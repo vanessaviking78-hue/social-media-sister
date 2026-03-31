@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
@@ -51,54 +51,55 @@
 }
 
 :root {
-  --button-outline: rgba(255, 255, 255, 0.10);
-  --badge-outline: rgba(255, 255, 255, 0.05);
+  --button-outline: rgba(255, 255, 255, 0.08);
+  --badge-outline: rgba(255, 255, 255, 0.04);
 
   --opaque-button-border-intensity: 9;
-  --elevate-1: rgba(255, 255, 255, 0.04);
-  --elevate-2: rgba(255, 255, 255, 0.09);
+  --elevate-1: rgba(255, 255, 255, 0.03);
+  --elevate-2: rgba(255, 255, 255, 0.07);
 
-  /* Dark slate / figma energy palette */
-  --background: 222 47% 11%;
-  --foreground: 210 40% 98%;
+  /* Deep near-black with warm-tinted surfaces */
+  --background: 240 25% 4%;
+  --foreground: 30 15% 93%;
 
-  --card: 222 47% 15%;
-  --card-foreground: 210 40% 98%;
-  --card-border: 217 32% 22%;
+  --card: 240 18% 8%;
+  --card-foreground: 30 15% 93%;
+  --card-border: 240 12% 14%;
 
-  --popover: 222 47% 15%;
-  --popover-foreground: 210 40% 98%;
-  --popover-border: 217 32% 22%;
+  --popover: 240 18% 8%;
+  --popover-foreground: 30 15% 93%;
+  --popover-border: 240 12% 14%;
 
-  --primary: 210 100% 55%;
-  --primary-foreground: 210 40% 98%;
+  /* Hot pink primary */
+  --primary: 328 100% 57%;
+  --primary-foreground: 0 0% 100%;
 
-  --secondary: 217 32% 22%;
-  --secondary-foreground: 210 40% 98%;
+  --secondary: 240 12% 14%;
+  --secondary-foreground: 30 15% 93%;
 
-  --muted: 217 32% 22%;
-  --muted-foreground: 215 20% 65%;
+  --muted: 240 12% 14%;
+  --muted-foreground: 240 8% 55%;
 
-  --accent: 217 32% 25%;
-  --accent-foreground: 210 40% 98%;
+  --accent: 240 14% 12%;
+  --accent-foreground: 30 15% 93%;
 
   --destructive: 0 62.8% 40.6%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive-foreground: 30 15% 93%;
 
-  --border: 217 32% 22%;
-  --input: 217 32% 22%;
-  --ring: 210 100% 55%;
+  --border: 240 12% 14%;
+  --input: 240 12% 14%;
+  --ring: 328 100% 57%;
 
-  --app-font-sans: 'Plus Jakarta Sans', sans-serif;
-  --app-font-serif: Georgia, serif;
+  --app-font-sans: 'Anton', 'Plus Jakarta Sans', sans-serif;
+  --app-font-serif: 'Cormorant Garamond', Georgia, serif;
   --app-font-mono: Menlo, monospace;
-  
-  --radius: 0.5rem;
 
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.5);
-  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.5), 0 1px 2px -1px rgb(0 0 0 / 0.5);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.5);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
+  --radius: 0.75rem;
+
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.6);
+  --shadow: 0 2px 6px 0 rgb(0 0 0 / 0.5), 0 1px 2px -1px rgb(0 0 0 / 0.5);
+  --shadow-md: 0 6px 16px -2px rgb(0 0 0 / 0.55), 0 2px 6px -2px rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 16px 32px -4px rgb(0 0 0 / 0.6), 0 6px 12px -4px rgb(0 0 0 / 0.4);
 
   --primary-border: hsl(var(--primary));
   --secondary-border: hsl(var(--secondary));
@@ -118,4 +119,39 @@
   body {
     @apply font-sans antialiased bg-background text-foreground selection:bg-primary/30;
   }
+}
+
+/* Shimmer animation for generate button */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.btn-shimmer {
+  background: linear-gradient(90deg, hsl(328 100% 47%), hsl(328 100% 63%), hsl(315 100% 68%), hsl(328 100% 47%));
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
+  color: hsl(0 0% 100%);
+}
+.btn-shimmer:disabled {
+  animation: none;
+  background: hsl(var(--primary) / 0.4);
+}
+
+/* Drop zone animated dashed border */
+@keyframes dash-pulse {
+  0%, 100% { border-color: hsl(var(--primary) / 0.5); }
+  50% { border-color: hsl(var(--primary)); }
+}
+
+.drop-zone-idle {
+  border: 2px dashed hsl(var(--border));
+  transition: border-color 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
+}
+.drop-zone-idle:hover,
+.drop-zone-dragging {
+  border-color: hsl(var(--primary) / 0.7);
+  background-color: hsl(var(--primary) / 0.06);
+  box-shadow: 0 0 0 4px hsl(var(--primary) / 0.08), inset 0 0 20px hsl(var(--primary) / 0.04);
+  animation: dash-pulse 1.8s ease-in-out infinite;
 }
