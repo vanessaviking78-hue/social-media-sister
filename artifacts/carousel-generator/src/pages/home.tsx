@@ -4,7 +4,7 @@ import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 
-import type { CarouselResult } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { CarouselResult, CarouselSlide } from "@workspace/api-client-react/src/generated/api.schemas";
 
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -241,50 +241,46 @@ export default function Home() {
     if (!photos.length) { toast.error("Please upload at least one photo"); return; }
     if (!csvFile) { toast.error("Please upload a CSV file"); return; }
 
-    const BATCH = 5;
-    const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
-
     setIsGenerating(true);
-    let sessionId: string | null = null;
-    const toastId = toast.loading(`Uploading photos 1–${Math.min(BATCH, photos.length)} of ${photos.length}…`);
+    const toastId = toast.loading("Generating slides…");
 
     try {
-      for (let i = 0; i < photos.length; i += BATCH) {
-        const batch = photos.slice(i, i + BATCH);
-        const end = Math.min(i + BATCH, photos.length);
-        toast.loading(`Uploading photos ${i + 1}–${end} of ${photos.length}…`, { id: toastId });
+      const csvText = await csvFile.text();
+      const parsed = Papa.parse<string[]>(csvText, { header: false, skipEmptyLines: true });
+      let rows = parsed.data as string[][];
+      if (rows.length === 0) throw new Error("CSV has no data rows");
 
-        const fd = new FormData();
-        batch.forEach((f) => fd.append("photos", f));
-        if (sessionId) fd.append("sessionId", sessionId);
+      const first = rows[0]?.[0]?.toLowerCase() ?? "";
+      if (/^(slide|hook|col|column|text|caption|header)\d*$/i.test(first)) rows = rows.slice(1);
+      rows = rows.map((r) => r.filter((c) => c.trim())).filter((r) => r.length > 0);
+      if (rows.length === 0) throw new Error("CSV has no data rows");
 
-        const url = sessionId
-          ? `${BASE}/api/carousel/upload-photos?sessionId=${sessionId}`
-          : `${BASE}/api/carousel/upload-photos`;
+      const MAX_CAROUSELS = 60;
+      const postRows = rows.slice(0, MAX_CAROUSELS);
+      const slidesPerCarousel = postRows[0].length;
 
-        const resp = await fetch(url, { method: "POST", body: fd });
-        if (!resp.ok) {
-          const err = await resp.json().catch(() => ({}));
-          throw new Error(err?.error ?? `Upload failed (${resp.status})`);
+      const photoUrls = photos.map((f) => URL.createObjectURL(f));
+
+      const slides: CarouselSlide[] = [];
+      let idx = 1;
+      for (let pi = 0; pi < postRows.length; pi++) {
+        const photoUrl = photoUrls[pi % photoUrls.length];
+        for (let si = 0; si < postRows[pi].length; si++) {
+          slides.push({
+            slideIndex: idx++,
+            groupIndex: pi + 1,
+            groupPosition: si + 1,
+            text: postRows[pi][si],
+            imageUrl: photoUrl,
+            imageName: photos[pi % photos.length].name,
+          });
         }
-        const json = await resp.json();
-        sessionId = json.sessionId;
       }
 
-      toast.loading("Generating slides…", { id: toastId });
-
-      const genFd = new FormData();
-      genFd.append("csv", csvFile);
-      const genResp = await fetch(`${BASE}/api/carousel/generate?sessionId=${sessionId}`, { method: "POST", body: genFd });
-      if (!genResp.ok) {
-        const errJson = await genResp.json().catch(() => ({}));
-        throw new Error(errJson?.error ?? `Generation failed (${genResp.status})`);
-      }
-      const data = await genResp.json();
-      setResult(data);
-      toast.success(`${data.totalSlides} slides generated — ready to download`, { id: toastId });
+      setResult({ slides, totalSlides: slides.length, slidesPerCarousel, totalCarousels: postRows.length, sessionId: "local" });
+      toast.success(`${slides.length} slides generated — ready to download`, { id: toastId });
     } catch (e: any) {
-      toast.error(e?.message ?? "Upload failed — please try again", { id: toastId });
+      toast.error(e?.message ?? "Failed to generate slides", { id: toastId });
     } finally {
       setIsGenerating(false);
     }
