@@ -121,7 +121,7 @@ function drawSlide(
   }
 }
 
-async function compressImage(file: File, maxPx = 1920, quality = 0.82): Promise<File> {
+async function compressImage(file: File, maxPx = 1080, quality = 0.72): Promise<File> {
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
