@@ -13,31 +13,38 @@ if (!fs.existsSync(uploadsBase)) {
   fs.mkdirSync(uploadsBase, { recursive: true });
 }
 
-const storage = multer.diskStorage({
-  destination: (req, _file, cb) => {
-    const sessionId = (req as any).sessionId || uuidv4();
-    (req as any).sessionId = sessionId;
-    const dir = path.join(uploadsBase, sessionId);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    cb(null, dir);
-  },
-  filename: (_req, file, cb) => {
-    const safe = Date.now() + "-" + file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
-    cb(null, safe);
+function makeStorage(getSessionId: (req: Express.Request) => string) {
+  return multer.diskStorage({
+    destination: (req, _file, cb) => {
+      const sessionId = getSessionId(req as any);
+      (req as any).sessionId = sessionId;
+      const dir = path.join(uploadsBase, sessionId);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (_req, file, cb) => {
+      const safe = Date.now() + Math.random().toString(36).slice(2, 6) + "-" + file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+      cb(null, safe);
+    },
+  });
+}
+
+const IMAGE_MIMES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
+const uploadBatch = multer({
+  storage: makeStorage((req: any) => (req.query?.sessionId as string) || uuidv4()),
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    cb(null, IMAGE_MIMES.has(file.mimetype));
   },
 });
 
-const upload = multer({
-  storage,
-  limits: { fileSize: 50 * 1024 * 1024 },
+const uploadAll = multer({
+  storage: makeStorage((_req: any) => uuidv4()),
+  limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    if (file.fieldname === "photos" && !file.mimetype.startsWith("image/")) {
-      cb(new Error("Only image files are allowed for photos"));
-      return;
-    }
-    cb(null, true);
+    if (file.fieldname === "photos") cb(null, IMAGE_MIMES.has(file.mimetype));
+    else cb(null, true);
   },
 });
 
@@ -65,7 +72,6 @@ function parseCarouselRows(csvBuffer: Buffer): string[][] {
 
   if (records.length === 0) return [];
 
-  // Skip header row if first cell looks like a column label (Slide1, Hook, etc.)
   const first = records[0]?.[0]?.toLowerCase() ?? "";
   const looksLikeHeader = /^(slide|hook|col|column|text|caption|header)\d*$/i.test(first);
   const rows = looksLikeHeader ? records.slice(1) : records;
@@ -75,28 +81,95 @@ function parseCarouselRows(csvBuffer: Buffer): string[][] {
     .filter((row) => row.length > 0);
 }
 
+function buildSlides(
+  postRows: string[][],
+  photos: { path: string; originalname: string }[],
+  sessionId: string
+) {
+  const MAX_CAROUSELS = 60;
+  const rows = postRows.slice(0, MAX_CAROUSELS);
+  const slidesPerCarousel = rows[0].length;
+  const slides: Array<{
+    slideIndex: number;
+    groupIndex: number;
+    groupPosition: number;
+    text: string;
+    imageUrl: string;
+    imageName: string;
+  }> = [];
+
+  let globalSlideIndex = 1;
+  for (let pi = 0; pi < rows.length; pi++) {
+    const photo = photos[pi % photos.length];
+    const slideTexts = rows[pi];
+    for (let si = 0; si < slideTexts.length; si++) {
+      slides.push({
+        slideIndex: globalSlideIndex++,
+        groupIndex: pi + 1,
+        groupPosition: si + 1,
+        text: slideTexts[si],
+        imageUrl: `/api/carousel/image/${sessionId}/${path.basename(photo.path)}`,
+        imageName: photo.originalname,
+      });
+    }
+  }
+  return { slides, slidesPerCarousel, totalCarousels: rows.length };
+}
+
+/** Upload a batch of photos to an existing (or new) session */
+router.post(
+  "/carousel/upload-photos",
+  uploadBatch.fields([{ name: "photos", maxCount: 20 }]),
+  (req, res): void => {
+    const sessionId = (req as any).sessionId as string;
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const count = files?.photos?.length ?? 0;
+    res.json({ sessionId, uploaded: count });
+  }
+);
+
+/** Generate carousels — accepts either:
+ *  A) sessionId (query) + csv (file) — photos already uploaded in batches
+ *  B) photos (files) + csv (file) — all-in-one legacy mode */
 router.post(
   "/carousel/generate",
   (req, _res, next) => {
-    (req as any).sessionId = uuidv4();
+    (req as any).sessionId = (req.query.sessionId as string) || uuidv4();
     next();
   },
-  upload.fields([
+  uploadAll.fields([
     { name: "photos", maxCount: 100 },
     { name: "csv", maxCount: 1 },
   ]),
   async (req, res): Promise<void> => {
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     const sessionId = (req as any).sessionId as string;
-
-    if (!files?.photos?.length) {
-      res.status(400).json({ error: "At least one photo is required" });
-      return;
-    }
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
     if (!files?.csv?.length) {
       res.status(400).json({ error: "A CSV file is required" });
       return;
+    }
+
+    let photos: { path: string; originalname: string }[];
+
+    if (files?.photos?.length) {
+      photos = files.photos.map((f) => ({ path: f.path, originalname: f.originalname }));
+    } else {
+      const sessionDir = path.join(uploadsBase, sessionId);
+      if (!fs.existsSync(sessionDir)) {
+        res.status(400).json({ error: "Session not found — please upload photos first" });
+        return;
+      }
+      const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif"]);
+      const photoFiles = fs.readdirSync(sessionDir)
+        .filter((f) => IMAGE_EXTS.has(path.extname(f).toLowerCase()))
+        .sort()
+        .map((f) => ({ path: path.join(sessionDir, f), originalname: f }));
+      if (photoFiles.length === 0) {
+        res.status(400).json({ error: "No photos found in session — please upload photos first" });
+        return;
+      }
+      photos = photoFiles;
     }
 
     const csvBuffer = fs.readFileSync(files.csv[0].path);
@@ -107,43 +180,15 @@ router.post(
       return;
     }
 
-    const photos = files.photos;
-    const MAX_CAROUSELS = 60;
-    const postRows = carouselRows.slice(0, MAX_CAROUSELS);
-    const slidesPerCarousel = postRows[0].length; // use first row's column count
+    const { slides, slidesPerCarousel, totalCarousels } = buildSlides(carouselRows, photos, sessionId);
 
-    const slides: Array<{
-      slideIndex: number;
-      groupIndex: number;
-      groupPosition: number;
-      text: string;
-      imageUrl: string;
-      imageName: string;
-    }> = [];
-
-    let globalSlideIndex = 1;
-    for (let pi = 0; pi < postRows.length; pi++) {
-      const photo = photos[pi % photos.length]; // one photo per carousel row
-      const slideTexts = postRows[pi];
-      for (let si = 0; si < slideTexts.length; si++) {
-        slides.push({
-          slideIndex: globalSlideIndex++,
-          groupIndex: pi + 1,
-          groupPosition: si + 1,
-          text: slideTexts[si],
-          imageUrl: `/api/carousel/image/${sessionId}/${path.basename(photo.path)}`,
-          imageName: photo.originalname,
-        });
-      }
-    }
-
-    req.log.info({ sessionId, totalCarousels: postRows.length, slidesPerCarousel, photos: photos.length }, "Carousel generated");
+    req.log.info({ sessionId, totalCarousels, slidesPerCarousel, photos: photos.length }, "Carousel generated");
 
     res.json({
       slides,
       totalSlides: slides.length,
       slidesPerCarousel,
-      totalCarousels: postRows.length,
+      totalCarousels,
       sessionId,
     });
   }

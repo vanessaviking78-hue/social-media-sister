@@ -4,7 +4,6 @@ import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 
-import { useGenerateCarousel } from "@workspace/api-client-react";
 import type { CarouselResult } from "@workspace/api-client-react/src/generated/api.schemas";
 
 import { toast } from "sonner";
@@ -168,12 +167,11 @@ export default function Home() {
   const [logoSize, setLogoSize] = useState(140);
 
   const [barExpanded, setBarExpanded] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const photoInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
-
-  const generateCarousel = useGenerateCarousel();
 
   useEffect(() => {
     if (!logoFile) { setLogoImg(null); setLogoPreviewUrl(null); return; }
@@ -239,16 +237,57 @@ export default function Home() {
     if (e.target.files?.[0]) setLogoFile(e.target.files[0]);
   }, []);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (!photos.length) { toast.error("Please upload at least one photo"); return; }
     if (!csvFile) { toast.error("Please upload a CSV file"); return; }
-    generateCarousel.mutate(
-      { data: { photos, csv: csvFile } },
-      {
-        onSuccess: (data) => { setResult(data); toast.success(`${data.totalSlides} slides generated — ready to download`); },
-        onError: (err: any) => toast.error(err?.response?.data?.error ?? err?.message ?? "Failed to generate slides — check your files and try again"),
+
+    const BATCH = 5;
+    const BASE = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+
+    setIsGenerating(true);
+    let sessionId: string | null = null;
+    const toastId = toast.loading(`Uploading photos 1–${Math.min(BATCH, photos.length)} of ${photos.length}…`);
+
+    try {
+      for (let i = 0; i < photos.length; i += BATCH) {
+        const batch = photos.slice(i, i + BATCH);
+        const end = Math.min(i + BATCH, photos.length);
+        toast.loading(`Uploading photos ${i + 1}–${end} of ${photos.length}…`, { id: toastId });
+
+        const fd = new FormData();
+        batch.forEach((f) => fd.append("photos", f));
+        if (sessionId) fd.append("sessionId", sessionId);
+
+        const url = sessionId
+          ? `${BASE}/api/carousel/upload-photos?sessionId=${sessionId}`
+          : `${BASE}/api/carousel/upload-photos`;
+
+        const resp = await fetch(url, { method: "POST", body: fd });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({}));
+          throw new Error(err?.error ?? `Upload failed (${resp.status})`);
+        }
+        const json = await resp.json();
+        sessionId = json.sessionId;
       }
-    );
+
+      toast.loading("Generating slides…", { id: toastId });
+
+      const genFd = new FormData();
+      genFd.append("csv", csvFile);
+      const genResp = await fetch(`${BASE}/api/carousel/generate?sessionId=${sessionId}`, { method: "POST", body: genFd });
+      if (!genResp.ok) {
+        const errJson = await genResp.json().catch(() => ({}));
+        throw new Error(errJson?.error ?? `Generation failed (${genResp.status})`);
+      }
+      const data = await genResp.json();
+      setResult(data);
+      toast.success(`${data.totalSlides} slides generated — ready to download`, { id: toastId });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Upload failed — please try again", { id: toastId });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleStartOver = () => {
@@ -671,10 +710,10 @@ export default function Home() {
               <button
                 className="btn-shimmer h-10 px-6 rounded-full text-sm font-semibold flex items-center gap-2 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleGenerate}
-                disabled={generateCarousel.isPending}
+                disabled={isGenerating}
                 data-testid="button-generate"
               >
-                {generateCarousel.isPending ? (
+                {isGenerating ? (
                   <><Loader2 className="w-4 h-4 animate-spin" />Generating…</>
                 ) : "Generate Carousel Posts"}
               </button>
