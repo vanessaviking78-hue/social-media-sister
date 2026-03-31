@@ -295,7 +295,7 @@ export default function Home() {
             <div>
               <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Upload Assets</h2>
               <p className="text-muted-foreground text-base leading-relaxed">
-                Add your photos and a CSV — <strong className="text-foreground font-medium">one row per carousel</strong>, one column per slide. Up to 30 rows = 30 carousels.
+                Add your photos and a CSV — <strong className="text-foreground font-medium">one row per carousel</strong>, one column per slide. Up to 60 rows = 60 carousels.
               </p>
             </div>
 

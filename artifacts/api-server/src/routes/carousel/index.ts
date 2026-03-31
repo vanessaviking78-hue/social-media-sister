@@ -108,7 +108,7 @@ router.post(
     }
 
     const photos = files.photos;
-    const MAX_CAROUSELS = 30;
+    const MAX_CAROUSELS = 60;
     const postRows = carouselRows.slice(0, MAX_CAROUSELS);
     const slidesPerCarousel = postRows[0].length; // use first row's column count
 
