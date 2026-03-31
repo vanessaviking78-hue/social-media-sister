@@ -40,7 +40,7 @@ const uploadBatch = multer({
 });
 
 const uploadAll = multer({
-  storage: makeStorage((_req: any) => uuidv4()),
+  storage: makeStorage((req: any) => (req as any).sessionId || (req.query?.sessionId as string) || uuidv4()),
   limits: { fileSize: 20 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (file.fieldname === "photos") cb(null, IMAGE_MIMES.has(file.mimetype));
