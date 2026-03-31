@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./carouselPost";
 export * from "./carouselResult";
 export * from "./carouselSlide";
 export * from "./errorResponse";

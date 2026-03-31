@@ -109,7 +109,7 @@ export function useHealthCheck<
 }
 
 /**
- * Upload photos and a CSV of text rows, returns up to 30 carousel posts
+ * Upload photos and a CSV where each row is a carousel post with one column per slide. Returns up to 30 carousel posts.
  * @summary Generate carousel posts
  */
 export const getGenerateCarouselUrl = () => {
@@ -201,31 +201,36 @@ export const useGenerateCarousel = <
 };
 
 /**
- * Returns a previously uploaded image by filename
+ * Returns a previously uploaded image by session and filename
  * @summary Get uploaded image
  */
-export const getGetCarouselImageUrl = (filename: string) => {
-  return `/api/carousel/image/${filename}`;
+export const getGetCarouselImageUrl = (sessionId: string, filename: string) => {
+  return `/api/carousel/image/${sessionId}/${filename}`;
 };
 
 export const getCarouselImage = async (
+  sessionId: string,
   filename: string,
   options?: RequestInit,
 ): Promise<Blob> => {
-  return customFetch<Blob>(getGetCarouselImageUrl(filename), {
+  return customFetch<Blob>(getGetCarouselImageUrl(sessionId, filename), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetCarouselImageQueryKey = (filename: string) => {
-  return [`/api/carousel/image/${filename}`] as const;
+export const getGetCarouselImageQueryKey = (
+  sessionId: string,
+  filename: string,
+) => {
+  return [`/api/carousel/image/${sessionId}/${filename}`] as const;
 };
 
 export const getGetCarouselImageQueryOptions = <
   TData = Awaited<ReturnType<typeof getCarouselImage>>,
   TError = ErrorType<ErrorResponse>,
 >(
+  sessionId: string,
   filename: string,
   options?: {
     query?: UseQueryOptions<
@@ -239,16 +244,17 @@ export const getGetCarouselImageQueryOptions = <
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
   const queryKey =
-    queryOptions?.queryKey ?? getGetCarouselImageQueryKey(filename);
+    queryOptions?.queryKey ?? getGetCarouselImageQueryKey(sessionId, filename);
 
   const queryFn: QueryFunction<
     Awaited<ReturnType<typeof getCarouselImage>>
-  > = ({ signal }) => getCarouselImage(filename, { signal, ...requestOptions });
+  > = ({ signal }) =>
+    getCarouselImage(sessionId, filename, { signal, ...requestOptions });
 
   return {
     queryKey,
     queryFn,
-    enabled: !!filename,
+    enabled: !!(sessionId && filename),
     ...queryOptions,
   } as UseQueryOptions<
     Awaited<ReturnType<typeof getCarouselImage>>,
@@ -270,6 +276,7 @@ export function useGetCarouselImage<
   TData = Awaited<ReturnType<typeof getCarouselImage>>,
   TError = ErrorType<ErrorResponse>,
 >(
+  sessionId: string,
   filename: string,
   options?: {
     query?: UseQueryOptions<
@@ -280,7 +287,11 @@ export function useGetCarouselImage<
     request?: SecondParameter<typeof customFetch>;
   },
 ): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetCarouselImageQueryOptions(filename, options);
+  const queryOptions = getGetCarouselImageQueryOptions(
+    sessionId,
+    filename,
+    options,
+  );
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;

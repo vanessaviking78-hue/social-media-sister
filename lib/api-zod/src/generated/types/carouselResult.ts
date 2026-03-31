@@ -5,12 +5,15 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import type { CarouselSlide } from "./carouselSlide";
+import type { CarouselPost } from "./carouselPost";
 
 export interface CarouselResult {
-  slides: CarouselSlide[];
-  /** Total number of slides generated */
-  totalSlides: number;
+  /** Generated carousel posts */
+  posts: CarouselPost[];
+  /** Total number of carousel posts generated */
+  totalPosts: number;
+  /** Number of slides per carousel post */
+  slidesPerPost: number;
   /** Session ID for referencing uploaded images */
   sessionId: string;
 }

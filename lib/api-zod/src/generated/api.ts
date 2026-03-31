@@ -16,7 +16,7 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * Upload photos and a CSV of text rows, returns up to 30 carousel posts
+ * Upload photos and a CSV where each row is a carousel post with one column per slide. Returns up to 30 carousel posts.
  * @summary Generate carousel posts
  */
 export const GenerateCarouselBody = zod.object({
@@ -25,28 +25,45 @@ export const GenerateCarouselBody = zod.object({
     .describe("Photo files to use in carousel slides"),
   csv: zod
     .instanceof(File)
-    .describe("CSV file with text rows (one row per slide)"),
+    .describe(
+      "CSV file — each row is one carousel post, each column is one slide",
+    ),
 });
 
 export const GenerateCarouselResponse = zod.object({
-  slides: zod.array(
-    zod.object({
-      index: zod.number().describe("Slide index (1-30)"),
-      text: zod.string().describe("Text content for this slide"),
-      imageUrl: zod.string().describe("URL path to the paired image"),
-      imageName: zod.string().describe("Original filename of the image"),
-    }),
-  ),
-  totalSlides: zod.number().describe("Total number of slides generated"),
+  posts: zod
+    .array(
+      zod.object({
+        postIndex: zod.number().describe("Post index (1-30)"),
+        slides: zod
+          .array(
+            zod.object({
+              slideIndex: zod
+                .number()
+                .describe("Slide index within the post (1-based)"),
+              text: zod.string().describe("Text content for this slide"),
+              imageUrl: zod.string().describe("URL path to the paired image"),
+              imageName: zod
+                .string()
+                .describe("Original filename of the image"),
+            }),
+          )
+          .describe("Slides within this carousel post"),
+      }),
+    )
+    .describe("Generated carousel posts"),
+  totalPosts: zod.number().describe("Total number of carousel posts generated"),
+  slidesPerPost: zod.number().describe("Number of slides per carousel post"),
   sessionId: zod
     .string()
     .describe("Session ID for referencing uploaded images"),
 });
 
 /**
- * Returns a previously uploaded image by filename
+ * Returns a previously uploaded image by session and filename
  * @summary Get uploaded image
  */
 export const GetCarouselImageParams = zod.object({
+  sessionId: zod.coerce.string(),
   filename: zod.coerce.string(),
 });

@@ -7,8 +7,8 @@
  */
 
 export interface CarouselSlide {
-  /** Slide index (1-30) */
-  index: number;
+  /** Slide index within the post (1-based) */
+  slideIndex: number;
   /** Text content for this slide */
   text: string;
   /** URL path to the paired image */

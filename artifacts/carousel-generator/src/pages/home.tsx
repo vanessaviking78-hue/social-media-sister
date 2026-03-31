@@ -1,11 +1,11 @@
 import React, { useState, useCallback, useRef } from "react";
-import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X } from "lucide-react";
+import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, ChevronLeft, ChevronRight } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 
 import { useGenerateCarousel } from "@workspace/api-client-react";
-import type { CarouselResult } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { CarouselResult, CarouselPost } from "@workspace/api-client-react/src/generated/api.schemas";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,28 +32,143 @@ const FONT_OPTIONS = [
   { label: "Roboto", value: "'Roboto', sans-serif" },
 ];
 
-const FONT_GOOGLE_NAMES = [
-  "Playfair+Display",
-  "Montserrat",
-  "Lato",
-  "Oswald",
-  "Merriweather",
-  "Raleway",
-  "Source+Sans+Pro",
-  "Roboto",
-];
-
 if (typeof document !== "undefined") {
   const link = document.createElement("link");
   link.rel = "stylesheet";
-  link.href = `https://fonts.googleapis.com/css2?family=${FONT_GOOGLE_NAMES.join("&family=")}&display=swap`;
+  link.href = "https://fonts.googleapis.com/css2?family=Playfair+Display&family=Montserrat&family=Lato&family=Oswald&family=Merriweather&family=Raleway&family=Source+Sans+Pro&family=Roboto&display=swap";
   document.head.appendChild(link);
+}
+
+function drawSlideOnCanvas(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  text: string,
+  font: string,
+  size: number
+) {
+  const W = CANVAS_WIDTH;
+  const H = CANVAS_HEIGHT;
+
+  // Cover-fit the image
+  const scale = Math.max(W / img.width, H / img.height);
+  const x = (W - img.width * scale) / 2;
+  const y = (H - img.height * scale) / 2;
+  ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+
+  // Gradient overlay at bottom
+  const barH = Math.round(H * 0.38);
+  const barY = H - barH;
+  const grad = ctx.createLinearGradient(0, barY - 60, 0, H);
+  grad.addColorStop(0, "rgba(0,0,0,0)");
+  grad.addColorStop(0.25, "rgba(0,0,0,0.72)");
+  grad.addColorStop(1, "rgba(0,0,0,0.93)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, barY - 60, W, barH + 60);
+
+  // Text
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `600 ${size}px ${font}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+
+  const maxW = W - 120;
+  const lineH = Math.round(size * 1.38);
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    const test = cur ? cur + " " + w : w;
+    if (ctx.measureText(test).width > maxW && cur) {
+      lines.push(cur);
+      cur = w;
+    } else {
+      cur = test;
+    }
+  }
+  if (cur) lines.push(cur);
+
+  const totalH = lines.length * lineH;
+  const startY = barY + Math.round((barH - totalH) / 2);
+  lines.forEach((line, i) => ctx.fillText(line, W / 2, startY + i * lineH));
+}
+
+/** Mini carousel post card for the preview grid */
+function PostCard({
+  post,
+  font,
+  fontSize,
+}: {
+  post: CarouselPost;
+  font: string;
+  fontSize: number;
+}) {
+  const [active, setActive] = useState(0);
+  const slide = post.slides[active];
+
+  return (
+    <div className="rounded-xl overflow-hidden border border-border/50 shadow-md bg-card" style={{ aspectRatio: "4/5" }}>
+      <div className="relative w-full h-full group" data-testid={`post-card-${post.postIndex}`}>
+        <img
+          src={slide.imageUrl}
+          alt={`Post ${post.postIndex} slide ${slide.slideIndex}`}
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent" />
+
+        {/* Text */}
+        <div className="absolute bottom-0 left-0 right-0 px-3 pb-6">
+          <p
+            className="text-white font-semibold leading-snug line-clamp-4"
+            style={{ fontFamily: font, fontSize: Math.max(9, Math.round(fontSize * 0.18)) + "px" }}
+            data-testid={`post-text-${post.postIndex}-${slide.slideIndex}`}
+          >
+            {slide.text}
+          </p>
+        </div>
+
+        {/* Post number */}
+        <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] font-bold text-white">
+          Post {post.postIndex}
+        </div>
+
+        {/* Slide dots + arrows */}
+        {post.slides.length > 1 && (
+          <>
+            <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+              {post.slides.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setActive(i)}
+                  className={`w-1.5 h-1.5 rounded-full transition-all ${i === active ? "bg-white scale-125" : "bg-white/40"}`}
+                  data-testid={`dot-${post.postIndex}-${i}`}
+                />
+              ))}
+            </div>
+            <button
+              onClick={() => setActive((a) => Math.max(0, a - 1))}
+              disabled={active === 0}
+              className="absolute left-1 top-1/2 -translate-y-1/2 bg-black/50 rounded-full p-0.5 text-white disabled:opacity-20 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <ChevronLeft className="w-3 h-3" />
+            </button>
+            <button
+              onClick={() => setActive((a) => Math.min(post.slides.length - 1, a + 1))}
+              disabled={active === post.slides.length - 1}
+              className="absolute right-1 top-1/2 -translate-y-1/2 bg-black/50 rounded-full p-0.5 text-white disabled:opacity-20 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <ChevronRight className="w-3 h-3" />
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function Home() {
   const [photos, setPhotos] = useState<File[]>([]);
   const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [csvPreview, setCsvPreview] = useState<Record<string, string>[]>([]);
+  const [csvPreview, setCsvPreview] = useState<{ headers: string[]; rows: string[][] }>({ headers: [], rows: [] });
   const [generatedResult, setGeneratedResult] = useState<CarouselResult | null>(null);
 
   const [isDraggingPhotos, setIsDraggingPhotos] = useState(false);
@@ -70,56 +185,56 @@ export default function Home() {
   const handlePhotosDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDraggingPhotos(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    if (e.dataTransfer.files?.length) {
       setPhotos((prev) => [...prev, ...Array.from(e.dataTransfer.files)].filter(f => f.type.startsWith("image/")));
     }
   }, []);
 
   const handlePhotosChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
+    if (e.target.files?.length) {
       setPhotos((prev) => [...prev, ...Array.from(e.target.files!)].filter(f => f.type.startsWith("image/")));
     }
   }, []);
 
-  const removePhoto = (index: number) => {
-    setPhotos((prev) => prev.filter((_, i) => i !== index));
-  };
+  const removePhoto = (index: number) => setPhotos((prev) => prev.filter((_, i) => i !== index));
 
   const processCsvFile = (file: File) => {
     setCsvFile(file);
-    Papa.parse<Record<string, string>>(file, {
-      header: true,
+    Papa.parse<string[]>(file, {
+      header: false,
       skipEmptyLines: true,
       complete: (results) => {
-        setCsvPreview(results.data.slice(0, 5));
+        const rows = results.data as string[][];
+        if (rows.length === 0) return;
+        const first = rows[0];
+        const looksLikeHeader = first.every((c) => /^[a-z][a-z0-9_\s]*$/i.test(c.trim()));
+        const headers = looksLikeHeader ? first : first.map((_, i) => `Slide ${i + 1}`);
+        const dataRows = looksLikeHeader ? rows.slice(1) : rows;
+        setCsvPreview({ headers, rows: dataRows.slice(0, 3) });
       },
-      error: (error: { message: string }) => {
-        toast.error("Failed to parse CSV file: " + error.message);
-      },
+      error: (err: { message: string }) => toast.error("Failed to parse CSV: " + err.message),
     });
   };
 
   const handleCsvDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDraggingCsv(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    if (e.dataTransfer.files?.length) {
       const file = e.dataTransfer.files[0];
-      if (file.name.endsWith(".csv") || file.type === "text/csv") {
+      if (file.name.endsWith(".csv") || file.type === "text/csv" || file.type === "text/plain") {
         processCsvFile(file);
       } else {
-        toast.error("Please upload a valid CSV file");
+        toast.error("Please upload a CSV file");
       }
     }
   }, []);
 
   const handleCsvChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      processCsvFile(e.target.files[0]);
-    }
+    if (e.target.files?.length) processCsvFile(e.target.files[0]);
   }, []);
 
   const handleGenerate = () => {
-    if (photos.length === 0) { toast.error("Please upload at least one photo"); return; }
+    if (!photos.length) { toast.error("Please upload at least one photo"); return; }
     if (!csvFile) { toast.error("Please upload a CSV file"); return; }
 
     generateCarousel.mutate(
@@ -127,11 +242,9 @@ export default function Home() {
       {
         onSuccess: (data) => {
           setGeneratedResult(data);
-          toast.success(`Generated ${data.totalSlides} slides successfully`);
+          toast.success(`Generated ${data.totalPosts} carousel posts (${data.slidesPerPost} slides each)`);
         },
-        onError: (err: { error?: { error?: string } }) => {
-          toast.error(err.error?.error || "Failed to generate carousel posts");
-        },
+        onError: () => toast.error("Failed to generate carousel posts"),
       }
     );
   };
@@ -139,103 +252,48 @@ export default function Home() {
   const handleStartOver = () => {
     setPhotos([]);
     setCsvFile(null);
-    setCsvPreview([]);
+    setCsvPreview({ headers: [], rows: [] });
     setGeneratedResult(null);
   };
 
-  const drawTextOnCanvas = (
-    ctx: CanvasRenderingContext2D,
-    text: string,
-    canvasWidth: number,
-    canvasHeight: number,
-    font: string,
-    size: number
-  ) => {
-    const barHeight = Math.round(canvasHeight * 0.32);
-    const barY = canvasHeight - barHeight;
-
-    const gradient = ctx.createLinearGradient(0, barY - 40, 0, canvasHeight);
-    gradient.addColorStop(0, "rgba(0,0,0,0)");
-    gradient.addColorStop(0.2, "rgba(0,0,0,0.75)");
-    gradient.addColorStop(1, "rgba(0,0,0,0.92)");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, barY - 40, canvasWidth, barHeight + 40);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.font = `600 ${size}px ${font}`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "top";
-
-    const maxWidth = canvasWidth - 120;
-    const lineHeight = Math.round(size * 1.4);
-    const words = text.split(" ");
-    const lines: string[] = [];
-    let current = "";
-
-    for (const word of words) {
-      const test = current ? current + " " + word : word;
-      if (ctx.measureText(test).width > maxWidth && current) {
-        lines.push(current);
-        current = word;
-      } else {
-        current = test;
-      }
-    }
-    if (current) lines.push(current);
-
-    const totalTextHeight = lines.length * lineHeight;
-    const startY = barY + Math.round((barHeight - totalTextHeight) / 2);
-
-    lines.forEach((line, i) => {
-      ctx.fillText(line, canvasWidth / 2, startY + i * lineHeight);
-    });
-
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.font = `500 ${Math.round(size * 0.42)}px ${font}`;
-    ctx.textBaseline = "bottom";
-  };
-
   const downloadAllAsZip = async () => {
-    if (!generatedResult || generatedResult.slides.length === 0) return;
-
-    const toastId = toast.loading("Preparing ZIP — this may take a moment...");
+    if (!generatedResult?.posts.length) return;
+    const toastId = toast.loading("Building ZIP — this may take a moment...");
 
     try {
       await document.fonts.ready;
-
       const zip = new JSZip();
 
-      for (const slide of generatedResult.slides) {
-        const res = await fetch(slide.imageUrl);
-        const blob = await res.blob();
+      for (const post of generatedResult.posts) {
+        const folder = zip.folder(`carousel-${String(post.postIndex).padStart(2, "0")}`);
+        if (!folder) continue;
 
-        const img = new Image();
-        const imgLoadPromise = new Promise<void>((resolve, reject) => {
-          img.onload = () => resolve();
-          img.onerror = reject;
-          img.src = URL.createObjectURL(blob);
-        });
-        await imgLoadPromise;
+        for (const slide of post.slides) {
+          const res = await fetch(slide.imageUrl);
+          const blob = await res.blob();
 
-        const canvas = document.createElement("canvas");
-        canvas.width = CANVAS_WIDTH;
-        canvas.height = CANVAS_HEIGHT;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) continue;
+          const img = new Image();
+          const loaded = new Promise<void>((ok, fail) => {
+            img.onload = () => ok();
+            img.onerror = fail;
+            img.src = URL.createObjectURL(blob);
+          });
+          await loaded;
 
-        const scale = Math.max(CANVAS_WIDTH / img.width, CANVAS_HEIGHT / img.height);
-        const x = (CANVAS_WIDTH - img.width * scale) / 2;
-        const y = (CANVAS_HEIGHT - img.height * scale) / 2;
-        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+          const canvas = document.createElement("canvas");
+          canvas.width = CANVAS_WIDTH;
+          canvas.height = CANVAS_HEIGHT;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) continue;
 
-        drawTextOnCanvas(ctx, slide.text, CANVAS_WIDTH, CANVAS_HEIGHT, fontFamily, fontSize);
+          drawSlideOnCanvas(ctx, img, slide.text, fontFamily, fontSize);
+          URL.revokeObjectURL(img.src);
 
-        const outBlob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, "image/png"));
-        if (outBlob) {
-          zip.file(`slide-${String(slide.index).padStart(2, "0")}.png`, outBlob);
+          const outBlob = await new Promise<Blob | null>(r => canvas.toBlob(r, "image/png"));
+          if (outBlob) {
+            folder.file(`slide-${String(slide.slideIndex).padStart(2, "0")}.png`, outBlob);
+          }
         }
-
-        URL.revokeObjectURL(img.src);
       }
 
       const content = await zip.generateAsync({ type: "blob" });
@@ -243,7 +301,7 @@ export default function Home() {
       toast.success("Download started", { id: toastId });
     } catch (e) {
       console.error(e);
-      toast.error("Failed to create ZIP file", { id: toastId });
+      toast.error("Failed to create ZIP", { id: toastId });
     }
   };
 
@@ -264,7 +322,7 @@ export default function Home() {
               <RefreshCcw className="w-4 h-4 mr-2" />
               Start Over
             </Button>
-            <Button size="sm" onClick={downloadAllAsZip}>
+            <Button size="sm" onClick={downloadAllAsZip} data-testid="button-download-zip">
               <Download className="w-4 h-4 mr-2" />
               Download ZIP
             </Button>
@@ -278,15 +336,14 @@ export default function Home() {
             <div className="lg:col-span-8 flex flex-col gap-8">
               <div>
                 <h2 className="text-2xl font-bold mb-2">Upload Assets</h2>
-                <p className="text-muted-foreground">Add your photos and CSV text to generate up to 30 slides.</p>
+                <p className="text-muted-foreground">Add photos and a CSV where each row is one carousel post.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Photos Upload */}
                 <Card className="bg-card border-border/50 overflow-hidden shadow-sm">
                   <div
                     data-testid="drop-zone-photos"
-                    className={`p-8 h-full flex flex-col items-center justify-center text-center transition-colors cursor-pointer ${isDraggingPhotos ? "bg-primary/10 border-primary" : "hover:bg-muted/50"} border-2 border-dashed border-transparent`}
+                    className={`p-8 h-full flex flex-col items-center justify-center text-center transition-colors cursor-pointer border-2 border-dashed border-transparent ${isDraggingPhotos ? "bg-primary/10 border-primary" : "hover:bg-muted/50"}`}
                     onDragOver={(e) => { e.preventDefault(); setIsDraggingPhotos(true); }}
                     onDragLeave={() => setIsDraggingPhotos(false)}
                     onDrop={handlePhotosDrop}
@@ -301,11 +358,10 @@ export default function Home() {
                   </div>
                 </Card>
 
-                {/* CSV Upload */}
                 <Card className="bg-card border-border/50 overflow-hidden shadow-sm">
                   <div
                     data-testid="drop-zone-csv"
-                    className={`p-8 h-full flex flex-col items-center justify-center text-center transition-colors cursor-pointer ${isDraggingCsv ? "bg-primary/10 border-primary" : "hover:bg-muted/50"} border-2 border-dashed border-transparent`}
+                    className={`p-8 h-full flex flex-col items-center justify-center text-center transition-colors cursor-pointer border-2 border-dashed border-transparent ${isDraggingCsv ? "bg-primary/10 border-primary" : "hover:bg-muted/50"}`}
                     onDragOver={(e) => { e.preventDefault(); setIsDraggingCsv(true); }}
                     onDragLeave={() => setIsDraggingCsv(false)}
                     onDrop={handleCsvDrop}
@@ -343,10 +399,42 @@ export default function Home() {
                   </div>
                 </div>
               )}
+
+              {/* CSV preview table */}
+              {csvPreview.rows.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold">CSV Preview</h3>
+                  <div className="rounded-md border border-border/50 overflow-hidden text-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-accent/60">
+                          <tr>
+                            {csvPreview.headers.map((h, i) => (
+                              <th key={i} className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground whitespace-nowrap">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {csvPreview.rows.map((row, ri) => (
+                            <tr key={ri} className="border-t border-border/30">
+                              {row.map((cell, ci) => (
+                                <td key={ci} className="px-3 py-2 text-muted-foreground max-w-[180px] truncate">{cell}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="px-3 py-2 bg-accent/20 text-xs text-muted-foreground border-t border-border/30">
+                      Showing first 3 rows — each row = one carousel post, each column = one slide
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Right Sidebar */}
-            <div className="lg:col-span-4 flex flex-col gap-6">
+            {/* Right sidebar */}
+            <div className="lg:col-span-4">
               <Card className="bg-card border-border/50 sticky top-24">
                 <CardContent className="p-6 space-y-6">
                   <div>
@@ -357,8 +445,8 @@ export default function Home() {
                         <span className="font-medium">{photos.length} uploaded</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">CSV Text</span>
-                        <span className="font-medium">{csvFile ? "Ready" : "Missing"}</span>
+                        <span className="text-muted-foreground">CSV</span>
+                        <span className="font-medium">{csvFile ? csvFile.name : "Missing"}</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Output size</span>
@@ -367,18 +455,17 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Font family */}
                   <div className="space-y-2">
                     <Label className="text-sm text-muted-foreground">Font</Label>
                     <Select value={fontFamily} onValueChange={setFontFamily}>
                       <SelectTrigger className="w-full" data-testid="select-font">
-                        <SelectValue placeholder="Choose font">
+                        <SelectValue>
                           <span style={{ fontFamily }}>{selectedFontLabel}</span>
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {FONT_OPTIONS.map((f) => (
-                          <SelectItem key={f.value} value={f.value} data-testid={`font-option-${f.label}`}>
+                          <SelectItem key={f.value} value={f.value}>
                             <span style={{ fontFamily: f.value }}>{f.label}</span>
                           </SelectItem>
                         ))}
@@ -386,34 +473,20 @@ export default function Home() {
                     </Select>
                   </div>
 
-                  {/* Font size */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <Label className="text-sm text-muted-foreground">Text Size</Label>
                       <span className="text-sm font-semibold tabular-nums" data-testid="text-font-size">{fontSize}px</span>
                     </div>
-                    <Slider
-                      min={28}
-                      max={96}
-                      step={2}
-                      value={[fontSize]}
-                      onValueChange={([v]) => setFontSize(v)}
-                      className="w-full"
-                      data-testid="slider-font-size"
-                    />
+                    <Slider min={28} max={96} step={2} value={[fontSize]} onValueChange={([v]) => setFontSize(v)} className="w-full" data-testid="slider-font-size" />
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>Small</span>
                       <span>Large</span>
                     </div>
                   </div>
 
-                  {/* Text preview */}
                   <div className="rounded-md bg-background/50 border border-border/50 p-3">
-                    <p
-                      className="text-center text-foreground leading-snug"
-                      style={{ fontFamily, fontSize: Math.round(fontSize * 0.25) + "px" }}
-                      data-testid="text-preview-sample"
-                    >
+                    <p className="text-center text-foreground leading-snug" style={{ fontFamily, fontSize: Math.round(fontSize * 0.25) + "px" }}>
                       Your caption text will look like this on each slide.
                     </p>
                   </div>
@@ -425,79 +498,29 @@ export default function Home() {
                     data-testid="button-generate"
                   >
                     {generateCarousel.isPending ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      "Generate Carousel Posts"
-                    )}
+                      <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Generating...</>
+                    ) : "Generate Carousel Posts"}
                   </Button>
-
-                  {csvPreview.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-semibold mb-3 text-muted-foreground uppercase tracking-wider">CSV Preview</h4>
-                      <ScrollArea className="h-40 rounded-md border border-border/50 bg-background/50">
-                        <div className="p-3 space-y-2">
-                          {csvPreview.map((row, i) => (
-                            <div key={i} className="text-xs bg-accent/50 p-2 rounded text-muted-foreground">
-                              {Object.entries(row).map(([k, v]) => (
-                                <div key={k} className="line-clamp-2">
-                                  <span className="font-medium text-foreground">{k}:</span> {String(v)}
-                                </div>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             </div>
           </div>
         ) : (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-4 justify-between">
-              <div>
-                <h2 className="text-3xl font-bold mb-2">Your Carousel is Ready</h2>
-                <p className="text-muted-foreground">
-                  {generatedResult.totalSlides} slides at 1080 × 1350 px — font: <span style={{ fontFamily }} className="text-foreground font-medium">{selectedFontLabel}</span>, {fontSize}px
-                </p>
-              </div>
+            <div>
+              <h2 className="text-3xl font-bold mb-2">Your Carousel Posts are Ready</h2>
+              <p className="text-muted-foreground">
+                {generatedResult.totalPosts} posts &times; {generatedResult.slidesPerPost} slides &mdash; 1080 &times; 1350 px &mdash;{" "}
+                <span style={{ fontFamily }} className="text-foreground font-medium">{selectedFontLabel}</span>, {fontSize}px
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                ZIP will contain <strong className="text-foreground">carousel-01/</strong> … <strong className="text-foreground">carousel-{String(generatedResult.totalPosts).padStart(2, "0")}/</strong>, each with slide-01.png … slide-{String(generatedResult.slidesPerPost).padStart(2, "0")}.png
+              </p>
             </div>
 
-            {/* Slides grid — 4:5 aspect ratio (1080:1350) */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {generatedResult.slides.map((slide) => (
-                <div
-                  key={slide.index}
-                  className="relative group rounded-xl overflow-hidden shadow-md border border-border/50 bg-card"
-                  style={{ aspectRatio: "4/5" }}
-                  data-testid={`slide-card-${slide.index}`}
-                >
-                  <img
-                    src={slide.imageUrl}
-                    alt={`Slide ${slide.index}`}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent" />
-                  {/* Text */}
-                  <div className="absolute bottom-0 left-0 right-0 p-3 flex flex-col justify-end">
-                    <p
-                      className="text-white leading-snug line-clamp-4 font-semibold"
-                      style={{ fontFamily, fontSize: Math.max(9, Math.round(fontSize * 0.19)) + "px" }}
-                      data-testid={`slide-text-${slide.index}`}
-                    >
-                      {slide.text}
-                    </p>
-                  </div>
-                  {/* Slide number */}
-                  <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded text-xs font-semibold text-white" data-testid={`slide-number-${slide.index}`}>
-                    {slide.index}
-                  </div>
-                </div>
+              {generatedResult.posts.map((post) => (
+                <PostCard key={post.postIndex} post={post} font={fontFamily} fontSize={fontSize} />
               ))}
             </div>
           </div>
