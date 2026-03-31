@@ -219,7 +219,7 @@ export default function Home() {
       { data: { photos, csv: csvFile } },
       {
         onSuccess: (data) => { setResult(data); toast.success(`${data.totalSlides} slides generated — ready to download`); },
-        onError: () => toast.error("Failed to generate slides"),
+        onError: (err: any) => toast.error(err?.response?.data?.error ?? err?.message ?? "Failed to generate slides — check your files and try again"),
       }
     );
   };
