@@ -6,4 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./carouselResult";
+export * from "./carouselSlide";
+export * from "./errorResponse";
+export * from "./generateCarouselBody";
 export * from "./healthStatus";

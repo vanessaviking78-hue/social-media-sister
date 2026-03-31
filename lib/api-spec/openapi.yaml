@@ -1,6 +1,5 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
   description: API specification
@@ -10,6 +9,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: carousel
+    description: Carousel post generation
 paths:
   /healthz:
     get:
@@ -24,6 +25,74 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /carousel/generate:
+    post:
+      operationId: generateCarousel
+      tags: [carousel]
+      summary: Generate carousel posts
+      description: Upload photos and a CSV of text rows, returns up to 30 carousel posts
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photos:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Photo files to use in carousel slides
+                csv:
+                  type: string
+                  format: binary
+                  description: CSV file with text rows (one row per slide)
+              required:
+                - photos
+                - csv
+      responses:
+        "200":
+          description: Generated carousel posts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CarouselResult"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /carousel/image/{filename}:
+    get:
+      operationId: getCarouselImage
+      tags: [carousel]
+      summary: Get uploaded image
+      description: Returns a previously uploaded image by filename
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Image file
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +103,49 @@ components:
       required:
         - status
 
+    CarouselSlide:
+      type: object
+      properties:
+        index:
+          type: integer
+          description: Slide index (1-30)
+        text:
+          type: string
+          description: Text content for this slide
+        imageUrl:
+          type: string
+          description: URL path to the paired image
+        imageName:
+          type: string
+          description: Original filename of the image
+      required:
+        - index
+        - text
+        - imageUrl
+        - imageName
+
+    CarouselResult:
+      type: object
+      properties:
+        slides:
+          type: array
+          items:
+            $ref: "#/components/schemas/CarouselSlide"
+        totalSlides:
+          type: integer
+          description: Total number of slides generated
+        sessionId:
+          type: string
+          description: Session ID for referencing uploaded images
+      required:
+        - slides
+        - totalSlides
+        - sessionId
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

@@ -16,6 +16,19 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 
+## Applications
+
+### Carousel Post Generator (`artifacts/carousel-generator`)
+
+A social media content tool at the root path `/`. Upload photos + a CSV file to generate up to 30 carousel posts, preview them in-app, and download as a ZIP file.
+
+- **Frontend**: React + Vite at `artifacts/carousel-generator/src/`
+- **Backend**: Express API at `artifacts/api-server/src/routes/carousel/`
+- **Upload endpoint**: `POST /api/carousel/generate` — accepts `multipart/form-data` with `photos[]` and `csv`
+- **Image serving**: `GET /api/carousel/image/:sessionId/:filename`
+- **Dependencies**: multer (file upload), csv-parse (CSV parsing), jszip + file-saver + papaparse (frontend)
+- **Zip download**: Client-side canvas compositing (image + text overlay) → JSZip → file-saver
+
 ## Structure
 
 ```text

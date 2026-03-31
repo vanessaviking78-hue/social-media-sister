@@ -14,3 +14,39 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * Upload photos and a CSV of text rows, returns up to 30 carousel posts
+ * @summary Generate carousel posts
+ */
+export const GenerateCarouselBody = zod.object({
+  photos: zod
+    .array(zod.instanceof(File))
+    .describe("Photo files to use in carousel slides"),
+  csv: zod
+    .instanceof(File)
+    .describe("CSV file with text rows (one row per slide)"),
+});
+
+export const GenerateCarouselResponse = zod.object({
+  slides: zod.array(
+    zod.object({
+      index: zod.number().describe("Slide index (1-30)"),
+      text: zod.string().describe("Text content for this slide"),
+      imageUrl: zod.string().describe("URL path to the paired image"),
+      imageName: zod.string().describe("Original filename of the image"),
+    }),
+  ),
+  totalSlides: zod.number().describe("Total number of slides generated"),
+  sessionId: zod
+    .string()
+    .describe("Session ID for referencing uploaded images"),
+});
+
+/**
+ * Returns a previously uploaded image by filename
+ * @summary Get uploaded image
+ */
+export const GetCarouselImageParams = zod.object({
+  filename: zod.coerce.string(),
+});

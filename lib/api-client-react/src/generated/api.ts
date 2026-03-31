@@ -5,18 +5,26 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  CarouselResult,
+  ErrorResponse,
+  GenerateCarouselBody,
+  HealthStatus,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -92,6 +100,187 @@ export function useHealthCheck<
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
   const queryOptions = getHealthCheckQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Upload photos and a CSV of text rows, returns up to 30 carousel posts
+ * @summary Generate carousel posts
+ */
+export const getGenerateCarouselUrl = () => {
+  return `/api/carousel/generate`;
+};
+
+export const generateCarousel = async (
+  generateCarouselBody: GenerateCarouselBody,
+  options?: RequestInit,
+): Promise<CarouselResult> => {
+  const formData = new FormData();
+  generateCarouselBody.photos.forEach((value) =>
+    formData.append(`photos`, value),
+  );
+  formData.append(`csv`, generateCarouselBody.csv);
+
+  return customFetch<CarouselResult>(getGenerateCarouselUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getGenerateCarouselMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateCarousel>>,
+    TError,
+    { data: BodyType<GenerateCarouselBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateCarousel>>,
+  TError,
+  { data: BodyType<GenerateCarouselBody> },
+  TContext
+> => {
+  const mutationKey = ["generateCarousel"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateCarousel>>,
+    { data: BodyType<GenerateCarouselBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateCarousel(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateCarouselMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateCarousel>>
+>;
+export type GenerateCarouselMutationBody = BodyType<GenerateCarouselBody>;
+export type GenerateCarouselMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Generate carousel posts
+ */
+export const useGenerateCarousel = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateCarousel>>,
+    TError,
+    { data: BodyType<GenerateCarouselBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateCarousel>>,
+  TError,
+  { data: BodyType<GenerateCarouselBody> },
+  TContext
+> => {
+  return useMutation(getGenerateCarouselMutationOptions(options));
+};
+
+/**
+ * Returns a previously uploaded image by filename
+ * @summary Get uploaded image
+ */
+export const getGetCarouselImageUrl = (filename: string) => {
+  return `/api/carousel/image/${filename}`;
+};
+
+export const getCarouselImage = async (
+  filename: string,
+  options?: RequestInit,
+): Promise<Blob> => {
+  return customFetch<Blob>(getGetCarouselImageUrl(filename), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCarouselImageQueryKey = (filename: string) => {
+  return [`/api/carousel/image/${filename}`] as const;
+};
+
+export const getGetCarouselImageQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCarouselImage>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  filename: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCarouselImage>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCarouselImageQueryKey(filename);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCarouselImage>>
+  > = ({ signal }) => getCarouselImage(filename, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!filename,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCarouselImage>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCarouselImageQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCarouselImage>>
+>;
+export type GetCarouselImageQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get uploaded image
+ */
+
+export function useGetCarouselImage<
+  TData = Awaited<ReturnType<typeof getCarouselImage>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  filename: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCarouselImage>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCarouselImageQueryOptions(filename, options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
