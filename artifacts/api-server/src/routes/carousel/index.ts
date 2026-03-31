@@ -109,7 +109,7 @@ router.post(
 
     const photos = files.photos;
     const SLIDES_PER_CAROUSEL = 5;
-    const MAX_SLIDES = 30;
+    const MAX_SLIDES = 150; // 30 carousels × 5 slides
     const count = Math.min(MAX_SLIDES, captions.length);
 
     const slides = captions.slice(0, count).map((text, i) => {

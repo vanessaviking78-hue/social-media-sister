@@ -254,7 +254,7 @@ export default function Home() {
             <div className="lg:col-span-8 flex flex-col gap-8">
               <div>
                 <h2 className="text-2xl font-bold mb-2">Upload Assets</h2>
-                <p className="text-muted-foreground">Add photos and a CSV — every 5 rows becomes one carousel (row 1 = vivid cover, rows 2–5 = faded slides).</p>
+                <p className="text-muted-foreground">Add photos and a CSV with up to 150 rows — every 5 rows = one carousel (row 1 = vivid cover, rows 2–5 = faded slides). Up to 30 carousels per run.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -364,7 +364,7 @@ export default function Home() {
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-muted-foreground">Max carousels</span>
-                        <span className="font-medium">6</span>
+                        <span className="font-medium">30</span>
                       </div>
                     </div>
                   </div>
@@ -430,7 +430,7 @@ export default function Home() {
                 <span style={{ fontFamily }} className="text-foreground font-medium">{selectedFontLabel}</span>, {fontSize}px
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                ZIP: <strong className="text-foreground">carousel-01/slide-01.png … slide-05.png</strong>, carousel-02/ …
+                ZIP: <strong className="text-foreground">carousel-01/slide-01…05.png</strong> through <strong className="text-foreground">carousel-{String(result.totalCarousels).padStart(2, "0")}/</strong>
               </p>
             </div>
 
