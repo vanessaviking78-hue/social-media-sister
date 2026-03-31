@@ -272,7 +272,7 @@ export default function Home() {
           <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center text-primary-foreground">
             <Layers className="w-5 h-5" />
           </div>
-          <h1 className="font-sans text-xl font-bold tracking-tight">Carousel Studio</h1>
+          <h1 className="font-sans text-xl font-bold tracking-tight">Aesthetic Content Studio <span className="text-muted-foreground font-normal text-sm">by Social Media Sister</span></h1>
         </div>
         {result && (
           <div className="flex items-center gap-3">
