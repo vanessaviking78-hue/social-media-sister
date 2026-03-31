@@ -8,10 +8,14 @@
 import type { CarouselSlide } from "./carouselSlide";
 
 export interface CarouselResult {
-  /** Generated slides — one per CSV row */
+  /** Generated slides — grouped into carousel posts */
   slides: CarouselSlide[];
   /** Total number of slides generated */
   totalSlides: number;
+  /** Number of slides per carousel post */
+  slidesPerCarousel: number;
+  /** Number of carousel posts */
+  totalCarousels: number;
   /** Session ID for referencing uploaded images */
   sessionId: string;
 }

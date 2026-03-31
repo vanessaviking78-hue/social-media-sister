@@ -32,14 +32,28 @@ export const GenerateCarouselResponse = zod.object({
   slides: zod
     .array(
       zod.object({
-        slideIndex: zod.number().describe("Slide index (1-based)"),
+        slideIndex: zod
+          .number()
+          .describe("Slide index across all slides (1-based)"),
+        groupPosition: zod
+          .number()
+          .describe(
+            "Position within its carousel post (1 = cover slide, 2-5 = detail slides)",
+          ),
+        groupIndex: zod
+          .number()
+          .describe("Which carousel post this slide belongs to (1-based)"),
         text: zod.string().describe("Caption text for this slide"),
         imageUrl: zod.string().describe("URL path to the paired photo"),
         imageName: zod.string().describe("Original filename of the photo"),
       }),
     )
-    .describe("Generated slides — one per CSV row"),
+    .describe("Generated slides — grouped into carousel posts"),
   totalSlides: zod.number().describe("Total number of slides generated"),
+  slidesPerCarousel: zod
+    .number()
+    .describe("Number of slides per carousel post"),
+  totalCarousels: zod.number().describe("Number of carousel posts"),
   sessionId: zod
     .string()
     .describe("Session ID for referencing uploaded images"),

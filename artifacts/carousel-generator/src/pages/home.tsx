@@ -44,16 +44,23 @@ function drawSlide(
   img: HTMLImageElement,
   text: string,
   font: string,
-  size: number
+  size: number,
+  isCoverSlide: boolean
 ) {
   const W = CANVAS_WIDTH;
   const H = CANVAS_HEIGHT;
 
-  // Cover-fit image
+  // Black base
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, W, H);
+
+  // Cover-fit image — 50% opacity for slides 2-5
   const scale = Math.max(W / img.width, H / img.height);
   const x = (W - img.width * scale) / 2;
   const y = (H - img.height * scale) / 2;
+  ctx.globalAlpha = isCoverSlide ? 1.0 : 0.5;
   ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+  ctx.globalAlpha = 1.0;
 
   // Gradient overlay at bottom
   const barH = Math.round(H * 0.38);
@@ -182,6 +189,7 @@ export default function Home() {
       const zip = new JSZip();
 
       for (const slide of result.slides) {
+        const isCover = slide.groupPosition === 1;
         const res = await fetch(slide.imageUrl);
         const blob = await res.blob();
         const img = new Image();
@@ -195,11 +203,14 @@ export default function Home() {
         canvas.width = CANVAS_WIDTH;
         canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover);
         URL.revokeObjectURL(img.src);
 
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
-        if (outBlob) zip.file(`post-${String(slide.slideIndex).padStart(2, "0")}.png`, outBlob);
+        if (outBlob) {
+          const folder = `carousel-${String(slide.groupIndex).padStart(2, "0")}`;
+          zip.file(`${folder}/slide-${String(slide.groupPosition).padStart(2, "0")}.png`, outBlob);
+        }
       }
 
       const content = await zip.generateAsync({ type: "blob" });
@@ -243,7 +254,7 @@ export default function Home() {
             <div className="lg:col-span-8 flex flex-col gap-8">
               <div>
                 <h2 className="text-2xl font-bold mb-2">Upload Assets</h2>
-                <p className="text-muted-foreground">Add your photos and a CSV with one caption per row.</p>
+                <p className="text-muted-foreground">Add photos and a CSV — every 5 rows becomes one carousel (row 1 = vivid cover, rows 2–5 = faded slides).</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -321,7 +332,7 @@ export default function Home() {
                       </div>
                     ))}
                     <div className="px-4 py-2 bg-accent/20 text-xs text-muted-foreground">
-                      Showing first 5 rows — one row = one post image
+                      Showing first 5 rows — every 5 rows = one carousel · row 1 = full-colour cover
                     </div>
                   </div>
                 </div>
@@ -348,8 +359,12 @@ export default function Home() {
                         <span className="font-medium text-primary">1080 × 1350 px</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Max posts</span>
-                        <span className="font-medium">30</span>
+                        <span className="text-muted-foreground">Slides per carousel</span>
+                        <span className="font-medium">5</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Max carousels</span>
+                        <span className="font-medium">6</span>
                       </div>
                     </div>
                   </div>
@@ -406,47 +421,65 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          /* Results grid */
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          /* Results — grouped by carousel */
+          <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div>
-              <h2 className="text-3xl font-bold mb-2">Your Posts are Ready</h2>
+              <h2 className="text-3xl font-bold mb-2">Your Carousels are Ready</h2>
               <p className="text-muted-foreground">
-                {result.totalSlides} posts at 1080 × 1350 px —{" "}
+                {result.totalCarousels} carousels &times; {result.slidesPerCarousel} slides at 1080 × 1350 px —{" "}
                 <span style={{ fontFamily }} className="text-foreground font-medium">{selectedFontLabel}</span>, {fontSize}px
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                ZIP contains <strong className="text-foreground">post-01.png</strong> … <strong className="text-foreground">post-{String(result.totalSlides).padStart(2, "0")}.png</strong>
+                ZIP: <strong className="text-foreground">carousel-01/slide-01.png … slide-05.png</strong>, carousel-02/ …
               </p>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {result.slides.map((slide) => (
-                <div
-                  key={slide.slideIndex}
-                  className="relative rounded-xl overflow-hidden border border-border/50 shadow-md"
-                  style={{ aspectRatio: "4/5" }}
-                  data-testid={`slide-card-${slide.slideIndex}`}
-                >
-                  <img
-                    src={slide.imageUrl}
-                    alt={`Post ${slide.slideIndex}`}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent" />
-                  <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] font-bold text-white">
-                    {String(slide.slideIndex).padStart(2, "0")}
+            {Array.from({ length: result.totalCarousels }, (_, gi) => {
+              const groupSlides = result.slides.filter((s) => s.groupIndex === gi + 1);
+              return (
+                <div key={gi} className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-1 rounded-md">
+                      Carousel {String(gi + 1).padStart(2, "0")}
+                    </span>
                   </div>
-                  <div className="absolute bottom-0 left-0 right-0 px-3 pb-5">
-                    <p
-                      className="text-white font-semibold leading-snug line-clamp-4"
-                      style={{ fontFamily, fontSize: Math.max(9, Math.round(fontSize * 0.18)) + "px" }}
-                    >
-                      {slide.text}
-                    </p>
+                  <div className="grid grid-cols-5 gap-3">
+                    {groupSlides.map((slide) => {
+                      const isCover = slide.groupPosition === 1;
+                      return (
+                        <div
+                          key={slide.slideIndex}
+                          className="relative rounded-xl overflow-hidden border border-border/50 shadow-md"
+                          style={{ aspectRatio: "4/5" }}
+                          data-testid={`slide-card-${slide.slideIndex}`}
+                        >
+                          {/* Image with opacity applied in preview too */}
+                          <img
+                            src={slide.imageUrl}
+                            alt={`Carousel ${slide.groupIndex} slide ${slide.groupPosition}`}
+                            className="absolute inset-0 w-full h-full object-cover"
+                            style={{ opacity: isCover ? 1 : 0.5 }}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent" />
+                          {/* Slide position badge */}
+                          <div className={`absolute top-2 left-2 px-2 py-0.5 rounded text-[10px] font-bold text-white backdrop-blur-sm ${isCover ? "bg-primary/80" : "bg-black/60"}`}>
+                            {isCover ? "Cover" : `Slide ${slide.groupPosition}`}
+                          </div>
+                          <div className="absolute bottom-0 left-0 right-0 px-2 pb-4">
+                            <p
+                              className="text-white font-semibold leading-snug line-clamp-3"
+                              style={{ fontFamily, fontSize: Math.max(8, Math.round(fontSize * 0.16)) + "px" }}
+                            >
+                              {slide.text}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         )}
       </main>

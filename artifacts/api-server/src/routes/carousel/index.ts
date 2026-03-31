@@ -108,22 +108,35 @@ router.post(
     }
 
     const photos = files.photos;
+    const SLIDES_PER_CAROUSEL = 5;
     const MAX_SLIDES = 30;
     const count = Math.min(MAX_SLIDES, captions.length);
 
     const slides = captions.slice(0, count).map((text, i) => {
-      const photo = photos[i % photos.length];
+      const groupIndex = Math.floor(i / SLIDES_PER_CAROUSEL);
+      const groupPosition = (i % SLIDES_PER_CAROUSEL) + 1;
+      // Same photo for all slides within the same carousel
+      const photo = photos[groupIndex % photos.length];
       return {
         slideIndex: i + 1,
+        groupIndex: groupIndex + 1,
+        groupPosition,
         text,
         imageUrl: `/api/carousel/image/${sessionId}/${path.basename(photo.path)}`,
         imageName: photo.originalname,
       };
     });
 
-    req.log.info({ sessionId, count, photos: photos.length }, "Carousel generated");
+    const totalCarousels = Math.ceil(slides.length / SLIDES_PER_CAROUSEL);
+    req.log.info({ sessionId, count, totalCarousels, photos: photos.length }, "Carousel generated");
 
-    res.json({ slides, totalSlides: slides.length, sessionId });
+    res.json({
+      slides,
+      totalSlides: slides.length,
+      slidesPerCarousel: SLIDES_PER_CAROUSEL,
+      totalCarousels,
+      sessionId,
+    });
   }
 );
 

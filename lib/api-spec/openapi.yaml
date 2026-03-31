@@ -113,7 +113,13 @@ components:
       properties:
         slideIndex:
           type: integer
-          description: Slide index (1-based)
+          description: Slide index across all slides (1-based)
+        groupPosition:
+          type: integer
+          description: Position within its carousel post (1 = cover slide, 2-5 = detail slides)
+        groupIndex:
+          type: integer
+          description: Which carousel post this slide belongs to (1-based)
         text:
           type: string
           description: Caption text for this slide
@@ -125,6 +131,8 @@ components:
           description: Original filename of the photo
       required:
         - slideIndex
+        - groupPosition
+        - groupIndex
         - text
         - imageUrl
         - imageName
@@ -136,16 +144,24 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/CarouselSlide"
-          description: Generated slides — one per CSV row
+          description: Generated slides — grouped into carousel posts
         totalSlides:
           type: integer
           description: Total number of slides generated
+        slidesPerCarousel:
+          type: integer
+          description: Number of slides per carousel post
+        totalCarousels:
+          type: integer
+          description: Number of carousel posts
         sessionId:
           type: string
           description: Session ID for referencing uploaded images
       required:
         - slides
         - totalSlides
+        - slidesPerCarousel
+        - totalCarousels
         - sessionId
 
     ErrorResponse:

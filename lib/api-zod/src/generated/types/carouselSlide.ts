@@ -7,8 +7,12 @@
  */
 
 export interface CarouselSlide {
-  /** Slide index (1-based) */
+  /** Slide index across all slides (1-based) */
   slideIndex: number;
+  /** Position within its carousel post (1 = cover slide, 2-5 = detail slides) */
+  groupPosition: number;
+  /** Which carousel post this slide belongs to (1-based) */
+  groupIndex: number;
   /** Caption text for this slide */
   text: string;
   /** URL path to the paired photo */
