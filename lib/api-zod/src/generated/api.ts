@@ -16,44 +16,30 @@ export const HealthCheckResponse = zod.object({
 });
 
 /**
- * Upload photos and a CSV where each row is a carousel post with one column per slide. Returns up to 30 carousel posts.
+ * Upload photos and a CSV where each row is one post (photo + caption). Returns up to 30 posts.
  * @summary Generate carousel posts
  */
 export const GenerateCarouselBody = zod.object({
   photos: zod
     .array(zod.instanceof(File))
-    .describe("Photo files to use in carousel slides"),
+    .describe("Photo files to cycle through across slides"),
   csv: zod
     .instanceof(File)
-    .describe(
-      "CSV file — each row is one carousel post, each column is one slide",
-    ),
+    .describe("CSV file — one row per slide, first column is the caption text"),
 });
 
 export const GenerateCarouselResponse = zod.object({
-  posts: zod
+  slides: zod
     .array(
       zod.object({
-        postIndex: zod.number().describe("Post index (1-30)"),
-        slides: zod
-          .array(
-            zod.object({
-              slideIndex: zod
-                .number()
-                .describe("Slide index within the post (1-based)"),
-              text: zod.string().describe("Text content for this slide"),
-              imageUrl: zod.string().describe("URL path to the paired image"),
-              imageName: zod
-                .string()
-                .describe("Original filename of the image"),
-            }),
-          )
-          .describe("Slides within this carousel post"),
+        slideIndex: zod.number().describe("Slide index (1-based)"),
+        text: zod.string().describe("Caption text for this slide"),
+        imageUrl: zod.string().describe("URL path to the paired photo"),
+        imageName: zod.string().describe("Original filename of the photo"),
       }),
     )
-    .describe("Generated carousel posts"),
-  totalPosts: zod.number().describe("Total number of carousel posts generated"),
-  slidesPerPost: zod.number().describe("Number of slides per carousel post"),
+    .describe("Generated slides — one per CSV row"),
+  totalSlides: zod.number().describe("Total number of slides generated"),
   sessionId: zod
     .string()
     .describe("Session ID for referencing uploaded images"),

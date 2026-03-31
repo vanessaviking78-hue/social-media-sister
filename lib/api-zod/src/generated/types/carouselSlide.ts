@@ -7,12 +7,12 @@
  */
 
 export interface CarouselSlide {
-  /** Slide index within the post (1-based) */
+  /** Slide index (1-based) */
   slideIndex: number;
-  /** Text content for this slide */
+  /** Caption text for this slide */
   text: string;
-  /** URL path to the paired image */
+  /** URL path to the paired photo */
   imageUrl: string;
-  /** Original filename of the image */
+  /** Original filename of the photo */
   imageName: string;
 }

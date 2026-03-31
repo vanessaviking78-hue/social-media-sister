@@ -31,7 +31,7 @@ paths:
       operationId: generateCarousel
       tags: [carousel]
       summary: Generate carousel posts
-      description: Upload photos and a CSV where each row is a carousel post with one column per slide. Returns up to 30 carousel posts.
+      description: Upload photos and a CSV where each row is one post (photo + caption). Returns up to 30 posts.
       requestBody:
         required: true
         content:
@@ -44,17 +44,17 @@ paths:
                   items:
                     type: string
                     format: binary
-                  description: Photo files to use in carousel slides
+                  description: Photo files to cycle through across slides
                 csv:
                   type: string
                   format: binary
-                  description: CSV file — each row is one carousel post, each column is one slide
+                  description: CSV file — one row per slide, first column is the caption text
               required:
                 - photos
                 - csv
       responses:
         "200":
-          description: Generated carousel posts
+          description: Generated slide list
           content:
             application/json:
               schema:
@@ -113,58 +113,39 @@ components:
       properties:
         slideIndex:
           type: integer
-          description: Slide index within the post (1-based)
+          description: Slide index (1-based)
         text:
           type: string
-          description: Text content for this slide
+          description: Caption text for this slide
         imageUrl:
           type: string
-          description: URL path to the paired image
+          description: URL path to the paired photo
         imageName:
           type: string
-          description: Original filename of the image
+          description: Original filename of the photo
       required:
         - slideIndex
         - text
         - imageUrl
         - imageName
 
-    CarouselPost:
+    CarouselResult:
       type: object
       properties:
-        postIndex:
-          type: integer
-          description: Post index (1-30)
         slides:
           type: array
           items:
             $ref: "#/components/schemas/CarouselSlide"
-          description: Slides within this carousel post
-      required:
-        - postIndex
-        - slides
-
-    CarouselResult:
-      type: object
-      properties:
-        posts:
-          type: array
-          items:
-            $ref: "#/components/schemas/CarouselPost"
-          description: Generated carousel posts
-        totalPosts:
+          description: Generated slides — one per CSV row
+        totalSlides:
           type: integer
-          description: Total number of carousel posts generated
-        slidesPerPost:
-          type: integer
-          description: Number of slides per carousel post
+          description: Total number of slides generated
         sessionId:
           type: string
           description: Session ID for referencing uploaded images
       required:
-        - posts
-        - totalPosts
-        - slidesPerPost
+        - slides
+        - totalSlides
         - sessionId
 
     ErrorResponse:

@@ -10,30 +10,21 @@ export interface HealthStatus {
 }
 
 export interface CarouselSlide {
-  /** Slide index within the post (1-based) */
+  /** Slide index (1-based) */
   slideIndex: number;
-  /** Text content for this slide */
+  /** Caption text for this slide */
   text: string;
-  /** URL path to the paired image */
+  /** URL path to the paired photo */
   imageUrl: string;
-  /** Original filename of the image */
+  /** Original filename of the photo */
   imageName: string;
 }
 
-export interface CarouselPost {
-  /** Post index (1-30) */
-  postIndex: number;
-  /** Slides within this carousel post */
-  slides: CarouselSlide[];
-}
-
 export interface CarouselResult {
-  /** Generated carousel posts */
-  posts: CarouselPost[];
-  /** Total number of carousel posts generated */
-  totalPosts: number;
-  /** Number of slides per carousel post */
-  slidesPerPost: number;
+  /** Generated slides — one per CSV row */
+  slides: CarouselSlide[];
+  /** Total number of slides generated */
+  totalSlides: number;
   /** Session ID for referencing uploaded images */
   sessionId: string;
 }
@@ -43,8 +34,8 @@ export interface ErrorResponse {
 }
 
 export type GenerateCarouselBody = {
-  /** Photo files to use in carousel slides */
+  /** Photo files to cycle through across slides */
   photos: Blob[];
-  /** CSV file — each row is one carousel post, each column is one slide */
+  /** CSV file — one row per slide, first column is the caption text */
   csv: Blob;
 };

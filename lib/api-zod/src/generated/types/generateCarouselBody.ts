@@ -7,8 +7,8 @@
  */
 
 export type GenerateCarouselBody = {
-  /** Photo files to use in carousel slides */
+  /** Photo files to cycle through across slides */
   photos: Blob[];
-  /** CSV file — each row is one carousel post, each column is one slide */
+  /** CSV file — one row per slide, first column is the caption text */
   csv: Blob;
 };

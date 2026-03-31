@@ -109,7 +109,7 @@ export function useHealthCheck<
 }
 
 /**
- * Upload photos and a CSV where each row is a carousel post with one column per slide. Returns up to 30 carousel posts.
+ * Upload photos and a CSV where each row is one post (photo + caption). Returns up to 30 posts.
  * @summary Generate carousel posts
  */
 export const getGenerateCarouselUrl = () => {
