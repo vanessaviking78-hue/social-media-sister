@@ -42,11 +42,11 @@ const upload = multer({
 });
 
 /**
- * Parse CSV into a flat list of caption strings.
- * Each row → one caption (first non-empty column).
+ * Parse CSV where each row is one carousel post and each column is one slide.
+ * Returns string[][] — outer = carousel posts, inner = slide captions.
  * Header row is skipped automatically.
  */
-function parseCaptionRows(csvBuffer: Buffer): string[] {
+function parseCarouselRows(csvBuffer: Buffer): string[][] {
   let records: string[][] = [];
 
   try {
@@ -59,20 +59,20 @@ function parseCaptionRows(csvBuffer: Buffer): string[] {
     const text = csvBuffer.toString("utf-8");
     records = text
       .split("\n")
-      .map((line) => [line.trim().replace(/^"|"$/g, "")])
-      .filter((r) => r[0]);
+      .map((line) => line.split(",").map((c) => c.trim().replace(/^"|"$/g, "")))
+      .filter((r) => r.some((c) => c));
   }
 
   if (records.length === 0) return [];
 
-  // Skip header if first cell looks like a label (text, caption, slide, etc.)
+  // Skip header row if first cell looks like a column label (Slide1, Hook, etc.)
   const first = records[0]?.[0]?.toLowerCase() ?? "";
-  const looksLikeHeader = /^(text|caption|slide|col|column|header)\d*$/i.test(first);
+  const looksLikeHeader = /^(slide|hook|col|column|text|caption|header)\d*$/i.test(first);
   const rows = looksLikeHeader ? records.slice(1) : records;
 
   return rows
-    .map((row) => row.find((c) => c.trim()) ?? "")
-    .filter((c) => c.length > 0);
+    .map((row) => row.filter((c) => c.trim() !== ""))
+    .filter((row) => row.length > 0);
 }
 
 router.post(
@@ -100,41 +100,50 @@ router.post(
     }
 
     const csvBuffer = fs.readFileSync(files.csv[0].path);
-    const captions = parseCaptionRows(csvBuffer);
+    const carouselRows = parseCarouselRows(csvBuffer);
 
-    if (captions.length === 0) {
-      res.status(400).json({ error: "CSV file must contain at least one caption row" });
+    if (carouselRows.length === 0) {
+      res.status(400).json({ error: "CSV file must contain at least one data row" });
       return;
     }
 
     const photos = files.photos;
-    const SLIDES_PER_CAROUSEL = 5;
-    const MAX_SLIDES = 150; // 30 carousels × 5 slides
-    const count = Math.min(MAX_SLIDES, captions.length);
+    const MAX_CAROUSELS = 30;
+    const postRows = carouselRows.slice(0, MAX_CAROUSELS);
+    const slidesPerCarousel = postRows[0].length; // use first row's column count
 
-    const slides = captions.slice(0, count).map((text, i) => {
-      const groupIndex = Math.floor(i / SLIDES_PER_CAROUSEL);
-      const groupPosition = (i % SLIDES_PER_CAROUSEL) + 1;
-      // Same photo for all slides within the same carousel
-      const photo = photos[groupIndex % photos.length];
-      return {
-        slideIndex: i + 1,
-        groupIndex: groupIndex + 1,
-        groupPosition,
-        text,
-        imageUrl: `/api/carousel/image/${sessionId}/${path.basename(photo.path)}`,
-        imageName: photo.originalname,
-      };
-    });
+    const slides: Array<{
+      slideIndex: number;
+      groupIndex: number;
+      groupPosition: number;
+      text: string;
+      imageUrl: string;
+      imageName: string;
+    }> = [];
 
-    const totalCarousels = Math.ceil(slides.length / SLIDES_PER_CAROUSEL);
-    req.log.info({ sessionId, count, totalCarousels, photos: photos.length }, "Carousel generated");
+    let globalSlideIndex = 1;
+    for (let pi = 0; pi < postRows.length; pi++) {
+      const photo = photos[pi % photos.length]; // one photo per carousel row
+      const slideTexts = postRows[pi];
+      for (let si = 0; si < slideTexts.length; si++) {
+        slides.push({
+          slideIndex: globalSlideIndex++,
+          groupIndex: pi + 1,
+          groupPosition: si + 1,
+          text: slideTexts[si],
+          imageUrl: `/api/carousel/image/${sessionId}/${path.basename(photo.path)}`,
+          imageName: photo.originalname,
+        });
+      }
+    }
+
+    req.log.info({ sessionId, totalCarousels: postRows.length, slidesPerCarousel, photos: photos.length }, "Carousel generated");
 
     res.json({
       slides,
       totalSlides: slides.length,
-      slidesPerCarousel: SLIDES_PER_CAROUSEL,
-      totalCarousels,
+      slidesPerCarousel,
+      totalCarousels: postRows.length,
       sessionId,
     });
   }

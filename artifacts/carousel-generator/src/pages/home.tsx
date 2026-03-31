@@ -102,7 +102,7 @@ function drawSlide(
 export default function Home() {
   const [photos, setPhotos] = useState<File[]>([]);
   const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [csvPreview, setCsvPreview] = useState<string[]>([]);
+  const [csvPreview, setCsvPreview] = useState<{ headers: string[]; rows: string[][] }>({ headers: [], rows: [] });
   const [result, setResult] = useState<CarouselResult | null>(null);
 
   const [isDraggingPhotos, setIsDraggingPhotos] = useState(false);
@@ -138,11 +138,13 @@ export default function Home() {
       skipEmptyLines: true,
       complete: (res) => {
         const rows = res.data as string[][];
-        // Skip header if it looks like a label
+        if (rows.length === 0) return;
+        // Detect and separate header row
         const first = rows[0]?.[0]?.toLowerCase() ?? "";
-        const isHeader = /^(text|caption|slide|col|column|header)\d*$/i.test(first);
-        const data = isHeader ? rows.slice(1) : rows;
-        setCsvPreview(data.slice(0, 5).map((r) => r.find((c) => c.trim()) ?? "").filter(Boolean));
+        const isHeader = /^(slide|hook|col|column|text|caption|header)\d*$/i.test(first);
+        const headers = isHeader ? rows[0] : rows[0].map((_, i) => `Slide ${i + 1}`);
+        const dataRows = isHeader ? rows.slice(1) : rows;
+        setCsvPreview({ headers, rows: dataRows.slice(0, 3) });
       },
       error: (err: { message: string }) => toast.error("CSV parse error: " + err.message),
     });
@@ -254,7 +256,7 @@ export default function Home() {
             <div className="lg:col-span-8 flex flex-col gap-8">
               <div>
                 <h2 className="text-2xl font-bold mb-2">Upload Assets</h2>
-                <p className="text-muted-foreground">Add photos and a CSV with up to 150 rows — every 5 rows = one carousel (row 1 = vivid cover, rows 2–5 = faded slides). Up to 30 carousels per run.</p>
+                <p className="text-muted-foreground">Add your photos and a CSV — <strong className="text-foreground">one row per carousel post</strong>, one column per slide (hook, slide 2, slide 3…). Up to 30 rows = 30 carousels.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
