@@ -280,7 +280,8 @@ export default function Home() {
       setResult({ slides, totalSlides: slides.length, slidesPerCarousel, totalCarousels: postRows.length, sessionId: "local" });
       toast.success(`${slides.length} slides generated — ready to download`, { id: toastId });
     } catch (e: any) {
-      toast.error(e?.message ?? "Failed to generate slides", { id: toastId });
+      console.error("Generate error:", e);
+      toast.error("Error: " + (e?.message ?? "Unknown error"), { id: toastId, duration: 15000 });
     } finally {
       setIsGenerating(false);
     }
@@ -335,6 +336,7 @@ export default function Home() {
             <Layers className="w-5 h-5" />
           </div>
           <h1 className="font-sans text-xl font-bold tracking-tight">Social Media Sister</h1>
+          <span className="text-[10px] text-muted-foreground/40 ml-2">v3</span>
         </div>
         {result && (
           <div className="flex items-center gap-3">
