@@ -179,7 +179,7 @@ export default function Home() {
   const handleStartOver = () => {
     setPhotos([]);
     setCsvFile(null);
-    setCsvPreview([]);
+    setCsvPreview({ headers: [], rows: [] });
     setResult(null);
   };
 
@@ -323,18 +323,36 @@ export default function Home() {
               )}
 
               {/* CSV preview */}
-              {csvPreview.length > 0 && (
+              {csvPreview.rows.length > 0 && (
                 <div className="space-y-3">
                   <h3 className="font-semibold">CSV Preview</h3>
-                  <div className="rounded-md border border-border/50 overflow-hidden text-sm divide-y divide-border/30">
-                    {csvPreview.map((caption, i) => (
-                      <div key={i} className="flex items-start gap-3 px-4 py-3 bg-card hover:bg-accent/30 transition-colors">
-                        <span className="text-primary font-mono text-xs pt-0.5 shrink-0">{String(i + 1).padStart(2, "0")}</span>
-                        <p className="text-muted-foreground truncate">{caption}</p>
-                      </div>
-                    ))}
-                    <div className="px-4 py-2 bg-accent/20 text-xs text-muted-foreground">
-                      Showing first 5 rows — every 5 rows = one carousel · row 1 = full-colour cover
+                  <div className="rounded-md border border-border/50 overflow-hidden text-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-accent/60">
+                          <tr>
+                            <th className="text-left px-3 py-2 text-xs font-semibold text-muted-foreground w-8">#</th>
+                            {csvPreview.headers.map((h, i) => (
+                              <th key={i} className={`text-left px-3 py-2 text-xs font-semibold whitespace-nowrap ${i === 0 ? "text-primary" : "text-muted-foreground"}`}>
+                                {i === 0 ? `🪝 ${h}` : h}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {csvPreview.rows.map((row, ri) => (
+                            <tr key={ri} className="border-t border-border/30 hover:bg-accent/20 transition-colors">
+                              <td className="px-3 py-2 text-primary font-mono text-xs">{String(ri + 1).padStart(2, "0")}</td>
+                              {row.map((cell, ci) => (
+                                <td key={ci} className="px-3 py-2 text-muted-foreground max-w-[160px] truncate">{cell}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="px-3 py-2 bg-accent/20 text-xs text-muted-foreground border-t border-border/30">
+                      Showing first 3 rows — each row = one carousel · column 1 = vivid cover · columns 2–5 = faded slides
                     </div>
                   </div>
                 </div>
