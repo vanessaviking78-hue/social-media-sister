@@ -31,7 +31,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (file.fieldname === "photos" && !file.mimetype.startsWith("image/")) {
       cb(new Error("Only image files are allowed for photos"));
@@ -82,7 +82,7 @@ router.post(
     next();
   },
   upload.fields([
-    { name: "photos", maxCount: 50 },
+    { name: "photos", maxCount: 100 },
     { name: "csv", maxCount: 1 },
   ]),
   async (req, res): Promise<void> => {
