@@ -57,12 +57,13 @@ function drawSlide(
   overlayColor: string = "rgba(0,0,0,0.5)",
   logoImg: HTMLImageElement | null = null,
   logoPosition: string = "top-right",
-  logoSize: number = 140
+  logoSize: number = 140,
+  pageColor: string = "#000000"
 ) {
   const W = CANVAS_WIDTH;
   const H = CANVAS_HEIGHT;
 
-  ctx.fillStyle = "#000000";
+  ctx.fillStyle = pageColor;
   ctx.fillRect(0, 0, W, H);
 
   const scale = Math.max(W / img.width, H / img.height);
@@ -159,6 +160,7 @@ export default function Home() {
   const [textColor, setTextColor] = useState("#ffffff");
   const [lineSpacing, setLineSpacing] = useState(0.9);
   const [overlayColor, setOverlayColor] = useState("rgba(0,0,0,0.5)");
+  const [pageColor, setPageColor] = useState("#000000");
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
@@ -307,7 +309,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor);
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -606,6 +608,17 @@ export default function Home() {
                   <span className="text-xs font-semibold tabular-nums">{lineSpacing.toFixed(2)}</span>
                 </div>
                 <Slider min={0.7} max={2} step={0.05} value={[lineSpacing]} onValueChange={([v]) => setLineSpacing(v)} className="w-full" />
+              </div>
+
+              {/* Page Colour (background behind semi-transparent photos) */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <Palette className="w-3 h-3" /> Page Colour
+                </Label>
+                <div className="flex gap-2">
+                  <Input type="color" value={pageColor} onChange={(e) => setPageColor(e.target.value)} className="w-10 h-8 p-0.5 cursor-pointer" />
+                  <Input type="text" value={pageColor} onChange={(e) => setPageColor(e.target.value)} className="flex-1 h-8 text-xs font-mono" placeholder="#000000" />
+                </div>
               </div>
 
               {/* Overlay Colour */}
