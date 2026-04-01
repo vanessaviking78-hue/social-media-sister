@@ -616,7 +616,12 @@ export default function Home() {
                 <div className="flex gap-2">
                   <Input
                     type="color"
-                    value={overlayColor.startsWith("#") ? overlayColor : "#000000"}
+                    value={(() => {
+                      if (overlayColor.startsWith("#")) return overlayColor;
+                      const m = overlayColor.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+                      if (m) return "#" + [m[1], m[2], m[3]].map((v) => Number(v).toString(16).padStart(2, "0")).join("");
+                      return "#000000";
+                    })()}
                     onChange={(e) => {
                       const hex = e.target.value;
                       const a = overlayColor.includes(",") ? overlayColor.match(/[\d.]+\)$/)?.[0]?.slice(0, -1) || "0.5" : "0.5";
