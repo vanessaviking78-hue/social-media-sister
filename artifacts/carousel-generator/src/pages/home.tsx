@@ -338,7 +338,7 @@ export default function Home() {
             <Layers className="w-5 h-5" />
           </div>
           <h1 className="font-sans text-xl font-bold tracking-tight">Social Media Sister</h1>
-          <span className="text-[10px] text-muted-foreground/40 ml-2">v3</span>
+          <span className="text-[10px] text-muted-foreground/40 ml-2">v4</span>
         </div>
         {result && (
           <div className="flex items-center gap-3">
