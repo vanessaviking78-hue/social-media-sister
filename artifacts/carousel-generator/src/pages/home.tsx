@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import VanessaChat from "@/components/vanessa-chat";
 
 const CANVAS_WIDTH = 1080;
 const CANVAS_HEIGHT = 1350;
@@ -1144,6 +1145,7 @@ export default function Home() {
           </div>
         </div>
       </div>
+      <VanessaChat />
     </div>
   );
 }
