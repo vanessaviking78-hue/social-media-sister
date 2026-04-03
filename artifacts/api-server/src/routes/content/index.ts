@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { openai, toFile } from "@workspace/integrations-openai-ai-server";
+import { openai } from "@workspace/integrations-openai-ai-server";
 
 const router: IRouter = Router();
 
@@ -311,6 +311,7 @@ router.post("/content/clinician-recreate", async (req, res) => {
     let clientClosed = false;
     req.on("close", () => { clientClosed = true; });
 
+    let clinicianDescription = "";
     let clinicDescription = "a modern, clean aesthetic clinic with neutral tones, professional medical equipment, and tasteful decor";
 
     const detectMime = (b64: string) => {
@@ -322,6 +323,35 @@ router.post("/content/clinician-recreate", async (req, res) => {
     };
 
     const clinicianMime = detectMime(clinicianBase64);
+
+    res.write(`data: ${JSON.stringify({ type: "progress", current: 0, total: 10, label: "Analysing your photo..." })}\n\n`);
+
+    try {
+      const clinicianVision = await openai.chat.completions.create({
+        model: "gpt-5.2",
+        max_completion_tokens: 500,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "You are an expert at describing people for photorealistic AI image recreation. Describe this person in EXHAUSTIVE detail so an AI image generator can recreate them identically. Include ALL of the following:\n\n1. FACE: exact face shape (oval/round/square/heart/oblong), forehead size, cheekbone prominence, jaw shape, chin shape\n2. SKIN: exact skin tone (use specific shade descriptions), any freckles/moles/blemishes and their locations, skin texture\n3. EYES: shape, size, colour (be very specific), spacing, eyebrow shape/thickness/colour/arch\n4. NOSE: shape, size, bridge width, nostril shape\n5. MOUTH: lip shape, thickness of upper vs lower lip, lip colour\n6. HAIR: exact colour (include highlights/roots if visible), length, texture (straight/wavy/curly), style, parting\n7. BUILD: body type, shoulder width, approximate height impression\n8. CLOTHING: describe exactly what they're wearing including colours, fit, style\n9. DISTINGUISHING FEATURES: glasses, jewellery, tattoos, dimples, smile lines, anything unique\n\nBe extremely precise. Use 5-6 detailed sentences." },
+              { type: "image_url", image_url: { url: `data:${clinicianMime};base64,${clinicianBase64}` } },
+            ],
+          },
+        ],
+      });
+      clinicianDescription = clinicianVision.choices[0]?.message?.content?.trim() || "";
+      console.log("Clinician description:", clinicianDescription);
+    } catch (vErr: any) {
+      console.error("Clinician vision error:", vErr?.message || vErr);
+    }
+
+    if (!clinicianDescription) {
+      res.write(`data: ${JSON.stringify({ type: "error", message: "Could not analyse your photo. Please try a clear, well-lit image." })}\n\n`);
+      res.write(`data: ${JSON.stringify({ type: "complete", count: 0 })}\n\n`);
+      res.end();
+      return;
+    }
 
     if (clinicBase64) {
       try {
@@ -342,29 +372,26 @@ router.post("/content/clinician-recreate", async (req, res) => {
         const desc = clinicVision.choices[0]?.message?.content?.trim();
         if (desc) clinicDescription = desc;
         console.log("Clinic description:", clinicDescription);
-      } catch (vErr) {
-        console.error("Clinic vision error:", vErr);
+      } catch (vErr: any) {
+        console.error("Clinic vision error:", vErr?.message || vErr);
       }
     }
 
-    const clinicSetting = `Place them in their clinic setting: ${clinicDescription}.`;
+    const identityPrefix = `CRITICAL IDENTITY REQUIREMENT: The person in this image MUST match this exact description - do not deviate from any detail: ${clinicianDescription}`;
+    const clinicSetting = `Setting: ${clinicDescription}`;
 
     const prompts = [
-      { name: "gloves", label: "Pulling on Gloves", prompt: `Recreate this exact person with identical facial features, same face, same identity. ${clinicSetting} Camera setting: medium shot, eye-level, camera 1.5m in front, 35mm full-frame look, f/2.8 with sharp focus on hands and face and gentle falloff to background, soft directional window light from camera-left with subtle bounce fill, neutral clinic palette, clean composition. The clinician is pulling on medical gloves mid-motion, fingers aligned and slightly flexed as latex stretches, subtle tension in wrists, realistic sheen catching light, uniform folds natural, grounded stance, visible pores and skin texture, crisp clinical environment. No distorted fingers, no extra digits, no plastic skin, no warped tools. No text or words in the image.` },
-      { name: "arms-folded", label: "Arms Folded", prompt: `Recreate this exact person with identical facial features, same face, same identity. ${clinicSetting} Camera setting: medium-full body, eye-level, camera 2m away, 35mm, f/2.8, diffused overhead lighting, symmetrical composition. Clinician with arms folded, posture upright but relaxed, elbows natural with fabric compression, calm confident expression, clean environment softly blurred, realistic skin and fabric texture. No stiff pose, no flat lighting, no warped furniture. No text or words in the image.` },
-      { name: "editorial", label: "Editorial Pose", prompt: `Recreate this exact person with identical facial features, same face, same identity. ${clinicSetting} Camera setting: 3/4 portrait, slight low angle, 35mm, f/2.8, strong directional contrast lighting, muted palette. Editorial-style clinician pose, asymmetrical stance, direct gaze, strong light shaping face and uniform, background receding into shadow, tactile realism in skin and fabric. No over-stylized HDR, no crushed blacks, no distorted limbs. No text or words in the image.` },
-      { name: "lipstick", label: "Mirror Lipstick", prompt: `Recreate this exact person with identical facial features, same face, same identity. ${clinicSetting} Camera setting: close-up mirror shot, 45 degree angle, 35mm, f/2.8, soft directional light. Clinician applying lipstick in mirror, reflection sharp, hand holding product precisely, lips mid-application with natural edge detail, subtle gloss, clean mirror with faint imperfections, realistic skin texture. No mismatched reflection, no warped hands, no artificial shine. No text or words in the image.` },
-      { name: "moisturizing", label: "Moisturizing", prompt: `Recreate this exact person with identical facial features, same face, same identity. ${clinicSetting} Camera setting: extreme close-up, 0.5m distance, 35mm, f/2.8 shallow DOF, soft frontal light. Clinician moisturizing face, fingertips pressing lightly creating skin compression, cream texture visible with soft sheen, pores and fine texture clear, background blurred. No waxy skin, no blurred fingers, no overexposure. No text or words in the image.` },
-      { name: "facial", label: "Performing Facial", prompt: `Recreate this exact person with identical facial features, same face, same identity. ${clinicSetting} Camera setting: tight close-up, slight top-down, 35mm, f/2.8, soft diffused lighting. Clinician performing facial on patient, hands placed gently with correct alignment and pressure, subtle skin displacement, product sheen visible, patient reclined with towel textures clear. No extra fingers, no glossy plastic skin, no warped features. No text or words in the image.` },
-      { name: "proud", label: "Proud Pose", prompt: `Recreate this exact person with identical facial features, same face, same identity. ${clinicSetting} Camera setting: medium shot, eye-level, 1.8m away, 35mm, f/2.8, soft balanced lighting with slight backlight. Clinician arms folded, proud expression, shoulders squared, uniform creases natural, subtle rim light separation, clean clinic background. No stiff posture, no over-retouching, no distortion. No text or words in the image.` },
-      { name: "hands-hips", label: "Hands on Hips", prompt: `Recreate this exact person with identical facial features, same face, same identity. ${clinicSetting} Camera setting: medium-full portrait, slight low angle, 35mm, f/2.8, directional soft light. Clinician hands on hips, confident stance, elbows angled naturally, fingers resting correctly, slight hip shift, clean minimal clinic setting, realistic textures. No exaggerated pose, no warped arms, no plastic skin. No text or words in the image.` },
-      { name: "consultation", label: "Consultation", prompt: `Recreate this exact person with identical facial features, same face, same identity. ${clinicSetting} Camera setting: medium shot, eye-level, 35mm, f/2.8, soft balanced clinic lighting. Clinician mid-consultation speaking to client, natural hand gesture, relaxed fingers, slight forward lean, realistic interaction, clean environment, detailed textures. No frozen expressions, no awkward gestures, no extra limbs. No text or words in the image.` },
-      { name: "linkedin", label: "LinkedIn Portrait", prompt: `Recreate this exact person with identical facial features, same face, same identity. ${clinicSetting} Camera setting: head-and-shoulders portrait, eye-level, 1m away, 35mm, f/2.8, soft key light with fill. Clinician smiling LinkedIn-style portrait, relaxed posture, natural expression, subtle skin texture, softly blurred background, clean lighting without over-smoothing. No beauty filter, no artificial blur, no exaggerated smile. No text or words in the image.` },
+      { name: "gloves", label: "Pulling on Gloves", prompt: `${identityPrefix}. ${clinicSetting}. Camera setting: medium shot, eye-level, camera 1.5m in front, 35mm full-frame look, f/2.8 with sharp focus on hands and face and gentle falloff to background, soft directional window light from camera-left with subtle bounce fill, neutral clinic palette, clean composition. The clinician is pulling on medical gloves mid-motion, fingers aligned and slightly flexed as latex stretches, subtle tension in wrists, realistic sheen catching light, uniform folds natural, grounded stance, visible pores and skin texture, crisp clinical environment. No distorted fingers, no extra digits, no plastic skin, no warped tools. No text or words in the image.` },
+      { name: "arms-folded", label: "Arms Folded", prompt: `${identityPrefix}. ${clinicSetting}. Camera setting: medium-full body, eye-level, camera 2m away, 35mm, f/2.8, diffused overhead lighting, symmetrical composition. Clinician with arms folded, posture upright but relaxed, elbows natural with fabric compression, calm confident expression, clean environment softly blurred, realistic skin and fabric texture. No stiff pose, no flat lighting, no warped furniture. No text or words in the image.` },
+      { name: "editorial", label: "Editorial Pose", prompt: `${identityPrefix}. ${clinicSetting}. Camera setting: 3/4 portrait, slight low angle, 35mm, f/2.8, strong directional contrast lighting, muted palette. Editorial-style clinician pose, asymmetrical stance, direct gaze, strong light shaping face and uniform, background receding into shadow, tactile realism in skin and fabric. No over-stylized HDR, no crushed blacks, no distorted limbs. No text or words in the image.` },
+      { name: "lipstick", label: "Mirror Lipstick", prompt: `${identityPrefix}. ${clinicSetting}. Camera setting: close-up mirror shot, 45 degree angle, 35mm, f/2.8, soft directional light. Clinician applying lipstick in mirror, reflection sharp, hand holding product precisely, lips mid-application with natural edge detail, subtle gloss, clean mirror with faint imperfections, realistic skin texture. No mismatched reflection, no warped hands, no artificial shine. No text or words in the image.` },
+      { name: "moisturizing", label: "Moisturizing", prompt: `${identityPrefix}. ${clinicSetting}. Camera setting: extreme close-up, 0.5m distance, 35mm, f/2.8 shallow DOF, soft frontal light. Clinician moisturizing face, fingertips pressing lightly creating skin compression, cream texture visible with soft sheen, pores and fine texture clear, background blurred. No waxy skin, no blurred fingers, no overexposure. No text or words in the image.` },
+      { name: "facial", label: "Performing Facial", prompt: `${identityPrefix}. ${clinicSetting}. Camera setting: tight close-up, slight top-down, 35mm, f/2.8, soft diffused lighting. Clinician performing facial on patient, hands placed gently with correct alignment and pressure, subtle skin displacement, product sheen visible, patient reclined with towel textures clear. No extra fingers, no glossy plastic skin, no warped features. No text or words in the image.` },
+      { name: "proud", label: "Proud Pose", prompt: `${identityPrefix}. ${clinicSetting}. Camera setting: medium shot, eye-level, 1.8m away, 35mm, f/2.8, soft balanced lighting with slight backlight. Clinician arms folded, proud expression, shoulders squared, uniform creases natural, subtle rim light separation, clean clinic background. No stiff posture, no over-retouching, no distortion. No text or words in the image.` },
+      { name: "hands-hips", label: "Hands on Hips", prompt: `${identityPrefix}. ${clinicSetting}. Camera setting: medium-full portrait, slight low angle, 35mm, f/2.8, directional soft light. Clinician hands on hips, confident stance, elbows angled naturally, fingers resting correctly, slight hip shift, clean minimal clinic setting, realistic textures. No exaggerated pose, no warped arms, no plastic skin. No text or words in the image.` },
+      { name: "consultation", label: "Consultation", prompt: `${identityPrefix}. ${clinicSetting}. Camera setting: medium shot, eye-level, 35mm, f/2.8, soft balanced clinic lighting. Clinician mid-consultation speaking to client, natural hand gesture, relaxed fingers, slight forward lean, realistic interaction, clean environment, detailed textures. No frozen expressions, no awkward gestures, no extra limbs. No text or words in the image.` },
+      { name: "linkedin", label: "LinkedIn Portrait", prompt: `${identityPrefix}. ${clinicSetting}. Camera setting: head-and-shoulders portrait, eye-level, 1m away, 35mm, f/2.8, soft key light with fill. Clinician smiling LinkedIn-style portrait, relaxed posture, natural expression, subtle skin texture, softly blurred background, clean lighting without over-smoothing. No beauty filter, no artificial blur, no exaggerated smile. No text or words in the image.` },
     ];
-
-    const imageBuffer = Buffer.from(clinicianBase64, "base64");
-    const ext = clinicianMime === "image/png" ? "png" : clinicianMime === "image/webp" ? "webp" : "jpg";
-    const imageFile = await toFile(imageBuffer, `clinician.${ext}`, { type: clinicianMime });
 
     let completedCount = 0;
 
@@ -374,9 +401,8 @@ router.post("/content/clinician-recreate", async (req, res) => {
       res.write(`data: ${JSON.stringify({ type: "progress", current: i + 1, total: prompts.length, label: p.label })}\n\n`);
 
       try {
-        const response = await openai.images.edit({
+        const response = await openai.images.generate({
           model: "gpt-image-1",
-          image: imageFile,
           prompt: p.prompt,
           n: 1,
           size: "1024x1024",
