@@ -274,37 +274,56 @@ IMPORTANT: Output ONLY a valid JSON array with no markdown formatting, no code f
   }
 });
 
-router.post("/content/generate-image", async (req, res) => {
+router.post("/content/clinician-recreate", async (req, res) => {
   try {
-    const { prompt } = req.body;
-    if (!prompt) {
-      res.status(400).json({ error: "Prompt required" });
+    const { imageBase64 } = req.body;
+    if (!imageBase64) {
+      res.status(400).json({ error: "Image required" });
       return;
     }
 
-    const response = await openai.images.generate({
-      model: "gpt-image-1",
-      prompt: `${prompt}. No text, words, letters, or typography in the image.`,
-      n: 1,
-      size: "1024x1024",
-    });
+    const styles = [
+      { name: "classic", prompt: "Classic professional portrait headshot, studio lighting, neutral background, formal pose" },
+      { name: "bailey", prompt: "David Bailey style portrait, dramatic lighting, high contrast black and white, elegant and timeless" },
+      { name: "closeup", prompt: "Intimate close-up portrait, soft focus background, natural lighting, professional makeup" },
+      { name: "patient", prompt: "Professional healthcare setting, clinician talking to patient, warm and approachable, medical environment" },
+      { name: "editorial", prompt: "Editorial style fashion portrait, dynamic pose, artistic lighting, magazine quality" },
+    ];
 
-    const imageData = response.data?.[0];
-    if (!imageData) {
-      res.status(500).json({ error: "No image generated" });
+    const results = await Promise.all(
+      styles.map(async (style) => {
+        try {
+          const response = await openai.images.generate({
+            model: "gpt-image-1",
+            prompt: `${style.prompt}. No text, words, letters, or typography in the image. Same person, same outfit, identical facial features.`,
+            n: 1,
+            size: "1024x1024",
+          });
+
+          const imageData = response.data?.[0];
+          if (imageData?.b64_json) {
+            return { style: style.name, image: `data:image/png;base64,${imageData.b64_json}` };
+          } else if (imageData?.url) {
+            return { style: style.name, image: imageData.url };
+          }
+          return null;
+        } catch (err) {
+          console.error(`Error generating ${style.name} style:`, err);
+          return null;
+        }
+      })
+    );
+
+    const validResults = results.filter(r => r !== null);
+    if (validResults.length === 0) {
+      res.status(500).json({ error: "Failed to generate portrait styles" });
       return;
     }
 
-    if (imageData.b64_json) {
-      res.json({ image: `data:image/png;base64,${imageData.b64_json}` });
-    } else if (imageData.url) {
-      res.json({ image: imageData.url });
-    } else {
-      res.status(500).json({ error: "Unexpected response format" });
-    }
+    res.json({ portraits: validResults });
   } catch (err: any) {
-    console.error("Image generation error:", err);
-    res.status(500).json({ error: err.message || "Image generation failed" });
+    console.error("Clinician recreate error:", err);
+    res.status(500).json({ error: err.message || "Recreation failed" });
   }
 });
 

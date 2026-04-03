@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, ChevronUp, ChevronDown, Sparkles, Wand2, Copy, Check, MessageSquareText, ImagePlus, Trash2 } from "lucide-react";
+import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, ChevronUp, ChevronDown, Sparkles, Wand2, Copy, Check, MessageSquareText, ImagePlus, Trash2, Plus } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -415,12 +415,9 @@ export default function Home() {
 
   const [allCsvRows, setAllCsvRows] = useState<string[][]>([]);
 
-  const [aiImages, setAiImages] = useState<Array<{ prompt: string; label: string; url: string | null; generating: boolean }>>([]);
-  const [imagePromptsLoading, setImagePromptsLoading] = useState(false);
-  const [batchGenerating, setBatchGenerating] = useState(false);
-  const [imageStyle, setImageStyle] = useState("clean, modern, professional");
-  const [imageCount, setImageCount] = useState(6);
-  const [customImagePrompt, setCustomImagePrompt] = useState("");
+  const [clinicianPhoto, setClinicianPhoto] = useState<File | null>(null);
+  const [clinicianPortraits, setClinicianPortraits] = useState<Array<{ style: string; image: string }>>([]);
+  const [clinicianRecreating, setClinicianRecreating] = useState(false);
 
   const [captions, setCaptions] = useState<string[]>([]);
   const [captionGenerating, setCaptionGenerating] = useState(false);
@@ -748,85 +745,42 @@ export default function Home() {
     }
   };
 
-  const generateImagePrompts = async () => {
-    setImagePromptsLoading(true);
-    try {
-      const resp = await fetch(`${import.meta.env.BASE_URL}api/content/image-prompts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          industry: aiIndustry || "aesthetics",
-          topics: aiTopics,
-          count: imageCount,
-          style: imageStyle,
-        }),
-      });
-      if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        throw new Error(errData.error || `Server error ${resp.status}`);
-      }
-      const data = await resp.json();
-      if (data.prompts) {
-        setAiImages(data.prompts.map((p: any) => ({ prompt: p.prompt, label: p.label, url: null, generating: false })));
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to generate image prompts");
-    } finally {
-      setImagePromptsLoading(false);
+  const recreatePortraits = async () => {
+    if (!clinicianPhoto) {
+      toast.error("Please select a photo first");
+      return;
     }
-  };
-
-  const generateSingleImage = async (index: number) => {
-    setAiImages(prev => {
-      if (prev[index]?.generating || prev[index]?.url) return prev;
-      return prev.map((im, i) => i === index ? { ...im, generating: true } : im);
-    });
+    setClinicianRecreating(true);
     try {
-      const currentImg = aiImages[index];
-      if (!currentImg || currentImg.url) return;
-      const resp = await fetch(`${import.meta.env.BASE_URL}api/content/generate-image`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: currentImg.prompt }),
-      });
-      if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        throw new Error(errData.error || `Server error ${resp.status}`);
-      }
-      const data = await resp.json();
-      if (data.image) {
-        setAiImages(prev => prev.map((im, i) => i === index ? { ...im, url: data.image, generating: false } : im));
-      } else {
-        throw new Error("No image returned");
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Image generation failed");
-      setAiImages(prev => prev.map((im, i) => i === index ? { ...im, generating: false } : im));
-    }
-  };
-
-  const generateAllImages = async () => {
-    if (batchGenerating) return;
-    setBatchGenerating(true);
-    try {
-      for (let i = 0; i < aiImages.length; i++) {
-        if (!aiImages[i].url) {
-          await generateSingleImage(i);
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = (e.target?.result as string).split(",")[1];
+        const resp = await fetch(`${import.meta.env.BASE_URL}api/content/clinician-recreate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageBase64: base64 }),
+        });
+        if (!resp.ok) {
+          const errData = await resp.json().catch(() => ({}));
+          throw new Error(errData.error || `Server error ${resp.status}`);
         }
-      }
+        const data = await resp.json();
+        if (data.portraits) {
+          setClinicianPortraits(data.portraits);
+          toast.success("Portraits created successfully!");
+        } else {
+          throw new Error("No portraits generated");
+        }
+      };
+      reader.readAsDataURL(clinicianPhoto);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to recreate portraits");
     } finally {
-      setBatchGenerating(false);
+      setClinicianRecreating(false);
     }
   };
 
-  const addCustomImagePrompt = () => {
-    if (!customImagePrompt.trim()) return;
-    const newEntry = { prompt: customImagePrompt.trim(), label: "Custom", url: null as string | null, generating: false };
-    setAiImages(prev => [...prev, newEntry]);
-    setCustomImagePrompt("");
-  };
-
-  const useAiImageAsPhoto = async (url: string) => {
+  const addPortraitAsPhoto = async (url: string) => {
     try {
       let blob: Blob;
       if (url.startsWith("data:")) {
@@ -840,11 +794,11 @@ export default function Home() {
         const resp = await fetch(url);
         blob = await resp.blob();
       }
-      const file = new File([blob], `ai-image-${Date.now()}.png`, { type: "image/png" });
+      const file = new File([blob], `portrait-${Date.now()}.png`, { type: "image/png" });
       setPhotos(prev => [...prev, file]);
-      toast.success("Image added to your photos");
+      toast.success("Portrait added to carousel");
     } catch {
-      toast.error("Failed to add image");
+      toast.error("Failed to add portrait");
     }
   };
 
@@ -954,22 +908,22 @@ export default function Home() {
             <div className="flex rounded-xl overflow-hidden border border-border/30">
               <button
                 onClick={() => setContentMode("csv")}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${contentMode === "csv" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-accent text-muted-foreground"}`}
+                className={`flex-1 flex items-center justify-center gap-3 py-6 text-lg font-semibold rounded-xl transition-colors ${contentMode === "csv" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-accent text-muted-foreground"}`}
               >
-                <FileText className="w-4 h-4" />
+                <FileText className="w-6 h-6" />
                 Upload CSV
               </button>
               <button
                 onClick={() => setContentMode("ai")}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${contentMode === "ai" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-accent text-muted-foreground"}`}
+                className={`flex-1 flex items-center justify-center gap-3 py-6 text-lg font-semibold rounded-xl transition-colors ${contentMode === "ai" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-accent text-muted-foreground"}`}
               >
-                <Sparkles className="w-4 h-4" />
+                <Sparkles className="w-6 h-6" />
                 Content Machine
               </button>
             </div>
 
             {/* Drop zones */}
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-6">
               {/* Photos */}
               <div
                 data-testid="drop-zone-photos"
@@ -984,117 +938,109 @@ export default function Home() {
                   <ImageIcon className="w-5 h-5" />
                 </div>
                 <div>
-                  <p className="font-semibold text-sm">Photos</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <p className="font-semibold text-lg">Photos</p>
+                  <p className="text-base text-muted-foreground mt-1">
                     {photos.length > 0 ? `${photos.length} selected — click to add more` : "Drag & drop or click to upload"}
                   </p>
                 </div>
               </div>
 
-              {/* AI Image Generator */}
-              <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ImagePlus className="w-5 h-5 text-primary" />
-                    <h3 className="font-semibold text-base">AI Image Generator</h3>
-                  </div>
-                  {aiImages.length > 0 && aiImages.some(im => !im.url) && (
-                    <Button size="sm" onClick={generateAllImages} disabled={batchGenerating} className="text-xs">
-                      {batchGenerating ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Generating...</> : <><Sparkles className="w-3 h-3 mr-1" />Generate All</>}
-                    </Button>
-                  )}
+              {/* ClinicianRecreate - Portrait Recreation */}
+              <div className="rounded-2xl border border-border/30 bg-card/50 p-8 space-y-6">
+                <div className="flex items-center gap-3">
+                  <Sparkles className="w-7 h-7 text-primary" />
+                  <h3 className="font-semibold text-2xl">ClinicianRecreate</h3>
                 </div>
+                <p className="text-lg text-muted-foreground">Upload a portrait and recreate it in 5 professional styles</p>
 
-                {aiImages.length === 0 ? (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Style</Label>
-                        <Select value={imageStyle} onValueChange={setImageStyle}>
-                          <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="clean, modern, professional">Clean & Modern</SelectItem>
-                            <SelectItem value="warm, cosy, inviting, soft lighting">Warm & Cosy</SelectItem>
-                            <SelectItem value="luxury, elegant, gold accents, marble">Luxury & Elegant</SelectItem>
-                            <SelectItem value="clinical, medical, sterile, bright">Clinical & Medical</SelectItem>
-                            <SelectItem value="natural, organic, earthy tones, botanical">Natural & Organic</SelectItem>
-                            <SelectItem value="bold, vibrant, colourful, energetic">Bold & Vibrant</SelectItem>
-                            <SelectItem value="minimalist, white space, simple">Minimalist</SelectItem>
-                            <SelectItem value="dark moody, dramatic lighting, shadows">Dark & Moody</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">How Many</Label>
-                        <Select value={String(imageCount)} onValueChange={(v) => setImageCount(Number(v))}>
-                          <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {[4, 6, 8, 10, 12, 15, 20].map(n => (
-                              <SelectItem key={n} value={String(n)}>{n} images</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                {clinicianPortraits.length === 0 ? (
+                  <div className="space-y-5">
+                    {/* Upload clinician photo */}
+                    <div
+                      className={`border-3 border-dashed rounded-2xl p-12 text-center cursor-pointer transition ${
+                        clinicianPhoto ? "border-primary/50 bg-primary/5" : "border-border/50 hover:border-primary/50"
+                      }`}
+                      onClick={() => {
+                        const input = document.createElement("input");
+                        input.type = "file";
+                        input.accept = "image/*";
+                        input.onchange = (e) => {
+                          const file = (e.target as HTMLInputElement).files?.[0];
+                          if (file) setClinicianPhoto(file);
+                        };
+                        input.click();
+                      }}
+                    >
+                      <ImageIcon className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                      <p className="font-semibold text-lg mb-1">
+                        {clinicianPhoto ? clinicianPhoto.name : "Select a portrait photo"}
+                      </p>
+                      <p className="text-muted-foreground text-base">Click to upload or drag & drop</p>
                     </div>
-                    <Button onClick={generateImagePrompts} disabled={imagePromptsLoading} className="w-full">
-                      {imagePromptsLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating prompts...</> : <><Sparkles className="w-4 h-4 mr-2" />Generate Image Ideas</>}
+
+                    <Button
+                      onClick={recreatePortraits}
+                      disabled={!clinicianPhoto || clinicianRecreating}
+                      className="w-full py-7 text-lg font-semibold"
+                      size="lg"
+                    >
+                      {clinicianRecreating ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+                          Creating 5 styles...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-5 h-5 mr-3" />
+                          ClinicianRecreate
+                        </>
+                      )}
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {aiImages.map((img, i) => (
-                        <div key={i} className="rounded-xl border border-border/20 bg-accent/10 overflow-hidden">
-                          {img.url ? (
-                            <div className="relative aspect-square">
-                              <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
-                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
-                                <p className="text-[10px] text-white font-medium truncate">{img.label}</p>
-                              </div>
-                              <button
-                                onClick={() => useAiImageAsPhoto(img.url!)}
-                                className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-lg px-2 py-1 text-[10px] font-semibold hover:opacity-90"
-                              >
-                                Use
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="aspect-square flex flex-col items-center justify-center gap-2 p-3">
-                              {img.generating ? (
-                                <>
-                                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                                  <p className="text-[10px] text-muted-foreground">Generating...</p>
-                                </>
-                              ) : (
-                                <>
-                                  <p className="text-xs text-muted-foreground text-center line-clamp-3">{img.label}</p>
-                                  <Button size="sm" variant="outline" onClick={() => generateSingleImage(i)} disabled={batchGenerating} className="text-[10px] h-7">
-                                    <Sparkles className="w-3 h-3 mr-1" />Generate
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          )}
+                  <div className="space-y-6">
+                    <p className="text-lg font-medium">Your 5 Portrait Styles:</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {clinicianPortraits.map((portrait, i) => (
+                        <div key={i} className="rounded-xl border border-border/30 overflow-hidden bg-accent/5">
+                          <img src={portrait.image} alt={portrait.style} className="w-full aspect-square object-cover" />
+                          <div className="p-4 space-y-3">
+                            <p className="font-semibold text-lg capitalize">
+                              {portrait.style === "bailey"
+                                ? "David Bailey Style"
+                                : portrait.style === "closeup"
+                                ? "Close-up"
+                                : portrait.style === "patient"
+                                ? "Patient Consultation"
+                                : portrait.style === "editorial"
+                                ? "Editorial"
+                                : "Classic Portrait"}
+                            </p>
+                            <Button
+                              onClick={() => addPortraitAsPhoto(portrait.image)}
+                              className="w-full py-6 text-base font-semibold"
+                              size="lg"
+                            >
+                              <Plus className="w-5 h-5 mr-2" />
+                              Add to Carousel
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
 
-                    <div className="flex gap-2">
-                      <Input
-                        value={customImagePrompt}
-                        onChange={(e) => setCustomImagePrompt(e.target.value)}
-                        placeholder="Add custom image prompt..."
-                        className="flex-1 h-9 text-sm"
-                        onKeyDown={(e) => e.key === "Enter" && addCustomImagePrompt()}
-                      />
-                      <Button size="sm" variant="outline" onClick={addCustomImagePrompt} disabled={!customImagePrompt.trim()}>
-                        <ImagePlus className="w-4 h-4" />
-                      </Button>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => { setAiImages([]); }} className="text-xs">
-                        <RefreshCcw className="w-3 h-3 mr-1" />Start Over
+                    <div className="flex gap-3 pt-4">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setClinicianPortraits([]);
+                          setClinicianPhoto(null);
+                        }}
+                        className="flex-1 py-6 text-base font-semibold"
+                        size="lg"
+                      >
+                        <RefreshCcw className="w-5 h-5 mr-2" />
+                        Try Another Photo
                       </Button>
                     </div>
                   </div>
