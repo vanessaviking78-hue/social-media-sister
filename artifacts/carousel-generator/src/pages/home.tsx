@@ -88,7 +88,9 @@ function drawSlide(
   gradientColor: string = "#000000",
   gradientEnabled: boolean = true,
   gradientStyle: string = "solid",
-  gradientPosition: string = "left"
+  gradientPosition: string = "left",
+  slidePosition: number = 1,
+  totalSlidesInGroup: number = 5
 ) {
   const W = CANVAS_WIDTH;
   const H = CANVAS_HEIGHT;
@@ -284,13 +286,16 @@ function drawSlide(
     }
   }
 
-  const textAreaW = isHoriz ? gw - 60 : W - 80;
+  const isLastSlide = slidePosition === totalSlidesInGroup;
+  const ctaSize = isLastSlide ? Math.round(size * 1.4) : size;
+  const textAreaW = isLastSlide ? W - 120 : (isHoriz ? gw - 60 : W - 80);
+
   ctx.fillStyle = textColor;
-  ctx.font = `600 ${size}px ${font}`;
+  ctx.font = `${isLastSlide ? 700 : 600} ${ctaSize}px ${font}`;
   ctx.textBaseline = "top";
 
   const maxW = textAreaW;
-  const lineH = Math.round(size * lineSpacing);
+  const lineH = Math.round(ctaSize * lineSpacing);
   const words = text.split(" ");
   const lines: string[] = [];
   let cur = "";
@@ -304,7 +309,11 @@ function drawSlide(
   const totalH = lines.length * lineH;
   let startX = 40, startY = Math.round(H - totalH - 60);
 
-  if (gradientPosition === "left") { startX = 40; ctx.textAlign = "left"; }
+  if (isLastSlide) {
+    startX = Math.round(W / 2);
+    startY = Math.round((H - totalH) / 2);
+    ctx.textAlign = "center";
+  } else if (gradientPosition === "left") { startX = 40; ctx.textAlign = "left"; }
   else if (gradientPosition === "right") { startX = W - 40; ctx.textAlign = "right"; startY = Math.round(H - totalH - 60); }
   else if (gradientPosition === "center") { startX = Math.round(W / 2); ctx.textAlign = "center"; }
   else if (gradientPosition === "top") { startX = 40; startY = 40; ctx.textAlign = "left"; }
@@ -712,7 +721,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, gradientColor, gradientEnabled, gradientStyle, gradientPosition);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, gradientColor, gradientEnabled, gradientStyle, gradientPosition, slide.groupPosition, result.slidesPerCarousel);
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
