@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, ChevronUp, ChevronDown, Sparkles, Wand2 } from "lucide-react";
+import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, ChevronUp, ChevronDown, Sparkles, Wand2, Copy, Check, MessageSquareText } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -401,6 +401,12 @@ export default function Home() {
   const [aiProgress, setAiProgress] = useState("");
   const [aiGeneratedPosts, setAiGeneratedPosts] = useState<string[][] | null>(null);
 
+  const [allCsvRows, setAllCsvRows] = useState<string[][]>([]);
+  const [captions, setCaptions] = useState<string[]>([]);
+  const [captionGenerating, setCaptionGenerating] = useState(false);
+  const [captionProgress, setCaptionProgress] = useState("");
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
   const photoInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -444,6 +450,7 @@ export default function Home() {
         const headers = isHeader ? rows[0] : rows[0].map((_, i) => `Slide ${i + 1}`);
         const dataRows = isHeader ? rows.slice(1) : rows;
         setCsvPreview({ headers, rows: dataRows.slice(0, 3) });
+        setAllCsvRows(dataRows);
       },
       error: (err: { message: string }) => toast.error("CSV parse error: " + err.message),
     });
@@ -686,7 +693,7 @@ export default function Home() {
 
   const handleStartOver = () => {
     setPhotos([]); setCsvFile(null);
-    setCsvPreview({ headers: [], rows: [] }); setResult(null);
+    setCsvPreview({ headers: [], rows: [] }); setAllCsvRows([]); setCaptions([]); setResult(null);
     setAiGeneratedPosts(null); setAiProgress("");
   };
 
@@ -719,6 +726,68 @@ export default function Home() {
       console.error(e);
       toast.error("Failed to create ZIP", { id });
     }
+  };
+
+  const generateCaptions = async () => {
+    const posts = aiGeneratedPosts || (allCsvRows.length > 0 ? allCsvRows : null);
+    if (!posts || posts.length === 0) return;
+    setCaptionGenerating(true);
+    setCaptionProgress("Starting caption generation...");
+    setCaptions([]);
+    try {
+      const resp = await fetch(`${import.meta.env.BASE_URL}api/content/captions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          posts,
+          clientName: aiClientName,
+          industry: aiIndustry || "aesthetics",
+          tone: aiTone,
+          extraInstructions: aiExtraInstructions,
+        }),
+      });
+      const reader = resp.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.type === "progress") {
+              setCaptionProgress(`Generating captions... ${data.generated}/${data.total}`);
+            } else if (data.type === "complete") {
+              setCaptions(data.captions || []);
+              setCaptionProgress("");
+            } else if (data.type === "error") {
+              setCaptionProgress(data.message || "Error generating captions");
+            }
+          } catch {}
+        }
+      }
+    } catch (err: any) {
+      setCaptionProgress("Failed to generate captions");
+    } finally {
+      setCaptionGenerating(false);
+    }
+  };
+
+  const copyCaption = (text: string, index: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
+  const copyAllCaptions = () => {
+    const all = captions.map((c, i) => `--- Carousel ${i + 1} ---\n${c}`).join("\n\n");
+    navigator.clipboard.writeText(all);
+    setCopiedIndex(-1);
+    setTimeout(() => setCopiedIndex(null), 2000);
   };
 
   const selectedFontLabel = FONT_OPTIONS.find((f) => f.value === fontFamily)?.label ?? "Inter";
@@ -1112,6 +1181,72 @@ export default function Home() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* ——— Captions Section ——— */}
+        {result && (
+          <div className="max-w-5xl mx-auto px-6 md:px-10 py-10 space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <MessageSquareText className="w-6 h-6 text-primary" />
+                <h2 className="font-serif text-3xl font-semibold tracking-tight">Post Captions</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                {captions.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={copyAllCaptions}>
+                    {copiedIndex === -1 ? <><Check className="w-4 h-4 mr-2" />Copied!</> : <><Copy className="w-4 h-4 mr-2" />Copy All</>}
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  onClick={generateCaptions}
+                  disabled={captionGenerating}
+                  className="bg-primary text-primary-foreground"
+                >
+                  {captionGenerating ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{captionProgress || "Generating..."}</>
+                  ) : captions.length > 0 ? (
+                    <><RefreshCcw className="w-4 h-4 mr-2" />Regenerate Captions</>
+                  ) : (
+                    <><Sparkles className="w-4 h-4 mr-2" />Generate Captions</>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {captions.length === 0 && !captionGenerating && (
+              <div className="rounded-xl border border-dashed border-border/40 bg-accent/10 p-8 text-center">
+                <MessageSquareText className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-muted-foreground text-sm">
+                  Generate ready-to-post captions for each carousel, complete with hashtags and calls to action.
+                </p>
+              </div>
+            )}
+
+            {captions.length > 0 && (
+              <div className="space-y-4">
+                {captions.map((caption, i) => (
+                  <div key={i} className="rounded-xl border border-border/30 bg-accent/20 overflow-hidden group">
+                    <div className="px-4 py-2.5 bg-accent/30 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-primary font-mono text-sm font-bold">{String(i + 1).padStart(2, "0")}</span>
+                        <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Carousel {i + 1} Caption</span>
+                      </div>
+                      <button
+                        onClick={() => copyCaption(caption, i)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                      >
+                        {copiedIndex === i ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <div className="p-4">
+                      <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{caption}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </main>

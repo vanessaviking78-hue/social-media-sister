@@ -154,6 +154,105 @@ IMPORTANT: Output ONLY a valid JSON array with no markdown formatting, no code f
   }
 });
 
+router.post("/content/captions", async (req, res) => {
+  try {
+    const { posts, clientName, industry, tone, extraInstructions } = req.body;
+    if (!posts || !Array.isArray(posts) || posts.length === 0) {
+      res.status(400).json({ error: "Posts array required" });
+      return;
+    }
+
+    const count = posts.length;
+
+    const systemPrompt = `${VANESSA_SYSTEM}
+
+You are now generating Instagram/social media captions for carousel posts. Write in a ${tone || "warm & professional"} tone of voice.${clientName ? ` You are creating content for "${clientName}".` : ""} The industry is: ${industry || "aesthetics"}.
+
+You will receive the slide text for each carousel post. Write a caption for each one that:
+- Opens with a strong first line (this shows as the preview before "...more") - make it curiosity-driven or benefit-led
+- Is 80-150 words long - enough to add value but not so long people scroll past
+- Includes a clear call to action (save this, share with a friend, book a consultation, drop a comment)
+- Uses 3-5 relevant hashtags at the end
+- Feels conversational and authentic, not corporate
+- Is MHRA/ASA compliant - no medical claims, no guaranteed results, no pressure tactics
+- Includes 1-2 relevant emojis naturally woven in (not emoji spam)
+- NEVER use em dashes or en dashes, use hyphens or commas instead
+${extraInstructions ? `\nAdditional instructions: ${extraInstructions}` : ""}
+
+IMPORTANT: Output ONLY a valid JSON array with no markdown formatting, no code fences, no extra text. Each element should be a string containing the full caption. Return exactly ${count} captions.`;
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    const batchSize = 15;
+    const batches = Math.ceil(count / batchSize);
+    let allCaptions: string[] = [];
+
+    for (let b = 0; b < batches; b++) {
+      const batchStart = b * batchSize;
+      const batchPosts = posts.slice(batchStart, batchStart + batchSize);
+
+      res.write(
+        `data: ${JSON.stringify({ type: "progress", generated: allCaptions.length, total: count })}\n\n`
+      );
+
+      const postsDescription = batchPosts
+        .map((p: string[], i: number) => `Post ${batchStart + i + 1}: Slides: ${p.map((s, si) => `[Slide ${si + 1}] ${s}`).join(" | ")}`)
+        .join("\n");
+
+      const stream = await openai.chat.completions.create({
+        model: "gpt-5.2",
+        max_completion_tokens: 8192,
+        messages: [
+          { role: "system", content: systemPrompt },
+          {
+            role: "user",
+            content: `Write captions for these ${batchPosts.length} carousel posts:\n\n${postsDescription}\n\nReturn ONLY a JSON array of ${batchPosts.length} caption strings.`,
+          },
+        ],
+        stream: true,
+      });
+
+      let fullResponse = "";
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content;
+        if (content) fullResponse += content;
+      }
+
+      try {
+        let cleaned = fullResponse.trim();
+        const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+        if (jsonMatch) cleaned = jsonMatch[0];
+        const parsed = JSON.parse(cleaned);
+        if (Array.isArray(parsed)) {
+          allCaptions = allCaptions.concat(parsed.map((c: any) => String(c)));
+        }
+      } catch (parseErr) {
+        console.error("Failed to parse caption batch:", parseErr);
+        res.write(
+          `data: ${JSON.stringify({ type: "error", message: "Failed to parse caption batch" })}\n\n`
+        );
+      }
+    }
+
+    res.write(
+      `data: ${JSON.stringify({ type: "complete", captions: allCaptions })}\n\n`
+    );
+    res.end();
+  } catch (err: any) {
+    console.error("Caption generation error:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message || "Caption generation failed" });
+    } else {
+      res.write(
+        `data: ${JSON.stringify({ type: "error", message: err.message || "Caption generation failed" })}\n\n`
+      );
+      res.end();
+    }
+  }
+});
+
 router.post("/content/chat", async (req, res) => {
   try {
     const { messages } = req.body;
