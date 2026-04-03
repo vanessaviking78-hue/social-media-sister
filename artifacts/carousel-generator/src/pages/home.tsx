@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, ChevronUp, ChevronDown } from "lucide-react";
+import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, ChevronUp, ChevronDown, Sparkles, Wand2 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -233,6 +233,17 @@ export default function Home() {
   const [barExpanded, setBarExpanded] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
+  const [contentMode, setContentMode] = useState<"csv" | "ai">("csv");
+  const [aiClientName, setAiClientName] = useState("");
+  const [aiIndustry, setAiIndustry] = useState("");
+  const [aiTone, setAiTone] = useState("warm & professional");
+  const [aiTopics, setAiTopics] = useState("");
+  const [aiPostCount, setAiPostCount] = useState(30);
+  const [aiExtraInstructions, setAiExtraInstructions] = useState("");
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiProgress, setAiProgress] = useState("");
+  const [aiGeneratedPosts, setAiGeneratedPosts] = useState<string[][] | null>(null);
+
   const photoInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -351,9 +362,110 @@ export default function Home() {
     }
   };
 
+  const handleAiGenerate = async () => {
+    if (!aiIndustry.trim()) { toast.error("Please enter an industry"); return; }
+    if (!aiTopics.trim()) { toast.error("Please enter at least one topic"); return; }
+    setAiGenerating(true);
+    setAiProgress("Starting content generation...");
+    setAiGeneratedPosts(null);
+    const toastId = toast.loading("AI is writing your content...");
+
+    try {
+      const resp = await fetch(`/api/content/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientName: aiClientName,
+          industry: aiIndustry,
+          tone: aiTone,
+          topics: aiTopics,
+          postCount: aiPostCount,
+          slidesPerPost: 5,
+          extraInstructions: aiExtraInstructions,
+        }),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: "Server error" }));
+        throw new Error(err.error || "Generation failed");
+      }
+
+      const reader = resp.body?.getReader();
+      if (!reader) throw new Error("No response stream");
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const evt = JSON.parse(line.slice(6));
+            if (evt.type === "progress") {
+              setAiProgress(`Generated ${evt.generated} of ${evt.total} posts...`);
+            } else if (evt.type === "complete") {
+              setAiGeneratedPosts(evt.posts);
+              setAiProgress("");
+              toast.success(`${evt.postCount} carousel posts generated!`, { id: toastId });
+            } else if (evt.type === "error") {
+              toast.error(evt.message);
+            }
+          } catch {}
+        }
+      }
+    } catch (e: any) {
+      toast.error("Error: " + (e?.message ?? "Unknown error"), { id: toastId });
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
+  const handleGenerateFromAi = async () => {
+    if (!photos.length) { toast.error("Please upload at least one photo"); return; }
+    if (!aiGeneratedPosts?.length) { toast.error("Please generate content first"); return; }
+
+    setIsGenerating(true);
+    const toastId = toast.loading("Building slides...");
+
+    try {
+      const postRows = aiGeneratedPosts.slice(0, 60);
+      const slidesPerCarousel = postRows[0].length;
+      const photoUrls = photos.map((f) => URL.createObjectURL(f));
+
+      const slides: CarouselSlide[] = [];
+      let idx = 1;
+      for (let pi = 0; pi < postRows.length; pi++) {
+        const photoUrl = photoUrls[pi % photoUrls.length];
+        for (let si = 0; si < postRows[pi].length; si++) {
+          slides.push({
+            slideIndex: idx++,
+            groupIndex: pi + 1,
+            groupPosition: si + 1,
+            text: postRows[pi][si],
+            imageUrl: photoUrl,
+            imageName: photos[pi % photos.length].name,
+          });
+        }
+      }
+
+      setResult({ slides, totalSlides: slides.length, slidesPerCarousel, totalCarousels: postRows.length, sessionId: "local" });
+      toast.success(`${slides.length} slides generated — ready to download`, { id: toastId });
+    } catch (e: any) {
+      toast.error("Error: " + (e?.message ?? "Unknown error"), { id: toastId });
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleStartOver = () => {
     setPhotos([]); setCsvFile(null);
     setCsvPreview({ headers: [], rows: [] }); setResult(null);
+    setAiGeneratedPosts(null); setAiProgress("");
   };
 
   const downloadZip = async () => {
@@ -400,7 +512,7 @@ export default function Home() {
             <Layers className="w-5 h-5" />
           </div>
           <h1 className="font-sans text-xl font-bold tracking-tight">Social Media Sister</h1>
-          <span className="text-[10px] text-muted-foreground/40 ml-2">v4</span>
+          <span className="text-[10px] text-muted-foreground/40 ml-2">v5</span>
         </div>
         {result && (
           <div className="flex items-center gap-3">
@@ -421,13 +533,31 @@ export default function Home() {
           <div className="flex flex-col gap-10">
             {/* Heading */}
             <div>
-              <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Upload Assets</h2>
+              <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Create Content</h2>
               <p className="text-muted-foreground text-base leading-relaxed">
-                Add your photos and a CSV — <strong className="text-foreground font-medium">one row per carousel</strong>, one column per slide. Up to 60 rows = 60 carousels.
+                Upload photos, then choose how to create your slide text.
               </p>
             </div>
 
-            {/* Drop zones — stacked, tall, full-width */}
+            {/* Mode toggle */}
+            <div className="flex rounded-xl overflow-hidden border border-border/30">
+              <button
+                onClick={() => setContentMode("csv")}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${contentMode === "csv" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-accent text-muted-foreground"}`}
+              >
+                <FileText className="w-4 h-4" />
+                Upload CSV
+              </button>
+              <button
+                onClick={() => setContentMode("ai")}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium transition-colors ${contentMode === "ai" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-accent text-muted-foreground"}`}
+              >
+                <Sparkles className="w-4 h-4" />
+                Content Machine
+              </button>
+            </div>
+
+            {/* Drop zones */}
             <div className="flex flex-col gap-4">
               {/* Photos */}
               <div
@@ -450,26 +580,142 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* CSV */}
-              <div
-                data-testid="drop-zone-csv"
-                className={`drop-zone-idle rounded-2xl min-h-[168px] flex flex-col items-center justify-center text-center cursor-pointer gap-3 px-8 ${isDraggingCsv ? "drop-zone-dragging" : ""}`}
-                onDragOver={(e) => { e.preventDefault(); setIsDraggingCsv(true); }}
-                onDragLeave={() => setIsDraggingCsv(false)}
-                onDrop={handleCsvDrop}
-                onClick={() => csvInputRef.current?.click()}
-              >
-                <input ref={csvInputRef} type="file" className="hidden" accept=".csv,text/csv" onChange={handleCsvChange} data-testid="input-csv" />
-                <div className="w-11 h-11 rounded-full bg-accent flex items-center justify-center text-primary">
-                  <FileText className="w-5 h-5" />
+              {/* CSV — only in csv mode */}
+              {contentMode === "csv" && (
+                <div
+                  data-testid="drop-zone-csv"
+                  className={`drop-zone-idle rounded-2xl min-h-[168px] flex flex-col items-center justify-center text-center cursor-pointer gap-3 px-8 ${isDraggingCsv ? "drop-zone-dragging" : ""}`}
+                  onDragOver={(e) => { e.preventDefault(); setIsDraggingCsv(true); }}
+                  onDragLeave={() => setIsDraggingCsv(false)}
+                  onDrop={handleCsvDrop}
+                  onClick={() => csvInputRef.current?.click()}
+                >
+                  <input ref={csvInputRef} type="file" className="hidden" accept=".csv,text/csv" onChange={handleCsvChange} data-testid="input-csv" />
+                  <div className="w-11 h-11 rounded-full bg-accent flex items-center justify-center text-primary">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">CSV File</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[260px]">
+                      {csvFile ? csvFile.name : "Drag & drop or click to upload"}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-semibold text-sm">CSV File</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[260px]">
-                    {csvFile ? csvFile.name : "Drag & drop or click to upload"}
-                  </p>
+              )}
+
+              {/* AI Content Machine brief — only in ai mode */}
+              {contentMode === "ai" && (
+                <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-5">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Wand2 className="w-5 h-5 text-primary" />
+                    <h3 className="font-semibold text-base">Content Brief</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Client / Brand Name</Label>
+                      <Input value={aiClientName} onChange={(e) => setAiClientName(e.target.value)} placeholder="e.g. Glow Aesthetics" className="h-9 text-sm" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Industry *</Label>
+                      <Input value={aiIndustry} onChange={(e) => setAiIndustry(e.target.value)} placeholder="e.g. Aesthetics clinic, Dental practice, Fitness" className="h-9 text-sm" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Tone of Voice</Label>
+                    <Select value={aiTone} onValueChange={setAiTone}>
+                      <SelectTrigger className="h-9 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="warm & professional">Warm & Professional</SelectItem>
+                        <SelectItem value="bold & edgy">Bold & Edgy</SelectItem>
+                        <SelectItem value="luxury & aspirational">Luxury & Aspirational</SelectItem>
+                        <SelectItem value="friendly & casual">Friendly & Casual</SelectItem>
+                        <SelectItem value="clinical & authoritative">Clinical & Authoritative</SelectItem>
+                        <SelectItem value="playful & fun">Playful & Fun</SelectItem>
+                        <SelectItem value="empathetic & caring">Empathetic & Caring</SelectItem>
+                        <SelectItem value="minimalist & clean">Minimalist & Clean</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Topics to Cover *</Label>
+                    <textarea
+                      value={aiTopics}
+                      onChange={(e) => setAiTopics(e.target.value)}
+                      placeholder="e.g. Botox benefits, skin care tips, client testimonials, treatment aftercare, seasonal offers"
+                      className="w-full min-h-[80px] rounded-lg border border-border bg-background px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Number of Posts</Label>
+                      <div className="flex items-center gap-3">
+                        <Slider min={5} max={60} step={5} value={[aiPostCount]} onValueChange={([v]) => setAiPostCount(v)} className="flex-1" />
+                        <span className="text-sm font-semibold tabular-nums w-8 text-right">{aiPostCount}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Extra Instructions</Label>
+                      <Input value={aiExtraInstructions} onChange={(e) => setAiExtraInstructions(e.target.value)} placeholder="e.g. Always mention our clinic name" className="h-9 text-sm" />
+                    </div>
+                  </div>
+
+                  <button
+                    className="btn-shimmer w-full h-11 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleAiGenerate}
+                    disabled={aiGenerating}
+                  >
+                    {aiGenerating ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" />{aiProgress || "Generating..."}</>
+                    ) : (
+                      <><Sparkles className="w-4 h-4" />Generate {aiPostCount} Posts with AI</>
+                    )}
+                  </button>
+
+                  {aiGeneratedPosts && (
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium text-sm text-green-400">Content Ready</h4>
+                        <Badge variant="secondary" className="bg-green-500/10 text-green-400 text-xs">{aiGeneratedPosts.length} posts</Badge>
+                      </div>
+                      <div className="rounded-xl overflow-hidden text-sm bg-accent/30 max-h-[300px] overflow-y-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr>
+                              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-8">#</th>
+                              {Array.from({ length: aiGeneratedPosts[0]?.length || 5 }, (_, i) => (
+                                <th key={i} className={`text-left px-4 py-3 text-xs font-semibold whitespace-nowrap ${i === 0 ? "text-primary" : "text-muted-foreground"}`}>
+                                  {i === 0 ? "Hook" : `Slide ${i + 1}`}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {aiGeneratedPosts.slice(0, 5).map((row, ri) => (
+                              <tr key={ri} className="hover:bg-accent/40 transition-colors">
+                                <td className="px-4 py-3 text-primary font-mono text-xs">{String(ri + 1).padStart(2, "0")}</td>
+                                {row.map((cell, ci) => (
+                                  <td key={ci} className="px-4 py-3 text-muted-foreground max-w-[180px] truncate text-xs">{cell}</td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        {aiGeneratedPosts.length > 5 && (
+                          <div className="px-4 py-2.5 text-xs text-muted-foreground/70 italic">
+                            Showing first 5 of {aiGeneratedPosts.length} posts
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
 
               {/* Logo */}
               <div
@@ -810,7 +1056,7 @@ export default function Home() {
             {!result ? (
               <button
                 className="btn-shimmer h-10 px-6 rounded-full text-sm font-semibold flex items-center gap-2 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={handleGenerate}
+                onClick={contentMode === "ai" ? handleGenerateFromAi : handleGenerate}
                 disabled={isGenerating}
                 data-testid="button-generate"
               >

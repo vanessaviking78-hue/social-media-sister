@@ -20,14 +20,14 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ### Carousel Post Generator (`artifacts/carousel-generator`)
 
-A social media content tool at the root path `/`. Upload photos + a CSV file to generate up to 30 carousel posts, preview them in-app, and download as a ZIP file.
+A social media content tool at the root path `/`. Two modes: (1) Upload photos + CSV to generate up to 60 carousel posts, or (2) "Content Machine" — fill in a brief and AI generates all slide text automatically. Preview in-app and download as ZIP.
 
 - **Frontend**: React + Vite at `artifacts/carousel-generator/src/`
-- **Backend**: Express API at `artifacts/api-server/src/routes/carousel/`
-- **Upload endpoint**: `POST /api/carousel/generate` — accepts `multipart/form-data` with `photos[]` and `csv`
-- **Image serving**: `GET /api/carousel/image/:sessionId/:filename`
-- **Dependencies**: multer (file upload), csv-parse (CSV parsing), jszip + file-saver + papaparse (frontend)
+- **Backend**: Express API at `artifacts/api-server/src/routes/carousel/` and `artifacts/api-server/src/routes/content/`
+- **AI Content Generation**: `POST /api/content/generate` — SSE endpoint using OpenAI (via Replit AI Integrations) to generate carousel text from a brief (industry, tone, topics, post count)
+- **Dependencies**: multer, csv-parse, jszip + file-saver + papaparse (frontend), @workspace/integrations-openai-ai-server (AI)
 - **Zip download**: Client-side canvas compositing (image + text overlay) → JSZip → file-saver
+- **Branding**: Corner accents (triangle, arc, double-line, frame), page color, overlay color, 25 Google Fonts
 
 ## Structure
 
