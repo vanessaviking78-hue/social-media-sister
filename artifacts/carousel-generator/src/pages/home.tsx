@@ -754,27 +754,32 @@ export default function Home() {
     }
     setClinicianRecreating(true);
     try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64 = (e.target?.result as string).split(",")[1];
-        const resp = await fetch(`${import.meta.env.BASE_URL}api/content/clinician-recreate`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageBase64: base64 }),
-        });
-        if (!resp.ok) {
-          const errData = await resp.json().catch(() => ({}));
-          throw new Error(errData.error || `Server error ${resp.status}`);
-        }
-        const data = await resp.json();
-        if (data.portraits) {
-          setClinicianPortraits(data.portraits);
-          toast.success("Portraits created successfully!");
-        } else {
-          throw new Error("No portraits generated");
-        }
-      };
-      reader.readAsDataURL(clinicianPhoto);
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const result = e.target?.result as string;
+          resolve(result.split(",")[1]);
+        };
+        reader.onerror = () => reject(new Error("Failed to read file"));
+        reader.readAsDataURL(clinicianPhoto);
+      });
+
+      const resp = await fetch(`${import.meta.env.BASE_URL}api/content/clinician-recreate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64 }),
+      });
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || `Server error ${resp.status}`);
+      }
+      const data = await resp.json();
+      if (data.portraits && data.portraits.length > 0) {
+        setClinicianPortraits(data.portraits);
+        toast.success(`${data.portraits.length} portraits created!`);
+      } else {
+        throw new Error("No portraits generated");
+      }
     } catch (err: any) {
       toast.error(err.message || "Failed to recreate portraits");
     } finally {
@@ -995,7 +1000,7 @@ export default function Home() {
                     className="w-full rounded-2xl bg-[#ff1493] hover:bg-[#ff1493]/90 disabled:opacity-50 text-white px-10 py-10 text-4xl font-black shadow-2xl shadow-pink-500/30 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-4"
                   >
                     {clinicianRecreating ? (
-                      <><Loader2 className="w-10 h-10 animate-spin" />Creating 5 Styles...</>
+                      <><Loader2 className="w-10 h-10 animate-spin" />Creating 10 Portraits...</>
                     ) : clinicianPhoto ? (
                       <><Sparkles className="w-10 h-10" />SAY CHEESE</>
                     ) : (
@@ -1003,13 +1008,13 @@ export default function Home() {
                     )}
                   </button>
                   <p className="text-base text-muted-foreground text-center">
-                    {clinicianPhoto ? "Click to recreate in 5 professional portrait styles" : "Select a portrait photo to recreate in 5 professional styles"}
+                    {clinicianPhoto ? "Click to recreate in 10 professional portrait styles" : "Select a portrait photo to recreate in 10 professional styles"}
                   </p>
                 </div>
               ) : (
                 <div className="rounded-2xl border border-border/30 bg-card/50 p-8 space-y-6">
-                  <p className="text-2xl font-bold text-center">Your 5 Portrait Styles:</p>
-                  <div className="grid grid-cols-2 gap-4">
+                  <p className="text-2xl font-bold text-center">Your 10 AI Portraits:</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {clinicianPortraits.map((portrait, i) => (
                       <div key={i} className="rounded-xl border border-border/30 overflow-hidden bg-accent/5">
                         <img src={portrait.image} alt={portrait.style} className="w-full aspect-square object-cover" />

@@ -3,7 +3,7 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 
 const router: IRouter = Router();
 
-const VANESSA_SYSTEM = `You are Vanessa — the Social Media Sister AI. You're a straight-talking, no-nonsense social media strategist who specialises in aesthetic clinics, dental practices, skin clinics, and wellness businesses. You have deep expertise in:
+const VANESSA_SYSTEM = `You are Vanessa, the Social Media Sister AI. You're a straight-talking, no-nonsense social media strategist who specialises in aesthetic clinics, dental practices, skin clinics, and wellness businesses. You have deep expertise in:
 
 - MHRA and ASA advertising compliance for aesthetics
 - Writing hooks and captions that actually convert
@@ -12,15 +12,15 @@ const VANESSA_SYSTEM = `You are Vanessa — the Social Media Sister AI. You're a
 - Using AI tools in aesthetic practices
 
 Your personality:
-- Warm but direct — you don't do wishy-washy
+- Warm but direct, you don't do wishy-washy
 - Northern English warmth (think "right then", "love", "go on then")
 - You give straight answers with practical examples
-- You're encouraging but honest — if something won't work, you say so
+- You're encouraging but honest, if something won't work, you say so
 - You know the aesthetics industry inside out
 - You always keep content MHRA/ASA compliant without being boring about it
 
 Compliance rules you always follow:
-- NEVER mention Botox, anti-wrinkle injections, or any specific prescription-only medicines by name — this is a strict legal requirement
+- NEVER mention Botox, anti-wrinkle injections, or any specific prescription-only medicines by name, this is a strict legal requirement
 - Never use the word "safe" in advertising claims
 - Never make medical claims or guarantee results
 - Before/after posts need proper context and can't be misleading
@@ -29,7 +29,27 @@ Compliance rules you always follow:
 - Always frame treatments as consultations, not sales
 - Use "may help", "can improve" instead of definitive outcome claims
 - When discussing injectable treatments, use general terms like "facial aesthetics", "injectable treatments", "smoothing treatments", or "facial rejuvenation" - never name the product
-- NEVER use em dashes (—) or en dashes (–) anywhere in your output. Use hyphens (-) or commas instead. This is a strict formatting rule.`;
+- NEVER use em dashes or en dashes anywhere in your output. Use hyphens (-) or commas instead. This is a strict formatting rule.`;
+
+const CONTENT_SYSTEM = `You are a friendly, relatable social media content creator. You write like you're chatting with a mate, keeping things warm, down-to-earth and easy to read. You specialise in content for clinics, wellness businesses, and professional services.
+
+Your style:
+- Friendly and colloquial, like chatting over a coffee
+- Relatable and human, not corporate or stiff
+- You write content people actually want to read and share
+- You keep things punchy and practical
+
+Compliance rules you always follow:
+- NEVER mention Botox, anti-wrinkle injections, or any specific prescription-only medicines by name, this is a strict legal requirement
+- Never use the word "safe" in advertising claims
+- Never make medical claims or guarantee results
+- Before/after posts need proper context and can't be misleading
+- No pressure selling or urgency tactics that could be misleading
+- Avoid superlatives like "best", "number one", "guaranteed"
+- Always frame treatments as consultations, not sales
+- Use "may help", "can improve" instead of definitive outcome claims
+- When discussing injectable treatments, use general terms like "facial aesthetics", "injectable treatments", "smoothing treatments", or "facial rejuvenation" - never name the product
+- NEVER use em dashes or en dashes anywhere in your output. Use hyphens (-) or commas instead. This is a strict formatting rule.`;
 
 router.post("/content/generate", async (req, res) => {
   try {
@@ -53,7 +73,7 @@ router.post("/content/generate", async (req, res) => {
 
     const topicList = Array.isArray(topics) ? topics.join(", ") : topics;
 
-    const systemPrompt = `${VANESSA_SYSTEM}
+    const systemPrompt = `${CONTENT_SYSTEM}
 
 You are now generating carousel post content. Write in a ${tone} tone of voice.${clientName ? ` You are creating content for "${clientName}".` : ""} The industry is: ${industry}.
 
@@ -164,7 +184,7 @@ router.post("/content/captions", async (req, res) => {
 
     const count = posts.length;
 
-    const systemPrompt = `${VANESSA_SYSTEM}
+    const systemPrompt = `${CONTENT_SYSTEM}
 
 You are now generating Instagram/social media captions for carousel posts. Write in a ${tone || "warm & professional"} tone of voice.${clientName ? ` You are creating content for "${clientName}".` : ""} The industry is: ${industry || "aesthetics"}.
 
@@ -283,38 +303,52 @@ router.post("/content/clinician-recreate", async (req, res) => {
     }
 
     const styles = [
-      { name: "classic", prompt: "Classic professional portrait headshot, studio lighting, neutral background, formal pose" },
-      { name: "bailey", prompt: "David Bailey style portrait, dramatic lighting, high contrast black and white, elegant and timeless" },
-      { name: "closeup", prompt: "Intimate close-up portrait, soft focus background, natural lighting, professional makeup" },
-      { name: "patient", prompt: "Professional healthcare setting, clinician talking to patient, warm and approachable, medical environment" },
-      { name: "editorial", prompt: "Editorial style fashion portrait, dynamic pose, artistic lighting, magazine quality" },
+      { name: "classic", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. Classic professional portrait headshot with soft studio lighting, clean neutral grey background, shoulders slightly angled, warm confident expression. High-end corporate headshot quality." },
+      { name: "classic", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. Classic professional portrait with warm studio lighting, soft cream background, direct eye contact, approachable smile. Clean, polished look suitable for a clinic website or LinkedIn." },
+      { name: "bailey", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. David Bailey inspired portrait, dramatic side lighting with deep shadows, high contrast black and white, strong gaze, elegant and timeless composition. Moody, editorial quality." },
+      { name: "bailey", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. David Bailey style portrait, bold chiaroscuro lighting from above, black and white, powerful confident pose, slightly tilted chin. Fashion photography meets fine art portraiture." },
+      { name: "closeup", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. Intimate close-up portrait, beautifully lit with soft natural window light, shallow depth of field with blurred background, genuine warm smile, focus on the eyes. Feels personal and approachable." },
+      { name: "closeup", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. Tight close-up portrait, golden hour warmth, soft bokeh background, relaxed natural expression, skin detail visible but flattering. Magazine beauty editorial feel." },
+      { name: "patient", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. Professional clinician in a modern treatment room, engaged in a warm consultation with a patient (seen from behind or side), natural lighting, caring and attentive expression. Clean clinical environment with tasteful decor." },
+      { name: "patient", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. Clinician seated at a consultation desk, leaning forward slightly with an empathetic expression, bright modern clinic interior, plants and soft furnishings visible, warm and welcoming atmosphere." },
+      { name: "editorial", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. High fashion editorial portrait, dynamic three-quarter pose, dramatic directional lighting with rim light, rich colour grading, magazine cover quality. Confident, powerful energy." },
+      { name: "editorial", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. Cinematic editorial portrait, environmental setting with interesting architecture or textures behind, creative lighting with colour gels, fashion-forward styling. Vogue or GQ quality composition." },
     ];
 
-    const results = await Promise.all(
-      styles.map(async (style) => {
-        try {
-          const response = await openai.images.generate({
-            model: "gpt-image-1",
-            prompt: `${style.prompt}. No text, words, letters, or typography in the image. Same person, same outfit, identical facial features.`,
-            n: 1,
-            size: "1024x1024",
-          });
+    const batchSize = 5;
+    const batches = Math.ceil(styles.length / batchSize);
+    const allResults: Array<{ style: string; image: string } | null> = [];
 
-          const imageData = response.data?.[0];
-          if (imageData?.b64_json) {
-            return { style: style.name, image: `data:image/png;base64,${imageData.b64_json}` };
-          } else if (imageData?.url) {
-            return { style: style.name, image: imageData.url };
+    for (let b = 0; b < batches; b++) {
+      const batchStyles = styles.slice(b * batchSize, (b + 1) * batchSize);
+      const batchResults = await Promise.all(
+        batchStyles.map(async (style) => {
+          try {
+            const response = await openai.images.edit({
+              model: "gpt-image-1",
+              image: Buffer.from(imageBase64, "base64"),
+              prompt: `${style.prompt}. CRITICAL: The person must look exactly like the person in the reference photo - same face, same features, same identity. No text, words, letters, or typography in the image.`,
+              n: 1,
+              size: "1024x1024",
+            });
+
+            const imageData = response.data?.[0];
+            if (imageData?.b64_json) {
+              return { style: style.name, image: `data:image/png;base64,${imageData.b64_json}` };
+            } else if (imageData?.url) {
+              return { style: style.name, image: imageData.url };
+            }
+            return null;
+          } catch (err) {
+            console.error(`Error generating ${style.name} style:`, err);
+            return null;
           }
-          return null;
-        } catch (err) {
-          console.error(`Error generating ${style.name} style:`, err);
-          return null;
-        }
-      })
-    );
+        })
+      );
+      allResults.push(...batchResults);
+    }
 
-    const validResults = results.filter(r => r !== null);
+    const validResults = allResults.filter(r => r !== null);
     if (validResults.length === 0) {
       res.status(500).json({ error: "Failed to generate portrait styles" });
       return;
