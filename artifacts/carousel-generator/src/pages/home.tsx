@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool } from "lucide-react";
+import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -843,7 +843,7 @@ export default function Home() {
                 { num: 1, label: "Images", icon: ImageIcon },
                 { num: 2, label: "Font & Layout", icon: Type },
                 { num: 3, label: "Content", icon: PenTool },
-                { num: 4, label: "Generate", icon: Download },
+                { num: 4, label: "Generate", icon: Sparkles },
               ].map((step, i) => (
                 <React.Fragment key={step.num}>
                   <button
