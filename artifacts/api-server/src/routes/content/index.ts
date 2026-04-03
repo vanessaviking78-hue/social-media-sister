@@ -28,7 +28,7 @@ Compliance rules you always follow:
 - Always frame treatments as consultations, not sales
 - Use "may help", "can improve" instead of definitive outcome claims`;
 
-router.post("/api/content/generate", async (req, res) => {
+router.post("/content/generate", async (req, res) => {
   try {
     const {
       clientName,
@@ -151,7 +151,7 @@ IMPORTANT: Output ONLY a valid JSON array with no markdown formatting, no code f
   }
 });
 
-router.post("/api/content/chat", async (req, res) => {
+router.post("/content/chat", async (req, res) => {
   try {
     const { messages } = req.body;
     if (!messages || !Array.isArray(messages)) {
