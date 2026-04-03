@@ -220,18 +220,39 @@ IMPORTANT: Output ONLY a valid JSON array with no markdown formatting, no code f
         if (content) fullResponse += content;
       }
 
+      let parsed: string[] | null = null;
       try {
         let cleaned = fullResponse.trim();
         const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
         if (jsonMatch) cleaned = jsonMatch[0];
-        const parsed = JSON.parse(cleaned);
-        if (Array.isArray(parsed)) {
-          allCaptions = allCaptions.concat(parsed.map((c: any) => String(c)));
+        cleaned = cleaned.replace(/,\s*\]/g, "]");
+        const result = JSON.parse(cleaned);
+        if (Array.isArray(result)) {
+          parsed = result.map((c: any) => String(c));
         }
-      } catch (parseErr) {
-        console.error("Failed to parse caption batch:", parseErr);
+      } catch {
+        try {
+          const cleaned = fullResponse
+            .replace(/```json\s*/g, "")
+            .replace(/```\s*/g, "")
+            .trim();
+          const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            const result = JSON.parse(jsonMatch[0].replace(/,\s*\]/g, "]"));
+            if (Array.isArray(result)) {
+              parsed = result.map((c: any) => String(c));
+            }
+          }
+        } catch (parseErr2) {
+          console.error("Failed to parse caption batch:", parseErr2, "Raw:", fullResponse.slice(0, 500));
+        }
+      }
+
+      if (parsed) {
+        allCaptions = allCaptions.concat(parsed);
+      } else {
         res.write(
-          `data: ${JSON.stringify({ type: "error", message: "Failed to parse caption batch" })}\n\n`
+          `data: ${JSON.stringify({ type: "error", message: "Failed to parse caption batch, retrying..." })}\n\n`
         );
       }
     }

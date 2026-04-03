@@ -90,7 +90,8 @@ function drawSlide(
   gradientStyle: string = "solid",
   gradientPosition: string = "left",
   slidePosition: number = 1,
-  totalSlidesInGroup: number = 5
+  totalSlidesInGroup: number = 5,
+  textPosition: string = "bottom-left"
 ) {
   const W = CANVAS_WIDTH;
   const H = CANVAS_HEIGHT;
@@ -288,7 +289,8 @@ function drawSlide(
 
   const isLastSlide = slidePosition === totalSlidesInGroup;
   const ctaSize = isLastSlide ? Math.round(size * 1.4) : size;
-  const textAreaW = isLastSlide ? W - 120 : (isHoriz ? gw - 60 : W - 80);
+  const textAreaW = isLastSlide ? W - 120 : W - 80;
+  const activeTextPos = isLastSlide ? "center-center" : textPosition;
 
   ctx.fillStyle = textColor;
   ctx.font = `${isLastSlide ? 700 : 600} ${ctaSize}px ${font}`;
@@ -307,18 +309,18 @@ function drawSlide(
   if (cur) lines.push(cur);
 
   const totalH = lines.length * lineH;
-  let startX = 40, startY = Math.round(H - totalH - 60);
+  const pad = 40;
+  let startX = pad, startY = pad;
 
-  if (isLastSlide) {
-    startX = Math.round(W / 2);
-    startY = Math.round((H - totalH) / 2);
-    ctx.textAlign = "center";
-  } else if (gradientPosition === "left") { startX = 40; ctx.textAlign = "left"; }
-  else if (gradientPosition === "right") { startX = W - 40; ctx.textAlign = "right"; startY = Math.round(H - totalH - 60); }
-  else if (gradientPosition === "center") { startX = Math.round(W / 2); ctx.textAlign = "center"; }
-  else if (gradientPosition === "top") { startX = 40; startY = 40; ctx.textAlign = "left"; }
-  else if (gradientPosition === "middle") { startX = 40; startY = Math.round((H - totalH) / 2); ctx.textAlign = "left"; }
-  else if (gradientPosition === "bottom") { startX = 40; startY = Math.round(H - totalH - 40); ctx.textAlign = "left"; }
+  const [vPos, hPos] = activeTextPos.split("-");
+
+  if (hPos === "left") { startX = pad; ctx.textAlign = "left"; }
+  else if (hPos === "center") { startX = Math.round(W / 2); ctx.textAlign = "center"; }
+  else if (hPos === "right") { startX = W - pad; ctx.textAlign = "right"; }
+
+  if (vPos === "top") { startY = pad; }
+  else if (vPos === "center") { startY = Math.round((H - totalH) / 2); }
+  else if (vPos === "bottom") { startY = Math.round(H - totalH - pad); }
 
   const maxLineWidth = Math.max(...lines.map((line) => ctx.measureText(line).width));
   ctx.fillStyle = overlayColor;
@@ -389,6 +391,7 @@ export default function Home() {
   const [gradientStyle, setGradientStyle] = useState("solid");
   const [gradientColor, setGradientColor] = useState("#000000");
   const [gradientPosition, setGradientPosition] = useState("left");
+  const [textPosition, setTextPosition] = useState("bottom-left");
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
@@ -721,7 +724,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, gradientColor, gradientEnabled, gradientStyle, gradientPosition, slide.groupPosition, result.slidesPerCarousel);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, gradientColor, gradientEnabled, gradientStyle, gradientPosition, slide.groupPosition, result.slidesPerCarousel, textPosition);
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -1244,9 +1247,9 @@ export default function Home() {
                       </div>
                       <button
                         onClick={() => copyCaption(caption, i)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-foreground"
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        {copiedIndex === i ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                        {copiedIndex === i ? <><Check className="w-4 h-4 text-green-400" /><span className="text-green-400">Copied</span></> : <><Copy className="w-4 h-4" /><span>Copy</span></>}
                       </button>
                     </div>
                     <div className="p-4">
@@ -1284,6 +1287,37 @@ export default function Home() {
                   <Input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-10 h-8 p-0.5 cursor-pointer" />
                   <Input type="text" value={textColor.toUpperCase()} onChange={(e) => setTextColor(e.target.value)} className="flex-1 h-8 text-xs font-mono" placeholder="#ffffff" />
                 </div>
+              </div>
+
+              {/* Text Position */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Text Position</Label>
+                <div className="grid grid-cols-3 gap-1">
+                  {[
+                    { value: "top-left", label: "TL" },
+                    { value: "top-center", label: "TC" },
+                    { value: "top-right", label: "TR" },
+                    { value: "center-left", label: "CL" },
+                    { value: "center-center", label: "CC" },
+                    { value: "center-right", label: "CR" },
+                    { value: "bottom-left", label: "BL" },
+                    { value: "bottom-center", label: "BC" },
+                    { value: "bottom-right", label: "BR" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setTextPosition(opt.value)}
+                      className={`px-1 py-1.5 rounded text-[10px] font-semibold transition-all ${
+                        textPosition === opt.value
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-accent/40 text-muted-foreground hover:bg-accent/60"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[10px] text-muted-foreground/50">Last slide always centre</p>
               </div>
 
               {/* Line Spacing */}
