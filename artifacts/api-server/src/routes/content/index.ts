@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
+import sharp from "sharp";
 
 const router: IRouter = Router();
 
@@ -309,7 +310,7 @@ router.post("/content/clinician-recreate", async (req, res) => {
     res.flushHeaders();
 
     let clientClosed = false;
-    req.on("close", () => { clientClosed = true; });
+    res.on("close", () => { clientClosed = true; });
 
     let clinicianDescription = "";
     let clinicDescription = "a modern, clean aesthetic clinic with neutral tones, professional medical equipment, and tasteful decor";
@@ -334,7 +335,7 @@ router.post("/content/clinician-recreate", async (req, res) => {
           {
             role: "user",
             content: [
-              { type: "text", text: "You are an expert at describing people for photorealistic AI image recreation. Describe this person in EXHAUSTIVE detail so an AI image generator can recreate them identically. Include ALL of the following:\n\n1. FACE: exact face shape (oval/round/square/heart/oblong), forehead size, cheekbone prominence, jaw shape, chin shape\n2. SKIN: exact skin tone (use specific shade descriptions), any freckles/moles/blemishes and their locations, skin texture\n3. EYES: shape, size, colour (be very specific), spacing, eyebrow shape/thickness/colour/arch\n4. NOSE: shape, size, bridge width, nostril shape\n5. MOUTH: lip shape, thickness of upper vs lower lip, lip colour\n6. HAIR: exact colour (include highlights/roots if visible), length, texture (straight/wavy/curly), style, parting\n7. BUILD: body type, shoulder width, approximate height impression\n8. CLOTHING: describe exactly what they're wearing including colours, fit, style\n9. DISTINGUISHING FEATURES: glasses, jewellery, tattoos, dimples, smile lines, anything unique\n\nBe extremely precise. Use 5-6 detailed sentences." },
+              { type: "text", text: "You are a creative director writing a character reference brief for an illustrator. Study this photo and write a highly detailed visual description that captures the person's overall look and style. Cover:\n\n- Hair: colour, length, texture, style\n- Face shape and general features\n- Skin tone\n- Glasses or eyewear if present (frame shape, colour)\n- Clothing: colours, fit, type, any visible branding or text\n- Jewellery or accessories\n- Build and posture\n- Any distinctive style elements\n\nWrite this as a single flowing paragraph, 4-6 sentences. Focus on what makes this person visually distinctive and recognisable. Be specific about colours and styles." },
               { type: "image_url", image_url: { url: `data:${clinicianMime};base64,${clinicianBase64}` } },
             ],
           },
@@ -412,7 +413,7 @@ router.post("/content/clinician-recreate", async (req, res) => {
           model: "gpt-image-1",
           prompt: p.prompt,
           n: 1,
-          size: "1024x1024",
+          size: "1024x1536",
         });
         console.log(`Image ${i + 1}/10 generated, has data: ${!!response.data?.[0]?.b64_json || !!response.data?.[0]?.url}`);
 
@@ -421,7 +422,12 @@ router.post("/content/clinician-recreate", async (req, res) => {
         const imageData = response.data?.[0];
         let imageResult: string | null = null;
         if (imageData?.b64_json) {
-          imageResult = `data:image/png;base64,${imageData.b64_json}`;
+          const rawBuf = Buffer.from(imageData.b64_json, "base64");
+          const resizedBuf = await sharp(rawBuf)
+            .resize(1080, 1350, { fit: "cover", position: "centre" })
+            .png()
+            .toBuffer();
+          imageResult = `data:image/png;base64,${resizedBuf.toString("base64")}`;
         } else if (imageData?.url) {
           imageResult = imageData.url;
         }
