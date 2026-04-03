@@ -425,40 +425,105 @@ export default function Home() {
     }
   };
 
+  const buildSlidesFromPosts = (posts: string[][]) => {
+    const postRows = posts.slice(0, 60);
+    const slidesPerCarousel = postRows[0].length;
+    const photoUrls = photos.map((f) => URL.createObjectURL(f));
+
+    const slides: CarouselSlide[] = [];
+    let idx = 1;
+    for (let pi = 0; pi < postRows.length; pi++) {
+      const photoUrl = photoUrls[pi % photoUrls.length];
+      for (let si = 0; si < postRows[pi].length; si++) {
+        slides.push({
+          slideIndex: idx++,
+          groupIndex: pi + 1,
+          groupPosition: si + 1,
+          text: postRows[pi][si],
+          imageUrl: photoUrl,
+          imageName: photos[pi % photos.length].name,
+        });
+      }
+    }
+    return { slides, slidesPerCarousel, totalCarousels: postRows.length };
+  };
+
   const handleGenerateFromAi = async () => {
     if (!photos.length) { toast.error("Please upload at least one photo"); return; }
-    if (!aiGeneratedPosts?.length) { toast.error("Please generate content first"); return; }
+    if (!aiIndustry.trim()) { toast.error("Please enter an industry in the Content Machine brief"); return; }
+    if (!aiTopics.trim()) { toast.error("Please enter topics in the Content Machine brief"); return; }
 
     setIsGenerating(true);
-    const toastId = toast.loading("Building slides...");
 
     try {
-      const postRows = aiGeneratedPosts.slice(0, 60);
-      const slidesPerCarousel = postRows[0].length;
-      const photoUrls = photos.map((f) => URL.createObjectURL(f));
+      let posts = aiGeneratedPosts;
+      if (!posts?.length) {
+        setAiGenerating(true);
+        setAiProgress("Starting content generation...");
+        const toastId = toast.loading("AI is writing your content...");
 
-      const slides: CarouselSlide[] = [];
-      let idx = 1;
-      for (let pi = 0; pi < postRows.length; pi++) {
-        const photoUrl = photoUrls[pi % photoUrls.length];
-        for (let si = 0; si < postRows[pi].length; si++) {
-          slides.push({
-            slideIndex: idx++,
-            groupIndex: pi + 1,
-            groupPosition: si + 1,
-            text: postRows[pi][si],
-            imageUrl: photoUrl,
-            imageName: photos[pi % photos.length].name,
-          });
+        const resp = await fetch(`/api/content/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            clientName: aiClientName,
+            industry: aiIndustry,
+            tone: aiTone,
+            topics: aiTopics,
+            postCount: aiPostCount,
+            slidesPerPost: 5,
+            extraInstructions: aiExtraInstructions,
+          }),
+        });
+
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({ error: "Server error" }));
+          throw new Error(err.error || "Generation failed");
         }
+
+        const reader = resp.body?.getReader();
+        if (!reader) throw new Error("No response stream");
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            try {
+              const evt = JSON.parse(line.slice(6));
+              if (evt.type === "progress") {
+                setAiProgress(`Generated ${evt.generated} of ${evt.total} posts...`);
+              } else if (evt.type === "complete") {
+                posts = evt.posts;
+                setAiGeneratedPosts(evt.posts);
+                setAiProgress("");
+                toast.success(`${evt.postCount} posts generated — building slides...`, { id: toastId });
+              } else if (evt.type === "error") {
+                toast.error(evt.message);
+              }
+            } catch {}
+          }
+        }
+        setAiGenerating(false);
       }
 
-      setResult({ slides, totalSlides: slides.length, slidesPerCarousel, totalCarousels: postRows.length, sessionId: "local" });
-      toast.success(`${slides.length} slides generated — ready to download`, { id: toastId });
+      if (!posts?.length) throw new Error("No content was generated");
+
+      const buildToast = toast.loading("Building carousel slides...");
+      const { slides, slidesPerCarousel, totalCarousels } = buildSlidesFromPosts(posts);
+      setResult({ slides, totalSlides: slides.length, slidesPerCarousel, totalCarousels, sessionId: "local" });
+      toast.success(`${slides.length} slides generated — ready to download`, { id: buildToast });
     } catch (e: any) {
-      toast.error("Error: " + (e?.message ?? "Unknown error"), { id: toastId });
+      toast.error("Error: " + (e?.message ?? "Unknown error"));
     } finally {
       setIsGenerating(false);
+      setAiGenerating(false);
     }
   };
 
@@ -1060,8 +1125,10 @@ export default function Home() {
                 disabled={isGenerating}
                 data-testid="button-generate"
               >
-                {isGenerating ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" />Generating…</>
+                {isGenerating || aiGenerating ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" />{aiGenerating ? (aiProgress || "Writing content…") : "Generating…"}</>
+                ) : contentMode === "ai" && !aiGeneratedPosts?.length ? (
+                  <><Sparkles className="w-4 h-4" />Generate with AI</>
                 ) : "Generate Carousel Posts"}
               </button>
             ) : (
