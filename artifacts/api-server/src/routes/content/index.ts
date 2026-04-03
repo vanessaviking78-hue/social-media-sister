@@ -360,73 +360,93 @@ router.post("/content/clinician-recreate", async (req, res) => {
       }
     }
 
-    const clinicSetting = `Setting: ${clinicDescription}`;
+    const clinicSetting = clinicDescription;
+
+    const identity = `IDENTITY LOCK: You MUST preserve this person's exact face, bone structure, skin tone, hair colour, hair texture, hair length, and every distinguishing feature from the reference photo. The face must be instantly recognisable as the same individual. Do not alter, idealise, or smooth any facial feature.`;
 
     const prompts = [
-      { name: "gloves", label: "Pulling on Gloves", prompt: `Recreate this exact person with identical facial features, hair, and appearance. Place them in a clinic setting. ${clinicSetting}. Medium shot, eye-level, 35mm, f/2.8. The person is pulling on medical gloves, fingers aligned, wearing their same clothing. Photorealistic, natural lighting. No text.` },
-      { name: "arms-folded", label: "Arms Folded", prompt: `Recreate this exact person with identical facial features, hair, and appearance. Place them in a clinic setting. ${clinicSetting}. Medium-full body, eye-level, 35mm, f/2.8. The person standing with arms folded, confident posture, calm expression, wearing their same clothing. Photorealistic. No text.` },
-      { name: "editorial", label: "Editorial Pose", prompt: `Recreate this exact person with identical facial features, hair, and appearance. ${clinicSetting}. 3/4 portrait, slight low angle, 35mm, f/2.8, directional contrast lighting. Editorial-style pose, asymmetrical stance, direct gaze, wearing their same clothing. Photorealistic. No text.` },
-      { name: "lipstick", label: "Mirror Lipstick", prompt: `Recreate this exact person with identical facial features, hair, and appearance. Close-up mirror shot, 45 degree angle, 35mm, f/2.8. The person applying lipstick in a mirror, reflection visible, wearing their same clothing. Photorealistic, soft lighting. No text.` },
-      { name: "moisturizing", label: "Moisturizing", prompt: `Recreate this exact person with identical facial features, hair, and appearance. Extreme close-up, 35mm, f/2.8 shallow DOF. The person moisturizing their face, fingertips pressing gently, cream texture visible. Photorealistic, soft frontal light. No text.` },
-      { name: "facial", label: "Performing Facial", prompt: `Recreate this exact person with identical facial features, hair, and appearance. Place them in a clinic setting. ${clinicSetting}. Tight close-up, slight top-down angle, 35mm, f/2.8. The person performing a facial treatment on a patient, gloves on, professional and focused. Photorealistic. No text.` },
-      { name: "proud", label: "Proud Pose", prompt: `Recreate this exact person with identical facial features, hair, and appearance. Place them in a clinic setting. ${clinicSetting}. Medium shot, eye-level, 35mm, f/2.8. The person standing proudly with arms folded, shoulders squared, confident smile, wearing their same clothing. Photorealistic. No text.` },
-      { name: "hands-hips", label: "Hands on Hips", prompt: `Recreate this exact person with identical facial features, hair, and appearance. Place them in a clinic setting. ${clinicSetting}. Medium-full portrait, slight low angle, 35mm, f/2.8. The person with hands on hips, confident stance, wearing their same clothing. Photorealistic. No text.` },
-      { name: "consultation", label: "Consultation", prompt: `Recreate this exact person with identical facial features, hair, and appearance. Place them in a clinic setting. ${clinicSetting}. Medium shot, eye-level, 35mm, f/2.8. The person mid-consultation with a client, natural hand gesture, engaged expression, wearing their same clothing. Photorealistic. No text.` },
-      { name: "linkedin", label: "LinkedIn Portrait", prompt: `Recreate this exact person with identical facial features, hair, and appearance. Head-and-shoulders portrait, eye-level, 35mm, f/2.8, soft key light with fill. Professional LinkedIn-style portrait, warm natural smile, softly blurred background. Photorealistic. No text.` },
+      { name: "gloves", label: "Pulling on Gloves", prompt: `${identity} Place this person in their clinic. ${clinicSetting}. Medium shot, eye-level, 35mm, f/2.8. They are pulling on medical gloves mid-motion, wearing their same outfit. Photorealistic photo. No text or watermarks.` },
+      { name: "arms-folded", label: "Arms Folded", prompt: `${identity} Place this person in their clinic. ${clinicSetting}. Medium-full body, eye-level, 35mm, f/2.8. Standing with arms confidently folded, wearing their same outfit. Photorealistic photo. No text or watermarks.` },
+      { name: "editorial", label: "Editorial Pose", prompt: `${identity} Place this person in their clinic. ${clinicSetting}. 3/4 portrait, slight low angle, 35mm, f/2.8, directional contrast lighting. Editorial-style confident pose, direct gaze, wearing their same outfit. Photorealistic photo. No text or watermarks.` },
+      { name: "lipstick", label: "Mirror Lipstick", prompt: `${identity} Close-up shot, 45 degree angle, 35mm, f/2.8. This person applying lipstick in front of a mirror, reflection visible, wearing their same outfit. Soft lighting. Photorealistic photo. No text or watermarks.` },
+      { name: "moisturizing", label: "Moisturizing", prompt: `${identity} Extreme close-up, 35mm, f/2.8 shallow DOF. This person applying moisturiser to their face, fingertips pressing gently on skin. Photorealistic photo, soft frontal light. No text or watermarks.` },
+      { name: "facial", label: "Performing Facial", prompt: `${identity} Place this person in their clinic. ${clinicSetting}. Close-up, slight top-down angle, 35mm, f/2.8. This person performing a facial treatment on a patient, wearing gloves, professional and focused. Photorealistic photo. No text or watermarks.` },
+      { name: "proud", label: "Proud Pose", prompt: `${identity} Place this person in their clinic. ${clinicSetting}. Medium shot, eye-level, 35mm, f/2.8. Standing proudly with arms folded, shoulders squared, confident warm smile, wearing their same outfit. Photorealistic photo. No text or watermarks.` },
+      { name: "hands-hips", label: "Hands on Hips", prompt: `${identity} Place this person in their clinic. ${clinicSetting}. Medium-full portrait, slight low angle, 35mm, f/2.8. Standing with hands on hips, confident stance, wearing their same outfit. Photorealistic photo. No text or watermarks.` },
+      { name: "consultation", label: "Consultation", prompt: `${identity} Place this person in their clinic. ${clinicSetting}. Medium shot, eye-level, 35mm, f/2.8. Mid-consultation sitting across from a client, natural hand gesture, engaged expression, wearing their same outfit. Photorealistic photo. No text or watermarks.` },
+      { name: "linkedin", label: "LinkedIn Portrait", prompt: `${identity} Head-and-shoulders portrait, eye-level, 35mm, f/2.8, soft key light with fill. Professional LinkedIn-style portrait of this person, warm natural smile, clean softly blurred background, wearing their same outfit. Photorealistic photo. No text or watermarks.` },
     ];
 
     let completedCount = 0;
+    const BATCH_SIZE = 5;
 
     const heartbeat = setInterval(() => {
       if (!clientClosed) {
         try { res.write(`: heartbeat\n\n`); } catch {}
       }
-    }, 10000);
+    }, 8000);
 
-    for (let i = 0; i < prompts.length; i++) {
-      if (clientClosed) break;
-      const p = prompts[i];
-      res.write(`data: ${JSON.stringify({ type: "progress", current: i + 1, total: prompts.length, label: p.label })}\n\n`);
-
+    let clinicFile: any = null;
+    if (clinicBase64) {
       try {
-        console.log(`Generating image ${i + 1}/10: ${p.label}...`);
-        const refFile = await toFile(Buffer.from(clinicianPngBuf), "clinician.png", { type: "image/png" });
-        const response = await openai.images.edit({
-          model: "gpt-image-1",
-          image: refFile,
-          prompt: p.prompt,
-          n: 1,
-          size: "1024x1536",
-          input_fidelity: "high",
-        });
-        console.log(`Image ${i + 1}/10 generated, has data: ${!!response.data?.[0]?.b64_json || !!response.data?.[0]?.url}`);
+        const clinicBuf = Buffer.from(clinicBase64, "base64");
+        const clinicPng = await sharp(clinicBuf).png().toBuffer();
+        clinicFile = clinicPng;
+      } catch {}
+    }
 
+    for (let batchStart = 0; batchStart < prompts.length; batchStart += BATCH_SIZE) {
+      if (clientClosed) break;
+      const batch = prompts.slice(batchStart, batchStart + BATCH_SIZE);
+
+      const batchLabels = batch.map(p => p.label).join(", ");
+      res.write(`data: ${JSON.stringify({ type: "progress", current: batchStart + 1, total: prompts.length, label: `Generating: ${batchLabels}` })}\n\n`);
+
+      const results = await Promise.allSettled(
+        batch.map(async (p) => {
+          console.log(`Generating: ${p.label}...`);
+          const refImages: any[] = [];
+          refImages.push(await toFile(Buffer.from(clinicianPngBuf), "clinician.png", { type: "image/png" }));
+          if (clinicFile) {
+            refImages.push(await toFile(Buffer.from(clinicFile), "clinic.png", { type: "image/png" }));
+          }
+          const response = await openai.images.edit({
+            model: "gpt-image-1",
+            image: refImages.length === 1 ? refImages[0] : refImages,
+            prompt: p.prompt,
+            n: 1,
+            size: "1024x1536",
+            input_fidelity: "high",
+          });
+          console.log(`Generated: ${p.label}, has data: ${!!response.data?.[0]?.b64_json}`);
+          return { prompt: p, response };
+        })
+      );
+
+      for (const result of results) {
         if (clientClosed) break;
-
-        const imageData = response.data?.[0];
-        let imageResult: string | null = null;
-        if (imageData?.b64_json) {
-          const rawBuf = Buffer.from(imageData.b64_json, "base64");
-          const resizedBuf = await sharp(rawBuf)
-            .resize(1080, 1350, { fit: "cover", position: "centre" })
-            .png()
-            .toBuffer();
-          imageResult = `data:image/png;base64,${resizedBuf.toString("base64")}`;
-        } else if (imageData?.url) {
-          imageResult = imageData.url;
-        }
-
-        if (imageResult) {
-          completedCount++;
-          res.write(`data: ${JSON.stringify({ type: "portrait", style: p.name, label: p.label, image: imageResult })}\n\n`);
+        if (result.status === "fulfilled") {
+          const { prompt: p, response } = result.value;
+          const imageData = response.data?.[0];
+          if (imageData?.b64_json) {
+            const rawBuf = Buffer.from(imageData.b64_json, "base64");
+            const resizedBuf = await sharp(rawBuf)
+              .resize(1080, 1350, { fit: "cover", position: "centre" })
+              .png()
+              .toBuffer();
+            const imageResult = `data:image/png;base64,${resizedBuf.toString("base64")}`;
+            completedCount++;
+            res.write(`data: ${JSON.stringify({ type: "portrait", style: p.name, label: p.label, image: imageResult })}\n\n`);
+          } else {
+            console.error(`No image data for ${p.name}`);
+            res.write(`data: ${JSON.stringify({ type: "error", message: `"${p.label}" returned no image - skipping` })}\n\n`);
+          }
         } else {
-          console.error(`No image data returned for ${p.name}`, JSON.stringify(response));
-          res.write(`data: ${JSON.stringify({ type: "error", message: `"${p.label}" returned no image - skipping` })}\n\n`);
+          const failedIdx = results.indexOf(result);
+          const p = batch[failedIdx];
+          console.error(`Error generating ${p?.name}:`, result.reason?.message || result.reason);
+          res.write(`data: ${JSON.stringify({ type: "error", message: `Failed to generate "${p?.label}" - skipping` })}\n\n`);
         }
-      } catch (err: any) {
-        if (clientClosed) break;
-        console.error(`Error generating ${p.name}:`, err?.message || err);
-        res.write(`data: ${JSON.stringify({ type: "error", message: `Failed to generate "${p.label}" - skipping` })}\n\n`);
       }
     }
 
