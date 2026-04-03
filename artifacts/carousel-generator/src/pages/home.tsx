@@ -87,7 +87,8 @@ function drawSlide(
   cornerColor: string = "#d4af37",
   gradientColor: string = "#000000",
   gradientEnabled: boolean = true,
-  gradientStyle: string = "solid"
+  gradientStyle: string = "solid",
+  gradientPosition: string = "left"
 ) {
   const W = CANVAS_WIDTH;
   const H = CANVAS_HEIGHT;
@@ -137,24 +138,40 @@ function drawSlide(
     }
   }
 
-  const overlayW = Math.round(W * 0.35);
+  const isHoriz = ["left", "center", "right"].includes(gradientPosition);
+  const stripW = Math.round(W * 0.35);
+  const stripH = Math.round(H * 0.30);
+
+  let gx = 0, gy = 0, gw = stripW, gh = H;
+  if (isHoriz) {
+    gw = stripW; gh = H;
+    if (gradientPosition === "left") { gx = 0; }
+    else if (gradientPosition === "center") { gx = Math.round((W - stripW) / 2); }
+    else { gx = W - stripW; }
+  } else {
+    gw = W; gh = stripH;
+    if (gradientPosition === "top") { gy = 0; }
+    else if (gradientPosition === "middle") { gy = Math.round((H - stripH) / 2); }
+    else { gy = H - stripH; }
+  }
 
   if (gradientEnabled) {
     if (gradientStyle === "leopard") {
       const patCanvas = document.createElement("canvas");
-      patCanvas.width = overlayW;
-      patCanvas.height = H;
+      patCanvas.width = gw;
+      patCanvas.height = gh;
       const pc = patCanvas.getContext("2d")!;
 
       pc.fillStyle = "#c8a44e";
-      pc.fillRect(0, 0, overlayW, H);
+      pc.fillRect(0, 0, gw, gh);
 
       const rng = (min: number, max: number) => min + Math.random() * (max - min);
+      const spotCount = isHoriz ? 120 : 80;
       const spots: { x: number; y: number; rx: number; ry: number; angle: number }[] = [];
-      for (let i = 0; i < 120; i++) {
+      for (let i = 0; i < spotCount; i++) {
         spots.push({
-          x: rng(-20, overlayW + 20),
-          y: rng(-20, H + 20),
+          x: rng(-20, gw + 20),
+          y: rng(-20, gh + 20),
           rx: rng(18, 40),
           ry: rng(22, 50),
           angle: rng(0, Math.PI),
@@ -176,7 +193,7 @@ function drawSlide(
       }
       for (let i = 0; i < 60; i++) {
         pc.save();
-        pc.translate(rng(0, overlayW), rng(0, H));
+        pc.translate(rng(0, gw), rng(0, gh));
         pc.rotate(rng(0, Math.PI));
         pc.beginPath();
         pc.ellipse(0, 0, rng(4, 10), rng(4, 10), 0, 0, Math.PI * 2);
@@ -185,35 +202,94 @@ function drawSlide(
         pc.restore();
       }
 
-      const fadeGrad = pc.createLinearGradient(0, 0, overlayW, 0);
-      fadeGrad.addColorStop(0, "rgba(0,0,0,0)");
-      fadeGrad.addColorStop(0.7, "rgba(0,0,0,0)");
-      fadeGrad.addColorStop(1, "rgba(0,0,0,1)");
+      let fadeGrad: CanvasGradient;
+      if (isHoriz) {
+        if (gradientPosition === "left") {
+          fadeGrad = pc.createLinearGradient(0, 0, gw, 0);
+          fadeGrad.addColorStop(0, "rgba(0,0,0,0)"); fadeGrad.addColorStop(0.7, "rgba(0,0,0,0)"); fadeGrad.addColorStop(1, "rgba(0,0,0,1)");
+        } else if (gradientPosition === "right") {
+          fadeGrad = pc.createLinearGradient(gw, 0, 0, 0);
+          fadeGrad.addColorStop(0, "rgba(0,0,0,0)"); fadeGrad.addColorStop(0.7, "rgba(0,0,0,0)"); fadeGrad.addColorStop(1, "rgba(0,0,0,1)");
+        } else {
+          fadeGrad = pc.createLinearGradient(gw / 2, 0, 0, 0);
+          fadeGrad.addColorStop(0, "rgba(0,0,0,0)"); fadeGrad.addColorStop(1, "rgba(0,0,0,1)");
+          pc.fillStyle = fadeGrad; pc.globalCompositeOperation = "destination-out"; pc.fillRect(0, 0, gw / 2, gh);
+          fadeGrad = pc.createLinearGradient(gw / 2, 0, gw, 0);
+          fadeGrad.addColorStop(0, "rgba(0,0,0,0)"); fadeGrad.addColorStop(1, "rgba(0,0,0,1)");
+        }
+      } else {
+        if (gradientPosition === "top") {
+          fadeGrad = pc.createLinearGradient(0, 0, 0, gh);
+          fadeGrad.addColorStop(0, "rgba(0,0,0,0)"); fadeGrad.addColorStop(0.7, "rgba(0,0,0,0)"); fadeGrad.addColorStop(1, "rgba(0,0,0,1)");
+        } else if (gradientPosition === "bottom") {
+          fadeGrad = pc.createLinearGradient(0, gh, 0, 0);
+          fadeGrad.addColorStop(0, "rgba(0,0,0,0)"); fadeGrad.addColorStop(0.7, "rgba(0,0,0,0)"); fadeGrad.addColorStop(1, "rgba(0,0,0,1)");
+        } else {
+          fadeGrad = pc.createLinearGradient(0, gh / 2, 0, 0);
+          fadeGrad.addColorStop(0, "rgba(0,0,0,0)"); fadeGrad.addColorStop(1, "rgba(0,0,0,1)");
+          pc.fillStyle = fadeGrad; pc.globalCompositeOperation = "destination-out"; pc.fillRect(0, 0, gw, gh / 2);
+          fadeGrad = pc.createLinearGradient(0, gh / 2, 0, gh);
+          fadeGrad.addColorStop(0, "rgba(0,0,0,0)"); fadeGrad.addColorStop(1, "rgba(0,0,0,1)");
+        }
+      }
       pc.fillStyle = fadeGrad;
       pc.globalCompositeOperation = "destination-out";
-      pc.fillRect(0, 0, overlayW, H);
+      pc.fillRect(0, 0, gw, gh);
 
       ctx.globalAlpha = 0.85;
-      ctx.drawImage(patCanvas, 0, 0);
+      ctx.drawImage(patCanvas, gx, gy);
       ctx.globalAlpha = 1.0;
     } else {
-      const grad = ctx.createLinearGradient(overlayW, 0, 0, 0);
       const gr = parseInt(gradientColor.slice(1, 3), 16);
       const gg = parseInt(gradientColor.slice(3, 5), 16);
       const gb = parseInt(gradientColor.slice(5, 7), 16);
+      let grad: CanvasGradient;
+      if (isHoriz) {
+        if (gradientPosition === "left") {
+          grad = ctx.createLinearGradient(gx + gw, 0, gx, 0);
+        } else if (gradientPosition === "right") {
+          grad = ctx.createLinearGradient(gx, 0, gx + gw, 0);
+        } else {
+          grad = ctx.createLinearGradient(gx + gw / 2, 0, gx, 0);
+          grad.addColorStop(0, `rgba(${gr},${gg},${gb},0)`);
+          grad.addColorStop(1, `rgba(${gr},${gg},${gb},0.85)`);
+          ctx.fillStyle = grad;
+          ctx.fillRect(gx, gy, gw / 2, gh);
+          grad = ctx.createLinearGradient(gx + gw / 2, 0, gx + gw, 0);
+        }
+      } else {
+        if (gradientPosition === "top") {
+          grad = ctx.createLinearGradient(0, gy + gh, 0, gy);
+        } else if (gradientPosition === "bottom") {
+          grad = ctx.createLinearGradient(0, gy, 0, gy + gh);
+        } else {
+          grad = ctx.createLinearGradient(0, gy + gh / 2, 0, gy);
+          grad.addColorStop(0, `rgba(${gr},${gg},${gb},0)`);
+          grad.addColorStop(1, `rgba(${gr},${gg},${gb},0.85)`);
+          ctx.fillStyle = grad;
+          ctx.fillRect(gx, gy, gw, gh / 2);
+          grad = ctx.createLinearGradient(0, gy + gh / 2, 0, gy + gh);
+        }
+      }
       grad.addColorStop(0, `rgba(${gr},${gg},${gb},0)`);
       grad.addColorStop(1, `rgba(${gr},${gg},${gb},0.85)`);
       ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, overlayW, H);
+      if (gradientPosition === "center") {
+        ctx.fillRect(gx + gw / 2, gy, gw / 2, gh);
+      } else if (gradientPosition === "middle") {
+        ctx.fillRect(gx, gy + gh / 2, gw, gh / 2);
+      } else {
+        ctx.fillRect(gx, gy, gw, gh);
+      }
     }
   }
 
+  const textAreaW = isHoriz ? gw - 60 : W - 80;
   ctx.fillStyle = textColor;
   ctx.font = `600 ${size}px ${font}`;
-  ctx.textAlign = "left";
   ctx.textBaseline = "top";
 
-  const maxW = overlayW - 60;
+  const maxW = textAreaW;
   const lineH = Math.round(size * lineSpacing);
   const words = text.split(" ");
   const lines: string[] = [];
@@ -226,12 +302,21 @@ function drawSlide(
   if (cur) lines.push(cur);
 
   const totalH = lines.length * lineH;
-  const startY = Math.round(H - totalH - 60);
-  const startX = 40;
+  let startX = 40, startY = Math.round(H - totalH - 60);
+
+  if (gradientPosition === "left") { startX = 40; ctx.textAlign = "left"; }
+  else if (gradientPosition === "right") { startX = W - 40; ctx.textAlign = "right"; startY = Math.round(H - totalH - 60); }
+  else if (gradientPosition === "center") { startX = Math.round(W / 2); ctx.textAlign = "center"; }
+  else if (gradientPosition === "top") { startX = 40; startY = 40; ctx.textAlign = "left"; }
+  else if (gradientPosition === "middle") { startX = 40; startY = Math.round((H - totalH) / 2); ctx.textAlign = "left"; }
+  else if (gradientPosition === "bottom") { startX = 40; startY = Math.round(H - totalH - 40); ctx.textAlign = "left"; }
 
   const maxLineWidth = Math.max(...lines.map((line) => ctx.measureText(line).width));
   ctx.fillStyle = overlayColor;
-  ctx.fillRect(startX - 15, startY - 15, maxLineWidth + 30, totalH + 30);
+  let boxX = startX - 15;
+  if (ctx.textAlign === "right") boxX = startX - maxLineWidth - 15;
+  else if (ctx.textAlign === "center") boxX = startX - maxLineWidth / 2 - 15;
+  ctx.fillRect(boxX, startY - 15, maxLineWidth + 30, totalH + 30);
 
   ctx.fillStyle = textColor;
   lines.forEach((line, i) => ctx.fillText(line, startX, startY + i * lineH));
@@ -294,6 +379,7 @@ export default function Home() {
   const [gradientEnabled, setGradientEnabled] = useState(true);
   const [gradientStyle, setGradientStyle] = useState("solid");
   const [gradientColor, setGradientColor] = useState("#000000");
+  const [gradientPosition, setGradientPosition] = useState("left");
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
@@ -619,7 +705,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, gradientColor, gradientEnabled, gradientStyle);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, gradientColor, gradientEnabled, gradientStyle, gradientPosition);
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -978,8 +1064,24 @@ export default function Home() {
                             className="absolute inset-0 w-full h-full object-cover"
                             style={{ opacity: isCover ? 1 : 0.5 }}
                           />
-                          {gradientEnabled && gradientStyle === "solid" && <div className="absolute inset-0" style={{ background: `linear-gradient(to right, ${gradientColor}cc, transparent)` }} />}
-                          {gradientEnabled && gradientStyle === "leopard" && <div className="absolute inset-0 w-[35%]" style={{ background: "linear-gradient(to right, #c8a44e, transparent)", opacity: 0.7 }} />}
+                          {gradientEnabled && (() => {
+                            const posMap: Record<string, React.CSSProperties> = {
+                              left: { left: 0, top: 0, width: "35%", height: "100%" },
+                              center: { left: "32.5%", top: 0, width: "35%", height: "100%" },
+                              right: { right: 0, top: 0, width: "35%", height: "100%" },
+                              top: { left: 0, top: 0, width: "100%", height: "30%" },
+                              middle: { left: 0, top: "35%", width: "100%", height: "30%" },
+                              bottom: { left: 0, bottom: 0, width: "100%", height: "30%" },
+                            };
+                            const dirMap: Record<string, string> = {
+                              left: "to right", center: "to right", right: "to left",
+                              top: "to bottom", middle: "to bottom", bottom: "to top",
+                            };
+                            const style = posMap[gradientPosition] || posMap.left;
+                            const dir = dirMap[gradientPosition] || "to right";
+                            const baseColor = gradientStyle === "leopard" ? "#c8a44e" : gradientColor;
+                            return <div className="absolute" style={{ ...style, background: `linear-gradient(${dir}, ${baseColor}cc, transparent)`, position: "absolute" }} />;
+                          })()}
                           {/* Logo preview */}
                           {logoPreviewUrl && (() => {
                             const posStyle: React.CSSProperties = { position: "absolute" };
@@ -1075,7 +1177,7 @@ export default function Home() {
                   <span className="text-xs text-muted-foreground">{gradientEnabled ? "On" : "Off"}</span>
                 </div>
                 {gradientEnabled && (
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div className="flex gap-2">
                       {[
                         { value: "solid", label: "Solid" },
@@ -1086,6 +1188,29 @@ export default function Home() {
                           onClick={() => setGradientStyle(opt.value)}
                           className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                             gradientStyle === opt.value
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-accent/40 text-muted-foreground hover:bg-accent/60"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    <Label className="text-xs text-muted-foreground">Position</Label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {[
+                        { value: "left", label: "Left" },
+                        { value: "center", label: "Centre" },
+                        { value: "right", label: "Right" },
+                        { value: "top", label: "Top" },
+                        { value: "middle", label: "Middle" },
+                        { value: "bottom", label: "Bottom" },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => setGradientPosition(opt.value)}
+                          className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                            gradientPosition === opt.value
                               ? "bg-primary text-primary-foreground"
                               : "bg-accent/40 text-muted-foreground hover:bg-accent/60"
                           }`}
