@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, ChevronUp, ChevronDown, Sparkles, Wand2, Copy, Check, MessageSquareText, ImagePlus, Trash2, Plus } from "lucide-react";
+import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Camera, Type, PenTool } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -399,9 +399,9 @@ export default function Home() {
   const [logoPosition, setLogoPosition] = useState("top-right");
   const [logoSize, setLogoSize] = useState(140);
 
-  const [barExpanded, setBarExpanded] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
+  const [currentStep, setCurrentStep] = useState(1);
   const [contentMode, setContentMode] = useState<"csv" | "ai">("csv");
   const [aiClientName, setAiClientName] = useState("");
   const [aiIndustry, setAiIndustry] = useState("");
@@ -534,6 +534,7 @@ export default function Home() {
       }
 
       setResult({ slides, totalSlides: slides.length, slidesPerCarousel, totalCarousels: postRows.length, sessionId: "local" });
+      setCurrentStep(4);
       toast.success(`${slides.length} slides generated — ready to download`, { id: toastId });
     } catch (e: any) {
       console.error("Generate error:", e);
@@ -699,6 +700,7 @@ export default function Home() {
       const buildToast = toast.loading("Building carousel slides...");
       const { slides, slidesPerCarousel, totalCarousels } = buildSlidesFromPosts(posts);
       setResult({ slides, totalSlides: slides.length, slidesPerCarousel, totalCarousels, sessionId: "local" });
+      setCurrentStep(4);
       toast.success(`${slides.length} slides generated — ready to download`, { id: buildToast });
     } catch (e: any) {
       toast.error("Error: " + (e?.message ?? "Unknown error"));
@@ -711,7 +713,7 @@ export default function Home() {
   const handleStartOver = () => {
     setPhotos([]); setCsvFile(null);
     setCsvPreview({ headers: [], rows: [] }); setAllCsvRows([]); setCaptions([]); setResult(null);
-    setAiGeneratedPosts(null); setAiProgress("");
+    setAiGeneratedPosts(null); setAiProgress(""); setCurrentStep(1);
   };
 
   const downloadZip = async () => {
@@ -893,59 +895,80 @@ export default function Home() {
         )}
       </header>
 
-      <main className="max-w-2xl mx-auto px-6 mt-12">
-        {!result ? (
-          <div className="flex flex-col gap-10">
-            {/* Heading */}
-            <div>
-              <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Create Content</h2>
-              <p className="text-muted-foreground text-base leading-relaxed">
-                Upload photos, then choose how to create your slide text.
-              </p>
+      <main className="max-w-3xl mx-auto px-6 mt-8 pb-32">
+        {/* Step Progress Bar */}
+          <div className="mb-10">
+            <div className="flex items-center justify-between mb-6">
+              {[
+                { num: 1, label: "Images", icon: Camera },
+                { num: 2, label: "Font & Layout", icon: Type },
+                { num: 3, label: "Content", icon: PenTool },
+                { num: 4, label: "Generate", icon: Sparkles },
+              ].map((step, i) => (
+                <React.Fragment key={step.num}>
+                  <button
+                    onClick={() => setCurrentStep(step.num)}
+                    className={`flex flex-col items-center gap-2 transition-all ${
+                      currentStep === step.num
+                        ? "text-primary"
+                        : currentStep > step.num
+                        ? "text-green-400"
+                        : "text-muted-foreground/40"
+                    }`}
+                  >
+                    <div
+                      className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold transition-all ${
+                        currentStep === step.num
+                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
+                          : currentStep > step.num
+                          ? "bg-green-500/20 text-green-400 border-2 border-green-500/30"
+                          : "bg-accent/30 text-muted-foreground/40"
+                      }`}
+                    >
+                      {currentStep > step.num ? <Check className="w-6 h-6" /> : <step.icon className="w-6 h-6" />}
+                    </div>
+                    <span className="text-sm font-semibold">{step.label}</span>
+                  </button>
+                  {i < 3 && (
+                    <div className={`flex-1 h-1 rounded-full mx-3 mt-[-20px] ${currentStep > step.num ? "bg-green-500/30" : "bg-accent/20"}`} />
+                  )}
+                </React.Fragment>
+              ))}
             </div>
+          </div>
 
-            {/* Mode toggle */}
-            <div className="flex rounded-xl overflow-hidden border border-border/30">
-              <button
-                onClick={() => setContentMode("csv")}
-                className={`flex-1 flex items-center justify-center gap-3 py-6 text-lg font-semibold rounded-xl transition-colors ${contentMode === "csv" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-accent text-muted-foreground"}`}
-              >
-                <FileText className="w-6 h-6" />
-                Upload CSV
-              </button>
-              <button
-                onClick={() => setContentMode("ai")}
-                className={`flex-1 flex items-center justify-center gap-3 py-6 text-lg font-semibold rounded-xl transition-colors ${contentMode === "ai" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-accent text-muted-foreground"}`}
-              >
-                <Sparkles className="w-6 h-6" />
-                Content Machine
-              </button>
-            </div>
+          <div className="flex flex-col gap-8">
 
-            {/* Drop zones */}
-            <div className="flex flex-col gap-6">
-              {/* Photos */}
-              <div
-                data-testid="drop-zone-photos"
-                className={`drop-zone-idle rounded-2xl min-h-[168px] flex flex-col items-center justify-center text-center cursor-pointer gap-3 px-8 ${isDraggingPhotos ? "drop-zone-dragging" : ""}`}
-                onDragOver={(e) => { e.preventDefault(); setIsDraggingPhotos(true); }}
-                onDragLeave={() => setIsDraggingPhotos(false)}
-                onDrop={handlePhotosDrop}
-                onClick={() => photoInputRef.current?.click()}
-              >
-                <input ref={photoInputRef} type="file" className="hidden" multiple accept="image/*" onChange={handlePhotosChange} data-testid="input-photos" />
-                <div className="w-11 h-11 rounded-full bg-accent flex items-center justify-center text-primary">
-                  <ImageIcon className="w-5 h-5" />
-                </div>
+            {/* ═══════ STEP 1: Images ═══════ */}
+            {currentStep === 1 && (
+              <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div>
-                  <p className="font-semibold text-lg">Photos</p>
-                  <p className="text-base text-muted-foreground mt-1">
-                    {photos.length > 0 ? `${photos.length} selected — click to add more` : "Drag & drop or click to upload"}
-                  </p>
+                  <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 1: Your Images</h2>
+                  <p className="text-lg text-muted-foreground">Upload your photos, use AI to recreate portraits, and add your logo.</p>
                 </div>
-              </div>
 
-              {/* SAY CHEESE - Portrait Recreation */}
+                {/* Photos upload */}
+                <div
+                  data-testid="drop-zone-photos"
+                  className={`drop-zone-idle rounded-2xl min-h-[168px] flex flex-col items-center justify-center text-center cursor-pointer gap-3 px-8 ${isDraggingPhotos ? "drop-zone-dragging" : ""}`}
+                  onDragOver={(e) => { e.preventDefault(); setIsDraggingPhotos(true); }}
+                  onDragLeave={() => setIsDraggingPhotos(false)}
+                  onDrop={handlePhotosDrop}
+                  onClick={() => photoInputRef.current?.click()}
+                >
+                  <input ref={photoInputRef} type="file" className="hidden" multiple accept="image/*" onChange={handlePhotosChange} data-testid="input-photos" />
+                  <div className="w-14 h-14 rounded-full bg-accent flex items-center justify-center text-primary">
+                    <ImageIcon className="w-7 h-7" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-xl">Photos</p>
+                    <p className="text-base text-muted-foreground mt-1">
+                      {photos.length > 0 ? `${photos.length} selected — click to add more` : "Drag & drop or click to upload"}
+                    </p>
+                  </div>
+                </div>
+
+              {/* SAY CHEESE */}
               {clinicianPortraits.length === 0 ? (
                 <div className="flex flex-col items-center gap-4">
                   {clinicianPhoto && (
@@ -972,20 +995,11 @@ export default function Home() {
                     className="w-full rounded-2xl bg-[#ff1493] hover:bg-[#ff1493]/90 disabled:opacity-50 text-white px-10 py-10 text-4xl font-black shadow-2xl shadow-pink-500/30 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-4"
                   >
                     {clinicianRecreating ? (
-                      <>
-                        <Loader2 className="w-10 h-10 animate-spin" />
-                        Creating 5 Styles...
-                      </>
+                      <><Loader2 className="w-10 h-10 animate-spin" />Creating 5 Styles...</>
                     ) : clinicianPhoto ? (
-                      <>
-                        <Sparkles className="w-10 h-10" />
-                        SAY CHEESE
-                      </>
+                      <><Sparkles className="w-10 h-10" />SAY CHEESE</>
                     ) : (
-                      <>
-                        <ImageIcon className="w-10 h-10" />
-                        SAY CHEESE
-                      </>
+                      <><ImageIcon className="w-10 h-10" />SAY CHEESE</>
                     )}
                   </button>
                   <p className="text-base text-muted-foreground text-center">
@@ -995,184 +1009,24 @@ export default function Home() {
               ) : (
                 <div className="rounded-2xl border border-border/30 bg-card/50 p-8 space-y-6">
                   <p className="text-2xl font-bold text-center">Your 5 Portrait Styles:</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-2 gap-4">
                     {clinicianPortraits.map((portrait, i) => (
                       <div key={i} className="rounded-xl border border-border/30 overflow-hidden bg-accent/5">
                         <img src={portrait.image} alt={portrait.style} className="w-full aspect-square object-cover" />
                         <div className="p-4 space-y-3">
                           <p className="font-semibold text-lg capitalize">
-                            {portrait.style === "bailey"
-                              ? "David Bailey Style"
-                              : portrait.style === "closeup"
-                              ? "Close-up"
-                              : portrait.style === "patient"
-                              ? "Patient Consultation"
-                              : portrait.style === "editorial"
-                              ? "Editorial"
-                              : "Classic Portrait"}
+                            {portrait.style === "bailey" ? "David Bailey Style" : portrait.style === "closeup" ? "Close-up" : portrait.style === "patient" ? "Patient Consultation" : portrait.style === "editorial" ? "Editorial" : "Classic Portrait"}
                           </p>
-                          <Button
-                            onClick={() => addPortraitAsPhoto(portrait.image)}
-                            className="w-full py-6 text-base font-semibold"
-                            size="lg"
-                          >
-                            <Plus className="w-5 h-5 mr-2" />
-                            Add to Carousel
+                          <Button onClick={() => addPortraitAsPhoto(portrait.image)} className="w-full py-5 text-base font-semibold" size="lg">
+                            <Plus className="w-5 h-5 mr-2" />Add to Carousel
                           </Button>
                         </div>
                       </div>
                     ))}
                   </div>
-
-                  <div className="flex gap-3 pt-4">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setClinicianPortraits([]);
-                        setClinicianPhoto(null);
-                      }}
-                      className="flex-1 py-6 text-base font-semibold"
-                      size="lg"
-                    >
-                      <RefreshCcw className="w-5 h-5 mr-2" />
-                      Try Another Photo
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* CSV — only in csv mode */}
-              {contentMode === "csv" && (
-                <div
-                  data-testid="drop-zone-csv"
-                  className={`drop-zone-idle rounded-2xl min-h-[168px] flex flex-col items-center justify-center text-center cursor-pointer gap-3 px-8 ${isDraggingCsv ? "drop-zone-dragging" : ""}`}
-                  onDragOver={(e) => { e.preventDefault(); setIsDraggingCsv(true); }}
-                  onDragLeave={() => setIsDraggingCsv(false)}
-                  onDrop={handleCsvDrop}
-                  onClick={() => csvInputRef.current?.click()}
-                >
-                  <input ref={csvInputRef} type="file" className="hidden" accept=".csv,text/csv" onChange={handleCsvChange} data-testid="input-csv" />
-                  <div className="w-11 h-11 rounded-full bg-accent flex items-center justify-center text-primary">
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <p className="font-semibold text-sm">CSV File</p>
-                    <p className="text-xs text-muted-foreground mt-0.5 truncate max-w-[260px]">
-                      {csvFile ? csvFile.name : "Drag & drop or click to upload"}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* AI Content Machine brief — only in ai mode */}
-              {contentMode === "ai" && (
-                <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-5">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Wand2 className="w-5 h-5 text-primary" />
-                    <h3 className="font-semibold text-base">Content Brief</h3>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Client / Brand Name</Label>
-                      <Input value={aiClientName} onChange={(e) => setAiClientName(e.target.value)} placeholder="e.g. Glow Aesthetics" className="h-9 text-sm" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Industry *</Label>
-                      <Input value={aiIndustry} onChange={(e) => setAiIndustry(e.target.value)} placeholder="e.g. Aesthetics clinic, Dental practice, Fitness" className="h-9 text-sm" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Tone of Voice</Label>
-                    <Select value={aiTone} onValueChange={setAiTone}>
-                      <SelectTrigger className="h-9 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="warm & professional">Warm & Professional</SelectItem>
-                        <SelectItem value="bold & edgy">Bold & Edgy</SelectItem>
-                        <SelectItem value="luxury & aspirational">Luxury & Aspirational</SelectItem>
-                        <SelectItem value="friendly & casual">Friendly & Casual</SelectItem>
-                        <SelectItem value="clinical & authoritative">Clinical & Authoritative</SelectItem>
-                        <SelectItem value="playful & fun">Playful & Fun</SelectItem>
-                        <SelectItem value="empathetic & caring">Empathetic & Caring</SelectItem>
-                        <SelectItem value="minimalist & clean">Minimalist & Clean</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Topics to Cover *</Label>
-                    <textarea
-                      value={aiTopics}
-                      onChange={(e) => setAiTopics(e.target.value)}
-                      placeholder="e.g. Botox benefits, skin care tips, client testimonials, treatment aftercare, seasonal offers"
-                      className="w-full min-h-[80px] rounded-lg border border-border bg-background px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-primary/30"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Number of Posts</Label>
-                      <div className="flex items-center gap-3">
-                        <Slider min={5} max={60} step={5} value={[aiPostCount]} onValueChange={([v]) => setAiPostCount(v)} className="flex-1" />
-                        <span className="text-sm font-semibold tabular-nums w-8 text-right">{aiPostCount}</span>
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Extra Instructions</Label>
-                      <Input value={aiExtraInstructions} onChange={(e) => setAiExtraInstructions(e.target.value)} placeholder="e.g. Always mention our clinic name" className="h-9 text-sm" />
-                    </div>
-                  </div>
-
-                  <button
-                    className="btn-shimmer w-full h-11 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleAiGenerate}
-                    disabled={aiGenerating}
-                  >
-                    {aiGenerating ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" />{aiProgress || "Generating..."}</>
-                    ) : (
-                      <><Sparkles className="w-4 h-4" />Generate {aiPostCount} Posts with AI</>
-                    )}
-                  </button>
-
-                  {aiGeneratedPosts && (
-                    <div className="space-y-4 pt-2">
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-medium text-base text-green-400">Content Ready</h4>
-                        <Badge variant="secondary" className="bg-green-500/10 text-green-400 text-sm">{aiGeneratedPosts.length} posts</Badge>
-                      </div>
-                      <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
-                        {aiGeneratedPosts.slice(0, 8).map((row, ri) => (
-                          <div key={ri} className="rounded-xl border border-border/30 bg-accent/20 overflow-hidden">
-                            <div className="px-4 py-2.5 bg-accent/30 flex items-center gap-2">
-                              <span className="text-primary font-mono text-sm font-bold">{String(ri + 1).padStart(2, "0")}</span>
-                              <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Carousel {ri + 1}</span>
-                            </div>
-                            <div className="p-4 space-y-3">
-                              {row.map((cell, ci) => (
-                                <div key={ci} className="flex gap-3">
-                                  <span className={`text-xs font-semibold mt-0.5 flex-shrink-0 w-14 ${ci === 0 ? "text-primary" : "text-muted-foreground/60"}`}>
-                                    {ci === 0 ? "Hook" : ci === row.length - 1 ? "CTA" : `Slide ${ci + 1}`}
-                                  </span>
-                                  <p className={`text-sm leading-relaxed ${ci === 0 ? "text-foreground font-semibold" : "text-muted-foreground"}`}>
-                                    {cell}
-                                  </p>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                        {aiGeneratedPosts.length > 8 && (
-                          <p className="text-sm text-muted-foreground/70 italic text-center py-2">
-                            Showing first 8 of {aiGeneratedPosts.length} posts
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                  <Button variant="outline" onClick={() => { setClinicianPortraits([]); setClinicianPhoto(null); }} className="w-full py-5 text-base font-semibold" size="lg">
+                    <RefreshCcw className="w-5 h-5 mr-2" />Try Another Photo
+                  </Button>
                 </div>
               )}
 
@@ -1189,532 +1043,588 @@ export default function Home() {
                 {logoPreviewUrl ? (
                   <>
                     <div className="relative">
-                      <img src={logoPreviewUrl} alt="Logo preview" className="h-10 max-w-[120px] object-contain" />
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setLogoFile(null); }}
-                        className="absolute -top-2 -right-2 p-0.5 bg-black/70 hover:bg-black/90 text-white rounded-full"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
+                      <img src={logoPreviewUrl} alt="Logo preview" className="h-12 max-w-[140px] object-contain" />
+                      <button onClick={(e) => { e.stopPropagation(); setLogoFile(null); }} className="absolute -top-2 -right-2 p-0.5 bg-black/70 hover:bg-black/90 text-white rounded-full"><X className="w-3 h-3" /></button>
                     </div>
-                    <p className="text-xs text-muted-foreground truncate max-w-[240px]">{logoFile?.name}</p>
+                    <p className="text-sm text-muted-foreground truncate max-w-[240px]">{logoFile?.name}</p>
                   </>
                 ) : (
                   <>
-                    <div className="w-11 h-11 rounded-full bg-accent flex items-center justify-center text-primary">
-                      <Layers className="w-5 h-5" />
-                    </div>
+                    <div className="w-14 h-14 rounded-full bg-accent flex items-center justify-center text-primary"><Layers className="w-7 h-7" /></div>
                     <div>
-                      <p className="font-semibold text-sm">Logo <span className="text-muted-foreground font-normal">(optional)</span></p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Drag & drop or click to upload</p>
+                      <p className="font-semibold text-lg">Logo <span className="text-muted-foreground font-normal">(optional)</span></p>
+                      <p className="text-base text-muted-foreground mt-1">Drag & drop or click to upload</p>
                     </div>
                   </>
                 )}
               </div>
-            </div>
 
-            {/* Photo thumbnails */}
-            {photos.length > 0 && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <h3 className="font-medium text-sm">Selected Photos</h3>
-                  <Badge variant="secondary" className="bg-accent text-xs">{photos.length}</Badge>
-                </div>
-                <div className="grid grid-cols-5 md:grid-cols-7 gap-2">
-                  {photos.map((file, i) => (
-                    <div key={i} className="relative aspect-square rounded-xl overflow-hidden group bg-accent cursor-pointer hover:shadow-[0_0_0_2px_hsl(var(--primary)/0.5),0_0_16px_hsl(var(--primary)/0.15)] transition-shadow duration-200">
-                      <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                      <button
-                        onClick={(e) => { e.stopPropagation(); removePhoto(i); }}
-                        className="absolute top-1 right-1 p-0.5 bg-black/60 hover:bg-black/90 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* CSV preview */}
-            {csvPreview.rows.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="font-medium text-base">CSV Preview</h3>
-                <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
-                  {csvPreview.rows.map((row, ri) => (
-                    <div key={ri} className="rounded-xl border border-border/30 bg-accent/20 overflow-hidden">
-                      <div className="px-4 py-2.5 bg-accent/30 flex items-center gap-2">
-                        <span className="text-primary font-mono text-sm font-bold">{String(ri + 1).padStart(2, "0")}</span>
-                        <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Carousel {ri + 1}</span>
+              {/* Photo thumbnails */}
+              {photos.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-medium text-lg">Selected Photos</h3>
+                    <Badge variant="secondary" className="bg-accent text-sm">{photos.length}</Badge>
+                  </div>
+                  <div className="grid grid-cols-5 md:grid-cols-7 gap-2">
+                    {photos.map((file, i) => (
+                      <div key={i} className="relative aspect-square rounded-xl overflow-hidden group bg-accent cursor-pointer hover:shadow-[0_0_0_2px_hsl(var(--primary)/0.5),0_0_16px_hsl(var(--primary)/0.15)] transition-shadow duration-200">
+                        <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                        <button onClick={(e) => { e.stopPropagation(); removePhoto(i); }} className="absolute top-1 right-1 p-0.5 bg-black/60 hover:bg-black/90 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3" /></button>
                       </div>
-                      <div className="p-4 space-y-3">
-                        {row.map((cell, ci) => (
-                          <div key={ci} className="flex gap-3">
-                            <span className={`text-xs font-semibold mt-0.5 flex-shrink-0 w-14 ${ci === 0 ? "text-primary" : "text-muted-foreground/60"}`}>
-                              {ci === 0 ? "Hook" : `Slide ${ci + 1}`}
-                            </span>
-                            <p className={`text-sm leading-relaxed ${ci === 0 ? "text-foreground font-semibold" : "text-muted-foreground"}`}>
-                              {cell}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-sm text-muted-foreground/70 italic">
-                  Showing first 3 rows - each row becomes one carousel
-                </p>
-              </div>
-            )}
-          </div>
-
-        ) : (
-          /* Results — gallery style */
-          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl mx-auto">
-            <div>
-              <h2 className="font-serif text-4xl font-semibold mb-2 tracking-tight">Your Carousels are Ready</h2>
-              <p className="text-muted-foreground">
-                {result.totalCarousels} carousels &times; {result.slidesPerCarousel} slides at 1080 × 1350 px —{" "}
-                <span style={{ fontFamily }} className="text-foreground font-medium">{selectedFontLabel}</span>, {fontSize}px
-              </p>
-            </div>
-
-            {Array.from({ length: result.totalCarousels }, (_, gi) => {
-              const groupSlides = result.slides.filter((s) => s.groupIndex === gi + 1);
-              return (
-                <div key={gi} className="space-y-4">
-                  <p className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">
-                    Carousel {String(gi + 1).padStart(2, "0")}
-                  </p>
-                  <div className="grid grid-cols-5 gap-4">
-                    {groupSlides.map((slide) => {
-                      const isCover = slide.groupPosition === 1;
-                      return (
-                        <div
-                          key={slide.slideIndex}
-                          className="relative rounded-2xl overflow-hidden shadow-md hover:shadow-[0_0_24px_hsl(var(--primary)/0.15)] transition-shadow duration-300"
-                          style={{ aspectRatio: "4/5" }}
-                          data-testid={`slide-card-${slide.slideIndex}`}
-                        >
-                          <img
-                            src={slide.imageUrl}
-                            alt={`Carousel ${slide.groupIndex} slide ${slide.groupPosition}`}
-                            className="absolute inset-0 w-full h-full object-cover"
-                            style={{ opacity: isCover ? 1 : 0.5 }}
-                          />
-                          {gradientEnabled && (() => {
-                            const posMap: Record<string, React.CSSProperties> = {
-                              left: { left: 0, top: 0, width: "35%", height: "100%" },
-                              center: { left: "32.5%", top: 0, width: "35%", height: "100%" },
-                              right: { right: 0, top: 0, width: "35%", height: "100%" },
-                              top: { left: 0, top: 0, width: "100%", height: "30%" },
-                              middle: { left: 0, top: "35%", width: "100%", height: "30%" },
-                              bottom: { left: 0, bottom: 0, width: "100%", height: "30%" },
-                            };
-                            const dirMap: Record<string, string> = {
-                              left: "to right", center: "to right", right: "to left",
-                              top: "to bottom", middle: "to bottom", bottom: "to top",
-                            };
-                            const style = posMap[gradientPosition] || posMap.left;
-                            const dir = dirMap[gradientPosition] || "to right";
-                            const baseColor = gradientStyle === "leopard" ? "#c8a44e" : gradientColor;
-                            return <div className="absolute" style={{ ...style, background: `linear-gradient(${dir}, ${baseColor}cc, transparent)`, position: "absolute" }} />;
-                          })()}
-                          {/* Logo preview */}
-                          {logoPreviewUrl && (() => {
-                            const posStyle: React.CSSProperties = { position: "absolute" };
-                            if (logoPosition === "top-left") { posStyle.top = 4; posStyle.left = 4; }
-                            else if (logoPosition === "top-right") { posStyle.top = 4; posStyle.right = 4; }
-                            else if (logoPosition === "bottom-left") { posStyle.bottom = 24; posStyle.left = 4; }
-                            else { posStyle.bottom = 24; posStyle.right = 4; }
-                            return (
-                              <img src={logoPreviewUrl} alt="Logo" style={{ ...posStyle, height: previewLogoH, maxWidth: 60, objectFit: "contain" }} />
-                            );
-                          })()}
-                          {/* Text overlay box */}
-                          <div
-                            className="absolute bottom-4 left-3 px-2 py-1.5 rounded-sm"
-                            style={{ backgroundColor: overlayColor }}
-                          >
-                            <p
-                              className="font-semibold line-clamp-4"
-                              style={{ fontFamily, fontSize: Math.max(7, Math.round(fontSize * 0.15)) + "px", color: textColor, lineHeight: lineSpacing }}
-                            >
-                              {slide.text}
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    })}
+                    ))}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
+              )}
 
-        {/* ——— Captions Section ——— */}
-        {result && (
-          <div className="max-w-5xl mx-auto px-6 md:px-10 py-10 space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <MessageSquareText className="w-6 h-6 text-primary" />
-                <h2 className="font-serif text-3xl font-semibold tracking-tight">Post Captions</h2>
-              </div>
-              <div className="flex items-center gap-2">
-                {captions.length > 0 && (
-                  <Button variant="outline" size="sm" onClick={copyAllCaptions}>
-                    {copiedIndex === -1 ? <><Check className="w-4 h-4 mr-2" />Copied!</> : <><Copy className="w-4 h-4 mr-2" />Copy All</>}
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  onClick={generateCaptions}
-                  disabled={captionGenerating}
-                  className="bg-primary text-primary-foreground"
-                >
-                  {captionGenerating ? (
-                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{captionProgress || "Generating..."}</>
-                  ) : captions.length > 0 ? (
-                    <><RefreshCcw className="w-4 h-4 mr-2" />Regenerate Captions</>
-                  ) : (
-                    <><Sparkles className="w-4 h-4 mr-2" />Generate Captions</>
-                  )}
+              {/* Step 1 Navigation */}
+              <div className="flex justify-end pt-4">
+                <Button onClick={() => setCurrentStep(2)} className="px-8 py-6 text-lg font-semibold" size="lg">
+                  Next: Font & Layout <ChevronRight className="w-5 h-5 ml-2" />
                 </Button>
               </div>
-            </div>
-
-            {captions.length === 0 && !captionGenerating && (
-              <div className="rounded-xl border border-dashed border-border/40 bg-accent/10 p-8 text-center">
-                <MessageSquareText className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
-                <p className="text-muted-foreground text-sm">
-                  Generate ready-to-post captions for each carousel, complete with hashtags and calls to action.
-                </p>
               </div>
             )}
 
-            {captions.length > 0 && (
-              <div className="space-y-4">
-                {captions.map((caption, i) => (
-                  <div key={i} className="rounded-xl border border-border/30 bg-accent/20 overflow-hidden group">
-                    <div className="px-4 py-2.5 bg-accent/30 flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-primary font-mono text-sm font-bold">{String(i + 1).padStart(2, "0")}</span>
-                        <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Carousel {i + 1} Caption</span>
-                      </div>
-                      <button
-                        onClick={() => copyCaption(caption, i)}
-                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        {copiedIndex === i ? <><Check className="w-4 h-4 text-green-400" /><span className="text-green-400">Copied</span></> : <><Copy className="w-4 h-4" /><span>Copy</span></>}
-                      </button>
-                    </div>
-                    <div className="p-4">
-                      <p className="text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">{caption}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-      </main>
-
-      {/* ——— Floating Bottom Bar ——— */}
-      <div className="fixed bottom-0 left-0 right-0 z-50">
-        {/* Expanded panel */}
-        {barExpanded && (
-          <div className="bg-card/98 backdrop-blur border-t border-border/30 shadow-[0_-8px_32px_rgba(0,0,0,0.5)]">
-            <div className="max-w-5xl mx-auto px-6 py-5 grid grid-cols-2 md:grid-cols-3 gap-5">
-              {/* Text Size */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs text-muted-foreground">Text Size</Label>
-                  <span className="text-xs font-semibold tabular-nums">{fontSize}px</span>
+            {/* ═══════ STEP 2: Font & Layout ═══════ */}
+            {currentStep === 2 && (
+              <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div>
+                  <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 2: Font & Layout</h2>
+                  <p className="text-lg text-muted-foreground">Customise the look and feel of your carousel slides.</p>
                 </div>
-                <Slider min={28} max={96} step={2} value={[fontSize]} onValueChange={([v]) => setFontSize(v)} className="w-full" />
-              </div>
 
-              {/* Text Colour */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                  <Palette className="w-3 h-3" /> Text Colour
-                </Label>
-                <div className="flex gap-2">
-                  <Input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-10 h-8 p-0.5 cursor-pointer" />
-                  <Input type="text" value={textColor.toUpperCase()} onChange={(e) => setTextColor(e.target.value)} className="flex-1 h-8 text-xs font-mono" placeholder="#ffffff" />
-                </div>
-              </div>
-
-              {/* Text Position */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Text Position</Label>
-                <div className="grid grid-cols-3 gap-1">
-                  {[
-                    { value: "top-left", label: "TL" },
-                    { value: "top-center", label: "TC" },
-                    { value: "top-right", label: "TR" },
-                    { value: "center-left", label: "CL" },
-                    { value: "center-center", label: "CC" },
-                    { value: "center-right", label: "CR" },
-                    { value: "bottom-left", label: "BL" },
-                    { value: "bottom-center", label: "BC" },
-                    { value: "bottom-right", label: "BR" },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setTextPosition(opt.value)}
-                      className={`px-1 py-1.5 rounded text-[10px] font-semibold transition-all ${
-                        textPosition === opt.value
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-accent/40 text-muted-foreground hover:bg-accent/60"
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[10px] text-muted-foreground/50">Last slide always centre</p>
-              </div>
-
-              {/* Line Spacing */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs text-muted-foreground">Line Spacing</Label>
-                  <span className="text-xs font-semibold tabular-nums">{lineSpacing.toFixed(2)}</span>
-                </div>
-                <Slider min={0.7} max={2} step={0.05} value={[lineSpacing]} onValueChange={([v]) => setLineSpacing(v)} className="w-full" />
-              </div>
-
-              {/* Page Colour (background behind semi-transparent photos) */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                  <Palette className="w-3 h-3" /> Page Colour
-                </Label>
-                <div className="flex gap-2">
-                  <Input type="color" value={pageColor} onChange={(e) => setPageColor(e.target.value)} className="w-10 h-8 p-0.5 cursor-pointer" />
-                  <Input type="text" value={pageColor} onChange={(e) => setPageColor(e.target.value)} className="flex-1 h-8 text-xs font-mono" placeholder="#000000" />
-                </div>
-              </div>
-
-              {/* Gradient */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                  <Palette className="w-3 h-3" /> Left Gradient
-                </Label>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setGradientEnabled(!gradientEnabled)}
-                    className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ${gradientEnabled ? "bg-primary" : "bg-muted-foreground/30"}`}
-                  >
-                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${gradientEnabled ? "left-[22px]" : "left-0.5"}`} />
-                  </button>
-                  <span className="text-xs text-muted-foreground">{gradientEnabled ? "On" : "Off"}</span>
-                </div>
-                {gradientEnabled && (
-                  <div className="space-y-3">
-                    <div className="flex gap-2">
-                      {[
-                        { value: "solid", label: "Solid" },
-                        { value: "leopard", label: "Leopard" },
-                      ].map((opt) => (
-                        <button
-                          key={opt.value}
-                          onClick={() => setGradientStyle(opt.value)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                            gradientStyle === opt.value
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-accent/40 text-muted-foreground hover:bg-accent/60"
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                    <Label className="text-xs text-muted-foreground">Position</Label>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {[
-                        { value: "left", label: "Left" },
-                        { value: "center", label: "Centre" },
-                        { value: "right", label: "Right" },
-                        { value: "top", label: "Top" },
-                        { value: "middle", label: "Middle" },
-                        { value: "bottom", label: "Bottom" },
-                      ].map((opt) => (
-                        <button
-                          key={opt.value}
-                          onClick={() => setGradientPosition(opt.value)}
-                          className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                            gradientPosition === opt.value
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-accent/40 text-muted-foreground hover:bg-accent/60"
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                    {gradientStyle === "solid" && (
-                      <div className="flex gap-2">
-                        <Input type="color" value={gradientColor} onChange={(e) => setGradientColor(e.target.value)} className="w-10 h-8 p-0.5 cursor-pointer" />
-                        <Input type="text" value={gradientColor} onChange={(e) => setGradientColor(e.target.value)} className="flex-1 h-8 text-xs font-mono" placeholder="#000000" />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Overlay Colour */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                  <Palette className="w-3 h-3" /> Overlay Colour
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    type="color"
-                    value={(() => {
-                      if (overlayColor.startsWith("#")) return overlayColor;
-                      const m = overlayColor.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
-                      if (m) return "#" + [m[1], m[2], m[3]].map((v) => Number(v).toString(16).padStart(2, "0")).join("");
-                      return "#000000";
-                    })()}
-                    onChange={(e) => {
-                      const hex = e.target.value;
-                      const a = overlayColor.includes(",") ? overlayColor.match(/[\d.]+\)$/)?.[0]?.slice(0, -1) || "0.5" : "0.5";
-                      setOverlayColor(`rgba(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)}, ${a})`);
-                    }}
-                    className="w-10 h-8 p-0.5 cursor-pointer"
-                  />
-                  <Input type="text" value={overlayColor} onChange={(e) => setOverlayColor(e.target.value)} className="flex-1 h-8 text-xs font-mono" placeholder="rgba(0,0,0,0.5)" />
-                </div>
-              </div>
-
-              {/* Corner Accent */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
-                  <Palette className="w-3 h-3" /> Corner Accent
-                </Label>
-                <Select value={cornerStyle} onValueChange={setCornerStyle}>
-                  <SelectTrigger className="h-8 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CORNER_STYLES.map((s) => (
-                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {cornerStyle !== "none" && (
-                  <div className="flex gap-2">
-                    <Input type="color" value={cornerColor} onChange={(e) => setCornerColor(e.target.value)} className="w-10 h-8 p-0.5 cursor-pointer" />
-                    <Input type="text" value={cornerColor} onChange={(e) => setCornerColor(e.target.value)} className="flex-1 h-8 text-xs font-mono" placeholder="#d4af37" />
-                  </div>
-                )}
-              </div>
-
-              {/* Logo controls */}
-              {logoFile && (
-                <>
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Logo Position</Label>
-                    <Select value={logoPosition} onValueChange={setLogoPosition}>
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Font */}
+                  <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
+                    <Label className="text-base font-semibold">Font</Label>
+                    <Select value={fontFamily} onValueChange={setFontFamily}>
+                      <SelectTrigger className="h-12 text-base" data-testid="select-font">
+                        <SelectValue><span style={{ fontFamily }}>{selectedFontLabel}</span></SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        {LOGO_POSITIONS.map((p) => (
-                          <SelectItem key={p.value} value={p.value} className="text-xs">{p.label}</SelectItem>
+                        {FONT_OPTIONS.map((f) => (
+                          <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
+                  {/* Text Size */}
+                  <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs text-muted-foreground">Logo Size</Label>
-                      <span className="text-xs font-semibold tabular-nums">{logoSize}px</span>
+                      <Label className="text-base font-semibold">Text Size</Label>
+                      <span className="text-base font-semibold tabular-nums">{fontSize}px</span>
                     </div>
-                    <Slider min={40} max={300} step={10} value={[logoSize]} onValueChange={([v]) => setLogoSize(v)} className="w-full" />
+                    <Slider min={28} max={96} step={2} value={[fontSize]} onValueChange={([v]) => setFontSize(v)} className="w-full" />
                   </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
 
-        {/* Main bar */}
-        <div className="bg-card/98 backdrop-blur border-t border-border/20 shadow-[0_-4px_24px_rgba(0,0,0,0.4)]">
-          <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
-            {/* Font */}
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Label className="text-xs text-muted-foreground whitespace-nowrap hidden sm:block">Font</Label>
-              <Select value={fontFamily} onValueChange={setFontFamily}>
-                <SelectTrigger className="h-8 text-xs w-[120px]" data-testid="select-font">
-                  <SelectValue>
-                    <span style={{ fontFamily }}>{selectedFontLabel}</span>
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {FONT_OPTIONS.map((f) => (
-                    <SelectItem key={f.value} value={f.value}>
-                      <span style={{ fontFamily: f.value }}>{f.label}</span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                  {/* Text Colour */}
+                  <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
+                    <Label className="text-base font-semibold flex items-center gap-2"><Palette className="w-4 h-4" /> Text Colour</Label>
+                    <div className="flex gap-3">
+                      <Input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-14 h-12 p-1 cursor-pointer" data-testid="input-text-color" />
+                      <Input type="text" value={textColor.toUpperCase()} onChange={(e) => setTextColor(e.target.value)} className="flex-1 h-12 text-base font-mono" placeholder="#ffffff" />
+                    </div>
+                  </div>
 
-            {/* Font size compact display */}
-            <div className="hidden md:flex items-center gap-2 min-w-[120px]">
-              <span className="text-xs text-muted-foreground whitespace-nowrap">{fontSize}px</span>
-              <Slider min={28} max={96} step={2} value={[fontSize]} onValueChange={([v]) => setFontSize(v)} className="w-full" />
-            </div>
+                  {/* Text Position */}
+                  <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
+                    <Label className="text-base font-semibold">Text Position</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { value: "top-left", label: "TL" }, { value: "top-center", label: "TC" }, { value: "top-right", label: "TR" },
+                        { value: "center-left", label: "CL" }, { value: "center-center", label: "CC" }, { value: "center-right", label: "CR" },
+                        { value: "bottom-left", label: "BL" }, { value: "bottom-center", label: "BC" }, { value: "bottom-right", label: "BR" },
+                      ].map((opt) => (
+                        <button key={opt.value} onClick={() => setTextPosition(opt.value)}
+                          className={`px-3 py-3 rounded-lg text-sm font-semibold transition-all ${textPosition === opt.value ? "bg-primary text-primary-foreground" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}
+                        >{opt.label}</button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground/60">Last slide always centre</p>
+                  </div>
 
-            {/* Text color compact */}
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              <Label className="text-xs text-muted-foreground hidden sm:block">T</Label>
-              <Input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-8 h-8 p-0.5 cursor-pointer flex-shrink-0" data-testid="input-text-color" />
-            </div>
+                  {/* Line Spacing */}
+                  <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-base font-semibold">Line Spacing</Label>
+                      <span className="text-base font-semibold tabular-nums">{lineSpacing.toFixed(2)}</span>
+                    </div>
+                    <Slider min={0.7} max={2} step={0.05} value={[lineSpacing]} onValueChange={([v]) => setLineSpacing(v)} className="w-full" />
+                  </div>
 
-            {/* Expand toggle */}
-            <button
-              onClick={() => setBarExpanded((v) => !v)}
-              className="ml-1 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 px-2 py-1 rounded-md hover:bg-accent"
-            >
-              {barExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
-              <span className="hidden sm:inline">{barExpanded ? "Less" : "More"}</span>
-            </button>
+                  {/* Page Colour */}
+                  <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
+                    <Label className="text-base font-semibold flex items-center gap-2"><Palette className="w-4 h-4" /> Page Colour</Label>
+                    <div className="flex gap-3">
+                      <Input type="color" value={pageColor} onChange={(e) => setPageColor(e.target.value)} className="w-14 h-12 p-1 cursor-pointer" />
+                      <Input type="text" value={pageColor} onChange={(e) => setPageColor(e.target.value)} className="flex-1 h-12 text-base font-mono" placeholder="#000000" />
+                    </div>
+                  </div>
 
-            <div className="flex-1" />
+                  {/* Overlay Colour */}
+                  <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
+                    <Label className="text-base font-semibold flex items-center gap-2"><Palette className="w-4 h-4" /> Overlay Colour</Label>
+                    <div className="flex gap-3">
+                      <Input
+                        type="color"
+                        value={(() => {
+                          if (overlayColor.startsWith("#")) return overlayColor;
+                          const m = overlayColor.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+                          if (m) return "#" + [m[1], m[2], m[3]].map((v) => Number(v).toString(16).padStart(2, "0")).join("");
+                          return "#000000";
+                        })()}
+                        onChange={(e) => {
+                          const hex = e.target.value;
+                          const a = overlayColor.includes(",") ? overlayColor.match(/[\d.]+\)$/)?.[0]?.slice(0, -1) || "0.5" : "0.5";
+                          setOverlayColor(`rgba(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)}, ${a})`);
+                        }}
+                        className="w-14 h-12 p-1 cursor-pointer"
+                      />
+                      <Input type="text" value={overlayColor} onChange={(e) => setOverlayColor(e.target.value)} className="flex-1 h-12 text-base font-mono" placeholder="rgba(0,0,0,0.5)" />
+                    </div>
+                  </div>
 
-            {/* Generate button — pill, gradient, shimmer */}
-            {!result ? (
-              <button
-                className="btn-shimmer h-10 px-6 rounded-full text-sm font-semibold flex items-center gap-2 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={contentMode === "ai" ? handleGenerateFromAi : handleGenerate}
-                disabled={isGenerating}
-                data-testid="button-generate"
-              >
-                {isGenerating || aiGenerating ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" />{aiGenerating ? (aiProgress || "Writing content…") : "Generating…"}</>
-                ) : contentMode === "ai" && !aiGeneratedPosts?.length ? (
-                  <><Sparkles className="w-4 h-4" />Generate with AI</>
-                ) : "Generate Carousel Posts"}
-              </button>
-            ) : (
-              <button
-                className="btn-shimmer h-10 px-6 rounded-full text-sm font-semibold flex items-center gap-2 flex-shrink-0"
-                onClick={downloadZip}
-                data-testid="button-download-zip-bar"
-              >
-                <Download className="w-4 h-4" />
-                Download ZIP
-              </button>
+                  {/* Corner Accent */}
+                  <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
+                    <Label className="text-base font-semibold flex items-center gap-2"><Palette className="w-4 h-4" /> Corner Accent</Label>
+                    <Select value={cornerStyle} onValueChange={setCornerStyle}>
+                      <SelectTrigger className="h-12 text-base"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {CORNER_STYLES.map((s) => (<SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                    {cornerStyle !== "none" && (
+                      <div className="flex gap-3">
+                        <Input type="color" value={cornerColor} onChange={(e) => setCornerColor(e.target.value)} className="w-14 h-12 p-1 cursor-pointer" />
+                        <Input type="text" value={cornerColor} onChange={(e) => setCornerColor(e.target.value)} className="flex-1 h-12 text-base font-mono" placeholder="#d4af37" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Gradient */}
+                  <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6 md:col-span-2">
+                    <Label className="text-base font-semibold flex items-center gap-2"><Palette className="w-4 h-4" /> Gradient</Label>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => setGradientEnabled(!gradientEnabled)}
+                        className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${gradientEnabled ? "bg-primary" : "bg-muted-foreground/30"}`}
+                      >
+                        <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${gradientEnabled ? "left-[26px]" : "left-0.5"}`} />
+                      </button>
+                      <span className="text-base text-muted-foreground">{gradientEnabled ? "On" : "Off"}</span>
+                    </div>
+                    {gradientEnabled && (
+                      <div className="space-y-4 pt-2">
+                        <div className="flex gap-3">
+                          {[{ value: "solid", label: "Solid" }, { value: "leopard", label: "Leopard" }].map((opt) => (
+                            <button key={opt.value} onClick={() => setGradientStyle(opt.value)}
+                              className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${gradientStyle === opt.value ? "bg-primary text-primary-foreground" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}
+                            >{opt.label}</button>
+                          ))}
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          {[{ value: "left", label: "Left" }, { value: "center", label: "Centre" }, { value: "right", label: "Right" },
+                            { value: "top", label: "Top" }, { value: "middle", label: "Middle" }, { value: "bottom", label: "Bottom" }].map((opt) => (
+                            <button key={opt.value} onClick={() => setGradientPosition(opt.value)}
+                              className={`px-3 py-2.5 rounded-lg text-sm font-semibold transition-all ${gradientPosition === opt.value ? "bg-primary text-primary-foreground" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}
+                            >{opt.label}</button>
+                          ))}
+                        </div>
+                        {gradientStyle === "solid" && (
+                          <div className="flex gap-3">
+                            <Input type="color" value={gradientColor} onChange={(e) => setGradientColor(e.target.value)} className="w-14 h-12 p-1 cursor-pointer" />
+                            <Input type="text" value={gradientColor} onChange={(e) => setGradientColor(e.target.value)} className="flex-1 h-12 text-base font-mono" />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Logo controls */}
+                  {logoFile && (
+                    <>
+                      <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
+                        <Label className="text-base font-semibold">Logo Position</Label>
+                        <Select value={logoPosition} onValueChange={setLogoPosition}>
+                          <SelectTrigger className="h-12 text-base"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {LOGO_POSITIONS.map((p) => (<SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-base font-semibold">Logo Size</Label>
+                          <span className="text-base font-semibold tabular-nums">{logoSize}px</span>
+                        </div>
+                        <Slider min={40} max={300} step={10} value={[logoSize]} onValueChange={([v]) => setLogoSize(v)} className="w-full" />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Step 2 Navigation */}
+                <div className="flex justify-between pt-4">
+                  <Button variant="outline" onClick={() => setCurrentStep(1)} className="px-8 py-6 text-lg font-semibold" size="lg">
+                    <ChevronLeft className="w-5 h-5 mr-2" /> Back
+                  </Button>
+                  <Button onClick={() => setCurrentStep(3)} className="px-8 py-6 text-lg font-semibold" size="lg">
+                    Next: Content <ChevronRight className="w-5 h-5 ml-2" />
+                  </Button>
+                </div>
+              </div>
             )}
+
+            {/* ═══════ STEP 3: Content ═══════ */}
+            {currentStep === 3 && (
+              <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div>
+                  <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 3: Your Content</h2>
+                  <p className="text-lg text-muted-foreground">Choose how to create the text for your carousel slides.</p>
+                </div>
+
+                {/* Mode toggle */}
+                <div className="flex rounded-xl overflow-hidden border border-border/30">
+                  <button onClick={() => setContentMode("csv")}
+                    className={`flex-1 flex items-center justify-center gap-3 py-6 text-lg font-semibold rounded-xl transition-colors ${contentMode === "csv" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-accent text-muted-foreground"}`}
+                  ><FileText className="w-6 h-6" />Upload CSV</button>
+                  <button onClick={() => setContentMode("ai")}
+                    className={`flex-1 flex items-center justify-center gap-3 py-6 text-lg font-semibold rounded-xl transition-colors ${contentMode === "ai" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-accent text-muted-foreground"}`}
+                  ><Sparkles className="w-6 h-6" />Content Machine</button>
+                </div>
+
+                {/* CSV upload */}
+                {contentMode === "csv" && (
+                  <>
+                    <div
+                      data-testid="drop-zone-csv"
+                      className={`drop-zone-idle rounded-2xl min-h-[168px] flex flex-col items-center justify-center text-center cursor-pointer gap-3 px-8 ${isDraggingCsv ? "drop-zone-dragging" : ""}`}
+                      onDragOver={(e) => { e.preventDefault(); setIsDraggingCsv(true); }}
+                      onDragLeave={() => setIsDraggingCsv(false)}
+                      onDrop={handleCsvDrop}
+                      onClick={() => csvInputRef.current?.click()}
+                    >
+                      <input ref={csvInputRef} type="file" className="hidden" accept=".csv,text/csv" onChange={handleCsvChange} data-testid="input-csv" />
+                      <div className="w-14 h-14 rounded-full bg-accent flex items-center justify-center text-primary"><FileText className="w-7 h-7" /></div>
+                      <div>
+                        <p className="font-semibold text-lg">CSV File</p>
+                        <p className="text-base text-muted-foreground mt-1 truncate max-w-[300px]">
+                          {csvFile ? csvFile.name : "Drag & drop or click to upload"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {csvPreview.rows.length > 0 && (
+                      <div className="space-y-4">
+                        <h3 className="font-medium text-lg">CSV Preview</h3>
+                        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
+                          {csvPreview.rows.map((row, ri) => (
+                            <div key={ri} className="rounded-xl border border-border/30 bg-accent/20 overflow-hidden">
+                              <div className="px-4 py-2.5 bg-accent/30 flex items-center gap-2">
+                                <span className="text-primary font-mono text-sm font-bold">{String(ri + 1).padStart(2, "0")}</span>
+                                <span className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Carousel {ri + 1}</span>
+                              </div>
+                              <div className="p-4 space-y-3">
+                                {row.map((cell, ci) => (
+                                  <div key={ci} className="flex gap-3">
+                                    <span className={`text-sm font-semibold mt-0.5 flex-shrink-0 w-16 ${ci === 0 ? "text-primary" : "text-muted-foreground/60"}`}>
+                                      {ci === 0 ? "Hook" : `Slide ${ci + 1}`}
+                                    </span>
+                                    <p className={`text-base leading-relaxed ${ci === 0 ? "text-foreground font-semibold" : "text-muted-foreground"}`}>{cell}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-sm text-muted-foreground/70 italic">Showing first 3 rows - each row becomes one carousel</p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* AI Content Machine */}
+                {contentMode === "ai" && (
+                  <div className="rounded-2xl border border-border/30 bg-card/50 p-8 space-y-6">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Wand2 className="w-6 h-6 text-primary" />
+                      <h3 className="font-semibold text-xl">Content Brief</h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground">Client / Brand Name</Label>
+                        <Input value={aiClientName} onChange={(e) => setAiClientName(e.target.value)} placeholder="e.g. Glow Aesthetics" className="h-12 text-base" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground">Industry *</Label>
+                        <Input value={aiIndustry} onChange={(e) => setAiIndustry(e.target.value)} placeholder="e.g. Aesthetics clinic" className="h-12 text-base" />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground">Tone of Voice</Label>
+                      <Select value={aiTone} onValueChange={setAiTone}>
+                        <SelectTrigger className="h-12 text-base"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="warm & professional">Warm & Professional</SelectItem>
+                          <SelectItem value="bold & edgy">Bold & Edgy</SelectItem>
+                          <SelectItem value="luxury & aspirational">Luxury & Aspirational</SelectItem>
+                          <SelectItem value="friendly & casual">Friendly & Casual</SelectItem>
+                          <SelectItem value="clinical & authoritative">Clinical & Authoritative</SelectItem>
+                          <SelectItem value="playful & fun">Playful & Fun</SelectItem>
+                          <SelectItem value="empathetic & caring">Empathetic & Caring</SelectItem>
+                          <SelectItem value="minimalist & clean">Minimalist & Clean</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground">Topics to Cover *</Label>
+                      <textarea value={aiTopics} onChange={(e) => setAiTopics(e.target.value)}
+                        placeholder="e.g. Botox benefits, skin care tips, client testimonials"
+                        className="w-full min-h-[100px] rounded-lg border border-border bg-background px-4 py-3 text-base resize-y focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground">Number of Posts</Label>
+                        <div className="flex items-center gap-3">
+                          <Slider min={5} max={60} step={5} value={[aiPostCount]} onValueChange={([v]) => setAiPostCount(v)} className="flex-1" />
+                          <span className="text-lg font-semibold tabular-nums w-10 text-right">{aiPostCount}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground">Extra Instructions</Label>
+                        <Input value={aiExtraInstructions} onChange={(e) => setAiExtraInstructions(e.target.value)} placeholder="e.g. Always mention our clinic name" className="h-12 text-base" />
+                      </div>
+                    </div>
+
+                    <button className="btn-shimmer w-full h-14 rounded-xl text-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      onClick={handleAiGenerate} disabled={aiGenerating}
+                    >
+                      {aiGenerating ? (
+                        <><Loader2 className="w-5 h-5 animate-spin" />{aiProgress || "Generating..."}</>
+                      ) : (
+                        <><Sparkles className="w-5 h-5" />Generate {aiPostCount} Posts with AI</>
+                      )}
+                    </button>
+
+                    {aiGeneratedPosts && (
+                      <div className="space-y-4 pt-2">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium text-lg text-green-400">Content Ready</h4>
+                          <Badge variant="secondary" className="bg-green-500/10 text-green-400 text-base">{aiGeneratedPosts.length} posts</Badge>
+                        </div>
+                        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
+                          {aiGeneratedPosts.slice(0, 8).map((row, ri) => (
+                            <div key={ri} className="rounded-xl border border-border/30 bg-accent/20 overflow-hidden">
+                              <div className="px-4 py-2.5 bg-accent/30 flex items-center gap-2">
+                                <span className="text-primary font-mono text-sm font-bold">{String(ri + 1).padStart(2, "0")}</span>
+                                <span className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Carousel {ri + 1}</span>
+                              </div>
+                              <div className="p-4 space-y-3">
+                                {row.map((cell, ci) => (
+                                  <div key={ci} className="flex gap-3">
+                                    <span className={`text-sm font-semibold mt-0.5 flex-shrink-0 w-16 ${ci === 0 ? "text-primary" : "text-muted-foreground/60"}`}>
+                                      {ci === 0 ? "Hook" : ci === row.length - 1 ? "CTA" : `Slide ${ci + 1}`}
+                                    </span>
+                                    <p className={`text-base leading-relaxed ${ci === 0 ? "text-foreground font-semibold" : "text-muted-foreground"}`}>{cell}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                          {aiGeneratedPosts.length > 8 && (
+                            <p className="text-sm text-muted-foreground/70 italic text-center py-2">Showing first 8 of {aiGeneratedPosts.length} posts</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Step 3 Navigation */}
+                <div className="flex justify-between pt-4">
+                  <Button variant="outline" onClick={() => setCurrentStep(2)} className="px-8 py-6 text-lg font-semibold" size="lg">
+                    <ChevronLeft className="w-5 h-5 mr-2" /> Back
+                  </Button>
+                  <button
+                    className="btn-shimmer px-10 py-6 rounded-2xl text-lg font-bold flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => {
+                      if (contentMode === "ai") {
+                        handleGenerateFromAi();
+                      } else {
+                        handleGenerate();
+                      }
+                    }}
+                    disabled={isGenerating || aiGenerating}
+                    data-testid="button-generate"
+                  >
+                    {isGenerating || aiGenerating ? (
+                      <><Loader2 className="w-5 h-5 animate-spin" />{aiGenerating ? (aiProgress || "Writing content...") : "Generating..."}</>
+                    ) : (
+                      <>Generate Carousel Posts <ChevronRight className="w-5 h-5" /></>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ═══════ STEP 4: Results & Captions ═══════ */}
+            {currentStep === 4 && (
+              <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                {!result ? (
+                  <>
+                    <div>
+                      <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 4: Generate</h2>
+                      <p className="text-lg text-muted-foreground">Generate your carousel posts first, then create captions.</p>
+                    </div>
+                    <div className="text-center py-12">
+                      <p className="text-xl text-muted-foreground mb-6">Complete Step 3 first to generate your carousels</p>
+                      <Button variant="outline" onClick={() => setCurrentStep(3)} className="px-8 py-6 text-lg font-semibold" size="lg">
+                        <ChevronLeft className="w-5 h-5 mr-2" /> Go to Step 3
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="font-serif text-4xl font-semibold mb-2 tracking-tight">Your Carousels are Ready</h2>
+                        <p className="text-lg text-muted-foreground">
+                          {result.totalCarousels} carousels &times; {result.slidesPerCarousel} slides at 1080 &times; 1350 px
+                        </p>
+                      </div>
+                      <div className="flex gap-3">
+                        <button className="btn-shimmer px-8 py-4 rounded-2xl text-lg font-bold flex items-center gap-3" onClick={downloadZip} data-testid="button-download-zip-bar">
+                          <Download className="w-5 h-5" />Download ZIP
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-10">
+                      {Array.from({ length: result.totalCarousels }, (_, gi) => {
+                        const groupSlides = result.slides.filter((s: any) => s.groupIndex === gi + 1);
+                        return (
+                          <div key={gi} className="space-y-4">
+                            <p className="text-sm font-semibold tracking-[0.2em] uppercase text-muted-foreground">
+                              Carousel {String(gi + 1).padStart(2, "0")}
+                            </p>
+                            <div className="grid grid-cols-5 gap-4">
+                              {groupSlides.map((slide: any) => {
+                                const isCover = slide.groupPosition === 1;
+                                return (
+                                  <div key={slide.slideIndex} className="relative rounded-2xl overflow-hidden shadow-md hover:shadow-[0_0_24px_hsl(var(--primary)/0.15)] transition-shadow duration-300" style={{ aspectRatio: "4/5" }} data-testid={`slide-card-${slide.slideIndex}`}>
+                                    <img src={slide.imageUrl} alt={`Carousel ${slide.groupIndex} slide ${slide.groupPosition}`} className="absolute inset-0 w-full h-full object-cover" style={{ opacity: isCover ? 1 : 0.5 }} />
+                                    {gradientEnabled && (() => {
+                                      const posMap: Record<string, React.CSSProperties> = {
+                                        left: { left: 0, top: 0, width: "35%", height: "100%" },
+                                        center: { left: "32.5%", top: 0, width: "35%", height: "100%" },
+                                        right: { right: 0, top: 0, width: "35%", height: "100%" },
+                                        top: { left: 0, top: 0, width: "100%", height: "30%" },
+                                        middle: { left: 0, top: "35%", width: "100%", height: "30%" },
+                                        bottom: { left: 0, bottom: 0, width: "100%", height: "30%" },
+                                      };
+                                      const dirMap: Record<string, string> = { left: "to right", center: "to right", right: "to left", top: "to bottom", middle: "to bottom", bottom: "to top" };
+                                      const style = posMap[gradientPosition] || posMap.left;
+                                      const dir = dirMap[gradientPosition] || "to right";
+                                      const baseColor = gradientStyle === "leopard" ? "#c8a44e" : gradientColor;
+                                      return <div className="absolute" style={{ ...style, background: `linear-gradient(${dir}, ${baseColor}cc, transparent)`, position: "absolute" }} />;
+                                    })()}
+                                    {logoPreviewUrl && (() => {
+                                      const posStyle: React.CSSProperties = { position: "absolute" };
+                                      if (logoPosition === "top-left") { posStyle.top = 4; posStyle.left = 4; }
+                                      else if (logoPosition === "top-right") { posStyle.top = 4; posStyle.right = 4; }
+                                      else if (logoPosition === "bottom-left") { posStyle.bottom = 24; posStyle.left = 4; }
+                                      else { posStyle.bottom = 24; posStyle.right = 4; }
+                                      return <img src={logoPreviewUrl} alt="Logo" style={{ ...posStyle, height: previewLogoH, maxWidth: 60, objectFit: "contain" }} />;
+                                    })()}
+                                    <div className="absolute bottom-4 left-3 px-2 py-1.5 rounded-sm" style={{ backgroundColor: overlayColor }}>
+                                      <p className="font-semibold line-clamp-4" style={{ fontFamily, fontSize: Math.max(7, Math.round(fontSize * 0.15)) + "px", color: textColor, lineHeight: lineSpacing }}>{slide.text}</p>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Captions Section */}
+                    <div className="space-y-6 pt-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <MessageSquareText className="w-6 h-6 text-primary" />
+                          <h2 className="font-serif text-3xl font-semibold tracking-tight">Post Captions</h2>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {captions.length > 0 && (
+                            <Button variant="outline" size="lg" onClick={copyAllCaptions} className="py-4 text-base">
+                              {copiedIndex === -1 ? <><Check className="w-5 h-5 mr-2" />Copied!</> : <><Copy className="w-5 h-5 mr-2" />Copy All</>}
+                            </Button>
+                          )}
+                          <Button size="lg" onClick={generateCaptions} disabled={captionGenerating} className="bg-primary text-primary-foreground py-4 text-base">
+                            {captionGenerating ? (
+                              <><Loader2 className="w-5 h-5 mr-2 animate-spin" />{captionProgress || "Generating..."}</>
+                            ) : captions.length > 0 ? (
+                              <><RefreshCcw className="w-5 h-5 mr-2" />Regenerate Captions</>
+                            ) : (
+                              <><Sparkles className="w-5 h-5 mr-2" />Generate Captions</>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+
+                      {captions.length === 0 && !captionGenerating && (
+                        <div className="rounded-xl border border-dashed border-border/40 bg-accent/10 p-8 text-center">
+                          <MessageSquareText className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+                          <p className="text-lg text-muted-foreground">Generate ready-to-post captions for each carousel, complete with hashtags and calls to action.</p>
+                        </div>
+                      )}
+
+                      {captions.length > 0 && (
+                        <div className="space-y-4">
+                          {captions.map((caption, i) => (
+                            <div key={i} className="rounded-xl border border-border/30 bg-accent/20 overflow-hidden group">
+                              <div className="px-4 py-3 bg-accent/30 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-primary font-mono text-sm font-bold">{String(i + 1).padStart(2, "0")}</span>
+                                  <span className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Carousel {i + 1} Caption</span>
+                                </div>
+                                <button onClick={() => copyCaption(caption, i)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                                  {copiedIndex === i ? <><Check className="w-4 h-4 text-green-400" /><span className="text-green-400">Copied</span></> : <><Copy className="w-4 h-4" /><span>Copy</span></>}
+                                </button>
+                              </div>
+                              <div className="p-4">
+                                <p className="text-base leading-relaxed text-muted-foreground whitespace-pre-wrap">{caption}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Step 4 Navigation */}
+                    <div className="flex justify-between pt-4">
+                      <Button variant="outline" onClick={handleStartOver} className="px-8 py-6 text-lg font-semibold" size="lg">
+                        <RefreshCcw className="w-5 h-5 mr-2" /> Start Over
+                      </Button>
+                      <button className="btn-shimmer px-10 py-6 rounded-2xl text-lg font-bold flex items-center gap-3" onClick={downloadZip} data-testid="button-download-zip">
+                        <Download className="w-5 h-5" />Download ZIP
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
           </div>
-        </div>
-      </div>
+      </main>
+
       <VanessaChat />
     </div>
   );

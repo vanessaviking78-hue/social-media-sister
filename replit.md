@@ -32,6 +32,7 @@ A social media content tool at the root path `/`. Two modes: (1) Upload photos +
 - **Caption Generator**: `POST /api/content/captions` — SSE endpoint generating Instagram captions
 - **Gradient Controls**: On/off toggle, color picker, solid vs leopard print, 6-position gradient placement
 - **Text Position**: 3x3 grid (TL/TC/TR/CL/CC/CR/BL/BC/BR); CTA slide forces center-center with larger bold text
+- **4-Step Wizard**: Step 1 (Images: photos upload, SAY CHEESE portrait AI, logo upload), Step 2 (Font & Layout: all styling controls in card grid), Step 3 (Content: CSV/AI mode toggle + content creation), Step 4 (Results & Captions: carousel gallery, download ZIP, caption generation). Progress bar at top with clickable step icons. Next/Back navigation on each step.
 - **Interface**: Simplified and enlarged design with larger text (16-18px), expanded buttons (py-6+), increased padding and spacing for better readability
 
 ## Structure
