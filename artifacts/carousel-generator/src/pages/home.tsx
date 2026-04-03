@@ -19,15 +19,30 @@ const CANVAS_HEIGHT = 1350;
 
 const FONT_OPTIONS = [
   { label: "Inter", value: "Inter, sans-serif" },
-  { label: "Georgia", value: "Georgia, serif" },
   { label: "Playfair Display", value: "'Playfair Display', serif" },
   { label: "Montserrat", value: "'Montserrat', sans-serif" },
   { label: "Lato", value: "'Lato', sans-serif" },
   { label: "Oswald", value: "'Oswald', sans-serif" },
   { label: "Merriweather", value: "'Merriweather', serif" },
   { label: "Raleway", value: "'Raleway', sans-serif" },
-  { label: "Source Sans Pro", value: "'Source Sans Pro', sans-serif" },
   { label: "Roboto", value: "'Roboto', sans-serif" },
+  { label: "Cormorant Garamond", value: "'Cormorant Garamond', serif" },
+  { label: "Anton", value: "'Anton', sans-serif" },
+  { label: "Poppins", value: "'Poppins', sans-serif" },
+  { label: "Bebas Neue", value: "'Bebas Neue', sans-serif" },
+  { label: "Dancing Script", value: "'Dancing Script', cursive" },
+  { label: "Pacifico", value: "'Pacifico', cursive" },
+  { label: "Libre Baskerville", value: "'Libre Baskerville', serif" },
+  { label: "DM Serif Display", value: "'DM Serif Display', serif" },
+  { label: "Abril Fatface", value: "'Abril Fatface', serif" },
+  { label: "Quicksand", value: "'Quicksand', sans-serif" },
+  { label: "Nunito", value: "'Nunito', sans-serif" },
+  { label: "Crimson Text", value: "'Crimson Text', serif" },
+  { label: "Work Sans", value: "'Work Sans', sans-serif" },
+  { label: "Bitter", value: "'Bitter', serif" },
+  { label: "Georgia", value: "Georgia, serif" },
+  { label: "Josefin Sans", value: "'Josefin Sans', sans-serif" },
+  { label: "Great Vibes", value: "'Great Vibes', cursive" },
 ];
 
 const CORNER_STYLES = [
@@ -49,7 +64,7 @@ if (typeof document !== "undefined") {
   const link = document.createElement("link");
   link.rel = "stylesheet";
   link.href =
-    "https://fonts.googleapis.com/css2?family=Playfair+Display&family=Montserrat&family=Lato&family=Oswald&family=Merriweather&family=Raleway&family=Source+Sans+Pro&family=Roboto&display=swap";
+    "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Montserrat:wght@400;600;700&family=Lato:wght@400;700&family=Oswald:wght@400;600;700&family=Merriweather:wght@400;700&family=Raleway:wght@400;600;700&family=Roboto:wght@400;700&family=Poppins:wght@400;600;700&family=Bebas+Neue&family=Dancing+Script:wght@400;700&family=Pacifico&family=Libre+Baskerville:wght@400;700&family=DM+Serif+Display&family=Abril+Fatface&family=Quicksand:wght@400;600;700&family=Nunito:wght@400;600;700&family=Crimson+Text:wght@400;600;700&family=Work+Sans:wght@400;600;700&family=Bitter:wght@400;600;700&family=Josefin+Sans:wght@400;600;700&family=Great+Vibes&display=swap";
   document.head.appendChild(link);
 }
 
