@@ -274,6 +274,110 @@ IMPORTANT: Output ONLY a valid JSON array with no markdown formatting, no code f
   }
 });
 
+router.post("/content/generate-image", async (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt) {
+      res.status(400).json({ error: "Prompt required" });
+      return;
+    }
+
+    const response = await openai.images.generate({
+      model: "gpt-image-1",
+      prompt: `${prompt}. No text, words, letters, or typography in the image.`,
+      n: 1,
+      size: "1024x1024",
+    });
+
+    const imageData = response.data?.[0];
+    if (!imageData) {
+      res.status(500).json({ error: "No image generated" });
+      return;
+    }
+
+    if (imageData.b64_json) {
+      res.json({ image: `data:image/png;base64,${imageData.b64_json}` });
+    } else if (imageData.url) {
+      res.json({ image: imageData.url });
+    } else {
+      res.status(500).json({ error: "Unexpected response format" });
+    }
+  } catch (err: any) {
+    console.error("Image generation error:", err);
+    res.status(500).json({ error: err.message || "Image generation failed" });
+  }
+});
+
+router.post("/content/image-prompts", async (req, res) => {
+  try {
+    const { industry, topics, count, style } = req.body;
+    if (!industry) {
+      res.status(400).json({ error: "Industry required" });
+      return;
+    }
+
+    const imageCount = Math.min(Number(count) || 6, 20);
+
+    const stream = await openai.chat.completions.create({
+      model: "gpt-5.2",
+      max_completion_tokens: 4096,
+      messages: [
+        {
+          role: "system",
+          content: `You generate detailed image prompts for AI image generation. These images will be used as backgrounds for social media carousel posts in the ${industry} industry.
+
+Style preference: ${style || "clean, modern, professional"}
+
+Rules:
+- Each prompt should describe a visually striking image suitable for a portrait (3:4) carousel slide
+- Focus on aesthetic, mood, lighting, and composition
+- DO NOT include any text, words, letters, or typography in the images
+- Good subjects: flat lays, treatment rooms, skincare products, lifestyle shots, textures, abstract beauty concepts, clinic interiors, hands, close-ups
+- Keep prompts specific and detailed (lighting, colours, angles, style)
+- Make them diverse - mix close-ups, wide shots, flat lays, abstract, lifestyle
+- NEVER use em dashes or en dashes
+
+Output ONLY a valid JSON array of ${imageCount} objects, each with "prompt" (the AI image prompt) and "label" (a short 3-4 word description). No markdown, no code fences.`,
+        },
+        {
+          role: "user",
+          content: `Generate ${imageCount} image prompts for ${industry} social media carousel backgrounds.${topics ? ` Topics: ${topics}` : ""} Return ONLY a JSON array.`,
+        },
+      ],
+      stream: true,
+    });
+
+    let fullResponse = "";
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content;
+      if (content) fullResponse += content;
+    }
+
+    let prompts: Array<{ prompt: string; label: string }> = [];
+    try {
+      let cleaned = fullResponse.trim();
+      const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+      if (jsonMatch) cleaned = jsonMatch[0];
+      cleaned = cleaned.replace(/,\s*\]/g, "]");
+      prompts = JSON.parse(cleaned);
+    } catch {
+      try {
+        const cleaned = fullResponse.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+        const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+        if (jsonMatch) prompts = JSON.parse(jsonMatch[0].replace(/,\s*\]/g, "]"));
+      } catch {
+        res.status(500).json({ error: "Failed to generate image prompts" });
+        return;
+      }
+    }
+
+    res.json({ prompts });
+  } catch (err: any) {
+    console.error("Image prompt error:", err);
+    res.status(500).json({ error: err.message || "Failed to generate prompts" });
+  }
+});
+
 router.post("/content/chat", async (req, res) => {
   try {
     const { messages } = req.body;

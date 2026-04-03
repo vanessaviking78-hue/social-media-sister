@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, ChevronUp, ChevronDown, Sparkles, Wand2, Copy, Check, MessageSquareText } from "lucide-react";
+import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, ChevronUp, ChevronDown, Sparkles, Wand2, Copy, Check, MessageSquareText, ImagePlus, Trash2 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -414,6 +414,14 @@ export default function Home() {
   const [aiGeneratedPosts, setAiGeneratedPosts] = useState<string[][] | null>(null);
 
   const [allCsvRows, setAllCsvRows] = useState<string[][]>([]);
+
+  const [aiImages, setAiImages] = useState<Array<{ prompt: string; label: string; url: string | null; generating: boolean }>>([]);
+  const [imagePromptsLoading, setImagePromptsLoading] = useState(false);
+  const [batchGenerating, setBatchGenerating] = useState(false);
+  const [imageStyle, setImageStyle] = useState("clean, modern, professional");
+  const [imageCount, setImageCount] = useState(6);
+  const [customImagePrompt, setCustomImagePrompt] = useState("");
+
   const [captions, setCaptions] = useState<string[]>([]);
   const [captionGenerating, setCaptionGenerating] = useState(false);
   const [captionProgress, setCaptionProgress] = useState("");
@@ -740,6 +748,106 @@ export default function Home() {
     }
   };
 
+  const generateImagePrompts = async () => {
+    setImagePromptsLoading(true);
+    try {
+      const resp = await fetch(`${import.meta.env.BASE_URL}api/content/image-prompts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          industry: aiIndustry || "aesthetics",
+          topics: aiTopics,
+          count: imageCount,
+          style: imageStyle,
+        }),
+      });
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || `Server error ${resp.status}`);
+      }
+      const data = await resp.json();
+      if (data.prompts) {
+        setAiImages(data.prompts.map((p: any) => ({ prompt: p.prompt, label: p.label, url: null, generating: false })));
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to generate image prompts");
+    } finally {
+      setImagePromptsLoading(false);
+    }
+  };
+
+  const generateSingleImage = async (index: number) => {
+    setAiImages(prev => {
+      if (prev[index]?.generating || prev[index]?.url) return prev;
+      return prev.map((im, i) => i === index ? { ...im, generating: true } : im);
+    });
+    try {
+      const currentImg = aiImages[index];
+      if (!currentImg || currentImg.url) return;
+      const resp = await fetch(`${import.meta.env.BASE_URL}api/content/generate-image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: currentImg.prompt }),
+      });
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({}));
+        throw new Error(errData.error || `Server error ${resp.status}`);
+      }
+      const data = await resp.json();
+      if (data.image) {
+        setAiImages(prev => prev.map((im, i) => i === index ? { ...im, url: data.image, generating: false } : im));
+      } else {
+        throw new Error("No image returned");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Image generation failed");
+      setAiImages(prev => prev.map((im, i) => i === index ? { ...im, generating: false } : im));
+    }
+  };
+
+  const generateAllImages = async () => {
+    if (batchGenerating) return;
+    setBatchGenerating(true);
+    try {
+      for (let i = 0; i < aiImages.length; i++) {
+        if (!aiImages[i].url) {
+          await generateSingleImage(i);
+        }
+      }
+    } finally {
+      setBatchGenerating(false);
+    }
+  };
+
+  const addCustomImagePrompt = () => {
+    if (!customImagePrompt.trim()) return;
+    const newEntry = { prompt: customImagePrompt.trim(), label: "Custom", url: null as string | null, generating: false };
+    setAiImages(prev => [...prev, newEntry]);
+    setCustomImagePrompt("");
+  };
+
+  const useAiImageAsPhoto = async (url: string) => {
+    try {
+      let blob: Blob;
+      if (url.startsWith("data:")) {
+        const parts = url.split(",");
+        const mime = parts[0].match(/:(.*?);/)?.[1] || "image/png";
+        const raw = atob(parts[1]);
+        const arr = new Uint8Array(raw.length);
+        for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+        blob = new Blob([arr], { type: mime });
+      } else {
+        const resp = await fetch(url);
+        blob = await resp.blob();
+      }
+      const file = new File([blob], `ai-image-${Date.now()}.png`, { type: "image/png" });
+      setPhotos(prev => [...prev, file]);
+      toast.success("Image added to your photos");
+    } catch {
+      toast.error("Failed to add image");
+    }
+  };
+
   const generateCaptions = async () => {
     const posts = aiGeneratedPosts || (allCsvRows.length > 0 ? allCsvRows : null);
     if (!posts || posts.length === 0) return;
@@ -881,6 +989,116 @@ export default function Home() {
                     {photos.length > 0 ? `${photos.length} selected — click to add more` : "Drag & drop or click to upload"}
                   </p>
                 </div>
+              </div>
+
+              {/* AI Image Generator */}
+              <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ImagePlus className="w-5 h-5 text-primary" />
+                    <h3 className="font-semibold text-base">AI Image Generator</h3>
+                  </div>
+                  {aiImages.length > 0 && aiImages.some(im => !im.url) && (
+                    <Button size="sm" onClick={generateAllImages} disabled={batchGenerating} className="text-xs">
+                      {batchGenerating ? <><Loader2 className="w-3 h-3 mr-1 animate-spin" />Generating...</> : <><Sparkles className="w-3 h-3 mr-1" />Generate All</>}
+                    </Button>
+                  )}
+                </div>
+
+                {aiImages.length === 0 ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Style</Label>
+                        <Select value={imageStyle} onValueChange={setImageStyle}>
+                          <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="clean, modern, professional">Clean & Modern</SelectItem>
+                            <SelectItem value="warm, cosy, inviting, soft lighting">Warm & Cosy</SelectItem>
+                            <SelectItem value="luxury, elegant, gold accents, marble">Luxury & Elegant</SelectItem>
+                            <SelectItem value="clinical, medical, sterile, bright">Clinical & Medical</SelectItem>
+                            <SelectItem value="natural, organic, earthy tones, botanical">Natural & Organic</SelectItem>
+                            <SelectItem value="bold, vibrant, colourful, energetic">Bold & Vibrant</SelectItem>
+                            <SelectItem value="minimalist, white space, simple">Minimalist</SelectItem>
+                            <SelectItem value="dark moody, dramatic lighting, shadows">Dark & Moody</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">How Many</Label>
+                        <Select value={String(imageCount)} onValueChange={(v) => setImageCount(Number(v))}>
+                          <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {[4, 6, 8, 10, 12, 15, 20].map(n => (
+                              <SelectItem key={n} value={String(n)}>{n} images</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <Button onClick={generateImagePrompts} disabled={imagePromptsLoading} className="w-full">
+                      {imagePromptsLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating prompts...</> : <><Sparkles className="w-4 h-4 mr-2" />Generate Image Ideas</>}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {aiImages.map((img, i) => (
+                        <div key={i} className="rounded-xl border border-border/20 bg-accent/10 overflow-hidden">
+                          {img.url ? (
+                            <div className="relative aspect-square">
+                              <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
+                              <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-2">
+                                <p className="text-[10px] text-white font-medium truncate">{img.label}</p>
+                              </div>
+                              <button
+                                onClick={() => useAiImageAsPhoto(img.url!)}
+                                className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-lg px-2 py-1 text-[10px] font-semibold hover:opacity-90"
+                              >
+                                Use
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="aspect-square flex flex-col items-center justify-center gap-2 p-3">
+                              {img.generating ? (
+                                <>
+                                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                                  <p className="text-[10px] text-muted-foreground">Generating...</p>
+                                </>
+                              ) : (
+                                <>
+                                  <p className="text-xs text-muted-foreground text-center line-clamp-3">{img.label}</p>
+                                  <Button size="sm" variant="outline" onClick={() => generateSingleImage(i)} disabled={batchGenerating} className="text-[10px] h-7">
+                                    <Sparkles className="w-3 h-3 mr-1" />Generate
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Input
+                        value={customImagePrompt}
+                        onChange={(e) => setCustomImagePrompt(e.target.value)}
+                        placeholder="Add custom image prompt..."
+                        className="flex-1 h-9 text-sm"
+                        onKeyDown={(e) => e.key === "Enter" && addCustomImagePrompt()}
+                      />
+                      <Button size="sm" variant="outline" onClick={addCustomImagePrompt} disabled={!customImagePrompt.trim()}>
+                        <ImagePlus className="w-4 h-4" />
+                      </Button>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => { setAiImages([]); }} className="text-xs">
+                        <RefreshCcw className="w-3 h-3 mr-1" />Start Over
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* CSV — only in csv mode */}
