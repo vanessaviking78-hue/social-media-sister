@@ -927,7 +927,7 @@ export default function Home() {
                     >
                       {currentStep > step.num ? <Check className="w-6 h-6" /> : <step.icon className="w-6 h-6" />}
                     </div>
-                    <span className="text-sm font-semibold">{step.label}</span>
+                    <span className="text-sm font-semibold">{step.num}. {step.label}</span>
                   </button>
                   {i < 3 && (
                     <div className={`flex-1 h-1 rounded-full mx-3 mt-[-20px] ${currentStep > step.num ? "bg-green-500/30" : "bg-accent/20"}`} />
