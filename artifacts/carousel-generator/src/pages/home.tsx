@@ -947,48 +947,50 @@ export default function Home() {
 
               {/* SAY CHEESE - Portrait Recreation */}
               {clinicianPortraits.length === 0 ? (
-                <div className="rounded-2xl border border-border/30 bg-card/50 p-12 space-y-8 flex flex-col items-center text-center">
-                  <div className="flex items-center justify-center gap-3">
-                    <Sparkles className="w-8 h-8 text-primary" />
-                    <h3 className="font-semibold text-4xl">Say Cheese!</h3>
-                  </div>
-                  <p className="text-xl text-muted-foreground max-w-md">Upload a portrait and we'll recreate it in 5 professional styles</p>
-
-                  <Button
+                <div className="flex flex-col items-center gap-4">
+                  {clinicianPhoto && (
+                    <p className="text-lg text-muted-foreground">
+                      Selected: <span className="text-foreground font-medium">{clinicianPhoto.name}</span>
+                    </p>
+                  )}
+                  <button
                     onClick={() => {
-                      const input = document.createElement("input");
-                      input.type = "file";
-                      input.accept = "image/*";
-                      input.onchange = (e) => {
-                        const file = (e.target as HTMLInputElement).files?.[0];
-                        if (file) setClinicianPhoto(file);
-                      };
-                      input.click();
+                      if (clinicianPhoto) {
+                        recreatePortraits();
+                      } else {
+                        const input = document.createElement("input");
+                        input.type = "file";
+                        input.accept = "image/*";
+                        input.onchange = (e) => {
+                          const file = (e.target as HTMLInputElement).files?.[0];
+                          if (file) setClinicianPhoto(file);
+                        };
+                        input.click();
+                      }
                     }}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl px-12 py-8 text-2xl font-bold shadow-lg"
-                  >
-                    <ImageIcon className="w-7 h-7 mr-3" />
-                    {clinicianPhoto ? clinicianPhoto.name : "Select Photo"}
-                  </Button>
-
-                  <Button
-                    onClick={recreatePortraits}
-                    disabled={!clinicianPhoto || clinicianRecreating}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl px-16 py-10 text-4xl font-bold shadow-xl"
-                    size="lg"
+                    disabled={clinicianRecreating}
+                    className="w-full rounded-2xl bg-[#ff1493] hover:bg-[#ff1493]/90 disabled:opacity-50 text-white px-10 py-10 text-4xl font-black shadow-2xl shadow-pink-500/30 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-4"
                   >
                     {clinicianRecreating ? (
                       <>
-                        <Loader2 className="w-8 h-8 mr-4 animate-spin" />
-                        Creating...
+                        <Loader2 className="w-10 h-10 animate-spin" />
+                        Creating 5 Styles...
+                      </>
+                    ) : clinicianPhoto ? (
+                      <>
+                        <Sparkles className="w-10 h-10" />
+                        SAY CHEESE
                       </>
                     ) : (
                       <>
-                        <Sparkles className="w-8 h-8 mr-4" />
+                        <ImageIcon className="w-10 h-10" />
                         SAY CHEESE
                       </>
                     )}
-                  </Button>
+                  </button>
+                  <p className="text-base text-muted-foreground text-center">
+                    {clinicianPhoto ? "Click to recreate in 5 professional portrait styles" : "Select a portrait photo to recreate in 5 professional styles"}
+                  </p>
                 </div>
               ) : (
                 <div className="rounded-2xl border border-border/30 bg-card/50 p-8 space-y-6">
