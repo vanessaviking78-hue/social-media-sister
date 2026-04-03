@@ -30,6 +30,14 @@ const FONT_OPTIONS = [
   { label: "Roboto", value: "'Roboto', sans-serif" },
 ];
 
+const CORNER_STYLES = [
+  { label: "None", value: "none" },
+  { label: "Triangle", value: "triangle" },
+  { label: "Arc", value: "arc" },
+  { label: "Double Line", value: "double-line" },
+  { label: "Frame", value: "frame" },
+];
+
 const LOGO_POSITIONS = [
   { label: "Top Left", value: "top-left" },
   { label: "Top Right", value: "top-right" },
@@ -58,7 +66,9 @@ function drawSlide(
   logoImg: HTMLImageElement | null = null,
   logoPosition: string = "top-right",
   logoSize: number = 140,
-  pageColor: string = "#000000"
+  pageColor: string = "#000000",
+  cornerStyle: string = "none",
+  cornerColor: string = "#d4af37"
 ) {
   const W = CANVAS_WIDTH;
   const H = CANVAS_HEIGHT;
@@ -72,6 +82,41 @@ function drawSlide(
   ctx.globalAlpha = isCoverSlide ? 1.0 : 0.5;
   ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
   ctx.globalAlpha = 1.0;
+
+  if (cornerStyle !== "none") {
+    ctx.strokeStyle = cornerColor;
+    ctx.fillStyle = cornerColor;
+    const S = 180;
+
+    if (cornerStyle === "triangle") {
+      ctx.beginPath();
+      ctx.moveTo(0, 0); ctx.lineTo(S, 0); ctx.lineTo(0, S); ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(W, H); ctx.lineTo(W - S, H); ctx.lineTo(W, H - S); ctx.closePath(); ctx.fill();
+    } else if (cornerStyle === "arc") {
+      ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.arc(0, 0, S, 0, Math.PI / 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(W, H, S, Math.PI, Math.PI * 1.5); ctx.stroke();
+      ctx.beginPath(); ctx.arc(W, 0, S, Math.PI / 2, Math.PI); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, H, S, Math.PI * 1.5, Math.PI * 2); ctx.stroke();
+    } else if (cornerStyle === "double-line") {
+      ctx.lineWidth = 4;
+      const G = 12;
+      [0, G].forEach((off) => {
+        ctx.strokeRect(off + 30, off + 30, W - (off + 30) * 2, H - (off + 30) * 2);
+      });
+    } else if (cornerStyle === "frame") {
+      ctx.lineWidth = 5;
+      const L = 120;
+      const M = 40;
+      ctx.beginPath();
+      ctx.moveTo(M, M + L); ctx.lineTo(M, M); ctx.lineTo(M + L, M);
+      ctx.moveTo(W - M - L, M); ctx.lineTo(W - M, M); ctx.lineTo(W - M, M + L);
+      ctx.moveTo(W - M, H - M - L); ctx.lineTo(W - M, H - M); ctx.lineTo(W - M - L, H - M);
+      ctx.moveTo(M + L, H - M); ctx.lineTo(M, H - M); ctx.lineTo(M, H - M - L);
+      ctx.stroke();
+    }
+  }
 
   const overlayW = Math.round(W * 0.35);
   const grad = ctx.createLinearGradient(overlayW, 0, 0, 0);
@@ -161,6 +206,8 @@ export default function Home() {
   const [lineSpacing, setLineSpacing] = useState(0.9);
   const [overlayColor, setOverlayColor] = useState("rgba(0,0,0,0.5)");
   const [pageColor, setPageColor] = useState("#000000");
+  const [cornerStyle, setCornerStyle] = useState("none");
+  const [cornerColor, setCornerColor] = useState("#d4af37");
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
@@ -309,7 +356,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -644,6 +691,29 @@ export default function Home() {
                   />
                   <Input type="text" value={overlayColor} onChange={(e) => setOverlayColor(e.target.value)} className="flex-1 h-8 text-xs font-mono" placeholder="rgba(0,0,0,0.5)" />
                 </div>
+              </div>
+
+              {/* Corner Accent */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <Palette className="w-3 h-3" /> Corner Accent
+                </Label>
+                <Select value={cornerStyle} onValueChange={setCornerStyle}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CORNER_STYLES.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {cornerStyle !== "none" && (
+                  <div className="flex gap-2">
+                    <Input type="color" value={cornerColor} onChange={(e) => setCornerColor(e.target.value)} className="w-10 h-8 p-0.5 cursor-pointer" />
+                    <Input type="text" value={cornerColor} onChange={(e) => setCornerColor(e.target.value)} className="flex-1 h-8 text-xs font-mono" placeholder="#d4af37" />
+                  </div>
+                )}
               </div>
 
               {/* Logo controls */}
