@@ -28,7 +28,7 @@ A social media content tool at the root path `/`. Two modes: (1) Upload photos +
 - **Dependencies**: multer, csv-parse, jszip + file-saver + papaparse (frontend), @workspace/integrations-openai-ai-server (AI)
 - **Zip download**: Client-side canvas compositing (image + text overlay) → JSZip → file-saver
 - **Branding**: Corner accents (triangle, arc, double-line, frame), page color, overlay color, 25 Google Fonts
-- **Say Cheese**: `POST /api/content/clinician-recreate` — takes uploaded clinician portrait via `images.edit` (reference photo), generates 10 AI portraits (2x each: classic, David Bailey, close-up, patient consultation, editorial) with identical facial features. Returns base64 images for carousel use. Big pink button in main interface. Body limit 50mb for base64 images.
+- **Say Cheese**: `POST /api/content/clinician-recreate` — accepts `clinicianBase64` (required) + `clinicBase64` (optional clinic photo). Uses GPT vision to analyse clinic photo, then generates 10 portraits sequentially via `images.edit` with specific prompts (gloves, arms folded, editorial, lipstick, moisturizing, facial, proud, hands on hips, consultation, LinkedIn). Streams results as SSE (progress/portrait/complete/error events). Body limit 50mb.
 - **Caption Generator**: `POST /api/content/captions` — SSE endpoint generating Instagram captions
 - **Gradient Controls**: On/off toggle, color picker, solid vs leopard print, 6-position gradient placement
 - **Text Position**: 3x3 grid (TL/TC/TR/CL/CC/CR/BL/BC/BR); CTA slide forces center-center with larger bold text

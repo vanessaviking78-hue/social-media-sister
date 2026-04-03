@@ -296,68 +296,108 @@ IMPORTANT: Output ONLY a valid JSON array with no markdown formatting, no code f
 
 router.post("/content/clinician-recreate", async (req, res) => {
   try {
-    const { imageBase64 } = req.body;
-    if (!imageBase64) {
-      res.status(400).json({ error: "Image required" });
+    const { clinicianBase64, clinicBase64 } = req.body;
+    if (!clinicianBase64) {
+      res.status(400).json({ error: "Clinician photo required" });
       return;
     }
 
-    const styles = [
-      { name: "classic", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. Classic professional portrait headshot with soft studio lighting, clean neutral grey background, shoulders slightly angled, warm confident expression. High-end corporate headshot quality." },
-      { name: "classic", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. Classic professional portrait with warm studio lighting, soft cream background, direct eye contact, approachable smile. Clean, polished look suitable for a clinic website or LinkedIn." },
-      { name: "bailey", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. David Bailey inspired portrait, dramatic side lighting with deep shadows, high contrast black and white, strong gaze, elegant and timeless composition. Moody, editorial quality." },
-      { name: "bailey", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. David Bailey style portrait, bold chiaroscuro lighting from above, black and white, powerful confident pose, slightly tilted chin. Fashion photography meets fine art portraiture." },
-      { name: "closeup", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. Intimate close-up portrait, beautifully lit with soft natural window light, shallow depth of field with blurred background, genuine warm smile, focus on the eyes. Feels personal and approachable." },
-      { name: "closeup", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. Tight close-up portrait, golden hour warmth, soft bokeh background, relaxed natural expression, skin detail visible but flattering. Magazine beauty editorial feel." },
-      { name: "patient", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. Professional clinician in a modern treatment room, engaged in a warm consultation with a patient (seen from behind or side), natural lighting, caring and attentive expression. Clean clinical environment with tasteful decor." },
-      { name: "patient", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. Clinician seated at a consultation desk, leaning forward slightly with an empathetic expression, bright modern clinic interior, plants and soft furnishings visible, warm and welcoming atmosphere." },
-      { name: "editorial", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. High fashion editorial portrait, dynamic three-quarter pose, dramatic directional lighting with rim light, rich colour grading, magazine cover quality. Confident, powerful energy." },
-      { name: "editorial", prompt: "Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style, and outfit. Cinematic editorial portrait, environmental setting with interesting architecture or textures behind, creative lighting with colour gels, fashion-forward styling. Vogue or GQ quality composition." },
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders();
+
+    let clientClosed = false;
+    req.on("close", () => { clientClosed = true; });
+
+    const imageBuffer = Buffer.from(clinicianBase64, "base64");
+
+    let clinicDescription = "a modern, clean aesthetic clinic with neutral tones, professional medical equipment, and tasteful decor";
+    if (clinicBase64) {
+      try {
+        const visionResp = await openai.chat.completions.create({
+          model: "gpt-5.2",
+          max_completion_tokens: 300,
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: "Describe this clinic interior in detail for use in an image generation prompt. Focus on: colours, furniture, lighting, equipment visible, flooring, walls, overall aesthetic and mood. Be specific and concise. 2-3 sentences max." },
+                { type: "image_url", image_url: { url: `data:image/jpeg;base64,${clinicBase64}` } },
+              ],
+            },
+          ],
+        });
+        const desc = visionResp.choices[0]?.message?.content?.trim();
+        if (desc) clinicDescription = desc;
+      } catch (vErr) {
+        console.error("Vision analysis error:", vErr);
+      }
+    }
+
+    const prompts = [
+      { name: "gloves", label: "Pulling on Gloves", prompt: `Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style. Place them in their clinic (${clinicDescription}). Camera setting: medium shot, eye-level, camera 1.5m in front, 35mm full-frame look, f/2.8 with sharp focus on hands and face and gentle falloff to background, soft directional window light from camera-left with subtle bounce fill, neutral clinic palette, clean composition. The clinician is pulling on medical gloves mid-motion, fingers aligned and slightly flexed as latex stretches, subtle tension in wrists, realistic sheen catching light, uniform folds natural, grounded stance, visible pores and skin texture, crisp clinical environment. No distorted fingers, no extra digits, no plastic skin, no warped tools.` },
+      { name: "arms-folded", label: "Arms Folded", prompt: `Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style. Place them in their clinic (${clinicDescription}). Camera setting: medium-full body, eye-level, camera 2m away, 35mm, f/2.8, diffused overhead lighting, symmetrical composition. Clinician with arms folded, posture upright but relaxed, elbows natural with fabric compression, calm confident expression, clean environment softly blurred, realistic skin and fabric texture. No stiff pose, no flat lighting, no warped furniture.` },
+      { name: "editorial", label: "Editorial Pose", prompt: `Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style. Place them in their clinic (${clinicDescription}). Camera setting: 3/4 portrait, slight low angle, 35mm, f/2.8, strong directional contrast lighting, muted palette. Editorial-style clinician pose, asymmetrical stance, direct gaze, strong light shaping face and uniform, background receding into shadow, tactile realism in skin and fabric. No over-stylized HDR, no crushed blacks, no distorted limbs.` },
+      { name: "lipstick", label: "Mirror Lipstick", prompt: `Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style. Place them in their clinic (${clinicDescription}). Camera setting: close-up mirror shot, 45 degree angle, 35mm, f/2.8, soft directional light. Clinician applying lipstick in mirror, reflection sharp, hand holding product precisely, lips mid-application with natural edge detail, subtle gloss, clean mirror with faint imperfections, realistic skin texture. No mismatched reflection, no warped hands, no artificial shine.` },
+      { name: "moisturizing", label: "Moisturizing", prompt: `Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style. Place them in their clinic (${clinicDescription}). Camera setting: extreme close-up, 0.5m distance, 35mm, f/2.8 shallow DOF, soft frontal light. Clinician moisturizing face, fingertips pressing lightly creating skin compression, cream texture visible with soft sheen, pores and fine texture clear, background blurred. No waxy skin, no blurred fingers, no overexposure.` },
+      { name: "facial", label: "Performing Facial", prompt: `Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style. Place them in their clinic (${clinicDescription}). Camera setting: tight close-up, slight top-down, 35mm, f/2.8, soft diffused lighting. Clinician performing facial on patient, hands placed gently with correct alignment and pressure, subtle skin displacement, product sheen visible, patient reclined with towel textures clear. No extra fingers, no glossy plastic skin, no warped features.` },
+      { name: "proud", label: "Proud Pose", prompt: `Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style. Place them in their clinic (${clinicDescription}). Camera setting: medium shot, eye-level, 1.8m away, 35mm, f/2.8, soft balanced lighting with slight backlight. Clinician arms folded, proud expression, shoulders squared, uniform creases natural, subtle rim light separation, clean clinic background. No stiff posture, no over-retouching, no distortion.` },
+      { name: "hands-hips", label: "Hands on Hips", prompt: `Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style. Place them in their clinic (${clinicDescription}). Camera setting: medium-full portrait, slight low angle, 35mm, f/2.8, directional soft light. Clinician hands on hips, confident stance, elbows angled naturally, fingers resting correctly, slight hip shift, clean minimal clinic setting, realistic textures. No exaggerated pose, no warped arms, no plastic skin.` },
+      { name: "consultation", label: "Consultation", prompt: `Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style. Place them in their clinic (${clinicDescription}). Camera setting: medium shot, eye-level, 35mm, f/2.8, soft balanced clinic lighting. Clinician mid-consultation speaking to client, natural hand gesture, relaxed fingers, slight forward lean, realistic interaction, clean environment, detailed textures. No frozen expressions, no awkward gestures, no extra limbs.` },
+      { name: "linkedin", label: "LinkedIn Portrait", prompt: `Recreate this exact person with identical facial features, face shape, skin tone, hair colour and style. Place them in their clinic (${clinicDescription}). Camera setting: head-and-shoulders portrait, eye-level, 1m away, 35mm, f/2.8, soft key light with fill. Clinician smiling LinkedIn-style portrait, relaxed posture, natural expression, subtle skin texture, softly blurred background, clean lighting without over-smoothing. No beauty filter, no artificial blur, no exaggerated smile.` },
     ];
 
-    const batchSize = 5;
-    const batches = Math.ceil(styles.length / batchSize);
-    const allResults: Array<{ style: string; image: string } | null> = [];
+    let completedCount = 0;
 
-    for (let b = 0; b < batches; b++) {
-      const batchStyles = styles.slice(b * batchSize, (b + 1) * batchSize);
-      const batchResults = await Promise.all(
-        batchStyles.map(async (style) => {
-          try {
-            const response = await openai.images.edit({
-              model: "gpt-image-1",
-              image: Buffer.from(imageBase64, "base64"),
-              prompt: `${style.prompt}. CRITICAL: The person must look exactly like the person in the reference photo - same face, same features, same identity. No text, words, letters, or typography in the image.`,
-              n: 1,
-              size: "1024x1024",
-            });
+    for (let i = 0; i < prompts.length; i++) {
+      if (clientClosed) break;
+      const p = prompts[i];
+      res.write(`data: ${JSON.stringify({ type: "progress", current: i + 1, total: prompts.length, label: p.label })}\n\n`);
 
-            const imageData = response.data?.[0];
-            if (imageData?.b64_json) {
-              return { style: style.name, image: `data:image/png;base64,${imageData.b64_json}` };
-            } else if (imageData?.url) {
-              return { style: style.name, image: imageData.url };
-            }
-            return null;
-          } catch (err) {
-            console.error(`Error generating ${style.name} style:`, err);
-            return null;
-          }
-        })
-      );
-      allResults.push(...batchResults);
+      try {
+        const response = await openai.images.edit({
+          model: "gpt-image-1",
+          image: imageBuffer,
+          prompt: `${p.prompt}. CRITICAL: The generated person MUST look exactly like the person in this reference photo - identical face, identical features, identical identity. No text, words, letters, or typography anywhere in the image.`,
+          n: 1,
+          size: "1024x1024",
+        });
+
+        if (clientClosed) break;
+
+        const imageData = response.data?.[0];
+        let imageResult: string | null = null;
+        if (imageData?.b64_json) {
+          imageResult = `data:image/png;base64,${imageData.b64_json}`;
+        } else if (imageData?.url) {
+          imageResult = imageData.url;
+        }
+
+        if (imageResult) {
+          completedCount++;
+          res.write(`data: ${JSON.stringify({ type: "portrait", style: p.name, label: p.label, image: imageResult })}\n\n`);
+        }
+      } catch (err: any) {
+        if (clientClosed) break;
+        console.error(`Error generating ${p.name}:`, err?.message || err);
+        res.write(`data: ${JSON.stringify({ type: "error", message: `Failed to generate "${p.label}" - skipping` })}\n\n`);
+      }
     }
 
-    const validResults = allResults.filter(r => r !== null);
-    if (validResults.length === 0) {
-      res.status(500).json({ error: "Failed to generate portrait styles" });
-      return;
+    if (!clientClosed) {
+      res.write(`data: ${JSON.stringify({ type: "complete", count: completedCount })}\n\n`);
     }
-
-    res.json({ portraits: validResults });
+    res.end();
   } catch (err: any) {
     console.error("Clinician recreate error:", err);
-    res.status(500).json({ error: err.message || "Recreation failed" });
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message || "Recreation failed" });
+    } else {
+      res.write(`data: ${JSON.stringify({ type: "error", message: err.message || "Recreation failed" })}\n\n`);
+      res.end();
+    }
   }
 });
 
