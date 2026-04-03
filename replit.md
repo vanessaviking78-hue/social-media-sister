@@ -28,11 +28,10 @@ A social media content tool at the root path `/`. Two modes: (1) Upload photos +
 - **Dependencies**: multer, csv-parse, jszip + file-saver + papaparse (frontend), @workspace/integrations-openai-ai-server (AI)
 - **Zip download**: Client-side canvas compositing (image + text overlay) → JSZip → file-saver
 - **Branding**: Corner accents (triangle, arc, double-line, frame), page color, overlay color, 25 Google Fonts
-- **Say Cheese**: `POST /api/content/clinician-recreate` — accepts `clinicianBase64` (required) + `clinicBase64` (optional clinic photo). Uses GPT vision to analyse clinic photo, then generates 10 portraits sequentially via `images.edit` with specific prompts (gloves, arms folded, editorial, lipstick, moisturizing, facial, proud, hands on hips, consultation, LinkedIn). Streams results as SSE (progress/portrait/complete/error events). Body limit 50mb.
 - **Caption Generator**: `POST /api/content/captions` — SSE endpoint generating Instagram captions
 - **Gradient Controls**: On/off toggle, color picker, solid vs leopard print, 6-position gradient placement
 - **Text Position**: 3x3 grid (TL/TC/TR/CL/CC/CR/BL/BC/BR); CTA slide forces center-center with larger bold text
-- **4-Step Wizard**: Step 1 (Images: photos upload, SAY CHEESE portrait AI, logo upload), Step 2 (Font & Layout: all styling controls in card grid), Step 3 (Content: CSV/AI mode toggle + content creation), Step 4 (Results & Captions: carousel gallery, download ZIP, caption generation). Progress bar at top with clickable step icons. Next/Back navigation on each step.
+- **4-Step Wizard**: Step 1 (Images: photos upload, logo upload), Step 2 (Font & Layout: all styling controls in card grid), Step 3 (Content: CSV/AI mode toggle + content creation), Step 4 (Results & Captions: carousel gallery, download ZIP, caption generation). Progress bar at top with clickable step icons. Next/Back navigation on each step.
 - **Interface**: Simplified and enlarged design with larger text (16-18px), expanded buttons (py-6+), increased padding and spacing for better readability
 
 ## Structure

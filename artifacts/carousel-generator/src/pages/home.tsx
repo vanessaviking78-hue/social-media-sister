@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Camera, Type, PenTool } from "lucide-react";
+import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -415,11 +415,6 @@ export default function Home() {
 
   const [allCsvRows, setAllCsvRows] = useState<string[][]>([]);
 
-  const [clinicianPhoto, setClinicianPhoto] = useState<File | null>(null);
-  const [clinicPhoto, setClinicPhoto] = useState<File | null>(null);
-  const [clinicianPortraits, setClinicianPortraits] = useState<Array<{ style: string; label: string; image: string }>>([]);
-  const [clinicianRecreating, setClinicianRecreating] = useState(false);
-  const [portraitProgress, setPortraitProgress] = useState<{ current: number; total: number; label: string } | null>(null);
 
   const [captions, setCaptions] = useState<string[]>([]);
   const [captionGenerating, setCaptionGenerating] = useState(false);
@@ -749,96 +744,6 @@ export default function Home() {
     }
   };
 
-  const readFileAsBase64 = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve((e.target?.result as string).split(",")[1]);
-      reader.onerror = () => reject(new Error("Failed to read file"));
-      reader.readAsDataURL(file);
-    });
-
-  const recreatePortraits = async () => {
-    if (!clinicianPhoto) {
-      toast.error("Please select your photo first");
-      return;
-    }
-    setClinicianRecreating(true);
-    setClinicianPortraits([]);
-    setPortraitProgress(null);
-    try {
-      const clinicianBase64 = await readFileAsBase64(clinicianPhoto);
-      let clinicBase64: string | undefined;
-      if (clinicPhoto) {
-        clinicBase64 = await readFileAsBase64(clinicPhoto);
-      }
-
-      const resp = await fetch(`${import.meta.env.BASE_URL}api/content/clinician-recreate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clinicianBase64, clinicBase64 }),
-      });
-      if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        throw new Error(errData.error || `Server error ${resp.status}`);
-      }
-
-      const reader = resp.body?.getReader();
-      const decoder = new TextDecoder();
-      if (!reader) throw new Error("No response stream");
-
-      let buffer = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          try {
-            const event = JSON.parse(line.slice(6));
-            if (event.type === "progress") {
-              setPortraitProgress({ current: event.current, total: event.total, label: event.label });
-            } else if (event.type === "portrait") {
-              setClinicianPortraits((prev) => [...prev, { style: event.style, label: event.label, image: event.image }]);
-            } else if (event.type === "complete") {
-              toast.success(`${event.count} portraits created!`);
-            } else if (event.type === "error") {
-              toast.error(event.message);
-            }
-          } catch {}
-        }
-      }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to recreate portraits");
-    } finally {
-      setClinicianRecreating(false);
-      setPortraitProgress(null);
-    }
-  };
-
-  const addPortraitAsPhoto = async (url: string) => {
-    try {
-      let blob: Blob;
-      if (url.startsWith("data:")) {
-        const parts = url.split(",");
-        const mime = parts[0].match(/:(.*?);/)?.[1] || "image/png";
-        const raw = atob(parts[1]);
-        const arr = new Uint8Array(raw.length);
-        for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
-        blob = new Blob([arr], { type: mime });
-      } else {
-        const resp = await fetch(url);
-        blob = await resp.blob();
-      }
-      const file = new File([blob], `portrait-${Date.now()}.png`, { type: "image/png" });
-      setPhotos(prev => [...prev, file]);
-      toast.success("Portrait added to carousel");
-    } catch {
-      toast.error("Failed to add portrait");
-    }
-  };
-
   const generateCaptions = async () => {
     const posts = aiGeneratedPosts || (allCsvRows.length > 0 ? allCsvRows : null);
     if (!posts || posts.length === 0) return;
@@ -935,10 +840,10 @@ export default function Home() {
           <div className="mb-10">
             <div className="flex items-center justify-between mb-6">
               {[
-                { num: 1, label: "Images", icon: Camera },
+                { num: 1, label: "Images", icon: ImageIcon },
                 { num: 2, label: "Font & Layout", icon: Type },
                 { num: 3, label: "Content", icon: PenTool },
-                { num: 4, label: "Generate", icon: Sparkles },
+                { num: 4, label: "Generate", icon: Download },
               ].map((step, i) => (
                 <React.Fragment key={step.num}>
                   <button
@@ -979,7 +884,7 @@ export default function Home() {
               <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div>
                   <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 1: Your Images</h2>
-                  <p className="text-lg text-muted-foreground">Upload your photos, use AI to recreate portraits, and add your logo.</p>
+                  <p className="text-lg text-muted-foreground">Upload your photos and add your logo.</p>
                 </div>
 
                 {/* Photos upload */}
@@ -1002,113 +907,6 @@ export default function Home() {
                     </p>
                   </div>
                 </div>
-
-              {/* SAY CHEESE */}
-              {clinicianPortraits.length === 0 && !clinicianRecreating ? (
-                <div className="flex flex-col items-center gap-4">
-                  <div className="grid grid-cols-2 gap-4 w-full">
-                    <div
-                      className="drop-zone-idle rounded-2xl min-h-[140px] flex flex-col items-center justify-center text-center cursor-pointer gap-2 px-4"
-                      onClick={() => {
-                        const input = document.createElement("input");
-                        input.type = "file";
-                        input.accept = "image/*";
-                        input.onchange = (e) => {
-                          const file = (e.target as HTMLInputElement).files?.[0];
-                          if (file) setClinicianPhoto(file);
-                        };
-                        input.click();
-                      }}
-                    >
-                      <Camera className="w-8 h-8 text-muted-foreground" />
-                      <p className="font-bold text-lg">Your Photo</p>
-                      {clinicianPhoto ? (
-                        <p className="text-sm text-[#ff1493] font-medium truncate max-w-full">{clinicianPhoto.name}</p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Click to upload</p>
-                      )}
-                    </div>
-                    <div
-                      className="drop-zone-idle rounded-2xl min-h-[140px] flex flex-col items-center justify-center text-center cursor-pointer gap-2 px-4"
-                      onClick={() => {
-                        const input = document.createElement("input");
-                        input.type = "file";
-                        input.accept = "image/*";
-                        input.onchange = (e) => {
-                          const file = (e.target as HTMLInputElement).files?.[0];
-                          if (file) setClinicPhoto(file);
-                        };
-                        input.click();
-                      }}
-                    >
-                      <ImageIcon className="w-8 h-8 text-muted-foreground" />
-                      <p className="font-bold text-lg">Clinic Photo</p>
-                      {clinicPhoto ? (
-                        <p className="text-sm text-[#ff1493] font-medium truncate max-w-full">{clinicPhoto.name}</p>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Click to upload (optional)</p>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    onClick={recreatePortraits}
-                    disabled={!clinicianPhoto}
-                    className="w-full rounded-2xl bg-[#ff1493] hover:bg-[#ff1493]/90 disabled:opacity-30 text-white px-10 py-10 text-4xl font-black shadow-2xl shadow-pink-500/30 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-4"
-                  >
-                    <Sparkles className="w-10 h-10" />SAY CHEESE
-                  </button>
-                  <p className="text-base text-muted-foreground text-center">
-                    Upload your photo {clinicPhoto ? "" : "and optionally your clinic "}to generate 10 AI portraits
-                  </p>
-                </div>
-              ) : clinicianRecreating ? (
-                <div className="flex flex-col items-center gap-6">
-                  <button disabled className="w-full rounded-2xl bg-[#ff1493]/80 text-white px-10 py-10 text-4xl font-black shadow-2xl shadow-pink-500/30 flex items-center justify-center gap-4">
-                    <Loader2 className="w-10 h-10 animate-spin" />
-                    {portraitProgress ? `Creating ${portraitProgress.current}/${portraitProgress.total}...` : "Starting..."}
-                  </button>
-                  {portraitProgress && (
-                    <div className="w-full space-y-2">
-                      <div className="w-full bg-accent/20 rounded-full h-3">
-                        <div className="bg-[#ff1493] h-3 rounded-full transition-all duration-500" style={{ width: `${(portraitProgress.current / portraitProgress.total) * 100}%` }} />
-                      </div>
-                      <p className="text-center text-muted-foreground">Creating: {portraitProgress.label}</p>
-                    </div>
-                  )}
-                  {clinicianPortraits.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 w-full">
-                      {clinicianPortraits.map((portrait, i) => (
-                        <div key={i} className="rounded-xl border border-border/30 overflow-hidden bg-accent/5">
-                          <img src={portrait.image} alt={portrait.label} className="w-full aspect-square object-cover" />
-                          <div className="p-3">
-                            <p className="font-semibold text-sm text-center">{portrait.label}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="rounded-2xl border border-border/30 bg-card/50 p-8 space-y-6">
-                  <p className="text-2xl font-bold text-center">Your 10 AI Portraits:</p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {clinicianPortraits.map((portrait, i) => (
-                      <div key={i} className="rounded-xl border border-border/30 overflow-hidden bg-accent/5">
-                        <img src={portrait.image} alt={portrait.label} className="w-full aspect-square object-cover" />
-                        <div className="p-4 space-y-3">
-                          <p className="font-semibold text-lg">{portrait.label}</p>
-                          <Button onClick={() => addPortraitAsPhoto(portrait.image)} className="w-full py-5 text-base font-semibold" size="lg">
-                            <Plus className="w-5 h-5 mr-2" />Add to Carousel
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <Button variant="outline" onClick={() => { setClinicianPortraits([]); setClinicianPhoto(null); setClinicPhoto(null); }} className="w-full py-5 text-base font-semibold" size="lg">
-                    <RefreshCcw className="w-5 h-5 mr-2" />Try Again
-                  </Button>
-                </div>
-              )}
 
               {/* Logo */}
               <div
