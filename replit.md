@@ -28,7 +28,7 @@ A social media content tool at the root path `/`. Two modes: (1) Upload photos +
 - **Dependencies**: multer, csv-parse, jszip + file-saver + papaparse (frontend), @workspace/integrations-openai-ai-server (AI)
 - **Zip download**: Client-side canvas compositing (image + text overlay) → JSZip → file-saver
 - **Branding**: Corner accents (triangle, arc, double-line, frame), page color, overlay color, 25 Google Fonts
-- **ClinicianRecreate**: `POST /api/content/clinician-recreate` — takes uploaded clinician portrait, generates 5 AI recreation styles (classic portrait, David Bailey style, close-up, patient consultation, editorial) with identical facial features and outfit. Returns base64 images for carousel use.
+- **Say Cheese**: `POST /api/content/clinician-recreate` — takes uploaded clinician portrait, generates 5 AI recreation styles (classic portrait, David Bailey style, close-up, patient consultation, editorial) with identical facial features and outfit. Returns base64 images for carousel use. Big pink button in main interface.
 - **Caption Generator**: `POST /api/content/captions` — SSE endpoint generating Instagram captions
 - **Gradient Controls**: On/off toggle, color picker, solid vs leopard print, 6-position gradient placement
 - **Text Position**: 3x3 grid (TL/TC/TR/CL/CC/CR/BL/BC/BR); CTA slide forces center-center with larger bold text

@@ -945,107 +945,99 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* ClinicianRecreate - Portrait Recreation */}
-              <div className="rounded-2xl border border-border/30 bg-card/50 p-8 space-y-6">
-                <div className="flex items-center gap-3">
-                  <Sparkles className="w-7 h-7 text-primary" />
-                  <h3 className="font-semibold text-2xl">ClinicianRecreate</h3>
+              {/* SAY CHEESE - Portrait Recreation */}
+              {clinicianPortraits.length === 0 ? (
+                <div className="rounded-2xl border border-border/30 bg-card/50 p-12 space-y-8 flex flex-col items-center text-center">
+                  <div className="flex items-center justify-center gap-3">
+                    <Sparkles className="w-8 h-8 text-primary" />
+                    <h3 className="font-semibold text-4xl">Say Cheese!</h3>
+                  </div>
+                  <p className="text-xl text-muted-foreground max-w-md">Upload a portrait and we'll recreate it in 5 professional styles</p>
+
+                  <Button
+                    onClick={() => {
+                      const input = document.createElement("input");
+                      input.type = "file";
+                      input.accept = "image/*";
+                      input.onchange = (e) => {
+                        const file = (e.target as HTMLInputElement).files?.[0];
+                        if (file) setClinicianPhoto(file);
+                      };
+                      input.click();
+                    }}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl px-12 py-8 text-2xl font-bold shadow-lg"
+                  >
+                    <ImageIcon className="w-7 h-7 mr-3" />
+                    {clinicianPhoto ? clinicianPhoto.name : "Select Photo"}
+                  </Button>
+
+                  <Button
+                    onClick={recreatePortraits}
+                    disabled={!clinicianPhoto || clinicianRecreating}
+                    className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-2xl px-16 py-10 text-4xl font-bold shadow-xl"
+                    size="lg"
+                  >
+                    {clinicianRecreating ? (
+                      <>
+                        <Loader2 className="w-8 h-8 mr-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-8 h-8 mr-4" />
+                        SAY CHEESE
+                      </>
+                    )}
+                  </Button>
                 </div>
-                <p className="text-lg text-muted-foreground">Upload a portrait and recreate it in 5 professional styles</p>
+              ) : (
+                <div className="rounded-2xl border border-border/30 bg-card/50 p-8 space-y-6">
+                  <p className="text-2xl font-bold text-center">Your 5 Portrait Styles:</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {clinicianPortraits.map((portrait, i) => (
+                      <div key={i} className="rounded-xl border border-border/30 overflow-hidden bg-accent/5">
+                        <img src={portrait.image} alt={portrait.style} className="w-full aspect-square object-cover" />
+                        <div className="p-4 space-y-3">
+                          <p className="font-semibold text-lg capitalize">
+                            {portrait.style === "bailey"
+                              ? "David Bailey Style"
+                              : portrait.style === "closeup"
+                              ? "Close-up"
+                              : portrait.style === "patient"
+                              ? "Patient Consultation"
+                              : portrait.style === "editorial"
+                              ? "Editorial"
+                              : "Classic Portrait"}
+                          </p>
+                          <Button
+                            onClick={() => addPortraitAsPhoto(portrait.image)}
+                            className="w-full py-6 text-base font-semibold"
+                            size="lg"
+                          >
+                            <Plus className="w-5 h-5 mr-2" />
+                            Add to Carousel
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
 
-                {clinicianPortraits.length === 0 ? (
-                  <div className="space-y-5">
-                    {/* Upload clinician photo */}
-                    <div
-                      className={`border-3 border-dashed rounded-2xl p-12 text-center cursor-pointer transition ${
-                        clinicianPhoto ? "border-primary/50 bg-primary/5" : "border-border/50 hover:border-primary/50"
-                      }`}
-                      onClick={() => {
-                        const input = document.createElement("input");
-                        input.type = "file";
-                        input.accept = "image/*";
-                        input.onchange = (e) => {
-                          const file = (e.target as HTMLInputElement).files?.[0];
-                          if (file) setClinicianPhoto(file);
-                        };
-                        input.click();
-                      }}
-                    >
-                      <ImageIcon className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
-                      <p className="font-semibold text-lg mb-1">
-                        {clinicianPhoto ? clinicianPhoto.name : "Select a portrait photo"}
-                      </p>
-                      <p className="text-muted-foreground text-base">Click to upload or drag & drop</p>
-                    </div>
-
+                  <div className="flex gap-3 pt-4">
                     <Button
-                      onClick={recreatePortraits}
-                      disabled={!clinicianPhoto || clinicianRecreating}
-                      className="w-full py-7 text-lg font-semibold"
+                      variant="outline"
+                      onClick={() => {
+                        setClinicianPortraits([]);
+                        setClinicianPhoto(null);
+                      }}
+                      className="flex-1 py-6 text-base font-semibold"
                       size="lg"
                     >
-                      {clinicianRecreating ? (
-                        <>
-                          <Loader2 className="w-5 h-5 mr-3 animate-spin" />
-                          Creating 5 styles...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-5 h-5 mr-3" />
-                          ClinicianRecreate
-                        </>
-                      )}
+                      <RefreshCcw className="w-5 h-5 mr-2" />
+                      Try Another Photo
                     </Button>
                   </div>
-                ) : (
-                  <div className="space-y-6">
-                    <p className="text-lg font-medium">Your 5 Portrait Styles:</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {clinicianPortraits.map((portrait, i) => (
-                        <div key={i} className="rounded-xl border border-border/30 overflow-hidden bg-accent/5">
-                          <img src={portrait.image} alt={portrait.style} className="w-full aspect-square object-cover" />
-                          <div className="p-4 space-y-3">
-                            <p className="font-semibold text-lg capitalize">
-                              {portrait.style === "bailey"
-                                ? "David Bailey Style"
-                                : portrait.style === "closeup"
-                                ? "Close-up"
-                                : portrait.style === "patient"
-                                ? "Patient Consultation"
-                                : portrait.style === "editorial"
-                                ? "Editorial"
-                                : "Classic Portrait"}
-                            </p>
-                            <Button
-                              onClick={() => addPortraitAsPhoto(portrait.image)}
-                              className="w-full py-6 text-base font-semibold"
-                              size="lg"
-                            >
-                              <Plus className="w-5 h-5 mr-2" />
-                              Add to Carousel
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="flex gap-3 pt-4">
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setClinicianPortraits([]);
-                          setClinicianPhoto(null);
-                        }}
-                        className="flex-1 py-6 text-base font-semibold"
-                        size="lg"
-                      >
-                        <RefreshCcw className="w-5 h-5 mr-2" />
-                        Try Another Photo
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* CSV — only in csv mode */}
               {contentMode === "csv" && (
