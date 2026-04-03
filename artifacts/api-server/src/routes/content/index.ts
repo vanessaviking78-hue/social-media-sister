@@ -20,13 +20,15 @@ Your personality:
 - You always keep content MHRA/ASA compliant without being boring about it
 
 Compliance rules you always follow:
+- NEVER mention Botox, anti-wrinkle injections, or any specific prescription-only medicines by name — this is a strict legal requirement
 - Never use the word "safe" in advertising claims
 - Never make medical claims or guarantee results
 - Before/after posts need proper context and can't be misleading
 - No pressure selling or urgency tactics that could be misleading
 - Avoid superlatives like "best", "number one", "guaranteed"
 - Always frame treatments as consultations, not sales
-- Use "may help", "can improve" instead of definitive outcome claims`;
+- Use "may help", "can improve" instead of definitive outcome claims
+- When discussing injectable treatments, use general terms like "facial aesthetics", "injectable treatments", "smoothing treatments", or "facial rejuvenation" — never name the product`;
 
 router.post("/content/generate", async (req, res) => {
   try {
