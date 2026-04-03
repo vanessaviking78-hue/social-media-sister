@@ -395,18 +395,26 @@ router.post("/content/clinician-recreate", async (req, res) => {
 
     let completedCount = 0;
 
+    const heartbeat = setInterval(() => {
+      if (!clientClosed) {
+        try { res.write(`: heartbeat\n\n`); } catch {}
+      }
+    }, 10000);
+
     for (let i = 0; i < prompts.length; i++) {
       if (clientClosed) break;
       const p = prompts[i];
       res.write(`data: ${JSON.stringify({ type: "progress", current: i + 1, total: prompts.length, label: p.label })}\n\n`);
 
       try {
+        console.log(`Generating image ${i + 1}/10: ${p.label}...`);
         const response = await openai.images.generate({
           model: "gpt-image-1",
           prompt: p.prompt,
           n: 1,
           size: "1024x1024",
         });
+        console.log(`Image ${i + 1}/10 generated, has data: ${!!response.data?.[0]?.b64_json || !!response.data?.[0]?.url}`);
 
         if (clientClosed) break;
 
@@ -431,6 +439,8 @@ router.post("/content/clinician-recreate", async (req, res) => {
         res.write(`data: ${JSON.stringify({ type: "error", message: `Failed to generate "${p.label}" - skipping` })}\n\n`);
       }
     }
+
+    clearInterval(heartbeat);
 
     if (!clientClosed) {
       res.write(`data: ${JSON.stringify({ type: "complete", count: completedCount })}\n\n`);
