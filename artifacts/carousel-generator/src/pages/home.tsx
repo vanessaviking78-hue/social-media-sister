@@ -86,7 +86,8 @@ function drawSlide(
   cornerStyle: string = "none",
   cornerColor: string = "#d4af37",
   gradientColor: string = "#000000",
-  gradientEnabled: boolean = true
+  gradientEnabled: boolean = true,
+  gradientStyle: string = "solid"
 ) {
   const W = CANVAS_WIDTH;
   const H = CANVAS_HEIGHT;
@@ -136,16 +137,75 @@ function drawSlide(
     }
   }
 
+  const overlayW = Math.round(W * 0.35);
+
   if (gradientEnabled) {
-    const overlayW = Math.round(W * 0.35);
-    const grad = ctx.createLinearGradient(overlayW, 0, 0, 0);
-    const gr = parseInt(gradientColor.slice(1, 3), 16);
-    const gg = parseInt(gradientColor.slice(3, 5), 16);
-    const gb = parseInt(gradientColor.slice(5, 7), 16);
-    grad.addColorStop(0, `rgba(${gr},${gg},${gb},0)`);
-    grad.addColorStop(1, `rgba(${gr},${gg},${gb},0.85)`);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, overlayW, H);
+    if (gradientStyle === "leopard") {
+      const patCanvas = document.createElement("canvas");
+      patCanvas.width = overlayW;
+      patCanvas.height = H;
+      const pc = patCanvas.getContext("2d")!;
+
+      pc.fillStyle = "#c8a44e";
+      pc.fillRect(0, 0, overlayW, H);
+
+      const rng = (min: number, max: number) => min + Math.random() * (max - min);
+      const spots: { x: number; y: number; rx: number; ry: number; angle: number }[] = [];
+      for (let i = 0; i < 120; i++) {
+        spots.push({
+          x: rng(-20, overlayW + 20),
+          y: rng(-20, H + 20),
+          rx: rng(18, 40),
+          ry: rng(22, 50),
+          angle: rng(0, Math.PI),
+        });
+      }
+      for (const s of spots) {
+        pc.save();
+        pc.translate(s.x, s.y);
+        pc.rotate(s.angle);
+        pc.beginPath();
+        pc.ellipse(0, 0, s.rx, s.ry, 0, 0, Math.PI * 2);
+        pc.fillStyle = "#6b3a1f";
+        pc.fill();
+        pc.beginPath();
+        pc.ellipse(0, 0, s.rx * 0.6, s.ry * 0.6, 0, 0, Math.PI * 2);
+        pc.fillStyle = "#c8a44e";
+        pc.fill();
+        pc.restore();
+      }
+      for (let i = 0; i < 60; i++) {
+        pc.save();
+        pc.translate(rng(0, overlayW), rng(0, H));
+        pc.rotate(rng(0, Math.PI));
+        pc.beginPath();
+        pc.ellipse(0, 0, rng(4, 10), rng(4, 10), 0, 0, Math.PI * 2);
+        pc.fillStyle = "#1a0f08";
+        pc.fill();
+        pc.restore();
+      }
+
+      const fadeGrad = pc.createLinearGradient(0, 0, overlayW, 0);
+      fadeGrad.addColorStop(0, "rgba(0,0,0,0)");
+      fadeGrad.addColorStop(0.7, "rgba(0,0,0,0)");
+      fadeGrad.addColorStop(1, "rgba(0,0,0,1)");
+      pc.fillStyle = fadeGrad;
+      pc.globalCompositeOperation = "destination-out";
+      pc.fillRect(0, 0, overlayW, H);
+
+      ctx.globalAlpha = 0.85;
+      ctx.drawImage(patCanvas, 0, 0);
+      ctx.globalAlpha = 1.0;
+    } else {
+      const grad = ctx.createLinearGradient(overlayW, 0, 0, 0);
+      const gr = parseInt(gradientColor.slice(1, 3), 16);
+      const gg = parseInt(gradientColor.slice(3, 5), 16);
+      const gb = parseInt(gradientColor.slice(5, 7), 16);
+      grad.addColorStop(0, `rgba(${gr},${gg},${gb},0)`);
+      grad.addColorStop(1, `rgba(${gr},${gg},${gb},0.85)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, overlayW, H);
+    }
   }
 
   ctx.fillStyle = textColor;
@@ -232,6 +292,7 @@ export default function Home() {
   const [cornerStyle, setCornerStyle] = useState("none");
   const [cornerColor, setCornerColor] = useState("#d4af37");
   const [gradientEnabled, setGradientEnabled] = useState(true);
+  const [gradientStyle, setGradientStyle] = useState("solid");
   const [gradientColor, setGradientColor] = useState("#000000");
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -558,7 +619,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, gradientColor, gradientEnabled);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, gradientColor, gradientEnabled, gradientStyle);
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -917,7 +978,8 @@ export default function Home() {
                             className="absolute inset-0 w-full h-full object-cover"
                             style={{ opacity: isCover ? 1 : 0.5 }}
                           />
-                          {gradientEnabled && <div className="absolute inset-0" style={{ background: `linear-gradient(to right, ${gradientColor}cc, transparent)` }} />}
+                          {gradientEnabled && gradientStyle === "solid" && <div className="absolute inset-0" style={{ background: `linear-gradient(to right, ${gradientColor}cc, transparent)` }} />}
+                          {gradientEnabled && gradientStyle === "leopard" && <div className="absolute inset-0 w-[35%]" style={{ background: "linear-gradient(to right, #c8a44e, transparent)", opacity: 0.7 }} />}
                           {/* Logo preview */}
                           {logoPreviewUrl && (() => {
                             const posStyle: React.CSSProperties = { position: "absolute" };
@@ -1013,9 +1075,31 @@ export default function Home() {
                   <span className="text-xs text-muted-foreground">{gradientEnabled ? "On" : "Off"}</span>
                 </div>
                 {gradientEnabled && (
-                  <div className="flex gap-2">
-                    <Input type="color" value={gradientColor} onChange={(e) => setGradientColor(e.target.value)} className="w-10 h-8 p-0.5 cursor-pointer" />
-                    <Input type="text" value={gradientColor} onChange={(e) => setGradientColor(e.target.value)} className="flex-1 h-8 text-xs font-mono" placeholder="#000000" />
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      {[
+                        { value: "solid", label: "Solid" },
+                        { value: "leopard", label: "Leopard" },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => setGradientStyle(opt.value)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                            gradientStyle === opt.value
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-accent/40 text-muted-foreground hover:bg-accent/60"
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                    {gradientStyle === "solid" && (
+                      <div className="flex gap-2">
+                        <Input type="color" value={gradientColor} onChange={(e) => setGradientColor(e.target.value)} className="w-10 h-8 p-0.5 cursor-pointer" />
+                        <Input type="text" value={gradientColor} onChange={(e) => setGradientColor(e.target.value)} className="flex-1 h-8 text-xs font-mono" placeholder="#000000" />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
