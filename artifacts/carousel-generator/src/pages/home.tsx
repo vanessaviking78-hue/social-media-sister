@@ -744,38 +744,36 @@ export default function Home() {
                   </button>
 
                   {aiGeneratedPosts && (
-                    <div className="space-y-3 pt-2">
+                    <div className="space-y-4 pt-2">
                       <div className="flex items-center gap-2">
-                        <h4 className="font-medium text-sm text-green-400">Content Ready</h4>
-                        <Badge variant="secondary" className="bg-green-500/10 text-green-400 text-xs">{aiGeneratedPosts.length} posts</Badge>
+                        <h4 className="font-medium text-base text-green-400">Content Ready</h4>
+                        <Badge variant="secondary" className="bg-green-500/10 text-green-400 text-sm">{aiGeneratedPosts.length} posts</Badge>
                       </div>
-                      <div className="rounded-xl overflow-hidden text-sm bg-accent/30 max-h-[300px] overflow-y-auto">
-                        <table className="w-full">
-                          <thead>
-                            <tr>
-                              <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-8">#</th>
-                              {Array.from({ length: aiGeneratedPosts[0]?.length || 5 }, (_, i) => (
-                                <th key={i} className={`text-left px-4 py-3 text-xs font-semibold whitespace-nowrap ${i === 0 ? "text-primary" : "text-muted-foreground"}`}>
-                                  {i === 0 ? "Hook" : `Slide ${i + 1}`}
-                                </th>
+                      <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
+                        {aiGeneratedPosts.slice(0, 8).map((row, ri) => (
+                          <div key={ri} className="rounded-xl border border-border/30 bg-accent/20 overflow-hidden">
+                            <div className="px-4 py-2.5 bg-accent/30 flex items-center gap-2">
+                              <span className="text-primary font-mono text-sm font-bold">{String(ri + 1).padStart(2, "0")}</span>
+                              <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Carousel {ri + 1}</span>
+                            </div>
+                            <div className="p-4 space-y-3">
+                              {row.map((cell, ci) => (
+                                <div key={ci} className="flex gap-3">
+                                  <span className={`text-xs font-semibold mt-0.5 flex-shrink-0 w-14 ${ci === 0 ? "text-primary" : "text-muted-foreground/60"}`}>
+                                    {ci === 0 ? "Hook" : ci === row.length - 1 ? "CTA" : `Slide ${ci + 1}`}
+                                  </span>
+                                  <p className={`text-sm leading-relaxed ${ci === 0 ? "text-foreground font-semibold" : "text-muted-foreground"}`}>
+                                    {cell}
+                                  </p>
+                                </div>
                               ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {aiGeneratedPosts.slice(0, 5).map((row, ri) => (
-                              <tr key={ri} className="hover:bg-accent/40 transition-colors">
-                                <td className="px-4 py-3 text-primary font-mono text-xs">{String(ri + 1).padStart(2, "0")}</td>
-                                {row.map((cell, ci) => (
-                                  <td key={ci} className="px-4 py-3 text-muted-foreground max-w-[180px] truncate text-xs">{cell}</td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                        {aiGeneratedPosts.length > 5 && (
-                          <div className="px-4 py-2.5 text-xs text-muted-foreground/70 italic">
-                            Showing first 5 of {aiGeneratedPosts.length} posts
+                            </div>
                           </div>
+                        ))}
+                        {aiGeneratedPosts.length > 8 && (
+                          <p className="text-sm text-muted-foreground/70 italic text-center py-2">
+                            Showing first 8 of {aiGeneratedPosts.length} posts
+                          </p>
                         )}
                       </div>
                     </div>
@@ -843,39 +841,35 @@ export default function Home() {
               </div>
             )}
 
-            {/* CSV preview — spacing only, no harsh borders */}
+            {/* CSV preview */}
             {csvPreview.rows.length > 0 && (
-              <div className="space-y-3">
-                <h3 className="font-medium text-sm">CSV Preview</h3>
-                <div className="rounded-xl overflow-hidden text-sm bg-accent/30">
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground w-8">#</th>
-                          {csvPreview.headers.map((h, i) => (
-                            <th key={i} className={`text-left px-4 py-3 text-xs font-semibold whitespace-nowrap ${i === 0 ? "text-primary" : "text-muted-foreground"}`}>
-                              {i === 0 ? `🪝 ${h}` : h}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {csvPreview.rows.map((row, ri) => (
-                          <tr key={ri} className="hover:bg-accent/40 transition-colors">
-                            <td className="px-4 py-3 text-primary font-mono text-xs">{String(ri + 1).padStart(2, "0")}</td>
-                            {row.map((cell, ci) => (
-                              <td key={ci} className="px-4 py-3 text-muted-foreground max-w-[180px] truncate text-xs">{cell}</td>
-                            ))}
-                          </tr>
+              <div className="space-y-4">
+                <h3 className="font-medium text-base">CSV Preview</h3>
+                <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
+                  {csvPreview.rows.map((row, ri) => (
+                    <div key={ri} className="rounded-xl border border-border/30 bg-accent/20 overflow-hidden">
+                      <div className="px-4 py-2.5 bg-accent/30 flex items-center gap-2">
+                        <span className="text-primary font-mono text-sm font-bold">{String(ri + 1).padStart(2, "0")}</span>
+                        <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Carousel {ri + 1}</span>
+                      </div>
+                      <div className="p-4 space-y-3">
+                        {row.map((cell, ci) => (
+                          <div key={ci} className="flex gap-3">
+                            <span className={`text-xs font-semibold mt-0.5 flex-shrink-0 w-14 ${ci === 0 ? "text-primary" : "text-muted-foreground/60"}`}>
+                              {ci === 0 ? "Hook" : `Slide ${ci + 1}`}
+                            </span>
+                            <p className={`text-sm leading-relaxed ${ci === 0 ? "text-foreground font-semibold" : "text-muted-foreground"}`}>
+                              {cell}
+                            </p>
+                          </div>
                         ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  <div className="px-4 py-2.5 text-xs text-muted-foreground/70 italic">
-                    Showing first 3 rows — each row = one carousel · column 1 = vivid cover · columns 2–5 = faded slides
-                  </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
+                <p className="text-sm text-muted-foreground/70 italic">
+                  Showing first 3 rows - each row becomes one carousel
+                </p>
               </div>
             )}
           </div>

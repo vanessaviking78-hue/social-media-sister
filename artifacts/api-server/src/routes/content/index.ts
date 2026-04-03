@@ -28,7 +28,8 @@ Compliance rules you always follow:
 - Avoid superlatives like "best", "number one", "guaranteed"
 - Always frame treatments as consultations, not sales
 - Use "may help", "can improve" instead of definitive outcome claims
-- When discussing injectable treatments, use general terms like "facial aesthetics", "injectable treatments", "smoothing treatments", or "facial rejuvenation" — never name the product`;
+- When discussing injectable treatments, use general terms like "facial aesthetics", "injectable treatments", "smoothing treatments", or "facial rejuvenation" - never name the product
+- NEVER use em dashes (—) or en dashes (–) anywhere in your output. Use hyphens (-) or commas instead. This is a strict formatting rule.`;
 
 router.post("/content/generate", async (req, res) => {
   try {
