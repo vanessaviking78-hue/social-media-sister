@@ -1108,6 +1108,7 @@ export default function Home() {
                             const blob = new Blob([csvContent], { type: "text/csv" });
                             const file = new File([blob], "library-captions.csv", { type: "text/csv" });
                             setCsvFile(file);
+                            setAllCsvRows(rows);
                             setCsvPreview({ headers: ["Text"], rows: rows.slice(0, 5) });
                             setSelectedLibCaptionIds(new Set());
                             setShowBrowseLibrary(false);

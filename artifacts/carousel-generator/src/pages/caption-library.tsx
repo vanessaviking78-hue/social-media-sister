@@ -63,10 +63,6 @@ export default function CaptionLibrary() {
   const [allClientNames, setAllClientNames] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchCaptions().then(() => {});
-  }, []);
-
-  useEffect(() => {
     if (!searchQuery && !filterCategory && !filterClient) {
       const names = Array.from(new Set(captions.map((c) => c.clientName).filter(Boolean)));
       if (names.length > 0 || allClientNames.length === 0) setAllClientNames(names);
