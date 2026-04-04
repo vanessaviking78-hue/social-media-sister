@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "wouter";
 import {
   Layers, ChevronLeft, ChevronRight, Plus, X, Trash2, Pencil, CalendarDays, MessageSquareText,
-  ImageIcon, ArrowLeftRight, GripVertical, Filter,
+  ImageIcon, ArrowLeftRight, GripVertical, Filter, BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -242,6 +242,9 @@ export default function Calendar() {
             <Link href="/presets" className="text-muted-foreground hover:text-white transition">Presets</Link>
             <Link href="/captions" className="flex items-center gap-1 text-muted-foreground hover:text-white transition">
               <MessageSquareText className="w-4 h-4" />Captions
+            </Link>
+            <Link href="/analytics" className="flex items-center gap-1 text-muted-foreground hover:text-white transition">
+              <BarChart3 className="w-4 h-4" />Analytics
             </Link>
           </nav>
         </div>

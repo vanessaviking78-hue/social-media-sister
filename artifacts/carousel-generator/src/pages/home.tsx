@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
-import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus, CalendarDays } from "lucide-react";
+import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus, CalendarDays, BarChart3 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -513,6 +513,7 @@ export default function Home() {
       }
       const content = await zip.generateAsync({ type: "blob" });
       saveAs(content, "carousel-posts.zip");
+      fetch(`${import.meta.env.BASE_URL}api/analytics/log`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "downloaded", postType: "carousel", clientName: clientName || "", postCount: slides.length > 0 ? new Set(slides.map(s => s.groupIndex)).size : 0 }) }).catch(() => {});
       toast.success("Download started", { id });
     } catch (e) {
       console.error(e);
@@ -695,6 +696,12 @@ export default function Home() {
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <CalendarDays className="w-4 h-4 mr-2" />
               Calendar
+            </Button>
+          </Link>
+          <Link href="/analytics">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analytics
             </Button>
           </Link>
           {result && (

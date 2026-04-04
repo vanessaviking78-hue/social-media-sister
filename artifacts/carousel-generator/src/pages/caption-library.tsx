@@ -158,6 +158,9 @@ export default function CaptionLibrary() {
             <Link href="/calendar" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
               Calendar
             </Link>
+            <Link href="/analytics" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Analytics
+            </Link>
           </nav>
         </div>
       </header>

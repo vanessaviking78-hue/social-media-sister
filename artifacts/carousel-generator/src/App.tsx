@@ -9,6 +9,7 @@ import SingleImage from "@/pages/single-image";
 import Presets from "@/pages/presets";
 import CaptionLibrary from "@/pages/caption-library";
 import Calendar from "@/pages/calendar";
+import Analytics from "@/pages/analytics";
 
 const queryClient = new QueryClient();
 
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/presets" component={Presets} />
       <Route path="/captions" component={CaptionLibrary} />
       <Route path="/calendar" component={Calendar} />
+      <Route path="/analytics" component={Analytics} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { objectStorageClient } from "../../lib/objectStorage";
+import { logActivity } from "../../lib/activityLog";
 
 const CC_BASE = "https://app.cloudcampaign.com/api/v1";
 
@@ -188,6 +189,8 @@ IMPORTANT: Output ONLY a valid JSON array with no markdown formatting, no code f
       }
     }
 
+    logActivity({ action: "generated", postType: "carousel", clientName: clientName || "", postCount: csvRows.length, slideCount: csvRows.length * slides });
+
     res.write(
       `data: ${JSON.stringify({ type: "complete", posts: csvRows, postCount: csvRows.length })}\n\n`
     );
@@ -280,6 +283,8 @@ Example: ["Your skin deserves better","Stop doing this to your face","3 things y
         res.write(`data: ${JSON.stringify({ type: "error", message: "Failed to parse AI response for a batch." })}\n\n`);
       }
     }
+
+    logActivity({ action: "generated", postType: "single-image", clientName: clientName || "", postCount: allTexts.length, slideCount: allTexts.length });
 
     res.write(`data: ${JSON.stringify({ type: "complete", texts: allTexts })}\n\n`);
     res.end();
@@ -868,6 +873,9 @@ router.post("/cloud-campaign/push", async (req, res) => {
 
     const succeeded = results.filter((r) => r.status === "success").length;
     const failed = results.filter((r) => r.status === "error").length;
+    if (succeeded > 0) {
+      logActivity({ action: "pushed", postType: "carousel", postCount: succeeded });
+    }
     res.json({ results, summary: { total: results.length, succeeded, failed } });
   } catch (err: any) {
     console.error("CC push error:", err);

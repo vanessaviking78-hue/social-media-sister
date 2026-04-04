@@ -63,3 +63,17 @@ export const calendarPostsTable = pgTable("calendar_posts", {
 export const insertCalendarPostSchema = createInsertSchema(calendarPostsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertCalendarPost = z.infer<typeof insertCalendarPostSchema>;
 export type CalendarPost = typeof calendarPostsTable.$inferSelect;
+
+export const activityLogTable = pgTable("activity_log", {
+  id: serial("id").primaryKey(),
+  action: text("action").notNull(),
+  postType: text("post_type").notNull().default("carousel"),
+  clientName: text("client_name").notNull().default(""),
+  slideCount: integer("slide_count").notNull().default(0),
+  postCount: integer("post_count").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertActivityLogSchema = createInsertSchema(activityLogTable).omit({ id: true, createdAt: true });
+export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
+export type ActivityLog = typeof activityLogTable.$inferSelect;

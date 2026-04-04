@@ -23,6 +23,7 @@ import {
   ImagePlus,
   BookOpen,
   CalendarDays,
+  BarChart3,
 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
@@ -749,6 +750,7 @@ export default function BeforeAfter() {
 
       const zipContent = await zip.generateAsync({ type: "blob" });
       saveAs(zipContent, "before-after-posts.zip");
+      fetch(`${import.meta.env.BASE_URL}api/analytics/log`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "downloaded", postType: "before-after", postCount: pairs.length }) }).catch(() => {});
       toast.success("Download started", { id });
     } catch (e) {
       console.error(e);
@@ -895,6 +897,12 @@ export default function BeforeAfter() {
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <CalendarDays className="w-4 h-4 mr-2" />
               Calendar
+            </Button>
+          </Link>
+          <Link href="/analytics">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analytics
             </Button>
           </Link>
           {currentStep === 4 && (

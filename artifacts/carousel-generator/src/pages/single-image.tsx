@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import {
-  Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus, CalendarDays,
+  Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus, CalendarDays, BarChart3,
 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
@@ -419,6 +419,7 @@ export default function SingleImage() {
       }
       const content = await zip.generateAsync({ type: "blob" });
       saveAs(content, "single-image-posts.zip");
+      fetch(`${import.meta.env.BASE_URL}api/analytics/log`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "downloaded", postType: "single-image", clientName: clientName || "", postCount: slides.length }) }).catch(() => {});
       toast.success("Download started", { id });
     } catch (e) {
       console.error(e);
@@ -654,6 +655,12 @@ export default function SingleImage() {
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <CalendarDays className="w-4 h-4 mr-2" />
               Calendar
+            </Button>
+          </Link>
+          <Link href="/analytics">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Analytics
             </Button>
           </Link>
           {result && (
