@@ -20,6 +20,7 @@ import {
   Tag,
   Trash2,
   FileText,
+  ImagePlus,
 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
@@ -827,6 +828,12 @@ export default function BeforeAfter() {
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <ArrowLeftRight className="w-4 h-4 mr-2" />
               Carousel Mode
+            </Button>
+          </Link>
+          <Link href="/single-image">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <ImagePlus className="w-4 h-4 mr-2" />
+              Single Image
             </Button>
           </Link>
           {currentStep === 4 && (

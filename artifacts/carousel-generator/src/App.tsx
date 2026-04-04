@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import BeforeAfter from "@/pages/before-after";
+import SingleImage from "@/pages/single-image";
 
 const queryClient = new QueryClient();
 
@@ -13,6 +14,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/before-after" component={BeforeAfter} />
+      <Route path="/single-image" component={SingleImage} />
       <Route component={NotFound} />
     </Switch>
   );

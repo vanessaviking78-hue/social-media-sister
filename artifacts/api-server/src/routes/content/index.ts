@@ -205,6 +205,95 @@ IMPORTANT: Output ONLY a valid JSON array with no markdown formatting, no code f
   }
 });
 
+router.post("/content/generate-single", async (req, res) => {
+  try {
+    const { clientName, industry, tone, topics, postCount, extraInstructions } = req.body;
+
+    if (!industry || !tone || !topics || !postCount) {
+      res.status(400).json({ error: "Missing required fields" });
+      return;
+    }
+
+    const count = Math.min(Number(postCount) || 10, 60);
+    const topicList = Array.isArray(topics) ? topics.join(", ") : topics;
+
+    const systemPrompt = `${CONTENT_SYSTEM}
+
+You are now generating text overlays for single-image Instagram posts. Write in a ${tone} tone of voice.${clientName ? ` You are creating content for "${clientName}".` : ""} The industry is: ${industry}.
+
+Generate exactly ${count} single-image post texts.
+
+Content rules:
+- Each text is a short, punchy statement or question that works as a standalone image overlay
+- Keep each text under 15 words - these need to be readable on a single image
+- Mix up styles: bold statements, questions, myth-busting, tips, calls to action, inspiring quotes
+- Make them scroll-stopping and attention-grabbing
+- All content must be MHRA and ASA compliant - no medical claims, no guaranteed results, no pressure tactics
+- Make content specific to ${industry}
+- Keep language conversational, warm, and accessible
+- Each text should be concise enough to fit on a 1080x1350 image
+${extraInstructions ? `\nAdditional instructions: ${extraInstructions}` : ""}
+
+IMPORTANT: Output ONLY a valid JSON array of strings with no markdown formatting, no code fences, no extra text. Each element is a single text string.
+Example: ["Your skin deserves better","Stop doing this to your face","3 things your practitioner wants you to know"]`;
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+
+    const batchSize = Math.min(count, 30);
+    const batches = Math.ceil(count / batchSize);
+    let allTexts: string[] = [];
+
+    for (let b = 0; b < batches; b++) {
+      const remaining = count - allTexts.length;
+      const thisBatch = Math.min(batchSize, remaining);
+
+      res.write(`data: ${JSON.stringify({ type: "progress", generated: allTexts.length, total: count })}\n\n`);
+
+      const stream = await openai.chat.completions.create({
+        model: "gpt-5.2",
+        max_completion_tokens: 4096,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Generate exactly ${thisBatch} single-image post texts about these topics: ${topicList}. Distribute topics evenly. Return ONLY a JSON array of strings.` },
+        ],
+        stream: true,
+      });
+
+      let fullResponse = "";
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content;
+        if (content) fullResponse += content;
+      }
+
+      try {
+        let cleaned = fullResponse.trim();
+        const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+        if (jsonMatch) cleaned = jsonMatch[0];
+        const parsed = JSON.parse(cleaned);
+        if (Array.isArray(parsed)) {
+          allTexts = allTexts.concat(parsed.map((t: any) => String(t)).slice(0, thisBatch));
+        }
+      } catch (parseErr) {
+        console.error("Failed to parse AI single-image batch:", parseErr);
+        res.write(`data: ${JSON.stringify({ type: "error", message: "Failed to parse AI response for a batch." })}\n\n`);
+      }
+    }
+
+    res.write(`data: ${JSON.stringify({ type: "complete", texts: allTexts })}\n\n`);
+    res.end();
+  } catch (err: any) {
+    console.error("Single image content generation error:", err);
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message || "Generation failed" });
+    } else {
+      res.write(`data: ${JSON.stringify({ type: "error", message: err.message || "Generation failed" })}\n\n`);
+      res.end();
+    }
+  }
+});
+
 router.post("/content/captions", async (req, res) => {
   try {
     const { posts, clientName, industry, tone, extraInstructions } = req.body;

@@ -1,0 +1,358 @@
+export const CANVAS_WIDTH = 1080;
+export const CANVAS_HEIGHT = 1350;
+
+export const FONT_OPTIONS = [
+  { label: "Inter", value: "Inter, sans-serif" },
+  { label: "Playfair Display", value: "'Playfair Display', serif" },
+  { label: "Montserrat", value: "'Montserrat', sans-serif" },
+  { label: "Lato", value: "'Lato', sans-serif" },
+  { label: "Oswald", value: "'Oswald', sans-serif" },
+  { label: "Merriweather", value: "'Merriweather', serif" },
+  { label: "Raleway", value: "'Raleway', sans-serif" },
+  { label: "Roboto", value: "'Roboto', sans-serif" },
+  { label: "Cormorant Garamond", value: "'Cormorant Garamond', serif" },
+  { label: "Anton", value: "'Anton', sans-serif" },
+  { label: "Poppins", value: "'Poppins', sans-serif" },
+  { label: "Bebas Neue", value: "'Bebas Neue', sans-serif" },
+  { label: "Dancing Script", value: "'Dancing Script', cursive" },
+  { label: "Pacifico", value: "'Pacifico', cursive" },
+  { label: "Libre Baskerville", value: "'Libre Baskerville', serif" },
+  { label: "DM Serif Display", value: "'DM Serif Display', serif" },
+  { label: "Abril Fatface", value: "'Abril Fatface', serif" },
+  { label: "Quicksand", value: "'Quicksand', sans-serif" },
+  { label: "Nunito", value: "'Nunito', sans-serif" },
+  { label: "Crimson Text", value: "'Crimson Text', serif" },
+  { label: "Work Sans", value: "'Work Sans', sans-serif" },
+  { label: "Bitter", value: "'Bitter', serif" },
+  { label: "Georgia", value: "Georgia, serif" },
+  { label: "Josefin Sans", value: "'Josefin Sans', sans-serif" },
+  { label: "Great Vibes", value: "'Great Vibes', cursive" },
+];
+
+export const CORNER_STYLES = [
+  { label: "None", value: "none" },
+  { label: "Triangle", value: "triangle" },
+  { label: "Arc", value: "arc" },
+  { label: "Double Line", value: "double-line" },
+  { label: "Frame", value: "frame" },
+];
+
+export const LOGO_POSITIONS = [
+  { label: "Top Left", value: "top-left" },
+  { label: "Top Right", value: "top-right" },
+  { label: "Bottom Left", value: "bottom-left" },
+  { label: "Bottom Right", value: "bottom-right" },
+];
+
+export function loadGoogleFonts() {
+  if (typeof document !== "undefined") {
+    const existing = document.querySelector('link[data-slide-fonts]');
+    if (existing) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.setAttribute("data-slide-fonts", "true");
+    link.href =
+      "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Montserrat:wght@400;600;700&family=Lato:wght@400;700&family=Oswald:wght@400;600;700&family=Merriweather:wght@400;700&family=Raleway:wght@400;600;700&family=Roboto:wght@400;700&family=Poppins:wght@400;600;700&family=Bebas+Neue&family=Dancing+Script:wght@400;700&family=Pacifico&family=Libre+Baskerville:wght@400;700&family=DM+Serif+Display&family=Abril+Fatface&family=Quicksand:wght@400;600;700&family=Nunito:wght@400;600;700&family=Crimson+Text:wght@400;600;700&family=Work+Sans:wght@400;600;700&family=Bitter:wght@400;600;700&family=Josefin+Sans:wght@400;600;700&family=Great+Vibes&display=swap";
+    document.head.appendChild(link);
+  }
+}
+
+export function drawSlide(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement,
+  text: string,
+  font: string,
+  size: number,
+  isCoverSlide: boolean,
+  textColor: string = "#ffffff",
+  lineSpacing: number = 0.9,
+  overlayColor: string = "rgba(0,0,0,0.5)",
+  logoImg: HTMLImageElement | null = null,
+  logoPosition: string = "top-right",
+  logoSize: number = 140,
+  pageColor: string = "#000000",
+  cornerStyle: string = "none",
+  cornerColor: string = "#d4af37",
+  gradientColor: string = "#000000",
+  gradientEnabled: boolean = true,
+  gradientStyle: string = "solid",
+  gradientPosition: string = "left",
+  slidePosition: number = 1,
+  totalSlidesInGroup: number = 5,
+  textPosition: string = "bottom-left"
+) {
+  const W = CANVAS_WIDTH;
+  const H = CANVAS_HEIGHT;
+
+  ctx.fillStyle = pageColor;
+  ctx.fillRect(0, 0, W, H);
+
+  const scale = Math.max(W / img.width, H / img.height);
+  const x = (W - img.width * scale) / 2;
+  const y = (H - img.height * scale) / 2;
+  ctx.globalAlpha = isCoverSlide ? 1.0 : 0.5;
+  ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+  ctx.globalAlpha = 1.0;
+
+  if (cornerStyle !== "none") {
+    ctx.strokeStyle = cornerColor;
+    ctx.fillStyle = cornerColor;
+    const S = 180;
+
+    if (cornerStyle === "triangle") {
+      ctx.beginPath();
+      ctx.moveTo(0, 0); ctx.lineTo(S, 0); ctx.lineTo(0, S); ctx.closePath(); ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(W, H); ctx.lineTo(W - S, H); ctx.lineTo(W, H - S); ctx.closePath(); ctx.fill();
+    } else if (cornerStyle === "arc") {
+      ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.arc(0, 0, S, 0, Math.PI / 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(W, H, S, Math.PI, Math.PI * 1.5); ctx.stroke();
+      ctx.beginPath(); ctx.arc(W, 0, S, Math.PI / 2, Math.PI); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, H, S, Math.PI * 1.5, Math.PI * 2); ctx.stroke();
+    } else if (cornerStyle === "double-line") {
+      ctx.lineWidth = 4;
+      const G = 12;
+      [0, G].forEach((off) => {
+        ctx.strokeRect(off + 30, off + 30, W - (off + 30) * 2, H - (off + 30) * 2);
+      });
+    } else if (cornerStyle === "frame") {
+      ctx.lineWidth = 5;
+      const L = 120;
+      const M = 40;
+      ctx.beginPath();
+      ctx.moveTo(M, M + L); ctx.lineTo(M, M); ctx.lineTo(M + L, M);
+      ctx.moveTo(W - M - L, M); ctx.lineTo(W - M, M); ctx.lineTo(W - M, M + L);
+      ctx.moveTo(W - M, H - M - L); ctx.lineTo(W - M, H - M); ctx.lineTo(W - M - L, H - M);
+      ctx.moveTo(M + L, H - M); ctx.lineTo(M, H - M); ctx.lineTo(M, H - M - L);
+      ctx.stroke();
+    }
+  }
+
+  const isHoriz = ["left", "center", "right"].includes(gradientPosition);
+  const stripW = Math.round(W * 0.35);
+  const stripH = Math.round(H * 0.30);
+
+  let gx = 0, gy = 0, gw = stripW, gh = H;
+  if (isHoriz) {
+    gw = stripW; gh = H;
+    if (gradientPosition === "left") { gx = 0; }
+    else if (gradientPosition === "center") { gx = Math.round((W - stripW) / 2); }
+    else { gx = W - stripW; }
+  } else {
+    gw = W; gh = stripH;
+    if (gradientPosition === "top") { gy = 0; }
+    else if (gradientPosition === "middle") { gy = Math.round((H - stripH) / 2); }
+    else { gy = H - stripH; }
+  }
+
+  if (gradientEnabled) {
+    if (gradientStyle === "leopard") {
+      const patCanvas = document.createElement("canvas");
+      patCanvas.width = gw;
+      patCanvas.height = gh;
+      const pc = patCanvas.getContext("2d")!;
+
+      pc.fillStyle = "#c8a44e";
+      pc.fillRect(0, 0, gw, gh);
+
+      const rng = (min: number, max: number) => min + Math.random() * (max - min);
+      const spotCount = isHoriz ? 120 : 80;
+      const spots: { x: number; y: number; rx: number; ry: number; angle: number }[] = [];
+      for (let i = 0; i < spotCount; i++) {
+        spots.push({
+          x: rng(-20, gw + 20),
+          y: rng(-20, gh + 20),
+          rx: rng(18, 40),
+          ry: rng(22, 50),
+          angle: rng(0, Math.PI),
+        });
+      }
+      for (const s of spots) {
+        pc.save();
+        pc.translate(s.x, s.y);
+        pc.rotate(s.angle);
+        pc.beginPath();
+        pc.ellipse(0, 0, s.rx, s.ry, 0, 0, Math.PI * 2);
+        pc.fillStyle = "#6b3a1f";
+        pc.fill();
+        pc.beginPath();
+        pc.ellipse(0, 0, s.rx * 0.6, s.ry * 0.6, 0, 0, Math.PI * 2);
+        pc.fillStyle = "#c8a44e";
+        pc.fill();
+        pc.restore();
+      }
+      for (let i = 0; i < 60; i++) {
+        pc.save();
+        pc.translate(rng(0, gw), rng(0, gh));
+        pc.rotate(rng(0, Math.PI));
+        pc.beginPath();
+        pc.ellipse(0, 0, rng(4, 10), rng(4, 10), 0, 0, Math.PI * 2);
+        pc.fillStyle = "#1a0f08";
+        pc.fill();
+        pc.restore();
+      }
+
+      let fadeGrad: CanvasGradient;
+      if (isHoriz) {
+        if (gradientPosition === "left") {
+          fadeGrad = pc.createLinearGradient(0, 0, gw, 0);
+          fadeGrad.addColorStop(0, "rgba(0,0,0,0)"); fadeGrad.addColorStop(0.7, "rgba(0,0,0,0)"); fadeGrad.addColorStop(1, "rgba(0,0,0,1)");
+        } else if (gradientPosition === "right") {
+          fadeGrad = pc.createLinearGradient(gw, 0, 0, 0);
+          fadeGrad.addColorStop(0, "rgba(0,0,0,0)"); fadeGrad.addColorStop(0.7, "rgba(0,0,0,0)"); fadeGrad.addColorStop(1, "rgba(0,0,0,1)");
+        } else {
+          fadeGrad = pc.createLinearGradient(gw / 2, 0, 0, 0);
+          fadeGrad.addColorStop(0, "rgba(0,0,0,0)"); fadeGrad.addColorStop(1, "rgba(0,0,0,1)");
+          pc.fillStyle = fadeGrad; pc.globalCompositeOperation = "destination-out"; pc.fillRect(0, 0, gw / 2, gh);
+          fadeGrad = pc.createLinearGradient(gw / 2, 0, gw, 0);
+          fadeGrad.addColorStop(0, "rgba(0,0,0,0)"); fadeGrad.addColorStop(1, "rgba(0,0,0,1)");
+        }
+      } else {
+        if (gradientPosition === "top") {
+          fadeGrad = pc.createLinearGradient(0, 0, 0, gh);
+          fadeGrad.addColorStop(0, "rgba(0,0,0,0)"); fadeGrad.addColorStop(0.7, "rgba(0,0,0,0)"); fadeGrad.addColorStop(1, "rgba(0,0,0,1)");
+        } else if (gradientPosition === "bottom") {
+          fadeGrad = pc.createLinearGradient(0, gh, 0, 0);
+          fadeGrad.addColorStop(0, "rgba(0,0,0,0)"); fadeGrad.addColorStop(0.7, "rgba(0,0,0,0)"); fadeGrad.addColorStop(1, "rgba(0,0,0,1)");
+        } else {
+          fadeGrad = pc.createLinearGradient(0, gh / 2, 0, 0);
+          fadeGrad.addColorStop(0, "rgba(0,0,0,0)"); fadeGrad.addColorStop(1, "rgba(0,0,0,1)");
+          pc.fillStyle = fadeGrad; pc.globalCompositeOperation = "destination-out"; pc.fillRect(0, 0, gw, gh / 2);
+          fadeGrad = pc.createLinearGradient(0, gh / 2, 0, gh);
+          fadeGrad.addColorStop(0, "rgba(0,0,0,0)"); fadeGrad.addColorStop(1, "rgba(0,0,0,1)");
+        }
+      }
+      pc.fillStyle = fadeGrad;
+      pc.globalCompositeOperation = "destination-out";
+      pc.fillRect(0, 0, gw, gh);
+
+      ctx.globalAlpha = 0.85;
+      ctx.drawImage(patCanvas, gx, gy);
+      ctx.globalAlpha = 1.0;
+    } else {
+      const gr = parseInt(gradientColor.slice(1, 3), 16);
+      const gg = parseInt(gradientColor.slice(3, 5), 16);
+      const gb = parseInt(gradientColor.slice(5, 7), 16);
+      let grad: CanvasGradient;
+      if (isHoriz) {
+        if (gradientPosition === "left") {
+          grad = ctx.createLinearGradient(gx + gw, 0, gx, 0);
+        } else if (gradientPosition === "right") {
+          grad = ctx.createLinearGradient(gx, 0, gx + gw, 0);
+        } else {
+          grad = ctx.createLinearGradient(gx + gw / 2, 0, gx, 0);
+          grad.addColorStop(0, `rgba(${gr},${gg},${gb},0)`);
+          grad.addColorStop(1, `rgba(${gr},${gg},${gb},0.85)`);
+          ctx.fillStyle = grad;
+          ctx.fillRect(gx, gy, gw / 2, gh);
+          grad = ctx.createLinearGradient(gx + gw / 2, 0, gx + gw, 0);
+        }
+      } else {
+        if (gradientPosition === "top") {
+          grad = ctx.createLinearGradient(0, gy + gh, 0, gy);
+        } else if (gradientPosition === "bottom") {
+          grad = ctx.createLinearGradient(0, gy, 0, gy + gh);
+        } else {
+          grad = ctx.createLinearGradient(0, gy + gh / 2, 0, gy);
+          grad.addColorStop(0, `rgba(${gr},${gg},${gb},0)`);
+          grad.addColorStop(1, `rgba(${gr},${gg},${gb},0.85)`);
+          ctx.fillStyle = grad;
+          ctx.fillRect(gx, gy, gw, gh / 2);
+          grad = ctx.createLinearGradient(0, gy + gh / 2, 0, gy + gh);
+        }
+      }
+      grad.addColorStop(0, `rgba(${gr},${gg},${gb},0)`);
+      grad.addColorStop(1, `rgba(${gr},${gg},${gb},0.85)`);
+      ctx.fillStyle = grad;
+      if (gradientPosition === "center") {
+        ctx.fillRect(gx + gw / 2, gy, gw / 2, gh);
+      } else if (gradientPosition === "middle") {
+        ctx.fillRect(gx, gy + gh / 2, gw, gh / 2);
+      } else {
+        ctx.fillRect(gx, gy, gw, gh);
+      }
+    }
+  }
+
+  const isLastSlide = slidePosition === totalSlidesInGroup;
+  const ctaSize = isLastSlide ? Math.round(size * 1.4) : size;
+  const textAreaW = isLastSlide ? W - 120 : W - 80;
+  const activeTextPos = isLastSlide ? "center-center" : textPosition;
+
+  ctx.fillStyle = textColor;
+  ctx.font = `${isLastSlide ? 700 : 600} ${ctaSize}px ${font}`;
+  ctx.textBaseline = "top";
+
+  const maxW = textAreaW;
+  const lineH = Math.round(ctaSize * lineSpacing);
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    const test = cur ? cur + " " + w : w;
+    if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; }
+    else { cur = test; }
+  }
+  if (cur) lines.push(cur);
+
+  const totalH = lines.length * lineH;
+  const pad = 40;
+  let startX = pad, startY = pad;
+
+  const [vPos, hPos] = activeTextPos.split("-");
+
+  if (hPos === "left") { startX = pad; ctx.textAlign = "left"; }
+  else if (hPos === "center") { startX = Math.round(W / 2); ctx.textAlign = "center"; }
+  else if (hPos === "right") { startX = W - pad; ctx.textAlign = "right"; }
+
+  if (vPos === "top") { startY = pad; }
+  else if (vPos === "center") { startY = Math.round((H - totalH) / 2); }
+  else if (vPos === "bottom") { startY = Math.round(H - totalH - pad); }
+
+  const maxLineWidth = Math.max(...lines.map((line) => ctx.measureText(line).width));
+  ctx.fillStyle = overlayColor;
+  let boxX = startX - 15;
+  if (ctx.textAlign === "right") boxX = startX - maxLineWidth - 15;
+  else if (ctx.textAlign === "center") boxX = startX - maxLineWidth / 2 - 15;
+  ctx.fillRect(boxX, startY - 15, maxLineWidth + 30, totalH + 30);
+
+  ctx.fillStyle = textColor;
+  lines.forEach((line, i) => ctx.fillText(line, startX, startY + i * lineH));
+
+  if (logoImg) {
+    const margin = 40;
+    const aspectRatio = logoImg.width / logoImg.height;
+    const logoW = Math.round(logoSize * aspectRatio);
+    const logoH = logoSize;
+    let lx = margin, ly = margin;
+    if (logoPosition === "top-right") { lx = W - logoW - margin; ly = margin; }
+    else if (logoPosition === "bottom-left") { lx = margin; ly = H - logoH - margin; }
+    else if (logoPosition === "bottom-right") { lx = W - logoW - margin; ly = H - logoH - margin; }
+    ctx.drawImage(logoImg, lx, ly, logoW, logoH);
+  }
+}
+
+export async function compressImage(file: File, maxPx = 1080, quality = 0.72): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(
+        (blob) => resolve(blob ? new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" }) : file),
+        "image/jpeg",
+        quality,
+      );
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
