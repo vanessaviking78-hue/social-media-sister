@@ -713,21 +713,75 @@ export default function BeforeAfter() {
     }
   };
 
-  const downloadCsv = () => {
+  const downloadCsv = async () => {
     if (pairs.length === 0) return;
-    const rows: string[][] = [];
-    rows.push(["Treatment", "Caption", "Image Files"]);
-    for (let pi = 0; pi < pairs.length; pi++) {
-      const pair = pairs[pi];
-      const content = generatedContent[pi];
-      const prefix = `pair-${String(pi + 1).padStart(2, "0")}`;
-      const imageFiles = [`${prefix}-01-cover.png`, `${prefix}-02-side-by-side.png`, `${prefix}-03-stacked.png`].join(", ");
-      rows.push([content?.treatmentType || pair.treatmentType, content?.caption || "", imageFiles]);
+    const id = toast.loading("Uploading images to ImgBB...");
+    try {
+      await document.fonts.ready;
+      const images: { name: string; base64: string }[] = [];
+
+      for (let pi = 0; pi < pairs.length; pi++) {
+        const pair = pairs[pi];
+        const content = generatedContent[pi];
+        const prefix = `pair-${String(pi + 1).padStart(2, "0")}`;
+
+        const [beforeImg, afterImg] = await Promise.all([
+          loadImage(pair.beforeUrl),
+          loadImage(pair.afterUrl),
+        ]);
+
+        const coverCanvas = document.createElement("canvas");
+        coverCanvas.width = CANVAS_WIDTH; coverCanvas.height = CANVAS_HEIGHT;
+        drawCoverSlide(coverCanvas.getContext("2d")!, beforeImg, afterImg, fontFamily, fontSize, textColor, overlayColor, accentColor, content?.hookText || pair.treatmentType, content?.treatmentType || pair.treatmentType, logoImg, logoPosition, logoSize, pageColor);
+        images.push({ name: `${prefix}-01-cover.png`, base64: coverCanvas.toDataURL("image/png") });
+
+        const sideCanvas = document.createElement("canvas");
+        sideCanvas.width = CANVAS_WIDTH; sideCanvas.height = CANVAS_HEIGHT;
+        drawBeforeAfterSlide(sideCanvas.getContext("2d")!, beforeImg, afterImg, "side-by-side", fontFamily, fontSize, textColor, overlayColor, accentColor, content?.beforeLabel || "Before", content?.afterLabel || "After", logoImg, logoPosition, logoSize, pageColor);
+        images.push({ name: `${prefix}-02-side-by-side.png`, base64: sideCanvas.toDataURL("image/png") });
+
+        const stackCanvas = document.createElement("canvas");
+        stackCanvas.width = CANVAS_WIDTH; stackCanvas.height = CANVAS_HEIGHT;
+        drawBeforeAfterSlide(stackCanvas.getContext("2d")!, beforeImg, afterImg, "stacked", fontFamily, fontSize, textColor, overlayColor, accentColor, content?.beforeLabel || "Before", content?.afterLabel || "After", logoImg, logoPosition, logoSize, pageColor);
+        images.push({ name: `${prefix}-03-stacked.png`, base64: stackCanvas.toDataURL("image/png") });
+      }
+
+      toast.loading("Uploading to ImgBB...", { id });
+      const uploadResp = await fetch(`${import.meta.env.BASE_URL}api/content/upload-imgbb`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images }),
+      });
+      const uploadData = await uploadResp.json();
+      if (!uploadResp.ok) throw new Error(uploadData.error || "Upload failed");
+
+      const urlMap = new Map<string, string>();
+      for (const r of uploadData.results) {
+        urlMap.set(r.name, r.url);
+      }
+
+      const rows: string[][] = [];
+      rows.push(["Treatment", "Caption", "Cover URL", "Side-by-Side URL", "Stacked URL"]);
+      for (let pi = 0; pi < pairs.length; pi++) {
+        const pair = pairs[pi];
+        const content = generatedContent[pi];
+        const prefix = `pair-${String(pi + 1).padStart(2, "0")}`;
+        rows.push([
+          content?.treatmentType || pair.treatmentType,
+          content?.caption || "",
+          urlMap.get(`${prefix}-01-cover.png`) || "",
+          urlMap.get(`${prefix}-02-side-by-side.png`) || "",
+          urlMap.get(`${prefix}-03-stacked.png`) || "",
+        ]);
+      }
+      const csvString = Papa.unparse(rows);
+      const blob = new Blob([csvString], { type: "text/csv;charset=utf-8" });
+      saveAs(blob, "before-after-posts.csv");
+      toast.success("CSV downloaded with ImgBB links", { id });
+    } catch (e: any) {
+      console.error(e);
+      toast.error("Failed: " + (e?.message || "Unknown error"), { id });
     }
-    const csvString = Papa.unparse(rows);
-    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8" });
-    saveAs(blob, "before-after-posts.csv");
-    toast.success("CSV downloaded");
   };
 
   const handleStartOver = () => {

@@ -745,22 +745,64 @@ export default function Home() {
     }
   };
 
-  const downloadCsv = () => {
+  const downloadCsv = async () => {
     if (!result?.slides.length) return;
-    const rows: string[][] = [];
-    rows.push(["Carousel", "Caption", "Image Files"]);
-    for (let gi = 0; gi < result.totalCarousels; gi++) {
-      const groupSlides = result.slides.filter((s: any) => s.groupIndex === gi + 1);
-      const imageFiles = groupSlides
-        .map((s: any) => `carousel-${String(s.groupIndex).padStart(2, "0")}-slide-${String(s.groupPosition).padStart(2, "0")}.png`)
-        .join(", ");
-      const caption = captions[gi] || "";
-      rows.push([`Carousel ${gi + 1}`, caption, imageFiles]);
+    const id = toast.loading("Uploading images to ImgBB...");
+    try {
+      await document.fonts.ready;
+      const images: { name: string; base64: string }[] = [];
+
+      for (const slide of result.slides) {
+        const isCover = slide.groupPosition === 1;
+        const res = await fetch(slide.imageUrl);
+        const blob = await res.blob();
+        const img = new Image();
+        await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
+        const canvas = document.createElement("canvas");
+        canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
+        const ctx = canvas.getContext("2d")!;
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, gradientColor, gradientEnabled, gradientStyle, gradientPosition, slide.groupPosition, result.slidesPerCarousel, textPosition);
+        URL.revokeObjectURL(img.src);
+        const dataUrl = canvas.toDataURL("image/png");
+        const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
+        images.push({ name: fileName, base64: dataUrl });
+      }
+
+      toast.loading("Uploading to ImgBB...", { id });
+      const uploadResp = await fetch(`${import.meta.env.BASE_URL}api/content/upload-imgbb`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images }),
+      });
+      const uploadData = await uploadResp.json();
+      if (!uploadResp.ok) throw new Error(uploadData.error || "Upload failed");
+
+      const urlMap = new Map<string, string>();
+      for (const r of uploadData.results) {
+        urlMap.set(r.name, r.url);
+      }
+
+      const rows: string[][] = [];
+      rows.push(["Carousel", "Caption", "Image URLs"]);
+      for (let gi = 0; gi < result.totalCarousels; gi++) {
+        const groupSlides = result.slides.filter((s: any) => s.groupIndex === gi + 1);
+        const imageUrls = groupSlides
+          .map((s: any) => {
+            const fn = `carousel-${String(s.groupIndex).padStart(2, "0")}-slide-${String(s.groupPosition).padStart(2, "0")}.png`;
+            return urlMap.get(fn) || fn;
+          })
+          .join(", ");
+        const caption = captions[gi] || "";
+        rows.push([`Carousel ${gi + 1}`, caption, imageUrls]);
+      }
+      const csvString = Papa.unparse(rows);
+      const blob = new Blob([csvString], { type: "text/csv;charset=utf-8" });
+      saveAs(blob, "carousel-posts.csv");
+      toast.success("CSV downloaded with ImgBB links", { id });
+    } catch (e: any) {
+      console.error(e);
+      toast.error("Failed: " + (e?.message || "Unknown error"), { id });
     }
-    const csvString = Papa.unparse(rows);
-    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8" });
-    saveAs(blob, "carousel-posts.csv");
-    toast.success("CSV downloaded");
   };
 
   const generateCaptions = async () => {

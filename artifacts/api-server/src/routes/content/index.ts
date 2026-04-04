@@ -554,4 +554,52 @@ Return exactly ${count} items.`;
   }
 });
 
+router.post("/content/upload-imgbb", async (req, res) => {
+  try {
+    const apiKey = process.env.IMGBB_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: "IMGBB_API_KEY not configured" });
+    }
+
+    const { images } = req.body as { images: { name: string; base64: string }[] };
+    if (!images || !Array.isArray(images) || images.length === 0) {
+      return res.status(400).json({ error: "No images provided" });
+    }
+    if (images.length > 100) {
+      return res.status(400).json({ error: "Maximum 100 images per request" });
+    }
+
+    const results: { name: string; url: string; deleteUrl: string }[] = [];
+
+    for (const img of images) {
+      const raw = img.base64.includes(",") ? img.base64.split(",")[1] : img.base64;
+      const form = new URLSearchParams();
+      form.append("key", apiKey);
+      form.append("image", raw);
+      form.append("name", img.name.replace(/\.[^.]+$/, ""));
+
+      const resp = await fetch("https://api.imgbb.com/1/upload", {
+        method: "POST",
+        body: form,
+      });
+      const data = await resp.json();
+      if (!data.success) {
+        console.error("ImgBB upload failed for", img.name, data);
+        results.push({ name: img.name, url: "", deleteUrl: "" });
+      } else {
+        results.push({
+          name: img.name,
+          url: data.data.url,
+          deleteUrl: data.data.delete_url || "",
+        });
+      }
+    }
+
+    res.json({ results });
+  } catch (err: any) {
+    console.error("ImgBB upload error:", err);
+    res.status(500).json({ error: err.message || "Upload failed" });
+  }
+});
+
 export default router;
