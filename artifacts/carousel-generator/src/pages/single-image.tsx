@@ -419,7 +419,7 @@ export default function SingleImage() {
       }
       const content = await zip.generateAsync({ type: "blob" });
       saveAs(content, "single-image-posts.zip");
-      fetch(`${import.meta.env.BASE_URL}api/analytics/log`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "downloaded", postType: "single-image", clientName: clientName || "", postCount: slides.length }) }).catch(() => {});
+      fetch(`${import.meta.env.BASE_URL}api/analytics/log`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "downloaded", postType: "single-image", clientName: aiClientName || "", postCount: result.posts.length }) }).catch(() => {});
       toast.success("Download started", { id });
     } catch (e) {
       console.error(e);

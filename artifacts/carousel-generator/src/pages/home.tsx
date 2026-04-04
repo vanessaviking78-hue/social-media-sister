@@ -513,7 +513,7 @@ export default function Home() {
       }
       const content = await zip.generateAsync({ type: "blob" });
       saveAs(content, "carousel-posts.zip");
-      fetch(`${import.meta.env.BASE_URL}api/analytics/log`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "downloaded", postType: "carousel", clientName: clientName || "", postCount: slides.length > 0 ? new Set(slides.map(s => s.groupIndex)).size : 0 }) }).catch(() => {});
+      fetch(`${import.meta.env.BASE_URL}api/analytics/log`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "downloaded", postType: "carousel", clientName: aiClientName || "", postCount: result.slides.length > 0 ? new Set(result.slides.map((s: any) => s.groupIndex)).size : 0 }) }).catch(() => {});
       toast.success("Download started", { id });
     } catch (e) {
       console.error(e);
