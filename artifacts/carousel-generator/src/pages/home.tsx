@@ -584,6 +584,7 @@ export default function Home() {
       const bom = "\uFEFF";
       const blob = new Blob([bom + csvString], { type: "text/csv;charset=utf-8" });
       saveAs(blob, "carousel-posts.csv");
+      fetch(`${import.meta.env.BASE_URL}api/analytics/log`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "downloaded", postType: "carousel", clientName: aiClientName || "", postCount: result.totalCarousels }) }).catch(() => {});
       toast.success("CSV downloaded with image links", { id });
     } catch (e: any) {
       console.error(e);

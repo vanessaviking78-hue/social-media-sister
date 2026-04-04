@@ -829,6 +829,7 @@ export default function BeforeAfter() {
       const bom = "\uFEFF";
       const blob = new Blob([bom + csvString], { type: "text/csv;charset=utf-8" });
       saveAs(blob, "before-after-posts.csv");
+      fetch(`${import.meta.env.BASE_URL}api/analytics/log`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "downloaded", postType: "before-after", postCount: pairs.length }) }).catch(() => {});
       toast.success("CSV downloaded with image links", { id });
     } catch (e: any) {
       console.error(e);
