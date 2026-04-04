@@ -797,7 +797,7 @@ export default function Home() {
             const fn = `carousel-${String(s.groupIndex).padStart(2, "0")}-slide-${String(s.groupPosition).padStart(2, "0")}.png`;
             return urlMap.get(fn) || fn;
           })
-          .join(", ");
+          .join("|");
         const caption = captions[gi] || "";
         rows.push([`Carousel ${gi + 1}`, caption, imageUrls]);
       }
