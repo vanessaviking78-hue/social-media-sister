@@ -26,8 +26,9 @@ function formatDate(iso: string) {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
-function formatPeriod(period: string) {
+function formatPeriod(period: string, group: string) {
   const d = new Date(period);
+  if (group === "week") return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   return d.toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
 }
 
@@ -44,7 +45,7 @@ export default function Analytics() {
   }));
 
   const barData = overTime.map((d) => ({
-    period: formatPeriod(d.period),
+    period: formatPeriod(d.period, timeGroup),
     actions: d.total,
     posts: d.posts,
   }));
