@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
-import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight } from "lucide-react";
+import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -421,6 +421,8 @@ export default function Home() {
   const [captionGenerating, setCaptionGenerating] = useState(false);
   const [captionProgress, setCaptionProgress] = useState("");
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [ccPushing, setCcPushing] = useState(false);
+  const [ccStatus, setCcStatus] = useState<{ configured: boolean; hasWorkspaces: boolean } | null>(null);
 
   const photoInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
@@ -435,6 +437,80 @@ export default function Home() {
     el.src = url;
     return () => URL.revokeObjectURL(url);
   }, [logoFile]);
+
+  useEffect(() => {
+    fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/status`)
+      .then((r) => r.json())
+      .then((d) => setCcStatus(d))
+      .catch(() => setCcStatus(null));
+  }, []);
+
+  const pushToCloudCampaign = async () => {
+    if (!result?.slides.length) return;
+    setCcPushing(true);
+    const id = toast.loading("Rendering slides for Cloud Campaign...");
+    try {
+      await document.fonts.ready;
+      const rendered: { name: string; base64: string; groupIndex: number; groupPosition: number }[] = [];
+      for (const slide of result.slides) {
+        const isCover = slide.groupPosition === 1;
+        const res = await fetch(slide.imageUrl);
+        const blob = await res.blob();
+        const img = new Image();
+        await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
+        const canvas = document.createElement("canvas");
+        canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
+        const ctx = canvas.getContext("2d")!;
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, gradientColor, gradientEnabled, gradientStyle, gradientPosition, slide.groupPosition, result.slidesPerCarousel, textPosition);
+        URL.revokeObjectURL(img.src);
+        const dataUrl = canvas.toDataURL("image/png");
+        const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
+        rendered.push({ name: fileName, base64: dataUrl, groupIndex: slide.groupIndex, groupPosition: slide.groupPosition });
+      }
+
+      const urlMap = new Map<string, string>();
+      const PARALLEL = 3;
+      for (let i = 0; i < rendered.length; i += PARALLEL) {
+        toast.loading(`Uploading images... ${i}/${rendered.length}`, { id });
+        const batch = rendered.slice(i, i + PARALLEL);
+        const urls = await Promise.all(batch.map((r) => uploadOneImage(r.name, r.base64)));
+        batch.forEach((r, bi) => urlMap.set(r.name, urls[bi]));
+      }
+
+      toast.loading("Pushing to Cloud Campaign...", { id });
+      const posts = [];
+      for (let gi = 0; gi < result.totalCarousels; gi++) {
+        const groupSlides = result.slides.filter((s: any) => s.groupIndex === gi + 1);
+        const imageUrls = groupSlides.map((s: any) => {
+          const fn = `carousel-${String(s.groupIndex).padStart(2, "0")}-slide-${String(s.groupPosition).padStart(2, "0")}.png`;
+          return urlMap.get(fn) || "";
+        }).filter(Boolean);
+        posts.push({
+          title: `Carousel ${gi + 1}`,
+          caption: captions[gi] || "",
+          imageUrls,
+        });
+      }
+
+      const resp = await fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/push`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ posts }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Push failed");
+      toast.success(`Pushed ${data.summary.succeeded} carousel(s) to Cloud Campaign!`, { id });
+      if (data.summary.failed > 0) {
+        toast.error(`${data.summary.failed} post(s) failed. Check the console for details.`);
+        console.error("Cloud Campaign push failures:", data.results.filter((r: any) => r.status === "error"));
+      }
+    } catch (e: any) {
+      console.error(e);
+      toast.error("Cloud Campaign push failed: " + (e?.message || "Unknown error"), { id });
+    } finally {
+      setCcPushing(false);
+    }
+  };
 
   const addPhotos = async (files: File[]) => {
     const images = files.filter((f) => f.type.startsWith("image/"));
@@ -1462,6 +1538,12 @@ export default function Home() {
                         <Button variant="outline" size="lg" onClick={downloadCsv} className="px-8 py-4 text-lg font-bold" data-testid="button-download-csv-bar">
                           <FileText className="w-5 h-5 mr-2" />Download CSV
                         </Button>
+                        {ccStatus?.configured && (
+                          <Button size="lg" onClick={pushToCloudCampaign} disabled={ccPushing} className="px-8 py-4 text-lg font-bold bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-push-cc-bar">
+                            {ccPushing ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <CloudUpload className="w-5 h-5 mr-2" />}
+                            {ccPushing ? "Pushing..." : "Push to Cloud Campaign"}
+                          </Button>
+                        )}
                       </div>
                     </div>
 
@@ -1573,13 +1655,19 @@ export default function Home() {
                       <Button variant="outline" onClick={handleStartOver} className="px-8 py-6 text-lg font-semibold" size="lg">
                         <RefreshCcw className="w-5 h-5 mr-2" /> Start Over
                       </Button>
-                      <div className="flex gap-3">
+                      <div className="flex gap-3 flex-wrap justify-end">
                         <Button variant="outline" size="lg" onClick={downloadCsv} className="px-8 py-6 text-lg font-bold" data-testid="button-download-csv">
                           <FileText className="w-5 h-5 mr-2" />Download CSV
                         </Button>
                         <button className="btn-shimmer px-10 py-6 rounded-2xl text-lg font-bold flex items-center gap-3" onClick={downloadZip} data-testid="button-download-zip">
                           <Download className="w-5 h-5" />Download ZIP
                         </button>
+                        {ccStatus?.configured && (
+                          <Button size="lg" onClick={pushToCloudCampaign} disabled={ccPushing} className="px-10 py-6 text-lg font-bold bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-push-cc">
+                            {ccPushing ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <CloudUpload className="w-5 h-5 mr-2" />}
+                            {ccPushing ? "Pushing..." : "Push to Cloud Campaign"}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </>

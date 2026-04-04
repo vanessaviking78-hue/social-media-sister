@@ -29,7 +29,8 @@ A social media content tool at the root path `/`. Two modes: (1) Upload photos +
 - **Zip download**: Client-side canvas compositing (image + text overlay) → JSZip → file-saver
 - **Branding**: Corner accents (triangle, arc, double-line, frame), page color, overlay color, 25 Google Fonts
 - **Image Upload**: `POST /api/content/upload-image` — uploads rendered slide images to Replit Object Storage (bucket: `replit-objstore-7bc3b789-f026-4325-97a3-07fb026b92ce`), returns public URLs served via `GET /api/content/images/carousel-images/:filename`
-- **CSV Export**: "Download CSV" button renders slides, uploads to object storage 3 at a time, generates CSV with `|`-separated direct image URLs and captions per Cloud Campaign format
+- **CSV Export**: "Download CSV" button renders slides, uploads to object storage 3 at a time, generates CSV with Cloud Campaign-compatible columns (`Image`, `Caption`, `Title`, `Approved`, `Image 2`...`Image N`)
+- **Cloud Campaign Integration**: Direct API push via `POST /api/cloud-campaign/push` — renders slides, uploads images, creates carousel content in Cloud Campaign with multiple media items per post. Env vars: `CLOUD_CAMPAIGN_API_KEY`, `CLOUD_CAMPAIGN_AGENCY_ID` (UUID), `CLOUD_CAMPAIGN_WORKSPACE_IDS` (comma-separated UUIDs). Status check: `GET /api/cloud-campaign/status`. Also supports CSV bulk push via `POST /api/cloud-campaign/push-csv`. API base: `https://app.cloudcampaign.com/api/v1`
 - **Caption Generator**: `POST /api/content/captions` — SSE endpoint generating Instagram captions
 - **Gradient Controls**: On/off toggle, color picker, solid vs leopard print, 6-position gradient placement
 - **Text Position**: 3x3 grid (TL/TC/TR/CL/CC/CR/BL/BC/BR); CTA slide forces center-center with larger bold text

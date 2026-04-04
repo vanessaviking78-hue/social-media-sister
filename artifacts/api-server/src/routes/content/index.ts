@@ -2,6 +2,31 @@ import { Router, type IRouter } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { objectStorageClient } from "../../lib/objectStorage";
 
+const CC_BASE = "https://app.cloudcampaign.com/api/v1";
+
+async function ccFetch(path: string, opts: RequestInit = {}) {
+  const apiKey = process.env.CLOUD_CAMPAIGN_API_KEY;
+  const agencyId = process.env.CLOUD_CAMPAIGN_AGENCY_ID;
+  if (!apiKey || !agencyId) throw new Error("Cloud Campaign credentials not configured");
+  const res = await fetch(`${CC_BASE}${path}`, {
+    ...opts,
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+      "x-agency-id": agencyId,
+      ...(opts.headers || {}),
+    },
+  });
+  const text = await res.text();
+  let data: any;
+  try { data = JSON.parse(text); } catch { data = { raw: text }; }
+  if (!res.ok) {
+    console.error(`Cloud Campaign API error ${res.status}:`, data);
+    throw new Error(data?.message || data?.errorReason || `API error ${res.status}`);
+  }
+  return data;
+}
+
 const router: IRouter = Router();
 
 const VANESSA_SYSTEM = `You are Vanessa, the Social Media Sister AI. You're a straight-talking, no-nonsense social media strategist who specialises in aesthetic clinics, dental practices, skin clinics, and wellness businesses. You have deep expertise in:
@@ -636,6 +661,126 @@ router.get("/content/images/carousel-images/:filename", async (req, res) => {
   } catch (err: any) {
     console.error("Image serve error:", err);
     res.status(500).json({ error: err.message || "Failed to serve image" });
+  }
+});
+
+router.get("/cloud-campaign/status", async (_req, res) => {
+  const apiKey = process.env.CLOUD_CAMPAIGN_API_KEY;
+  const agencyId = process.env.CLOUD_CAMPAIGN_AGENCY_ID;
+  const workspaceIds = (process.env.CLOUD_CAMPAIGN_WORKSPACE_IDS || "").split(",").filter(Boolean);
+  res.json({
+    configured: !!(apiKey && agencyId),
+    hasWorkspaces: workspaceIds.length > 0,
+    workspaceCount: workspaceIds.length,
+  });
+});
+
+router.get("/cloud-campaign/workspaces", async (_req, res) => {
+  try {
+    const ids = (process.env.CLOUD_CAMPAIGN_WORKSPACE_IDS || "").split(",").filter(Boolean);
+    const workspaces = [];
+    for (const id of ids) {
+      try {
+        const profile = await ccFetch(`/workspace/${id}/profile`);
+        workspaces.push({ id, name: profile.name || profile.businessName || id });
+      } catch {
+        workspaces.push({ id, name: id });
+      }
+    }
+    res.json({ workspaces });
+  } catch (err: any) {
+    console.error("CC workspaces error:", err);
+    res.status(500).json({ error: err.message || "Failed to fetch workspaces" });
+  }
+});
+
+router.post("/cloud-campaign/push", async (req, res) => {
+  try {
+    const { posts, workspaceIds } = req.body as {
+      posts: { title: string; caption: string; imageUrls: string[] }[];
+      workspaceIds?: string[];
+    };
+
+    if (!posts || !Array.isArray(posts) || posts.length === 0) {
+      return res.status(400).json({ error: "No posts provided" });
+    }
+
+    const targetIds = workspaceIds?.length
+      ? workspaceIds
+      : (process.env.CLOUD_CAMPAIGN_WORKSPACE_IDS || "").split(",").filter(Boolean);
+
+    if (targetIds.length === 0) {
+      return res.status(400).json({ error: "No workspace IDs configured" });
+    }
+
+    const results: { workspace: string; post: string; status: string; id?: string; error?: string }[] = [];
+
+    for (const wsId of targetIds) {
+      for (const post of posts) {
+        try {
+          const media = post.imageUrls.map((url) => ({
+            type: "IMAGE",
+            sourceUrl: url,
+          }));
+
+          const body = {
+            title: post.title,
+            captions: [{ text: post.caption, platform: "INSTAGRAM", index: 0 }],
+            media,
+            approved: true,
+            postNow: false,
+          };
+
+          console.log(`Pushing "${post.title}" to workspace ${wsId} with ${media.length} images`);
+          const data = await ccFetch(`/workspace/${wsId}/content`, {
+            method: "POST",
+            body: JSON.stringify(body),
+          });
+
+          results.push({ workspace: wsId, post: post.title, status: "success", id: data.id });
+        } catch (err: any) {
+          console.error(`Failed to push "${post.title}" to ${wsId}:`, err.message);
+          results.push({ workspace: wsId, post: post.title, status: "error", error: err.message });
+        }
+      }
+    }
+
+    const succeeded = results.filter((r) => r.status === "success").length;
+    const failed = results.filter((r) => r.status === "error").length;
+    res.json({ results, summary: { total: results.length, succeeded, failed } });
+  } catch (err: any) {
+    console.error("CC push error:", err);
+    res.status(500).json({ error: err.message || "Failed to push to Cloud Campaign" });
+  }
+});
+
+router.post("/cloud-campaign/push-csv", async (req, res) => {
+  try {
+    const { csvUrl, workspaceIds } = req.body as { csvUrl: string; workspaceIds?: string[] };
+
+    if (!csvUrl) {
+      return res.status(400).json({ error: "No CSV URL provided" });
+    }
+
+    const agencyId = process.env.CLOUD_CAMPAIGN_AGENCY_ID;
+    const targetIds = workspaceIds?.length
+      ? workspaceIds
+      : (process.env.CLOUD_CAMPAIGN_WORKSPACE_IDS || "").split(",").filter(Boolean);
+
+    if (targetIds.length === 0) {
+      return res.status(400).json({ error: "No workspace IDs configured" });
+    }
+
+    console.log(`Pushing CSV to ${targetIds.length} workspace(s): ${csvUrl}`);
+    const data = await ccFetch("/content/csv", {
+      method: "POST",
+      body: JSON.stringify({ agencyId, workspaceIds: targetIds, externalUrl: csvUrl }),
+    });
+
+    res.json({ success: true, data });
+  } catch (err: any) {
+    console.error("CC CSV push error:", err);
+    res.status(500).json({ error: err.message || "Failed to push CSV to Cloud Campaign" });
   }
 });
 
