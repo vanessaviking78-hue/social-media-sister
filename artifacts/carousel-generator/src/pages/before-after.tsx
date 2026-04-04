@@ -22,6 +22,7 @@ import {
   FileText,
   ImagePlus,
   BookOpen,
+  CalendarDays,
 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
@@ -888,6 +889,12 @@ export default function BeforeAfter() {
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <BookOpen className="w-4 h-4 mr-2" />
               Captions
+            </Button>
+          </Link>
+          <Link href="/calendar">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <CalendarDays className="w-4 h-4 mr-2" />
+              Calendar
             </Button>
           </Link>
           {currentStep === 4 && (

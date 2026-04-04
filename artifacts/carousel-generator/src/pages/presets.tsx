@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "wouter";
-import { Trash2, Pencil, Save, X, Layers, ArrowLeft, ImageIcon, ArrowLeftRight, MessageSquareText } from "lucide-react";
+import { Trash2, Pencil, Save, X, Layers, ArrowLeft, ImageIcon, ArrowLeftRight, MessageSquareText, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -84,6 +84,7 @@ export default function PresetsPage() {
             <Link href="/single-image" className="text-muted-foreground hover:text-white transition">Single Image</Link>
             <Link href="/before-after" className="text-muted-foreground hover:text-white transition">Before & After</Link>
             <Link href="/captions" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><MessageSquareText className="w-4 h-4" />Captions</Link>
+            <Link href="/calendar" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><CalendarDays className="w-4 h-4" />Calendar</Link>
           </nav>
         </div>
       </header>

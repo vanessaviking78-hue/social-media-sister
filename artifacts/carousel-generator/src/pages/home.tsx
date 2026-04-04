@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
-import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus } from "lucide-react";
+import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus, CalendarDays } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -690,6 +690,12 @@ export default function Home() {
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <MessageSquareText className="w-4 h-4 mr-2" />
               Captions
+            </Button>
+          </Link>
+          <Link href="/calendar">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <CalendarDays className="w-4 h-4 mr-2" />
+              Calendar
             </Button>
           </Link>
           {result && (

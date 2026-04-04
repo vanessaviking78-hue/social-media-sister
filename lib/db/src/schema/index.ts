@@ -44,3 +44,21 @@ export const captionsTable = pgTable("captions", {
 export const insertCaptionSchema = createInsertSchema(captionsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertCaption = z.infer<typeof insertCaptionSchema>;
 export type Caption = typeof captionsTable.$inferSelect;
+
+export const calendarPostsTable = pgTable("calendar_posts", {
+  id: serial("id").primaryKey(),
+  date: text("date").notNull(),
+  clientName: text("client_name").notNull().default(""),
+  postType: text("post_type").notNull().default("carousel"),
+  title: text("title").notNull().default(""),
+  caption: text("caption").notNull().default(""),
+  notes: text("notes").notNull().default(""),
+  status: text("status").notNull().default("draft"),
+  color: text("color").notNull().default("#ec4899"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertCalendarPostSchema = createInsertSchema(calendarPostsTable).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCalendarPost = z.infer<typeof insertCalendarPostSchema>;
+export type CalendarPost = typeof calendarPostsTable.$inferSelect;
