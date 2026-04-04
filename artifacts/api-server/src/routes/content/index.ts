@@ -5,40 +5,16 @@ import { logActivity } from "../../lib/activityLog";
 
 const CC_BASE = "https://app.cloudcampaign.com/api/v1";
 
-let ccToken: string | null = null;
-let ccTokenExpiry = 0;
-
-async function getCCToken(): Promise<string> {
-  if (ccToken && Date.now() < ccTokenExpiry) return ccToken;
-  const apiKey = process.env.CLOUD_CAMPAIGN_API_KEY;
-  const apiSecret = process.env.CLOUD_CAMPAIGN_API_SECRET;
-  if (!apiKey || !apiSecret) throw new Error("Cloud Campaign API key and secret not configured");
-  const res = await fetch(`${CC_BASE}/auth/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ key: apiKey, secret: apiSecret }),
-  });
-  const text = await res.text();
-  let data: any;
-  try { data = JSON.parse(text); } catch { data = { raw: text }; }
-  if (!res.ok) {
-    console.error("CC auth error:", data);
-    throw new Error(data?.message || data?.errorReason || `Auth error ${res.status}`);
-  }
-  ccToken = data.token || data.access_token || data.accessToken;
-  if (!ccToken) throw new Error("No token returned from CC auth");
-  ccTokenExpiry = Date.now() + 55 * 60 * 1000;
-  console.log("CC auth token obtained successfully");
-  return ccToken;
-}
-
 async function ccFetch(path: string, opts: RequestInit = {}) {
-  const token = await getCCToken();
+  const apiKey = process.env.CLOUD_CAMPAIGN_API_KEY;
+  const agencyId = process.env.CLOUD_CAMPAIGN_AGENCY_ID;
+  if (!apiKey || !agencyId) throw new Error("Cloud Campaign credentials not configured");
   const res = await fetch(`${CC_BASE}${path}`, {
     ...opts,
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
+      "Authorization": `Bearer ${apiKey}`,
+      "x-agency-id": agencyId,
       ...(opts.headers || {}),
     },
   });
@@ -46,10 +22,6 @@ async function ccFetch(path: string, opts: RequestInit = {}) {
   let data: any;
   try { data = JSON.parse(text); } catch { data = { raw: text }; }
   if (!res.ok) {
-    if (res.status === 401) {
-      ccToken = null;
-      ccTokenExpiry = 0;
-    }
     console.error(`Cloud Campaign API error ${res.status}:`, data);
     throw new Error(data?.message || data?.errorReason || `API error ${res.status}`);
   }
@@ -796,10 +768,10 @@ router.get("/content/images/carousel-images/:filename", async (req, res) => {
 
 router.get("/cloud-campaign/status", async (_req, res) => {
   const apiKey = process.env.CLOUD_CAMPAIGN_API_KEY;
-  const apiSecret = process.env.CLOUD_CAMPAIGN_API_SECRET;
+  const agencyId = process.env.CLOUD_CAMPAIGN_AGENCY_ID;
   const workspaceIds = (process.env.CLOUD_CAMPAIGN_WORKSPACE_IDS || "").split(",").filter(Boolean);
   res.json({
-    configured: !!(apiKey && apiSecret),
+    configured: !!(apiKey && agencyId),
     hasWorkspaces: workspaceIds.length > 0,
     workspaceCount: workspaceIds.length,
   });
@@ -881,15 +853,21 @@ router.post("/cloud-campaign/push", async (req, res) => {
     for (const wsId of targetIds) {
       for (const post of posts) {
         try {
+          const media = post.imageUrls.map((url) => ({
+            type: "IMAGE",
+            sourceUrl: url,
+          }));
+
           const body = {
-            workspaceId: wsId,
-            caption: post.caption,
-            mediaUrls: post.imageUrls,
+            title: post.title,
+            captions: [{ text: post.caption, platform: "INSTAGRAM", index: 0 }],
+            media,
+            approved: true,
             postNow: false,
           };
 
           console.log(`Pushing "${post.title}" to workspace ${wsId} with ${post.imageUrls.length} images`);
-          const data = await ccFetch(`/content`, {
+          const data = await ccFetch(`/workspace/${wsId}/content`, {
             method: "POST",
             body: JSON.stringify(body),
           });
