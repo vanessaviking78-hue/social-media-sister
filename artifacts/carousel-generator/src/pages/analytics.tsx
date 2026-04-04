@@ -40,8 +40,7 @@ export default function Analytics() {
 
   const pieData = byType.map((t) => ({
     name: POST_TYPE_LABELS[t.postType] || t.postType,
-    value: t.total,
-    posts: t.posts,
+    value: t.posts,
   }));
 
   const barData = overTime.map((d) => ({
