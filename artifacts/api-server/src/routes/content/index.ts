@@ -570,30 +570,35 @@ router.post("/content/upload-imgbb", async (req, res) => {
       return res.status(400).json({ error: "Maximum 100 images per request" });
     }
 
-    const results: { name: string; url: string; deleteUrl: string }[] = [];
+    const BATCH_SIZE = 5;
+    const results: { name: string; url: string; deleteUrl: string }[] = new Array(images.length);
 
-    for (const img of images) {
-      const raw = img.base64.includes(",") ? img.base64.split(",")[1] : img.base64;
-      const form = new URLSearchParams();
-      form.append("key", apiKey);
-      form.append("image", raw);
-      form.append("name", img.name.replace(/\.[^.]+$/, ""));
+    for (let i = 0; i < images.length; i += BATCH_SIZE) {
+      const batch = images.slice(i, i + BATCH_SIZE);
+      const promises = batch.map(async (img, bi) => {
+        const raw = img.base64.includes(",") ? img.base64.split(",")[1] : img.base64;
+        const form = new URLSearchParams();
+        form.append("key", apiKey);
+        form.append("image", raw);
+        form.append("name", img.name.replace(/\.[^.]+$/, ""));
 
-      const resp = await fetch("https://api.imgbb.com/1/upload", {
-        method: "POST",
-        body: form,
-      });
-      const data = await resp.json();
-      if (!data.success) {
-        console.error("ImgBB upload failed for", img.name, data);
-        results.push({ name: img.name, url: "", deleteUrl: "" });
-      } else {
-        results.push({
-          name: img.name,
-          url: data.data.url,
-          deleteUrl: data.data.delete_url || "",
+        const resp = await fetch("https://api.imgbb.com/1/upload", {
+          method: "POST",
+          body: form,
         });
-      }
+        const data = await resp.json();
+        if (!data.success) {
+          console.error("ImgBB upload failed for", img.name, data);
+          results[i + bi] = { name: img.name, url: "", deleteUrl: "" };
+        } else {
+          results[i + bi] = {
+            name: img.name,
+            url: data.data.url,
+            deleteUrl: data.data.delete_url || "",
+          };
+        }
+      });
+      await Promise.all(promises);
     }
 
     res.json({ results });
