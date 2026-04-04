@@ -783,7 +783,8 @@ export default function BeforeAfter() {
         ]);
       }
       const csvString = Papa.unparse(rows);
-      const blob = new Blob([csvString], { type: "text/csv;charset=utf-8" });
+      const bom = "\uFEFF";
+      const blob = new Blob([bom + csvString], { type: "text/csv;charset=utf-8" });
       saveAs(blob, "before-after-posts.csv");
       toast.success("CSV downloaded with image links", { id });
     } catch (e: any) {
