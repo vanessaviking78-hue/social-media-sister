@@ -111,7 +111,7 @@ export default function VanessaChat() {
               </div>
               <div>
                 <p className="font-semibold text-sm text-primary-foreground">Vanessa</p>
-                <p className="text-[11px] text-primary-foreground/70">Social Media Sister AI</p>
+                <p className="text-[11px] text-primary-foreground/70">CyberSuite AI</p>
               </div>
             </div>
             <button onClick={() => setOpen(false)} className="text-primary-foreground/70 hover:text-primary-foreground transition-colors p-1">
@@ -124,7 +124,7 @@ export default function VanessaChat() {
               <div className="space-y-4">
                 <div className="bg-accent/50 rounded-xl p-3.5">
                   <p className="text-sm text-foreground leading-relaxed">
-                    Right then, I'm Vanessa — your Social Media Sister AI. Ask me about social media strategy, compliance, hooks, captions, or content ideas. Go on then, what do you need?
+                    Right then, I'm Vanessa, your CyberSuite AI. Ask me about social media strategy, compliance, hooks, captions, or content ideas. Go on then, what do you need?
                   </p>
                 </div>
                 <div className="space-y-2">

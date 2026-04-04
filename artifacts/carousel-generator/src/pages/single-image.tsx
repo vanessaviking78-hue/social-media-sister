@@ -622,7 +622,7 @@ export default function SingleImage() {
           <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center text-primary-foreground">
             <Layers className="w-5 h-5" />
           </div>
-          <h1 className="font-sans text-xl font-bold tracking-tight">Social Media Sister</h1>
+          <h1 className="font-sans text-xl font-bold tracking-tight"><span className="text-white">Social Media Sister's</span>{" "}<span className="text-pink-400">CyberSuite</span></h1>
           <Badge variant="secondary" className="bg-accent text-xs">Single Image</Badge>
         </div>
         <div className="flex items-center gap-3">

@@ -18,7 +18,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Applications
 
-### Carousel Post Generator (`artifacts/carousel-generator`)
+### Social Media Sister's CyberSuite (`artifacts/carousel-generator`)
 
 A social media content tool at the root path `/`. Two modes: (1) Upload photos + CSV to generate up to 60 carousel posts, or (2) "Content Machine" — fill in a brief and AI generates all slide text automatically. Preview in-app and download as ZIP.
 

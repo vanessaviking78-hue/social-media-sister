@@ -664,8 +664,7 @@ export default function Home() {
           <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center text-primary-foreground">
             <Layers className="w-5 h-5" />
           </div>
-          <h1 className="font-sans text-xl font-bold tracking-tight">Social Media Sister</h1>
-          <span className="text-[10px] text-muted-foreground/40 ml-2">v5</span>
+          <h1 className="font-sans text-xl font-bold tracking-tight"><span className="text-white">Social Media Sister's</span>{" "}<span className="text-pink-400">CyberSuite</span></h1>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/single-image">
