@@ -569,6 +569,7 @@ export default function SingleImage() {
           industry: aiIndustry || "aesthetics",
           tone: aiTone,
           extraInstructions: aiExtraInstructions,
+          postType: "single-image",
         }),
       });
       const reader = resp.body!.getReader();

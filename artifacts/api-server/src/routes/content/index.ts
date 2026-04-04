@@ -301,19 +301,22 @@ Example: ["Your skin deserves better","Stop doing this to your face","3 things y
 
 router.post("/content/captions", async (req, res) => {
   try {
-    const { posts, clientName, industry, tone, extraInstructions } = req.body;
+    const { posts, clientName, industry, tone, extraInstructions, postType } = req.body;
     if (!posts || !Array.isArray(posts) || posts.length === 0) {
       res.status(400).json({ error: "Posts array required" });
       return;
     }
 
     const count = posts.length;
+    const isSingle = postType === "single-image";
+    const postLabel = isSingle ? "single-image post" : "carousel post";
+    const postsLabel = isSingle ? "single-image posts" : "carousel posts";
 
     const systemPrompt = `${CONTENT_SYSTEM}
 
-You are now generating Instagram/social media captions for carousel posts. Write in a ${tone || "warm & professional"} tone of voice.${clientName ? ` You are creating content for "${clientName}".` : ""} The industry is: ${industry || "aesthetics"}.
+You are now generating Instagram/social media captions for ${postsLabel}. Write in a ${tone || "warm & professional"} tone of voice.${clientName ? ` You are creating content for "${clientName}".` : ""} The industry is: ${industry || "aesthetics"}.
 
-You will receive the slide text for each carousel post. Write a caption for each one that:
+You will receive the ${isSingle ? "overlay text" : "slide text"} for each ${postLabel}. Write a caption for each one that:
 - Opens with a strong first line (this shows as the preview before "...more") - make it curiosity-driven or benefit-led
 - Is 80-150 words long - enough to add value but not so long people scroll past
 - Includes a clear call to action (save this, share with a friend, book a consultation, drop a comment)
@@ -343,7 +346,10 @@ IMPORTANT: Output ONLY a valid JSON array with no markdown formatting, no code f
       );
 
       const postsDescription = batchPosts
-        .map((p: string[], i: number) => `Post ${batchStart + i + 1}: Slides: ${p.map((s, si) => `[Slide ${si + 1}] ${s}`).join(" | ")}`)
+        .map((p: string[], i: number) => {
+          if (isSingle) return `Post ${batchStart + i + 1}: Overlay text: ${p[0]}`;
+          return `Post ${batchStart + i + 1}: Slides: ${p.map((s, si) => `[Slide ${si + 1}] ${s}`).join(" | ")}`;
+        })
         .join("\n");
 
       const stream = await openai.chat.completions.create({
@@ -353,7 +359,7 @@ IMPORTANT: Output ONLY a valid JSON array with no markdown formatting, no code f
           { role: "system", content: systemPrompt },
           {
             role: "user",
-            content: `Write captions for these ${batchPosts.length} carousel posts:\n\n${postsDescription}\n\nReturn ONLY a JSON array of ${batchPosts.length} caption strings.`,
+            content: `Write captions for these ${batchPosts.length} ${postsLabel}:\n\n${postsDescription}\n\nReturn ONLY a JSON array of ${batchPosts.length} caption strings.`,
           },
         ],
         stream: true,
