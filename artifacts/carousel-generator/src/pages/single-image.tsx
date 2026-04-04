@@ -520,10 +520,13 @@ export default function SingleImage() {
       });
 
       toast.loading("Pushing to Cloud Campaign...", { id });
+      const selectedPreset = presets.find((p) => p.id === selectedPresetId);
+      const pushBody: any = { posts: ccPosts };
+      if (selectedPreset?.ccWorkspaceId) pushBody.workspaceIds = [selectedPreset.ccWorkspaceId];
       const resp = await fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/push`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ posts: ccPosts }),
+        body: JSON.stringify(pushBody),
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "Push failed");
