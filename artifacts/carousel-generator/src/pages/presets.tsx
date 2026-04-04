@@ -57,7 +57,7 @@ export default function PresetsPage() {
         logoSize: editData.logoSize || 140,
         accentColor: editData.accentColor || "#d4af37",
       };
-      await updatePreset(editingId, editData.name!.trim(), styles, editData.ccWorkspaceId || undefined, editData.logoUrl);
+      await updatePreset(editingId, editData.name!.trim(), styles, editData.ccWorkspaceId || undefined, editData.logoUrl, editData.captionFootnote);
       toast.success("Preset updated");
       cancelEdit();
     } catch (err: any) {
@@ -164,6 +164,16 @@ export default function PresetsPage() {
                         <Input type="number" value={editData.fontSize || 52} onChange={(e) => setEditData((d) => ({ ...d, fontSize: Number(e.target.value) }))} className="bg-gray-900 border-gray-700 text-white" />
                       </div>
                     </div>
+                    <div>
+                      <Label className="text-xs text-gray-400">Caption Footnote (appended to AI-generated captions)</Label>
+                      <textarea
+                        placeholder="e.g. 📍 123 High Street, London | @clinicname"
+                        value={editData.captionFootnote || ""}
+                        onChange={(e) => setEditData((d) => ({ ...d, captionFootnote: e.target.value }))}
+                        rows={2}
+                        className="w-full bg-gray-900 border border-gray-700 text-white rounded-md px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-pink-500"
+                      />
+                    </div>
                     <div className="flex gap-2 justify-end">
                       <Button variant="ghost" size="sm" onClick={cancelEdit} className="text-gray-400">Cancel</Button>
                       <Button size="sm" onClick={handleSaveEdit} className="bg-pink-600 hover:bg-pink-700">
@@ -194,6 +204,9 @@ export default function PresetsPage() {
                         {preset.ccWorkspaceId && <span className="text-blue-400">CC linked</span>}
                         {preset.logoUrl && <span className="text-green-400">Has logo</span>}
                       </div>
+                      {preset.captionFootnote && (
+                        <p className="text-xs text-gray-500 mt-1 italic">Footnote: {preset.captionFootnote}</p>
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
                       <Button variant="ghost" size="sm" onClick={() => startEdit(preset)} className="text-gray-400 hover:text-white h-8 px-2">

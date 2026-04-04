@@ -626,7 +626,10 @@ export default function Home() {
             if (data.type === "progress") {
               setCaptionProgress(`Generating captions... ${data.generated}/${data.total}`);
             } else if (data.type === "complete") {
-              setCaptions(data.captions || []);
+              const raw = data.captions || [];
+              const selectedPreset = presets.find((p) => p.id === selectedPresetId);
+              const footnote = selectedPreset?.captionFootnote?.trim();
+              setCaptions(footnote ? raw.map((c: string) => c + "\n\n" + footnote) : raw);
               setCaptionProgress("");
             } else if (data.type === "error") {
               setCaptionProgress(data.message || "Error generating captions");
@@ -863,8 +866,8 @@ export default function Home() {
                     loading={presetsLoading}
                     selectedPresetId={selectedPresetId}
                     onSelectPreset={applyPreset}
-                    onSavePreset={async (name, styles, ccWs, logoUrl) => { await savePreset(name, styles, ccWs, logoUrl); }}
-                    onUpdatePreset={async (id, name, styles, ccWs, logoUrl) => { await updatePreset(id, name, styles, ccWs, logoUrl); }}
+                    onSavePreset={async (name, styles, ccWs, logoUrl, footnote) => { await savePreset(name, styles, ccWs, logoUrl, footnote); }}
+                    onUpdatePreset={async (id, name, styles, ccWs, logoUrl, footnote) => { await updatePreset(id, name, styles, ccWs, logoUrl, footnote); }}
                     onDeletePreset={async (id) => { await deletePreset(id); if (selectedPresetId === id) setSelectedPresetId(null); }}
                     getCurrentStyles={getCurrentStyles}
                     logoFile={logoFile}

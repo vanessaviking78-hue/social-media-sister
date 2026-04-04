@@ -23,6 +23,7 @@ export const clientPresetsTable = pgTable("client_presets", {
   logoUrl: text("logo_url"),
   accentColor: text("accent_color").notNull().default("#d4af37"),
   ccWorkspaceId: text("cc_workspace_id"),
+  captionFootnote: text("caption_footnote").notNull().default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

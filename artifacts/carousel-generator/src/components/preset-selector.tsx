@@ -17,8 +17,8 @@ interface PresetSelectorProps {
   loading: boolean;
   selectedPresetId: number | null;
   onSelectPreset: (preset: ClientPreset) => void;
-  onSavePreset: (name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null) => Promise<void>;
-  onUpdatePreset: (id: number, name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null) => Promise<void>;
+  onSavePreset: (name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null, captionFootnote?: string) => Promise<void>;
+  onUpdatePreset: (id: number, name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null, captionFootnote?: string) => Promise<void>;
   onDeletePreset: (id: number) => Promise<void>;
   getCurrentStyles: () => PresetStyleFields;
   logoFile?: File | null;
@@ -42,6 +42,7 @@ export default function PresetSelector({
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saveName, setSaveName] = useState("");
   const [saveCcWorkspaceId, setSaveCcWorkspaceId] = useState("");
+  const [saveCaptionFootnote, setSaveCaptionFootnote] = useState("");
   const [saving, setSaving] = useState(false);
   const [showManage, setShowManage] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -76,10 +77,11 @@ export default function PresetSelector({
       } else if (currentLogoUrl) {
         logoUrl = currentLogoUrl;
       }
-      await onSavePreset(saveName.trim(), styles, saveCcWorkspaceId || undefined, logoUrl);
+      await onSavePreset(saveName.trim(), styles, saveCcWorkspaceId || undefined, logoUrl, saveCaptionFootnote);
       toast.success(`Preset "${saveName.trim()}" saved`);
       setSaveName("");
       setSaveCcWorkspaceId("");
+      setSaveCaptionFootnote("");
       setShowSaveDialog(false);
     } catch (err: any) {
       toast.error(err?.message || "Failed to save preset");
@@ -105,7 +107,7 @@ export default function PresetSelector({
       } else if (currentLogoUrl) {
         logoUrl = currentLogoUrl;
       }
-      await onUpdatePreset(selectedPresetId, preset.name, styles, preset.ccWorkspaceId || undefined, logoUrl);
+      await onUpdatePreset(selectedPresetId, preset.name, styles, preset.ccWorkspaceId || undefined, logoUrl, preset.captionFootnote);
       toast.success(`Preset "${preset.name}" updated`);
     } catch (err: any) {
       toast.error(err?.message || "Failed to update preset");
@@ -147,7 +149,7 @@ export default function PresetSelector({
         logoPosition: preset.logoPosition,
         logoSize: preset.logoSize,
         accentColor: preset.accentColor,
-      }, preset.ccWorkspaceId || undefined, preset.logoUrl);
+      }, preset.ccWorkspaceId || undefined, preset.logoUrl, preset.captionFootnote);
       toast.success("Preset renamed");
       setEditingId(null);
       setEditName("");
@@ -201,7 +203,7 @@ export default function PresetSelector({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => { setShowSaveDialog(true); setSaveName(""); setSaveCcWorkspaceId(""); }}
+          onClick={() => { setShowSaveDialog(true); setSaveName(""); setSaveCcWorkspaceId(""); setSaveCaptionFootnote(""); }}
           className="mt-5 border-pink-600 text-pink-400 hover:text-white hover:bg-pink-600"
         >
           <Save className="w-3.5 h-3.5 mr-1" />
@@ -253,6 +255,16 @@ export default function PresetSelector({
               </Select>
             </div>
           )}
+          <div>
+            <Label className="text-xs text-gray-400 mb-1 block">Caption Footnote (appended to AI captions)</Label>
+            <textarea
+              placeholder="e.g. 📍 123 High Street, London | @clinicname"
+              value={saveCaptionFootnote}
+              onChange={(e) => setSaveCaptionFootnote(e.target.value)}
+              rows={2}
+              className="w-full bg-gray-900 border border-gray-600 text-white rounded-md px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-pink-500"
+            />
+          </div>
           {logoFile && (
             <p className="text-xs text-gray-400 flex items-center gap-1">
               <Upload className="w-3 h-3" /> Logo will be saved with this preset

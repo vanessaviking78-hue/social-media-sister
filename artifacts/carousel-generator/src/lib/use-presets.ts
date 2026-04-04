@@ -21,6 +21,7 @@ export interface ClientPreset {
   logoUrl: string | null;
   accentColor: string;
   ccWorkspaceId: string | null;
+  captionFootnote: string;
 }
 
 export interface PresetStyleFields {
@@ -78,13 +79,14 @@ export function usePresets() {
     return data.results?.[0]?.url || "";
   }, []);
 
-  const savePreset = useCallback(async (name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null) => {
+  const savePreset = useCallback(async (name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null, captionFootnote?: string) => {
     const body = {
       name,
       ...styles,
       lineSpacing: String(styles.lineSpacing),
       ccWorkspaceId: ccWorkspaceId || null,
       logoUrl: logoUrl || null,
+      captionFootnote: captionFootnote || "",
     };
     const resp = await fetch(`${import.meta.env.BASE_URL}api/presets`, {
       method: "POST",
@@ -100,13 +102,14 @@ export function usePresets() {
     return data.preset as ClientPreset;
   }, [fetchPresets]);
 
-  const updatePreset = useCallback(async (id: number, name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null) => {
+  const updatePreset = useCallback(async (id: number, name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null, captionFootnote?: string) => {
     const body = {
       name,
       ...styles,
       lineSpacing: String(styles.lineSpacing),
       ccWorkspaceId: ccWorkspaceId || null,
       logoUrl: logoUrl || null,
+      captionFootnote: captionFootnote ?? "",
     };
     const resp = await fetch(`${import.meta.env.BASE_URL}api/presets/${id}`, {
       method: "PUT",

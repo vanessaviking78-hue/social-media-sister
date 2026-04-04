@@ -625,7 +625,9 @@ export default function BeforeAfter() {
               );
             } else if (evt.type === "complete") {
               const results = evt.results || [];
-              setGeneratedContent(results);
+              const selectedPreset = presets.find((p) => p.id === selectedPresetId);
+              const footnote = selectedPreset?.captionFootnote?.trim();
+              setGeneratedContent(footnote ? results.map((r: any) => ({ ...r, caption: r.caption ? r.caption + "\n\n" + footnote : r.caption })) : results);
               setGeneratingProgress("");
               if (results.length === 0) {
                 toast.error("AI failed to generate any content. Please try again.", { id: toastId });
@@ -1284,8 +1286,8 @@ export default function BeforeAfter() {
                   loading={presetsLoading}
                   selectedPresetId={selectedPresetId}
                   onSelectPreset={applyPreset}
-                  onSavePreset={async (name, styles, ccWs, logoUrl) => { await savePreset(name, styles, ccWs, logoUrl); }}
-                  onUpdatePreset={async (id, name, styles, ccWs, logoUrl) => { await updatePreset(id, name, styles, ccWs, logoUrl); }}
+                  onSavePreset={async (name, styles, ccWs, logoUrl, footnote) => { await savePreset(name, styles, ccWs, logoUrl, footnote); }}
+                  onUpdatePreset={async (id, name, styles, ccWs, logoUrl, footnote) => { await updatePreset(id, name, styles, ccWs, logoUrl, footnote); }}
                   onDeletePreset={async (id) => { await deletePreset(id); if (selectedPresetId === id) setSelectedPresetId(null); }}
                   getCurrentStyles={getCurrentStyles}
                   logoFile={logoFile}
