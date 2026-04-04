@@ -189,7 +189,7 @@ export default function Home() {
       }
 
       const selectedPreset = presets.find((p) => p.id === selectedPresetId);
-      const pushBody: { posts: typeof posts; workspaceIds?: string[] } = { posts };
+      const pushBody: { posts: typeof posts; workspaceIds?: string[]; postType: string } = { posts, postType: "carousel" };
       if (selectedPreset?.ccWorkspaceId) pushBody.workspaceIds = [selectedPreset.ccWorkspaceId];
       const resp = await fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/push`, {
         method: "POST",

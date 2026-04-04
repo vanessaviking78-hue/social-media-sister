@@ -40,7 +40,7 @@ router.get("/analytics/by-client", async (_req, res) => {
     const rows = await db.select({
       clientName: activityLogTable.clientName,
       total: sql<number>`count(*)::int`,
-      posts: sql<number>`coalesce(sum(${activityLogTable.postCount}), 0)::int`,
+      posts: sql<number>`coalesce(sum(${activityLogTable.postCount}) filter (where ${activityLogTable.action} = 'generated'), 0)::int`,
       generated: sql<number>`count(*) filter (where ${activityLogTable.action} = 'generated')::int`,
       downloaded: sql<number>`count(*) filter (where ${activityLogTable.action} = 'downloaded')::int`,
     }).from(activityLogTable)
@@ -66,6 +66,7 @@ router.get("/analytics/over-time", async (req, res) => {
       total: sql<number>`count(*)::int`,
       posts: sql<number>`coalesce(sum(${activityLogTable.postCount}), 0)::int`,
     }).from(activityLogTable)
+      .where(eq(activityLogTable.action, "generated"))
       .groupBy(truncFn)
       .orderBy(truncFn);
     res.json({ data: rows, groupBy });
@@ -83,6 +84,7 @@ router.get("/analytics/by-type", async (_req, res) => {
       total: sql<number>`count(*)::int`,
       posts: sql<number>`coalesce(sum(${activityLogTable.postCount}), 0)::int`,
     }).from(activityLogTable)
+      .where(eq(activityLogTable.action, "generated"))
       .groupBy(activityLogTable.postType)
       .orderBy(sql`count(*) desc`);
     res.json({ types: rows });
