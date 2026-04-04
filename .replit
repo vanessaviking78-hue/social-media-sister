@@ -27,3 +27,8 @@ timeoutMs = 20000
 
 [nix]
 channel = "stable-25_05"
+
+[userenv]
+
+[userenv.shared]
+CLOUD_CAMPAIGN_AGENCY_ID = "0d4ce208-9d45-4009-8567-9b6d74673b9a"
