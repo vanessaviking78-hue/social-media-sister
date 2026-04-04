@@ -788,18 +788,21 @@ export default function Home() {
         batch.forEach((r, bi) => urlMap.set(r.name, urls[bi]));
       }
 
+      const maxSlides = result.slidesPerCarousel || 5;
       const rows: string[][] = [];
-      rows.push(["Carousel", "Caption", "Image URLs"]);
+      const header = ["Image", "Caption", "Title", "Approved"];
+      for (let s = 2; s <= maxSlides; s++) header.push(`Image ${s}`);
+      rows.push(header);
       for (let gi = 0; gi < result.totalCarousels; gi++) {
         const groupSlides = result.slides.filter((s: any) => s.groupIndex === gi + 1);
-        const imageUrls = groupSlides
-          .map((s: any) => {
-            const fn = `carousel-${String(s.groupIndex).padStart(2, "0")}-slide-${String(s.groupPosition).padStart(2, "0")}.png`;
-            return urlMap.get(fn) || fn;
-          })
-          .join("|");
+        const slideUrls = groupSlides.map((s: any) => {
+          const fn = `carousel-${String(s.groupIndex).padStart(2, "0")}-slide-${String(s.groupPosition).padStart(2, "0")}.png`;
+          return urlMap.get(fn) || fn;
+        });
         const caption = captions[gi] || "";
-        rows.push([`Carousel ${gi + 1}`, caption, imageUrls]);
+        const row = [slideUrls[0] || "", caption, `Carousel ${gi + 1}`, "TRUE"];
+        for (let s = 1; s < maxSlides; s++) row.push(slideUrls[s] || "");
+        rows.push(row);
       }
       const csvString = Papa.unparse(rows);
       const bom = "\uFEFF";
