@@ -11,6 +11,7 @@ export interface CalendarPost {
   notes: string;
   status: string;
   color: string;
+  imageUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }

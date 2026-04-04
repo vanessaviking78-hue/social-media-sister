@@ -38,7 +38,7 @@ router.get("/calendar", async (req, res) => {
 
 router.post("/calendar", async (req, res) => {
   try {
-    const { date, clientName, postType, title, caption, notes, status, color } = req.body;
+    const { date, clientName, postType, title, caption, notes, status, color, imageUrl } = req.body;
     if (!date?.trim()) { res.status(400).json({ error: "Date is required" }); return; }
     const [post] = await db.insert(calendarPostsTable).values({
       date: date.trim(),
@@ -49,6 +49,7 @@ router.post("/calendar", async (req, res) => {
       notes: notes?.trim() || "",
       status: status?.trim() || "draft",
       color: color?.trim() || "#ec4899",
+      imageUrl: imageUrl?.trim() || null,
     }).returning();
     res.json({ post });
   } catch (err: unknown) {
@@ -62,16 +63,17 @@ router.put("/calendar/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
-    const { date, clientName, postType, title, caption, notes, status, color } = req.body;
+    const { date, clientName, postType, title, caption, notes, status, color, imageUrl } = req.body;
     const updates: Record<string, unknown> = { updatedAt: new Date() };
-    if (date !== undefined) updates.date = date.trim();
-    if (clientName !== undefined) updates.clientName = clientName.trim();
-    if (postType !== undefined) updates.postType = postType.trim();
-    if (title !== undefined) updates.title = title.trim();
-    if (caption !== undefined) updates.caption = caption.trim();
-    if (notes !== undefined) updates.notes = notes.trim();
-    if (status !== undefined) updates.status = status.trim();
-    if (color !== undefined) updates.color = color.trim();
+    if (date !== undefined) updates.date = typeof date === "string" ? date.trim() : date;
+    if (clientName !== undefined) updates.clientName = typeof clientName === "string" ? clientName.trim() : clientName;
+    if (postType !== undefined) updates.postType = typeof postType === "string" ? postType.trim() : postType;
+    if (title !== undefined) updates.title = typeof title === "string" ? title.trim() : title;
+    if (caption !== undefined) updates.caption = typeof caption === "string" ? caption.trim() : caption;
+    if (notes !== undefined) updates.notes = typeof notes === "string" ? notes.trim() : notes;
+    if (status !== undefined) updates.status = typeof status === "string" ? status.trim() : status;
+    if (color !== undefined) updates.color = typeof color === "string" ? color.trim() : color;
+    if (imageUrl !== undefined) updates.imageUrl = typeof imageUrl === "string" ? imageUrl.trim() || null : null;
     const [updated] = await db.update(calendarPostsTable).set(updates).where(eq(calendarPostsTable.id, id)).returning();
     if (!updated) { res.status(404).json({ error: "Post not found" }); return; }
     res.json({ post: updated });

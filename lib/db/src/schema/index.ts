@@ -55,6 +55,7 @@ export const calendarPostsTable = pgTable("calendar_posts", {
   notes: text("notes").notNull().default(""),
   status: text("status").notNull().default("draft"),
   color: text("color").notNull().default("#ec4899"),
+  imageUrl: text("image_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

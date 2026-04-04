@@ -81,6 +81,7 @@ export default function Calendar() {
   const [formNotes, setFormNotes] = useState("");
   const [formStatus, setFormStatus] = useState("draft");
   const [formColor, setFormColor] = useState("#ec4899");
+  const [formImageUrl, setFormImageUrl] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
   const { posts, loading, fetchPosts, createPost, updatePost, deletePost } = useCalendar();
@@ -118,6 +119,7 @@ export default function Calendar() {
     setFormNotes("");
     setFormStatus("draft");
     setFormColor("#ec4899");
+    setFormImageUrl("");
     setShowModal(true);
   };
 
@@ -131,6 +133,7 @@ export default function Calendar() {
     setFormNotes(post.notes);
     setFormStatus(post.status);
     setFormColor(post.color);
+    setFormImageUrl(post.imageUrl || "");
     setShowModal(true);
   };
 
@@ -141,12 +144,14 @@ export default function Calendar() {
         await updatePost(editingPost.id, {
           date: formDate, clientName: formClient, postType: formPostType,
           title: formTitle, caption: formCaption, notes: formNotes, status: formStatus, color: formColor,
+          imageUrl: formImageUrl || null,
         });
         toast.success("Post updated");
       } else {
         await createPost({
           date: formDate, clientName: formClient, postType: formPostType,
           title: formTitle, caption: formCaption, notes: formNotes, status: formStatus, color: formColor,
+          imageUrl: formImageUrl || null,
         });
         toast.success("Post created");
       }
@@ -320,11 +325,15 @@ export default function Calendar() {
                       >
                         <div className="flex items-center gap-1">
                           <GripVertical className="w-3 h-3 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-grab" />
+                          {post.imageUrl && (
+                            <img src={post.imageUrl} alt="" className="w-4 h-4 rounded-sm object-cover flex-shrink-0" />
+                          )}
                           <span className="truncate font-medium text-foreground/90">{post.title || post.clientName || getPostTypeBadge(post.postType)}</span>
                         </div>
-                        {post.clientName && post.title && (
-                          <div className="text-[10px] text-muted-foreground truncate ml-4">{post.clientName}</div>
-                        )}
+                        <div className="flex items-center gap-1 ml-4 mt-0.5">
+                          <span className="text-[9px] px-1 py-px rounded bg-white/10 text-muted-foreground">{getPostTypeBadge(post.postType)}</span>
+                          {post.clientName && <span className="text-[10px] text-muted-foreground truncate">{post.clientName}</span>}
+                        </div>
                       </div>
                     ))}
                     {dayPosts.length > 3 && (
@@ -388,6 +397,17 @@ export default function Calendar() {
               <div>
                 <Label className="text-sm mb-1.5 block">Notes</Label>
                 <Textarea value={formNotes} onChange={(e) => setFormNotes(e.target.value)} placeholder="Internal notes..." rows={2} />
+              </div>
+
+              <div>
+                <Label className="text-sm mb-1.5 block">Image / Thumbnail URL</Label>
+                <Input value={formImageUrl} onChange={(e) => setFormImageUrl(e.target.value)} placeholder="https://example.com/image.jpg (optional)" />
+                {formImageUrl && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <img src={formImageUrl} alt="Preview" className="w-12 h-12 rounded object-cover border" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    <span className="text-xs text-muted-foreground">Preview</span>
+                  </div>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
