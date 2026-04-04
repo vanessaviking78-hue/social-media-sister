@@ -114,6 +114,9 @@ export default function SingleImage() {
       img.crossOrigin = "anonymous";
       img.onload = () => setLogoImg(img);
       img.src = preset.logoUrl;
+    } else {
+      setLogoImg(null);
+      setLogoFile(null);
     }
   };
   const [ccPushing, setCcPushing] = useState(false);

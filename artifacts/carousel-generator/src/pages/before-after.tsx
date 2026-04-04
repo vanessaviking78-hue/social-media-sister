@@ -371,6 +371,10 @@ export default function BeforeAfter() {
       img.crossOrigin = "anonymous";
       img.onload = () => { setLogoImg(img); setLogoPreviewUrl(preset.logoUrl); };
       img.src = preset.logoUrl;
+    } else {
+      setLogoImg(null);
+      setLogoPreviewUrl(null);
+      setLogoFile(null);
     }
   };
 
