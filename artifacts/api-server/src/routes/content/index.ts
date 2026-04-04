@@ -556,7 +556,8 @@ Return exactly ${count} items.`;
 
 router.post("/content/upload-imgbb", async (req, res) => {
   try {
-    const apiKey = process.env.IMGBB_API_KEY;
+    const rawKey = (process.env.IMGBB_API_KEY || "").trim();
+    const apiKey = rawKey.split(/\s+/)[0];
     if (!apiKey) {
       return res.status(500).json({ error: "IMGBB_API_KEY not configured" });
     }
