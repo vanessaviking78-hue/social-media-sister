@@ -18,6 +18,7 @@ export interface ClientPreset {
   textPosition: string;
   logoPosition: string;
   logoSize: number;
+  logoUrl: string | null;
   accentColor: string;
   ccWorkspaceId: string | null;
 }
@@ -60,12 +61,30 @@ export function usePresets() {
 
   useEffect(() => { fetchPresets(); }, [fetchPresets]);
 
-  const savePreset = useCallback(async (name: string, styles: PresetStyleFields, ccWorkspaceId?: string) => {
+  const uploadLogo = useCallback(async (file: File): Promise<string> => {
+    const reader = new FileReader();
+    const base64 = await new Promise<string>((resolve, reject) => {
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+    const resp = await fetch(`${import.meta.env.BASE_URL}api/content/upload-image`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images: [{ name: `logo-${Date.now()}.png`, base64 }] }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || "Logo upload failed");
+    return data.results?.[0]?.url || "";
+  }, []);
+
+  const savePreset = useCallback(async (name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null) => {
     const body = {
       name,
       ...styles,
       lineSpacing: String(styles.lineSpacing),
       ccWorkspaceId: ccWorkspaceId || null,
+      logoUrl: logoUrl || null,
     };
     const resp = await fetch(`${import.meta.env.BASE_URL}api/presets`, {
       method: "POST",
@@ -81,12 +100,13 @@ export function usePresets() {
     return data.preset as ClientPreset;
   }, [fetchPresets]);
 
-  const updatePreset = useCallback(async (id: number, name: string, styles: PresetStyleFields, ccWorkspaceId?: string) => {
+  const updatePreset = useCallback(async (id: number, name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null) => {
     const body = {
       name,
       ...styles,
       lineSpacing: String(styles.lineSpacing),
       ccWorkspaceId: ccWorkspaceId || null,
+      logoUrl: logoUrl || null,
     };
     const resp = await fetch(`${import.meta.env.BASE_URL}api/presets/${id}`, {
       method: "PUT",
@@ -111,5 +131,5 @@ export function usePresets() {
     await fetchPresets();
   }, [fetchPresets]);
 
-  return { presets, loading, fetchPresets, savePreset, updatePreset, deletePreset };
+  return { presets, loading, fetchPresets, savePreset, updatePreset, deletePreset, uploadLogo };
 }

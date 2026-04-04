@@ -20,6 +20,7 @@ export const clientPresetsTable = pgTable("client_presets", {
   textPosition: text("text_position").notNull().default("bottom-left"),
   logoPosition: text("logo_position").notNull().default("top-right"),
   logoSize: integer("logo_size").notNull().default(140),
+  logoUrl: text("logo_url"),
   accentColor: text("accent_color").notNull().default("#d4af37"),
   ccWorkspaceId: text("cc_workspace_id"),
   createdAt: timestamp("created_at").notNull().defaultNow(),

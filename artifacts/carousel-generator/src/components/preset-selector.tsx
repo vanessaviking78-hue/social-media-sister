@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Save, Trash2, FolderOpen, Pencil, X } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Save, Trash2, FolderOpen, Pencil, X, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,15 +7,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import type { ClientPreset, PresetStyleFields } from "@/lib/use-presets";
 
+interface CcWorkspace {
+  id: string;
+  name: string;
+}
+
 interface PresetSelectorProps {
   presets: ClientPreset[];
   loading: boolean;
   selectedPresetId: number | null;
   onSelectPreset: (preset: ClientPreset) => void;
-  onSavePreset: (name: string, styles: PresetStyleFields) => Promise<void>;
-  onUpdatePreset: (id: number, name: string, styles: PresetStyleFields) => Promise<void>;
+  onSavePreset: (name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null) => Promise<void>;
+  onUpdatePreset: (id: number, name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null) => Promise<void>;
   onDeletePreset: (id: number) => Promise<void>;
   getCurrentStyles: () => PresetStyleFields;
+  logoFile?: File | null;
+  uploadLogo?: (file: File) => Promise<string>;
+  currentLogoUrl?: string | null;
 }
 
 export default function PresetSelector({
@@ -27,13 +35,25 @@ export default function PresetSelector({
   onUpdatePreset,
   onDeletePreset,
   getCurrentStyles,
+  logoFile,
+  uploadLogo,
+  currentLogoUrl,
 }: PresetSelectorProps) {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saveName, setSaveName] = useState("");
+  const [saveCcWorkspaceId, setSaveCcWorkspaceId] = useState("");
   const [saving, setSaving] = useState(false);
   const [showManage, setShowManage] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
+  const [ccWorkspaces, setCcWorkspaces] = useState<CcWorkspace[]>([]);
+
+  useEffect(() => {
+    fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/workspaces`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.workspaces) setCcWorkspaces(d.workspaces); })
+      .catch(() => {});
+  }, []);
 
   const handleLoad = (value: string) => {
     if (value === "__none__") return;
@@ -49,9 +69,17 @@ export default function PresetSelector({
     setSaving(true);
     try {
       const styles = getCurrentStyles();
-      await onSavePreset(saveName.trim(), styles);
+      let logoUrl: string | null = null;
+      if (logoFile && uploadLogo) {
+        toast.loading("Uploading logo...");
+        logoUrl = await uploadLogo(logoFile);
+      } else if (currentLogoUrl) {
+        logoUrl = currentLogoUrl;
+      }
+      await onSavePreset(saveName.trim(), styles, saveCcWorkspaceId || undefined, logoUrl);
       toast.success(`Preset "${saveName.trim()}" saved`);
       setSaveName("");
+      setSaveCcWorkspaceId("");
       setShowSaveDialog(false);
     } catch (err: any) {
       toast.error(err?.message || "Failed to save preset");
@@ -70,7 +98,14 @@ export default function PresetSelector({
     setSaving(true);
     try {
       const styles = getCurrentStyles();
-      await onUpdatePreset(selectedPresetId, preset.name, styles);
+      let logoUrl: string | null = preset.logoUrl;
+      if (logoFile && uploadLogo) {
+        toast.loading("Uploading logo...");
+        logoUrl = await uploadLogo(logoFile);
+      } else if (currentLogoUrl) {
+        logoUrl = currentLogoUrl;
+      }
+      await onUpdatePreset(selectedPresetId, preset.name, styles, preset.ccWorkspaceId || undefined, logoUrl);
       toast.success(`Preset "${preset.name}" updated`);
     } catch (err: any) {
       toast.error(err?.message || "Failed to update preset");
@@ -112,13 +147,19 @@ export default function PresetSelector({
         logoPosition: preset.logoPosition,
         logoSize: preset.logoSize,
         accentColor: preset.accentColor,
-      });
+      }, preset.ccWorkspaceId || undefined, preset.logoUrl);
       toast.success("Preset renamed");
       setEditingId(null);
       setEditName("");
     } catch (err: any) {
       toast.error(err?.message || "Failed to rename");
     }
+  };
+
+  const getWorkspaceName = (wsId: string | null) => {
+    if (!wsId) return null;
+    const ws = ccWorkspaces.find((w) => w.id === wsId);
+    return ws?.name || wsId;
   };
 
   return (
@@ -160,7 +201,7 @@ export default function PresetSelector({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => { setShowSaveDialog(true); setSaveName(""); }}
+          onClick={() => { setShowSaveDialog(true); setSaveName(""); setSaveCcWorkspaceId(""); }}
           className="mt-5 border-pink-600 text-pink-400 hover:text-white hover:bg-pink-600"
         >
           <Save className="w-3.5 h-3.5 mr-1" />
@@ -196,6 +237,27 @@ export default function PresetSelector({
             className="bg-gray-900 border-gray-600 text-white"
             autoFocus
           />
+          {ccWorkspaces.length > 0 && (
+            <div>
+              <Label className="text-xs text-gray-400 mb-1 block">Cloud Campaign Workspace (optional)</Label>
+              <Select value={saveCcWorkspaceId || "__none__"} onValueChange={(v) => setSaveCcWorkspaceId(v === "__none__" ? "" : v)}>
+                <SelectTrigger className="bg-gray-900 border-gray-600 text-white">
+                  <SelectValue placeholder="Link to workspace" />
+                </SelectTrigger>
+                <SelectContent className="bg-gray-800 border-gray-700">
+                  <SelectItem value="__none__" className="text-gray-400">No workspace</SelectItem>
+                  {ccWorkspaces.map((ws) => (
+                    <SelectItem key={ws.id} value={ws.id} className="text-white">{ws.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {logoFile && (
+            <p className="text-xs text-gray-400 flex items-center gap-1">
+              <Upload className="w-3 h-3" /> Logo will be saved with this preset
+            </p>
+          )}
           <div className="flex gap-2 justify-end">
             <Button variant="ghost" size="sm" onClick={() => setShowSaveDialog(false)} className="text-gray-400">Cancel</Button>
             <Button size="sm" onClick={handleSave} disabled={saving || !saveName.trim()} className="bg-pink-600 hover:bg-pink-700">
@@ -229,7 +291,15 @@ export default function PresetSelector({
                 </>
               ) : (
                 <>
-                  <span className="flex-1 text-sm text-gray-200">{p.name}</span>
+                  <div className="flex-1">
+                    <span className="text-sm text-gray-200">{p.name}</span>
+                    {p.ccWorkspaceId && (
+                      <span className="text-[10px] text-gray-500 ml-2">CC: {getWorkspaceName(p.ccWorkspaceId)}</span>
+                    )}
+                    {p.logoUrl && (
+                      <span className="text-[10px] text-gray-500 ml-2">has logo</span>
+                    )}
+                  </div>
                   <button
                     onClick={() => { onSelectPreset(p); setShowManage(false); }}
                     className="text-xs text-blue-400 hover:text-blue-300 px-2"

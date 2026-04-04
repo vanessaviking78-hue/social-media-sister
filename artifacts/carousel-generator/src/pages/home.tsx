@@ -75,7 +75,8 @@ export default function Home() {
   const [ccPushing, setCcPushing] = useState(false);
   const [ccStatus, setCcStatus] = useState<{ configured: boolean; hasWorkspaces: boolean } | null>(null);
 
-  const { presets, loading: presetsLoading, savePreset, updatePreset, deletePreset } = usePresets();
+  const { presets, loading: presetsLoading, savePreset, updatePreset, deletePreset, uploadLogo } = usePresets();
+  const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null>(null);
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
 
   const getCurrentStyles = (): PresetStyleFields => ({
@@ -101,6 +102,13 @@ export default function Home() {
     setTextPosition(preset.textPosition);
     setLogoPosition(preset.logoPosition);
     setLogoSize(preset.logoSize);
+    setCurrentLogoUrl(preset.logoUrl || null);
+    if (preset.logoUrl) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => { setLogoImg(img); setLogoPreviewUrl(preset.logoUrl); };
+      img.src = preset.logoUrl;
+    }
   };
 
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -660,6 +668,12 @@ export default function Home() {
               Before & After
             </Button>
           </Link>
+          <Link href="/presets">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <Palette className="w-4 h-4 mr-2" />
+              Presets
+            </Button>
+          </Link>
           {result && (
             <>
               <Button variant="outline" size="sm" onClick={handleStartOver} className="text-muted-foreground border-muted-foreground/20 hover:text-foreground">
@@ -818,10 +832,13 @@ export default function Home() {
                     loading={presetsLoading}
                     selectedPresetId={selectedPresetId}
                     onSelectPreset={applyPreset}
-                    onSavePreset={async (name, styles) => { await savePreset(name, styles); }}
-                    onUpdatePreset={async (id, name, styles) => { await updatePreset(id, name, styles); }}
+                    onSavePreset={async (name, styles, ccWs, logoUrl) => { await savePreset(name, styles, ccWs, logoUrl); }}
+                    onUpdatePreset={async (id, name, styles, ccWs, logoUrl) => { await updatePreset(id, name, styles, ccWs, logoUrl); }}
                     onDeletePreset={async (id) => { await deletePreset(id); if (selectedPresetId === id) setSelectedPresetId(null); }}
                     getCurrentStyles={getCurrentStyles}
+                    logoFile={logoFile}
+                    uploadLogo={uploadLogo}
+                    currentLogoUrl={currentLogoUrl}
                   />
                 </div>
 
