@@ -486,7 +486,7 @@ export default function Home() {
   const handleStartOver = () => {
     setPhotos([]); setCsvFile(null);
     setCsvPreview({ headers: [], rows: [] }); setAllCsvRows([]); setCaptions([]); setResult(null);
-    setAiGeneratedPosts(null); setAiProgress(""); setCurrentStep(1);
+    setAiGeneratedPosts(null); setAiProgress(""); setSavedCaptionIndices(new Set()); setCurrentStep(1);
   };
 
   const downloadZip = async () => {

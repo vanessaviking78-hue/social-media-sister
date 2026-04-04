@@ -60,6 +60,18 @@ export default function CaptionLibrary() {
   const [editClient, setEditClient] = useState("");
 
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [allClientNames, setAllClientNames] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchCaptions().then(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!searchQuery && !filterCategory && !filterClient) {
+      const names = Array.from(new Set(captions.map((c) => c.clientName).filter(Boolean)));
+      if (names.length > 0 || allClientNames.length === 0) setAllClientNames(names);
+    }
+  }, [captions, searchQuery, filterCategory, filterClient]);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -67,8 +79,6 @@ export default function CaptionLibrary() {
     }, 300);
     return () => clearTimeout(timeout);
   }, [searchQuery, filterCategory, filterClient, fetchCaptions]);
-
-  const clientNames = Array.from(new Set(captions.map((c) => c.clientName).filter(Boolean)));
 
   const handleAdd = async () => {
     if (!newText.trim()) { toast.error("Caption text is required"); return; }
@@ -184,14 +194,14 @@ export default function CaptionLibrary() {
                 ))}
               </SelectContent>
             </Select>
-            {clientNames.length > 0 && (
-              <Select value={filterClient} onValueChange={(v) => setFilterClient(v === "all" ? "" : v)}>
+            {allClientNames.length > 0 && (
+              <Select value={filterClient || "all"} onValueChange={(v) => setFilterClient(v === "all" ? "" : v)}>
                 <SelectTrigger className="w-[160px] h-11">
                   <SelectValue placeholder="Client" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Clients</SelectItem>
-                  {clientNames.map((name) => (
+                  {allClientNames.map((name) => (
                     <SelectItem key={name} value={name}>{name}</SelectItem>
                   ))}
                 </SelectContent>

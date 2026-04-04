@@ -841,6 +841,7 @@ export default function BeforeAfter() {
     setPairs([]);
     setPendingBefore(null);
     setGeneratedContent([]);
+    setSavedCaptionIndices(new Set());
     setCurrentStep(1);
     setPreviewPairIndex(0);
   };

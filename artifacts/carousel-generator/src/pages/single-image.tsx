@@ -393,7 +393,7 @@ export default function SingleImage() {
   const handleStartOver = () => {
     setPhotos([]); setCsvFile(null); setCsvPreview({ rows: [] }); setAllCsvRows([]);
     setCaptions([]); setResult(null); setAiGeneratedTexts(null); setAiProgress("");
-    setCurrentStep(1);
+    setSavedCaptionIndices(new Set()); setCurrentStep(1);
   };
 
   const downloadZip = async () => {
