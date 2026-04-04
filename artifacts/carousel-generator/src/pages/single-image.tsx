@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import VanessaChat from "@/components/vanessa-chat";
 import { CANVAS_WIDTH, CANVAS_HEIGHT, FONT_OPTIONS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, compressImage } from "@/lib/slide-utils";
 import { usePresets, type ClientPreset, type PresetStyleFields } from "@/lib/use-presets";
+import { useCaptions } from "@/lib/use-captions";
 import PresetSelector from "@/components/preset-selector";
 
 loadGoogleFonts();
@@ -82,8 +83,11 @@ export default function SingleImage() {
   const [ccStatus, setCcStatus] = useState<{ configured: boolean } | null>(null);
 
   const { presets, loading: presetsLoading, savePreset, updatePreset, deletePreset, uploadLogo } = usePresets();
+  const { saveCaption: saveCaptionToLib, bulkSave: bulkSaveCaptions, captions: libCaptions, fetchCaptions: refreshLibCaptions } = useCaptions();
+  const [savedCaptionIndices, setSavedCaptionIndices] = useState<Set<number>>(new Set());
   const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null>(null);
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
+  const [showBrowseLibrary, setShowBrowseLibrary] = useState(false);
 
   const getCurrentStyles = (): PresetStyleFields => ({
     pageColor, overlayColor, fontFamily, fontSize, textColor, lineSpacing,
@@ -639,6 +643,12 @@ export default function SingleImage() {
               Presets
             </Button>
           </Link>
+          <Link href="/captions">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <MessageSquareText className="w-4 h-4 mr-2" />
+              Captions
+            </Button>
+          </Link>
           {result && (
             <>
               <Button variant="outline" size="sm" onClick={handleStartOver} className="text-muted-foreground border-muted-foreground/20 hover:text-foreground">
@@ -979,6 +989,43 @@ export default function SingleImage() {
                 ><Sparkles className="w-6 h-6" />Content Machine</button>
               </div>
 
+              <Button variant="outline" size="lg" onClick={() => { refreshLibCaptions(); setShowBrowseLibrary(!showBrowseLibrary); }} className="w-full py-5 text-base">
+                <MessageSquareText className="w-5 h-5 mr-2" />
+                {showBrowseLibrary ? "Hide Caption Library" : "Browse Caption Library"}
+              </Button>
+
+              {showBrowseLibrary && (
+                <div className="rounded-xl border border-border/30 bg-accent/5 p-5 space-y-4 max-h-[400px] overflow-y-auto">
+                  {libCaptions.length === 0 ? (
+                    <p className="text-center text-muted-foreground py-4">No saved captions yet. Save captions from Step 4 to build your library.</p>
+                  ) : (
+                    libCaptions.map((lc) => (
+                      <div key={lc.id} className="rounded-lg border border-border/20 bg-accent/10 p-4 hover:border-primary/30 transition-colors">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-4">{lc.text}</p>
+                            <div className="flex items-center gap-2 mt-2">
+                              <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">{lc.category}</span>
+                              {lc.clientName && <span className="text-xs text-muted-foreground bg-accent/40 px-2 py-0.5 rounded-full">{lc.clientName}</span>}
+                            </div>
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              navigator.clipboard.writeText(lc.text);
+                              toast.success("Caption copied to clipboard");
+                            }}
+                          >
+                            <Copy className="w-3 h-3 mr-1" /> Use
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
               {contentMode === "csv" && (
                 <>
                   <div
@@ -1193,15 +1240,47 @@ export default function SingleImage() {
                                 <span className="text-primary font-mono text-sm font-bold">{String(i + 1).padStart(2, "0")}</span>
                                 <span className="text-sm text-muted-foreground font-medium uppercase tracking-wider">Post {i + 1} Caption</span>
                               </div>
-                              <button onClick={() => copyCaption(caption, i)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                                {copiedIndex === i ? <><Check className="w-4 h-4 text-green-400" /><span className="text-green-400">Copied</span></> : <><Copy className="w-4 h-4" /><span>Copy</span></>}
-                              </button>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      await saveCaptionToLib(caption, "General", aiClientName || "");
+                                      setSavedCaptionIndices((prev) => new Set(prev).add(i));
+                                      toast.success("Caption saved to library");
+                                    } catch { toast.error("Failed to save caption"); }
+                                  }}
+                                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+                                  disabled={savedCaptionIndices.has(i)}
+                                >
+                                  {savedCaptionIndices.has(i) ? <><Check className="w-4 h-4 text-green-400" /><span className="text-green-400">Saved</span></> : <><Plus className="w-4 h-4" /><span>Save</span></>}
+                                </button>
+                                <button onClick={() => copyCaption(caption, i)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                                  {copiedIndex === i ? <><Check className="w-4 h-4 text-green-400" /><span className="text-green-400">Copied</span></> : <><Copy className="w-4 h-4" /><span>Copy</span></>}
+                                </button>
+                              </div>
                             </div>
                             <div className="p-4">
                               <p className="text-base leading-relaxed text-muted-foreground whitespace-pre-wrap">{caption}</p>
                             </div>
                           </div>
                         ))}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              const unsaved = captions.filter((_, i) => !savedCaptionIndices.has(i));
+                              if (unsaved.length === 0) { toast.info("All captions already saved"); return; }
+                              await bulkSaveCaptions(unsaved.map((text) => ({ text, category: "General", clientName: aiClientName || "" })));
+                              setSavedCaptionIndices(new Set(captions.map((_, i) => i)));
+                              toast.success(`${unsaved.length} caption(s) saved to library`);
+                            } catch { toast.error("Failed to save captions"); }
+                          }}
+                          className="w-full"
+                        >
+                          <Plus className="w-4 h-4 mr-2" />
+                          Save All Captions to Library
+                        </Button>
                       </div>
                     )}
                   </div>

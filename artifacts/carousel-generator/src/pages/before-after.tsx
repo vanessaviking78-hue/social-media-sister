@@ -21,6 +21,7 @@ import {
   Trash2,
   FileText,
   ImagePlus,
+  BookOpen,
 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
@@ -39,6 +40,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { usePresets, type ClientPreset, type PresetStyleFields } from "@/lib/use-presets";
+import { useCaptions } from "@/lib/use-captions";
 import PresetSelector from "@/components/preset-selector";
 
 const CANVAS_WIDTH = 1080;
@@ -344,6 +346,8 @@ export default function BeforeAfter() {
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
 
   const { presets, loading: presetsLoading, savePreset, updatePreset, deletePreset, uploadLogo } = usePresets();
+  const { saveCaption: saveCaptionToLib, bulkSave: bulkSaveCaptions } = useCaptions();
+  const [savedCaptionIndices, setSavedCaptionIndices] = useState<Set<number>>(new Set());
   const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null>(null);
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
 
@@ -877,6 +881,12 @@ export default function BeforeAfter() {
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <Palette className="w-4 h-4 mr-2" />
               Presets
+            </Button>
+          </Link>
+          <Link href="/captions">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Captions
             </Button>
           </Link>
           {currentStep === 4 && (
@@ -1742,16 +1752,31 @@ export default function BeforeAfter() {
                               {content.treatmentType || pairs[i]?.treatmentType}
                             </span>
                           </div>
-                          <button
-                            onClick={() => copyCaption(content.caption, i)}
-                            className="text-muted-foreground hover:text-foreground transition-colors"
-                          >
-                            {copiedIndex === i ? (
-                              <Check className="w-4 h-4 text-green-400" />
-                            ) : (
-                              <Copy className="w-4 h-4" />
-                            )}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await saveCaptionToLib(content.caption, "Before & After", aiClientName || "");
+                                  setSavedCaptionIndices((prev) => new Set(prev).add(i));
+                                  toast.success("Caption saved to library");
+                                } catch { toast.error("Failed to save caption"); }
+                              }}
+                              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+                              disabled={savedCaptionIndices.has(i)}
+                            >
+                              {savedCaptionIndices.has(i) ? <Check className="w-4 h-4 text-green-400" /> : <Plus className="w-4 h-4" />}
+                            </button>
+                            <button
+                              onClick={() => copyCaption(content.caption, i)}
+                              className="text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              {copiedIndex === i ? (
+                                <Check className="w-4 h-4 text-green-400" />
+                              ) : (
+                                <Copy className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
                         </div>
                         <div className="p-4">
                           <textarea

@@ -30,3 +30,17 @@ export const clientPresetsTable = pgTable("client_presets", {
 export const insertPresetSchema = createInsertSchema(clientPresetsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertPreset = z.infer<typeof insertPresetSchema>;
 export type ClientPreset = typeof clientPresetsTable.$inferSelect;
+
+export const captionsTable = pgTable("captions", {
+  id: serial("id").primaryKey(),
+  text: text("text").notNull(),
+  category: text("category").notNull().default("General"),
+  clientName: text("client_name").notNull().default(""),
+  favourite: boolean("favourite").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertCaptionSchema = createInsertSchema(captionsTable).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertCaption = z.infer<typeof insertCaptionSchema>;
+export type Caption = typeof captionsTable.$inferSelect;

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "wouter";
-import { Trash2, Pencil, Save, X, Layers, ArrowLeft } from "lucide-react";
+import { Trash2, Pencil, Save, X, Layers, ArrowLeft, ImageIcon, ArrowLeftRight, MessageSquareText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,13 +70,21 @@ export default function PresetsPage() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur border-b border-border/20">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center gap-4">
-          <Link href="/" className="flex items-center gap-2 text-pink-500 hover:text-pink-400 transition">
-            <ArrowLeft className="w-4 h-4" />
-            <Layers className="w-6 h-6" />
-            <span className="font-bold text-lg text-white">Social Media Sister</span>
-          </Link>
-          <span className="bg-gray-700 text-gray-300 text-xs px-2 py-0.5 rounded">Client Presets</span>
+        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/" className="flex items-center gap-2 text-pink-500 hover:text-pink-400 transition">
+              <ArrowLeft className="w-4 h-4" />
+              <Layers className="w-6 h-6" />
+              <span className="font-bold text-lg text-white">Social Media Sister</span>
+            </Link>
+            <span className="bg-gray-700 text-gray-300 text-xs px-2 py-0.5 rounded">Client Presets</span>
+          </div>
+          <nav className="flex items-center gap-6 text-sm font-medium">
+            <Link href="/" className="text-muted-foreground hover:text-white transition">Carousel</Link>
+            <Link href="/single-image" className="text-muted-foreground hover:text-white transition">Single Image</Link>
+            <Link href="/before-after" className="text-muted-foreground hover:text-white transition">Before & After</Link>
+            <Link href="/captions" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><MessageSquareText className="w-4 h-4" />Captions</Link>
+          </nav>
         </div>
       </header>
 

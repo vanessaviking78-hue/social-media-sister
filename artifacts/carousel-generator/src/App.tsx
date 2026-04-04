@@ -7,6 +7,7 @@ import Home from "@/pages/home";
 import BeforeAfter from "@/pages/before-after";
 import SingleImage from "@/pages/single-image";
 import Presets from "@/pages/presets";
+import CaptionLibrary from "@/pages/caption-library";
 
 const queryClient = new QueryClient();
 
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/before-after" component={BeforeAfter} />
       <Route path="/single-image" component={SingleImage} />
       <Route path="/presets" component={Presets} />
+      <Route path="/captions" component={CaptionLibrary} />
       <Route component={NotFound} />
     </Switch>
   );
