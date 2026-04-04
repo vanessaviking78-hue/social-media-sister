@@ -33,6 +33,7 @@ A social media content tool at the root path `/`. Two modes: (1) Upload photos +
 - **Text Position**: 3x3 grid (TL/TC/TR/CL/CC/CR/BL/BC/BR); CTA slide forces center-center with larger bold text
 - **4-Step Wizard**: Step 1 (Images: photos upload, logo upload), Step 2 (Font & Layout: all styling controls in card grid), Step 3 (Content: CSV/AI mode toggle + content creation), Step 4 (Results & Captions: carousel gallery, download ZIP, caption generation). Progress bar at top with clickable step icons. Next/Back navigation on each step.
 - **Interface**: Simplified and enlarged design with larger text (16-18px), expanded buttons (py-6+), increased padding and spacing for better readability
+- **Before & After Mode**: Dedicated flow at `/before-after` for treatment before/after photo posts. 4-step wizard: (1) Upload paired before/after photos with treatment type labels, (2) Style customization (layout: side-by-side or stacked, fonts, colors, accent, logo), (3) AI content generation with compliance-aware captions via `POST /api/content/before-after-captions`, (4) Preview slides on canvas + download ZIP with cover, side-by-side, and stacked versions for each pair plus caption text files. Uses the Vanessa/MHRA-compliant content system. Navigation between Carousel Mode and Before & After Mode via header links.
 
 ## Structure
 

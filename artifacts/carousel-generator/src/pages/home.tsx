@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool } from "lucide-react";
+import { Link } from "wouter";
+import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -821,18 +822,26 @@ export default function Home() {
           <h1 className="font-sans text-xl font-bold tracking-tight">Social Media Sister</h1>
           <span className="text-[10px] text-muted-foreground/40 ml-2">v5</span>
         </div>
-        {result && (
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" onClick={handleStartOver} className="text-muted-foreground border-muted-foreground/20 hover:text-foreground">
-              <RefreshCcw className="w-4 h-4 mr-2" />
-              Start Over
+        <div className="flex items-center gap-3">
+          <Link href="/before-after">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <ArrowLeftRight className="w-4 h-4 mr-2" />
+              Before & After
             </Button>
-            <Button size="sm" onClick={downloadZip} data-testid="button-download-zip">
-              <Download className="w-4 h-4 mr-2" />
-              Download ZIP
-            </Button>
-          </div>
-        )}
+          </Link>
+          {result && (
+            <>
+              <Button variant="outline" size="sm" onClick={handleStartOver} className="text-muted-foreground border-muted-foreground/20 hover:text-foreground">
+                <RefreshCcw className="w-4 h-4 mr-2" />
+                Start Over
+              </Button>
+              <Button size="sm" onClick={downloadZip} data-testid="button-download-zip">
+                <Download className="w-4 h-4 mr-2" />
+                Download ZIP
+              </Button>
+            </>
+          )}
+        </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-6 mt-8 pb-32">
