@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
+import { objectStorageClient } from "../../lib/objectStorage";
 
 const router: IRouter = Router();
 
@@ -559,57 +560,81 @@ Return exactly ${count} items.`;
   }
 });
 
-router.post("/content/upload-imgbb", async (req, res) => {
+router.post("/content/upload-image", async (req, res) => {
   try {
-    const rawKey = (process.env.IMGBB_API_KEY || "").trim();
-    const apiKey = rawKey.split(/\s+/)[0];
-    if (!apiKey) {
-      return res.status(500).json({ error: "IMGBB_API_KEY not configured" });
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    if (!bucketId) {
+      return res.status(500).json({ error: "Object storage not configured" });
     }
 
     const { images } = req.body as { images: { name: string; base64: string }[] };
     if (!images || !Array.isArray(images) || images.length === 0) {
       return res.status(400).json({ error: "No images provided" });
     }
-    if (images.length > 100) {
-      return res.status(400).json({ error: "Maximum 100 images per request" });
+    if (images.length > 5) {
+      return res.status(400).json({ error: "Maximum 5 images per request" });
     }
 
-    const BATCH_SIZE = 5;
-    const results: { name: string; url: string; deleteUrl: string }[] = new Array(images.length);
+    const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+    const bucket = objectStorageClient.bucket(bucketId);
+    const results: { name: string; url: string }[] = [];
 
-    for (let i = 0; i < images.length; i += BATCH_SIZE) {
-      const batch = images.slice(i, i + BATCH_SIZE);
-      const promises = batch.map(async (img, bi) => {
-        const raw = img.base64.includes(",") ? img.base64.split(",")[1] : img.base64;
-        const form = new URLSearchParams();
-        form.append("key", apiKey);
-        form.append("image", raw);
-        form.append("name", img.name.replace(/\.[^.]+$/, ""));
+    for (const img of images) {
+      const raw = img.base64.includes(",") ? img.base64.split(",")[1] : img.base64;
+      const buffer = Buffer.from(raw, "base64");
+      if (buffer.length > MAX_IMAGE_BYTES) {
+        return res.status(400).json({ error: `Image ${img.name} exceeds 5MB limit` });
+      }
+      const timestamp = Date.now();
+      const safeName = img.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const objectPath = `carousel-images/${timestamp}-${safeName}`;
 
-        const resp = await fetch("https://api.imgbb.com/1/upload", {
-          method: "POST",
-          body: form,
-        });
-        const data = await resp.json();
-        if (!data.success) {
-          console.error("ImgBB upload failed for", img.name, data);
-          results[i + bi] = { name: img.name, url: "", deleteUrl: "" };
-        } else {
-          results[i + bi] = {
-            name: img.name,
-            url: data.data.url,
-            deleteUrl: data.data.delete_url || "",
-          };
-        }
+      const file = bucket.file(objectPath);
+      await file.save(buffer, {
+        contentType: "image/png",
+        metadata: { cacheControl: "public, max-age=31536000" },
       });
-      await Promise.all(promises);
+
+      const domain = process.env.REPLIT_DEPLOYMENT_URL || process.env.REPLIT_DEV_DOMAIN || "";
+      const baseUrl = domain.startsWith("http") ? domain : `https://${domain}`;
+      const serveUrl = `${baseUrl}/api-server/api/content/images/${objectPath}`;
+      results.push({ name: img.name, url: serveUrl });
     }
 
     res.json({ results });
   } catch (err: any) {
-    console.error("ImgBB upload error:", err);
+    console.error("Image upload error:", err);
     res.status(500).json({ error: err.message || "Upload failed" });
+  }
+});
+
+router.get("/content/images/carousel-images/:filename", async (req, res) => {
+  try {
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    if (!bucketId) {
+      return res.status(500).json({ error: "Object storage not configured" });
+    }
+
+    const objectPath = `carousel-images/${req.params.filename}`;
+    const bucket = objectStorageClient.bucket(bucketId);
+    const file = bucket.file(objectPath);
+
+    const [exists] = await file.exists();
+    if (!exists) {
+      return res.status(404).json({ error: "Image not found" });
+    }
+
+    const [metadata] = await file.getMetadata();
+    res.setHeader("Content-Type", (metadata.contentType as string) || "image/png");
+    res.setHeader("Cache-Control", "public, max-age=31536000");
+    if (metadata.size) {
+      res.setHeader("Content-Length", String(metadata.size));
+    }
+
+    file.createReadStream().pipe(res);
+  } catch (err: any) {
+    console.error("Image serve error:", err);
+    res.status(500).json({ error: err.message || "Failed to serve image" });
   }
 });
 

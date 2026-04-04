@@ -713,8 +713,8 @@ export default function BeforeAfter() {
     }
   };
 
-  const uploadOneToImgBB = async (name: string, base64: string): Promise<string> => {
-    const resp = await fetch(`${import.meta.env.BASE_URL}api/content/upload-imgbb`, {
+  const uploadOneImage = async (name: string, base64: string): Promise<string> => {
+    const resp = await fetch(`${import.meta.env.BASE_URL}api/content/upload-image`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ images: [{ name, base64 }] }),
@@ -760,9 +760,9 @@ export default function BeforeAfter() {
       const urlMap = new Map<string, string>();
       const PARALLEL = 3;
       for (let i = 0; i < rendered.length; i += PARALLEL) {
-        toast.loading(`Uploading to ImgBB... ${i}/${rendered.length}`, { id });
+        toast.loading(`Uploading images... ${i}/${rendered.length}`, { id });
         const batch = rendered.slice(i, i + PARALLEL);
-        const urls = await Promise.all(batch.map((r) => uploadOneToImgBB(r.name, r.base64)));
+        const urls = await Promise.all(batch.map((r) => uploadOneImage(r.name, r.base64)));
         batch.forEach((r, bi) => urlMap.set(r.name, urls[bi]));
       }
 
@@ -783,7 +783,7 @@ export default function BeforeAfter() {
       const csvString = Papa.unparse(rows);
       const blob = new Blob([csvString], { type: "text/csv;charset=utf-8" });
       saveAs(blob, "before-after-posts.csv");
-      toast.success("CSV downloaded with ImgBB links", { id });
+      toast.success("CSV downloaded with image links", { id });
     } catch (e: any) {
       console.error(e);
       toast.error("Failed: " + (e?.message || "Unknown error"), { id });

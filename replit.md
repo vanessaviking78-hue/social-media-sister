@@ -28,6 +28,8 @@ A social media content tool at the root path `/`. Two modes: (1) Upload photos +
 - **Dependencies**: multer, csv-parse, jszip + file-saver + papaparse (frontend), @workspace/integrations-openai-ai-server (AI)
 - **Zip download**: Client-side canvas compositing (image + text overlay) → JSZip → file-saver
 - **Branding**: Corner accents (triangle, arc, double-line, frame), page color, overlay color, 25 Google Fonts
+- **Image Upload**: `POST /api/content/upload-image` — uploads rendered slide images to Replit Object Storage (bucket: `replit-objstore-7bc3b789-f026-4325-97a3-07fb026b92ce`), returns public URLs served via `GET /api/content/images/carousel-images/:filename`
+- **CSV Export**: "Download CSV" button renders slides, uploads to object storage 3 at a time, generates CSV with `|`-separated direct image URLs and captions per Cloud Campaign format
 - **Caption Generator**: `POST /api/content/captions` — SSE endpoint generating Instagram captions
 - **Gradient Controls**: On/off toggle, color picker, solid vs leopard print, 6-position gradient placement
 - **Text Position**: 3x3 grid (TL/TC/TR/CL/CC/CR/BL/BC/BR); CTA slide forces center-center with larger bold text
