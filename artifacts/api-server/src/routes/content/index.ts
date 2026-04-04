@@ -595,7 +595,11 @@ router.post("/content/upload-image", async (req, res) => {
         metadata: { cacheControl: "public, max-age=31536000" },
       });
 
-      results.push({ name: img.name, url: `/api/content/images/${objectPath}` });
+      const proto = (req.headers["x-forwarded-proto"] as string) || "https";
+      const host = (req.headers["x-forwarded-host"] as string) || req.headers.host || "localhost";
+      const fullUrl = `${proto}://${host}/api/content/images/${objectPath}`;
+      console.log(`Uploaded ${img.name} → ${fullUrl}`);
+      results.push({ name: img.name, url: fullUrl });
     }
 
     res.json({ results });
