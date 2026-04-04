@@ -524,7 +524,7 @@ export default function SingleImage() {
 
       toast.loading("Pushing to Cloud Campaign...", { id });
       const selectedPreset = presets.find((p) => p.id === selectedPresetId);
-      const pushBody: any = { posts: ccPosts };
+      const pushBody: { posts: typeof ccPosts; workspaceIds?: string[] } = { posts: ccPosts };
       if (selectedPreset?.ccWorkspaceId) pushBody.workspaceIds = [selectedPreset.ccWorkspaceId];
       const resp = await fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/push`, {
         method: "POST",
