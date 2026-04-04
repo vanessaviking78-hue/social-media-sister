@@ -275,7 +275,7 @@ export function drawSlide(
     }
   }
 
-  const isLastSlide = slidePosition === totalSlidesInGroup;
+  const isLastSlide = totalSlidesInGroup > 1 && slidePosition === totalSlidesInGroup;
   const ctaSize = isLastSlide ? Math.round(size * 1.4) : size;
   const textAreaW = isLastSlide ? W - 120 : W - 80;
   const activeTextPos = isLastSlide ? "center-center" : textPosition;
