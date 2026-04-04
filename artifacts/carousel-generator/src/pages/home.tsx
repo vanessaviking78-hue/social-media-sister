@@ -745,12 +745,23 @@ export default function Home() {
     }
   };
 
+  const uploadOneToImgBB = async (name: string, base64: string): Promise<string> => {
+    const resp = await fetch(`${import.meta.env.BASE_URL}api/content/upload-imgbb`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images: [{ name, base64 }] }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || "Upload failed");
+    return data.results?.[0]?.url || "";
+  };
+
   const downloadCsv = async () => {
     if (!result?.slides.length) return;
-    const id = toast.loading("Uploading images to ImgBB...");
+    const id = toast.loading("Rendering slides...");
     try {
       await document.fonts.ready;
-      const images: { name: string; base64: string }[] = [];
+      const rendered: { name: string; base64: string }[] = [];
 
       for (const slide of result.slides) {
         const isCover = slide.groupPosition === 1;
@@ -765,21 +776,16 @@ export default function Home() {
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
-        images.push({ name: fileName, base64: dataUrl });
+        rendered.push({ name: fileName, base64: dataUrl });
       }
 
-      toast.loading("Uploading to ImgBB...", { id });
-      const uploadResp = await fetch(`${import.meta.env.BASE_URL}api/content/upload-imgbb`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ images }),
-      });
-      const uploadData = await uploadResp.json();
-      if (!uploadResp.ok) throw new Error(uploadData.error || "Upload failed");
-
       const urlMap = new Map<string, string>();
-      for (const r of uploadData.results) {
-        urlMap.set(r.name, r.url);
+      const PARALLEL = 3;
+      for (let i = 0; i < rendered.length; i += PARALLEL) {
+        toast.loading(`Uploading to ImgBB... ${i}/${rendered.length}`, { id });
+        const batch = rendered.slice(i, i + PARALLEL);
+        const urls = await Promise.all(batch.map((r) => uploadOneToImgBB(r.name, r.base64)));
+        batch.forEach((r, bi) => urlMap.set(r.name, urls[bi]));
       }
 
       const rows: string[][] = [];

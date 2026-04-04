@@ -713,12 +713,23 @@ export default function BeforeAfter() {
     }
   };
 
+  const uploadOneToImgBB = async (name: string, base64: string): Promise<string> => {
+    const resp = await fetch(`${import.meta.env.BASE_URL}api/content/upload-imgbb`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images: [{ name, base64 }] }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || "Upload failed");
+    return data.results?.[0]?.url || "";
+  };
+
   const downloadCsv = async () => {
     if (pairs.length === 0) return;
-    const id = toast.loading("Uploading images to ImgBB...");
+    const id = toast.loading("Rendering slides...");
     try {
       await document.fonts.ready;
-      const images: { name: string; base64: string }[] = [];
+      const rendered: { name: string; base64: string }[] = [];
 
       for (let pi = 0; pi < pairs.length; pi++) {
         const pair = pairs[pi];
@@ -733,31 +744,26 @@ export default function BeforeAfter() {
         const coverCanvas = document.createElement("canvas");
         coverCanvas.width = CANVAS_WIDTH; coverCanvas.height = CANVAS_HEIGHT;
         drawCoverSlide(coverCanvas.getContext("2d")!, beforeImg, afterImg, fontFamily, fontSize, textColor, overlayColor, accentColor, content?.hookText || pair.treatmentType, content?.treatmentType || pair.treatmentType, logoImg, logoPosition, logoSize, pageColor);
-        images.push({ name: `${prefix}-01-cover.png`, base64: coverCanvas.toDataURL("image/png") });
+        rendered.push({ name: `${prefix}-01-cover.png`, base64: coverCanvas.toDataURL("image/png") });
 
         const sideCanvas = document.createElement("canvas");
         sideCanvas.width = CANVAS_WIDTH; sideCanvas.height = CANVAS_HEIGHT;
         drawBeforeAfterSlide(sideCanvas.getContext("2d")!, beforeImg, afterImg, "side-by-side", fontFamily, fontSize, textColor, overlayColor, accentColor, content?.beforeLabel || "Before", content?.afterLabel || "After", logoImg, logoPosition, logoSize, pageColor);
-        images.push({ name: `${prefix}-02-side-by-side.png`, base64: sideCanvas.toDataURL("image/png") });
+        rendered.push({ name: `${prefix}-02-side-by-side.png`, base64: sideCanvas.toDataURL("image/png") });
 
         const stackCanvas = document.createElement("canvas");
         stackCanvas.width = CANVAS_WIDTH; stackCanvas.height = CANVAS_HEIGHT;
         drawBeforeAfterSlide(stackCanvas.getContext("2d")!, beforeImg, afterImg, "stacked", fontFamily, fontSize, textColor, overlayColor, accentColor, content?.beforeLabel || "Before", content?.afterLabel || "After", logoImg, logoPosition, logoSize, pageColor);
-        images.push({ name: `${prefix}-03-stacked.png`, base64: stackCanvas.toDataURL("image/png") });
+        rendered.push({ name: `${prefix}-03-stacked.png`, base64: stackCanvas.toDataURL("image/png") });
       }
 
-      toast.loading("Uploading to ImgBB...", { id });
-      const uploadResp = await fetch(`${import.meta.env.BASE_URL}api/content/upload-imgbb`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ images }),
-      });
-      const uploadData = await uploadResp.json();
-      if (!uploadResp.ok) throw new Error(uploadData.error || "Upload failed");
-
       const urlMap = new Map<string, string>();
-      for (const r of uploadData.results) {
-        urlMap.set(r.name, r.url);
+      const PARALLEL = 3;
+      for (let i = 0; i < rendered.length; i += PARALLEL) {
+        toast.loading(`Uploading to ImgBB... ${i}/${rendered.length}`, { id });
+        const batch = rendered.slice(i, i + PARALLEL);
+        const urls = await Promise.all(batch.map((r) => uploadOneToImgBB(r.name, r.base64)));
+        batch.forEach((r, bi) => urlMap.set(r.name, urls[bi]));
       }
 
       const rows: string[][] = [];
