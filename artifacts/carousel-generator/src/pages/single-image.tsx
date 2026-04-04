@@ -168,15 +168,18 @@ export default function SingleImage() {
       const texts = allCsvRows;
       if (texts.length === 0) throw new Error("CSV has no data rows");
 
-      const MAX_POSTS = 60;
-      const postTexts = texts.slice(0, MAX_POSTS);
       const photoUrls = photos.map((f) => URL.createObjectURL(f));
+      const postCount = photos.length;
 
-      const posts: SinglePost[] = postTexts.map((text, i) => ({
+      if (texts.length < postCount) {
+        toast.warning(`Only ${texts.length} text(s) for ${postCount} photo(s) - extra photos will have no text overlay`);
+      }
+
+      const posts: SinglePost[] = photos.map((photo, i) => ({
         index: i + 1,
-        text,
-        imageUrl: photoUrls[i % photoUrls.length],
-        imageName: photos[i % photos.length].name,
+        text: texts[i] || "",
+        imageUrl: photoUrls[i],
+        imageName: photo.name,
       }));
 
       setResult({ posts, totalPosts: posts.length, sessionId: "local" });
@@ -206,7 +209,7 @@ export default function SingleImage() {
           industry: aiIndustry,
           tone: aiTone,
           topics: aiTopics,
-          postCount: aiPostCount,
+          postCount: photos.length > 0 ? photos.length : aiPostCount,
           extraInstructions: aiExtraInstructions,
         }),
       });
@@ -273,7 +276,7 @@ export default function SingleImage() {
             industry: aiIndustry,
             tone: aiTone,
             topics: aiTopics,
-            postCount: aiPostCount,
+            postCount: photos.length,
             extraInstructions: aiExtraInstructions,
           }),
         });
@@ -318,11 +321,16 @@ export default function SingleImage() {
       if (!texts?.length) throw new Error("No content was generated");
 
       const photoUrls = photos.map((f) => URL.createObjectURL(f));
-      const posts: SinglePost[] = texts.slice(0, 60).map((text, i) => ({
+
+      if (texts.length < photos.length) {
+        toast.warning(`Only ${texts.length} text(s) generated for ${photos.length} photo(s) - extra photos will have no text overlay`);
+      }
+
+      const posts: SinglePost[] = photos.map((photo, i) => ({
         index: i + 1,
-        text,
-        imageUrl: photoUrls[i % photoUrls.length],
-        imageName: photos[i % photos.length].name,
+        text: texts[i] || "",
+        imageUrl: photoUrls[i],
+        imageName: photo.name,
       }));
 
       setResult({ posts, totalPosts: posts.length, sessionId: "local" });
@@ -985,14 +993,12 @@ export default function SingleImage() {
                       </div>
                       <div className="space-y-2">
                         <Label className="text-sm font-semibold">Number of Posts</Label>
-                        <Select value={String(aiPostCount)} onValueChange={(v) => setAiPostCount(Number(v))}>
-                          <SelectTrigger className="h-12 text-base"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {[5, 10, 15, 20, 30].map((n) => (
-                              <SelectItem key={n} value={String(n)}>{n} posts</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <div className="h-12 flex items-center px-4 rounded-md border border-border/30 bg-accent/20 text-base">
+                          {photos.length > 0
+                            ? <span>{photos.length} post{photos.length !== 1 ? "s" : ""} <span className="text-muted-foreground">(1 per photo)</span></span>
+                            : <span className="text-muted-foreground">Upload photos first</span>
+                          }
+                        </div>
                       </div>
                     </div>
                     <div className="space-y-2">
