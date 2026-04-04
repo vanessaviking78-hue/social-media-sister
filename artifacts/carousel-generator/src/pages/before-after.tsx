@@ -38,6 +38,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { usePresets, type ClientPreset, type PresetStyleFields } from "@/lib/use-presets";
+import PresetSelector from "@/components/preset-selector";
 
 const CANVAS_WIDTH = 1080;
 const CANVAS_HEIGHT = 1350;
@@ -340,6 +342,29 @@ export default function BeforeAfter() {
 
   const [isDragging, setIsDragging] = useState(false);
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
+
+  const { presets, loading: presetsLoading, savePreset, updatePreset, deletePreset } = usePresets();
+  const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
+
+  const getCurrentStyles = (): PresetStyleFields => ({
+    pageColor, overlayColor, fontFamily, fontSize, textColor,
+    lineSpacing: 0.9, cornerStyle: "none", cornerColor: accentColor,
+    gradientEnabled: false, gradientStyle: "solid", gradientColor: "#000000",
+    gradientPosition: "left", textPosition: "bottom-left",
+    logoPosition, logoSize, accentColor,
+  });
+
+  const applyPreset = (preset: ClientPreset) => {
+    setSelectedPresetId(preset.id);
+    setPageColor(preset.pageColor);
+    setOverlayColor(preset.overlayColor);
+    setFontFamily(preset.fontFamily);
+    setFontSize(preset.fontSize);
+    setTextColor(preset.textColor);
+    if (preset.accentColor) setAccentColor(preset.accentColor);
+    setLogoPosition(preset.logoPosition);
+    setLogoSize(preset.logoSize);
+  };
 
   const beforeInputRef = useRef<HTMLInputElement>(null);
   const afterInputRef = useRef<HTMLInputElement>(null);
@@ -1206,6 +1231,19 @@ export default function BeforeAfter() {
                 <p className="text-lg text-muted-foreground">
                   Customise the look of your before & after slides.
                 </p>
+              </div>
+
+              <div className="rounded-2xl border border-pink-500/20 bg-card/50 p-6">
+                <PresetSelector
+                  presets={presets}
+                  loading={presetsLoading}
+                  selectedPresetId={selectedPresetId}
+                  onSelectPreset={applyPreset}
+                  onSavePreset={async (name, styles) => { await savePreset(name, styles); }}
+                  onUpdatePreset={async (id, name, styles) => { await updatePreset(id, name, styles); }}
+                  onDeletePreset={async (id) => { await deletePreset(id); if (selectedPresetId === id) setSelectedPresetId(null); }}
+                  getCurrentStyles={getCurrentStyles}
+                />
               </div>
 
               <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">

@@ -37,6 +37,7 @@ A social media content tool at the root path `/`. Two modes: (1) Upload photos +
 - **4-Step Wizard**: Step 1 (Images: photos upload, logo upload), Step 2 (Font & Layout: all styling controls in card grid), Step 3 (Content: CSV/AI mode toggle + content creation), Step 4 (Results & Captions: carousel gallery, download ZIP, caption generation). Progress bar at top with clickable step icons. Next/Back navigation on each step.
 - **Interface**: Simplified and enlarged design with larger text (16-18px), expanded buttons (py-6+), increased padding and spacing for better readability
 - **Single Image Mode**: Dedicated flow at `/single-image` for single-image posts. Same 4-step wizard as carousel but each photo gets exactly one text overlay (no multi-slide). CSV expects one text per row (first column). AI content via `POST /api/content/generate-single` generates short, punchy overlay texts (under 15 words each). ZIP uses flat naming (`post-01.png`). CSV export has single Image column. CC push sends single-image posts. Shared utilities extracted to `src/lib/slide-utils.ts` (drawSlide, compressImage, FONT_OPTIONS, CORNER_STYLES, LOGO_POSITIONS, CANVAS constants, Google Fonts loader).
+- **Client Brand Presets**: Save/load reusable brand presets per client. Database-backed (`client_presets` table via Drizzle). CRUD API: `GET/POST /api/presets`, `GET/PUT/DELETE /api/presets/:id`. Stores all styling fields (page color, overlay, font, font size, text color, line spacing, corners, gradient, text position, logo position/size, accent color, CC workspace ID). Shared `usePresets` hook (`src/lib/use-presets.ts`) and `PresetSelector` component (`src/components/preset-selector.tsx`) integrated into Step 2 of all wizard flows (Carousel, Single Image, Before & After). Users can select a saved preset to auto-fill all styling, save current settings as a new preset, update existing presets, rename and delete via manage panel.
 - **Before & After Mode**: Dedicated flow at `/before-after` for treatment before/after photo posts. 4-step wizard: (1) Upload paired before/after photos with treatment type labels, (2) Style customization (layout: side-by-side or stacked, fonts, colors, accent, logo), (3) AI content generation with compliance-aware captions via `POST /api/content/before-after-captions`, (4) Preview slides on canvas + download ZIP with cover, side-by-side, and stacked versions for each pair plus caption text files. Uses the Vanessa/MHRA-compliant content system. Navigation between Carousel Mode, Single Image, and Before & After Mode via header links.
 
 ## Structure
@@ -91,7 +92,8 @@ Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client insta
 
 - `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
 - `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
+- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas
+- `src/schema/index.ts` — `client_presets` table (brand presets: name, colors, font, gradient, text position, logo, accent, CC workspace ID)
 - `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
 - Exports: `.` (pool, db, schema), `./schema` (schema only)
 

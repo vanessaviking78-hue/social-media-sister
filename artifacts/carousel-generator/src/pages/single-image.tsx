@@ -15,6 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import VanessaChat from "@/components/vanessa-chat";
 import { CANVAS_WIDTH, CANVAS_HEIGHT, FONT_OPTIONS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, compressImage } from "@/lib/slide-utils";
+import { usePresets, type ClientPreset, type PresetStyleFields } from "@/lib/use-presets";
+import PresetSelector from "@/components/preset-selector";
 
 loadGoogleFonts();
 
@@ -78,6 +80,34 @@ export default function SingleImage() {
   const [isDraggingCsv, setIsDraggingCsv] = useState(false);
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
   const [ccStatus, setCcStatus] = useState<{ configured: boolean } | null>(null);
+
+  const { presets, loading: presetsLoading, savePreset, updatePreset, deletePreset } = usePresets();
+  const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
+
+  const getCurrentStyles = (): PresetStyleFields => ({
+    pageColor, overlayColor, fontFamily, fontSize, textColor, lineSpacing,
+    cornerStyle, cornerColor, gradientEnabled, gradientStyle, gradientColor,
+    gradientPosition, textPosition, logoPosition, logoSize,
+  });
+
+  const applyPreset = (preset: ClientPreset) => {
+    setSelectedPresetId(preset.id);
+    setPageColor(preset.pageColor);
+    setOverlayColor(preset.overlayColor);
+    setFontFamily(preset.fontFamily);
+    setFontSize(preset.fontSize);
+    setTextColor(preset.textColor);
+    setLineSpacing(parseFloat(preset.lineSpacing));
+    setCornerStyle(preset.cornerStyle);
+    setCornerColor(preset.cornerColor);
+    setGradientEnabled(preset.gradientEnabled);
+    setGradientStyle(preset.gradientStyle);
+    setGradientColor(preset.gradientColor);
+    setGradientPosition(preset.gradientPosition);
+    setTextPosition(preset.textPosition);
+    setLogoPosition(preset.logoPosition);
+    setLogoSize(preset.logoSize);
+  };
   const [ccPushing, setCcPushing] = useState(false);
 
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -725,6 +755,19 @@ export default function SingleImage() {
               <div>
                 <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 2: Font & Layout</h2>
                 <p className="text-lg text-muted-foreground">Customise the look and feel of your single image posts.</p>
+              </div>
+
+              <div className="rounded-2xl border border-pink-500/20 bg-card/50 p-6">
+                <PresetSelector
+                  presets={presets}
+                  loading={presetsLoading}
+                  selectedPresetId={selectedPresetId}
+                  onSelectPreset={applyPreset}
+                  onSavePreset={async (name, styles) => { await savePreset(name, styles); }}
+                  onUpdatePreset={async (id, name, styles) => { await updatePreset(id, name, styles); }}
+                  onDeletePreset={async (id) => { await deletePreset(id); if (selectedPresetId === id) setSelectedPresetId(null); }}
+                  getCurrentStyles={getCurrentStyles}
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
