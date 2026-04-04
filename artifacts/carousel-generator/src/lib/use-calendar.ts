@@ -21,7 +21,21 @@ const api = (path: string) => `${BASE}api${path}`;
 
 export function useCalendar() {
   const [posts, setPosts] = useState<CalendarPost[]>([]);
+  const [allClients, setAllClients] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const fetchClients = useCallback(async (from?: string, to?: string) => {
+    try {
+      const params = new URLSearchParams();
+      if (from) params.set("from", from);
+      if (to) params.set("to", to);
+      const res = await fetch(`${api("/calendar")}?${params.toString()}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const names = Array.from(new Set((data.posts || []).map((p: CalendarPost) => p.clientName).filter(Boolean))) as string[];
+      setAllClients(names.sort());
+    } catch {}
+  }, []);
 
   const fetchPosts = useCallback(async (from?: string, to?: string, client?: string) => {
     setLoading(true);
@@ -81,5 +95,5 @@ export function useCalendar() {
     setPosts((prev) => prev.filter((p) => p.id !== id));
   }, []);
 
-  return { posts, loading, fetchPosts, createPost, updatePost, deletePost };
+  return { posts, allClients, loading, fetchPosts, fetchClients, createPost, updatePost, deletePost };
 }

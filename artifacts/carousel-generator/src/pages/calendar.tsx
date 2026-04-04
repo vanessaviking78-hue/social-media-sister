@@ -84,7 +84,7 @@ export default function Calendar() {
   const [formImageUrl, setFormImageUrl] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
-  const { posts, loading, fetchPosts, createPost, updatePost, deletePost } = useCalendar();
+  const { posts, allClients, loading, fetchPosts, fetchClients, createPost, updatePost, deletePost } = useCalendar();
 
   const dragPostId = useRef<number | null>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
@@ -94,10 +94,14 @@ export default function Calendar() {
   const toDate = days[days.length - 1].date;
 
   useEffect(() => {
+    fetchClients(fromDate, toDate);
+  }, [year, month, fetchClients, fromDate, toDate]);
+
+  useEffect(() => {
     fetchPosts(fromDate, toDate, filterClient || undefined);
   }, [year, month, filterClient, fetchPosts, fromDate, toDate]);
 
-  const allClientNames = Array.from(new Set(posts.map((p) => p.clientName).filter(Boolean)));
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   const prevMonth = () => {
     if (month === 0) { setMonth(11); setYear(year - 1); }
@@ -272,7 +276,7 @@ export default function Calendar() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Clients</SelectItem>
-                {allClientNames.map((name) => (
+                {allClients.map((name) => (
                   <SelectItem key={name} value={name}>{name}</SelectItem>
                 ))}
               </SelectContent>
@@ -314,7 +318,7 @@ export default function Calendar() {
                     )}
                   </div>
                   <div className="space-y-1">
-                    {dayPosts.slice(0, 3).map((post) => (
+                    {(expandedDay === day.date ? dayPosts : dayPosts.slice(0, 3)).map((post) => (
                       <div
                         key={post.id}
                         draggable
@@ -337,7 +341,21 @@ export default function Calendar() {
                       </div>
                     ))}
                     {dayPosts.length > 3 && (
-                      <div className="text-[10px] text-muted-foreground text-center">+{dayPosts.length - 3} more</div>
+                      expandedDay === day.date ? (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setExpandedDay(null); }}
+                          className="text-[10px] text-pink-400 hover:text-pink-300 text-center w-full cursor-pointer"
+                        >
+                          Show less
+                        </button>
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setExpandedDay(day.date); }}
+                          className="text-[10px] text-pink-400 hover:text-pink-300 text-center w-full cursor-pointer"
+                        >
+                          +{dayPosts.length - 3} more
+                        </button>
+                      )
                     )}
                   </div>
                 </div>
