@@ -721,7 +721,9 @@ export default function BeforeAfter() {
     });
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || "Upload failed");
-    return data.results?.[0]?.url || "";
+    const path = data.results?.[0]?.url || "";
+    if (!path) return "";
+    return `${window.location.origin}${path}`;
   };
 
   const downloadCsv = async () => {

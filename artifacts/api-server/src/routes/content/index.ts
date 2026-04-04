@@ -595,10 +595,7 @@ router.post("/content/upload-image", async (req, res) => {
         metadata: { cacheControl: "public, max-age=31536000" },
       });
 
-      const domain = process.env.REPLIT_DEPLOYMENT_URL || process.env.REPLIT_DEV_DOMAIN || "";
-      const baseUrl = domain.startsWith("http") ? domain : `https://${domain}`;
-      const serveUrl = `${baseUrl}/api-server/api/content/images/${objectPath}`;
-      results.push({ name: img.name, url: serveUrl });
+      results.push({ name: img.name, url: `/api/content/images/${objectPath}` });
     }
 
     res.json({ results });
