@@ -662,6 +662,8 @@ Return exactly ${count} items.`;
       }
     }
 
+    logActivity({ action: "generated", postType: "before-after", clientName: clientName || "", postCount: allResults.length, slideCount: allResults.length * 3 });
+
     res.write(
       `data: ${JSON.stringify({ type: "complete", results: allResults })}\n\n`
     );
@@ -822,9 +824,10 @@ router.get("/cloud-campaign/workspaces", async (_req, res) => {
 
 router.post("/cloud-campaign/push", async (req, res) => {
   try {
-    const { posts, workspaceIds } = req.body as {
+    const { posts, workspaceIds, postType } = req.body as {
       posts: { title: string; caption: string; imageUrls: string[] }[];
       workspaceIds?: string[];
+      postType?: string;
     };
 
     if (!posts || !Array.isArray(posts) || posts.length === 0) {
@@ -874,7 +877,7 @@ router.post("/cloud-campaign/push", async (req, res) => {
     const succeeded = results.filter((r) => r.status === "success").length;
     const failed = results.filter((r) => r.status === "error").length;
     if (succeeded > 0) {
-      logActivity({ action: "pushed", postType: "carousel", postCount: succeeded });
+      logActivity({ action: "pushed", postType: postType || "carousel", postCount: succeeded });
     }
     res.json({ results, summary: { total: results.length, succeeded, failed } });
   } catch (err: any) {

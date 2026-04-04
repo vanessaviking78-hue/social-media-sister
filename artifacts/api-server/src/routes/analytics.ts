@@ -13,11 +13,11 @@ router.get("/analytics/summary", async (_req, res) => {
       totalGenerated: sql<number>`count(*) filter (where ${activityLogTable.action} = 'generated')::int`,
       totalDownloaded: sql<number>`count(*) filter (where ${activityLogTable.action} = 'downloaded')::int`,
       totalPushed: sql<number>`count(*) filter (where ${activityLogTable.action} = 'pushed')::int`,
-      totalCarousels: sql<number>`count(*) filter (where ${activityLogTable.postType} = 'carousel')::int`,
-      totalSingleImages: sql<number>`count(*) filter (where ${activityLogTable.postType} = 'single-image')::int`,
-      totalBeforeAfters: sql<number>`count(*) filter (where ${activityLogTable.postType} = 'before-after')::int`,
-      totalPosts: sql<number>`coalesce(sum(${activityLogTable.postCount}), 0)::int`,
-      totalSlides: sql<number>`coalesce(sum(${activityLogTable.slideCount}), 0)::int`,
+      totalCarousels: sql<number>`count(*) filter (where ${activityLogTable.action} = 'generated' and ${activityLogTable.postType} = 'carousel')::int`,
+      totalSingleImages: sql<number>`count(*) filter (where ${activityLogTable.action} = 'generated' and ${activityLogTable.postType} = 'single-image')::int`,
+      totalBeforeAfters: sql<number>`count(*) filter (where ${activityLogTable.action} = 'generated' and ${activityLogTable.postType} = 'before-after')::int`,
+      totalPosts: sql<number>`coalesce(sum(${activityLogTable.postCount}) filter (where ${activityLogTable.action} = 'generated'), 0)::int`,
+      totalSlides: sql<number>`coalesce(sum(${activityLogTable.slideCount}) filter (where ${activityLogTable.action} = 'generated'), 0)::int`,
     }).from(activityLogTable);
 
     const now = new Date();
