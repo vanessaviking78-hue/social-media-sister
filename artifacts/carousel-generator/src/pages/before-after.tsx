@@ -346,7 +346,7 @@ export default function BeforeAfter() {
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
 
   const { presets, loading: presetsLoading, savePreset, updatePreset, deletePreset, uploadLogo } = usePresets();
-  const { saveCaption: saveCaptionToLib, bulkSave: bulkSaveCaptions } = useCaptions();
+  const { saveCaption: saveCaptionToLib } = useCaptions();
   const [savedCaptionIndices, setSavedCaptionIndices] = useState<Set<number>>(new Set());
   const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null>(null);
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);

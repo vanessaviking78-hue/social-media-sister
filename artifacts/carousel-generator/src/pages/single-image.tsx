@@ -88,6 +88,7 @@ export default function SingleImage() {
   const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null>(null);
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
   const [showBrowseLibrary, setShowBrowseLibrary] = useState(false);
+  const [selectedLibCaptionIds, setSelectedLibCaptionIds] = useState<Set<number>>(new Set());
 
   const getCurrentStyles = (): PresetStyleFields => ({
     pageColor, overlayColor, fontFamily, fontSize, textColor, lineSpacing,
@@ -999,29 +1000,52 @@ export default function SingleImage() {
                   {libCaptions.length === 0 ? (
                     <p className="text-center text-muted-foreground py-4">No saved captions yet. Save captions from Step 4 to build your library.</p>
                   ) : (
-                    libCaptions.map((lc) => (
-                      <div key={lc.id} className="rounded-lg border border-border/20 bg-accent/10 p-4 hover:border-primary/30 transition-colors">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-4">{lc.text}</p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">{lc.category}</span>
-                              {lc.clientName && <span className="text-xs text-muted-foreground bg-accent/40 px-2 py-0.5 rounded-full">{lc.clientName}</span>}
+                    <>
+                      <p className="text-xs text-muted-foreground">Select captions to use as overlay text for your single image posts.</p>
+                      {libCaptions.map((lc) => {
+                        const isSelected = selectedLibCaptionIds.has(lc.id);
+                        return (
+                          <div key={lc.id} className={`rounded-lg border p-4 transition-colors cursor-pointer ${isSelected ? "border-primary bg-primary/10" : "border-border/20 bg-accent/10 hover:border-primary/30"}`}
+                            onClick={() => {
+                              setSelectedLibCaptionIds((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(lc.id)) next.delete(lc.id); else next.add(lc.id);
+                                return next;
+                              });
+                            }}>
+                            <div className="flex items-start gap-3">
+                              <div className={`mt-1 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${isSelected ? "bg-primary border-primary" : "border-muted-foreground/40"}`}>
+                                {isSelected && <Check className="w-3 h-3 text-primary-foreground" />}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-4">{lc.text}</p>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <span className="text-xs text-primary bg-primary/10 px-2 py-0.5 rounded-full">{lc.category}</span>
+                                  {lc.clientName && <span className="text-xs text-muted-foreground bg-accent/40 px-2 py-0.5 rounded-full">{lc.clientName}</span>}
+                                </div>
+                              </div>
                             </div>
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              navigator.clipboard.writeText(lc.text);
-                              toast.success("Caption copied to clipboard");
-                            }}
-                          >
-                            <Copy className="w-3 h-3 mr-1" /> Use
-                          </Button>
-                        </div>
-                      </div>
-                    ))
+                        );
+                      })}
+                      {selectedLibCaptionIds.size > 0 && (
+                        <Button className="w-full" onClick={() => {
+                          const selected = libCaptions.filter((lc) => selectedLibCaptionIds.has(lc.id));
+                          const texts = selected.map((lc) => lc.text);
+                          setAllCsvRows(texts);
+                          setCsvPreview({ rows: texts.slice(0, 5) });
+                          const csvContent = texts.map((t) => `"${t.replace(/"/g, '""')}"`).join("\n");
+                          const blob = new Blob([csvContent], { type: "text/csv" });
+                          setCsvFile(new File([blob], "library-captions.csv", { type: "text/csv" }));
+                          setSelectedLibCaptionIds(new Set());
+                          setShowBrowseLibrary(false);
+                          setContentMode("csv");
+                          toast.success(`${selected.length} caption(s) loaded as post content`);
+                        }}>
+                          <Check className="w-4 h-4 mr-2" /> Use {selectedLibCaptionIds.size} Caption{selectedLibCaptionIds.size > 1 ? "s" : ""}
+                        </Button>
+                      )}
+                    </>
                   )}
                 </div>
               )}
