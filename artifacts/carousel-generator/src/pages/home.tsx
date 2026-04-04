@@ -745,6 +745,24 @@ export default function Home() {
     }
   };
 
+  const downloadCsv = () => {
+    if (!result?.slides.length) return;
+    const rows: string[][] = [];
+    rows.push(["Carousel", "Caption", "Image Files"]);
+    for (let gi = 0; gi < result.totalCarousels; gi++) {
+      const groupSlides = result.slides.filter((s: any) => s.groupIndex === gi + 1);
+      const imageFiles = groupSlides
+        .map((s: any) => `carousel-${String(s.groupIndex).padStart(2, "0")}-slide-${String(s.groupPosition).padStart(2, "0")}.png`)
+        .join(", ");
+      const caption = captions[gi] || "";
+      rows.push([`Carousel ${gi + 1}`, caption, imageFiles]);
+    }
+    const csvString = Papa.unparse(rows);
+    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8" });
+    saveAs(blob, "carousel-posts.csv");
+    toast.success("CSV downloaded");
+  };
+
   const generateCaptions = async () => {
     const posts = aiGeneratedPosts || (allCsvRows.length > 0 ? allCsvRows : null);
     if (!posts || posts.length === 0) return;
@@ -1389,6 +1407,9 @@ export default function Home() {
                         <button className="btn-shimmer px-8 py-4 rounded-2xl text-lg font-bold flex items-center gap-3" onClick={downloadZip} data-testid="button-download-zip-bar">
                           <Download className="w-5 h-5" />Download ZIP
                         </button>
+                        <Button variant="outline" size="lg" onClick={downloadCsv} className="px-8 py-4 text-lg font-bold" data-testid="button-download-csv-bar">
+                          <FileText className="w-5 h-5 mr-2" />Download CSV
+                        </Button>
                       </div>
                     </div>
 
@@ -1500,9 +1521,14 @@ export default function Home() {
                       <Button variant="outline" onClick={handleStartOver} className="px-8 py-6 text-lg font-semibold" size="lg">
                         <RefreshCcw className="w-5 h-5 mr-2" /> Start Over
                       </Button>
-                      <button className="btn-shimmer px-10 py-6 rounded-2xl text-lg font-bold flex items-center gap-3" onClick={downloadZip} data-testid="button-download-zip">
-                        <Download className="w-5 h-5" />Download ZIP
-                      </button>
+                      <div className="flex gap-3">
+                        <Button variant="outline" size="lg" onClick={downloadCsv} className="px-8 py-6 text-lg font-bold" data-testid="button-download-csv">
+                          <FileText className="w-5 h-5 mr-2" />Download CSV
+                        </Button>
+                        <button className="btn-shimmer px-10 py-6 rounded-2xl text-lg font-bold flex items-center gap-3" onClick={downloadZip} data-testid="button-download-zip">
+                          <Download className="w-5 h-5" />Download ZIP
+                        </button>
+                      </div>
                     </div>
                   </>
                 )}

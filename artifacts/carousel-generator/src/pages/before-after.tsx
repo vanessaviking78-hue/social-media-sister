@@ -19,7 +19,9 @@ import {
   ArrowUpDown,
   Tag,
   Trash2,
+  FileText,
 } from "lucide-react";
+import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { toast } from "sonner";
@@ -711,6 +713,23 @@ export default function BeforeAfter() {
     }
   };
 
+  const downloadCsv = () => {
+    if (pairs.length === 0) return;
+    const rows: string[][] = [];
+    rows.push(["Treatment", "Caption", "Image Files"]);
+    for (let pi = 0; pi < pairs.length; pi++) {
+      const pair = pairs[pi];
+      const content = generatedContent[pi];
+      const prefix = `pair-${String(pi + 1).padStart(2, "0")}`;
+      const imageFiles = [`${prefix}-01-cover.png`, `${prefix}-02-side-by-side.png`, `${prefix}-03-stacked.png`].join(", ");
+      rows.push([content?.treatmentType || pair.treatmentType, content?.caption || "", imageFiles]);
+    }
+    const csvString = Papa.unparse(rows);
+    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8" });
+    saveAs(blob, "before-after-posts.csv");
+    toast.success("CSV downloaded");
+  };
+
   const handleStartOver = () => {
     pairs.forEach((p) => {
       URL.revokeObjectURL(p.beforeUrl);
@@ -754,6 +773,10 @@ export default function BeforeAfter() {
               <Button variant="outline" size="sm" onClick={handleStartOver}>
                 <RefreshCcw className="w-4 h-4 mr-2" />
                 Start Over
+              </Button>
+              <Button variant="outline" size="sm" onClick={downloadCsv} data-testid="button-download-csv-ba">
+                <FileText className="w-4 h-4 mr-2" />
+                Download CSV
               </Button>
               <Button size="sm" onClick={downloadZip} data-testid="button-download-zip-ba">
                 <Download className="w-4 h-4 mr-2" />
@@ -1633,15 +1656,27 @@ export default function BeforeAfter() {
                 >
                   <ChevronLeft className="w-5 h-5 mr-2" /> Back
                 </Button>
-                <Button
-                  onClick={downloadZip}
-                  className="px-10 py-6 text-lg font-semibold"
-                  size="lg"
-                  data-testid="button-download-ba-main"
-                >
-                  <Download className="w-5 h-5 mr-2" />
-                  Download ZIP
-                </Button>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={downloadCsv}
+                    className="px-8 py-6 text-lg font-bold"
+                    size="lg"
+                    data-testid="button-download-csv-ba-main"
+                  >
+                    <FileText className="w-5 h-5 mr-2" />
+                    Download CSV
+                  </Button>
+                  <Button
+                    onClick={downloadZip}
+                    className="px-10 py-6 text-lg font-semibold"
+                    size="lg"
+                    data-testid="button-download-ba-main"
+                  >
+                    <Download className="w-5 h-5 mr-2" />
+                    Download ZIP
+                  </Button>
+                </div>
               </div>
             </div>
           )}
