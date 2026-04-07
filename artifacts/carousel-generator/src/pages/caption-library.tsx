@@ -138,7 +138,7 @@ export default function CaptionLibrary() {
           </Link>
           <Link href="/" className="flex items-center gap-2">
             <Layers className="w-6 h-6 text-primary" />
-            <span className="font-bold text-lg tracking-tight"><span className="text-white">Social Media Sister's</span>{" "}<span className="text-pink-400">CyberSuite</span></span>
+            <span className="font-bold text-3xl tracking-tight"><span className="text-white">Social Media Sister's</span>{" "}<span className="text-pink-400">CyberSuite</span></span>
           </Link>
           <span className="text-xs font-semibold text-muted-foreground bg-accent/50 px-2 py-1 rounded-full">Caption Library</span>
           <div className="flex-1" />

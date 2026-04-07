@@ -231,7 +231,7 @@ export default function Calendar() {
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-center gap-2 text-pink-500 hover:text-pink-400 transition">
               <Layers className="w-6 h-6" />
-              <span className="font-bold text-lg"><span className="text-white">Social Media Sister's</span>{" "}<span className="text-pink-400">CyberSuite</span></span>
+              <span className="font-bold text-3xl"><span className="text-white">Social Media Sister's</span>{" "}<span className="text-pink-400">CyberSuite</span></span>
             </Link>
             <span className="bg-gray-700 text-gray-300 text-xs px-2 py-0.5 rounded">Calendar</span>
           </div>
