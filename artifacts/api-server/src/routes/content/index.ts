@@ -5,16 +5,58 @@ import { logActivity } from "../../lib/activityLog";
 
 const CC_BASE = "https://app.cloudcampaign.com/api/v1";
 
+let ccToken: string | null = null;
+let ccTokenExpiry = 0;
+
+async function getCCToken(): Promise<string> {
+  if (ccToken && Date.now() < ccTokenExpiry) return ccToken;
+  const apiKey = process.env.CLOUD_CAMPAIGN_API_KEY;
+  const apiSecret = process.env.CLOUD_CAMPAIGN_API_SECRET;
+  if (!apiKey || !apiSecret) throw new Error("Cloud Campaign API key and secret not configured");
+  console.log("Attempting CC auth token request...");
+  const res = await fetch(`${CC_BASE}/auth/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key: apiKey, secret: apiSecret }),
+  });
+  const text = await res.text();
+  let data: any;
+  try { data = JSON.parse(text); } catch { data = { raw: text }; }
+  if (!res.ok) {
+    console.error(`CC auth error ${res.status}:`, data);
+    throw new Error(data?.message || data?.errorReason || `Auth error ${res.status}`);
+  }
+  console.log("CC auth response keys:", Object.keys(data));
+  ccToken = data.token || data.access_token || data.accessToken || data.jwt;
+  if (!ccToken) {
+    console.error("CC auth response had no token field:", JSON.stringify(data).substring(0, 200));
+    throw new Error("No token returned from CC auth");
+  }
+  ccTokenExpiry = Date.now() + 55 * 60 * 1000;
+  console.log("CC auth token obtained successfully");
+  return ccToken;
+}
+
 async function ccFetch(path: string, opts: RequestInit = {}) {
   const apiKey = process.env.CLOUD_CAMPAIGN_API_KEY;
   const agencyId = process.env.CLOUD_CAMPAIGN_AGENCY_ID;
-  if (!apiKey || !agencyId) throw new Error("Cloud Campaign credentials not configured");
+  let authHeader: string;
+  let extraHeaders: Record<string, string> = {};
+  try {
+    const token = await getCCToken();
+    authHeader = `Bearer ${token}`;
+  } catch (e: any) {
+    console.log("Token auth failed, falling back to API key auth:", e.message);
+    if (!apiKey || !agencyId) throw new Error("Cloud Campaign credentials not configured");
+    authHeader = `Bearer ${apiKey}`;
+    extraHeaders["x-agency-id"] = agencyId;
+  }
   const res = await fetch(`${CC_BASE}${path}`, {
     ...opts,
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-      "x-agency-id": agencyId,
+      "Authorization": authHeader,
+      ...extraHeaders,
       ...(opts.headers || {}),
     },
   });
@@ -22,6 +64,10 @@ async function ccFetch(path: string, opts: RequestInit = {}) {
   let data: any;
   try { data = JSON.parse(text); } catch { data = { raw: text }; }
   if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      ccToken = null;
+      ccTokenExpiry = 0;
+    }
     console.error(`Cloud Campaign API error ${res.status}:`, data);
     throw new Error(data?.message || data?.errorReason || `API error ${res.status}`);
   }
