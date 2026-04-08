@@ -17,46 +17,37 @@ async function getCCToken(): Promise<string> {
   const res = await fetch(`${CC_BASE}/auth/token`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ key: apiKey, secret: apiSecret }),
+    body: JSON.stringify({ apiKey, apiSecret }),
   });
-  const text = await res.text();
-  let data: any;
-  try { data = JSON.parse(text); } catch { data = { raw: text }; }
   if (!res.ok) {
+    const text = await res.text();
+    let data: any;
+    try { data = JSON.parse(text); } catch { data = { raw: text }; }
     console.error(`CC auth error ${res.status}:`, data);
     throw new Error(data?.message || data?.errorReason || `Auth error ${res.status}`);
   }
-  console.log("CC auth response keys:", Object.keys(data));
-  ccToken = data.token || data.access_token || data.accessToken || data.jwt;
-  if (!ccToken) {
-    console.error("CC auth response had no token field:", JSON.stringify(data).substring(0, 200));
-    throw new Error("No token returned from CC auth");
+  const token = res.headers.get("x-api-token");
+  if (!token) {
+    const allHeaders = Object.fromEntries(res.headers.entries());
+    console.error("CC auth response headers:", JSON.stringify(allHeaders));
+    throw new Error("No x-api-token header in CC auth response");
   }
-  ccTokenExpiry = Date.now() + 55 * 60 * 1000;
+  ccToken = token;
+  ccTokenExpiry = Date.now() + 11 * 60 * 60 * 1000;
   console.log("CC auth token obtained successfully");
   return ccToken;
 }
 
 async function ccFetch(path: string, opts: RequestInit = {}) {
-  const apiKey = process.env.CLOUD_CAMPAIGN_API_KEY;
   const agencyId = process.env.CLOUD_CAMPAIGN_AGENCY_ID;
-  let authHeader: string;
-  let extraHeaders: Record<string, string> = {};
-  try {
-    const token = await getCCToken();
-    authHeader = `Bearer ${token}`;
-  } catch (e: any) {
-    console.log("Token auth failed, falling back to API key auth:", e.message);
-    if (!apiKey || !agencyId) throw new Error("Cloud Campaign credentials not configured");
-    authHeader = `Bearer ${apiKey}`;
-    extraHeaders["x-agency-id"] = agencyId;
-  }
+  if (!agencyId) throw new Error("Cloud Campaign agency ID not configured");
+  const token = await getCCToken();
   const res = await fetch(`${CC_BASE}${path}`, {
     ...opts,
     headers: {
       "Content-Type": "application/json",
-      "Authorization": authHeader,
-      ...extraHeaders,
+      "Authorization": `Bearer ${token}`,
+      "x-agency-id": agencyId,
       ...(opts.headers || {}),
     },
   });
