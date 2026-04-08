@@ -17,7 +17,7 @@ async function getCCToken(): Promise<string> {
   const res = await fetch(`${CC_BASE}/auth/token`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ apiKey, apiSecret }),
+    body: JSON.stringify({ key: apiKey, secret: apiSecret }),
   });
   if (!res.ok) {
     const text = await res.text();
