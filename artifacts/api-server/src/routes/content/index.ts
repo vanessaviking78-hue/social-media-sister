@@ -895,13 +895,18 @@ router.post("/cloud-campaign/push", async (req, res) => {
             sourceUrl: url,
           }));
 
-          const body = {
+          const body: Record<string, any> = {
             title: post.title,
-            captions: [{ text: post.caption, platform: "INSTAGRAM", index: 0 }],
-            media,
-            approved: true,
             postNow: false,
+            approved: true,
+            captions: [{ text: post.caption, platform: "INSTAGRAM", index: 0 }],
+            publishingSettings: {},
+            platformList: ["INSTAGRAM"],
+            accountIds: [],
           };
+          if (media.length > 0) {
+            body.media = media;
+          }
 
           console.log(`Pushing "${post.title}" to workspace ${wsId} with ${post.imageUrls.length} images`);
           const data = await ccFetch(`/workspace/${wsId}/content`, {
