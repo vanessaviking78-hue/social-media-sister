@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { Layers, BarChart3, Users, Download, Send, Image, Sparkles, Clock, TrendingUp, PieChart, AlertCircle } from "lucide-react";
+import { Layers, BarChart3, Users, Download, Send, Image, Sparkles, Clock, PieChart, AlertCircle } from "lucide-react";
 import { useAnalytics } from "@/lib/use-analytics";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -10,7 +10,6 @@ import {
 const POST_TYPE_LABELS: Record<string, string> = {
   carousel: "Carousel",
   "single-image": "Single Image",
-  "before-after": "Before & After",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -64,7 +63,6 @@ export default function Analytics() {
           <nav className="flex items-center gap-6 text-sm font-medium">
             <Link href="/" className="text-muted-foreground hover:text-foreground transition">Carousel</Link>
             <Link href="/single-image" className="text-muted-foreground hover:text-foreground transition">Single Image</Link>
-            <Link href="/before-after" className="text-muted-foreground hover:text-foreground transition">Before & After</Link>
             <Link href="/presets" className="text-muted-foreground hover:text-foreground transition">Presets</Link>
             <Link href="/captions" className="text-muted-foreground hover:text-foreground transition">Captions</Link>
             <Link href="/calendar" className="text-muted-foreground hover:text-foreground transition">Calendar</Link>
@@ -85,11 +83,10 @@ export default function Analytics() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
               <StatCard icon={<Sparkles className="w-5 h-5 text-pink-400" />} label="Total Posts Created" value={summary?.totalPosts ?? 0} />
               <StatCard icon={<BarChart3 className="w-5 h-5 text-purple-400" />} label="Carousels" value={summary?.totalCarousels ?? 0} />
               <StatCard icon={<Image className="w-5 h-5 text-cyan-400" />} label="Single Images" value={summary?.totalSingleImages ?? 0} />
-              <StatCard icon={<TrendingUp className="w-5 h-5 text-green-400" />} label="Before & Afters" value={summary?.totalBeforeAfters ?? 0} />
               <StatCard icon={<Download className="w-5 h-5 text-amber-400" />} label="Downloads This Month" value={summary?.monthDownloads ?? 0} />
             </div>
 

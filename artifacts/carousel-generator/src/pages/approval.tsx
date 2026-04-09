@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { Link } from "wouter";
 import {
   Layers, Plus, Trash2, Copy, Check, ExternalLink, Loader2,
-  ImagePlus, CalendarDays, BarChart3, ArrowLeftRight, PenTool,
+  ImagePlus, CalendarDays, BarChart3, PenTool,
   MessageSquareText, Eye, CheckCircle2, XCircle, Clock, ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -119,7 +119,6 @@ export default function Approval() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Link href="/"><Button variant="ghost" size="sm" className="text-muted-foreground"><Layers className="w-4 h-4 mr-2" />Carousel</Button></Link>
-            <Link href="/before-after"><Button variant="ghost" size="sm" className="text-muted-foreground"><ArrowLeftRight className="w-4 h-4 mr-2" />Before & After</Button></Link>
             <Link href="/single-image"><Button variant="ghost" size="sm" className="text-muted-foreground"><ImagePlus className="w-4 h-4 mr-2" />Single Image</Button></Link>
             <Link href="/presets"><Button variant="ghost" size="sm" className="text-muted-foreground"><PenTool className="w-4 h-4 mr-2" />Presets</Button></Link>
             <Link href="/captions"><Button variant="ghost" size="sm" className="text-muted-foreground"><MessageSquareText className="w-4 h-4 mr-2" />Captions</Button></Link>

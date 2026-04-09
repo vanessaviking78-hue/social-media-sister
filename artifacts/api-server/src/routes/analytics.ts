@@ -15,7 +15,6 @@ router.get("/analytics/summary", async (_req, res) => {
       totalPushed: sql<number>`count(*) filter (where ${activityLogTable.action} = 'pushed')::int`,
       totalCarousels: sql<number>`coalesce(sum(${activityLogTable.postCount}) filter (where ${activityLogTable.action} = 'generated' and ${activityLogTable.postType} = 'carousel'), 0)::int`,
       totalSingleImages: sql<number>`coalesce(sum(${activityLogTable.postCount}) filter (where ${activityLogTable.action} = 'generated' and ${activityLogTable.postType} = 'single-image'), 0)::int`,
-      totalBeforeAfters: sql<number>`coalesce(sum(${activityLogTable.postCount}) filter (where ${activityLogTable.action} = 'generated' and ${activityLogTable.postType} = 'before-after'), 0)::int`,
       totalPosts: sql<number>`coalesce(sum(${activityLogTable.postCount}) filter (where ${activityLogTable.action} = 'generated'), 0)::int`,
       totalSlides: sql<number>`coalesce(sum(${activityLogTable.slideCount}) filter (where ${activityLogTable.action} = 'generated'), 0)::int`,
     }).from(activityLogTable);

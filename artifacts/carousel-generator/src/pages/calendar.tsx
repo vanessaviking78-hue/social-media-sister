@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "wouter";
 import {
   Layers, ChevronLeft, ChevronRight, Plus, X, Trash2, Pencil, CalendarDays, MessageSquareText,
-  ImageIcon, ArrowLeftRight, GripVertical, Filter, BarChart3, ShieldCheck,
+  ImageIcon, GripVertical, Filter, BarChart3, ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,6 @@ import { useCalendar, type CalendarPost } from "@/lib/use-calendar";
 const POST_TYPES = [
   { value: "carousel", label: "Carousel", icon: Layers },
   { value: "single-image", label: "Single Image", icon: ImageIcon },
-  { value: "before-after", label: "Before & After", icon: ArrowLeftRight },
 ];
 
 const STATUS_OPTIONS = [
@@ -238,7 +237,6 @@ export default function Calendar() {
           <nav className="flex items-center gap-6 text-sm font-medium">
             <Link href="/" className="text-muted-foreground hover:text-white transition">Carousel</Link>
             <Link href="/single-image" className="text-muted-foreground hover:text-white transition">Single Image</Link>
-            <Link href="/before-after" className="text-muted-foreground hover:text-white transition">Before & After</Link>
             <Link href="/presets" className="text-muted-foreground hover:text-white transition">Presets</Link>
             <Link href="/captions" className="flex items-center gap-1 text-muted-foreground hover:text-white transition">
               <MessageSquareText className="w-4 h-4" />Captions

@@ -5,7 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthGate } from "@/components/auth-gate";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
-import BeforeAfter from "@/pages/before-after";
 import SingleImage from "@/pages/single-image";
 import Presets from "@/pages/presets";
 import CaptionLibrary from "@/pages/caption-library";
@@ -20,7 +19,6 @@ function ProtectedRouter() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/before-after" component={BeforeAfter} />
       <Route path="/single-image" component={SingleImage} />
       <Route path="/presets" component={Presets} />
       <Route path="/captions" component={CaptionLibrary} />

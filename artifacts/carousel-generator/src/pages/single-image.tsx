@@ -639,12 +639,6 @@ export default function SingleImage() {
               Carousel Mode
             </Button>
           </Link>
-          <Link href="/before-after">
-            <Button variant="ghost" size="sm" className="text-muted-foreground">
-              <ArrowLeftRight className="w-4 h-4 mr-2" />
-              Before & After
-            </Button>
-          </Link>
           <Link href="/presets">
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <Palette className="w-4 h-4 mr-2" />

@@ -150,9 +150,6 @@ export default function CaptionLibrary() {
             <Link href="/single-image" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
               Single Image
             </Link>
-            <Link href="/before-after" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Before & After
-            </Link>
             <Link href="/presets" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
               Presets
             </Link>

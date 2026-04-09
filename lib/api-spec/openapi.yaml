@@ -98,57 +98,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /content/before-after-captions:
-    post:
-      operationId: generateBeforeAfterCaptions
-      tags: [content]
-      summary: Generate before/after treatment captions
-      description: Generate compliance-aware captions and slide labels for before/after treatment photo posts using AI
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                treatments:
-                  type: array
-                  items:
-                    type: object
-                    properties:
-                      treatmentType:
-                        type: string
-                      area:
-                        type: string
-                      notes:
-                        type: string
-                    required:
-                      - treatmentType
-                  maxItems: 30
-                clientName:
-                  type: string
-                industry:
-                  type: string
-                tone:
-                  type: string
-                extraInstructions:
-                  type: string
-              required:
-                - treatments
-      responses:
-        "200":
-          description: SSE stream with progress events and final results
-          content:
-            text/event-stream:
-              schema:
-                type: string
-        "400":
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
 components:
   schemas:
     HealthStatus:
