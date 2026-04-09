@@ -68,6 +68,7 @@ export default function Analytics() {
             <Link href="/presets" className="text-muted-foreground hover:text-foreground transition">Presets</Link>
             <Link href="/captions" className="text-muted-foreground hover:text-foreground transition">Captions</Link>
             <Link href="/calendar" className="text-muted-foreground hover:text-foreground transition">Calendar</Link>
+            <Link href="/approval" className="text-muted-foreground hover:text-foreground transition">Approvals</Link>
           </nav>
         </div>
       </header>

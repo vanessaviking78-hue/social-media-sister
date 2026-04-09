@@ -24,6 +24,7 @@ import {
   BookOpen,
   CalendarDays,
   BarChart3,
+  ShieldCheck,
 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
@@ -906,6 +907,12 @@ export default function BeforeAfter() {
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <BarChart3 className="w-4 h-4 mr-2" />
               Analytics
+            </Button>
+          </Link>
+          <Link href="/approval">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <ShieldCheck className="w-4 h-4 mr-2" />
+              Approvals
             </Button>
           </Link>
           {currentStep === 4 && (

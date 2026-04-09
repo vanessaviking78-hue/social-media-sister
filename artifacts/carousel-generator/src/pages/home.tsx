@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
-import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus, CalendarDays, BarChart3 } from "lucide-react";
+import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus, CalendarDays, BarChart3, ShieldCheck } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -710,6 +710,12 @@ export default function Home() {
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <BarChart3 className="w-4 h-4 mr-2" />
               Analytics
+            </Button>
+          </Link>
+          <Link href="/approval">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <ShieldCheck className="w-4 h-4 mr-2" />
+              Approvals
             </Button>
           </Link>
           {result && (

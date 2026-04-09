@@ -12,6 +12,7 @@ import {
   Filter,
   Layers,
   ChevronLeft,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -160,6 +161,9 @@ export default function CaptionLibrary() {
             </Link>
             <Link href="/analytics" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
               Analytics
+            </Link>
+            <Link href="/approval" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              Approvals
             </Link>
           </nav>
         </div>

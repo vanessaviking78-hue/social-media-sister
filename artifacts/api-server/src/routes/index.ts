@@ -7,6 +7,7 @@ import presetsRouter from "./presets";
 import captionsRouter from "./captions";
 import calendarRouter from "./calendar";
 import analyticsRouter from "./analytics";
+import approvalRouter from "./approval";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(presetsRouter);
 router.use(captionsRouter);
 router.use(calendarRouter);
 router.use(analyticsRouter);
+router.use(approvalRouter);
 
 export default router;

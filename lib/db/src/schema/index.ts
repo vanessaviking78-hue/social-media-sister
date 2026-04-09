@@ -78,3 +78,32 @@ export const activityLogTable = pgTable("activity_log", {
 export const insertActivityLogSchema = createInsertSchema(activityLogTable).omit({ id: true, createdAt: true });
 export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
 export type ActivityLog = typeof activityLogTable.$inferSelect;
+
+export const approvalBatchesTable = pgTable("approval_batches", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  clientName: text("client_name").notNull().default(""),
+  presetId: integer("preset_id"),
+  token: text("token").notNull().unique(),
+  expiresAt: timestamp("expires_at"),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertApprovalBatchSchema = createInsertSchema(approvalBatchesTable).omit({ id: true, createdAt: true });
+export type InsertApprovalBatch = z.infer<typeof insertApprovalBatchSchema>;
+export type ApprovalBatch = typeof approvalBatchesTable.$inferSelect;
+
+export const approvalImagesTable = pgTable("approval_images", {
+  id: serial("id").primaryKey(),
+  batchId: integer("batch_id").notNull(),
+  imageUrl: text("image_url").notNull(),
+  status: text("status").notNull().default("pending"),
+  clientNote: text("client_note").notNull().default(""),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertApprovalImageSchema = createInsertSchema(approvalImagesTable).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertApprovalImage = z.infer<typeof insertApprovalImageSchema>;
+export type ApprovalImage = typeof approvalImagesTable.$inferSelect;
