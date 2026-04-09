@@ -18,6 +18,7 @@ import { CANVAS_WIDTH, CANVAS_HEIGHT, FONT_OPTIONS, CORNER_STYLES, LOGO_POSITION
 import { usePresets, type ClientPreset, type PresetStyleFields } from "@/lib/use-presets";
 import { useCaptions } from "@/lib/use-captions";
 import PresetSelector from "@/components/preset-selector";
+import ApprovedImagesPicker from "@/components/approved-images-picker";
 
 loadGoogleFonts();
 
@@ -752,6 +753,11 @@ export default function SingleImage() {
                   </p>
                 </div>
               </div>
+
+              <ApprovedImagesPicker
+                clientName={presets.find((p) => p.id === selectedPresetId)?.name || ""}
+                onAddImages={(files) => setPhotos((prev) => [...prev, ...files])}
+              />
 
               <div
                 className={`drop-zone-idle rounded-2xl min-h-[140px] flex flex-col items-center justify-center text-center cursor-pointer gap-3 px-8 ${isDraggingLogo ? "drop-zone-dragging" : ""}`}

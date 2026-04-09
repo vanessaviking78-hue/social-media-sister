@@ -45,6 +45,7 @@ import { Button } from "@/components/ui/button";
 import { usePresets, type ClientPreset, type PresetStyleFields } from "@/lib/use-presets";
 import { useCaptions } from "@/lib/use-captions";
 import PresetSelector from "@/components/preset-selector";
+import ApprovedImagesPicker from "@/components/approved-images-picker";
 
 const CANVAS_WIDTH = 1080;
 const CANVAS_HEIGHT = 1350;
@@ -1096,6 +1097,27 @@ export default function BeforeAfter() {
                   Or drag & drop multiple images (pairs will be created in order: 1st=before, 2nd=after, etc.)
                 </p>
               </div>
+
+              <ApprovedImagesPicker
+                clientName={presets.find((p) => p.id === selectedPresetId)?.name || ""}
+                onAddImages={(files) => {
+                  files.forEach((file) => {
+                    const url = URL.createObjectURL(file);
+                    setPairs((prev) => [...prev, {
+                      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+                      beforeFile: file,
+                      afterFile: file,
+                      beforeUrl: url,
+                      afterUrl: url,
+                      treatmentType: "",
+                      area: "",
+                      notes: "",
+                    }]);
+                  });
+                  toast.info("Approved images added as pairs. Replace the 'After' photos for each pair as needed.");
+                }}
+                label="Use Approved Images as Before Photos"
+              />
 
               {pairs.length > 0 && (
                 <div className="space-y-4">
