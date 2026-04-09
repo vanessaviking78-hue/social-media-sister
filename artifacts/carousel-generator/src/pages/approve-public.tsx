@@ -67,7 +67,7 @@ export default function ApprovePublic({ token }: { token: string }) {
             <ShieldCheck className="w-6 h-6 text-pink-500" />
             <span className="font-bold text-lg">
               <span className="text-white">CyberSuite</span>{" "}
-              <span className="text-pink-400">Image Approval</span>
+              <span className="text-pink-400">Image Approval System</span>
             </span>
           </div>
           <div className="flex items-center gap-3 text-sm text-zinc-400">

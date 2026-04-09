@@ -24,7 +24,7 @@ export default function Approval() {
   const [batchName, setBatchName] = useState("");
   const [selectedClient, setSelectedClient] = useState("");
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
-  const [expiryDays, setExpiryDays] = useState(7);
+  const [expiryDays, setExpiryDays] = useState<number | null>(7);
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,7 +75,7 @@ export default function Approval() {
       setSelectedClient("");
       setSelectedPresetId(null);
       setUploadedUrls([]);
-      setExpiryDays(7);
+      setExpiryDays(7 as number | null);
     } catch (e: any) {
       toast.error(e?.message || "Failed to create batch");
     }
@@ -167,8 +167,11 @@ export default function Approval() {
                   </Select>
                 </div>
                 <div>
-                  <Label>Link Expiry (days)</Label>
-                  <Input type="number" value={expiryDays} onChange={(e) => setExpiryDays(parseInt(e.target.value) || 7)} min={1} max={90} className="mt-1" />
+                  <Label>Link Expiry</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Input type="number" value={expiryDays ?? ""} onChange={(e) => setExpiryDays(e.target.value ? parseInt(e.target.value) || 7 : null)} min={1} max={90} placeholder="No expiry" className="flex-1" />
+                    <span className="text-sm text-muted-foreground whitespace-nowrap">{expiryDays ? `${expiryDays} day${expiryDays !== 1 ? "s" : ""}` : "Never expires"}</span>
+                  </div>
                 </div>
               </div>
               <div>
