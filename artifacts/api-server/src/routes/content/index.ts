@@ -805,10 +805,11 @@ router.get("/content/images/carousel-images/:filename", async (req, res) => {
 
 router.get("/cloud-campaign/status", async (_req, res) => {
   const apiKey = process.env.CLOUD_CAMPAIGN_API_KEY;
+  const apiSecret = process.env.CLOUD_CAMPAIGN_API_SECRET;
   const agencyId = process.env.CLOUD_CAMPAIGN_AGENCY_ID;
   const workspaceIds = (process.env.CLOUD_CAMPAIGN_WORKSPACE_IDS || "").split(",").filter(Boolean);
   res.json({
-    configured: !!(apiKey && agencyId),
+    configured: !!(apiKey && apiSecret),
     hasWorkspaces: workspaceIds.length > 0,
     workspaceCount: workspaceIds.length,
   });
