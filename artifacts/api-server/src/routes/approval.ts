@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { db } from "@workspace/db";
 import { approvalBatchesTable, approvalImagesTable } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
@@ -6,7 +6,15 @@ import { randomBytes } from "crypto";
 
 const router: IRouter = Router();
 
-router.post("/approval/batches", async (req, res) => {
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const appPassword = process.env.APP_PASSWORD;
+  if (!appPassword) return next();
+  const provided = req.headers["x-app-password"];
+  if (provided === appPassword) return next();
+  res.status(401).json({ error: "Unauthorized" });
+}
+
+router.post("/approval/batches", requireAuth, async (req, res) => {
   try {
     const { name, clientName, presetId, imageUrls, expiryDays } = req.body as {
       name: string;
@@ -48,7 +56,7 @@ router.post("/approval/batches", async (req, res) => {
   }
 });
 
-router.get("/approval/batches", async (_req, res) => {
+router.get("/approval/batches", requireAuth, async (_req, res) => {
   try {
     const batches = await db.select().from(approvalBatchesTable).orderBy(desc(approvalBatchesTable.createdAt));
 
@@ -69,9 +77,10 @@ router.get("/approval/batches", async (_req, res) => {
   }
 });
 
-router.get("/approval/batches/:id", async (req, res) => {
+router.get("/approval/batches/:id", requireAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid batch ID" });
     const [batch] = await db.select().from(approvalBatchesTable).where(eq(approvalBatchesTable.id, id));
     if (!batch) return res.status(404).json({ error: "Batch not found" });
 
@@ -83,9 +92,12 @@ router.get("/approval/batches/:id", async (req, res) => {
   }
 });
 
-router.delete("/approval/batches/:id", async (req, res) => {
+router.delete("/approval/batches/:id", requireAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid batch ID" });
+    const [existing] = await db.select({ id: approvalBatchesTable.id }).from(approvalBatchesTable).where(eq(approvalBatchesTable.id, id));
+    if (!existing) return res.status(404).json({ error: "Batch not found" });
     await db.delete(approvalImagesTable).where(eq(approvalImagesTable.batchId, id));
     await db.delete(approvalBatchesTable).where(eq(approvalBatchesTable.id, id));
     res.json({ success: true });
@@ -116,6 +128,9 @@ router.get("/approval/public/:token", async (req, res) => {
 router.put("/approval/public/:token/images/:imageId", async (req, res) => {
   try {
     const { token, imageId } = req.params;
+    const parsedImageId = parseInt(imageId);
+    if (isNaN(parsedImageId)) return res.status(400).json({ error: "Invalid image ID" });
+
     const { status, clientNote } = req.body as { status: "approved" | "rejected"; clientNote?: string };
 
     if (!["approved", "rejected"].includes(status)) {
@@ -131,7 +146,7 @@ router.put("/approval/public/:token/images/:imageId", async (req, res) => {
 
     const [updated] = await db.update(approvalImagesTable)
       .set({ status, clientNote: clientNote || "", updatedAt: new Date() })
-      .where(and(eq(approvalImagesTable.id, parseInt(imageId)), eq(approvalImagesTable.batchId, batch.id)))
+      .where(and(eq(approvalImagesTable.id, parsedImageId), eq(approvalImagesTable.batchId, batch.id)))
       .returning();
 
     if (!updated) return res.status(404).json({ error: "Image not found" });
@@ -149,7 +164,7 @@ router.put("/approval/public/:token/images/:imageId", async (req, res) => {
   }
 });
 
-router.get("/approval/approved-images", async (req, res) => {
+router.get("/approval/approved-images", requireAuth, async (req, res) => {
   try {
     const clientName = req.query.clientName as string || "";
     const batches = await db.select().from(approvalBatchesTable);

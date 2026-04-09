@@ -2,6 +2,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const BASE = import.meta.env.BASE_URL || "/";
 
+function authHeaders(): Record<string, string> {
+  const pw = sessionStorage.getItem("cybersuite-pw") || "";
+  return { "Content-Type": "application/json", "x-app-password": pw };
+}
+
 export interface ApprovalBatch {
   id: number;
   name: string;
@@ -37,7 +42,7 @@ export function useApprovalBatches() {
   const { data: batches = [], isLoading } = useQuery<ApprovalBatch[]>({
     queryKey: ["approval-batches"],
     queryFn: async () => {
-      const res = await fetch(`${BASE}api/approval/batches`);
+      const res = await fetch(`${BASE}api/approval/batches`, { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to load batches");
       return res.json();
     },
@@ -47,7 +52,7 @@ export function useApprovalBatches() {
     mutationFn: async (data: { name: string; clientName: string; presetId?: number; imageUrls: string[]; expiryDays?: number }) => {
       const res = await fetch(`${BASE}api/approval/batches`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify(data),
       });
       if (!res.ok) {
@@ -61,7 +66,7 @@ export function useApprovalBatches() {
 
   const deleteBatch = useMutation({
     mutationFn: async (id: number) => {
-      const res = await fetch(`${BASE}api/approval/batches/${id}`, { method: "DELETE" });
+      const res = await fetch(`${BASE}api/approval/batches/${id}`, { method: "DELETE", headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to delete batch");
       return res.json();
     },
@@ -75,7 +80,7 @@ export function useApprovalBatchDetail(id: number | null) {
   return useQuery<ApprovalBatchDetail>({
     queryKey: ["approval-batch-detail", id],
     queryFn: async () => {
-      const res = await fetch(`${BASE}api/approval/batches/${id}`);
+      const res = await fetch(`${BASE}api/approval/batches/${id}`, { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to load batch");
       return res.json();
     },
@@ -119,7 +124,7 @@ export function useApprovedImages(clientName: string) {
     queryKey: ["approved-images", clientName],
     queryFn: async () => {
       const params = clientName ? `?clientName=${encodeURIComponent(clientName)}` : "";
-      const res = await fetch(`${BASE}api/approval/approved-images${params}`);
+      const res = await fetch(`${BASE}api/approval/approved-images${params}`, { headers: authHeaders() });
       if (!res.ok) throw new Error("Failed to load approved images");
       return res.json();
     },

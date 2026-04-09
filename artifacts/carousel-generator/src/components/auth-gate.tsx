@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 
 const BASE = import.meta.env.BASE_URL || "/";
 const STORAGE_KEY = "cybersuite-auth";
+const PASSWORD_KEY = "cybersuite-pw";
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const [authed, setAuthed] = useState(false);
@@ -34,6 +35,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       const data = await res.json();
       if (data.valid) {
         sessionStorage.setItem(STORAGE_KEY, "true");
+        sessionStorage.setItem(PASSWORD_KEY, password);
         setAuthed(true);
       } else {
         setError("Incorrect password");
