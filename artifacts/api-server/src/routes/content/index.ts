@@ -878,13 +878,11 @@ router.post("/cloud-campaign/push", async (req, res) => {
       return res.status(400).json({ error: "No posts provided" });
     }
 
-    const targetIds = workspaceIds?.length
-      ? workspaceIds
-      : (process.env.CLOUD_CAMPAIGN_WORKSPACE_IDS || "").split(",").filter(Boolean);
-
-    if (targetIds.length === 0) {
-      return res.status(400).json({ error: "No workspace IDs configured" });
+    if (!workspaceIds || workspaceIds.length === 0) {
+      return res.status(400).json({ error: "No workspace selected. Please select a client preset with a linked Cloud Campaign workspace." });
     }
+
+    const targetIds = workspaceIds;
 
     const results: { workspace: string; post: string; status: string; id?: string; error?: string }[] = [];
 

@@ -189,8 +189,12 @@ export default function Home() {
       }
 
       const selectedPreset = presets.find((p) => p.id === selectedPresetId);
-      const pushBody: { posts: typeof posts; workspaceIds?: string[]; postType: string } = { posts, postType: "carousel" };
-      if (selectedPreset?.ccWorkspaceId) pushBody.workspaceIds = [selectedPreset.ccWorkspaceId];
+      if (!selectedPreset?.ccWorkspaceId) {
+        toast.error("Please select a client preset with a linked Cloud Campaign workspace first.", { id });
+        setCcPushing(false);
+        return;
+      }
+      const pushBody: { posts: typeof posts; workspaceIds: string[]; postType: string } = { posts, workspaceIds: [selectedPreset.ccWorkspaceId], postType: "carousel" };
       const resp = await fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/push`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
