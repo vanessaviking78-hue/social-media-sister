@@ -544,7 +544,7 @@ router.post("/content/generate-story-questions", async (req, res) => {
     const count = Math.min(Number(questionCount) || 10, 60);
     const topicList = Array.isArray(topics) ? topics.join(", ") : topics;
 
-    const systemPrompt = `${CONTENT_SYSTEM}
+    const systemPrompt = `${VANESSA_SYSTEM}
 
 You are now generating Instagram Story engagement questions. Write in a ${tone} tone of voice.${clientName ? ` You are creating content for "${clientName}".` : ""} The industry is: ${industry}.
 

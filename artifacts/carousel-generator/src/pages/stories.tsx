@@ -22,32 +22,39 @@ import {
   STORY_WIDTH, STORY_HEIGHT, drawStory, loadGoogleFonts,
 } from "@/lib/slide-utils";
 import { authHeaders } from "@/lib/use-approval";
+import { usePresets, type ClientPreset, type PresetStyleFields } from "@/lib/use-presets";
+import PresetSelector from "@/components/preset-selector";
 
 const BASE = import.meta.env.BASE_URL || "/";
 const api = (p: string) => `${BASE}api${p}`;
 
-const OVERLAY_COLORS = [
-  { label: "Pink", value: "rgba(236,72,153,0.75)" },
-  { label: "Purple", value: "rgba(139,92,246,0.75)" },
-  { label: "Blue", value: "rgba(59,130,246,0.75)" },
-  { label: "Teal", value: "rgba(20,184,166,0.75)" },
-  { label: "Rose", value: "rgba(244,63,94,0.75)" },
-  { label: "Amber", value: "rgba(245,158,11,0.75)" },
-  { label: "Emerald", value: "rgba(16,185,129,0.75)" },
-  { label: "Black", value: "rgba(0,0,0,0.7)" },
-  { label: "White", value: "rgba(255,255,255,0.8)" },
+const OVERLAY_BASE_COLORS = [
+  { label: "Pink", r: 236, g: 72, b: 153 },
+  { label: "Purple", r: 139, g: 92, b: 246 },
+  { label: "Blue", r: 59, g: 130, b: 246 },
+  { label: "Teal", r: 20, g: 184, b: 166 },
+  { label: "Rose", r: 244, g: 63, b: 94 },
+  { label: "Amber", r: 245, g: 158, b: 11 },
+  { label: "Emerald", r: 16, g: 185, b: 129 },
+  { label: "Black", r: 0, g: 0, b: 0 },
+  { label: "White", r: 255, g: 255, b: 255 },
 ];
+
+function makeOverlayRgba(color: { r: number; g: number; b: number }, opacity: number) {
+  return `rgba(${color.r},${color.g},${color.b},${opacity.toFixed(2)})`;
+}
 
 type Step = "content" | "design" | "generate";
 
 export default function Stories() {
   const [step, setStep] = useState<Step>("content");
   const [questions, setQuestions] = useState<string[]>([]);
-  const [selectedBg, setSelectedBg] = useState(STORY_BACKGROUNDS[0].file);
+  const [selectedBgs, setSelectedBgs] = useState<Set<string>>(new Set([STORY_BACKGROUNDS[0].file]));
   const [font, setFont] = useState(FONT_OPTIONS[0].value);
   const [fontSize, setFontSize] = useState(54);
   const [textColor, setTextColor] = useState("#ffffff");
-  const [overlayColor, setOverlayColor] = useState(OVERLAY_COLORS[0].value);
+  const [overlayBaseColor, setOverlayBaseColor] = useState(OVERLAY_BASE_COLORS[0]);
+  const [overlayOpacity, setOverlayOpacity] = useState(0.75);
   const [footerText, setFooterText] = useState("Type your answer in the comments");
   const [bgOpacity, setBgOpacity] = useState(0.7);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -72,9 +79,14 @@ export default function Stories() {
   const [downloading, setDownloading] = useState(false);
   const [pushing, setPushing] = useState(false);
 
+  const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
+  const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null>(null);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bgImgCache = useRef<Record<string, HTMLImageElement>>({});
   const logoImgRef = useRef<HTMLImageElement | null>(null);
+
+  const { presets, loading: presetsLoading, savePreset, updatePreset, deletePreset, uploadLogo } = usePresets();
 
   useEffect(() => { loadGoogleFonts(); }, []);
 
@@ -92,6 +104,58 @@ export default function Stories() {
     }
   }, [logoFile]);
 
+  const applyPreset = useCallback((preset: ClientPreset) => {
+    setSelectedPresetId(preset.id);
+    setFont(preset.fontFamily);
+    setFontSize(preset.fontSize);
+    setTextColor(preset.textColor);
+    setLogoPosition(preset.logoPosition);
+    setLogoSize(preset.logoSize);
+    if (preset.overlayColor) {
+      const match = preset.overlayColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+      if (match) {
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        const a = match[4] !== undefined ? parseFloat(match[4]) : 0.75;
+        const found = OVERLAY_BASE_COLORS.find((c) => c.r === r && c.g === g && c.b === b);
+        if (found) setOverlayBaseColor(found);
+        else setOverlayBaseColor({ label: "Custom", r, g, b });
+        setOverlayOpacity(a);
+      }
+    }
+    if (preset.logoUrl) {
+      setCurrentLogoUrl(preset.logoUrl);
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => { logoImgRef.current = img; setLogoUrl(preset.logoUrl!); };
+      img.src = preset.logoUrl;
+    } else {
+      setCurrentLogoUrl(null);
+      setLogoUrl("");
+      logoImgRef.current = null;
+    }
+    toast.success(`Loaded preset: ${preset.name}`);
+  }, []);
+
+  const getCurrentStyles = useCallback((): PresetStyleFields => ({
+    pageColor: "#000000",
+    overlayColor: makeOverlayRgba(overlayBaseColor, overlayOpacity),
+    fontFamily: font,
+    fontSize,
+    textColor,
+    lineSpacing: 1.15,
+    cornerStyle: "none",
+    cornerColor: "#d4af37",
+    gradientEnabled: false,
+    gradientStyle: "solid",
+    gradientColor: "#000000",
+    gradientPosition: "left",
+    textPosition: "center-center",
+    logoPosition,
+    logoSize,
+  }), [overlayBaseColor, overlayOpacity, font, fontSize, textColor, logoPosition, logoSize]);
+
   const loadBgImg = useCallback((file: string): Promise<HTMLImageElement> => {
     if (bgImgCache.current[file]) return Promise.resolve(bgImgCache.current[file]);
     return new Promise((resolve, reject) => {
@@ -103,8 +167,29 @@ export default function Stories() {
     });
   }, []);
 
+  const toggleBg = useCallback((file: string) => {
+    setSelectedBgs((prev) => {
+      const next = new Set(prev);
+      if (next.has(file)) {
+        if (next.size > 1) next.delete(file);
+      } else {
+        next.add(file);
+      }
+      return next;
+    });
+  }, []);
+
+  const selectAllBgs = useCallback(() => {
+    setSelectedBgs(new Set(STORY_BACKGROUNDS.map((b) => b.file)));
+  }, []);
+
+  const selectOneBg = useCallback((file: string) => {
+    setSelectedBgs(new Set([file]));
+  }, []);
+
   const generateAI = useCallback(async () => {
     if (!topics.trim()) { toast.error("Enter at least one topic"); return; }
+    if (questionCount < 1) { toast.error("Question count must be at least 1"); return; }
     setGenerating(true);
     setProgress("Starting...");
     try {
@@ -117,7 +202,10 @@ export default function Stories() {
           questionCount, extraInstructions,
         }),
       });
-      if (!res.ok) throw new Error("AI generation failed");
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => null);
+        throw new Error(errBody?.error || `AI generation failed (${res.status})`);
+      }
       const reader = res.body?.getReader();
       if (!reader) throw new Error("No stream");
       const decoder = new TextDecoder();
@@ -181,6 +269,10 @@ export default function Stories() {
     setQuestions((prev) => prev.filter((_, i) => i !== idx));
   }, []);
 
+  const overlayColor = makeOverlayRgba(overlayBaseColor, overlayOpacity);
+  const bgFilesKey = Array.from(selectedBgs).sort().join(",");
+  const bgFiles = React.useMemo(() => Array.from(selectedBgs), [bgFilesKey]);
+
   const renderPreviews = useCallback(async () => {
     if (questions.length === 0) return;
     try {
@@ -188,10 +280,11 @@ export default function Stories() {
       canvas.width = STORY_WIDTH;
       canvas.height = STORY_HEIGHT;
       const ctx = canvas.getContext("2d")!;
-      const bgImg = await loadBgImg(selectedBg);
+      const bgImgs = await Promise.all(bgFiles.map((f) => loadBgImg(f)));
       const urls: string[] = [];
-      for (const q of questions) {
-        drawStory(ctx, bgImg, q, font, fontSize, textColor, overlayColor, footerText, logoImgRef.current, logoPosition, logoSize, bgOpacity);
+      for (let i = 0; i < questions.length; i++) {
+        const bgImg = bgImgs[i % bgImgs.length];
+        drawStory(ctx, bgImg, questions[i], font, fontSize, textColor, overlayColor, footerText, logoImgRef.current, logoPosition, logoSize, bgOpacity);
         urls.push(canvas.toDataURL("image/png"));
       }
       setPreviews(urls);
@@ -199,7 +292,7 @@ export default function Stories() {
     } catch (err: any) {
       toast.error("Failed to render previews. Check your background image.");
     }
-  }, [questions, selectedBg, font, fontSize, textColor, overlayColor, footerText, logoPosition, logoSize, bgOpacity, loadBgImg]);
+  }, [questions, bgFiles, font, fontSize, textColor, overlayColor, footerText, logoPosition, logoSize, bgOpacity, loadBgImg]);
 
   useEffect(() => {
     if (step === "design" && questions.length > 0) {
@@ -462,27 +555,53 @@ export default function Stories() {
         )}
 
         {step === "design" && (
-          <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-8">
             <div className="space-y-5">
               <div className="bg-card border border-border/40 rounded-xl p-5">
-                <h3 className="text-sm font-semibold mb-3">Background Image</h3>
+                <PresetSelector
+                  presets={presets}
+                  loading={presetsLoading}
+                  selectedPresetId={selectedPresetId}
+                  onSelectPreset={applyPreset}
+                  onSavePreset={async (name, styles, ccWs, logoUrl, footnote) => { await savePreset(name, styles, ccWs, logoUrl, footnote); }}
+                  onUpdatePreset={async (id, name, styles, ccWs, logoUrl, footnote) => { await updatePreset(id, name, styles, ccWs, logoUrl, footnote); }}
+                  onDeletePreset={async (id) => { await deletePreset(id); if (selectedPresetId === id) setSelectedPresetId(null); }}
+                  getCurrentStyles={getCurrentStyles}
+                  logoFile={logoFile}
+                  uploadLogo={uploadLogo}
+                  currentLogoUrl={currentLogoUrl}
+                />
+              </div>
+
+              <div className="bg-card border border-border/40 rounded-xl p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold">Backgrounds ({selectedBgs.size} selected)</h3>
+                  <div className="flex gap-1">
+                    <Button variant="ghost" size="sm" className="text-xs h-6 px-2" onClick={selectAllBgs}>Use All</Button>
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground mb-2">Click to toggle. Multiple backgrounds rotate across stories.</p>
                 <div className="grid grid-cols-4 gap-2 max-h-[240px] overflow-y-auto">
-                  {STORY_BACKGROUNDS.map((bg) => (
-                    <button
-                      key={bg.file}
-                      onClick={() => setSelectedBg(bg.file)}
-                      className={`relative aspect-[9/16] rounded-lg overflow-hidden border-2 transition-all ${
-                        selectedBg === bg.file ? "border-pink-500 ring-2 ring-pink-500/30" : "border-border/30 hover:border-white/30"
-                      }`}
-                    >
-                      <img src={`${BASE}story-backgrounds/${bg.file}`} alt={bg.label} className="w-full h-full object-cover" />
-                      {selectedBg === bg.file && (
-                        <div className="absolute inset-0 bg-pink-500/20 flex items-center justify-center">
-                          <Check className="w-5 h-5 text-white" />
-                        </div>
-                      )}
-                    </button>
-                  ))}
+                  {STORY_BACKGROUNDS.map((bg) => {
+                    const isSelected = selectedBgs.has(bg.file);
+                    return (
+                      <button
+                        key={bg.file}
+                        onClick={() => toggleBg(bg.file)}
+                        onDoubleClick={() => selectOneBg(bg.file)}
+                        className={`relative aspect-[9/16] rounded-lg overflow-hidden border-2 transition-all ${
+                          isSelected ? "border-pink-500 ring-2 ring-pink-500/30" : "border-border/30 hover:border-white/30 opacity-50"
+                        }`}
+                      >
+                        <img src={`${BASE}story-backgrounds/${bg.file}`} alt={bg.label} className="w-full h-full object-cover" />
+                        {isSelected && (
+                          <div className="absolute inset-0 bg-pink-500/20 flex items-center justify-center">
+                            <Check className="w-5 h-5 text-white" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -494,19 +613,21 @@ export default function Stories() {
 
               <div className="bg-card border border-border/40 rounded-xl p-5">
                 <h3 className="text-sm font-semibold mb-3">Overlay Colour</h3>
-                <div className="flex flex-wrap gap-2">
-                  {OVERLAY_COLORS.map((c) => (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {OVERLAY_BASE_COLORS.map((c) => (
                     <button
-                      key={c.value}
-                      onClick={() => setOverlayColor(c.value)}
+                      key={c.label}
+                      onClick={() => setOverlayBaseColor(c)}
                       className={`w-8 h-8 rounded-full border-2 transition-all ${
-                        overlayColor === c.value ? "border-white scale-110" : "border-transparent hover:border-white/40"
+                        overlayBaseColor.label === c.label ? "border-white scale-110" : "border-transparent hover:border-white/40"
                       }`}
-                      style={{ background: c.value }}
+                      style={{ background: `rgb(${c.r},${c.g},${c.b})` }}
                       title={c.label}
                     />
                   ))}
                 </div>
+                <h3 className="text-sm font-semibold mb-2">Overlay Opacity: {Math.round(overlayOpacity * 100)}%</h3>
+                <Slider value={[overlayOpacity * 100]} onValueChange={(v) => setOverlayOpacity(v[0] / 100)} min={20} max={100} step={5} />
               </div>
 
               <div className="bg-card border border-border/40 rounded-xl p-5 space-y-4">
