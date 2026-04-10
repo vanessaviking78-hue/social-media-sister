@@ -81,6 +81,8 @@ export default function Stories() {
 
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
   const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null>(null);
+  const [ccWorkspaces, setCcWorkspaces] = useState<{ id: string; name: string }[]>([]);
+  const [selectedCcWorkspace, setSelectedCcWorkspace] = useState<string>("");
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bgImgCache = useRef<Record<string, HTMLImageElement>>({});
@@ -89,6 +91,13 @@ export default function Stories() {
   const { presets, loading: presetsLoading, savePreset, updatePreset, deletePreset, uploadLogo } = usePresets();
 
   useEffect(() => { loadGoogleFonts(); }, []);
+
+  useEffect(() => {
+    fetch(api("/cloud-campaign/workspaces"), { headers: authHeaders() })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.workspaces) setCcWorkspaces(d.workspaces); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (logoFile) {
@@ -134,6 +143,9 @@ export default function Stories() {
       setCurrentLogoUrl(null);
       setLogoUrl("");
       logoImgRef.current = null;
+    }
+    if (preset.ccWorkspaceId) {
+      setSelectedCcWorkspace(preset.ccWorkspaceId);
     }
     toast.success(`Loaded preset: ${preset.name}`);
   }, []);
@@ -344,6 +356,7 @@ export default function Stories() {
 
   const pushToCC = useCallback(async () => {
     if (previews.length === 0) { toast.error("No stories to push"); return; }
+    if (!selectedCcWorkspace) { toast.error("Please select a Cloud Campaign workspace first"); return; }
     setPushing(true);
     try {
       const allUploadResults: { name: string; url: string }[] = [];
@@ -362,11 +375,6 @@ export default function Stories() {
         allUploadResults.push(...results);
       }
 
-      const wsRes = await fetch(api("/cloud-campaign/workspaces"), { headers: authHeaders() });
-      if (!wsRes.ok) throw new Error("Failed to fetch workspaces");
-      const { workspaces } = await wsRes.json();
-      if (!workspaces || workspaces.length === 0) throw new Error("No workspaces configured");
-
       const posts = previews.map((_, i) => ({
         title: `Story: ${questions[i]?.slice(0, 50) || `Story ${i + 1}`}`,
         caption: questions[i] || "",
@@ -376,17 +384,18 @@ export default function Stories() {
       const pushRes = await fetch(api("/cloud-campaign/push"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ posts, workspaceIds: workspaces.map((w: any) => w.id), postType: "story" }),
+        body: JSON.stringify({ posts, workspaceIds: [selectedCcWorkspace], postType: "story" }),
       });
       if (!pushRes.ok) throw new Error("Push failed");
       const pushData = await pushRes.json();
-      toast.success(`Pushed ${pushData.summary?.succeeded || 0} stories to Cloud Campaign`);
+      const wsName = ccWorkspaces.find((w) => w.id === selectedCcWorkspace)?.name || "selected workspace";
+      toast.success(`Pushed ${pushData.summary?.succeeded || 0} stories to ${wsName}`);
     } catch (err: any) {
       toast.error(err.message || "Push failed");
     } finally {
       setPushing(false);
     }
-  }, [previews, questions, clientName]);
+  }, [previews, questions, selectedCcWorkspace, ccWorkspaces]);
 
   const exportCsv = useCallback(() => {
     if (questions.length === 0) return;
@@ -742,7 +751,20 @@ export default function Stories() {
                 {downloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
                 Download ZIP ({previews.length} stories)
               </Button>
-              <Button onClick={pushToCC} disabled={pushing || previews.length === 0} variant="secondary">
+              {ccWorkspaces.length > 0 && (
+                <Select value={selectedCcWorkspace || "__none__"} onValueChange={(v) => setSelectedCcWorkspace(v === "__none__" ? "" : v)}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Select workspace" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__" className="text-muted-foreground">Select workspace</SelectItem>
+                    {ccWorkspaces.map((ws) => (
+                      <SelectItem key={ws.id} value={ws.id}>{ws.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <Button onClick={pushToCC} disabled={pushing || previews.length === 0 || !selectedCcWorkspace} variant="secondary">
                 {pushing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CloudUpload className="w-4 h-4 mr-2" />}
                 Push to Cloud Campaign
               </Button>
