@@ -261,8 +261,11 @@ export default function Stories() {
 
   const addManual = useCallback(() => {
     if (!manualQuestion.trim()) return;
-    setQuestions((prev) => [...prev, manualQuestion.trim()]);
+    const lines = manualQuestion.split("\n").map((l) => l.trim()).filter(Boolean);
+    if (lines.length === 0) return;
+    setQuestions((prev) => [...prev, ...lines]);
     setManualQuestion("");
+    toast.success(`${lines.length} question${lines.length > 1 ? "s" : ""} added`);
   }, [manualQuestion]);
 
   const removeQuestion = useCallback((idx: number) => {
@@ -281,9 +284,14 @@ export default function Stories() {
       canvas.height = STORY_HEIGHT;
       const ctx = canvas.getContext("2d")!;
       const bgImgs = await Promise.all(bgFiles.map((f) => loadBgImg(f)));
+      const shuffled = [...bgImgs];
+      for (let j = shuffled.length - 1; j > 0; j--) {
+        const k = Math.floor(Math.random() * (j + 1));
+        [shuffled[j], shuffled[k]] = [shuffled[k], shuffled[j]];
+      }
       const urls: string[] = [];
       for (let i = 0; i < questions.length; i++) {
-        const bgImg = bgImgs[i % bgImgs.length];
+        const bgImg = shuffled[i % shuffled.length];
         drawStory(ctx, bgImg, questions[i], font, fontSize, textColor, overlayColor, footerText, logoImgRef.current, logoPosition, logoSize, bgOpacity);
         urls.push(canvas.toDataURL("image/png"));
       }
@@ -502,15 +510,15 @@ export default function Stories() {
                   <PenTool className="w-5 h-5 text-cyan-400" />
                   Add Manually
                 </h2>
-                <div className="flex gap-2">
-                  <Input
+                <div className="space-y-2">
+                  <Textarea
                     value={manualQuestion}
                     onChange={(e) => setManualQuestion(e.target.value)}
-                    placeholder="Type a question..."
-                    onKeyDown={(e) => { if (e.key === "Enter") addManual(); }}
+                    placeholder="Type one question per line..."
+                    rows={4}
                   />
-                  <Button onClick={addManual} disabled={!manualQuestion.trim()}>
-                    <Plus className="w-4 h-4" />
+                  <Button onClick={addManual} disabled={!manualQuestion.trim()} className="w-full" variant="outline">
+                    <Plus className="w-4 h-4 mr-2" />Add Questions
                   </Button>
                 </div>
               </div>
