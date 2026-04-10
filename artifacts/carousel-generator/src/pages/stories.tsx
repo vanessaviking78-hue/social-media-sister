@@ -1,0 +1,647 @@
+import React, { useState, useCallback, useRef, useEffect } from "react";
+import { Link } from "wouter";
+import {
+  Layers, Loader2, Download, X, Sparkles, Wand2,
+  BookOpen, ImagePlus, CalendarDays, BarChart3, ShieldCheck,
+  MessageSquareText, PenTool, ChevronLeft, ChevronRight,
+  CloudUpload, FileText, Plus, Palette, Check, Copy,
+} from "lucide-react";
+import Papa from "papaparse";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
+import {
+  FONT_OPTIONS, LOGO_POSITIONS, STORY_BACKGROUNDS,
+  STORY_WIDTH, STORY_HEIGHT, drawStory, loadGoogleFonts,
+} from "@/lib/slide-utils";
+import { authHeaders } from "@/lib/use-approval";
+
+const BASE = import.meta.env.BASE_URL || "/";
+const api = (p: string) => `${BASE}api${p}`;
+
+const OVERLAY_COLORS = [
+  { label: "Pink", value: "rgba(236,72,153,0.75)" },
+  { label: "Purple", value: "rgba(139,92,246,0.75)" },
+  { label: "Blue", value: "rgba(59,130,246,0.75)" },
+  { label: "Teal", value: "rgba(20,184,166,0.75)" },
+  { label: "Rose", value: "rgba(244,63,94,0.75)" },
+  { label: "Amber", value: "rgba(245,158,11,0.75)" },
+  { label: "Emerald", value: "rgba(16,185,129,0.75)" },
+  { label: "Black", value: "rgba(0,0,0,0.7)" },
+  { label: "White", value: "rgba(255,255,255,0.8)" },
+];
+
+type Step = "content" | "design" | "generate";
+
+export default function Stories() {
+  const [step, setStep] = useState<Step>("content");
+  const [questions, setQuestions] = useState<string[]>([]);
+  const [selectedBg, setSelectedBg] = useState(STORY_BACKGROUNDS[0].file);
+  const [font, setFont] = useState(FONT_OPTIONS[0].value);
+  const [fontSize, setFontSize] = useState(54);
+  const [textColor, setTextColor] = useState("#ffffff");
+  const [overlayColor, setOverlayColor] = useState(OVERLAY_COLORS[0].value);
+  const [footerText, setFooterText] = useState("Type your answer in the comments");
+  const [bgOpacity, setBgOpacity] = useState(0.7);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoUrl, setLogoUrl] = useState("");
+  const [logoPosition, setLogoPosition] = useState("top-right");
+  const [logoSize, setLogoSize] = useState(120);
+
+  const [clientName, setClientName] = useState("");
+  const [industry, setIndustry] = useState("aesthetics");
+  const [tone, setTone] = useState("warm & professional");
+  const [topics, setTopics] = useState("");
+  const [questionCount, setQuestionCount] = useState(10);
+  const [extraInstructions, setExtraInstructions] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [progress, setProgress] = useState("");
+
+  const [csvText, setCsvText] = useState("");
+  const [manualQuestion, setManualQuestion] = useState("");
+
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [previewIdx, setPreviewIdx] = useState(0);
+  const [downloading, setDownloading] = useState(false);
+  const [pushing, setPushing] = useState(false);
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const bgImgCache = useRef<Record<string, HTMLImageElement>>({});
+  const logoImgRef = useRef<HTMLImageElement | null>(null);
+
+  useEffect(() => { loadGoogleFonts(); }, []);
+
+  useEffect(() => {
+    if (logoFile) {
+      const url = URL.createObjectURL(logoFile);
+      setLogoUrl(url);
+      const img = new Image();
+      img.onload = () => { logoImgRef.current = img; };
+      img.src = url;
+      return () => URL.revokeObjectURL(url);
+    } else {
+      logoImgRef.current = null;
+      setLogoUrl("");
+    }
+  }, [logoFile]);
+
+  const loadBgImg = useCallback((file: string): Promise<HTMLImageElement> => {
+    if (bgImgCache.current[file]) return Promise.resolve(bgImgCache.current[file]);
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => { bgImgCache.current[file] = img; resolve(img); };
+      img.onerror = reject;
+      img.src = `${BASE}story-backgrounds/${file}`;
+    });
+  }, []);
+
+  const generateAI = useCallback(async () => {
+    if (!topics.trim()) { toast.error("Enter at least one topic"); return; }
+    setGenerating(true);
+    setProgress("Starting...");
+    try {
+      const res = await fetch(api("/content/generate-story-questions"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({
+          clientName, industry, tone,
+          topics: topics.split(",").map((t) => t.trim()).filter(Boolean),
+          questionCount, extraInstructions,
+        }),
+      });
+      if (!res.ok) throw new Error("AI generation failed");
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("No stream");
+      const decoder = new TextDecoder();
+      let buf = "";
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split("\n");
+        buf = lines.pop() || "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.type === "progress") setProgress(`Generating ${data.generated}/${data.total}...`);
+            if (data.type === "complete" && data.questions) {
+              setQuestions((prev) => [...prev, ...data.questions]);
+              toast.success(`${data.questions.length} questions generated`);
+            }
+            if (data.type === "error") toast.error(data.message);
+          } catch {}
+        }
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Generation failed");
+    } finally {
+      setGenerating(false);
+      setProgress("");
+    }
+  }, [clientName, industry, tone, topics, questionCount, extraInstructions]);
+
+  const handleCsvUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    Papa.parse(file, {
+      complete: (results) => {
+        const parsed = results.data.flat().filter((v: any) => typeof v === "string" && v.trim());
+        setQuestions((prev) => [...prev, ...parsed as string[]]);
+        toast.success(`${parsed.length} questions imported from CSV`);
+      },
+    });
+    e.target.value = "";
+  }, []);
+
+  const handleCsvPaste = useCallback(() => {
+    if (!csvText.trim()) return;
+    const results = Papa.parse(csvText);
+    const parsed = results.data.flat().filter((v: any) => typeof v === "string" && v.trim());
+    setQuestions((prev) => [...prev, ...parsed as string[]]);
+    toast.success(`${parsed.length} questions added`);
+    setCsvText("");
+  }, [csvText]);
+
+  const addManual = useCallback(() => {
+    if (!manualQuestion.trim()) return;
+    setQuestions((prev) => [...prev, manualQuestion.trim()]);
+    setManualQuestion("");
+  }, [manualQuestion]);
+
+  const removeQuestion = useCallback((idx: number) => {
+    setQuestions((prev) => prev.filter((_, i) => i !== idx));
+  }, []);
+
+  const renderPreviews = useCallback(async () => {
+    if (questions.length === 0) return;
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = STORY_WIDTH;
+      canvas.height = STORY_HEIGHT;
+      const ctx = canvas.getContext("2d")!;
+      const bgImg = await loadBgImg(selectedBg);
+      const urls: string[] = [];
+      for (const q of questions) {
+        drawStory(ctx, bgImg, q, font, fontSize, textColor, overlayColor, footerText, logoImgRef.current, logoPosition, logoSize, bgOpacity);
+        urls.push(canvas.toDataURL("image/png"));
+      }
+      setPreviews(urls);
+      setPreviewIdx(0);
+    } catch (err: any) {
+      toast.error("Failed to render previews. Check your background image.");
+    }
+  }, [questions, selectedBg, font, fontSize, textColor, overlayColor, footerText, logoPosition, logoSize, bgOpacity, loadBgImg]);
+
+  useEffect(() => {
+    if (step === "design" && questions.length > 0) {
+      const timer = setTimeout(renderPreviews, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [step, renderPreviews, questions.length]);
+
+  useEffect(() => {
+    if (step === "generate" && questions.length > 0) {
+      renderPreviews();
+    }
+  }, [step]);
+
+  const downloadZip = useCallback(async () => {
+    if (previews.length === 0) { toast.error("No stories to download"); return; }
+    setDownloading(true);
+    try {
+      const zip = new JSZip();
+      const folder = zip.folder("stories")!;
+      for (let i = 0; i < previews.length; i++) {
+        const data = previews[i].split(",")[1];
+        folder.file(`story-${String(i + 1).padStart(2, "0")}.png`, data, { base64: true });
+      }
+      const blob = await zip.generateAsync({ type: "blob" });
+      saveAs(blob, `stories-${clientName || "export"}-${Date.now()}.zip`);
+      toast.success("ZIP downloaded");
+      try {
+        await fetch(api("/analytics/log"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({ action: "downloaded", postType: "story", clientName, postCount: previews.length }),
+        });
+      } catch {}
+    } catch (err: any) {
+      toast.error(err.message || "Download failed");
+    } finally {
+      setDownloading(false);
+    }
+  }, [previews, clientName]);
+
+  const pushToCC = useCallback(async () => {
+    if (previews.length === 0) { toast.error("No stories to push"); return; }
+    setPushing(true);
+    try {
+      const allUploadResults: { name: string; url: string }[] = [];
+      const batchSize = 5;
+      for (let i = 0; i < previews.length; i += batchSize) {
+        const batch = previews.slice(i, i + batchSize);
+        const uploadRes = await fetch(api("/content/upload-image"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({
+            images: batch.map((p, j) => ({ name: `story-${i + j + 1}.png`, base64: p })),
+          }),
+        });
+        if (!uploadRes.ok) throw new Error("Image upload failed");
+        const { results } = await uploadRes.json();
+        allUploadResults.push(...results);
+      }
+
+      const wsRes = await fetch(api("/cloud-campaign/workspaces"), { headers: authHeaders() });
+      if (!wsRes.ok) throw new Error("Failed to fetch workspaces");
+      const { workspaces } = await wsRes.json();
+      if (!workspaces || workspaces.length === 0) throw new Error("No workspaces configured");
+
+      const posts = previews.map((_, i) => ({
+        title: `Story: ${questions[i]?.slice(0, 50) || `Story ${i + 1}`}`,
+        caption: questions[i] || "",
+        imageUrls: [allUploadResults[i]?.url].filter(Boolean),
+      }));
+
+      const pushRes = await fetch(api("/cloud-campaign/push"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ posts, workspaceIds: workspaces.map((w: any) => w.id), postType: "story" }),
+      });
+      if (!pushRes.ok) throw new Error("Push failed");
+      const pushData = await pushRes.json();
+      toast.success(`Pushed ${pushData.summary?.succeeded || 0} stories to Cloud Campaign`);
+    } catch (err: any) {
+      toast.error(err.message || "Push failed");
+    } finally {
+      setPushing(false);
+    }
+  }, [previews, questions, clientName]);
+
+  const exportCsv = useCallback(() => {
+    if (questions.length === 0) return;
+    const csv = Papa.unparse(questions.map((q) => [q]));
+    const blob = new Blob([csv], { type: "text/csv" });
+    saveAs(blob, `story-questions-${Date.now()}.csv`);
+    toast.success("CSV exported");
+  }, [questions]);
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-4 px-6 md:px-10 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center text-primary-foreground">
+            <BookOpen className="w-5 h-5" />
+          </div>
+          <h1 className="font-sans text-3xl font-bold tracking-tight">
+            <span className="text-white">Social Media Sister's</span>{" "}
+            <span className="text-pink-400">CyberSuite</span>
+          </h1>
+          <Badge variant="secondary" className="bg-accent text-xs">Stories</Badge>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link href="/"><Button variant="ghost" size="sm" className="text-muted-foreground"><Layers className="w-4 h-4 mr-2" />Carousel</Button></Link>
+          <Link href="/single-image"><Button variant="ghost" size="sm" className="text-muted-foreground"><ImagePlus className="w-4 h-4 mr-2" />Single Image</Button></Link>
+          <Link href="/presets"><Button variant="ghost" size="sm" className="text-muted-foreground"><Palette className="w-4 h-4 mr-2" />Presets</Button></Link>
+          <Link href="/captions"><Button variant="ghost" size="sm" className="text-muted-foreground"><MessageSquareText className="w-4 h-4 mr-2" />Captions</Button></Link>
+          <Link href="/calendar"><Button variant="ghost" size="sm" className="text-muted-foreground"><CalendarDays className="w-4 h-4 mr-2" />Calendar</Button></Link>
+          <Link href="/analytics"><Button variant="ghost" size="sm" className="text-muted-foreground"><BarChart3 className="w-4 h-4 mr-2" />Analytics</Button></Link>
+          <Link href="/approval"><Button variant="ghost" size="sm" className="text-muted-foreground"><ShieldCheck className="w-4 h-4 mr-2" />Approvals</Button></Link>
+        </div>
+      </header>
+
+      <main className="max-w-[1400px] mx-auto px-6 py-8">
+        <div className="flex items-center gap-4 mb-8">
+          {(["content", "design", "generate"] as Step[]).map((s, i) => (
+            <button
+              key={s}
+              onClick={() => {
+                if (s === "design" && questions.length === 0) { toast.error("Add some questions first"); return; }
+                if (s === "generate" && questions.length === 0) { toast.error("Add some questions first"); return; }
+                setStep(s);
+              }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
+                step === s ? "bg-pink-500/20 text-pink-400 ring-1 ring-pink-500/30" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                step === s ? "bg-pink-500 text-white" : "bg-muted text-muted-foreground"
+              }`}>{i + 1}</span>
+              {s === "content" ? "Content" : s === "design" ? "Design" : "Generate"}
+            </button>
+          ))}
+          <div className="flex-1" />
+          <span className="text-sm text-muted-foreground">{questions.length} question{questions.length !== 1 ? "s" : ""}</span>
+        </div>
+
+        {step === "content" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <div className="bg-card border border-border/40 rounded-xl p-6">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-pink-400" />
+                  AI Question Generator
+                </h2>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm mb-1.5 block">Client Name</Label>
+                      <Input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="e.g. Skin Clinic London" />
+                    </div>
+                    <div>
+                      <Label className="text-sm mb-1.5 block">Industry</Label>
+                      <Input value={industry} onChange={(e) => setIndustry(e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-sm mb-1.5 block">Tone</Label>
+                      <Input value={tone} onChange={(e) => setTone(e.target.value)} />
+                    </div>
+                    <div>
+                      <Label className="text-sm mb-1.5 block">Number of Questions</Label>
+                      <Input type="number" min={1} max={60} value={questionCount} onChange={(e) => setQuestionCount(Number(e.target.value))} />
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm mb-1.5 block">Topics (comma-separated)</Label>
+                    <Input value={topics} onChange={(e) => setTopics(e.target.value)} placeholder="skincare, treatments, wellness tips" />
+                  </div>
+                  <div>
+                    <Label className="text-sm mb-1.5 block">Extra Instructions (optional)</Label>
+                    <Textarea value={extraInstructions} onChange={(e) => setExtraInstructions(e.target.value)} rows={2} placeholder="Any specific style or requirements..." />
+                  </div>
+                  <Button onClick={generateAI} disabled={generating} className="w-full">
+                    {generating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{progress}</> : <><Wand2 className="w-4 h-4 mr-2" />Generate Questions</>}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="bg-card border border-border/40 rounded-xl p-6">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-purple-400" />
+                  Import from CSV
+                </h2>
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm mb-1.5 block">Upload CSV File</Label>
+                    <Input type="file" accept=".csv" onChange={handleCsvUpload} />
+                  </div>
+                  <div className="text-xs text-muted-foreground text-center">or paste CSV text below</div>
+                  <Textarea value={csvText} onChange={(e) => setCsvText(e.target.value)} rows={3} placeholder="Question 1&#10;Question 2&#10;Question 3" />
+                  <Button variant="outline" onClick={handleCsvPaste} disabled={!csvText.trim()} className="w-full">
+                    <Plus className="w-4 h-4 mr-2" />Import Pasted Questions
+                  </Button>
+                </div>
+              </div>
+
+              <div className="bg-card border border-border/40 rounded-xl p-6">
+                <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <PenTool className="w-5 h-5 text-cyan-400" />
+                  Add Manually
+                </h2>
+                <div className="flex gap-2">
+                  <Input
+                    value={manualQuestion}
+                    onChange={(e) => setManualQuestion(e.target.value)}
+                    placeholder="Type a question..."
+                    onKeyDown={(e) => { if (e.key === "Enter") addManual(); }}
+                  />
+                  <Button onClick={addManual} disabled={!manualQuestion.trim()}>
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border/40 rounded-xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Questions ({questions.length})</h2>
+                {questions.length > 0 && (
+                  <Button variant="ghost" size="sm" className="text-red-400" onClick={() => setQuestions([])}>
+                    Clear All
+                  </Button>
+                )}
+              </div>
+              {questions.length === 0 ? (
+                <div className="text-center py-16 text-muted-foreground">
+                  <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                  <p>No questions yet. Use AI, CSV, or add manually.</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[600px] overflow-y-auto pr-2">
+                  {questions.map((q, i) => (
+                    <div key={i} className="flex items-center gap-2 p-3 rounded-lg bg-background/50 border border-border/20 group">
+                      <span className="text-xs text-muted-foreground w-6 text-center flex-shrink-0">{i + 1}</span>
+                      <span className="text-sm flex-1">{q}</span>
+                      <button onClick={() => removeQuestion(i)} className="opacity-0 group-hover:opacity-100 transition text-red-400 hover:text-red-300">
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {questions.length > 0 && (
+                <div className="mt-4 flex gap-2">
+                  <Button onClick={() => setStep("design")} className="flex-1">
+                    Next: Design <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {step === "design" && (
+          <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-8">
+            <div className="space-y-5">
+              <div className="bg-card border border-border/40 rounded-xl p-5">
+                <h3 className="text-sm font-semibold mb-3">Background Image</h3>
+                <div className="grid grid-cols-4 gap-2 max-h-[240px] overflow-y-auto">
+                  {STORY_BACKGROUNDS.map((bg) => (
+                    <button
+                      key={bg.file}
+                      onClick={() => setSelectedBg(bg.file)}
+                      className={`relative aspect-[9/16] rounded-lg overflow-hidden border-2 transition-all ${
+                        selectedBg === bg.file ? "border-pink-500 ring-2 ring-pink-500/30" : "border-border/30 hover:border-white/30"
+                      }`}
+                    >
+                      <img src={`${BASE}story-backgrounds/${bg.file}`} alt={bg.label} className="w-full h-full object-cover" />
+                      {selectedBg === bg.file && (
+                        <div className="absolute inset-0 bg-pink-500/20 flex items-center justify-center">
+                          <Check className="w-5 h-5 text-white" />
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-card border border-border/40 rounded-xl p-5">
+                <h3 className="text-sm font-semibold mb-3">Background Opacity</h3>
+                <Slider value={[bgOpacity * 100]} onValueChange={(v) => setBgOpacity(v[0] / 100)} min={20} max={100} step={5} />
+                <span className="text-xs text-muted-foreground mt-1 block">{Math.round(bgOpacity * 100)}%</span>
+              </div>
+
+              <div className="bg-card border border-border/40 rounded-xl p-5">
+                <h3 className="text-sm font-semibold mb-3">Overlay Colour</h3>
+                <div className="flex flex-wrap gap-2">
+                  {OVERLAY_COLORS.map((c) => (
+                    <button
+                      key={c.value}
+                      onClick={() => setOverlayColor(c.value)}
+                      className={`w-8 h-8 rounded-full border-2 transition-all ${
+                        overlayColor === c.value ? "border-white scale-110" : "border-transparent hover:border-white/40"
+                      }`}
+                      style={{ background: c.value }}
+                      title={c.label}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-card border border-border/40 rounded-xl p-5 space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold mb-2">Font</h3>
+                  <Select value={font} onValueChange={setFont}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {FONT_OPTIONS.map((f) => (
+                        <SelectItem key={f.value} value={f.value}>
+                          <span style={{ fontFamily: f.value }}>{f.label}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold mb-2">Font Size: {fontSize}px</h3>
+                  <Slider value={[fontSize]} onValueChange={(v) => setFontSize(v[0])} min={28} max={80} step={2} />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold mb-2">Text Colour</h3>
+                  <Input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-12 h-8 p-0 border-0" />
+                </div>
+              </div>
+
+              <div className="bg-card border border-border/40 rounded-xl p-5">
+                <h3 className="text-sm font-semibold mb-2">Footer Text</h3>
+                <Input value={footerText} onChange={(e) => setFooterText(e.target.value)} placeholder="Type your answer in the comments" />
+              </div>
+
+              <div className="bg-card border border-border/40 rounded-xl p-5 space-y-3">
+                <h3 className="text-sm font-semibold">Logo (optional)</h3>
+                <Input type="file" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] || null)} />
+                {logoUrl && (
+                  <div className="flex items-center gap-3">
+                    <img src={logoUrl} alt="Logo" className="w-10 h-10 object-contain rounded" />
+                    <Select value={logoPosition} onValueChange={setLogoPosition}>
+                      <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {LOGO_POSITIONS.map((p) => (
+                          <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Slider value={[logoSize]} onValueChange={(v) => setLogoSize(v[0])} min={40} max={200} step={10} className="w-20" />
+                  </div>
+                )}
+              </div>
+
+              <Button onClick={() => { renderPreviews(); }} className="w-full" variant="outline">
+                <Sparkles className="w-4 h-4 mr-2" />Refresh Preview
+              </Button>
+
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setStep("content")} className="flex-1">
+                  <ChevronLeft className="w-4 h-4 mr-1" />Back
+                </Button>
+                <Button onClick={() => { renderPreviews(); setStep("generate"); }} className="flex-1">
+                  Next: Generate <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center">
+              {previews.length > 0 ? (
+                <>
+                  <div className="relative">
+                    <img src={previews[previewIdx]} alt={`Story ${previewIdx + 1}`} className="rounded-xl shadow-2xl max-h-[700px]" />
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/60 backdrop-blur rounded-full px-4 py-2">
+                      <button onClick={() => setPreviewIdx(Math.max(0, previewIdx - 1))} disabled={previewIdx === 0} className="text-white disabled:opacity-30">
+                        <ChevronLeft className="w-5 h-5" />
+                      </button>
+                      <span className="text-sm text-white font-medium">{previewIdx + 1} / {previews.length}</span>
+                      <button onClick={() => setPreviewIdx(Math.min(previews.length - 1, previewIdx + 1))} disabled={previewIdx >= previews.length - 1} className="text-white disabled:opacity-30">
+                        <ChevronRight className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-3 text-center max-w-md">{questions[previewIdx]}</p>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-[500px] text-muted-foreground">
+                  <BookOpen className="w-16 h-16 mb-4 opacity-20" />
+                  <p className="text-sm">Preview will appear when settings are applied</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {step === "generate" && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4">
+              <Button variant="outline" onClick={() => setStep("design")}>
+                <ChevronLeft className="w-4 h-4 mr-1" />Back to Design
+              </Button>
+              <div className="flex-1" />
+              <Button variant="outline" onClick={exportCsv}>
+                <FileText className="w-4 h-4 mr-2" />Export CSV
+              </Button>
+              <Button onClick={downloadZip} disabled={downloading || previews.length === 0}>
+                {downloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                Download ZIP ({previews.length} stories)
+              </Button>
+              <Button onClick={pushToCC} disabled={pushing || previews.length === 0} variant="secondary">
+                {pushing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CloudUpload className="w-4 h-4 mr-2" />}
+                Push to Cloud Campaign
+              </Button>
+            </div>
+
+            {previews.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {previews.map((p, i) => (
+                  <div key={i} className="group relative rounded-xl overflow-hidden border border-border/30 bg-card">
+                    <img src={p} alt={`Story ${i + 1}`} className="w-full aspect-[9/16] object-cover" />
+                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                      <p className="text-[11px] text-white/80 line-clamp-2">{questions[i]}</p>
+                    </div>
+                    <div className="absolute top-2 left-2 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full">
+                      {i + 1}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 text-muted-foreground">
+                <Loader2 className="w-8 h-8 mx-auto mb-3 animate-spin" />
+                <p>Rendering previews...</p>
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+      <canvas ref={canvasRef} width={STORY_WIDTH} height={STORY_HEIGHT} className="hidden" />
+    </div>
+  );
+}

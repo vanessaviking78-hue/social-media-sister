@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 const BASE = import.meta.env.BASE_URL || "/";
 
-function authHeaders(): Record<string, string> {
+export function authHeaders(): Record<string, string> {
   const pw = sessionStorage.getItem("cybersuite-pw") || "";
   return { "Content-Type": "application/json", "x-app-password": pw, "Authorization": `Bearer ${pw}` };
 }

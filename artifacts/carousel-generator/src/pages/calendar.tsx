@@ -15,6 +15,7 @@ import { useCalendar, type CalendarPost } from "@/lib/use-calendar";
 const POST_TYPES = [
   { value: "carousel", label: "Carousel", icon: Layers },
   { value: "single-image", label: "Single Image", icon: ImageIcon },
+  { value: "story", label: "Story", icon: CalendarDays },
 ];
 
 const STATUS_OPTIONS = [
@@ -237,6 +238,7 @@ export default function Calendar() {
           <nav className="flex items-center gap-6 text-sm font-medium">
             <Link href="/" className="text-muted-foreground hover:text-white transition">Carousel</Link>
             <Link href="/single-image" className="text-muted-foreground hover:text-white transition">Single Image</Link>
+            <Link href="/stories" className="text-muted-foreground hover:text-white transition">Stories</Link>
             <Link href="/presets" className="text-muted-foreground hover:text-white transition">Presets</Link>
             <Link href="/captions" className="flex items-center gap-1 text-muted-foreground hover:text-white transition">
               <MessageSquareText className="w-4 h-4" />Captions

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
-import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, CloudUpload, ImagePlus, CalendarDays, BarChart3, ShieldCheck } from "lucide-react";
+import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, CloudUpload, ImagePlus, CalendarDays, BarChart3, ShieldCheck, BookOpen } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -681,6 +681,12 @@ export default function Home() {
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <ImagePlus className="w-4 h-4 mr-2" />
               Single Image
+            </Button>
+          </Link>
+          <Link href="/stories">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Stories
             </Button>
           </Link>
           <Link href="/presets">

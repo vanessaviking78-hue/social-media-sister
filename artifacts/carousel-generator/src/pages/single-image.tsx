@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import {
-  Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus, CalendarDays, BarChart3, ShieldCheck,
+  Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus, CalendarDays, BarChart3, ShieldCheck, BookOpen,
 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
@@ -637,6 +637,12 @@ export default function SingleImage() {
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <ArrowLeftRight className="w-4 h-4 mr-2" />
               Carousel Mode
+            </Button>
+          </Link>
+          <Link href="/stories">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Stories
             </Button>
           </Link>
           <Link href="/presets">

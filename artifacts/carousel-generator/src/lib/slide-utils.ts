@@ -333,6 +333,107 @@ export function drawSlide(
   }
 }
 
+export const STORY_WIDTH = 1080;
+export const STORY_HEIGHT = 1920;
+
+export const STORY_BACKGROUNDS = Array.from({ length: 19 }, (_, i) => {
+  const num = String(i + 1).padStart(2, "0");
+  return { label: `Retro ${num}`, file: `retro-${num}.png` };
+});
+
+export function drawStory(
+  ctx: CanvasRenderingContext2D,
+  bgImg: HTMLImageElement,
+  questionText: string,
+  font: string,
+  fontSize: number,
+  textColor: string = "#ffffff",
+  overlayColor: string = "rgba(236,72,153,0.75)",
+  footerText: string = "Type your answer in the comments",
+  logoImg: HTMLImageElement | null = null,
+  logoPosition: string = "top-right",
+  logoSize: number = 120,
+  bgOpacity: number = 0.7,
+) {
+  const W = STORY_WIDTH;
+  const H = STORY_HEIGHT;
+
+  ctx.fillStyle = "#000000";
+  ctx.fillRect(0, 0, W, H);
+
+  const scale = Math.max(W / bgImg.width, H / bgImg.height);
+  const bx = (W - bgImg.width * scale) / 2;
+  const by = (H - bgImg.height * scale) / 2;
+  ctx.globalAlpha = bgOpacity;
+  ctx.drawImage(bgImg, bx, by, bgImg.width * scale, bgImg.height * scale);
+  ctx.globalAlpha = 1.0;
+
+  const squareSize = Math.round(W * 0.82);
+  const sqX = Math.round((W - squareSize) / 2);
+  const sqY = Math.round((H - squareSize) / 2) - 40;
+  const radius = 24;
+
+  ctx.fillStyle = overlayColor;
+  ctx.beginPath();
+  ctx.moveTo(sqX + radius, sqY);
+  ctx.lineTo(sqX + squareSize - radius, sqY);
+  ctx.arcTo(sqX + squareSize, sqY, sqX + squareSize, sqY + radius, radius);
+  ctx.lineTo(sqX + squareSize, sqY + squareSize - radius);
+  ctx.arcTo(sqX + squareSize, sqY + squareSize, sqX + squareSize - radius, sqY + squareSize, radius);
+  ctx.lineTo(sqX + radius, sqY + squareSize);
+  ctx.arcTo(sqX, sqY + squareSize, sqX, sqY + squareSize - radius, radius);
+  ctx.lineTo(sqX, sqY + radius);
+  ctx.arcTo(sqX, sqY, sqX + radius, sqY, radius);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = textColor;
+  ctx.font = `700 ${fontSize}px ${font}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+
+  const maxTextW = squareSize - 80;
+  const lineH = Math.round(fontSize * 1.15);
+  const words = questionText.split(" ");
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    const test = cur ? cur + " " + w : w;
+    if (ctx.measureText(test).width > maxTextW && cur) {
+      lines.push(cur);
+      cur = w;
+    } else {
+      cur = test;
+    }
+  }
+  if (cur) lines.push(cur);
+
+  const totalTextH = lines.length * lineH;
+  const textStartY = sqY + Math.round((squareSize - totalTextH) / 2);
+  lines.forEach((line, i) => {
+    ctx.fillText(line, W / 2, textStartY + i * lineH);
+  });
+
+  ctx.fillStyle = textColor;
+  ctx.globalAlpha = 0.7;
+  ctx.font = `500 ${Math.round(fontSize * 0.5)}px ${font}`;
+  ctx.textAlign = "center";
+  ctx.fillText(footerText, W / 2, sqY + squareSize + 50);
+  ctx.globalAlpha = 1.0;
+
+  if (logoImg) {
+    const margin = 40;
+    const aspectRatio = logoImg.width / logoImg.height;
+    const logoW = Math.round(logoSize * aspectRatio);
+    const logoH = logoSize;
+    let lx = margin, ly = margin;
+    if (logoPosition === "top-right") { lx = W - logoW - margin; ly = margin; }
+    else if (logoPosition === "bottom-left") { lx = margin; ly = H - logoH - margin; }
+    else if (logoPosition === "bottom-right") { lx = W - logoW - margin; ly = H - logoH - margin; }
+    ctx.drawImage(logoImg, lx, ly, logoW, logoH);
+  }
+}
+
 export async function compressImage(file: File, maxPx = 1080, quality = 0.72): Promise<File> {
   return new Promise((resolve) => {
     const img = new Image();

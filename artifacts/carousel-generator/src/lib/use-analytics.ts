@@ -11,6 +11,7 @@ export interface AnalyticsSummary {
   totalPushed: number;
   totalCarousels: number;
   totalSingleImages: number;
+  totalStories: number;
   totalPosts: number;
   totalSlides: number;
   monthActions: number;

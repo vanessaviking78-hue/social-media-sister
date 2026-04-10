@@ -82,6 +82,7 @@ export default function PresetsPage() {
           <nav className="flex items-center gap-6 text-sm font-medium">
             <Link href="/" className="text-muted-foreground hover:text-white transition">Carousel</Link>
             <Link href="/single-image" className="text-muted-foreground hover:text-white transition">Single Image</Link>
+            <Link href="/stories" className="text-muted-foreground hover:text-white transition">Stories</Link>
             <Link href="/captions" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><MessageSquareText className="w-4 h-4" />Captions</Link>
             <Link href="/calendar" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><CalendarDays className="w-4 h-4" />Calendar</Link>
             <Link href="/analytics" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><BarChart3 className="w-4 h-4" />Analytics</Link>
