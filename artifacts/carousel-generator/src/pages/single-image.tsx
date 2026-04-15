@@ -43,6 +43,7 @@ export default function SingleImage() {
   const [logoSize, setLogoSize] = useState(140);
 
   const [fontFamily, setFontFamily] = useState("Inter, sans-serif");
+  const [subheadingFont, setSubheadingFont] = useState("Inter, sans-serif");
   const [fontSize, setFontSize] = useState(52);
   const [textColor, setTextColor] = useState("#ffffff");
   const [lineSpacing, setLineSpacing] = useState(0.9);
@@ -88,7 +89,7 @@ export default function SingleImage() {
   const [selectedLibCaptionIds, setSelectedLibCaptionIds] = useState<Set<number>>(new Set());
 
   const getCurrentStyles = (): PresetStyleFields => ({
-    pageColor, overlayColor, fontFamily, fontSize, textColor, lineSpacing,
+    pageColor, overlayColor, fontFamily, subheadingFont, fontSize, textColor, lineSpacing,
     cornerStyle, cornerColor, textPosition, logoPosition, logoSize,
   });
 
@@ -97,6 +98,7 @@ export default function SingleImage() {
     setPageColor(preset.pageColor);
     setOverlayColor(preset.overlayColor);
     setFontFamily(preset.fontFamily);
+    setSubheadingFont(preset.subheadingFont || preset.fontFamily);
     setFontSize(preset.fontSize);
     setTextColor(preset.textColor);
     setLineSpacing(parseFloat(preset.lineSpacing));
@@ -402,7 +404,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition);
+        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont);
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -445,7 +447,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition);
+        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `post-${String(post.index).padStart(2, "0")}.png`;
@@ -497,7 +499,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition);
+        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         rendered.push({ name: `post-${String(post.index).padStart(2, "0")}.png`, base64: dataUrl });
@@ -612,6 +614,7 @@ export default function SingleImage() {
   };
 
   const selectedFontLabel = FONT_OPTIONS.find((f) => f.value === fontFamily)?.label ?? "Inter";
+  const selectedSubheadingFontLabel = FONT_OPTIONS.find((f) => f.value === subheadingFont)?.label ?? "Inter";
 
   return (
     <div className="min-h-[100dvh] w-full pb-32">
@@ -827,10 +830,24 @@ export default function SingleImage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
-                  <Label className="text-base font-semibold">Font</Label>
+                  <Label className="text-base font-semibold">Heading Font</Label>
                   <Select value={fontFamily} onValueChange={setFontFamily}>
                     <SelectTrigger className="h-12 text-base">
                       <SelectValue><span style={{ fontFamily }}>{selectedFontLabel}</span></SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FONT_OPTIONS.map((f) => (
+                        <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
+                  <Label className="text-base font-semibold">Subheading Font</Label>
+                  <Select value={subheadingFont} onValueChange={setSubheadingFont}>
+                    <SelectTrigger className="h-12 text-base">
+                      <SelectValue><span style={{ fontFamily: subheadingFont }}>{selectedSubheadingFontLabel}</span></SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {FONT_OPTIONS.map((f) => (

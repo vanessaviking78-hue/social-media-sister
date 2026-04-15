@@ -76,7 +76,8 @@ export function drawSlide(
   slidePosition: number = 1,
   totalSlidesInGroup: number = 5,
   textPosition: string = "bottom-left",
-  showTextOverlay: boolean = true
+  showTextOverlay: boolean = true,
+  subheadingFont: string = ""
 ) {
   const W = CANVAS_WIDTH;
   const H = CANVAS_HEIGHT;
@@ -131,8 +132,10 @@ export function drawSlide(
   const textAreaW = isLastSlide ? W - 120 : W - 80;
   const activeTextPos = isLastSlide ? "center-center" : textPosition;
 
+  const activeFont = isCoverSlide ? font : (subheadingFont || font);
+
   ctx.fillStyle = textColor;
-  ctx.font = `${isLastSlide ? 700 : 600} ${ctaSize}px ${font}`;
+  ctx.font = `${isLastSlide ? 700 : 600} ${ctaSize}px ${activeFont}`;
   ctx.textBaseline = "top";
 
   const maxW = textAreaW;
@@ -220,6 +223,7 @@ export function drawStory(
   logoPosition: string = "top-right",
   logoSize: number = 120,
   bgOpacity: number = 0.7,
+  subheadingFont: string = ""
 ) {
   const W = STORY_WIDTH;
   const H = STORY_HEIGHT;
@@ -282,7 +286,7 @@ export function drawStory(
 
   ctx.fillStyle = textColor;
   ctx.globalAlpha = 0.7;
-  ctx.font = `500 ${Math.round(fontSize * 0.5)}px ${font}`;
+  ctx.font = `500 ${Math.round(fontSize * 0.5)}px ${subheadingFont || font}`;
   ctx.textAlign = "center";
   ctx.fillText(footerText, W / 2, sqY + squareSize + 50);
   ctx.globalAlpha = 1.0;

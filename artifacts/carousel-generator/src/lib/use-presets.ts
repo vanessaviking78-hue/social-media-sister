@@ -6,6 +6,7 @@ export interface ClientPreset {
   pageColor: string;
   overlayColor: string;
   fontFamily: string;
+  subheadingFont: string;
   fontSize: number;
   textColor: string;
   lineSpacing: string;
@@ -24,6 +25,7 @@ export interface PresetStyleFields {
   pageColor: string;
   overlayColor: string;
   fontFamily: string;
+  subheadingFont: string;
   fontSize: number;
   textColor: string;
   lineSpacing: number;

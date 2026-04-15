@@ -51,6 +51,7 @@ export default function Stories() {
   const [questions, setQuestions] = useState<string[]>([]);
   const [selectedBgs, setSelectedBgs] = useState<Set<string>>(new Set([STORY_BACKGROUNDS[0].file]));
   const [font, setFont] = useState(FONT_OPTIONS[0].value);
+  const [subheadingFont, setSubheadingFont] = useState(FONT_OPTIONS[0].value);
   const [fontSize, setFontSize] = useState(54);
   const [textColor, setTextColor] = useState("#ffffff");
   const [overlayBaseColor, setOverlayBaseColor] = useState(OVERLAY_BASE_COLORS[0]);
@@ -116,6 +117,7 @@ export default function Stories() {
   const applyPreset = useCallback((preset: ClientPreset) => {
     setSelectedPresetId(preset.id);
     setFont(preset.fontFamily);
+    setSubheadingFont(preset.subheadingFont || preset.fontFamily);
     setFontSize(preset.fontSize);
     setTextColor(preset.textColor);
     setLogoPosition(preset.logoPosition);
@@ -154,6 +156,7 @@ export default function Stories() {
     pageColor: "#000000",
     overlayColor: makeOverlayRgba(overlayBaseColor, overlayOpacity),
     fontFamily: font,
+    subheadingFont,
     fontSize,
     textColor,
     lineSpacing: 1.15,
@@ -162,7 +165,7 @@ export default function Stories() {
     textPosition: "center-center",
     logoPosition,
     logoSize,
-  }), [overlayBaseColor, overlayOpacity, font, fontSize, textColor, logoPosition, logoSize]);
+  }), [overlayBaseColor, overlayOpacity, font, subheadingFont, fontSize, textColor, logoPosition, logoSize]);
 
   const loadBgImg = useCallback((file: string): Promise<HTMLImageElement> => {
     if (bgImgCache.current[file]) return Promise.resolve(bgImgCache.current[file]);
@@ -300,7 +303,7 @@ export default function Stories() {
       const urls: string[] = [];
       for (let i = 0; i < questions.length; i++) {
         const bgImg = shuffled[i % shuffled.length];
-        drawStory(ctx, bgImg, questions[i], font, fontSize, textColor, overlayColor, footerText, logoImgRef.current, logoPosition, logoSize, bgOpacity);
+        drawStory(ctx, bgImg, questions[i], font, fontSize, textColor, overlayColor, footerText, logoImgRef.current, logoPosition, logoSize, bgOpacity, subheadingFont);
         urls.push(canvas.toDataURL("image/png"));
       }
       setPreviews(urls);
@@ -308,7 +311,7 @@ export default function Stories() {
     } catch (err: any) {
       toast.error("Failed to render previews. Check your background image.");
     }
-  }, [questions, bgFiles, font, fontSize, textColor, overlayColor, footerText, logoPosition, logoSize, bgOpacity, loadBgImg]);
+  }, [questions, bgFiles, font, subheadingFont, fontSize, textColor, overlayColor, footerText, logoPosition, logoSize, bgOpacity, loadBgImg]);
 
   useEffect(() => {
     if (step === "design" && questions.length > 0) {
@@ -646,8 +649,21 @@ export default function Stories() {
 
               <div className="bg-card border border-border/40 rounded-xl p-5 space-y-4">
                 <div>
-                  <h3 className="text-sm font-semibold mb-2">Font</h3>
+                  <h3 className="text-sm font-semibold mb-2">Heading Font</h3>
                   <Select value={font} onValueChange={setFont}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {FONT_OPTIONS.map((f) => (
+                        <SelectItem key={f.value} value={f.value}>
+                          <span style={{ fontFamily: f.value }}>{f.label}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold mb-2">Subheading Font</h3>
+                  <Select value={subheadingFont} onValueChange={setSubheadingFont}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {FONT_OPTIONS.map((f) => (

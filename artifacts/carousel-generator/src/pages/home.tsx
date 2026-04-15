@@ -35,6 +35,7 @@ export default function Home() {
 
   const [fontSize, setFontSize] = useState(52);
   const [fontFamily, setFontFamily] = useState(FONT_OPTIONS[0].value);
+  const [subheadingFont, setSubheadingFont] = useState(FONT_OPTIONS[0].value);
   const [textColor, setTextColor] = useState("#ffffff");
   const [lineSpacing, setLineSpacing] = useState(0.9);
   const [overlayColor, setOverlayColor] = useState("rgba(0,0,0,0.5)");
@@ -83,7 +84,7 @@ export default function Home() {
   const [selectedLibCaptionIds, setSelectedLibCaptionIds] = useState<Set<number>>(new Set());
 
   const getCurrentStyles = (): PresetStyleFields => ({
-    pageColor, overlayColor, fontFamily, fontSize, textColor, lineSpacing,
+    pageColor, overlayColor, fontFamily, subheadingFont, fontSize, textColor, lineSpacing,
     cornerStyle, cornerColor, textPosition, logoPosition, logoSize,
   });
 
@@ -92,6 +93,7 @@ export default function Home() {
     setPageColor(preset.pageColor);
     setOverlayColor(preset.overlayColor);
     setFontFamily(preset.fontFamily);
+    setSubheadingFont(preset.subheadingFont || preset.fontFamily);
     setFontSize(preset.fontSize);
     setTextColor(preset.textColor);
     setLineSpacing(parseFloat(preset.lineSpacing));
@@ -150,7 +152,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -501,7 +503,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont);
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -545,7 +547,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -655,6 +657,7 @@ export default function Home() {
   };
 
   const selectedFontLabel = FONT_OPTIONS.find((f) => f.value === fontFamily)?.label ?? "Inter";
+  const selectedSubheadingFontLabel = FONT_OPTIONS.find((f) => f.value === subheadingFont)?.label ?? "Inter";
   const previewLogoScale = 0.18;
   const previewLogoH = Math.round(logoSize * previewLogoScale);
 
@@ -885,12 +888,27 @@ export default function Home() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Font */}
+                  {/* Heading Font */}
                   <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
-                    <Label className="text-base font-semibold">Font</Label>
+                    <Label className="text-base font-semibold">Heading Font</Label>
                     <Select value={fontFamily} onValueChange={setFontFamily}>
                       <SelectTrigger className="h-12 text-base" data-testid="select-font">
                         <SelectValue><span style={{ fontFamily }}>{selectedFontLabel}</span></SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FONT_OPTIONS.map((f) => (
+                          <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Subheading Font */}
+                  <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
+                    <Label className="text-base font-semibold">Subheading Font</Label>
+                    <Select value={subheadingFont} onValueChange={setSubheadingFont}>
+                      <SelectTrigger className="h-12 text-base" data-testid="select-subheading-font">
+                        <SelectValue><span style={{ fontFamily: subheadingFont }}>{selectedSubheadingFontLabel}</span></SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {FONT_OPTIONS.map((f) => (
@@ -1366,7 +1384,7 @@ export default function Home() {
                                       return <img src={logoPreviewUrl} alt="Logo" style={{ ...posStyle, height: previewLogoH, maxWidth: 60, objectFit: "contain" }} />;
                                     })()}
                                     <div className="absolute bottom-4 left-3 px-2 py-1.5 rounded-sm" style={showTextOverlay ? { backgroundColor: overlayColor } : {}}>
-                                      <p className="font-semibold line-clamp-4" style={{ fontFamily, fontSize: Math.max(7, Math.round(fontSize * 0.15)) + "px", color: textColor, lineHeight: lineSpacing, ...(showTextOverlay ? {} : { textShadow: "1px 1px 3px rgba(0,0,0,0.8)" }) }}>{slide.text}</p>
+                                      <p className="font-semibold line-clamp-4" style={{ fontFamily: isCover ? fontFamily : subheadingFont, fontSize: Math.max(7, Math.round(fontSize * 0.15)) + "px", color: textColor, lineHeight: lineSpacing, ...(showTextOverlay ? {} : { textShadow: "1px 1px 3px rgba(0,0,0,0.8)" }) }}>{slide.text}</p>
                                     </div>
                                   </div>
                                 );
