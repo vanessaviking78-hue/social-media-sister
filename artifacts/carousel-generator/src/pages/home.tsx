@@ -42,6 +42,7 @@ export default function Home() {
   const [cornerStyle, setCornerStyle] = useState("none");
   const [cornerColor, setCornerColor] = useState("#d4af37");
   const [textPosition, setTextPosition] = useState("bottom-left");
+  const [showTextOverlay, setShowTextOverlay] = useState(true);
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
@@ -149,7 +150,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -500,7 +501,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay);
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -544,7 +545,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -952,8 +953,22 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Overlay Colour */}
+                  {/* Text Overlay Toggle */}
                   <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-base font-semibold flex items-center gap-2"><Palette className="w-4 h-4" /> Text Box</Label>
+                      <button
+                        onClick={() => setShowTextOverlay(!showTextOverlay)}
+                        className={`relative w-12 h-6 rounded-full transition-colors ${showTextOverlay ? "bg-pink-500" : "bg-gray-600"}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${showTextOverlay ? "translate-x-6" : ""}`} />
+                      </button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{showTextOverlay ? "Coloured box behind text" : "Text only with drop shadow"}</p>
+                  </div>
+
+                  {/* Overlay Colour */}
+                  {showTextOverlay && <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
                     <Label className="text-base font-semibold flex items-center gap-2"><Palette className="w-4 h-4" /> Overlay Colour</Label>
                     <div className="flex gap-3">
                       <Input
@@ -973,7 +988,7 @@ export default function Home() {
                       />
                       <Input type="text" value={overlayColor} onChange={(e) => setOverlayColor(e.target.value)} className="flex-1 h-12 text-base font-mono" placeholder="rgba(0,0,0,0.5)" />
                     </div>
-                  </div>
+                  </div>}
 
                   {/* Corner Accent */}
                   <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">

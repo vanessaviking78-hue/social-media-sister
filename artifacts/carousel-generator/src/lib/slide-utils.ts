@@ -75,7 +75,8 @@ export function drawSlide(
   cornerColor: string = "#d4af37",
   slidePosition: number = 1,
   totalSlidesInGroup: number = 5,
-  textPosition: string = "bottom-left"
+  textPosition: string = "bottom-left",
+  showTextOverlay: boolean = true
 ) {
   const W = CANVAS_WIDTH;
   const H = CANVAS_HEIGHT;
@@ -161,14 +162,29 @@ export function drawSlide(
   else if (vPos === "bottom") { startY = Math.round(H - totalH - pad); }
 
   const maxLineWidth = Math.max(...lines.map((line) => ctx.measureText(line).width));
-  ctx.fillStyle = overlayColor;
-  let boxX = startX - 15;
-  if (ctx.textAlign === "right") boxX = startX - maxLineWidth - 15;
-  else if (ctx.textAlign === "center") boxX = startX - maxLineWidth / 2 - 15;
-  ctx.fillRect(boxX, startY - 15, maxLineWidth + 30, totalH + 30);
+
+  if (showTextOverlay) {
+    ctx.fillStyle = overlayColor;
+    let boxX = startX - 15;
+    if (ctx.textAlign === "right") boxX = startX - maxLineWidth - 15;
+    else if (ctx.textAlign === "center") boxX = startX - maxLineWidth / 2 - 15;
+    ctx.fillRect(boxX, startY - 15, maxLineWidth + 30, totalH + 30);
+  }
+
+  if (!showTextOverlay) {
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.8)";
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetX = 2;
+    ctx.shadowOffsetY = 2;
+  }
 
   ctx.fillStyle = textColor;
   lines.forEach((line, i) => ctx.fillText(line, startX, startY + i * lineH));
+
+  if (!showTextOverlay) {
+    ctx.restore();
+  }
 
   if (logoImg) {
     const margin = 40;
