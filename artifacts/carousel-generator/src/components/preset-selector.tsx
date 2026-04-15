@@ -136,6 +136,7 @@ export default function PresetSelector({
         pageColor: preset.pageColor,
         overlayColor: preset.overlayColor,
         fontFamily: preset.fontFamily,
+        subheadingFont: preset.subheadingFont || preset.fontFamily,
         fontSize: preset.fontSize,
         textColor: preset.textColor,
         lineSpacing: parseFloat(preset.lineSpacing),

@@ -43,6 +43,7 @@ export default function PresetsPage() {
         pageColor: editData.pageColor || "#000000",
         overlayColor: editData.overlayColor || "rgba(0,0,0,0.5)",
         fontFamily: editData.fontFamily || "Inter, sans-serif",
+        subheadingFont: editData.subheadingFont || editData.fontFamily || "Inter, sans-serif",
         fontSize: editData.fontSize || 52,
         textColor: editData.textColor || "#ffffff",
         lineSpacing: parseFloat(editData.lineSpacing || "0.9"),

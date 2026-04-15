@@ -1213,7 +1213,7 @@ export default function SingleImage() {
                           <div className="aspect-[4/5] rounded-xl overflow-hidden bg-accent/20 border border-border/30 relative">
                             <img src={post.imageUrl} alt={`Post ${post.index}`} className="w-full h-full object-cover opacity-80" />
                             <div className="absolute inset-0 flex items-end p-3">
-                              <p className="text-white text-xs font-medium line-clamp-3 bg-black/50 rounded-lg p-2">{post.text}</p>
+                              <p className="text-white text-xs font-medium line-clamp-3 bg-black/50 rounded-lg p-2" style={{ fontFamily: subheadingFont }}>{post.text}</p>
                             </div>
                           </div>
                           <p className="text-xs text-muted-foreground font-mono">Post {post.index}</p>
