@@ -830,22 +830,8 @@ export default function SingleImage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
-                  <Label className="text-base font-semibold">Heading Font</Label>
-                  <Select value={fontFamily} onValueChange={setFontFamily}>
-                    <SelectTrigger className="h-12 text-base">
-                      <SelectValue><span style={{ fontFamily }}>{selectedFontLabel}</span></SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FONT_OPTIONS.map((f) => (
-                        <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
-                  <Label className="text-base font-semibold">Subheading Font</Label>
-                  <Select value={subheadingFont} onValueChange={setSubheadingFont}>
+                  <Label className="text-base font-semibold">Font</Label>
+                  <Select value={subheadingFont} onValueChange={(v) => { setSubheadingFont(v); setFontFamily(v); }}>
                     <SelectTrigger className="h-12 text-base">
                       <SelectValue><span style={{ fontFamily: subheadingFont }}>{selectedSubheadingFontLabel}</span></SelectValue>
                     </SelectTrigger>
