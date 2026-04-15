@@ -8,7 +8,7 @@ export const clientPresetsTable = pgTable("client_presets", {
   pageColor: text("page_color").notNull().default("#000000"),
   overlayColor: text("overlay_color").notNull().default("rgba(0,0,0,0.5)"),
   fontFamily: text("font_family").notNull().default("Inter, sans-serif"),
-  subheadingFont: text("subheading_font").notNull().default("Inter, sans-serif"),
+  subheadingFont: text("subheading_font"),
   fontSize: integer("font_size").notNull().default(52),
   textColor: text("text_color").notNull().default("#ffffff"),
   lineSpacing: text("line_spacing").notNull().default("0.9"),

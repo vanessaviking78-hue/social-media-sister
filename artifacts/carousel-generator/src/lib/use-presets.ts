@@ -6,7 +6,7 @@ export interface ClientPreset {
   pageColor: string;
   overlayColor: string;
   fontFamily: string;
-  subheadingFont: string;
+  subheadingFont: string | null;
   fontSize: number;
   textColor: string;
   lineSpacing: string;
