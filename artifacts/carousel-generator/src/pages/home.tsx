@@ -41,10 +41,6 @@ export default function Home() {
   const [pageColor, setPageColor] = useState("#000000");
   const [cornerStyle, setCornerStyle] = useState("none");
   const [cornerColor, setCornerColor] = useState("#d4af37");
-  const [gradientEnabled, setGradientEnabled] = useState(true);
-  const [gradientStyle, setGradientStyle] = useState("solid");
-  const [gradientColor, setGradientColor] = useState("#000000");
-  const [gradientPosition, setGradientPosition] = useState("left");
   const [textPosition, setTextPosition] = useState("bottom-left");
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -87,8 +83,7 @@ export default function Home() {
 
   const getCurrentStyles = (): PresetStyleFields => ({
     pageColor, overlayColor, fontFamily, fontSize, textColor, lineSpacing,
-    cornerStyle, cornerColor, gradientEnabled, gradientStyle, gradientColor,
-    gradientPosition, textPosition, logoPosition, logoSize,
+    cornerStyle, cornerColor, textPosition, logoPosition, logoSize,
   });
 
   const applyPreset = (preset: ClientPreset) => {
@@ -101,10 +96,6 @@ export default function Home() {
     setLineSpacing(parseFloat(preset.lineSpacing));
     setCornerStyle(preset.cornerStyle);
     setCornerColor(preset.cornerColor);
-    setGradientEnabled(preset.gradientEnabled);
-    setGradientStyle(preset.gradientStyle);
-    setGradientColor(preset.gradientColor);
-    setGradientPosition(preset.gradientPosition);
     setTextPosition(preset.textPosition);
     setLogoPosition(preset.logoPosition);
     setLogoSize(preset.logoSize);
@@ -158,7 +149,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, gradientColor, gradientEnabled, gradientStyle, gradientPosition, slide.groupPosition, result.slidesPerCarousel, textPosition);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -509,7 +500,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, gradientColor, gradientEnabled, gradientStyle, gradientPosition, slide.groupPosition, result.slidesPerCarousel, textPosition);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition);
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -553,7 +544,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, gradientColor, gradientEnabled, gradientStyle, gradientPosition, slide.groupPosition, result.slidesPerCarousel, textPosition);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -1001,44 +992,6 @@ export default function Home() {
                     )}
                   </div>
 
-                  {/* Gradient */}
-                  <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6 md:col-span-2">
-                    <Label className="text-base font-semibold flex items-center gap-2"><Palette className="w-4 h-4" /> Gradient</Label>
-                    <div className="flex items-center gap-3">
-                      <button onClick={() => setGradientEnabled(!gradientEnabled)}
-                        className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${gradientEnabled ? "bg-primary" : "bg-muted-foreground/30"}`}
-                      >
-                        <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${gradientEnabled ? "left-[26px]" : "left-0.5"}`} />
-                      </button>
-                      <span className="text-base text-muted-foreground">{gradientEnabled ? "On" : "Off"}</span>
-                    </div>
-                    {gradientEnabled && (
-                      <div className="space-y-4 pt-2">
-                        <div className="flex gap-3">
-                          {[{ value: "solid", label: "Solid" }, { value: "leopard", label: "Leopard" }].map((opt) => (
-                            <button key={opt.value} onClick={() => setGradientStyle(opt.value)}
-                              className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${gradientStyle === opt.value ? "bg-primary text-primary-foreground" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}
-                            >{opt.label}</button>
-                          ))}
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          {[{ value: "left", label: "Left" }, { value: "center", label: "Centre" }, { value: "right", label: "Right" },
-                            { value: "top", label: "Top" }, { value: "middle", label: "Middle" }, { value: "bottom", label: "Bottom" }].map((opt) => (
-                            <button key={opt.value} onClick={() => setGradientPosition(opt.value)}
-                              className={`px-3 py-2.5 rounded-lg text-sm font-semibold transition-all ${gradientPosition === opt.value ? "bg-primary text-primary-foreground" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}
-                            >{opt.label}</button>
-                          ))}
-                        </div>
-                        {gradientStyle === "solid" && (
-                          <div className="flex gap-3">
-                            <Input type="color" value={gradientColor} onChange={(e) => setGradientColor(e.target.value)} className="w-14 h-12 p-1 cursor-pointer" />
-                            <Input type="text" value={gradientColor} onChange={(e) => setGradientColor(e.target.value)} className="flex-1 h-12 text-base font-mono" />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
                   {/* Logo controls */}
                   {logoFile && (
                     <>
@@ -1389,21 +1342,6 @@ export default function Home() {
                                 return (
                                   <div key={slide.slideIndex} className="relative rounded-2xl overflow-hidden shadow-md hover:shadow-[0_0_24px_hsl(var(--primary)/0.15)] transition-shadow duration-300" style={{ aspectRatio: "4/5" }} data-testid={`slide-card-${slide.slideIndex}`}>
                                     <img src={slide.imageUrl} alt={`Carousel ${slide.groupIndex} slide ${slide.groupPosition}`} className="absolute inset-0 w-full h-full object-cover" style={{ opacity: isCover ? 1 : 0.5 }} />
-                                    {gradientEnabled && (() => {
-                                      const posMap: Record<string, React.CSSProperties> = {
-                                        left: { left: 0, top: 0, width: "35%", height: "100%" },
-                                        center: { left: "32.5%", top: 0, width: "35%", height: "100%" },
-                                        right: { right: 0, top: 0, width: "35%", height: "100%" },
-                                        top: { left: 0, top: 0, width: "100%", height: "30%" },
-                                        middle: { left: 0, top: "35%", width: "100%", height: "30%" },
-                                        bottom: { left: 0, bottom: 0, width: "100%", height: "30%" },
-                                      };
-                                      const dirMap: Record<string, string> = { left: "to right", center: "to right", right: "to left", top: "to bottom", middle: "to bottom", bottom: "to top" };
-                                      const style = posMap[gradientPosition] || posMap.left;
-                                      const dir = dirMap[gradientPosition] || "to right";
-                                      const baseColor = gradientStyle === "leopard" ? "#c8a44e" : gradientColor;
-                                      return <div className="absolute" style={{ ...style, background: `linear-gradient(${dir}, ${baseColor}cc, transparent)`, position: "absolute" }} />;
-                                    })()}
                                     {logoPreviewUrl && (() => {
                                       const posStyle: React.CSSProperties = { position: "absolute" };
                                       if (logoPosition === "top-left") { posStyle.top = 4; posStyle.left = 4; }

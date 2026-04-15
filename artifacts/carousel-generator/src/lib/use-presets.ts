@@ -11,10 +11,6 @@ export interface ClientPreset {
   lineSpacing: string;
   cornerStyle: string;
   cornerColor: string;
-  gradientEnabled: boolean;
-  gradientStyle: string;
-  gradientColor: string;
-  gradientPosition: string;
   textPosition: string;
   logoPosition: string;
   logoSize: number;
@@ -33,10 +29,6 @@ export interface PresetStyleFields {
   lineSpacing: number;
   cornerStyle: string;
   cornerColor: string;
-  gradientEnabled: boolean;
-  gradientStyle: string;
-  gradientColor: string;
-  gradientPosition: string;
   textPosition: string;
   logoPosition: string;
   logoSize: number;

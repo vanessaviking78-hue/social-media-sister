@@ -50,10 +50,6 @@ export default function SingleImage() {
   const [pageColor, setPageColor] = useState("#000000");
   const [cornerStyle, setCornerStyle] = useState("none");
   const [cornerColor, setCornerColor] = useState("#d4af37");
-  const [gradientColor, setGradientColor] = useState("#000000");
-  const [gradientEnabled, setGradientEnabled] = useState(true);
-  const [gradientStyle, setGradientStyle] = useState("solid");
-  const [gradientPosition, setGradientPosition] = useState("left");
   const [textPosition, setTextPosition] = useState("bottom-left");
 
   const [csvFile, setCsvFile] = useState<File | null>(null);
@@ -93,8 +89,7 @@ export default function SingleImage() {
 
   const getCurrentStyles = (): PresetStyleFields => ({
     pageColor, overlayColor, fontFamily, fontSize, textColor, lineSpacing,
-    cornerStyle, cornerColor, gradientEnabled, gradientStyle, gradientColor,
-    gradientPosition, textPosition, logoPosition, logoSize,
+    cornerStyle, cornerColor, textPosition, logoPosition, logoSize,
   });
 
   const applyPreset = (preset: ClientPreset) => {
@@ -107,10 +102,6 @@ export default function SingleImage() {
     setLineSpacing(parseFloat(preset.lineSpacing));
     setCornerStyle(preset.cornerStyle);
     setCornerColor(preset.cornerColor);
-    setGradientEnabled(preset.gradientEnabled);
-    setGradientStyle(preset.gradientStyle);
-    setGradientColor(preset.gradientColor);
-    setGradientPosition(preset.gradientPosition);
     setTextPosition(preset.textPosition);
     setLogoPosition(preset.logoPosition);
     setLogoSize(preset.logoSize);
@@ -411,7 +402,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, gradientColor, gradientEnabled, gradientStyle, gradientPosition, 1, 1, textPosition);
+        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition);
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -454,7 +445,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, gradientColor, gradientEnabled, gradientStyle, gradientPosition, 1, 1, textPosition);
+        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `post-${String(post.index).padStart(2, "0")}.png`;
@@ -506,7 +497,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, gradientColor, gradientEnabled, gradientStyle, gradientPosition, 1, 1, textPosition);
+        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         rendered.push({ name: `post-${String(post.index).padStart(2, "0")}.png`, base64: dataUrl });
@@ -930,43 +921,6 @@ export default function SingleImage() {
                     <div className="flex gap-3">
                       <Input type="color" value={cornerColor} onChange={(e) => setCornerColor(e.target.value)} className="w-14 h-12 p-1 cursor-pointer" />
                       <Input type="text" value={cornerColor} onChange={(e) => setCornerColor(e.target.value)} className="flex-1 h-12 text-base font-mono" placeholder="#d4af37" />
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6 md:col-span-2">
-                  <Label className="text-base font-semibold flex items-center gap-2"><Palette className="w-4 h-4" /> Gradient</Label>
-                  <div className="flex items-center gap-3">
-                    <button onClick={() => setGradientEnabled(!gradientEnabled)}
-                      className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ${gradientEnabled ? "bg-primary" : "bg-muted-foreground/30"}`}
-                    >
-                      <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${gradientEnabled ? "left-[26px]" : "left-0.5"}`} />
-                    </button>
-                    <span className="text-base text-muted-foreground">{gradientEnabled ? "On" : "Off"}</span>
-                  </div>
-                  {gradientEnabled && (
-                    <div className="space-y-4 pt-2">
-                      <div className="flex gap-3">
-                        {[{ value: "solid", label: "Solid" }, { value: "leopard", label: "Leopard" }].map((opt) => (
-                          <button key={opt.value} onClick={() => setGradientStyle(opt.value)}
-                            className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${gradientStyle === opt.value ? "bg-primary text-primary-foreground" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}
-                          >{opt.label}</button>
-                        ))}
-                      </div>
-                      <div className="grid grid-cols-3 gap-2">
-                        {[{ value: "left", label: "Left" }, { value: "center", label: "Centre" }, { value: "right", label: "Right" },
-                          { value: "top", label: "Top" }, { value: "middle", label: "Middle" }, { value: "bottom", label: "Bottom" }].map((opt) => (
-                          <button key={opt.value} onClick={() => setGradientPosition(opt.value)}
-                            className={`px-3 py-2.5 rounded-lg text-sm font-semibold transition-all ${gradientPosition === opt.value ? "bg-primary text-primary-foreground" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}
-                          >{opt.label}</button>
-                        ))}
-                      </div>
-                      {gradientStyle === "solid" && (
-                        <div className="flex gap-3">
-                          <Input type="color" value={gradientColor} onChange={(e) => setGradientColor(e.target.value)} className="w-14 h-12 p-1 cursor-pointer" />
-                          <Input type="text" value={gradientColor} onChange={(e) => setGradientColor(e.target.value)} className="flex-1 h-12 text-base font-mono" />
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
