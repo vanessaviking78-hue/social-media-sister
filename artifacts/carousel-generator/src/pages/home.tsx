@@ -1365,8 +1365,8 @@ export default function Home() {
                                       else { posStyle.bottom = 24; posStyle.right = 4; }
                                       return <img src={logoPreviewUrl} alt="Logo" style={{ ...posStyle, height: previewLogoH, maxWidth: 60, objectFit: "contain" }} />;
                                     })()}
-                                    <div className="absolute bottom-4 left-3 px-2 py-1.5 rounded-sm" style={{ backgroundColor: overlayColor }}>
-                                      <p className="font-semibold line-clamp-4" style={{ fontFamily, fontSize: Math.max(7, Math.round(fontSize * 0.15)) + "px", color: textColor, lineHeight: lineSpacing }}>{slide.text}</p>
+                                    <div className="absolute bottom-4 left-3 px-2 py-1.5 rounded-sm" style={showTextOverlay ? { backgroundColor: overlayColor } : {}}>
+                                      <p className="font-semibold line-clamp-4" style={{ fontFamily, fontSize: Math.max(7, Math.round(fontSize * 0.15)) + "px", color: textColor, lineHeight: lineSpacing, ...(showTextOverlay ? {} : { textShadow: "1px 1px 3px rgba(0,0,0,0.8)" }) }}>{slide.text}</p>
                                     </div>
                                   </div>
                                 );
