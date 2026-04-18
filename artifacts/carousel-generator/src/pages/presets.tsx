@@ -231,6 +231,16 @@ export default function PresetsPage() {
                       </div>
                     </div>
                     <div>
+                      <Label className="text-xs text-gray-400">Cloud Campaign Workspace ID</Label>
+                      <Input
+                        placeholder="e.g. b5a40a7f-a5b2-4e90-84c0-bdf1628d2d9e"
+                        value={editData.ccWorkspaceId || ""}
+                        onChange={(e) => setEditData((d) => ({ ...d, ccWorkspaceId: e.target.value || null }))}
+                        className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
+                      />
+                      <p className="text-[10px] text-gray-500 mt-1">Paste the workspace ID from the Cloud Campaign URL (the UUID after <code>client=</code>)</p>
+                    </div>
+                    <div>
                       <Label className="text-xs text-gray-400">Caption Footnote (appended to AI-generated captions)</Label>
                       <textarea
                         placeholder="e.g. 📍 123 High Street, London | @clinicname"
