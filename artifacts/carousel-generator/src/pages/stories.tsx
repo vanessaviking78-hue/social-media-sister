@@ -62,7 +62,7 @@ export default function Stories() {
   const [logoUrl, setLogoUrl] = useState("");
   const [logoPosition, setLogoPosition] = useState("top-right");
   const [logoSize, setLogoSize] = useState(120);
-  const [textAlign, setTextAlign] = useState("center");
+  const [textAlign, setTextAlign] = useState("left");
   const [textBoxOutline, setTextBoxOutline] = useState(false);
   const [textBoxOutlineColor, setTextBoxOutlineColor] = useState("#ffffff");
 
@@ -152,7 +152,7 @@ export default function Stories() {
     if (preset.ccWorkspaceId) {
       setSelectedCcWorkspace(preset.ccWorkspaceId);
     }
-    setTextAlign(preset.textAlign || "center");
+    setTextAlign(preset.textAlign || "left");
     setTextBoxOutline(preset.textBoxOutline ?? false);
     setTextBoxOutlineColor(preset.textBoxOutlineColor || "#ffffff");
     toast.success(`Loaded preset: ${preset.name}`);
@@ -320,7 +320,7 @@ export default function Stories() {
     } catch (err: any) {
       toast.error("Failed to render previews. Check your background image.");
     }
-  }, [questions, bgFiles, font, subheadingFont, fontSize, textColor, overlayColor, footerText, logoPosition, logoSize, bgOpacity, loadBgImg]);
+  }, [questions, bgFiles, font, subheadingFont, fontSize, textColor, overlayColor, footerText, logoPosition, logoSize, bgOpacity, loadBgImg, textAlign, textBoxOutline, textBoxOutlineColor]);
 
   useEffect(() => {
     if (step === "design" && questions.length > 0) {

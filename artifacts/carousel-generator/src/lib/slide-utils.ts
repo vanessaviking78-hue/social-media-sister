@@ -233,7 +233,7 @@ export function drawStory(
   logoSize: number = 120,
   bgOpacity: number = 0.7,
   subheadingFont: string = "",
-  textAlign: string = "center",
+  textAlign: string = "left",
   textBoxOutline: boolean = false,
   textBoxOutlineColor: string = "#ffffff"
 ) {
