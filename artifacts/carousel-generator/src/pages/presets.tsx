@@ -32,6 +32,7 @@ export default function PresetsPage() {
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [quickAddName, setQuickAddName] = useState("");
   const [quickAddSaving, setQuickAddSaving] = useState(false);
+  const [quickAddError, setQuickAddError] = useState<string | null>(null);
 
   const handleDelete = async (id: number) => {
     const preset = presets.find((p) => p.id === id);
@@ -84,13 +85,15 @@ export default function PresetsPage() {
   const handleQuickAdd = async () => {
     if (!quickAddName.trim()) return;
     setQuickAddSaving(true);
+    setQuickAddError(null);
     try {
       await savePreset(quickAddName.trim(), DEFAULT_STYLES);
       toast.success(`"${quickAddName.trim()}" added`);
       setQuickAddName("");
       setShowQuickAdd(false);
     } catch (err: any) {
-      toast.error(err?.message || "Failed to add client");
+      const message = err?.message || "Failed to add client";
+      setQuickAddError(message);
     } finally {
       setQuickAddSaving(false);
     }
@@ -129,7 +132,7 @@ export default function PresetsPage() {
             <p className="text-lg text-muted-foreground">Manage saved brand settings for all your clients. Use presets in any post creation mode to quickly apply a client's look.</p>
           </div>
           <Button
-            onClick={() => { setShowQuickAdd(true); setQuickAddName(""); }}
+            onClick={() => { setShowQuickAdd(true); setQuickAddName(""); setQuickAddError(null); }}
             className="shrink-0 bg-pink-600 hover:bg-pink-700 flex items-center gap-2"
           >
             <Plus className="w-4 h-4" /> Add New Client
@@ -144,10 +147,13 @@ export default function PresetsPage() {
                 autoFocus
                 placeholder="e.g. Glow Studio"
                 value={quickAddName}
-                onChange={(e) => setQuickAddName(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleQuickAdd(); if (e.key === "Escape") setShowQuickAdd(false); }}
-                className="bg-gray-900 border-gray-700 text-white"
+                onChange={(e) => { setQuickAddName(e.target.value); setQuickAddError(null); }}
+                onKeyDown={(e) => { if (e.key === "Enter") handleQuickAdd(); if (e.key === "Escape") { setShowQuickAdd(false); setQuickAddError(null); } }}
+                className={`bg-gray-900 border-gray-700 text-white ${quickAddError ? "border-red-500 focus-visible:ring-red-500" : ""}`}
               />
+              {quickAddError && (
+                <p className="text-xs text-red-400 mt-1.5">{quickAddError}</p>
+              )}
             </div>
             <Button
               onClick={handleQuickAdd}
@@ -156,7 +162,7 @@ export default function PresetsPage() {
             >
               <Save className="w-4 h-4 mr-1" /> {quickAddSaving ? "Saving…" : "Save"}
             </Button>
-            <Button variant="ghost" onClick={() => setShowQuickAdd(false)} className="text-gray-400">
+            <Button variant="ghost" onClick={() => { setShowQuickAdd(false); setQuickAddError(null); }} className="text-gray-400">
               <X className="w-4 h-4" />
             </Button>
           </div>
