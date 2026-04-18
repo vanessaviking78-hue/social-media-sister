@@ -12,6 +12,9 @@ const CLIENT_NAMES = [
   "Claire Brown",
   "Claire connolly",
   "CT",
+  "Digital Dentists",
+  "Annorlunda Aesthetics",
+  "The Compliance Clinic",
   "Dr Kathryn",
   "Dr Laura - Highcroft",
   "dr lisa academy",
@@ -43,12 +46,15 @@ const CLIENT_NAMES = [
 
 export async function seedClients(): Promise<void> {
   try {
-    const values = CLIENT_NAMES.map((name) => ({ name }));
-    await db
-      .insert(clientPresetsTable)
-      .values(values)
-      .onConflictDoNothing({ target: clientPresetsTable.name });
-    logger.info({ count: CLIENT_NAMES.length }, "Client seed complete (skipped duplicates)");
+    const existing = await db.select({ name: clientPresetsTable.name }).from(clientPresetsTable);
+    const existingNames = new Set(existing.map((r) => r.name.toLowerCase()));
+    const toInsert = CLIENT_NAMES.filter((name) => !existingNames.has(name.toLowerCase()));
+    if (toInsert.length === 0) {
+      logger.info("Client seed: all clients already present, nothing to insert");
+      return;
+    }
+    await db.insert(clientPresetsTable).values(toInsert.map((name) => ({ name })));
+    logger.info({ inserted: toInsert.length, skipped: CLIENT_NAMES.length - toInsert.length }, "Client seed complete");
   } catch (err) {
     logger.error({ err }, "Client seed failed");
   }
