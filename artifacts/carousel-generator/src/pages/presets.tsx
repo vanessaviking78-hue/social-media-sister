@@ -70,6 +70,9 @@ export default function PresetsPage() {
         cornerStyle: editData.cornerStyle || "none",
         cornerColor: editData.cornerColor || "#d4af37",
         textPosition: editData.textPosition || "bottom-left",
+        textAlign: editData.textAlign || "left",
+        textBoxOutline: editData.textBoxOutline ?? false,
+        textBoxOutlineColor: editData.textBoxOutlineColor || "#ffffff",
         logoPosition: editData.logoPosition || "top-right",
         logoSize: editData.logoSize || 140,
         accentColor: editData.accentColor || "#d4af37",
@@ -235,6 +238,33 @@ export default function PresetsPage() {
                         <Label className="text-xs text-gray-400">Font Size</Label>
                         <Input type="number" value={editData.fontSize || 52} onChange={(e) => setEditData((d) => ({ ...d, fontSize: Number(e.target.value) }))} className="bg-gray-900 border-gray-700 text-white" />
                       </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-400">Text Alignment</Label>
+                      <div className="grid grid-cols-3 gap-1 mt-1">
+                        {[{ value: "left", label: "Left" }, { value: "center", label: "Centre" }, { value: "right", label: "Right" }].map((opt) => (
+                          <button key={opt.value} onClick={() => setEditData((d) => ({ ...d, textAlign: opt.value }))}
+                            className={`px-2 py-2 rounded text-xs font-semibold transition-all ${(editData.textAlign || "left") === opt.value ? "bg-pink-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`}
+                          >{opt.label}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <Label className="text-xs text-gray-400">Text Box Outline</Label>
+                        <button
+                          onClick={() => setEditData((d) => ({ ...d, textBoxOutline: !d.textBoxOutline }))}
+                          className={`relative w-10 h-5 rounded-full transition-colors ${editData.textBoxOutline ? "bg-pink-500" : "bg-gray-600"}`}
+                        >
+                          <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${editData.textBoxOutline ? "translate-x-5" : ""}`} />
+                        </button>
+                      </div>
+                      {editData.textBoxOutline && (
+                        <div className="flex items-center gap-2">
+                          <input type="color" value={editData.textBoxOutlineColor || "#ffffff"} onChange={(e) => setEditData((d) => ({ ...d, textBoxOutlineColor: e.target.value }))} className="w-8 h-8 rounded cursor-pointer" />
+                          <Input value={editData.textBoxOutlineColor || "#ffffff"} onChange={(e) => setEditData((d) => ({ ...d, textBoxOutlineColor: e.target.value }))} className="flex-1 bg-gray-900 border-gray-700 text-white font-mono text-xs" />
+                        </div>
+                      )}
                     </div>
                     <div>
                       <Label className="text-xs text-gray-400">Cloud Campaign Workspace ID</Label>

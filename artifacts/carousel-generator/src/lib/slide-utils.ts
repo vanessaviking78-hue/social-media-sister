@@ -77,7 +77,10 @@ export function drawSlide(
   totalSlidesInGroup: number = 5,
   textPosition: string = "bottom-left",
   showTextOverlay: boolean = true,
-  subheadingFont: string = ""
+  subheadingFont: string = "",
+  textAlign: string = "left",
+  textBoxOutline: boolean = false,
+  textBoxOutlineColor: string = "#ffffff"
 ) {
   const W = CANVAS_WIDTH;
   const H = CANVAS_HEIGHT;
@@ -154,15 +157,16 @@ export function drawSlide(
   const pad = 40;
   let startX = pad, startY = pad;
 
-  const [vPos, hPos] = activeTextPos.split("-");
+  const [vPos] = activeTextPos.split("-");
+  const activeAlign = isLastSlide ? "center" : textAlign;
 
-  if (hPos === "left") { startX = pad; ctx.textAlign = "left"; }
-  else if (hPos === "center") { startX = Math.round(W / 2); ctx.textAlign = "center"; }
-  else if (hPos === "right") { startX = W - pad; ctx.textAlign = "right"; }
+  if (activeAlign === "center") { startX = Math.round(W / 2); ctx.textAlign = "center"; }
+  else if (activeAlign === "right") { startX = W - pad; ctx.textAlign = "right"; }
+  else { startX = pad; ctx.textAlign = "left"; }
 
   if (vPos === "top") { startY = pad; }
   else if (vPos === "center") { startY = Math.round((H - totalH) / 2); }
-  else if (vPos === "bottom") { startY = Math.round(H - totalH - pad); }
+  else { startY = Math.round(H - totalH - pad); }
 
   const maxLineWidth = Math.max(...lines.map((line) => ctx.measureText(line).width));
 
@@ -172,6 +176,11 @@ export function drawSlide(
     if (ctx.textAlign === "right") boxX = startX - maxLineWidth - 15;
     else if (ctx.textAlign === "center") boxX = startX - maxLineWidth / 2 - 15;
     ctx.fillRect(boxX, startY - 15, maxLineWidth + 30, totalH + 30);
+    if (textBoxOutline) {
+      ctx.strokeStyle = textBoxOutlineColor;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(boxX, startY - 15, maxLineWidth + 30, totalH + 30);
+    }
   }
 
   if (!showTextOverlay) {

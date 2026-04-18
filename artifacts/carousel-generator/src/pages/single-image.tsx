@@ -52,6 +52,9 @@ export default function SingleImage() {
   const [cornerStyle, setCornerStyle] = useState("none");
   const [cornerColor, setCornerColor] = useState("#d4af37");
   const [textPosition, setTextPosition] = useState("bottom-left");
+  const [textAlign, setTextAlign] = useState("left");
+  const [textBoxOutline, setTextBoxOutline] = useState(false);
+  const [textBoxOutlineColor, setTextBoxOutlineColor] = useState("#ffffff");
 
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<{ rows: string[] }>({ rows: [] });
@@ -90,7 +93,7 @@ export default function SingleImage() {
 
   const getCurrentStyles = (): PresetStyleFields => ({
     pageColor, overlayColor, fontFamily, subheadingFont, fontSize, textColor, lineSpacing,
-    cornerStyle, cornerColor, textPosition, logoPosition, logoSize,
+    cornerStyle, cornerColor, textPosition, textAlign, textBoxOutline, textBoxOutlineColor, logoPosition, logoSize,
   });
 
   const applyPreset = (preset: ClientPreset) => {
@@ -105,6 +108,9 @@ export default function SingleImage() {
     setCornerStyle(preset.cornerStyle);
     setCornerColor(preset.cornerColor);
     setTextPosition(preset.textPosition);
+    setTextAlign(preset.textAlign || "left");
+    setTextBoxOutline(preset.textBoxOutline ?? false);
+    setTextBoxOutlineColor(preset.textBoxOutlineColor || "#ffffff");
     setLogoPosition(preset.logoPosition);
     setLogoSize(preset.logoSize);
     setCurrentLogoUrl(preset.logoUrl || null);
@@ -404,7 +410,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont);
+        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -447,7 +453,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont);
+        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `post-${String(post.index).padStart(2, "0")}.png`;
@@ -499,7 +505,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont);
+        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         rendered.push({ name: `post-${String(post.index).padStart(2, "0")}.png`, base64: dataUrl });
@@ -875,6 +881,17 @@ export default function SingleImage() {
                 </div>
 
                 <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
+                  <Label className="text-base font-semibold">Text Alignment</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[{ value: "left", label: "Left" }, { value: "center", label: "Centre" }, { value: "right", label: "Right" }].map((opt) => (
+                      <button key={opt.value} onClick={() => setTextAlign(opt.value)}
+                        className={`px-3 py-3 rounded-lg text-sm font-semibold transition-all ${textAlign === opt.value ? "bg-primary text-primary-foreground" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}
+                      >{opt.label}</button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
                   <div className="flex items-center justify-between">
                     <Label className="text-base font-semibold">Line Spacing</Label>
                     <span className="text-base font-semibold tabular-nums">{lineSpacing.toFixed(2)}</span>
@@ -910,6 +927,24 @@ export default function SingleImage() {
                     />
                     <Input type="text" value={overlayColor} onChange={(e) => setOverlayColor(e.target.value)} className="flex-1 h-12 text-base font-mono" placeholder="rgba(0,0,0,0.5)" />
                   </div>
+                </div>
+
+                <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold flex items-center gap-2"><Palette className="w-4 h-4" /> Text Box Outline</Label>
+                    <button
+                      onClick={() => setTextBoxOutline(!textBoxOutline)}
+                      className={`relative w-12 h-6 rounded-full transition-colors ${textBoxOutline ? "bg-pink-500" : "bg-gray-600"}`}
+                    >
+                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${textBoxOutline ? "translate-x-6" : ""}`} />
+                    </button>
+                  </div>
+                  {textBoxOutline && (
+                    <div className="flex gap-3">
+                      <Input type="color" value={textBoxOutlineColor} onChange={(e) => setTextBoxOutlineColor(e.target.value)} className="w-14 h-12 p-1 cursor-pointer" />
+                      <Input type="text" value={textBoxOutlineColor} onChange={(e) => setTextBoxOutlineColor(e.target.value)} className="flex-1 h-12 text-base font-mono" placeholder="#ffffff" />
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">

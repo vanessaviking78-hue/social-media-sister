@@ -43,7 +43,10 @@ export default function Home() {
   const [cornerStyle, setCornerStyle] = useState("none");
   const [cornerColor, setCornerColor] = useState("#d4af37");
   const [textPosition, setTextPosition] = useState("bottom-left");
+  const [textAlign, setTextAlign] = useState("left");
   const [showTextOverlay, setShowTextOverlay] = useState(true);
+  const [textBoxOutline, setTextBoxOutline] = useState(false);
+  const [textBoxOutlineColor, setTextBoxOutlineColor] = useState("#ffffff");
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
@@ -85,7 +88,7 @@ export default function Home() {
 
   const getCurrentStyles = (): PresetStyleFields => ({
     pageColor, overlayColor, fontFamily, subheadingFont, fontSize, textColor, lineSpacing,
-    cornerStyle, cornerColor, textPosition, logoPosition, logoSize,
+    cornerStyle, cornerColor, textPosition, textAlign, textBoxOutline, textBoxOutlineColor, logoPosition, logoSize,
   });
 
   const applyPreset = (preset: ClientPreset) => {
@@ -100,6 +103,9 @@ export default function Home() {
     setCornerStyle(preset.cornerStyle);
     setCornerColor(preset.cornerColor);
     setTextPosition(preset.textPosition);
+    setTextAlign(preset.textAlign || "left");
+    setTextBoxOutline(preset.textBoxOutline ?? false);
+    setTextBoxOutlineColor(preset.textBoxOutlineColor || "#ffffff");
     setLogoPosition(preset.logoPosition);
     setLogoSize(preset.logoSize);
     setCurrentLogoUrl(preset.logoUrl || null);
@@ -152,7 +158,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -503,7 +509,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -547,7 +553,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont);
+        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -953,6 +959,18 @@ export default function Home() {
                     <p className="text-xs text-muted-foreground/60">Last slide always centre</p>
                   </div>
 
+                  {/* Text Alignment */}
+                  <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
+                    <Label className="text-base font-semibold">Text Alignment</Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {[{ value: "left", label: "Left" }, { value: "center", label: "Centre" }, { value: "right", label: "Right" }].map((opt) => (
+                        <button key={opt.value} onClick={() => setTextAlign(opt.value)}
+                          className={`px-3 py-3 rounded-lg text-sm font-semibold transition-all ${textAlign === opt.value ? "bg-primary text-primary-foreground" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}
+                        >{opt.label}</button>
+                      ))}
+                    </div>
+                  </div>
+
                   {/* Line Spacing */}
                   <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
                     <div className="flex items-center justify-between">
@@ -1006,6 +1024,25 @@ export default function Home() {
                       />
                       <Input type="text" value={overlayColor} onChange={(e) => setOverlayColor(e.target.value)} className="flex-1 h-12 text-base font-mono" placeholder="rgba(0,0,0,0.5)" />
                     </div>
+                  </div>}
+
+                  {/* Text Box Outline */}
+                  {showTextOverlay && <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-base font-semibold flex items-center gap-2"><Palette className="w-4 h-4" /> Text Box Outline</Label>
+                      <button
+                        onClick={() => setTextBoxOutline(!textBoxOutline)}
+                        className={`relative w-12 h-6 rounded-full transition-colors ${textBoxOutline ? "bg-pink-500" : "bg-gray-600"}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${textBoxOutline ? "translate-x-6" : ""}`} />
+                      </button>
+                    </div>
+                    {textBoxOutline && (
+                      <div className="flex gap-3">
+                        <Input type="color" value={textBoxOutlineColor} onChange={(e) => setTextBoxOutlineColor(e.target.value)} className="w-14 h-12 p-1 cursor-pointer" />
+                        <Input type="text" value={textBoxOutlineColor} onChange={(e) => setTextBoxOutlineColor(e.target.value)} className="flex-1 h-12 text-base font-mono" placeholder="#ffffff" />
+                      </div>
+                    )}
                   </div>}
 
                   {/* Corner Accent */}
@@ -1383,7 +1420,7 @@ export default function Home() {
                                       else { posStyle.bottom = 24; posStyle.right = 4; }
                                       return <img src={logoPreviewUrl} alt="Logo" style={{ ...posStyle, height: previewLogoH, maxWidth: 60, objectFit: "contain" }} />;
                                     })()}
-                                    <div className="absolute bottom-4 left-3 px-2 py-1.5 rounded-sm" style={showTextOverlay ? { backgroundColor: overlayColor } : {}}>
+                                    <div className="absolute bottom-4 left-3 px-2 py-1.5" style={showTextOverlay ? { backgroundColor: overlayColor, outline: textBoxOutline ? `2px solid ${textBoxOutlineColor}` : undefined } : {}}>
                                       <p className="font-semibold line-clamp-4" style={{ fontFamily: isCover ? fontFamily : subheadingFont, fontSize: Math.max(7, Math.round(fontSize * 0.15)) + "px", color: textColor, lineHeight: lineSpacing, ...(showTextOverlay ? {} : { textShadow: "1px 1px 3px rgba(0,0,0,0.8)" }) }}>{slide.text}</p>
                                     </div>
                                   </div>

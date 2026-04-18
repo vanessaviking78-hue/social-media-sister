@@ -18,6 +18,9 @@ export interface ClientPreset {
   logoUrl: string | null;
   accentColor: string;
   ccWorkspaceId: string | null;
+  textAlign: string;
+  textBoxOutline: boolean;
+  textBoxOutlineColor: string;
   captionFootnote: string;
 }
 
@@ -32,6 +35,9 @@ export interface PresetStyleFields {
   cornerStyle: string;
   cornerColor: string;
   textPosition: string;
+  textAlign: string;
+  textBoxOutline: boolean;
+  textBoxOutlineColor: string;
   logoPosition: string;
   logoSize: number;
   accentColor?: string;
