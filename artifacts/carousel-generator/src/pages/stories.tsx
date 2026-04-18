@@ -163,6 +163,9 @@ export default function Stories() {
     cornerStyle: "none",
     cornerColor: "#d4af37",
     textPosition: "center-center",
+    textAlign: "center",
+    textBoxOutline: false,
+    textBoxOutlineColor: "#ffffff",
     logoPosition,
     logoSize,
   }), [overlayBaseColor, overlayOpacity, font, subheadingFont, fontSize, textColor, logoPosition, logoSize]);
