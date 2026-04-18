@@ -232,7 +232,10 @@ export function drawStory(
   logoPosition: string = "top-right",
   logoSize: number = 120,
   bgOpacity: number = 0.7,
-  subheadingFont: string = ""
+  subheadingFont: string = "",
+  textAlign: string = "center",
+  textBoxOutline: boolean = false,
+  textBoxOutlineColor: string = "#ffffff"
 ) {
   const W = STORY_WIDTH;
   const H = STORY_HEIGHT;
@@ -266,12 +269,33 @@ export function drawStory(
   ctx.closePath();
   ctx.fill();
 
+  if (textBoxOutline) {
+    ctx.strokeStyle = textBoxOutlineColor;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(sqX + radius, sqY);
+    ctx.lineTo(sqX + squareSize - radius, sqY);
+    ctx.arcTo(sqX + squareSize, sqY, sqX + squareSize, sqY + radius, radius);
+    ctx.lineTo(sqX + squareSize, sqY + squareSize - radius);
+    ctx.arcTo(sqX + squareSize, sqY + squareSize, sqX + squareSize - radius, sqY + squareSize, radius);
+    ctx.lineTo(sqX + radius, sqY + squareSize);
+    ctx.arcTo(sqX, sqY + squareSize, sqX, sqY + squareSize - radius, radius);
+    ctx.lineTo(sqX, sqY + radius);
+    ctx.arcTo(sqX, sqY, sqX + radius, sqY, radius);
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  const pad = 40;
+  const resolvedAlign = (textAlign === "left" || textAlign === "right") ? textAlign : "center";
+  const textX = resolvedAlign === "left" ? sqX + pad : resolvedAlign === "right" ? sqX + squareSize - pad : W / 2;
+
   ctx.fillStyle = textColor;
   ctx.font = `700 ${fontSize}px ${font}`;
-  ctx.textAlign = "center";
+  ctx.textAlign = resolvedAlign as CanvasTextAlign;
   ctx.textBaseline = "top";
 
-  const maxTextW = squareSize - 80;
+  const maxTextW = squareSize - pad * 2;
   const lineH = Math.round(fontSize * 1.15);
   const words = questionText.split(" ");
   const lines: string[] = [];
@@ -290,7 +314,7 @@ export function drawStory(
   const totalTextH = lines.length * lineH;
   const textStartY = sqY + Math.round((squareSize - totalTextH) / 2);
   lines.forEach((line, i) => {
-    ctx.fillText(line, W / 2, textStartY + i * lineH);
+    ctx.fillText(line, textX, textStartY + i * lineH);
   });
 
   ctx.fillStyle = textColor;

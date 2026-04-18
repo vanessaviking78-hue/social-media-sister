@@ -62,6 +62,9 @@ export default function Stories() {
   const [logoUrl, setLogoUrl] = useState("");
   const [logoPosition, setLogoPosition] = useState("top-right");
   const [logoSize, setLogoSize] = useState(120);
+  const [textAlign, setTextAlign] = useState("center");
+  const [textBoxOutline, setTextBoxOutline] = useState(false);
+  const [textBoxOutlineColor, setTextBoxOutlineColor] = useState("#ffffff");
 
   const [clientName, setClientName] = useState("");
   const [industry, setIndustry] = useState("aesthetics");
@@ -149,6 +152,9 @@ export default function Stories() {
     if (preset.ccWorkspaceId) {
       setSelectedCcWorkspace(preset.ccWorkspaceId);
     }
+    setTextAlign(preset.textAlign || "center");
+    setTextBoxOutline(preset.textBoxOutline ?? false);
+    setTextBoxOutlineColor(preset.textBoxOutlineColor || "#ffffff");
     toast.success(`Loaded preset: ${preset.name}`);
   }, []);
 
@@ -163,12 +169,12 @@ export default function Stories() {
     cornerStyle: "none",
     cornerColor: "#d4af37",
     textPosition: "center-center",
-    textAlign: "center",
-    textBoxOutline: false,
-    textBoxOutlineColor: "#ffffff",
+    textAlign,
+    textBoxOutline,
+    textBoxOutlineColor,
     logoPosition,
     logoSize,
-  }), [overlayBaseColor, overlayOpacity, font, subheadingFont, fontSize, textColor, logoPosition, logoSize]);
+  }), [overlayBaseColor, overlayOpacity, font, subheadingFont, fontSize, textColor, textAlign, textBoxOutline, textBoxOutlineColor, logoPosition, logoSize]);
 
   const loadBgImg = useCallback((file: string): Promise<HTMLImageElement> => {
     if (bgImgCache.current[file]) return Promise.resolve(bgImgCache.current[file]);
@@ -306,7 +312,7 @@ export default function Stories() {
       const urls: string[] = [];
       for (let i = 0; i < questions.length; i++) {
         const bgImg = shuffled[i % shuffled.length];
-        drawStory(ctx, bgImg, questions[i], font, fontSize, textColor, overlayColor, footerText, logoImgRef.current, logoPosition, logoSize, bgOpacity, subheadingFont);
+        drawStory(ctx, bgImg, questions[i], font, fontSize, textColor, overlayColor, footerText, logoImgRef.current, logoPosition, logoSize, bgOpacity, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
         urls.push(canvas.toDataURL("image/png"));
       }
       setPreviews(urls);
@@ -684,6 +690,33 @@ export default function Stories() {
                 <div>
                   <h3 className="text-sm font-semibold mb-2">Text Colour</h3>
                   <Input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-12 h-8 p-0 border-0" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold mb-2">Text Alignment</h3>
+                  <div className="grid grid-cols-3 gap-1">
+                    {[{ value: "left", label: "Left" }, { value: "center", label: "Centre" }, { value: "right", label: "Right" }].map((opt) => (
+                      <button key={opt.value} onClick={() => setTextAlign(opt.value)}
+                        className={`px-2 py-2 rounded text-xs font-semibold transition-all ${textAlign === opt.value ? "bg-pink-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`}
+                      >{opt.label}</button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-sm font-semibold">Box Outline</h3>
+                    <button
+                      onClick={() => setTextBoxOutline((v) => !v)}
+                      className={`relative w-10 h-5 rounded-full transition-colors ${textBoxOutline ? "bg-pink-500" : "bg-gray-600"}`}
+                    >
+                      <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${textBoxOutline ? "translate-x-5" : ""}`} />
+                    </button>
+                  </div>
+                  {textBoxOutline && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <input type="color" value={textBoxOutlineColor} onChange={(e) => setTextBoxOutlineColor(e.target.value)} className="w-8 h-8 rounded cursor-pointer" />
+                      <Input value={textBoxOutlineColor} onChange={(e) => setTextBoxOutlineColor(e.target.value)} className="flex-1 bg-gray-900 border-gray-700 text-white font-mono text-xs" />
+                    </div>
+                  )}
                 </div>
               </div>
 
