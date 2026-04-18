@@ -4,7 +4,7 @@ import { z } from "zod/v4";
 
 export const clientPresetsTable = pgTable("client_presets", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
+  name: text("name").notNull(),
   pageColor: text("page_color").notNull().default("#000000"),
   overlayColor: text("overlay_color").notNull().default("rgba(0,0,0,0.5)"),
   fontFamily: text("font_family").notNull().default("Inter, sans-serif"),
