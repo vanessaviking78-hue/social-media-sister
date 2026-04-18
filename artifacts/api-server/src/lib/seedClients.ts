@@ -56,8 +56,11 @@ export async function seedClients(): Promise<void> {
         .values(values)
         .onConflictDoNothing({ target: clientPresetsTable.name });
       logger.info({ count: CLIENT_NAMES.length }, "Client seed complete (skipped duplicates)");
-    } catch (innerErr: any) {
-      const pgCode = innerErr?.cause?.code ?? innerErr?.code;
+    } catch (innerErr: unknown) {
+      const pgCode =
+        innerErr instanceof Error && "cause" in innerErr
+          ? (innerErr.cause as { code?: string } | undefined)?.code
+          : undefined;
       if (pgCode !== NO_UNIQUE_CONSTRAINT_CODE) throw innerErr;
 
       logger.warn("Unique constraint not present — falling back to app-side deduplication for seed");
