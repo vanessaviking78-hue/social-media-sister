@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { runMigrations } from "./lib/runMigrations";
 import { seedClients } from "./lib/seedClients";
 
 const rawPort = process.env["PORT"];
@@ -16,12 +17,23 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, async (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
-
-  logger.info({ port }, "Server listening");
+async function start(): Promise<void> {
+  await runMigrations();
   await seedClients();
+
+  await new Promise<void>((resolve, reject) => {
+    app.listen(port, (err?: Error) => {
+      if (err) {
+        reject(err);
+      } else {
+        logger.info({ port }, "Server listening");
+        resolve();
+      }
+    });
+  });
+}
+
+start().catch((err) => {
+  logger.error({ err }, "Server failed to start");
+  process.exit(1);
 });

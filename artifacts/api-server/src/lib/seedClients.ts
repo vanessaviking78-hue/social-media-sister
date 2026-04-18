@@ -44,37 +44,14 @@ const CLIENT_NAMES = [
   "timeless by sarah",
 ];
 
-const NO_UNIQUE_CONSTRAINT_CODE = "42P10";
-
 export async function seedClients(): Promise<void> {
   try {
     const values = CLIENT_NAMES.map((name) => ({ name }));
-
-    try {
-      await db
-        .insert(clientPresetsTable)
-        .values(values)
-        .onConflictDoNothing({ target: clientPresetsTable.name });
-      logger.info({ count: CLIENT_NAMES.length }, "Client seed complete (skipped duplicates)");
-    } catch (innerErr: unknown) {
-      const pgCode =
-        innerErr instanceof Error && "cause" in innerErr
-          ? (innerErr.cause as { code?: string } | undefined)?.code
-          : undefined;
-      if (pgCode !== NO_UNIQUE_CONSTRAINT_CODE) throw innerErr;
-
-      logger.warn("Unique constraint not present — falling back to app-side deduplication for seed");
-      const existing = await db.select({ name: clientPresetsTable.name }).from(clientPresetsTable);
-      const existingLower = new Set(existing.map((r) => r.name.toLowerCase()));
-      const toInsert = CLIENT_NAMES.filter((n) => !existingLower.has(n.toLowerCase()));
-      if (toInsert.length > 0) {
-        await db.insert(clientPresetsTable).values(toInsert.map((name) => ({ name })));
-      }
-      logger.info(
-        { inserted: toInsert.length, skipped: CLIENT_NAMES.length - toInsert.length },
-        "Client seed complete (fallback mode — add unique constraint to enable idempotent seeding)"
-      );
-    }
+    await db
+      .insert(clientPresetsTable)
+      .values(values)
+      .onConflictDoNothing();
+    logger.info({ count: CLIENT_NAMES.length }, "Client seed complete (skipped duplicates)");
   } catch (err) {
     logger.error({ err }, "Client seed failed");
   }

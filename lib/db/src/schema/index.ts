@@ -1,4 +1,5 @@
-import { pgTable, text, serial, timestamp, integer, boolean, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean, json, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -23,7 +24,9 @@ export const clientPresetsTable = pgTable("client_presets", {
   captionFootnote: text("caption_footnote").notNull().default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (table) => [
+  uniqueIndex("client_presets_name_lower_unique").on(sql`LOWER(${table.name})`),
+]);
 
 export const insertPresetSchema = createInsertSchema(clientPresetsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertPreset = z.infer<typeof insertPresetSchema>;
