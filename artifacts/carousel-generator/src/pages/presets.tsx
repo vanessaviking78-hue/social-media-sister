@@ -32,6 +32,7 @@ export default function PresetsPage() {
   const { presets, loading, savePreset, updatePreset, deletePreset } = usePresets();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<Partial<ClientPreset>>({});
+  const [editNameError, setEditNameError] = useState<string | null>(null);
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [quickAddName, setQuickAddName] = useState("");
   const [quickAddSaving, setQuickAddSaving] = useState(false);
@@ -52,15 +53,18 @@ export default function PresetsPage() {
   const startEdit = (preset: ClientPreset) => {
     setEditingId(preset.id);
     setEditData({ ...preset });
+    setEditNameError(null);
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditData({});
+    setEditNameError(null);
   };
 
   const handleSaveEdit = async () => {
     if (!editingId || !editData.name?.trim()) return;
+    setEditNameError(null);
     try {
       const styles: PresetStyleFields = {
         pageColor: editData.pageColor || "#000000",
@@ -84,7 +88,12 @@ export default function PresetsPage() {
       toast.success("Preset updated");
       cancelEdit();
     } catch (err: any) {
-      toast.error(err?.message || "Failed to update");
+      const msg: string = err?.message || "Failed to update";
+      if (msg.toLowerCase().includes("already exists")) {
+        setEditNameError(msg);
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
@@ -199,9 +208,12 @@ export default function PresetsPage() {
                         <Label className="text-xs text-gray-400">Name</Label>
                         <Input
                           value={editData.name || ""}
-                          onChange={(e) => setEditData((d) => ({ ...d, name: e.target.value }))}
-                          className="bg-gray-900 border-gray-700 text-white"
+                          onChange={(e) => { setEditData((d) => ({ ...d, name: e.target.value })); setEditNameError(null); }}
+                          className={`bg-gray-900 border-gray-700 text-white${editNameError ? " border-red-500 focus-visible:ring-red-500" : ""}`}
                         />
+                        {editNameError && (
+                          <p className="text-xs text-red-400 mt-1">{editNameError}</p>
+                        )}
                       </div>
                       <div>
                         <Label className="text-xs text-gray-400">Font</Label>

@@ -59,6 +59,10 @@ router.put("/presets/:id", async (req, res) => {
     if (!preset) { res.status(404).json({ error: "Preset not found" }); return; }
     res.json({ preset });
   } catch (err: any) {
+    if (err?.code === "23505" || err?.cause?.code === "23505") {
+      res.status(409).json({ error: `A client named "${req.body.name?.trim()}" already exists.` });
+      return;
+    }
     console.error("Update preset error:", err);
     res.status(500).json({ error: err.message || "Failed to update preset" });
   }
