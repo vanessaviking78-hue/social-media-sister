@@ -38,6 +38,10 @@ router.post("/presets", async (req, res) => {
     }).returning();
     res.json({ preset });
   } catch (err: any) {
+    if (err?.code === "23505") {
+      res.status(409).json({ error: `A preset named "${req.body.name?.trim()}" already exists` });
+      return;
+    }
     console.error("Create preset error:", err);
     res.status(500).json({ error: err.message || "Failed to create preset" });
   }

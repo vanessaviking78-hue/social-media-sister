@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "wouter";
-import { Trash2, Pencil, Save, X, Layers, ArrowLeft, ImageIcon, MessageSquareText, CalendarDays, BarChart3, ShieldCheck } from "lucide-react";
+import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,10 +9,29 @@ import { toast } from "sonner";
 import { usePresets, type ClientPreset, type PresetStyleFields } from "@/lib/use-presets";
 import { FONT_OPTIONS } from "@/lib/slide-utils";
 
+const DEFAULT_STYLES: PresetStyleFields = {
+  pageColor: "#000000",
+  overlayColor: "rgba(0,0,0,0.5)",
+  fontFamily: "Inter, sans-serif",
+  subheadingFont: "Inter, sans-serif",
+  fontSize: 52,
+  textColor: "#ffffff",
+  lineSpacing: 0.9,
+  cornerStyle: "none",
+  cornerColor: "#d4af37",
+  textPosition: "bottom-left",
+  logoPosition: "top-right",
+  logoSize: 140,
+  accentColor: "#d4af37",
+};
+
 export default function PresetsPage() {
   const { presets, loading, savePreset, updatePreset, deletePreset } = usePresets();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<Partial<ClientPreset>>({});
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [quickAddName, setQuickAddName] = useState("");
+  const [quickAddSaving, setQuickAddSaving] = useState(false);
 
   const handleDelete = async (id: number) => {
     const preset = presets.find((p) => p.id === id);
@@ -62,6 +81,21 @@ export default function PresetsPage() {
     }
   };
 
+  const handleQuickAdd = async () => {
+    if (!quickAddName.trim()) return;
+    setQuickAddSaving(true);
+    try {
+      await savePreset(quickAddName.trim(), DEFAULT_STYLES);
+      toast.success(`"${quickAddName.trim()}" added`);
+      setQuickAddName("");
+      setShowQuickAdd(false);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to add client");
+    } finally {
+      setQuickAddSaving(false);
+    }
+  };
+
   const getFontLabel = (value: string) => FONT_OPTIONS.find((f) => f.value === value)?.label || value;
 
   return (
@@ -89,10 +123,44 @@ export default function PresetsPage() {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-10">
-        <div className="mb-8">
-          <h1 className="font-serif text-4xl font-semibold mb-2 tracking-tight">Client Brand Presets</h1>
-          <p className="text-lg text-muted-foreground">Manage saved brand settings for all your clients. Use presets in any post creation mode to quickly apply a client's look.</p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="font-serif text-4xl font-semibold mb-2 tracking-tight">Client Brand Presets</h1>
+            <p className="text-lg text-muted-foreground">Manage saved brand settings for all your clients. Use presets in any post creation mode to quickly apply a client's look.</p>
+          </div>
+          <Button
+            onClick={() => { setShowQuickAdd(true); setQuickAddName(""); }}
+            className="shrink-0 bg-pink-600 hover:bg-pink-700 flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" /> Add New Client
+          </Button>
         </div>
+
+        {showQuickAdd && (
+          <div className="mb-6 rounded-2xl border border-pink-500/30 bg-pink-950/20 p-5 flex items-end gap-3">
+            <div className="flex-1">
+              <Label className="text-xs text-gray-400 mb-1 block">Client name</Label>
+              <Input
+                autoFocus
+                placeholder="e.g. Glow Studio"
+                value={quickAddName}
+                onChange={(e) => setQuickAddName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleQuickAdd(); if (e.key === "Escape") setShowQuickAdd(false); }}
+                className="bg-gray-900 border-gray-700 text-white"
+              />
+            </div>
+            <Button
+              onClick={handleQuickAdd}
+              disabled={!quickAddName.trim() || quickAddSaving}
+              className="bg-pink-600 hover:bg-pink-700"
+            >
+              <Save className="w-4 h-4 mr-1" /> {quickAddSaving ? "Saving…" : "Save"}
+            </Button>
+            <Button variant="ghost" onClick={() => setShowQuickAdd(false)} className="text-gray-400">
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
 
         {loading ? (
           <div className="text-center py-20 text-muted-foreground">Loading presets...</div>
