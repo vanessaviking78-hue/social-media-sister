@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import VanessaChat from "@/components/vanessa-chat";
-import { CANVAS_WIDTH, CANVAS_HEIGHT, FONT_OPTIONS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, compressImage, recordSlideVideo, type AnimationType } from "@/lib/slide-utils";
+import { CANVAS_WIDTH, CANVAS_HEIGHT, VIDEO_WIDTH, VIDEO_HEIGHT, FONT_OPTIONS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, compressImage, recordSlideVideo, type AnimationType } from "@/lib/slide-utils";
 import { usePresets, type ClientPreset, type PresetStyleFields, type TextPosition, type TextAlign, normalizeTextPosition } from "@/lib/use-presets";
 import { useCaptions } from "@/lib/use-captions";
 import PresetSelector from "@/components/preset-selector";
@@ -592,13 +592,21 @@ export default function SingleImage() {
         const canvas = videoPreviewCanvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d')!;
+        const offscreen = document.createElement('canvas');
+        offscreen.width = CANVAS_WIDTH;
+        offscreen.height = CANVAS_HEIGHT;
+        const offCtx = offscreen.getContext('2d')!;
+        const yOff = Math.round((VIDEO_HEIGHT - CANVAS_HEIGHT) / 2);
         const durationMs = videoDurationSec * 1000;
         const startTime = performance.now();
         setVideoPreviewPlaying(true);
         const tick = () => {
           const elapsed = performance.now() - startTime;
           const progress = Math.min(1, elapsed / durationMs);
-          drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+          drawSlide(offCtx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
+          ctx.drawImage(offscreen, 0, yOff);
           if (progress < 1) {
             videoPreviewRafRef.current = requestAnimationFrame(tick);
           } else {
@@ -623,9 +631,14 @@ export default function SingleImage() {
       await document.fonts.ready;
       const zip = new JSZip();
       const canvas = document.createElement('canvas');
-      canvas.width = CANVAS_WIDTH;
-      canvas.height = CANVAS_HEIGHT;
+      canvas.width = VIDEO_WIDTH;
+      canvas.height = VIDEO_HEIGHT;
       const ctx = canvas.getContext('2d')!;
+      const offscreen = document.createElement('canvas');
+      offscreen.width = CANVAS_WIDTH;
+      offscreen.height = CANVAS_HEIGHT;
+      const offCtx = offscreen.getContext('2d')!;
+      const yOff = Math.round((VIDEO_HEIGHT - CANVAS_HEIGHT) / 2);
 
       for (let si = 0; si < result.posts.length; si++) {
         const post = result.posts[si];
@@ -636,7 +649,10 @@ export default function SingleImage() {
         await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
 
         const videoBlob = await recordSlideVideo(canvas, (progress) => {
-          drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+          drawSlide(offCtx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
+          ctx.drawImage(offscreen, 0, yOff);
         }, videoDurationSec * 1000);
 
         URL.revokeObjectURL(img.src);
@@ -1488,9 +1504,9 @@ export default function SingleImage() {
                           </div>
                           <canvas
                             ref={videoPreviewCanvasRef}
-                            width={CANVAS_WIDTH}
-                            height={CANVAS_HEIGHT}
-                            style={{ width: '108px', height: '135px', borderRadius: '6px', flexShrink: 0 }}
+                            width={VIDEO_WIDTH}
+                            height={VIDEO_HEIGHT}
+                            style={{ width: '77px', height: '137px', borderRadius: '6px', flexShrink: 0 }}
                             className="border border-gray-700 bg-black"
                           />
                         </div>
