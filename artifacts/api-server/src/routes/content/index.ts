@@ -840,9 +840,13 @@ router.post("/cloud-campaign/push", async (req, res) => {
             title: post.title,
             postNow: false,
             approved: true,
-            captions: [{ text: post.caption, platform: "INSTAGRAM", index: 0 }],
+            captions: [
+              { text: post.caption, platform: "INSTAGRAM", index: 0 },
+              { text: post.caption, platform: "FACEBOOK", index: 1 },
+              { text: post.caption, platform: "GOOGLE_BUSINESS", index: 2 },
+            ],
             publishingSettings: {},
-            platformList: ["INSTAGRAM"],
+            platformList: ["INSTAGRAM", "FACEBOOK", "GOOGLE_BUSINESS"],
             accountIds: [],
           };
           if (media.length > 0) {
