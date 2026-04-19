@@ -947,12 +947,12 @@ export default function Home() {
                     <Label className="text-base font-semibold">Text Position</Label>
                     <div className="grid grid-cols-3 gap-2">
                       {[
-                        { value: "top-left", label: "TL" }, { value: "top-center", label: "TC" }, { value: "top-right", label: "TR" },
-                        { value: "center-left", label: "CL" }, { value: "center-center", label: "CC" }, { value: "center-right", label: "CR" },
-                        { value: "bottom-left", label: "BL" }, { value: "bottom-center", label: "BC" }, { value: "bottom-right", label: "BR" },
+                        { value: "top-left", label: "Top" },
+                        { value: "center-left", label: "Centre" },
+                        { value: "bottom-left", label: "Bottom" },
                       ].map((opt) => (
                         <button key={opt.value} onClick={() => setTextPosition(opt.value)}
-                          className={`px-3 py-3 rounded-lg text-sm font-semibold transition-all ${textPosition === opt.value ? "bg-primary text-primary-foreground" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}
+                          className={`px-3 py-3 rounded-lg text-sm font-semibold transition-all ${textPosition.split("-")[0] === opt.value.split("-")[0] ? "bg-primary text-primary-foreground" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}
                         >{opt.label}</button>
                       ))}
                     </div>
