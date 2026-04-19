@@ -218,7 +218,7 @@ export function drawSlide(
   const pad = 40;
   let startX = pad, startY = pad;
 
-  const [vPos] = activeTextPos.split("-");
+  const vPos = activeTextPos.split("-")[0];
   const activeAlign = isLastSlide ? "center" : textAlign;
 
   if (activeAlign === "center") { startX = Math.round(W / 2); ctx.textAlign = "center"; }
