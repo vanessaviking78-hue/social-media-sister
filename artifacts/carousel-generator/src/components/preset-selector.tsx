@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import type { ClientPreset, PresetStyleFields } from "@/lib/use-presets";
+import { normalizeTextPosition, type ClientPreset, type PresetStyleFields } from "@/lib/use-presets";
 
 interface CcWorkspace {
   id: string;
@@ -152,7 +152,7 @@ export default function PresetSelector({
         lineSpacing: parseFloat(preset.lineSpacing),
         cornerStyle: preset.cornerStyle,
         cornerColor: preset.cornerColor,
-        textPosition: preset.textPosition,
+        textPosition: normalizeTextPosition(preset.textPosition),
         textAlign: preset.textAlign || "left",
         textBoxOutline: preset.textBoxOutline ?? false,
         textBoxOutlineColor: preset.textBoxOutlineColor || "#ffffff",

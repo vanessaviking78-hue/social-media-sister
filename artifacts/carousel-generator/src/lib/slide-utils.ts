@@ -108,7 +108,7 @@ export function drawSlide(
   cornerColor: string = "#d4af37",
   slidePosition: number = 1,
   totalSlidesInGroup: number = 5,
-  textPosition: string = "bottom-left",
+  textPosition: "top" | "center" | "bottom" = "bottom",
   showTextOverlay: boolean = true,
   subheadingFont: string = "",
   textAlign: string = "left",
@@ -194,7 +194,7 @@ export function drawSlide(
   const isLastSlide = totalSlidesInGroup > 1 && slidePosition === totalSlidesInGroup;
   const ctaSize = isLastSlide ? Math.round(size * 1.4) : size;
   const textAreaW = isLastSlide ? W - 120 : W - 80;
-  const activeTextPos = isLastSlide ? "center-center" : textPosition;
+  const activeTextPos = isLastSlide ? "center" : textPosition;
 
   const activeFont = isCoverSlide ? font : (subheadingFont || font);
 
@@ -218,7 +218,7 @@ export function drawSlide(
   const pad = 40;
   let startX = pad, startY = pad;
 
-  const vPos = activeTextPos.split("-")[0];
+  const vPos = activeTextPos;
   const activeAlign = isLastSlide ? "center" : textAlign;
 
   if (activeAlign === "center") { startX = Math.round(W / 2); ctx.textAlign = "center"; }

@@ -1,6 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 
 export type TextAlign = "left" | "center" | "right";
+export type TextPosition = "top" | "center" | "bottom";
+
+export function normalizeTextPosition(raw: string | undefined | null): TextPosition {
+  if (!raw) return "bottom";
+  const vPos = raw.split("-")[0];
+  if (vPos === "top") return "top";
+  if (vPos === "center") return "center";
+  return "bottom";
+}
 
 export interface ClientPreset {
   id: number;
@@ -14,7 +23,7 @@ export interface ClientPreset {
   lineSpacing: string;
   cornerStyle: string;
   cornerColor: string;
-  textPosition: string;
+  textPosition: TextPosition;
   logoPosition: string;
   logoSize: number;
   logoUrl: string | null;
@@ -36,7 +45,7 @@ export interface PresetStyleFields {
   lineSpacing: number;
   cornerStyle: string;
   cornerColor: string;
-  textPosition: string;
+  textPosition: TextPosition;
   textAlign: TextAlign;
   textBoxOutline: boolean;
   textBoxOutlineColor: string;
@@ -54,7 +63,11 @@ export function usePresets() {
       const resp = await fetch(`${import.meta.env.BASE_URL}api/presets`);
       if (!resp.ok) throw new Error("Failed to fetch");
       const data = await resp.json();
-      setPresets(data.presets || []);
+      const normalized: ClientPreset[] = (data.presets || []).map((p: ClientPreset & { textPosition: string }) => ({
+        ...p,
+        textPosition: normalizeTextPosition(p.textPosition),
+      }));
+      setPresets(normalized);
     } catch (err) {
       console.error("Failed to fetch presets:", err);
     } finally {

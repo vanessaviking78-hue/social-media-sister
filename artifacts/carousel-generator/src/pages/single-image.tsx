@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import VanessaChat from "@/components/vanessa-chat";
 import { CANVAS_WIDTH, CANVAS_HEIGHT, FONT_OPTIONS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, compressImage, recordSlideVideo, type AnimationType } from "@/lib/slide-utils";
-import { usePresets, type ClientPreset, type PresetStyleFields } from "@/lib/use-presets";
+import { usePresets, type ClientPreset, type PresetStyleFields, type TextPosition, type TextAlign, normalizeTextPosition } from "@/lib/use-presets";
 import { useCaptions } from "@/lib/use-captions";
 import PresetSelector from "@/components/preset-selector";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
@@ -51,8 +51,8 @@ export default function SingleImage() {
   const [pageColor, setPageColor] = useState("#000000");
   const [cornerStyle, setCornerStyle] = useState("none");
   const [cornerColor, setCornerColor] = useState("#d4af37");
-  const [textPosition, setTextPosition] = useState("bottom-left");
-  const [textAlign, setTextAlign] = useState("left");
+  const [textPosition, setTextPosition] = useState<TextPosition>("bottom");
+  const [textAlign, setTextAlign] = useState<TextAlign>("left");
   const [textBoxOutline, setTextBoxOutline] = useState(false);
   const [textBoxOutlineColor, setTextBoxOutlineColor] = useState("#ffffff");
 
@@ -115,7 +115,7 @@ export default function SingleImage() {
     setLineSpacing(parseFloat(preset.lineSpacing));
     setCornerStyle(preset.cornerStyle);
     setCornerColor(preset.cornerColor);
-    setTextPosition(preset.textPosition);
+    setTextPosition(normalizeTextPosition(preset.textPosition));
     setTextAlign(preset.textAlign || "left");
     setTextBoxOutline(preset.textBoxOutline ?? false);
     setTextBoxOutlineColor(preset.textBoxOutlineColor || "#ffffff");
@@ -971,13 +971,13 @@ export default function SingleImage() {
                 <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
                   <Label className="text-base font-semibold">Text Position</Label>
                   <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { value: "top-left", label: "Top" },
-                      { value: "center-left", label: "Centre" },
-                      { value: "bottom-left", label: "Bottom" },
-                    ].map((opt) => (
+                    {([
+                      { value: "top" as TextPosition, label: "Top" },
+                      { value: "center" as TextPosition, label: "Centre" },
+                      { value: "bottom" as TextPosition, label: "Bottom" },
+                    ] as const).map((opt) => (
                       <button key={opt.value} onClick={() => setTextPosition(opt.value)}
-                        className={`px-3 py-3 rounded-lg text-sm font-semibold transition-all ${textPosition.split("-")[0] === opt.value.split("-")[0] ? "bg-primary text-primary-foreground" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}
+                        className={`px-3 py-3 rounded-lg text-sm font-semibold transition-all ${textPosition === opt.value ? "bg-primary text-primary-foreground" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}
                       >{opt.label}</button>
                     ))}
                   </div>
@@ -986,7 +986,7 @@ export default function SingleImage() {
                 <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
                   <Label className="text-base font-semibold">Text Alignment</Label>
                   <div className="grid grid-cols-3 gap-2">
-                    {[{ value: "left", label: "Left" }, { value: "center", label: "Centre" }, { value: "right", label: "Right" }].map((opt) => (
+                    {([{ value: "left" as TextAlign, label: "Left" }, { value: "center" as TextAlign, label: "Centre" }, { value: "right" as TextAlign, label: "Right" }] as const).map((opt) => (
                       <button key={opt.value} onClick={() => setTextAlign(opt.value)}
                         className={`px-3 py-3 rounded-lg text-sm font-semibold transition-all ${textAlign === opt.value ? "bg-primary text-primary-foreground" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}
                       >{opt.label}</button>

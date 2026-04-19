@@ -22,7 +22,7 @@ import {
   STORY_WIDTH, STORY_HEIGHT, drawStory, loadGoogleFonts,
 } from "@/lib/slide-utils";
 import { authHeaders } from "@/lib/use-approval";
-import { usePresets, type ClientPreset, type PresetStyleFields } from "@/lib/use-presets";
+import { usePresets, type ClientPreset, type PresetStyleFields, type TextAlign } from "@/lib/use-presets";
 import PresetSelector from "@/components/preset-selector";
 
 const BASE = import.meta.env.BASE_URL || "/";
@@ -62,7 +62,7 @@ export default function Stories() {
   const [logoUrl, setLogoUrl] = useState("");
   const [logoPosition, setLogoPosition] = useState("top-right");
   const [logoSize, setLogoSize] = useState(120);
-  const [textAlign, setTextAlign] = useState("left");
+  const [textAlign, setTextAlign] = useState<TextAlign>("left");
   const [textBoxOutline, setTextBoxOutline] = useState(false);
   const [textBoxOutlineColor, setTextBoxOutlineColor] = useState("#ffffff");
 
@@ -168,7 +168,7 @@ export default function Stories() {
     lineSpacing: 1.15,
     cornerStyle: "none",
     cornerColor: "#d4af37",
-    textPosition: "center-center",
+    textPosition: "center",
     textAlign,
     textBoxOutline,
     textBoxOutlineColor,
@@ -694,7 +694,7 @@ export default function Stories() {
                 <div>
                   <h3 className="text-sm font-semibold mb-2">Text Alignment</h3>
                   <div className="grid grid-cols-3 gap-1">
-                    {[{ value: "left", label: "Left" }, { value: "center", label: "Centre" }, { value: "right", label: "Right" }].map((opt) => (
+                    {([{ value: "left" as TextAlign, label: "Left" }, { value: "center" as TextAlign, label: "Centre" }, { value: "right" as TextAlign, label: "Right" }] as const).map((opt) => (
                       <button key={opt.value} onClick={() => setTextAlign(opt.value)}
                         className={`px-2 py-2 rounded text-xs font-semibold transition-all ${textAlign === opt.value ? "bg-pink-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`}
                       >{opt.label}</button>
