@@ -1462,7 +1462,7 @@ export default function Home() {
                           <Download className="w-5 h-5" />Download ZIP
                         </button>
                         <Button variant="outline" size="lg" onClick={() => { setVideoExportOpen(true); setTimeout(() => document.getElementById('video-export-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} className="px-8 py-4 text-lg font-bold border-purple-500/50 text-purple-300 hover:bg-purple-950/30" data-testid="button-export-video-bar">
-                          <Film className="w-5 h-5 mr-2" />Export Video
+                          <Film className="w-5 h-5 mr-2" />Export as Video
                         </Button>
                         <Button variant="outline" size="lg" onClick={downloadCsv} className="px-8 py-4 text-lg font-bold" data-testid="button-download-csv-bar">
                           <FileText className="w-5 h-5 mr-2" />Download CSV
