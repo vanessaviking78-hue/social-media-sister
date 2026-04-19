@@ -843,10 +843,10 @@ router.post("/cloud-campaign/push", async (req, res) => {
             captions: [
               { text: post.caption, platform: "INSTAGRAM", index: 0 },
               { text: post.caption, platform: "FACEBOOK", index: 1 },
-              { text: post.caption, platform: "GOOGLE_BUSINESS", index: 2 },
+              { text: post.caption, platform: "GOOGLE_MY_BUSINESS", index: 2 },
             ],
             publishingSettings: {},
-            platformList: ["INSTAGRAM", "FACEBOOK", "GOOGLE_BUSINESS"],
+            platformList: ["INSTAGRAM", "FACEBOOK", "GOOGLE_MY_BUSINESS"],
             accountIds: [],
           };
           if (media.length > 0) {
