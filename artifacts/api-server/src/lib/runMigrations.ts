@@ -4,17 +4,21 @@ import { logger } from "./logger";
 
 export async function runMigrations(): Promise<void> {
   try {
-    const alreadyMigrated = await hasClientPresetsNameLowerUnique();
-    if (alreadyMigrated) {
-      return;
-    }
-
-    await deduplicateClientPresets();
-    await addClientPresetsNameLowerUniqueIndex();
+    await runNameLowerUniqueIndexMigration();
+    await normalizeTextPositionValues();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
   }
+}
+
+async function runNameLowerUniqueIndexMigration(): Promise<void> {
+  const alreadyMigrated = await hasClientPresetsNameLowerUnique();
+  if (alreadyMigrated) {
+    return;
+  }
+  await deduplicateClientPresets();
+  await addClientPresetsNameLowerUniqueIndex();
 }
 
 async function hasClientPresetsNameLowerUnique(): Promise<boolean> {
@@ -55,4 +59,21 @@ async function addClientPresetsNameLowerUniqueIndex(): Promise<void> {
     ON client_presets (LOWER(name))
   `);
   logger.info("Created unique index client_presets_name_lower_unique");
+}
+
+async function normalizeTextPositionValues(): Promise<void> {
+  const result = await db.execute(sql`
+    UPDATE client_presets
+    SET text_position = CASE
+      WHEN text_position LIKE 'top-%'    THEN 'top'
+      WHEN text_position LIKE 'center-%' THEN 'center'
+      WHEN text_position LIKE 'bottom-%' THEN 'bottom'
+      ELSE text_position
+    END
+    WHERE text_position LIKE '%-%'
+  `);
+  const updated = (result as { rowCount?: number }).rowCount ?? 0;
+  if (updated > 0) {
+    logger.info({ updated }, "Normalised legacy compound text_position values in client_presets");
+  }
 }

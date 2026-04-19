@@ -14,7 +14,7 @@ export const clientPresetsTable = pgTable("client_presets", {
   lineSpacing: text("line_spacing").notNull().default("0.9"),
   cornerStyle: text("corner_style").notNull().default("none"),
   cornerColor: text("corner_color").notNull().default("#d4af37"),
-  textPosition: text("text_position").notNull().default("bottom-left"),
+  textPosition: text("text_position").notNull().default("bottom"),
   logoPosition: text("logo_position").notNull().default("top-right"),
   logoSize: integer("logo_size").notNull().default(140),
   logoUrl: text("logo_url"),
