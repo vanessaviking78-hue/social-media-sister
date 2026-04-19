@@ -47,6 +47,8 @@ export default function PresetSelector({
   const [showManage, setShowManage] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [renameError, setRenameError] = useState<string | null>(null);
   const [ccWorkspaces, setCcWorkspaces] = useState<CcWorkspace[]>([]);
 
   useEffect(() => {
@@ -68,6 +70,7 @@ export default function PresetSelector({
       return;
     }
     setSaving(true);
+    setSaveError(null);
     try {
       const styles = getCurrentStyles();
       let logoUrl: string | null = null;
@@ -82,9 +85,15 @@ export default function PresetSelector({
       setSaveName("");
       setSaveCcWorkspaceId("");
       setSaveCaptionFootnote("");
+      setSaveError(null);
       setShowSaveDialog(false);
     } catch (err: any) {
-      toast.error(err?.message || "Failed to save preset");
+      const msg: string = err?.message || "Failed to save preset";
+      if (msg.toLowerCase().includes("already exists")) {
+        setSaveError(msg);
+      } else {
+        toast.error(msg);
+      }
     } finally {
       setSaving(false);
     }
@@ -131,6 +140,7 @@ export default function PresetSelector({
     if (!editName.trim()) return;
     const preset = presets.find((p) => p.id === id);
     if (!preset) return;
+    setRenameError(null);
     try {
       await onUpdatePreset(id, editName.trim(), {
         pageColor: preset.pageColor,
@@ -153,8 +163,14 @@ export default function PresetSelector({
       toast.success("Preset renamed");
       setEditingId(null);
       setEditName("");
+      setRenameError(null);
     } catch (err: any) {
-      toast.error(err?.message || "Failed to rename");
+      const msg: string = err?.message || "Failed to rename";
+      if (msg.toLowerCase().includes("already exists")) {
+        setRenameError(msg);
+      } else {
+        toast.error(msg);
+      }
     }
   };
 
@@ -203,7 +219,7 @@ export default function PresetSelector({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => { setShowSaveDialog(true); setSaveName(""); setSaveCcWorkspaceId(""); setSaveCaptionFootnote(""); }}
+          onClick={() => { setShowSaveDialog(true); setSaveName(""); setSaveCcWorkspaceId(""); setSaveCaptionFootnote(""); setSaveError(null); }}
           className="mt-5 border-pink-600 text-pink-400 hover:text-white hover:bg-pink-600"
         >
           <Save className="w-3.5 h-3.5 mr-1" />
@@ -227,18 +243,23 @@ export default function PresetSelector({
         <div className="bg-gray-800/80 border border-gray-700 rounded-lg p-4 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-white">Save Current Settings as Preset</span>
-            <button onClick={() => setShowSaveDialog(false)} className="text-gray-400 hover:text-white">
+            <button onClick={() => { setShowSaveDialog(false); setSaveError(null); }} className="text-gray-400 hover:text-white">
               <X className="w-4 h-4" />
             </button>
           </div>
-          <Input
-            placeholder="Client / Preset name"
-            value={saveName}
-            onChange={(e) => setSaveName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSave()}
-            className="bg-gray-900 border-gray-600 text-white"
-            autoFocus
-          />
+          <div>
+            <Input
+              placeholder="Client / Preset name"
+              value={saveName}
+              onChange={(e) => { setSaveName(e.target.value); setSaveError(null); }}
+              onKeyDown={(e) => e.key === "Enter" && handleSave()}
+              className={`bg-gray-900 border-gray-600 text-white${saveError ? " border-red-500 focus-visible:ring-red-500" : ""}`}
+              autoFocus
+            />
+            {saveError && (
+              <p className="text-xs text-red-400 mt-1.5">{saveError}</p>
+            )}
+          </div>
           {ccWorkspaces.length > 0 && (
             <div>
               <Label className="text-xs text-gray-400 mb-1 block">Cloud Campaign Workspace (optional)</Label>
@@ -271,7 +292,7 @@ export default function PresetSelector({
             </p>
           )}
           <div className="flex gap-2 justify-end">
-            <Button variant="ghost" size="sm" onClick={() => setShowSaveDialog(false)} className="text-gray-400">Cancel</Button>
+            <Button variant="ghost" size="sm" onClick={() => { setShowSaveDialog(false); setSaveError(null); }} className="text-gray-400">Cancel</Button>
             <Button size="sm" onClick={handleSave} disabled={saving || !saveName.trim()} className="bg-pink-600 hover:bg-pink-700">
               {saving ? "Saving..." : "Save Preset"}
             </Button>
@@ -291,15 +312,20 @@ export default function PresetSelector({
             <div key={p.id} className="flex items-center gap-2 py-1.5 border-b border-gray-700/50 last:border-0">
               {editingId === p.id ? (
                 <>
-                  <Input
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleRename(p.id)}
-                    className="flex-1 bg-gray-900 border-gray-600 text-white h-8 text-sm"
-                    autoFocus
-                  />
-                  <Button size="sm" variant="ghost" onClick={() => handleRename(p.id)} className="h-8 px-2 text-green-400">Save</Button>
-                  <Button size="sm" variant="ghost" onClick={() => setEditingId(null)} className="h-8 px-2 text-gray-400">Cancel</Button>
+                  <div className="flex-1 min-w-0">
+                    <Input
+                      value={editName}
+                      onChange={(e) => { setEditName(e.target.value); setRenameError(null); }}
+                      onKeyDown={(e) => e.key === "Enter" && handleRename(p.id)}
+                      className={`bg-gray-900 border-gray-600 text-white h-8 text-sm${renameError ? " border-red-500 focus-visible:ring-red-500" : ""}`}
+                      autoFocus
+                    />
+                    {renameError && (
+                      <p className="text-xs text-red-400 mt-1">{renameError}</p>
+                    )}
+                  </div>
+                  <Button size="sm" variant="ghost" onClick={() => handleRename(p.id)} className="h-8 px-2 text-green-400 shrink-0">Save</Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setEditingId(null); setRenameError(null); }} className="h-8 px-2 text-gray-400 shrink-0">Cancel</Button>
                 </>
               ) : (
                 <>
@@ -317,7 +343,7 @@ export default function PresetSelector({
                     className="text-xs text-blue-400 hover:text-blue-300 px-2"
                   >Load</button>
                   <button
-                    onClick={() => { setEditingId(p.id); setEditName(p.name); }}
+                    onClick={() => { setEditingId(p.id); setEditName(p.name); setRenameError(null); }}
                     className="text-gray-400 hover:text-white p-1"
                   ><Pencil className="w-3.5 h-3.5" /></button>
                   <button
