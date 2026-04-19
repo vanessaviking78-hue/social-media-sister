@@ -1383,7 +1383,7 @@ export default function SingleImage() {
                   </div>
 
                   {/* Video Export Panel */}
-                  <div className="rounded-2xl border border-purple-500/20 bg-purple-950/10 overflow-hidden">
+                  <div id="si-video-export-panel" className="rounded-2xl border border-purple-500/20 bg-purple-950/10 overflow-hidden">
                     <button
                       className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-purple-950/20 transition-colors"
                       onClick={() => setVideoExportOpen((v) => !v)}
@@ -1429,6 +1429,9 @@ export default function SingleImage() {
                     <div className="flex gap-3 flex-wrap justify-end">
                       <Button variant="outline" size="lg" onClick={downloadCsv} className="px-8 py-6 text-lg font-bold">
                         <FileText className="w-5 h-5 mr-2" />Download CSV
+                      </Button>
+                      <Button variant="outline" size="lg" onClick={() => { setVideoExportOpen(true); setTimeout(() => document.getElementById('si-video-export-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} className="px-8 py-6 text-lg font-bold border-purple-500/50 text-purple-300 hover:bg-purple-950/30">
+                        <Film className="w-5 h-5 mr-2" />Export Video
                       </Button>
                       <button className="btn-shimmer px-10 py-6 rounded-2xl text-lg font-bold flex items-center gap-3" onClick={downloadZip}>
                         <Download className="w-5 h-5" />Download ZIP

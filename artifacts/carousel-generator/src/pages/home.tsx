@@ -1457,10 +1457,13 @@ export default function Home() {
                           {result.totalCarousels} carousels &times; {result.slidesPerCarousel} slides at 1080 &times; 1350 px
                         </p>
                       </div>
-                      <div className="flex gap-3">
+                      <div className="flex gap-3 flex-wrap justify-end">
                         <button className="btn-shimmer px-8 py-4 rounded-2xl text-lg font-bold flex items-center gap-3" onClick={downloadZip} data-testid="button-download-zip-bar">
                           <Download className="w-5 h-5" />Download ZIP
                         </button>
+                        <Button variant="outline" size="lg" onClick={() => { setVideoExportOpen(true); setTimeout(() => document.getElementById('video-export-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }} className="px-8 py-4 text-lg font-bold border-purple-500/50 text-purple-300 hover:bg-purple-950/30" data-testid="button-export-video-bar">
+                          <Film className="w-5 h-5 mr-2" />Export Video
+                        </Button>
                         <Button variant="outline" size="lg" onClick={downloadCsv} className="px-8 py-4 text-lg font-bold" data-testid="button-download-csv-bar">
                           <FileText className="w-5 h-5 mr-2" />Download CSV
                         </Button>
@@ -1474,7 +1477,7 @@ export default function Home() {
                     </div>
 
                     {/* Video Export Panel */}
-                    <div className="rounded-2xl border border-purple-500/20 bg-purple-950/10 overflow-hidden">
+                    <div id="video-export-panel" className="rounded-2xl border border-purple-500/20 bg-purple-950/10 overflow-hidden">
                       <button
                         className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-purple-950/20 transition-colors"
                         onClick={() => setVideoExportOpen((v) => !v)}

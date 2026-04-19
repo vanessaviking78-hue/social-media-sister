@@ -7,11 +7,29 @@ function easeOutQuad(t: number): number {
   return 1 - (1 - t) * (1 - t);
 }
 
+function hexToRgb(hex: string): [number, number, number] | null {
+  const s = hex.replace('#', '');
+  if (s.length === 3) {
+    const r = parseInt(s[0] + s[0], 16);
+    const g = parseInt(s[1] + s[1], 16);
+    const b = parseInt(s[2] + s[2], 16);
+    return [r, g, b];
+  }
+  if (s.length === 6) {
+    return [parseInt(s.slice(0, 2), 16), parseInt(s.slice(2, 4), 16), parseInt(s.slice(4, 6), 16)];
+  }
+  return null;
+}
+
 function scaleOverlayAlpha(color: string, scale: number): string {
   const m = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/);
   if (m) {
     const a = parseFloat(m[4] ?? '1') * scale;
     return `rgba(${m[1]},${m[2]},${m[3]},${Math.min(1, a)})`;
+  }
+  if (color.startsWith('#')) {
+    const rgb = hexToRgb(color);
+    if (rgb) return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${Math.min(1, scale)})`;
   }
   return color;
 }
