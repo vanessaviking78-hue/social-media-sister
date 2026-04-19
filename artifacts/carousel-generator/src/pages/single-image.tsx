@@ -577,7 +577,7 @@ export default function SingleImage() {
 
       for (let si = 0; si < result.posts.length; si++) {
         const post = result.posts[si];
-        toast.loading(`Rendering video ${si + 1} of ${result.posts.length}…`, { id });
+        toast.loading(`Rendering slide ${si + 1} of ${result.posts.length}…`, { id });
         const res = await fetch(post.imageUrl);
         const blob = await res.blob();
         const img = new Image();

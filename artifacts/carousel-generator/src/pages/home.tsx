@@ -645,7 +645,7 @@ export default function Home() {
       } else {
         for (let si = 0; si < result.slides.length; si++) {
           const slide = result.slides[si];
-          toast.loading(`Rendering video ${si + 1} of ${result.slides.length}…`, { id });
+          toast.loading(`Rendering slide ${si + 1} of ${result.slides.length}…`, { id });
           const isCover = slide.groupPosition === 1;
           const res = await fetch(slide.imageUrl);
           const blob = await res.blob();
