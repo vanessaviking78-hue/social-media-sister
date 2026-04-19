@@ -100,22 +100,33 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
       </div>
 
       {clients.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "thin" }}>
-          <button
-            onClick={() => { setSelectedClient(""); setSelected(new Set()); }}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${selectedClient === "" ? "bg-green-600 text-white" : "bg-accent text-muted-foreground hover:text-foreground"}`}
+        <div className="relative">
+          <div
+            className="flex gap-2 overflow-x-auto pb-2 pr-8"
+            style={{
+              scrollbarWidth: "none",
+              WebkitOverflowScrolling: "touch",
+              touchAction: "pan-x",
+              overscrollBehaviorX: "contain",
+            }}
           >
-            All
-          </button>
-          {clients.map((name) => (
             <button
-              key={name}
-              onClick={() => { setSelectedClient(name); setSelected(new Set()); }}
-              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedClient === name ? "bg-green-600 text-white" : "bg-accent text-muted-foreground hover:text-foreground"}`}
+              onClick={() => { setSelectedClient(""); setSelected(new Set()); }}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${selectedClient === "" ? "bg-green-600 text-white" : "bg-accent text-muted-foreground hover:text-foreground"}`}
             >
-              {name}
+              All
             </button>
-          ))}
+            {clients.map((name) => (
+              <button
+                key={name}
+                onClick={() => { setSelectedClient(name); setSelected(new Set()); }}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedClient === name ? "bg-green-600 text-white" : "bg-accent text-muted-foreground hover:text-foreground"}`}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+          <div className="pointer-events-none absolute right-0 top-0 bottom-2 w-10 bg-gradient-to-l from-card/90 to-transparent" />
         </div>
       )}
 
