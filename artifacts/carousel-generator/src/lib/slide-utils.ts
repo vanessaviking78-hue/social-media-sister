@@ -1,6 +1,21 @@
 export const CANVAS_WIDTH = 1080;
 export const CANVAS_HEIGHT = 1350;
 
+export type AnimationType = 'ken-burns' | 'slide-in-text' | 'typewriter' | 'fade-overlay';
+
+function easeOutQuad(t: number): number {
+  return 1 - (1 - t) * (1 - t);
+}
+
+function scaleOverlayAlpha(color: string, scale: number): string {
+  const m = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/);
+  if (m) {
+    const a = parseFloat(m[4] ?? '1') * scale;
+    return `rgba(${m[1]},${m[2]},${m[3]},${Math.min(1, a)})`;
+  }
+  return color;
+}
+
 export const FONT_OPTIONS = [
   { label: "Inter", value: "Inter, sans-serif" },
   { label: "Playfair Display", value: "'Playfair Display', serif" },
@@ -80,10 +95,23 @@ export function drawSlide(
   subheadingFont: string = "",
   textAlign: string = "left",
   textBoxOutline: boolean = false,
-  textBoxOutlineColor: string = "#ffffff"
+  textBoxOutlineColor: string = "#ffffff",
+  animationType?: AnimationType,
+  animationProgress?: number
 ) {
   const W = CANVAS_WIDTH;
   const H = CANVAS_HEIGHT;
+
+  const p = animationProgress !== undefined ? Math.min(1, Math.max(0, animationProgress)) : 1;
+  const ep = easeOutQuad(p);
+
+  const displayText = (animationType === 'typewriter' && animationProgress !== undefined)
+    ? text.slice(0, Math.max(1, Math.floor(p * text.length)))
+    : text;
+
+  const effectiveOverlayColor = (animationType === 'fade-overlay' && animationProgress !== undefined)
+    ? scaleOverlayAlpha(overlayColor, ep)
+    : overlayColor;
 
   ctx.fillStyle = pageColor;
   ctx.fillRect(0, 0, W, H);
@@ -91,9 +119,24 @@ export function drawSlide(
   const scale = Math.max(W / img.width, H / img.height);
   const x = (W - img.width * scale) / 2;
   const y = (H - img.height * scale) / 2;
-  ctx.globalAlpha = isCoverSlide ? 1.0 : 0.5;
-  ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-  ctx.globalAlpha = 1.0;
+
+  if (animationType === 'ken-burns' && animationProgress !== undefined) {
+    const zoom = 1.0 + 0.12 * ep;
+    const panX = 25 * ep;
+    const panY = 15 * ep;
+    ctx.save();
+    ctx.translate(W / 2 + panX, H / 2 + panY);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-W / 2, -H / 2);
+    ctx.globalAlpha = isCoverSlide ? 1.0 : 0.5;
+    ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+    ctx.globalAlpha = 1.0;
+    ctx.restore();
+  } else {
+    ctx.globalAlpha = isCoverSlide ? 1.0 : 0.5;
+    ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+    ctx.globalAlpha = 1.0;
+  }
 
   if (cornerStyle !== "none") {
     ctx.strokeStyle = cornerColor;
@@ -143,7 +186,7 @@ export function drawSlide(
 
   const maxW = textAreaW;
   const lineH = Math.round(ctaSize * lineSpacing);
-  const words = text.split(" ");
+  const words = displayText.split(" ");
   const lines: string[] = [];
   let cur = "";
   for (const w of words) {
@@ -168,10 +211,22 @@ export function drawSlide(
   else if (vPos === "center") { startY = Math.round((H - totalH) / 2); }
   else { startY = Math.round(H - totalH - pad); }
 
+  const textSlideOffset = (animationType === 'slide-in-text' && animationProgress !== undefined)
+    ? Math.round((1 - ep) * Math.round(H * 0.15))
+    : 0;
+
   const maxLineWidth = Math.max(...lines.map((line) => ctx.measureText(line).width));
 
+  if (textSlideOffset !== 0) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, W, H);
+    ctx.clip();
+    ctx.translate(0, textSlideOffset);
+  }
+
   if (showTextOverlay) {
-    ctx.fillStyle = overlayColor;
+    ctx.fillStyle = effectiveOverlayColor;
     let boxX = startX - 15;
     if (ctx.textAlign === "right") boxX = startX - maxLineWidth - 15;
     else if (ctx.textAlign === "center") boxX = startX - maxLineWidth / 2 - 15;
@@ -195,6 +250,10 @@ export function drawSlide(
   lines.forEach((line, i) => ctx.fillText(line, startX, startY + i * lineH));
 
   if (!showTextOverlay) {
+    ctx.restore();
+  }
+
+  if (textSlideOffset !== 0) {
     ctx.restore();
   }
 
@@ -335,6 +394,49 @@ export function drawStory(
     else if (logoPosition === "bottom-right") { lx = W - logoW - margin; ly = H - logoH - margin; }
     ctx.drawImage(logoImg, lx, ly, logoW, logoH);
   }
+}
+
+export async function recordSlideVideo(
+  canvas: HTMLCanvasElement,
+  animateFn: (progress: number) => void,
+  durationMs: number = 4000,
+  fps: number = 30
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((t) => {
+      try { return MediaRecorder.isTypeSupported(t); } catch { return false; }
+    }) || 'video/webm';
+
+    let stream: MediaStream;
+    try {
+      stream = canvas.captureStream(fps);
+    } catch {
+      reject(new Error('canvas.captureStream is not supported in this browser'));
+      return;
+    }
+
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 6_000_000 });
+    const chunks: Blob[] = [];
+
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
+    recorder.onerror = () => reject(new Error('MediaRecorder error'));
+
+    const startTime = performance.now();
+    const tick = () => {
+      const elapsed = performance.now() - startTime;
+      const progress = Math.min(1, elapsed / durationMs);
+      animateFn(progress);
+      if (progress < 1) {
+        requestAnimationFrame(tick);
+      } else {
+        setTimeout(() => { try { recorder.stop(); } catch {} }, 150);
+      }
+    };
+
+    recorder.start(250);
+    requestAnimationFrame(tick);
+  });
 }
 
 export async function compressImage(file: File, maxPx = 1080, quality = 0.72): Promise<File> {

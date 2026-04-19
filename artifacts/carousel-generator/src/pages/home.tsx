@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
-import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, CloudUpload, ImagePlus, CalendarDays, BarChart3, ShieldCheck, BookOpen } from "lucide-react";
+import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, CloudUpload, ImagePlus, CalendarDays, BarChart3, ShieldCheck, BookOpen, Film, ChevronDown } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import VanessaChat from "@/components/vanessa-chat";
-import { CANVAS_WIDTH, CANVAS_HEIGHT, FONT_OPTIONS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, compressImage } from "@/lib/slide-utils";
+import { CANVAS_WIDTH, CANVAS_HEIGHT, FONT_OPTIONS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, compressImage, recordSlideVideo, type AnimationType } from "@/lib/slide-utils";
 import { usePresets, type ClientPreset, type PresetStyleFields } from "@/lib/use-presets";
 import { useCaptions } from "@/lib/use-captions";
 import PresetSelector from "@/components/preset-selector";
@@ -85,6 +85,10 @@ export default function Home() {
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
   const [showBrowseLibrary, setShowBrowseLibrary] = useState(false);
   const [selectedLibCaptionIds, setSelectedLibCaptionIds] = useState<Set<number>>(new Set());
+
+  const [videoExportOpen, setVideoExportOpen] = useState(false);
+  const [videoAnimType, setVideoAnimType] = useState<AnimationType>('ken-burns');
+  const [videoExporting, setVideoExporting] = useState(false);
 
   const getCurrentStyles = (): PresetStyleFields => ({
     pageColor, overlayColor, fontFamily, subheadingFont, fontSize, textColor, lineSpacing,
@@ -594,6 +598,55 @@ export default function Home() {
     } catch (e: any) {
       console.error(e);
       toast.error("Failed: " + (e?.message || "Unknown error"), { id });
+    }
+  };
+
+  const ANIM_OPTIONS: { value: AnimationType; label: string; desc: string }[] = [
+    { value: 'ken-burns', label: 'Ken Burns', desc: 'Photo slowly zooms in' },
+    { value: 'slide-in-text', label: 'Slide-in', desc: 'Text glides up from below' },
+    { value: 'typewriter', label: 'Typewriter', desc: 'Text reveals char by char' },
+    { value: 'fade-overlay', label: 'Fade Overlay', desc: 'Overlay fades in with text' },
+  ];
+
+  const downloadVideos = async () => {
+    if (!result?.slides.length) return;
+    setVideoExporting(true);
+    const id = toast.loading(`Preparing ${result.slides.length} videos…`);
+    try {
+      await document.fonts.ready;
+      const zip = new JSZip();
+      const canvas = document.createElement('canvas');
+      canvas.width = CANVAS_WIDTH;
+      canvas.height = CANVAS_HEIGHT;
+      const ctx = canvas.getContext('2d')!;
+
+      for (let si = 0; si < result.slides.length; si++) {
+        const slide = result.slides[si];
+        toast.loading(`Rendering video ${si + 1} of ${result.slides.length}…`, { id });
+        const isCover = slide.groupPosition === 1;
+        const res = await fetch(slide.imageUrl);
+        const blob = await res.blob();
+        const img = new Image();
+        await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
+
+        const videoBlob = await recordSlideVideo(canvas, (progress) => {
+          drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+        });
+
+        URL.revokeObjectURL(img.src);
+        const fileName = `carousel-${String(slide.groupIndex).padStart(2, '0')}-slide-${String(slide.groupPosition).padStart(2, '0')}.webm`;
+        zip.file(fileName, videoBlob);
+      }
+
+      toast.loading('Zipping videos…', { id });
+      const content = await zip.generateAsync({ type: 'blob' });
+      saveAs(content, 'carousel-videos.zip');
+      toast.success(`${result.slides.length} videos downloaded!`, { id });
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Video export failed: ' + (e?.message || 'Unknown error'), { id });
+    } finally {
+      setVideoExporting(false);
     }
   };
 
@@ -1396,6 +1449,46 @@ export default function Home() {
                           </Button>
                         )}
                       </div>
+                    </div>
+
+                    {/* Video Export Panel */}
+                    <div className="rounded-2xl border border-purple-500/20 bg-purple-950/10 overflow-hidden">
+                      <button
+                        className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-purple-950/20 transition-colors"
+                        onClick={() => setVideoExportOpen((v) => !v)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Film className="w-5 h-5 text-purple-400" />
+                          <span className="font-semibold text-white">Export as Video (.webm)</span>
+                          <span className="text-xs text-purple-400/70 ml-1">Ken Burns · Slide-in · Typewriter · Fade</span>
+                        </div>
+                        <ChevronDown className={`w-4 h-4 text-purple-400 transition-transform ${videoExportOpen ? "rotate-180" : ""}`} />
+                      </button>
+                      {videoExportOpen && (
+                        <div className="px-5 pb-5 space-y-4 border-t border-purple-500/20">
+                          <p className="text-xs text-gray-400 pt-4">Each slide becomes a 4-second animated clip. Downloads as a ZIP of <code>.webm</code> files, playable on all major platforms.</p>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                            {ANIM_OPTIONS.map((opt) => (
+                              <button
+                                key={opt.value}
+                                onClick={() => setVideoAnimType(opt.value)}
+                                className={`px-3 py-3 rounded-xl text-sm font-semibold text-left transition-all border ${videoAnimType === opt.value ? "bg-purple-600 border-purple-500 text-white" : "bg-gray-800/60 border-gray-700 text-gray-300 hover:border-purple-500/50"}`}
+                              >
+                                <div className="font-bold mb-0.5">{opt.label}</div>
+                                <div className={`text-xs font-normal ${videoAnimType === opt.value ? "text-purple-200" : "text-gray-500"}`}>{opt.desc}</div>
+                              </button>
+                            ))}
+                          </div>
+                          <Button
+                            onClick={downloadVideos}
+                            disabled={videoExporting}
+                            className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 font-bold"
+                            size="lg"
+                          >
+                            {videoExporting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Rendering videos…</> : <><Film className="w-4 h-4 mr-2" />Generate Videos ({result.slides.length} clips)</>}
+                          </Button>
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-10">
