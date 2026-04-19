@@ -304,7 +304,7 @@ export default function PresetSelector({
         <div className="bg-gray-800/80 border border-gray-700 rounded-lg p-4 space-y-2">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-white">Manage Presets</span>
-            <button onClick={() => setShowManage(false)} className="text-gray-400 hover:text-white">
+            <button onClick={() => { setShowManage(false); setEditingId(null); setEditName(""); setRenameError(null); }} className="text-gray-400 hover:text-white">
               <X className="w-4 h-4" />
             </button>
           </div>
