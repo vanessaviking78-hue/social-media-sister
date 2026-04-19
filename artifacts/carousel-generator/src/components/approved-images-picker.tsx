@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ShieldCheck, Loader2, X, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useApprovedImages } from "@/lib/use-approval";
 import { toast } from "sonner";
 
 interface ApprovedImagesPickerProps {
-  clientName: string;
+  clientName?: string;
   onAddImages: (files: File[]) => void;
   mode?: "multi" | "single";
   label?: string;
@@ -20,11 +20,23 @@ async function urlToFile(url: string, index: number): Promise<File> {
 
 export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "multi", label }: ApprovedImagesPickerProps) {
   const [open, setOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<string>(clientName || "");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
-  const { data: images = [] } = useApprovedImages(clientName);
 
-  if (!clientName) return null;
+  const { data: allImages = [] } = useApprovedImages("");
+
+  const clients = Array.from(new Set(allImages.map((img) => img.clientName))).sort();
+
+  useEffect(() => {
+    if (clientName && clients.includes(clientName)) {
+      setSelectedClient(clientName);
+    }
+  }, [clientName, clients.join(",")]);
+
+  const images = selectedClient
+    ? allImages.filter((img) => img.clientName === selectedClient)
+    : allImages;
 
   const toggle = (id: number) => {
     setSelected((prev) => {
@@ -42,7 +54,7 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
     if (!selected.size) return;
     setLoading(true);
     try {
-      const selectedImages = images.filter((img) => selected.has(img.id));
+      const selectedImages = allImages.filter((img) => selected.has(img.id));
       const files = await Promise.all(selectedImages.map((img, i) => urlToFile(img.imageUrl, i)));
       onAddImages(files);
       toast.success(`Added ${files.length} approved image${files.length > 1 ? "s" : ""}`);
@@ -64,9 +76,11 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
       >
         <ShieldCheck className="w-6 h-6 text-green-400" />
         <div className="text-left">
-          <p className="font-semibold text-base text-green-400">{label || "Use Approved Images"}</p>
+          <p className="font-semibold text-base text-green-400">{label || "Use Approved Photos"}</p>
           <p className="text-sm text-muted-foreground">
-            {images.length > 0 ? `${images.length} approved image${images.length !== 1 ? "s" : ""} available for ${clientName}` : `No approved images for ${clientName}`}
+            {allImages.length > 0
+              ? `${allImages.length} photo${allImages.length !== 1 ? "s" : ""} across ${clients.length} client${clients.length !== 1 ? "s" : ""} — scroll to pick a person`
+              : "No approved photos available yet"}
           </p>
         </div>
       </button>
@@ -78,15 +92,37 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-5 h-5 text-green-400" />
-          <h3 className="font-semibold text-lg">Approved Images for {clientName}</h3>
+          <h3 className="font-semibold text-lg">Approved Photos</h3>
         </div>
         <button onClick={() => { setOpen(false); setSelected(new Set()); }} className="p-1 hover:bg-accent rounded-full">
           <X className="w-4 h-4" />
         </button>
       </div>
 
+      {clients.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: "thin" }}>
+          <button
+            onClick={() => { setSelectedClient(""); setSelected(new Set()); }}
+            className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${selectedClient === "" ? "bg-green-600 text-white" : "bg-accent text-muted-foreground hover:text-foreground"}`}
+          >
+            All
+          </button>
+          {clients.map((name) => (
+            <button
+              key={name}
+              onClick={() => { setSelectedClient(name); setSelected(new Set()); }}
+              className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedClient === name ? "bg-green-600 text-white" : "bg-accent text-muted-foreground hover:text-foreground"}`}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {images.length === 0 ? (
-        <p className="text-muted-foreground text-center py-6">No approved images found for this client.</p>
+        <p className="text-muted-foreground text-center py-6">
+          {selectedClient ? `No approved photos for ${selectedClient}.` : "No approved photos available."}
+        </p>
       ) : (
         <>
           <div className="grid grid-cols-4 md:grid-cols-6 gap-2 max-h-[300px] overflow-y-auto">
@@ -107,7 +143,7 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
                   </div>
                 )}
                 <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-0.5">
-                  <p className="text-[10px] text-white truncate">{img.batchName}</p>
+                  <p className="text-[10px] text-white truncate">{img.clientName} · {img.batchName}</p>
                 </div>
               </div>
             ))}
@@ -121,7 +157,7 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
               </Button>
               <Button size="sm" onClick={handleAdd} disabled={!selected.size || loading} className="bg-green-600 hover:bg-green-700">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
-                {loading ? "Loading..." : `Add ${selected.size} Image${selected.size !== 1 ? "s" : ""}`}
+                {loading ? "Loading..." : `Add ${selected.size} Photo${selected.size !== 1 ? "s" : ""}`}
               </Button>
             </div>
           </div>
