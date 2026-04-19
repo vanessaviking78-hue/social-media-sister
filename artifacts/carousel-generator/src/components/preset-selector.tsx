@@ -230,7 +230,7 @@ export default function PresetSelector({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setShowManage(!showManage)}
+            onClick={() => { if (showManage) { setEditingId(null); setEditName(""); setRenameError(null); } setShowManage(!showManage); }}
             className="mt-5 border-gray-600 text-gray-300 hover:text-white hover:bg-gray-700"
           >
             <FolderOpen className="w-3.5 h-3.5 mr-1" />
