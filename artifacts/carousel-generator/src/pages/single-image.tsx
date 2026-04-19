@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import {
-  Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus, CalendarDays, BarChart3, ShieldCheck, BookOpen, Film, ChevronDown,
+  Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus, CalendarDays, BarChart3, ShieldCheck, BookOpen, Film, ChevronDown, Play, Square,
 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
@@ -94,6 +94,10 @@ export default function SingleImage() {
   const [videoExportOpen, setVideoExportOpen] = useState(false);
   const [videoAnimType, setVideoAnimType] = useState<AnimationType>('ken-burns');
   const [videoExporting, setVideoExporting] = useState(false);
+  const [videoDurationSec, setVideoDurationSec] = useState(4);
+  const [videoPreviewPlaying, setVideoPreviewPlaying] = useState(false);
+  const videoPreviewCanvasRef = useRef<HTMLCanvasElement>(null);
+  const videoPreviewRafRef = useRef<number | null>(null);
 
   const getCurrentStyles = (): PresetStyleFields => ({
     pageColor, overlayColor, fontFamily, subheadingFont, fontSize, textColor, lineSpacing,
@@ -563,6 +567,54 @@ export default function SingleImage() {
     { value: 'fade-overlay', label: 'Fade Overlay', desc: 'Overlay fades in with text' },
   ];
 
+  const stopPreview = useCallback(() => {
+    if (videoPreviewRafRef.current !== null) {
+      cancelAnimationFrame(videoPreviewRafRef.current);
+      videoPreviewRafRef.current = null;
+    }
+    setVideoPreviewPlaying(false);
+  }, []);
+
+  useEffect(() => () => stopPreview(), [stopPreview]);
+
+  const playPreview = useCallback(async () => {
+    if (!result?.posts.length || !videoPreviewCanvasRef.current) return;
+    stopPreview();
+    const post = result.posts[0];
+    try {
+      const res = await fetch(post.imageUrl);
+      const blob = await res.blob();
+      const objUrl = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onerror = () => URL.revokeObjectURL(objUrl);
+      img.onload = () => {
+        URL.revokeObjectURL(objUrl);
+        const canvas = videoPreviewCanvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d')!;
+        const durationMs = videoDurationSec * 1000;
+        const startTime = performance.now();
+        setVideoPreviewPlaying(true);
+        const tick = () => {
+          const elapsed = performance.now() - startTime;
+          const progress = Math.min(1, elapsed / durationMs);
+          drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+          if (progress < 1) {
+            videoPreviewRafRef.current = requestAnimationFrame(tick);
+          } else {
+            videoPreviewRafRef.current = null;
+            setVideoPreviewPlaying(false);
+          }
+        };
+        videoPreviewRafRef.current = requestAnimationFrame(tick);
+      };
+      img.src = objUrl;
+    } catch (e) {
+      console.error('Preview failed', e);
+      setVideoPreviewPlaying(false);
+    }
+  }, [result, videoDurationSec, videoAnimType, fontFamily, fontSize, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, textPosition, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, stopPreview]);
+
   const downloadVideos = async () => {
     if (!result?.posts.length) return;
     setVideoExporting(true);
@@ -585,7 +637,7 @@ export default function SingleImage() {
 
         const videoBlob = await recordSlideVideo(canvas, (progress) => {
           drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
-        });
+        }, videoDurationSec * 1000);
 
         URL.revokeObjectURL(img.src);
         zip.file(`post-${String(post.index).padStart(2, '0')}.webm`, videoBlob);
@@ -1397,12 +1449,12 @@ export default function SingleImage() {
                     </button>
                     {videoExportOpen && (
                       <div className="px-5 pb-5 space-y-4 border-t border-purple-500/20">
-                        <p className="text-xs text-gray-400 pt-4">Each image becomes a 4-second animated clip. Downloads as a ZIP of <code>.webm</code> files, playable on all major platforms.</p>
+                        <p className="text-xs text-gray-400 pt-4">Each image becomes an animated clip. Downloads as a ZIP of <code>.webm</code> files, playable on all major platforms.</p>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                           {ANIM_OPTIONS.map((opt) => (
                             <button
                               key={opt.value}
-                              onClick={() => setVideoAnimType(opt.value)}
+                              onClick={() => { setVideoAnimType(opt.value); stopPreview(); }}
                               className={`px-3 py-3 rounded-xl text-sm font-semibold text-left transition-all border ${videoAnimType === opt.value ? "bg-purple-600 border-purple-500 text-white" : "bg-gray-800/60 border-gray-700 text-gray-300 hover:border-purple-500/50"}`}
                             >
                               <div className="font-bold mb-0.5">{opt.label}</div>
@@ -1410,13 +1462,45 @@ export default function SingleImage() {
                             </button>
                           ))}
                         </div>
+                        {/* Duration slider */}
+                        <div className="flex items-center gap-3 bg-gray-800/40 rounded-xl px-4 py-3">
+                          <span className="text-sm font-semibold text-white whitespace-nowrap">Clip duration</span>
+                          <input
+                            type="range" min={1} max={10} step={1} value={videoDurationSec}
+                            onChange={(e) => { setVideoDurationSec(Number(e.target.value)); stopPreview(); }}
+                            className="flex-1 accent-purple-500"
+                          />
+                          <span className="text-sm font-bold text-purple-300 w-8 text-right">{videoDurationSec}s</span>
+                        </div>
+                        {/* Animation preview */}
+                        <div className="flex gap-4 items-start">
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={videoPreviewPlaying ? stopPreview : playPreview}
+                              disabled={videoExporting}
+                              className="border-purple-500/50 text-purple-300 hover:bg-purple-950/40 whitespace-nowrap"
+                            >
+                              {videoPreviewPlaying ? <><Square className="w-3 h-3 mr-1.5 fill-current" />Stop</> : <><Play className="w-3 h-3 mr-1.5 fill-current" />Preview Animation</>}
+                            </Button>
+                            <p className="text-xs text-gray-500">Plays first image at {videoDurationSec}s duration</p>
+                          </div>
+                          <canvas
+                            ref={videoPreviewCanvasRef}
+                            width={CANVAS_WIDTH}
+                            height={CANVAS_HEIGHT}
+                            style={{ width: '108px', height: '135px', borderRadius: '6px', flexShrink: 0 }}
+                            className="border border-gray-700 bg-black"
+                          />
+                        </div>
                         <Button
                           onClick={downloadVideos}
                           disabled={videoExporting}
                           className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 font-bold"
                           size="lg"
                         >
-                          {videoExporting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Rendering videos…</> : <><Film className="w-4 h-4 mr-2" />Generate Videos ({result?.posts.length ?? 0} clips)</>}
+                          {videoExporting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Rendering videos…</> : <><Film className="w-4 h-4 mr-2" />Generate Videos ({result?.posts.length ?? 0} clip{(result?.posts.length ?? 0) !== 1 ? 's' : ''} × {videoDurationSec}s)</>}
                         </Button>
                       </div>
                     )}
