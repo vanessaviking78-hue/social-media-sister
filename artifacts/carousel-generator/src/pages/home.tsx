@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import VanessaChat from "@/components/vanessa-chat";
-import { CANVAS_WIDTH, CANVAS_HEIGHT, FONT_OPTIONS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, compressImage, recordSlideVideo, type AnimationType } from "@/lib/slide-utils";
+import { CANVAS_WIDTH, CANVAS_HEIGHT, FONT_OPTIONS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, compressImage, recordSlideVideo, recordGroupVideo, type AnimationType } from "@/lib/slide-utils";
 import { usePresets, type ClientPreset, type PresetStyleFields } from "@/lib/use-presets";
 import { useCaptions } from "@/lib/use-captions";
 import PresetSelector from "@/components/preset-selector";
@@ -89,6 +89,7 @@ export default function Home() {
   const [videoExportOpen, setVideoExportOpen] = useState(false);
   const [videoAnimType, setVideoAnimType] = useState<AnimationType>('ken-burns');
   const [videoExporting, setVideoExporting] = useState(false);
+  const [videoJoinGroup, setVideoJoinGroup] = useState(false);
 
   const getCurrentStyles = (): PresetStyleFields => ({
     pageColor, overlayColor, fontFamily, subheadingFont, fontSize, textColor, lineSpacing,
@@ -611,7 +612,8 @@ export default function Home() {
   const downloadVideos = async () => {
     if (!result?.slides.length) return;
     setVideoExporting(true);
-    const id = toast.loading(`Preparing ${result.slides.length} videos…`);
+    const totalClips = videoJoinGroup ? result.totalCarousels : result.slides.length;
+    const id = toast.loading(`Preparing ${totalClips} video${totalClips !== 1 ? 's' : ''}…`);
     try {
       await document.fonts.ready;
       const zip = new JSZip();
@@ -620,28 +622,48 @@ export default function Home() {
       canvas.height = CANVAS_HEIGHT;
       const ctx = canvas.getContext('2d')!;
 
-      for (let si = 0; si < result.slides.length; si++) {
-        const slide = result.slides[si];
-        toast.loading(`Rendering video ${si + 1} of ${result.slides.length}…`, { id });
-        const isCover = slide.groupPosition === 1;
-        const res = await fetch(slide.imageUrl);
-        const blob = await res.blob();
-        const img = new Image();
-        await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
-
-        const videoBlob = await recordSlideVideo(canvas, (progress) => {
-          drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
-        });
-
-        URL.revokeObjectURL(img.src);
-        const fileName = `carousel-${String(slide.groupIndex).padStart(2, '0')}-slide-${String(slide.groupPosition).padStart(2, '0')}.webm`;
-        zip.file(fileName, videoBlob);
+      if (videoJoinGroup) {
+        for (let gi = 1; gi <= result.totalCarousels; gi++) {
+          const groupSlides = result.slides.filter((s: any) => s.groupIndex === gi);
+          toast.loading(`Rendering carousel ${gi} of ${result.totalCarousels} (${groupSlides.length} slides joined)…`, { id });
+          const imgs: HTMLImageElement[] = [];
+          for (const slide of groupSlides) {
+            const res = await fetch(slide.imageUrl);
+            const blob = await res.blob();
+            const img = new Image();
+            await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
+            imgs.push(img);
+          }
+          const videoBlob = await recordGroupVideo(canvas, 4000, 300, groupSlides.length, (si, progress) => {
+            const slide = groupSlides[si];
+            const isCover = slide.groupPosition === 1;
+            drawSlide(ctx, imgs[si], slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+          });
+          imgs.forEach((img) => URL.revokeObjectURL(img.src));
+          zip.file(`carousel-${String(gi).padStart(2, '0')}-group.webm`, videoBlob);
+        }
+      } else {
+        for (let si = 0; si < result.slides.length; si++) {
+          const slide = result.slides[si];
+          toast.loading(`Rendering video ${si + 1} of ${result.slides.length}…`, { id });
+          const isCover = slide.groupPosition === 1;
+          const res = await fetch(slide.imageUrl);
+          const blob = await res.blob();
+          const img = new Image();
+          await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
+          const videoBlob = await recordSlideVideo(canvas, (progress) => {
+            drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+          });
+          URL.revokeObjectURL(img.src);
+          const fileName = `carousel-${String(slide.groupIndex).padStart(2, '0')}-slide-${String(slide.groupPosition).padStart(2, '0')}.webm`;
+          zip.file(fileName, videoBlob);
+        }
       }
 
       toast.loading('Zipping videos…', { id });
       const content = await zip.generateAsync({ type: 'blob' });
       saveAs(content, 'carousel-videos.zip');
-      toast.success(`${result.slides.length} videos downloaded!`, { id });
+      toast.success(`${totalClips} video${totalClips !== 1 ? 's' : ''} downloaded!`, { id });
     } catch (e: any) {
       console.error(e);
       toast.error('Video export failed: ' + (e?.message || 'Unknown error'), { id });
@@ -1479,13 +1501,25 @@ export default function Home() {
                               </button>
                             ))}
                           </div>
+                          <button
+                            onClick={() => setVideoJoinGroup((v) => !v)}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-xl border text-sm font-semibold transition-all w-full text-left ${videoJoinGroup ? "bg-purple-600/20 border-purple-500 text-purple-200" : "bg-gray-800/40 border-gray-700 text-gray-400"}`}
+                          >
+                            <span className={`w-10 h-6 rounded-full flex items-center transition-colors ${videoJoinGroup ? "bg-purple-600" : "bg-gray-600"}`}>
+                              <span className={`w-4 h-4 rounded-full bg-white shadow transition-transform mx-1 ${videoJoinGroup ? "translate-x-4" : "translate-x-0"}`} />
+                            </span>
+                            <div>
+                              <div className="text-white font-bold">Join slides per carousel into one clip</div>
+                              <div className="text-xs font-normal text-gray-400">Slides are joined with a ~0.3s black flash. One file per carousel.</div>
+                            </div>
+                          </button>
                           <Button
                             onClick={downloadVideos}
                             disabled={videoExporting}
                             className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 font-bold"
                             size="lg"
                           >
-                            {videoExporting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Rendering videos…</> : <><Film className="w-4 h-4 mr-2" />Generate Videos ({result.slides.length} clips)</>}
+                            {videoExporting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Rendering videos…</> : <><Film className="w-4 h-4 mr-2" />Generate Videos ({videoJoinGroup ? `${result.totalCarousels} joined clip${result.totalCarousels !== 1 ? 's' : ''}` : `${result.slides.length} individual clip${result.slides.length !== 1 ? 's' : ''}`})</>}
                           </Button>
                         </div>
                       )}

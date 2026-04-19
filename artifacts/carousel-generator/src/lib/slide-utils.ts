@@ -396,6 +396,64 @@ export function drawStory(
   }
 }
 
+export async function recordGroupVideo(
+  canvas: HTMLCanvasElement,
+  slideDurationMs: number,
+  blackFlashMs: number,
+  slideCount: number,
+  animateFn: (slideIndex: number, progress: number) => void,
+  fps: number = 30
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((t) => {
+      try { return MediaRecorder.isTypeSupported(t); } catch { return false; }
+    }) || 'video/webm';
+
+    let stream: MediaStream;
+    try {
+      stream = canvas.captureStream(fps);
+    } catch {
+      reject(new Error('canvas.captureStream is not supported in this browser'));
+      return;
+    }
+
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 6_000_000 });
+    const chunks: Blob[] = [];
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
+    recorder.onerror = () => reject(new Error('MediaRecorder error'));
+
+    const totalDurationMs = slideCount * slideDurationMs + Math.max(0, slideCount - 1) * blackFlashMs;
+    const segmentDuration = slideDurationMs + blackFlashMs;
+    const startTime = performance.now();
+    const ctx = canvas.getContext('2d')!;
+    const W = canvas.width;
+    const H = canvas.height;
+
+    const tick = () => {
+      const elapsed = Math.min(performance.now() - startTime, totalDurationMs);
+      const segIdx = Math.min(slideCount - 1, Math.floor(elapsed / segmentDuration));
+      const segElapsed = elapsed - segIdx * segmentDuration;
+
+      if (segElapsed < slideDurationMs) {
+        animateFn(segIdx, Math.min(1, segElapsed / slideDurationMs));
+      } else {
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      if (elapsed < totalDurationMs) {
+        requestAnimationFrame(tick);
+      } else {
+        setTimeout(() => { try { recorder.stop(); } catch {} }, 150);
+      }
+    };
+
+    recorder.start(250);
+    requestAnimationFrame(tick);
+  });
+}
+
 export async function recordSlideVideo(
   canvas: HTMLCanvasElement,
   animateFn: (progress: number) => void,

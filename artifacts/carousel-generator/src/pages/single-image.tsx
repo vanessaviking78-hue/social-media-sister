@@ -584,11 +584,11 @@ export default function SingleImage() {
         await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
 
         const videoBlob = await recordSlideVideo(canvas, (progress) => {
-          drawSlide(ctx, img, post.text, fontFamily, fontSize, true, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+          drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
         });
 
         URL.revokeObjectURL(img.src);
-        zip.file(`image-${String(si + 1).padStart(2, '0')}.webm`, videoBlob);
+        zip.file(`post-${String(post.index).padStart(2, '0')}.webm`, videoBlob);
       }
 
       toast.loading('Zipping videos…', { id });
