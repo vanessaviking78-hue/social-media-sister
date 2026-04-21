@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Save, Trash2, FolderOpen, Pencil, X, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +50,20 @@ export default function PresetSelector({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [renameError, setRenameError] = useState<string | null>(null);
   const [ccWorkspaces, setCcWorkspaces] = useState<CcWorkspace[]>([]);
+  const managePanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!editingId) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (managePanelRef.current && !managePanelRef.current.contains(e.target as Node)) {
+        setEditingId(null);
+        setEditName("");
+        setRenameError(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [editingId]);
 
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/workspaces`)
@@ -301,7 +315,7 @@ export default function PresetSelector({
       )}
 
       {showManage && presets.length > 0 && (
-        <div className="bg-gray-800/80 border border-gray-700 rounded-lg p-4 space-y-2">
+        <div ref={managePanelRef} className="bg-gray-800/80 border border-gray-700 rounded-lg p-4 space-y-2">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-white">Manage Presets</span>
             <button onClick={() => { setShowManage(false); setEditingId(null); setEditName(""); setRenameError(null); }} className="text-gray-400 hover:text-white">
