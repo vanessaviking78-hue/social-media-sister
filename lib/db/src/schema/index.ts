@@ -29,7 +29,12 @@ export const clientPresetsTable = pgTable("client_presets", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const insertPresetSchema = createInsertSchema(clientPresetsTable).omit({ id: true, createdAt: true, updatedAt: true });
+export const TEXT_POSITIONS = ["top", "center", "bottom"] as const;
+export type TextPosition = typeof TEXT_POSITIONS[number];
+
+export const insertPresetSchema = createInsertSchema(clientPresetsTable)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({ textPosition: z.enum(TEXT_POSITIONS) });
 export type InsertPreset = z.infer<typeof insertPresetSchema>;
 export type ClientPreset = typeof clientPresetsTable.$inferSelect;
 

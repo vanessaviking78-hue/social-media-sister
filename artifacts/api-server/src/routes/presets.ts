@@ -1,7 +1,9 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { clientPresetsTable } from "@workspace/db/schema";
+import { clientPresetsTable, TEXT_POSITIONS } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
+
+const VALID_TEXT_POSITIONS = new Set(TEXT_POSITIONS);
 
 const router: IRouter = Router();
 
@@ -32,6 +34,10 @@ router.post("/presets", async (req, res) => {
   try {
     const { name, ...settings } = req.body;
     if (!name?.trim()) { res.status(400).json({ error: "Name is required" }); return; }
+    if (settings.textPosition !== undefined && !VALID_TEXT_POSITIONS.has(settings.textPosition)) {
+      res.status(400).json({ error: `Invalid textPosition "${settings.textPosition}". Must be one of: ${TEXT_POSITIONS.join(", ")}.` });
+      return;
+    }
     const [preset] = await db.insert(clientPresetsTable).values({
       name: name.trim(),
       ...settings,
@@ -52,6 +58,10 @@ router.put("/presets/:id", async (req, res) => {
     const id = Number(req.params.id);
     if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
     const { name, ...settings } = req.body;
+    if (settings.textPosition !== undefined && !VALID_TEXT_POSITIONS.has(settings.textPosition)) {
+      res.status(400).json({ error: `Invalid textPosition "${settings.textPosition}". Must be one of: ${TEXT_POSITIONS.join(", ")}.` });
+      return;
+    }
     const [preset] = await db.update(clientPresetsTable)
       .set({ name: name?.trim(), ...settings, updatedAt: new Date() })
       .where(eq(clientPresetsTable.id, id))
