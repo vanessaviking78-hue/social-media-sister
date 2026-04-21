@@ -10,6 +10,7 @@ export const clientPresetsTable = pgTable("client_presets", {
   fontFamily: text("font_family").notNull().default("Inter, sans-serif"),
   subheadingFont: text("subheading_font"),
   fontSize: integer("font_size").notNull().default(52),
+  contentFontSize: integer("content_font_size").notNull().default(44),
   textColor: text("text_color").notNull().default("#ffffff"),
   lineSpacing: text("line_spacing").notNull().default("0.9"),
   cornerStyle: text("corner_style").notNull().default("none"),

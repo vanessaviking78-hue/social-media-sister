@@ -19,6 +19,7 @@ export interface ClientPreset {
   fontFamily: string;
   subheadingFont: string | null;
   fontSize: number;
+  contentFontSize: number;
   textColor: string;
   lineSpacing: string;
   cornerStyle: string;
@@ -41,6 +42,7 @@ export interface PresetStyleFields {
   fontFamily: string;
   subheadingFont: string;
   fontSize: number;
+  contentFontSize: number;
   textColor: string;
   lineSpacing: number;
   cornerStyle: string;

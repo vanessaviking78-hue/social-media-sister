@@ -34,6 +34,7 @@ export default function Home() {
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
 
   const [fontSize, setFontSize] = useState(52);
+  const [contentFontSize, setContentFontSize] = useState(44);
   const [fontFamily, setFontFamily] = useState(FONT_OPTIONS[0].value);
   const [subheadingFont, setSubheadingFont] = useState(FONT_OPTIONS[0].value);
   const [textColor, setTextColor] = useState("#ffffff");
@@ -96,7 +97,7 @@ export default function Home() {
   const videoPreviewRafRef = useRef<number | null>(null);
 
   const getCurrentStyles = (): PresetStyleFields => ({
-    pageColor, overlayColor, fontFamily, subheadingFont, fontSize, textColor, lineSpacing,
+    pageColor, overlayColor, fontFamily, subheadingFont, fontSize, contentFontSize, textColor, lineSpacing,
     cornerStyle, cornerColor, textPosition, textAlign, textBoxOutline, textBoxOutlineColor, logoPosition, logoSize,
   });
 
@@ -107,6 +108,7 @@ export default function Home() {
     setFontFamily(preset.fontFamily);
     setSubheadingFont(preset.subheadingFont || preset.fontFamily);
     setFontSize(preset.fontSize);
+    setContentFontSize(preset.contentFontSize ?? 44);
     setTextColor(preset.textColor);
     setLineSpacing(parseFloat(preset.lineSpacing));
     setCornerStyle(preset.cornerStyle);
@@ -167,7 +169,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
+        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -518,7 +520,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
+        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -562,7 +564,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
+        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -650,7 +652,7 @@ export default function Home() {
         const tick = () => {
           const elapsed = performance.now() - startTime;
           const progress = Math.min(1, elapsed / durationMs);
-          drawSlide(offCtx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+          drawSlide(offCtx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
           ctx.fillStyle = '#000000';
           ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
           ctx.drawImage(offscreen, 0, yOff);
@@ -668,7 +670,7 @@ export default function Home() {
       console.error('Preview failed', e);
       setVideoPreviewPlaying(false);
     }
-  }, [result, videoDurationSec, videoAnimType, fontFamily, fontSize, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, stopPreview]);
+  }, [result, videoDurationSec, videoAnimType, fontFamily, fontSize, contentFontSize, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, stopPreview]);
 
   const downloadVideos = async () => {
     if (!result?.slides.length) return;
@@ -703,7 +705,7 @@ export default function Home() {
           const videoBlob = await recordGroupVideo(canvas, videoDurationSec * 1000, 300, groupSlides.length, (si, progress) => {
             const slide = groupSlides[si];
             const isCover = slide.groupPosition === 1;
-            drawSlide(offCtx, imgs[si], slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+            drawSlide(offCtx, imgs[si], slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
             ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
             ctx.drawImage(offscreen, 0, yOff);
@@ -721,7 +723,7 @@ export default function Home() {
           const img = new Image();
           await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
           const videoBlob = await recordSlideVideo(canvas, (progress) => {
-            drawSlide(offCtx, img, slide.text, fontFamily, fontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+            drawSlide(offCtx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
             ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
             ctx.drawImage(offscreen, 0, yOff);
@@ -1072,12 +1074,22 @@ export default function Home() {
                   </div>
 
                   {/* Text Size */}
-                  <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-base font-semibold">Text Size</Label>
-                      <span className="text-base font-semibold tabular-nums">{fontSize}px</span>
+                  <div className="space-y-4 rounded-2xl border border-border/30 bg-card/50 p-6">
+                    <Label className="text-base font-semibold">Text Size</Label>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Cover slide</span>
+                        <span className="text-sm font-semibold tabular-nums">{fontSize}px</span>
+                      </div>
+                      <Slider min={28} max={96} step={2} value={[fontSize]} onValueChange={([v]) => setFontSize(v)} className="w-full" />
                     </div>
-                    <Slider min={28} max={96} step={2} value={[fontSize]} onValueChange={([v]) => setFontSize(v)} className="w-full" />
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Content slides</span>
+                        <span className="text-sm font-semibold tabular-nums">{contentFontSize}px</span>
+                      </div>
+                      <Slider min={28} max={96} step={2} value={[contentFontSize]} onValueChange={([v]) => setContentFontSize(v)} className="w-full" />
+                    </div>
                   </div>
 
                   {/* Text Colour */}
@@ -1655,7 +1667,7 @@ export default function Home() {
                                       return <img src={logoPreviewUrl} alt="Logo" style={{ ...posStyle, height: previewLogoH, maxWidth: 60, objectFit: "contain" }} />;
                                     })()}
                                     <div className={`absolute ${textPosition === "top" ? "top-4" : textPosition === "center" ? "top-1/2 -translate-y-1/2" : "bottom-4"} px-2 py-1.5 min-w-[60%] ${textAlign === "right" ? "right-3" : textAlign === "center" ? "left-1/2 -translate-x-1/2" : "left-3"}`} style={showTextOverlay ? { backgroundColor: overlayColor, outline: textBoxOutline ? `2px solid ${textBoxOutlineColor}` : undefined } : {}}>
-                                      <p className="font-semibold line-clamp-4" style={{ fontFamily: isCover ? fontFamily : subheadingFont, fontSize: Math.max(7, Math.round(fontSize * 0.15)) + "px", color: textColor, lineHeight: lineSpacing, textAlign: textAlign === "center" ? "center" : textAlign === "right" ? "right" : "left", ...(showTextOverlay ? {} : { textShadow: "1px 1px 3px rgba(0,0,0,0.8)" }) }}>{slide.text}</p>
+                                      <p className="font-semibold line-clamp-4" style={{ fontFamily: isCover ? fontFamily : subheadingFont, fontSize: Math.max(7, Math.round((isCover ? fontSize : contentFontSize) * 0.15)) + "px", color: textColor, lineHeight: lineSpacing, textAlign: textAlign === "center" ? "center" : textAlign === "right" ? "right" : "left", ...(showTextOverlay ? {} : { textShadow: "1px 1px 3px rgba(0,0,0,0.8)" }) }}>{slide.text}</p>
                                     </div>
                                   </div>
                                 );
