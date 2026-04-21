@@ -1128,6 +1128,14 @@ export default function Home() {
                         >{opt.label}</button>
                       ))}
                     </div>
+                    {/* Live alignment preview */}
+                    <div className="rounded-lg border border-border/40 bg-background/60 px-4 py-3 space-y-1.5">
+                      {[70, 100, 55].map((w, i) => (
+                        <div key={i} className={`flex ${textAlign === "left" ? "justify-start" : textAlign === "right" ? "justify-end" : "justify-center"}`}>
+                          <div className="h-2 rounded-full bg-muted-foreground/30 transition-all duration-200" style={{ width: `${w}%` }} />
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   {/* Line Spacing */}
