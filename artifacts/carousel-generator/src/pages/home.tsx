@@ -1154,6 +1154,47 @@ export default function Home() {
                       <Input type="color" value={pageColor} onChange={(e) => setPageColor(e.target.value)} className="w-14 h-12 p-1 cursor-pointer" />
                       <Input type="text" value={pageColor} onChange={(e) => setPageColor(e.target.value)} className="flex-1 h-12 text-base font-mono" placeholder="#000000" />
                     </div>
+                    {/* Live mini slide preview */}
+                    <div
+                      className="w-full rounded-xl overflow-hidden border border-border/40"
+                      style={{
+                        backgroundColor: pageColor,
+                        aspectRatio: "1 / 1",
+                        maxHeight: 160,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
+                        padding: "12px 16px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          color: textColor,
+                          fontFamily: fontFamily,
+                          fontSize: 18,
+                          fontWeight: 700,
+                          textAlign: "center",
+                          lineHeight: 1.2,
+                          textShadow: "0 1px 3px rgba(0,0,0,0.4)",
+                        }}
+                      >
+                        Headline Text
+                      </span>
+                      <span
+                        style={{
+                          color: textColor,
+                          fontFamily: subheadingFont,
+                          fontSize: 12,
+                          textAlign: "center",
+                          opacity: 0.8,
+                          textShadow: "0 1px 2px rgba(0,0,0,0.3)",
+                        }}
+                      >
+                        Body copy preview
+                      </span>
+                    </div>
                   </div>
 
                   {/* Text Overlay Toggle */}
