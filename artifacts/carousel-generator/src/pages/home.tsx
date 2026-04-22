@@ -50,6 +50,8 @@ export default function Home() {
   const [textBoxOutline, setTextBoxOutline] = useState(false);
   const [textBoxOutlineColor, setTextBoxOutlineColor] = useState("#ffffff");
 
+  const [coverSubheading, setCoverSubheading] = useState("");
+
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
@@ -100,6 +102,7 @@ export default function Home() {
   const getCurrentStyles = (): PresetStyleFields => ({
     pageColor, overlayColor, fontFamily, subheadingFont, fontSize, contentFontSize, textColor, lineSpacing,
     cornerStyle, cornerColor, textPosition, textAlign, textBoxOutline, textBoxOutlineColor, logoPosition, logoSize,
+    coverSubheading,
   });
 
   const applyPreset = (preset: ClientPreset) => {
@@ -120,6 +123,7 @@ export default function Home() {
     setTextBoxOutlineColor(preset.textBoxOutlineColor || "#ffffff");
     setLogoPosition(preset.logoPosition);
     setLogoSize(preset.logoSize);
+    setCoverSubheading(preset.coverSubheading || "");
     setCurrentLogoUrl(preset.logoUrl || null);
     if (preset.logoUrl) {
       const img = new Image();
@@ -170,7 +174,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
+        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -521,7 +525,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
+        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading);
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -565,7 +569,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
+        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -653,7 +657,7 @@ export default function Home() {
         const tick = () => {
           const elapsed = performance.now() - startTime;
           const progress = Math.min(1, elapsed / durationMs);
-          drawSlide(offCtx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+          drawSlide(offCtx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, videoAnimType, progress);
           ctx.fillStyle = '#000000';
           ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
           ctx.drawImage(offscreen, 0, yOff);
@@ -706,7 +710,7 @@ export default function Home() {
           const videoBlob = await recordGroupVideo(canvas, videoDurationSec * 1000, 300, groupSlides.length, (si, progress) => {
             const slide = groupSlides[si];
             const isCover = slide.groupPosition === 1;
-            drawSlide(offCtx, imgs[si], slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+            drawSlide(offCtx, imgs[si], slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, videoAnimType, progress);
             ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
             ctx.drawImage(offscreen, 0, yOff);
@@ -724,7 +728,7 @@ export default function Home() {
           const img = new Image();
           await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
           const videoBlob = await recordSlideVideo(canvas, (progress) => {
-            drawSlide(offCtx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+            drawSlide(offCtx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, videoAnimType, progress);
             ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
             ctx.drawImage(offscreen, 0, yOff);
@@ -1072,6 +1076,16 @@ export default function Home() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <div className="pt-1 space-y-1.5">
+                      <Label className="text-sm text-muted-foreground">Cover Subheading Text</Label>
+                      <Input
+                        placeholder="e.g. Your tagline here"
+                        value={coverSubheading}
+                        onChange={(e) => setCoverSubheading(e.target.value)}
+                        className="h-10"
+                      />
+                      <p className="text-xs text-muted-foreground">Optional — shown only on the cover (first) slide, in the subheading font</p>
+                    </div>
                   </div>
 
                   {/* Text Size */}

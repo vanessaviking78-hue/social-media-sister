@@ -231,6 +231,7 @@ export default function PresetSelector({
         logoPosition: preset.logoPosition,
         logoSize: preset.logoSize,
         accentColor: preset.accentColor,
+        coverSubheading: preset.coverSubheading || "",
       }, preset.ccWorkspaceId || undefined, preset.logoUrl, preset.captionFootnote);
       toast.success("Preset renamed");
       setEditingId(null);

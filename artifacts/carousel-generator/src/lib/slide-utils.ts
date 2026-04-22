@@ -124,6 +124,7 @@ export function drawSlide(
   textAlign: string = "left",
   textBoxOutline: boolean = false,
   textBoxOutlineColor: string = "#ffffff",
+  coverSubheading: string = "",
   animationType?: AnimationType,
   animationProgress?: number
 ) {
@@ -225,6 +226,36 @@ export function drawSlide(
   if (cur) lines.push(cur);
 
   const totalH = lines.length * lineH;
+
+  // --- Cover subheading (only on cover slide, not the last-slide CTA) ---
+  const hasCoverSubheading = isCoverSlide && !isLastSlide && !!coverSubheading?.trim();
+  let subheadingLines: string[] = [];
+  let subheadingSize = 0;
+  let subheadingLineH = 0;
+  let subheadingTotalH = 0;
+  let subheadingGap = 0;
+  let subheadingMaxW = 0;
+  if (hasCoverSubheading) {
+    subheadingSize = Math.round(ctaSize * 0.65);
+    subheadingLineH = Math.round(subheadingSize * lineSpacing);
+    subheadingGap = Math.round(ctaSize * 0.25);
+    const subFontStr = subheadingFont || font;
+    ctx.font = `500 ${subheadingSize}px ${subFontStr}`;
+    const shWords = coverSubheading.trim().split(" ");
+    let cur2 = "";
+    for (const w of shWords) {
+      const test = cur2 ? cur2 + " " + w : w;
+      if (ctx.measureText(test).width > maxW && cur2) { subheadingLines.push(cur2); cur2 = w; }
+      else { cur2 = test; }
+    }
+    if (cur2) subheadingLines.push(cur2);
+    subheadingTotalH = subheadingLines.length * subheadingLineH;
+    subheadingMaxW = subheadingLines.length > 0 ? Math.max(...subheadingLines.map((l) => ctx.measureText(l).width)) : 0;
+    // Restore main heading font
+    ctx.font = `${isLastSlide ? 700 : 600} ${ctaSize}px ${activeFont}`;
+  }
+  const combinedTotalH = totalH + (hasCoverSubheading ? subheadingGap + subheadingTotalH : 0);
+
   const pad = 40;
   let startX = pad, startY = pad;
 
@@ -236,14 +267,15 @@ export function drawSlide(
   else { startX = pad; ctx.textAlign = "left"; }
 
   if (vPos === "top") { startY = pad; }
-  else if (vPos === "center") { startY = Math.round((H - totalH) / 2); }
-  else { startY = Math.round(H - totalH - pad); }
+  else if (vPos === "center") { startY = Math.round((H - combinedTotalH) / 2); }
+  else { startY = Math.round(H - combinedTotalH - pad); }
 
   const textSlideOffset = (animationType === 'slide-in-text' && animationProgress !== undefined)
     ? Math.round((1 - ep) * Math.round(H * 0.15))
     : 0;
 
   const maxLineWidth = Math.max(...lines.map((line) => ctx.measureText(line).width));
+  const effectiveMaxLineWidth = Math.max(maxLineWidth, subheadingMaxW);
 
   if (textSlideOffset !== 0) {
     ctx.save();
@@ -256,13 +288,13 @@ export function drawSlide(
   if (showTextOverlay) {
     ctx.fillStyle = effectiveOverlayColor;
     let boxX = startX - 15;
-    if (ctx.textAlign === "right") boxX = startX - maxLineWidth - 15;
-    else if (ctx.textAlign === "center") boxX = startX - maxLineWidth / 2 - 15;
-    ctx.fillRect(boxX, startY - 15, maxLineWidth + 30, totalH + 30);
+    if (ctx.textAlign === "right") boxX = startX - effectiveMaxLineWidth - 15;
+    else if (ctx.textAlign === "center") boxX = startX - effectiveMaxLineWidth / 2 - 15;
+    ctx.fillRect(boxX, startY - 15, effectiveMaxLineWidth + 30, combinedTotalH + 30);
     if (textBoxOutline) {
       ctx.strokeStyle = textBoxOutlineColor;
       ctx.lineWidth = 2;
-      ctx.strokeRect(boxX, startY - 15, maxLineWidth + 30, totalH + 30);
+      ctx.strokeRect(boxX, startY - 15, effectiveMaxLineWidth + 30, combinedTotalH + 30);
     }
   }
 
@@ -276,6 +308,13 @@ export function drawSlide(
 
   ctx.fillStyle = textColor;
   lines.forEach((line, i) => ctx.fillText(line, startX, startY + i * lineH));
+
+  if (hasCoverSubheading && subheadingLines.length > 0) {
+    const subFontStr = subheadingFont || font;
+    ctx.font = `500 ${subheadingSize}px ${subFontStr}`;
+    const subStartY = startY + totalH + subheadingGap;
+    subheadingLines.forEach((line, i) => ctx.fillText(line, startX, subStartY + i * subheadingLineH));
+  }
 
   if (!showTextOverlay) {
     ctx.restore();

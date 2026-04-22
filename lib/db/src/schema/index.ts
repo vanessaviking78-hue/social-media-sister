@@ -26,6 +26,7 @@ export const clientPresetsTable = pgTable("client_presets", {
   textBoxOutline: boolean("text_box_outline").notNull().default(false),
   textBoxOutlineColor: text("text_box_outline_color").notNull().default("#ffffff"),
   captionFootnote: text("caption_footnote").notNull().default(""),
+  coverSubheading: text("cover_subheading").notNull().default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => [

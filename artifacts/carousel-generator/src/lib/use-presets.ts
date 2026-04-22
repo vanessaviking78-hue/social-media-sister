@@ -42,6 +42,7 @@ export interface ClientPreset {
   textBoxOutline: boolean;
   textBoxOutlineColor: string;
   captionFootnote: string;
+  coverSubheading: string;
 }
 
 export interface PresetStyleFields {
@@ -62,6 +63,7 @@ export interface PresetStyleFields {
   logoPosition: LogoPosition;
   logoSize: number;
   accentColor?: string;
+  coverSubheading?: string;
 }
 
 export function usePresets() {
