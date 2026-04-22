@@ -1,4 +1,5 @@
-import { pgTable, text, serial, timestamp, integer, boolean, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean, json, check } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -27,7 +28,9 @@ export const clientPresetsTable = pgTable("client_presets", {
   captionFootnote: text("caption_footnote").notNull().default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (table) => [
+  check("client_presets_text_position_check", sql`${table.textPosition} IN ('top', 'center', 'bottom')`),
+]);
 
 export const TEXT_POSITIONS = ["top", "center", "bottom"] as const;
 export type TextPosition = typeof TEXT_POSITIONS[number];
