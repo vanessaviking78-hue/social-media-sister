@@ -1,9 +1,11 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { clientPresetsTable, TEXT_POSITIONS } from "@workspace/db/schema";
+import { clientPresetsTable, TEXT_POSITIONS, TEXT_ALIGNS, LOGO_POSITIONS } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 
 const VALID_TEXT_POSITIONS = new Set(TEXT_POSITIONS);
+const VALID_TEXT_ALIGNS = new Set(TEXT_ALIGNS);
+const VALID_LOGO_POSITIONS = new Set(LOGO_POSITIONS);
 
 const router: IRouter = Router();
 
@@ -38,6 +40,14 @@ router.post("/presets", async (req, res) => {
       res.status(400).json({ error: `Invalid textPosition "${settings.textPosition}". Must be one of: ${TEXT_POSITIONS.join(", ")}.` });
       return;
     }
+    if (settings.textAlign !== undefined && !VALID_TEXT_ALIGNS.has(settings.textAlign)) {
+      res.status(400).json({ error: `Invalid textAlign "${settings.textAlign}". Must be one of: ${TEXT_ALIGNS.join(", ")}.` });
+      return;
+    }
+    if (settings.logoPosition !== undefined && !VALID_LOGO_POSITIONS.has(settings.logoPosition)) {
+      res.status(400).json({ error: `Invalid logoPosition "${settings.logoPosition}". Must be one of: ${LOGO_POSITIONS.join(", ")}.` });
+      return;
+    }
     const [preset] = await db.insert(clientPresetsTable).values({
       name: name.trim(),
       ...settings,
@@ -60,6 +70,14 @@ router.put("/presets/:id", async (req, res) => {
     const { name, ...settings } = req.body;
     if (settings.textPosition !== undefined && !VALID_TEXT_POSITIONS.has(settings.textPosition)) {
       res.status(400).json({ error: `Invalid textPosition "${settings.textPosition}". Must be one of: ${TEXT_POSITIONS.join(", ")}.` });
+      return;
+    }
+    if (settings.textAlign !== undefined && !VALID_TEXT_ALIGNS.has(settings.textAlign)) {
+      res.status(400).json({ error: `Invalid textAlign "${settings.textAlign}". Must be one of: ${TEXT_ALIGNS.join(", ")}.` });
+      return;
+    }
+    if (settings.logoPosition !== undefined && !VALID_LOGO_POSITIONS.has(settings.logoPosition)) {
+      res.status(400).json({ error: `Invalid logoPosition "${settings.logoPosition}". Must be one of: ${LOGO_POSITIONS.join(", ")}.` });
       return;
     }
     const [preset] = await db.update(clientPresetsTable)

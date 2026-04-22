@@ -35,9 +35,19 @@ export const clientPresetsTable = pgTable("client_presets", {
 export const TEXT_POSITIONS = ["top", "center", "bottom"] as const;
 export type TextPosition = typeof TEXT_POSITIONS[number];
 
+export const TEXT_ALIGNS = ["left", "center", "right"] as const;
+export type TextAlign = typeof TEXT_ALIGNS[number];
+
+export const LOGO_POSITIONS = ["top-right", "top-left", "bottom-right", "bottom-left", "none"] as const;
+export type LogoPosition = typeof LOGO_POSITIONS[number];
+
 export const insertPresetSchema = createInsertSchema(clientPresetsTable)
   .omit({ id: true, createdAt: true, updatedAt: true })
-  .extend({ textPosition: z.enum(TEXT_POSITIONS) });
+  .extend({
+    textPosition: z.enum(TEXT_POSITIONS),
+    textAlign: z.enum(TEXT_ALIGNS),
+    logoPosition: z.enum(LOGO_POSITIONS),
+  });
 export type InsertPreset = z.infer<typeof insertPresetSchema>;
 export type ClientPreset = typeof clientPresetsTable.$inferSelect;
 
