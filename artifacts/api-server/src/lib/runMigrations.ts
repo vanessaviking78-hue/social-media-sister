@@ -6,6 +6,7 @@ export async function runMigrations(): Promise<void> {
   try {
     await runNameLowerUniqueIndexMigration();
     await normalizeTextPositionValues();
+    await addCoverSubheadingColumn();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -59,6 +60,13 @@ async function addClientPresetsNameLowerUniqueIndex(): Promise<void> {
     ON client_presets (LOWER(name))
   `);
   logger.info("Created unique index client_presets_name_lower_unique");
+}
+
+async function addCoverSubheadingColumn(): Promise<void> {
+  await db.execute(sql`
+    ALTER TABLE client_presets
+    ADD COLUMN IF NOT EXISTS cover_subheading text NOT NULL DEFAULT ''
+  `);
 }
 
 async function normalizeTextPositionValues(): Promise<void> {

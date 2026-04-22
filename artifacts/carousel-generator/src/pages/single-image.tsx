@@ -210,6 +210,7 @@ export default function SingleImage() {
         textAlign,
         textBoxOutline,
         textBoxOutlineColor,
+        "",
       );
       setDesignPreviewDataUrl(canvas.toDataURL("image/png"));
     } catch (e) {
@@ -504,7 +505,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
+        drawSlide(ctx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, "");
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -547,7 +548,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
+        drawSlide(ctx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, "");
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `post-${String(post.index).padStart(2, "0")}.png`;
@@ -599,7 +600,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
+        drawSlide(ctx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, "");
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         rendered.push({ name: `post-${String(post.index).padStart(2, "0")}.png`, base64: dataUrl });
@@ -689,7 +690,7 @@ export default function SingleImage() {
         const tick = () => {
           const elapsed = performance.now() - startTime;
           const progress = Math.min(1, elapsed / durationMs);
-          drawSlide(offCtx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+          drawSlide(offCtx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, "", videoAnimType, progress);
           ctx.fillStyle = '#000000';
           ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
           ctx.drawImage(offscreen, 0, yOff);
@@ -735,7 +736,7 @@ export default function SingleImage() {
         await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
 
         const videoBlob = await recordSlideVideo(canvas, (progress) => {
-          drawSlide(offCtx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+          drawSlide(offCtx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, "", videoAnimType, progress);
           ctx.fillStyle = '#000000';
           ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
           ctx.drawImage(offscreen, 0, yOff);
