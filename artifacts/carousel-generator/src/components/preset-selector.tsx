@@ -51,6 +51,25 @@ export default function PresetSelector({
   const [renameError, setRenameError] = useState<string | null>(null);
   const [ccWorkspaces, setCcWorkspaces] = useState<CcWorkspace[]>([]);
   const managePanelRef = useRef<HTMLDivElement>(null);
+  const saveDialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showSaveDialog) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Element;
+      // Radix Select portals render outside the dialog DOM tree; ignore those clicks
+      if (target?.closest?.("[data-radix-popper-content-wrapper]")) return;
+      if (saveDialogRef.current && !saveDialogRef.current.contains(target)) {
+        setShowSaveDialog(false);
+        setSaveName("");
+        setSaveCcWorkspaceId("");
+        setSaveCaptionFootnote("");
+        setSaveError(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showSaveDialog]);
 
   useEffect(() => {
     if (!editingId) return;
@@ -254,7 +273,7 @@ export default function PresetSelector({
       </div>
 
       {showSaveDialog && (
-        <div className="bg-gray-800/80 border border-gray-700 rounded-lg p-4 space-y-3">
+        <div ref={saveDialogRef} className="bg-gray-800/80 border border-gray-700 rounded-lg p-4 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-white">Save Current Settings as Preset</span>
             <button onClick={() => { setShowSaveDialog(false); setSaveError(null); }} className="text-gray-400 hover:text-white">
