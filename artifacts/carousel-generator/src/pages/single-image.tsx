@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import VanessaChat from "@/components/vanessa-chat";
 import { CANVAS_WIDTH, CANVAS_HEIGHT, VIDEO_WIDTH, VIDEO_HEIGHT, FONT_OPTIONS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, compressImage, recordSlideVideo, type AnimationType } from "@/lib/slide-utils";
-import { usePresets, type ClientPreset, type PresetStyleFields, type TextPosition, type TextAlign, normalizeTextPosition } from "@/lib/use-presets";
+import { usePresets, type ClientPreset, type PresetStyleFields, type TextPosition, type TextAlign, type CornerStyle, isCornerStyle, normalizeTextPosition } from "@/lib/use-presets";
 import type { LogoPosition } from "@workspace/db/schema";
 import { useCaptions } from "@/lib/use-captions";
 import PresetSelector from "@/components/preset-selector";
@@ -51,7 +51,7 @@ export default function SingleImage() {
   const [lineSpacing, setLineSpacing] = useState(0.9);
   const [overlayColor, setOverlayColor] = useState("rgba(0,0,0,0.5)");
   const [pageColor, setPageColor] = useState("#000000");
-  const [cornerStyle, setCornerStyle] = useState("none");
+  const [cornerStyle, setCornerStyle] = useState<CornerStyle>("none");
   const [cornerColor, setCornerColor] = useState("#d4af37");
   const [textPosition, setTextPosition] = useState<TextPosition>("bottom");
   const [textAlign, setTextAlign] = useState<TextAlign>("left");
@@ -1081,7 +1081,7 @@ export default function SingleImage() {
 
                 <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
                   <Label className="text-base font-semibold flex items-center gap-2"><Palette className="w-4 h-4" /> Corner Accent</Label>
-                  <Select value={cornerStyle} onValueChange={setCornerStyle}>
+                  <Select value={cornerStyle} onValueChange={(v) => { if (isCornerStyle(v)) setCornerStyle(v); }}>
                     <SelectTrigger className="h-12 text-base"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {CORNER_STYLES.map((s) => (<SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>))}

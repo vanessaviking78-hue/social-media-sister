@@ -1,5 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import type { TextAlign, LogoPosition } from "@workspace/db/schema";
+import { CORNER_STYLES } from "@workspace/db/schema";
+import type { TextAlign, LogoPosition, CornerStyle } from "@workspace/db/schema";
+
+export type { CornerStyle };
+
+export function isCornerStyle(value: string): value is CornerStyle {
+  return (CORNER_STYLES as readonly string[]).includes(value);
+}
 
 export type { TextAlign };
 export type TextPosition = "top" | "center" | "bottom";
@@ -23,7 +30,7 @@ export interface ClientPreset {
   contentFontSize: number;
   textColor: string;
   lineSpacing: string;
-  cornerStyle: string;
+  cornerStyle: CornerStyle;
   cornerColor: string;
   textPosition: TextPosition;
   logoPosition: LogoPosition;
@@ -46,7 +53,7 @@ export interface PresetStyleFields {
   contentFontSize: number;
   textColor: string;
   lineSpacing: number;
-  cornerStyle: string;
+  cornerStyle: CornerStyle;
   cornerColor: string;
   textPosition: TextPosition;
   textAlign: TextAlign;

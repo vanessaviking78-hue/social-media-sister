@@ -1,4 +1,5 @@
-import type { LogoPosition } from "@workspace/db/schema";
+import { CORNER_STYLES as CORNER_STYLE_VALUES } from "@workspace/db/schema";
+import type { LogoPosition, CornerStyle } from "@workspace/db/schema";
 
 export type { LogoPosition };
 
@@ -68,13 +69,16 @@ export const FONT_OPTIONS = [
   { label: "Great Vibes", value: "'Great Vibes', cursive" },
 ];
 
-export const CORNER_STYLES = [
-  { label: "None", value: "none" },
-  { label: "Triangle", value: "triangle" },
-  { label: "Arc", value: "arc" },
-  { label: "Double Line", value: "double-line" },
-  { label: "Frame", value: "frame" },
-];
+const CORNER_STYLE_LABELS: Record<CornerStyle, string> = {
+  none: "None",
+  triangle: "Triangle",
+  arc: "Arc",
+  "double-line": "Double Line",
+  frame: "Frame",
+};
+
+export const CORNER_STYLES: Array<{ label: string; value: CornerStyle }> =
+  CORNER_STYLE_VALUES.map((value) => ({ label: CORNER_STYLE_LABELS[value], value }));
 
 export const LOGO_POSITIONS: Array<{ label: string; value: LogoPosition }> = [
   { label: "Top Left", value: "top-left" },
