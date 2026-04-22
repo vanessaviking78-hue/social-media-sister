@@ -72,6 +72,12 @@ export const insertCaptionSchema = createInsertSchema(captionsTable).omit({ id: 
 export type InsertCaption = z.infer<typeof insertCaptionSchema>;
 export type Caption = typeof captionsTable.$inferSelect;
 
+export const CALENDAR_POST_STATUSES = ["draft", "scheduled", "posted"] as const;
+export type CalendarPostStatus = typeof CALENDAR_POST_STATUSES[number];
+
+export const CALENDAR_POST_TYPES = ["carousel", "single-image", "story"] as const;
+export type CalendarPostType = typeof CALENDAR_POST_TYPES[number];
+
 export const calendarPostsTable = pgTable("calendar_posts", {
   id: serial("id").primaryKey(),
   date: text("date").notNull(),
@@ -85,9 +91,17 @@ export const calendarPostsTable = pgTable("calendar_posts", {
   imageUrl: text("image_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (table) => [
+  check("calendar_posts_status_check", sql`${table.status} IN ('draft', 'scheduled', 'posted')`),
+  check("calendar_posts_post_type_check", sql`${table.postType} IN ('carousel', 'single-image', 'story')`),
+]);
 
-export const insertCalendarPostSchema = createInsertSchema(calendarPostsTable).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertCalendarPostSchema = createInsertSchema(calendarPostsTable)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    status: z.enum(CALENDAR_POST_STATUSES),
+    postType: z.enum(CALENDAR_POST_TYPES),
+  });
 export type InsertCalendarPost = z.infer<typeof insertCalendarPostSchema>;
 export type CalendarPost = typeof calendarPostsTable.$inferSelect;
 
@@ -105,6 +119,9 @@ export const insertActivityLogSchema = createInsertSchema(activityLogTable).omit
 export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
 export type ActivityLog = typeof activityLogTable.$inferSelect;
 
+export const APPROVAL_BATCH_STATUSES = ["pending", "reviewed"] as const;
+export type ApprovalBatchStatus = typeof APPROVAL_BATCH_STATUSES[number];
+
 export const approvalBatchesTable = pgTable("approval_batches", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -114,11 +131,20 @@ export const approvalBatchesTable = pgTable("approval_batches", {
   expiresAt: timestamp("expires_at"),
   status: text("status").notNull().default("pending"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  check("approval_batches_status_check", sql`${table.status} IN ('pending', 'reviewed')`),
+]);
 
-export const insertApprovalBatchSchema = createInsertSchema(approvalBatchesTable).omit({ id: true, createdAt: true });
+export const insertApprovalBatchSchema = createInsertSchema(approvalBatchesTable)
+  .omit({ id: true, createdAt: true })
+  .extend({
+    status: z.enum(APPROVAL_BATCH_STATUSES),
+  });
 export type InsertApprovalBatch = z.infer<typeof insertApprovalBatchSchema>;
 export type ApprovalBatch = typeof approvalBatchesTable.$inferSelect;
+
+export const APPROVAL_IMAGE_STATUSES = ["pending", "approved", "rejected"] as const;
+export type ApprovalImageStatus = typeof APPROVAL_IMAGE_STATUSES[number];
 
 export const approvalImagesTable = pgTable("approval_images", {
   id: serial("id").primaryKey(),
@@ -128,8 +154,14 @@ export const approvalImagesTable = pgTable("approval_images", {
   clientNote: text("client_note").notNull().default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+}, (table) => [
+  check("approval_images_status_check", sql`${table.status} IN ('pending', 'approved', 'rejected')`),
+]);
 
-export const insertApprovalImageSchema = createInsertSchema(approvalImagesTable).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertApprovalImageSchema = createInsertSchema(approvalImagesTable)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    status: z.enum(APPROVAL_IMAGE_STATUSES),
+  });
 export type InsertApprovalImage = z.infer<typeof insertApprovalImageSchema>;
 export type ApprovalImage = typeof approvalImagesTable.$inferSelect;
