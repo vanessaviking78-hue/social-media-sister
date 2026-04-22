@@ -1792,6 +1792,9 @@ export default function Home() {
                                     })()}
                                     <div className={`absolute ${textPosition === "top" ? "top-4" : textPosition === "center" ? "top-1/2 -translate-y-1/2" : "bottom-4"} px-2 py-1.5 min-w-[60%] ${textAlign === "right" ? "right-3" : textAlign === "center" ? "left-1/2 -translate-x-1/2" : "left-3"}`} style={showTextOverlay ? { backgroundColor: overlayColor, outline: textBoxOutline ? `2px solid ${textBoxOutlineColor}` : undefined } : {}}>
                                       <p className="font-semibold line-clamp-4" style={{ fontFamily: isCover ? fontFamily : subheadingFont, fontSize: Math.max(7, Math.round((isCover ? fontSize : contentFontSize) * 0.15)) + "px", color: textColor, lineHeight: lineSpacing, textAlign: textAlign === "center" ? "center" : textAlign === "right" ? "right" : "left", ...(showTextOverlay ? {} : { textShadow: "1px 1px 3px rgba(0,0,0,0.8)" }) }}>{slide.text}</p>
+                                      {isCover && coverSubheading && (
+                                        <p className="line-clamp-2 mt-0.5" style={{ fontFamily: subheadingFont, fontSize: Math.max(5, Math.round(fontSize * 0.15 * 0.65)) + "px", color: textColor, lineHeight: lineSpacing, textAlign: textAlign === "center" ? "center" : textAlign === "right" ? "right" : "left", ...(showTextOverlay ? {} : { textShadow: "1px 1px 3px rgba(0,0,0,0.8)" }) }}>{coverSubheading}</p>
+                                      )}
                                     </div>
                                   </div>
                                 );
