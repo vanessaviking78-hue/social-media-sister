@@ -747,18 +747,40 @@ export default function Stories() {
                 <h3 className="text-sm font-semibold">Logo (optional)</h3>
                 <Input type="file" accept="image/*" onChange={(e) => setLogoFile(e.target.files?.[0] || null)} />
                 {logoUrl && (
-                  <div className="flex items-center gap-3">
-                    <img src={logoUrl} alt="Logo" className="w-10 h-10 object-contain rounded" />
-                    <Select value={logoPosition} onValueChange={(v) => setLogoPosition(v as LogoPosition)}>
-                      <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-                      <SelectContent>
+                  <>
+                    <div className="flex items-center gap-3">
+                      <img src={logoUrl} alt="Logo" className="w-10 h-10 object-contain rounded" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">Logo Position</Label>
+                      <div className="grid grid-cols-2 gap-2" role="group" aria-label="Logo position">
                         {LOGO_POSITIONS.map((p) => (
-                          <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                          <button type="button" key={p.value} onClick={() => setLogoPosition(p.value)}
+                            aria-pressed={logoPosition === p.value}
+                            className={`px-3 py-3 rounded-lg text-sm font-semibold transition-all ${logoPosition === p.value ? "bg-primary text-primary-foreground" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}
+                          >{p.label}</button>
                         ))}
-                      </SelectContent>
-                    </Select>
-                    <Slider value={[logoSize]} onValueChange={(v) => setLogoSize(v[0])} min={40} max={200} step={10} className="w-20" />
-                  </div>
+                      </div>
+                      <div className="rounded-lg border border-border/40 bg-background/60 p-3" style={{ aspectRatio: "9/16", position: "relative" }}>
+                        <div
+                          className="absolute w-6 h-4 rounded-sm bg-primary/70 transition-all duration-200"
+                          style={{
+                            top: logoPosition.startsWith("top") ? 8 : undefined,
+                            bottom: logoPosition.startsWith("bottom") ? 8 : undefined,
+                            left: logoPosition.endsWith("left") ? 8 : undefined,
+                            right: logoPosition.endsWith("right") ? 8 : undefined,
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-semibold">Logo Size</Label>
+                        <span className="text-sm font-semibold tabular-nums">{logoSize}px</span>
+                      </div>
+                      <Slider value={[logoSize]} onValueChange={(v) => setLogoSize(v[0])} min={40} max={200} step={10} className="w-full" />
+                    </div>
+                  </>
                 )}
               </div>
 
