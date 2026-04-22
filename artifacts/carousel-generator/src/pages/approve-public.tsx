@@ -2,13 +2,22 @@ import React, { useState } from "react";
 import { ShieldCheck, CheckCircle2, XCircle, Clock, Loader2, AlertTriangle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePublicApproval } from "@/lib/use-approval";
+import { APPROVAL_IMAGE_STATUSES } from "@workspace/db/schema";
+import type { ApprovalImageStatus } from "@workspace/db/schema";
+
+const IMG_STATUS = Object.fromEntries(APPROVAL_IMAGE_STATUSES.map((s) => [s, s])) as {
+  [K in typeof APPROVAL_IMAGE_STATUSES[number]]: K;
+};
+const IMG_PENDING = IMG_STATUS.pending;
+const IMG_APPROVED = IMG_STATUS.approved;
+const IMG_REJECTED = IMG_STATUS.rejected;
 
 export default function ApprovePublic({ token }: { token: string }) {
   const { data, isLoading, error, updateImage } = usePublicApproval(token);
   const [noteInputs, setNoteInputs] = useState<Record<number, string>>({});
   const [submittingId, setSubmittingId] = useState<number | null>(null);
 
-  const handleAction = async (imageId: number, status: "approved" | "rejected") => {
+  const handleAction = async (imageId: number, status: Exclude<ApprovalImageStatus, "pending">) => {
     setSubmittingId(imageId);
     try {
       await updateImage.mutateAsync({ imageId, status, clientNote: noteInputs[imageId] || "" });
@@ -55,9 +64,9 @@ export default function ApprovePublic({ token }: { token: string }) {
 
   if (!data) return null;
 
-  const allReviewed = data.images.every((img) => img.status !== "pending");
-  const approvedCount = data.images.filter((img) => img.status === "approved").length;
-  const rejectedCount = data.images.filter((img) => img.status === "rejected").length;
+  const allReviewed = data.images.every((img) => img.status !== IMG_PENDING);
+  const approvedCount = data.images.filter((img) => img.status === IMG_APPROVED).length;
+  const rejectedCount = data.images.filter((img) => img.status === IMG_REJECTED).length;
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -92,9 +101,9 @@ export default function ApprovePublic({ token }: { token: string }) {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {data.images.map((img) => {
-            const isPending = img.status === "pending";
-            const isApproved = img.status === "approved";
-            const isRejected = img.status === "rejected";
+            const isPending = img.status === IMG_PENDING;
+            const isApproved = img.status === IMG_APPROVED;
+            const isRejected = img.status === IMG_REJECTED;
 
             return (
               <div key={img.id} className={`bg-zinc-900 border rounded-xl overflow-hidden transition-all ${isApproved ? "border-green-600" : isRejected ? "border-red-600" : "border-zinc-800"}`}>
@@ -122,7 +131,7 @@ export default function ApprovePublic({ token }: { token: string }) {
                         <Button
                           className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                           disabled={submittingId === img.id}
-                          onClick={() => handleAction(img.id, "approved")}
+                          onClick={() => handleAction(img.id, IMG_APPROVED)}
                         >
                           {submittingId === img.id ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-1" />}
                           Approve
@@ -130,7 +139,7 @@ export default function ApprovePublic({ token }: { token: string }) {
                         <Button
                           className="flex-1 bg-red-600 hover:bg-red-700 text-white"
                           disabled={submittingId === img.id}
-                          onClick={() => handleAction(img.id, "rejected")}
+                          onClick={() => handleAction(img.id, IMG_REJECTED)}
                         >
                           {submittingId === img.id ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <XCircle className="w-4 h-4 mr-1" />}
                           Reject
@@ -159,7 +168,7 @@ export default function ApprovePublic({ token }: { token: string }) {
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-500" />{approvedCount}</span>
             <span className="flex items-center gap-1"><XCircle className="w-3 h-3 text-red-500" />{rejectedCount}</span>
-            <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-yellow-500" />{data.images.filter((i) => i.status === "pending").length}</span>
+            <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-yellow-500" />{data.images.filter((i) => i.status === IMG_PENDING).length}</span>
           </div>
         </div>
       </footer>

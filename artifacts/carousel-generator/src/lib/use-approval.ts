@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ApprovalBatchStatus, ApprovalImageStatus } from "@workspace/db/schema";
 
 const BASE = import.meta.env.BASE_URL || "/";
 
@@ -14,7 +15,7 @@ export interface ApprovalBatch {
   presetId: number | null;
   token: string;
   expiresAt: string | null;
-  status: string;
+  status: ApprovalBatchStatus;
   createdAt: string;
   imageCount: number;
   approved: number;
@@ -26,7 +27,7 @@ export interface ApprovalImage {
   id: number;
   batchId: number;
   imageUrl: string;
-  status: string;
+  status: ApprovalImageStatus;
   clientNote: string;
   createdAt: string;
   updatedAt: string;
@@ -91,7 +92,7 @@ export function useApprovalBatchDetail(id: number | null) {
 export function usePublicApproval(token: string) {
   const qc = useQueryClient();
 
-  const { data, isLoading, error } = useQuery<{ name: string; clientName: string; status: string; images: ApprovalImage[] }>({
+  const { data, isLoading, error } = useQuery<{ name: string; clientName: string; status: ApprovalBatchStatus; images: ApprovalImage[] }>({
     queryKey: ["approval-public", token],
     queryFn: async () => {
       const res = await fetch(`${BASE}api/approval/public/${token}`);
@@ -104,7 +105,7 @@ export function usePublicApproval(token: string) {
   });
 
   const updateImage = useMutation({
-    mutationFn: async ({ imageId, status, clientNote }: { imageId: number; status: "approved" | "rejected"; clientNote?: string }) => {
+    mutationFn: async ({ imageId, status, clientNote }: { imageId: number; status: Exclude<ApprovalImageStatus, "pending">; clientNote?: string }) => {
       const res = await fetch(`${BASE}api/approval/public/${token}/images/${imageId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

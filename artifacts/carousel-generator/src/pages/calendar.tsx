@@ -11,18 +11,23 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useCalendar, type CalendarPost } from "@/lib/use-calendar";
+import { CALENDAR_POST_STATUSES, CALENDAR_POST_TYPES } from "@workspace/db/schema";
 
-const POST_TYPES = [
-  { value: "carousel", label: "Carousel", icon: Layers },
-  { value: "single-image", label: "Single Image", icon: ImageIcon },
-  { value: "story", label: "Story", icon: CalendarDays },
-];
+const POST_TYPE_META: Record<typeof CALENDAR_POST_TYPES[number], { label: string; icon: React.ComponentType<{ className?: string }> }> = {
+  carousel: { label: "Carousel", icon: Layers },
+  "single-image": { label: "Single Image", icon: ImageIcon },
+  story: { label: "Story", icon: CalendarDays },
+};
 
-const STATUS_OPTIONS = [
-  { value: "draft", label: "Draft" },
-  { value: "scheduled", label: "Scheduled" },
-  { value: "posted", label: "Posted" },
-];
+const POST_TYPES = CALENDAR_POST_TYPES.map((value) => ({ value, ...POST_TYPE_META[value] }));
+
+const STATUS_LABELS: Record<typeof CALENDAR_POST_STATUSES[number], string> = {
+  draft: "Draft",
+  scheduled: "Scheduled",
+  posted: "Posted",
+};
+
+const STATUS_OPTIONS = CALENDAR_POST_STATUSES.map((value) => ({ value, label: STATUS_LABELS[value] }));
 
 const COLORS = [
   "#ec4899", "#f43f5e", "#ef4444", "#f97316", "#eab308",
