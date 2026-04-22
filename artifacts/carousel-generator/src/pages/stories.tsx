@@ -53,6 +53,7 @@ export default function Stories() {
   const [font, setFont] = useState(FONT_OPTIONS[0].value);
   const [subheadingFont, setSubheadingFont] = useState(FONT_OPTIONS[0].value);
   const [fontSize, setFontSize] = useState(54);
+  const [contentFontSize, setContentFontSize] = useState(44);
   const [textColor, setTextColor] = useState("#ffffff");
   const [overlayBaseColor, setOverlayBaseColor] = useState(OVERLAY_BASE_COLORS[0]);
   const [overlayOpacity, setOverlayOpacity] = useState(0.75);
@@ -122,6 +123,7 @@ export default function Stories() {
     setFont(preset.fontFamily);
     setSubheadingFont(preset.subheadingFont || preset.fontFamily);
     setFontSize(preset.fontSize);
+    setContentFontSize(preset.contentFontSize ?? 44);
     setTextColor(preset.textColor);
     setLogoPosition(preset.logoPosition);
     setLogoSize(preset.logoSize);
@@ -164,6 +166,7 @@ export default function Stories() {
     fontFamily: font,
     subheadingFont,
     fontSize,
+    contentFontSize,
     textColor,
     lineSpacing: 1.15,
     cornerStyle: "none",
@@ -174,7 +177,7 @@ export default function Stories() {
     textBoxOutlineColor,
     logoPosition,
     logoSize,
-  }), [overlayBaseColor, overlayOpacity, font, subheadingFont, fontSize, textColor, textAlign, textBoxOutline, textBoxOutlineColor, logoPosition, logoSize]);
+  }), [overlayBaseColor, overlayOpacity, font, subheadingFont, fontSize, contentFontSize, textColor, textAlign, textBoxOutline, textBoxOutlineColor, logoPosition, logoSize]);
 
   const loadBgImg = useCallback((file: string): Promise<HTMLImageElement> => {
     if (bgImgCache.current[file]) return Promise.resolve(bgImgCache.current[file]);
@@ -312,7 +315,8 @@ export default function Stories() {
       const urls: string[] = [];
       for (let i = 0; i < questions.length; i++) {
         const bgImg = shuffled[i % shuffled.length];
-        drawStory(ctx, bgImg, questions[i], font, fontSize, textColor, overlayColor, footerText, logoImgRef.current, logoPosition, logoSize, bgOpacity, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
+        const frameFontSize = i === 0 ? fontSize : contentFontSize;
+        drawStory(ctx, bgImg, questions[i], font, frameFontSize, textColor, overlayColor, footerText, logoImgRef.current, logoPosition, logoSize, bgOpacity, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
         urls.push(canvas.toDataURL("image/png"));
       }
       setPreviews(urls);
@@ -320,7 +324,7 @@ export default function Stories() {
     } catch (err: any) {
       toast.error("Failed to render previews. Check your background image.");
     }
-  }, [questions, bgFiles, font, subheadingFont, fontSize, textColor, overlayColor, footerText, logoPosition, logoSize, bgOpacity, loadBgImg, textAlign, textBoxOutline, textBoxOutlineColor]);
+  }, [questions, bgFiles, font, subheadingFont, fontSize, contentFontSize, textColor, overlayColor, footerText, logoPosition, logoSize, bgOpacity, loadBgImg, textAlign, textBoxOutline, textBoxOutlineColor]);
 
   useEffect(() => {
     if (step === "design" && questions.length > 0) {
@@ -683,9 +687,22 @@ export default function Stories() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <h3 className="text-sm font-semibold mb-2">Font Size: {fontSize}px</h3>
-                  <Slider value={[fontSize]} onValueChange={(v) => setFontSize(v[0])} min={28} max={80} step={2} />
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold">Text Size</h3>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">First story frame</span>
+                      <span className="text-xs font-semibold tabular-nums">{fontSize}px</span>
+                    </div>
+                    <Slider value={[fontSize]} onValueChange={(v) => setFontSize(v[0])} min={28} max={80} step={2} />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Remaining stories</span>
+                      <span className="text-xs font-semibold tabular-nums">{contentFontSize}px</span>
+                    </div>
+                    <Slider value={[contentFontSize]} onValueChange={(v) => setContentFontSize(v[0])} min={28} max={80} step={2} />
+                  </div>
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold mb-2">Text Colour</h3>
