@@ -67,8 +67,21 @@ export default function PresetSelector({
         setSaveError(null);
       }
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowSaveDialog(false);
+        setSaveName("");
+        setSaveCcWorkspaceId("");
+        setSaveCaptionFootnote("");
+        setSaveError(null);
+      }
+    };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [showSaveDialog]);
 
   useEffect(() => {
@@ -81,8 +94,20 @@ export default function PresetSelector({
         setRenameError(null);
       }
     };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowManage(false);
+        setEditingId(null);
+        setEditName("");
+        setRenameError(null);
+      }
+    };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [showManage]);
 
   useEffect(() => {
