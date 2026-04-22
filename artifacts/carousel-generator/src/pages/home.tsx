@@ -1251,7 +1251,7 @@ export default function Home() {
                     <div
                       className="w-full rounded-xl overflow-hidden border border-border/40"
                       style={{
-                        background: "repeating-conic-gradient(#aaa 0% 25%, #ddd 0% 50%) 0 0 / 16px 16px",
+                        background: pageColor,
                         aspectRatio: "2 / 1",
                         maxHeight: 100,
                         display: "flex",
