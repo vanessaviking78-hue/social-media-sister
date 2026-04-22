@@ -74,6 +74,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
               placeholder="Password"
               className="pl-10 h-12 text-base"
               autoFocus
+              autoCapitalize="none"
+              autoCorrect="off"
+              autoComplete="current-password"
+              spellCheck={false}
             />
           </div>
           {error && <p className="text-red-400 text-sm text-center">{error}</p>}
