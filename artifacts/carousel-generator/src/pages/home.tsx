@@ -1233,6 +1233,52 @@ export default function Home() {
                       />
                       <Input type="text" value={overlayColor} onChange={(e) => setOverlayColor(e.target.value)} className="flex-1 h-12 text-base font-mono" placeholder="rgba(0,0,0,0.5)" />
                     </div>
+                    {/* Live overlay colour preview */}
+                    <div
+                      className="w-full rounded-xl overflow-hidden border border-border/40"
+                      style={{
+                        background: "repeating-conic-gradient(#aaa 0% 25%, #ddd 0% 50%) 0 0 / 16px 16px",
+                        aspectRatio: "2 / 1",
+                        maxHeight: 100,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <div
+                        style={{
+                          backgroundColor: overlayColor,
+                          padding: "8px 18px",
+                          borderRadius: 8,
+                          display: "flex",
+                          flexDirection: "column",
+                          alignItems: "center",
+                          gap: 3,
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: textColor,
+                            fontFamily: fontFamily,
+                            fontSize: 14,
+                            fontWeight: 700,
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          Headline Text
+                        </span>
+                        <span
+                          style={{
+                            color: textColor,
+                            fontFamily: subheadingFont,
+                            fontSize: 10,
+                            opacity: 0.85,
+                          }}
+                        >
+                          Body copy preview
+                        </span>
+                      </div>
+                    </div>
                   </div>}
 
                   {/* Text Box Outline */}
