@@ -10,7 +10,10 @@ router.post("/auth/verify", (req, res) => {
   }
   const submitted = (password ?? "").trim();
   const expected = appPassword.trim();
-  console.log(`[auth] submitted len=${submitted.length} expected len=${expected.length} match=${submitted === expected}`);
+  const sCodes = Array.from(submitted).map((c) => c.charCodeAt(0));
+  const eCodes = Array.from(expected).map((c) => c.charCodeAt(0));
+  console.log(`[auth] submitted codes: ${sCodes.join(",")}`);
+  console.log(`[auth] expected  codes: ${eCodes.join(",")}`);
   if (submitted === expected) {
     return res.json({ valid: true });
   }
