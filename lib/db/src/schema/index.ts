@@ -106,6 +106,9 @@ export const insertCalendarPostSchema = createInsertSchema(calendarPostsTable)
 export type InsertCalendarPost = z.infer<typeof insertCalendarPostSchema>;
 export type CalendarPost = typeof calendarPostsTable.$inferSelect;
 
+export const ACTIVITY_LOG_POST_TYPES = ["carousel", "single-image", "story"] as const;
+export type ActivityLogPostType = typeof ACTIVITY_LOG_POST_TYPES[number];
+
 export const activityLogTable = pgTable("activity_log", {
   id: serial("id").primaryKey(),
   action: text("action").notNull(),
@@ -114,9 +117,15 @@ export const activityLogTable = pgTable("activity_log", {
   slideCount: integer("slide_count").notNull().default(0),
   postCount: integer("post_count").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  check("activity_log_post_type_check", sql`${table.postType} IN ('carousel', 'single-image', 'story')`),
+]);
 
-export const insertActivityLogSchema = createInsertSchema(activityLogTable).omit({ id: true, createdAt: true });
+export const insertActivityLogSchema = createInsertSchema(activityLogTable)
+  .omit({ id: true, createdAt: true })
+  .extend({
+    postType: z.enum(ACTIVITY_LOG_POST_TYPES),
+  });
 export type InsertActivityLog = z.infer<typeof insertActivityLogSchema>;
 export type ActivityLog = typeof activityLogTable.$inferSelect;
 
