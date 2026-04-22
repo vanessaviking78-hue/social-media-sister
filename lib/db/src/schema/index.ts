@@ -30,10 +30,16 @@ export const clientPresetsTable = pgTable("client_presets", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => [
   check("client_presets_text_position_check", sql`${table.textPosition} IN ('top', 'center', 'bottom')`),
+  check("client_presets_corner_style_check", sql`${table.cornerStyle} IN ('none', 'triangle', 'arc', 'double-line', 'frame')`),
+  check("client_presets_text_align_check", sql`${table.textAlign} IN ('left', 'center', 'right')`),
+  check("client_presets_logo_position_check", sql`${table.logoPosition} IN ('top-right', 'top-left', 'bottom-right', 'bottom-left', 'none')`),
 ]);
 
 export const TEXT_POSITIONS = ["top", "center", "bottom"] as const;
 export type TextPosition = typeof TEXT_POSITIONS[number];
+
+export const CORNER_STYLES = ["none", "triangle", "arc", "double-line", "frame"] as const;
+export type CornerStyle = typeof CORNER_STYLES[number];
 
 export const TEXT_ALIGNS = ["left", "center", "right"] as const;
 export type TextAlign = typeof TEXT_ALIGNS[number];
@@ -45,6 +51,7 @@ export const insertPresetSchema = createInsertSchema(clientPresetsTable)
   .omit({ id: true, createdAt: true, updatedAt: true })
   .extend({
     textPosition: z.enum(TEXT_POSITIONS),
+    cornerStyle: z.enum(CORNER_STYLES),
     textAlign: z.enum(TEXT_ALIGNS),
     logoPosition: z.enum(LOGO_POSITIONS),
   });
