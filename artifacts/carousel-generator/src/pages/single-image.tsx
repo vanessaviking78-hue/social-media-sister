@@ -46,6 +46,7 @@ export default function SingleImage() {
   const [fontFamily, setFontFamily] = useState("Inter, sans-serif");
   const [subheadingFont, setSubheadingFont] = useState("Inter, sans-serif");
   const [fontSize, setFontSize] = useState(52);
+  const [contentFontSize, setContentFontSize] = useState(44);
   const [textColor, setTextColor] = useState("#ffffff");
   const [lineSpacing, setLineSpacing] = useState(0.9);
   const [overlayColor, setOverlayColor] = useState("rgba(0,0,0,0.5)");
@@ -101,7 +102,7 @@ export default function SingleImage() {
   const videoPreviewRafRef = useRef<number | null>(null);
 
   const getCurrentStyles = (): PresetStyleFields => ({
-    pageColor, overlayColor, fontFamily, subheadingFont, fontSize, textColor, lineSpacing,
+    pageColor, overlayColor, fontFamily, subheadingFont, fontSize, contentFontSize, textColor, lineSpacing,
     cornerStyle, cornerColor, textPosition, textAlign, textBoxOutline, textBoxOutlineColor, logoPosition, logoSize,
   });
 
@@ -112,6 +113,7 @@ export default function SingleImage() {
     setFontFamily(preset.fontFamily);
     setSubheadingFont(preset.subheadingFont || preset.fontFamily);
     setFontSize(preset.fontSize);
+    setContentFontSize(preset.contentFontSize ?? 44);
     setTextColor(preset.textColor);
     setLineSpacing(parseFloat(preset.lineSpacing));
     setCornerStyle(preset.cornerStyle);
@@ -419,7 +421,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
+        drawSlide(ctx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -462,7 +464,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
+        drawSlide(ctx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `post-${String(post.index).padStart(2, "0")}.png`;
@@ -514,7 +516,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
+        drawSlide(ctx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         rendered.push({ name: `post-${String(post.index).padStart(2, "0")}.png`, base64: dataUrl });
@@ -604,7 +606,7 @@ export default function SingleImage() {
         const tick = () => {
           const elapsed = performance.now() - startTime;
           const progress = Math.min(1, elapsed / durationMs);
-          drawSlide(offCtx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+          drawSlide(offCtx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
           ctx.fillStyle = '#000000';
           ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
           ctx.drawImage(offscreen, 0, yOff);
@@ -622,7 +624,7 @@ export default function SingleImage() {
       console.error('Preview failed', e);
       setVideoPreviewPlaying(false);
     }
-  }, [result, videoDurationSec, videoAnimType, fontFamily, fontSize, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, textPosition, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, stopPreview]);
+  }, [result, videoDurationSec, videoAnimType, fontFamily, fontSize, contentFontSize, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, textPosition, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, stopPreview]);
 
   const downloadVideos = async () => {
     if (!result?.posts.length) return;
@@ -650,7 +652,7 @@ export default function SingleImage() {
         await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
 
         const videoBlob = await recordSlideVideo(canvas, (progress) => {
-          drawSlide(offCtx, img, post.text, fontFamily, fontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
+          drawSlide(offCtx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, videoAnimType, progress);
           ctx.fillStyle = '#000000';
           ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
           ctx.drawImage(offscreen, 0, yOff);
@@ -969,12 +971,22 @@ export default function SingleImage() {
                   </Select>
                 </div>
 
-                <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-base font-semibold">Text Size</Label>
-                    <span className="text-base font-semibold tabular-nums">{fontSize}px</span>
+                <div className="space-y-4 rounded-2xl border border-border/30 bg-card/50 p-6">
+                  <Label className="text-base font-semibold">Text Size</Label>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">First image</span>
+                      <span className="text-sm font-semibold tabular-nums">{fontSize}px</span>
+                    </div>
+                    <Slider min={28} max={96} step={2} value={[fontSize]} onValueChange={([v]) => setFontSize(v)} className="w-full" />
                   </div>
-                  <Slider min={28} max={96} step={2} value={[fontSize]} onValueChange={([v]) => setFontSize(v)} className="w-full" />
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Remaining images</span>
+                      <span className="text-sm font-semibold tabular-nums">{contentFontSize}px</span>
+                    </div>
+                    <Slider min={28} max={96} step={2} value={[contentFontSize]} onValueChange={([v]) => setContentFontSize(v)} className="w-full" />
+                  </div>
                 </div>
 
                 <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
