@@ -101,6 +101,9 @@ export default function SingleImage() {
   const videoPreviewCanvasRef = useRef<HTMLCanvasElement>(null);
   const videoPreviewRafRef = useRef<number | null>(null);
 
+  const [designPreviewDataUrl, setDesignPreviewDataUrl] = useState<string | null>(null);
+  const designBgImgRef = useRef<HTMLImageElement | null>(null);
+
   const getCurrentStyles = (): PresetStyleFields => ({
     pageColor, overlayColor, fontFamily, subheadingFont, fontSize, contentFontSize, textColor, lineSpacing,
     cornerStyle, cornerColor, textPosition, textAlign, textBoxOutline, textBoxOutlineColor, logoPosition, logoSize,
@@ -158,6 +161,86 @@ export default function SingleImage() {
       .then(setCcStatus)
       .catch(() => {});
   }, []);
+
+  const renderDesignPreview = useCallback(async () => {
+    try {
+      await document.fonts.ready;
+      const canvas = document.createElement("canvas");
+      canvas.width = CANVAS_WIDTH;
+      canvas.height = CANVAS_HEIGHT;
+      const ctx = canvas.getContext("2d")!;
+      const sampleText = allCsvRows[0] || aiGeneratedTexts?.[0] || "Sample text overlay";
+
+      let bgImg = designBgImgRef.current;
+      if (!bgImg) {
+        const placeholder = document.createElement("canvas");
+        placeholder.width = CANVAS_WIDTH;
+        placeholder.height = CANVAS_HEIGHT;
+        const pCtx = placeholder.getContext("2d")!;
+        pCtx.fillStyle = "#1a1a2e";
+        pCtx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+        bgImg = await new Promise<HTMLImageElement>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.src = placeholder.toDataURL();
+        });
+      }
+
+      drawSlide(
+        ctx,
+        bgImg,
+        sampleText,
+        fontFamily,
+        fontSize,
+        false,
+        textColor,
+        lineSpacing,
+        overlayColor,
+        logoImg,
+        logoPosition,
+        logoSize,
+        pageColor,
+        cornerStyle,
+        cornerColor,
+        1,
+        1,
+        textPosition,
+        true,
+        subheadingFont,
+        textAlign,
+        textBoxOutline,
+        textBoxOutlineColor,
+      );
+      setDesignPreviewDataUrl(canvas.toDataURL("image/png"));
+    } catch (e) {
+      console.error("Design preview render error", e);
+    }
+  }, [
+    fontFamily, subheadingFont, fontSize, textColor, lineSpacing,
+    overlayColor, pageColor, cornerStyle, cornerColor, textPosition, textAlign,
+    textBoxOutline, textBoxOutlineColor, logoImg, logoPosition, logoSize,
+    allCsvRows, aiGeneratedTexts,
+  ]);
+
+  useEffect(() => {
+    if (currentStep !== 2) return;
+    const timer = setTimeout(renderDesignPreview, 150);
+    return () => clearTimeout(timer);
+  }, [currentStep, renderDesignPreview]);
+
+  useEffect(() => {
+    if (currentStep !== 2) return;
+    const url = photos[0] ? URL.createObjectURL(photos[0]) : null;
+    if (!url) { designBgImgRef.current = null; renderDesignPreview(); return; }
+    const img = new Image();
+    img.onload = () => {
+      designBgImgRef.current = img;
+      URL.revokeObjectURL(url);
+      renderDesignPreview();
+    };
+    img.onerror = () => URL.revokeObjectURL(url);
+    img.src = url;
+  }, [photos[0], currentStep]);
 
   const addPhotos = async (files: File[]) => {
     const images = files.filter((f) => f.type.startsWith("image/"));
@@ -938,6 +1021,28 @@ export default function SingleImage() {
               <div>
                 <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 2: Font & Layout</h2>
                 <p className="text-lg text-muted-foreground">Customise the look and feel of your single image posts.</p>
+              </div>
+
+              <div className="rounded-2xl border border-border/30 bg-card/50 p-4 flex flex-col items-center gap-3">
+                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide w-full">Live Preview <span className="normal-case font-normal text-xs">(first image style)</span></p>
+                {designPreviewDataUrl ? (
+                  <img
+                    src={designPreviewDataUrl}
+                    alt="Design preview"
+                    className="w-full max-w-xs rounded-xl shadow-lg object-contain"
+                    style={{ aspectRatio: `${CANVAS_WIDTH}/${CANVAS_HEIGHT}` }}
+                  />
+                ) : (
+                  <div
+                    className="w-full max-w-xs rounded-xl bg-accent/30 flex items-center justify-center"
+                    style={{ aspectRatio: `${CANVAS_WIDTH}/${CANVAS_HEIGHT}` }}
+                  >
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+                {!photos[0] && (
+                  <p className="text-xs text-muted-foreground">Upload a photo in Step 1 to preview your image background</p>
+                )}
               </div>
 
               <div className="rounded-2xl border border-pink-500/20 bg-card/50 p-6">
