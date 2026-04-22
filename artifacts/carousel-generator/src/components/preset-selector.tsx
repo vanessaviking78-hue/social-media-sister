@@ -72,6 +72,20 @@ export default function PresetSelector({
   }, [showSaveDialog]);
 
   useEffect(() => {
+    if (!showManage) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (managePanelRef.current && !managePanelRef.current.contains(e.target as Node)) {
+        setShowManage(false);
+        setEditingId(null);
+        setEditName("");
+        setRenameError(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showManage]);
+
+  useEffect(() => {
     if (!editingId) return;
     const handleClickOutside = (e: MouseEvent) => {
       if (managePanelRef.current && !managePanelRef.current.contains(e.target as Node)) {
