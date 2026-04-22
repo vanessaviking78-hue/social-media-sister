@@ -1,5 +1,5 @@
 import { useState, useEffect, type ReactNode } from "react";
-import { Layers, Lock } from "lucide-react";
+import { Layers, Lock, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -13,6 +13,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const saved = sessionStorage.getItem(STORAGE_KEY);
@@ -68,17 +69,26 @@ export function AuthGate({ children }: { children: ReactNode }) {
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              type="password"
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              className="pl-10 h-12 text-base"
+              className="pl-10 pr-11 h-12 text-base"
               autoFocus
               autoCapitalize="none"
               autoCorrect="off"
               autoComplete="current-password"
               spellCheck={false}
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white transition-colors"
+              tabIndex={-1}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
           </div>
           {error && <p className="text-red-400 text-sm text-center">{error}</p>}
           <Button type="submit" className="w-full h-12 text-base" disabled={loading || !password}>
