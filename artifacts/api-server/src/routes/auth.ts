@@ -8,7 +8,7 @@ router.post("/auth/verify", (req, res) => {
   if (!appPassword) {
     return res.json({ valid: true });
   }
-  if (password === appPassword) {
+  if (password.trim() === appPassword.trim()) {
     return res.json({ valid: true });
   }
   return res.status(401).json({ valid: false, error: "Incorrect password" });
