@@ -1307,10 +1307,59 @@ export default function Home() {
                       </button>
                     </div>
                     {textBoxOutline && (
-                      <div className="flex gap-3">
-                        <Input type="color" value={textBoxOutlineColor} onChange={(e) => setTextBoxOutlineColor(e.target.value)} className="w-14 h-12 p-1 cursor-pointer" />
-                        <Input type="text" value={textBoxOutlineColor} onChange={(e) => setTextBoxOutlineColor(e.target.value)} className="flex-1 h-12 text-base font-mono" placeholder="#ffffff" />
-                      </div>
+                      <>
+                        <div className="flex gap-3">
+                          <Input type="color" value={textBoxOutlineColor} onChange={(e) => setTextBoxOutlineColor(e.target.value)} className="w-14 h-12 p-1 cursor-pointer" />
+                          <Input type="text" value={textBoxOutlineColor} onChange={(e) => setTextBoxOutlineColor(e.target.value)} className="flex-1 h-12 text-base font-mono" placeholder="#ffffff" />
+                        </div>
+                        {/* Live outline colour preview */}
+                        <div
+                          className="w-full rounded-xl overflow-hidden border border-border/40"
+                          style={{
+                            background: pageColor,
+                            aspectRatio: "2 / 1",
+                            maxHeight: 100,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          <div
+                            style={{
+                              backgroundColor: overlayColor,
+                              border: `2px solid ${textBoxOutlineColor}`,
+                              padding: "8px 18px",
+                              borderRadius: 8,
+                              display: "flex",
+                              flexDirection: "column",
+                              alignItems: "center",
+                              gap: 3,
+                            }}
+                          >
+                            <span
+                              style={{
+                                color: textColor,
+                                fontFamily: fontFamily,
+                                fontSize: 14,
+                                fontWeight: 700,
+                                lineHeight: 1.2,
+                              }}
+                            >
+                              Headline Text
+                            </span>
+                            <span
+                              style={{
+                                color: textColor,
+                                fontFamily: subheadingFont,
+                                fontSize: 10,
+                                opacity: 0.85,
+                              }}
+                            >
+                              Body copy preview
+                            </span>
+                          </div>
+                        </div>
+                      </>
                     )}
                   </div>}
 
