@@ -1,3 +1,7 @@
+import type { LogoPosition } from "@workspace/db/schema";
+
+export type { LogoPosition };
+
 export const CANVAS_WIDTH = 1080;
 export const CANVAS_HEIGHT = 1350;
 export const VIDEO_WIDTH = 1080;
@@ -72,7 +76,7 @@ export const CORNER_STYLES = [
   { label: "Frame", value: "frame" },
 ];
 
-export const LOGO_POSITIONS = [
+export const LOGO_POSITIONS: Array<{ label: string; value: LogoPosition }> = [
   { label: "Top Left", value: "top-left" },
   { label: "Top Right", value: "top-right" },
   { label: "Bottom Left", value: "bottom-left" },

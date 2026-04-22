@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import VanessaChat from "@/components/vanessa-chat";
 import { CANVAS_WIDTH, CANVAS_HEIGHT, VIDEO_WIDTH, VIDEO_HEIGHT, FONT_OPTIONS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, compressImage, recordSlideVideo, recordGroupVideo, type AnimationType } from "@/lib/slide-utils";
 import { usePresets, type ClientPreset, type PresetStyleFields, type TextPosition, type TextAlign, normalizeTextPosition } from "@/lib/use-presets";
+import type { LogoPosition } from "@workspace/db/schema";
 import { useCaptions } from "@/lib/use-captions";
 import PresetSelector from "@/components/preset-selector";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
@@ -52,7 +53,7 @@ export default function Home() {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
-  const [logoPosition, setLogoPosition] = useState("top-right");
+  const [logoPosition, setLogoPosition] = useState<LogoPosition>("top-right");
   const [logoSize, setLogoSize] = useState(140);
 
   const [isGenerating, setIsGenerating] = useState(false);

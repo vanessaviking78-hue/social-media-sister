@@ -23,6 +23,7 @@ import {
 } from "@/lib/slide-utils";
 import { authHeaders } from "@/lib/use-approval";
 import { usePresets, type ClientPreset, type PresetStyleFields, type TextAlign } from "@/lib/use-presets";
+import type { LogoPosition } from "@workspace/db/schema";
 import PresetSelector from "@/components/preset-selector";
 
 const BASE = import.meta.env.BASE_URL || "/";
@@ -61,7 +62,7 @@ export default function Stories() {
   const [bgOpacity, setBgOpacity] = useState(0.7);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoUrl, setLogoUrl] = useState("");
-  const [logoPosition, setLogoPosition] = useState("top-right");
+  const [logoPosition, setLogoPosition] = useState<LogoPosition>("top-right");
   const [logoSize, setLogoSize] = useState(120);
   const [textAlign, setTextAlign] = useState<TextAlign>("left");
   const [textBoxOutline, setTextBoxOutline] = useState(false);
@@ -748,7 +749,7 @@ export default function Stories() {
                 {logoUrl && (
                   <div className="flex items-center gap-3">
                     <img src={logoUrl} alt="Logo" className="w-10 h-10 object-contain rounded" />
-                    <Select value={logoPosition} onValueChange={setLogoPosition}>
+                    <Select value={logoPosition} onValueChange={(v) => setLogoPosition(v as LogoPosition)}>
                       <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {LOGO_POSITIONS.map((p) => (

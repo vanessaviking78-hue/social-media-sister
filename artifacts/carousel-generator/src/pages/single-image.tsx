@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import VanessaChat from "@/components/vanessa-chat";
 import { CANVAS_WIDTH, CANVAS_HEIGHT, VIDEO_WIDTH, VIDEO_HEIGHT, FONT_OPTIONS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, compressImage, recordSlideVideo, type AnimationType } from "@/lib/slide-utils";
 import { usePresets, type ClientPreset, type PresetStyleFields, type TextPosition, type TextAlign, normalizeTextPosition } from "@/lib/use-presets";
+import type { LogoPosition } from "@workspace/db/schema";
 import { useCaptions } from "@/lib/use-captions";
 import PresetSelector from "@/components/preset-selector";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
@@ -39,7 +40,7 @@ export default function SingleImage() {
   const [photos, setPhotos] = useState<File[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
-  const [logoPosition, setLogoPosition] = useState("top-right");
+  const [logoPosition, setLogoPosition] = useState<LogoPosition>("top-right");
   const [logoSize, setLogoSize] = useState(140);
 
   const [fontFamily, setFontFamily] = useState("Inter, sans-serif");
@@ -1086,7 +1087,7 @@ export default function SingleImage() {
                   <>
                     <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
                       <Label className="text-base font-semibold">Logo Position</Label>
-                      <Select value={logoPosition} onValueChange={setLogoPosition}>
+                      <Select value={logoPosition} onValueChange={(v) => setLogoPosition(v as LogoPosition)}>
                         <SelectTrigger className="h-12 text-base"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {LOGO_POSITIONS.map((p) => (<SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>))}

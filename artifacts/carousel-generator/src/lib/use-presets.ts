@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
+import type { TextAlign, LogoPosition } from "@workspace/db/schema";
 
-export type TextAlign = "left" | "center" | "right";
+export type { TextAlign };
 export type TextPosition = "top" | "center" | "bottom";
 
 export function normalizeTextPosition(raw: string | undefined | null): TextPosition {
@@ -25,7 +26,7 @@ export interface ClientPreset {
   cornerStyle: string;
   cornerColor: string;
   textPosition: TextPosition;
-  logoPosition: string;
+  logoPosition: LogoPosition;
   logoSize: number;
   logoUrl: string | null;
   accentColor: string;
@@ -51,7 +52,7 @@ export interface PresetStyleFields {
   textAlign: TextAlign;
   textBoxOutline: boolean;
   textBoxOutlineColor: string;
-  logoPosition: string;
+  logoPosition: LogoPosition;
   logoSize: number;
   accentColor?: string;
 }
