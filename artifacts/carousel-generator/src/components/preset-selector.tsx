@@ -265,7 +265,7 @@ export default function PresetSelector({
             <SelectTrigger className="bg-gray-800 border-gray-700 text-white">
               <SelectValue placeholder={loading ? "Loading..." : "Select a client preset"} />
             </SelectTrigger>
-            <SelectContent className="bg-gray-800 border-gray-700">
+            <SelectContent position="popper" className="bg-gray-800 border-gray-700 max-h-72 overflow-y-auto">
               <SelectItem value="__none__" className="text-gray-400">No preset</SelectItem>
               {presets.map((p) => (
                 <SelectItem key={p.id} value={String(p.id)} className="text-white">
@@ -381,6 +381,7 @@ export default function PresetSelector({
               <X className="w-4 h-4" />
             </button>
           </div>
+          <div className="max-h-64 overflow-y-auto -mx-1 px-1">
           {presets.map((p) => (
             <div key={p.id} className="flex items-center gap-2 py-1.5 border-b border-gray-700/50 last:border-0">
               {editingId === p.id ? (
@@ -427,6 +428,7 @@ export default function PresetSelector({
               )}
             </div>
           ))}
+          </div>
         </div>
       )}
     </div>
