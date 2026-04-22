@@ -1099,12 +1099,32 @@ export default function SingleImage() {
                   <>
                     <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
                       <Label className="text-base font-semibold">Logo Position</Label>
-                      <Select value={logoPosition} onValueChange={(v) => setLogoPosition(v as LogoPosition)}>
-                        <SelectTrigger className="h-12 text-base"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {LOGO_POSITIONS.map((p) => (<SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
+                      <div className="grid grid-cols-2 gap-2" role="group" aria-label="Logo position">
+                        {LOGO_POSITIONS.map((p) => (
+                          <button
+                            type="button"
+                            key={p.value}
+                            onClick={() => setLogoPosition(p.value as LogoPosition)}
+                            aria-pressed={logoPosition === p.value}
+                            className={`px-3 py-3 rounded-lg text-sm font-semibold transition-all ${
+                              logoPosition === p.value ? "bg-primary text-primary-foreground" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"
+                            }`}
+                          >
+                            {p.label}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="rounded-lg border border-border/40 bg-background/60 p-3" style={{ aspectRatio: "4/5", position: "relative" }}>
+                        <div
+                          className="absolute w-6 h-4 rounded-sm bg-primary/70 transition-all duration-200"
+                          style={{
+                            top: logoPosition.startsWith("top") ? 8 : undefined,
+                            bottom: logoPosition.startsWith("bottom") ? 8 : undefined,
+                            left: logoPosition.endsWith("left") ? 8 : undefined,
+                            right: logoPosition.endsWith("right") ? 8 : undefined,
+                          }}
+                        />
+                      </div>
                     </div>
                     <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
                       <div className="flex items-center justify-between">
