@@ -757,42 +757,6 @@ router.get("/cloud-campaign/status", async (_req, res) => {
   });
 });
 
-const WORKSPACE_NAMES: Record<string, string> = {
-  "fc7cb893-462d-484f-bfc9-797a371fab49": "Rafique Aesthetics",
-  "5bcb3eda-41a4-4dc4-b5d2-f0538553fd72": "Ami B",
-  "82352433-c37b-4adb-a5dc-d2f46928979d": "Aspyre",
-  "d16db895-87ee-4fd2-821c-7e2ddfbe860d": "Behold Me",
-  "bb592af3-cb91-460d-b759-b407c091ca81": "Bex Wood",
-  "a6c88691-6770-4094-88c2-421e192779b4": "Castle Clinic",
-  "29ad0ded-06d7-4f2c-9796-b08097fbe722": "CK",
-  "b405b7b0-b6fe-479f-a8fb-3cef1b44ecce": "Claire Brown",
-  "9434b57b-1db5-4d7f-8f6a-d171983f502d": "Clare Connolly",
-  "ea050da9-a302-4e51-99c4-40dd6b07d452": "CT",
-  "f79e7f45-e5aa-4729-b856-bd55702216af": "Dr Kathryn",
-  "2d0a7b46-f2e9-4dd6-8be1-4514cb505e80": "Dr Laura Highcroft",
-  "1935ae9e-b164-44a3-ba51-1ed8bbd5d312": "Dr Lisa Academy",
-  "7ec52a39-9f8f-4074-ac00-ed60ef5014d4": "Dr Lisa Aesthetics",
-  "a4268d17-142d-4f9c-b40c-2d71a916fe29": "Dr V",
-  "92f303a0-3458-4893-9820-10aa47d393d0": "Eaton",
-  "0244ca6e-2269-47df-8d6b-aa89b8bc7448": "Equilibrium",
-  "14d722a6-0c91-474e-becf-2627f76becd7": "Eva Garcia Aesthetics",
-  "a1961d93-02f0-4f54-8c1f-a24fba893783": "Forever Young",
-  "558e4849-d72e-4c27-9b43-27084074612b": "Happy Face",
-  "21418c01-a9d7-450f-a936-36cf6aecbcb1": "Harwood Aesthetics",
-  "e21a4a62-8ed9-4589-bbf7-083f959c984d": "Helen Tweaked",
-  "d28a4ba3-abe8-47a2-99cd-d714b0752ca4": "Kelly Anne",
-  "7f55ed52-fa03-40d8-9c33-11c191cdfd1d": "Nova Aesthetics",
-  "1aebf27a-73e5-424b-84a4-67d8c7cee00c": "Pip",
-  "682dde7b-48bc-4267-a1e8-aadca3173afb": "Pura Aesthetics",
-  "53aebda4-a90a-496b-9609-5300786735ab": "Radiant Rose",
-  "9c9bc090-4dc1-4cdf-a988-418e91caa422": "Social Media Sister",
-  "8d69664a-3f90-40ac-934e-6da379997798": "Sonja",
-  "d0ee5ed5-347a-4a9e-b73a-020dcbc69133": "Suzanne",
-  "b9349755-68cf-4219-9157-bcff6968c53d": "Taunton",
-  "1858ac0e-6c1f-47d5-b427-664a522d00ed": "Teviot",
-  "7458f9c2-419d-4d0c-b203-0cc78a582c29": "The Compliance Clinic",
-  "6af48e3f-7251-46df-9f3a-c3f3c36cdb6d": "Timeless by Sarah",
-};
 
 router.get("/cloud-campaign/workspaces", async (_req, res) => {
   try {
