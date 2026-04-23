@@ -48,12 +48,13 @@ export default function PresetsPage() {
     setCcWorkspacesLoading(true);
     setCcWorkspacesError(null);
     fetch(`${BASE}api/cloud-campaign/workspaces`)
-      .then((r) => r.json())
-      .then((data) => {
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data?.error || "Failed to load workspaces");
         setCcWorkspaces(data.workspaces || []);
       })
-      .catch(() => {
-        setCcWorkspacesError("Could not load Cloud Campaign workspaces");
+      .catch((err: Error) => {
+        setCcWorkspacesError(err.message || "Could not load Cloud Campaign workspaces");
         setCcWorkspaces([]);
       })
       .finally(() => setCcWorkspacesLoading(false));
