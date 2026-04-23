@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "wouter";
 import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { usePresets, type ClientPreset, type PresetStyleFields, type TextAlign } from "@/lib/use-presets";
 import { FONT_OPTIONS } from "@/lib/slide-utils";
+
+const BASE = import.meta.env.BASE_URL || "/";
 
 const DEFAULT_STYLES: PresetStyleFields = {
   pageColor: "#000000",
@@ -37,6 +39,25 @@ export default function PresetsPage() {
   const [quickAddName, setQuickAddName] = useState("");
   const [quickAddSaving, setQuickAddSaving] = useState(false);
   const [quickAddError, setQuickAddError] = useState<string | null>(null);
+  const [ccWorkspaces, setCcWorkspaces] = useState<{ id: string; name: string }[]>([]);
+  const [ccWorkspacesLoading, setCcWorkspacesLoading] = useState(false);
+  const [ccWorkspacesError, setCcWorkspacesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (editingId === null) return;
+    setCcWorkspacesLoading(true);
+    setCcWorkspacesError(null);
+    fetch(`${BASE}api/cloud-campaign/workspaces`)
+      .then((r) => r.json())
+      .then((data) => {
+        setCcWorkspaces(data.workspaces || []);
+      })
+      .catch(() => {
+        setCcWorkspacesError("Could not load Cloud Campaign workspaces");
+        setCcWorkspaces([]);
+      })
+      .finally(() => setCcWorkspacesLoading(false));
+  }, [editingId]);
 
   const handleDelete = async (id: number) => {
     const preset = presets.find((p) => p.id === id);
@@ -282,14 +303,35 @@ export default function PresetsPage() {
                       )}
                     </div>
                     <div>
-                      <Label className="text-xs text-gray-400">Cloud Campaign Workspace ID</Label>
-                      <Input
-                        placeholder="e.g. b5a40a7f-a5b2-4e90-84c0-bdf1628d2d9e"
-                        value={editData.ccWorkspaceId || ""}
-                        onChange={(e) => setEditData((d) => ({ ...d, ccWorkspaceId: e.target.value || null }))}
-                        className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
-                      />
-                      <p className="text-[10px] text-gray-500 mt-1">Paste the workspace ID from the Cloud Campaign URL (the UUID after <code>client=</code>)</p>
+                      <Label className="text-xs text-gray-400">Cloud Campaign Workspace</Label>
+                      {ccWorkspacesLoading ? (
+                        <p className="text-xs text-gray-500 mt-1">Loading workspaces…</p>
+                      ) : ccWorkspacesError ? (
+                        <div>
+                          <p className="text-xs text-red-400 mt-1 mb-1">{ccWorkspacesError}</p>
+                          <Input
+                            placeholder="Paste workspace UUID manually"
+                            value={editData.ccWorkspaceId || ""}
+                            onChange={(e) => setEditData((d) => ({ ...d, ccWorkspaceId: e.target.value || null }))}
+                            className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
+                          />
+                        </div>
+                      ) : (
+                        <Select
+                          value={editData.ccWorkspaceId || "__none__"}
+                          onValueChange={(v) => setEditData((d) => ({ ...d, ccWorkspaceId: v === "__none__" ? null : v }))}
+                        >
+                          <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
+                            <SelectValue placeholder="Select a workspace…" />
+                          </SelectTrigger>
+                          <SelectContent position="popper" className="bg-gray-800 border-gray-700 max-h-72 overflow-y-auto">
+                            <SelectItem value="__none__" className="text-gray-400">None (unlink)</SelectItem>
+                            {ccWorkspaces.map((ws) => (
+                              <SelectItem key={ws.id} value={ws.id} className="text-white">{ws.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </div>
                     <div>
                       <Label className="text-xs text-gray-400">Caption Footnote (appended to AI-generated captions)</Label>

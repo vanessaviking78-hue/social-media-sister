@@ -796,11 +796,22 @@ const WORKSPACE_NAMES: Record<string, string> = {
 
 router.get("/cloud-campaign/workspaces", async (_req, res) => {
   try {
-    const ids = (process.env.CLOUD_CAMPAIGN_WORKSPACE_IDS || "").split(",").filter(Boolean);
-    const workspaces = ids.map(id => ({
-      id,
-      name: WORKSPACE_NAMES[id] || id,
-    }));
+    let workspaces: { id: string; name: string }[] = [];
+    try {
+      const data = await ccFetch("/workspaces");
+      const items: any[] = Array.isArray(data) ? data : (data?.data ?? data?.workspaces ?? data?.clients ?? []);
+      if (items.length > 0) {
+        workspaces = items
+          .filter((c: any) => c?.id)
+          .map((c: any) => ({ id: String(c.id), name: String(c.name || c.id) }));
+      }
+    } catch (apiErr: any) {
+      console.warn("CC /workspaces fetch failed, falling back to WORKSPACE_NAMES:", apiErr.message);
+    }
+    if (workspaces.length === 0) {
+      workspaces = Object.entries(WORKSPACE_NAMES).map(([id, name]) => ({ id, name }));
+    }
+    workspaces.sort((a, b) => a.name.localeCompare(b.name));
     res.json({ workspaces });
   } catch (err: any) {
     console.error("CC workspaces error:", err);
