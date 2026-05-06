@@ -7,6 +7,7 @@ export async function runMigrations(): Promise<void> {
     await runNameLowerUniqueIndexMigration();
     await normalizeTextPositionValues();
     await addCoverSubheadingColumn();
+    await addMetaConnectionColumns();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -67,6 +68,12 @@ async function addCoverSubheadingColumn(): Promise<void> {
     ALTER TABLE client_presets
     ADD COLUMN IF NOT EXISTS cover_subheading text NOT NULL DEFAULT ''
   `);
+}
+
+async function addMetaConnectionColumns(): Promise<void> {
+  await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS meta_page_access_token text`);
+  await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS meta_facebook_page_id text`);
+  await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS meta_instagram_account_id text`);
 }
 
 async function normalizeTextPositionValues(): Promise<void> {

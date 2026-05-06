@@ -1,125 +1,83 @@
-# Workspace
+# Social Media Sister's CyberSuite
 
-## Overview
+A social media content creation tool that allows users to generate, manage, and post various types of social media content, including carousels, single-image posts, and Instagram stories, with AI assistance and client-specific branding.
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+## Run & Operate
+
+- **Run Dev Server**: `pnpm --filter @workspace/api-server run dev`
+- **Build All**: `pnpm run build`
+- **Typecheck All**: `pnpm run typecheck`
+- **Codegen API Clients**: `pnpm --filter @workspace/api-spec run codegen`
+- **DB Push (Dev)**: `pnpm --filter @workspace/db run push` (fallback to `push-force`)
+- **Required Env Vars**:
+    - `DATABASE_URL` (for Drizzle ORM)
+    - `META_APP_ID`, `META_APP_SECRET` (for Meta Graph API)
+    - `CLOUD_CAMPAIGN_API_KEY`, `CLOUD_CAMPAIGN_AGENCY_ID`, `CLOUD_CAMPAIGN_WORKSPACE_IDS` (for Cloud Campaign API)
+    - `PORT` (for API server)
 
 ## Stack
 
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+- **Monorepo**: pnpm workspaces
+- **Node.js**: 24
+- **TypeScript**: 5.9
+- **API Framework**: Express 5
+- **ORM**: Drizzle ORM (PostgreSQL)
+- **Validation**: Zod, `drizzle-zod`
+- **API Codegen**: Orval (from OpenAPI spec)
+- **Build Tool**: esbuild (CJS bundle for backend), Vite (frontend)
+- **Frontend**: React
 
-## Applications
+## Where things live
 
-### Social Media Sister's CyberSuite (`artifacts/carousel-generator`)
+- **Frontend App**: `artifacts/carousel-generator/src/`
+- **API Server**: `artifacts/api-server/src/`
+- **DB Schema**: `lib/db/src/schema/`
+- **OpenAPI Spec**: `lib/api-spec/openapi.yaml`
+- **Generated API Client (React Query)**: `lib/api-client-react/src/generated/`
+- **Generated Zod Schemas**: `lib/api-zod/src/generated/`
+- **Shared Utilities (Frontend)**: `artifacts/carousel-generator/src/lib/slide-utils.ts`
+- **Client Brand Presets (DB Schema)**: `lib/db/src/schema/client_presets.ts`
+- **Activity Log (DB Schema)**: `lib/db/src/schema/activity_log.ts`
+- **Content Calendar (DB Schema)**: `lib/db/src/schema/calendar_posts.ts`
+- **Image Approval (DB Schemas)**: `lib/db/src/schema/approval_batches.ts`, `lib/db/src/schema/approval_images.ts`
 
-A social media content tool at the root path `/`. Two modes: (1) Upload photos + CSV to generate up to 60 carousel posts, or (2) "Content Machine" — fill in a brief and AI generates all slide text automatically. Preview in-app and download as ZIP.
+## Architecture decisions
 
-- **Frontend**: React + Vite at `artifacts/carousel-generator/src/`
-- **Backend**: Express API at `artifacts/api-server/src/routes/carousel/` and `artifacts/api-server/src/routes/content/`
-- **AI Content Generation**: `POST /api/content/generate` — SSE endpoint using OpenAI (via Replit AI Integrations) to generate carousel text from a brief (industry, tone, topics, post count)
-- **Dependencies**: multer, csv-parse, jszip + file-saver + papaparse (frontend), @workspace/integrations-openai-ai-server (AI)
-- **Zip download**: Client-side canvas compositing (image + text overlay) → JSZip → file-saver
-- **Branding**: Corner accents (triangle, arc, double-line, frame), page color, overlay color, 25 Google Fonts
-- **Image Upload**: `POST /api/content/upload-image` — uploads rendered slide images to Replit Object Storage (bucket: `replit-objstore-7bc3b789-f026-4325-97a3-07fb026b92ce`), returns public URLs served via `GET /api/content/images/carousel-images/:filename`
-- **CSV Export**: "Download CSV" button renders slides, uploads to object storage 3 at a time, generates CSV with Cloud Campaign-compatible columns (`Image`, `Caption`, `Title`, `Approved`, `Image 2`...`Image N`)
-- **Cloud Campaign Integration**: Direct API push via `POST /api/cloud-campaign/push` — renders slides, uploads images, creates carousel content in Cloud Campaign with multiple media items per post. Env vars: `CLOUD_CAMPAIGN_API_KEY`, `CLOUD_CAMPAIGN_AGENCY_ID` (UUID), `CLOUD_CAMPAIGN_WORKSPACE_IDS` (comma-separated UUIDs). Status check: `GET /api/cloud-campaign/status`. Also supports CSV bulk push via `POST /api/cloud-campaign/push-csv`. API base: `https://app.cloudcampaign.com/api/v1`
-- **Caption Generator**: `POST /api/content/captions` — SSE endpoint generating Instagram captions
-- **Gradient Controls**: On/off toggle, color picker, solid vs leopard print, 6-position gradient placement
-- **Text Position**: 3x3 grid (TL/TC/TR/CL/CC/CR/BL/BC/BR); CTA slide forces center-center with larger bold text
-- **4-Step Wizard**: Step 1 (Images: photos upload, logo upload), Step 2 (Font & Layout: all styling controls in card grid), Step 3 (Content: CSV/AI mode toggle + content creation), Step 4 (Results & Captions: carousel gallery, download ZIP, caption generation). Progress bar at top with clickable step icons. Next/Back navigation on each step.
-- **Interface**: Simplified and enlarged design with larger text (16-18px), expanded buttons (py-6+), increased padding and spacing for better readability
-- **Single Image Mode**: Dedicated flow at `/single-image` for single-image posts. Same 4-step wizard as carousel but each photo gets exactly one text overlay (no multi-slide). CSV expects one text per row (first column). AI content via `POST /api/content/generate-single` generates short, punchy overlay texts (under 15 words each). ZIP uses flat naming (`post-01.png`). CSV export has single Image column. CC push sends single-image posts. Shared utilities extracted to `src/lib/slide-utils.ts` (drawSlide, compressImage, FONT_OPTIONS, CORNER_STYLES, LOGO_POSITIONS, CANVAS constants, Google Fonts loader).
-- **Client Brand Presets**: Save/load reusable brand presets per client. Database-backed (`client_presets` table via Drizzle). CRUD API: `GET/POST /api/presets`, `GET/PUT/DELETE /api/presets/:id`. Stores all styling fields (page color, overlay, font, font size, text color, line spacing, corners, gradient, text position, logo position/size, accent color, CC workspace ID, caption footnote). **Caption Footnote**: per-client text (e.g. location, @handle) automatically appended to every AI-generated caption when that client preset is selected. Footnote field available in both the Save New dialog and the Presets management page edit form. Shared `usePresets` hook (`src/lib/use-presets.ts`) and `PresetSelector` component (`src/components/preset-selector.tsx`) integrated into Step 2 of all wizard flows (Carousel, Single Image). Users can select a saved preset to auto-fill all styling, save current settings as a new preset, update existing presets, rename and delete via manage panel.
-- **Caption Library**: Dedicated page at `/captions` for saving, organising, and reusing captions. Database-backed (`captions` table with text, category, client name, favourite flag). CRUD API: `GET/POST /api/captions`, `PUT/DELETE /api/captions/:id`, `POST /api/captions/bulk`. Search/filter by category, client, keyword. `useCaptions` hook (`src/lib/use-captions.ts`). "Save to Library" button on each caption in Step 4 of all wizard flows. "Save All" bulk save button. "Browse Caption Library" panel in Step 3 of Carousel and Single Image modes. Nav link on all page headers.
-- **Story Generator**: Dedicated flow at `/stories` for Instagram Story engagement posts (1080x1920). 3-step wizard: Content (AI question generation via `POST /api/content/generate-story-questions`, CSV import, manual entry), Design (19 retro pin-up backgrounds in `public/story-backgrounds/`, overlay colour, font, opacity, footer text, optional logo), Generate (preview grid, ZIP download, CC push with batched uploads, CSV export). `drawStory` function in `slide-utils.ts` renders centered rounded overlay on background at chosen opacity. Activity logged as `postType: "story"`. Analytics includes `totalStories` stat card. Calendar supports `story` post type.
-- **Analytics Dashboard**: Dashboard at `/analytics` showing content creation metrics. Database-backed (`activity_log` table with action, postType, clientName, slideCount, postCount). API: `GET /api/analytics/summary` (totals + monthly stats), `GET /api/analytics/by-client` (per-client breakdown), `GET /api/analytics/over-time?group=week|month` (time series), `GET /api/analytics/by-type` (post type distribution), `GET /api/analytics/recent` (last 20 activities), `POST /api/analytics/log` (frontend log endpoint). Activity logging integrated into content generation (carousel, single-image), CC push, and download handlers. UI: 5 summary stat cards, bar chart for volume over time (weekly/monthly toggle), donut chart for post type distribution, client breakdown table, recent activity feed, Cloud Campaign placeholder section. `useAnalytics` hook (`src/lib/use-analytics.ts`). Recharts library for charts. Nav link on all page headers.
-- **Content Calendar**: Monthly calendar view at `/calendar` for planning and organising posts across clients. Database-backed (`calendar_posts` table with date, client name, post type, title, caption, notes, status, color). CRUD API: `GET/POST /api/calendar`, `PUT/DELETE /api/calendar/:id`. List supports `from`, `to`, `client` query params for date range and client filtering. Monthly grid UI with day cells, colour-coded post cards, drag-and-drop rescheduling, create/edit modal dialog, status badges (draft/scheduled/posted), client filter dropdown, month navigation (prev/next/today). `useCalendar` hook (`src/lib/use-calendar.ts`). Nav link on all page headers.
-- **Image Approval System**: Client-facing image approval portal at `/approval` (management) and `/approve/:token` (public). Database-backed (`approval_batches` table with name, clientName, presetId, token, expiresAt, status; `approval_images` table with batchId, imageUrl, status, clientNote). CRUD API: `GET/POST /api/approval/batches`, `GET/DELETE /api/approval/batches/:id`. Public API (no auth): `GET /api/approval/public/:token`, `PUT /api/approval/public/:token/images/:imageId`. Approved images API: `GET /api/approval/approved-images?clientName=`. Create batch with name, client preset, uploaded images, and expiry days. Generates unique shareable link. Public approval page is completely separate from CyberSuite (no login, no access to other features). Clients see images in a gallery with approve/reject buttons and optional notes. Status tracking: pending/approved/rejected per image, batch auto-marked "reviewed" when all images reviewed. Expiry handling with clear expired/not-found messages. `useApproval` hooks (`src/lib/use-approval.ts`). Approved images picker integrated into Step 1 of Carousel and Single Image wizards. Nav link on all page headers.
+- **Monorepo Structure**: Uses pnpm workspaces for a monorepo, organizing applications (`artifacts/`) and shared libraries (`lib/`) to centralize tooling and type safety.
+- **TypeScript Composite Projects**: Leverages TypeScript's `composite` projects and project references to ensure correct cross-package type-checking and build ordering, emitting only declaration files (`.d.ts`) during typecheck.
+- **OpenAPI-driven Development**: API contracts are defined in an OpenAPI spec, which then auto-generates Zod schemas for server-side validation and React Query hooks for the frontend, ensuring strong type consistency across the stack.
+- **Client-side Image Processing**: Image compositing, compression, and ZIP generation are handled client-side in the browser to offload server resources and provide immediate feedback.
+- **Object Storage for Media**: Rendered slide images are uploaded to Replit Object Storage, decoupling media serving from the application server and providing public URLs.
 
-## Structure
+## Product
 
-```text
-artifacts-monorepo/
-├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
-├── lib/                    # Shared libraries
-│   ├── api-spec/           # OpenAPI spec + Orval codegen config
-│   ├── api-client-react/   # Generated React Query hooks
-│   ├── api-zod/            # Generated Zod schemas from OpenAPI
-│   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
-```
+- **Carousel Generator**: Upload photos and CSV or use AI to generate up to 60 carousel posts, with in-app preview and ZIP download.
+- **Single Image Mode**: Dedicated flow for single-image posts with AI-generated short overlay texts.
+- **Story Generator**: Create Instagram Story engagement posts with AI question generation, customizable designs, and various export options.
+- **AI Content Generation**: Generate carousel slide text, Instagram captions, and story questions using OpenAI integration.
+- **Client Brand Presets**: Save and load reusable brand styling presets per client, including colors, fonts, gradients, and logo positions.
+- **Caption Library**: Manage, save, and organize captions by category and client, with bulk save and browse features.
+- **Direct Posting Integrations**: Post directly to Instagram and Facebook via Meta Graph API, and to Cloud Campaign.
+- **Image Approval System**: Create shareable public links for clients to approve/reject images before final posting.
+- **Analytics Dashboard**: View content creation metrics, including summary stats, per-client breakdowns, and activity logs.
+- **Content Calendar**: Plan and organize posts with a monthly calendar view, drag-and-drop rescheduling, and filtering.
 
-## TypeScript & Composite Projects
+## User preferences
 
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
+- _Populate as you build_
 
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`). This builds the full dependency graph so that cross-package imports resolve correctly. Running `tsc` inside a single package will fail if its dependencies haven't been built yet.
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite...etc, not `tsc`.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array. `tsc --build` uses this to determine build order and skip up-to-date packages.
+## Gotchas
 
-## Root Scripts
+- **Typechecking**: Always run `pnpm run typecheck` from the root to ensure all cross-package imports resolve correctly; running `tsc` within a single package might fail.
+- **Development Database**: For development, use `pnpm --filter @workspace/db run push` for Drizzle migrations; `push-force` is available as a fallback.
+- **API Route Prefix**: All API routes are mounted under `/api`.
 
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
+## Pointers
 
-## Packages
-
-### `artifacts/api-server` (`@workspace/api-server`)
-
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
-
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
-
-### `lib/db` (`@workspace/db`)
-
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
-
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas
-- `src/schema/index.ts` — `client_presets` table (brand presets: name, colors, font, gradient, text position, logo, accent, CC workspace ID)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
-
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
-
-### `lib/api-spec` (`@workspace/api-spec`)
-
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
-
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
-
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
-
-### `lib/api-zod` (`@workspace/api-zod`)
-
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
-
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+- [pnpm Workspaces Documentation](https://pnpm.io/workspaces)
+- [TypeScript Project References](https://www.typescriptlang.org/docs/handbook/project-references.html)
+- [Drizzle ORM Documentation](https://orm.drizzle.team/docs/overview)
+- [Orval Documentation](https://orval.dev/)
+- [OpenAPI Specification](https://swagger.io/specification/)
+- [React Query Documentation](https://tanstack.com/query/latest)
+- [Express.js Documentation](https://expressjs.com/)

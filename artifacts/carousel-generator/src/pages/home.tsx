@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
-import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, CloudUpload, ImagePlus, CalendarDays, BarChart3, ShieldCheck, BookOpen, Film, ChevronDown, Play, Square } from "lucide-react";
+import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, CloudUpload, ImagePlus, CalendarDays, BarChart3, ShieldCheck, BookOpen, Film, ChevronDown, Play, Square, Share2 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -81,6 +81,7 @@ export default function Home() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [ccPushing, setCcPushing] = useState(false);
   const [ccStatus, setCcStatus] = useState<{ configured: boolean; hasWorkspaces: boolean } | null>(null);
+  const [metaPushing, setMetaPushing] = useState(false);
 
   const { presets, loading: presetsLoading, savePreset, updatePreset, deletePreset, uploadLogo } = usePresets();
   const { saveCaption: saveCaptionToLib, bulkSave: bulkSaveCaptions, captions: libCaptions, fetchCaptions: refreshLibCaptions } = useCaptions();
@@ -229,6 +230,79 @@ export default function Home() {
       toast.error("Cloud Campaign push failed: " + (e?.message || "Unknown error"), { id });
     } finally {
       setCcPushing(false);
+    }
+  };
+
+  const pushToMeta = async () => {
+    if (!result?.slides.length) return;
+    const selectedPreset = presets.find((p) => p.id === selectedPresetId);
+    if (!selectedPreset?.metaInstagramAccountId && !selectedPreset?.metaFacebookPageId) {
+      toast.error("Please select a client preset with Meta (Instagram/Facebook) connected first. Add the connection in Client Presets.");
+      return;
+    }
+    setMetaPushing(true);
+    const id = toast.loading("Rendering slides for Instagram & Facebook...");
+    try {
+      await document.fonts.ready;
+      const rendered: { name: string; base64: string; groupIndex: number; groupPosition: number }[] = [];
+      for (const slide of result.slides) {
+        const isCover = slide.groupPosition === 1;
+        const res = await fetch(slide.imageUrl);
+        const blob = await res.blob();
+        const img = new Image();
+        await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
+        const canvas = document.createElement("canvas");
+        canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
+        const ctx = canvas.getContext("2d")!;
+        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading);
+        URL.revokeObjectURL(img.src);
+        const dataUrl = canvas.toDataURL("image/png");
+        const fileName = `meta-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
+        rendered.push({ name: fileName, base64: dataUrl, groupIndex: slide.groupIndex, groupPosition: slide.groupPosition });
+      }
+
+      const urlMap = new Map<string, string>();
+      const PARALLEL = 3;
+      for (let i = 0; i < rendered.length; i += PARALLEL) {
+        toast.loading(`Uploading images... ${i}/${rendered.length}`, { id });
+        const batch = rendered.slice(i, i + PARALLEL);
+        const urls = await Promise.all(batch.map((r) => uploadOneImage(r.name, r.base64)));
+        batch.forEach((r, bi) => urlMap.set(r.name, urls[bi]));
+      }
+
+      toast.loading("Posting to Instagram & Facebook...", { id });
+      const posts = [];
+      for (let gi = 0; gi < result.totalCarousels; gi++) {
+        const groupSlides = result.slides.filter((s: any) => s.groupIndex === gi + 1);
+        const imageUrls = groupSlides.map((s: any) => {
+          const fn = `meta-${String(s.groupIndex).padStart(2, "0")}-slide-${String(s.groupPosition).padStart(2, "0")}.png`;
+          return urlMap.get(fn) || "";
+        }).filter(Boolean);
+        posts.push({ title: `Carousel ${gi + 1}`, caption: captions[gi] || "", imageUrls });
+      }
+
+      const resp = await fetch(`${import.meta.env.BASE_URL}api/meta/push`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ posts, presetId: selectedPreset!.id, postType: "carousel" }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Push failed");
+      const igResults = data.results.filter((r: any) => r.platform === "instagram");
+      const fbResults = data.results.filter((r: any) => r.platform === "facebook");
+      const igOk = igResults.filter((r: any) => r.status === "success").length;
+      const fbOk = fbResults.filter((r: any) => r.status === "success").length;
+      const parts = [];
+      if (igOk) parts.push(`${igOk} to Instagram`);
+      if (fbOk) parts.push(`${fbOk} to Facebook`);
+      toast.success(`Posted ${parts.join(" & ")}!`, { id });
+      if (data.summary.failed > 0) {
+        toast.error(`${data.summary.failed} post(s) failed.`);
+      }
+    } catch (e: any) {
+      toast.error("Meta push failed: " + (e?.message || "Unknown error"), { id });
+    } finally {
+      setMetaPushing(false);
     }
   };
 
@@ -1730,6 +1804,12 @@ export default function Home() {
                             {ccPushing ? "Pushing..." : "Push to Cloud Campaign"}
                           </Button>
                         )}
+                        {presets.find((p) => p.id === selectedPresetId)?.metaInstagramAccountId || presets.find((p) => p.id === selectedPresetId)?.metaFacebookPageId ? (
+                          <Button size="lg" onClick={pushToMeta} disabled={metaPushing} className="px-8 py-4 text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white" data-testid="button-push-meta-bar">
+                            {metaPushing ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Share2 className="w-5 h-5 mr-2" />}
+                            {metaPushing ? "Posting..." : "Post to Instagram & Facebook"}
+                          </Button>
+                        ) : null}
                       </div>
                     </div>
 
@@ -1958,6 +2038,12 @@ export default function Home() {
                             {ccPushing ? "Pushing..." : "Push to Cloud Campaign"}
                           </Button>
                         )}
+                        {presets.find((p) => p.id === selectedPresetId)?.metaInstagramAccountId || presets.find((p) => p.id === selectedPresetId)?.metaFacebookPageId ? (
+                          <Button size="lg" onClick={pushToMeta} disabled={metaPushing} className="px-10 py-6 text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white" data-testid="button-push-meta">
+                            {metaPushing ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Share2 className="w-5 h-5 mr-2" />}
+                            {metaPushing ? "Posting..." : "Post to Instagram & Facebook"}
+                          </Button>
+                        ) : null}
                       </div>
                     </div>
                   </>

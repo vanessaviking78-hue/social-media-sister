@@ -38,6 +38,9 @@ export interface ClientPreset {
   logoUrl: string | null;
   accentColor: string;
   ccWorkspaceId: string | null;
+  metaPageAccessToken: string | null;
+  metaFacebookPageId: string | null;
+  metaInstagramAccountId: string | null;
   textAlign: TextAlign;
   textBoxOutline: boolean;
   textBoxOutlineColor: string;
@@ -129,7 +132,7 @@ export function usePresets() {
     return data.preset as ClientPreset;
   }, [fetchPresets]);
 
-  const updatePreset = useCallback(async (id: number, name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null, captionFootnote?: string) => {
+  const updatePreset = useCallback(async (id: number, name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null, captionFootnote?: string, metaFields?: { metaPageAccessToken?: string | null; metaFacebookPageId?: string | null; metaInstagramAccountId?: string | null }) => {
     const body = {
       name,
       ...styles,
@@ -137,6 +140,7 @@ export function usePresets() {
       ccWorkspaceId: ccWorkspaceId || null,
       logoUrl: logoUrl || null,
       captionFootnote: captionFootnote ?? "",
+      ...(metaFields || {}),
     };
     const resp = await fetch(`${import.meta.env.BASE_URL}api/presets/${id}`, {
       method: "PUT",

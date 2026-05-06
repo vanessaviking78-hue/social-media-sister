@@ -8,6 +8,7 @@ import captionsRouter from "./captions";
 import calendarRouter from "./calendar";
 import analyticsRouter from "./analytics";
 import approvalRouter from "./approval";
+import metaRouter from "./meta";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(captionsRouter);
 router.use(calendarRouter);
 router.use(analyticsRouter);
 router.use(approvalRouter);
+router.use(metaRouter);
 
 export default router;

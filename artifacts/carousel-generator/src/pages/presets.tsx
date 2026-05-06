@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus } from "lucide-react";
+import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,46 @@ import { usePresets, type ClientPreset, type PresetStyleFields, type TextAlign }
 import { FONT_OPTIONS } from "@/lib/slide-utils";
 
 const BASE = import.meta.env.BASE_URL || "/";
+
+function TestMetaConnection({ presetId }: { presetId: number }) {
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<{ ok: boolean; name?: string; error?: string } | null>(null);
+
+  const test = async () => {
+    setTesting(true);
+    setResult(null);
+    try {
+      const r = await fetch(`${BASE}api/meta/test-connection?presetId=${presetId}`);
+      const data = await r.json();
+      if (r.ok) setResult({ ok: true, name: data.name });
+      else setResult({ ok: false, error: data.error });
+    } catch {
+      setResult({ ok: false, error: "Connection failed" });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-3">
+      <button
+        onClick={test}
+        disabled={testing}
+        className="text-xs px-3 py-1.5 rounded-lg bg-purple-700/40 hover:bg-purple-700/60 text-purple-200 border border-purple-500/30 transition flex items-center gap-1.5 disabled:opacity-50"
+      >
+        {testing ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+        {testing ? "Testing…" : "Test Connection"}
+      </button>
+      {result && (
+        result.ok ? (
+          <span className="flex items-center gap-1 text-xs text-green-400"><CheckCircle2 className="w-3.5 h-3.5" /> Connected as {result.name}</span>
+        ) : (
+          <span className="flex items-center gap-1 text-xs text-red-400"><AlertCircle className="w-3.5 h-3.5" /> {result.error}</span>
+        )
+      )}
+    </div>
+  );
+}
 
 const DEFAULT_STYLES: PresetStyleFields = {
   pageColor: "#000000",
@@ -106,7 +146,11 @@ export default function PresetsPage() {
         logoSize: editData.logoSize || 140,
         accentColor: editData.accentColor || "#d4af37",
       };
-      await updatePreset(editingId, editData.name!.trim(), styles, editData.ccWorkspaceId || undefined, editData.logoUrl, editData.captionFootnote);
+      await updatePreset(editingId, editData.name!.trim(), styles, editData.ccWorkspaceId || undefined, editData.logoUrl, editData.captionFootnote, {
+        metaPageAccessToken: editData.metaPageAccessToken || null,
+        metaFacebookPageId: editData.metaFacebookPageId || null,
+        metaInstagramAccountId: editData.metaInstagramAccountId || null,
+      });
       toast.success("Preset updated");
       cancelEdit();
     } catch (err: any) {
@@ -334,6 +378,51 @@ export default function PresetsPage() {
                         </Select>
                       )}
                     </div>
+                    <div className="border border-purple-500/20 rounded-xl p-4 bg-purple-950/10 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-semibold text-purple-300">Direct Instagram & Facebook Posting</Label>
+                        {editData.metaInstagramAccountId || editData.metaFacebookPageId ? (
+                          <span className="text-xs bg-green-900/40 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full">Connected</span>
+                        ) : (
+                          <span className="text-xs bg-gray-800 text-gray-500 border border-gray-700 px-2 py-0.5 rounded-full">Not connected</span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400">Enter details from your Meta Developer App to post directly to this client's Instagram and Facebook without Cloud Campaign.</p>
+                      <div>
+                        <Label className="text-xs text-gray-400">Page Access Token</Label>
+                        <Input
+                          type="password"
+                          placeholder="Long-lived Page Access Token"
+                          value={editData.metaPageAccessToken || ""}
+                          onChange={(e) => setEditData((d) => ({ ...d, metaPageAccessToken: e.target.value || null }))}
+                          className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-gray-400">Facebook Page ID</Label>
+                          <Input
+                            placeholder="e.g. 123456789"
+                            value={editData.metaFacebookPageId || ""}
+                            onChange={(e) => setEditData((d) => ({ ...d, metaFacebookPageId: e.target.value || null }))}
+                            className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-gray-400">Instagram Account ID</Label>
+                          <Input
+                            placeholder="e.g. 987654321"
+                            value={editData.metaInstagramAccountId || ""}
+                            onChange={(e) => setEditData((d) => ({ ...d, metaInstagramAccountId: e.target.value || null }))}
+                            className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
+                          />
+                        </div>
+                      </div>
+                      {editingId && (editData.metaPageAccessToken) && (
+                        <TestMetaConnection presetId={editingId} />
+                      )}
+                    </div>
                     <div>
                       <Label className="text-xs text-gray-400">Caption Footnote (appended to AI-generated captions)</Label>
                       <textarea
@@ -372,6 +461,7 @@ export default function PresetsPage() {
                         <span>{preset.fontSize}px</span>
                         {preset.cornerStyle !== "none" && <span>Corner: {preset.cornerStyle}</span>}
                         {preset.ccWorkspaceId && <span className="text-blue-400">CC linked</span>}
+                        {preset.metaInstagramAccountId && <span className="text-purple-400">Meta connected</span>}
                         {preset.logoUrl && <span className="text-green-400">Has logo</span>}
                       </div>
                       {preset.captionFootnote && (
