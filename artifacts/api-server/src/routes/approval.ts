@@ -167,6 +167,19 @@ router.put("/approval/public/:token/images/:imageId", async (req, res) => {
   }
 });
 
+function rewriteImageUrl(imageUrl: string, req: import("express").Request): string {
+  try {
+    const parsed = new URL(imageUrl);
+    const pathMatch = parsed.pathname.match(/\/api\/content\/images\/carousel-images\/.+/);
+    if (pathMatch) {
+      const currentHost = (req.headers["x-forwarded-host"] as string) || req.headers.host || parsed.host;
+      const protocol = (req.headers["x-forwarded-proto"] as string) || req.protocol || "https";
+      return `${protocol}://${currentHost}${pathMatch[0]}`;
+    }
+  } catch {}
+  return imageUrl;
+}
+
 router.get("/approval/approved-images", requireAuth, async (req, res) => {
   try {
     const clientName = req.query.clientName as string || "";
@@ -180,7 +193,7 @@ router.get("/approval/approved-images", requireAuth, async (req, res) => {
       const images = await db.select().from(approvalImagesTable)
         .where(and(eq(approvalImagesTable.batchId, batch.id), eq(approvalImagesTable.status, "approved")));
       for (const img of images) {
-        allApproved.push({ id: img.id, imageUrl: img.imageUrl, batchName: batch.name, clientName: batch.clientName });
+        allApproved.push({ id: img.id, imageUrl: rewriteImageUrl(img.imageUrl, req), batchName: batch.name, clientName: batch.clientName });
       }
     }
 
