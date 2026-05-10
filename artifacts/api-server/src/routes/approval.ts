@@ -197,6 +197,7 @@ router.get("/approval/approved-images", requireAuth, async (req, res) => {
       }
     }
 
+    res.set("Cache-Control", "no-store");
     res.json(allApproved);
   } catch (err: any) {
     console.error("List approved images error:", err);
