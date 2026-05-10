@@ -4,7 +4,7 @@ import type { ApprovalBatchStatus, ApprovalImageStatus } from "@workspace/db/sch
 const BASE = import.meta.env.BASE_URL || "/";
 
 export function authHeaders(): Record<string, string> {
-  const pw = sessionStorage.getItem("cybersuite-pw") || "";
+  const pw = localStorage.getItem("cybersuite-pw") || "";
   return { "Content-Type": "application/json", "x-app-password": pw, "Authorization": `Bearer ${pw}` };
 }
 

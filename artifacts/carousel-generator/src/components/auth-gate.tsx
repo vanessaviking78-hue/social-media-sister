@@ -16,7 +16,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(STORAGE_KEY);
     if (saved === "true") {
       setAuthed(true);
     }
@@ -35,8 +35,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
       });
       const data = await res.json();
       if (data.valid) {
-        sessionStorage.setItem(STORAGE_KEY, "true");
-        sessionStorage.setItem(PASSWORD_KEY, password);
+        localStorage.setItem(STORAGE_KEY, "true");
+        localStorage.setItem(PASSWORD_KEY, password);
         setAuthed(true);
       } else {
         setError("Incorrect password");
