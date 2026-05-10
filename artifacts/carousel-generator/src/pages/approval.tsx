@@ -24,7 +24,7 @@ export default function Approval() {
   const [batchName, setBatchName] = useState("");
   const [selectedClient, setSelectedClient] = useState("");
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
-  const [expiryDays, setExpiryDays] = useState<number | null>(7);
+  const [expiryDays, setExpiryDays] = useState<number | null>(90);
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -75,7 +75,7 @@ export default function Approval() {
       setSelectedClient("");
       setSelectedPresetId(null);
       setUploadedUrls([]);
-      setExpiryDays(7 as number | null);
+      setExpiryDays(90 as number | null);
     } catch (e: any) {
       toast.error(e?.message || "Failed to create batch");
     }
@@ -100,7 +100,10 @@ export default function Approval() {
     }
   };
 
+  const isExpired = (batch: ApprovalBatch) => batch.expiresAt && new Date() > new Date(batch.expiresAt);
+
   const statusBadge = (batch: ApprovalBatch) => {
+    if (isExpired(batch)) return <Badge className="bg-zinc-600 text-white">Expired</Badge>;
     if (batch.status === "reviewed") return <Badge className="bg-green-600 text-white">All Reviewed</Badge>;
     if (batch.approved > 0 || batch.rejected > 0) return <Badge className="bg-yellow-600 text-white">In Progress</Badge>;
     return <Badge variant="secondary">Awaiting Review</Badge>;
@@ -169,7 +172,7 @@ export default function Approval() {
                 <div>
                   <Label>Link Expiry</Label>
                   <div className="flex items-center gap-2 mt-1">
-                    <Input type="number" value={expiryDays ?? ""} onChange={(e) => setExpiryDays(e.target.value ? parseInt(e.target.value) || 7 : null)} min={1} max={90} placeholder="No expiry" className="flex-1" />
+                    <Input type="number" value={expiryDays ?? ""} onChange={(e) => setExpiryDays(e.target.value ? parseInt(e.target.value) || 90 : null)} min={1} max={365} placeholder="No expiry" className="flex-1" />
                     <span className="text-sm text-muted-foreground whitespace-nowrap">{expiryDays ? `${expiryDays} day${expiryDays !== 1 ? "s" : ""}` : "Never expires"}</span>
                   </div>
                 </div>
@@ -221,7 +224,7 @@ export default function Approval() {
         ) : (
           <div className="space-y-3">
             {batches.map((batch) => (
-              <div key={batch.id} className="bg-card border border-border rounded-lg p-4 flex items-center justify-between gap-4">
+              <div key={batch.id} className={`bg-card border border-border rounded-lg p-4 flex items-center justify-between gap-4 ${isExpired(batch) ? "opacity-60" : ""}`}>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-1">
                     <h3 className="font-semibold truncate">{batch.name}</h3>
