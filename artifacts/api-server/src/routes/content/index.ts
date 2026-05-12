@@ -807,7 +807,7 @@ router.post("/cloud-campaign/push", async (req, res) => {
             approved: true,
             captions: [
               { text: post.caption, platform: "INSTAGRAM", index: 0 },
-              { text: post.caption, platform: "FACEBOOK", index: 1 },
+              { text: post.caption, platform: "FACEBOOK", index: 0 },
             ],
             publishingSettings: {},
             platformList: ["INSTAGRAM", "FACEBOOK"],
@@ -817,7 +817,7 @@ router.post("/cloud-campaign/push", async (req, res) => {
             body.media = media;
           }
 
-          console.log(`Pushing "${post.title}" to workspace ${wsId} with ${post.imageUrls.length} images`);
+          console.log(`Pushing "${post.title}" to workspace ${wsId} | caption length: ${post.caption?.length ?? 0} chars | images: ${post.imageUrls.length}`);
           if (media.length > 0) {
             console.log(`Image URLs: ${post.imageUrls.join(", ")}`);
           }
