@@ -126,6 +126,7 @@ export function drawSlide(
   textBoxOutlineColor: string = "#ffffff",
   coverSubheading: string = "",
   coverLetterSpacing: number = 0,
+  coverUppercase: boolean = false,
   animationType?: AnimationType,
   animationProgress?: number
 ) {
@@ -135,9 +136,10 @@ export function drawSlide(
   const p = animationProgress !== undefined ? Math.min(1, Math.max(0, animationProgress)) : 1;
   const ep = easeOutQuad(p);
 
+  const rawText = (isCoverSlide && coverUppercase) ? text.toUpperCase() : text;
   const displayText = (animationType === 'typewriter' && animationProgress !== undefined)
-    ? text.slice(0, Math.max(1, Math.floor(p * text.length)))
-    : text;
+    ? rawText.slice(0, Math.max(1, Math.floor(p * rawText.length)))
+    : rawText;
 
   const effectiveOverlayColor = (animationType === 'fade-overlay' && animationProgress !== undefined)
     ? scaleOverlayAlpha(overlayColor, ep)
