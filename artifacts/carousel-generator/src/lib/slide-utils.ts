@@ -125,6 +125,7 @@ export function drawSlide(
   textBoxOutline: boolean = false,
   textBoxOutlineColor: string = "#ffffff",
   coverSubheading: string = "",
+  coverLetterSpacing: number = 0,
   animationType?: AnimationType,
   animationProgress?: number
 ) {
@@ -212,6 +213,7 @@ export function drawSlide(
   ctx.fillStyle = textColor;
   ctx.font = `${isLastSlide ? 700 : 600} ${ctaSize}px ${activeFont}`;
   ctx.textBaseline = "top";
+  (ctx as any).letterSpacing = (isCoverSlide && coverLetterSpacing) ? `${coverLetterSpacing}px` : "0px";
 
   const maxW = textAreaW;
   const lineH = Math.round(ctaSize * lineSpacing);
