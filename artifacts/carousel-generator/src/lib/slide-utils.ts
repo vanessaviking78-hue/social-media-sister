@@ -207,7 +207,7 @@ export function drawSlide(
 
   const isLastSlide = totalSlidesInGroup > 1 && slidePosition === totalSlidesInGroup;
   const ctaSize = isLastSlide ? Math.round(size * 1.4) : size;
-  const textAreaW = isLastSlide ? W - 120 : W - 80;
+  const textAreaW = isLastSlide ? W - 120 : (isCoverSlide ? W - 10 : W - 80);
   const activeTextPos = isLastSlide ? "center" : textPosition;
 
   const activeFont = isCoverSlide ? font : (subheadingFont || font);
