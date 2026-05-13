@@ -208,7 +208,7 @@ export function drawSlide(
 
   const isLastSlide = totalSlidesInGroup > 1 && slidePosition === totalSlidesInGroup;
   const ctaSize = isLastSlide ? Math.round(size * 1.4) : size;
-  const textAreaW = W;
+  const hPad = 5;
   const activeTextPos = isLastSlide ? "center" : textPosition;
 
   const activeFont = isCoverSlide ? font : (subheadingFont || font);
@@ -218,7 +218,7 @@ export function drawSlide(
   ctx.textBaseline = "top";
   (ctx as any).letterSpacing = (isCoverSlide && coverLetterSpacing) ? `${coverLetterSpacing}px` : "0px";
 
-  const maxW = textAreaW;
+  const maxW = W - hPad * 2;
   const lineH = Math.round(ctaSize * lineSpacing);
   const words = displayText.split(" ");
   const lines: string[] = [];
@@ -261,19 +261,19 @@ export function drawSlide(
   }
   const combinedTotalH = totalH + (hasCoverSubheading ? subheadingGap + subheadingTotalH : 0);
 
-  const pad = 40;
-  let startX = pad, startY = pad;
+  const vPad = 40;
+  let startX = hPad, startY = vPad;
 
   const vPos = activeTextPos;
   const activeAlign = isLastSlide ? "center" : textAlign;
 
   if (activeAlign === "center") { startX = Math.round(W / 2); ctx.textAlign = "center"; }
-  else if (activeAlign === "right") { startX = W - pad; ctx.textAlign = "right"; }
-  else { startX = pad; ctx.textAlign = "left"; }
+  else if (activeAlign === "right") { startX = W - hPad; ctx.textAlign = "right"; }
+  else { startX = hPad; ctx.textAlign = "left"; }
 
-  if (vPos === "top") { startY = pad; }
+  if (vPos === "top") { startY = vPad; }
   else if (vPos === "center") { startY = Math.round((H - combinedTotalH) / 2); }
-  else { startY = Math.round(H - combinedTotalH - pad); }
+  else { startY = Math.round(H - combinedTotalH - vPad); }
 
   const textSlideOffset = (animationType === 'slide-in-text' && animationProgress !== undefined)
     ? Math.round((1 - ep) * Math.round(H * 0.15))
