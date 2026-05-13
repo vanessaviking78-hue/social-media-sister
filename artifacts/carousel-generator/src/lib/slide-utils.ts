@@ -67,6 +67,7 @@ export const FONT_OPTIONS = [
   { label: "Georgia", value: "Georgia, serif" },
   { label: "Josefin Sans", value: "'Josefin Sans', sans-serif" },
   { label: "Great Vibes", value: "'Great Vibes', cursive" },
+  { label: "Cinzel", value: "'Cinzel', serif" },
 ];
 
 const CORNER_STYLE_LABELS: Record<CornerStyle, string> = {
@@ -95,7 +96,7 @@ export function loadGoogleFonts() {
     link.rel = "stylesheet";
     link.setAttribute("data-slide-fonts", "true");
     link.href =
-      "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Montserrat:wght@400;600;700&family=Lato:wght@400;700&family=Oswald:wght@400;600;700&family=Merriweather:wght@400;700&family=Raleway:wght@400;600;700&family=Roboto:wght@400;700&family=Poppins:wght@400;600;700&family=Bebas+Neue&family=Dancing+Script:wght@400;700&family=Pacifico&family=Libre+Baskerville:wght@400;700&family=DM+Serif+Display&family=Abril+Fatface&family=Quicksand:wght@400;600;700&family=Nunito:wght@400;600;700&family=Crimson+Text:wght@400;600;700&family=Work+Sans:wght@400;600;700&family=Bitter:wght@400;600;700&family=Josefin+Sans:wght@400;600;700&family=Great+Vibes&display=swap";
+      "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Montserrat:wght@400;600;700&family=Lato:wght@400;700&family=Oswald:wght@400;600;700&family=Merriweather:wght@400;700&family=Raleway:wght@400;600;700&family=Roboto:wght@400;700&family=Poppins:wght@400;600;700&family=Bebas+Neue&family=Dancing+Script:wght@400;700&family=Pacifico&family=Libre+Baskerville:wght@400;700&family=DM+Serif+Display&family=Abril+Fatface&family=Quicksand:wght@400;600;700&family=Nunito:wght@400;600;700&family=Crimson+Text:wght@400;600;700&family=Work+Sans:wght@400;600;700&family=Bitter:wght@400;600;700&family=Josefin+Sans:wght@400;600;700&family=Great+Vibes&family=Cinzel:wght@400;600;700&display=swap";
     document.head.appendChild(link);
   }
 }
