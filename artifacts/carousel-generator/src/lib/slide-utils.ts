@@ -214,54 +214,68 @@ export function drawSlide(
   const activeFont = isCoverSlide ? font : (subheadingFont || font);
 
   ctx.fillStyle = textColor;
-  ctx.font = `${isLastSlide ? 700 : 600} ${ctaSize}px ${activeFont}`;
   ctx.textBaseline = "top";
-  (ctx as any).letterSpacing = (isCoverSlide && coverLetterSpacing) ? `${coverLetterSpacing}px` : "0px";
 
+  const vPad = 40;
+  const availTextH = H - vPad * 2;
   const maxW = W - hPad * 2;
-  const lineH = Math.round(ctaSize * lineSpacing);
-  const words = displayText.split(" ");
-  const lines: string[] = [];
-  let cur = "";
-  for (const w of words) {
-    const test = cur ? cur + " " + w : w;
-    if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; }
-    else { cur = test; }
-  }
-  if (cur) lines.push(cur);
-
-  const totalH = lines.length * lineH;
-
-  // --- Cover subheading (only on cover slide, not the last-slide CTA) ---
   const hasCoverSubheading = isCoverSlide && !isLastSlide && !!coverSubheading?.trim();
+
+  // Auto-shrink font so all text fits vertically within the canvas
+  let currentSize = ctaSize;
+  let lines: string[] = [];
+  let lineH = 0;
+  let totalH = 0;
   let subheadingLines: string[] = [];
   let subheadingSize = 0;
   let subheadingLineH = 0;
   let subheadingTotalH = 0;
   let subheadingGap = 0;
   let subheadingMaxW = 0;
-  if (hasCoverSubheading) {
-    subheadingSize = Math.round(ctaSize * 0.65);
-    subheadingLineH = Math.round(subheadingSize * lineSpacing);
-    subheadingGap = Math.round(ctaSize * 0.25);
-    const subFontStr = subheadingFont || font;
-    ctx.font = `500 ${subheadingSize}px ${subFontStr}`;
-    const shWords = coverSubheading.trim().split(" ");
-    let cur2 = "";
-    for (const w of shWords) {
-      const test = cur2 ? cur2 + " " + w : w;
-      if (ctx.measureText(test).width > maxW && cur2) { subheadingLines.push(cur2); cur2 = w; }
-      else { cur2 = test; }
-    }
-    if (cur2) subheadingLines.push(cur2);
-    subheadingTotalH = subheadingLines.length * subheadingLineH;
-    subheadingMaxW = subheadingLines.length > 0 ? Math.max(...subheadingLines.map((l) => ctx.measureText(l).width)) : 0;
-    // Restore main heading font
-    ctx.font = `${isLastSlide ? 700 : 600} ${ctaSize}px ${activeFont}`;
-  }
-  const combinedTotalH = totalH + (hasCoverSubheading ? subheadingGap + subheadingTotalH : 0);
+  let combinedTotalH = 0;
 
-  const vPad = 40;
+  for (let attempt = 0; attempt < 20; attempt++) {
+    ctx.font = `${isLastSlide ? 700 : 600} ${currentSize}px ${activeFont}`;
+    (ctx as any).letterSpacing = (isCoverSlide && coverLetterSpacing) ? `${coverLetterSpacing}px` : "0px";
+    lineH = Math.round(currentSize * lineSpacing);
+    const words = displayText.split(" ");
+    lines = [];
+    let cur = "";
+    for (const w of words) {
+      const test = cur ? cur + " " + w : w;
+      if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; }
+      else { cur = test; }
+    }
+    if (cur) lines.push(cur);
+    totalH = lines.length * lineH;
+
+    subheadingLines = [];
+    subheadingSize = 0; subheadingLineH = 0; subheadingTotalH = 0;
+    subheadingGap = 0; subheadingMaxW = 0;
+    if (hasCoverSubheading) {
+      subheadingSize = Math.round(currentSize * 0.65);
+      subheadingLineH = Math.round(subheadingSize * lineSpacing);
+      subheadingGap = Math.round(currentSize * 0.25);
+      const subFontStr = subheadingFont || font;
+      ctx.font = `500 ${subheadingSize}px ${subFontStr}`;
+      const shWords = coverSubheading.trim().split(" ");
+      let cur2 = "";
+      for (const w of shWords) {
+        const test = cur2 ? cur2 + " " + w : w;
+        if (ctx.measureText(test).width > maxW && cur2) { subheadingLines.push(cur2); cur2 = w; }
+        else { cur2 = test; }
+      }
+      if (cur2) subheadingLines.push(cur2);
+      subheadingTotalH = subheadingLines.length * subheadingLineH;
+      subheadingMaxW = subheadingLines.length > 0 ? Math.max(...subheadingLines.map((l) => ctx.measureText(l).width)) : 0;
+      ctx.font = `${isLastSlide ? 700 : 600} ${currentSize}px ${activeFont}`;
+    }
+    combinedTotalH = totalH + (hasCoverSubheading ? subheadingGap + subheadingTotalH : 0);
+
+    if (combinedTotalH <= availTextH || currentSize <= 10) break;
+    currentSize = Math.max(10, Math.round(currentSize * 0.85));
+  }
+
   let startX = hPad, startY = vPad;
 
   const vPos = activeTextPos;
