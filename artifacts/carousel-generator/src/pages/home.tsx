@@ -196,7 +196,7 @@ export default function Home() {
       toast.loading("Pushing to Cloud Campaign...", { id });
       const posts = [];
       for (let gi = 0; gi < result.totalCarousels; gi++) {
-        const groupSlides = result.slides.filter((s: any) => s.groupIndex === gi + 1);
+        const groupSlides = result.slides.filter((s: any) => s.groupIndex === gi + 1).sort((a: any, b: any) => a.groupPosition - b.groupPosition);
         const imageUrls = groupSlides.map((s: any) => {
           const fn = `carousel-${String(s.groupIndex).padStart(2, "0")}-slide-${String(s.groupPosition).padStart(2, "0")}.png`;
           return urlMap.get(fn) || "";
@@ -275,7 +275,7 @@ export default function Home() {
       toast.loading("Posting to Instagram & Facebook...", { id });
       const posts = [];
       for (let gi = 0; gi < result.totalCarousels; gi++) {
-        const groupSlides = result.slides.filter((s: any) => s.groupIndex === gi + 1);
+        const groupSlides = result.slides.filter((s: any) => s.groupIndex === gi + 1).sort((a: any, b: any) => a.groupPosition - b.groupPosition);
         const imageUrls = groupSlides.map((s: any) => {
           const fn = `meta-${String(s.groupIndex).padStart(2, "0")}-slide-${String(s.groupPosition).padStart(2, "0")}.png`;
           return urlMap.get(fn) || "";
@@ -667,7 +667,7 @@ export default function Home() {
       for (let s = 2; s <= maxSlides; s++) header.push(`Image ${s}`);
       rows.push(header);
       for (let gi = 0; gi < result.totalCarousels; gi++) {
-        const groupSlides = result.slides.filter((s: any) => s.groupIndex === gi + 1);
+        const groupSlides = result.slides.filter((s: any) => s.groupIndex === gi + 1).sort((a: any, b: any) => a.groupPosition - b.groupPosition);
         const slideUrls = groupSlides.map((s: any) => {
           const fn = `carousel-${String(s.groupIndex).padStart(2, "0")}-slide-${String(s.groupPosition).padStart(2, "0")}.png`;
           return urlMap.get(fn) || fn;
