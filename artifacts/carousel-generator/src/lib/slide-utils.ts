@@ -311,14 +311,11 @@ export function drawSlide(
 
   if (showTextOverlay) {
     ctx.fillStyle = effectiveOverlayColor;
-    let boxX = startX - 15;
-    if (ctx.textAlign === "right") boxX = startX - effectiveMaxLineWidth - 15;
-    else if (ctx.textAlign === "center") boxX = startX - effectiveMaxLineWidth / 2 - 15;
-    ctx.fillRect(boxX, startY - 15, effectiveMaxLineWidth + 30, combinedTotalH + 30);
+    ctx.fillRect(0, 0, W, H);
     if (textBoxOutline) {
       ctx.strokeStyle = textBoxOutlineColor;
       ctx.lineWidth = 2;
-      ctx.strokeRect(boxX, startY - 15, effectiveMaxLineWidth + 30, combinedTotalH + 30);
+      ctx.strokeRect(1, 1, W - 2, H - 2);
     }
   }
 
