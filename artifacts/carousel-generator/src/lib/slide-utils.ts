@@ -128,6 +128,8 @@ export function drawSlide(
   coverSubheading: string = "",
   coverLetterSpacing: number = 0,
   coverUppercase: boolean = false,
+  coverDropCap: boolean = false,
+  coverDropCapFont: string = "'Great Vibes', cursive",
   animationType?: AnimationType,
   animationProgress?: number
 ) {
@@ -226,6 +228,7 @@ export function drawSlide(
   let lines: string[] = [];
   let lineH = 0;
   let totalH = 0;
+  let effectiveTotalH = 0;
   let subheadingLines: string[] = [];
   let subheadingSize = 0;
   let subheadingLineH = 0;
@@ -270,7 +273,9 @@ export function drawSlide(
       subheadingMaxW = subheadingLines.length > 0 ? Math.max(...subheadingLines.map((l) => ctx.measureText(l).width)) : 0;
       ctx.font = `${isLastSlide ? 700 : 600} ${currentSize}px ${activeFont}`;
     }
-    combinedTotalH = totalH + (hasCoverSubheading ? subheadingGap + subheadingTotalH : 0);
+    const dropCapBigH = (coverDropCap && isCoverSlide && lines.length > 0) ? Math.round(currentSize * 2.0) : 0;
+    effectiveTotalH = dropCapBigH > 0 ? dropCapBigH + Math.max(0, lines.length - 1) * lineH : totalH;
+    combinedTotalH = effectiveTotalH + (hasCoverSubheading ? subheadingGap + subheadingTotalH : 0);
 
     if (combinedTotalH <= availTextH || currentSize <= 10) break;
     currentSize = Math.max(10, Math.round(currentSize * 0.85));
@@ -326,12 +331,37 @@ export function drawSlide(
   }
 
   ctx.fillStyle = textColor;
-  lines.forEach((line, i) => ctx.fillText(line, startX, startY + i * lineH));
+  if (coverDropCap && isCoverSlide && lines.length > 0) {
+    const bigSize = Math.round(currentSize * 2.0);
+    const dropFont = coverDropCapFont || "'Great Vibes', cursive";
+    const firstChar = lines[0][0] || "";
+    const restOfFirst = lines[0].slice(1);
+    const gap = Math.round(currentSize * 0.05);
+    ctx.font = `400 ${bigSize}px ${dropFont}`;
+    const bigCharW = ctx.measureText(firstChar).width;
+    ctx.font = `600 ${currentSize}px ${activeFont}`;
+    const restW = ctx.measureText(restOfFirst).width;
+    const savedAlign = ctx.textAlign;
+    ctx.textAlign = "left";
+    let firstLineX = hPad;
+    if (activeAlign === "center") firstLineX = Math.round(W / 2 - (bigCharW + gap + restW) / 2);
+    else if (activeAlign === "right") firstLineX = Math.round(W - hPad - bigCharW - gap - restW);
+    ctx.font = `400 ${bigSize}px ${dropFont}`;
+    ctx.fillText(firstChar, firstLineX, startY);
+    ctx.font = `600 ${currentSize}px ${activeFont}`;
+    ctx.fillText(restOfFirst, firstLineX + bigCharW + gap, startY + bigSize - currentSize);
+    ctx.textAlign = savedAlign;
+    for (let i = 1; i < lines.length; i++) {
+      ctx.fillText(lines[i], startX, startY + bigSize + (i - 1) * lineH);
+    }
+  } else {
+    lines.forEach((line, i) => ctx.fillText(line, startX, startY + i * lineH));
+  }
 
   if (hasCoverSubheading && subheadingLines.length > 0) {
     const subFontStr = subheadingFont || font;
     ctx.font = `500 ${subheadingSize}px ${subFontStr}`;
-    const subStartY = startY + totalH + subheadingGap;
+    const subStartY = startY + effectiveTotalH + subheadingGap;
     subheadingLines.forEach((line, i) => ctx.fillText(line, startX, subStartY + i * subheadingLineH));
   }
 
