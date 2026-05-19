@@ -13,6 +13,7 @@ import Calendar from "@/pages/calendar";
 import Analytics from "@/pages/analytics";
 import Approval from "@/pages/approval";
 import ApprovePublic from "@/pages/approve-public";
+import Reels from "@/pages/reels";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +28,7 @@ function ProtectedRouter() {
       <Route path="/calendar" component={Calendar} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/approval" component={Approval} />
+      <Route path="/reels" component={Reels} />
       <Route component={NotFound} />
     </Switch>
   );

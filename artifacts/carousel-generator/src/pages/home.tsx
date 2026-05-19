@@ -942,6 +942,12 @@ export default function Home() {
               Stories
             </Button>
           </Link>
+          <Link href="/reels">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <Film className="w-4 h-4 mr-2" />
+              Reels
+            </Button>
+          </Link>
           <Link href="/presets">
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <Palette className="w-4 h-4 mr-2" />

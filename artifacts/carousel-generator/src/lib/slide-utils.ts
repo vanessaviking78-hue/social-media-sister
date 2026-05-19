@@ -112,7 +112,7 @@ export function loadGoogleFonts() {
 
 export function drawSlide(
   ctx: CanvasRenderingContext2D,
-  img: HTMLImageElement,
+  img: HTMLImageElement | null,
   text: string,
   font: string,
   size: number,
@@ -170,26 +170,28 @@ export function drawSlide(
   ctx.fillStyle = pageColor;
   ctx.fillRect(0, 0, W, H);
 
-  const scale = Math.max(W / img.width, H / img.height);
-  const x = (W - img.width * scale) / 2;
-  const y = (H - img.height * scale) / 2;
+  if (img) {
+    const scale = Math.max(W / img.width, H / img.height);
+    const x = (W - img.width * scale) / 2;
+    const y = (H - img.height * scale) / 2;
 
-  if (animationType === 'ken-burns' && animationProgress !== undefined) {
-    const zoom = 1.0 + 0.12 * ep;
-    const panX = 25 * ep;
-    const panY = 15 * ep;
-    ctx.save();
-    ctx.translate(W / 2 + panX, H / 2 + panY);
-    ctx.scale(zoom, zoom);
-    ctx.translate(-W / 2, -H / 2);
-    ctx.globalAlpha = isCoverSlide ? 1.0 : 0.5;
-    ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-    ctx.globalAlpha = 1.0;
-    ctx.restore();
-  } else {
-    ctx.globalAlpha = isCoverSlide ? 1.0 : 0.5;
-    ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
-    ctx.globalAlpha = 1.0;
+    if (animationType === 'ken-burns' && animationProgress !== undefined) {
+      const zoom = 1.0 + 0.12 * ep;
+      const panX = 25 * ep;
+      const panY = 15 * ep;
+      ctx.save();
+      ctx.translate(W / 2 + panX, H / 2 + panY);
+      ctx.scale(zoom, zoom);
+      ctx.translate(-W / 2, -H / 2);
+      ctx.globalAlpha = isCoverSlide ? 1.0 : 0.5;
+      ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+      ctx.globalAlpha = 1.0;
+      ctx.restore();
+    } else {
+      ctx.globalAlpha = isCoverSlide ? 1.0 : 0.5;
+      ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+      ctx.globalAlpha = 1.0;
+    }
   }
 
   if (cornerStyle !== "none") {
@@ -608,6 +610,74 @@ export async function recordGroupVideo(
       } else {
         ctx.fillStyle = '#000000';
         ctx.fillRect(0, 0, W, H);
+      }
+
+      if (elapsed < totalDurationMs) {
+        requestAnimationFrame(tick);
+      } else {
+        setTimeout(() => { try { recorder.stop(); } catch {} }, 150);
+      }
+    };
+
+    recorder.start(250);
+    requestAnimationFrame(tick);
+  });
+}
+
+export async function recordReelVideo(
+  canvas: HTMLCanvasElement,
+  slideDurationMs: number,
+  fadeMs: number,
+  slideCount: number,
+  animateFn: (slideIndex: number) => void,
+  fps: number = 30
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((t) => {
+      try { return MediaRecorder.isTypeSupported(t); } catch { return false; }
+    }) || 'video/webm';
+
+    let stream: MediaStream;
+    try {
+      stream = canvas.captureStream(fps);
+    } catch {
+      reject(new Error('canvas.captureStream is not supported in this browser'));
+      return;
+    }
+
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
+    const chunks: Blob[] = [];
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+    recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
+    recorder.onerror = () => reject(new Error('MediaRecorder error'));
+
+    const totalDurationMs = slideCount * slideDurationMs;
+    const startTime = performance.now();
+    const ctx = canvas.getContext('2d')!;
+    const W = canvas.width;
+    const H = canvas.height;
+    const fadeRatio = Math.min(0.4, fadeMs / slideDurationMs);
+
+    const tick = () => {
+      const elapsed = Math.min(performance.now() - startTime, totalDurationMs);
+      const slideIndex = Math.min(slideCount - 1, Math.floor(elapsed / slideDurationMs));
+      const slideElapsed = elapsed - slideIndex * slideDurationMs;
+      const slideProgress = slideElapsed / slideDurationMs;
+
+      animateFn(slideIndex);
+
+      let fadeAlpha = 0;
+      if (slideProgress < fadeRatio) {
+        fadeAlpha = 1 - slideProgress / fadeRatio;
+      } else if (slideProgress > 1 - fadeRatio) {
+        fadeAlpha = (slideProgress - (1 - fadeRatio)) / fadeRatio;
+      }
+
+      if (fadeAlpha > 0) {
+        ctx.globalAlpha = Math.min(1, fadeAlpha);
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(0, 0, W, H);
+        ctx.globalAlpha = 1;
       }
 
       if (elapsed < totalDurationMs) {
