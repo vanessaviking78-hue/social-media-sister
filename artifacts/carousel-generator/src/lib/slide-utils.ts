@@ -322,14 +322,6 @@ export function drawSlide(
     }
   }
 
-  if (!showTextOverlay) {
-    ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,0.8)";
-    ctx.shadowBlur = 12;
-    ctx.shadowOffsetX = 2;
-    ctx.shadowOffsetY = 2;
-  }
-
   ctx.fillStyle = textColor;
   if (coverDropCap && isCoverSlide && lines.length > 0) {
     const bigSize = Math.round(currentSize * 2.0);
@@ -363,10 +355,6 @@ export function drawSlide(
     ctx.font = `500 ${subheadingSize}px ${subFontStr}`;
     const subStartY = startY + effectiveTotalH + subheadingGap;
     subheadingLines.forEach((line, i) => ctx.fillText(line, startX, subStartY + i * subheadingLineH));
-  }
-
-  if (!showTextOverlay) {
-    ctx.restore();
   }
 
   if (textSlideOffset !== 0) {

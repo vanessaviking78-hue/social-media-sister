@@ -1303,7 +1303,6 @@ export default function Home() {
                           fontWeight: 700,
                           textAlign: "center",
                           lineHeight: 1.2,
-                          textShadow: "0 1px 3px rgba(0,0,0,0.4)",
                         }}
                       >
                         Headline Text
@@ -1315,7 +1314,6 @@ export default function Home() {
                           fontSize: 12,
                           textAlign: "center",
                           opacity: 0.8,
-                          textShadow: "0 1px 2px rgba(0,0,0,0.3)",
                         }}
                       >
                         Body copy preview
@@ -1957,9 +1955,9 @@ export default function Home() {
                                       return <img src={logoPreviewUrl} alt="Logo" style={{ ...posStyle, height: previewLogoH, maxWidth: 60, objectFit: "contain" }} />;
                                     })()}
                                     <div className={`absolute ${textPosition === "top" ? "top-4" : textPosition === "center" ? "top-1/2 -translate-y-1/2" : "bottom-4"} px-2 py-1.5 left-[1px] right-[1px]`} style={showTextOverlay ? { backgroundColor: overlayColor, outline: textBoxOutline ? `2px solid ${textBoxOutlineColor}` : undefined } : {}}>
-                                      <p className={`font-semibold ${isCover ? "" : "line-clamp-4"}`} style={{ fontFamily: isCover ? fontFamily : subheadingFont, fontSize: Math.max(7, Math.round((isCover ? fontSize : contentFontSize) * 0.15)) + "px", color: textColor, lineHeight: lineSpacing, textAlign: textAlign === "center" ? "center" : textAlign === "right" ? "right" : "left", overflowWrap: "break-word", wordBreak: "break-word", ...(isCover && coverLetterSpacing ? { letterSpacing: (coverLetterSpacing * 0.15) + "px" } : {}), ...(isCover && coverUppercase ? { textTransform: "uppercase" } : {}), ...(showTextOverlay ? {} : { textShadow: "1px 1px 3px rgba(0,0,0,0.8)" }) }}>{isCover && coverDropCap && slide.text ? (<><span style={{ fontFamily: coverDropCapFont, fontSize: Math.max(12, Math.round(fontSize * 0.15 * 2)) + "px", lineHeight: 1, display: "inline-block", marginRight: "1px" }}>{slide.text[0]}</span>{slide.text.slice(1)}</>) : slide.text}</p>
+                                      <p className={`font-semibold ${isCover ? "" : "line-clamp-4"}`} style={{ fontFamily: isCover ? fontFamily : subheadingFont, fontSize: Math.max(7, Math.round((isCover ? fontSize : contentFontSize) * 0.15)) + "px", color: textColor, lineHeight: lineSpacing, textAlign: textAlign === "center" ? "center" : textAlign === "right" ? "right" : "left", overflowWrap: "break-word", wordBreak: "break-word", ...(isCover && coverLetterSpacing ? { letterSpacing: (coverLetterSpacing * 0.15) + "px" } : {}), ...(isCover && coverUppercase ? { textTransform: "uppercase" } : {}), }}>{isCover && coverDropCap && slide.text ? (<><span style={{ fontFamily: coverDropCapFont, fontSize: Math.max(12, Math.round(fontSize * 0.15 * 2)) + "px", lineHeight: 1, display: "inline-block", marginRight: "1px" }}>{slide.text[0]}</span>{slide.text.slice(1)}</>) : slide.text}</p>
                                       {isCover && coverSubheading && (
-                                        <p className="line-clamp-2 mt-0.5" style={{ fontFamily: subheadingFont, fontSize: Math.max(5, Math.round(fontSize * 0.15 * 0.65)) + "px", color: textColor, lineHeight: lineSpacing, textAlign: textAlign === "center" ? "center" : textAlign === "right" ? "right" : "left", overflowWrap: "break-word", wordBreak: "break-word", ...(showTextOverlay ? {} : { textShadow: "1px 1px 3px rgba(0,0,0,0.8)" }) }}>{coverSubheading}</p>
+                                        <p className="line-clamp-2 mt-0.5" style={{ fontFamily: subheadingFont, fontSize: Math.max(5, Math.round(fontSize * 0.15 * 0.65)) + "px", color: textColor, lineHeight: lineSpacing, textAlign: textAlign === "center" ? "center" : textAlign === "right" ? "right" : "left", overflowWrap: "break-word", wordBreak: "break-word", }}>{coverSubheading}</p>
                                       )}
                                     </div>
                                   </div>
