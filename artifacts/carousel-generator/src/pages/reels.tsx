@@ -60,6 +60,7 @@ export default function Reels() {
   const [coverEyebrowLetterSpacing, setCoverEyebrowLetterSpacing] = useState(4);
   const [coverHeadlineItalic, setCoverHeadlineItalic] = useState(false);
   const [coverHeadlineWeight, setCoverHeadlineWeight] = useState(700);
+  const [coverEyebrowArch, setCoverEyebrowArch] = useState(0.4);
 
   const [slideDurationSec, setSlideDurationSec] = useState(3);
   const [fadeDurationMs, setFadeDurationMs] = useState(400);
@@ -95,6 +96,7 @@ export default function Reels() {
       coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
       coverEyebrowWeight, coverEyebrowLetterSpacing,
       coverHeadlineItalic, coverHeadlineWeight,
+      coverEyebrowArch,
     );
   }
 
@@ -107,7 +109,7 @@ export default function Reels() {
     logoImg, logoPosition, logoSize,
     coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio,
     coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight,
-    coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight,
+    coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
   ]);
 
   useEffect(() => {
@@ -437,6 +439,10 @@ export default function Reels() {
                 <div className="space-y-1">
                   <Label className="text-xs text-white/40">Eyebrow letter spacing — {coverEyebrowLetterSpacing}px</Label>
                   <Slider min={0} max={20} step={1} value={[coverEyebrowLetterSpacing]} onValueChange={([v]) => setCoverEyebrowLetterSpacing(v)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-white/40">Eyebrow arch — {Math.round(coverEyebrowArch * 100)}%</Label>
+                  <Slider min={0} max={1} step={0.05} value={[coverEyebrowArch]} onValueChange={([v]) => setCoverEyebrowArch(v)} />
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={() => setCoverEyebrowItalic((p) => !p)}

@@ -148,6 +148,38 @@ export function loadGoogleFonts() {
   }
 }
 
+function drawArcText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  cx: number,
+  topY: number,
+  radius: number,
+  letterSpacing: number = 0
+): void {
+  const chars = [...text];
+  if (chars.length === 0) return;
+  const savedAlign = ctx.textAlign;
+  const savedBaseline = ctx.textBaseline;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
+  const charWidths = chars.map(ch => ctx.measureText(ch).width);
+  const totalWidth = charWidths.reduce((s, w) => s + w, 0) + letterSpacing * Math.max(0, chars.length - 1);
+  const halfAngle = totalWidth / (2 * radius);
+  const arcCenterY = topY + radius;
+  let θ = -halfAngle;
+  for (let i = 0; i < chars.length; i++) {
+    const midθ = θ + charWidths[i] / (2 * radius);
+    ctx.save();
+    ctx.translate(cx + radius * Math.sin(midθ), arcCenterY - radius * Math.cos(midθ));
+    ctx.rotate(midθ);
+    ctx.fillText(chars[i], 0, 0);
+    ctx.restore();
+    θ += charWidths[i] / radius + (i < chars.length - 1 ? letterSpacing / radius : 0);
+  }
+  ctx.textAlign = savedAlign;
+  ctx.textBaseline = savedBaseline as CanvasTextBaseline;
+}
+
 export function drawSlide(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement | null,
@@ -187,6 +219,7 @@ export function drawSlide(
   coverEyebrowLetterSpacing: number = 2,
   coverHeadlineItalic: boolean = false,
   coverHeadlineWeight: number = 700,
+  coverEyebrowArch: number = 0,
   animationType?: AnimationType,
   animationProgress?: number
 ) {
@@ -339,6 +372,14 @@ export function drawSlide(
       }
       if (cur3) eyebrowLines.push(cur3);
       eyebrowTotalH = eyebrowLines.length * eyebrowLineH + eyebrowGap;
+      if (coverEyebrowArch > 0 && eyebrowLines.length > 0) {
+        const archRadius = W * (4 - coverEyebrowArch * 3.5);
+        const maxEyebrowW = Math.max(...eyebrowLines.map(l =>
+          ctx.measureText(l).width + coverEyebrowLetterSpacing * Math.max(0, [...l].length - 1)
+        ));
+        const halfAng = maxEyebrowW / (2 * archRadius);
+        eyebrowTotalH += Math.round(archRadius * (1 - Math.cos(halfAng)));
+      }
       ctx.font = `${fStyle} ${fWeight} ${currentSize}px ${activeFont}`;
       (ctx as any).letterSpacing = (isCoverSlide && coverLetterSpacing) ? `${coverLetterSpacing}px` : "0px";
     }
@@ -419,7 +460,14 @@ export function drawSlide(
     ctx.font = `${eyebrowStyle} ${coverEyebrowWeight} ${eyebrowSize}px ${eyebrowFontStr}`;
     (ctx as any).letterSpacing = `${coverEyebrowLetterSpacing}px`;
     ctx.fillStyle = coverEyebrowColor || textColor;
-    eyebrowLines.forEach((line, i) => ctx.fillText(line, startX, startY + i * eyebrowLineH));
+    if (coverEyebrowArch > 0) {
+      const archRadius = W * (4 - coverEyebrowArch * 3.5);
+      eyebrowLines.forEach((line, i) => {
+        drawArcText(ctx, line, W / 2, startY + i * eyebrowLineH, archRadius, coverEyebrowLetterSpacing);
+      });
+    } else {
+      eyebrowLines.forEach((line, i) => ctx.fillText(line, startX, startY + i * eyebrowLineH));
+    }
     // --- Headline ---
     const hlStyle = coverHeadlineItalic ? 'italic' : 'normal';
     ctx.font = `${hlStyle} ${coverHeadlineWeight} ${currentSize}px ${activeFont}`;
