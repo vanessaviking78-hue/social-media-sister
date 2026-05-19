@@ -210,7 +210,7 @@ export function drawSlide(
 
   const isLastSlide = totalSlidesInGroup > 1 && slidePosition === totalSlidesInGroup;
   const ctaSize = isLastSlide ? Math.round(size * 1.4) : size;
-  const hPad = 5;
+  const hPad = 2;
   const activeTextPos = isLastSlide ? "center" : textPosition;
 
   const activeFont = isCoverSlide ? font : (subheadingFont || font);
@@ -218,7 +218,7 @@ export function drawSlide(
   ctx.fillStyle = textColor;
   ctx.textBaseline = "top";
 
-  const vPad = 40;
+  const vPad = 20;
   const availTextH = H - vPad * 2;
   const maxW = W - hPad * 2;
   const hasCoverSubheading = isCoverSlide && !isLastSlide && !!coverSubheading?.trim();
