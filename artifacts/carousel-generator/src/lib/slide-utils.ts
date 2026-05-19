@@ -68,6 +68,15 @@ export const FONT_OPTIONS = [
   { label: "Josefin Sans", value: "'Josefin Sans', sans-serif" },
   { label: "Great Vibes", value: "'Great Vibes', cursive" },
   { label: "Cinzel", value: "'Cinzel', serif" },
+  { label: "Bodoni Moda", value: "'Bodoni Moda', serif" },
+  { label: "Barlow Condensed", value: "'Barlow Condensed', sans-serif" },
+  { label: "EB Garamond", value: "'EB Garamond', serif" },
+  { label: "Italiana", value: "'Italiana', serif" },
+  { label: "Fjalla One", value: "'Fjalla One', sans-serif" },
+  { label: "Tenor Sans", value: "'Tenor Sans', sans-serif" },
+  { label: "Cormorant SC", value: "'Cormorant SC', serif" },
+  { label: "Spectral", value: "'Spectral', serif" },
+  { label: "Yeseva One", value: "'Yeseva One', serif" },
 ];
 
 const CORNER_STYLE_LABELS: Record<CornerStyle, string> = {
@@ -96,7 +105,7 @@ export function loadGoogleFonts() {
     link.rel = "stylesheet";
     link.setAttribute("data-slide-fonts", "true");
     link.href =
-      "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Montserrat:wght@400;600;700&family=Lato:wght@400;700&family=Oswald:wght@400;600;700&family=Merriweather:wght@400;700&family=Raleway:wght@400;600;700&family=Roboto:wght@400;700&family=Poppins:wght@400;600;700&family=Bebas+Neue&family=Dancing+Script:wght@400;700&family=Pacifico&family=Libre+Baskerville:wght@400;700&family=DM+Serif+Display&family=Abril+Fatface&family=Quicksand:wght@400;600;700&family=Nunito:wght@400;600;700&family=Crimson+Text:wght@400;600;700&family=Work+Sans:wght@400;600;700&family=Bitter:wght@400;600;700&family=Josefin+Sans:wght@400;600;700&family=Great+Vibes&family=Cinzel:wght@400;600;700&display=swap";
+      "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&family=Montserrat:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400;1,700&family=Lato:ital,wght@0,300;0,400;0,700;1,400&family=Oswald:wght@300;400;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Raleway:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400&family=Roboto:ital,wght@0,300;0,400;0,700;1,400&family=Poppins:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400&family=Bebas+Neue&family=Dancing+Script:wght@400;700&family=Pacifico&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Serif+Display:ital@0;1&family=Abril+Fatface&family=Quicksand:wght@300;400;600;700&family=Nunito:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Work+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Bitter:ital,wght@0,400;0,600;0,700;1,400&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Great+Vibes&family=Cinzel:wght@400;600;700;900&family=Bodoni+Moda:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&family=Barlow+Condensed:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,700;1,400;1,700&family=Italiana&family=Fjalla+One&family=Tenor+Sans&family=Cormorant+SC:wght@300;400;500;600;700&family=Spectral:ital,wght@0,300;0,400;0,600;0,700;1,400;1,700&family=Yeseva+One&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600;1,700&display=swap";
     document.head.appendChild(link);
   }
 }
@@ -130,6 +139,16 @@ export function drawSlide(
   coverUppercase: boolean = false,
   coverDropCap: boolean = false,
   coverDropCapFont: string = "'Great Vibes', cursive",
+  coverSplit: boolean = false,
+  coverEyebrowFont: string = "",
+  coverEyebrowColor: string = "#ffffff",
+  coverEyebrowSizeRatio: number = 0.45,
+  coverEyebrowItalic: boolean = false,
+  coverEyebrowUppercase: boolean = false,
+  coverEyebrowWeight: number = 400,
+  coverEyebrowLetterSpacing: number = 2,
+  coverHeadlineItalic: boolean = false,
+  coverHeadlineWeight: number = 700,
   animationType?: AnimationType,
   animationProgress?: number
 ) {
@@ -222,6 +241,7 @@ export function drawSlide(
   const availTextH = H - vPad * 2;
   const maxW = W - hPad * 2;
   const hasCoverSubheading = isCoverSlide && !isLastSlide && !!coverSubheading?.trim();
+  const isSplit = coverSplit && isCoverSlide && displayText.includes('|');
 
   // Auto-shrink font so all text fits vertically within the canvas
   let currentSize = ctaSize;
@@ -236,12 +256,19 @@ export function drawSlide(
   let subheadingGap = 0;
   let subheadingMaxW = 0;
   let combinedTotalH = 0;
+  let eyebrowLines: string[] = [];
+  let eyebrowLineH = 0;
+  let eyebrowTotalH = 0;
+  let eyebrowGap = 0;
 
   for (let attempt = 0; attempt < 20; attempt++) {
-    ctx.font = `${isLastSlide ? 700 : 600} ${currentSize}px ${activeFont}`;
+    const fWeight = isSplit ? coverHeadlineWeight : (isLastSlide ? 700 : 600);
+    const fStyle = (isSplit && coverHeadlineItalic) ? 'italic' : 'normal';
+    ctx.font = `${fStyle} ${fWeight} ${currentSize}px ${activeFont}`;
     (ctx as any).letterSpacing = (isCoverSlide && coverLetterSpacing) ? `${coverLetterSpacing}px` : "0px";
     lineH = Math.round(currentSize * lineSpacing);
-    const words = displayText.split(" ");
+    const wrapSrc = isSplit ? displayText.split('|').slice(1).join('|').trim() : displayText;
+    const words = wrapSrc.split(" ");
     lines = [];
     let cur = "";
     for (const w of words) {
@@ -251,6 +278,30 @@ export function drawSlide(
     }
     if (cur) lines.push(cur);
     totalH = lines.length * lineH;
+
+    eyebrowLines = []; eyebrowLineH = 0; eyebrowTotalH = 0; eyebrowGap = 0;
+    if (isSplit) {
+      const eyebrowRaw = displayText.split('|')[0].trim();
+      const eyebrowText = coverEyebrowUppercase ? eyebrowRaw.toUpperCase() : eyebrowRaw;
+      const eyebrowSize = Math.round(currentSize * coverEyebrowSizeRatio);
+      eyebrowLineH = Math.round(eyebrowSize * lineSpacing);
+      eyebrowGap = Math.round(currentSize * 0.18);
+      const eyebrowFontStr = coverEyebrowFont || activeFont;
+      const eyebrowStyle = coverEyebrowItalic ? 'italic' : 'normal';
+      ctx.font = `${eyebrowStyle} ${coverEyebrowWeight} ${eyebrowSize}px ${eyebrowFontStr}`;
+      (ctx as any).letterSpacing = `${coverEyebrowLetterSpacing}px`;
+      eyebrowLines = [];
+      let cur3 = "";
+      for (const w of (eyebrowText || " ").split(' ')) {
+        const test = cur3 ? cur3 + " " + w : w;
+        if (ctx.measureText(test).width > maxW && cur3) { eyebrowLines.push(cur3); cur3 = w; }
+        else { cur3 = test; }
+      }
+      if (cur3) eyebrowLines.push(cur3);
+      eyebrowTotalH = eyebrowLines.length * eyebrowLineH + eyebrowGap;
+      ctx.font = `${fStyle} ${fWeight} ${currentSize}px ${activeFont}`;
+      (ctx as any).letterSpacing = (isCoverSlide && coverLetterSpacing) ? `${coverLetterSpacing}px` : "0px";
+    }
 
     subheadingLines = [];
     subheadingSize = 0; subheadingLineH = 0; subheadingTotalH = 0;
@@ -271,11 +322,11 @@ export function drawSlide(
       if (cur2) subheadingLines.push(cur2);
       subheadingTotalH = subheadingLines.length * subheadingLineH;
       subheadingMaxW = subheadingLines.length > 0 ? Math.max(...subheadingLines.map((l) => ctx.measureText(l).width)) : 0;
-      ctx.font = `${isLastSlide ? 700 : 600} ${currentSize}px ${activeFont}`;
+      ctx.font = `${fStyle} ${fWeight} ${currentSize}px ${activeFont}`;
     }
-    const dropCapBigH = (coverDropCap && isCoverSlide && lines.length > 0) ? Math.round(currentSize * 2.0) : 0;
+    const dropCapBigH = (!isSplit && coverDropCap && isCoverSlide && lines.length > 0) ? Math.round(currentSize * 2.0) : 0;
     effectiveTotalH = dropCapBigH > 0 ? dropCapBigH + Math.max(0, lines.length - 1) * lineH : totalH;
-    combinedTotalH = effectiveTotalH + (hasCoverSubheading ? subheadingGap + subheadingTotalH : 0);
+    combinedTotalH = eyebrowTotalH + effectiveTotalH + (hasCoverSubheading ? subheadingGap + subheadingTotalH : 0);
 
     if (combinedTotalH <= availTextH || currentSize <= 10) break;
     currentSize = Math.max(10, Math.round(currentSize * 0.85));
@@ -320,7 +371,23 @@ export function drawSlide(
   }
 
   ctx.fillStyle = textColor;
-  if (coverDropCap && isCoverSlide && lines.length > 0) {
+  if (isSplit && eyebrowLines.length > 0) {
+    // --- Eyebrow line ---
+    const eyebrowSize = Math.round(currentSize * coverEyebrowSizeRatio);
+    const eyebrowFontStr = coverEyebrowFont || activeFont;
+    const eyebrowStyle = coverEyebrowItalic ? 'italic' : 'normal';
+    ctx.font = `${eyebrowStyle} ${coverEyebrowWeight} ${eyebrowSize}px ${eyebrowFontStr}`;
+    (ctx as any).letterSpacing = `${coverEyebrowLetterSpacing}px`;
+    ctx.fillStyle = coverEyebrowColor || textColor;
+    eyebrowLines.forEach((line, i) => ctx.fillText(line, startX, startY + i * eyebrowLineH));
+    // --- Headline ---
+    const hlStyle = coverHeadlineItalic ? 'italic' : 'normal';
+    ctx.font = `${hlStyle} ${coverHeadlineWeight} ${currentSize}px ${activeFont}`;
+    (ctx as any).letterSpacing = coverLetterSpacing ? `${coverLetterSpacing}px` : '0px';
+    ctx.fillStyle = textColor;
+    const headlineY = startY + eyebrowTotalH;
+    lines.forEach((line, i) => ctx.fillText(line, startX, headlineY + i * lineH));
+  } else if (coverDropCap && isCoverSlide && lines.length > 0) {
     const bigSize = Math.round(currentSize * 2.0);
     const dropFont = coverDropCapFont || "'Great Vibes', cursive";
     const firstChar = lines[0][0] || "";
@@ -350,7 +417,7 @@ export function drawSlide(
   if (hasCoverSubheading && subheadingLines.length > 0) {
     const subFontStr = subheadingFont || font;
     ctx.font = `500 ${subheadingSize}px ${subFontStr}`;
-    const subStartY = startY + effectiveTotalH + subheadingGap;
+    const subStartY = startY + eyebrowTotalH + effectiveTotalH + subheadingGap;
     subheadingLines.forEach((line, i) => ctx.fillText(line, startX, subStartY + i * subheadingLineH));
   }
 

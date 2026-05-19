@@ -44,6 +44,16 @@ export default function Home() {
   const [coverUppercase, setCoverUppercase] = useState(false);
   const [coverDropCap, setCoverDropCap] = useState(true);
   const [coverDropCapFont, setCoverDropCapFont] = useState("'Great Vibes', cursive");
+  const [coverSplit, setCoverSplit] = useState(false);
+  const [coverEyebrowFont, setCoverEyebrowFont] = useState("'Cormorant Garamond', serif");
+  const [coverEyebrowColor, setCoverEyebrowColor] = useState("#ffffff");
+  const [coverEyebrowSizeRatio, setCoverEyebrowSizeRatio] = useState(0.45);
+  const [coverEyebrowItalic, setCoverEyebrowItalic] = useState(false);
+  const [coverEyebrowUppercase, setCoverEyebrowUppercase] = useState(false);
+  const [coverEyebrowWeight, setCoverEyebrowWeight] = useState(400);
+  const [coverEyebrowLetterSpacing, setCoverEyebrowLetterSpacing] = useState(2);
+  const [coverHeadlineItalic, setCoverHeadlineItalic] = useState(false);
+  const [coverHeadlineWeight, setCoverHeadlineWeight] = useState(700);
   const [overlayColor, setOverlayColor] = useState("rgba(0,0,0,0.5)");
   const [pageColor, setPageColor] = useState("#000000");
   const [cornerStyle, setCornerStyle] = useState<CornerStyle>("none");
@@ -170,6 +180,7 @@ export default function Home() {
     try {
       await document.fonts.ready;
       if (coverDropCap) await document.fonts.load(`400 80px ${coverDropCapFont}`).catch(() => {});
+      if (coverSplit && coverEyebrowFont) await document.fonts.load(`${coverEyebrowItalic ? 'italic' : 'normal'} ${coverEyebrowWeight} 80px ${coverEyebrowFont}`).catch(() => {});
       const rendered: { name: string; base64: string; groupIndex: number; groupPosition: number }[] = [];
       for (const slide of result.slides) {
         const isCover = slide.groupPosition === 1;
@@ -180,7 +191,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont);
+        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -250,6 +261,7 @@ export default function Home() {
     try {
       await document.fonts.ready;
       if (coverDropCap) await document.fonts.load(`400 80px ${coverDropCapFont}`).catch(() => {});
+      if (coverSplit && coverEyebrowFont) await document.fonts.load(`${coverEyebrowItalic ? 'italic' : 'normal'} ${coverEyebrowWeight} 80px ${coverEyebrowFont}`).catch(() => {});
       const rendered: { name: string; base64: string; groupIndex: number; groupPosition: number }[] = [];
       for (const slide of result.slides) {
         const isCover = slide.groupPosition === 1;
@@ -260,7 +272,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont);
+        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `meta-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -596,6 +608,7 @@ export default function Home() {
     try {
       await document.fonts.ready;
       if (coverDropCap) await document.fonts.load(`400 80px ${coverDropCapFont}`).catch(() => {});
+      if (coverSplit && coverEyebrowFont) await document.fonts.load(`${coverEyebrowItalic ? 'italic' : 'normal'} ${coverEyebrowWeight} 80px ${coverEyebrowFont}`).catch(() => {});
       const zip = new JSZip();
       for (const slide of result.slides) {
         const isCover = slide.groupPosition === 1;
@@ -606,7 +619,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont);
+        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight);
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -640,6 +653,7 @@ export default function Home() {
     try {
       await document.fonts.ready;
       if (coverDropCap) await document.fonts.load(`400 80px ${coverDropCapFont}`).catch(() => {});
+      if (coverSplit && coverEyebrowFont) await document.fonts.load(`${coverEyebrowItalic ? 'italic' : 'normal'} ${coverEyebrowWeight} 80px ${coverEyebrowFont}`).catch(() => {});
       const rendered: { name: string; base64: string }[] = [];
 
       for (const slide of result.slides) {
@@ -651,7 +665,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont);
+        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -739,7 +753,7 @@ export default function Home() {
         const tick = () => {
           const elapsed = performance.now() - startTime;
           const progress = Math.min(1, elapsed / durationMs);
-          drawSlide(offCtx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, videoAnimType, progress);
+          drawSlide(offCtx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, videoAnimType, progress);
           ctx.fillStyle = '#000000';
           ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
           ctx.drawImage(offscreen, 0, yOff);
@@ -767,6 +781,7 @@ export default function Home() {
     try {
       await document.fonts.ready;
       if (coverDropCap) await document.fonts.load(`400 80px ${coverDropCapFont}`).catch(() => {});
+      if (coverSplit && coverEyebrowFont) await document.fonts.load(`${coverEyebrowItalic ? 'italic' : 'normal'} ${coverEyebrowWeight} 80px ${coverEyebrowFont}`).catch(() => {});
       const zip = new JSZip();
       const canvas = document.createElement('canvas');
       canvas.width = VIDEO_WIDTH;
@@ -793,7 +808,7 @@ export default function Home() {
           const videoBlob = await recordGroupVideo(canvas, videoDurationSec * 1000, 300, groupSlides.length, (si, progress) => {
             const slide = groupSlides[si];
             const isCover = slide.groupPosition === 1;
-            drawSlide(offCtx, imgs[si], slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, videoAnimType, progress);
+            drawSlide(offCtx, imgs[si], slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, videoAnimType, progress);
             ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
             ctx.drawImage(offscreen, 0, yOff);
@@ -811,7 +826,7 @@ export default function Home() {
           const img = new Image();
           await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
           const videoBlob = await recordSlideVideo(canvas, (progress) => {
-            drawSlide(offCtx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, videoAnimType, progress);
+            drawSlide(offCtx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, videoAnimType, progress);
             ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
             ctx.drawImage(offscreen, 0, yOff);
@@ -1205,21 +1220,117 @@ export default function Home() {
                       </button>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Large drop cap first letter</span>
+                      <div>
+                        <span className="text-sm text-muted-foreground">Split text mode</span>
+                        <p className="text-xs text-muted-foreground/60">Use <code className="bg-accent/60 px-1 rounded">|</code> in cover text: <em>"Eyebrow|Headline"</em></p>
+                      </div>
                       <button
-                        onClick={() => setCoverDropCap(!coverDropCap)}
-                        className={`relative w-12 h-6 rounded-full transition-colors ${coverDropCap ? "bg-pink-500" : "bg-gray-600"}`}
+                        onClick={() => setCoverSplit(!coverSplit)}
+                        className={`relative w-12 h-6 rounded-full transition-colors ${coverSplit ? "bg-pink-500" : "bg-gray-600"}`}
                       >
-                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${coverDropCap ? "translate-x-6" : ""}`} />
+                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${coverSplit ? "translate-x-6" : ""}`} />
                       </button>
                     </div>
-                    {coverDropCap && (
-                      <div className="space-y-1.5">
-                        <span className="text-sm text-muted-foreground">Drop cap font</span>
-                        <select value={coverDropCapFont} onChange={(e) => setCoverDropCapFont(e.target.value)} className="w-full rounded-lg border border-border/40 bg-background px-3 py-2 text-sm">
-                          {FONT_OPTIONS.map((f) => <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>{f.label}</option>)}
-                        </select>
+
+                    {coverSplit ? (
+                      <div className="space-y-4 pl-3 border-l-2 border-pink-500/40">
+                        {/* Eyebrow line */}
+                        <div className="space-y-3">
+                          <span className="text-xs font-bold tracking-widest uppercase text-pink-400">Eyebrow line</span>
+                          <div className="space-y-1.5">
+                            <span className="text-xs text-muted-foreground">Font</span>
+                            <select value={coverEyebrowFont} onChange={(e) => setCoverEyebrowFont(e.target.value)} className="w-full rounded-lg border border-border/40 bg-background px-3 py-2 text-sm">
+                              {FONT_OPTIONS.map((f) => <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>{f.label}</option>)}
+                            </select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <span className="text-xs text-muted-foreground">Colour</span>
+                            <div className="flex gap-2">
+                              <Input type="color" value={coverEyebrowColor} onChange={(e) => setCoverEyebrowColor(e.target.value)} className="w-12 h-9 p-1 cursor-pointer" />
+                              <Input type="text" value={coverEyebrowColor.toUpperCase()} onChange={(e) => setCoverEyebrowColor(e.target.value)} className="flex-1 h-9 font-mono text-sm" />
+                            </div>
+                          </div>
+                          <div className="space-y-1.5">
+                            <span className="text-xs text-muted-foreground">Weight</span>
+                            <div className="grid grid-cols-4 gap-1">
+                              {([300,400,600,700,800,900] as const).map((w) => (
+                                <button key={w} onClick={() => setCoverEyebrowWeight(w)} className={`py-1 rounded text-xs font-medium transition-all ${coverEyebrowWeight === w ? "bg-pink-500 text-white" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}>
+                                  {w === 300 ? "Light" : w === 400 ? "Regular" : w === 600 ? "Semi" : w === 700 ? "Bold" : w === 800 ? "Extra" : "Black"}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">Size (relative to headline)</span>
+                              <span className="text-xs font-semibold tabular-nums">{Math.round(coverEyebrowSizeRatio * 100)}%</span>
+                            </div>
+                            <Slider min={0.2} max={0.9} step={0.05} value={[coverEyebrowSizeRatio]} onValueChange={([v]) => setCoverEyebrowSizeRatio(v)} className="w-full" />
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">Letter spacing</span>
+                              <span className="text-xs font-semibold tabular-nums">{coverEyebrowLetterSpacing}px</span>
+                            </div>
+                            <Slider min={-2} max={20} step={0.5} value={[coverEyebrowLetterSpacing]} onValueChange={([v]) => setCoverEyebrowLetterSpacing(v)} className="w-full" />
+                          </div>
+                          <div className="flex gap-4">
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => setCoverEyebrowItalic(!coverEyebrowItalic)} className={`relative w-10 h-5 rounded-full transition-colors ${coverEyebrowItalic ? "bg-pink-500" : "bg-gray-600"}`}>
+                                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${coverEyebrowItalic ? "translate-x-5" : ""}`} />
+                              </button>
+                              <span className="text-xs text-muted-foreground italic">Italic</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => setCoverEyebrowUppercase(!coverEyebrowUppercase)} className={`relative w-10 h-5 rounded-full transition-colors ${coverEyebrowUppercase ? "bg-pink-500" : "bg-gray-600"}`}>
+                                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${coverEyebrowUppercase ? "translate-x-5" : ""}`} />
+                              </button>
+                              <span className="text-xs text-muted-foreground">ALL CAPS</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Headline */}
+                        <div className="space-y-3">
+                          <span className="text-xs font-bold tracking-widest uppercase text-pink-400">Headline</span>
+                          <div className="space-y-1.5">
+                            <span className="text-xs text-muted-foreground">Weight</span>
+                            <div className="grid grid-cols-4 gap-1">
+                              {([300,400,600,700,800,900] as const).map((w) => (
+                                <button key={w} onClick={() => setCoverHeadlineWeight(w)} className={`py-1 rounded text-xs font-medium transition-all ${coverHeadlineWeight === w ? "bg-pink-500 text-white" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}>
+                                  {w === 300 ? "Light" : w === 400 ? "Regular" : w === 600 ? "Semi" : w === 700 ? "Bold" : w === 800 ? "Extra" : "Black"}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => setCoverHeadlineItalic(!coverHeadlineItalic)} className={`relative w-10 h-5 rounded-full transition-colors ${coverHeadlineItalic ? "bg-pink-500" : "bg-gray-600"}`}>
+                              <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${coverHeadlineItalic ? "translate-x-5" : ""}`} />
+                            </button>
+                            <span className="text-xs text-muted-foreground italic">Italic</span>
+                          </div>
+                        </div>
                       </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Large drop cap first letter</span>
+                          <button
+                            onClick={() => setCoverDropCap(!coverDropCap)}
+                            className={`relative w-12 h-6 rounded-full transition-colors ${coverDropCap ? "bg-pink-500" : "bg-gray-600"}`}
+                          >
+                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${coverDropCap ? "translate-x-6" : ""}`} />
+                          </button>
+                        </div>
+                        {coverDropCap && (
+                          <div className="space-y-1.5">
+                            <span className="text-sm text-muted-foreground">Drop cap font</span>
+                            <select value={coverDropCapFont} onChange={(e) => setCoverDropCapFont(e.target.value)} className="w-full rounded-lg border border-border/40 bg-background px-3 py-2 text-sm">
+                              {FONT_OPTIONS.map((f) => <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>{f.label}</option>)}
+                            </select>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
 
@@ -1961,7 +2072,12 @@ export default function Home() {
                                     })()}
                                     {showTextOverlay && <div className="absolute inset-0" style={{ backgroundColor: overlayColor, outline: textBoxOutline ? `2px solid ${textBoxOutlineColor}` : undefined }} />}
                                     <div className={`absolute ${textPosition === "top" ? "top-0" : textPosition === "center" ? "top-1/2 -translate-y-1/2" : "bottom-0"} px-0.5 py-0.5 left-0 right-0`}>
-                                      <p className={`font-semibold ${isCover ? "" : "line-clamp-4"}`} style={{ fontFamily: isCover ? fontFamily : subheadingFont, fontSize: Math.max(7, Math.round((isCover ? fontSize : contentFontSize) * 0.15)) + "px", color: textColor, lineHeight: lineSpacing, textAlign: textAlign === "center" ? "center" : textAlign === "right" ? "right" : "left", overflowWrap: "break-word", wordBreak: "break-word", ...(isCover && coverLetterSpacing ? { letterSpacing: (coverLetterSpacing * 0.15) + "px" } : {}), ...(isCover && coverUppercase ? { textTransform: "uppercase" } : {}), }}>{isCover && coverDropCap && slide.text ? (<><span style={{ fontFamily: coverDropCapFont, fontSize: Math.max(12, Math.round(fontSize * 0.15 * 2)) + "px", lineHeight: 1, display: "inline-block", marginRight: "1px" }}>{slide.text[0]}</span>{slide.text.slice(1)}</>) : slide.text}</p>
+                                      <p className={`font-semibold ${isCover ? "" : "line-clamp-4"}`} style={{ fontFamily: isCover ? fontFamily : subheadingFont, fontSize: Math.max(7, Math.round((isCover ? fontSize : contentFontSize) * 0.15)) + "px", color: textColor, lineHeight: lineSpacing, textAlign: textAlign === "center" ? "center" : textAlign === "right" ? "right" : "left", overflowWrap: "break-word", wordBreak: "break-word", ...(isCover && coverLetterSpacing ? { letterSpacing: (coverLetterSpacing * 0.15) + "px" } : {}), ...(isCover && coverUppercase ? { textTransform: "uppercase" } : {}), }}>{isCover && coverSplit && slide.text?.includes('|') ? (
+  <>
+    <span style={{ fontFamily: coverEyebrowFont || fontFamily, fontSize: Math.max(6, Math.round(fontSize * 0.15 * coverEyebrowSizeRatio)) + "px", color: coverEyebrowColor, fontStyle: coverEyebrowItalic ? "italic" : "normal", fontWeight: coverEyebrowWeight, letterSpacing: (coverEyebrowLetterSpacing * 0.15) + "px", textTransform: coverEyebrowUppercase ? "uppercase" : "none", display: "block", lineHeight: 1.1 }}>{slide.text.split('|')[0]}</span>
+    <span style={{ fontStyle: coverHeadlineItalic ? "italic" : "normal", fontWeight: coverHeadlineWeight, display: "block" }}>{slide.text.split('|').slice(1).join('|')}</span>
+  </>
+) : isCover && coverDropCap && slide.text ? (<><span style={{ fontFamily: coverDropCapFont, fontSize: Math.max(12, Math.round(fontSize * 0.15 * 2)) + "px", lineHeight: 1, display: "inline-block", marginRight: "1px" }}>{slide.text[0]}</span>{slide.text.slice(1)}</>) : slide.text}</p>
                                       {isCover && coverSubheading && (
                                         <p className="line-clamp-2 mt-0.5" style={{ fontFamily: subheadingFont, fontSize: Math.max(5, Math.round(fontSize * 0.15 * 0.65)) + "px", color: textColor, lineHeight: lineSpacing, textAlign: textAlign === "center" ? "center" : textAlign === "right" ? "right" : "left", overflowWrap: "break-word", wordBreak: "break-word", }}>{coverSubheading}</p>
                                       )}
