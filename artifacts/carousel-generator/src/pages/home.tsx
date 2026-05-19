@@ -36,8 +36,8 @@ export default function Home() {
 
   const [fontSize, setFontSize] = useState(52);
   const [contentFontSize, setContentFontSize] = useState(44);
-  const [fontFamily, setFontFamily] = useState(FONT_OPTIONS[0].value);
-  const [subheadingFont, setSubheadingFont] = useState(FONT_OPTIONS[0].value);
+  const [fontFamily, setFontFamily] = useState("'Cinzel', serif");
+  const [subheadingFont, setSubheadingFont] = useState("'Cinzel', serif");
   const [textColor, setTextColor] = useState("#ffffff");
   const [lineSpacing, setLineSpacing] = useState(0.9);
   const [coverLetterSpacing, setCoverLetterSpacing] = useState(0);
