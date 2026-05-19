@@ -42,7 +42,7 @@ export default function Home() {
   const [lineSpacing, setLineSpacing] = useState(0.9);
   const [coverLetterSpacing, setCoverLetterSpacing] = useState(0);
   const [coverUppercase, setCoverUppercase] = useState(false);
-  const [coverDropCap, setCoverDropCap] = useState(false);
+  const [coverDropCap, setCoverDropCap] = useState(true);
   const [coverDropCapFont, setCoverDropCapFont] = useState("'Great Vibes', cursive");
   const [overlayColor, setOverlayColor] = useState("rgba(0,0,0,0.5)");
   const [pageColor, setPageColor] = useState("#000000");
