@@ -169,6 +169,7 @@ export default function Home() {
     const id = toast.loading("Rendering slides for Cloud Campaign...");
     try {
       await document.fonts.ready;
+      if (coverDropCap) await document.fonts.load(`400 80px ${coverDropCapFont}`).catch(() => {});
       const rendered: { name: string; base64: string; groupIndex: number; groupPosition: number }[] = [];
       for (const slide of result.slides) {
         const isCover = slide.groupPosition === 1;
@@ -248,6 +249,7 @@ export default function Home() {
     const id = toast.loading("Rendering slides for Instagram & Facebook...");
     try {
       await document.fonts.ready;
+      if (coverDropCap) await document.fonts.load(`400 80px ${coverDropCapFont}`).catch(() => {});
       const rendered: { name: string; base64: string; groupIndex: number; groupPosition: number }[] = [];
       for (const slide of result.slides) {
         const isCover = slide.groupPosition === 1;
@@ -593,6 +595,7 @@ export default function Home() {
     const id = toast.loading("Building ZIP…");
     try {
       await document.fonts.ready;
+      if (coverDropCap) await document.fonts.load(`400 80px ${coverDropCapFont}`).catch(() => {});
       const zip = new JSZip();
       for (const slide of result.slides) {
         const isCover = slide.groupPosition === 1;
@@ -636,6 +639,7 @@ export default function Home() {
     const id = toast.loading("Rendering slides...");
     try {
       await document.fonts.ready;
+      if (coverDropCap) await document.fonts.load(`400 80px ${coverDropCapFont}`).catch(() => {});
       const rendered: { name: string; base64: string }[] = [];
 
       for (const slide of result.slides) {
@@ -762,6 +766,7 @@ export default function Home() {
     const id = toast.loading(`Preparing ${totalClips} video${totalClips !== 1 ? 's' : ''}…`);
     try {
       await document.fonts.ready;
+      if (coverDropCap) await document.fonts.load(`400 80px ${coverDropCapFont}`).catch(() => {});
       const zip = new JSZip();
       const canvas = document.createElement('canvas');
       canvas.width = VIDEO_WIDTH;
