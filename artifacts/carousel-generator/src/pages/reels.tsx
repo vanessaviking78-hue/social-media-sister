@@ -13,7 +13,7 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   VIDEO_WIDTH, VIDEO_HEIGHT, FONT_OPTIONS, loadGoogleFonts,
-  drawSlide, recordReelVideo, recordReelVideoMp4, drawTypewriterSlide,
+  drawSlide, recordReelVideo, recordReelVideoMp4, drawTypewriterSlide, drawTypewriterOnVideo,
 } from "@/lib/slide-utils";
 import type { LogoPosition } from "@workspace/db/schema";
 import { saveAs } from "file-saver";
@@ -22,7 +22,7 @@ loadGoogleFonts();
 
 type ReelSlide = {
   id: string;
-  mode: "cover" | "typewriter";
+  mode: "cover" | "typewriter" | "image-typewriter";
   text: string;
   imageFile: File | null;
   imageElement: HTMLImageElement | null;
@@ -117,6 +117,24 @@ export default function Reels() {
         logoImg, logoPosition, logoSize,
         typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT,
       );
+    } else if (slide.mode === "image-typewriter") {
+      drawSlide(
+        ctx, slide.imageElement, "",
+        fontFamily, fontSize, true,
+        textColor, lineSpacing, overlayColor,
+        logoImg, logoPosition, logoSize,
+        pageColor, "none", "#ffffff",
+        1, 1, textPosition, false, fontFamily, textAlign,
+        false, "#ffffff", "", 0, false,
+        false, "'Great Vibes', cursive",
+        coverSplit, coverEyebrowFont, coverEyebrowColor,
+        coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
+        coverEyebrowWeight, coverEyebrowLetterSpacing,
+        coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+        undefined, undefined,
+        { imageOffsetY: slide.imageOffsetY, canvasW: VIDEO_WIDTH, canvasH: VIDEO_HEIGHT }
+      );
+      drawTypewriterOnVideo(ctx, slide.text, progress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
     } else {
       drawSlide(
         ctx, slide.imageElement, slide.text,
@@ -189,7 +207,7 @@ export default function Reels() {
       .catch(() => {});
   }, []);
 
-  const toggleSlideMode = (idx: number, mode: "cover" | "typewriter") => {
+  const toggleSlideMode = (idx: number, mode: "cover" | "typewriter" | "image-typewriter") => {
     setSlides((prev) => prev.map((s, i) => (i === idx ? { ...s, mode } : s)));
   };
 
@@ -248,6 +266,22 @@ export default function Reels() {
         const slide = slides[slideIndex];
         if (slide.mode === "typewriter") {
           drawTypewriterSlide(ctx, slide.text, slideProgress, typewriterBgColor, textColor, fontFamily, fontSize, lineSpacing, logoImg, logoPosition, logoSize, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
+        } else if (slide.mode === "image-typewriter") {
+          drawSlide(
+            ctx, slide.imageElement, "",
+            fontFamily, fontSize, true,
+            textColor, lineSpacing, overlayColor,
+            logoImg, logoPosition, logoSize,
+            pageColor, "none", "#ffffff",
+            1, 1, textPosition, false, fontFamily, textAlign,
+            false, "#ffffff", "", 0, false,
+            false, "'Great Vibes', cursive",
+            coverSplit, coverEyebrowFont, coverEyebrowColor,
+            coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
+            coverEyebrowWeight, coverEyebrowLetterSpacing,
+            coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+          );
+          drawTypewriterOnVideo(ctx, slide.text, slideProgress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
         } else {
           drawSlide(
             ctx, slide.imageElement, slide.text,
@@ -310,6 +344,22 @@ export default function Reels() {
         const slide = slides[slideIndex];
         if (slide.mode === "typewriter") {
           drawTypewriterSlide(ctx, slide.text, slideProgress, typewriterBgColor, textColor, fontFamily, fontSize, lineSpacing, logoImg, logoPosition, logoSize, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
+        } else if (slide.mode === "image-typewriter") {
+          drawSlide(
+            ctx, slide.imageElement, "",
+            fontFamily, fontSize, true,
+            textColor, lineSpacing, overlayColor,
+            logoImg, logoPosition, logoSize,
+            pageColor, "none", "#ffffff",
+            1, 1, textPosition, false, fontFamily, textAlign,
+            false, "#ffffff", "", 0, false,
+            false, "'Great Vibes', cursive",
+            coverSplit, coverEyebrowFont, coverEyebrowColor,
+            coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
+            coverEyebrowWeight, coverEyebrowLetterSpacing,
+            coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+          );
+          drawTypewriterOnVideo(ctx, slide.text, slideProgress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
         } else {
           drawSlide(
             ctx, slide.imageElement, slide.text,
@@ -393,6 +443,22 @@ export default function Reels() {
         const slide = slides[slideIndex];
         if (slide.mode === "typewriter") {
           drawTypewriterSlide(ctx, slide.text, slideProgress, typewriterBgColor, textColor, fontFamily, fontSize, lineSpacing, logoImg, logoPosition, logoSize, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
+        } else if (slide.mode === "image-typewriter") {
+          drawSlide(
+            ctx, slide.imageElement, "",
+            fontFamily, fontSize, true,
+            textColor, lineSpacing, overlayColor,
+            logoImg, logoPosition, logoSize,
+            pageColor, "none", "#ffffff",
+            1, 1, textPosition, false, fontFamily, textAlign,
+            false, "#ffffff", "", 0, false,
+            false, "'Great Vibes', cursive",
+            coverSplit, coverEyebrowFont, coverEyebrowColor,
+            coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
+            coverEyebrowWeight, coverEyebrowLetterSpacing,
+            coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+          );
+          drawTypewriterOnVideo(ctx, slide.text, slideProgress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
         } else {
           drawSlide(
             ctx, slide.imageElement, slide.text,
@@ -510,14 +576,18 @@ export default function Reels() {
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-white/50">Slide {idx + 1}</span>
                 <div className="flex items-center gap-1">
-                  {(["cover", "typewriter"] as const).map((m) => (
+                  {([
+                    { m: "cover" as const, label: "Img", title: "Image + static text" },
+                    { m: "typewriter" as const, label: "Aa", title: "Typewriter text only" },
+                    { m: "image-typewriter" as const, label: "Img+Aa", title: "Image + typewriter text" },
+                  ]).map(({ m, label, title }) => (
                     <button
                       key={m}
                       onClick={(e) => { e.stopPropagation(); toggleSlideMode(idx, m); }}
-                      title={m === "cover" ? "Image + text overlay" : "Text-only typewriter"}
+                      title={title}
                       className={`text-[9px] px-1.5 py-0.5 rounded transition-colors ${slide.mode === m ? "bg-pink-600/80 text-white" : "text-white/30 border border-white/15"}`}
                     >
-                      {m === "cover" ? "Img" : "Aa"}
+                      {label}
                     </button>
                   ))}
                   {slides.length > 1 && (
@@ -538,7 +608,7 @@ export default function Reels() {
                 onClick={(e) => e.stopPropagation()}
                 className="w-full bg-transparent text-sm text-white placeholder:text-white/30 resize-none outline-none border border-white/10 rounded p-2 focus:border-pink-500/50"
               />
-              {slide.mode === "cover" ? (
+              {(slide.mode === "cover" || slide.mode === "image-typewriter") ? (
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 cursor-pointer text-xs text-white/40 hover:text-white/60 transition-colors">
                     <Upload className="w-3 h-3" />
