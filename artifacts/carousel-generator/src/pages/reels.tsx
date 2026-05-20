@@ -4,7 +4,7 @@ import {
   Layers, Plus, Trash2, Download, Play, Square, Upload, Loader2,
   ImagePlus, BookOpen, Palette, MessageSquareText, CalendarDays,
   BarChart3, ShieldCheck, Film, Image as ImageIcon,
-  Music, Search, X, Send,
+  Music, Search, X, Send, FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import {
   VIDEO_WIDTH, VIDEO_HEIGHT, FONT_OPTIONS, loadGoogleFonts,
   drawSlide, recordReelVideo, recordReelVideoMp4, drawTypewriterSlide, drawTypewriterOnVideo,
 } from "@/lib/slide-utils";
+import Papa from "papaparse";
 import type { LogoPosition } from "@workspace/db/schema";
 import { saveAs } from "file-saver";
 
@@ -207,8 +208,45 @@ export default function Reels() {
       .catch(() => {});
   }, []);
 
+  const csvInputRef = useRef<HTMLInputElement>(null);
+
   const toggleSlideMode = (idx: number, mode: "cover" | "typewriter" | "image-typewriter") => {
     setSlides((prev) => prev.map((s, i) => (i === idx ? { ...s, mode } : s)));
+  };
+
+  const handleCsvImport = (file: File) => {
+    Papa.parse<string[]>(file, {
+      header: false,
+      skipEmptyLines: true,
+      complete: (res) => {
+        let rows = res.data as string[][];
+        if (rows.length === 0) { toast.error("CSV is empty"); return; }
+        const first = rows[0]?.[0]?.toLowerCase() ?? "";
+        if (/^(slide|text|caption|hook|col|column|header)\d*$/i.test(first)) rows = rows.slice(1);
+        rows = rows.filter((r) => r[0]?.trim());
+        if (rows.length === 0) { toast.error("No slide text found in CSV"); return; }
+        const MAX = 10;
+        const capped = rows.slice(0, MAX);
+        const newSlides = capped.map((r) => {
+          const text = r[0]?.trim() ?? "";
+          const rawMode = r[1]?.trim().toLowerCase();
+          const mode: ReelSlide["mode"] =
+            rawMode === "cover" ? "cover"
+            : rawMode === "image-typewriter" ? "image-typewriter"
+            : "typewriter";
+          return { id: crypto.randomUUID(), mode, text, imageFile: null, imageElement: null, imageOffsetY: 0 } satisfies ReelSlide;
+        });
+        setSlides(newSlides);
+        setActiveIdx(0);
+        setIsPlaying(false);
+        if (rows.length > MAX) {
+          toast.success(`Loaded ${MAX} slides (${rows.length - MAX} rows skipped — 10-slide max)`);
+        } else {
+          toast.success(`Loaded ${newSlides.length} slide${newSlides.length !== 1 ? "s" : ""} from CSV`);
+        }
+      },
+      error: (err: { message: string }) => toast.error("CSV parse error: " + err.message),
+    });
   };
 
   const addSlide = () => {
@@ -557,10 +595,24 @@ export default function Reels() {
         <div className="w-72 border-r border-white/10 flex flex-col overflow-y-auto p-4 gap-3 shrink-0">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-semibold text-white/50 uppercase tracking-widest">Slides</h2>
-            <Button size="sm" variant="outline" onClick={addSlide} disabled={slides.length >= 10}
-              className="border-white/20 text-white/60 hover:text-white h-7 px-2 text-xs">
-              <Plus className="w-3 h-3 mr-1" />Add
-            </Button>
+            <div className="flex items-center gap-1">
+              <input
+                ref={csvInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={(e) => { if (e.target.files?.[0]) { handleCsvImport(e.target.files[0]); e.target.value = ""; } }}
+              />
+              <Button size="sm" variant="outline" onClick={() => csvInputRef.current?.click()}
+                title="Import slides from CSV (one row per slide)"
+                className="border-white/20 text-white/60 hover:text-white h-7 px-2 text-xs">
+                <FileText className="w-3 h-3 mr-1" />CSV
+              </Button>
+              <Button size="sm" variant="outline" onClick={addSlide} disabled={slides.length >= 10}
+                className="border-white/20 text-white/60 hover:text-white h-7 px-2 text-xs">
+                <Plus className="w-3 h-3 mr-1" />Add
+              </Button>
+            </div>
           </div>
 
           {slides.map((slide, idx) => (
