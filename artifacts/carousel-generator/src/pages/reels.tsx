@@ -4,7 +4,7 @@ import {
   Layers, Plus, Trash2, Download, Play, Square, Upload, Loader2,
   ImagePlus, BookOpen, Palette, MessageSquareText, CalendarDays,
   BarChart3, ShieldCheck, Film, Image as ImageIcon,
-  Music, Search, X, Send, FileText,
+  Music, Search, X, Send, FileText, Sparkles, ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -108,6 +108,13 @@ export default function Reels() {
   const [bulkPushing, setBulkPushing] = useState(false);
   const [bulkPushProgress, setBulkPushProgress] = useState({ current: 0, total: 0, label: "" });
 
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiIndustry, setAiIndustry] = useState("");
+  const [aiTopics, setAiTopics] = useState("");
+  const [aiTone, setAiTone] = useState("conversational");
+  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiSlideCount, setAiSlideCount] = useState(5);
+
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const exportCanvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number | null>(null);
@@ -166,10 +173,14 @@ export default function Reels() {
     }
   }
 
+  const drawCurrentSlideRef = useRef(drawCurrentSlide);
+  drawCurrentSlideRef.current = drawCurrentSlide;
+
   useEffect(() => {
-    drawCurrentSlide(isPlaying ? previewIdx : activeIdx, 1);
+    if (isPlaying) return;
+    drawCurrentSlide(activeIdx, 1);
   }, [
-    slides, activeIdx, previewIdx, isPlaying,
+    slides, activeIdx, isPlaying,
     fontFamily, fontSize, textColor, overlayOpacity, pageColor,
     lineSpacing, textPosition, textAlign,
     logoImg, logoPosition, logoSize,
@@ -197,7 +208,7 @@ export default function Reels() {
       const idx = Math.min(slides.length - 1, Math.floor(elapsed / msPerSlide));
       const slideProgress = (elapsed - idx * msPerSlide) / msPerSlide;
       setPreviewIdx(idx);
-      drawCurrentSlide(idx, slideProgress);
+      drawCurrentSlideRef.current(idx, slideProgress);
       animFrameRef.current = requestAnimationFrame(tick);
     };
     animFrameRef.current = requestAnimationFrame(tick);
@@ -258,6 +269,61 @@ export default function Reels() {
       },
       error: (err: { message: string }) => toast.error("CSV parse error: " + err.message),
     });
+  };
+
+  const handleAIGenerate = async () => {
+    if (!aiIndustry.trim()) { toast.error("Enter an industry first"); return; }
+    if (!aiTopics.trim()) { toast.error("Enter at least one topic"); return; }
+    setAiGenerating(true);
+    try {
+      const resp = await fetch(`${import.meta.env.BASE_URL}api/content/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          industry: aiIndustry,
+          tone: aiTone,
+          topics: aiTopics,
+          postCount: 1,
+          slidesPerPost: aiSlideCount,
+          extraInstructions: "Each slide will appear as a frame in a short-form video reel. Keep each slide to 1–2 short punchy sentences. No hashtags.",
+        }),
+      });
+      if (!resp.body) throw new Error("No response body");
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let done = false;
+      while (!done) {
+        const { value, done: streamDone } = await reader.read();
+        done = streamDone;
+        buffer += decoder.decode(value ?? new Uint8Array(), { stream: !done });
+        const parts = buffer.split("\n\n");
+        buffer = parts.pop() ?? "";
+        for (const part of parts) {
+          if (!part.startsWith("data: ")) continue;
+          try {
+            const msg = JSON.parse(part.slice(6));
+            if (msg.type === "done" && Array.isArray(msg.posts) && msg.posts[0]?.slides) {
+              const texts: string[] = msg.posts[0].slides;
+              setSlides(texts.map((text) => ({
+                id: crypto.randomUUID(),
+                mode: "typewriter" as const,
+                text,
+                imageFile: null,
+                imageElement: null,
+                imageOffsetY: 0,
+              })));
+              setActiveIdx(0);
+              toast.success(`Generated ${texts.length} slides!`);
+            }
+          } catch { /* skip unparseable */ }
+        }
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "AI generation failed");
+    } finally {
+      setAiGenerating(false);
+    }
   };
 
   const handleBulkCsvImport = (file: File) => {
@@ -837,6 +903,56 @@ export default function Reels() {
           ))}
 
           <p className="text-xs text-white/20 text-center">{slides.length} / 10 slides</p>
+
+          <div className="border-t border-white/10 pt-3 space-y-2">
+            <button
+              onClick={() => setAiOpen((p) => !p)}
+              className="flex items-center gap-2 w-full text-left"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-pink-400" />
+              <span className="text-xs text-white/50 font-semibold uppercase tracking-wider flex-1">Content Machine</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform ${aiOpen ? "rotate-180" : ""}`} />
+            </button>
+            {aiOpen && (
+              <div className="space-y-2 pt-1">
+                <input
+                  value={aiIndustry}
+                  onChange={(e) => setAiIndustry(e.target.value)}
+                  placeholder="Industry (e.g. Aesthetics clinic)"
+                  className="w-full bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-pink-500/50"
+                />
+                <Select value={aiTone} onValueChange={setAiTone}>
+                  <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-7 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {["conversational", "professional", "playful", "inspirational", "educational"].map((t) => (
+                      <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <textarea
+                  value={aiTopics}
+                  onChange={(e) => setAiTopics(e.target.value)}
+                  placeholder="Topics / hooks to cover…"
+                  rows={2}
+                  className="w-full bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-pink-500/50 resize-none"
+                />
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-white/40 shrink-0">Slides: {aiSlideCount}</span>
+                  <Slider min={2} max={10} step={1} value={[aiSlideCount]} onValueChange={([v]) => setAiSlideCount(v)} className="flex-1" />
+                </div>
+                <Button
+                  size="sm"
+                  onClick={handleAIGenerate}
+                  disabled={aiGenerating}
+                  className="w-full bg-pink-600 hover:bg-pink-500 text-white text-xs"
+                >
+                  {aiGenerating
+                    ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Generating…</>
+                    : <><Sparkles className="w-3.5 h-3.5 mr-2" />Generate {aiSlideCount} Slides</>}
+                </Button>
+              </div>
+            )}
+          </div>
           </>}
 
           {bulkMode === "bulk" && (
@@ -1015,7 +1131,7 @@ export default function Reels() {
                     value={musicQuery}
                     onChange={(e) => setMusicQuery(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && fetchMusic()}
-                    placeholder="Search tracks by mood, genre…"
+                    placeholder="Search tracks… (press Enter)"
                     className="flex-1 bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-pink-500/50"
                   />
                   <Button
