@@ -1,7 +1,10 @@
 import { Router, type IRouter } from "express";
+import multer from "multer";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { objectStorageClient } from "../../lib/objectStorage";
 import { logActivity } from "../../lib/activityLog";
+
+const videoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 300 * 1024 * 1024 } });
 
 const CC_BASE = "https://app.cloudcampaign.com/api/v1";
 

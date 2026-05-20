@@ -778,6 +778,84 @@ export async function recordReelVideo(
   });
 }
 
+export async function recordReelVideoMp4(
+  canvas: HTMLCanvasElement,
+  slideDurationMs: number,
+  fadeMs: number,
+  slideCount: number,
+  animateFn: (slideIndex: number) => void,
+  fps: number = 30,
+  onProgress?: (pct: number) => void
+): Promise<Blob> {
+  if (typeof (window as any).VideoEncoder === 'undefined') {
+    throw new Error('MP4 encoding requires Chrome 94+ or Edge 94+. Use "Export Reel" (WebM) instead.');
+  }
+  const { Muxer, ArrayBufferTarget } = await import('mp4-muxer');
+  const W = canvas.width;
+  const H = canvas.height;
+  const totalDurationMs = slideCount * slideDurationMs;
+  const totalFrames = Math.ceil((totalDurationMs / 1000) * fps);
+  const frameIntervalMs = 1000 / fps;
+  const fadeRatio = Math.min(0.4, fadeMs / slideDurationMs);
+  const ctx = canvas.getContext('2d')!;
+
+  const muxer = new Muxer({
+    target: new ArrayBufferTarget(),
+    video: { codec: 'avc', width: W, height: H },
+    fastStart: 'in-memory',
+  });
+
+  const encoder = new (window as any).VideoEncoder({
+    output: (chunk: any, meta?: any) => muxer.addVideoChunk(chunk, meta),
+    error: (e: Error) => { throw e; },
+  });
+
+  encoder.configure({
+    codec: 'avc1.42001e',
+    width: W,
+    height: H,
+    bitrate: 8_000_000,
+    framerate: fps,
+  });
+
+  for (let i = 0; i < totalFrames; i++) {
+    const elapsed = Math.min(i * frameIntervalMs, totalDurationMs - 1);
+    const slideIndex = Math.min(slideCount - 1, Math.floor(elapsed / slideDurationMs));
+    const slideElapsed = elapsed - slideIndex * slideDurationMs;
+    const slideProgress = slideElapsed / slideDurationMs;
+
+    animateFn(slideIndex);
+
+    let fadeAlpha = 0;
+    if (slideProgress < fadeRatio) {
+      fadeAlpha = 1 - slideProgress / fadeRatio;
+    } else if (slideProgress > 1 - fadeRatio) {
+      fadeAlpha = (slideProgress - (1 - fadeRatio)) / fadeRatio;
+    }
+    if (fadeAlpha > 0) {
+      ctx.globalAlpha = Math.min(1, fadeAlpha);
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(0, 0, W, H);
+      ctx.globalAlpha = 1;
+    }
+
+    const timestamp = Math.round(i * (1_000_000 / fps));
+    const frame = new (window as any).VideoFrame(canvas, { timestamp });
+    encoder.encode(frame, { keyFrame: i % (fps * 2) === 0 });
+    frame.close();
+
+    if (onProgress) onProgress(i / totalFrames);
+    if (i % 10 === 0) await new Promise<void>((r) => setTimeout(r, 0));
+  }
+
+  await encoder.flush();
+  muxer.finalize();
+  if (onProgress) onProgress(1);
+
+  const { buffer } = (muxer.target as any);
+  return new Blob([buffer], { type: 'video/mp4' });
+}
+
 export async function recordSlideVideo(
   canvas: HTMLCanvasElement,
   animateFn: (progress: number) => void,
