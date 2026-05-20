@@ -716,16 +716,46 @@ export async function recordReelVideo(
   fadeMs: number,
   slideCount: number,
   animateFn: (slideIndex: number) => void,
-  fps: number = 30
+  fps: number = 30,
+  audioUrl?: string
 ): Promise<Blob> {
+  let audioContext: AudioContext | null = null;
+  let audioDestination: MediaStreamAudioDestinationNode | null = null;
+
+  if (audioUrl) {
+    try {
+      const response = await fetch(audioUrl);
+      const arrayBuffer = await response.arrayBuffer();
+      audioContext = new AudioContext();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      audioDestination = audioContext.createMediaStreamDestination();
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.loop = true;
+      source.connect(audioDestination);
+      source.start();
+    } catch {
+      audioContext = null;
+      audioDestination = null;
+    }
+  }
+
   return new Promise((resolve, reject) => {
-    const mimeType = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((t) => {
-      try { return MediaRecorder.isTypeSupported(t); } catch { return false; }
-    }) || 'video/webm';
+    const mimeType = audioDestination
+      ? (['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find((t) => {
+          try { return MediaRecorder.isTypeSupported(t); } catch { return false; }
+        }) || 'video/webm')
+      : (['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm'].find((t) => {
+          try { return MediaRecorder.isTypeSupported(t); } catch { return false; }
+        }) || 'video/webm');
 
     let stream: MediaStream;
     try {
       stream = canvas.captureStream(fps);
+      if (audioDestination) {
+        const audioTrack = audioDestination.stream.getAudioTracks()[0];
+        if (audioTrack) stream.addTrack(audioTrack);
+      }
     } catch {
       reject(new Error('canvas.captureStream is not supported in this browser'));
       return;
@@ -734,7 +764,10 @@ export async function recordReelVideo(
     const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
     const chunks: Blob[] = [];
     recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-    recorder.onstop = () => resolve(new Blob(chunks, { type: 'video/webm' }));
+    recorder.onstop = () => {
+      if (audioContext) audioContext!.close();
+      resolve(new Blob(chunks, { type: mimeType }));
+    };
     recorder.onerror = () => reject(new Error('MediaRecorder error'));
 
     const totalDurationMs = slideCount * slideDurationMs;
@@ -785,7 +818,8 @@ export async function recordReelVideoMp4(
   slideCount: number,
   animateFn: (slideIndex: number) => void,
   fps: number = 30,
-  onProgress?: (pct: number) => void
+  onProgress?: (pct: number) => void,
+  audioArrayBuffer?: ArrayBuffer
 ): Promise<Blob> {
   if (typeof (window as any).VideoEncoder === 'undefined') {
     throw new Error('MP4 encoding requires Chrome 94+ or Edge 94+. Use "Export Reel" (WebM) instead.');
@@ -799,24 +833,49 @@ export async function recordReelVideoMp4(
   const fadeRatio = Math.min(0.4, fadeMs / slideDurationMs);
   const ctx = canvas.getContext('2d')!;
 
-  const muxer = new Muxer({
+  const SAMPLE_RATE = 44100;
+  const NUM_CHANNELS = 2;
+  let audioChannels: Float32Array[] | null = null;
+
+  if (audioArrayBuffer) {
+    try {
+      const totalSamples = Math.ceil((totalDurationMs / 1000) * SAMPLE_RATE);
+      const audioCtx = new OfflineAudioContext(NUM_CHANNELS, totalSamples + SAMPLE_RATE, SAMPLE_RATE);
+      const decoded = await audioCtx.decodeAudioData(audioArrayBuffer.slice(0));
+      audioChannels = [];
+      for (let c = 0; c < NUM_CHANNELS; c++) {
+        const src = decoded.getChannelData(Math.min(c, decoded.numberOfChannels - 1));
+        const buf = new Float32Array(totalSamples);
+        for (let i = 0; i < totalSamples; i++) buf[i] = src[i % src.length];
+        audioChannels.push(buf);
+      }
+    } catch { audioChannels = null; }
+  }
+
+  const muxerConfig: any = {
     target: new ArrayBufferTarget(),
     video: { codec: 'avc', width: W, height: H },
     fastStart: 'in-memory',
-  });
+  };
+  if (audioChannels) {
+    muxerConfig.audio = { codec: 'aac', numberOfChannels: NUM_CHANNELS, sampleRate: SAMPLE_RATE };
+  }
+  const muxer = new Muxer(muxerConfig);
 
-  const encoder = new (window as any).VideoEncoder({
+  const videoEncoder = new (window as any).VideoEncoder({
     output: (chunk: any, meta?: any) => muxer.addVideoChunk(chunk, meta),
     error: (e: Error) => { throw e; },
   });
+  videoEncoder.configure({ codec: 'avc1.42001e', width: W, height: H, bitrate: 8_000_000, framerate: fps });
 
-  encoder.configure({
-    codec: 'avc1.42001e',
-    width: W,
-    height: H,
-    bitrate: 8_000_000,
-    framerate: fps,
-  });
+  let audioEncoder: any = null;
+  if (audioChannels && typeof (window as any).AudioEncoder !== 'undefined') {
+    audioEncoder = new (window as any).AudioEncoder({
+      output: (chunk: any, meta?: any) => muxer.addAudioChunk(chunk, meta),
+      error: (e: Error) => { throw e; },
+    });
+    audioEncoder.configure({ codec: 'mp4a.40.2', sampleRate: SAMPLE_RATE, numberOfChannels: NUM_CHANNELS, bitrate: 128_000 });
+  }
 
   for (let i = 0; i < totalFrames; i++) {
     const elapsed = Math.min(i * frameIntervalMs, totalDurationMs - 1);
@@ -841,17 +900,40 @@ export async function recordReelVideoMp4(
 
     const timestamp = Math.round(i * (1_000_000 / fps));
     const frame = new (window as any).VideoFrame(canvas, { timestamp });
-    encoder.encode(frame, { keyFrame: i % (fps * 2) === 0 });
+    videoEncoder.encode(frame, { keyFrame: i % (fps * 2) === 0 });
     frame.close();
 
-    if (onProgress) onProgress(i / totalFrames);
+    if (onProgress) onProgress((i / totalFrames) * (audioChannels ? 0.75 : 0.95));
     if (i % 10 === 0) await new Promise<void>((r) => setTimeout(r, 0));
   }
 
-  await encoder.flush();
+  await videoEncoder.flush();
+
+  if (audioChannels && audioEncoder) {
+    const CHUNK_FRAMES = 1024;
+    const totalSamples = audioChannels[0].length;
+    for (let offset = 0; offset < totalSamples; offset += CHUNK_FRAMES) {
+      const size = Math.min(CHUNK_FRAMES, totalSamples - offset);
+      const planar = new Float32Array(size * NUM_CHANNELS);
+      for (let c = 0; c < NUM_CHANNELS; c++) {
+        planar.set(audioChannels[c].subarray(offset, offset + size), c * size);
+      }
+      const audioData = new (window as any).AudioData({
+        format: 'f32-planar',
+        sampleRate: SAMPLE_RATE,
+        numberOfFrames: size,
+        numberOfChannels: NUM_CHANNELS,
+        timestamp: Math.round((offset / SAMPLE_RATE) * 1_000_000),
+        data: planar,
+      });
+      audioEncoder.encode(audioData);
+      audioData.close();
+    }
+    await audioEncoder.flush();
+  }
+
   muxer.finalize();
   if (onProgress) onProgress(1);
-
   const { buffer } = (muxer.target as any);
   return new Blob([buffer], { type: 'video/mp4' });
 }

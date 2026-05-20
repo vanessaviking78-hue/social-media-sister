@@ -803,6 +803,33 @@ router.get("/cloud-campaign/status", async (_req, res) => {
 });
 
 
+router.get("/music/search", async (req, res) => {
+  try {
+    const apiKey = process.env.PIXABAY_API_KEY;
+    if (!apiKey) return res.status(503).json({ error: "Music search not configured — add PIXABAY_API_KEY to secrets." });
+    const { q = "", genre = "", page = "1" } = req.query as Record<string, string>;
+    const params = new URLSearchParams({ key: apiKey, per_page: "20", page });
+    if (q.trim()) params.set("q", q.trim());
+    if (genre.trim()) params.set("genre", genre.trim());
+    const resp = await fetch(`https://pixabay.com/api/music/?${params}`);
+    if (!resp.ok) throw new Error(`Pixabay error ${resp.status}`);
+    const data = await resp.json();
+    const tracks = (data.hits || []).map((h: any) => ({
+      id: h.id,
+      title: h.title || "Untitled",
+      duration: h.duration || 0,
+      artist: h.user || "Unknown",
+      previewUrl: h.audio || h.url || "",
+      genres: h.genres || [],
+      moods: h.moods || [],
+      bpm: h.bpm || null,
+    }));
+    res.json({ tracks, total: data.totalHits || 0 });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Music search failed" });
+  }
+});
+
 router.get("/cloud-campaign/workspaces", async (_req, res) => {
   try {
     const data = await ccFetch("/clients");
@@ -821,7 +848,7 @@ router.get("/cloud-campaign/workspaces", async (_req, res) => {
 router.post("/cloud-campaign/push", async (req, res) => {
   try {
     const { posts, workspaceIds, postType } = req.body as {
-      posts: { title: string; caption: string; imageUrls: string[] }[];
+      posts: { title: string; caption: string; imageUrls?: string[]; videoUrl?: string }[];
       workspaceIds?: string[];
       postType?: string;
     };
@@ -841,10 +868,9 @@ router.post("/cloud-campaign/push", async (req, res) => {
     for (const wsId of targetIds) {
       for (const post of posts) {
         try {
-          const media = post.imageUrls.map((url) => ({
-            type: "IMAGE",
-            sourceUrl: url,
-          }));
+          const media = post.videoUrl
+            ? [{ type: "VIDEO", sourceUrl: post.videoUrl }]
+            : (post.imageUrls || []).map((url) => ({ type: "IMAGE", sourceUrl: url }));
 
           const body: Record<string, any> = {
             title: post.title,

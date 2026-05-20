@@ -4,6 +4,7 @@ import {
   Layers, Plus, Trash2, Download, Play, Square, Upload, Loader2,
   ImagePlus, BookOpen, Palette, MessageSquareText, CalendarDays,
   BarChart3, ShieldCheck, Film, Image as ImageIcon,
+  Music, Search, X, Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   VIDEO_WIDTH, VIDEO_HEIGHT, FONT_OPTIONS, loadGoogleFonts,
-  drawSlide, recordReelVideo,
+  drawSlide, recordReelVideo, recordReelVideoMp4,
 } from "@/lib/slide-utils";
 import type { LogoPosition } from "@workspace/db/schema";
 import { saveAs } from "file-saver";
@@ -67,6 +68,20 @@ export default function Reels() {
 
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState("");
+
+  const [musicQuery, setMusicQuery] = useState("");
+  const [musicGenre, setMusicGenre] = useState("");
+  const [musicTracks, setMusicTracks] = useState<Array<{ id: number; title: string; duration: number; artist: string; previewUrl: string }>>([]);
+  const [musicLoading, setMusicLoading] = useState(false);
+  const [selectedTrack, setSelectedTrack] = useState<{ id: number; title: string; artist: string; previewUrl: string } | null>(null);
+  const [previewingTrackId, setPreviewingTrackId] = useState<number | null>(null);
+  const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
+
+  const [ccWorkspaces, setCcWorkspaces] = useState<Array<{ id: string; name: string }>>([]);
+  const [ccWorkspaceId, setCcWorkspaceId] = useState("");
+  const [ccCaption, setCcCaption] = useState("");
+  const [ccPushing, setCcPushing] = useState(false);
+  const [ccPushProgress, setCcPushProgress] = useState("");
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [previewIdx, setPreviewIdx] = useState(0);
@@ -135,6 +150,13 @@ export default function Reels() {
     return () => { if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); };
   }, [isPlaying, slides.length, slideDurationSec]);
 
+  useEffect(() => {
+    fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/workspaces`)
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d.workspaces)) setCcWorkspaces(d.workspaces); })
+      .catch(() => {});
+  }, []);
+
   const addSlide = () => {
     if (slides.length >= 10) return;
     const newSlide = { id: crypto.randomUUID(), text: "", imageFile: null, imageElement: null };
@@ -181,6 +203,7 @@ export default function Reels() {
       canvas.height = VIDEO_HEIGHT;
       const ctx = canvas.getContext("2d")!;
       setExportProgress("Recording…");
+      if (selectedTrack?.previewUrl) setExportProgress("Fetching audio…");
       const blob = await recordReelVideo(canvas, slideDurationSec * 1000, fadeDurationMs, slides.length, (slideIndex) => {
         const slide = slides[slideIndex];
         drawSlide(
@@ -195,17 +218,115 @@ export default function Reels() {
           coverSplit, coverEyebrowFont, coverEyebrowColor,
           coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
           coverEyebrowWeight, coverEyebrowLetterSpacing,
-          coverHeadlineItalic, coverHeadlineWeight,
+          coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
         );
-      });
+      }, 30, selectedTrack?.previewUrl);
       setExportProgress("Saving…");
       saveAs(blob, `reel-${Date.now()}.webm`);
-      toast.success("Reel exported!");
+      toast.success(selectedTrack ? `Exported with "${selectedTrack.title}"!` : "Reel exported!");
     } catch (e: any) {
       toast.error(e?.message || "Export failed");
     } finally {
       setExporting(false);
       setExportProgress("");
+    }
+  };
+
+  const fetchMusic = async () => {
+    setMusicLoading(true);
+    setMusicTracks([]);
+    try {
+      const params = new URLSearchParams();
+      if (musicQuery.trim()) params.set("q", musicQuery.trim());
+      if (musicGenre) params.set("genre", musicGenre);
+      const res = await fetch(`${import.meta.env.BASE_URL}api/music/search?${params}`);
+      const data = await res.json();
+      if (data.error) { toast.error(data.error); return; }
+      setMusicTracks(data.tracks || []);
+      if ((data.tracks || []).length === 0) toast.info("No tracks found — try different keywords");
+    } catch {
+      toast.error("Music search failed");
+    } finally {
+      setMusicLoading(false);
+    }
+  };
+
+  const handlePushToCC = async () => {
+    if (!ccWorkspaceId) { toast.error("Select a Cloud Campaign workspace first"); return; }
+    const hasContent = slides.some((s) => s.text.trim() || s.imageElement);
+    if (!hasContent) { toast.error("Add some content to your slides first"); return; }
+    setCcPushing(true);
+    setCcPushProgress("Setting up…");
+    try {
+      const canvas = exportCanvasRef.current!;
+      canvas.width = VIDEO_WIDTH;
+      canvas.height = VIDEO_HEIGHT;
+      const ctx = canvas.getContext("2d")!;
+      const animateFn = (slideIndex: number) => {
+        const slide = slides[slideIndex];
+        drawSlide(
+          ctx, slide.imageElement, slide.text,
+          fontFamily, fontSize, true,
+          textColor, lineSpacing, overlayColor,
+          logoImg, logoPosition, logoSize,
+          pageColor, "none", "#ffffff",
+          1, 1, textPosition, true, fontFamily, textAlign,
+          false, "#ffffff", "", 0, false,
+          false, "'Great Vibes', cursive",
+          coverSplit, coverEyebrowFont, coverEyebrowColor,
+          coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
+          coverEyebrowWeight, coverEyebrowLetterSpacing,
+          coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+        );
+      };
+      let audioArrayBuffer: ArrayBuffer | undefined;
+      if (selectedTrack?.previewUrl) {
+        setCcPushProgress("Fetching audio…");
+        try {
+          const r = await fetch(selectedTrack.previewUrl);
+          audioArrayBuffer = await r.arrayBuffer();
+        } catch { /* skip audio on error */ }
+      }
+      setCcPushProgress("Encoding MP4…");
+      let videoBlob: Blob;
+      try {
+        videoBlob = await recordReelVideoMp4(
+          canvas, slideDurationSec * 1000, fadeDurationMs, slides.length, animateFn, 30,
+          (pct) => setCcPushProgress(`Encoding ${Math.round(pct * 100)}%…`),
+          audioArrayBuffer,
+        );
+      } catch {
+        setCcPushProgress("Encoding WebM…");
+        videoBlob = await recordReelVideo(
+          canvas, slideDurationSec * 1000, fadeDurationMs, slides.length, animateFn, 30,
+          selectedTrack?.previewUrl,
+        );
+      }
+      setCcPushProgress("Uploading video…");
+      const form = new FormData();
+      const ext = videoBlob.type.includes("mp4") ? "mp4" : "webm";
+      form.append("video", videoBlob, `reel-${Date.now()}.${ext}`);
+      const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, { method: "POST", body: form });
+      if (!uploadRes.ok) throw new Error("Video upload failed");
+      const { url } = await uploadRes.json();
+      setCcPushProgress("Pushing to Cloud Campaign…");
+      const pushRes = await fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/push`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          posts: [{ title: `Reel – ${new Date().toLocaleDateString()}`, caption: ccCaption, videoUrl: url }],
+          workspaceIds: [ccWorkspaceId],
+          postType: "reel",
+        }),
+      });
+      if (!pushRes.ok) throw new Error("Cloud Campaign push failed");
+      toast.success("Reel pushed to Cloud Campaign!");
+      setCcCaption("");
+    } catch (e: any) {
+      toast.error(e?.message || "Push failed");
+    } finally {
+      setCcPushing(false);
+      setCcPushProgress("");
     }
   };
 
@@ -295,7 +416,7 @@ export default function Reels() {
           <p className="text-xs text-white/20 text-center">{slides.length} / 10 slides</p>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center gap-5 p-6 bg-[#08080d]">
+        <div className="flex-1 flex flex-col items-center overflow-y-auto gap-5 p-6 pt-8 bg-[#08080d]">
           <div className="relative" style={{ width: PREVIEW_W, height: PREVIEW_H }}>
             <canvas
               ref={previewCanvasRef}
@@ -337,8 +458,151 @@ export default function Reels() {
           </div>
 
           <p className="text-xs text-white/30">
-            9:16 · 1080×1920 · {(slides.length * slideDurationSec).toFixed(0)}s · exports as .webm
+            9:16 · 1080×1920 · {(slides.length * slideDurationSec).toFixed(0)}s
+            {selectedTrack ? ` · 🎵 ${selectedTrack.title}` : ""}
           </p>
+
+          {/* Music picker */}
+          <div className="w-full max-w-xs space-y-2.5">
+            <div className="flex items-center gap-1.5 text-xs text-white/40 font-semibold uppercase tracking-wider">
+              <Music className="w-3.5 h-3.5" /> Music
+            </div>
+            {selectedTrack ? (
+              <div className="flex items-center gap-2 bg-pink-500/10 border border-pink-500/30 rounded-lg px-3 py-2.5">
+                <Music className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-white truncate">{selectedTrack.title}</p>
+                  <p className="text-xs text-white/40 truncate">{selectedTrack.artist}</p>
+                </div>
+                <button
+                  onClick={() => setSelectedTrack(null)}
+                  className="text-white/30 hover:text-red-400 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-1.5">
+                  <input
+                    value={musicQuery}
+                    onChange={(e) => setMusicQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && fetchMusic()}
+                    placeholder="Search tracks by mood, genre…"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-pink-500/50"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={fetchMusic}
+                    disabled={musicLoading}
+                    className="bg-pink-600 hover:bg-pink-500 text-white h-7 px-2.5 shrink-0"
+                  >
+                    {musicLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                  </Button>
+                </div>
+                <Select value={musicGenre} onValueChange={setMusicGenre}>
+                  <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-7 text-xs">
+                    <SelectValue placeholder="All genres" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All genres</SelectItem>
+                    <SelectItem value="pop">Pop</SelectItem>
+                    <SelectItem value="hip-hop">Hip-Hop</SelectItem>
+                    <SelectItem value="electronic">Electronic</SelectItem>
+                    <SelectItem value="jazz">Jazz</SelectItem>
+                    <SelectItem value="classical">Classical</SelectItem>
+                    <SelectItem value="r-b-soul">R&amp;B / Soul</SelectItem>
+                    <SelectItem value="ambient">Ambient</SelectItem>
+                    <SelectItem value="rock">Rock</SelectItem>
+                    <SelectItem value="country">Country</SelectItem>
+                  </SelectContent>
+                </Select>
+                {musicTracks.length > 0 && (
+                  <div className="max-h-48 overflow-y-auto space-y-0.5 border border-white/10 rounded-lg p-1.5 bg-black/20">
+                    {musicTracks.map((track) => (
+                      <div
+                        key={track.id}
+                        className="flex items-center gap-2 hover:bg-white/5 rounded px-2 py-1.5 group cursor-default"
+                      >
+                        <button
+                          onClick={() => {
+                            if (previewingTrackId === track.id) {
+                              audioPreviewRef.current?.pause();
+                              setPreviewingTrackId(null);
+                            } else {
+                              if (audioPreviewRef.current) audioPreviewRef.current.pause();
+                              audioPreviewRef.current = new Audio(track.previewUrl);
+                              audioPreviewRef.current.play();
+                              setPreviewingTrackId(track.id);
+                              audioPreviewRef.current.onended = () => setPreviewingTrackId(null);
+                            }
+                          }}
+                          className="text-white/30 hover:text-pink-400 transition-colors shrink-0"
+                        >
+                          {previewingTrackId === track.id
+                            ? <Square className="w-3 h-3" />
+                            : <Play className="w-3 h-3" />}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-white truncate">{track.title}</p>
+                          <p className="text-xs text-white/30 truncate">
+                            {track.artist} · {Math.floor(track.duration / 60)}:{String(track.duration % 60).padStart(2, "0")}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setSelectedTrack(track);
+                            if (audioPreviewRef.current) { audioPreviewRef.current.pause(); setPreviewingTrackId(null); }
+                          }}
+                          className="text-white/30 hover:text-green-400 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                          title="Use this track"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Cloud Campaign push */}
+          {ccWorkspaces.length > 0 && (
+            <div className="w-full max-w-xs space-y-2.5">
+              <div className="flex items-center gap-1.5 text-xs text-white/40 font-semibold uppercase tracking-wider">
+                <Send className="w-3.5 h-3.5" /> Push to Cloud Campaign
+              </div>
+              <Select value={ccWorkspaceId} onValueChange={setCcWorkspaceId}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-7 text-xs">
+                  <SelectValue placeholder="Select workspace…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ccWorkspaces.map((ws) => (
+                    <SelectItem key={ws.id} value={ws.id}>{ws.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <textarea
+                value={ccCaption}
+                onChange={(e) => setCcCaption(e.target.value)}
+                placeholder="Caption (optional)…"
+                rows={2}
+                className="w-full bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-pink-500/50 resize-none"
+              />
+              <Button
+                size="sm"
+                onClick={handlePushToCC}
+                disabled={ccPushing || !ccWorkspaceId}
+                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white h-8 text-xs"
+              >
+                {ccPushing
+                  ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />{ccPushProgress}</>
+                  : <><Send className="w-3.5 h-3.5 mr-2" />Push Reel as MP4</>}
+              </Button>
+              <p className="text-xs text-white/20 text-center">Encodes MP4 → uploads → posts as video</p>
+            </div>
+          )}
 
           <canvas ref={exportCanvasRef} className="hidden" />
         </div>
