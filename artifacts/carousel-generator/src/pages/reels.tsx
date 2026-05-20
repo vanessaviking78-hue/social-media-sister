@@ -13,7 +13,7 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   VIDEO_WIDTH, VIDEO_HEIGHT, FONT_OPTIONS, loadGoogleFonts,
-  drawSlide, recordReelVideo, recordReelVideoMp4,
+  drawSlide, recordReelVideo, recordReelVideoMp4, drawTypewriterSlide,
 } from "@/lib/slide-utils";
 import type { LogoPosition } from "@workspace/db/schema";
 import { saveAs } from "file-saver";
@@ -22,6 +22,7 @@ loadGoogleFonts();
 
 type ReelSlide = {
   id: string;
+  mode: "cover" | "typewriter";
   text: string;
   imageFile: File | null;
   imageElement: HTMLImageElement | null;
@@ -33,7 +34,7 @@ const PREVIEW_H = Math.round(VIDEO_HEIGHT * PREVIEW_SCALE);
 
 export default function Reels() {
   const [slides, setSlides] = useState<ReelSlide[]>([
-    { id: crypto.randomUUID(), text: "", imageFile: null, imageElement: null },
+    { id: crypto.randomUUID(), mode: "cover", text: "", imageFile: null, imageElement: null },
   ]);
   const [activeIdx, setActiveIdx] = useState(0);
 
@@ -83,6 +84,9 @@ export default function Reels() {
   const [ccPushing, setCcPushing] = useState(false);
   const [ccPushProgress, setCcPushProgress] = useState("");
 
+  const [typewriterBgColor, setTypewriterBgColor] = useState("#0d0d0d");
+  const [typewriterFill, setTypewriterFill] = useState(0.7);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [previewIdx, setPreviewIdx] = useState(0);
 
@@ -92,31 +96,40 @@ export default function Reels() {
 
   const overlayColor = `rgba(0,0,0,${(overlayOpacity / 100).toFixed(2)})`;
 
-  function drawPreview(idx: number) {
+  function drawCurrentSlide(idx: number, progress: number = 1) {
     const canvas = previewCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const slide = slides[idx] ?? slides[0];
-    drawSlide(
-      ctx, slide.imageElement, slide.text,
-      fontFamily, fontSize, true,
-      textColor, lineSpacing, overlayColor,
-      logoImg, logoPosition, logoSize,
-      pageColor, "none", "#ffffff",
-      1, 1, textPosition, true, fontFamily, textAlign,
-      false, "#ffffff", "", 0, false,
-      false, "'Great Vibes', cursive",
-      coverSplit, coverEyebrowFont, coverEyebrowColor,
-      coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
-      coverEyebrowWeight, coverEyebrowLetterSpacing,
-      coverHeadlineItalic, coverHeadlineWeight,
-      coverEyebrowArch,
-    );
+    if (slide.mode === "typewriter") {
+      drawTypewriterSlide(
+        ctx, slide.text, progress,
+        typewriterBgColor, textColor,
+        fontFamily, fontSize, lineSpacing,
+        logoImg, logoPosition, logoSize,
+        typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT,
+      );
+    } else {
+      drawSlide(
+        ctx, slide.imageElement, slide.text,
+        fontFamily, fontSize, true,
+        textColor, lineSpacing, overlayColor,
+        logoImg, logoPosition, logoSize,
+        pageColor, "none", "#ffffff",
+        1, 1, textPosition, true, fontFamily, textAlign,
+        false, "#ffffff", "", 0, false,
+        false, "'Great Vibes', cursive",
+        coverSplit, coverEyebrowFont, coverEyebrowColor,
+        coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
+        coverEyebrowWeight, coverEyebrowLetterSpacing,
+        coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+      );
+    }
   }
 
   useEffect(() => {
-    drawPreview(isPlaying ? previewIdx : activeIdx);
+    drawCurrentSlide(isPlaying ? previewIdx : activeIdx, 1);
   }, [
     slides, activeIdx, previewIdx, isPlaying,
     fontFamily, fontSize, textColor, overlayOpacity, pageColor,
@@ -125,6 +138,7 @@ export default function Reels() {
     coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio,
     coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight,
     coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+    typewriterBgColor, typewriterFill,
   ]);
 
   useEffect(() => {
@@ -143,7 +157,9 @@ export default function Reels() {
         return;
       }
       const idx = Math.min(slides.length - 1, Math.floor(elapsed / msPerSlide));
+      const slideProgress = (elapsed - idx * msPerSlide) / msPerSlide;
       setPreviewIdx(idx);
+      drawCurrentSlide(idx, slideProgress);
       animFrameRef.current = requestAnimationFrame(tick);
     };
     animFrameRef.current = requestAnimationFrame(tick);
@@ -157,9 +173,13 @@ export default function Reels() {
       .catch(() => {});
   }, []);
 
+  const toggleSlideMode = (idx: number, mode: "cover" | "typewriter") => {
+    setSlides((prev) => prev.map((s, i) => (i === idx ? { ...s, mode } : s)));
+  };
+
   const addSlide = () => {
     if (slides.length >= 10) return;
-    const newSlide = { id: crypto.randomUUID(), text: "", imageFile: null, imageElement: null };
+    const newSlide = { id: crypto.randomUUID(), mode: "typewriter" as const, text: "", imageFile: null, imageElement: null };
     setSlides((prev) => [...prev, newSlide]);
     setActiveIdx(slides.length);
   };
@@ -204,22 +224,26 @@ export default function Reels() {
       const ctx = canvas.getContext("2d")!;
       setExportProgress("Recording…");
       if (selectedTrack?.previewUrl) setExportProgress("Fetching audio…");
-      const blob = await recordReelVideo(canvas, slideDurationSec * 1000, fadeDurationMs, slides.length, (slideIndex) => {
+      const blob = await recordReelVideo(canvas, slideDurationSec * 1000, fadeDurationMs, slides.length, (slideIndex, slideProgress) => {
         const slide = slides[slideIndex];
-        drawSlide(
-          ctx, slide.imageElement, slide.text,
-          fontFamily, fontSize, true,
-          textColor, lineSpacing, overlayColor,
-          logoImg, logoPosition, logoSize,
-          pageColor, "none", "#ffffff",
-          1, 1, textPosition, true, fontFamily, textAlign,
-          false, "#ffffff", "", 0, false,
-          false, "'Great Vibes', cursive",
-          coverSplit, coverEyebrowFont, coverEyebrowColor,
-          coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
-          coverEyebrowWeight, coverEyebrowLetterSpacing,
-          coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
-        );
+        if (slide.mode === "typewriter") {
+          drawTypewriterSlide(ctx, slide.text, slideProgress, typewriterBgColor, textColor, fontFamily, fontSize, lineSpacing, logoImg, logoPosition, logoSize, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
+        } else {
+          drawSlide(
+            ctx, slide.imageElement, slide.text,
+            fontFamily, fontSize, true,
+            textColor, lineSpacing, overlayColor,
+            logoImg, logoPosition, logoSize,
+            pageColor, "none", "#ffffff",
+            1, 1, textPosition, true, fontFamily, textAlign,
+            false, "#ffffff", "", 0, false,
+            false, "'Great Vibes', cursive",
+            coverSplit, coverEyebrowFont, coverEyebrowColor,
+            coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
+            coverEyebrowWeight, coverEyebrowLetterSpacing,
+            coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+          );
+        }
       }, 30, selectedTrack?.previewUrl);
       setExportProgress("Saving…");
       saveAs(blob, `reel-${Date.now()}.webm`);
@@ -262,22 +286,26 @@ export default function Reels() {
       canvas.width = VIDEO_WIDTH;
       canvas.height = VIDEO_HEIGHT;
       const ctx = canvas.getContext("2d")!;
-      const animateFn = (slideIndex: number) => {
+      const animateFn = (slideIndex: number, slideProgress: number = 1) => {
         const slide = slides[slideIndex];
-        drawSlide(
-          ctx, slide.imageElement, slide.text,
-          fontFamily, fontSize, true,
-          textColor, lineSpacing, overlayColor,
-          logoImg, logoPosition, logoSize,
-          pageColor, "none", "#ffffff",
-          1, 1, textPosition, true, fontFamily, textAlign,
-          false, "#ffffff", "", 0, false,
-          false, "'Great Vibes', cursive",
-          coverSplit, coverEyebrowFont, coverEyebrowColor,
-          coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
-          coverEyebrowWeight, coverEyebrowLetterSpacing,
-          coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
-        );
+        if (slide.mode === "typewriter") {
+          drawTypewriterSlide(ctx, slide.text, slideProgress, typewriterBgColor, textColor, fontFamily, fontSize, lineSpacing, logoImg, logoPosition, logoSize, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
+        } else {
+          drawSlide(
+            ctx, slide.imageElement, slide.text,
+            fontFamily, fontSize, true,
+            textColor, lineSpacing, overlayColor,
+            logoImg, logoPosition, logoSize,
+            pageColor, "none", "#ffffff",
+            1, 1, textPosition, true, fontFamily, textAlign,
+            false, "#ffffff", "", 0, false,
+            false, "'Great Vibes', cursive",
+            coverSplit, coverEyebrowFont, coverEyebrowColor,
+            coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
+            coverEyebrowWeight, coverEyebrowLetterSpacing,
+            coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+          );
+        }
       };
       let audioArrayBuffer: ArrayBuffer | undefined;
       if (selectedTrack?.previewUrl) {
@@ -379,37 +407,53 @@ export default function Reels() {
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-white/50">Slide {idx + 1}</span>
-                {slides.length > 1 && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); removeSlide(idx); }}
-                    className="text-white/30 hover:text-red-400 transition-colors"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                )}
+                <div className="flex items-center gap-1">
+                  {(["cover", "typewriter"] as const).map((m) => (
+                    <button
+                      key={m}
+                      onClick={(e) => { e.stopPropagation(); toggleSlideMode(idx, m); }}
+                      title={m === "cover" ? "Image + text overlay" : "Text-only typewriter"}
+                      className={`text-[9px] px-1.5 py-0.5 rounded transition-colors ${slide.mode === m ? "bg-pink-600/80 text-white" : "text-white/30 border border-white/15"}`}
+                    >
+                      {m === "cover" ? "Img" : "Aa"}
+                    </button>
+                  ))}
+                  {slides.length > 1 && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeSlide(idx); }}
+                      className="text-white/30 hover:text-red-400 transition-colors ml-1"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
               </div>
               <textarea
                 value={slide.text}
                 onChange={(e) => updateText(idx, e.target.value)}
-                placeholder={coverSplit ? "Eyebrow|Headline" : "Slide text…"}
+                placeholder={slide.mode === "cover" && coverSplit ? "Eyebrow|Headline" : "Slide text…"}
                 rows={3}
                 onClick={(e) => e.stopPropagation()}
                 className="w-full bg-transparent text-sm text-white placeholder:text-white/30 resize-none outline-none border border-white/10 rounded p-2 focus:border-pink-500/50"
               />
-              <label className="flex items-center gap-2 cursor-pointer text-xs text-white/40 hover:text-white/60 transition-colors">
-                <Upload className="w-3 h-3" />
-                {slide.imageFile
-                  ? slide.imageFile.name.length > 18
-                    ? slide.imageFile.name.slice(0, 18) + "…"
-                    : slide.imageFile.name
-                  : "Upload background image"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSlideImage(idx, f); }}
-                />
-              </label>
+              {slide.mode === "cover" ? (
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-white/40 hover:text-white/60 transition-colors">
+                  <Upload className="w-3 h-3" />
+                  {slide.imageFile
+                    ? slide.imageFile.name.length > 18
+                      ? slide.imageFile.name.slice(0, 18) + "…"
+                      : slide.imageFile.name
+                    : "Upload background image"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSlideImage(idx, f); }}
+                  />
+                </label>
+              ) : (
+                <p className="text-[10px] text-white/20 italic">Typewriter reveal on playback</p>
+              )}
             </div>
           ))}
 
@@ -762,6 +806,27 @@ export default function Reels() {
                 <Slider min={40} max={200} step={10} value={[logoSize]} onValueChange={([v]) => setLogoSize(v)} />
               </div>
             )}
+          </div>
+
+          <div className="border-t border-white/10 pt-4 space-y-3">
+            <h3 className="text-xs font-semibold text-white/40 uppercase tracking-widest">Text slides</h3>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-white/50">Background color</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={typewriterBgColor}
+                  onChange={(e) => setTypewriterBgColor(e.target.value)}
+                  className="w-8 h-7 rounded border border-white/10 bg-transparent cursor-pointer"
+                />
+                <span className="text-xs text-white/30">{typewriterBgColor}</span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-white/50">Reveal speed — {Math.round(typewriterFill * 100)}% of slide</Label>
+              <Slider min={25} max={95} step={5} value={[Math.round(typewriterFill * 100)]} onValueChange={([v]) => setTypewriterFill(v / 100)} />
+              <p className="text-[10px] text-white/25">Lower = text appears faster</p>
+            </div>
           </div>
 
           <div className="border-t border-white/10 pt-4 space-y-4">

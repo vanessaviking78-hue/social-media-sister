@@ -526,6 +526,74 @@ export function drawSlide(
   }
 }
 
+export function drawTypewriterSlide(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  slideProgress: number,
+  bgColor: string,
+  textColor: string,
+  fontFamily: string,
+  fontSize: number,
+  lineSpacing: number,
+  logoImg: HTMLImageElement | null,
+  logoPosition: LogoPosition,
+  logoSize: number,
+  typewriterFill: number = 0.7,
+  W: number = VIDEO_WIDTH,
+  H: number = VIDEO_HEIGHT,
+) {
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = bgColor;
+  ctx.fillRect(0, 0, W, H);
+
+  if (text.trim()) {
+    const typeProgress = typewriterFill >= 1 ? 1 : Math.min(1, slideProgress / typewriterFill);
+    const totalChars = text.length;
+    const charsToShow = slideProgress >= 1 ? totalChars : Math.floor(typeProgress * totalChars);
+    const isTyping = charsToShow < totalChars;
+    const visibleText = text.slice(0, charsToShow) + (isTyping ? "▍" : "");
+
+    ctx.font = `700 ${fontSize}px ${fontFamily}`;
+    ctx.fillStyle = textColor;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+
+    const maxWidth = W * 0.8;
+    const rawWords = visibleText.split(/\s+/).filter(Boolean);
+    const lines: string[] = [];
+    let cur = "";
+    for (const word of rawWords) {
+      const test = cur ? cur + " " + word : word;
+      if (ctx.measureText(test).width > maxWidth && cur) {
+        lines.push(cur);
+        cur = word;
+      } else {
+        cur = test;
+      }
+    }
+    if (cur) lines.push(cur);
+
+    const lineH = Math.round(fontSize * lineSpacing);
+    const totalTextH = lines.length * lineH;
+    const startY = Math.round((H - totalTextH) / 2) + fontSize;
+    lines.forEach((line, i) => {
+      ctx.fillText(line, W / 2, startY + i * lineH);
+    });
+  }
+
+  if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
+    const margin = 40;
+    const aspectRatio = logoImg.width / logoImg.height;
+    const logoW = Math.round(logoSize * aspectRatio);
+    const logoH = logoSize;
+    let lx = margin, ly = margin;
+    if (logoPosition === "top-right") { lx = W - logoW - margin; ly = margin; }
+    else if (logoPosition === "bottom-left") { lx = margin; ly = H - logoH - margin; }
+    else if (logoPosition === "bottom-right") { lx = W - logoW - margin; ly = H - logoH - margin; }
+    ctx.drawImage(logoImg, lx, ly, logoW, logoH);
+  }
+}
+
 export const STORY_WIDTH = 1080;
 export const STORY_HEIGHT = 1920;
 
@@ -715,7 +783,7 @@ export async function recordReelVideo(
   slideDurationMs: number,
   fadeMs: number,
   slideCount: number,
-  animateFn: (slideIndex: number) => void,
+  animateFn: (slideIndex: number, slideProgress: number) => void,
   fps: number = 30,
   audioUrl?: string
 ): Promise<Blob> {
@@ -783,7 +851,7 @@ export async function recordReelVideo(
       const slideElapsed = elapsed - slideIndex * slideDurationMs;
       const slideProgress = slideElapsed / slideDurationMs;
 
-      animateFn(slideIndex);
+      animateFn(slideIndex, slideProgress);
 
       let fadeAlpha = 0;
       if (slideProgress < fadeRatio) {
@@ -816,7 +884,7 @@ export async function recordReelVideoMp4(
   slideDurationMs: number,
   fadeMs: number,
   slideCount: number,
-  animateFn: (slideIndex: number) => void,
+  animateFn: (slideIndex: number, slideProgress: number) => void,
   fps: number = 30,
   onProgress?: (pct: number) => void,
   audioArrayBuffer?: ArrayBuffer
@@ -883,7 +951,7 @@ export async function recordReelVideoMp4(
     const slideElapsed = elapsed - slideIndex * slideDurationMs;
     const slideProgress = slideElapsed / slideDurationMs;
 
-    animateFn(slideIndex);
+    animateFn(slideIndex, slideProgress);
 
     let fadeAlpha = 0;
     if (slideProgress < fadeRatio) {
