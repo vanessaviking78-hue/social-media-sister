@@ -16,6 +16,7 @@ import {
   drawSlide, recordReelVideo, recordReelVideoMp4, drawTypewriterSlide, drawTypewriterOnVideo,
 } from "@/lib/slide-utils";
 import Papa from "papaparse";
+import JSZip from "jszip";
 import type { LogoPosition } from "@workspace/db/schema";
 import { saveAs } from "file-saver";
 
@@ -97,6 +98,15 @@ export default function Reels() {
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [previewIdx, setPreviewIdx] = useState(0);
+
+  const [bulkMode, setBulkMode] = useState<"single" | "bulk">("single");
+  const [bulkRows, setBulkRows] = useState<string[][]>([]);
+  const [bulkGenerating, setBulkGenerating] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState({ current: 0, total: 0, label: "" });
+  const [bulkZipBlob, setBulkZipBlob] = useState<Blob | null>(null);
+  const [bulkIgPresetId, setBulkIgPresetId] = useState("");
+  const [bulkPushing, setBulkPushing] = useState(false);
+  const [bulkPushProgress, setBulkPushProgress] = useState({ current: 0, total: 0, label: "" });
 
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const exportCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -209,6 +219,7 @@ export default function Reels() {
   }, []);
 
   const csvInputRef = useRef<HTMLInputElement>(null);
+  const bulkCsvRef = useRef<HTMLInputElement>(null);
 
   const toggleSlideMode = (idx: number, mode: "cover" | "typewriter" | "image-typewriter") => {
     setSlides((prev) => prev.map((s, i) => (i === idx ? { ...s, mode } : s)));
@@ -247,6 +258,118 @@ export default function Reels() {
       },
       error: (err: { message: string }) => toast.error("CSV parse error: " + err.message),
     });
+  };
+
+  const handleBulkCsvImport = (file: File) => {
+    Papa.parse<string[]>(file, {
+      header: false,
+      skipEmptyLines: true,
+      complete: (res) => {
+        let rows = res.data as string[][];
+        if (rows.length === 0) { toast.error("CSV is empty"); return; }
+        const first = rows[0]?.[0]?.toLowerCase() ?? "";
+        if (/^(reel|slide|text|caption|hook|col|column|header)\d*$/i.test(first)) rows = rows.slice(1);
+        rows = rows.map((r) => r.filter((c) => c.trim())).filter((r) => r.length > 0);
+        if (rows.length === 0) { toast.error("No data found in CSV"); return; }
+        const MAX = 30;
+        const capped = rows.slice(0, MAX);
+        setBulkRows(capped);
+        setBulkZipBlob(null);
+        if (rows.length > MAX) {
+          toast.success(`Loaded ${MAX} reels (${rows.length - MAX} rows skipped — 20-reel max)`);
+        } else {
+          toast.success(`Loaded ${capped.length} reel${capped.length !== 1 ? "s" : ""} from CSV`);
+        }
+      },
+      error: (err: { message: string }) => toast.error("CSV parse error: " + err.message),
+    });
+  };
+
+  const handleBulkGenerate = async () => {
+    if (bulkRows.length === 0) { toast.error("Upload a CSV first"); return; }
+    setBulkGenerating(true);
+    setBulkZipBlob(null);
+    const zip = new JSZip();
+    const canvas = exportCanvasRef.current!;
+    canvas.width = VIDEO_WIDTH;
+    canvas.height = VIDEO_HEIGHT;
+    const ctx = canvas.getContext("2d")!;
+    try {
+      for (let i = 0; i < bulkRows.length; i++) {
+        const texts = bulkRows[i];
+        setBulkProgress({ current: i + 1, total: bulkRows.length, label: `Encoding reel ${i + 1} of ${bulkRows.length}…` });
+        const animateFn = (slideIndex: number, slideProgress: number) => {
+          drawTypewriterSlide(ctx, texts[slideIndex] ?? "", slideProgress, typewriterBgColor, textColor, fontFamily, fontSize, lineSpacing, logoImg, logoPosition, logoSize, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
+        };
+        let blob: Blob;
+        try {
+          blob = await recordReelVideoMp4(canvas, slideDurationSec * 1000, fadeDurationMs, texts.length, animateFn, 30);
+        } catch {
+          blob = await recordReelVideo(canvas, slideDurationSec * 1000, fadeDurationMs, texts.length, animateFn, 30);
+        }
+        const ext = blob.type.includes("mp4") ? "mp4" : "webm";
+        zip.file(`reel-${String(i + 1).padStart(2, "0")}.${ext}`, blob);
+      }
+      setBulkProgress({ current: bulkRows.length, total: bulkRows.length, label: "Packaging ZIP…" });
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      setBulkZipBlob(zipBlob);
+      toast.success(`${bulkRows.length} reels ready — click Download!`);
+    } catch (e: any) {
+      toast.error(e?.message || "Bulk generation failed");
+    } finally {
+      setBulkGenerating(false);
+      setBulkProgress({ current: 0, total: 0, label: "" });
+    }
+  };
+
+  const handleBulkPushToIG = async (trial: boolean) => {
+    if (!bulkIgPresetId) { toast.error("Select a client preset first"); return; }
+    if (bulkRows.length === 0) { toast.error("Upload a CSV first"); return; }
+    setBulkPushing(true);
+    setBulkPushProgress({ current: 0, total: bulkRows.length, label: "Starting…" });
+    const canvas = exportCanvasRef.current!;
+    canvas.width = VIDEO_WIDTH;
+    canvas.height = VIDEO_HEIGHT;
+    const ctx = canvas.getContext("2d")!;
+    let successCount = 0;
+    try {
+      for (let i = 0; i < bulkRows.length; i++) {
+        const texts = bulkRows[i];
+        const reelNum = `${i + 1}/${bulkRows.length}`;
+        setBulkPushProgress({ current: i + 1, total: bulkRows.length, label: `Reel ${reelNum}: Encoding…` });
+        const animateFn = (slideIndex: number, slideProgress: number) => {
+          drawTypewriterSlide(ctx, texts[slideIndex] ?? "", slideProgress, typewriterBgColor, textColor, fontFamily, fontSize, lineSpacing, logoImg, logoPosition, logoSize, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
+        };
+        let blob: Blob;
+        try {
+          blob = await recordReelVideoMp4(canvas, slideDurationSec * 1000, fadeDurationMs, texts.length, animateFn, 30);
+        } catch {
+          blob = await recordReelVideo(canvas, slideDurationSec * 1000, fadeDurationMs, texts.length, animateFn, 30);
+        }
+        setBulkPushProgress({ current: i + 1, total: bulkRows.length, label: `Reel ${reelNum}: Uploading…` });
+        const form = new FormData();
+        const ext = blob.type.includes("mp4") ? "mp4" : "webm";
+        form.append("video", blob, `reel-${String(i + 1).padStart(2, "0")}.${ext}`);
+        const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, { method: "POST", body: form });
+        if (!uploadRes.ok) throw new Error(`Reel ${i + 1}: video upload failed`);
+        const { url } = await uploadRes.json();
+        setBulkPushProgress({ current: i + 1, total: bulkRows.length, label: `Reel ${reelNum}: Posting…` });
+        const pushRes = await fetch(`${import.meta.env.BASE_URL}api/meta/push-reel`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ videoUrl: url, caption: "", presetId: Number(bulkIgPresetId), trial, graduationStrategy: "MANUAL" }),
+        });
+        const pushData = await pushRes.json();
+        if (!pushRes.ok) throw new Error(`Reel ${i + 1}: ${pushData.error || "push failed"}`);
+        successCount++;
+      }
+      toast.success(`${successCount} trial reel${successCount !== 1 ? "s" : ""} posted! Open Instagram to review.`);
+    } catch (e: any) {
+      toast.error(e?.message || "Bulk push failed");
+    } finally {
+      setBulkPushing(false);
+      setBulkPushProgress({ current: 0, total: 0, label: "" });
+    }
   };
 
   const addSlide = () => {
@@ -594,6 +717,18 @@ export default function Reels() {
 
       <div className="flex flex-1 overflow-hidden">
         <div className="w-72 border-r border-white/10 flex flex-col overflow-y-auto p-4 gap-3 shrink-0">
+          <div className="flex gap-1 bg-white/5 rounded-lg p-1">
+            <button onClick={() => setBulkMode("single")}
+              className={`flex-1 text-xs py-1.5 rounded-md transition-colors font-medium ${bulkMode === "single" ? "bg-pink-600 text-white" : "text-white/40 hover:text-white/60"}`}>
+              Single
+            </button>
+            <button onClick={() => setBulkMode("bulk")}
+              className={`flex-1 text-xs py-1.5 rounded-md transition-colors font-medium ${bulkMode === "bulk" ? "bg-pink-600 text-white" : "text-white/40 hover:text-white/60"}`}>
+              Bulk
+            </button>
+          </div>
+
+          {bulkMode === "single" && <>
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-semibold text-white/50 uppercase tracking-widest">Slides</h2>
             <div className="flex items-center gap-1">
@@ -702,6 +837,98 @@ export default function Reels() {
           ))}
 
           <p className="text-xs text-white/20 text-center">{slides.length} / 10 slides</p>
+          </>}
+
+          {bulkMode === "bulk" && (
+            <div className="space-y-3">
+              <p className="text-xs text-white/30 leading-relaxed">Each row = one reel. Each column = one slide. Uses your Style settings from the right panel.</p>
+              <input
+                ref={bulkCsvRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={(e) => { if (e.target.files?.[0]) { handleBulkCsvImport(e.target.files[0]); e.target.value = ""; } }}
+              />
+              <Button size="sm" variant="outline" onClick={() => bulkCsvRef.current?.click()}
+                className="w-full border-white/20 text-white/60 hover:text-white text-xs">
+                <FileText className="w-3.5 h-3.5 mr-2" />Upload CSV
+              </Button>
+              {bulkRows.length > 0 && (
+                <div className="bg-white/5 rounded-lg p-3 space-y-1">
+                  <p className="text-xs font-medium text-white">{bulkRows.length} reels loaded</p>
+                  <p className="text-xs text-white/40">Up to {Math.max(...bulkRows.map((r) => r.length))} slides each</p>
+                </div>
+              )}
+              <Button
+                size="sm"
+                onClick={handleBulkGenerate}
+                disabled={bulkGenerating || bulkPushing || bulkRows.length === 0}
+                className="w-full bg-pink-600 hover:bg-pink-500 text-white text-xs"
+              >
+                {bulkGenerating
+                  ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />{bulkProgress.label}</>
+                  : <><Download className="w-3.5 h-3.5 mr-2" />Generate ZIP {bulkRows.length > 0 ? `(${bulkRows.length})` : ""}</>}
+              </Button>
+              {bulkGenerating && bulkProgress.total > 0 && (
+                <div className="space-y-1.5">
+                  <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-full bg-pink-500 rounded-full transition-all duration-500"
+                      style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }} />
+                  </div>
+                  <p className="text-[10px] text-white/30 text-center">{bulkProgress.current} / {bulkProgress.total}</p>
+                </div>
+              )}
+              {bulkZipBlob && (
+                <Button size="sm"
+                  onClick={() => saveAs(bulkZipBlob!, `bulk-reels-${Date.now()}.zip`)}
+                  className="w-full bg-green-700 hover:bg-green-600 text-white text-xs">
+                  <Download className="w-3.5 h-3.5 mr-2" />Download ZIP ({bulkRows.length} reels)
+                </Button>
+              )}
+
+              {igPresets.length > 0 && (
+                <div className="border-t border-white/10 pt-3 space-y-2">
+                  <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider flex items-center gap-1">
+                    <Film className="w-3 h-3" /> Push Trial Reels to Instagram
+                  </p>
+                  <Select value={bulkIgPresetId} onValueChange={setBulkIgPresetId}>
+                    <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-7 text-xs">
+                      <SelectValue placeholder="Select client…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {igPresets.map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    onClick={() => handleBulkPushToIG(true)}
+                    disabled={bulkPushing || bulkGenerating || bulkRows.length === 0 || !bulkIgPresetId}
+                    className="w-full bg-pink-700 hover:bg-pink-600 text-white text-xs"
+                  >
+                    {bulkPushing
+                      ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />{bulkPushProgress.label}</>
+                      : <><Film className="w-3.5 h-3.5 mr-2" />Push {bulkRows.length > 0 ? `${bulkRows.length} ` : ""}Trial Reels</>}
+                  </Button>
+                  {bulkPushing && bulkPushProgress.total > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-pink-500 rounded-full transition-all duration-500"
+                          style={{ width: `${(bulkPushProgress.current / bulkPushProgress.total) * 100}%` }} />
+                      </div>
+                      <p className="text-[10px] text-white/30 text-center">{bulkPushProgress.current} / {bulkPushProgress.total}</p>
+                    </div>
+                  )}
+                  <p className="text-[10px] text-white/20 text-center">Posts as private drafts — graduate each in Instagram when ready</p>
+                </div>
+              )}
+
+              <p className="text-[10px] text-white/20 text-center leading-relaxed">
+                Max 30 reels · 10 slides each · Typewriter style
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 flex flex-col items-center overflow-y-auto gap-5 p-6 pt-8 bg-[#08080d]">
