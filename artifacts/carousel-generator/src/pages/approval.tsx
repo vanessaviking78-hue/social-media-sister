@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import {
   Layers, Plus, Trash2, Copy, Check, ExternalLink, Loader2,
   ImagePlus, CalendarDays, BarChart3, PenTool, BookOpen,
-  MessageSquareText, Eye, CheckCircle2, XCircle, Clock, ShieldCheck,
+  MessageSquareText, Eye, CheckCircle2, XCircle, Clock, ShieldCheck, Film, Play,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -124,6 +124,8 @@ export default function Approval() {
             <Link href="/"><Button variant="ghost" size="sm" className="text-muted-foreground"><Layers className="w-4 h-4 mr-2" />Carousel</Button></Link>
             <Link href="/single-image"><Button variant="ghost" size="sm" className="text-muted-foreground"><ImagePlus className="w-4 h-4 mr-2" />Single Image</Button></Link>
             <Link href="/stories"><Button variant="ghost" size="sm" className="text-muted-foreground"><BookOpen className="w-4 h-4 mr-2" />Stories</Button></Link>
+            <Link href="/reels"><Button variant="ghost" size="sm" className="text-muted-foreground"><Film className="w-4 h-4 mr-2" />Reels</Button></Link>
+            <Link href="/video-overlay"><Button variant="ghost" size="sm" className="text-muted-foreground"><Play className="w-4 h-4 mr-2" />Video Overlay</Button></Link>
             <Link href="/presets"><Button variant="ghost" size="sm" className="text-muted-foreground"><PenTool className="w-4 h-4 mr-2" />Presets</Button></Link>
             <Link href="/captions"><Button variant="ghost" size="sm" className="text-muted-foreground"><MessageSquareText className="w-4 h-4 mr-2" />Captions</Button></Link>
             <Link href="/calendar"><Button variant="ghost" size="sm" className="text-muted-foreground"><CalendarDays className="w-4 h-4 mr-2" />Calendar</Button></Link>

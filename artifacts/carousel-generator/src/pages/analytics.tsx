@@ -65,6 +65,8 @@ export default function Analytics() {
             <Link href="/" className="text-muted-foreground hover:text-foreground transition">Carousel</Link>
             <Link href="/single-image" className="text-muted-foreground hover:text-foreground transition">Single Image</Link>
             <Link href="/stories" className="text-muted-foreground hover:text-foreground transition">Stories</Link>
+            <Link href="/reels" className="text-muted-foreground hover:text-foreground transition">Reels</Link>
+            <Link href="/video-overlay" className="text-muted-foreground hover:text-foreground transition">Video Overlay</Link>
             <Link href="/presets" className="text-muted-foreground hover:text-foreground transition">Presets</Link>
             <Link href="/captions" className="text-muted-foreground hover:text-foreground transition">Captions</Link>
             <Link href="/calendar" className="text-muted-foreground hover:text-foreground transition">Calendar</Link>

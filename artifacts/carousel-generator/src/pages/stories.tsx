@@ -4,7 +4,7 @@ import {
   Layers, Loader2, Download, X, Sparkles, Wand2,
   BookOpen, ImagePlus, CalendarDays, BarChart3, ShieldCheck,
   MessageSquareText, PenTool, ChevronLeft, ChevronRight,
-  CloudUpload, FileText, Plus, Palette, Check, Copy,
+  CloudUpload, FileText, Plus, Palette, Check, Copy, Film, Play,
 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
@@ -435,6 +435,8 @@ export default function Stories() {
           <Link href="/"><Button variant="ghost" size="sm" className="text-muted-foreground"><Layers className="w-4 h-4 mr-2" />Carousel</Button></Link>
           <Link href="/single-image"><Button variant="ghost" size="sm" className="text-muted-foreground"><ImagePlus className="w-4 h-4 mr-2" />Single Image</Button></Link>
           <Link href="/stories"><Button variant="ghost" size="sm" className="text-pink-400 bg-pink-500/10"><BookOpen className="w-4 h-4 mr-2" />Stories</Button></Link>
+          <Link href="/reels"><Button variant="ghost" size="sm" className="text-muted-foreground"><Film className="w-4 h-4 mr-2" />Reels</Button></Link>
+          <Link href="/video-overlay"><Button variant="ghost" size="sm" className="text-muted-foreground"><Play className="w-4 h-4 mr-2" />Video Overlay</Button></Link>
           <Link href="/presets"><Button variant="ghost" size="sm" className="text-muted-foreground"><Palette className="w-4 h-4 mr-2" />Presets</Button></Link>
           <Link href="/captions"><Button variant="ghost" size="sm" className="text-muted-foreground"><MessageSquareText className="w-4 h-4 mr-2" />Captions</Button></Link>
           <Link href="/calendar"><Button variant="ghost" size="sm" className="text-muted-foreground"><CalendarDays className="w-4 h-4 mr-2" />Calendar</Button></Link>

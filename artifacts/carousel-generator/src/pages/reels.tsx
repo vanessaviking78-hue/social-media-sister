@@ -583,6 +583,7 @@ export default function Reels() {
           <Link href="/single-image"><Button variant="ghost" size="sm" className="text-muted-foreground"><ImageIcon className="w-4 h-4 mr-2" />Single Image</Button></Link>
           <Link href="/stories"><Button variant="ghost" size="sm" className="text-muted-foreground"><BookOpen className="w-4 h-4 mr-2" />Stories</Button></Link>
           <Button variant="ghost" size="sm" className="text-pink-400 bg-pink-400/10 pointer-events-none"><Film className="w-4 h-4 mr-2" />Reels</Button>
+          <Link href="/video-overlay"><Button variant="ghost" size="sm" className="text-muted-foreground"><Play className="w-4 h-4 mr-2" />Video Overlay</Button></Link>
           <Link href="/presets"><Button variant="ghost" size="sm" className="text-muted-foreground"><Palette className="w-4 h-4 mr-2" />Presets</Button></Link>
           <Link href="/captions"><Button variant="ghost" size="sm" className="text-muted-foreground"><MessageSquareText className="w-4 h-4 mr-2" />Captions</Button></Link>
           <Link href="/calendar"><Button variant="ghost" size="sm" className="text-muted-foreground"><CalendarDays className="w-4 h-4 mr-2" />Calendar</Button></Link>

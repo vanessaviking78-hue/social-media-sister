@@ -856,6 +856,18 @@ export default function SingleImage() {
               Stories
             </Button>
           </Link>
+          <Link href="/reels">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <Film className="w-4 h-4 mr-2" />
+              Reels
+            </Button>
+          </Link>
+          <Link href="/video-overlay">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <Play className="w-4 h-4 mr-2" />
+              Video Overlay
+            </Button>
+          </Link>
           <Link href="/presets">
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <Palette className="w-4 h-4 mr-2" />

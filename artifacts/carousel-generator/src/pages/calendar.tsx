@@ -244,6 +244,8 @@ export default function Calendar() {
             <Link href="/" className="text-muted-foreground hover:text-white transition">Carousel</Link>
             <Link href="/single-image" className="text-muted-foreground hover:text-white transition">Single Image</Link>
             <Link href="/stories" className="text-muted-foreground hover:text-white transition">Stories</Link>
+            <Link href="/reels" className="text-muted-foreground hover:text-white transition">Reels</Link>
+            <Link href="/video-overlay" className="text-muted-foreground hover:text-white transition">Video Overlay</Link>
             <Link href="/presets" className="text-muted-foreground hover:text-white transition">Presets</Link>
             <Link href="/captions" className="flex items-center gap-1 text-muted-foreground hover:text-white transition">
               <MessageSquareText className="w-4 h-4" />Captions
