@@ -14,6 +14,7 @@ import Analytics from "@/pages/analytics";
 import Approval from "@/pages/approval";
 import ApprovePublic from "@/pages/approve-public";
 import Reels from "@/pages/reels";
+import VideoOverlay from "@/pages/video-overlay";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ function ProtectedRouter() {
       <Route path="/analytics" component={Analytics} />
       <Route path="/approval" component={Approval} />
       <Route path="/reels" component={Reels} />
+      <Route path="/video-overlay" component={VideoOverlay} />
       <Route component={NotFound} />
     </Switch>
   );

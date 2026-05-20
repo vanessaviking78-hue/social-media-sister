@@ -1049,6 +1049,148 @@ export async function recordSlideVideo(
   });
 }
 
+export function drawTypewriterOnVideo(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  segmentProgress: number,
+  textColor: string,
+  fontFamily: string,
+  fontSize: number,
+  lineSpacing: number,
+  overlayPosition: "top" | "center" | "bottom",
+  typewriterFill: number,
+  W: number = VIDEO_WIDTH,
+  H: number = VIDEO_HEIGHT,
+): void {
+  if (!text.trim()) return;
+
+  const typeProgress = typewriterFill >= 1 ? 1 : Math.min(1, segmentProgress / typewriterFill);
+  const charsToShow = segmentProgress >= 1 ? text.length : Math.floor(typeProgress * text.length);
+  const isTyping = charsToShow < text.length;
+  const visibleText = text.slice(0, charsToShow) + (isTyping ? "▍" : "");
+
+  ctx.save();
+  ctx.font = `700 ${fontSize}px ${fontFamily}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+
+  const maxWidth = W * 0.82;
+  const words = visibleText.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let cur = "";
+  for (const word of words) {
+    const test = cur ? cur + " " + word : word;
+    if (ctx.measureText(test).width > maxWidth && cur) {
+      lines.push(cur);
+      cur = word;
+    } else {
+      cur = test;
+    }
+  }
+  if (cur) lines.push(cur);
+
+  const lineH = Math.round(fontSize * lineSpacing);
+  const totalTextH = lines.length * lineH;
+  const pad = Math.round(H * 0.04);
+
+  let baseY: number;
+  if (overlayPosition === "top") {
+    baseY = pad + fontSize;
+  } else if (overlayPosition === "bottom") {
+    baseY = H - pad - totalTextH + fontSize;
+  } else {
+    baseY = Math.round((H - totalTextH) / 2) + fontSize;
+  }
+
+  const backdropPad = pad * 0.75;
+  const backdropY = baseY - fontSize - backdropPad;
+  const backdropH = totalTextH + backdropPad * 2;
+  const grad = ctx.createLinearGradient(0, backdropY, 0, backdropY + backdropH);
+  grad.addColorStop(0, "rgba(0,0,0,0)");
+  grad.addColorStop(0.25, "rgba(0,0,0,0.65)");
+  grad.addColorStop(0.75, "rgba(0,0,0,0.65)");
+  grad.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, backdropY, W, backdropH);
+
+  ctx.fillStyle = textColor;
+  for (let i = 0; i < lines.length; i++) {
+    ctx.fillText(lines[i], W / 2, baseY + i * lineH);
+  }
+  ctx.restore();
+}
+
+export async function recordVideoWithOverlay(
+  sourceVideo: HTMLVideoElement,
+  canvas: HTMLCanvasElement,
+  segmentCount: number,
+  animateFn: (segmentIndex: number, segmentProgress: number) => void,
+): Promise<Blob> {
+  const W = canvas.width;
+  const H = canvas.height;
+  const ctx = canvas.getContext("2d")!;
+
+  const canvasStream = canvas.captureStream(30);
+
+  try {
+    const srcStream: MediaStream = (sourceVideo as unknown as { captureStream: () => MediaStream }).captureStream();
+    const audioTrack = srcStream.getAudioTracks()[0];
+    if (audioTrack) canvasStream.addTrack(audioTrack.clone());
+  } catch {
+    // proceed without audio if capture not supported
+  }
+
+  const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
+    ? "video/webm;codecs=vp9,opus"
+    : MediaRecorder.isTypeSupported("video/webm;codecs=vp9")
+      ? "video/webm;codecs=vp9"
+      : "video/webm";
+
+  const recorder = new MediaRecorder(canvasStream, { mimeType });
+  const chunks: BlobPart[] = [];
+  recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+
+  return new Promise((resolve, reject) => {
+    recorder.onstop = () => resolve(new Blob(chunks, { type: "video/webm" }));
+    recorder.onerror = (e) => reject(e);
+    recorder.start(100);
+    sourceVideo.currentTime = 0;
+
+    const segDurationS = sourceVideo.duration / segmentCount;
+
+    const drawFrame = () => {
+      if (sourceVideo.ended || sourceVideo.paused) return;
+
+      const elapsed = sourceVideo.currentTime;
+      const segIdx = Math.min(segmentCount - 1, Math.floor(elapsed / segDurationS));
+      const segProgress = (elapsed - segIdx * segDurationS) / segDurationS;
+
+      const vw = sourceVideo.videoWidth;
+      const vh = sourceVideo.videoHeight;
+      const scale = Math.max(W / vw, H / vh);
+      const dw = vw * scale;
+      const dh = vh * scale;
+      const dx = (W - dw) / 2;
+      const dy = (H - dh) / 2;
+
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, W, H);
+      ctx.drawImage(sourceVideo, dx, dy, dw, dh);
+      animateFn(segIdx, segProgress);
+
+      requestAnimationFrame(drawFrame);
+    };
+
+    sourceVideo.onended = () => {
+      setTimeout(() => {
+        if (recorder.state !== "inactive") recorder.stop();
+      }, 200);
+    };
+
+    sourceVideo.play().then(() => requestAnimationFrame(drawFrame)).catch(reject);
+  });
+}
+
 export async function compressImage(file: File, maxPx = 1080, quality = 0.72): Promise<File> {
   return new Promise((resolve) => {
     const img = new Image();

@@ -9,6 +9,7 @@ import calendarRouter from "./calendar";
 import analyticsRouter from "./analytics";
 import approvalRouter from "./approval";
 import metaRouter from "./meta";
+import videoOverlayRouter from "./video-overlay";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(calendarRouter);
 router.use(analyticsRouter);
 router.use(approvalRouter);
 router.use(metaRouter);
+router.use(videoOverlayRouter);
 
 export default router;

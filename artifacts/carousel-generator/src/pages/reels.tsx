@@ -71,7 +71,7 @@ export default function Reels() {
   const [exportProgress, setExportProgress] = useState("");
 
   const [musicQuery, setMusicQuery] = useState("");
-  const [musicGenre, setMusicGenre] = useState("");
+  const [musicGenre, setMusicGenre] = useState("all");
   const [musicTracks, setMusicTracks] = useState<Array<{ id: number; title: string; duration: number; artist: string; previewUrl: string }>>([]);
   const [musicLoading, setMusicLoading] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState<{ id: number; title: string; artist: string; previewUrl: string } | null>(null);
@@ -262,7 +262,7 @@ export default function Reels() {
     try {
       const params = new URLSearchParams();
       if (musicQuery.trim()) params.set("q", musicQuery.trim());
-      if (musicGenre) params.set("genre", musicGenre);
+      if (musicGenre && musicGenre !== "all") params.set("genre", musicGenre);
       const res = await fetch(`${import.meta.env.BASE_URL}api/music/search?${params}`);
       const data = await res.json();
       if (data.error) { toast.error(data.error); return; }
@@ -549,7 +549,7 @@ export default function Reels() {
                     <SelectValue placeholder="All genres" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All genres</SelectItem>
+                    <SelectItem value="all">All genres</SelectItem>
                     <SelectItem value="pop">Pop</SelectItem>
                     <SelectItem value="hip-hop">Hip-Hop</SelectItem>
                     <SelectItem value="electronic">Electronic</SelectItem>
