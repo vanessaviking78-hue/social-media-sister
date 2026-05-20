@@ -26,6 +26,7 @@ type ReelSlide = {
   text: string;
   imageFile: File | null;
   imageElement: HTMLImageElement | null;
+  imageOffsetY: number;
 };
 
 const PREVIEW_SCALE = 0.25;
@@ -34,7 +35,7 @@ const PREVIEW_H = Math.round(VIDEO_HEIGHT * PREVIEW_SCALE);
 
 export default function Reels() {
   const [slides, setSlides] = useState<ReelSlide[]>([
-    { id: crypto.randomUUID(), mode: "cover", text: "", imageFile: null, imageElement: null },
+    { id: crypto.randomUUID(), mode: "cover", text: "", imageFile: null, imageElement: null, imageOffsetY: 0 },
   ]);
   const [activeIdx, setActiveIdx] = useState(0);
 
@@ -130,6 +131,8 @@ export default function Reels() {
         coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
         coverEyebrowWeight, coverEyebrowLetterSpacing,
         coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+        undefined, undefined,
+        { imageOffsetY: slide.imageOffsetY, canvasW: VIDEO_WIDTH, canvasH: VIDEO_HEIGHT }
       );
     }
   }
@@ -192,7 +195,7 @@ export default function Reels() {
 
   const addSlide = () => {
     if (slides.length >= 10) return;
-    const newSlide = { id: crypto.randomUUID(), mode: "typewriter" as const, text: "", imageFile: null, imageElement: null };
+    const newSlide = { id: crypto.randomUUID(), mode: "typewriter" as const, text: "", imageFile: null, imageElement: null, imageOffsetY: 0 };
     setSlides((prev) => [...prev, newSlide]);
     setActiveIdx(slides.length);
   };
@@ -205,6 +208,10 @@ export default function Reels() {
 
   const updateText = (idx: number, text: string) => {
     setSlides((prev) => prev.map((s, i) => (i === idx ? { ...s, text } : s)));
+  };
+
+  const updateImageOffset = (idx: number, offsetY: number) => {
+    setSlides((prev) => prev.map((s, i) => (i === idx ? { ...s, imageOffsetY: offsetY } : s)));
   };
 
   const handleSlideImage = (idx: number, file: File) => {
@@ -532,20 +539,39 @@ export default function Reels() {
                 className="w-full bg-transparent text-sm text-white placeholder:text-white/30 resize-none outline-none border border-white/10 rounded p-2 focus:border-pink-500/50"
               />
               {slide.mode === "cover" ? (
-                <label className="flex items-center gap-2 cursor-pointer text-xs text-white/40 hover:text-white/60 transition-colors">
-                  <Upload className="w-3 h-3" />
-                  {slide.imageFile
-                    ? slide.imageFile.name.length > 18
-                      ? slide.imageFile.name.slice(0, 18) + "…"
-                      : slide.imageFile.name
-                    : "Upload background image"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSlideImage(idx, f); }}
-                  />
-                </label>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-white/40 hover:text-white/60 transition-colors">
+                    <Upload className="w-3 h-3" />
+                    {slide.imageFile
+                      ? slide.imageFile.name.length > 18
+                        ? slide.imageFile.name.slice(0, 18) + "…"
+                        : slide.imageFile.name
+                      : "Upload background image"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSlideImage(idx, f); }}
+                    />
+                  </label>
+                  {slide.imageElement && (
+                    <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex justify-between text-[9px] text-white/25">
+                        <span>▲ Top</span>
+                        <span className="text-white/40">Image position</span>
+                        <span>Bottom ▼</span>
+                      </div>
+                      <Slider
+                        min={0}
+                        max={100}
+                        step={1}
+                        value={[Math.round((slide.imageOffsetY + 1) * 50)]}
+                        onValueChange={([v]) => updateImageOffset(idx, parseFloat(((v / 50) - 1).toFixed(3)))}
+                        className="w-full"
+                      />
+                    </div>
+                  )}
+                </div>
               ) : (
                 <p className="text-[10px] text-white/20 italic">Typewriter reveal on playback</p>
               )}

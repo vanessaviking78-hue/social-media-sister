@@ -221,10 +221,13 @@ export function drawSlide(
   coverHeadlineWeight: number = 700,
   coverEyebrowArch: number = 0,
   animationType?: AnimationType,
-  animationProgress?: number
+  animationProgress?: number,
+  opts?: { imageOffsetX?: number; imageOffsetY?: number; canvasW?: number; canvasH?: number }
 ) {
-  const W = CANVAS_WIDTH;
-  const H = CANVAS_HEIGHT;
+  const W = opts?.canvasW ?? CANVAS_WIDTH;
+  const H = opts?.canvasH ?? CANVAS_HEIGHT;
+  const imageOffsetX = opts?.imageOffsetX ?? 0;
+  const imageOffsetY = opts?.imageOffsetY ?? 0;
 
   const p = animationProgress !== undefined ? Math.min(1, Math.max(0, animationProgress)) : 1;
   const ep = easeOutQuad(p);
@@ -243,8 +246,10 @@ export function drawSlide(
 
   if (img) {
     const scale = Math.max(W / img.width, H / img.height);
-    const x = (W - img.width * scale) / 2;
-    const y = (H - img.height * scale) / 2;
+    const overflowX = Math.max(0, img.width * scale - W);
+    const overflowY = Math.max(0, img.height * scale - H);
+    const x = -overflowX * (imageOffsetX + 1) / 2;
+    const y = -overflowY * (imageOffsetY + 1) / 2;
 
     if (animationType === 'ken-burns' && animationProgress !== undefined) {
       const zoom = 1.0 + 0.12 * ep;
