@@ -901,16 +901,28 @@ export default function Reels() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button
-                    size="sm"
-                    onClick={() => handleBulkPushToIG(true)}
-                    disabled={bulkPushing || bulkGenerating || bulkRows.length === 0 || !bulkIgPresetId}
-                    className="w-full bg-pink-700 hover:bg-pink-600 text-white text-xs"
-                  >
-                    {bulkPushing
-                      ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />{bulkPushProgress.label}</>
-                      : <><Film className="w-3.5 h-3.5 mr-2" />Push {bulkRows.length > 0 ? `${bulkRows.length} ` : ""}Trial Reels</>}
-                  </Button>
+                  <div className="flex gap-1.5">
+                    <Button
+                      size="sm"
+                      onClick={() => handleBulkPushToIG(true)}
+                      disabled={bulkPushing || bulkGenerating || bulkRows.length === 0 || !bulkIgPresetId}
+                      className="flex-1 bg-pink-700 hover:bg-pink-600 text-white text-xs"
+                    >
+                      {bulkPushing
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <><Film className="w-3 h-3 mr-1" />Trial</>}
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => handleBulkPushToIG(false)}
+                      disabled={bulkPushing || bulkGenerating || bulkRows.length === 0 || !bulkIgPresetId}
+                      className="flex-1 border border-pink-700/60 text-pink-300 bg-transparent hover:bg-pink-700/20 text-xs"
+                    >
+                      {bulkPushing
+                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        : <><Film className="w-3 h-3 mr-1" />Post</>}
+                    </Button>
+                  </div>
                   {bulkPushing && bulkPushProgress.total > 0 && (
                     <div className="space-y-1.5">
                       <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
