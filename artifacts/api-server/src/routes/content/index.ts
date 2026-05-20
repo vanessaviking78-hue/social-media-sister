@@ -718,6 +718,48 @@ router.post("/content/upload-image", async (req, res) => {
   }
 });
 
+router.post("/content/upload-video", videoUpload.single("video"), async (req, res) => {
+  try {
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    if (!bucketId) return res.status(500).json({ error: "Object storage not configured" });
+    if (!req.file) return res.status(400).json({ error: "No video file provided" });
+
+    const timestamp = Date.now();
+    const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const objectPath = `reel-videos/${timestamp}-${safeName}`;
+    const bucket = objectStorageClient.bucket(bucketId);
+    const file = bucket.file(objectPath);
+    await file.save(req.file.buffer, {
+      contentType: req.file.mimetype || "video/mp4",
+      metadata: { cacheControl: "public, max-age=31536000" },
+    });
+    const proto = (req.headers["x-forwarded-proto"] as string) || "https";
+    const host = (req.headers["x-forwarded-host"] as string) || req.headers.host || "localhost";
+    const url = `${proto}://${host}/api/content/videos/${objectPath}`;
+    res.json({ url });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Video upload failed" });
+  }
+});
+
+router.get("/content/videos/reel-videos/:filename", async (req, res) => {
+  try {
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    if (!bucketId) return res.status(500).json({ error: "Object storage not configured" });
+    const objectPath = `reel-videos/${req.params.filename}`;
+    const bucket = objectStorageClient.bucket(bucketId);
+    const file = bucket.file(objectPath);
+    const [exists] = await file.exists();
+    if (!exists) return res.status(404).json({ error: "Not found" });
+    const [buffer] = await file.download();
+    res.setHeader("Content-Type", "video/mp4");
+    res.setHeader("Cache-Control", "public, max-age=31536000");
+    res.send(buffer);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to serve video" });
+  }
+});
+
 router.get("/content/images/carousel-images/:filename", async (req, res) => {
   try {
     const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
