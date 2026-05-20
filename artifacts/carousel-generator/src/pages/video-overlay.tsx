@@ -20,6 +20,8 @@ import {
   Square,
   Download,
   ArrowLeft,
+  Send,
+  Film,
 } from "lucide-react";
 import {
   VIDEO_WIDTH,
@@ -55,12 +57,25 @@ export default function VideoOverlay() {
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState("");
 
+  const [igPresets, setIgPresets] = useState<Array<{ id: number; name: string }>>([]);
+  const [igPresetId, setIgPresetId] = useState("");
+  const [igCaption, setIgCaption] = useState("");
+  const [igPushing, setIgPushing] = useState(false);
+  const [igPushProgress, setIgPushProgress] = useState("");
+
   const [textColor, setTextColor] = useState("#ffffff");
   const [fontFamily, setFontFamily] = useState("'Playfair Display', serif");
   const [fontSize, setFontSize] = useState(72);
   const [lineSpacing, setLineSpacing] = useState(1.3);
   const [overlayPosition, setOverlayPosition] = useState<"top" | "center" | "bottom">("center");
   const [typewriterFill, setTypewriterFill] = useState(0.7);
+
+  useEffect(() => {
+    fetch(`${import.meta.env.BASE_URL}api/presets`)
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d)) setIgPresets(d.map((p: { id: number; name: string }) => ({ id: p.id, name: p.name }))); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!videoFile || !videoRef.current) return;
@@ -236,6 +251,70 @@ export default function VideoOverlay() {
     }
   };
 
+  const handlePushToIG = async (trial: boolean) => {
+    if (!igPresetId) { toast.error("Select a client preset first"); return; }
+    if (!videoFile || !videoRef.current) { toast.error("Upload a video first"); return; }
+    const video = videoRef.current;
+    if (!video.duration) { toast.error("Video not loaded yet"); return; }
+
+    stopPlayback();
+    setIgPushing(true);
+    setIgPushProgress("Recording overlay…");
+
+    try {
+      const canvas = exportCanvasRef.current!;
+      canvas.width = VIDEO_WIDTH;
+      canvas.height = VIDEO_HEIGHT;
+      const ctx = canvas.getContext("2d")!;
+
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      const scale = Math.max(VIDEO_WIDTH / vw, VIDEO_HEIGHT / vh);
+      const dw = vw * scale;
+      const dh = vh * scale;
+      const dx = (VIDEO_WIDTH - dw) / 2;
+      const dy = (VIDEO_HEIGHT - dh) / 2;
+
+      const animateFn = (segIdx: number, segProgress: number) => {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
+        ctx.drawImage(video, dx, dy, dw, dh);
+        const text = segments[segIdx] || "";
+        if (text.trim()) {
+          drawTypewriterOnVideo(ctx, text, segProgress, textColor, fontFamily, fontSize, lineSpacing, overlayPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
+        }
+      };
+
+      const blob = await recordVideoWithOverlay(video, canvas, segmentCount, animateFn);
+
+      setIgPushProgress("Uploading video…");
+      const form = new FormData();
+      const ext = blob.type.includes("mp4") ? "mp4" : "webm";
+      form.append("video", blob, `video-overlay-${Date.now()}.${ext}`);
+      const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, { method: "POST", body: form });
+      if (!uploadRes.ok) throw new Error("Video upload failed");
+      const { url } = await uploadRes.json();
+
+      setIgPushProgress(trial ? "Posting Trial Reel… (up to 2 min)" : "Posting Reel…");
+      const pushRes = await fetch(`${import.meta.env.BASE_URL}api/meta/push-reel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videoUrl: url, caption: igCaption, presetId: Number(igPresetId), trial, graduationStrategy: "MANUAL" }),
+      });
+      const pushData = await pushRes.json();
+      if (!pushRes.ok) throw new Error(pushData.error || "Push failed");
+      toast.success(trial
+        ? "Trial Reel posted! Open your Instagram app to review before graduating."
+        : "Reel posted to Instagram!");
+      setIgCaption("");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Push failed");
+    } finally {
+      setIgPushing(false);
+      setIgPushProgress("");
+    }
+  };
+
   const handleGenerate = async () => {
     if (!topic.trim()) {
       toast.error("Enter a topic first");
@@ -382,7 +461,7 @@ export default function VideoOverlay() {
             <Button
               size="sm"
               onClick={handleExport}
-              disabled={exporting || !videoFile}
+              disabled={exporting || igPushing || !videoFile}
               className="w-full bg-purple-600 hover:bg-purple-500 text-white h-8 text-xs"
             >
               {exporting ? (
@@ -395,6 +474,54 @@ export default function VideoOverlay() {
               Exports as WebM · plays in real time during recording
             </p>
           </div>
+
+          {/* Instagram posting */}
+          {igPresets.length > 0 && (
+            <div className="border-t border-white/10 pt-4 space-y-2.5">
+              <div className="flex items-center gap-1.5 text-[10px] font-semibold text-white/40 uppercase tracking-widest">
+                <Film className="w-3.5 h-3.5" /> Post to Instagram
+              </div>
+              <Select value={igPresetId} onValueChange={setIgPresetId}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-7 text-xs">
+                  <SelectValue placeholder="Select client…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {igPresets.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <textarea
+                value={igCaption}
+                onChange={(e) => setIgCaption(e.target.value)}
+                placeholder="Caption (optional)…"
+                rows={2}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-white/25 outline-none focus:border-pink-500/50 resize-none"
+              />
+              <div className="flex gap-1.5">
+                <Button
+                  size="sm"
+                  onClick={() => handlePushToIG(false)}
+                  disabled={igPushing || exporting || !videoFile || !igPresetId}
+                  className="flex-1 bg-pink-700 hover:bg-pink-600 text-white h-8 text-xs"
+                >
+                  {igPushing
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <><Send className="w-3 h-3 mr-1.5" />Post Reel</>}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => handlePushToIG(true)}
+                  disabled={igPushing || exporting || !videoFile || !igPresetId}
+                  className="flex-1 border border-pink-700/60 text-pink-300 bg-transparent hover:bg-pink-700/20 h-8 text-xs"
+                >
+                  {igPushing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Trial Reel"}
+                </Button>
+              </div>
+              {igPushing && <p className="text-[10px] text-white/40 text-center">{igPushProgress}</p>}
+              <p className="text-[10px] text-white/20 text-center">Trial = private test · graduate when ready</p>
+            </div>
+          )}
         </div>
 
         {/* ── CENTER: preview ── */}

@@ -84,6 +84,12 @@ export default function Reels() {
   const [ccPushing, setCcPushing] = useState(false);
   const [ccPushProgress, setCcPushProgress] = useState("");
 
+  const [igPresets, setIgPresets] = useState<Array<{ id: number; name: string }>>([]);
+  const [igPresetId, setIgPresetId] = useState("");
+  const [igCaption, setIgCaption] = useState("");
+  const [igPushing, setIgPushing] = useState(false);
+  const [igPushProgress, setIgPushProgress] = useState("");
+
   const [typewriterBgColor, setTypewriterBgColor] = useState("#0d0d0d");
   const [typewriterFill, setTypewriterFill] = useState(0.7);
 
@@ -170,6 +176,13 @@ export default function Reels() {
     fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/workspaces`)
       .then((r) => r.json())
       .then((d) => { if (Array.isArray(d.workspaces)) setCcWorkspaces(d.workspaces); })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch(`${import.meta.env.BASE_URL}api/presets`)
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d)) setIgPresets(d.map((p: { id: number; name: string }) => ({ id: p.id, name: p.name }))); })
       .catch(() => {});
   }, []);
 
@@ -355,6 +368,88 @@ export default function Reels() {
     } finally {
       setCcPushing(false);
       setCcPushProgress("");
+    }
+  };
+
+  const handlePushToIG = async (trial: boolean) => {
+    if (!igPresetId) { toast.error("Select a client preset first"); return; }
+    const hasContent = slides.some((s) => s.text.trim() || s.imageElement);
+    if (!hasContent) { toast.error("Add some content to your slides first"); return; }
+    setIgPushing(true);
+    setIgPushProgress("Setting up…");
+    try {
+      const canvas = exportCanvasRef.current!;
+      canvas.width = VIDEO_WIDTH;
+      canvas.height = VIDEO_HEIGHT;
+      const ctx = canvas.getContext("2d")!;
+      const animateFn = (slideIndex: number, slideProgress: number = 1) => {
+        const slide = slides[slideIndex];
+        if (slide.mode === "typewriter") {
+          drawTypewriterSlide(ctx, slide.text, slideProgress, typewriterBgColor, textColor, fontFamily, fontSize, lineSpacing, logoImg, logoPosition, logoSize, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
+        } else {
+          drawSlide(
+            ctx, slide.imageElement, slide.text,
+            fontFamily, fontSize, true,
+            textColor, lineSpacing, overlayColor,
+            logoImg, logoPosition, logoSize,
+            pageColor, "none", "#ffffff",
+            1, 1, textPosition, true, fontFamily, textAlign,
+            false, "#ffffff", "", 0, false,
+            false, "'Great Vibes', cursive",
+            coverSplit, coverEyebrowFont, coverEyebrowColor,
+            coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
+            coverEyebrowWeight, coverEyebrowLetterSpacing,
+            coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+          );
+        }
+      };
+      let audioArrayBuffer: ArrayBuffer | undefined;
+      if (selectedTrack?.previewUrl) {
+        setIgPushProgress("Fetching audio…");
+        try {
+          const r = await fetch(selectedTrack.previewUrl);
+          audioArrayBuffer = await r.arrayBuffer();
+        } catch { /* skip audio on error */ }
+      }
+      let videoBlob: Blob;
+      try {
+        setIgPushProgress("Encoding MP4…");
+        videoBlob = await recordReelVideoMp4(
+          canvas, slideDurationSec * 1000, fadeDurationMs, slides.length, animateFn, 30,
+          (pct) => setIgPushProgress(`Encoding ${Math.round(pct * 100)}%…`),
+          audioArrayBuffer,
+        );
+      } catch {
+        setIgPushProgress("Encoding WebM…");
+        videoBlob = await recordReelVideo(
+          canvas, slideDurationSec * 1000, fadeDurationMs, slides.length, animateFn, 30,
+          selectedTrack?.previewUrl,
+        );
+      }
+      setIgPushProgress("Uploading video…");
+      const form = new FormData();
+      const ext = videoBlob.type.includes("mp4") ? "mp4" : "webm";
+      form.append("video", videoBlob, `reel-${Date.now()}.${ext}`);
+      const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, { method: "POST", body: form });
+      if (!uploadRes.ok) throw new Error("Video upload failed");
+      const { url } = await uploadRes.json();
+      setIgPushProgress(trial ? "Posting Trial Reel… (may take up to 2 min)" : "Posting Reel…");
+      const pushRes = await fetch(`${import.meta.env.BASE_URL}api/meta/push-reel`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ videoUrl: url, caption: igCaption, presetId: Number(igPresetId), trial, graduationStrategy: "MANUAL" }),
+      });
+      const pushData = await pushRes.json();
+      if (!pushRes.ok) throw new Error(pushData.error || "Push failed");
+      toast.success(trial
+        ? "Trial Reel posted! Open your Instagram app to review it before graduating."
+        : "Reel posted to Instagram!");
+      setIgCaption("");
+    } catch (e: any) {
+      toast.error(e?.message || "Push failed");
+    } finally {
+      setIgPushing(false);
+      setIgPushProgress("");
     }
   };
 
@@ -645,6 +740,54 @@ export default function Reels() {
                   : <><Send className="w-3.5 h-3.5 mr-2" />Push Reel as MP4</>}
               </Button>
               <p className="text-xs text-white/20 text-center">Encodes MP4 → uploads → posts as video</p>
+            </div>
+          )}
+
+          {/* Instagram Reel posting */}
+          {igPresets.length > 0 && (
+            <div className="w-full max-w-xs space-y-2.5">
+              <div className="flex items-center gap-1.5 text-xs text-white/40 font-semibold uppercase tracking-wider">
+                <Film className="w-3.5 h-3.5" /> Post to Instagram
+              </div>
+              <Select value={igPresetId} onValueChange={setIgPresetId}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-7 text-xs">
+                  <SelectValue placeholder="Select client…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {igPresets.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <textarea
+                value={igCaption}
+                onChange={(e) => setIgCaption(e.target.value)}
+                placeholder="Caption (optional)…"
+                rows={2}
+                className="w-full bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-pink-500/50 resize-none"
+              />
+              <div className="flex gap-1.5">
+                <Button
+                  size="sm"
+                  onClick={() => handlePushToIG(false)}
+                  disabled={igPushing || !igPresetId}
+                  className="flex-1 bg-pink-700 hover:bg-pink-600 text-white h-8 text-xs"
+                >
+                  {igPushing
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <><Film className="w-3 h-3 mr-1.5" />Post Reel</>}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => handlePushToIG(true)}
+                  disabled={igPushing || !igPresetId}
+                  className="flex-1 border border-pink-700/60 text-pink-300 bg-transparent hover:bg-pink-700/20 h-8 text-xs"
+                >
+                  {igPushing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Trial Reel"}
+                </Button>
+              </div>
+              {igPushing && <p className="text-[10px] text-white/40 text-center">{igPushProgress}</p>}
+              <p className="text-[10px] text-white/20 text-center">Trial = private test · you graduate it when ready</p>
             </div>
           )}
 

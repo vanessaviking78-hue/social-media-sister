@@ -209,4 +209,94 @@ router.post("/meta/push", async (req: Request, res: Response) => {
   }
 });
 
+router.post("/meta/push-reel", async (req: Request, res: Response) => {
+  try {
+    const { videoUrl, caption, presetId, trial, graduationStrategy } = req.body as {
+      videoUrl: string;
+      caption?: string;
+      presetId: number;
+      trial?: boolean;
+      graduationStrategy?: "MANUAL" | "SS_PERFORMANCE";
+    };
+
+    if (!videoUrl) { res.status(400).json({ error: "videoUrl required" }); return; }
+    if (!presetId) { res.status(400).json({ error: "presetId required" }); return; }
+
+    const [preset] = await db.select().from(clientPresetsTable).where(eq(clientPresetsTable.id, presetId));
+    if (!preset) { res.status(404).json({ error: "Preset not found" }); return; }
+
+    const token = preset.metaPageAccessToken;
+    const igId = preset.metaInstagramAccountId;
+
+    if (!token) {
+      res.status(400).json({ error: "No Meta access token configured for this client. Add it in Client Presets." });
+      return;
+    }
+    if (!igId) {
+      res.status(400).json({ error: "No Instagram Account ID configured for this client. Add it in Client Presets." });
+      return;
+    }
+
+    // Step 1: create Reel container
+    const containerBody: Record<string, unknown> = {
+      media_type: "REELS",
+      video_url: videoUrl,
+      caption: caption || "",
+      access_token: token,
+    };
+    if (trial) {
+      containerBody.trial_params = JSON.stringify({
+        graduation_strategy: graduationStrategy || "MANUAL",
+      });
+    }
+
+    const containerRes = await fetch(`${GRAPH}/${igId}/media`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(containerBody),
+    });
+    const containerData = await containerRes.json() as { id?: string; error?: { message?: string } };
+    if (!containerRes.ok || !containerData.id) {
+      throw new Error(`Reel container creation failed: ${containerData?.error?.message || JSON.stringify(containerData)}`);
+    }
+    const containerId = containerData.id;
+
+    // Step 2: poll until FINISHED (up to ~2 min)
+    let statusCode = "IN_PROGRESS";
+    for (let i = 0; i < 24; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      const statusRes = await fetch(
+        `${GRAPH}/${containerId}?fields=status_code,status&access_token=${token}`,
+      );
+      const statusData = await statusRes.json() as { status_code?: string; status?: string };
+      statusCode = statusData.status_code || "UNKNOWN";
+      if (statusCode === "FINISHED") break;
+      if (statusCode === "ERROR" || statusCode === "EXPIRED") {
+        throw new Error(`Reel container failed with status: ${statusCode} — ${statusData.status || ""}`);
+      }
+    }
+
+    if (statusCode !== "FINISHED") {
+      throw new Error("Reel container timed out. Try again or check the video format.");
+    }
+
+    // Step 3: publish
+    const publishRes = await fetch(`${GRAPH}/${igId}/media_publish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ creation_id: containerId, access_token: token }),
+    });
+    const publishData = await publishRes.json() as { id?: string; error?: { message?: string } };
+    if (!publishRes.ok || !publishData.id) {
+      throw new Error(`Reel publish failed: ${publishData?.error?.message || JSON.stringify(publishData)}`);
+    }
+
+    logActivity({ action: "pushed", postType: "reel", postCount: 1 });
+    res.json({ id: publishData.id, trial: trial || false });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Reel push failed";
+    res.status(500).json({ error: msg });
+  }
+});
+
 export default router;
