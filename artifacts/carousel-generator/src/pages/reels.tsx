@@ -864,20 +864,33 @@ export default function Reels() {
               />
               {(slide.mode === "cover" || slide.mode === "image-typewriter") ? (
                 <div className="space-y-2">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-white/40 hover:text-white/60 transition-colors">
-                    <Upload className="w-3 h-3" />
+                  <label className={`flex items-center gap-2 cursor-pointer transition-colors rounded-md px-2 py-1.5 text-xs ${
+                    slide.imageFile
+                      ? "text-white/50 hover:text-white/70"
+                      : "border border-dashed border-white/20 hover:border-pink-500/60 text-white/40 hover:text-white/70 justify-center"
+                  }`}>
+                    <Upload className="w-3.5 h-3.5 shrink-0" />
                     {slide.imageFile
-                      ? slide.imageFile.name.length > 18
-                        ? slide.imageFile.name.slice(0, 18) + "…"
+                      ? slide.imageFile.name.length > 22
+                        ? slide.imageFile.name.slice(0, 22) + "…"
                         : slide.imageFile.name
-                      : "Upload background image"}
+                      : slide.mode === "image-typewriter"
+                        ? "Upload photo (required)"
+                        : "Upload background image"}
                     <input
                       type="file"
                       accept="image/*"
                       className="hidden"
+                      onClick={(e) => e.stopPropagation()}
                       onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSlideImage(idx, f); }}
                     />
                   </label>
+                  {slide.mode === "image-typewriter" && !slide.imageElement && (
+                    <p className="text-[10px] text-amber-400/70 italic text-center">Upload a photo, add text, then press ▶ Preview</p>
+                  )}
+                  {slide.mode === "image-typewriter" && slide.imageElement && (
+                    <p className="text-[10px] text-green-400/60 italic text-center">Press ▶ Preview to see text type over photo</p>
+                  )}
                   {slide.imageElement && (
                     <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-between text-[9px] text-white/25">
@@ -897,7 +910,7 @@ export default function Reels() {
                   )}
                 </div>
               ) : (
-                <p className="text-[10px] text-white/20 italic">Typewriter reveal on playback</p>
+                <p className="text-[10px] text-white/30 italic">Press ▶ Preview to see typewriter animation</p>
               )}
             </div>
           ))}
