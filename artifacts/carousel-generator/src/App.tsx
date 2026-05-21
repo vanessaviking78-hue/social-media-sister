@@ -56,9 +56,9 @@ function AppContent() {
   }
 
   return (
-    <AuthGate>
+    <>
       <ProtectedRouter />
-    </AuthGate>
+    </>
   );
 }
 
