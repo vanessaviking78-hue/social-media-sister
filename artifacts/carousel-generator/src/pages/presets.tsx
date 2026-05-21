@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw } from "lucide-react";
+import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw, Facebook, Instagram, Unlink, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -130,6 +130,186 @@ function TestMetaConnection({ presetId }: { presetId: number }) {
   );
 }
 
+interface MetaConnectSectionProps {
+  editingId: number | null;
+  editData: Partial<ClientPreset>;
+  setEditData: React.Dispatch<React.SetStateAction<Partial<ClientPreset>>>;
+  onConnected: () => void;
+}
+
+function MetaConnectSection({ editingId, editData, setEditData, onConnected }: MetaConnectSectionProps) {
+  const [showManual, setShowManual] = useState(false);
+  const isConnected = !!(editData.metaFacebookPageId || editData.metaPageAccessToken);
+
+  const openOAuth = () => {
+    if (!editingId) return;
+    const popup = window.open(
+      `${BASE}api/meta/auth/start?presetId=${editingId}`,
+      "meta-oauth",
+      "width=520,height=680,scrollbars=yes,resizable=yes"
+    );
+
+    const handler = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.type !== "meta-oauth-result") return;
+      window.removeEventListener("message", handler);
+      popup?.close();
+      if (e.data.success) {
+        void onConnected();
+        toast.success(`Connected: ${e.data.pageName || "Facebook Page"}${e.data.hasInstagram ? " + Instagram" : ""}`);
+      } else {
+        toast.error(`Connection failed: ${e.data.error || "Unknown error"}`);
+      }
+    };
+
+    window.addEventListener("message", handler);
+
+    const poll = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(poll);
+        window.removeEventListener("message", handler);
+      }
+    }, 500);
+  };
+
+  const disconnect = () => {
+    setEditData((d) => ({
+      ...d,
+      metaPageAccessToken: null,
+      metaFacebookPageId: null,
+      metaInstagramAccountId: null,
+    }));
+  };
+
+  return (
+    <div className="border border-purple-500/20 rounded-xl p-4 bg-purple-950/10 space-y-3">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-semibold text-purple-300">Direct Instagram &amp; Facebook Posting</Label>
+        {isConnected ? (
+          <span className="text-xs bg-green-900/40 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3" /> Connected
+          </span>
+        ) : (
+          <span className="text-xs bg-gray-800 text-gray-500 border border-gray-700 px-2 py-0.5 rounded-full">
+            Not connected
+          </span>
+        )}
+      </div>
+
+      {isConnected ? (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-xs text-gray-300 bg-gray-800/60 rounded-lg px-3 py-2">
+            <Facebook className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            <span className="truncate">Page ID: <span className="text-white font-mono">{editData.metaFacebookPageId}</span></span>
+            {editData.metaInstagramAccountId && (
+              <>
+                <span className="text-gray-600">·</span>
+                <Instagram className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                <span className="truncate text-purple-300">IG linked</span>
+              </>
+            )}
+          </div>
+          <div className="flex gap-2">
+            {editingId && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={openOAuth}
+                className="flex-1 text-xs border-blue-500/40 text-blue-300 hover:bg-blue-950/40 hover:text-blue-200"
+              >
+                <Facebook className="w-3.5 h-3.5 mr-1.5" />
+                Reconnect
+              </Button>
+            )}
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={disconnect}
+              className="text-xs text-red-400 hover:text-red-300 hover:bg-red-950/30"
+            >
+              <Unlink className="w-3.5 h-3.5 mr-1" />
+              Disconnect
+            </Button>
+          </div>
+          {editingId && editData.metaPageAccessToken && editData.metaPageAccessToken !== "••••••••" && (
+            <TestMetaConnection presetId={editingId} />
+          )}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-xs text-gray-400">
+            Click below to connect this client's Facebook Page and Instagram account with one click.
+          </p>
+          {editingId ? (
+            <Button
+              type="button"
+              onClick={openOAuth}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm h-10"
+            >
+              <Facebook className="w-4 h-4 mr-2" />
+              Connect Facebook Page
+            </Button>
+          ) : (
+            <p className="text-xs text-amber-400 bg-amber-900/20 border border-amber-500/20 rounded-lg px-3 py-2">
+              Save this preset first, then reopen it to connect Facebook.
+            </p>
+          )}
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => setShowManual((v) => !v)}
+        className="text-xs text-gray-500 hover:text-gray-400 flex items-center gap-1 transition-colors"
+      >
+        {showManual ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        {showManual ? "Hide" : "Enter credentials manually instead"}
+      </button>
+
+      {showManual && (
+        <div className="space-y-2 pt-1 border-t border-gray-800">
+          <div>
+            <Label className="text-xs text-gray-400">Page Access Token</Label>
+            <Input
+              type="password"
+              placeholder="Long-lived Page Access Token"
+              value={editData.metaPageAccessToken || ""}
+              onChange={(e) => setEditData((d) => ({ ...d, metaPageAccessToken: e.target.value || null }))}
+              className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
+              autoComplete="off"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs text-gray-400">Facebook Page ID</Label>
+              <Input
+                placeholder="e.g. 123456789"
+                value={editData.metaFacebookPageId || ""}
+                onChange={(e) => setEditData((d) => ({ ...d, metaFacebookPageId: e.target.value || null }))}
+                className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
+              />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-400">Instagram Account ID</Label>
+              <Input
+                placeholder="e.g. 987654321"
+                value={editData.metaInstagramAccountId || ""}
+                onChange={(e) => setEditData((d) => ({ ...d, metaInstagramAccountId: e.target.value || null }))}
+                className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
+              />
+            </div>
+          </div>
+          {editingId && editData.metaPageAccessToken && editData.metaPageAccessToken !== "••••••••" && (
+            <TestMetaConnection presetId={editingId} />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const DEFAULT_STYLES: PresetStyleFields = {
   pageColor: "#000000",
   overlayColor: "rgba(0,0,0,0.5)",
@@ -151,7 +331,7 @@ const DEFAULT_STYLES: PresetStyleFields = {
 };
 
 export default function PresetsPage() {
-  const { presets, loading, savePreset, updatePreset, deletePreset } = usePresets();
+  const { presets, loading, savePreset, updatePreset, deletePreset, fetchPresets } = usePresets();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<Partial<ClientPreset>>({});
   const [editNameError, setEditNameError] = useState<string | null>(null);
@@ -461,51 +641,23 @@ export default function PresetsPage() {
                         </Select>
                       )}
                     </div>
-                    <div className="border border-purple-500/20 rounded-xl p-4 bg-purple-950/10 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm font-semibold text-purple-300">Direct Instagram & Facebook Posting</Label>
-                        {editData.metaInstagramAccountId || editData.metaFacebookPageId ? (
-                          <span className="text-xs bg-green-900/40 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full">Connected</span>
-                        ) : (
-                          <span className="text-xs bg-gray-800 text-gray-500 border border-gray-700 px-2 py-0.5 rounded-full">Not connected</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-400">Enter details from your Meta Developer App to post directly to this client's Instagram and Facebook without Cloud Campaign.</p>
-                      <div>
-                        <Label className="text-xs text-gray-400">Page Access Token</Label>
-                        <Input
-                          type="password"
-                          placeholder="Long-lived Page Access Token"
-                          value={editData.metaPageAccessToken || ""}
-                          onChange={(e) => setEditData((d) => ({ ...d, metaPageAccessToken: e.target.value || null }))}
-                          className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
-                          autoComplete="off"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label className="text-xs text-gray-400">Facebook Page ID</Label>
-                          <Input
-                            placeholder="e.g. 123456789"
-                            value={editData.metaFacebookPageId || ""}
-                            onChange={(e) => setEditData((d) => ({ ...d, metaFacebookPageId: e.target.value || null }))}
-                            className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
-                          />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-gray-400">Instagram Account ID</Label>
-                          <Input
-                            placeholder="e.g. 987654321"
-                            value={editData.metaInstagramAccountId || ""}
-                            onChange={(e) => setEditData((d) => ({ ...d, metaInstagramAccountId: e.target.value || null }))}
-                            className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
-                          />
-                        </div>
-                      </div>
-                      {editingId && (editData.metaPageAccessToken) && (
-                        <TestMetaConnection presetId={editingId} />
-                      )}
-                    </div>
+                    <MetaConnectSection
+                      editingId={editingId}
+                      editData={editData}
+                      setEditData={setEditData}
+                      onConnected={async () => {
+                        await fetchPresets();
+                        const fresh = presets.find((p) => p.id === editingId);
+                        if (fresh) {
+                          setEditData((d) => ({
+                            ...d,
+                            metaPageAccessToken: fresh.metaPageAccessToken,
+                            metaFacebookPageId: fresh.metaFacebookPageId,
+                            metaInstagramAccountId: fresh.metaInstagramAccountId,
+                          }));
+                        }
+                      }}
+                    />
                     <div>
                       <Label className="text-xs text-gray-400">Caption Footnote (appended to AI-generated captions)</Label>
                       <textarea

@@ -14,6 +14,7 @@ import Analytics from "@/pages/analytics";
 import Approval from "@/pages/approval";
 import ApprovePublic from "@/pages/approve-public";
 import ClientPortal from "@/pages/client-portal";
+import MetaOAuthResult from "@/pages/meta-oauth-result";
 import Reels from "@/pages/reels";
 import VideoOverlay from "@/pages/video-overlay";
 
@@ -40,7 +41,11 @@ function ProtectedRouter() {
 function AppContent() {
   const [isApprove, approveParams] = useRoute("/approve/:token");
   const [isPortal, portalParams] = useRoute("/portal/:token");
+  const [isMetaOAuth] = useRoute("/oauth/meta/result");
 
+  if (isMetaOAuth) {
+    return <MetaOAuthResult />;
+  }
   if (isPortal && portalParams?.token) {
     return <ClientPortal token={portalParams.token} />;
   }
