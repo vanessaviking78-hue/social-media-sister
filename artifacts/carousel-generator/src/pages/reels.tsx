@@ -1220,57 +1220,55 @@ export default function Reels() {
                   {musicTracks.map((track) => {
                     const isSelected = selectedTrack?.id === track.id;
                     const isPreviewing = previewingTrackId === track.id;
-                      return (
-                        <div
-                          key={track.id}
-                          className={`flex items-center gap-2 rounded px-2 py-1.5 cursor-default transition-colors ${
-                            isSelected
-                              ? "bg-green-500/15 ring-1 ring-green-500/40"
-                              : "hover:bg-white/5"
-                          }`}
+                    return (
+                      <div
+                        key={track.id}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedTrack(null);
+                          } else {
+                            setSelectedTrack(track);
+                            if (audioPreviewRef.current) { audioPreviewRef.current.pause(); setPreviewingTrackId(null); }
+                          }
+                        }}
+                        className={`flex items-center gap-2 rounded px-2 py-2 cursor-pointer transition-colors ${
+                          isSelected
+                            ? "bg-green-500/20 ring-1 ring-green-500/50"
+                            : "hover:bg-white/8 active:bg-white/10"
+                        }`}
+                      >
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isPreviewing) {
+                              audioPreviewRef.current?.pause();
+                              setPreviewingTrackId(null);
+                            } else {
+                              if (audioPreviewRef.current) audioPreviewRef.current.pause();
+                              audioPreviewRef.current = new Audio(track.previewUrl);
+                              audioPreviewRef.current.play();
+                              setPreviewingTrackId(track.id);
+                              audioPreviewRef.current.onended = () => setPreviewingTrackId(null);
+                            }
+                          }}
+                          className={`transition-colors shrink-0 p-1 rounded ${isPreviewing ? "text-pink-400" : "text-white/50 hover:text-pink-400"}`}
                         >
-                          <button
-                            onClick={() => {
-                              if (isPreviewing) {
-                                audioPreviewRef.current?.pause();
-                                setPreviewingTrackId(null);
-                              } else {
-                                if (audioPreviewRef.current) audioPreviewRef.current.pause();
-                                audioPreviewRef.current = new Audio(track.previewUrl);
-                                audioPreviewRef.current.play();
-                                setPreviewingTrackId(track.id);
-                                audioPreviewRef.current.onended = () => setPreviewingTrackId(null);
-                              }
-                            }}
-                            className={`transition-colors shrink-0 ${isPreviewing ? "text-pink-400" : "text-white/30 hover:text-pink-400"}`}
-                          >
-                            {isPreviewing
-                              ? <Square className="w-3 h-3" />
-                              : <Play className="w-3 h-3" />}
-                          </button>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-xs truncate ${isSelected ? "text-green-300 font-medium" : "text-white"}`}>{track.title}</p>
-                            <p className="text-xs text-white/30 truncate">
-                              {track.artist} · {Math.floor(track.duration / 60)}:{String(track.duration % 60).padStart(2, "0")}
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => {
-                              if (isSelected) {
-                                setSelectedTrack(null);
-                              } else {
-                                setSelectedTrack(track);
-                                if (audioPreviewRef.current) { audioPreviewRef.current.pause(); setPreviewingTrackId(null); }
-                              }
-                            }}
-                            className={`shrink-0 transition-colors ${isSelected ? "text-green-400 hover:text-red-400" : "text-white/20 hover:text-green-400"}`}
-                            title={isSelected ? "Remove track" : "Use this track"}
-                          >
-                            {isSelected ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                          </button>
+                          {isPreviewing ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                        </button>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-xs truncate ${isSelected ? "text-green-300 font-semibold" : "text-white"}`}>{track.title}</p>
+                          <p className="text-xs text-white/40 truncate">
+                            {track.artist} · {Math.floor(track.duration / 60)}:{String(track.duration % 60).padStart(2, "0")}
+                          </p>
                         </div>
-                      );
-                    })}
+                        <div className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
+                          isSelected ? "bg-green-500 text-white" : "bg-white/10 text-white/60"
+                        }`}>
+                          {isSelected ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
+                        </div>
+                      </div>
+                    );
+                  })}
                   </div>
                 )}
               </div>
