@@ -35,7 +35,7 @@ type ReelSlide = {
   imageOffsetY: number;
 };
 
-const PREVIEW_SCALE = 0.25;
+const PREVIEW_SCALE = 0.38;
 const PREVIEW_W = Math.round(VIDEO_WIDTH * PREVIEW_SCALE);
 const PREVIEW_H = Math.round(VIDEO_HEIGHT * PREVIEW_SCALE);
 
@@ -1111,6 +1111,31 @@ export default function Reels() {
           </div>
         </div>
 
+        {/* ═══ Persistent live preview (always visible) ═══ */}
+        <div className="mb-8 flex flex-col items-center gap-3">
+          <div className="relative" style={{ width: PREVIEW_W, height: PREVIEW_H }}>
+            <canvas
+              ref={previewCanvasRef}
+              width={VIDEO_WIDTH}
+              height={VIDEO_HEIGHT}
+              style={{ width: PREVIEW_W, height: PREVIEW_H, borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", display: "block" }}
+            />
+            <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
+              {slides.map((_, i) => (
+                <button key={i} onClick={() => { setActiveIdx(i); setIsPlaying(false); }}
+                  className={`w-1.5 h-1.5 rounded-full transition-colors ${displayIdx === i ? "bg-pink-400" : "bg-white/25 hover:bg-white/50"}`} />
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <p className="text-xs text-white/30">Slide {displayIdx + 1} of {slides.length} · 9:16 · {(slides.length * slideDurationSec).toFixed(0)}s{selectedTrack ? ` · 🎵 ${selectedTrack.title}` : ""}</p>
+            <button onClick={() => { setIsPlaying((p) => !p); setPreviewIdx(0); }}
+              className="flex items-center gap-1 text-xs text-white/50 hover:text-white/80 border border-white/15 hover:border-white/30 rounded-lg px-3 py-1.5 transition-colors">
+              {isPlaying ? <><Square className="w-3 h-3" />Stop</> : <><Play className="w-3 h-3" />Play</>}
+            </button>
+          </div>
+        </div>
+
         <div className="flex flex-col gap-8">
 
           {/* ═══════ STEP 1: SLIDES ═══════ */}
@@ -1515,25 +1540,6 @@ export default function Reels() {
                 <p className="text-lg text-white/50">Customise the look of your reel slides.</p>
               </div>
 
-              {/* Live preview */}
-              <div className="flex flex-col items-center gap-3">
-                <div className="relative" style={{ width: PREVIEW_W, height: PREVIEW_H }}>
-                  <canvas
-                    ref={previewCanvasRef}
-                    width={VIDEO_WIDTH}
-                    height={VIDEO_HEIGHT}
-                    style={{ width: PREVIEW_W, height: PREVIEW_H, borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", display: "block" }}
-                  />
-                  <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
-                    {slides.map((_, i) => (
-                      <button key={i} onClick={() => setActiveIdx(i)}
-                        className={`w-1.5 h-1.5 rounded-full transition-colors ${activeIdx === i ? "bg-pink-400" : "bg-white/25 hover:bg-white/50"}`} />
-                    ))}
-                  </div>
-                </div>
-                <p className="text-xs text-white/30">Click a dot to preview a different slide</p>
-              </div>
-
               {/* Font & Text */}
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-5">
                 <h3 className="text-base font-semibold text-white/70">Font & Text</h3>
@@ -1901,34 +1907,10 @@ export default function Reels() {
                 <p className="text-lg text-white/50">Preview your reel, export, and publish.</p>
               </div>
 
-              {/* Preview + export */}
+              {/* Export */}
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-5">
-                <h3 className="text-base font-semibold text-white/70">Preview</h3>
-                <div className="flex justify-center">
-                  <div className="relative" style={{ width: PREVIEW_W, height: PREVIEW_H }}>
-                    <canvas
-                      ref={previewCanvasRef}
-                      width={VIDEO_WIDTH}
-                      height={VIDEO_HEIGHT}
-                      style={{ width: PREVIEW_W, height: PREVIEW_H, borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", display: "block" }}
-                    />
-                    <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
-                      {slides.map((_, i) => (
-                        <button key={i} onClick={() => { setActiveIdx(i); setIsPlaying(false); }}
-                          className={`w-1.5 h-1.5 rounded-full transition-colors ${displayIdx === i ? "bg-pink-400" : "bg-white/25 hover:bg-white/50"}`} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <p className="text-sm text-white/30 text-center">
-                  9:16 · 1080×1920 · {(slides.length * slideDurationSec).toFixed(0)}s
-                  {selectedTrack ? ` · 🎵 ${selectedTrack.title}` : ""}
-                </p>
+                <h3 className="text-base font-semibold text-white/70">Export</h3>
                 <div className="flex gap-3 justify-center">
-                  <Button variant="outline" onClick={() => { setIsPlaying((p) => !p); setPreviewIdx(0); }}
-                    className="border-white/20 text-white/70 hover:text-white px-6 py-5 text-base">
-                    {isPlaying ? <><Square className="w-4 h-4 mr-2" />Stop</> : <><Play className="w-4 h-4 mr-2" />Preview</>}
-                  </Button>
                   <Button onClick={handleExport} disabled={exporting}
                     className="bg-pink-600 hover:bg-pink-500 text-white px-6 py-5 text-base">
                     {exporting
