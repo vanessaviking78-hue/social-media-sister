@@ -446,7 +446,7 @@ export function drawSlide(
     ctx.translate(0, textSlideOffset);
   }
 
-  if (showTextOverlay && !isCoverSlide) {
+  if (showTextOverlay) {
     const boxPad = Math.round(H * 0.025);
     const boxTop = Math.max(0, startY - boxPad);
     const boxBot = Math.min(H, startY + combinedTotalH + boxPad);
