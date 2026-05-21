@@ -356,11 +356,17 @@ export default function Reels() {
           extraInstructions: "Each slide will appear as a frame in a short-form video reel. Keep each slide to 1–2 short punchy sentences. No hashtags.",
         }),
       });
+      if (!resp.ok) {
+        let errMsg = `Request failed (${resp.status})`;
+        try { const j = await resp.json(); if (j?.error) errMsg = j.error; } catch { /* ignore */ }
+        throw new Error(errMsg);
+      }
       if (!resp.body) throw new Error("No response body");
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
       let done = false;
+      let receivedComplete = false;
       while (!done) {
         const { value, done: streamDone } = await reader.read();
         done = streamDone;
@@ -371,6 +377,12 @@ export default function Reels() {
           if (!part.startsWith("data: ")) continue;
           try {
             const msg = JSON.parse(part.slice(6));
+            if (msg.type === "error") {
+              toast.error(msg.message || "AI generation failed");
+              receivedComplete = true;
+              done = true;
+              break;
+            }
             if (msg.type === "complete" && Array.isArray(msg.posts) && Array.isArray(msg.posts[0])) {
               const texts: string[] = msg.posts[0];
               setSlides(texts.map((text) => ({
@@ -385,9 +397,13 @@ export default function Reels() {
               })));
               setActiveIdx(0);
               toast.success(`Generated ${texts.length} slides!`);
+              receivedComplete = true;
             }
           } catch { /* skip unparseable */ }
         }
+      }
+      if (!receivedComplete) {
+        toast.error("AI generation ended without a response — please try again");
       }
     } catch (e: any) {
       toast.error(e?.message || "AI generation failed");
