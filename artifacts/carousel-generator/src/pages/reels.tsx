@@ -520,24 +520,21 @@ export default function Reels() {
           await vid.play().catch(() => {});
         }
         const animateFn = (slideIndex: number, slideProgress: number) => {
-          ctx.fillStyle = "#000";
-          ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
           if (mediaEl) {
-            if (isVideo) {
-              const vid = mediaEl as HTMLVideoElement;
-              if (vid.readyState >= 2) {
-                const scale = Math.max(VIDEO_WIDTH / vid.videoWidth, VIDEO_HEIGHT / vid.videoHeight);
-                const dw = vid.videoWidth * scale;
-                const dh = vid.videoHeight * scale;
-                ctx.drawImage(vid, (VIDEO_WIDTH - dw) / 2, (VIDEO_HEIGHT - dh) / 2, dw, dh);
-              }
-            } else {
-              const img = mediaEl as HTMLImageElement;
-              const scale = Math.max(VIDEO_WIDTH / img.naturalWidth, VIDEO_HEIGHT / img.naturalHeight);
-              const dw = img.naturalWidth * scale;
-              const dh = img.naturalHeight * scale;
-              ctx.drawImage(img, (VIDEO_WIDTH - dw) / 2, (VIDEO_HEIGHT - dh) / 2, dw, dh);
-            }
+            drawSlide(
+              ctx, mediaEl as HTMLImageElement, "",
+              fontFamily, fontSize, true,
+              textColor, lineSpacing, overlayColor,
+              logoImg, logoPosition, logoSize,
+              pageColor, "none", "#ffffff",
+              1, 1, textPosition, false, fontFamily, textAlign,
+              false, "#ffffff", "", letterSpacing, false,
+              false, "'Great Vibes', cursive",
+              coverSplit, coverEyebrowFont, coverEyebrowColor,
+              coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
+              coverEyebrowWeight, coverEyebrowLetterSpacing,
+              coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch,
+            );
             drawTypewriterOnVideo(ctx, texts[slideIndex] ?? "", slideProgress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
           } else {
             drawTypewriterSlide(ctx, texts[slideIndex] ?? "", slideProgress, typewriterBgColor, textColor, fontFamily, fontSize, lineSpacing, logoImg, logoPosition, logoSize, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
