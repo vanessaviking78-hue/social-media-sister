@@ -222,7 +222,7 @@ export function drawSlide(
   coverEyebrowArch: number = 0,
   animationType?: AnimationType,
   animationProgress?: number,
-  opts?: { imageOffsetX?: number; imageOffsetY?: number; canvasW?: number; canvasH?: number; contentLetterSpacing?: number }
+  opts?: { imageOffsetX?: number; imageOffsetY?: number; canvasW?: number; canvasH?: number; contentLetterSpacing?: number; pageColorEnd?: string; overlayGradient?: boolean; textShadow?: number }
 ) {
   const W = opts?.canvasW ?? CANVAS_WIDTH;
   const H = opts?.canvasH ?? CANVAS_HEIGHT;
@@ -241,7 +241,14 @@ export function drawSlide(
     ? scaleOverlayAlpha(overlayColor, ep)
     : overlayColor;
 
-  ctx.fillStyle = pageColor;
+  if (opts?.pageColorEnd) {
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+    bgGrad.addColorStop(0, pageColor);
+    bgGrad.addColorStop(1, opts.pageColorEnd);
+    ctx.fillStyle = bgGrad;
+  } else {
+    ctx.fillStyle = pageColor;
+  }
   ctx.fillRect(0, 0, W, H);
 
   if (img) {
@@ -268,6 +275,15 @@ export function drawSlide(
       ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
       ctx.globalAlpha = 1.0;
     }
+  }
+
+  if (opts?.overlayGradient && img) {
+    const grad = ctx.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(0.42, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, effectiveOverlayColor);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
   }
 
   if (cornerStyle !== "none") {
@@ -311,6 +327,13 @@ export function drawSlide(
   const activeTextPos = isLastSlide ? "center" : textPosition;
 
   const activeFont = isCoverSlide ? font : (subheadingFont || font);
+
+  if (opts?.textShadow) {
+    ctx.shadowColor = 'rgba(0,0,0,0.85)';
+    ctx.shadowBlur = opts.textShadow;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 2;
+  }
 
   ctx.fillStyle = textColor;
   ctx.textBaseline = "top";
@@ -446,7 +469,7 @@ export function drawSlide(
     ctx.translate(0, textSlideOffset);
   }
 
-  if (showTextOverlay) {
+  if (showTextOverlay && !opts?.overlayGradient) {
     const boxPad = Math.round(H * 0.025);
     const boxTop = Math.max(0, startY - boxPad);
     const boxBot = Math.min(H, startY + combinedTotalH + boxPad);
@@ -520,6 +543,9 @@ export function drawSlide(
   if (textSlideOffset !== 0) {
     ctx.restore();
   }
+
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent';
 
   if (logoImg) {
     const margin = 40;
