@@ -17,11 +17,11 @@ router.post("/video-overlay/generate-captions", async (req: Request, res: Respon
       messages: [
         {
           role: "system",
-          content: `You are a social media content writer. Generate exactly ${count} short, punchy text overlays for a social media video. Each should be 2-8 words max, bold and impactful — like hook lines that appear on screen. Return ONLY a JSON array of strings, nothing else. Example: ["Stop scrolling.", "This changes everything.", "Here's what no one tells you.", "You need to see this."]`,
+          content: `You are a social media content writer. Generate exactly ${count} text overlays for a social media video. The first ${count - 1} should be punchy hook/body lines — each 5-12 words, bold and impactful, like captions that appear on screen one at a time. The final overlay (overlay #${count}) MUST be a clear call-to-action, e.g. "Book your consultation — link in bio!" or "DM us 'INFO' to get started today!" or "Click the link in bio to book now!". Return ONLY a JSON array of strings, nothing else. Example for 4 overlays: ["Here's what your clinic is missing on Instagram.", "Patients are searching for you — are you showing up?", "3 content types that actually drive bookings.", "DM us 'CLINIC' and we'll show you exactly what to post!"]`,
         },
         {
           role: "user",
-          content: `Topic: ${topic.trim()}\n\nGenerate ${count} short text overlays for this video.`,
+          content: `Topic: ${topic.trim()}\n\nGenerate ${count} text overlays for this video. Remember: first ${count - 1} are punchy hooks/points (5-12 words each), and the last one is a strong CTA.`,
         },
       ],
     });
