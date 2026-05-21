@@ -68,6 +68,7 @@ const DEFAULT_STYLES: PresetStyleFields = {
   logoPosition: "top-right",
   logoSize: 140,
   accentColor: "#d4af37",
+  contentFontSize: 44,
 };
 
 export default function PresetsPage() {
@@ -145,6 +146,7 @@ export default function PresetsPage() {
         logoPosition: editData.logoPosition || "top-right",
         logoSize: editData.logoSize || 140,
         accentColor: editData.accentColor || "#d4af37",
+        contentFontSize: editData.contentFontSize ?? 44,
       };
       await updatePreset(editingId, editData.name!.trim(), styles, editData.ccWorkspaceId || undefined, editData.logoUrl, editData.captionFootnote, {
         metaPageAccessToken: editData.metaPageAccessToken || null,

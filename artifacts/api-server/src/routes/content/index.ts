@@ -838,18 +838,39 @@ router.get("/cloud-campaign/workspaces", async (_req, res) => {
     if (workspaceIds.length === 0) {
       return res.json({ workspaces: [] });
     }
-    let workspaces: { id: string; name: string }[] = [];
-    try {
-      const data = await ccFetch("/workspaces");
-      const items: any[] = Array.isArray(data) ? data : (data?.data ?? data?.workspaces ?? []);
-      const byId = new Map(items.map((w: any) => [String(w.id), w]));
-      workspaces = workspaceIds.map((id) => {
-        const w = byId.get(id);
-        return { id, name: w ? String(w.name || w.title || id) : id };
-      });
-    } catch {
-      workspaces = workspaceIds.map((id) => ({ id, name: id }));
+
+    const nameOverrides = (process.env.CLOUD_CAMPAIGN_WORKSPACE_NAMES || "")
+      .split(",").map((s) => s.trim());
+    const nameById = new Map<string, string>();
+    workspaceIds.forEach((id, i) => {
+      if (nameOverrides[i] && nameOverrides[i].length > 0) nameById.set(id, nameOverrides[i]);
+    });
+
+    let apiNames = new Map<string, string>();
+    const agencyId = process.env.CLOUD_CAMPAIGN_AGENCY_ID || "";
+    for (const path of [`/agencies/${agencyId}/workspaces`, `/workspaces`]) {
+      try {
+        const data = await ccFetch(path);
+        const items: any[] = Array.isArray(data) ? data : (data?.data ?? data?.workspaces ?? []);
+        if (items.length > 0) {
+          items.forEach((w: any) => {
+            if (w?.id) apiNames.set(String(w.id), String(w.name || w.title || w.id));
+          });
+          break;
+        }
+      } catch {
+        continue;
+      }
     }
+
+    const workspaces = workspaceIds.map((id) => {
+      const name =
+        nameById.get(id) ||
+        apiNames.get(id) ||
+        `Workspace ${id.slice(0, 8)}…`;
+      return { id, name };
+    });
+
     res.json({ workspaces });
   } catch (err: any) {
     res.status(502).json({ error: err.message || "Failed to fetch workspaces from Cloud Campaign" });
