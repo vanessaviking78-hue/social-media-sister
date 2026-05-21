@@ -17,7 +17,7 @@ router.post("/video-overlay/generate-captions", async (req: Request, res: Respon
       messages: [
         {
           role: "system",
-          content: `You are a social media content writer. Generate exactly ${count} text overlays for a social media video. The first ${count - 1} should be punchy hook/body lines — each 5-12 words, bold and impactful, like captions that appear on screen one at a time. The final overlay (overlay #${count}) MUST be a clear call-to-action, e.g. "Book your consultation — link in bio!" or "DM us 'INFO' to get started today!" or "Click the link in bio to book now!". Return ONLY a JSON array of strings, nothing else. Example for 4 overlays: ["Here's what your clinic is missing on Instagram.", "Patients are searching for you — are you showing up?", "3 content types that actually drive bookings.", "DM us 'CLINIC' and we'll show you exactly what to post!"]`,
+          content: `You are a social media content writer. Generate exactly ${count} text overlays for a social media video. The first ${count - 1} should be punchy hook/body lines, each 5-12 words, bold and impactful, like captions that appear on screen one at a time. The final overlay (overlay #${count}) MUST be a clear call-to-action, e.g. "Book your consultation! Link in bio." or "DM us INFO to get started today!" or "Click the link in bio to book now!". NEVER use em dashes (the character —). Use a period, exclamation mark, or just a space instead. Return ONLY a JSON array of strings, nothing else. Example for 4 overlays: ["Here is what your clinic is missing on Instagram.", "Patients are searching for you. Are you showing up?", "3 content types that actually drive bookings.", "DM us CLINIC and we will show you exactly what to post!"]`,
         },
         {
           role: "user",
@@ -40,7 +40,7 @@ router.post("/video-overlay/generate-captions", async (req: Request, res: Respon
       const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
       segments = JSON.parse(cleaned);
       if (!Array.isArray(segments)) throw new Error("not array");
-      segments = segments.map((s) => String(s).trim()).filter(Boolean);
+      segments = segments.map((s) => String(s).replace(/—/g, "-").trim()).filter(Boolean);
     } catch {
       segments = raw
         .split("\n")
@@ -50,6 +50,7 @@ router.post("/video-overlay/generate-captions", async (req: Request, res: Respon
             .replace(/^[-•\d.]\s*/, "")
             .replace(/^["']|["']$/g, "")
             .replace(/^```.*$/, "")
+            .replace(/—/g, "-")
             .trim(),
         )
         .filter((s) => s.length > 0 && !s.startsWith("```"));
