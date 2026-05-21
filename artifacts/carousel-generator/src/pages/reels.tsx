@@ -371,8 +371,8 @@ export default function Reels() {
           if (!part.startsWith("data: ")) continue;
           try {
             const msg = JSON.parse(part.slice(6));
-            if (msg.type === "done" && Array.isArray(msg.posts) && msg.posts[0]?.slides) {
-              const texts: string[] = msg.posts[0].slides;
+            if (msg.type === "complete" && Array.isArray(msg.posts) && Array.isArray(msg.posts[0])) {
+              const texts: string[] = msg.posts[0];
               setSlides(texts.map((text) => ({
                 id: crypto.randomUUID(),
                 mode: "typewriter" as const,

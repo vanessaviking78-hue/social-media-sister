@@ -92,6 +92,9 @@ export default function VideoOverlay() {
     const ctx = canvas.getContext("2d")!;
     ctx.clearRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
 
+    ctx.fillStyle = "#111118";
+    ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
+
     if (video && video.readyState >= 2) {
       const vw = video.videoWidth;
       const vh = video.videoHeight;
@@ -100,21 +103,18 @@ export default function VideoOverlay() {
       const dh = vh * scale;
       const dx = (VIDEO_WIDTH - dw) / 2;
       const dy = (VIDEO_HEIGHT - dh) / 2;
-      ctx.fillStyle = "#000";
-      ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
       ctx.drawImage(video, dx, dy, dw, dh);
-      const text = segments[0] || "";
-      if (text.trim()) {
-        drawTypewriterOnVideo(ctx, text, 1, textColor, fontFamily, fontSize, lineSpacing, overlayPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
-      }
     } else {
-      ctx.fillStyle = "#111118";
-      ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
-      ctx.fillStyle = "rgba(255,255,255,0.2)";
+      ctx.fillStyle = "rgba(255,255,255,0.12)";
       ctx.font = `${Math.round(VIDEO_HEIGHT * 0.03)}px sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText("Upload a video to preview", VIDEO_WIDTH / 2, VIDEO_HEIGHT / 2);
+    }
+
+    const text = segments[0] || "";
+    if (text.trim()) {
+      drawTypewriterOnVideo(ctx, text, 1, textColor, fontFamily, fontSize, lineSpacing, overlayPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
     }
   }, [segments, textColor, fontFamily, fontSize, lineSpacing, overlayPosition, typewriterFill]);
 

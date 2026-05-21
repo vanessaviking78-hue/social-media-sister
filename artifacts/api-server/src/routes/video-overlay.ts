@@ -12,7 +12,7 @@ router.post("/video-overlay/generate-captions", async (req: Request, res: Respon
     }
     const count = Math.min(8, Math.max(1, Number(segmentCount) || 4));
     const completion = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: "gpt-4o-mini",
       max_completion_tokens: 500,
       messages: [
         {
