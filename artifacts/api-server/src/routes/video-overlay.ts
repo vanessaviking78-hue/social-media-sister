@@ -63,4 +63,45 @@ router.post("/video-overlay/generate-captions", async (req: Request, res: Respon
   }
 });
 
+router.post("/video-overlay/generate-ig-caption", async (req: Request, res: Response) => {
+  try {
+    const { topic, overlayTexts } = req.body as { topic?: string; overlayTexts?: string[] };
+    const context = [
+      topic?.trim() ? `Topic: ${topic.trim()}` : "",
+      overlayTexts?.length ? `Video overlay texts: ${overlayTexts.filter(Boolean).join(" | ")}` : "",
+    ].filter(Boolean).join("\n");
+
+    if (!context) {
+      res.status(400).json({ error: "Provide a topic or overlay texts" });
+      return;
+    }
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5.2",
+      max_completion_tokens: 400,
+      messages: [
+        {
+          role: "system",
+          content: `You are a social media copywriter for Instagram Reels. Write a single Instagram caption for a Reel video. The caption should: open with a strong hook (1-2 sentences), follow with 2-3 short punchy lines expanding on the topic, and end with a clear call-to-action (e.g. "Comment INFO below!", "Save this!", "Link in bio to book!"). Add 5-8 relevant hashtags at the end on a new line. Use line breaks between sections for readability. Keep the whole caption under 220 words. Do NOT use em dashes. Return only the caption text, nothing else.`,
+        },
+        {
+          role: "user",
+          content: context,
+        },
+      ],
+    });
+
+    const content = completion.choices[0]?.message?.content;
+    if (!content?.trim()) {
+      res.status(500).json({ error: "AI returned no content — please try again" });
+      return;
+    }
+
+    res.json({ caption: content.trim().replace(/—/g, "-") });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to generate caption";
+    res.status(500).json({ error: msg });
+  }
+});
+
 export default router;

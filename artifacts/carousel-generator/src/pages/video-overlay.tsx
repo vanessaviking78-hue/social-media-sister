@@ -62,6 +62,7 @@ export default function VideoOverlay() {
   const [igCaption, setIgCaption] = useState("");
   const [igPushing, setIgPushing] = useState(false);
   const [igPushProgress, setIgPushProgress] = useState("");
+  const [generatingCaption, setGeneratingCaption] = useState(false);
 
   const [textColor, setTextColor] = useState("#ffffff");
   const [fontFamily, setFontFamily] = useState("'Playfair Display', serif");
@@ -315,6 +316,29 @@ export default function VideoOverlay() {
     }
   };
 
+  const handleGenerateCaption = async () => {
+    if (!topic.trim() && !segments.some(Boolean)) {
+      toast.error("Enter a topic or generate text overlays first");
+      return;
+    }
+    setGeneratingCaption(true);
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}api/video-overlay/generate-ig-caption`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic: topic.trim(), overlayTexts: segments.filter(Boolean) }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.error) throw new Error(data.error || `Server error (${res.status})`);
+      setIgCaption(data.caption);
+      toast.success("Caption generated!");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Caption generation failed");
+    } finally {
+      setGeneratingCaption(false);
+    }
+  };
+
   const handleGenerate = async () => {
     if (!topic.trim()) {
       toast.error("Enter a topic first");
@@ -493,13 +517,27 @@ export default function VideoOverlay() {
                   ))}
                 </SelectContent>
               </Select>
-              <textarea
-                value={igCaption}
-                onChange={(e) => setIgCaption(e.target.value)}
-                placeholder="Caption (optional)…"
-                rows={2}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-white/25 outline-none focus:border-pink-500/50 resize-none"
-              />
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-white/40">Caption</span>
+                  <button
+                    onClick={handleGenerateCaption}
+                    disabled={generatingCaption}
+                    className="flex items-center gap-1 text-[10px] text-pink-400 hover:text-pink-300 disabled:opacity-40 transition-colors"
+                  >
+                    {generatingCaption
+                      ? <><Loader2 className="w-2.5 h-2.5 animate-spin" />Generating…</>
+                      : <><Wand2 className="w-2.5 h-2.5" />Generate</>}
+                  </button>
+                </div>
+                <textarea
+                  value={igCaption}
+                  onChange={(e) => setIgCaption(e.target.value)}
+                  placeholder="Caption (optional)… or click Generate above"
+                  rows={3}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder:text-white/25 outline-none focus:border-pink-500/50 resize-none"
+                />
+              </div>
               <div className="flex gap-1.5">
                 <Button
                   size="sm"
