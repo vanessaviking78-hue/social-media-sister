@@ -6,6 +6,7 @@ import {
   BarChart3, ShieldCheck, Film, Image as ImageIcon,
   Music, Search, X, Send, FileText, Sparkles, ChevronDown, Check,
   ExternalLink, AlertCircle, CheckCircle2, KeyRound, ChevronUp, Settings,
+  ChevronRight, ChevronLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -129,6 +130,8 @@ export default function Reels() {
   const [aiTone, setAiTone] = useState("conversational");
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiSlideCount, setAiSlideCount] = useState(5);
+
+  const [reelStep, setReelStep] = useState(1);
 
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const exportCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -904,796 +907,856 @@ export default function Reels() {
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="w-72 border-r border-white/10 flex flex-col overflow-y-auto p-4 gap-3 shrink-0">
-          <div className="flex gap-1 bg-white/5 rounded-lg p-1">
-            <button onClick={() => setBulkMode("single")}
-              className={`flex-1 text-xs py-1.5 rounded-md transition-colors font-medium ${bulkMode === "single" ? "bg-pink-600 text-white" : "text-white/40 hover:text-white/60"}`}>
-              Single
-            </button>
-            <button onClick={() => setBulkMode("bulk")}
-              className={`flex-1 text-xs py-1.5 rounded-md transition-colors font-medium ${bulkMode === "bulk" ? "bg-pink-600 text-white" : "text-white/40 hover:text-white/60"}`}>
-              Bulk
-            </button>
-          </div>
+      <main className="max-w-3xl mx-auto w-full px-6 mt-8 pb-32">
 
-          {bulkMode === "single" && <>
-          <div className="flex items-center justify-between">
-            <h2 className="text-xs font-semibold text-white/50 uppercase tracking-widest">Slides</h2>
-            <div className="flex items-center gap-1">
-              <input
-                ref={csvInputRef}
-                type="file"
-                accept=".csv,text/csv"
-                className="hidden"
-                onChange={(e) => { if (e.target.files?.[0]) { handleCsvImport(e.target.files[0]); e.target.value = ""; } }}
-              />
-              <Button size="sm" variant="outline" onClick={() => csvInputRef.current?.click()}
-                title="Import slides from CSV (one row per slide)"
-                className="border-white/20 text-white/60 hover:text-white h-7 px-2 text-xs">
-                <FileText className="w-3 h-3 mr-1" />CSV
-              </Button>
-              <Button size="sm" variant="outline" onClick={addSlide} disabled={slides.length >= 10}
-                className="border-white/20 text-white/60 hover:text-white h-7 px-2 text-xs">
-                <Plus className="w-3 h-3 mr-1" />Add
-              </Button>
-            </div>
-          </div>
-
-          {slides.map((slide, idx) => (
-            <div
-              key={slide.id}
-              onClick={() => { setActiveIdx(idx); setIsPlaying(false); }}
-              className={`rounded-lg border p-3 cursor-pointer transition-all space-y-2 ${
-                activeIdx === idx && !isPlaying
-                  ? "border-pink-500 bg-pink-500/10"
-                  : "border-white/10 hover:border-white/20"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-white/50">Slide {idx + 1}</span>
-                <div className="flex items-center gap-1">
-                  {([
-                    { m: "cover" as const, label: "Img", title: "Image + static text" },
-                    { m: "typewriter" as const, label: "Aa", title: "Typewriter text only" },
-                    { m: "image-typewriter" as const, label: "Img+Aa", title: "Image + typewriter text" },
-                  ]).map(({ m, label, title }) => (
-                    <button
-                      key={m}
-                      onClick={(e) => { e.stopPropagation(); toggleSlideMode(idx, m); }}
-                      title={title}
-                      className={`text-[9px] px-1.5 py-0.5 rounded transition-colors ${slide.mode === m ? "bg-pink-600/80 text-white" : "text-white/30 border border-white/15"}`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                  {slides.length > 1 && (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); removeSlide(idx); }}
-                      className="text-white/30 hover:text-red-400 transition-colors ml-1"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              </div>
-              <textarea
-                value={slide.text}
-                onChange={(e) => updateText(idx, e.target.value)}
-                placeholder={slide.mode === "cover" && coverSplit ? "Eyebrow|Headline" : "Slide text…"}
-                rows={3}
-                onClick={(e) => e.stopPropagation()}
-                className="w-full bg-transparent text-sm text-white placeholder:text-white/30 resize-none outline-none border border-white/10 rounded p-2 focus:border-pink-500/50"
-              />
-              {(slide.mode === "cover" || slide.mode === "image-typewriter") ? (
-                <div className="space-y-2">
-                  <label className={`flex items-center gap-2 cursor-pointer transition-colors rounded-md px-2 py-1.5 text-xs ${
-                    (slide.imageFile || slide.videoFile)
-                      ? "text-white/50 hover:text-white/70"
-                      : "border border-dashed border-white/20 hover:border-pink-500/60 text-white/40 hover:text-white/70 justify-center"
-                  }`}>
-                    <Upload className="w-3.5 h-3.5 shrink-0" />
-                    {slide.videoFile
-                      ? slide.videoFile.name.length > 22
-                        ? slide.videoFile.name.slice(0, 22) + "…"
-                        : slide.videoFile.name
-                      : slide.imageFile
-                        ? slide.imageFile.name.length > 22
-                          ? slide.imageFile.name.slice(0, 22) + "…"
-                          : slide.imageFile.name
-                        : slide.mode === "image-typewriter"
-                          ? "Upload photo or video (required)"
-                          : "Upload photo or video"}
-                    <input
-                      type="file"
-                      accept="image/*,video/*"
-                      className="hidden"
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSlideMedia(idx, f); }}
-                    />
-                  </label>
-                  {slide.mode === "image-typewriter" && !slide.imageElement && !slide.videoElement && (
-                    <p className="text-[10px] text-amber-400/70 italic text-center">Upload a photo or video, add text, then press ▶ Preview</p>
-                  )}
-                  {slide.mode === "image-typewriter" && (slide.imageElement || slide.videoElement) && (
-                    <p className="text-[10px] text-green-400/60 italic text-center">Press ▶ Preview to see text type over media</p>
-                  )}
-                  {slide.imageElement && (
-                    <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex justify-between text-[9px] text-white/25">
-                        <span>▲ Top</span>
-                        <span className="text-white/40">Image position</span>
-                        <span>Bottom ▼</span>
-                      </div>
-                      <Slider
-                        min={0}
-                        max={100}
-                        step={1}
-                        value={[Math.round((slide.imageOffsetY + 1) * 50)]}
-                        onValueChange={([v]) => updateImageOffset(idx, parseFloat(((v / 50) - 1).toFixed(3)))}
-                        className="w-full"
-                      />
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-[10px] text-white/30 italic">Press ▶ Preview to see typewriter animation</p>
-              )}
-            </div>
-          ))}
-
-          <p className="text-xs text-white/20 text-center">{slides.length} / 10 slides</p>
-
-          <div className="border-t border-white/10 pt-3 space-y-2">
-            <button
-              onClick={() => setAiOpen((p) => !p)}
-              className="flex items-center gap-2 w-full text-left"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-pink-400" />
-              <span className="text-xs text-white/50 font-semibold uppercase tracking-wider flex-1">Content Machine</span>
-              <ChevronDown className={`w-3.5 h-3.5 text-white/30 transition-transform ${aiOpen ? "rotate-180" : ""}`} />
-            </button>
-            {aiOpen && (
-              <div className="space-y-2 pt-1">
-                <input
-                  value={aiIndustry}
-                  onChange={(e) => setAiIndustry(e.target.value)}
-                  placeholder="Industry (e.g. Aesthetics clinic)"
-                  className="w-full bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-pink-500/50"
-                />
-                <Select value={aiTone} onValueChange={setAiTone}>
-                  <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-7 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {["conversational", "professional", "playful", "inspirational", "educational"].map((t) => (
-                      <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <textarea
-                  value={aiTopics}
-                  onChange={(e) => setAiTopics(e.target.value)}
-                  placeholder="Topics / hooks to cover…"
-                  rows={2}
-                  className="w-full bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-pink-500/50 resize-none"
-                />
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] text-white/40 shrink-0">Slides: {aiSlideCount}</span>
-                  <Slider min={2} max={10} step={1} value={[aiSlideCount]} onValueChange={([v]) => setAiSlideCount(v)} className="flex-1" />
-                </div>
-                <Button
-                  size="sm"
-                  onClick={handleAIGenerate}
-                  disabled={aiGenerating}
-                  className="w-full bg-pink-600 hover:bg-pink-500 text-white text-xs"
+        {/* Step progress bar */}
+        <div className="mb-10">
+          <div className="flex items-center justify-between mb-6">
+            {[
+              { num: 1, label: "Slides", icon: Layers },
+              { num: 2, label: "Style", icon: Palette },
+              { num: 3, label: "Music", icon: Music },
+              { num: 4, label: "Export & Post", icon: Download },
+            ].map((step, i) => (
+              <React.Fragment key={step.num}>
+                <button
+                  onClick={() => setReelStep(step.num)}
+                  className={`flex flex-col items-center gap-2 transition-all ${
+                    reelStep === step.num ? "text-pink-400" : reelStep > step.num ? "text-green-400" : "text-white/25"
+                  }`}
                 >
-                  {aiGenerating
-                    ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Generating…</>
-                    : <><Sparkles className="w-3.5 h-3.5 mr-2" />Generate {aiSlideCount} Slides</>}
-                </Button>
-              </div>
-            )}
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold transition-all ${
+                    reelStep === step.num
+                      ? "bg-pink-600 text-white shadow-lg shadow-pink-500/30"
+                      : reelStep > step.num
+                      ? "bg-green-500/20 text-green-400 border-2 border-green-500/30"
+                      : "bg-white/5 text-white/25"
+                  }`}>
+                    {reelStep > step.num ? <Check className="w-6 h-6" /> : <step.icon className="w-6 h-6" />}
+                  </div>
+                  <span className="text-sm font-semibold">{step.num}. {step.label}</span>
+                </button>
+                {i < 3 && (
+                  <div className={`flex-1 h-1 rounded-full mx-3 mt-[-20px] ${reelStep > step.num ? "bg-green-500/30" : "bg-white/10"}`} />
+                )}
+              </React.Fragment>
+            ))}
           </div>
-          </>}
-
-          {bulkMode === "bulk" && (
-            <div className="space-y-3">
-              <p className="text-xs text-white/30 leading-relaxed">Each row = one reel. Each column = one slide. Uses your Style settings from the right panel.</p>
-              <input
-                ref={bulkCsvRef}
-                type="file"
-                accept=".csv,text/csv"
-                className="hidden"
-                onChange={(e) => { if (e.target.files?.[0]) { handleBulkCsvImport(e.target.files[0]); e.target.value = ""; } }}
-              />
-              <Button size="sm" variant="outline" onClick={() => bulkCsvRef.current?.click()}
-                className="w-full border-white/20 text-white/60 hover:text-white text-xs">
-                <FileText className="w-3.5 h-3.5 mr-2" />Upload CSV
-              </Button>
-              {bulkRows.length > 0 && (
-                <div className="bg-white/5 rounded-lg p-3 space-y-1">
-                  <p className="text-xs font-medium text-white">{bulkRows.length} reels loaded</p>
-                  <p className="text-xs text-white/40">Up to {Math.max(...bulkRows.map((r) => r.length))} slides each</p>
-                </div>
-              )}
-              <Button
-                size="sm"
-                onClick={handleBulkGenerate}
-                disabled={bulkGenerating || bulkPushing || bulkRows.length === 0}
-                className="w-full bg-pink-600 hover:bg-pink-500 text-white text-xs"
-              >
-                {bulkGenerating
-                  ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />{bulkProgress.label}</>
-                  : <><Download className="w-3.5 h-3.5 mr-2" />Generate ZIP {bulkRows.length > 0 ? `(${bulkRows.length})` : ""}</>}
-              </Button>
-              {bulkGenerating && bulkProgress.total > 0 && (
-                <div className="space-y-1.5">
-                  <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-pink-500 rounded-full transition-all duration-500"
-                      style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }} />
-                  </div>
-                  <p className="text-[10px] text-white/30 text-center">{bulkProgress.current} / {bulkProgress.total}</p>
-                </div>
-              )}
-              {bulkZipBlob && (
-                <Button size="sm"
-                  onClick={() => saveAs(bulkZipBlob!, `bulk-reels-${Date.now()}.zip`)}
-                  className="w-full bg-green-700 hover:bg-green-600 text-white text-xs">
-                  <Download className="w-3.5 h-3.5 mr-2" />Download ZIP ({bulkRows.length} reels)
-                </Button>
-              )}
-
-              {igPresets.length > 0 && (
-                <div className="border-t border-white/10 pt-3 space-y-2">
-                  <p className="text-[10px] text-white/40 font-semibold uppercase tracking-wider flex items-center gap-1">
-                    <Film className="w-3 h-3" /> Push Trial Reels to Instagram
-                  </p>
-                  <Select value={bulkIgPresetId} onValueChange={setBulkIgPresetId}>
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-7 text-xs">
-                      <SelectValue placeholder="Select client…" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {igPresets.map((p) => (
-                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <div className="flex gap-1.5">
-                    <Button
-                      size="sm"
-                      onClick={() => handleBulkPushToIG(true)}
-                      disabled={bulkPushing || bulkGenerating || bulkRows.length === 0 || !bulkIgPresetId}
-                      className="flex-1 bg-pink-700 hover:bg-pink-600 text-white text-xs"
-                    >
-                      {bulkPushing
-                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        : <><Film className="w-3 h-3 mr-1" />Trial</>}
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => handleBulkPushToIG(false)}
-                      disabled={bulkPushing || bulkGenerating || bulkRows.length === 0 || !bulkIgPresetId}
-                      className="flex-1 border border-pink-700/60 text-pink-300 bg-transparent hover:bg-pink-700/20 text-xs"
-                    >
-                      {bulkPushing
-                        ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        : <><Film className="w-3 h-3 mr-1" />Post</>}
-                    </Button>
-                  </div>
-                  {bulkPushing && bulkPushProgress.total > 0 && (
-                    <div className="space-y-1.5">
-                      <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                        <div className="h-full bg-pink-500 rounded-full transition-all duration-500"
-                          style={{ width: `${(bulkPushProgress.current / bulkPushProgress.total) * 100}%` }} />
-                      </div>
-                      <p className="text-[10px] text-white/30 text-center">{bulkPushProgress.current} / {bulkPushProgress.total}</p>
-                    </div>
-                  )}
-                  <p className="text-[10px] text-white/20 text-center">Posts as private drafts — graduate each in Instagram when ready</p>
-                </div>
-              )}
-
-              <p className="text-[10px] text-white/20 text-center leading-relaxed">
-                Max 30 reels · 10 slides each · Typewriter style
-              </p>
-            </div>
-          )}
         </div>
 
-        <div className="flex-1 flex flex-col items-center overflow-y-auto gap-5 p-6 pt-8 bg-[#08080d]">
-          <div className="relative" style={{ width: PREVIEW_W, height: PREVIEW_H }}>
-            <canvas
-              ref={previewCanvasRef}
-              width={VIDEO_WIDTH}
-              height={VIDEO_HEIGHT}
-              style={{ width: PREVIEW_W, height: PREVIEW_H, borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", display: "block" }}
-            />
-            <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
-              {slides.map((_, i) => (
-                <div
-                  key={i}
-                  className={`w-1.5 h-1.5 rounded-full transition-colors ${displayIdx === i ? "bg-pink-400" : "bg-white/25"}`}
-                />
-              ))}
-            </div>
-          </div>
+        <div className="flex flex-col gap-8">
 
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              className="border-white/20 text-white/70 hover:text-white"
-              onClick={() => { setIsPlaying((p) => !p); setPreviewIdx(0); }}
-            >
-              {isPlaying
-                ? <><Square className="w-4 h-4 mr-2" />Stop</>
-                : <><Play className="w-4 h-4 mr-2" />Preview</>}
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleExport}
-              disabled={exporting}
-              className="bg-pink-600 hover:bg-pink-500 text-white"
-            >
-              {exporting
-                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{exportProgress}</>
-                : <><Download className="w-4 h-4 mr-2" />Export Reel</>}
-            </Button>
-          </div>
+          {/* ═══════ STEP 1: SLIDES ═══════ */}
+          {reelStep === 1 && (
+            <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div>
+                <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 1: Your Slides</h2>
+                <p className="text-lg text-white/50">Build your reel slide by slide, or upload a batch CSV.</p>
+              </div>
 
-          <p className="text-xs text-white/30">
-            9:16 · 1080×1920 · {(slides.length * slideDurationSec).toFixed(0)}s
-            {selectedTrack ? ` · 🎵 ${selectedTrack.title}` : ""}
-          </p>
-
-          {/* Music picker */}
-          <div className="w-full max-w-xs space-y-2.5">
-            <div className="flex items-center gap-1.5 text-xs text-white/40 font-semibold uppercase tracking-wider">
-              <Music className="w-3.5 h-3.5" /> Music
-            </div>
-            {/* Selected track chip — always shown when a track is chosen */}
-            {selectedTrack && (
-              <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-2.5">
-                <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-green-300 truncate">{selectedTrack.title}</p>
-                  <p className="text-xs text-white/40 truncate">{selectedTrack.artist}</p>
-                </div>
-                <button onClick={() => setSelectedTrack(null)} className="text-white/30 hover:text-red-400 transition-colors">
-                  <X className="w-3.5 h-3.5" />
+              {/* Single / Bulk toggle */}
+              <div className="flex gap-1 bg-white/5 rounded-xl p-1.5">
+                <button onClick={() => setBulkMode("single")}
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors ${bulkMode === "single" ? "bg-pink-600 text-white" : "text-white/40 hover:text-white/60"}`}>
+                  Single Reel
+                </button>
+                <button onClick={() => setBulkMode("bulk")}
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-semibold transition-colors ${bulkMode === "bulk" ? "bg-pink-600 text-white" : "text-white/40 hover:text-white/60"}`}>
+                  Bulk Reels (CSV)
                 </button>
               </div>
-            )}
-            {/* Search — always visible */}
-            <div className="space-y-2">
-              <div className="flex gap-1.5">
-                <input
-                  value={musicQuery}
-                  onChange={(e) => setMusicQuery(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && fetchMusic()}
-                  placeholder="Search tracks… (press Enter)"
-                  className="flex-1 bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-pink-500/50"
-                />
-                <Button
-                  size="sm"
-                  onClick={() => fetchMusic()}
-                  disabled={musicLoading}
-                  className="bg-pink-600 hover:bg-pink-500 text-white h-7 px-2.5 shrink-0"
-                >
-                  {musicLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-                </Button>
-              </div>
-              <Select value={musicGenre} onValueChange={(v) => { setMusicGenre(v); fetchMusic(v); }}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-7 text-xs">
-                  <SelectValue placeholder="All genres" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All genres</SelectItem>
-                  <SelectItem value="pop">Pop</SelectItem>
-                  <SelectItem value="hip-hop">Hip-Hop</SelectItem>
-                  <SelectItem value="electronic">Electronic</SelectItem>
-                  <SelectItem value="jazz">Jazz</SelectItem>
-                  <SelectItem value="classical">Classical</SelectItem>
-                  <SelectItem value="r-b-soul">R&amp;B / Soul</SelectItem>
-                  <SelectItem value="ambient">Ambient</SelectItem>
-                  <SelectItem value="rock">Rock</SelectItem>
-                  <SelectItem value="country">Country</SelectItem>
-                </SelectContent>
-              </Select>
-              {musicTracks.length > 0 && (
-                <div className="max-h-48 overflow-y-auto space-y-0.5 border border-white/10 rounded-lg p-1.5 bg-black/20">
-                  {musicTracks.map((track) => {
-                    const isSelected = selectedTrack?.id === track.id;
-                    const isPreviewing = previewingTrackId === track.id;
-                    return (
-                      <div
-                        key={track.id}
-                        onClick={() => {
-                          if (isSelected) {
-                            setSelectedTrack(null);
-                          } else {
-                            setSelectedTrack(track);
-                            if (audioPreviewRef.current) { audioPreviewRef.current.pause(); setPreviewingTrackId(null); }
-                          }
-                        }}
-                        className={`flex items-center gap-2 rounded px-2 py-2 cursor-pointer transition-colors ${
-                          isSelected
-                            ? "bg-green-500/20 ring-1 ring-green-500/50"
-                            : "hover:bg-white/8 active:bg-white/10"
-                        }`}
-                      >
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (isPreviewing) {
-                              audioPreviewRef.current?.pause();
-                              setPreviewingTrackId(null);
-                            } else {
-                              if (audioPreviewRef.current) audioPreviewRef.current.pause();
-                              audioPreviewRef.current = new Audio(track.previewUrl);
-                              audioPreviewRef.current.play();
-                              setPreviewingTrackId(track.id);
-                              audioPreviewRef.current.onended = () => setPreviewingTrackId(null);
-                            }
-                          }}
-                          className={`transition-colors shrink-0 p-1 rounded ${isPreviewing ? "text-pink-400" : "text-white/50 hover:text-pink-400"}`}
-                        >
-                          {isPreviewing ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                        </button>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-xs truncate ${isSelected ? "text-green-300 font-semibold" : "text-white"}`}>{track.title}</p>
-                          <p className="text-xs text-white/40 truncate">
-                            {track.artist} · {Math.floor(track.duration / 60)}:{String(track.duration % 60).padStart(2, "0")}
-                          </p>
-                        </div>
-                        <div className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center transition-colors ${
-                          isSelected ? "bg-green-500 text-white" : "bg-white/10 text-white/60"
-                        }`}>
-                          {isSelected ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
-                        </div>
+
+              {/* ── Single mode ── */}
+              {bulkMode === "single" && (
+                <>
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-base font-semibold text-white/70">Slides ({slides.length} / 10)</h3>
+                      <div className="flex items-center gap-2">
+                        <input
+                          ref={csvInputRef}
+                          type="file"
+                          accept=".csv,text/csv"
+                          className="hidden"
+                          onChange={(e) => { if (e.target.files?.[0]) { handleCsvImport(e.target.files[0]); e.target.value = ""; } }}
+                        />
+                        <Button size="sm" variant="outline" onClick={() => csvInputRef.current?.click()}
+                          className="border-white/20 text-white/60 hover:text-white h-8 px-3 text-xs">
+                          <FileText className="w-3.5 h-3.5 mr-1.5" />Import CSV
+                        </Button>
+                        <Button size="sm" onClick={addSlide} disabled={slides.length >= 10}
+                          className="bg-pink-600 hover:bg-pink-500 text-white h-8 px-3 text-xs">
+                          <Plus className="w-3.5 h-3.5 mr-1.5" />Add Slide
+                        </Button>
                       </div>
-                    );
-                  })}
-                  </div>
-                )}
-              </div>
-          </div>
-
-          {/* Cloud Campaign push */}
-          <div className="w-full max-w-xs space-y-2.5">
-            <div className="flex items-center gap-1.5 text-xs text-white/40 font-semibold uppercase tracking-wider">
-              <Send className="w-3.5 h-3.5" /> Push to Cloud Campaign
-              <button
-                onClick={() => setWsNamesOpen((o) => !o)}
-                title="Name workspaces"
-                className="ml-auto text-white/20 hover:text-white/60 transition-colors"
-              >
-                <Settings className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Workspace naming panel */}
-            {wsNamesOpen && (
-              <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/5 p-3 space-y-2.5">
-                <p className="text-[10px] text-white/40 uppercase tracking-wide font-semibold">Name your workspaces</p>
-                <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1">
-                  {ccWorkspaces.map((ws) => (
-                    <div key={ws.id} className="flex items-center gap-2">
-                      <span className="text-[10px] text-white/20 font-mono shrink-0 w-16 truncate" title={ws.id}>{ws.id.slice(0, 8)}…</span>
-                      <input
-                        type="text"
-                        value={wsLabelsDraft[ws.id] ?? ""}
-                        onChange={(e) => setWsLabelsDraft((d) => ({ ...d, [ws.id]: e.target.value }))}
-                        placeholder="Enter name…"
-                        className="flex-1 bg-black/30 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-white/20 outline-none focus:border-indigo-400/50 min-w-0"
-                      />
                     </div>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" onClick={() => setWsNamesOpen(false)}
-                    className="flex-1 h-7 text-xs border-white/20 text-white/50 bg-transparent hover:bg-white/5">
-                    Cancel
-                  </Button>
-                  <Button size="sm" onClick={handleSaveWsLabels} disabled={wsLabelsSaving}
-                    className="flex-1 h-7 text-xs bg-indigo-600 hover:bg-indigo-500 text-white">
-                    {wsLabelsSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save Names"}
-                  </Button>
-                </div>
-              </div>
-            )}
+                    <div className="space-y-3">
+                      {slides.map((slide, idx) => (
+                        <div
+                          key={slide.id}
+                          onClick={() => { setActiveIdx(idx); setIsPlaying(false); }}
+                          className={`rounded-xl border p-4 cursor-pointer transition-all space-y-3 ${
+                            activeIdx === idx ? "border-pink-500 bg-pink-500/10" : "border-white/10 hover:border-white/20 bg-white/[0.02]"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-white/60">Slide {idx + 1}</span>
+                            <div className="flex items-center gap-1.5">
+                              {([
+                                { m: "cover" as const, label: "Img", title: "Image + static text" },
+                                { m: "typewriter" as const, label: "Aa", title: "Text only (typewriter)" },
+                                { m: "image-typewriter" as const, label: "Img+Aa", title: "Image + typewriter text" },
+                              ]).map(({ m, label, title }) => (
+                                <button
+                                  key={m}
+                                  onClick={(e) => { e.stopPropagation(); toggleSlideMode(idx, m); }}
+                                  title={title}
+                                  className={`text-[10px] px-2 py-1 rounded transition-colors ${slide.mode === m ? "bg-pink-600/80 text-white" : "text-white/30 border border-white/15 hover:border-white/30"}`}
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                              {slides.length > 1 && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); removeSlide(idx); }}
+                                  className="text-white/25 hover:text-red-400 transition-colors ml-1"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <textarea
+                            value={slide.text}
+                            onChange={(e) => updateText(idx, e.target.value)}
+                            placeholder={slide.mode === "cover" && coverSplit ? "Eyebrow|Headline" : "Slide text…"}
+                            rows={2}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full bg-transparent text-sm text-white placeholder:text-white/30 resize-none outline-none border border-white/10 rounded-lg p-2.5 focus:border-pink-500/50"
+                          />
+                          {(slide.mode === "cover" || slide.mode === "image-typewriter") && (
+                            <div className="space-y-2">
+                              <label className={`flex items-center gap-2 cursor-pointer rounded-lg px-3 py-2 text-sm transition-colors ${
+                                (slide.imageFile || slide.videoFile)
+                                  ? "text-white/50 hover:text-white/70 border border-white/10"
+                                  : "border border-dashed border-white/20 hover:border-pink-500/60 text-white/40 hover:text-white/70 justify-center"
+                              }`}>
+                                <Upload className="w-4 h-4 shrink-0" />
+                                {slide.videoFile
+                                  ? (slide.videoFile.name.length > 26 ? slide.videoFile.name.slice(0, 26) + "…" : slide.videoFile.name)
+                                  : slide.imageFile
+                                  ? (slide.imageFile.name.length > 26 ? slide.imageFile.name.slice(0, 26) + "…" : slide.imageFile.name)
+                                  : slide.mode === "image-typewriter" ? "Upload photo or video (required)" : "Upload photo or video (optional)"}
+                                <input
+                                  type="file"
+                                  accept="image/*,video/*"
+                                  className="hidden"
+                                  onClick={(e) => e.stopPropagation()}
+                                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSlideMedia(idx, f); }}
+                                />
+                              </label>
+                              {slide.mode === "image-typewriter" && !slide.imageElement && !slide.videoElement && (
+                                <p className="text-xs text-amber-400/70 italic text-center">Upload a photo or video, add text, then press ▶ Preview</p>
+                              )}
+                              {slide.imageElement && (
+                                <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex justify-between text-xs text-white/25">
+                                    <span>▲ Top</span>
+                                    <span className="text-white/40">Image position</span>
+                                    <span>Bottom ▼</span>
+                                  </div>
+                                  <Slider
+                                    min={0} max={100} step={1}
+                                    value={[Math.round((slide.imageOffsetY + 1) * 50)]}
+                                    onValueChange={([v]) => updateImageOffset(idx, parseFloat(((v / 50) - 1).toFixed(3)))}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          {slide.mode === "typewriter" && (
+                            <p className="text-xs text-white/30 italic">Press ▶ Preview in Step 4 to see the typewriter animation</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
 
-            {ccLoading ? (
-              <div className="flex items-center gap-2 text-xs text-white/30 py-2">
-                <Loader2 className="w-3 h-3 animate-spin" /> Loading workspaces…
-              </div>
-            ) : ccWorkspaces.length === 0 ? (
-              <p className="text-xs text-white/30 italic">No Cloud Campaign workspaces configured.</p>
-            ) : (
-              <>
-                <Select value={ccWorkspaceId} onValueChange={setCcWorkspaceId}>
-                  <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-7 text-xs">
-                    <SelectValue placeholder="Select workspace…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ccWorkspaces.map((ws) => (
-                      <SelectItem key={ws.id} value={ws.id}>{ws.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <textarea
-                  value={ccCaption}
-                  onChange={(e) => setCcCaption(e.target.value)}
-                  placeholder="Caption (optional)…"
-                  rows={2}
-                  className="w-full bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-pink-500/50 resize-none"
-                />
-                <Button
-                  size="sm"
-                  onClick={handlePushToCC}
-                  disabled={ccPushing || !ccWorkspaceId}
-                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white h-8 text-xs"
-                >
-                  {ccPushing
-                    ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />{ccPushProgress}</>
-                    : <><Send className="w-3.5 h-3.5 mr-2" />Push Reel as MP4</>}
-                </Button>
-                <p className="text-xs text-white/20 text-center">Encodes MP4 → uploads → posts as video</p>
-              </>
-            )}
-          </div>
+                  {/* AI Content Machine */}
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-4">
+                    <button onClick={() => setAiOpen((p) => !p)} className="flex items-center gap-3 w-full text-left">
+                      <Sparkles className="w-5 h-5 text-pink-400" />
+                      <span className="text-base font-semibold text-white/80 flex-1">AI Content Machine</span>
+                      <ChevronDown className={`w-5 h-5 text-white/30 transition-transform ${aiOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    {aiOpen && (
+                      <div className="space-y-3 pt-1">
+                        <input
+                          value={aiIndustry}
+                          onChange={(e) => setAiIndustry(e.target.value)}
+                          placeholder="Industry (e.g. Aesthetics clinic)"
+                          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/30 outline-none focus:border-pink-500/50"
+                        />
+                        <Select value={aiTone} onValueChange={setAiTone}>
+                          <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-10 text-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {["conversational", "professional", "playful", "inspirational", "educational"].map((t) => (
+                              <SelectItem key={t} value={t} className="capitalize">{t}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <textarea
+                          value={aiTopics}
+                          onChange={(e) => setAiTopics(e.target.value)}
+                          placeholder="Topics or hooks to cover…"
+                          rows={3}
+                          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/30 outline-none focus:border-pink-500/50 resize-none"
+                        />
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-white/50 shrink-0">Slides: {aiSlideCount}</span>
+                          <Slider min={2} max={10} step={1} value={[aiSlideCount]} onValueChange={([v]) => setAiSlideCount(v)} className="flex-1" />
+                        </div>
+                        <Button onClick={handleAIGenerate} disabled={aiGenerating} className="w-full bg-pink-600 hover:bg-pink-500 text-white py-5 text-sm">
+                          {aiGenerating
+                            ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating…</>
+                            : <><Sparkles className="w-4 h-4 mr-2" />Generate {aiSlideCount} Slides</>}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
 
-          {/* Instagram Reel posting */}
-          <div className="w-full max-w-xs space-y-2.5">
-            <div className="flex items-center gap-1.5 text-xs text-white/40 font-semibold uppercase tracking-wider">
-              <Film className="w-3.5 h-3.5" /> Post to Instagram
-            </div>
-            {igLoading ? (
-              <div className="flex items-center gap-2 text-xs text-white/30 py-2">
-                <Loader2 className="w-3 h-3 animate-spin" /> Loading clients…
-              </div>
-            ) : igPresets.length === 0 ? (
-              <p className="text-xs text-white/30 italic">No client presets found. Add one in the Presets page.</p>
-            ) : (
-              <>
-                <Select value={igPresetId} onValueChange={setIgPresetId}>
-                  <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-7 text-xs">
-                    <SelectValue placeholder="Select client…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {igPresets.map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <textarea
-                  value={igCaption}
-                  onChange={(e) => setIgCaption(e.target.value)}
-                  placeholder="Caption (optional)…"
-                  rows={2}
-                  className="w-full bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-pink-500/50 resize-none"
-                />
-                <div className="flex gap-1.5">
+              {/* ── Bulk mode ── */}
+              {bulkMode === "bulk" && (
+                <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-4">
+                  <p className="text-sm text-white/40 leading-relaxed">Upload a CSV where each row is one reel and each column is one slide. Style settings from Step 2 apply to all reels.</p>
+                  <input
+                    ref={bulkCsvRef}
+                    type="file"
+                    accept=".csv,text/csv"
+                    className="hidden"
+                    onChange={(e) => { if (e.target.files?.[0]) { handleBulkCsvImport(e.target.files[0]); e.target.value = ""; } }}
+                  />
+                  <Button variant="outline" onClick={() => bulkCsvRef.current?.click()}
+                    className="w-full border-white/20 text-white/60 hover:text-white py-5 text-sm">
+                    <FileText className="w-4 h-4 mr-2" />Upload CSV
+                  </Button>
+                  {bulkRows.length > 0 && (
+                    <div className="bg-white/5 rounded-xl p-4 space-y-1">
+                      <p className="text-sm font-semibold text-white">{bulkRows.length} reels loaded</p>
+                      <p className="text-sm text-white/40">Up to {Math.max(...bulkRows.map((r) => r.length))} slides each</p>
+                    </div>
+                  )}
                   <Button
-                    size="sm"
-                    onClick={() => handlePushToIG(false)}
-                    disabled={igPushing || !igPresetId}
-                    className="flex-1 bg-pink-700 hover:bg-pink-600 text-white h-8 text-xs"
+                    onClick={handleBulkGenerate}
+                    disabled={bulkGenerating || bulkPushing || bulkRows.length === 0}
+                    className="w-full bg-pink-600 hover:bg-pink-500 text-white py-5 text-sm"
                   >
-                    {igPushing
-                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      : <><Film className="w-3 h-3 mr-1.5" />Post Reel</>}
+                    {bulkGenerating
+                      ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{bulkProgress.label}</>
+                      : <><Download className="w-4 h-4 mr-2" />Generate ZIP {bulkRows.length > 0 ? `(${bulkRows.length} reels)` : ""}</>}
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => handlePushToIG(true)}
-                    disabled={igPushing || !igPresetId}
-                    className="flex-1 border border-pink-700/60 text-pink-300 bg-transparent hover:bg-pink-700/20 h-8 text-xs"
-                  >
-                    {igPushing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Trial Reel"}
-                  </Button>
+                  {bulkGenerating && bulkProgress.total > 0 && (
+                    <div className="space-y-1.5">
+                      <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                        <div className="h-full bg-pink-500 rounded-full transition-all duration-500"
+                          style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }} />
+                      </div>
+                      <p className="text-sm text-white/40 text-center">{bulkProgress.current} / {bulkProgress.total}</p>
+                    </div>
+                  )}
+                  {bulkZipBlob && (
+                    <Button onClick={() => saveAs(bulkZipBlob!, `bulk-reels-${Date.now()}.zip`)}
+                      className="w-full bg-green-700 hover:bg-green-600 text-white py-5 text-sm">
+                      <Download className="w-4 h-4 mr-2" />Download ZIP ({bulkRows.length} reels)
+                    </Button>
+                  )}
+                  {igPresets.length > 0 && (
+                    <div className="border-t border-white/10 pt-4 space-y-3">
+                      <p className="text-sm font-semibold text-white/60 flex items-center gap-2"><Film className="w-4 h-4" />Push Bulk Reels to Instagram</p>
+                      <Select value={bulkIgPresetId} onValueChange={setBulkIgPresetId}>
+                        <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-10 text-sm"><SelectValue placeholder="Select client…" /></SelectTrigger>
+                        <SelectContent>
+                          {igPresets.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleBulkPushToIG(true)}
+                          disabled={bulkPushing || bulkGenerating || bulkRows.length === 0 || !bulkIgPresetId}
+                          className="flex-1 bg-pink-700 hover:bg-pink-600 text-white py-5 text-sm"
+                        >
+                          {bulkPushing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Trial"}
+                        </Button>
+                        <Button
+                          onClick={() => handleBulkPushToIG(false)}
+                          disabled={bulkPushing || bulkGenerating || bulkRows.length === 0 || !bulkIgPresetId}
+                          className="flex-1 border border-pink-700/60 text-pink-300 bg-transparent hover:bg-pink-700/20 py-5 text-sm"
+                        >
+                          {bulkPushing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Post Live"}
+                        </Button>
+                      </div>
+                      {bulkPushing && bulkPushProgress.total > 0 && (
+                        <div className="space-y-1.5">
+                          <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-full bg-pink-500 rounded-full transition-all duration-500"
+                              style={{ width: `${(bulkPushProgress.current / bulkPushProgress.total) * 100}%` }} />
+                          </div>
+                          <p className="text-sm text-white/40 text-center">{bulkPushProgress.current} / {bulkPushProgress.total}</p>
+                        </div>
+                      )}
+                      <p className="text-xs text-white/20 text-center">Posts as private drafts — graduate each in Instagram when ready</p>
+                    </div>
+                  )}
+                  <p className="text-xs text-white/20 text-center">Max 30 reels · 10 slides each · Typewriter style</p>
                 </div>
-                {igPushing && <p className="text-[10px] text-white/40 text-center">{igPushProgress}</p>}
-                <p className="text-[10px] text-white/20 text-center">Trial = private test · you graduate it when ready</p>
-              </>
-            )}
-          </div>
+              )}
 
-          <canvas ref={exportCanvasRef} className="hidden" />
-        </div>
-
-        <div className="w-72 border-l border-white/10 flex flex-col overflow-y-auto p-4 gap-5 shrink-0">
-          <h2 className="text-xs font-semibold text-white/50 uppercase tracking-widest">Style</h2>
-
-          <div className="space-y-2">
-            <Label className="text-xs text-white/50">Font</Label>
-            <Select value={fontFamily} onValueChange={setFontFamily}>
-              <SelectTrigger className="bg-white/5 border-white/10 text-xs h-8"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {FONT_OPTIONS.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs text-white/50">Font size — {fontSize}px</Label>
-            <Slider min={30} max={180} step={2} value={[fontSize]} onValueChange={([v]) => setFontSize(v)} />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Label className="text-xs text-white/50 flex-1">Text colour</Label>
-            <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)}
-              className="w-8 h-8 rounded border border-white/20 bg-transparent cursor-pointer" />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs text-white/50">Overlay darkness — {overlayOpacity}%</Label>
-            <Slider min={0} max={90} step={5} value={[overlayOpacity]} onValueChange={([v]) => setOverlayOpacity(v)} />
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Label className="text-xs text-white/50 flex-1">Background colour</Label>
-            <input type="color" value={pageColor} onChange={(e) => setPageColor(e.target.value)}
-              className="w-8 h-8 rounded border border-white/20 bg-transparent cursor-pointer" />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs text-white/50">Line spacing — {lineSpacing.toFixed(1)}</Label>
-            <Slider min={0.8} max={2.2} step={0.1} value={[lineSpacing]} onValueChange={([v]) => setLineSpacing(v)} />
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-xs text-white/50">Text position</Label>
-            <div className="flex gap-1">
-              {(["top", "center", "bottom"] as const).map((p) => (
-                <Button key={p} size="sm" onClick={() => setTextPosition(p)}
-                  className={`flex-1 h-7 text-xs capitalize ${textPosition === p ? "bg-pink-600 border-pink-600 text-white" : "border-white/20 text-white/50 bg-transparent border"}`}>
-                  {p}
+              <div className="flex justify-end pt-4">
+                <Button onClick={() => setReelStep(2)} className="px-8 py-6 text-lg font-semibold bg-pink-600 hover:bg-pink-500">
+                  Next: Style <ChevronRight className="w-5 h-5 ml-2" />
                 </Button>
-              ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="space-y-2">
-            <Label className="text-xs text-white/50">Alignment</Label>
-            <div className="flex gap-1">
-              {(["left", "center", "right"] as const).map((a) => (
-                <Button key={a} size="sm" onClick={() => setTextAlign(a)}
-                  className={`flex-1 h-7 text-xs capitalize ${textAlign === a ? "bg-pink-600 border-pink-600 text-white" : "border-white/20 text-white/50 bg-transparent border"}`}>
-                  {a}
-                </Button>
-              ))}
-            </div>
-          </div>
+          {/* ═══════ STEP 2: STYLE ═══════ */}
+          {reelStep === 2 && (
+            <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div>
+                <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 2: Style</h2>
+                <p className="text-lg text-white/50">Customise the look of your reel slides.</p>
+              </div>
 
-          <div className="border border-white/10 rounded-lg p-3 space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs text-white/50">Split text mode</Label>
-              <button
-                onClick={() => setCoverSplit((p) => !p)}
-                className={`w-9 h-5 rounded-full transition-colors relative ${coverSplit ? "bg-pink-600" : "bg-white/20"}`}
-              >
-                <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${coverSplit ? "translate-x-4" : "translate-x-0.5"}`} />
-              </button>
-            </div>
-            {coverSplit && (
-              <div className="space-y-3">
-                <p className="text-xs text-white/30">Type "Eyebrow|Headline" in slide text</p>
-                <div className="space-y-1">
-                  <Label className="text-xs text-white/40">Eyebrow font</Label>
-                  <Select value={coverEyebrowFont} onValueChange={setCoverEyebrowFont}>
-                    <SelectTrigger className="bg-white/5 border-white/10 h-7 text-xs"><SelectValue /></SelectTrigger>
+              {/* Live preview */}
+              <div className="flex flex-col items-center gap-3">
+                <div className="relative" style={{ width: PREVIEW_W, height: PREVIEW_H }}>
+                  <canvas
+                    ref={previewCanvasRef}
+                    width={VIDEO_WIDTH}
+                    height={VIDEO_HEIGHT}
+                    style={{ width: PREVIEW_W, height: PREVIEW_H, borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", display: "block" }}
+                  />
+                  <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
+                    {slides.map((_, i) => (
+                      <button key={i} onClick={() => setActiveIdx(i)}
+                        className={`w-1.5 h-1.5 rounded-full transition-colors ${activeIdx === i ? "bg-pink-400" : "bg-white/25 hover:bg-white/50"}`} />
+                    ))}
+                  </div>
+                </div>
+                <p className="text-xs text-white/30">Click a dot to preview a different slide</p>
+              </div>
+
+              {/* Font & Text */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-5">
+                <h3 className="text-base font-semibold text-white/70">Font & Text</h3>
+                <div className="space-y-2">
+                  <Label className="text-sm text-white/50">Font family</Label>
+                  <Select value={fontFamily} onValueChange={setFontFamily}>
+                    <SelectTrigger className="bg-white/5 border-white/10 text-white/80 h-10"><SelectValue /></SelectTrigger>
                     <SelectContent>{FONT_OPTIONS.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs text-white/40 flex-1">Eyebrow colour</Label>
-                  <input type="color" value={coverEyebrowColor} onChange={(e) => setCoverEyebrowColor(e.target.value)}
-                    className="w-7 h-7 rounded border border-white/20 bg-transparent cursor-pointer" />
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label className="text-sm text-white/50">Font size</Label>
+                    <span className="text-sm font-semibold text-white">{fontSize}px</span>
+                  </div>
+                  <Slider min={30} max={180} step={2} value={[fontSize]} onValueChange={([v]) => setFontSize(v)} />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-white/40">Eyebrow size — {coverEyebrowSizeRatio.toFixed(2)}×</Label>
-                  <Slider min={0.2} max={0.7} step={0.01} value={[coverEyebrowSizeRatio]} onValueChange={([v]) => setCoverEyebrowSizeRatio(v)} />
+                <div className="flex items-center gap-3">
+                  <Label className="text-sm text-white/50 flex-1">Text colour</Label>
+                  <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)}
+                    className="w-10 h-10 rounded-lg border border-white/20 bg-transparent cursor-pointer" />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-white/40">Eyebrow letter spacing — {coverEyebrowLetterSpacing}px</Label>
-                  <Slider min={0} max={20} step={1} value={[coverEyebrowLetterSpacing]} onValueChange={([v]) => setCoverEyebrowLetterSpacing(v)} />
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label className="text-sm text-white/50">Line spacing</Label>
+                    <span className="text-sm font-semibold text-white">{lineSpacing.toFixed(1)}</span>
+                  </div>
+                  <Slider min={0.8} max={2.2} step={0.1} value={[lineSpacing]} onValueChange={([v]) => setLineSpacing(v)} />
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-white/40">Eyebrow arch — {Math.round(coverEyebrowArch * 100)}%</Label>
-                  <Slider min={0} max={1} step={0.05} value={[coverEyebrowArch]} onValueChange={([v]) => setCoverEyebrowArch(v)} />
-                </div>
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => setCoverEyebrowItalic((p) => !p)}
-                    className={`flex-1 h-7 text-xs italic ${coverEyebrowItalic ? "bg-pink-600 text-white" : "border border-white/20 text-white/50 bg-transparent"}`}>
-                    Italic
-                  </Button>
-                  <Button size="sm" onClick={() => setCoverEyebrowUppercase((p) => !p)}
-                    className={`flex-1 h-7 text-xs ${coverEyebrowUppercase ? "bg-pink-600 text-white" : "border border-white/20 text-white/50 bg-transparent"}`}>
-                    ALL CAPS
-                  </Button>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-white/40">Headline weight</Label>
-                  <div className="flex gap-1 flex-wrap">
-                    {[300, 400, 600, 700, 900].map((w) => (
-                      <Button key={w} size="sm" onClick={() => setCoverHeadlineWeight(w)}
-                        className={`flex-1 h-7 text-xs ${coverHeadlineWeight === w ? "bg-pink-600 text-white" : "border border-white/20 text-white/50 bg-transparent"}`}>
-                        {w}
-                      </Button>
+              </div>
+
+              {/* Layout */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-5">
+                <h3 className="text-base font-semibold text-white/70">Layout</h3>
+                <div className="space-y-2">
+                  <Label className="text-sm text-white/50">Text position</Label>
+                  <div className="flex gap-2">
+                    {(["top", "center", "bottom"] as const).map((p) => (
+                      <button key={p} onClick={() => setTextPosition(p)}
+                        className={`flex-1 py-2.5 rounded-lg text-sm font-medium capitalize transition-colors ${textPosition === p ? "bg-pink-600 text-white" : "border border-white/15 text-white/40 hover:border-white/30"}`}>
+                        {p}
+                      </button>
                     ))}
                   </div>
                 </div>
-                <Button size="sm" onClick={() => setCoverHeadlineItalic((p) => !p)}
-                  className={`w-full h-7 text-xs italic ${coverHeadlineItalic ? "bg-pink-600 text-white" : "border border-white/20 text-white/50 bg-transparent"}`}>
-                  Headline Italic
+                <div className="space-y-2">
+                  <Label className="text-sm text-white/50">Text alignment</Label>
+                  <div className="flex gap-2">
+                    {(["left", "center", "right"] as const).map((a) => (
+                      <button key={a} onClick={() => setTextAlign(a)}
+                        className={`flex-1 py-2.5 rounded-lg text-sm font-medium capitalize transition-colors ${textAlign === a ? "bg-pink-600 text-white" : "border border-white/15 text-white/40 hover:border-white/30"}`}>
+                        {a}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Background & Overlay */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-5">
+                <h3 className="text-base font-semibold text-white/70">Background & Overlay</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label className="text-sm text-white/50">Overlay darkness</Label>
+                    <span className="text-sm font-semibold text-white">{overlayOpacity}%</span>
+                  </div>
+                  <Slider min={0} max={90} step={5} value={[overlayOpacity]} onValueChange={([v]) => setOverlayOpacity(v)} />
+                </div>
+                <div className="flex items-center gap-3">
+                  <Label className="text-sm text-white/50 flex-1">Background colour (no-photo slides)</Label>
+                  <input type="color" value={pageColor} onChange={(e) => setPageColor(e.target.value)}
+                    className="w-10 h-10 rounded-lg border border-white/20 bg-transparent cursor-pointer" />
+                </div>
+              </div>
+
+              {/* Split text mode */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-5">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-white/70">Split Text Mode</h3>
+                  <button onClick={() => setCoverSplit((p) => !p)}
+                    className={`w-11 h-6 rounded-full transition-colors relative ${coverSplit ? "bg-pink-600" : "bg-white/20"}`}>
+                    <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${coverSplit ? "translate-x-5" : "translate-x-0.5"}`} />
+                  </button>
+                </div>
+                {coverSplit ? (
+                  <div className="space-y-4">
+                    <p className="text-sm text-white/40">Type "Eyebrow|Headline" in your slide text</p>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-white/50">Eyebrow font</Label>
+                      <Select value={coverEyebrowFont} onValueChange={setCoverEyebrowFont}>
+                        <SelectTrigger className="bg-white/5 border-white/10 text-white/80 h-10"><SelectValue /></SelectTrigger>
+                        <SelectContent>{FONT_OPTIONS.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Label className="text-sm text-white/50 flex-1">Eyebrow colour</Label>
+                      <input type="color" value={coverEyebrowColor} onChange={(e) => setCoverEyebrowColor(e.target.value)}
+                        className="w-10 h-10 rounded-lg border border-white/20 bg-transparent cursor-pointer" />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <Label className="text-sm text-white/50">Eyebrow size</Label>
+                        <span className="text-sm font-semibold text-white">{coverEyebrowSizeRatio.toFixed(2)}×</span>
+                      </div>
+                      <Slider min={0.2} max={0.7} step={0.01} value={[coverEyebrowSizeRatio]} onValueChange={([v]) => setCoverEyebrowSizeRatio(v)} />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <Label className="text-sm text-white/50">Letter spacing</Label>
+                        <span className="text-sm font-semibold text-white">{coverEyebrowLetterSpacing}px</span>
+                      </div>
+                      <Slider min={0} max={20} step={1} value={[coverEyebrowLetterSpacing]} onValueChange={([v]) => setCoverEyebrowLetterSpacing(v)} />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <Label className="text-sm text-white/50">Arch</Label>
+                        <span className="text-sm font-semibold text-white">{Math.round(coverEyebrowArch * 100)}%</span>
+                      </div>
+                      <Slider min={0} max={1} step={0.05} value={[coverEyebrowArch]} onValueChange={([v]) => setCoverEyebrowArch(v)} />
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setCoverEyebrowItalic((p) => !p)}
+                        className={`flex-1 py-2.5 rounded-lg text-sm italic transition-colors ${coverEyebrowItalic ? "bg-pink-600 text-white" : "border border-white/15 text-white/40 hover:border-white/30"}`}>
+                        Italic
+                      </button>
+                      <button onClick={() => setCoverEyebrowUppercase((p) => !p)}
+                        className={`flex-1 py-2.5 rounded-lg text-sm transition-colors ${coverEyebrowUppercase ? "bg-pink-600 text-white" : "border border-white/15 text-white/40 hover:border-white/30"}`}>
+                        ALL CAPS
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-white/50">Headline weight</Label>
+                      <div className="flex gap-2 flex-wrap">
+                        {[300, 400, 600, 700, 900].map((w) => (
+                          <button key={w} onClick={() => setCoverHeadlineWeight(w)}
+                            className={`flex-1 py-2 rounded-lg text-sm transition-colors ${coverHeadlineWeight === w ? "bg-pink-600 text-white" : "border border-white/15 text-white/40 hover:border-white/30"}`}>
+                            {w}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <button onClick={() => setCoverHeadlineItalic((p) => !p)}
+                      className={`w-full py-2.5 rounded-lg text-sm italic transition-colors ${coverHeadlineItalic ? "bg-pink-600 text-white" : "border border-white/15 text-white/40 hover:border-white/30"}`}>
+                      Headline Italic
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-white/30">Enable to split slide text into an eyebrow label + headline</p>
+                )}
+              </div>
+
+              {/* Logo */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-4">
+                <h3 className="text-base font-semibold text-white/70">Logo</h3>
+                <label className="flex items-center gap-3 cursor-pointer text-sm text-white/50 hover:text-white/70 border border-white/10 hover:border-white/20 rounded-xl p-3 transition-colors">
+                  <Upload className="w-4 h-4 shrink-0" />
+                  {logoFile ? (logoFile.name.length > 30 ? logoFile.name.slice(0, 30) + "…" : logoFile.name) : "Upload logo (optional)"}
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); }} />
+                </label>
+                {logoImg && (
+                  <>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-white/50">Position</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(["top-left", "top-right", "bottom-left", "bottom-right"] as const).map((p) => (
+                          <button key={p} onClick={() => setLogoPosition(p)}
+                            className={`py-2.5 rounded-lg text-sm capitalize transition-colors ${logoPosition === p ? "bg-pink-600 text-white" : "border border-white/15 text-white/40 hover:border-white/30"}`}>
+                            {p.replace("-", " ")}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <Label className="text-sm text-white/50">Size</Label>
+                        <span className="text-sm font-semibold text-white">{logoSize}px</span>
+                      </div>
+                      <Slider min={40} max={200} step={10} value={[logoSize]} onValueChange={([v]) => setLogoSize(v)} />
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Text-only slides */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-4">
+                <h3 className="text-base font-semibold text-white/70">Text-Only Slides (Aa)</h3>
+                <p className="text-sm text-white/30">Settings for typewriter-style slides with no photo</p>
+                <div className="flex items-center gap-3">
+                  <Label className="text-sm text-white/50 flex-1">Background colour</Label>
+                  <input type="color" value={typewriterBgColor} onChange={(e) => setTypewriterBgColor(e.target.value)}
+                    className="w-10 h-10 rounded-lg border border-white/20 bg-transparent cursor-pointer" />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label className="text-sm text-white/50">Reveal speed</Label>
+                    <span className="text-sm font-semibold text-white">{Math.round(typewriterFill * 100)}% of slide</span>
+                  </div>
+                  <Slider min={25} max={95} step={5} value={[Math.round(typewriterFill * 100)]} onValueChange={([v]) => setTypewriterFill(v / 100)} />
+                  <p className="text-xs text-white/25">Lower = text appears faster</p>
+                </div>
+              </div>
+
+              {/* Timing */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-4">
+                <h3 className="text-base font-semibold text-white/70">Timing</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label className="text-sm text-white/50">Slide duration</Label>
+                    <span className="text-sm font-semibold text-white">{slideDurationSec}s</span>
+                  </div>
+                  <Slider min={2} max={8} step={1} value={[slideDurationSec]} onValueChange={([v]) => setSlideDurationSec(v)} />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label className="text-sm text-white/50">Fade duration</Label>
+                    <span className="text-sm font-semibold text-white">{fadeDurationMs}ms</span>
+                  </div>
+                  <Slider min={100} max={800} step={50} value={[fadeDurationMs]} onValueChange={([v]) => setFadeDurationMs(v)} />
+                </div>
+                <p className="text-sm text-white/30 text-center">Total reel length: {(slides.length * slideDurationSec).toFixed(0)}s</p>
+              </div>
+
+              <div className="flex justify-between pt-4">
+                <Button variant="outline" onClick={() => setReelStep(1)}
+                  className="px-8 py-6 text-lg font-semibold border-white/20 text-white/60 hover:text-white bg-transparent">
+                  <ChevronLeft className="w-5 h-5 mr-2" /> Back
+                </Button>
+                <Button onClick={() => setReelStep(3)} className="px-8 py-6 text-lg font-semibold bg-pink-600 hover:bg-pink-500">
+                  Next: Music <ChevronRight className="w-5 h-5 ml-2" />
                 </Button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          <div className="space-y-2">
-            <Label className="text-xs text-white/50">Logo</Label>
-            <label className="flex items-center gap-2 cursor-pointer text-xs text-white/40 hover:text-white/60 border border-white/10 rounded p-2 transition-colors">
-              <Upload className="w-3 h-3" />
-              {logoFile
-                ? logoFile.name.length > 20 ? logoFile.name.slice(0, 20) + "…" : logoFile.name
-                : "Upload logo"}
-              <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f); }} />
-            </label>
-            {logoImg && (
-              <div className="flex gap-1 flex-wrap">
-                {(["top-left", "top-right", "bottom-left", "bottom-right"] as const).map((p) => (
-                  <Button key={p} size="sm" onClick={() => setLogoPosition(p)}
-                    className={`flex-1 h-6 text-[9px] px-1 ${logoPosition === p ? "bg-pink-600 text-white" : "border border-white/20 text-white/40 bg-transparent"}`}>
-                    {p.replace("top-left", "TL").replace("top-right", "TR").replace("bottom-left", "BL").replace("bottom-right", "BR")}
+          {/* ═══════ STEP 3: MUSIC ═══════ */}
+          {reelStep === 3 && (
+            <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div>
+                <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 3: Music</h2>
+                <p className="text-lg text-white/50">Add a backing track to your reel (optional).</p>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-4">
+                {selectedTrack && (
+                  <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3">
+                    <Check className="w-4 h-4 text-green-400 shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-green-300 truncate">{selectedTrack.title}</p>
+                      <p className="text-sm text-white/40 truncate">{selectedTrack.artist}</p>
+                    </div>
+                    <button onClick={() => setSelectedTrack(null)} className="text-white/30 hover:text-red-400 transition-colors">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <input
+                    value={musicQuery}
+                    onChange={(e) => setMusicQuery(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && fetchMusic()}
+                    placeholder="Search tracks… (press Enter)"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/30 outline-none focus:border-pink-500/50"
+                  />
+                  <Button onClick={() => fetchMusic()} disabled={musicLoading}
+                    className="bg-pink-600 hover:bg-pink-500 text-white px-4">
+                    {musicLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
                   </Button>
-                ))}
+                </div>
+                <Select value={musicGenre} onValueChange={(v) => { setMusicGenre(v); fetchMusic(v); }}>
+                  <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-10 text-sm"><SelectValue placeholder="All genres" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All genres</SelectItem>
+                    <SelectItem value="pop">Pop</SelectItem>
+                    <SelectItem value="hip-hop">Hip-Hop</SelectItem>
+                    <SelectItem value="electronic">Electronic</SelectItem>
+                    <SelectItem value="jazz">Jazz</SelectItem>
+                    <SelectItem value="classical">Classical</SelectItem>
+                    <SelectItem value="r-b-soul">R&amp;B / Soul</SelectItem>
+                    <SelectItem value="ambient">Ambient</SelectItem>
+                    <SelectItem value="rock">Rock</SelectItem>
+                    <SelectItem value="country">Country</SelectItem>
+                  </SelectContent>
+                </Select>
+                {musicTracks.length > 0 && (
+                  <div className="space-y-1 border border-white/10 rounded-xl p-2 bg-black/20 max-h-80 overflow-y-auto">
+                    {musicTracks.map((track) => {
+                      const isSelected = selectedTrack?.id === track.id;
+                      const isPreviewing = previewingTrackId === track.id;
+                      return (
+                        <div
+                          key={track.id}
+                          onClick={() => {
+                            if (isSelected) { setSelectedTrack(null); }
+                            else {
+                              setSelectedTrack(track);
+                              if (audioPreviewRef.current) { audioPreviewRef.current.pause(); setPreviewingTrackId(null); }
+                            }
+                          }}
+                          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer transition-colors ${isSelected ? "bg-green-500/20 ring-1 ring-green-500/50" : "hover:bg-white/5"}`}
+                        >
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (isPreviewing) { audioPreviewRef.current?.pause(); setPreviewingTrackId(null); }
+                              else {
+                                if (audioPreviewRef.current) audioPreviewRef.current.pause();
+                                audioPreviewRef.current = new Audio(track.previewUrl);
+                                audioPreviewRef.current.play();
+                                setPreviewingTrackId(track.id);
+                                audioPreviewRef.current.onended = () => setPreviewingTrackId(null);
+                              }
+                            }}
+                            className={`shrink-0 p-1.5 rounded-lg transition-colors ${isPreviewing ? "text-pink-400 bg-pink-500/10" : "text-white/40 hover:text-pink-400"}`}
+                          >
+                            {isPreviewing ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm truncate ${isSelected ? "text-green-300 font-semibold" : "text-white"}`}>{track.title}</p>
+                            <p className="text-xs text-white/40 truncate">{track.artist} · {Math.floor(track.duration / 60)}:{String(track.duration % 60).padStart(2, "0")}</p>
+                          </div>
+                          <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-colors ${isSelected ? "bg-green-500 text-white" : "bg-white/10 text-white/50"}`}>
+                            {isSelected ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-            {logoImg && (
-              <div className="space-y-1">
-                <Label className="text-xs text-white/40">Logo size — {logoSize}px</Label>
-                <Slider min={40} max={200} step={10} value={[logoSize]} onValueChange={([v]) => setLogoSize(v)} />
-              </div>
-            )}
-          </div>
 
-          <div className="border-t border-white/10 pt-4 space-y-3">
-            <h3 className="text-xs font-semibold text-white/40 uppercase tracking-widest">Text slides</h3>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-white/50">Background color</Label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="color"
-                  value={typewriterBgColor}
-                  onChange={(e) => setTypewriterBgColor(e.target.value)}
-                  className="w-8 h-7 rounded border border-white/10 bg-transparent cursor-pointer"
-                />
-                <span className="text-xs text-white/30">{typewriterBgColor}</span>
+              <div className="flex justify-between pt-4">
+                <Button variant="outline" onClick={() => setReelStep(2)}
+                  className="px-8 py-6 text-lg font-semibold border-white/20 text-white/60 hover:text-white bg-transparent">
+                  <ChevronLeft className="w-5 h-5 mr-2" /> Back
+                </Button>
+                <Button onClick={() => setReelStep(4)} className="px-8 py-6 text-lg font-semibold bg-pink-600 hover:bg-pink-500">
+                  Next: Export &amp; Post <ChevronRight className="w-5 h-5 ml-2" />
+                </Button>
               </div>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-white/50">Reveal speed — {Math.round(typewriterFill * 100)}% of slide</Label>
-              <Slider min={25} max={95} step={5} value={[Math.round(typewriterFill * 100)]} onValueChange={([v]) => setTypewriterFill(v / 100)} />
-              <p className="text-[10px] text-white/25">Lower = text appears faster</p>
-            </div>
-          </div>
+          )}
 
-          <div className="border-t border-white/10 pt-4 space-y-4">
-            <div className="space-y-2">
-              <Label className="text-xs text-white/50">Slide duration — {slideDurationSec}s</Label>
-              <Slider min={2} max={8} step={1} value={[slideDurationSec]} onValueChange={([v]) => setSlideDurationSec(v)} />
+          {/* ═══════ STEP 4: EXPORT & POST ═══════ */}
+          {reelStep === 4 && (
+            <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div>
+                <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 4: Export &amp; Post</h2>
+                <p className="text-lg text-white/50">Preview your reel, export, and publish.</p>
+              </div>
+
+              {/* Preview + export */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-5">
+                <h3 className="text-base font-semibold text-white/70">Preview</h3>
+                <div className="flex justify-center">
+                  <div className="relative" style={{ width: PREVIEW_W, height: PREVIEW_H }}>
+                    <canvas
+                      ref={previewCanvasRef}
+                      width={VIDEO_WIDTH}
+                      height={VIDEO_HEIGHT}
+                      style={{ width: PREVIEW_W, height: PREVIEW_H, borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", display: "block" }}
+                    />
+                    <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
+                      {slides.map((_, i) => (
+                        <button key={i} onClick={() => { setActiveIdx(i); setIsPlaying(false); }}
+                          className={`w-1.5 h-1.5 rounded-full transition-colors ${displayIdx === i ? "bg-pink-400" : "bg-white/25 hover:bg-white/50"}`} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <p className="text-sm text-white/30 text-center">
+                  9:16 · 1080×1920 · {(slides.length * slideDurationSec).toFixed(0)}s
+                  {selectedTrack ? ` · 🎵 ${selectedTrack.title}` : ""}
+                </p>
+                <div className="flex gap-3 justify-center">
+                  <Button variant="outline" onClick={() => { setIsPlaying((p) => !p); setPreviewIdx(0); }}
+                    className="border-white/20 text-white/70 hover:text-white px-6 py-5 text-base">
+                    {isPlaying ? <><Square className="w-4 h-4 mr-2" />Stop</> : <><Play className="w-4 h-4 mr-2" />Preview</>}
+                  </Button>
+                  <Button onClick={handleExport} disabled={exporting}
+                    className="bg-pink-600 hover:bg-pink-500 text-white px-6 py-5 text-base">
+                    {exporting
+                      ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{exportProgress}</>
+                      : <><Download className="w-4 h-4 mr-2" />Export Reel</>}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Cloud Campaign */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-semibold text-white/70 flex items-center gap-2">
+                    <Send className="w-4 h-4" />Push to Cloud Campaign
+                  </h3>
+                  <button onClick={() => setWsNamesOpen((o) => !o)} title="Name workspaces"
+                    className="text-white/30 hover:text-white/60 transition-colors">
+                    <Settings className="w-4 h-4" />
+                  </button>
+                </div>
+                {wsNamesOpen && (
+                  <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-4 space-y-3">
+                    <p className="text-xs text-white/40 uppercase tracking-wide font-semibold">Name your workspaces</p>
+                    <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+                      {ccWorkspaces.map((ws) => (
+                        <div key={ws.id} className="flex items-center gap-2">
+                          <span className="text-xs text-white/20 font-mono shrink-0 w-20 truncate" title={ws.id}>{ws.id.slice(0, 8)}…</span>
+                          <input
+                            type="text"
+                            value={wsLabelsDraft[ws.id] ?? ""}
+                            onChange={(e) => setWsLabelsDraft((d) => ({ ...d, [ws.id]: e.target.value }))}
+                            placeholder="Enter name…"
+                            className="flex-1 bg-black/30 border border-white/10 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-indigo-400/50"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => setWsNamesOpen(false)}
+                        className="flex-1 border-white/20 text-white/50 bg-transparent hover:bg-white/5">Cancel</Button>
+                      <Button size="sm" onClick={handleSaveWsLabels} disabled={wsLabelsSaving}
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white">
+                        {wsLabelsSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save Names"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {ccLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-white/30 py-2">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Loading workspaces…
+                  </div>
+                ) : ccWorkspaces.length === 0 ? (
+                  <p className="text-sm text-white/30 italic">No Cloud Campaign workspaces configured.</p>
+                ) : (
+                  <>
+                    <Select value={ccWorkspaceId} onValueChange={setCcWorkspaceId}>
+                      <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-10 text-sm"><SelectValue placeholder="Select workspace…" /></SelectTrigger>
+                      <SelectContent>{ccWorkspaces.map((ws) => <SelectItem key={ws.id} value={ws.id}>{ws.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <textarea
+                      value={ccCaption}
+                      onChange={(e) => setCcCaption(e.target.value)}
+                      placeholder="Caption (optional)…"
+                      rows={3}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/30 outline-none focus:border-indigo-500/50 resize-none"
+                    />
+                    <Button onClick={handlePushToCC} disabled={ccPushing || !ccWorkspaceId}
+                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-5 text-sm">
+                      {ccPushing
+                        ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{ccPushProgress}</>
+                        : <><Send className="w-4 h-4 mr-2" />Push Reel as MP4</>}
+                    </Button>
+                    <p className="text-sm text-white/20 text-center">Encodes MP4 → uploads → posts as video</p>
+                  </>
+                )}
+              </div>
+
+              {/* Instagram */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-4">
+                <h3 className="text-base font-semibold text-white/70 flex items-center gap-2">
+                  <Film className="w-4 h-4" />Post to Instagram
+                </h3>
+                {igLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-white/30 py-2">
+                    <Loader2 className="w-4 h-4 animate-spin" /> Loading clients…
+                  </div>
+                ) : igPresets.length === 0 ? (
+                  <p className="text-sm text-white/30 italic">No client presets found. Add one in the Presets page.</p>
+                ) : (
+                  <>
+                    <Select value={igPresetId} onValueChange={setIgPresetId}>
+                      <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-10 text-sm"><SelectValue placeholder="Select client…" /></SelectTrigger>
+                      <SelectContent>{igPresets.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                    <textarea
+                      value={igCaption}
+                      onChange={(e) => setIgCaption(e.target.value)}
+                      placeholder="Caption (optional)…"
+                      rows={3}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/30 outline-none focus:border-pink-500/50 resize-none"
+                    />
+                    <div className="flex gap-3">
+                      <Button onClick={() => handlePushToIG(false)} disabled={igPushing || !igPresetId}
+                        className="flex-1 bg-pink-700 hover:bg-pink-600 text-white py-5 text-sm">
+                        {igPushing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Film className="w-4 h-4 mr-2" />Post Reel</>}
+                      </Button>
+                      <Button onClick={() => handlePushToIG(true)} disabled={igPushing || !igPresetId}
+                        className="flex-1 border border-pink-700/60 text-pink-300 bg-transparent hover:bg-pink-700/20 py-5 text-sm">
+                        {igPushing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Trial Reel"}
+                      </Button>
+                    </div>
+                    {igPushing && <p className="text-sm text-white/40 text-center">{igPushProgress}</p>}
+                    <p className="text-xs text-white/20 text-center">Trial = private test · graduate in Instagram when ready</p>
+                  </>
+                )}
+              </div>
+
+              <div className="flex justify-start pt-4">
+                <Button variant="outline" onClick={() => setReelStep(3)}
+                  className="px-8 py-6 text-lg font-semibold border-white/20 text-white/60 hover:text-white bg-transparent">
+                  <ChevronLeft className="w-5 h-5 mr-2" /> Back
+                </Button>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs text-white/50">Fade duration — {fadeDurationMs}ms</Label>
-              <Slider min={100} max={800} step={50} value={[fadeDurationMs]} onValueChange={([v]) => setFadeDurationMs(v)} />
-            </div>
-            <p className="text-xs text-white/25 text-center">
-              Total: {(slides.length * slideDurationSec).toFixed(0)}s
-            </p>
-          </div>
+          )}
+
         </div>
-      </div>
+      </main>
+
+      <canvas ref={exportCanvasRef} className="hidden" />
+
     </div>
   );
 }
