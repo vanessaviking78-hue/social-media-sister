@@ -832,15 +832,24 @@ router.get("/music/search", async (req, res) => {
 
 router.get("/cloud-campaign/workspaces", async (_req, res) => {
   try {
-    const data = await ccFetch("/clients");
-    const items: any[] = Array.isArray(data) ? data : (data?.data ?? data?.clients ?? data?.workspaces ?? []);
-    const workspaces = items
-      .filter((c: any) => c?.id)
-      .map((c: any) => ({ id: String(c.id), name: String(c.name || c.id) }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    const workspaceIds = (process.env.CLOUD_CAMPAIGN_WORKSPACE_IDS || "").split(",").map((s) => s.trim()).filter(Boolean);
+    if (workspaceIds.length === 0) {
+      return res.json({ workspaces: [] });
+    }
+    let workspaces: { id: string; name: string }[] = [];
+    try {
+      const data = await ccFetch("/workspaces");
+      const items: any[] = Array.isArray(data) ? data : (data?.data ?? data?.workspaces ?? []);
+      const byId = new Map(items.map((w: any) => [String(w.id), w]));
+      workspaces = workspaceIds.map((id) => {
+        const w = byId.get(id);
+        return { id, name: w ? String(w.name || w.title || id) : id };
+      });
+    } catch {
+      workspaces = workspaceIds.map((id) => ({ id, name: id }));
+    }
     res.json({ workspaces });
   } catch (err: any) {
-    console.error("CC workspaces error:", err);
     res.status(502).json({ error: err.message || "Failed to fetch workspaces from Cloud Campaign" });
   }
 });

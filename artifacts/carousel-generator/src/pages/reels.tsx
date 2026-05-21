@@ -28,6 +28,8 @@ type ReelSlide = {
   text: string;
   imageFile: File | null;
   imageElement: HTMLImageElement | null;
+  videoFile: File | null;
+  videoElement: HTMLVideoElement | null;
   imageOffsetY: number;
 };
 
@@ -37,7 +39,7 @@ const PREVIEW_H = Math.round(VIDEO_HEIGHT * PREVIEW_SCALE);
 
 export default function Reels() {
   const [slides, setSlides] = useState<ReelSlide[]>([
-    { id: crypto.randomUUID(), mode: "cover", text: "", imageFile: null, imageElement: null, imageOffsetY: 0 },
+    { id: crypto.randomUUID(), mode: "cover", text: "", imageFile: null, imageElement: null, videoFile: null, videoElement: null, imageOffsetY: 0 },
   ]);
   const [activeIdx, setActiveIdx] = useState(0);
 
@@ -136,8 +138,9 @@ export default function Reels() {
         typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT,
       );
     } else if (slide.mode === "image-typewriter") {
+      const mediaBg = (slide.videoElement ?? slide.imageElement) as HTMLImageElement | null;
       drawSlide(
-        ctx, slide.imageElement, "",
+        ctx, mediaBg, "",
         fontFamily, fontSize, true,
         textColor, lineSpacing, overlayColor,
         logoImg, logoPosition, logoSize,
@@ -154,8 +157,9 @@ export default function Reels() {
       );
       drawTypewriterOnVideo(ctx, slide.text, progress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
     } else {
+      const mediaBg = (slide.videoElement ?? slide.imageElement) as HTMLImageElement | null;
       drawSlide(
-        ctx, slide.imageElement, slide.text,
+        ctx, mediaBg, slide.text,
         fontFamily, fontSize, true,
         textColor, lineSpacing, overlayColor,
         logoImg, logoPosition, logoSize,
@@ -192,9 +196,13 @@ export default function Reels() {
 
   useEffect(() => {
     if (!isPlaying) {
+      slides.forEach((s) => {
+        if (s.videoElement) { s.videoElement.pause(); s.videoElement.currentTime = 0; }
+      });
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       return;
     }
+    slides.forEach((s) => s.videoElement?.play().catch(() => {}));
     const msPerSlide = slideDurationSec * 1000;
     const total = slides.length * msPerSlide;
     const startTime = performance.now();
@@ -225,7 +233,10 @@ export default function Reels() {
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}api/presets`)
       .then((r) => r.json())
-      .then((d) => { if (Array.isArray(d)) setIgPresets(d.map((p: { id: number; name: string }) => ({ id: p.id, name: p.name }))); })
+      .then((d) => {
+        const list: { id: number; name: string }[] = Array.isArray(d) ? d : (d?.presets ?? []);
+        setIgPresets(list.map((p) => ({ id: p.id, name: p.name })));
+      })
       .catch(() => {});
   }, []);
 
@@ -256,7 +267,7 @@ export default function Reels() {
             rawMode === "cover" ? "cover"
             : rawMode === "image-typewriter" ? "image-typewriter"
             : "typewriter";
-          return { id: crypto.randomUUID(), mode, text, imageFile: null, imageElement: null, imageOffsetY: 0 } satisfies ReelSlide;
+          return { id: crypto.randomUUID(), mode, text, imageFile: null, imageElement: null, videoFile: null, videoElement: null, imageOffsetY: 0 } satisfies ReelSlide;
         });
         setSlides(newSlides);
         setActiveIdx(0);
@@ -311,6 +322,8 @@ export default function Reels() {
                 text,
                 imageFile: null,
                 imageElement: null,
+                videoFile: null,
+                videoElement: null,
                 imageOffsetY: 0,
               })));
               setActiveIdx(0);
@@ -440,7 +453,7 @@ export default function Reels() {
 
   const addSlide = () => {
     if (slides.length >= 10) return;
-    const newSlide = { id: crypto.randomUUID(), mode: "typewriter" as const, text: "", imageFile: null, imageElement: null, imageOffsetY: 0 };
+    const newSlide = { id: crypto.randomUUID(), mode: "typewriter" as const, text: "", imageFile: null, imageElement: null, videoFile: null, videoElement: null, imageOffsetY: 0 };
     setSlides((prev) => [...prev, newSlide]);
     setActiveIdx(slides.length);
   };
@@ -459,15 +472,33 @@ export default function Reels() {
     setSlides((prev) => prev.map((s, i) => (i === idx ? { ...s, imageOffsetY: offsetY } : s)));
   };
 
-  const handleSlideImage = (idx: number, file: File) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      setSlides((prev) => prev.map((s, i) => (i === idx ? { ...s, imageFile: file, imageElement: img } : s)));
-      URL.revokeObjectURL(url);
-    };
-    img.onerror = () => URL.revokeObjectURL(url);
-    img.src = url;
+  const handleSlideMedia = (idx: number, file: File) => {
+    if (file.type.startsWith("video/")) {
+      const url = URL.createObjectURL(file);
+      const vid = document.createElement("video");
+      vid.muted = true;
+      vid.loop = true;
+      vid.playsInline = true;
+      vid.preload = "auto";
+      vid.src = url;
+      vid.onloadeddata = () => {
+        vid.currentTime = 0;
+        setSlides((prev) => prev.map((s, i) =>
+          i === idx ? { ...s, videoFile: file, videoElement: vid, imageFile: null, imageElement: null } : s
+        ));
+      };
+    } else {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        setSlides((prev) => prev.map((s, i) =>
+          i === idx ? { ...s, imageFile: file, imageElement: img, videoFile: null, videoElement: null } : s
+        ));
+        URL.revokeObjectURL(url);
+      };
+      img.onerror = () => URL.revokeObjectURL(url);
+      img.src = url;
+    }
   };
 
   const handleLogoUpload = (file: File) => {
@@ -478,8 +509,8 @@ export default function Reels() {
   };
 
   const handleExport = async () => {
-    const hasContent = slides.some((s) => s.text.trim() || s.imageElement);
-    if (!hasContent) { toast.error("Add some text or images first"); return; }
+    const hasContent = slides.some((s) => s.text.trim() || s.imageElement || s.videoElement);
+    if (!hasContent) { toast.error("Add some text or media first"); return; }
     setExporting(true);
     setExportProgress("Setting up…");
     try {
@@ -491,11 +522,12 @@ export default function Reels() {
       if (selectedTrack?.previewUrl) setExportProgress("Fetching audio…");
       const blob = await recordReelVideo(canvas, slideDurationSec * 1000, fadeDurationMs, slides.length, (slideIndex, slideProgress) => {
         const slide = slides[slideIndex];
+        const mediaBg = (slide.videoElement ?? slide.imageElement) as HTMLImageElement | null;
         if (slide.mode === "typewriter") {
           drawTypewriterSlide(ctx, slide.text, slideProgress, typewriterBgColor, textColor, fontFamily, fontSize, lineSpacing, logoImg, logoPosition, logoSize, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
         } else if (slide.mode === "image-typewriter") {
           drawSlide(
-            ctx, slide.imageElement, "",
+            ctx, mediaBg, "",
             fontFamily, fontSize, true,
             textColor, lineSpacing, overlayColor,
             logoImg, logoPosition, logoSize,
@@ -511,7 +543,7 @@ export default function Reels() {
           drawTypewriterOnVideo(ctx, slide.text, slideProgress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
         } else {
           drawSlide(
-            ctx, slide.imageElement, slide.text,
+            ctx, mediaBg, slide.text,
             fontFamily, fontSize, true,
             textColor, lineSpacing, overlayColor,
             logoImg, logoPosition, logoSize,
@@ -537,18 +569,19 @@ export default function Reels() {
     }
   };
 
-  const fetchMusic = async () => {
+  const fetchMusic = async (genreOverride?: string) => {
     setMusicLoading(true);
     setMusicTracks([]);
     try {
+      const genre = genreOverride ?? musicGenre;
       const params = new URLSearchParams();
       if (musicQuery.trim()) params.set("q", musicQuery.trim());
-      if (musicGenre && musicGenre !== "all") params.set("genre", musicGenre);
+      if (genre && genre !== "all") params.set("genre", genre);
       const res = await fetch(`${import.meta.env.BASE_URL}api/music/search?${params}`);
       const data = await res.json();
       if (data.error) { toast.error(data.error); return; }
       setMusicTracks(data.tracks || []);
-      if ((data.tracks || []).length === 0) toast.info("No tracks found — try different keywords");
+      if ((data.tracks || []).length === 0) toast.info("No tracks found — try a different genre or keyword");
     } catch {
       toast.error("Music search failed");
     } finally {
@@ -558,7 +591,7 @@ export default function Reels() {
 
   const handlePushToCC = async () => {
     if (!ccWorkspaceId) { toast.error("Select a Cloud Campaign workspace first"); return; }
-    const hasContent = slides.some((s) => s.text.trim() || s.imageElement);
+    const hasContent = slides.some((s) => s.text.trim() || s.imageElement || s.videoElement);
     if (!hasContent) { toast.error("Add some content to your slides first"); return; }
     setCcPushing(true);
     setCcPushProgress("Setting up…");
@@ -569,11 +602,12 @@ export default function Reels() {
       const ctx = canvas.getContext("2d")!;
       const animateFn = (slideIndex: number, slideProgress: number = 1) => {
         const slide = slides[slideIndex];
+        const mediaBg = (slide.videoElement ?? slide.imageElement) as HTMLImageElement | null;
         if (slide.mode === "typewriter") {
           drawTypewriterSlide(ctx, slide.text, slideProgress, typewriterBgColor, textColor, fontFamily, fontSize, lineSpacing, logoImg, logoPosition, logoSize, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
         } else if (slide.mode === "image-typewriter") {
           drawSlide(
-            ctx, slide.imageElement, "",
+            ctx, mediaBg, "",
             fontFamily, fontSize, true,
             textColor, lineSpacing, overlayColor,
             logoImg, logoPosition, logoSize,
@@ -589,7 +623,7 @@ export default function Reels() {
           drawTypewriterOnVideo(ctx, slide.text, slideProgress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
         } else {
           drawSlide(
-            ctx, slide.imageElement, slide.text,
+            ctx, mediaBg, slide.text,
             fontFamily, fontSize, true,
             textColor, lineSpacing, overlayColor,
             logoImg, logoPosition, logoSize,
@@ -657,7 +691,7 @@ export default function Reels() {
 
   const handlePushToIG = async (trial: boolean) => {
     if (!igPresetId) { toast.error("Select a client preset first"); return; }
-    const hasContent = slides.some((s) => s.text.trim() || s.imageElement);
+    const hasContent = slides.some((s) => s.text.trim() || s.imageElement || s.videoElement);
     if (!hasContent) { toast.error("Add some content to your slides first"); return; }
     setIgPushing(true);
     setIgPushProgress("Setting up…");
@@ -668,11 +702,12 @@ export default function Reels() {
       const ctx = canvas.getContext("2d")!;
       const animateFn = (slideIndex: number, slideProgress: number = 1) => {
         const slide = slides[slideIndex];
+        const mediaBg = (slide.videoElement ?? slide.imageElement) as HTMLImageElement | null;
         if (slide.mode === "typewriter") {
           drawTypewriterSlide(ctx, slide.text, slideProgress, typewriterBgColor, textColor, fontFamily, fontSize, lineSpacing, logoImg, logoPosition, logoSize, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
         } else if (slide.mode === "image-typewriter") {
           drawSlide(
-            ctx, slide.imageElement, "",
+            ctx, mediaBg, "",
             fontFamily, fontSize, true,
             textColor, lineSpacing, overlayColor,
             logoImg, logoPosition, logoSize,
@@ -688,7 +723,7 @@ export default function Reels() {
           drawTypewriterOnVideo(ctx, slide.text, slideProgress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
         } else {
           drawSlide(
-            ctx, slide.imageElement, slide.text,
+            ctx, mediaBg, slide.text,
             fontFamily, fontSize, true,
             textColor, lineSpacing, overlayColor,
             logoImg, logoPosition, logoSize,
@@ -865,31 +900,35 @@ export default function Reels() {
               {(slide.mode === "cover" || slide.mode === "image-typewriter") ? (
                 <div className="space-y-2">
                   <label className={`flex items-center gap-2 cursor-pointer transition-colors rounded-md px-2 py-1.5 text-xs ${
-                    slide.imageFile
+                    (slide.imageFile || slide.videoFile)
                       ? "text-white/50 hover:text-white/70"
                       : "border border-dashed border-white/20 hover:border-pink-500/60 text-white/40 hover:text-white/70 justify-center"
                   }`}>
                     <Upload className="w-3.5 h-3.5 shrink-0" />
-                    {slide.imageFile
-                      ? slide.imageFile.name.length > 22
-                        ? slide.imageFile.name.slice(0, 22) + "…"
-                        : slide.imageFile.name
-                      : slide.mode === "image-typewriter"
-                        ? "Upload photo (required)"
-                        : "Upload background image"}
+                    {slide.videoFile
+                      ? slide.videoFile.name.length > 22
+                        ? slide.videoFile.name.slice(0, 22) + "…"
+                        : slide.videoFile.name
+                      : slide.imageFile
+                        ? slide.imageFile.name.length > 22
+                          ? slide.imageFile.name.slice(0, 22) + "…"
+                          : slide.imageFile.name
+                        : slide.mode === "image-typewriter"
+                          ? "Upload photo or video (required)"
+                          : "Upload photo or video"}
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,video/*"
                       className="hidden"
                       onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSlideImage(idx, f); }}
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSlideMedia(idx, f); }}
                     />
                   </label>
-                  {slide.mode === "image-typewriter" && !slide.imageElement && (
-                    <p className="text-[10px] text-amber-400/70 italic text-center">Upload a photo, add text, then press ▶ Preview</p>
+                  {slide.mode === "image-typewriter" && !slide.imageElement && !slide.videoElement && (
+                    <p className="text-[10px] text-amber-400/70 italic text-center">Upload a photo or video, add text, then press ▶ Preview</p>
                   )}
-                  {slide.mode === "image-typewriter" && slide.imageElement && (
-                    <p className="text-[10px] text-green-400/60 italic text-center">Press ▶ Preview to see text type over photo</p>
+                  {slide.mode === "image-typewriter" && (slide.imageElement || slide.videoElement) && (
+                    <p className="text-[10px] text-green-400/60 italic text-center">Press ▶ Preview to see text type over media</p>
                   )}
                   {slide.imageElement && (
                     <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
@@ -1149,14 +1188,14 @@ export default function Reels() {
                   />
                   <Button
                     size="sm"
-                    onClick={fetchMusic}
+                    onClick={() => fetchMusic()}
                     disabled={musicLoading}
                     className="bg-pink-600 hover:bg-pink-500 text-white h-7 px-2.5 shrink-0"
                   >
                     {musicLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
                   </Button>
                 </div>
-                <Select value={musicGenre} onValueChange={setMusicGenre}>
+                <Select value={musicGenre} onValueChange={(v) => { setMusicGenre(v); fetchMusic(v); }}>
                   <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-7 text-xs">
                     <SelectValue placeholder="All genres" />
                   </SelectTrigger>
