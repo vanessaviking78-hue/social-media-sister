@@ -3,6 +3,8 @@ import multer from "multer";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { objectStorageClient } from "../../lib/objectStorage";
 import { logActivity } from "../../lib/activityLog";
+import { db } from "@workspace/db";
+import { workspaceLabelsTable } from "@workspace/db/schema";
 
 const videoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 300 * 1024 * 1024 } });
 
@@ -832,6 +834,35 @@ router.get("/music/search", async (req, res) => {
   }
 });
 
+router.get("/cloud-campaign/workspace-labels", async (_req, res) => {
+  try {
+    const labels = await db.select().from(workspaceLabelsTable);
+    res.json(labels);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put("/cloud-campaign/workspace-labels", async (req, res) => {
+  try {
+    const entries: Array<{ workspaceId: string; label: string }> = req.body;
+    if (!Array.isArray(entries)) return res.status(400).json({ error: "Expected array" });
+    for (const { workspaceId, label } of entries) {
+      if (!workspaceId) continue;
+      await db
+        .insert(workspaceLabelsTable)
+        .values({ workspaceId, label: label || "", updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: workspaceLabelsTable.workspaceId,
+          set: { label: label || "", updatedAt: new Date() },
+        });
+    }
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get("/cloud-campaign/workspaces", async (_req, res) => {
   try {
     const workspaceIds = (process.env.CLOUD_CAMPAIGN_WORKSPACE_IDS || "").split(",").map((s) => s.trim()).filter(Boolean);
@@ -839,34 +870,20 @@ router.get("/cloud-campaign/workspaces", async (_req, res) => {
       return res.json({ workspaces: [] });
     }
 
+    const dbLabels = await db.select().from(workspaceLabelsTable);
+    const dbLabelMap = new Map(dbLabels.map((l) => [l.workspaceId, l.label]));
+
     const nameOverrides = (process.env.CLOUD_CAMPAIGN_WORKSPACE_NAMES || "")
       .split(",").map((s) => s.trim());
-    const nameById = new Map<string, string>();
+    const envNameById = new Map<string, string>();
     workspaceIds.forEach((id, i) => {
-      if (nameOverrides[i] && nameOverrides[i].length > 0) nameById.set(id, nameOverrides[i]);
+      if (nameOverrides[i] && nameOverrides[i].length > 0) envNameById.set(id, nameOverrides[i]);
     });
-
-    let apiNames = new Map<string, string>();
-    const agencyId = process.env.CLOUD_CAMPAIGN_AGENCY_ID || "";
-    for (const path of [`/agencies/${agencyId}/workspaces`, `/workspaces`]) {
-      try {
-        const data = await ccFetch(path);
-        const items: any[] = Array.isArray(data) ? data : (data?.data ?? data?.workspaces ?? []);
-        if (items.length > 0) {
-          items.forEach((w: any) => {
-            if (w?.id) apiNames.set(String(w.id), String(w.name || w.title || w.id));
-          });
-          break;
-        }
-      } catch {
-        continue;
-      }
-    }
 
     const workspaces = workspaceIds.map((id) => {
       const name =
-        nameById.get(id) ||
-        apiNames.get(id) ||
+        dbLabelMap.get(id) ||
+        envNameById.get(id) ||
         `Workspace ${id.slice(0, 8)}…`;
       return { id, name };
     });

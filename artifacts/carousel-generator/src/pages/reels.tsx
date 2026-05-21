@@ -5,6 +5,7 @@ import {
   ImagePlus, BookOpen, Palette, MessageSquareText, CalendarDays,
   BarChart3, ShieldCheck, Film, Image as ImageIcon,
   Music, Search, X, Send, FileText, Sparkles, ChevronDown, Check,
+  ExternalLink, AlertCircle, CheckCircle2, KeyRound, ChevronUp, Settings,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -89,13 +90,23 @@ export default function Reels() {
   const [ccPushing, setCcPushing] = useState(false);
   const [ccPushProgress, setCcPushProgress] = useState("");
   const [ccLoading, setCcLoading] = useState(true);
+  const [wsNamesOpen, setWsNamesOpen] = useState(false);
+  const [wsLabelsDraft, setWsLabelsDraft] = useState<Record<string, string>>({});
+  const [wsLabelsSaving, setWsLabelsSaving] = useState(false);
 
-  const [igPresets, setIgPresets] = useState<Array<{ id: number; name: string }>>([]);
+  const [igPresets, setIgPresets] = useState<Array<{ id: number; name: string; metaPageAccessToken?: string | null; metaFacebookPageId?: string | null; metaInstagramAccountId?: string | null }>>([]);
   const [igPresetId, setIgPresetId] = useState("");
   const [igCaption, setIgCaption] = useState("");
   const [igPushing, setIgPushing] = useState(false);
   const [igPushProgress, setIgPushProgress] = useState("");
   const [igLoading, setIgLoading] = useState(true);
+  const [igSetupOpen, setIgSetupOpen] = useState(false);
+  const [igSetupToken, setIgSetupToken] = useState("");
+  const [igSetupPageId, setIgSetupPageId] = useState("");
+  const [igSetupIgId, setIgSetupIgId] = useState("");
+  const [igSetupSaving, setIgSetupSaving] = useState(false);
+  const [igSetupTesting, setIgSetupTesting] = useState(false);
+  const [igSetupTestResult, setIgSetupTestResult] = useState<{ ok: boolean; name?: string; error?: string } | null>(null);
 
   const [typewriterBgColor, setTypewriterBgColor] = useState("#0d0d0d");
   const [typewriterFill, setTypewriterFill] = useState(0.7);
@@ -226,22 +237,57 @@ export default function Reels() {
   }, [isPlaying, slides.length, slideDurationSec]);
 
   useEffect(() => {
-    fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/workspaces`)
-      .then((r) => r.json())
-      .then((d) => { if (Array.isArray(d.workspaces)) setCcWorkspaces(d.workspaces); })
-      .catch(() => {})
-      .finally(() => setCcLoading(false));
+    Promise.all([
+      fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/workspaces`).then((r) => r.json()),
+      fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/workspace-labels`).then((r) => r.json()),
+    ]).then(([wsData, labelsData]) => {
+      if (Array.isArray(wsData.workspaces)) setCcWorkspaces(wsData.workspaces);
+      if (Array.isArray(labelsData)) {
+        const draft: Record<string, string> = {};
+        labelsData.forEach((l: { workspaceId: string; label: string }) => { draft[l.workspaceId] = l.label; });
+        setWsLabelsDraft(draft);
+      }
+    }).catch(() => {}).finally(() => setCcLoading(false));
   }, []);
 
-  useEffect(() => {
-    fetch(`${import.meta.env.BASE_URL}api/presets`)
+  const handleSaveWsLabels = async () => {
+    setWsLabelsSaving(true);
+    try {
+      const entries = Object.entries(wsLabelsDraft).map(([workspaceId, label]) => ({ workspaceId, label }));
+      const r = await fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/workspace-labels`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(entries),
+      });
+      if (!r.ok) throw new Error("Save failed");
+      const wsData = await fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/workspaces`).then((r2) => r2.json());
+      if (Array.isArray(wsData.workspaces)) setCcWorkspaces(wsData.workspaces);
+      setWsNamesOpen(false);
+      toast.success("Workspace names saved!");
+    } catch {
+      toast.error("Failed to save workspace names");
+    } finally {
+      setWsLabelsSaving(false);
+    }
+  };
+
+  const reloadIgPresets = () => {
+    return fetch(`${import.meta.env.BASE_URL}api/presets`)
       .then((r) => r.json())
       .then((d) => {
-        const list: { id: number; name: string }[] = Array.isArray(d) ? d : (d?.presets ?? []);
-        setIgPresets(list.map((p) => ({ id: p.id, name: p.name })));
-      })
-      .catch(() => {})
-      .finally(() => setIgLoading(false));
+        const list: any[] = Array.isArray(d) ? d : (d?.presets ?? []);
+        setIgPresets(list.map((p) => ({
+          id: p.id,
+          name: p.name,
+          metaPageAccessToken: p.metaPageAccessToken,
+          metaFacebookPageId: p.metaFacebookPageId,
+          metaInstagramAccountId: p.metaInstagramAccountId,
+        })));
+      });
+  };
+
+  useEffect(() => {
+    reloadIgPresets().catch(() => {}).finally(() => setIgLoading(false));
   }, []);
 
   const csvInputRef = useRef<HTMLInputElement>(null);
@@ -792,6 +838,44 @@ export default function Reels() {
     }
   };
 
+  const handleSaveIgCreds = async () => {
+    if (!igPresetId) return;
+    if (!igSetupToken.trim() || !igSetupPageId.trim() || !igSetupIgId.trim()) {
+      toast.error("Please fill in all three fields");
+      return;
+    }
+    setIgSetupSaving(true);
+    setIgSetupTestResult(null);
+    try {
+      const r = await fetch(`${import.meta.env.BASE_URL}api/presets/${igPresetId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          metaPageAccessToken: igSetupToken.trim(),
+          metaFacebookPageId: igSetupPageId.trim(),
+          metaInstagramAccountId: igSetupIgId.trim(),
+        }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "Save failed");
+      await reloadIgPresets();
+      const testR = await fetch(`${import.meta.env.BASE_URL}api/meta/test-connection?presetId=${igPresetId}`);
+      const testData = await testR.json();
+      if (testR.ok) {
+        setIgSetupTestResult({ ok: true, name: testData.name });
+        toast.success(`Connected! Posting as ${testData.name}`);
+        setTimeout(() => setIgSetupOpen(false), 1500);
+      } else {
+        setIgSetupTestResult({ ok: false, error: testData.error });
+        toast.error("Saved but connection test failed — check your credentials");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to save credentials");
+    } finally {
+      setIgSetupSaving(false);
+    }
+  };
+
   const displayIdx = isPlaying ? previewIdx : activeIdx;
 
   return (
@@ -1278,7 +1362,46 @@ export default function Reels() {
           <div className="w-full max-w-xs space-y-2.5">
             <div className="flex items-center gap-1.5 text-xs text-white/40 font-semibold uppercase tracking-wider">
               <Send className="w-3.5 h-3.5" /> Push to Cloud Campaign
+              <button
+                onClick={() => setWsNamesOpen((o) => !o)}
+                title="Name workspaces"
+                className="ml-auto text-white/20 hover:text-white/60 transition-colors"
+              >
+                <Settings className="w-3.5 h-3.5" />
+              </button>
             </div>
+
+            {/* Workspace naming panel */}
+            {wsNamesOpen && (
+              <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/5 p-3 space-y-2.5">
+                <p className="text-[10px] text-white/40 uppercase tracking-wide font-semibold">Name your workspaces</p>
+                <div className="max-h-56 overflow-y-auto space-y-1.5 pr-1">
+                  {ccWorkspaces.map((ws) => (
+                    <div key={ws.id} className="flex items-center gap-2">
+                      <span className="text-[10px] text-white/20 font-mono shrink-0 w-16 truncate" title={ws.id}>{ws.id.slice(0, 8)}…</span>
+                      <input
+                        type="text"
+                        value={wsLabelsDraft[ws.id] ?? ""}
+                        onChange={(e) => setWsLabelsDraft((d) => ({ ...d, [ws.id]: e.target.value }))}
+                        placeholder="Enter name…"
+                        className="flex-1 bg-black/30 border border-white/10 rounded px-2 py-1 text-xs text-white placeholder:text-white/20 outline-none focus:border-indigo-400/50 min-w-0"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setWsNamesOpen(false)}
+                    className="flex-1 h-7 text-xs border-white/20 text-white/50 bg-transparent hover:bg-white/5">
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={handleSaveWsLabels} disabled={wsLabelsSaving}
+                    className="flex-1 h-7 text-xs bg-indigo-600 hover:bg-indigo-500 text-white">
+                    {wsLabelsSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save Names"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {ccLoading ? (
               <div className="flex items-center gap-2 text-xs text-white/30 py-2">
                 <Loader2 className="w-3 h-3 animate-spin" /> Loading workspaces…

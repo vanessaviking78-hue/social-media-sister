@@ -156,6 +156,13 @@ export const insertApprovalBatchSchema = createInsertSchema(approvalBatchesTable
 export type InsertApprovalBatch = z.infer<typeof insertApprovalBatchSchema>;
 export type ApprovalBatch = typeof approvalBatchesTable.$inferSelect;
 
+export const workspaceLabelsTable = pgTable("workspace_labels", {
+  workspaceId: text("workspace_id").primaryKey(),
+  label: text("label").notNull(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+export type WorkspaceLabel = typeof workspaceLabelsTable.$inferSelect;
+
 export const APPROVAL_IMAGE_STATUSES = ["pending", "approved", "rejected"] as const;
 export type ApprovalImageStatus = typeof APPROVAL_IMAGE_STATUSES[number];
 
