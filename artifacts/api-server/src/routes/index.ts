@@ -10,6 +10,7 @@ import analyticsRouter from "./analytics";
 import approvalRouter from "./approval";
 import metaRouter from "./meta";
 import videoOverlayRouter from "./video-overlay";
+import portalRouter from "./portal";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(analyticsRouter);
 router.use(approvalRouter);
 router.use(metaRouter);
 router.use(videoOverlayRouter);
+router.use(portalRouter);
 
 export default router;

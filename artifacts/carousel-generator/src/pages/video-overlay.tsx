@@ -73,7 +73,7 @@ export default function VideoOverlay() {
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}api/presets`)
       .then((r) => r.json())
-      .then((d) => { if (Array.isArray(d)) setIgPresets(d.map((p: { id: number; name: string }) => ({ id: p.id, name: p.name }))); })
+      .then((d) => { if (d?.presets && Array.isArray(d.presets)) setIgPresets(d.presets.map((p: { id: number; name: string }) => ({ id: p.id, name: p.name }))); })
       .catch(() => {});
   }, []);
 
@@ -328,11 +328,13 @@ export default function VideoOverlay() {
         body: JSON.stringify({ topic: topic.trim(), segmentCount }),
       });
       const data = await res.json();
-      if (data.error) throw new Error(data.error);
+      if (!res.ok || data.error) throw new Error(data.error || `Server error (${res.status})`);
       const newSegs: string[] = [...(data.segments ?? [])];
       while (newSegs.length < segmentCount) newSegs.push("");
-      setSegments(newSegs.slice(0, segmentCount));
-      toast.success("Text generated!");
+      const trimmed = newSegs.slice(0, segmentCount);
+      if (!trimmed.some(Boolean)) throw new Error("No text was returned — try a different topic or try again");
+      setSegments(trimmed);
+      toast.success(`${trimmed.filter(Boolean).length} text overlays generated!`);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Generation failed");
     } finally {

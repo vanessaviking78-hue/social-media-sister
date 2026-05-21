@@ -46,6 +46,7 @@ export interface ClientPreset {
   textBoxOutlineColor: string;
   captionFootnote: string;
   coverSubheading: string;
+  clientPortalToken: string | null;
 }
 
 export interface PresetStyleFields {

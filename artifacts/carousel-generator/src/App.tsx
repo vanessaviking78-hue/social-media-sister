@@ -13,6 +13,7 @@ import Calendar from "@/pages/calendar";
 import Analytics from "@/pages/analytics";
 import Approval from "@/pages/approval";
 import ApprovePublic from "@/pages/approve-public";
+import ClientPortal from "@/pages/client-portal";
 import Reels from "@/pages/reels";
 import VideoOverlay from "@/pages/video-overlay";
 
@@ -37,10 +38,14 @@ function ProtectedRouter() {
 }
 
 function AppContent() {
-  const [isPublic, publicParams] = useRoute("/approve/:token");
+  const [isApprove, approveParams] = useRoute("/approve/:token");
+  const [isPortal, portalParams] = useRoute("/portal/:token");
 
-  if (isPublic && publicParams?.token) {
-    return <ApprovePublic token={publicParams.token} />;
+  if (isPortal && portalParams?.token) {
+    return <ClientPortal token={portalParams.token} />;
+  }
+  if (isApprove && approveParams?.token) {
+    return <ApprovePublic token={approveParams.token} />;
   }
 
   return (

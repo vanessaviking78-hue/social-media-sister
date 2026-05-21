@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,85 @@ import { usePresets, type ClientPreset, type PresetStyleFields, type TextAlign }
 import { FONT_OPTIONS } from "@/lib/slide-utils";
 
 const BASE = import.meta.env.BASE_URL || "/";
+
+function PortalButton({ preset }: { preset: import("@/lib/use-presets").ClientPreset }) {
+  const [open, setOpen] = useState(false);
+  const [token, setToken] = useState<string | null>(preset.clientPortalToken ?? null);
+  const [generating, setGenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const portalUrl = token
+    ? `${window.location.origin}${BASE.replace(/\/$/, "")}/portal/${token}`
+    : null;
+
+  const generate = async () => {
+    setGenerating(true);
+    try {
+      const r = await fetch(`${BASE}api/presets/${preset.id}/generate-portal-token`, { method: "POST" });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Failed");
+      setToken(d.token);
+      setOpen(true);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to generate portal link");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const copy = async () => {
+    if (!portalUrl) return;
+    await navigator.clipboard.writeText(portalUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="relative">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => token ? setOpen((o) => !o) : generate()}
+        disabled={generating}
+        title="Client portal"
+        className="text-blue-400 hover:text-blue-300 h-8 px-2"
+      >
+        {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Globe className="w-4 h-4" />}
+      </Button>
+      {open && token && (
+        <div className="absolute right-0 top-10 z-50 w-80 bg-gray-900 border border-gray-700 rounded-xl shadow-xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-semibold text-white flex items-center gap-2"><Globe className="w-4 h-4 text-blue-400" />Client Portal</p>
+            <button onClick={() => setOpen(false)} className="text-gray-500 hover:text-white"><X className="w-4 h-4" /></button>
+          </div>
+          <p className="text-xs text-gray-400">Share this link with <span className="text-white font-medium">{preset.name}</span> — they'll see upcoming content and approval requests.</p>
+          <div className="flex gap-1.5">
+            <input
+              readOnly
+              value={portalUrl ?? ""}
+              className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-xs text-gray-300 font-mono overflow-hidden"
+              onFocus={(e) => e.target.select()}
+            />
+            <button
+              onClick={copy}
+              title="Copy link"
+              className="bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-2.5 py-1.5 transition"
+            >
+              {copied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+          <button
+            onClick={generate}
+            disabled={generating}
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition disabled:opacity-50"
+          >
+            <RefreshCw className="w-3 h-3" />Regenerate link (invalidates old one)
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function TestMetaConnection({ presetId }: { presetId: number }) {
   const [testing, setTesting] = useState(false);
@@ -473,6 +552,7 @@ export default function PresetsPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-1">
+                      <PortalButton preset={preset} />
                       <Button variant="ghost" size="sm" onClick={() => startEdit(preset)} className="text-gray-400 hover:text-white h-8 px-2">
                         <Pencil className="w-4 h-4" />
                       </Button>
