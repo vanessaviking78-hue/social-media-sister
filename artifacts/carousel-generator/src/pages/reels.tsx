@@ -4,7 +4,7 @@ import {
   Layers, Plus, Trash2, Download, Play, Square, Upload, Loader2,
   ImagePlus, BookOpen, Palette, MessageSquareText, CalendarDays,
   BarChart3, ShieldCheck, Film, Image as ImageIcon,
-  Music, Search, X, Send, FileText, Sparkles, ChevronDown,
+  Music, Search, X, Send, FileText, Sparkles, ChevronDown, Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -79,7 +79,7 @@ export default function Reels() {
   const [musicGenre, setMusicGenre] = useState("all");
   const [musicTracks, setMusicTracks] = useState<Array<{ id: number; title: string; duration: number; artist: string; previewUrl: string }>>([]);
   const [musicLoading, setMusicLoading] = useState(false);
-  const [selectedTrack, setSelectedTrack] = useState<{ id: number; title: string; artist: string; previewUrl: string } | null>(null);
+  const [selectedTrack, setSelectedTrack] = useState<{ id: number; title: string; duration: number; artist: string; previewUrl: string } | null>(null);
   const [previewingTrackId, setPreviewingTrackId] = useState<number | null>(null);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
 
@@ -88,12 +88,14 @@ export default function Reels() {
   const [ccCaption, setCcCaption] = useState("");
   const [ccPushing, setCcPushing] = useState(false);
   const [ccPushProgress, setCcPushProgress] = useState("");
+  const [ccLoading, setCcLoading] = useState(true);
 
   const [igPresets, setIgPresets] = useState<Array<{ id: number; name: string }>>([]);
   const [igPresetId, setIgPresetId] = useState("");
   const [igCaption, setIgCaption] = useState("");
   const [igPushing, setIgPushing] = useState(false);
   const [igPushProgress, setIgPushProgress] = useState("");
+  const [igLoading, setIgLoading] = useState(true);
 
   const [typewriterBgColor, setTypewriterBgColor] = useState("#0d0d0d");
   const [typewriterFill, setTypewriterFill] = useState(0.7);
@@ -227,7 +229,8 @@ export default function Reels() {
     fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/workspaces`)
       .then((r) => r.json())
       .then((d) => { if (Array.isArray(d.workspaces)) setCcWorkspaces(d.workspaces); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setCcLoading(false));
   }, []);
 
   useEffect(() => {
@@ -237,7 +240,8 @@ export default function Reels() {
         const list: { id: number; name: string }[] = Array.isArray(d) ? d : (d?.presets ?? []);
         setIgPresets(list.map((p) => ({ id: p.id, name: p.name })));
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setIgLoading(false));
   }, []);
 
   const csvInputRef = useRef<HTMLInputElement>(null);
@@ -1162,190 +1166,216 @@ export default function Reels() {
             <div className="flex items-center gap-1.5 text-xs text-white/40 font-semibold uppercase tracking-wider">
               <Music className="w-3.5 h-3.5" /> Music
             </div>
-            {selectedTrack ? (
-              <div className="flex items-center gap-2 bg-pink-500/10 border border-pink-500/30 rounded-lg px-3 py-2.5">
-                <Music className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+            {/* Selected track chip — always shown when a track is chosen */}
+            {selectedTrack && (
+              <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-2.5">
+                <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-white truncate">{selectedTrack.title}</p>
+                  <p className="text-xs font-medium text-green-300 truncate">{selectedTrack.title}</p>
                   <p className="text-xs text-white/40 truncate">{selectedTrack.artist}</p>
                 </div>
-                <button
-                  onClick={() => setSelectedTrack(null)}
-                  className="text-white/30 hover:text-red-400 transition-colors"
-                >
+                <button onClick={() => setSelectedTrack(null)} className="text-white/30 hover:text-red-400 transition-colors">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
-            ) : (
-              <div className="space-y-2">
-                <div className="flex gap-1.5">
-                  <input
-                    value={musicQuery}
-                    onChange={(e) => setMusicQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && fetchMusic()}
-                    placeholder="Search tracks… (press Enter)"
-                    className="flex-1 bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-pink-500/50"
-                  />
-                  <Button
-                    size="sm"
-                    onClick={() => fetchMusic()}
-                    disabled={musicLoading}
-                    className="bg-pink-600 hover:bg-pink-500 text-white h-7 px-2.5 shrink-0"
-                  >
-                    {musicLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-                  </Button>
-                </div>
-                <Select value={musicGenre} onValueChange={(v) => { setMusicGenre(v); fetchMusic(v); }}>
-                  <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-7 text-xs">
-                    <SelectValue placeholder="All genres" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All genres</SelectItem>
-                    <SelectItem value="pop">Pop</SelectItem>
-                    <SelectItem value="hip-hop">Hip-Hop</SelectItem>
-                    <SelectItem value="electronic">Electronic</SelectItem>
-                    <SelectItem value="jazz">Jazz</SelectItem>
-                    <SelectItem value="classical">Classical</SelectItem>
-                    <SelectItem value="r-b-soul">R&amp;B / Soul</SelectItem>
-                    <SelectItem value="ambient">Ambient</SelectItem>
-                    <SelectItem value="rock">Rock</SelectItem>
-                    <SelectItem value="country">Country</SelectItem>
-                  </SelectContent>
-                </Select>
-                {musicTracks.length > 0 && (
-                  <div className="max-h-48 overflow-y-auto space-y-0.5 border border-white/10 rounded-lg p-1.5 bg-black/20">
-                    {musicTracks.map((track) => (
-                      <div
-                        key={track.id}
-                        className="flex items-center gap-2 hover:bg-white/5 rounded px-2 py-1.5 group cursor-default"
-                      >
-                        <button
-                          onClick={() => {
-                            if (previewingTrackId === track.id) {
-                              audioPreviewRef.current?.pause();
-                              setPreviewingTrackId(null);
-                            } else {
-                              if (audioPreviewRef.current) audioPreviewRef.current.pause();
-                              audioPreviewRef.current = new Audio(track.previewUrl);
-                              audioPreviewRef.current.play();
-                              setPreviewingTrackId(track.id);
-                              audioPreviewRef.current.onended = () => setPreviewingTrackId(null);
-                            }
-                          }}
-                          className="text-white/30 hover:text-pink-400 transition-colors shrink-0"
+            )}
+            {/* Search — always visible */}
+            <div className="space-y-2">
+              <div className="flex gap-1.5">
+                <input
+                  value={musicQuery}
+                  onChange={(e) => setMusicQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && fetchMusic()}
+                  placeholder="Search tracks… (press Enter)"
+                  className="flex-1 bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-pink-500/50"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => fetchMusic()}
+                  disabled={musicLoading}
+                  className="bg-pink-600 hover:bg-pink-500 text-white h-7 px-2.5 shrink-0"
+                >
+                  {musicLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+                </Button>
+              </div>
+              <Select value={musicGenre} onValueChange={(v) => { setMusicGenre(v); fetchMusic(v); }}>
+                <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-7 text-xs">
+                  <SelectValue placeholder="All genres" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All genres</SelectItem>
+                  <SelectItem value="pop">Pop</SelectItem>
+                  <SelectItem value="hip-hop">Hip-Hop</SelectItem>
+                  <SelectItem value="electronic">Electronic</SelectItem>
+                  <SelectItem value="jazz">Jazz</SelectItem>
+                  <SelectItem value="classical">Classical</SelectItem>
+                  <SelectItem value="r-b-soul">R&amp;B / Soul</SelectItem>
+                  <SelectItem value="ambient">Ambient</SelectItem>
+                  <SelectItem value="rock">Rock</SelectItem>
+                  <SelectItem value="country">Country</SelectItem>
+                </SelectContent>
+              </Select>
+              {musicTracks.length > 0 && (
+                <div className="max-h-48 overflow-y-auto space-y-0.5 border border-white/10 rounded-lg p-1.5 bg-black/20">
+                  {musicTracks.map((track) => {
+                    const isSelected = selectedTrack?.id === track.id;
+                    const isPreviewing = previewingTrackId === track.id;
+                      return (
+                        <div
+                          key={track.id}
+                          className={`flex items-center gap-2 rounded px-2 py-1.5 cursor-default transition-colors ${
+                            isSelected
+                              ? "bg-green-500/15 ring-1 ring-green-500/40"
+                              : "hover:bg-white/5"
+                          }`}
                         >
-                          {previewingTrackId === track.id
-                            ? <Square className="w-3 h-3" />
-                            : <Play className="w-3 h-3" />}
-                        </button>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-white truncate">{track.title}</p>
-                          <p className="text-xs text-white/30 truncate">
-                            {track.artist} · {Math.floor(track.duration / 60)}:{String(track.duration % 60).padStart(2, "0")}
-                          </p>
+                          <button
+                            onClick={() => {
+                              if (isPreviewing) {
+                                audioPreviewRef.current?.pause();
+                                setPreviewingTrackId(null);
+                              } else {
+                                if (audioPreviewRef.current) audioPreviewRef.current.pause();
+                                audioPreviewRef.current = new Audio(track.previewUrl);
+                                audioPreviewRef.current.play();
+                                setPreviewingTrackId(track.id);
+                                audioPreviewRef.current.onended = () => setPreviewingTrackId(null);
+                              }
+                            }}
+                            className={`transition-colors shrink-0 ${isPreviewing ? "text-pink-400" : "text-white/30 hover:text-pink-400"}`}
+                          >
+                            {isPreviewing
+                              ? <Square className="w-3 h-3" />
+                              : <Play className="w-3 h-3" />}
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-xs truncate ${isSelected ? "text-green-300 font-medium" : "text-white"}`}>{track.title}</p>
+                            <p className="text-xs text-white/30 truncate">
+                              {track.artist} · {Math.floor(track.duration / 60)}:{String(track.duration % 60).padStart(2, "0")}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              if (isSelected) {
+                                setSelectedTrack(null);
+                              } else {
+                                setSelectedTrack(track);
+                                if (audioPreviewRef.current) { audioPreviewRef.current.pause(); setPreviewingTrackId(null); }
+                              }
+                            }}
+                            className={`shrink-0 transition-colors ${isSelected ? "text-green-400 hover:text-red-400" : "text-white/20 hover:text-green-400"}`}
+                            title={isSelected ? "Remove track" : "Use this track"}
+                          >
+                            {isSelected ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                          </button>
                         </div>
-                        <button
-                          onClick={() => {
-                            setSelectedTrack(track);
-                            if (audioPreviewRef.current) { audioPreviewRef.current.pause(); setPreviewingTrackId(null); }
-                          }}
-                          className="text-white/30 hover:text-green-400 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
-                          title="Use this track"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
-            )}
           </div>
 
           {/* Cloud Campaign push */}
-          {ccWorkspaces.length > 0 && (
-            <div className="w-full max-w-xs space-y-2.5">
-              <div className="flex items-center gap-1.5 text-xs text-white/40 font-semibold uppercase tracking-wider">
-                <Send className="w-3.5 h-3.5" /> Push to Cloud Campaign
-              </div>
-              <Select value={ccWorkspaceId} onValueChange={setCcWorkspaceId}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-7 text-xs">
-                  <SelectValue placeholder="Select workspace…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ccWorkspaces.map((ws) => (
-                    <SelectItem key={ws.id} value={ws.id}>{ws.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <textarea
-                value={ccCaption}
-                onChange={(e) => setCcCaption(e.target.value)}
-                placeholder="Caption (optional)…"
-                rows={2}
-                className="w-full bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-pink-500/50 resize-none"
-              />
-              <Button
-                size="sm"
-                onClick={handlePushToCC}
-                disabled={ccPushing || !ccWorkspaceId}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white h-8 text-xs"
-              >
-                {ccPushing
-                  ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />{ccPushProgress}</>
-                  : <><Send className="w-3.5 h-3.5 mr-2" />Push Reel as MP4</>}
-              </Button>
-              <p className="text-xs text-white/20 text-center">Encodes MP4 → uploads → posts as video</p>
+          <div className="w-full max-w-xs space-y-2.5">
+            <div className="flex items-center gap-1.5 text-xs text-white/40 font-semibold uppercase tracking-wider">
+              <Send className="w-3.5 h-3.5" /> Push to Cloud Campaign
             </div>
-          )}
+            {ccLoading ? (
+              <div className="flex items-center gap-2 text-xs text-white/30 py-2">
+                <Loader2 className="w-3 h-3 animate-spin" /> Loading workspaces…
+              </div>
+            ) : ccWorkspaces.length === 0 ? (
+              <p className="text-xs text-white/30 italic">No Cloud Campaign workspaces configured.</p>
+            ) : (
+              <>
+                <Select value={ccWorkspaceId} onValueChange={setCcWorkspaceId}>
+                  <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-7 text-xs">
+                    <SelectValue placeholder="Select workspace…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ccWorkspaces.map((ws) => (
+                      <SelectItem key={ws.id} value={ws.id}>{ws.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <textarea
+                  value={ccCaption}
+                  onChange={(e) => setCcCaption(e.target.value)}
+                  placeholder="Caption (optional)…"
+                  rows={2}
+                  className="w-full bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-pink-500/50 resize-none"
+                />
+                <Button
+                  size="sm"
+                  onClick={handlePushToCC}
+                  disabled={ccPushing || !ccWorkspaceId}
+                  className="w-full bg-indigo-600 hover:bg-indigo-500 text-white h-8 text-xs"
+                >
+                  {ccPushing
+                    ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />{ccPushProgress}</>
+                    : <><Send className="w-3.5 h-3.5 mr-2" />Push Reel as MP4</>}
+                </Button>
+                <p className="text-xs text-white/20 text-center">Encodes MP4 → uploads → posts as video</p>
+              </>
+            )}
+          </div>
 
           {/* Instagram Reel posting */}
-          {igPresets.length > 0 && (
-            <div className="w-full max-w-xs space-y-2.5">
-              <div className="flex items-center gap-1.5 text-xs text-white/40 font-semibold uppercase tracking-wider">
-                <Film className="w-3.5 h-3.5" /> Post to Instagram
-              </div>
-              <Select value={igPresetId} onValueChange={setIgPresetId}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-7 text-xs">
-                  <SelectValue placeholder="Select client…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {igPresets.map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <textarea
-                value={igCaption}
-                onChange={(e) => setIgCaption(e.target.value)}
-                placeholder="Caption (optional)…"
-                rows={2}
-                className="w-full bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-pink-500/50 resize-none"
-              />
-              <div className="flex gap-1.5">
-                <Button
-                  size="sm"
-                  onClick={() => handlePushToIG(false)}
-                  disabled={igPushing || !igPresetId}
-                  className="flex-1 bg-pink-700 hover:bg-pink-600 text-white h-8 text-xs"
-                >
-                  {igPushing
-                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    : <><Film className="w-3 h-3 mr-1.5" />Post Reel</>}
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => handlePushToIG(true)}
-                  disabled={igPushing || !igPresetId}
-                  className="flex-1 border border-pink-700/60 text-pink-300 bg-transparent hover:bg-pink-700/20 h-8 text-xs"
-                >
-                  {igPushing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Trial Reel"}
-                </Button>
-              </div>
-              {igPushing && <p className="text-[10px] text-white/40 text-center">{igPushProgress}</p>}
-              <p className="text-[10px] text-white/20 text-center">Trial = private test · you graduate it when ready</p>
+          <div className="w-full max-w-xs space-y-2.5">
+            <div className="flex items-center gap-1.5 text-xs text-white/40 font-semibold uppercase tracking-wider">
+              <Film className="w-3.5 h-3.5" /> Post to Instagram
             </div>
-          )}
+            {igLoading ? (
+              <div className="flex items-center gap-2 text-xs text-white/30 py-2">
+                <Loader2 className="w-3 h-3 animate-spin" /> Loading clients…
+              </div>
+            ) : igPresets.length === 0 ? (
+              <p className="text-xs text-white/30 italic">No client presets found. Add one in the Presets page.</p>
+            ) : (
+              <>
+                <Select value={igPresetId} onValueChange={setIgPresetId}>
+                  <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-7 text-xs">
+                    <SelectValue placeholder="Select client…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {igPresets.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <textarea
+                  value={igCaption}
+                  onChange={(e) => setIgCaption(e.target.value)}
+                  placeholder="Caption (optional)…"
+                  rows={2}
+                  className="w-full bg-white/5 border border-white/10 rounded-md px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 outline-none focus:border-pink-500/50 resize-none"
+                />
+                <div className="flex gap-1.5">
+                  <Button
+                    size="sm"
+                    onClick={() => handlePushToIG(false)}
+                    disabled={igPushing || !igPresetId}
+                    className="flex-1 bg-pink-700 hover:bg-pink-600 text-white h-8 text-xs"
+                  >
+                    {igPushing
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : <><Film className="w-3 h-3 mr-1.5" />Post Reel</>}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handlePushToIG(true)}
+                    disabled={igPushing || !igPresetId}
+                    className="flex-1 border border-pink-700/60 text-pink-300 bg-transparent hover:bg-pink-700/20 h-8 text-xs"
+                  >
+                    {igPushing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Trial Reel"}
+                  </Button>
+                </div>
+                {igPushing && <p className="text-[10px] text-white/40 text-center">{igPushProgress}</p>}
+                <p className="text-[10px] text-white/20 text-center">Trial = private test · you graduate it when ready</p>
+              </>
+            )}
+          </div>
 
           <canvas ref={exportCanvasRef} className="hidden" />
         </div>
