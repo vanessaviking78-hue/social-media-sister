@@ -446,13 +446,16 @@ export function drawSlide(
     ctx.translate(0, textSlideOffset);
   }
 
-  if (showTextOverlay) {
+  if (showTextOverlay && !isCoverSlide) {
+    const boxPad = Math.round(H * 0.025);
+    const boxTop = Math.max(0, startY - boxPad);
+    const boxBot = Math.min(H, startY + combinedTotalH + boxPad);
     ctx.fillStyle = effectiveOverlayColor;
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillRect(0, boxTop, W, boxBot - boxTop);
     if (textBoxOutline) {
       ctx.strokeStyle = textBoxOutlineColor;
       ctx.lineWidth = 2;
-      ctx.strokeRect(1, 1, W - 2, H - 2);
+      ctx.strokeRect(1, boxTop, W - 2, boxBot - boxTop);
     }
   }
 
