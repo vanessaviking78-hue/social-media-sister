@@ -937,10 +937,7 @@ router.post("/cloud-campaign/push", async (req, res) => {
             body.media = media;
           }
 
-          console.log(`Pushing "${post.title}" to workspace ${wsId} | caption length: ${post.caption?.length ?? 0} chars | images: ${post.imageUrls.length}`);
-          if (media.length > 0) {
-            console.log(`Image URLs: ${post.imageUrls.join(", ")}`);
-          }
+          req.log.info({ wsId, title: post.title, captionLength: post.caption?.length ?? 0, mediaCount: media.length }, "Pushing to CC");
           const data = await ccFetch(`/workspace/${wsId}/content`, {
             method: "POST",
             body: JSON.stringify(body),

@@ -625,9 +625,13 @@ export default function Reels() {
             postType: "reel",
           }),
         });
+        const pushData = await pushRes.json().catch(() => ({}));
         if (!pushRes.ok) {
-          const d = await pushRes.json().catch(() => ({}));
-          throw new Error(`Reel ${i + 1}: ${(d as any)?.error || "CC push failed"}`);
+          throw new Error(`Reel ${i + 1}: ${(pushData as any)?.error || "CC push failed"}`);
+        }
+        if ((pushData as any)?.summary?.failed > 0 && (pushData as any)?.summary?.succeeded === 0) {
+          const firstErr = (pushData as any).results?.find((r: any) => r.status === "error")?.error;
+          throw new Error(`Reel ${i + 1}: ${firstErr || "CC push failed"}`);
         }
         successCount++;
       }
@@ -869,6 +873,11 @@ export default function Reels() {
         }),
       });
       if (!pushRes.ok) throw new Error("Cloud Campaign push failed");
+      const pushData = await pushRes.json();
+      if (pushData?.summary?.failed > 0 && pushData?.summary?.succeeded === 0) {
+        const firstErr = pushData.results?.find((r: any) => r.status === "error")?.error;
+        throw new Error(firstErr || "Cloud Campaign push failed");
+      }
       toast.success("Reel pushed to Cloud Campaign!");
       setCcCaption("");
     } catch (e: any) {
