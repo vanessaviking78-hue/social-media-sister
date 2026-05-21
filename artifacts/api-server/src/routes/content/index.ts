@@ -805,26 +805,28 @@ router.get("/cloud-campaign/status", async (_req, res) => {
 
 router.get("/music/search", async (req, res) => {
   try {
-    const apiKey = process.env.PIXABAY_API_KEY;
-    if (!apiKey) return res.status(503).json({ error: "Music search not configured — add PIXABAY_API_KEY to secrets." });
     const { q = "", genre = "", page = "1" } = req.query as Record<string, string>;
-    const params = new URLSearchParams({ key: apiKey, per_page: "20", page });
-    if (q.trim()) params.set("q", q.trim());
-    if (genre.trim()) params.set("genre", genre.trim());
-    const resp = await fetch(`https://pixabay.com/api/music/?${params}`);
-    if (!resp.ok) throw new Error(`Pixabay error ${resp.status}`);
+    const index = (Math.max(1, parseInt(page, 10)) - 1) * 20;
+    const searchTerm = q.trim() || genre.trim() || "happy";
+    const params = new URLSearchParams({
+      q: searchTerm,
+      limit: "20",
+      index: String(index),
+    });
+    const resp = await fetch(`https://api.deezer.com/search?${params}`);
+    if (!resp.ok) throw new Error(`Deezer error ${resp.status}`);
     const data = await resp.json();
-    const tracks = (data.hits || []).map((h: any) => ({
-      id: h.id,
-      title: h.title || "Untitled",
-      duration: h.duration || 0,
-      artist: h.user || "Unknown",
-      previewUrl: h.audio || h.url || "",
-      genres: h.genres || [],
-      moods: h.moods || [],
-      bpm: h.bpm || null,
-    }));
-    res.json({ tracks, total: data.totalHits || 0 });
+    if (data.error) throw new Error(data.error.message || "Deezer API error");
+    const tracks = (data.data || [])
+      .filter((h: any) => h.preview)
+      .map((h: any) => ({
+        id: h.id,
+        title: h.title || "Untitled",
+        duration: h.duration || 0,
+        artist: h.artist?.name || "Unknown",
+        previewUrl: h.preview,
+      }));
+    res.json({ tracks, total: data.total || tracks.length });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Music search failed" });
   }
