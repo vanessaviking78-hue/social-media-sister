@@ -88,7 +88,8 @@ router.get("/approval/batches/:id", requireAuth, async (req, res) => {
     if (!batch) return res.status(404).json({ error: "Batch not found" });
 
     const images = await db.select().from(approvalImagesTable).where(eq(approvalImagesTable.batchId, batch.id));
-    res.json({ ...batch, images });
+    const rewritten = images.map((img) => ({ ...img, imageUrl: rewriteImageUrl(img.imageUrl, req) }));
+    res.json({ ...batch, images: rewritten });
   } catch (err: any) {
     console.error("Get approval batch error:", err);
     res.status(500).json({ error: err.message || "Failed to get batch" });
@@ -121,7 +122,8 @@ router.get("/approval/public/:token", async (req, res) => {
     }
 
     const images = await db.select().from(approvalImagesTable).where(eq(approvalImagesTable.batchId, batch.id));
-    res.json({ name: batch.name, clientName: batch.clientName, status: batch.status, images });
+    const rewritten = images.map((img) => ({ ...img, imageUrl: rewriteImageUrl(img.imageUrl, req) }));
+    res.json({ name: batch.name, clientName: batch.clientName, status: batch.status, images: rewritten });
   } catch (err: any) {
     console.error("Public approval fetch error:", err);
     res.status(500).json({ error: err.message || "Failed to load approval" });
