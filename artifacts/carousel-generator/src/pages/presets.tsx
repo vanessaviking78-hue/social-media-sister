@@ -190,7 +190,7 @@ export default function PresetsPage() {
             <Link href="/" className="flex items-center gap-2 text-pink-500 hover:text-pink-400 transition">
               <ArrowLeft className="w-4 h-4" />
               <Layers className="w-6 h-6" />
-              <span className="font-bold text-3xl"><span className="text-white">Social Media Sister's</span>{" "}<span className="text-pink-400">CyberSuite</span></span>
+              <span className="font-bold text-3xl"><span className="text-white">The</span>{" "}<span className="text-pink-400">CyberSuite™</span></span>
             </Link>
             <span className="bg-gray-700 text-gray-300 text-xs px-2 py-0.5 rounded">Client Presets</span>
           </div>

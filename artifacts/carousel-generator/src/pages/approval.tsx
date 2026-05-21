@@ -116,8 +116,8 @@ export default function Approval() {
           <div className="flex items-center gap-2">
             <Layers className="w-6 h-6 text-pink-500" />
             <span className="font-bold text-3xl">
-              <span className="text-white">Social Media Sister's</span>{" "}
-              <span className="text-pink-400">CyberSuite</span>
+              <span className="text-white">The</span>{" "}
+              <span className="text-pink-400">CyberSuite™</span>
             </span>
           </div>
           <div className="flex items-center gap-2 flex-wrap">

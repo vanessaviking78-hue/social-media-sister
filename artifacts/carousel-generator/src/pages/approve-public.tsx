@@ -75,7 +75,7 @@ export default function ApprovePublic({ token }: { token: string }) {
           <div className="flex items-center gap-2 mb-1">
             <ShieldCheck className="w-6 h-6 text-pink-500" />
             <span className="font-bold text-lg">
-              <span className="text-white">CyberSuite</span>{" "}
+              <span className="text-white">The CyberSuite™</span>{" "}
               <span className="text-pink-400">Image Approval System</span>
             </span>
           </div>
@@ -164,7 +164,7 @@ export default function ApprovePublic({ token }: { token: string }) {
 
       <footer className="fixed bottom-0 inset-x-0 bg-zinc-900/90 backdrop-blur-sm border-t border-zinc-800 py-3">
         <div className="max-w-4xl mx-auto px-4 flex items-center justify-between text-sm text-zinc-500">
-          <span>Powered by CyberSuite Image Approval System</span>
+          <span>Powered by The CyberSuite™ Image Approval System</span>
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-500" />{approvedCount}</span>
             <span className="flex items-center gap-1"><XCircle className="w-3 h-3 text-red-500" />{rejectedCount}</span>

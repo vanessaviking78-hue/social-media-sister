@@ -426,8 +426,8 @@ export default function Stories() {
             <BookOpen className="w-5 h-5" />
           </div>
           <h1 className="font-sans text-3xl font-bold tracking-tight">
-            <span className="text-white">Social Media Sister's</span>{" "}
-            <span className="text-pink-400">CyberSuite</span>
+            <span className="text-white">The</span>{" "}
+            <span className="text-pink-400">CyberSuite™</span>
           </h1>
           <Badge variant="secondary" className="bg-accent text-xs">Stories</Badge>
         </div>

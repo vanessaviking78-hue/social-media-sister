@@ -348,8 +348,8 @@ export default function VideoOverlay() {
             <Layers className="w-4 h-4" />
           </div>
           <h1 className="font-sans text-xl font-bold tracking-tight">
-            <span className="text-white">Social Media Sister's</span>{" "}
-            <span className="text-pink-400">CyberSuite</span>
+            <span className="text-white">The</span>{" "}
+            <span className="text-pink-400">CyberSuite™</span>
             <span className="text-white/30 font-normal text-sm ml-3">/ Video Overlay</span>
           </h1>
         </div>

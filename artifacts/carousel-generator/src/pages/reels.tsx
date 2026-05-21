@@ -798,8 +798,8 @@ export default function Reels() {
             <Layers className="w-4 h-4" />
           </div>
           <h1 className="font-sans text-2xl font-bold tracking-tight">
-            <span className="text-white">Social Media Sister's</span>{" "}
-            <span className="text-pink-400">CyberSuite</span>
+            <span className="text-white">The</span>{" "}
+            <span className="text-pink-400">CyberSuite™</span>
           </h1>
         </div>
         <div className="flex items-center gap-2 ml-4 flex-wrap">
