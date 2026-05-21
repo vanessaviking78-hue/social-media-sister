@@ -12,7 +12,7 @@ router.post("/video-overlay/generate-captions", async (req: Request, res: Respon
     }
     const count = Math.min(8, Math.max(1, Number(segmentCount) || 4));
     const completion = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: "gpt-5.2",
       max_completion_tokens: 500,
       messages: [
         {
@@ -25,11 +25,22 @@ router.post("/video-overlay/generate-captions", async (req: Request, res: Respon
         },
       ],
     });
-    const raw = completion.choices[0]?.message?.content?.trim() ?? "[]";
+
+    const content = completion.choices[0]?.message?.content;
+    req.log.info({ model: "gpt-5.2", finishReason: completion.choices[0]?.finish_reason, contentLength: content?.length ?? 0 }, "video overlay generation response");
+
+    if (!content?.trim()) {
+      res.status(500).json({ error: "AI returned no content — please try again" });
+      return;
+    }
+
+    const raw = content.trim();
     let segments: string[];
     try {
-      segments = JSON.parse(raw);
+      const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "").trim();
+      segments = JSON.parse(cleaned);
       if (!Array.isArray(segments)) throw new Error("not array");
+      segments = segments.map((s) => String(s).trim()).filter(Boolean);
     } catch {
       segments = raw
         .split("\n")
@@ -38,10 +49,12 @@ router.post("/video-overlay/generate-captions", async (req: Request, res: Respon
           s
             .replace(/^[-•\d.]\s*/, "")
             .replace(/^["']|["']$/g, "")
+            .replace(/^```.*$/, "")
             .trim(),
         )
-        .filter(Boolean);
+        .filter((s) => s.length > 0 && !s.startsWith("```"));
     }
+
     res.json({ segments: segments.slice(0, count) });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to generate captions";
