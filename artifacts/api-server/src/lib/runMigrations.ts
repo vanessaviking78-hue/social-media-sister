@@ -8,6 +8,7 @@ export async function runMigrations(): Promise<void> {
     await normalizeTextPositionValues();
     await addCoverSubheadingColumn();
     await addMetaConnectionColumns();
+    await createScheduledPostsTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -74,6 +75,30 @@ async function addMetaConnectionColumns(): Promise<void> {
   await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS meta_page_access_token text`);
   await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS meta_facebook_page_id text`);
   await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS meta_instagram_account_id text`);
+}
+
+async function createScheduledPostsTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS scheduled_posts (
+      id SERIAL PRIMARY KEY,
+      preset_id INTEGER NOT NULL,
+      client_name TEXT NOT NULL DEFAULT '',
+      post_type TEXT NOT NULL DEFAULT 'carousel',
+      content JSONB NOT NULL DEFAULT '{}',
+      scheduled_at TIMESTAMPTZ NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      meta_status TEXT NOT NULL DEFAULT 'pending',
+      meta_result JSONB,
+      meta_posted_at TIMESTAMPTZ,
+      cc_status TEXT NOT NULL DEFAULT 'pending',
+      cc_result JSONB,
+      cc_posted_at TIMESTAMPTZ,
+      is_trial BOOLEAN NOT NULL DEFAULT FALSE,
+      notes TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
 }
 
 async function normalizeTextPositionValues(): Promise<void> {

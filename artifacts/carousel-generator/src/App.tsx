@@ -17,6 +17,7 @@ import ClientPortal from "@/pages/client-portal";
 import MetaOAuthResult from "@/pages/meta-oauth-result";
 import Reels from "@/pages/reels";
 import VideoOverlay from "@/pages/video-overlay";
+import Scheduler from "@/pages/scheduler";
 
 const queryClient = new QueryClient();
 
@@ -33,6 +34,7 @@ function ProtectedRouter() {
       <Route path="/approval" component={Approval} />
       <Route path="/reels" component={Reels} />
       <Route path="/video-overlay" component={VideoOverlay} />
+      <Route path="/scheduler" component={Scheduler} />
       <Route component={NotFound} />
     </Switch>
   );

@@ -186,3 +186,45 @@ export const insertApprovalImageSchema = createInsertSchema(approvalImagesTable)
   });
 export type InsertApprovalImage = z.infer<typeof insertApprovalImageSchema>;
 export type ApprovalImage = typeof approvalImagesTable.$inferSelect;
+
+export const SCHEDULED_POST_STATUSES = ["pending", "processing", "published", "failed", "cancelled"] as const;
+export type ScheduledPostStatus = typeof SCHEDULED_POST_STATUSES[number];
+
+export const SCHEDULED_POST_TYPES = ["carousel", "reel"] as const;
+export type ScheduledPostType = typeof SCHEDULED_POST_TYPES[number];
+
+export const RAIL_STATUSES = ["pending", "success", "failed", "skipped"] as const;
+export type RailStatus = typeof RAIL_STATUSES[number];
+
+export const scheduledPostsTable = pgTable("scheduled_posts", {
+  id: serial("id").primaryKey(),
+  presetId: integer("preset_id").notNull(),
+  clientName: text("client_name").notNull().default(""),
+  postType: text("post_type").notNull().default("carousel"),
+  content: json("content").notNull().$type<{
+    imageUrls?: string[];
+    videoUrl?: string;
+    caption: string;
+    title: string;
+  }>(),
+  scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
+  status: text("status").notNull().default("pending"),
+  metaStatus: text("meta_status").notNull().default("pending"),
+  metaResult: json("meta_result").$type<{ igPostId?: string; fbPostId?: string; error?: string } | null>(),
+  metaPostedAt: timestamp("meta_posted_at", { withTimezone: true }),
+  ccStatus: text("cc_status").notNull().default("pending"),
+  ccResult: json("cc_result").$type<{ postId?: string; error?: string } | null>(),
+  ccPostedAt: timestamp("cc_posted_at", { withTimezone: true }),
+  isTrial: boolean("is_trial").notNull().default(false),
+  notes: text("notes").notNull().default(""),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertScheduledPostSchema = createInsertSchema(scheduledPostsTable)
+  .omit({ id: true, createdAt: true, updatedAt: true, status: true, metaStatus: true, metaResult: true, metaPostedAt: true, ccStatus: true, ccResult: true, ccPostedAt: true })
+  .extend({
+    postType: z.enum(SCHEDULED_POST_TYPES),
+  });
+export type InsertScheduledPost = z.infer<typeof insertScheduledPostSchema>;
+export type ScheduledPost = typeof scheduledPostsTable.$inferSelect;

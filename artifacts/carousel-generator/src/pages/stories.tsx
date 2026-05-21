@@ -4,7 +4,7 @@ import {
   Layers, Loader2, Download, X, Sparkles, Wand2,
   BookOpen, ImagePlus, CalendarDays, BarChart3, ShieldCheck,
   MessageSquareText, PenTool, ChevronLeft, ChevronRight,
-  CloudUpload, FileText, Plus, Palette, Check, Copy, Film, Play,
+  CloudUpload, FileText, Plus, Palette, Check, Copy, Film, Play, Clock,
 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
@@ -442,6 +442,7 @@ export default function Stories() {
           <Link href="/calendar"><Button variant="ghost" size="sm" className="text-muted-foreground"><CalendarDays className="w-4 h-4 mr-2" />Calendar</Button></Link>
           <Link href="/analytics"><Button variant="ghost" size="sm" className="text-muted-foreground"><BarChart3 className="w-4 h-4 mr-2" />Analytics</Button></Link>
           <Link href="/approval"><Button variant="ghost" size="sm" className="text-muted-foreground"><ShieldCheck className="w-4 h-4 mr-2" />Approvals</Button></Link>
+          <Link href="/scheduler"><Button variant="ghost" size="sm" className="text-muted-foreground"><Clock className="w-4 h-4 mr-2" />Scheduler</Button></Link>
         </div>
       </header>
 

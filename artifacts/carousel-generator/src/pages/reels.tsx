@@ -6,7 +6,7 @@ import {
   BarChart3, ShieldCheck, Film, Image as ImageIcon,
   Music, Search, X, Send, FileText, Sparkles, ChevronDown, Check,
   ExternalLink, AlertCircle, CheckCircle2, KeyRound, ChevronUp, Settings,
-  ChevronRight, ChevronLeft,
+  ChevronRight, ChevronLeft, Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -1070,6 +1070,7 @@ export default function Reels() {
           <Link href="/calendar"><Button variant="ghost" size="sm" className="text-muted-foreground"><CalendarDays className="w-4 h-4 mr-2" />Calendar</Button></Link>
           <Link href="/analytics"><Button variant="ghost" size="sm" className="text-muted-foreground"><BarChart3 className="w-4 h-4 mr-2" />Analytics</Button></Link>
           <Link href="/approval"><Button variant="ghost" size="sm" className="text-muted-foreground"><ShieldCheck className="w-4 h-4 mr-2" />Approvals</Button></Link>
+          <Link href="/scheduler"><Button variant="ghost" size="sm" className="text-muted-foreground"><Clock className="w-4 h-4 mr-2" />Scheduler</Button></Link>
         </div>
       </header>
 

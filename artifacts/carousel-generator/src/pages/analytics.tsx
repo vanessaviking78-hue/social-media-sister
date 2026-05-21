@@ -71,6 +71,7 @@ export default function Analytics() {
             <Link href="/captions" className="text-muted-foreground hover:text-foreground transition">Captions</Link>
             <Link href="/calendar" className="text-muted-foreground hover:text-foreground transition">Calendar</Link>
             <Link href="/approval" className="text-muted-foreground hover:text-foreground transition">Approvals</Link>
+            <Link href="/scheduler" className="text-muted-foreground hover:text-foreground transition">Scheduler</Link>
           </nav>
         </div>
       </header>

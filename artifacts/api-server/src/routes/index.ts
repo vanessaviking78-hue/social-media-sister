@@ -12,6 +12,7 @@ import metaRouter from "./meta";
 import metaAuthRouter from "./meta-auth";
 import videoOverlayRouter from "./video-overlay";
 import portalRouter from "./portal";
+import schedulerRouter from "./scheduler";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(metaRouter);
 router.use(metaAuthRouter);
 router.use(videoOverlayRouter);
 router.use(portalRouter);
+router.use(schedulerRouter);
 
 export default router;
