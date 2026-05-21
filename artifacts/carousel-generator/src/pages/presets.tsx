@@ -138,7 +138,7 @@ interface MetaConnectSectionProps {
 }
 
 function MetaConnectSection({ editingId, editData, setEditData, onConnected }: MetaConnectSectionProps) {
-  const [showManual, setShowManual] = useState(false);
+  const [showManual, setShowManual] = useState(true);
   const isConnected = !!(editData.metaFacebookPageId || editData.metaPageAccessToken);
 
   const openOAuth = () => {
@@ -182,7 +182,7 @@ function MetaConnectSection({ editingId, editData, setEditData, onConnected }: M
   };
 
   return (
-    <div className="border border-purple-500/20 rounded-xl p-4 bg-purple-950/10 space-y-3">
+    <div className="border border-purple-500/20 rounded-xl p-5 bg-purple-950/10 space-y-4">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-semibold text-purple-300">Direct Instagram &amp; Facebook Posting</Label>
         {isConnected ? (
@@ -196,116 +196,96 @@ function MetaConnectSection({ editingId, editData, setEditData, onConnected }: M
         )}
       </div>
 
-      {isConnected ? (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-xs text-gray-300 bg-gray-800/60 rounded-lg px-3 py-2">
-            <Facebook className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-            <span className="truncate">Page ID: <span className="text-white font-mono">{editData.metaFacebookPageId}</span></span>
-            {editData.metaInstagramAccountId && (
-              <>
-                <span className="text-gray-600">·</span>
-                <Instagram className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                <span className="truncate text-purple-300">IG linked</span>
-              </>
-            )}
-          </div>
-          <div className="flex gap-2">
-            {editingId && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={openOAuth}
-                className="flex-1 text-xs border-blue-500/40 text-blue-300 hover:bg-blue-950/40 hover:text-blue-200"
-              >
-                <Facebook className="w-3.5 h-3.5 mr-1.5" />
-                Reconnect
-              </Button>
-            )}
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={disconnect}
-              className="text-xs text-red-400 hover:text-red-300 hover:bg-red-950/30"
-            >
-              <Unlink className="w-3.5 h-3.5 mr-1" />
-              Disconnect
-            </Button>
-          </div>
-          {editingId && editData.metaPageAccessToken && editData.metaPageAccessToken !== "••••••••" && (
-            <TestMetaConnection presetId={editingId} />
-          )}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <p className="text-xs text-gray-400">
-            Click below to connect this client's Facebook Page and Instagram account with one click.
-          </p>
-          {editingId ? (
-            <Button
-              type="button"
-              onClick={openOAuth}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm h-10"
-            >
-              <Facebook className="w-4 h-4 mr-2" />
-              Connect Facebook Page
-            </Button>
-          ) : (
-            <p className="text-xs text-amber-400 bg-amber-900/20 border border-amber-500/20 rounded-lg px-3 py-2">
-              Save this preset first, then reopen it to connect Facebook.
-            </p>
+      {isConnected && (
+        <div className="flex items-center gap-2 text-xs text-gray-300 bg-gray-800/60 rounded-lg px-3 py-2">
+          <Facebook className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+          <span className="truncate">Page ID: <span className="text-white font-mono">{editData.metaFacebookPageId}</span></span>
+          {editData.metaInstagramAccountId && (
+            <>
+              <span className="text-gray-600">·</span>
+              <Instagram className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+              <span className="truncate text-purple-300">IG: {editData.metaInstagramAccountId}</span>
+            </>
           )}
         </div>
       )}
 
-      <button
-        type="button"
-        onClick={() => setShowManual((v) => !v)}
-        className="text-xs text-gray-500 hover:text-gray-400 flex items-center gap-1 transition-colors"
-      >
-        {showManual ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-        {showManual ? "Hide" : "Enter credentials manually instead"}
-      </button>
+      {/* Auto connect */}
+      {editingId && (
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            onClick={openOAuth}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm h-9"
+          >
+            <Facebook className="w-4 h-4 mr-2" />
+            {isConnected ? "Reconnect via Facebook" : "Auto-connect via Facebook"}
+          </Button>
+          {isConnected && (
+            <Button type="button" size="sm" variant="ghost" onClick={disconnect}
+              className="text-xs text-red-400 hover:text-red-300 hover:bg-red-950/30 h-9">
+              <Unlink className="w-3.5 h-3.5 mr-1" />Disconnect
+            </Button>
+          )}
+        </div>
+      )}
+      {!editingId && (
+        <p className="text-xs text-amber-400 bg-amber-900/20 border border-amber-500/20 rounded-lg px-3 py-2">
+          Save this preset first, then reopen it to connect.
+        </p>
+      )}
 
-      {showManual && (
-        <div className="space-y-2 pt-1 border-t border-gray-800">
+      {/* Manual entry — always visible */}
+      <div className="space-y-3 pt-1 border-t border-white/10">
+        <div className="space-y-1">
+          <p className="text-xs font-semibold text-gray-300">Or enter credentials manually</p>
+          <p className="text-xs text-gray-500 leading-relaxed">
+            Get these from{" "}
+            <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener noreferrer"
+              className="text-blue-400 underline hover:text-blue-300">
+              Meta Graph API Explorer
+            </a>
+            {" "}— select your app, generate a Page token with{" "}
+            <span className="font-mono text-gray-400">instagram_basic</span>,{" "}
+            <span className="font-mono text-gray-400">instagram_content_publish</span>,{" "}
+            <span className="font-mono text-gray-400">pages_manage_posts</span> permissions, then get your Page ID and Instagram Account ID from the same tool.
+          </p>
+        </div>
+        <div>
+          <Label className="text-xs text-gray-400 mb-1 block">Page Access Token</Label>
+          <Input
+            type="password"
+            placeholder="Paste your long-lived Page Access Token"
+            value={editData.metaPageAccessToken || ""}
+            onChange={(e) => setEditData((d) => ({ ...d, metaPageAccessToken: e.target.value || null }))}
+            className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
+            autoComplete="off"
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-2">
           <div>
-            <Label className="text-xs text-gray-400">Page Access Token</Label>
+            <Label className="text-xs text-gray-400 mb-1 block">Facebook Page ID</Label>
             <Input
-              type="password"
-              placeholder="Long-lived Page Access Token"
-              value={editData.metaPageAccessToken || ""}
-              onChange={(e) => setEditData((d) => ({ ...d, metaPageAccessToken: e.target.value || null }))}
+              placeholder="e.g. 123456789"
+              value={editData.metaFacebookPageId || ""}
+              onChange={(e) => setEditData((d) => ({ ...d, metaFacebookPageId: e.target.value || null }))}
               className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
-              autoComplete="off"
             />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label className="text-xs text-gray-400">Facebook Page ID</Label>
-              <Input
-                placeholder="e.g. 123456789"
-                value={editData.metaFacebookPageId || ""}
-                onChange={(e) => setEditData((d) => ({ ...d, metaFacebookPageId: e.target.value || null }))}
-                className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-gray-400">Instagram Account ID</Label>
-              <Input
-                placeholder="e.g. 987654321"
-                value={editData.metaInstagramAccountId || ""}
-                onChange={(e) => setEditData((d) => ({ ...d, metaInstagramAccountId: e.target.value || null }))}
-                className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
-              />
-            </div>
+          <div>
+            <Label className="text-xs text-gray-400 mb-1 block">Instagram Account ID</Label>
+            <Input
+              placeholder="e.g. 987654321"
+              value={editData.metaInstagramAccountId || ""}
+              onChange={(e) => setEditData((d) => ({ ...d, metaInstagramAccountId: e.target.value || null }))}
+              className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
+            />
           </div>
-          {editingId && editData.metaPageAccessToken && editData.metaPageAccessToken !== "••••••••" && (
-            <TestMetaConnection presetId={editingId} />
-          )}
         </div>
-      )}
+        {editingId && editData.metaPageAccessToken && editData.metaPageAccessToken !== "••••••••" && (
+          <TestMetaConnection presetId={editingId} />
+        )}
+      </div>
     </div>
   );
 }
