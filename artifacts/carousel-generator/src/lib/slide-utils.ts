@@ -340,7 +340,7 @@ export function drawSlide(
   let eyebrowGap = 0;
 
   for (let attempt = 0; attempt < 20; attempt++) {
-    const fWeight = isSplit ? coverHeadlineWeight : (isLastSlide ? 700 : 600);
+    const fWeight = isLastSlide ? 700 : coverHeadlineWeight;
     const fStyle = (isSplit && coverHeadlineItalic) ? 'italic' : 'normal';
     ctx.font = `${fStyle} ${fWeight} ${currentSize}px ${activeFont}`;
     (ctx as any).letterSpacing = (isCoverSlide && coverLetterSpacing) ? `${coverLetterSpacing}px` : "0px";

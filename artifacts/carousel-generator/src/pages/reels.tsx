@@ -71,6 +71,9 @@ export default function Reels() {
   const [coverHeadlineWeight, setCoverHeadlineWeight] = useState(700);
   const [coverEyebrowArch, setCoverEyebrowArch] = useState(0.4);
 
+  const [mainFontWeight, setMainFontWeight] = useState(400);
+  const [letterSpacing, setLetterSpacing] = useState(0);
+
   const [slideDurationSec, setSlideDurationSec] = useState(3);
   const [fadeDurationMs, setFadeDurationMs] = useState(400);
 
@@ -162,12 +165,12 @@ export default function Reels() {
         logoImg, logoPosition, logoSize,
         pageColor, "none", "#ffffff",
         1, 1, textPosition, false, fontFamily, textAlign,
-        false, "#ffffff", "", 0, false,
+        false, "#ffffff", "", letterSpacing, false,
         false, "'Great Vibes', cursive",
         coverSplit, coverEyebrowFont, coverEyebrowColor,
         coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
         coverEyebrowWeight, coverEyebrowLetterSpacing,
-        coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+        coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch,
         undefined, undefined,
         { imageOffsetY: slide.imageOffsetY, canvasW: VIDEO_WIDTH, canvasH: VIDEO_HEIGHT }
       );
@@ -181,12 +184,12 @@ export default function Reels() {
         logoImg, logoPosition, logoSize,
         pageColor, "none", "#ffffff",
         1, 1, textPosition, true, fontFamily, textAlign,
-        false, "#ffffff", "", 0, false,
+        false, "#ffffff", "", letterSpacing, false,
         false, "'Great Vibes', cursive",
         coverSplit, coverEyebrowFont, coverEyebrowColor,
         coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
         coverEyebrowWeight, coverEyebrowLetterSpacing,
-        coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+        coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch,
         undefined, undefined,
         { imageOffsetY: slide.imageOffsetY, canvasW: VIDEO_WIDTH, canvasH: VIDEO_HEIGHT }
       );
@@ -200,10 +203,11 @@ export default function Reels() {
     if (isPlaying) return;
     drawCurrentSlide(activeIdx, 1);
   }, [
-    slides, activeIdx, isPlaying,
+    slides, activeIdx, isPlaying, reelStep,
     fontFamily, fontSize, textColor, overlayOpacity, pageColor,
     lineSpacing, textPosition, textAlign,
     logoImg, logoPosition, logoSize,
+    mainFontWeight, letterSpacing,
     coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio,
     coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight,
     coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
@@ -586,12 +590,12 @@ export default function Reels() {
             logoImg, logoPosition, logoSize,
             pageColor, "none", "#ffffff",
             1, 1, textPosition, false, fontFamily, textAlign,
-            false, "#ffffff", "", 0, false,
+            false, "#ffffff", "", letterSpacing, false,
             false, "'Great Vibes', cursive",
             coverSplit, coverEyebrowFont, coverEyebrowColor,
             coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
             coverEyebrowWeight, coverEyebrowLetterSpacing,
-            coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+            coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch,
           );
           drawTypewriterOnVideo(ctx, slide.text, slideProgress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
         } else {
@@ -602,12 +606,12 @@ export default function Reels() {
             logoImg, logoPosition, logoSize,
             pageColor, "none", "#ffffff",
             1, 1, textPosition, true, fontFamily, textAlign,
-            false, "#ffffff", "", 0, false,
+            false, "#ffffff", "", letterSpacing, false,
             false, "'Great Vibes', cursive",
             coverSplit, coverEyebrowFont, coverEyebrowColor,
             coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
             coverEyebrowWeight, coverEyebrowLetterSpacing,
-            coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+            coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch,
           );
         }
       }, 30, selectedTrack?.previewUrl);
@@ -666,12 +670,12 @@ export default function Reels() {
             logoImg, logoPosition, logoSize,
             pageColor, "none", "#ffffff",
             1, 1, textPosition, false, fontFamily, textAlign,
-            false, "#ffffff", "", 0, false,
+            false, "#ffffff", "", letterSpacing, false,
             false, "'Great Vibes', cursive",
             coverSplit, coverEyebrowFont, coverEyebrowColor,
             coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
             coverEyebrowWeight, coverEyebrowLetterSpacing,
-            coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+            coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch,
           );
           drawTypewriterOnVideo(ctx, slide.text, slideProgress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
         } else {
@@ -682,12 +686,12 @@ export default function Reels() {
             logoImg, logoPosition, logoSize,
             pageColor, "none", "#ffffff",
             1, 1, textPosition, true, fontFamily, textAlign,
-            false, "#ffffff", "", 0, false,
+            false, "#ffffff", "", letterSpacing, false,
             false, "'Great Vibes', cursive",
             coverSplit, coverEyebrowFont, coverEyebrowColor,
             coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
             coverEyebrowWeight, coverEyebrowLetterSpacing,
-            coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+            coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch,
           );
         }
       };
@@ -766,12 +770,12 @@ export default function Reels() {
             logoImg, logoPosition, logoSize,
             pageColor, "none", "#ffffff",
             1, 1, textPosition, false, fontFamily, textAlign,
-            false, "#ffffff", "", 0, false,
+            false, "#ffffff", "", letterSpacing, false,
             false, "'Great Vibes', cursive",
             coverSplit, coverEyebrowFont, coverEyebrowColor,
             coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
             coverEyebrowWeight, coverEyebrowLetterSpacing,
-            coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+            coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch,
           );
           drawTypewriterOnVideo(ctx, slide.text, slideProgress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
         } else {
@@ -782,12 +786,12 @@ export default function Reels() {
             logoImg, logoPosition, logoSize,
             pageColor, "none", "#ffffff",
             1, 1, textPosition, true, fontFamily, textAlign,
-            false, "#ffffff", "", 0, false,
+            false, "#ffffff", "", letterSpacing, false,
             false, "'Great Vibes', cursive",
             coverSplit, coverEyebrowFont, coverEyebrowColor,
             coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
             coverEyebrowWeight, coverEyebrowLetterSpacing,
-            coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+            coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch,
           );
         }
       };
@@ -1276,6 +1280,23 @@ export default function Reels() {
                     <span className="text-sm font-semibold text-white">{lineSpacing.toFixed(1)}</span>
                   </div>
                   <Slider min={0.8} max={2.2} step={0.1} value={[lineSpacing]} onValueChange={([v]) => setLineSpacing(v)} />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label className="text-sm text-white/50">Font weight</Label>
+                    <span className="text-sm font-semibold text-white">{mainFontWeight}</span>
+                  </div>
+                  <Slider min={100} max={900} step={100} value={[mainFontWeight]} onValueChange={([v]) => setMainFontWeight(v)} />
+                  <div className="flex justify-between text-xs text-white/25 px-0.5">
+                    <span>Thin</span><span>Regular</span><span>Bold</span><span>Black</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <Label className="text-sm text-white/50">Letter spacing</Label>
+                    <span className="text-sm font-semibold text-white">{letterSpacing}px</span>
+                  </div>
+                  <Slider min={0} max={24} step={1} value={[letterSpacing]} onValueChange={([v]) => setLetterSpacing(v)} />
                 </div>
               </div>
 
