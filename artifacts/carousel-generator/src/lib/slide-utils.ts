@@ -222,7 +222,7 @@ export function drawSlide(
   coverEyebrowArch: number = 0,
   animationType?: AnimationType,
   animationProgress?: number,
-  opts?: { imageOffsetX?: number; imageOffsetY?: number; canvasW?: number; canvasH?: number }
+  opts?: { imageOffsetX?: number; imageOffsetY?: number; canvasW?: number; canvasH?: number; contentLetterSpacing?: number }
 ) {
   const W = opts?.canvasW ?? CANVAS_WIDTH;
   const H = opts?.canvasH ?? CANVAS_HEIGHT;
@@ -343,7 +343,7 @@ export function drawSlide(
     const fWeight = isLastSlide ? 700 : coverHeadlineWeight;
     const fStyle = (isSplit && coverHeadlineItalic) ? 'italic' : 'normal';
     ctx.font = `${fStyle} ${fWeight} ${currentSize}px ${activeFont}`;
-    (ctx as any).letterSpacing = (isCoverSlide && coverLetterSpacing) ? `${coverLetterSpacing}px` : "0px";
+    (ctx as any).letterSpacing = isCoverSlide ? `${coverLetterSpacing}px` : `${opts?.contentLetterSpacing ?? 0}px`;
     lineH = Math.round(currentSize * lineSpacing);
     const wrapSrc = isSplit ? displayText.split('|').slice(1).join('|').trim() : displayText;
     const words = wrapSrc.split(" ");
