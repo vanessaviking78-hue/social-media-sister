@@ -128,6 +128,8 @@ export default function Reels() {
   const [bulkPushProgress, setBulkPushProgress] = useState({ current: 0, total: 0, label: "" });
   const [bulkMedia, setBulkMedia] = useState<File[]>([]);
   const [bulkReelBlobs, setBulkReelBlobs] = useState<Blob[]>([]);
+  const [bulkMediaThumbs, setBulkMediaThumbs] = useState<string[]>([]);
+  const [bulkMediaLoadedCount, setBulkMediaLoadedCount] = useState(0);
   const [bulkCcWorkspaceId, setBulkCcWorkspaceId] = useState("");
   const [bulkCcCaption, setBulkCcCaption] = useState("");
   const [bulkCcPushing, setBulkCcPushing] = useState(false);
@@ -452,10 +454,18 @@ export default function Reels() {
       .filter((f) => f.type.startsWith("image/") || f.type.startsWith("video/"))
       .slice(0, MAX);
     if (accepted.length === 0) { toast.error("No supported image or video files found"); return; }
+    setBulkMediaThumbs((prev) => { prev.forEach((t) => { if (t) URL.revokeObjectURL(t); }); return []; });
     setBulkMedia(accepted);
     setBulkZipBlob(null);
     setBulkReelBlobs([]);
+    setBulkMediaThumbs(new Array(accepted.length).fill(""));
+    setBulkMediaLoadedCount(0);
     bulkMediaElementsRef.current = new Array(accepted.length).fill(null);
+    let loaded = 0;
+    const onLoaded = () => {
+      loaded++;
+      setBulkMediaLoadedCount(loaded);
+    };
     accepted.forEach((file, i) => {
       const url = URL.createObjectURL(file);
       if (file.type.startsWith("video/")) {
@@ -465,11 +475,16 @@ export default function Reels() {
         vid.playsInline = true;
         vid.preload = "auto";
         vid.src = url;
-        vid.onloadeddata = () => { bulkMediaElementsRef.current[i] = vid; };
+        vid.onloadeddata = () => { bulkMediaElementsRef.current[i] = vid; onLoaded(); };
+        vid.onerror = () => { URL.revokeObjectURL(url); onLoaded(); };
       } else {
         const img = new Image();
-        img.onload = () => { bulkMediaElementsRef.current[i] = img; URL.revokeObjectURL(url); };
-        img.onerror = () => URL.revokeObjectURL(url);
+        img.onload = () => {
+          bulkMediaElementsRef.current[i] = img;
+          setBulkMediaThumbs((prev) => { const next = [...prev]; next[i] = url; return next; });
+          onLoaded();
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); onLoaded(); };
         img.src = url;
       }
     });
@@ -478,6 +493,10 @@ export default function Reels() {
 
   const handleBulkGenerate = async () => {
     if (bulkRows.length === 0) { toast.error("Upload a CSV first"); return; }
+    if (bulkMedia.length > 0 && bulkMediaLoadedCount < bulkMedia.length) {
+      toast.error(`Media still loading (${bulkMediaLoadedCount}/${bulkMedia.length}) — please wait a moment`);
+      return;
+    }
     setBulkGenerating(true);
     setBulkZipBlob(null);
     setBulkReelBlobs([]);
@@ -1301,9 +1320,21 @@ export default function Reels() {
                         className="hidden"
                         onChange={(e) => { if (e.target.files?.length) { handleBulkMediaUpload(e.target.files); e.target.value = ""; } }} />
                       <Button variant="outline" onClick={() => bulkMediaInputRef.current?.click()}
-                        className={`w-full border-white/20 hover:text-white py-5 text-sm flex flex-col gap-1 h-auto ${bulkMedia.length > 0 ? "border-green-500/40 text-green-400" : "text-white/60"}`}>
-                        <Upload className="w-5 h-5" />
-                        {bulkMedia.length > 0 ? `Media: ${bulkMedia.length} file${bulkMedia.length !== 1 ? "s" : ""}` : "Upload Media (optional)"}
+                        className={`w-full border-white/20 hover:text-white py-5 text-sm flex flex-col gap-1 h-auto ${
+                          bulkMedia.length > 0 && bulkMediaLoadedCount === bulkMedia.length
+                            ? "border-green-500/40 text-green-400"
+                            : bulkMedia.length > 0
+                            ? "border-amber-500/40 text-amber-400"
+                            : "text-white/60"
+                        }`}>
+                        {bulkMedia.length > 0 && bulkMediaLoadedCount < bulkMedia.length
+                          ? <Loader2 className="w-5 h-5 animate-spin" />
+                          : <Upload className="w-5 h-5" />}
+                        {bulkMedia.length > 0 && bulkMediaLoadedCount < bulkMedia.length
+                          ? `Loading… ${bulkMediaLoadedCount}/${bulkMedia.length}`
+                          : bulkMedia.length > 0
+                          ? `Media: ${bulkMedia.length} file${bulkMedia.length !== 1 ? "s" : ""}`
+                          : "Upload Media (optional)"}
                       </Button>
                     </div>
                   </div>
@@ -1330,11 +1361,13 @@ export default function Reels() {
                               <div key={i} className={`grid gap-2 px-3 py-2 text-xs items-center ${bulkMedia.length > 0 ? "grid-cols-[1.5rem_1fr_1fr]" : "grid-cols-[1.5rem_1fr]"} ${!paired ? "opacity-30" : ""}`}>
                                 <span className="text-white/30">{i + 1}</span>
                                 {bulkMedia.length > 0 && (
-                                  <span className="truncate text-white/60 flex items-center gap-1 min-w-0">
+                                  <span className="flex items-center gap-1.5 min-w-0">
                                     {i < bulkMedia.length
                                       ? bulkMedia[i].type.startsWith("video/")
-                                        ? <><Film className="w-3 h-3 shrink-0 text-purple-400" /><span className="truncate">{bulkMedia[i].name.length > 18 ? bulkMedia[i].name.slice(0, 18) + "…" : bulkMedia[i].name}</span></>
-                                        : <><ImageIcon className="w-3 h-3 shrink-0 text-blue-400" /><span className="truncate">{bulkMedia[i].name.length > 18 ? bulkMedia[i].name.slice(0, 18) + "…" : bulkMedia[i].name}</span></>
+                                        ? <><Film className="w-3 h-3 shrink-0 text-purple-400" /><span className="truncate text-white/60 text-xs">{bulkMedia[i].name.length > 16 ? bulkMedia[i].name.slice(0, 16) + "…" : bulkMedia[i].name}</span></>
+                                        : bulkMediaThumbs[i]
+                                          ? <><img src={bulkMediaThumbs[i]} className="w-8 h-6 object-cover rounded shrink-0" alt="" /><span className="truncate text-white/60 text-xs">{bulkMedia[i].name.length > 14 ? bulkMedia[i].name.slice(0, 14) + "…" : bulkMedia[i].name}</span></>
+                                          : <><Loader2 className="w-3 h-3 shrink-0 text-white/30 animate-spin" /><span className="text-white/30 text-xs">loading…</span></>
                                       : <span className="text-white/20">—</span>}
                                   </span>
                                 )}
@@ -1357,7 +1390,7 @@ export default function Reels() {
 
                   <Button
                     onClick={handleBulkGenerate}
-                    disabled={bulkGenerating || bulkPushing || bulkRows.length === 0}
+                    disabled={bulkGenerating || bulkPushing || bulkRows.length === 0 || (bulkMedia.length > 0 && bulkMediaLoadedCount < bulkMedia.length)}
                     className="w-full bg-pink-600 hover:bg-pink-500 text-white py-5 text-sm"
                   >
                     {bulkGenerating
