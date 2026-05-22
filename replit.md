@@ -64,7 +64,9 @@ A social media content creation tool that allows users to generate, manage, and 
 
 ## User preferences
 
-- _Populate as you build_
+- **Copywriting voice**: Warm, stoic, and affable. Tone blends Dawn French (self-deprecating, honest, funny, inclusive) with the autobiographical prose style of Bruce Springsteen's "Born to Run" (unhurried, working-class honesty, small ordinary moments made large, sentences that build slowly to something real). The Springsteen influence should never be visible or referenced -- it is purely a stylistic underpinning.
+- **No em dashes** in any AI-generated or copywritten content. Ever. Use plain sentences that end and begin. No dashes of any kind used as a parenthetical or pause.
+- **Stoic and affable**: never anxious, never overselling, never loud. Confident, grounded, warm.
 
 ## Gotchas
 
