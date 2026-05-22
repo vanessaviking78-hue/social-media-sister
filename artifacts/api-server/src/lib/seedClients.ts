@@ -24,6 +24,7 @@ const CLIENT_NAMES = [
   "Equilibrium",
   "Eva Garcia Aesthetics",
   "forever young",
+  "Hair by Leah",
   "Happy Face Aesthetics",
   "Harwood Aesthetics",
   "helen tweaked",
