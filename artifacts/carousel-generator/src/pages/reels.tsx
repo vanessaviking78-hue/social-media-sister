@@ -35,7 +35,7 @@ type ReelSlide = {
   imageOffsetY: number;
 };
 
-const PREVIEW_SCALE = 0.38;
+const PREVIEW_SCALE = 0.22;
 const PREVIEW_W = Math.round(VIDEO_WIDTH * PREVIEW_SCALE);
 const PREVIEW_H = Math.round(VIDEO_HEIGHT * PREVIEW_SCALE);
 
