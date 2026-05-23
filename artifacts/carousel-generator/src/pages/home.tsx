@@ -1914,7 +1914,7 @@ export default function Home() {
                       <div className="space-y-2">
                         <Label className="text-sm text-muted-foreground">Number of Posts</Label>
                         <div className="flex items-center gap-3">
-                          <Slider min={5} max={60} step={5} value={[aiPostCount]} onValueChange={([v]) => setAiPostCount(v)} className="flex-1" />
+                          <Slider min={1} max={60} step={1} value={[aiPostCount]} onValueChange={([v]) => setAiPostCount(v)} className="flex-1" />
                           <span className="text-lg font-semibold tabular-nums w-10 text-right">{aiPostCount}</span>
                         </div>
                       </div>
