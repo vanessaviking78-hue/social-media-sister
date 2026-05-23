@@ -970,7 +970,7 @@ export async function recordReelVideoMp4(
     output: (chunk: any, meta?: any) => muxer.addVideoChunk(chunk, meta),
     error: (e: Error) => { throw e; },
   });
-  videoEncoder.configure({ codec: 'avc1.42001e', width: W, height: H, bitrate: 8_000_000, framerate: fps });
+  videoEncoder.configure({ codec: 'avc1.420029', width: W, height: H, bitrate: 8_000_000, framerate: fps });
 
   let audioEncoder: any = null;
   if (audioChannels && typeof (window as any).AudioEncoder !== 'undefined') {
