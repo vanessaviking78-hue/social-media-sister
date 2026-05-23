@@ -47,7 +47,7 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
         const r = await fetch(`${BASE}/api/scheduler/posts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ presetId, postType, content, scheduledAt, notes }),
+          body: JSON.stringify({ presetId, postType, content, scheduledAt: new Date(scheduledAt).toISOString(), notes }),
         });
         if (!r.ok) {
           const err = await r.json().catch(() => ({ error: "Failed" }));

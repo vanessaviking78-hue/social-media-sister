@@ -123,7 +123,7 @@ function ScheduleDialog({ presets, onClose, onSaved, editing }: ScheduleDialogPr
       if (editing) {
         await apiFetch(`/api/scheduler/posts/${editing.id}`, {
           method: "PATCH",
-          body: JSON.stringify({ content, scheduledAt, notes }),
+          body: JSON.stringify({ content, scheduledAt: new Date(scheduledAt).toISOString(), notes }),
         });
         toast.success("Post updated");
       } else {

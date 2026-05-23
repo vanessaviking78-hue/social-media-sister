@@ -1164,7 +1164,7 @@ export default function Home() {
             {currentStep === 1 && (
               <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div>
-                  <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 1: Your Images</h2>
+                  <h2 className="font-sans font-bold text-4xl mb-3 tracking-tight">Step 1: Your Images</h2>
                   <p className="text-lg text-muted-foreground">Upload your photos and add your logo.</p>
                 </div>
 
@@ -1305,7 +1305,7 @@ export default function Home() {
             {currentStep === 2 && (
               <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div>
-                  <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 2: Font & Layout</h2>
+                  <h2 className="font-sans font-bold text-4xl mb-3 tracking-tight">Step 2: Font & Layout</h2>
                   <p className="text-lg text-muted-foreground">Customise the look and feel of your carousel slides.</p>
                 </div>
 
@@ -1891,7 +1891,7 @@ export default function Home() {
             {currentStep === 3 && (
               <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div>
-                  <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 3: Your Content</h2>
+                  <h2 className="font-sans font-bold text-4xl mb-3 tracking-tight">Step 3: Your Content</h2>
                   <p className="text-lg text-muted-foreground">Choose how to create the text for your carousel slides.</p>
                 </div>
 
@@ -2153,7 +2153,7 @@ export default function Home() {
                 {!result ? (
                   <>
                     <div>
-                      <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 4: Generate</h2>
+                      <h2 className="font-sans font-bold text-4xl mb-3 tracking-tight">Step 4: Generate</h2>
                       <p className="text-lg text-muted-foreground">Generate your carousel posts first, then create captions.</p>
                     </div>
                     <div className="text-center py-12">
@@ -2167,7 +2167,7 @@ export default function Home() {
                   <>
                     <div className="flex items-center justify-between">
                       <div>
-                        <h2 className="font-serif text-4xl font-semibold mb-2 tracking-tight">Your Carousels are Ready</h2>
+                        <h2 className="font-sans font-bold text-4xl mb-2 tracking-tight">Your Carousels are Ready</h2>
                         <p className="text-lg text-muted-foreground">
                           {result.totalCarousels} carousels &times; {result.slidesPerCarousel} slides at 1080 &times; 1350 px
                         </p>
@@ -2338,7 +2338,7 @@ export default function Home() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <MessageSquareText className="w-6 h-6 text-primary" />
-                          <h2 className="font-serif text-3xl font-semibold tracking-tight">Post Captions</h2>
+                          <h2 className="font-sans font-bold text-3xl tracking-tight">Post Captions</h2>
                         </div>
                         <div className="flex items-center gap-3">
                           {captions.length > 0 && (
