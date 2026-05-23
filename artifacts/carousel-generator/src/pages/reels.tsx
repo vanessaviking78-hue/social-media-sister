@@ -40,6 +40,33 @@ const PREVIEW_SCALE = 0.22;
 const PREVIEW_W = Math.round(VIDEO_WIDTH * PREVIEW_SCALE);
 const PREVIEW_H = Math.round(VIDEO_HEIGHT * PREVIEW_SCALE);
 
+async function pollReelJob(
+  jobId: string,
+  BASE: string,
+  onProgress: (label: string) => void,
+): Promise<{ igPostId: string; trial: boolean }> {
+  const LABELS = [
+    "Processing video…",
+    "Uploading to Instagram…",
+    "Almost there…",
+    "Nearly done…",
+    "Finishing up…",
+  ];
+  for (let i = 0; i < 60; i++) {
+    await new Promise((r) => setTimeout(r, 5000));
+    const res = await fetch(`${BASE}api/meta/push-reel/${encodeURIComponent(jobId)}/status`);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string };
+      throw new Error(body.error || "Could not check reel status");
+    }
+    const job = await res.json() as { status: string; igPostId?: string; trial?: boolean; error?: string };
+    if (job.status === "finished") return { igPostId: job.igPostId!, trial: job.trial ?? false };
+    if (job.status === "error") throw new Error(job.error || "Reel processing failed");
+    onProgress(LABELS[Math.min(Math.floor(i / 4), LABELS.length - 1)]);
+  }
+  throw new Error("Reel timed out after 5 minutes — please try again");
+}
+
 export default function Reels() {
   const [slides, setSlides] = useState<ReelSlide[]>([
     { id: crypto.randomUUID(), mode: "cover", text: "", imageFile: null, imageElement: null, videoFile: null, videoElement: null, imageOffsetY: 0 },
@@ -602,14 +629,19 @@ export default function Reels() {
         const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, { method: "POST", body: form });
         if (!uploadRes.ok) throw new Error(`Reel ${i + 1}: video upload failed`);
         const { url } = await uploadRes.json();
-        setBulkPushProgress({ current: i + 1, total: bulkRows.length, label: `Reel ${reelNum}: Posting…` });
+        setBulkPushProgress({ current: i + 1, total: bulkRows.length, label: `Reel ${reelNum}: Submitting…` });
         const pushRes = await fetch(`${import.meta.env.BASE_URL}api/meta/push-reel`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ videoUrl: url, caption: "", presetId: Number(bulkIgPresetId), trial, graduationStrategy: "MANUAL" }),
         });
-        const pushData = await pushRes.json();
+        const pushData = await pushRes.json().catch(() => ({})) as { jobId?: string; error?: string };
         if (!pushRes.ok) throw new Error(`Reel ${i + 1}: ${pushData.error || "push failed"}`);
+        await pollReelJob(
+          pushData.jobId!,
+          import.meta.env.BASE_URL,
+          (label) => setBulkPushProgress({ current: i + 1, total: bulkRows.length, label: `Reel ${reelNum}: ${label}` }),
+        );
         successCount++;
       }
       toast.success(`${successCount} trial reel${successCount !== 1 ? "s" : ""} posted! Open Instagram to review.`);
@@ -1046,14 +1078,19 @@ export default function Reels() {
       const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, { method: "POST", body: form });
       if (!uploadRes.ok) throw new Error("Video upload failed");
       const { url } = await uploadRes.json();
-      setIgPushProgress(trial ? "Posting Trial Reel… (may take up to 2 min)" : "Posting Reel…");
+      setIgPushProgress("Submitting to Instagram…");
       const pushRes = await fetch(`${import.meta.env.BASE_URL}api/meta/push-reel`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ videoUrl: url, caption: igCaption, presetId: Number(igPresetId), trial, graduationStrategy: "MANUAL" }),
       });
-      const pushData = await pushRes.json();
+      const pushData = await pushRes.json().catch(() => ({})) as { jobId?: string; error?: string };
       if (!pushRes.ok) throw new Error(pushData.error || "Push failed");
+      await pollReelJob(
+        pushData.jobId!,
+        import.meta.env.BASE_URL,
+        (label) => setIgPushProgress(label),
+      );
       toast.success(trial
         ? "Trial Reel posted! Open your Instagram app to review it before graduating."
         : "Reel posted to Instagram!");

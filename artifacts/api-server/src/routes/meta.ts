@@ -217,10 +217,118 @@ router.post("/meta/push", async (req: Request, res: Response) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Async reel job store
+// Reel container creation + polling takes up to 2 min, which exceeds the
+// Replit reverse-proxy hard timeout of 120 s.  We solve this by returning a
+// jobId immediately and processing the reel in the background.
+// ---------------------------------------------------------------------------
+
+type ReelJobStatus = "queued" | "processing" | "finished" | "error";
+
+interface ReelJob {
+  status: ReelJobStatus;
+  igPostId?: string;
+  trial?: boolean;
+  error?: string;
+  startedAt: number;
+}
+
+const reelJobs = new Map<string, ReelJob>();
+
+// Auto-clean jobs older than 15 minutes so the Map doesn't grow unbounded.
+setInterval(() => {
+  const cutoff = Date.now() - 15 * 60_000;
+  for (const [id, job] of reelJobs) {
+    if (job.startedAt < cutoff) reelJobs.delete(id);
+  }
+}, 5 * 60_000).unref();
+
+async function processReelJob(
+  jobId: string,
+  params: {
+    videoUrl: string;
+    caption: string;
+    token: string;
+    igId: string;
+    trial: boolean;
+    graduationStrategy: string;
+  }
+): Promise<void> {
+  const { videoUrl, caption, token, igId, trial, graduationStrategy } = params;
+
+  const patch = (update: Partial<ReelJob>) =>
+    reelJobs.set(jobId, { ...reelJobs.get(jobId)!, ...update });
+
+  try {
+    patch({ status: "processing" });
+
+    // Step 1: create Reel container
+    const containerBody: Record<string, unknown> = {
+      media_type: "REELS",
+      video_url: videoUrl,
+      caption,
+      access_token: token,
+    };
+    if (trial) {
+      containerBody.trial_params = JSON.stringify({
+        graduation_strategy: graduationStrategy,
+      });
+    }
+
+    const containerRes = await metaFetch(
+      `${GRAPH}/${igId}/media`,
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(containerBody) },
+      60_000,
+    );
+    const containerData = await containerRes.json() as { id?: string; error?: { message?: string } };
+    if (!containerRes.ok || !containerData.id) {
+      throw new Error(`Reel container creation failed: ${containerData?.error?.message || JSON.stringify(containerData)}`);
+    }
+    const containerId = containerData.id;
+
+    // Step 2: poll until FINISHED (up to ~2 min, 24 × 5 s)
+    let statusCode = "IN_PROGRESS";
+    for (let i = 0; i < 24; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      const statusRes = await metaFetch(
+        `${GRAPH}/${containerId}?fields=status_code,status&access_token=${token}`,
+      );
+      const statusData = await statusRes.json() as { status_code?: string; status?: string };
+      statusCode = statusData.status_code || "UNKNOWN";
+      if (statusCode === "FINISHED") break;
+      if (statusCode === "ERROR" || statusCode === "EXPIRED") {
+        throw new Error(`Reel container failed with status: ${statusCode} — ${statusData.status || ""}`);
+      }
+    }
+
+    if (statusCode !== "FINISHED") {
+      throw new Error("Reel container timed out — please try again or check the video format.");
+    }
+
+    // Step 3: publish
+    const publishRes = await metaFetch(`${GRAPH}/${igId}/media_publish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ creation_id: containerId, access_token: token }),
+    });
+    const publishData = await publishRes.json() as { id?: string; error?: { message?: string } };
+    if (!publishRes.ok || !publishData.id) {
+      throw new Error(`Reel publish failed: ${publishData?.error?.message || JSON.stringify(publishData)}`);
+    }
+
+    logActivity({ action: "pushed", postType: "reel", postCount: 1 });
+    patch({ status: "finished", igPostId: publishData.id, trial });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Reel push failed";
+    patch({ status: "error", error: msg });
+  }
+}
+
+// POST /api/meta/push-reel
+// Returns immediately with { jobId, status: "queued" }.  Actual processing
+// runs in the background via processReelJob().
 router.post("/meta/push-reel", async (req: Request, res: Response) => {
-  // Reel processing takes up to ~2 min — extend socket timeout so the proxy
-  // doesn't cut the connection and return an HTML error page mid-poll.
-  req.socket.setTimeout(300_000);
   try {
     const { videoUrl, caption, presetId, trial, graduationStrategy } = req.body as {
       videoUrl: string;
@@ -248,68 +356,36 @@ router.post("/meta/push-reel", async (req: Request, res: Response) => {
       return;
     }
 
-    // Step 1: create Reel container
-    const containerBody: Record<string, unknown> = {
-      media_type: "REELS",
-      video_url: videoUrl,
-      caption: caption || "",
-      access_token: token,
-    };
-    if (trial) {
-      containerBody.trial_params = JSON.stringify({
-        graduation_strategy: graduationStrategy || "MANUAL",
-      });
-    }
+    const jobId = `rl_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    reelJobs.set(jobId, { status: "queued", startedAt: Date.now() });
 
-    // Container creation: Meta fetches and validates the video URL, which can
-    // take well over 30s — give it 60s before giving up.
-    const containerRes = await metaFetch(`${GRAPH}/${igId}/media`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(containerBody),
-    }, 60_000);
-    const containerData = await containerRes.json() as { id?: string; error?: { message?: string } };
-    if (!containerRes.ok || !containerData.id) {
-      throw new Error(`Reel container creation failed: ${containerData?.error?.message || JSON.stringify(containerData)}`);
-    }
-    const containerId = containerData.id;
-
-    // Step 2: poll until FINISHED (up to ~2 min)
-    let statusCode = "IN_PROGRESS";
-    for (let i = 0; i < 24; i++) {
-      await new Promise((r) => setTimeout(r, 5000));
-      const statusRes = await metaFetch(
-        `${GRAPH}/${containerId}?fields=status_code,status&access_token=${token}`,
-      );
-      const statusData = await statusRes.json() as { status_code?: string; status?: string };
-      statusCode = statusData.status_code || "UNKNOWN";
-      if (statusCode === "FINISHED") break;
-      if (statusCode === "ERROR" || statusCode === "EXPIRED") {
-        throw new Error(`Reel container failed with status: ${statusCode} — ${statusData.status || ""}`);
-      }
-    }
-
-    if (statusCode !== "FINISHED") {
-      throw new Error("Reel container timed out. Try again or check the video format.");
-    }
-
-    // Step 3: publish
-    const publishRes = await metaFetch(`${GRAPH}/${igId}/media_publish`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ creation_id: containerId, access_token: token }),
+    // Fire and forget — response is sent before the async work starts.
+    setImmediate(() => {
+      processReelJob(jobId, {
+        videoUrl,
+        caption: caption || "",
+        token,
+        igId,
+        trial: trial ?? false,
+        graduationStrategy: graduationStrategy || "MANUAL",
+      }).catch(() => {});
     });
-    const publishData = await publishRes.json() as { id?: string; error?: { message?: string } };
-    if (!publishRes.ok || !publishData.id) {
-      throw new Error(`Reel publish failed: ${publishData?.error?.message || JSON.stringify(publishData)}`);
-    }
 
-    logActivity({ action: "pushed", postType: "reel", postCount: 1 });
-    res.json({ id: publishData.id, trial: trial || false });
+    res.status(202).json({ jobId, status: "queued" });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Reel push failed";
     res.status(500).json({ error: msg });
   }
+});
+
+// GET /api/meta/push-reel/:jobId/status
+router.get("/meta/push-reel/:jobId/status", (req: Request, res: Response) => {
+  const job = reelJobs.get(req.params.jobId);
+  if (!job) {
+    res.status(404).json({ error: "Job not found — it may have expired" });
+    return;
+  }
+  res.json(job);
 });
 
 export default router;
