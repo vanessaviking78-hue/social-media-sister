@@ -8,9 +8,9 @@ const router: IRouter = Router();
 
 const GRAPH = "https://graph.facebook.com/v19.0";
 
-function metaFetch(url: string, opts: RequestInit = {}): Promise<Response> {
+function metaFetch(url: string, opts: RequestInit = {}, timeoutMs = 30_000): Promise<Response> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30_000);
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   return fetch(url, { ...opts, signal: controller.signal }).finally(() =>
     clearTimeout(timer)
   );
@@ -218,6 +218,9 @@ router.post("/meta/push", async (req: Request, res: Response) => {
 });
 
 router.post("/meta/push-reel", async (req: Request, res: Response) => {
+  // Reel processing takes up to ~2 min — extend socket timeout so the proxy
+  // doesn't cut the connection and return an HTML error page mid-poll.
+  req.socket.setTimeout(300_000);
   try {
     const { videoUrl, caption, presetId, trial, graduationStrategy } = req.body as {
       videoUrl: string;
@@ -258,11 +261,13 @@ router.post("/meta/push-reel", async (req: Request, res: Response) => {
       });
     }
 
+    // Container creation: Meta fetches and validates the video URL, which can
+    // take well over 30s — give it 60s before giving up.
     const containerRes = await metaFetch(`${GRAPH}/${igId}/media`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(containerBody),
-    });
+    }, 60_000);
     const containerData = await containerRes.json() as { id?: string; error?: { message?: string } };
     if (!containerRes.ok || !containerData.id) {
       throw new Error(`Reel container creation failed: ${containerData?.error?.message || JSON.stringify(containerData)}`);
