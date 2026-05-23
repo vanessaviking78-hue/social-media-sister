@@ -69,7 +69,7 @@ async function pollReelJob(
 
 export default function Reels() {
   const [slides, setSlides] = useState<ReelSlide[]>([
-    { id: crypto.randomUUID(), mode: "cover", text: "", imageFile: null, imageElement: null, videoFile: null, videoElement: null, imageOffsetY: 0 },
+    { id: crypto.randomUUID(), mode: "image-typewriter", text: "", imageFile: null, imageElement: null, videoFile: null, videoElement: null, imageOffsetY: 0 },
   ]);
   const [activeIdx, setActiveIdx] = useState(0);
 
@@ -431,7 +431,7 @@ export default function Reels() {
               const texts: string[] = msg.posts[0];
               setSlides(texts.map((text) => ({
                 id: crypto.randomUUID(),
-                mode: "typewriter" as const,
+                mode: "image-typewriter" as const,
                 text,
                 imageFile: null,
                 imageElement: null,
