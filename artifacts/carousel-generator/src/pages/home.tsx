@@ -125,6 +125,8 @@ export default function Home() {
   const [videoPreviewPlaying, setVideoPreviewPlaying] = useState(false);
   const videoPreviewCanvasRef = useRef<HTMLCanvasElement>(null);
   const videoPreviewRafRef = useRef<number | null>(null);
+  const livePreviewCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [livePreviewImg, setLivePreviewImg] = useState<HTMLImageElement | null>(null);
 
   const getCurrentStyles = (): PresetStyleFields => ({
     pageColor, overlayColor, fontFamily, subheadingFont, fontSize, contentFontSize, textColor, lineSpacing,
@@ -184,12 +186,34 @@ export default function Home() {
     return () => URL.revokeObjectURL(url);
   }, [logoFile]);
 
+  // Load first photo for live preview
+  useEffect(() => {
+    if (!photos.length) { setLivePreviewImg(null); return; }
+    const url = URL.createObjectURL(photos[0]);
+    const img = new Image();
+    img.onload = () => setLivePreviewImg(img);
+    img.src = url;
+    return () => URL.revokeObjectURL(url);
+  }, [photos]);
+
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/status`)
       .then((r) => r.json())
       .then((d) => setCcStatus(d))
       .catch(() => setCcStatus(null));
   }, []);
+
+  // Render live preview canvas whenever style settings change
+  useEffect(() => {
+    const canvas = livePreviewCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    canvas.width = CANVAS_WIDTH;
+    canvas.height = CANVAS_HEIGHT;
+    const previewText = allCsvRows[0]?.[0] ?? (coverSplit ? "Your Eyebrow|And Your Headline" : coverDropCap ? "Your headline will appear here in the chosen font" : "Your headline will appear here");
+    drawSlide(ctx, livePreviewImg, previewText, fontFamily, fontSize, true, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 4, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined });
+  }, [livePreviewImg, fontFamily, fontSize, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, contentLetterSpacing, pageColorEnd, overlayGradient, textShadow, allCsvRows]);
 
   const pushToCloudCampaign = async () => {
     if (!result?.slides.length) return;
@@ -1309,6 +1333,12 @@ export default function Home() {
                   <p className="text-lg text-muted-foreground">Customise the look and feel of your carousel slides.</p>
                 </div>
 
+                {/* Two-column: settings left, live preview right */}
+                <div className="flex gap-8 items-start">
+
+                {/* LEFT: all settings */}
+                <div className="flex-1 flex flex-col gap-6 min-w-0">
+
                 <div className="rounded-2xl border border-pink-500/20 bg-card/50 p-6">
                   <PresetSelector
                     presets={presets}
@@ -1874,6 +1904,21 @@ export default function Home() {
                     </>
                   )}
                 </div>
+
+                </div>{/* end LEFT settings col */}
+
+                {/* RIGHT: Sticky live preview */}
+                <div className="hidden lg:flex flex-col gap-3 shrink-0 w-72 sticky top-6 self-start">
+                  <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground text-center">Live Preview</p>
+                  <div className="rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+                    <canvas ref={livePreviewCanvasRef} className="w-full block" style={{ aspectRatio: "4/5" }} />
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center leading-snug">
+                    {photos.length > 0 ? "Cover slide — updates as you edit" : "Upload a photo in Step 1 to see a live preview"}
+                  </p>
+                </div>
+
+                </div>{/* end two-col wrapper */}
 
                 {/* Step 2 Navigation */}
                 <div className="flex justify-between pt-4">
