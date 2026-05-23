@@ -189,35 +189,24 @@ IMPORTANT: Output ONLY a valid JSON array with no markdown formatting, no code f
         `data: ${JSON.stringify({ type: "progress", generated: allPosts.length, total: count })}\n\n`
       );
 
-      const stream = await openai.chat.completions.create({
+      const completion = await openai.chat.completions.create({
         model: "gpt-5.2",
-        max_completion_tokens: 8192,
+        max_completion_tokens: 16384,
+        response_format: { type: "json_object" },
         messages: [
           { role: "system", content: systemPrompt },
           {
             role: "user",
-            content: `Generate exactly ${thisBatch} carousel posts about these topics: ${topicList}. Distribute topics evenly across posts. Return ONLY a JSON array.`,
+            content: `Generate exactly ${thisBatch} carousel posts about these topics: ${topicList}. Distribute topics evenly across posts. Return a JSON object with a single key "posts" whose value is an array of exactly ${thisBatch} objects, each with a "slides" array.`,
           },
         ],
-        stream: true,
       });
 
-      let fullResponse = "";
-      for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content;
-        if (content) {
-          fullResponse += content;
-        }
-      }
-
       try {
-        let cleaned = fullResponse.trim();
-        const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
-        if (jsonMatch) cleaned = jsonMatch[0];
-        const parsed = JSON.parse(cleaned);
-        if (Array.isArray(parsed)) {
-          allPosts = allPosts.concat(parsed.slice(0, thisBatch));
-        }
+        const raw = completion.choices[0]?.message?.content ?? "";
+        const parsed = JSON.parse(raw) as { posts?: Array<{ slides: string[] }> };
+        const posts = Array.isArray(parsed.posts) ? parsed.posts : [];
+        allPosts = allPosts.concat(posts.slice(0, thisBatch));
       } catch (parseErr) {
         console.error("Failed to parse AI batch response:", parseErr);
         res.write(
