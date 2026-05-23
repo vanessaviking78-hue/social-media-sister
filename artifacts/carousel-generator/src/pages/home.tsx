@@ -1182,7 +1182,7 @@ export default function Home() {
                     <ImageIcon className="w-7 h-7" />
                   </div>
                   <div>
-                    <p className="font-semibold text-xl">Photos</p>
+                    <p className="font-semibold text-xl">{useCoverImages ? "Content Photos (Slides 2, 3, 4…)" : "Photos"}</p>
                     <p className="text-base text-muted-foreground mt-1">
                       {photos.length > 0 ? `${photos.length} selected — click to add more` : "Drag & drop or click to upload"}
                     </p>
