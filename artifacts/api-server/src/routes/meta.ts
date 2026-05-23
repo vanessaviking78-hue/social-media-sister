@@ -8,6 +8,14 @@ const router: IRouter = Router();
 
 const GRAPH = "https://graph.facebook.com/v19.0";
 
+function metaFetch(url: string, opts: RequestInit = {}): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30_000);
+  return fetch(url, { ...opts, signal: controller.signal }).finally(() =>
+    clearTimeout(timer)
+  );
+}
+
 async function igUploadContainer(
   igAccountId: string,
   token: string,
@@ -24,27 +32,27 @@ async function igUploadContainer(
   } else if (caption) {
     params.caption = caption;
   }
-  const res = await fetch(`${GRAPH}/${igAccountId}/media`, {
+  const res = await metaFetch(`${GRAPH}/${igAccountId}/media`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),
   });
   const data = await res.json();
   if (!res.ok || !data.id) {
-    throw new Error(`IG media upload failed: ${data?.error?.message || JSON.stringify(data)}`);
+    throw new Error(`IG media upload failed (${res.status}): ${data?.error?.message || JSON.stringify(data)}`);
   }
   return data.id as string;
 }
 
 async function igPublish(igAccountId: string, token: string, creationId: string): Promise<string> {
-  const res = await fetch(`${GRAPH}/${igAccountId}/media_publish`, {
+  const res = await metaFetch(`${GRAPH}/${igAccountId}/media_publish`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ creation_id: creationId, access_token: token }),
   });
   const data = await res.json();
   if (!res.ok || !data.id) {
-    throw new Error(`IG publish failed: ${data?.error?.message || JSON.stringify(data)}`);
+    throw new Error(`IG publish failed (${res.status}): ${data?.error?.message || JSON.stringify(data)}`);
   }
   return data.id as string;
 }
@@ -64,7 +72,7 @@ async function postToInstagram(
     const id = await igUploadContainer(igAccountId, token, url, true);
     childIds.push(id);
   }
-  const carouselRes = await fetch(`${GRAPH}/${igAccountId}/media`, {
+  const carouselRes = await metaFetch(`${GRAPH}/${igAccountId}/media`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -76,7 +84,7 @@ async function postToInstagram(
   });
   const carouselData = await carouselRes.json();
   if (!carouselRes.ok || !carouselData.id) {
-    throw new Error(`IG carousel container failed: ${carouselData?.error?.message || JSON.stringify(carouselData)}`);
+    throw new Error(`IG carousel container failed (${carouselRes.status}): ${carouselData?.error?.message || JSON.stringify(carouselData)}`);
   }
   return igPublish(igAccountId, token, carouselData.id);
 }
@@ -88,29 +96,29 @@ async function postToFacebook(
   caption: string
 ): Promise<string> {
   if (imageUrls.length === 1) {
-    const res = await fetch(`${GRAPH}/${pageId}/photos`, {
+    const res = await metaFetch(`${GRAPH}/${pageId}/photos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url: imageUrls[0], caption, access_token: token }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(`FB photo post failed: ${data?.error?.message || JSON.stringify(data)}`);
+    if (!res.ok) throw new Error(`FB photo post failed (${res.status}): ${data?.error?.message || JSON.stringify(data)}`);
     return data.post_id || data.id;
   }
 
   const mediaFbids: { media_fbid: string }[] = [];
   for (const url of imageUrls) {
-    const res = await fetch(`${GRAPH}/${pageId}/photos`, {
+    const res = await metaFetch(`${GRAPH}/${pageId}/photos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url, published: false, access_token: token }),
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(`FB photo upload failed: ${data?.error?.message || JSON.stringify(data)}`);
+    if (!res.ok) throw new Error(`FB photo upload failed (${res.status}): ${data?.error?.message || JSON.stringify(data)}`);
     mediaFbids.push({ media_fbid: data.id });
   }
 
-  const feedRes = await fetch(`${GRAPH}/${pageId}/feed`, {
+  const feedRes = await metaFetch(`${GRAPH}/${pageId}/feed`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -120,7 +128,7 @@ async function postToFacebook(
     }),
   });
   const feedData = await feedRes.json();
-  if (!feedRes.ok) throw new Error(`FB feed post failed: ${feedData?.error?.message || JSON.stringify(feedData)}`);
+  if (!feedRes.ok) throw new Error(`FB feed post failed (${feedRes.status}): ${feedData?.error?.message || JSON.stringify(feedData)}`);
   return feedData.id;
 }
 
@@ -137,7 +145,7 @@ router.get("/meta/test-connection", async (req: Request, res: Response) => {
       res.status(400).json({ error: "No Meta access token configured for this preset" });
       return;
     }
-    const r = await fetch(`${GRAPH}/me?fields=id,name&access_token=${preset.metaPageAccessToken}`);
+    const r = await metaFetch(`${GRAPH}/me?fields=id,name&access_token=${preset.metaPageAccessToken}`);
     const data = await r.json();
     if (!r.ok) {
       res.status(400).json({ error: `Token invalid: ${data?.error?.message || "Unknown error"}` });
@@ -250,7 +258,7 @@ router.post("/meta/push-reel", async (req: Request, res: Response) => {
       });
     }
 
-    const containerRes = await fetch(`${GRAPH}/${igId}/media`, {
+    const containerRes = await metaFetch(`${GRAPH}/${igId}/media`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(containerBody),
@@ -265,7 +273,7 @@ router.post("/meta/push-reel", async (req: Request, res: Response) => {
     let statusCode = "IN_PROGRESS";
     for (let i = 0; i < 24; i++) {
       await new Promise((r) => setTimeout(r, 5000));
-      const statusRes = await fetch(
+      const statusRes = await metaFetch(
         `${GRAPH}/${containerId}?fields=status_code,status&access_token=${token}`,
       );
       const statusData = await statusRes.json() as { status_code?: string; status?: string };
@@ -281,7 +289,7 @@ router.post("/meta/push-reel", async (req: Request, res: Response) => {
     }
 
     // Step 3: publish
-    const publishRes = await fetch(`${GRAPH}/${igId}/media_publish`, {
+    const publishRes = await metaFetch(`${GRAPH}/${igId}/media_publish`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ creation_id: containerId, access_token: token }),
