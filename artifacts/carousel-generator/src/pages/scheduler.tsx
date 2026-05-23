@@ -129,7 +129,7 @@ function ScheduleDialog({ presets, onClose, onSaved, editing }: ScheduleDialogPr
       } else {
         await apiFetch("/api/scheduler/posts", {
           method: "POST",
-          body: JSON.stringify({ presetId: Number(presetId), postType, content, scheduledAt, isTrial, notes }),
+          body: JSON.stringify({ presetId: Number(presetId), postType, content, scheduledAt: new Date(scheduledAt).toISOString(), isTrial, notes }),
         });
         toast.success("Post scheduled");
       }
