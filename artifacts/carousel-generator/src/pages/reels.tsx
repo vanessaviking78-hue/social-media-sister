@@ -106,6 +106,9 @@ export default function Reels() {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [schedulePost, setSchedulePost] = useState<SchedulePostPayload | null>(null);
   const [scheduleRendering, setScheduleRendering] = useState(false);
+  const [bulkScheduleOpen, setBulkScheduleOpen] = useState(false);
+  const [bulkSchedulePosts, setBulkSchedulePosts] = useState<SchedulePostPayload[]>([]);
+  const [bulkScheduleRendering, setBulkScheduleRendering] = useState(false);
   const [igPushProgress, setIgPushProgress] = useState("");
   const [igLoading, setIgLoading] = useState(true);
   const [igSetupOpen, setIgSetupOpen] = useState(false);
@@ -615,6 +618,62 @@ export default function Reels() {
     } finally {
       setBulkPushing(false);
       setBulkPushProgress({ current: 0, total: 0, label: "" });
+    }
+  };
+
+  const handleBulkSchedule = async () => {
+    if (!bulkIgPresetId) { toast.error("Select a client preset first"); return; }
+    if (bulkRows.length === 0) { toast.error("Upload a CSV first"); return; }
+    if (bulkMedia.length > 0 && bulkMediaLoadedCount < bulkMedia.length) {
+      toast.error(`Media still loading (${bulkMediaLoadedCount}/${bulkMedia.length}) — please wait`); return;
+    }
+    setBulkScheduleRendering(true);
+    const hasMedia = bulkMedia.length > 0;
+    const pairCount = hasMedia ? Math.min(bulkMedia.length, bulkRows.length) : bulkRows.length;
+    const canvas = exportCanvasRef.current!;
+    canvas.width = VIDEO_WIDTH;
+    canvas.height = VIDEO_HEIGHT;
+    const ctx = canvas.getContext("2d")!;
+    const posts: SchedulePostPayload[] = [];
+    const id = toast.loading(`Encoding reel 1 of ${pairCount}…`);
+    try {
+      for (let i = 0; i < pairCount; i++) {
+        const texts = bulkRows[i];
+        const mediaEl = hasMedia ? bulkMediaElementsRef.current[i] : null;
+        const isVideo = hasMedia && (bulkMedia[i]?.type.startsWith("video/") ?? false);
+        toast.loading(`Encoding reel ${i + 1} of ${pairCount}…`, { id });
+        if (mediaEl && isVideo) { const vid = mediaEl as HTMLVideoElement; vid.currentTime = 0; await vid.play().catch(() => {}); }
+        const animateFn = (slideIndex: number, slideProgress: number) => {
+          if (mediaEl) {
+            drawSlide(ctx, mediaEl as HTMLImageElement, "", fontFamily, fontSize, true, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, "none", "#ffffff", 1, 1, textPosition, false, fontFamily, textAlign, false, "#ffffff", "", letterSpacing, false, false, "'Great Vibes', cursive", coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch);
+            drawTypewriterOnVideo(ctx, texts[slideIndex] ?? "", slideProgress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
+          } else {
+            drawTypewriterSlide(ctx, texts[slideIndex] ?? "", slideProgress, typewriterBgColor, textColor, fontFamily, fontSize, lineSpacing, logoImg, logoPosition, logoSize, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
+          }
+        };
+        let blob: Blob;
+        try {
+          blob = await recordReelVideoMp4(canvas, slideDurationSec * 1000, fadeDurationMs, texts.length, animateFn, 30);
+        } catch {
+          blob = await recordReelVideo(canvas, slideDurationSec * 1000, fadeDurationMs, texts.length, animateFn, 30);
+        }
+        if (mediaEl && isVideo) { (mediaEl as HTMLVideoElement).pause(); }
+        toast.loading(`Uploading reel ${i + 1} of ${pairCount}…`, { id });
+        const form = new FormData();
+        const ext = blob.type.includes("mp4") ? "mp4" : "webm";
+        form.append("video", blob, `reel-sched-${Date.now()}-${i + 1}.${ext}`);
+        const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, { method: "POST", body: form });
+        if (!uploadRes.ok) throw new Error(`Reel ${i + 1}: video upload failed`);
+        const { url } = await uploadRes.json();
+        posts.push({ title: `Reel ${i + 1} – ${new Date().toLocaleDateString()}`, caption: "", videoUrl: url });
+      }
+      toast.dismiss(id);
+      setBulkSchedulePosts(posts);
+      setBulkScheduleOpen(true);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to prepare reels for scheduling", { id });
+    } finally {
+      setBulkScheduleRendering(false);
     }
   };
 
@@ -1549,15 +1608,21 @@ export default function Reels() {
                         </SelectContent>
                       </Select>
                       <div className="flex gap-2">
-                        <Button onClick={() => handleBulkPushToIG(true)} disabled={bulkPushing || bulkGenerating || bulkRows.length === 0 || !bulkIgPresetId}
+                        <Button onClick={() => handleBulkPushToIG(true)} disabled={bulkPushing || bulkGenerating || bulkScheduleRendering || bulkRows.length === 0 || !bulkIgPresetId}
                           className="flex-1 bg-pink-700 hover:bg-pink-600 text-white py-5 text-sm">
                           {bulkPushing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Trial"}
                         </Button>
-                        <Button onClick={() => handleBulkPushToIG(false)} disabled={bulkPushing || bulkGenerating || bulkRows.length === 0 || !bulkIgPresetId}
+                        <Button onClick={() => handleBulkPushToIG(false)} disabled={bulkPushing || bulkGenerating || bulkScheduleRendering || bulkRows.length === 0 || !bulkIgPresetId}
                           className="flex-1 border border-pink-700/60 text-pink-300 bg-transparent hover:bg-pink-700/20 py-5 text-sm">
                           {bulkPushing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Post Live"}
                         </Button>
                       </div>
+                      <Button onClick={handleBulkSchedule} disabled={bulkScheduleRendering || bulkPushing || bulkGenerating || bulkRows.length === 0 || !bulkIgPresetId}
+                        variant="outline" className="w-full border-pink-500/40 text-pink-300 hover:bg-pink-950/30 py-5 text-sm">
+                        {bulkScheduleRendering
+                          ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Preparing {bulkRows.length} reels…</>
+                          : <><CalendarClock className="w-4 h-4 mr-2" />Schedule reels</>}
+                      </Button>
                       {bulkPushing && bulkPushProgress.total > 0 && (
                         <div className="space-y-1.5">
                           <div className="h-2 bg-white/10 rounded-full overflow-hidden">
@@ -2103,6 +2168,17 @@ export default function Reels() {
           postType="reel"
           posts={schedulePost ? [schedulePost] : []}
           onClose={() => setScheduleOpen(false)}
+        />
+      )}
+
+      {bulkScheduleOpen && bulkIgPresetId && (
+        <ScheduleModal
+          presetId={Number(bulkIgPresetId)}
+          presetName={igPresets.find((p) => p.id === Number(bulkIgPresetId))?.name}
+          postType="reel"
+          posts={bulkSchedulePosts}
+          onClose={() => setBulkScheduleOpen(false)}
+          onSaved={() => setBulkSchedulePosts([])}
         />
       )}
     </div>
