@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import {
-  Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus, CalendarDays, BarChart3, ShieldCheck, BookOpen, Film, ChevronDown, Play, Square,
+  Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus, CalendarDays, CalendarClock, BarChart3, ShieldCheck, BookOpen, Film, ChevronDown, Play, Square,
 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
@@ -18,6 +18,7 @@ import { CANVAS_WIDTH, CANVAS_HEIGHT, VIDEO_WIDTH, VIDEO_HEIGHT, FONT_OPTIONS, F
 import { usePresets, type ClientPreset, type PresetStyleFields, type TextPosition, type TextAlign, type CornerStyle, isCornerStyle, normalizeTextPosition } from "@/lib/use-presets";
 import type { LogoPosition } from "@workspace/db/schema";
 import { useCaptions } from "@/lib/use-captions";
+import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import PresetSelector from "@/components/preset-selector";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 
@@ -84,6 +85,9 @@ export default function SingleImage() {
   const [isDraggingCsv, setIsDraggingCsv] = useState(false);
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
   const [ccStatus, setCcStatus] = useState<{ configured: boolean } | null>(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
+  const [scheduleRendering, setScheduleRendering] = useState(false);
 
   const { presets, loading: presetsLoading, savePreset, updatePreset, deletePreset, uploadLogo } = usePresets();
   const { saveCaption: saveCaptionToLib, bulkSave: bulkSaveCaptions, captions: libCaptions, fetchCaptions: refreshLibCaptions } = useCaptions();
@@ -652,6 +656,49 @@ export default function SingleImage() {
     }
   };
 
+  const scheduleImages = async () => {
+    if (!result?.posts.length) return;
+    if (!selectedPresetId) { toast.error("Select a client preset first"); return; }
+    setScheduleRendering(true);
+    const id = toast.loading("Rendering images for scheduling...");
+    try {
+      await document.fonts.ready;
+      const rendered: { name: string; base64: string }[] = [];
+      for (const post of result.posts) {
+        const res = await fetch(post.imageUrl);
+        const blob = await res.blob();
+        const img = new Image();
+        await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
+        const canvas = document.createElement("canvas");
+        canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
+        const ctx = canvas.getContext("2d")!;
+        drawSlide(ctx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, "");
+        URL.revokeObjectURL(img.src);
+        rendered.push({ name: `sched-post-${String(post.index).padStart(2, "0")}.png`, base64: canvas.toDataURL("image/png") });
+      }
+      const urlMap = new Map<string, string>();
+      const PARALLEL = 3;
+      for (let i = 0; i < rendered.length; i += PARALLEL) {
+        toast.loading(`Uploading... ${i}/${rendered.length}`, { id });
+        const batch = rendered.slice(i, i + PARALLEL);
+        const urls = await Promise.all(batch.map((r) => uploadOneImage(r.name, r.base64)));
+        batch.forEach((r, bi) => urlMap.set(r.name, urls[bi]));
+      }
+      toast.dismiss(id);
+      const posts: SchedulePostPayload[] = result.posts.map((post, i) => ({
+        title: `Post ${post.index}`,
+        caption: captions[i] || "",
+        imageUrls: [urlMap.get(`sched-post-${String(post.index).padStart(2, "0")}.png`) || ""].filter(Boolean),
+      }));
+      setSchedulePosts(posts);
+      setScheduleOpen(true);
+    } catch (e: any) {
+      toast.error("Failed to prepare: " + (e?.message || ""), { id });
+    } finally {
+      setScheduleRendering(false);
+    }
+  };
+
   const ANIM_OPTIONS: { value: AnimationType; label: string; desc: string }[] = [
     { value: 'ken-burns', label: 'Ken Burns', desc: 'Photo slowly zooms in' },
     { value: 'slide-in-text', label: 'Slide-in', desc: 'Text glides up from below' },
@@ -912,6 +959,12 @@ export default function SingleImage() {
                 <Button size="sm" onClick={pushToCloudCampaign} disabled={ccPushing} className="bg-blue-600 hover:bg-blue-700 text-white">
                   {ccPushing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CloudUpload className="w-4 h-4 mr-2" />}
                   {ccPushing ? "Pushing..." : "Push to CC"}
+                </Button>
+              )}
+              {selectedPresetId && (
+                <Button size="sm" onClick={scheduleImages} disabled={scheduleRendering} variant="outline" className="border-pink-500/40 text-pink-300 hover:bg-pink-950/30">
+                  {scheduleRendering ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-2" />}
+                  {scheduleRendering ? "Preparing..." : "Schedule"}
                 </Button>
               )}
             </>
@@ -1698,6 +1751,12 @@ export default function SingleImage() {
                           {ccPushing ? "Pushing..." : "Push to Cloud Campaign"}
                         </Button>
                       )}
+                      {selectedPresetId && (
+                        <Button size="lg" onClick={scheduleImages} disabled={scheduleRendering} variant="outline" className="px-10 py-6 text-lg font-bold border-pink-500/40 text-pink-300 hover:bg-pink-950/30">
+                          {scheduleRendering ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <CalendarClock className="w-5 h-5 mr-2" />}
+                          {scheduleRendering ? "Preparing..." : "Schedule"}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </>
@@ -1707,6 +1766,15 @@ export default function SingleImage() {
         </div>
       </main>
 
+      {scheduleOpen && selectedPresetId && (
+        <ScheduleModal
+          presetId={selectedPresetId}
+          presetName={presets.find((p) => p.id === selectedPresetId)?.name}
+          postType="carousel"
+          posts={schedulePosts}
+          onClose={() => setScheduleOpen(false)}
+        />
+      )}
       <VanessaChat />
     </div>
   );

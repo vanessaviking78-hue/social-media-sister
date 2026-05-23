@@ -4,7 +4,7 @@ import {
   Layers, Loader2, Download, X, Sparkles, Wand2,
   BookOpen, ImagePlus, CalendarDays, BarChart3, ShieldCheck,
   MessageSquareText, PenTool, ChevronLeft, ChevronRight,
-  CloudUpload, FileText, Plus, Palette, Check, Copy, Film, Play, Clock,
+  CloudUpload, FileText, Plus, Palette, Check, Copy, Film, Play, Clock, CalendarClock,
 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
@@ -25,6 +25,7 @@ import { authHeaders } from "@/lib/use-approval";
 import { usePresets, type ClientPreset, type PresetStyleFields, type TextAlign } from "@/lib/use-presets";
 import type { LogoPosition } from "@workspace/db/schema";
 import PresetSelector from "@/components/preset-selector";
+import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 
 const BASE = import.meta.env.BASE_URL || "/";
 const api = (p: string) => `${BASE}api${p}`;
@@ -84,6 +85,9 @@ export default function Stories() {
   const [previewIdx, setPreviewIdx] = useState(0);
   const [downloading, setDownloading] = useState(false);
   const [pushing, setPushing] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
+  const [scheduleRendering, setScheduleRendering] = useState(false);
 
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
   const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null>(null);
@@ -409,6 +413,40 @@ export default function Stories() {
       setPushing(false);
     }
   }, [previews, questions, selectedCcWorkspace, ccWorkspaces]);
+
+  const scheduleStories = useCallback(async () => {
+    if (previews.length === 0) { toast.error("No stories to schedule"); return; }
+    if (!selectedPresetId) { toast.error("Select a client preset first"); return; }
+    setScheduleRendering(true);
+    const id = toast.loading("Uploading stories for scheduling...");
+    try {
+      const allUploadResults: { name: string; url: string }[] = [];
+      const batchSize = 5;
+      for (let i = 0; i < previews.length; i += batchSize) {
+        const batch = previews.slice(i, i + batchSize);
+        const uploadRes = await fetch(api("/content/upload-image"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({ images: batch.map((p, j) => ({ name: `story-sched-${i + j + 1}.png`, base64: p })) }),
+        });
+        if (!uploadRes.ok) throw new Error("Image upload failed");
+        const { results } = await uploadRes.json();
+        allUploadResults.push(...results);
+      }
+      toast.dismiss(id);
+      const posts: SchedulePostPayload[] = previews.map((_, i) => ({
+        title: `Story: ${questions[i]?.slice(0, 50) || `Story ${i + 1}`}`,
+        caption: questions[i] || "",
+        imageUrls: [allUploadResults[i]?.url].filter(Boolean),
+      }));
+      setSchedulePosts(posts);
+      setScheduleOpen(true);
+    } catch (err: any) {
+      toast.error(err.message || "Upload failed", { id });
+    } finally {
+      setScheduleRendering(false);
+    }
+  }, [previews, questions, selectedPresetId]);
 
   const exportCsv = useCallback(() => {
     if (questions.length === 0) return;
@@ -859,6 +897,12 @@ export default function Stories() {
                 {pushing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CloudUpload className="w-4 h-4 mr-2" />}
                 Push to Cloud Campaign
               </Button>
+              {selectedPresetId && (
+                <Button onClick={scheduleStories} disabled={scheduleRendering || previews.length === 0} variant="outline" className="border-pink-500/40 text-pink-300 hover:bg-pink-950/30">
+                  {scheduleRendering ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-2" />}
+                  {scheduleRendering ? "Preparing..." : "Schedule"}
+                </Button>
+              )}
             </div>
 
             {previews.length > 0 ? (
@@ -885,6 +929,14 @@ export default function Stories() {
         )}
       </main>
       <canvas ref={canvasRef} width={STORY_WIDTH} height={STORY_HEIGHT} className="hidden" />
+      {scheduleOpen && selectedPresetId && (
+        <ScheduleModal
+          presetId={selectedPresetId}
+          postType="carousel"
+          posts={schedulePosts}
+          onClose={() => setScheduleOpen(false)}
+        />
+      )}
     </div>
   );
 }

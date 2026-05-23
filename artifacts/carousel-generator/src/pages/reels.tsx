@@ -6,8 +6,9 @@ import {
   BarChart3, ShieldCheck, Film, Image as ImageIcon,
   Music, Search, X, Send, FileText, Sparkles, ChevronDown, Check,
   ExternalLink, AlertCircle, CheckCircle2, KeyRound, ChevronUp, Settings,
-  ChevronRight, ChevronLeft, Clock,
+  ChevronRight, ChevronLeft, Clock, CalendarClock,
 } from "lucide-react";
+import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -102,6 +103,9 @@ export default function Reels() {
   const [igPresetId, setIgPresetId] = useState("");
   const [igCaption, setIgCaption] = useState("");
   const [igPushing, setIgPushing] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [schedulePost, setSchedulePost] = useState<SchedulePostPayload | null>(null);
+  const [scheduleRendering, setScheduleRendering] = useState(false);
   const [igPushProgress, setIgPushProgress] = useState("");
   const [igLoading, setIgLoading] = useState(true);
   const [igSetupOpen, setIgSetupOpen] = useState(false);
@@ -1000,6 +1004,58 @@ export default function Reels() {
     } finally {
       setIgPushing(false);
       setIgPushProgress("");
+    }
+  };
+
+  const scheduleReel = async () => {
+    if (!igPresetId) { toast.error("Select a client preset first"); return; }
+    const hasContent = slides.some((s) => s.text.trim() || s.imageElement || s.videoElement);
+    if (!hasContent) { toast.error("Add some content to your slides first"); return; }
+    setScheduleRendering(true);
+    const id = toast.loading("Encoding reel for scheduling...");
+    try {
+      const canvas = exportCanvasRef.current!;
+      canvas.width = VIDEO_WIDTH;
+      canvas.height = VIDEO_HEIGHT;
+      const ctx = canvas.getContext("2d")!;
+      const animateFn = (slideIndex: number, slideProgress: number = 1) => {
+        const slide = slides[slideIndex];
+        const mediaBg = (slide.videoElement ?? slide.imageElement) as HTMLImageElement | null;
+        if (slide.mode === "typewriter") {
+          drawTypewriterSlide(ctx, slide.text, slideProgress, typewriterBgColor, textColor, fontFamily, fontSize, lineSpacing, logoImg, logoPosition, logoSize, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
+        } else if (slide.mode === "image-typewriter") {
+          drawSlide(ctx, mediaBg, "", fontFamily, fontSize, true, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, "none", "#ffffff", 1, 1, textPosition, false, fontFamily, textAlign, false, "#ffffff", "", letterSpacing, false, false, "'Great Vibes', cursive", coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch);
+          drawTypewriterOnVideo(ctx, slide.text, slideProgress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
+        } else {
+          drawSlide(ctx, mediaBg, slide.text, fontFamily, fontSize, true, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, "none", "#ffffff", 1, 1, textPosition, true, fontFamily, textAlign, false, "#ffffff", "", letterSpacing, false, false, "'Great Vibes', cursive", coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch);
+        }
+      };
+      let audioArrayBuffer: ArrayBuffer | undefined;
+      if (selectedTrack?.previewUrl) {
+        try { const r = await fetch(selectedTrack.previewUrl); audioArrayBuffer = await r.arrayBuffer(); } catch { }
+      }
+      let videoBlob: Blob;
+      try {
+        toast.loading("Encoding MP4...", { id });
+        videoBlob = await recordReelVideoMp4(canvas, slideDurationSec * 1000, fadeDurationMs, slides.length, animateFn, 30, (pct) => toast.loading(`Encoding ${Math.round(pct * 100)}%...`, { id }), audioArrayBuffer);
+      } catch {
+        toast.loading("Encoding WebM...", { id });
+        videoBlob = await recordReelVideo(canvas, slideDurationSec * 1000, fadeDurationMs, slides.length, animateFn, 30, selectedTrack?.previewUrl);
+      }
+      toast.loading("Uploading video...", { id });
+      const form = new FormData();
+      const ext = videoBlob.type.includes("mp4") ? "mp4" : "webm";
+      form.append("video", videoBlob, `reel-sched-${Date.now()}.${ext}`);
+      const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, { method: "POST", body: form });
+      if (!uploadRes.ok) throw new Error("Video upload failed");
+      const { url } = await uploadRes.json();
+      toast.dismiss(id);
+      setSchedulePost({ title: `Reel – ${new Date().toLocaleDateString()}`, caption: igCaption, videoUrl: url });
+      setScheduleOpen(true);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to prepare reel", { id });
+    } finally {
+      setScheduleRendering(false);
     }
   };
 
@@ -2022,6 +2078,10 @@ export default function Reels() {
                         {igPushing ? <Loader2 className="w-4 h-4 animate-spin" /> : "Trial Reel"}
                       </Button>
                     </div>
+                    <Button onClick={scheduleReel} disabled={scheduleRendering || !igPresetId}
+                      variant="outline" className="w-full border-pink-500/40 text-pink-300 hover:bg-pink-950/30 py-5 text-sm">
+                      {scheduleRendering ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Preparing...</> : <><CalendarClock className="w-4 h-4 mr-2" />Schedule for later</>}
+                    </Button>
                     {igPushing && <p className="text-sm text-white/40 text-center">{igPushProgress}</p>}
                     <p className="text-xs text-white/20 text-center">Trial = private test · graduate in Instagram when ready</p>
                   </>
@@ -2042,6 +2102,15 @@ export default function Reels() {
 
       <canvas ref={exportCanvasRef} className="hidden" />
 
+      {scheduleOpen && igPresetId && (
+        <ScheduleModal
+          presetId={Number(igPresetId)}
+          presetName={igPresets.find((p) => p.id === Number(igPresetId))?.name}
+          postType="reel"
+          posts={schedulePost ? [schedulePost] : []}
+          onClose={() => setScheduleOpen(false)}
+        />
+      )}
     </div>
   );
 }

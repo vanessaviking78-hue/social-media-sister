@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
-import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, CloudUpload, ImagePlus, CalendarDays, BarChart3, ShieldCheck, BookOpen, Film, ChevronDown, Play, Square, Share2, Clock } from "lucide-react";
+import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, CloudUpload, ImagePlus, CalendarDays, BarChart3, ShieldCheck, BookOpen, Film, ChevronDown, Play, Square, Share2, Clock, CalendarClock } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -21,6 +21,7 @@ import type { LogoPosition } from "@workspace/db/schema";
 import { useCaptions } from "@/lib/use-captions";
 import PresetSelector from "@/components/preset-selector";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
+import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 
 loadGoogleFonts();
 
@@ -101,6 +102,9 @@ export default function Home() {
   const [ccPushing, setCcPushing] = useState(false);
   const [ccStatus, setCcStatus] = useState<{ configured: boolean; hasWorkspaces: boolean } | null>(null);
   const [metaPushing, setMetaPushing] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
+  const [scheduleRendering, setScheduleRendering] = useState(false);
 
   const { presets, loading: presetsLoading, savePreset, updatePreset, deletePreset, uploadLogo } = usePresets();
   const { saveCaption: saveCaptionToLib, bulkSave: bulkSaveCaptions, captions: libCaptions, fetchCaptions: refreshLibCaptions } = useCaptions();
@@ -331,6 +335,57 @@ export default function Home() {
       toast.error("Meta push failed: " + (e?.message || "Unknown error"), { id });
     } finally {
       setMetaPushing(false);
+    }
+  };
+
+  const scheduleCarousels = async () => {
+    if (!result?.slides.length) return;
+    if (!selectedPresetId) { toast.error("Select a client preset first"); return; }
+    setScheduleRendering(true);
+    const id = toast.loading("Rendering slides for scheduling...");
+    try {
+      await document.fonts.ready;
+      if (coverDropCap) await document.fonts.load(`400 80px ${coverDropCapFont}`).catch(() => {});
+      if (coverSplit && coverEyebrowFont) await document.fonts.load(`${coverEyebrowItalic ? "italic" : "normal"} ${coverEyebrowWeight} 80px ${coverEyebrowFont}`).catch(() => {});
+      const rendered: { name: string; base64: string; groupIndex: number; groupPosition: number }[] = [];
+      for (const slide of result.slides) {
+        const isCover = slide.groupPosition === 1;
+        const res = await fetch(slide.imageUrl);
+        const blob = await res.blob();
+        const img = new Image();
+        await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
+        const canvas = document.createElement("canvas");
+        canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
+        const ctx = canvas.getContext("2d")!;
+        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined });
+        URL.revokeObjectURL(img.src);
+        const fileName = `sched-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
+        rendered.push({ name: fileName, base64: canvas.toDataURL("image/png"), groupIndex: slide.groupIndex, groupPosition: slide.groupPosition });
+      }
+      const urlMap = new Map<string, string>();
+      const PARALLEL = 3;
+      for (let i = 0; i < rendered.length; i += PARALLEL) {
+        toast.loading(`Uploading images... ${i}/${rendered.length}`, { id });
+        const batch = rendered.slice(i, i + PARALLEL);
+        const urls = await Promise.all(batch.map((r) => uploadOneImage(r.name, r.base64)));
+        batch.forEach((r, bi) => urlMap.set(r.name, urls[bi]));
+      }
+      toast.dismiss(id);
+      const posts: SchedulePostPayload[] = [];
+      for (let gi = 0; gi < result.totalCarousels; gi++) {
+        const groupSlides = result.slides.filter((s: any) => s.groupIndex === gi + 1).sort((a: any, b: any) => a.groupPosition - b.groupPosition);
+        const imageUrls = groupSlides.map((s: any) => {
+          const fn = `sched-${String(s.groupIndex).padStart(2, "0")}-slide-${String(s.groupPosition).padStart(2, "0")}.png`;
+          return urlMap.get(fn) || "";
+        }).filter(Boolean);
+        posts.push({ title: `Carousel ${gi + 1}`, caption: captions[gi] || "", imageUrls });
+      }
+      setSchedulePosts(posts);
+      setScheduleOpen(true);
+    } catch (e: any) {
+      toast.error("Failed to prepare: " + (e?.message || "Unknown error"), { id });
+    } finally {
+      setScheduleRendering(false);
     }
   };
 
@@ -2042,6 +2097,12 @@ export default function Home() {
                             {metaPushing ? "Posting..." : "Post to Instagram & Facebook"}
                           </Button>
                         ) : null}
+                        {selectedPresetId && (
+                          <Button size="lg" onClick={scheduleCarousels} disabled={scheduleRendering} variant="outline" className="px-8 py-4 text-lg font-bold border-pink-500/40 text-pink-300 hover:bg-pink-950/30" data-testid="button-schedule-bar">
+                            {scheduleRendering ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <CalendarClock className="w-5 h-5 mr-2" />}
+                            {scheduleRendering ? "Preparing..." : "Schedule"}
+                          </Button>
+                        )}
                       </div>
                     </div>
 
@@ -2281,6 +2342,12 @@ export default function Home() {
                             {metaPushing ? "Posting..." : "Post to Instagram & Facebook"}
                           </Button>
                         ) : null}
+                        {selectedPresetId && (
+                          <Button size="lg" onClick={scheduleCarousels} disabled={scheduleRendering} variant="outline" className="px-10 py-6 text-lg font-bold border-pink-500/40 text-pink-300 hover:bg-pink-950/30" data-testid="button-schedule">
+                            {scheduleRendering ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <CalendarClock className="w-5 h-5 mr-2" />}
+                            {scheduleRendering ? "Preparing..." : "Schedule"}
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </>
@@ -2291,6 +2358,15 @@ export default function Home() {
           </div>
       </main>
 
+      {scheduleOpen && selectedPresetId && (
+        <ScheduleModal
+          presetId={selectedPresetId}
+          presetName={presets.find((p) => p.id === selectedPresetId)?.name}
+          postType="carousel"
+          posts={schedulePosts}
+          onClose={() => setScheduleOpen(false)}
+        />
+      )}
       <VanessaChat />
     </div>
   );

@@ -22,7 +22,9 @@ import {
   ArrowLeft,
   Send,
   Film,
+  CalendarClock,
 } from "lucide-react";
+import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import {
   VIDEO_WIDTH,
   VIDEO_HEIGHT,
@@ -63,6 +65,9 @@ export default function VideoOverlay() {
   const [igPushing, setIgPushing] = useState(false);
   const [igPushProgress, setIgPushProgress] = useState("");
   const [generatingCaption, setGeneratingCaption] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [schedulePost, setSchedulePost] = useState<SchedulePostPayload | null>(null);
+  const [scheduleRendering, setScheduleRendering] = useState(false);
 
   const [textColor, setTextColor] = useState("#ffffff");
   const [fontFamily, setFontFamily] = useState("'Playfair Display', serif");
@@ -316,6 +321,51 @@ export default function VideoOverlay() {
     }
   };
 
+  const scheduleVideoOverlay = async () => {
+    if (!igPresetId) { toast.error("Select a client preset first"); return; }
+    if (!videoFile || !videoRef.current) { toast.error("Upload a video first"); return; }
+    const video = videoRef.current;
+    if (!video.duration) { toast.error("Video not loaded yet"); return; }
+    stopPlayback();
+    setScheduleRendering(true);
+    const id = toast.loading("Recording overlay for scheduling...");
+    try {
+      const canvas = exportCanvasRef.current!;
+      canvas.width = VIDEO_WIDTH;
+      canvas.height = VIDEO_HEIGHT;
+      const ctx = canvas.getContext("2d")!;
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      const scale = Math.max(VIDEO_WIDTH / vw, VIDEO_HEIGHT / vh);
+      const dw = vw * scale;
+      const dh = vh * scale;
+      const dx = (VIDEO_WIDTH - dw) / 2;
+      const dy = (VIDEO_HEIGHT - dh) / 2;
+      const animateFn = (segIdx: number, segProgress: number) => {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
+        ctx.drawImage(video, dx, dy, dw, dh);
+        const text = segments[segIdx] || "";
+        if (text.trim()) drawTypewriterOnVideo(ctx, text, segProgress, textColor, fontFamily, fontSize, lineSpacing, overlayPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
+      };
+      const blob = await recordVideoWithOverlay(video, canvas, segmentCount, animateFn);
+      toast.loading("Uploading video...", { id });
+      const form = new FormData();
+      const ext = blob.type.includes("mp4") ? "mp4" : "webm";
+      form.append("video", blob, `video-overlay-sched-${Date.now()}.${ext}`);
+      const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, { method: "POST", body: form });
+      if (!uploadRes.ok) throw new Error("Video upload failed");
+      const { url } = await uploadRes.json();
+      toast.dismiss(id);
+      setSchedulePost({ title: `Video Overlay – ${new Date().toLocaleDateString()}`, caption: igCaption, videoUrl: url });
+      setScheduleOpen(true);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to prepare", { id });
+    } finally {
+      setScheduleRendering(false);
+    }
+  };
+
   const handleGenerateCaption = async () => {
     if (!topic.trim() && !segments.some(Boolean)) {
       toast.error("Enter a topic or generate text overlays first");
@@ -558,6 +608,15 @@ export default function VideoOverlay() {
                   {igPushing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Trial Reel"}
                 </Button>
               </div>
+              <Button
+                size="sm"
+                onClick={scheduleVideoOverlay}
+                disabled={scheduleRendering || exporting || !videoFile || !igPresetId}
+                variant="outline"
+                className="w-full border-pink-500/40 text-pink-300 hover:bg-pink-950/30 h-8 text-xs"
+              >
+                {scheduleRendering ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CalendarClock className="w-3 h-3 mr-1.5" />Schedule for later</>}
+              </Button>
               {igPushing && <p className="text-[10px] text-white/40 text-center">{igPushProgress}</p>}
               <p className="text-[10px] text-white/20 text-center">Trial = private test · graduate when ready</p>
             </div>
@@ -709,6 +768,15 @@ export default function VideoOverlay() {
           </div>
         </div>
       </div>
+      {scheduleOpen && igPresetId && (
+        <ScheduleModal
+          presetId={Number(igPresetId)}
+          presetName={igPresets.find((p) => p.id === Number(igPresetId))?.name}
+          postType="reel"
+          posts={schedulePost ? [schedulePost] : []}
+          onClose={() => setScheduleOpen(false)}
+        />
+      )}
     </div>
   );
 }
