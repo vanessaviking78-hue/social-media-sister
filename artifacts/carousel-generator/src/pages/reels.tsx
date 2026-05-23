@@ -806,6 +806,29 @@ export default function Reels() {
     }
   };
 
+  const handleRepeatMediaToAll = (idx: number) => {
+    const src = slides[idx];
+    if (!src.imageElement && !src.videoElement) return;
+    setSlides((prev) =>
+      prev.map((s, i) => {
+        if (i === idx) return s;
+        const nextMode =
+          s.mode === "typewriter"
+            ? (src.mode === "typewriter" ? "cover" as const : src.mode)
+            : s.mode;
+        return {
+          ...s,
+          imageFile: src.imageFile,
+          imageElement: src.imageElement,
+          videoFile: src.videoFile,
+          videoElement: src.videoElement,
+          mode: nextMode,
+        };
+      })
+    );
+    toast.success("Media copied to all slides");
+  };
+
   const handleLogoUpload = (file: File) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
@@ -1395,6 +1418,15 @@ export default function Reels() {
                               </label>
                               {slide.mode === "image-typewriter" && !slide.imageElement && !slide.videoElement && (
                                 <p className="text-xs text-amber-400/70 italic text-center">Upload a photo or video, add text, then press ▶ Preview</p>
+                              )}
+                              {(slide.imageElement || slide.videoElement) && slides.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); handleRepeatMediaToAll(idx); }}
+                                  className="w-full text-xs text-white/40 hover:text-pink-400 border border-white/10 hover:border-pink-500/40 rounded-lg px-3 py-1.5 transition-colors text-center"
+                                >
+                                  Use on all slides
+                                </button>
                               )}
                               {slide.imageElement && (
                                 <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
