@@ -1251,7 +1251,7 @@ export default function Reels() {
           {reelStep === 1 && (
             <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
               <div>
-                <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 1: Your Slides</h2>
+                <h2 className="font-sans font-bold text-4xl mb-3 tracking-tight">Step 1: Your Slides</h2>
                 <p className="text-lg text-white/50">Build your reel slide by slide, or upload a batch CSV.</p>
               </div>
 
@@ -1651,7 +1651,7 @@ export default function Reels() {
           {reelStep === 2 && (
             <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
               <div>
-                <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 2: Style</h2>
+                <h2 className="font-sans font-bold text-4xl mb-3 tracking-tight">Step 2: Style</h2>
                 <p className="text-lg text-white/50">Customise the look of your reel slides.</p>
               </div>
 
@@ -1910,7 +1910,7 @@ export default function Reels() {
           {reelStep === 3 && (
             <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
               <div>
-                <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 3: Music</h2>
+                <h2 className="font-sans font-bold text-4xl mb-3 tracking-tight">Step 3: Music</h2>
                 <p className="text-lg text-white/50">Add a backing track to your reel (optional).</p>
               </div>
 
@@ -2018,7 +2018,7 @@ export default function Reels() {
           {reelStep === 4 && (
             <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
               <div>
-                <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 4: Export &amp; Post</h2>
+                <h2 className="font-sans font-bold text-4xl mb-3 tracking-tight">Step 4: Export &amp; Post</h2>
                 <p className="text-lg text-white/50">Preview your reel, export, and publish.</p>
               </div>
 
@@ -2142,7 +2142,7 @@ export default function Reels() {
                       {scheduleRendering ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Preparing...</> : <><CalendarClock className="w-4 h-4 mr-2" />Schedule for later</>}
                     </Button>
                     {igPushing && <p className="text-sm text-white/40 text-center">{igPushProgress}</p>}
-                    <p className="text-xs text-white/20 text-center">Trial = private test · graduate in Instagram when ready</p>
+                    <p className="text-xs text-white text-center">Trial = private test · graduate in Instagram when ready</p>
                   </>
                 )}
               </div>
