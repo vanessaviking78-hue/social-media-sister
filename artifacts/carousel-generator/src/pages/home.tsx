@@ -34,6 +34,9 @@ export default function Home() {
   const [isDraggingPhotos, setIsDraggingPhotos] = useState(false);
   const [isDraggingCsv, setIsDraggingCsv] = useState(false);
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
+  const [useCoverImages, setUseCoverImages] = useState(false);
+  const [coverPhotos, setCoverPhotos] = useState<File[]>([]);
+  const [isDraggingCoverPhotos, setIsDraggingCoverPhotos] = useState(false);
 
   const [fontSize, setFontSize] = useState(52);
   const [contentFontSize, setContentFontSize] = useState(44);
@@ -164,6 +167,7 @@ export default function Home() {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const coverPhotoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const paired = FONT_PAIRINGS[fontFamily];
@@ -205,7 +209,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined });
+        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -286,7 +290,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined });
+        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `meta-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -357,7 +361,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined });
+        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
         URL.revokeObjectURL(img.src);
         const fileName = `sched-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
         rendered.push({ name: fileName, base64: canvas.toDataURL("image/png"), groupIndex: slide.groupIndex, groupPosition: slide.groupPosition });
@@ -406,6 +410,20 @@ export default function Home() {
 
   const removePhoto = (i: number) => setPhotos((prev) => prev.filter((_, idx) => idx !== i));
 
+  const addCoverPhotos = async (files: File[]) => {
+    const imgs = files.filter(f => f.type.startsWith("image/"));
+    const compressed = await Promise.all(imgs.map(f => compressImage(f)));
+    setCoverPhotos(prev => [...prev, ...compressed]);
+  };
+  const handleCoverPhotosDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault(); setIsDraggingCoverPhotos(false);
+    if (e.dataTransfer.files?.length) addCoverPhotos(Array.from(e.dataTransfer.files));
+  }, []);
+  const handleCoverPhotosChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.length) addCoverPhotos(Array.from(e.target.files));
+  }, []);
+  const removeCoverPhoto = (i: number) => setCoverPhotos(prev => prev.filter((_, idx) => idx !== i));
+
   const processCsv = (file: File) => {
     setCsvFile(file);
     Papa.parse<string[]>(file, {
@@ -446,6 +464,7 @@ export default function Home() {
 
   const handleGenerate = async () => {
     if (!photos.length) { toast.error("Please upload at least one photo"); return; }
+    if (useCoverImages && !coverPhotos.length) { toast.error("Please upload cover images (Slide 1) or turn off the Cover Image option"); return; }
     if (!csvFile) { toast.error("Please upload a CSV file"); return; }
 
     setIsGenerating(true);
@@ -467,16 +486,29 @@ export default function Home() {
       const slidesPerCarousel = postRows[0].length;
 
       const photoUrls = photos.map((f) => URL.createObjectURL(f));
+      const coverPhotoUrls = useCoverImages ? coverPhotos.map((f) => URL.createObjectURL(f)) : [];
 
       const slides: CarouselSlide[] = [];
       let idx = 1;
       for (let pi = 0; pi < postRows.length; pi++) {
         const photoUrl = photoUrls[pi % photoUrls.length];
+        if (useCoverImages) {
+          const coverUrl = coverPhotoUrls[pi % coverPhotoUrls.length];
+          slides.push({
+            slideIndex: idx++,
+            groupIndex: pi + 1,
+            groupPosition: 1,
+            text: "",
+            imageUrl: coverUrl,
+            imageName: coverPhotos[pi % coverPhotos.length].name,
+            isCoverImageSlide: true,
+          });
+        }
         for (let si = 0; si < postRows[pi].length; si++) {
           slides.push({
             slideIndex: idx++,
             groupIndex: pi + 1,
-            groupPosition: si + 1,
+            groupPosition: useCoverImages ? si + 2 : si + 1,
             text: postRows[pi][si],
             imageUrl: photoUrl,
             imageName: photos[pi % photos.length].name,
@@ -484,7 +516,8 @@ export default function Home() {
         }
       }
 
-      setResult({ slides, totalSlides: slides.length, slidesPerCarousel, totalCarousels: postRows.length, sessionId: "local" });
+      const slidesPerCarouselFinal = slidesPerCarousel + (useCoverImages ? 1 : 0);
+      setResult({ slides, totalSlides: slides.length, slidesPerCarousel: slidesPerCarouselFinal, totalCarousels: postRows.length, sessionId: "local" });
       setCurrentStep(4);
       toast.success(`${slides.length} slides generated — ready to download`, { id: toastId });
     } catch (e: any) {
@@ -563,26 +596,42 @@ export default function Home() {
     const slidesPerCarousel = postRows[0].length;
     const photoUrls = photos.map((f) => URL.createObjectURL(f));
 
+    const coverPhotoUrlsAi = useCoverImages ? coverPhotos.map((f) => URL.createObjectURL(f)) : [];
+
     const slides: CarouselSlide[] = [];
     let idx = 1;
     for (let pi = 0; pi < postRows.length; pi++) {
       const photoUrl = photoUrls[pi % photoUrls.length];
+      if (useCoverImages && coverPhotoUrlsAi.length) {
+        const coverUrl = coverPhotoUrlsAi[pi % coverPhotoUrlsAi.length];
+        slides.push({
+          slideIndex: idx++,
+          groupIndex: pi + 1,
+          groupPosition: 1,
+          text: "",
+          imageUrl: coverUrl,
+          imageName: coverPhotos[pi % coverPhotos.length].name,
+          isCoverImageSlide: true,
+        });
+      }
       for (let si = 0; si < postRows[pi].length; si++) {
         slides.push({
           slideIndex: idx++,
           groupIndex: pi + 1,
-          groupPosition: si + 1,
+          groupPosition: useCoverImages && coverPhotoUrlsAi.length ? si + 2 : si + 1,
           text: postRows[pi][si],
           imageUrl: photoUrl,
           imageName: photos[pi % photos.length].name,
         });
       }
     }
-    return { slides, slidesPerCarousel, totalCarousels: postRows.length };
+    const slidesPerCarouselAi = slidesPerCarousel + (useCoverImages && coverPhotoUrlsAi.length ? 1 : 0);
+    return { slides, slidesPerCarousel: slidesPerCarouselAi, totalCarousels: postRows.length };
   };
 
   const handleGenerateFromAi = async () => {
     if (!photos.length) { toast.error("Please upload at least one photo"); return; }
+    if (useCoverImages && !coverPhotos.length) { toast.error("Please upload cover images (Slide 1) or turn off the Cover Image option"); return; }
     if (!aiIndustry.trim()) { toast.error("Please enter an industry in the Content Machine brief"); return; }
     if (!aiTopics.trim()) { toast.error("Please enter topics in the Content Machine brief"); return; }
 
@@ -684,7 +733,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined });
+        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -730,7 +779,7 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined });
+        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -818,7 +867,7 @@ export default function Home() {
         const tick = () => {
           const elapsed = performance.now() - startTime;
           const progress = Math.min(1, elapsed / durationMs);
-          drawSlide(offCtx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, videoAnimType, progress, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined });
+          drawSlide(offCtx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, videoAnimType, progress, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
           ctx.fillStyle = '#000000';
           ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
           ctx.drawImage(offscreen, 0, yOff);
@@ -873,7 +922,7 @@ export default function Home() {
           const videoBlob = await recordGroupVideo(canvas, videoDurationSec * 1000, 300, groupSlides.length, (si, progress) => {
             const slide = groupSlides[si];
             const isCover = slide.groupPosition === 1;
-            drawSlide(offCtx, imgs[si], slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, videoAnimType, progress, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined });
+            drawSlide(offCtx, imgs[si], slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, videoAnimType, progress, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
             ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
             ctx.drawImage(offscreen, 0, yOff);
@@ -891,7 +940,7 @@ export default function Home() {
           const img = new Image();
           await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
           const videoBlob = await recordSlideVideo(canvas, (progress) => {
-            drawSlide(offCtx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, videoAnimType, progress, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined });
+            drawSlide(offCtx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, videoAnimType, progress, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
             ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
             ctx.drawImage(offscreen, 0, yOff);
@@ -1144,6 +1193,57 @@ export default function Home() {
                   clientName={presets.find((p) => p.id === selectedPresetId)?.name || ""}
                   onAddImages={(files) => setPhotos((prev) => [...prev, ...files])}
                 />
+
+                {/* Cover Image Mode Toggle */}
+                <div className="rounded-2xl border border-border/40 bg-card/50 p-5 flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold text-base">Custom Cover Image (Slide 1)</p>
+                      <p className="text-sm text-muted-foreground mt-0.5">Upload pre-made Slide 1 images that already have your hook text on them. Your other photos become slides 2, 3, 4…</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setUseCoverImages(v => !v); if (useCoverImages) setCoverPhotos([]); }}
+                      className={`relative w-12 h-6 rounded-full transition-colors flex-shrink-0 ml-4 ${useCoverImages ? "bg-pink-500" : "bg-gray-600"}`}
+                    >
+                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${useCoverImages ? "translate-x-6" : ""}`} />
+                    </button>
+                  </div>
+
+                  {useCoverImages && (
+                    <div className="flex flex-col gap-3">
+                      <div
+                        className={`drop-zone-idle rounded-xl min-h-[140px] flex flex-col items-center justify-center text-center cursor-pointer gap-3 px-8 ${isDraggingCoverPhotos ? "drop-zone-dragging" : ""}`}
+                        onDragOver={(e) => { e.preventDefault(); setIsDraggingCoverPhotos(true); }}
+                        onDragLeave={() => setIsDraggingCoverPhotos(false)}
+                        onDrop={handleCoverPhotosDrop}
+                        onClick={() => coverPhotoInputRef.current?.click()}
+                      >
+                        <input ref={coverPhotoInputRef} type="file" className="hidden" multiple accept="image/*" onChange={handleCoverPhotosChange} />
+                        <div className="w-12 h-12 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-400">
+                          <ImageIcon className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-base">Slide 1 Cover Images</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {coverPhotos.length > 0 ? `${coverPhotos.length} cover image${coverPhotos.length !== 1 ? "s" : ""} — click to add more` : "Upload your pre-made cover images"}
+                          </p>
+                        </div>
+                      </div>
+                      {coverPhotos.length > 0 && (
+                        <div className="grid grid-cols-5 md:grid-cols-7 gap-2">
+                          {coverPhotos.map((file, i) => (
+                            <div key={i} className="relative aspect-square rounded-xl overflow-hidden group bg-accent cursor-pointer ring-2 ring-pink-500/40">
+                              <img src={URL.createObjectURL(file)} alt="cover preview" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[8px] text-center py-0.5 font-semibold">SLIDE 1</div>
+                              <button onClick={(e) => { e.stopPropagation(); removeCoverPhoto(i); }} className="absolute top-1 right-1 p-0.5 bg-black/60 hover:bg-black/90 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3" /></button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
 
               {/* Logo */}
               <div
@@ -2198,10 +2298,14 @@ export default function Home() {
                             <div className="grid grid-cols-5 gap-4">
                               {groupSlides.map((slide: any) => {
                                 const isCover = slide.groupPosition === 1;
+                                const isCoverImg = !!slide.isCoverImageSlide;
                                 return (
                                   <div key={slide.slideIndex} className="relative rounded-2xl overflow-hidden shadow-md hover:shadow-[0_0_24px_hsl(var(--primary)/0.15)] transition-shadow duration-300" style={{ aspectRatio: "4/5" }} data-testid={`slide-card-${slide.slideIndex}`}>
-                                    <img src={slide.imageUrl} alt={`Carousel ${slide.groupIndex} slide ${slide.groupPosition}`} className="absolute inset-0 w-full h-full object-cover" style={{ opacity: isCover ? 1 : 0.5 }} />
-                                    {logoPreviewUrl && (() => {
+                                    <img src={slide.imageUrl} alt={`Carousel ${slide.groupIndex} slide ${slide.groupPosition}`} className="absolute inset-0 w-full h-full object-cover" style={{ opacity: isCoverImg || isCover ? 1 : 0.5 }} />
+                                    {isCoverImg && (
+                                      <div className="absolute top-1 left-1 bg-pink-500/90 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide">Cover</div>
+                                    )}
+                                    {logoPreviewUrl && !isCoverImg && (() => {
                                       const posStyle: React.CSSProperties = { position: "absolute" };
                                       if (logoPosition === "top-left") { posStyle.top = 4; posStyle.left = 4; }
                                       else if (logoPosition === "top-right") { posStyle.top = 4; posStyle.right = 4; }
@@ -2209,7 +2313,7 @@ export default function Home() {
                                       else { posStyle.bottom = 24; posStyle.right = 4; }
                                       return <img src={logoPreviewUrl} alt="Logo" style={{ ...posStyle, height: previewLogoH, maxWidth: 60, objectFit: "contain" }} />;
                                     })()}
-                                    <div className={`absolute ${textPosition === "top" ? "top-0" : textPosition === "center" ? "top-1/2 -translate-y-1/2" : "bottom-0"} px-0.5 py-0.5 left-0 right-0`} style={{ backgroundColor: showTextOverlay ? overlayColor : undefined, outline: (showTextOverlay && textBoxOutline) ? `2px solid ${textBoxOutlineColor}` : undefined }}>
+                                    {!isCoverImg && <div className={`absolute ${textPosition === "top" ? "top-0" : textPosition === "center" ? "top-1/2 -translate-y-1/2" : "bottom-0"} px-0.5 py-0.5 left-0 right-0`} style={{ backgroundColor: showTextOverlay ? overlayColor : undefined, outline: (showTextOverlay && textBoxOutline) ? `2px solid ${textBoxOutlineColor}` : undefined }}>
                                       <p className={`font-semibold ${isCover ? "" : "line-clamp-4"}`} style={{ fontFamily: isCover ? fontFamily : subheadingFont, fontSize: Math.max(7, Math.round((isCover ? fontSize : contentFontSize) * 0.15)) + "px", color: textColor, lineHeight: lineSpacing, textAlign: textAlign === "center" ? "center" : textAlign === "right" ? "right" : "left", overflowWrap: "break-word", wordBreak: "break-word", ...(isCover && coverLetterSpacing ? { letterSpacing: (coverLetterSpacing * 0.15) + "px" } : {}), ...(isCover && coverUppercase ? { textTransform: "uppercase" } : {}), }}>{isCover && coverSplit && slide.text?.includes('|') ? (
   <>
     <span style={{ fontFamily: coverEyebrowFont || fontFamily, fontSize: Math.max(6, Math.round(fontSize * 0.15 * coverEyebrowSizeRatio)) + "px", color: coverEyebrowColor, fontStyle: coverEyebrowItalic ? "italic" : "normal", fontWeight: coverEyebrowWeight, letterSpacing: (coverEyebrowLetterSpacing * 0.15) + "px", textTransform: coverEyebrowUppercase ? "uppercase" : "none", display: "block", lineHeight: 1.1 }}>{slide.text.split('|')[0]}</span>
@@ -2219,7 +2323,7 @@ export default function Home() {
                                       {isCover && coverSubheading && (
                                         <p className="line-clamp-2 mt-0.5" style={{ fontFamily: subheadingFont, fontSize: Math.max(5, Math.round(fontSize * 0.15 * 0.65)) + "px", color: textColor, lineHeight: lineSpacing, textAlign: textAlign === "center" ? "center" : textAlign === "right" ? "right" : "left", overflowWrap: "break-word", wordBreak: "break-word", }}>{coverSubheading}</p>
                                       )}
-                                    </div>
+                                    </div>}
                                   </div>
                                 );
                               })}

@@ -222,7 +222,7 @@ export function drawSlide(
   coverEyebrowArch: number = 0,
   animationType?: AnimationType,
   animationProgress?: number,
-  opts?: { imageOffsetX?: number; imageOffsetY?: number; canvasW?: number; canvasH?: number; contentLetterSpacing?: number; pageColorEnd?: string; overlayGradient?: boolean; textShadow?: number }
+  opts?: { imageOffsetX?: number; imageOffsetY?: number; canvasW?: number; canvasH?: number; contentLetterSpacing?: number; pageColorEnd?: string; overlayGradient?: boolean; textShadow?: number; isCoverImageSlide?: boolean }
 ) {
   const W = opts?.canvasW ?? CANVAS_WIDTH;
   const H = opts?.canvasH ?? CANVAS_HEIGHT;
@@ -276,6 +276,8 @@ export function drawSlide(
       ctx.globalAlpha = 1.0;
     }
   }
+
+  if (opts?.isCoverImageSlide) return;
 
   if (opts?.overlayGradient && img) {
     const grad = ctx.createLinearGradient(0, 0, 0, H);

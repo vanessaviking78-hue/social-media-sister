@@ -46,6 +46,12 @@ export const GenerateCarouselResponse = zod.object({
         text: zod.string().describe("Caption text for this slide"),
         imageUrl: zod.string().describe("URL path to the paired photo"),
         imageName: zod.string().describe("Original filename of the photo"),
+        isCoverImageSlide: zod
+          .boolean()
+          .optional()
+          .describe(
+            "When true, this slide is a pre-made cover image — render as-is with no text or overlay",
+          ),
       }),
     )
     .describe("Generated slides — grouped into carousel posts"),

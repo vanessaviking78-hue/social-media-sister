@@ -129,6 +129,9 @@ components:
         imageName:
           type: string
           description: Original filename of the photo
+        isCoverImageSlide:
+          type: boolean
+          description: When true, this slide is a pre-made cover image — render as-is with no text or overlay
       required:
         - slideIndex
         - groupPosition

@@ -22,6 +22,8 @@ export interface CarouselSlide {
   imageUrl: string;
   /** Original filename of the photo */
   imageName: string;
+  /** When true, this slide is a pre-made cover image — render as-is with no text or overlay */
+  isCoverImageSlide?: boolean;
 }
 
 export interface CarouselResult {
