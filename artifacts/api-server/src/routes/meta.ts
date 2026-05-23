@@ -306,14 +306,29 @@ async function processReelJob(
       throw new Error("Reel container timed out — please try again or check the video format.");
     }
 
-    // Step 3: publish
-    const publishRes = await metaFetch(`${GRAPH}/${igId}/media_publish`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ creation_id: containerId, access_token: token }),
-    });
-    const publishData = await publishRes.json() as { id?: string; error?: { message?: string } };
-    if (!publishRes.ok || !publishData.id) {
+    // Brief pause — Instagram occasionally reports FINISHED before the container
+    // is actually available for publishing, causing a spurious "not found" error.
+    await new Promise((r) => setTimeout(r, 3000));
+
+    // Step 3: publish (retry once on transient container-not-found errors)
+    let publishData: { id?: string; error?: { message?: string; code?: number } } = {};
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const publishRes = await metaFetch(`${GRAPH}/${igId}/media_publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ creation_id: containerId, access_token: token }),
+      });
+      publishData = await publishRes.json() as typeof publishData;
+      if (publishRes.ok && publishData.id) break;
+      const errMsg = (publishData?.error?.message ?? "").toLowerCase();
+      const isContainerNotReady = errMsg.includes("not found") || errMsg.includes("container");
+      if (attempt === 0 && isContainerNotReady) {
+        await new Promise((r) => setTimeout(r, 5000));
+        continue;
+      }
+      throw new Error(`Reel publish failed: ${publishData?.error?.message || JSON.stringify(publishData)}`);
+    }
+    if (!publishData.id) {
       throw new Error(`Reel publish failed: ${publishData?.error?.message || JSON.stringify(publishData)}`);
     }
 
