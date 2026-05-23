@@ -58,7 +58,7 @@ router.get("/meta/auth/start", (req: Request, res: Response) => {
       "instagram_basic",
       "instagram_content_publish",
       "pages_read_engagement",
-      "pages_manage_posts",
+      "pages_show_list",
     ].join(",");
     const url =
       `https://www.facebook.com/dialog/oauth` +
