@@ -52,13 +52,33 @@ async function pollReelJob(
     "Nearly done…",
     "Finishing up…",
   ];
+  let consecutiveErrors = 0;
   for (let i = 0; i < 60; i++) {
     await new Promise((r) => setTimeout(r, 5000));
-    const res = await fetch(`${BASE}api/meta/push-reel/${encodeURIComponent(jobId)}/status`);
+    let res: Response;
+    try {
+      res = await fetch(`${BASE}api/meta/push-reel/${encodeURIComponent(jobId)}/status`);
+    } catch {
+      consecutiveErrors++;
+      if (consecutiveErrors >= 3) throw new Error("Lost connection to server — please try again");
+      onProgress("Reconnecting…");
+      continue;
+    }
     if (!res.ok) {
       const body = await res.json().catch(() => ({})) as { error?: string };
-      throw new Error(body.error || "Could not check reel status");
+      // 404 means the job is definitively gone (server restarted mid-job)
+      if (res.status === 404) {
+        throw new Error(body.error || "Reel job not found — the server may have restarted. Please try again.");
+      }
+      // 5xx / proxy errors are transient — allow up to 3 in a row before giving up
+      consecutiveErrors++;
+      if (consecutiveErrors >= 3) {
+        throw new Error(body.error || `Server error (${res.status}) — please try again`);
+      }
+      onProgress("Reconnecting…");
+      continue;
     }
+    consecutiveErrors = 0;
     const job = await res.json() as { status: string; igPostId?: string; trial?: boolean; error?: string };
     if (job.status === "finished") return { igPostId: job.igPostId!, trial: job.trial ?? false };
     if (job.status === "error") throw new Error(job.error || "Reel processing failed");
