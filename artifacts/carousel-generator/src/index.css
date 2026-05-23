@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
@@ -60,14 +60,14 @@
 
   /* Deep near-black with warm-tinted surfaces */
   --background: 240 25% 4%;
-  --foreground: 30 15% 93%;
+  --foreground: 0 0% 100%;
 
   --card: 240 18% 8%;
-  --card-foreground: 30 15% 93%;
+  --card-foreground: 0 0% 100%;
   --card-border: 240 12% 14%;
 
   --popover: 240 18% 8%;
-  --popover-foreground: 30 15% 93%;
+  --popover-foreground: 0 0% 100%;
   --popover-border: 240 12% 14%;
 
   /* Hot pink primary */
@@ -75,22 +75,22 @@
   --primary-foreground: 0 0% 100%;
 
   --secondary: 240 12% 14%;
-  --secondary-foreground: 30 15% 93%;
+  --secondary-foreground: 0 0% 100%;
 
   --muted: 240 12% 14%;
   --muted-foreground: 240 8% 55%;
 
   --accent: 240 14% 12%;
-  --accent-foreground: 30 15% 93%;
+  --accent-foreground: 0 0% 100%;
 
   --destructive: 0 62.8% 40.6%;
-  --destructive-foreground: 30 15% 93%;
+  --destructive-foreground: 0 0% 100%;
 
   --border: 240 12% 14%;
   --input: 240 12% 14%;
   --ring: 328 100% 57%;
 
-  --app-font-sans: 'Anton', 'Plus Jakarta Sans', sans-serif;
+  --app-font-sans: 'Poppins', 'Plus Jakarta Sans', sans-serif;
   --app-font-serif: 'Cormorant Garamond', Georgia, serif;
   --app-font-mono: Menlo, monospace;
 

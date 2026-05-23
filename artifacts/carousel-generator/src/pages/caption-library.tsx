@@ -138,8 +138,7 @@ export default function CaptionLibrary() {
             <ChevronLeft className="w-5 h-5" />
           </Link>
           <Link href="/" className="flex items-center gap-2">
-            <Layers className="w-6 h-6 text-primary" />
-            <span className="font-bold text-3xl tracking-tight"><span className="text-white">The</span>{" "}<span className="text-pink-400">CyberSuite™</span></span>
+            <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
           </Link>
           <span className="text-xs font-semibold text-muted-foreground bg-accent/50 px-2 py-1 rounded-full">Caption Library</span>
           <div className="flex-1" />

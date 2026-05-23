@@ -419,15 +419,9 @@ export default function VideoOverlay() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col">
       <header className="border-b border-white/10 px-6 py-3 flex items-center gap-4 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-purple-600 rounded-lg flex items-center justify-center">
-            <Layers className="w-4 h-4" />
-          </div>
-          <h1 className="font-sans text-xl font-bold tracking-tight">
-            <span className="text-white">The</span>{" "}
-            <span className="text-pink-400">CyberSuite™</span>
-            <span className="text-white/30 font-normal text-sm ml-3">/ Video Overlay</span>
-          </h1>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
+          <span className="text-white/50 font-normal text-sm">/ Video Overlay</span>
         </div>
         <button
           onClick={() => setLocation("/")}

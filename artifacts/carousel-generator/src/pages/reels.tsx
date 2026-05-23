@@ -1106,14 +1106,8 @@ export default function Reels() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col">
       <header className="border-b border-white/10 px-6 py-3 flex items-center gap-4 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-purple-600 rounded-lg flex items-center justify-center">
-            <Layers className="w-4 h-4" />
-          </div>
-          <h1 className="font-sans text-2xl font-bold tracking-tight">
-            <span className="text-white">The</span>{" "}
-            <span className="text-pink-400">CyberSuite™</span>
-          </h1>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
         </div>
         <div className="flex items-center gap-2 ml-4 flex-wrap">
           <Link href="/"><Button variant="ghost" size="sm" className="text-muted-foreground"><ImagePlus className="w-4 h-4 mr-2" />Carousel</Button></Link>

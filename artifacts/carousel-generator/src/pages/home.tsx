@@ -988,11 +988,8 @@ export default function Home() {
     <div className="min-h-[100dvh] w-full pb-32">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-4 px-6 md:px-10 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-md bg-primary flex items-center justify-center text-primary-foreground">
-            <Layers className="w-5 h-5" />
-          </div>
-          <h1 className="font-sans text-3xl font-bold tracking-tight"><span className="text-white">The</span>{" "}<span className="text-pink-400">CyberSuite™</span></h1>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
         </div>
         <div className="flex items-center gap-3">
           <Link href="/single-image">

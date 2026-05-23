@@ -56,12 +56,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Layers className="w-8 h-8 text-pink-500" />
-            <span className="font-bold text-3xl">
-              <span className="text-white">The</span>{" "}
-              <span className="text-pink-400">CyberSuite™</span>
-            </span>
+          <div className="flex items-center justify-center mb-4">
+            <img src="/sms-logo.png" alt="Social Media Sister" className="h-20 w-20 rounded-full object-cover" />
           </div>
           <p className="text-muted-foreground text-sm">Enter your password to continue</p>
         </div>
