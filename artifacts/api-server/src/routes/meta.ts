@@ -297,13 +297,16 @@ async function processReelJob(
       const statusRes = await metaFetch(
         `${GRAPH}/${containerId}?fields=status_code,status&access_token=${token}`,
       );
-      const statusData = await statusRes.json() as { status_code?: string; status?: string; error?: { message?: string } };
+      const statusData = await statusRes.json() as { status_code?: string; status?: string; error?: { message?: string; code?: number; type?: string } };
       statusCode = statusData.status_code || "UNKNOWN";
       lastStatus = statusData.status || "";
-      logger.info({ jobId, poll: i + 1, statusCode, status: lastStatus }, "Reel container poll");
+      logger.info({ jobId, poll: i + 1, statusCode, status: lastStatus, raw: statusData }, "Reel container poll");
       if (statusCode === "FINISHED") break;
+      if (statusData.error) {
+        throw new Error(`Instagram API error: ${statusData.error.message || JSON.stringify(statusData.error)}`);
+      }
       if (statusCode === "ERROR" || statusCode === "EXPIRED") {
-        throw new Error(`Reel container failed (${statusCode}): ${lastStatus || statusData.error?.message || ""}`);
+        throw new Error(`Reel container failed (${statusCode}): ${lastStatus}`);
       }
     }
 
