@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import multer from "multer";
 import { openai } from "@workspace/integrations-openai-ai-server";
-import { objectStorageClient } from "../../lib/objectStorage";
+import { objectStorageClient, signObjectURL } from "../../lib/objectStorage";
 import { logActivity } from "../../lib/activityLog";
 import { db } from "@workspace/db";
 import { workspaceLabelsTable } from "@workspace/db/schema";
@@ -712,10 +712,19 @@ router.post("/content/upload-video", videoUpload.single("video"), async (req, re
       contentType: req.file.mimetype || "video/mp4",
       metadata: { cacheControl: "public, max-age=31536000" },
     });
+    // Generate a signed GCS URL valid for 2 hours so Instagram can download
+    // the video directly from object storage without routing through our server.
+    const signedUrl = await signObjectURL({
+      bucketName: bucketId,
+      objectName: objectPath,
+      method: "GET",
+      ttlSec: 7200,
+    });
+    // Also keep a proxy URL as fallback for in-app playback preview
     const proto = (req.headers["x-forwarded-proto"] as string) || "https";
     const host = (req.headers["x-forwarded-host"] as string) || req.headers.host || "localhost";
-    const url = `${proto}://${host}/api/content/videos/${objectPath}`;
-    res.json({ url });
+    const proxyUrl = `${proto}://${host}/api/content/videos/${objectPath}`;
+    res.json({ url: signedUrl, proxyUrl });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Video upload failed" });
   }
