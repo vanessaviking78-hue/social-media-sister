@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw, Facebook, Instagram, Unlink, ChevronDown, ChevronUp, Clock } from "lucide-react";
+import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw, Facebook, Instagram, Unlink, ChevronDown, ChevronUp, Clock, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -391,7 +391,7 @@ export default function PresetsPage() {
         metaPageAccessToken: editData.metaPageAccessToken || null,
         metaFacebookPageId: editData.metaFacebookPageId || null,
         metaInstagramAccountId: editData.metaInstagramAccountId || null,
-      });
+      }, { defaultPostTime: editData.defaultPostTime || "18:00" });
       toast.success("Preset updated");
       cancelEdit();
     } catch (err: any) {
@@ -441,6 +441,7 @@ export default function PresetsPage() {
             <Link href="/reels" className="text-muted-foreground hover:text-white transition">Reels</Link>
             <Link href="/video-overlay" className="text-muted-foreground hover:text-white transition">Video Overlay</Link>
             <Link href="/captions" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><MessageSquareText className="w-4 h-4" />Captions</Link>
+            <Link href="/library" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><BookOpen className="w-4 h-4" />Library</Link>
             <Link href="/calendar" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><CalendarDays className="w-4 h-4" />Calendar</Link>
             <Link href="/analytics" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><BarChart3 className="w-4 h-4" />Analytics</Link>
             <Link href="/approval" className="flex items-center gap-1 text-muted-foreground hover:text-white transition"><ShieldCheck className="w-4 h-4" />Approvals</Link>
@@ -638,6 +639,16 @@ export default function PresetsPage() {
                         }
                       }}
                     />
+                    <div>
+                      <Label className="text-xs text-gray-400">Default Post Time</Label>
+                      <Input
+                        type="time"
+                        value={editData.defaultPostTime || "18:00"}
+                        onChange={(e) => setEditData((d) => ({ ...d, defaultPostTime: e.target.value }))}
+                        className="bg-gray-900 border-gray-700 text-white"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Used when auto-scheduling from the Content Library.</p>
+                    </div>
                     <div>
                       <Label className="text-xs text-gray-400">Caption Footnote (appended to AI-generated captions)</Label>
                       <textarea

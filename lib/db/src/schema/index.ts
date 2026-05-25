@@ -31,6 +31,7 @@ export const clientPresetsTable = pgTable("client_presets", {
   captionFootnote: text("caption_footnote").notNull().default(""),
   coverSubheading: text("cover_subheading").notNull().default(""),
   clientPortalToken: text("client_portal_token").unique(),
+  defaultPostTime: text("default_post_time").notNull().default("18:00"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => [
@@ -228,3 +229,23 @@ export const insertScheduledPostSchema = createInsertSchema(scheduledPostsTable)
   });
 export type InsertScheduledPost = z.infer<typeof insertScheduledPostSchema>;
 export type ScheduledPost = typeof scheduledPostsTable.$inferSelect;
+
+export const LIBRARY_POST_TYPES = ["carousel", "reel", "single", "story"] as const;
+export type LibraryPostType = typeof LIBRARY_POST_TYPES[number];
+
+export const contentLibraryTable = pgTable("content_library", {
+  id: serial("id").primaryKey(),
+  clientName: text("client_name").notNull(),
+  postType: text("post_type").notNull().default("single"),
+  caption: text("caption").notNull().default(""),
+  mediaUrl: text("media_url"),
+  mediaUrls: json("media_urls").$type<string[]>(),
+  thumbnailUrl: text("thumbnail_url"),
+  metadata: json("metadata").$type<Record<string, unknown>>(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertContentLibrarySchema = createInsertSchema(contentLibraryTable)
+  .omit({ id: true, createdAt: true });
+export type InsertContentLibrary = z.infer<typeof insertContentLibrarySchema>;
+export type ContentLibraryItem = typeof contentLibraryTable.$inferSelect;

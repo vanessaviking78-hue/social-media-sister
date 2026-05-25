@@ -47,6 +47,7 @@ export interface ClientPreset {
   captionFootnote: string;
   coverSubheading: string;
   clientPortalToken: string | null;
+  defaultPostTime: string;
 }
 
 export interface PresetStyleFields {
@@ -82,6 +83,7 @@ export function usePresets() {
       const normalized: ClientPreset[] = (data.presets || []).map((p: ClientPreset & { textPosition: string }) => ({
         ...p,
         textPosition: normalizeTextPosition(p.textPosition),
+        defaultPostTime: p.defaultPostTime || "18:00",
       }));
       setPresets(normalized);
     } catch (err) {
@@ -133,7 +135,16 @@ export function usePresets() {
     return data.preset as ClientPreset;
   }, [fetchPresets]);
 
-  const updatePreset = useCallback(async (id: number, name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null, captionFootnote?: string, metaFields?: { metaPageAccessToken?: string | null; metaFacebookPageId?: string | null; metaInstagramAccountId?: string | null }) => {
+  const updatePreset = useCallback(async (
+    id: number,
+    name: string,
+    styles: PresetStyleFields,
+    ccWorkspaceId?: string,
+    logoUrl?: string | null,
+    captionFootnote?: string,
+    metaFields?: { metaPageAccessToken?: string | null; metaFacebookPageId?: string | null; metaInstagramAccountId?: string | null },
+    extra?: { defaultPostTime?: string },
+  ) => {
     const body = {
       name,
       ...styles,
@@ -142,6 +153,7 @@ export function usePresets() {
       logoUrl: logoUrl || null,
       captionFootnote: captionFootnote ?? "",
       ...(metaFields || {}),
+      ...(extra || {}),
     };
     const resp = await fetch(`${import.meta.env.BASE_URL}api/presets/${id}`, {
       method: "PUT",

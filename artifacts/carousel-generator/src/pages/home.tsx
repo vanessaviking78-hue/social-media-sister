@@ -1101,6 +1101,12 @@ export default function Home() {
               Captions
             </Button>
           </Link>
+          <Link href="/library">
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Library
+            </Button>
+          </Link>
           <Link href="/calendar">
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <CalendarDays className="w-4 h-4 mr-2" />

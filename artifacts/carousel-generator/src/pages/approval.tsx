@@ -128,6 +128,7 @@ export default function Approval() {
             <Link href="/video-overlay"><Button variant="ghost" size="sm" className="text-muted-foreground"><Play className="w-4 h-4 mr-2" />Video Overlay</Button></Link>
             <Link href="/presets"><Button variant="ghost" size="sm" className="text-muted-foreground"><PenTool className="w-4 h-4 mr-2" />Presets</Button></Link>
             <Link href="/captions"><Button variant="ghost" size="sm" className="text-muted-foreground"><MessageSquareText className="w-4 h-4 mr-2" />Captions</Button></Link>
+            <Link href="/library"><Button variant="ghost" size="sm" className="text-muted-foreground"><BookOpen className="w-4 h-4 mr-2" />Library</Button></Link>
             <Link href="/calendar"><Button variant="ghost" size="sm" className="text-muted-foreground"><CalendarDays className="w-4 h-4 mr-2" />Calendar</Button></Link>
             <Link href="/analytics"><Button variant="ghost" size="sm" className="text-muted-foreground"><BarChart3 className="w-4 h-4 mr-2" />Analytics</Button></Link>
             <Button variant="ghost" size="sm" className="text-pink-400 font-semibold"><ShieldCheck className="w-4 h-4 mr-2" />Approvals</Button>

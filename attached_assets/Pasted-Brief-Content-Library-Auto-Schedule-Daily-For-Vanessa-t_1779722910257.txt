@@ -1,0 +1,123 @@
+Brief: Content Library + Auto-Schedule Daily
+For Vanessa to paste into the Replit Agent.
+
+
+What we're building
+A two-page workflow that lets Vanessa bulk-upload 60 posts for one client and schedule them all to post daily with a single click. Replaces Cloud Campaign's drag-every-card-individually flow.
+
+
+Feature 1: Content Library page
+New page in the sidebar called Content Library.
+Layout
+Client preset selector at the top (single select, defaults to last used)
+Big drop zone in the middle: "Drop a folder, images, or CSV+zip here"
+Below the drop zone, a grid of cards for that client's un-scheduled content
+Each card shows: thumbnail, caption (truncated), post type (carousel/reel/single/story), created date, a small delete X
+Database
+New table contentLibraryTable:
+
+id serial primary key
+clientName text not null (matches presets.name)
+postType text not null (one of: carousel, reel, single, story)
+caption text
+mediaUrl text (single image/video) or mediaUrls jsonb (carousel slides)
+thumbnailUrl text
+createdAt timestamp default now
+metadata jsonb (room for music track, slide config, overlays etc)
+API routes
+GET /api/library?clientName=... returns all library items for a client
+POST /api/library creates a single library item
+POST /api/library/bulk accepts multiple at once
+DELETE /api/library/:id deletes one
+POST /api/library/upload accepts multipart form: CSV file + zip of media, parses both, returns array of created library items
+
+
+Feature 2: Bulk upload via CSV + zip
+The drop zone accepts THREE input modes:
+
+Single file drop: just creates one library item, opens caption editor
+Multiple files drop: each becomes a library item, no captions yet
+CSV + zip drop: full bulk import
+CSV format
+post_type,caption,media_filename,music_track
+
+single,"Caption text here",photo1.jpg,
+
+single,"Another caption",photo2.jpg,
+
+reel,"Reel caption",video1.mp4,Aesthetic Vibes
+
+carousel,"Multi-slide caption",slide1.jpg|slide2.jpg|slide3.jpg,
+
+Pipe-separated filenames for carousel slides
+Music_track is optional, looked up in the music library by name
+Empty caption is fine, user can add later in the card
+Zip format
+Just a flat folder of media files matching the filenames in the CSV.
+Process
+User picks client preset
+Drops CSV + zip
+Server extracts zip into object storage under /library/{clientName}/{uuid}/
+Server parses CSV, creates one library row per CSV row, linking to extracted media URLs
+Frontend refreshes Library grid with the new cards
+
+
+Feature 3: Auto-schedule daily
+On the Library page, button: "Auto-schedule daily" (only enabled if cards are selected, or hit "Select all").
+
+Clicking opens a small modal:
+
+Start date (date picker, defaults to tomorrow)
+Post time (time picker, defaults to client preset's default time, falls back to 18:00)
+Confirm count: "Schedule 60 posts starting [date] at [time], one per day?"
+
+On confirm:
+
+Server takes all selected library items in their current sort order
+For each, creates a row in scheduledPostsTable with date = startDate + i days, time = chosen time, status = scheduled
+Deletes the library items (or marks them moved, see decision below)
+Returns count scheduled, frontend shows toast "60 posts scheduled across [start] to [end]"
+Library item vs scheduled item: keep separate or move?
+Recommend: when auto-scheduled, the library item is deleted and a scheduledPostsTable row is created instead. Cleaner, one source of truth per post. If user wants to unschedule, the scheduled post comes back to the library.
+
+
+Feature 4: Drag-from-Library to Calendar
+The existing Content Calendar page gets a new side panel: collapsible Library drawer on the right showing the current client's unscheduled cards.
+
+User drags a card from the drawer onto a date cell. A time picker pops up with the preset default. User confirms, card moves out of library, becomes a scheduled post on that date.
+
+(This is the fallback for manual tweaks. Auto-schedule daily is the main flow.)
+
+
+Feature 5: Default posting time on client preset
+Add a new field to clientPresetsTable:
+
+defaultPostTime text (HH:mm format, e.g. "18:00")
+
+Show it on the preset edit form. Used as the default for both auto-schedule daily and drag-to-date.
+
+
+Acceptance criteria
+When this is done, Vanessa should be able to:
+
+Pick "Test Clinic" from the preset dropdown on the Library page
+Drop a CSV with 60 rows and a zip with 60 images
+See 60 cards appear in the Library grid for Test Clinic
+Click "Select all", then "Auto-schedule daily"
+Pick a start date and time
+See toast "60 posts scheduled from [start] to [end]"
+Open the Content Calendar and see 60 posts dropped on consecutive dates
+The scheduler engine fires each one on its day at its time
+
+
+What NOT to do in this pass
+No repost queue (Vanessa doesn't want reposts)
+No skip dates (she posts every day)
+No bulk connect for clients yet (next task, separate brief)
+No multi-client bulk (one client at a time is fine, matches CC)
+No editing media inside the Library cards yet (delete + re-add for now)
+
+
+When done
+Restart api-server, ping Vanessa, she'll test on her Social Media Sister preset first.
+

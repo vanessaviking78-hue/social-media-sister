@@ -68,6 +68,7 @@ export default function Analytics() {
             <Link href="/video-overlay" className="text-muted-foreground hover:text-foreground transition">Video Overlay</Link>
             <Link href="/presets" className="text-muted-foreground hover:text-foreground transition">Presets</Link>
             <Link href="/captions" className="text-muted-foreground hover:text-foreground transition">Captions</Link>
+            <Link href="/library" className="text-muted-foreground hover:text-foreground transition">Library</Link>
             <Link href="/calendar" className="text-muted-foreground hover:text-foreground transition">Calendar</Link>
             <Link href="/approval" className="text-muted-foreground hover:text-foreground transition">Approvals</Link>
             <Link href="/scheduler" className="text-muted-foreground hover:text-foreground transition">Scheduler</Link>

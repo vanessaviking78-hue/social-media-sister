@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "wouter";
 import {
   Layers, ChevronLeft, ChevronRight, Plus, X, Trash2, Pencil, CalendarDays, MessageSquareText,
-  ImageIcon, GripVertical, Filter, BarChart3, ShieldCheck,
+  ImageIcon, GripVertical, Filter, BarChart3, ShieldCheck, BookOpen, Clock, PanelRightOpen, PanelRightClose,
 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +13,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { useCalendar, type CalendarPost } from "@/lib/use-calendar";
 import { CALENDAR_POST_STATUSES, CALENDAR_POST_TYPES } from "@workspace/db/schema";
+
+interface LibraryItem {
+  id: number;
+  clientName: string;
+  postType: string;
+  caption: string;
+  mediaUrl: string | null;
+  thumbnailUrl: string | null;
+  createdAt: string;
+}
+
+function libraryTypeToCalendarType(t: string): string {
+  if (t === "carousel") return "carousel";
+  if (t === "story") return "story";
+  return "single-image";
+}
 
 const POST_TYPE_META: Record<typeof CALENDAR_POST_TYPES[number], { label: string; icon: React.ComponentType<{ className?: string }> }> = {
   carousel: { label: "Carousel", icon: Layers },
@@ -89,10 +106,33 @@ export default function Calendar() {
   const [formImageUrl, setFormImageUrl] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
+  const [libraryLoading, setLibraryLoading] = useState(false);
+
   const { posts, allClients, loading, fetchPosts, fetchClients, createPost, updatePost, deletePost } = useCalendar();
 
   const dragPostId = useRef<number | null>(null);
+  const dragLibraryItemId = useRef<number | null>(null);
   const [dragOverDate, setDragOverDate] = useState<string | null>(null);
+
+  const fetchLibraryItems = useCallback(async (client?: string) => {
+    setLibraryLoading(true);
+    try {
+      const params = client ? `?clientName=${encodeURIComponent(client)}` : "";
+      const resp = await fetch(`${import.meta.env.BASE_URL}api/library${params}`);
+      const data = await resp.json();
+      setLibraryItems(data.items || []);
+    } catch {
+      /* ignore */
+    } finally {
+      setLibraryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showLibrary) fetchLibraryItems(filterClient || undefined);
+  }, [showLibrary, filterClient, fetchLibraryItems]);
 
   const days = getMonthDays(year, month);
   const fromDate = days[0].date;
@@ -185,8 +225,16 @@ export default function Calendar() {
 
   const handleDragStart = (e: React.DragEvent, postId: number) => {
     dragPostId.current = postId;
+    dragLibraryItemId.current = null;
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", String(postId));
+  };
+
+  const handleLibraryDragStart = (e: React.DragEvent, itemId: number) => {
+    dragLibraryItemId.current = itemId;
+    dragPostId.current = null;
+    e.dataTransfer.effectAllowed = "copy";
+    e.dataTransfer.setData("text/plain", String(itemId));
   };
 
   const handleDragOver = useCallback((e: React.DragEvent, date: string) => {
@@ -202,6 +250,26 @@ export default function Calendar() {
   const handleDrop = useCallback(async (e: React.DragEvent, date: string) => {
     e.preventDefault();
     setDragOverDate(null);
+
+    if (dragLibraryItemId.current) {
+      const libId = dragLibraryItemId.current;
+      dragLibraryItemId.current = null;
+      const item = libraryItems.find((i) => i.id === libId);
+      if (!item) return;
+      setEditingPost(null);
+      setFormDate(date);
+      setFormClient(item.clientName);
+      setFormPostType(libraryTypeToCalendarType(item.postType));
+      setFormTitle(item.caption?.slice(0, 60) || "");
+      setFormCaption(item.caption || "");
+      setFormNotes("");
+      setFormStatus("draft");
+      setFormColor("#ec4899");
+      setFormImageUrl(item.thumbnailUrl || item.mediaUrl || "");
+      setShowModal(true);
+      return;
+    }
+
     const postId = dragPostId.current;
     if (!postId) return;
     dragPostId.current = null;
@@ -211,7 +279,7 @@ export default function Calendar() {
     } catch {
       toast.error("Failed to move post");
     }
-  }, [updatePost]);
+  }, [updatePost, libraryItems]);
 
   const todayStr = fmt(today);
 
@@ -248,6 +316,9 @@ export default function Calendar() {
             <Link href="/presets" className="text-muted-foreground hover:text-white transition">Presets</Link>
             <Link href="/captions" className="flex items-center gap-1 text-muted-foreground hover:text-white transition">
               <MessageSquareText className="w-4 h-4" />Captions
+            </Link>
+            <Link href="/library" className="flex items-center gap-1 text-muted-foreground hover:text-white transition">
+              <BookOpen className="w-4 h-4" />Library
             </Link>
             <Link href="/analytics" className="flex items-center gap-1 text-muted-foreground hover:text-white transition">
               <BarChart3 className="w-4 h-4" />Analytics
@@ -293,9 +364,20 @@ export default function Calendar() {
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant={showLibrary ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setShowLibrary((v) => !v)}
+              className="gap-2"
+            >
+              {showLibrary ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+              Library
+            </Button>
           </div>
         </div>
 
+        <div className={`flex gap-4 ${showLibrary ? "items-start" : ""}`}>
+        <div className="flex-1 min-w-0">
         <div className="rounded-xl border border-border/30 overflow-hidden">
           <div className="grid grid-cols-7 bg-accent/20">
             {DAYS.map((day) => (
@@ -379,6 +461,60 @@ export default function Calendar() {
         {loading && (
           <div className="text-center py-4 text-muted-foreground text-sm">Loading...</div>
         )}
+        </div>
+
+        {showLibrary && (
+          <div className="w-72 flex-shrink-0 rounded-xl border border-border/30 bg-card overflow-hidden sticky top-24 self-start">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border/20 bg-accent/10">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-pink-400" />
+                <span className="text-sm font-semibold">Content Library</span>
+              </div>
+              <span className="text-xs text-muted-foreground">{libraryItems.length} items</span>
+            </div>
+            <p className="text-xs text-muted-foreground px-4 py-2 border-b border-border/10">Drag an item onto a calendar day to schedule it.</p>
+            <div className="overflow-y-auto max-h-[calc(100vh-280px)] divide-y divide-border/10">
+              {libraryLoading ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">Loading...</div>
+              ) : libraryItems.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground text-sm">No library items yet.</div>
+              ) : (
+                libraryItems.map((item) => (
+                  <div
+                    key={item.id}
+                    draggable
+                    onDragStart={(e) => handleLibraryDragStart(e, item.id)}
+                    className="flex gap-3 p-3 cursor-grab hover:bg-accent/20 transition-colors group"
+                  >
+                    {item.thumbnailUrl || item.mediaUrl ? (
+                      <img
+                        src={item.thumbnailUrl || item.mediaUrl || ""}
+                        alt=""
+                        className="w-10 h-10 rounded object-cover flex-shrink-0 border border-border/20"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded bg-accent/30 flex items-center justify-center flex-shrink-0">
+                        <ImageIcon className="w-4 h-4 text-muted-foreground/40" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="text-[10px] px-1 py-px rounded bg-pink-500/20 text-pink-400 uppercase tracking-wide font-medium">
+                          {item.postType}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground truncate">{item.clientName}</span>
+                      </div>
+                      <p className="text-xs text-foreground/80 line-clamp-2 leading-snug">{item.caption || "No caption"}</p>
+                    </div>
+                    <GripVertical className="w-4 h-4 text-muted-foreground/30 group-hover:text-muted-foreground/60 flex-shrink-0 self-center transition-colors" />
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+        </div>
       </main>
 
       {showModal && (
