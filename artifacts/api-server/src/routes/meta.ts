@@ -287,57 +287,42 @@ async function processReelJob(
       throw new Error(`Reel container creation failed: ${containerData?.error?.message || JSON.stringify(containerData)}`);
     }
     const containerId = containerData.id;
+    logger.info({ jobId, containerId, igId }, "Reel container created");
 
-    // Step 2: poll until FINISHED (up to ~4 min, 48 × 5 s)
-    // Instagram documentation states containers can take up to 4 minutes to process.
-    let statusCode = "IN_PROGRESS";
-    let lastStatus = "";
-    for (let i = 0; i < 48; i++) {
-      await new Promise((r) => setTimeout(r, 5000));
-      const statusRes = await metaFetch(
-        `${GRAPH}/${containerId}?fields=status_code,status&access_token=${token}`,
-      );
-      const statusData = await statusRes.json() as { status_code?: string; status?: string; error?: { message?: string; code?: number; type?: string } };
-      statusCode = statusData.status_code || "UNKNOWN";
-      lastStatus = statusData.status || "";
-      logger.info({ jobId, poll: i + 1, statusCode, status: lastStatus, raw: statusData }, "Reel container poll");
-      if (statusCode === "FINISHED") break;
-      if (statusData.error) {
-        throw new Error(`Instagram API error: ${statusData.error.message || JSON.stringify(statusData.error)}`);
-      }
-      if (statusCode === "ERROR" || statusCode === "EXPIRED") {
-        throw new Error(`Reel container failed (${statusCode}): ${lastStatus}`);
-      }
-    }
+    // Step 2: publish with retry loop.
+    // We skip the GET /{containerId}?fields=status_code check because it requires
+    // a permission scope that page tokens often don't carry (GraphMethodException/33).
+    // Instead we wait an initial period for video processing, then attempt to publish.
+    // If Instagram says the video isn't ready yet, we wait and retry.
+    const NOT_READY_PHRASES = ["not yet", "not ready", "processing", "in_progress", "media posted before"];
+    const isNotReady = (msg: string) => NOT_READY_PHRASES.some((p) => msg.toLowerCase().includes(p));
 
-    if (statusCode !== "FINISHED") {
-      throw new Error(`Reel container timed out after 4 minutes (last status: ${statusCode} — ${lastStatus}). Check the video format and try again.`);
-    }
+    // Initial wait — short videos typically finish processing in 20-30 s.
+    await new Promise((r) => setTimeout(r, 30_000));
 
-    // Brief pause — Instagram occasionally reports FINISHED before the container
-    // is actually available for publishing, causing a spurious "not found" error.
-    await new Promise((r) => setTimeout(r, 3000));
-
-    // Step 3: publish (retry once on transient container-not-found errors)
     let publishData: { id?: string; error?: { message?: string; code?: number } } = {};
-    for (let attempt = 0; attempt < 2; attempt++) {
+    let published = false;
+    // Retry up to 8 times × 20 s apart = up to 2 min 30 s additional wait after the initial 30 s.
+    for (let attempt = 0; attempt < 9; attempt++) {
+      if (attempt > 0) {
+        logger.info({ jobId, attempt }, "Reel not ready yet — waiting 20 s before retry");
+        await new Promise((r) => setTimeout(r, 20_000));
+      }
       const publishRes = await metaFetch(`${GRAPH}/${igId}/media_publish`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ creation_id: containerId, access_token: token }),
       });
       publishData = await publishRes.json() as typeof publishData;
-      if (publishRes.ok && publishData.id) break;
-      const errMsg = (publishData?.error?.message ?? "").toLowerCase();
-      const isContainerNotReady = errMsg.includes("not found") || errMsg.includes("container");
-      if (attempt === 0 && isContainerNotReady) {
-        await new Promise((r) => setTimeout(r, 5000));
-        continue;
+      logger.info({ jobId, attempt: attempt + 1, ok: publishRes.ok, data: publishData }, "Reel publish attempt");
+      if (publishRes.ok && publishData.id) { published = true; break; }
+      const errMsg = publishData?.error?.message ?? "";
+      if (!isNotReady(errMsg)) {
+        throw new Error(`Reel publish failed: ${errMsg || JSON.stringify(publishData)}`);
       }
-      throw new Error(`Reel publish failed: ${publishData?.error?.message || JSON.stringify(publishData)}`);
     }
-    if (!publishData.id) {
-      throw new Error(`Reel publish failed: ${publishData?.error?.message || JSON.stringify(publishData)}`);
+    if (!published) {
+      throw new Error("Reel publish failed: video took too long to process on Instagram's side. Please try again.");
     }
 
     logActivity({ action: "pushed", postType: "reel", postCount: 1 });
