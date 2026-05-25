@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { clientPresetsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logActivity } from "../lib/activityLog";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -287,23 +288,27 @@ async function processReelJob(
     }
     const containerId = containerData.id;
 
-    // Step 2: poll until FINISHED (up to ~2 min, 24 × 5 s)
+    // Step 2: poll until FINISHED (up to ~4 min, 48 × 5 s)
+    // Instagram documentation states containers can take up to 4 minutes to process.
     let statusCode = "IN_PROGRESS";
-    for (let i = 0; i < 24; i++) {
+    let lastStatus = "";
+    for (let i = 0; i < 48; i++) {
       await new Promise((r) => setTimeout(r, 5000));
       const statusRes = await metaFetch(
         `${GRAPH}/${containerId}?fields=status_code,status&access_token=${token}`,
       );
-      const statusData = await statusRes.json() as { status_code?: string; status?: string };
+      const statusData = await statusRes.json() as { status_code?: string; status?: string; error?: { message?: string } };
       statusCode = statusData.status_code || "UNKNOWN";
+      lastStatus = statusData.status || "";
+      logger.info({ jobId, poll: i + 1, statusCode, status: lastStatus }, "Reel container poll");
       if (statusCode === "FINISHED") break;
       if (statusCode === "ERROR" || statusCode === "EXPIRED") {
-        throw new Error(`Reel container failed with status: ${statusCode} — ${statusData.status || ""}`);
+        throw new Error(`Reel container failed (${statusCode}): ${lastStatus || statusData.error?.message || ""}`);
       }
     }
 
     if (statusCode !== "FINISHED") {
-      throw new Error("Reel container timed out — please try again or check the video format.");
+      throw new Error(`Reel container timed out after 4 minutes (last status: ${statusCode} — ${lastStatus}). Check the video format and try again.`);
     }
 
     // Brief pause — Instagram occasionally reports FINISHED before the container
