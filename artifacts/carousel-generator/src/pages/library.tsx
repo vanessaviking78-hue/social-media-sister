@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import {
   ArrowLeft, Layers, Image as ImageIcon, Film, BookOpen, Trash2, Calendar,
   Upload, X, CheckSquare, Square, CalendarDays, Clock, ChevronDown, Loader2,
@@ -56,6 +56,7 @@ function addDays(dateStr: string, n: number): string {
 }
 
 export default function Library() {
+  const [, navigate] = useLocation();
   const [presets, setPresets] = useState<ClientPreset[]>([]);
   const [clientName, setClientName] = useState("");
   const [items, setItems] = useState<LibraryItem[]>([]);
@@ -229,10 +230,11 @@ export default function Library() {
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Schedule failed");
-      toast.success(`${d.count} posts scheduled from ${d.startDate} to ${d.endDate}`);
       setShowScheduleModal(false);
       setSelectedIds(new Set());
       await fetchItems(clientName);
+      toast.success(`${d.count} post${d.count === 1 ? "" : "s"} added to calendar: ${d.startDate}${d.count > 1 ? ` to ${d.endDate}` : ""}`);
+      navigate("/calendar");
     } catch (e: unknown) {
       toast.error((e as Error).message || "Schedule failed");
     } finally {

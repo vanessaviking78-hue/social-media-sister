@@ -17,8 +17,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved === "true") {
+    const pw = localStorage.getItem(PASSWORD_KEY);
+    if (saved === "true" && pw) {
       setAuthed(true);
+    } else if (saved === "true" && !pw) {
+      localStorage.removeItem(STORAGE_KEY);
     }
     setChecking(false);
   }, []);
