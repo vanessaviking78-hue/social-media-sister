@@ -7,7 +7,7 @@ import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
-const GRAPH = "https://graph.facebook.com/v19.0";
+const GRAPH = "https://graph.facebook.com/v22.0";
 
 function metaFetch(url: string, opts: RequestInit = {}, timeoutMs = 30_000): Promise<Response> {
   const controller = new AbortController();
