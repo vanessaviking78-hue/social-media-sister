@@ -72,178 +72,179 @@ export default function Onboard() {
   }
 
   return (
-    <div
-      className="min-h-screen bg-black text-white"
-      style={{ fontFamily: "Inter, sans-serif" }}
-    >
-      <div className="px-8 py-6">
-        <img src="/sms-logo.png" alt="Social Media Sister" style={{ width: 120, height: 120, borderRadius: "50%", objectFit: "cover" }} />
+    <div className="min-h-screen bg-black text-white" style={{ fontFamily: "Inter, sans-serif" }}>
+      {/* Header */}
+      <div className="px-5 pt-6 pb-2">
+        <img
+          src="/sms-logo.png"
+          alt="Social Media Sister"
+          style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover" }}
+        />
       </div>
 
-      <div className="flex items-center justify-center px-4 pb-16" style={{ minHeight: "calc(100vh - 152px)" }}>
-        <div className="w-full max-w-xl space-y-8">
+      {/* Content */}
+      <div className="px-5 pb-10 pt-6" style={{ maxWidth: 560 }}>
 
-          {pageState === "loading" && (
-            <div className="flex justify-center pt-20">
-              <Loader2 className="w-10 h-10 animate-spin" style={{ color: BRAND.primaryColor }} />
-            </div>
-          )}
+        {pageState === "loading" && (
+          <div className="flex justify-center pt-16">
+            <Loader2 className="w-8 h-8 animate-spin" style={{ color: BRAND.primaryColor }} />
+          </div>
+        )}
 
-          {(pageState === "default" || pageState === "connecting") && (
-            <>
+        {(pageState === "default" || pageState === "connecting") && (
+          <>
+            <h1
+              style={{
+                fontFamily: "'Bebas Neue', sans-serif",
+                fontSize: "clamp(2.8rem, 12vw, 4.5rem)",
+                lineHeight: 1,
+                color: BRAND.primaryColor,
+                letterSpacing: "0.02em",
+                marginBottom: "1.25rem",
+              }}
+            >
+              Connect your socials
+            </h1>
+
+            <p className="text-lg font-medium text-white mb-2">
+              {BRAND.welcomeGreeting}{clinicName ? `, ${clinicName}` : ""}.
+            </p>
+            <p className="text-base leading-relaxed mb-8" style={{ color: "rgba(255,255,255,0.6)" }}>
+              {BRAND.welcomeBody}
+            </p>
+
+            <button
+              onClick={handleConnect}
+              disabled={pageState === "connecting"}
+              style={{
+                background: pageState === "connecting" ? "rgba(233,25,118,0.5)" : BRAND.primaryColor,
+                color: "#fff",
+                border: "none",
+                borderRadius: "0.875rem",
+                padding: "1rem 1.5rem",
+                fontSize: "1.0625rem",
+                fontWeight: 600,
+                cursor: pageState === "connecting" ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.625rem",
+                width: "100%",
+                justifyContent: "center",
+              }}
+            >
+              {pageState === "connecting" ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Waiting for Facebook…
+                </>
+              ) : (
+                <>
+                  <Facebook className="w-5 h-5" />
+                  Connect Facebook &amp; Instagram
+                </>
+              )}
+            </button>
+
+            {pageState === "connecting" && (
+              <p className="text-sm text-center mt-4" style={{ color: "rgba(255,255,255,0.45)" }}>
+                A Facebook window has opened. Complete the steps there and this page will update automatically.
+              </p>
+            )}
+          </>
+        )}
+
+        {pageState === "already-connected" && (
+          <>
+            <h1
+              style={{
+                fontFamily: "'Bebas Neue', sans-serif",
+                fontSize: "clamp(2.8rem, 12vw, 4.5rem)",
+                lineHeight: 1,
+                color: BRAND.primaryColor,
+                marginBottom: "1.5rem",
+              }}
+            >
+              Already connected
+            </h1>
+            <div
+              className="flex items-start gap-4 rounded-2xl p-5 mb-5"
+              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
+            >
+              <CheckCircle2 className="w-6 h-6 shrink-0 mt-0.5" style={{ color: "#4ade80" }} />
               <div>
-                <h1
-                  style={{
-                    fontFamily: "'Bebas Neue', sans-serif",
-                    fontSize: "clamp(2.5rem, 8vw, 4.5rem)",
-                    lineHeight: 1,
-                    color: BRAND.primaryColor,
-                    letterSpacing: "0.02em",
-                  }}
-                >
-                  Connect your socials
-                </h1>
-                <p className="mt-4 text-lg leading-relaxed" style={{ color: "rgba(255,255,255,0.85)" }}>
-                  {BRAND.welcomeGreeting}{clinicName ? `, ${clinicName}` : ""}.
-                </p>
-                <p className="mt-2 text-base leading-relaxed" style={{ color: "rgba(255,255,255,0.65)" }}>
-                  {BRAND.welcomeBody}
-                </p>
-              </div>
-
-              <div className="space-y-3">
-                <button
-                  onClick={handleConnect}
-                  disabled={pageState === "connecting"}
-                  style={{
-                    background: pageState === "connecting" ? "rgba(233,25,118,0.5)" : BRAND.primaryColor,
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "0.75rem",
-                    padding: "1rem 2rem",
-                    fontSize: "1rem",
-                    fontWeight: 600,
-                    cursor: pageState === "connecting" ? "not-allowed" : "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.625rem",
-                    width: "100%",
-                    justifyContent: "center",
-                    transition: "opacity 0.15s",
-                  }}
-                >
-                  {pageState === "connecting" ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Waiting for Facebook…
-                    </>
-                  ) : (
-                    <>
-                      <Facebook className="w-5 h-5" />
-                      Connect Facebook &amp; Instagram
-                    </>
-                  )}
-                </button>
-
-                {pageState === "connecting" && (
-                  <p className="text-sm text-center" style={{ color: "rgba(255,255,255,0.5)" }}>
-                    A Facebook window has opened. Complete the steps there and this page will update automatically.
-                  </p>
-                )}
-              </div>
-            </>
-          )}
-
-          {pageState === "already-connected" && (
-            <div className="space-y-6">
-              <h1
-                style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: "clamp(2.5rem, 8vw, 4.5rem)",
-                  lineHeight: 1,
-                  color: BRAND.primaryColor,
-                }}
-              >
-                Already connected
-              </h1>
-              <div
-                className="flex items-start gap-4 rounded-2xl p-5"
-                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
-              >
-                <CheckCircle2 className="w-6 h-6 shrink-0 mt-0.5" style={{ color: "#4ade80" }} />
-                <div>
-                  <p className="font-semibold text-white">Your account is linked.</p>
-                  <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.6)" }}>
-                    {clinicName} is already connected to Social Media Sister. Nothing more to do here.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
-                <Instagram className="w-4 h-4" />
-                Facebook &amp; Instagram access confirmed
-              </div>
-            </div>
-          )}
-
-          {pageState === "success" && (
-            <div className="space-y-6">
-              <h1
-                style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: "clamp(2.5rem, 8vw, 4.5rem)",
-                  lineHeight: 1,
-                  color: BRAND.primaryColor,
-                }}
-              >
-                You&apos;re connected
-              </h1>
-              <div
-                className="flex items-start gap-4 rounded-2xl p-5"
-                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
-              >
-                <CheckCircle2 className="w-6 h-6 shrink-0 mt-0.5" style={{ color: "#4ade80" }} />
-                <div>
-                  <p className="font-semibold text-white">All done, {clinicName || "friend"}.</p>
-                  <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.6)" }}>
-                    Your Facebook Page and Instagram are now linked. Your social media manager will take it from here.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
-                <Instagram className="w-4 h-4" />
-                Facebook &amp; Instagram access confirmed
-              </div>
-            </div>
-          )}
-
-          {pageState === "error" && (
-            <div className="space-y-6">
-              <h1
-                style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: "clamp(2.5rem, 8vw, 4.5rem)",
-                  lineHeight: 1,
-                  color: BRAND.primaryColor,
-                }}
-              >
-                Something went wrong
-              </h1>
-              <div
-                className="flex items-start gap-4 rounded-2xl p-5"
-                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
-              >
-                <AlertCircle className="w-6 h-6 shrink-0 mt-0.5 text-red-400" />
-                <p className="text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
-                  {errorMsg || "This link is invalid or has expired. Please ask your social media manager for a new link."}
+                <p className="font-semibold text-white">{clinicName} is already linked.</p>
+                <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.6)" }}>
+                  Nothing more to do here. Your social media manager has everything they need.
                 </p>
               </div>
             </div>
-          )}
+            <div className="flex items-center gap-2 text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
+              <Instagram className="w-4 h-4" />
+              Facebook &amp; Instagram access confirmed
+            </div>
+          </>
+        )}
 
-          <p className="text-xs text-center" style={{ color: "rgba(255,255,255,0.25)" }}>
-            {BRAND.productName} &middot; {BRAND.supportEmail}
-          </p>
-        </div>
+        {pageState === "success" && (
+          <>
+            <h1
+              style={{
+                fontFamily: "'Bebas Neue', sans-serif",
+                fontSize: "clamp(2.8rem, 12vw, 4.5rem)",
+                lineHeight: 1,
+                color: BRAND.primaryColor,
+                marginBottom: "1.5rem",
+              }}
+            >
+              You&apos;re connected
+            </h1>
+            <div
+              className="flex items-start gap-4 rounded-2xl p-5 mb-5"
+              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
+            >
+              <CheckCircle2 className="w-6 h-6 shrink-0 mt-0.5" style={{ color: "#4ade80" }} />
+              <div>
+                <p className="font-semibold text-white">All done, {clinicName || "friend"}.</p>
+                <p className="text-sm mt-1" style={{ color: "rgba(255,255,255,0.6)" }}>
+                  Your Facebook Page and Instagram are now linked. Your social media manager will take it from here.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-sm" style={{ color: "rgba(255,255,255,0.4)" }}>
+              <Instagram className="w-4 h-4" />
+              Facebook &amp; Instagram access confirmed
+            </div>
+          </>
+        )}
+
+        {pageState === "error" && (
+          <>
+            <h1
+              style={{
+                fontFamily: "'Bebas Neue', sans-serif",
+                fontSize: "clamp(2.8rem, 12vw, 4.5rem)",
+                lineHeight: 1,
+                color: BRAND.primaryColor,
+                marginBottom: "1.5rem",
+              }}
+            >
+              Something went wrong
+            </h1>
+            <div
+              className="flex items-start gap-4 rounded-2xl p-5"
+              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)" }}
+            >
+              <AlertCircle className="w-6 h-6 shrink-0 mt-0.5 text-red-400" />
+              <p className="text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
+                {errorMsg || "This link is invalid or has expired. Please ask your social media manager for a new link."}
+              </p>
+            </div>
+          </>
+        )}
+
+        <p className="text-xs mt-10" style={{ color: "rgba(255,255,255,0.2)" }}>
+          {BRAND.productName} &middot; {BRAND.supportEmail}
+        </p>
       </div>
     </div>
   );
