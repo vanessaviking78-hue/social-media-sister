@@ -178,12 +178,16 @@ router.post(
       if (!csvFile) { res.status(400).json({ error: "csv file required" }); return; }
       if (!zipFile) { res.status(400).json({ error: "zip file required" }); return; }
 
-      type CsvRow = { post_type: string; caption: string; media_filename: string; music_track: string };
+      type CsvRow = {
+        post_type: string; caption: string; media_filename: string; music_track: string;
+        text_style: string; lead_in: string; hero_word: string; hero_color: string; leadin_color: string;
+      };
       const rows = csvParse(csvFile.buffer, {
-        columns: ["post_type", "caption", "media_filename", "music_track"],
+        columns: ["post_type", "caption", "media_filename", "music_track", "text_style", "lead_in", "hero_word", "hero_color", "leadin_color"],
         skip_empty_lines: true,
         trim: true,
         from_line: 1,
+        relax_column_count: true,
       }) as CsvRow[];
 
       const zip = await JSZip.loadAsync(zipFile.buffer);
@@ -220,6 +224,20 @@ router.post(
         const rawType = (row.post_type || "").toLowerCase().trim();
         const isCarousel = uploadedUrls.length > 1 || rawType === "carousel";
         const postType = rawType || (isCarousel ? "carousel" : "single");
+        const textStyle = (row.text_style || "").toLowerCase().trim();
+        const isValidHex = (c: string) => /^#[0-9a-fA-F]{3,8}$/.test((c || "").trim());
+
+        const heroMeta = textStyle === "hero" ? {
+          textStyle: "hero",
+          heroLeadIn: (row.lead_in || "").trim() || null,
+          heroWord: (row.hero_word || "").trim() || null,
+          heroWordColor: isValidHex(row.hero_color) ? row.hero_color.trim() : "#ffffff",
+          heroLeadInColor: isValidHex(row.leadin_color) ? row.leadin_color.trim() : "#E91976",
+        } : null;
+
+        const metadata: Record<string, unknown> = {};
+        if (row.music_track) metadata.musicTrack = row.music_track;
+        if (heroMeta) Object.assign(metadata, heroMeta);
 
         const [item] = await db.insert(contentLibraryTable).values({
           clientName: clientName.trim(),
@@ -228,7 +246,7 @@ router.post(
           mediaUrl: uploadedUrls.length === 1 ? uploadedUrls[0] : null,
           mediaUrls: uploadedUrls.length > 1 ? uploadedUrls : null,
           thumbnailUrl,
-          metadata: row.music_track ? { musicTrack: row.music_track } : null,
+          metadata: Object.keys(metadata).length > 0 ? metadata : null,
         }).returning();
 
         created.push(item);

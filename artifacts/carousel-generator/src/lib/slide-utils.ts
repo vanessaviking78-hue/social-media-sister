@@ -562,6 +562,169 @@ export function drawSlide(
   }
 }
 
+export function drawHeroSlide(
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement | null,
+  leadIn: string,
+  heroWord: string,
+  leadInColor: string = "#E91976",
+  heroWordColor: string = "#ffffff",
+  heroWordFont: string = "'Bebas Neue', sans-serif",
+  verticalPosition: "top" | "middle" | "bottom" = "bottom",
+  spacing: number = 20,
+  uppercase: boolean = true,
+  overlayColor: string = "rgba(0,0,0,0.45)",
+  logoImg: HTMLImageElement | null = null,
+  logoPosition: string = "top-right",
+  logoSize: number = 140,
+  pageColor: string = "#000000",
+  cornerStyle: string = "none",
+  cornerColor: string = "#d4af37",
+  opts?: { imageOffsetX?: number; imageOffsetY?: number; canvasW?: number; canvasH?: number }
+) {
+  const W = opts?.canvasW ?? CANVAS_WIDTH;
+  const H = opts?.canvasH ?? CANVAS_HEIGHT;
+  const imageOffsetX = opts?.imageOffsetX ?? 0;
+  const imageOffsetY = opts?.imageOffsetY ?? 0;
+
+  const displayLeadIn = uppercase ? leadIn.toUpperCase() : leadIn;
+  const displayHeroWord = uppercase ? heroWord.toUpperCase() : heroWord;
+
+  ctx.fillStyle = pageColor;
+  ctx.fillRect(0, 0, W, H);
+
+  if (img) {
+    const scale = Math.max(W / img.width, H / img.height);
+    const overflowX = Math.max(0, img.width * scale - W);
+    const overflowY = Math.max(0, img.height * scale - H);
+    const x = -overflowX * (imageOffsetX + 1) / 2;
+    const y = -overflowY * (imageOffsetY + 1) / 2;
+    ctx.globalAlpha = 1.0;
+    ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+    ctx.globalAlpha = 1.0;
+  }
+
+  if (cornerStyle !== "none") {
+    ctx.strokeStyle = cornerColor;
+    ctx.fillStyle = cornerColor;
+    const S = 180;
+    if (cornerStyle === "triangle") {
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(S, 0); ctx.lineTo(0, S); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(W, H); ctx.lineTo(W - S, H); ctx.lineTo(W, H - S); ctx.closePath(); ctx.fill();
+    } else if (cornerStyle === "arc") {
+      ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.arc(0, 0, S, 0, Math.PI / 2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(W, H, S, Math.PI, Math.PI * 1.5); ctx.stroke();
+      ctx.beginPath(); ctx.arc(W, 0, S, Math.PI / 2, Math.PI); ctx.stroke();
+      ctx.beginPath(); ctx.arc(0, H, S, Math.PI * 1.5, Math.PI * 2); ctx.stroke();
+    } else if (cornerStyle === "double-line") {
+      ctx.lineWidth = 4;
+      const G = 12;
+      [0, G].forEach((off) => { ctx.strokeRect(off + 30, off + 30, W - (off + 30) * 2, H - (off + 30) * 2); });
+    } else if (cornerStyle === "frame") {
+      ctx.lineWidth = 5;
+      const L = 120; const M = 40;
+      ctx.beginPath();
+      ctx.moveTo(M, M + L); ctx.lineTo(M, M); ctx.lineTo(M + L, M);
+      ctx.moveTo(W - M - L, M); ctx.lineTo(W - M, M); ctx.lineTo(W - M, M + L);
+      ctx.moveTo(W - M, H - M - L); ctx.lineTo(W - M, H - M); ctx.lineTo(W - M - L, H - M);
+      ctx.moveTo(M + L, H - M); ctx.lineTo(M, H - M); ctx.lineTo(M, H - M - L);
+      ctx.stroke();
+    }
+  }
+
+  const LEAD_IN_SIZE = 50;
+  const LEAD_IN_LETTER_SPACING = 6;
+  const hPad = 60;
+  const maxW = W - hPad * 2;
+
+  let heroSize = 180;
+  ctx.font = `700 ${heroSize}px ${heroWordFont}`;
+  (ctx as any).letterSpacing = '0px';
+  const sampleWord = displayHeroWord || 'X';
+  while (heroSize > 80 && ctx.measureText(sampleWord).width > maxW) {
+    heroSize -= 4;
+    ctx.font = `700 ${heroSize}px ${heroWordFont}`;
+  }
+
+  const leadInLineH = Math.round(LEAD_IN_SIZE * 1.3);
+  const heroLineH = heroSize;
+  const totalH = leadInLineH + spacing + heroLineH;
+
+  const vPad = 80;
+  let blockStartY: number;
+  if (verticalPosition === "top") {
+    blockStartY = vPad;
+  } else if (verticalPosition === "middle") {
+    blockStartY = Math.round((H - totalH) / 2);
+  } else {
+    blockStartY = H - totalH - vPad;
+  }
+
+  if (verticalPosition === "top") {
+    const grad = ctx.createLinearGradient(0, 0, 0, blockStartY + totalH + 120);
+    grad.addColorStop(0, overlayColor);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, blockStartY + totalH + 120);
+  } else if (verticalPosition === "middle") {
+    ctx.fillStyle = overlayColor;
+    ctx.fillRect(0, Math.max(0, blockStartY - 80), W, totalH + 160);
+  } else {
+    const gradTop = Math.max(0, blockStartY - 120);
+    const grad = ctx.createLinearGradient(0, gradTop, 0, H);
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, overlayColor);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, gradTop, W, H - gradTop);
+  }
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+
+  if (displayLeadIn) {
+    ctx.save();
+    ctx.font = `400 ${LEAD_IN_SIZE}px ${heroWordFont}`;
+    (ctx as any).letterSpacing = `${LEAD_IN_LETTER_SPACING}px`;
+    ctx.fillStyle = leadInColor;
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 2;
+    ctx.shadowOffsetX = 0;
+    ctx.fillText(displayLeadIn, W / 2, blockStartY);
+    ctx.restore();
+  }
+
+  if (displayHeroWord) {
+    ctx.save();
+    ctx.font = `700 ${heroSize}px ${heroWordFont}`;
+    (ctx as any).letterSpacing = '0px';
+    ctx.fillStyle = heroWordColor;
+    ctx.shadowColor = 'rgba(0,0,0,0.1)';
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetY = 4;
+    ctx.shadowOffsetX = 0;
+    ctx.fillText(displayHeroWord, W / 2, blockStartY + leadInLineH + spacing);
+    ctx.restore();
+  }
+
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = 'transparent';
+  ctx.shadowOffsetY = 0;
+
+  if (logoImg) {
+    const margin = 40;
+    const aspectRatio = logoImg.width / logoImg.height;
+    const logoW = Math.round(logoSize * aspectRatio);
+    const logoH = logoSize;
+    let lx = margin, ly = margin;
+    if (logoPosition === "top-right") { lx = W - logoW - margin; ly = margin; }
+    else if (logoPosition === "bottom-left") { lx = margin; ly = H - logoH - margin; }
+    else if (logoPosition === "bottom-right") { lx = W - logoW - margin; ly = H - logoH - margin; }
+    ctx.drawImage(logoImg, lx, ly, logoW, logoH);
+  }
+}
+
 export function drawTypewriterSlide(
   ctx: CanvasRenderingContext2D,
   text: string,

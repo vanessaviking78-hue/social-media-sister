@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import VanessaChat from "@/components/vanessa-chat";
-import { CANVAS_WIDTH, CANVAS_HEIGHT, VIDEO_WIDTH, VIDEO_HEIGHT, FONT_OPTIONS, FONT_PAIRINGS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, compressImage, recordSlideVideo, type AnimationType } from "@/lib/slide-utils";
+import { CANVAS_WIDTH, CANVAS_HEIGHT, VIDEO_WIDTH, VIDEO_HEIGHT, FONT_OPTIONS, FONT_PAIRINGS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, drawHeroSlide, compressImage, recordSlideVideo, type AnimationType } from "@/lib/slide-utils";
 import { usePresets, type ClientPreset, type PresetStyleFields, type TextPosition, type TextAlign, type CornerStyle, isCornerStyle, normalizeTextPosition } from "@/lib/use-presets";
 import type { LogoPosition } from "@workspace/db/schema";
 import { useCaptions } from "@/lib/use-captions";
@@ -58,6 +58,16 @@ export default function SingleImage() {
   const [textAlign, setTextAlign] = useState<TextAlign>("left");
   const [textBoxOutline, setTextBoxOutline] = useState(false);
   const [textBoxOutlineColor, setTextBoxOutlineColor] = useState("#ffffff");
+
+  const [textStyle, setTextStyle] = useState<"standard" | "hero">("standard");
+  const [heroLeadIn, setHeroLeadIn] = useState("");
+  const [heroWord, setHeroWord] = useState("");
+  const [heroLeadInColor, setHeroLeadInColor] = useState("#E91976");
+  const [heroWordColor, setHeroWordColor] = useState("#ffffff");
+  const [heroWordFont, setHeroWordFont] = useState("'Bebas Neue', sans-serif");
+  const [heroVerticalPosition, setHeroVerticalPosition] = useState<"top" | "middle" | "bottom">("bottom");
+  const [heroSpacing, setHeroSpacing] = useState(20);
+  const [heroUppercase, setHeroUppercase] = useState(true);
 
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<{ rows: string[] }>({ rows: [] });
@@ -112,6 +122,30 @@ export default function SingleImage() {
     pageColor, overlayColor, fontFamily, subheadingFont, fontSize, contentFontSize, textColor, lineSpacing,
     cornerStyle, cornerColor, textPosition, textAlign, textBoxOutline, textBoxOutlineColor, logoPosition, logoSize,
   });
+
+  const renderPostToCanvas = useCallback((ctx: CanvasRenderingContext2D, img: HTMLImageElement, post: SinglePost) => {
+    if (textStyle === "hero") {
+      drawHeroSlide(
+        ctx, img,
+        heroLeadIn, heroWord,
+        heroLeadInColor, heroWordColor, heroWordFont,
+        heroVerticalPosition, heroSpacing, heroUppercase,
+        overlayColor, logoImg, logoPosition, logoSize,
+        pageColor, cornerStyle, cornerColor,
+      );
+    } else {
+      drawSlide(
+        ctx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize,
+        false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize,
+        pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont,
+        textAlign, textBoxOutline, textBoxOutlineColor, "",
+      );
+    }
+  }, [textStyle, heroLeadIn, heroWord, heroLeadInColor, heroWordColor, heroWordFont,
+    heroVerticalPosition, heroSpacing, heroUppercase,
+    fontFamily, fontSize, contentFontSize, textColor, lineSpacing, overlayColor,
+    logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor,
+    textPosition, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor]);
 
   const applyPreset = (preset: ClientPreset) => {
     setSelectedPresetId(preset.id);
@@ -195,37 +229,51 @@ export default function SingleImage() {
         });
       }
 
-      drawSlide(
-        ctx,
-        bgImg,
-        sampleText,
-        fontFamily,
-        fontSize,
-        false,
-        textColor,
-        lineSpacing,
-        overlayColor,
-        logoImg,
-        logoPosition,
-        logoSize,
-        pageColor,
-        cornerStyle,
-        cornerColor,
-        1,
-        1,
-        textPosition,
-        true,
-        subheadingFont,
-        textAlign,
-        textBoxOutline,
-        textBoxOutlineColor,
-        "",
-      );
+      if (textStyle === "hero") {
+        drawHeroSlide(
+          ctx, bgImg,
+          heroLeadIn || "LEAD-IN TEXT",
+          heroWord || "HERO",
+          heroLeadInColor, heroWordColor, heroWordFont,
+          heroVerticalPosition, heroSpacing, heroUppercase,
+          overlayColor, logoImg, logoPosition, logoSize,
+          pageColor, cornerStyle, cornerColor,
+        );
+      } else {
+        drawSlide(
+          ctx,
+          bgImg,
+          sampleText,
+          fontFamily,
+          fontSize,
+          false,
+          textColor,
+          lineSpacing,
+          overlayColor,
+          logoImg,
+          logoPosition,
+          logoSize,
+          pageColor,
+          cornerStyle,
+          cornerColor,
+          1,
+          1,
+          textPosition,
+          true,
+          subheadingFont,
+          textAlign,
+          textBoxOutline,
+          textBoxOutlineColor,
+          "",
+        );
+      }
       setDesignPreviewDataUrl(canvas.toDataURL("image/png"));
     } catch (e) {
       console.error("Design preview render error", e);
     }
   }, [
+    textStyle, heroLeadIn, heroWord, heroLeadInColor, heroWordColor, heroWordFont,
+    heroVerticalPosition, heroSpacing, heroUppercase,
     fontFamily, subheadingFont, fontSize, textColor, lineSpacing,
     overlayColor, pageColor, cornerStyle, cornerColor, textPosition, textAlign,
     textBoxOutline, textBoxOutlineColor, logoImg, logoPosition, logoSize,
@@ -309,25 +357,27 @@ export default function SingleImage() {
 
   const handleGenerate = async () => {
     if (!photos.length) { toast.error("Please upload at least one photo"); return; }
-    if (!csvFile && !allCsvRows.length) { toast.error("Please upload a CSV file"); return; }
+    if (textStyle === "standard" && !csvFile && !allCsvRows.length) {
+      toast.error("Please upload a CSV file or switch to Hero Headline style in Step 2"); return;
+    }
 
     setIsGenerating(true);
     const toastId = toast.loading("Generating images...");
 
     try {
       const texts = allCsvRows;
-      if (texts.length === 0) throw new Error("CSV has no data rows");
+      if (textStyle === "standard" && texts.length === 0) throw new Error("CSV has no data rows");
 
       const photoUrls = photos.map((f) => URL.createObjectURL(f));
       const postCount = photos.length;
 
-      if (texts.length < postCount) {
+      if (textStyle === "standard" && texts.length < postCount) {
         toast.warning(`Only ${texts.length} text(s) for ${postCount} photo(s) - extra photos will have no text overlay`);
       }
 
       const posts: SinglePost[] = photos.map((photo, i) => ({
         index: i + 1,
-        text: texts[i] || "",
+        text: textStyle === "standard" ? (texts[i] || "") : "",
         imageUrl: photoUrls[i],
         imageName: photo.name,
       }));
@@ -514,7 +564,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, "");
+        renderPostToCanvas(ctx, img, post);
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -557,7 +607,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, "");
+        renderPostToCanvas(ctx, img, post);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `post-${String(post.index).padStart(2, "0")}.png`;
@@ -609,7 +659,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, "");
+        renderPostToCanvas(ctx, img, post);
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         rendered.push({ name: `post-${String(post.index).padStart(2, "0")}.png`, base64: dataUrl });
@@ -672,7 +722,7 @@ export default function SingleImage() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, "");
+        renderPostToCanvas(ctx, img, post);
         URL.revokeObjectURL(img.src);
         rendered.push({ name: `sched-post-${String(post.index).padStart(2, "0")}.png`, base64: canvas.toDataURL("image/png") });
       }
@@ -1135,6 +1185,95 @@ export default function SingleImage() {
                 />
               </div>
 
+              <div className="space-y-4 rounded-2xl border border-border/30 bg-card/50 p-6">
+                <Label className="text-base font-semibold flex items-center gap-2">
+                  <Type className="w-4 h-4" /> Text Style
+                </Label>
+                <div className="grid grid-cols-2 gap-3">
+                  {(["standard", "hero"] as const).map((s) => (
+                    <button key={s} onClick={() => setTextStyle(s)}
+                      className={`px-4 py-4 rounded-xl text-sm font-semibold transition-all border ${textStyle === s ? "bg-primary text-primary-foreground border-primary" : "bg-accent/40 text-muted-foreground border-border/30 hover:bg-accent/60"}`}
+                    >{s === "standard" ? "Standard" : "Hero Headline"}</button>
+                  ))}
+                </div>
+
+                {textStyle === "hero" && (
+                  <div className="space-y-5 pt-3 border-t border-border/20">
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground">Lead-in line</Label>
+                      <Input
+                        value={heroLeadIn}
+                        onChange={(e) => setHeroLeadIn(e.target.value)}
+                        placeholder="YOUR LEAD-IN TEXT"
+                        className="h-12 text-base"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground">Hero word</Label>
+                      <Input
+                        value={heroWord}
+                        onChange={(e) => setHeroWord(e.target.value)}
+                        placeholder="IMPACT"
+                        className="h-14 text-xl font-bold"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm text-muted-foreground">Uppercase</Label>
+                      <button onClick={() => setHeroUppercase(!heroUppercase)}
+                        className={`relative w-12 h-6 rounded-full transition-colors ${heroUppercase ? "bg-pink-500" : "bg-gray-600"}`}>
+                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${heroUppercase ? "translate-x-6" : ""}`} />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground flex items-center gap-1"><Palette className="w-3 h-3" /> Lead-in colour</Label>
+                        <div className="flex gap-2">
+                          <Input type="color" value={heroLeadInColor} onChange={(e) => setHeroLeadInColor(e.target.value)} className="w-12 h-10 p-1 cursor-pointer" />
+                          <Input type="text" value={heroLeadInColor.toUpperCase()} onChange={(e) => setHeroLeadInColor(e.target.value)} className="flex-1 h-10 text-sm font-mono" />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground flex items-center gap-1"><Palette className="w-3 h-3" /> Hero word colour</Label>
+                        <div className="flex gap-2">
+                          <Input type="color" value={heroWordColor} onChange={(e) => setHeroWordColor(e.target.value)} className="w-12 h-10 p-1 cursor-pointer" />
+                          <Input type="text" value={heroWordColor.toUpperCase()} onChange={(e) => setHeroWordColor(e.target.value)} className="flex-1 h-10 text-sm font-mono" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground">Font</Label>
+                      <Select value={heroWordFont} onValueChange={setHeroWordFont}>
+                        <SelectTrigger className="h-12 text-base">
+                          <SelectValue><span style={{ fontFamily: heroWordFont }}>{FONT_OPTIONS.find((f) => f.value === heroWordFont)?.label ?? "Font"}</span></SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FONT_OPTIONS.map((f) => (
+                            <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm text-muted-foreground">Text position</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(["top", "middle", "bottom"] as const).map((pos) => (
+                          <button key={pos} onClick={() => setHeroVerticalPosition(pos)}
+                            className={`px-3 py-3 rounded-lg text-sm font-semibold capitalize transition-all ${heroVerticalPosition === pos ? "bg-primary text-primary-foreground" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}
+                          >{pos.charAt(0).toUpperCase() + pos.slice(1)}</button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm text-muted-foreground">Spacing between lines</Label>
+                        <span className="text-sm font-semibold tabular-nums">{heroSpacing}px</span>
+                      </div>
+                      <Slider min={0} max={80} step={4} value={[heroSpacing]} onValueChange={([v]) => setHeroSpacing(v)} className="w-full" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
                   <Label className="text-base font-semibold">Font</Label>
@@ -1333,6 +1472,13 @@ export default function SingleImage() {
                 <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 3: Your Content</h2>
                 <p className="text-lg text-muted-foreground">Add the text for each single image post. One line per post.</p>
               </div>
+
+              {textStyle === "hero" && (
+                <div className="rounded-2xl bg-primary/10 border border-primary/20 p-5">
+                  <p className="text-sm font-semibold text-primary mb-1">Hero Headline mode is on</p>
+                  <p className="text-sm text-muted-foreground">Your lead-in and hero word are set in Step 2 and will be the same across all your photos. Use the AI tool below to generate Instagram captions for Step 4, or skip straight to generating.</p>
+                </div>
+              )}
 
               <div className="flex rounded-xl overflow-hidden border border-border/30">
                 <button onClick={() => setContentMode("csv")}

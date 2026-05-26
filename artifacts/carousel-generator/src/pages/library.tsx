@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { drawHeroSlide, CANVAS_WIDTH, CANVAS_HEIGHT } from "@/lib/slide-utils";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -53,6 +54,44 @@ function addDays(dateStr: string, n: number): string {
   const [y, m, d] = dateStr.split("-").map(Number);
   const dt = new Date(y, m - 1, d + n);
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+}
+
+function HeroThumbnail({ item }: { item: LibraryItem }) {
+  const [dataUrl, setDataUrl] = useState<string | null>(null);
+  const meta = item.metadata as Record<string, unknown> | null;
+  const imgUrl = item.thumbnailUrl || item.mediaUrl || item.mediaUrls?.[0] || null;
+
+  useEffect(() => {
+    if (!imgUrl || meta?.textStyle !== "hero") return;
+    let cancelled = false;
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      if (cancelled) return;
+      const canvas = document.createElement("canvas");
+      canvas.width = CANVAS_WIDTH;
+      canvas.height = CANVAS_HEIGHT;
+      const ctx = canvas.getContext("2d")!;
+      drawHeroSlide(
+        ctx, img,
+        (meta.heroLeadIn as string) || "",
+        (meta.heroWord as string) || "",
+        (meta.heroLeadInColor as string) || "#E91976",
+        (meta.heroWordColor as string) || "#ffffff",
+        "'Bebas Neue', sans-serif",
+        "bottom",
+        20,
+        true,
+      );
+      if (!cancelled) setDataUrl(canvas.toDataURL("image/jpeg", 0.85));
+    };
+    img.src = imgUrl;
+    return () => { cancelled = true; };
+  }, [imgUrl, meta]);
+
+  if (dataUrl) return <img src={dataUrl} alt="" className="w-full h-full object-cover" />;
+  if (imgUrl) return <img src={imgUrl} alt="" className="w-full h-full object-cover" />;
+  return null;
 }
 
 export default function Library() {
@@ -347,7 +386,8 @@ export default function Library() {
                     Or drop <span className="text-gray-300">image/video files</span> directly for single posts.
                   </p>
                   <div className="mt-4 text-xs text-gray-600">
-                    CSV format: <code className="text-gray-500">post_type, caption, media_filename, music_track</code>
+                    CSV columns: <code className="text-gray-500">post_type, caption, media_filename, music_track</code><br />
+                    Hero posts add: <code className="text-gray-500">text_style=hero, lead_in, hero_word, hero_color, leadin_color</code>
                   </div>
                 </>
               )}
@@ -401,6 +441,8 @@ export default function Library() {
                         <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
                           <Play className="w-8 h-8 text-white/60" />
                         </div>
+                      ) : (item.metadata as any)?.textStyle === "hero" ? (
+                        <HeroThumbnail item={item} />
                       ) : (
                         <img src={thumb} alt="" className="w-full h-full object-cover" />
                       )
