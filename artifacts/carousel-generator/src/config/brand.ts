@@ -6,5 +6,5 @@ export const BRAND = {
   supportEmail: "hello@socialmediasister.co.uk",
   welcomeGreeting: "Welcome",
   welcomeBody:
-    "Connect your Facebook Page and Instagram account so your content can go straight to your socials — no logins, no faff, just done.",
+    "Ey up, wipe your feet and come on in. Connect your socials here for me, and then we are good to go.",
 };
