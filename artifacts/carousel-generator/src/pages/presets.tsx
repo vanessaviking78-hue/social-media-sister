@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw, Facebook, Instagram, Unlink, ChevronDown, ChevronUp, Clock, BookOpen } from "lucide-react";
+import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw, Facebook, Instagram, Unlink, ChevronDown, ChevronUp, Clock, BookOpen, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -456,12 +456,21 @@ export default function PresetsPage() {
             <h1 className="font-serif text-4xl font-semibold mb-2 tracking-tight">Client Brand Presets</h1>
             <p className="text-lg text-muted-foreground">Manage saved brand settings for all your clients. Use presets in any post creation mode to quickly apply a client's look.</p>
           </div>
-          <Button
-            onClick={() => { setShowQuickAdd(true); setQuickAddName(""); setQuickAddError(null); }}
-            className="shrink-0 bg-pink-600 hover:bg-pink-700 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> Add New Client
-          </Button>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => { window.location.href = `${BASE}api/meta/auth/bulk-start`; }}
+              className="border-purple-500/40 text-purple-300 hover:bg-purple-900/30 hover:text-purple-200 flex items-center gap-2"
+            >
+              <Zap className="w-4 h-4" /> Bulk Connect All Clients
+            </Button>
+            <Button
+              onClick={() => { setShowQuickAdd(true); setQuickAddName(""); setQuickAddError(null); }}
+              className="bg-pink-600 hover:bg-pink-700 flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> Add New Client
+            </Button>
+          </div>
         </div>
 
         {showQuickAdd && (

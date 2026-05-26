@@ -1,0 +1,191 @@
+Brief: Bulk Connect All Clients
+For Vanessa to paste into the Replit Agent.
+
+
+What we're building
+A single-click flow that lets Vanessa OAuth ONCE into Facebook, tick all her client Pages, and have the app fuzzy-match each Page to an existing preset and save the tokens in bulk. Replaces the per-preset Connect Meta dance for the initial migration of 40 clinic clients.
+
+
+User flow
+Vanessa goes to Presets page
+
+New button at the top: "Bulk Connect All Clients"
+
+Click it. Facebook OAuth popup opens.
+
+She approves the Meta App, and on the Page selector ticks ALL the client Pages she manages
+
+Popup closes. App lands her on a new review page: /presets/bulk-connect/review
+
+Review page shows a table:
+
+Facebook Page
+Suggested Preset
+Status
+The Castle Clinic
+The Castle Clinic ✓ matched
+[Save]
+Dr Sarah Aesthetics Whitley Bay
+Dr Sarah's Aesthetics ✓ fuzzy match (87%)
+[Save] [Override ▼]
+Glow Aesthetics Newcastle
+(no match)
+[Skip] [Assign ▼]
+
+
+She can override any match via the dropdown (full preset list)
+
+She can untick any row she doesn't want to save
+
+She clicks "Save All Matches"
+
+App writes the Page Access Token + Page ID + IG Account ID to each matched preset in one transaction
+
+Toast: "38 clients connected. 2 unmatched, skipped."
+
+
+Backend implementation
+New routes (extend artifacts/api-server/src/routes/meta-auth.ts)
+GET /api/meta/auth/bulk-start
+
+No presetId param (bulk mode)
+Builds OAuth URL identical to single-preset flow EXCEPT:
+State encodes { mode: "bulk", nonce: ... } instead of { presetId, nonce }
+Redirects to Facebook OAuth
+
+GET /api/meta/auth/callback (extend existing)
+
+After decoding state, check if state.mode === "bulk"
+If bulk:
+Exchange code for short-lived token, then long-lived user token (same as now)
+Call GET /me/accounts to get all Pages with access tokens (same as now)
+For each Page, fetch its instagram_business_account (same as now)
+Store the full Page array in pendingPageSelections with a new key
+Redirect to frontend: ${baseUrl}/presets/bulk-connect/review?key=${key}
+If non-bulk (existing presetId mode), keep current behaviour
+
+GET /api/meta/auth/bulk-pending?key=...
+
+Reads from pendingPageSelections
+Returns: { pages: [{id, name, accessToken, instagramAccountId, hasInstagram}], presets: [{id, name}] }
+ALSO computes suggested matches: for each page, find the best preset match by fuzzy name comparison (see algorithm below)
+Response: { pages: [...with suggestedPresetId and matchScore], presets: [...] }
+
+POST /api/meta/auth/bulk-save
+
+Body: { key, assignments: [{ pageId, presetId }] }
+For each assignment:
+Look up the page from pendingPageSelections by pageId
+Update the preset with metaPageAccessToken, metaFacebookPageId, metaInstagramAccountId
+Delete pendingPageSelections entry after save
+Return: { saved: N, failed: M, failedDetails: [...] }
+Fuzzy matching algorithm
+In a new helper file src/lib/fuzzyMatch.ts:
+
+function normalise(s: string): string {
+
+  return s
+
+    .toLowerCase()
+
+    .replace(/\b(the|clinic|aesthetics|aesthetic|cosmetic|beauty|skin|ltd|limited)\b/g, "")
+
+    .replace(/[^a-z0-9]/g, "")
+
+    .trim();
+
+}
+
+function similarity(a: string, b: string): number {
+
+  const na = normalise(a);
+
+  const nb = normalise(b);
+
+  if (na === nb) return 1.0;
+
+  if (na.includes(nb) || nb.includes(na)) return 0.85;
+
+  // Levenshtein or Dice coefficient for closer matches
+
+  return diceCoefficient(na, nb);
+
+}
+
+export function matchPagesToPresets(pages: Page[], presets: Preset[]) {
+
+  return pages.map(page => {
+
+    let bestPreset = null;
+
+    let bestScore = 0;
+
+    for (const preset of presets) {
+
+      const score = similarity(page.name, preset.name);
+
+      if (score > bestScore) {
+
+        bestScore = score;
+
+        bestPreset = preset;
+
+      }
+
+    }
+
+    return {
+
+      ...page,
+
+      suggestedPresetId: bestScore >= 0.7 ? bestPreset?.id : null,
+
+      matchScore: bestScore,
+
+    };
+
+  });
+
+}
+
+A 0.7 threshold means "fairly confident", anything below is shown as "no match" in the UI.
+
+
+Frontend implementation
+New page: /presets/bulk-connect/review
+Reads key query param
+Calls GET /api/meta/auth/bulk-pending?key=... on mount
+Renders a table with columns: Page Name, IG Linked? (badge), Suggested Preset, Override Dropdown, Include checkbox
+Default: include = true for pages with matchScore >= 0.7, false otherwise
+Bottom of page: count summary + "Save All Matches" button
+On Save: POST to /api/meta/auth/bulk-save with the user's final assignments
+After save, redirect to /presets with a toast showing the success count
+Button on /presets page
+Add to the Presets page header, next to "New Preset":
+
+[New Preset] [⚡ Bulk Connect All Clients]
+
+The button just navigates to GET /api/meta/auth/bulk-start (full page redirect, NOT fetch).
+
+
+Acceptance criteria
+Vanessa clicks "Bulk Connect All Clients" on Presets page
+Facebook OAuth opens, she ticks all 40-ish Pages, approves
+She lands on the review page within 5 seconds
+At least 80% of her Pages should match a preset automatically (assuming her preset names are reasonable)
+Unmatched Pages show "(no match)" with a dropdown to manually assign
+She can override any match
+Clicking "Save All Matches" saves all selected assignments in one go
+After save, she can post to any of those clients from the Calendar/Library and it goes to the right Instagram
+
+
+Edge cases to handle
+Pages with no linked Instagram: still allow saving, but show "No IG linked" warning badge
+Duplicate preset assignments: prevent same preset being matched to two Pages (validation error)
+Pending session expired (>5 min between OAuth and save): show "session expired, please reconnect" and redirect to /presets
+Vanessa already has tokens on a preset: show "will overwrite existing connection" warning, ask for confirmation
+
+
+When done
+Restart api-server, ping Vanessa, she'll run it on her live 40 clinics.
+

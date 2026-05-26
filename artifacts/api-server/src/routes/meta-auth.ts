@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { clientPresetsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { randomBytes } from "crypto";
+import { matchPagesToPresets } from "../lib/fuzzyMatch.js";
 
 const router: IRouter = Router();
 
@@ -15,11 +16,14 @@ interface PageEntry {
   instagramAccountId: string | null;
 }
 
-const pendingPageSelections = new Map<string, {
-  presetId: number;
+interface PendingEntry {
+  presetId?: number;
+  mode?: "bulk";
   pages: PageEntry[];
   expiresAt: number;
-}>();
+}
+
+const pendingPageSelections = new Map<string, PendingEntry>();
 
 function getAppId(): string {
   const id = process.env["META_APP_ID"];
@@ -74,6 +78,34 @@ router.get("/meta/auth/start", (req: Request, res: Response) => {
   }
 });
 
+router.get("/meta/auth/bulk-start", (req: Request, res: Response) => {
+  try {
+    const appId = getAppId();
+    const baseUrl = getBaseUrl(req);
+    const redirectUri = `${baseUrl}/api/meta/auth/callback`;
+    const state = Buffer.from(
+      JSON.stringify({ mode: "bulk", nonce: randomBytes(8).toString("hex") })
+    ).toString("base64url");
+    const scopes = [
+      "instagram_basic",
+      "instagram_content_publish",
+      "pages_read_engagement",
+      "pages_show_list",
+    ].join(",");
+    const url =
+      `https://www.facebook.com/dialog/oauth` +
+      `?client_id=${appId}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&scope=${scopes}` +
+      `&state=${state}` +
+      `&response_type=code`;
+    res.redirect(url);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    res.status(500).send(`Configuration error: ${msg}`);
+  }
+});
+
 router.get("/meta/auth/callback", async (req: Request, res: Response) => {
   const code = req.query["code"] as string | undefined;
   const stateRaw = req.query["state"] as string | undefined;
@@ -90,14 +122,23 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
     return;
   }
 
-  let presetId: number;
+  let stateObj: { presetId?: unknown; mode?: string; nonce?: string };
   try {
-    const state = JSON.parse(Buffer.from(stateRaw, "base64url").toString()) as { presetId: unknown };
-    presetId = Number(state.presetId);
-    if (!presetId || isNaN(presetId)) throw new Error("bad presetId");
+    stateObj = JSON.parse(Buffer.from(stateRaw, "base64url").toString()) as typeof stateObj;
   } catch {
     res.redirect(`${front}?error=invalid_state`);
     return;
+  }
+
+  const isBulk = stateObj.mode === "bulk";
+  let presetId = 0;
+
+  if (!isBulk) {
+    presetId = Number(stateObj.presetId);
+    if (!presetId || isNaN(presetId)) {
+      res.redirect(`${front}?error=invalid_state`);
+      return;
+    }
   }
 
   try {
@@ -138,7 +179,11 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
       throw new Error(pagesData.error?.message ?? "Failed to fetch pages");
     }
     if (pagesData.data.length === 0) {
-      res.redirect(`${front}?error=no_pages&presetId=${presetId}`);
+      if (isBulk) {
+        res.redirect(`${baseUrl}/presets/bulk-connect/review?error=no_pages`);
+      } else {
+        res.redirect(`${front}?error=no_pages&presetId=${presetId}`);
+      }
       return;
     }
 
@@ -157,8 +202,15 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
       })
     );
 
+    if (isBulk) {
+      const key = randomBytes(16).toString("hex");
+      pendingPageSelections.set(key, { mode: "bulk", pages, expiresAt: Date.now() + 10 * 60 * 1000 });
+      res.redirect(`${baseUrl}/presets/bulk-connect/review?key=${key}`);
+      return;
+    }
+
     if (pages.length === 1) {
-      const page = pages[0];
+      const page = pages[0]!;
       await db
         .update(clientPresetsTable)
         .set({
@@ -180,7 +232,11 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
     res.redirect(`${front}?select=1&key=${key}&presetId=${presetId}`);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    res.redirect(`${front}?error=${encodeURIComponent(msg)}&presetId=${presetId}`);
+    if (isBulk) {
+      res.redirect(`${baseUrl}/presets/bulk-connect/review?error=${encodeURIComponent(msg)}`);
+    } else {
+      res.redirect(`${front}?error=${encodeURIComponent(msg)}&presetId=${presetId}`);
+    }
   }
 });
 
@@ -226,7 +282,7 @@ router.post("/meta/auth/select-page", async (req: Request, res: Response) => {
       metaFacebookPageId: page.id,
       metaInstagramAccountId: page.instagramAccountId,
     })
-    .where(eq(clientPresetsTable.id, entry.presetId));
+    .where(eq(clientPresetsTable.id, entry.presetId!));
   pendingPageSelections.delete(key);
   res.json({
     success: true,
@@ -234,6 +290,111 @@ router.post("/meta/auth/select-page", async (req: Request, res: Response) => {
     presetId: entry.presetId,
     hasInstagram: !!page.instagramAccountId,
   });
+});
+
+router.get("/meta/auth/bulk-pending", async (req: Request, res: Response) => {
+  const key = req.query["key"] as string | undefined;
+  if (!key) {
+    res.status(400).json({ error: "key required" });
+    return;
+  }
+  const entry = pendingPageSelections.get(key);
+  if (!entry || entry.expiresAt < Date.now()) {
+    pendingPageSelections.delete(key);
+    res.status(404).json({ error: "Session expired. Please reconnect via Facebook." });
+    return;
+  }
+  if (entry.mode !== "bulk") {
+    res.status(400).json({ error: "Not a bulk session" });
+    return;
+  }
+
+  const allPresets = await db
+    .select({ id: clientPresetsTable.id, name: clientPresetsTable.name, metaFacebookPageId: clientPresetsTable.metaFacebookPageId })
+    .from(clientPresetsTable)
+    .orderBy(clientPresetsTable.name);
+
+  const presetsForMatch = allPresets.map((p) => ({ id: p.id, name: p.name }));
+  const matched = matchPagesToPresets(entry.pages, presetsForMatch);
+
+  const presetMap = new Map(allPresets.map((p) => [p.id, p]));
+
+  const pages = matched.map((p) => ({
+    id: p.id,
+    name: p.name,
+    hasInstagram: !!p.instagramAccountId,
+    suggestedPresetId: p.suggestedPresetId,
+    matchScore: p.matchScore,
+    existingConnection: p.suggestedPresetId
+      ? !!(presetMap.get(p.suggestedPresetId)?.metaFacebookPageId)
+      : false,
+  }));
+
+  const presets = allPresets.map((p) => ({
+    id: p.id,
+    name: p.name,
+    alreadyConnected: !!p.metaFacebookPageId,
+  }));
+
+  res.json({ pages, presets });
+});
+
+router.post("/meta/auth/bulk-save", async (req: Request, res: Response) => {
+  const { key, assignments } = req.body as {
+    key?: string;
+    assignments?: Array<{ pageId: string; presetId: number }>;
+  };
+
+  if (!key || !assignments || !Array.isArray(assignments)) {
+    res.status(400).json({ error: "key and assignments required" });
+    return;
+  }
+
+  const entry = pendingPageSelections.get(key);
+  if (!entry || entry.expiresAt < Date.now()) {
+    pendingPageSelections.delete(key);
+    res.status(404).json({ error: "Session expired. Please reconnect via Facebook." });
+    return;
+  }
+  if (entry.mode !== "bulk") {
+    res.status(400).json({ error: "Not a bulk session" });
+    return;
+  }
+
+  const presetIds = assignments.map((a) => a.presetId);
+  const uniquePresetIds = new Set(presetIds);
+  if (uniquePresetIds.size !== presetIds.length) {
+    res.status(400).json({ error: "Duplicate preset assignments detected. Each preset can only be linked to one page." });
+    return;
+  }
+
+  let saved = 0;
+  const failedDetails: string[] = [];
+
+  for (const assignment of assignments) {
+    const page = entry.pages.find((p) => p.id === assignment.pageId);
+    if (!page) {
+      failedDetails.push(`Page ${assignment.pageId} not found in session`);
+      continue;
+    }
+    try {
+      await db
+        .update(clientPresetsTable)
+        .set({
+          metaPageAccessToken: page.accessToken,
+          metaFacebookPageId: page.id,
+          metaInstagramAccountId: page.instagramAccountId,
+        })
+        .where(eq(clientPresetsTable.id, assignment.presetId));
+      saved++;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      failedDetails.push(`Preset ${assignment.presetId}: ${msg}`);
+    }
+  }
+
+  pendingPageSelections.delete(key);
+  res.json({ saved, failed: failedDetails.length, failedDetails });
 });
 
 export default router;

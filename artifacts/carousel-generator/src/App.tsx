@@ -19,6 +19,7 @@ import Reels from "@/pages/reels";
 import VideoOverlay from "@/pages/video-overlay";
 import Scheduler from "@/pages/scheduler";
 import Library from "@/pages/library";
+import BulkConnectReview from "@/pages/bulk-connect-review";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ function ProtectedRouter() {
       <Route path="/video-overlay" component={VideoOverlay} />
       <Route path="/scheduler" component={Scheduler} />
       <Route path="/library" component={Library} />
+      <Route path="/presets/bulk-connect/review" component={BulkConnectReview} />
       <Route component={NotFound} />
     </Switch>
   );
