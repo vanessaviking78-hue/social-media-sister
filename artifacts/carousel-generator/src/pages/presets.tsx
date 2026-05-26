@@ -448,6 +448,11 @@ export default function PresetsPage() {
     if (!confirm(`Delete preset "${preset.name}"?`)) return;
     try {
       await deletePreset(id);
+      if (editingId === id) {
+        setEditingId(null);
+        setEditData({});
+        setEditNameError(null);
+      }
       toast.success(`Preset "${preset.name}" deleted`);
     } catch (err: any) {
       toast.error(err?.message || "Failed to delete");

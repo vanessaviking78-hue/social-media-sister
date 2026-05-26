@@ -202,6 +202,11 @@ export default function PresetSelector({
     if (!preset) return;
     try {
       await onDeletePreset(id);
+      if (editingId === id) {
+        setEditingId(null);
+        setEditName("");
+        setRenameError(null);
+      }
       toast.success(`Preset "${preset.name}" deleted`);
     } catch (err: any) {
       toast.error(err?.message || "Failed to delete preset");
