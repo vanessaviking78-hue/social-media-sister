@@ -325,7 +325,7 @@ export function drawSlide(
 
   const isLastSlide = totalSlidesInGroup > 1 && slidePosition === totalSlidesInGroup;
   const ctaSize = isLastSlide ? Math.round(size * 1.4) : size;
-  const hPad = 2;
+  const hPad = 90;
   const activeTextPos = isLastSlide ? "center" : textPosition;
 
   const activeFont = isCoverSlide ? font : (subheadingFont || font);
@@ -635,7 +635,7 @@ export function drawHeroSlide(
 
   const LEAD_IN_SIZE = 50;
   const LEAD_IN_LETTER_SPACING = 6;
-  const hPad = 60;
+  const hPad = 90;
   const maxW = W - hPad * 2;
 
   let heroSize = 180;
@@ -1273,7 +1273,7 @@ export function drawTypewriterOnVideo(
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
 
-  const maxWidth = W * 0.82;
+  const maxWidth = W * 0.78;
   const words = visibleText.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let cur = "";
