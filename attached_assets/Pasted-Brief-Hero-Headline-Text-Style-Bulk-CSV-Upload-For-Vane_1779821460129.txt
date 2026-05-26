@@ -1,0 +1,135 @@
+Brief: Hero Headline Text Style + Bulk CSV Upload
+For Vanessa to paste into the Replit Agent.
+
+
+What we're building
+A new text-style option called "Hero Headline" in the Single Image designer (and Carousel cover slides). It splits a headline into two parts: a smaller "lead-in" line above and a MASSIVE "hero word" below. Plus a CSV bulk import that lets her drop 30 of these in one go.
+Example layout
+   MY PAGE IS HAVING A    ← lead-in, smaller, orange/accent colour
+
+        MAKEOVER          ← hero word, HUGE, bold, white/contrast
+
+
+Feature 1: Hero Headline text style in the post designer
+In the existing Single Image editor
+Add a new option to the existing "Text style" or "Text layout" toggle:
+
+Current options (whatever's there now)
+New option: "Hero Headline"
+
+When "Hero Headline" is selected, the existing single text input is replaced by TWO inputs:
+
+Lead-in text (smaller text above) - placeholder: "MY PAGE IS HAVING A"
+Hero word (big text below) - placeholder: "MAKEOVER"
+
+Both inputs auto-uppercase as the user types (because that's the typical Hero Headline design pattern). If she wants mixed case, give her a toggle "Uppercase: ON/OFF".
+Styling controls
+Below the two inputs, give her these controls in the design panel:
+
+Lead-in colour: colour picker, defaults to client preset's accent colour
+Hero word colour: colour picker, defaults to white
+Hero word font: dropdown (use existing fonts she has + Bebas Neue if not already there)
+Vertical position: slider or 3 buttons (Top / Middle / Bottom) — controls where the headline block sits on the image. Default: Bottom.
+Spacing between lead-in and hero word: small slider, default to "comfortable"
+Live preview (mandatory)
+On the same page, a live preview pane shows the post as it'll render, updating in real time as she types in the inputs or changes the styling controls.
+
+The preview should be the actual final-resolution rendering (1080x1080 for single image, scaled to fit the screen). When she changes the lead-in text, the preview updates within 100ms. Same for the hero word, the colours, the position.
+
+She must be able to see exactly what the post will look like BEFORE saving or pushing. This is the non-negotiable.
+Data model
+Add the following to the post object (whatever table currently stores single image posts):
+
+textStyle: "standard" | "hero" // existing + new
+
+heroLeadIn: string | null
+
+heroWord: string | null
+
+heroLeadInColor: string | null  // hex, falls back to brand accent
+
+heroWordColor: string | null    // hex, falls back to white
+
+heroWordFont: string | null     // name, falls back to Bebas Neue
+
+heroVerticalPosition: "top" | "middle" | "bottom"  // default "bottom"
+
+heroUppercase: boolean // default true
+
+If textStyle === "hero", the renderer uses heroLeadIn + heroWord. Otherwise it falls back to the existing single-text rendering.
+Renderer changes
+Wherever the post is rendered to PNG/JPG (for export to IG), handle the new "hero" text style. Use the existing canvas rendering library / approach, just add the two-line layout.
+
+Typography defaults:
+
+Lead-in: 40-60px, medium weight, letter-spacing slightly tracked out, lowercase OR uppercase per setting
+Hero word: 120-180px (auto-fit to image width with a minimum padding), bold weight, uppercase
+Both centred horizontally
+Drop shadow on the hero word for legibility (subtle, 4px y-offset, 10% opacity black, blur 8px)
+
+
+Feature 2: CSV bulk import for Hero Headline posts
+Extend the existing Content Library CSV bulk upload to support Hero Headline posts.
+CSV format
+post_type,text_style,lead_in,hero_word,media_filename,caption,hero_color,leadin_color
+
+single,hero,MY PAGE IS HAVING A,MAKEOVER,makeover_bg.jpg,"Big things coming, watch this space ✨",#FFFFFF,#FF6B35
+
+single,hero,SUMMER GLOW IS,LOADING,glow_bg.jpg,"Bookings now open for July and August",#FFFFFF,#FFD700
+
+single,hero,YOUR NEW LOOK,AWAITS,blank_bg.jpg,"Click the link in bio to book your consultation",#FFFFFF,#FF1493
+
+single,hero,IT'S TIME TO,GLOW,sunset.jpg,"Pre-summer skincare bookings are flying out",#000000,#FF6B35
+
+Columns explained:
+
+post_type: "single" for now (we'll add carousel cover support next)
+text_style: "hero" tells the importer to use the Hero Headline layout. "standard" or empty = normal single text post.
+lead_in: the small upper text
+hero_word: the big lower text
+media_filename: the image filename in the zip (existing pattern)
+caption: the Instagram caption (existing pattern)
+hero_color: optional hex code for the hero word colour. If blank, uses preset accent.
+leadin_color: optional hex code for the lead-in colour. If blank, uses preset accent.
+Process
+Vanessa picks her client preset on the Content Library page (existing flow)
+Drops a CSV + zip with up to 30 (or however many) rows
+Server parses CSV, creates one Content Library item per row, populating the new fields
+Each card in the Library grid shows a thumbnail rendering of what the post will look like
+She can click any card to fine-tune the styling individually in the editor
+Or auto-schedule them daily via the existing button
+Validation
+If text_style === "hero" but lead_in or hero_word is missing, surface a friendly error: "Row 5: text_style is 'hero' but hero_word is empty"
+Hex colours validated server-side, default to brand accent if invalid
+
+
+Feature 3: Preview thumbnails in the Content Library
+This is partly already there but worth confirming:
+
+Each Library card should show a small (300x300) preview of the rendered post, not just the raw media file. So a Hero Headline post in the Library shows the image WITH the text overlay, exactly as it'll publish.
+
+If thumbnails aren't already rendered server-side, the simplest way is to render them on demand when the Library page loads, cache to object storage.
+
+
+Stretch (only if quick): "Eyelash text" style
+Vanessa mentioned an "eyelash text" style as a possible future option. Note this for follow-up but DO NOT build it in this pass. Once Hero Headline is working, we'll spec eyelash text separately.
+
+
+Acceptance criteria
+When done, Vanessa should be able to:
+
+Open the Single Image designer
+Pick "Hero Headline" as the text style
+Type "MY PAGE IS HAVING A" in the lead-in
+Type "MAKEOVER" in the hero word
+See it rendered live in the preview pane within 100ms of typing
+Change the lead-in colour to orange, see preview update
+Save the post to her Library
+Separately, drop a CSV with 30 Hero Headline posts and a zip of 30 images
+See 30 cards appear in the Library, each with a thumbnail of the rendered post
+Auto-schedule all 30 daily across 30 days using the existing button
+
+
+When done
+Restart api-server, ping Vanessa. She'll test on her own Social Media Sister preset first with 5-6 sample rows before going full 30 for a real client.
+
