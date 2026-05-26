@@ -12,7 +12,19 @@ export default function Onboard({ token }: { token: string }) {
 
   const [pageState, setPageState] = useState<State>("loading");
   const [clinicName, setClinicName] = useState("");
-  const [errorMsg, setErrorMsg] = useState(urlError ? decodeURIComponent(urlError) : "");
+  function humaniseError(raw: string): string {
+    const map: Record<string, string> = {
+      missing_code: "Facebook didn't return an authorisation code. This usually means the redirect URI isn't whitelisted in the Meta App settings, or the login was cancelled.",
+      missing_state: "The OAuth state was lost in transit. Please try again.",
+      invalid_state: "The link used to start this connection is no longer valid. Please ask your social media manager for a fresh link.",
+      invalid_token: "This onboarding link has expired or already been used. Please ask for a new one.",
+      no_pages: "No Facebook Pages were found on that account. You need to be an admin of a Facebook Page to connect.",
+      access_denied: "Facebook access was denied. Please try again and accept the requested permissions.",
+    };
+    return map[raw] ?? raw;
+  }
+
+  const [errorMsg, setErrorMsg] = useState(urlError ? humaniseError(decodeURIComponent(urlError)) : "");
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   async function fetchStatus() {

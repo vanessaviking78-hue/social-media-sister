@@ -113,48 +113,91 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
   const oauthError = req.query["error"] as string | undefined;
   const baseUrl = getBaseUrl(req);
   const front = `${baseUrl}/oauth/meta/result`;
+  const redirectUri = `${baseUrl}/api/meta/auth/callback`;
+
+  // Log everything Facebook sent back — this is the primary diagnostic tool
+  req.log.info({
+    allQueryKeys: Object.keys(req.query),
+    hasCode: !!code,
+    codePrefix: code ? `${code.slice(0, 10)}…` : null,
+    hasState: !!stateRaw,
+    stateSample: stateRaw ? stateRaw.slice(0, 40) : null,
+    oauthError: oauthError ?? null,
+    oauthErrorReason: (req.query["error_reason"] as string) ?? null,
+    oauthErrorDescription: (req.query["error_description"] as string) ?? null,
+    redirectUriBuilt: redirectUri,
+    host: req.get("host"),
+    baseUrl,
+  }, "meta/auth/callback hit");
+
+  // Parse state early so every error branch can route to the right destination
+  let stateObj: { presetId?: unknown; mode?: string; nonce?: string; token?: string } = {};
+  let isOnboarding = false;
+  let onboardingPresetToken: string | undefined;
+  let onboardFront = "";
+
+  if (stateRaw) {
+    try {
+      stateObj = JSON.parse(Buffer.from(stateRaw, "base64url").toString()) as typeof stateObj;
+      isOnboarding = stateObj.mode === "onboarding";
+      onboardingPresetToken = stateObj.token;
+      if (isOnboarding && onboardingPresetToken) {
+        onboardFront = `${baseUrl}/onboard/${onboardingPresetToken}`;
+      }
+      req.log.info({ mode: stateObj.mode, hasPresetId: !!stateObj.presetId, hasToken: !!stateObj.token }, "state decoded");
+    } catch {
+      req.log.warn({ stateSample: stateRaw.slice(0, 40) }, "state decode failed — not valid base64url JSON");
+    }
+  }
+
+  // Route any error to the right page (onboarding or internal), preserving context
+  function routeError(msg: string) {
+    req.log.warn({ msg, isOnboarding, hasOnboardFront: !!onboardFront }, "routing OAuth error");
+    if (isOnboarding && onboardFront) {
+      res.redirect(`${onboardFront}?error=${encodeURIComponent(msg)}`);
+    } else {
+      res.redirect(`${front}?error=${encodeURIComponent(msg)}`);
+    }
+  }
 
   if (oauthError) {
-    res.redirect(`${front}?error=${encodeURIComponent(oauthError)}`);
-    return;
-  }
-  if (!code || !stateRaw) {
-    res.redirect(`${front}?error=missing_code`);
+    req.log.warn({ oauthError }, "Facebook returned OAuth error");
+    routeError(oauthError);
     return;
   }
 
-  let stateObj: { presetId?: unknown; mode?: string; nonce?: string; token?: string };
-  try {
-    stateObj = JSON.parse(Buffer.from(stateRaw, "base64url").toString()) as typeof stateObj;
-  } catch {
-    res.redirect(`${front}?error=invalid_state`);
+  if (!code) {
+    req.log.warn({ stateRaw: stateRaw?.slice(0, 40) }, "callback received with no code — possible redirect_uri mismatch or cancelled flow");
+    routeError("missing_code");
+    return;
+  }
+
+  if (!stateRaw) {
+    req.log.warn({ hasCode: !!code }, "callback received with no state");
+    routeError("missing_state");
     return;
   }
 
   const isBulk = stateObj.mode === "bulk";
-  const isOnboarding = stateObj.mode === "onboarding";
-  const onboardingPresetToken = stateObj.token;
   let presetId = 0;
 
   if (!isBulk && !isOnboarding) {
     presetId = Number(stateObj.presetId);
     if (!presetId || isNaN(presetId)) {
-      res.redirect(`${front}?error=invalid_state`);
+      routeError("invalid_state");
       return;
     }
   }
 
   if (isOnboarding && !onboardingPresetToken) {
-    res.redirect(`${front}?error=invalid_state`);
+    routeError("invalid_state");
     return;
   }
-
-  const onboardFront = isOnboarding ? `${baseUrl}/onboard/${onboardingPresetToken}` : "";
 
   try {
     const appId = getAppId();
     const appSecret = getAppSecret();
-    const redirectUri = `${baseUrl}/api/meta/auth/callback`;
+    req.log.info({ redirectUri, appId, isBulk, isOnboarding }, "exchanging code for token");
 
     const tokenRes = await fetch(
       `${GRAPH}/oauth/access_token` +
@@ -278,12 +321,11 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
     res.redirect(`${front}?select=1&key=${key}&presetId=${presetId}`);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
+    req.log.error({ err, msg, isBulk, isOnboarding }, "meta/auth/callback unhandled error");
     if (isBulk) {
       res.redirect(`${baseUrl}/presets/bulk-connect/review?error=${encodeURIComponent(msg)}`);
-    } else if (isOnboarding && onboardingPresetToken) {
-      res.redirect(`${onboardFront}?error=${encodeURIComponent(msg)}`);
     } else {
-      res.redirect(`${front}?error=${encodeURIComponent(msg)}&presetId=${presetId}`);
+      routeError(msg);
     }
   }
 });
