@@ -459,7 +459,7 @@ export default function PresetsPage() {
           <div className="flex items-center gap-2 shrink-0">
             <Button
               variant="outline"
-              onClick={() => { window.location.href = `${BASE}api/meta/auth/bulk-start`; }}
+              onClick={() => { window.open(`${BASE}api/meta/auth/bulk-start`, "_blank", "noopener"); }}
               className="border-purple-500/40 text-purple-300 hover:bg-purple-900/30 hover:text-purple-200 flex items-center gap-2"
             >
               <Zap className="w-4 h-4" /> Bulk Connect All Clients
