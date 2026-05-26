@@ -1,0 +1,165 @@
+What we're building
+A self-serve onboarding link per client. Vanessa generates a unique link for each clinic preset, sends it to the clinic owner, they click it, log into their OWN Facebook, tick their Page, approve, and the token saves to Vanessa's preset for them. Vanessa never needs to be a Facebook Page admin again.
+
+This solves two problems at once:
+
+Connecting the clinics where Vanessa isn't a Facebook Page admin (currently ~25)
+Onboarding all future new clients in 2 minutes flat
+
+Note: email notification is deferred. Build everything below WITHOUT the email piece. We'll add Resend integration in a separate brief in 2 days.
+
+
+User flow (clinic side)
+Clinic owner gets a link from Vanessa via email or text, e.g. https://app.example.com/onboard/abc123token
+Clicks it, lands on a branded Social Media Sister page (see Design spec below)
+Sees the welcome message with their clinic name
+Clicks "Connect Facebook & Instagram" button
+Facebook OAuth opens in a new tab
+They log into THEIR Facebook account, approve the app, tick THEIR Page(s)
+Continue
+Land back on the Social Media Sister page: "All done! Vanessa now has access to post for [Clinic Name]. You can close this tab."
+User flow (Vanessa side)
+On the Presets page, each preset has a new button: "Generate Onboarding Link"
+Click it, server creates a unique reusable token, saves to preset
+Link is shown with a Copy button: https://app.example.com/onboard/abc123token
+Vanessa copies and sends to the clinic
+Preset status flips to Connected, Page Access Token and Instagram Account ID populate automatically once the clinic completes
+(Email notification will be added in a later brief)
+
+
+Design spec for the public onboarding page
+Layout
+Full-page black background #000000
+Top left corner: Social Media Sister logo (file already in the Replit project, likely under client/public/ or attached_assets/. Agent should locate it). Display at approximately 240px wide, with at least 24px padding from the edges. Not tiny, properly visible.
+Centred main content (max-width 640px, generous vertical padding):
+Big headline: "SOCIAL MEDIA SISTER" in Bebas Neue, ALL CAPS, hot pink #E91976, font-size around 64px on desktop, scaled responsively on mobile
+Tagline immediately under: "Creating Compliant Content for Aesthetic Injectors" in bright white #FFFFFF, lighter weight, around 18px
+Big spacer
+Welcome heading: "Ey up [Clinic Name]," in white, font-size around 32px
+Body text: "wipe yer feet and come on in. Click below to connect your Facebook and Instagram so I can start posting compliant content that actually looks like you. Two minutes max." in white, around 16-18px line-height 1.6
+Big spacer
+Connect button: hot pink #E91976 background, white text, bold, full-width on mobile, around 280px wide on desktop, generous padding (16px vertical, 32px horizontal), label: "Connect Facebook & Instagram"
+Footer: white text, small (14px), centred:
+"Stuck? Email vanessaviking78@gmail.com"
+"© Social Media Sister"
+Fonts
+Bebas Neue for the SOCIAL MEDIA SISTER headline (Google Fonts, free)
+Inter or system sans-serif for all other white text (clean, modern, readable)
+
+Import Bebas Neue via Google Fonts in the HTML head:
+
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+Colours
+Background: #000000 (black)
+Primary text + accents: #E91976 (hot pink) - this is approximate, Agent should sample exact hex from the logo PNG if available
+Body text: #FFFFFF (white)
+Subtle dividers if needed: #222222
+States
+Default (clinic hasn't connected yet): shows welcome + Connect button
+Already connected: shows "[Clinic Name] is already connected. Vanessa can now post on your behalf. You can close this tab."
+OAuth in progress: spinner with "Connecting... please complete on the Facebook tab"
+Success: "All done! Vanessa now has access to post for [Clinic Name]. You can close this tab." with a celebratory tick or sparkle
+Error: friendly error message + "Try again" button
+
+
+Database changes
+Add columns to clientPresetsTable:
+
+onboardingToken text (nullable, unique index)
+onboardingConnectedAt timestamp (nullable, set when client completes OAuth)
+
+No expiry. Token is reusable forever. Regenerating creates a new token and invalidates the old one.
+
+
+Backend implementation
+New routes in artifacts/api-server/src/routes/onboarding.ts
+POST /api/presets/:id/generate-onboarding-token
+
+Generates a random token: crypto.randomBytes(24).toString("hex")
+Saves to preset's onboardingToken column
+Returns: { token, link: "${APP_BASE_URL}/onboard/${token}" }
+
+GET /api/onboarding/:token
+
+Looks up preset by token
+Returns: { clinicName, alreadyConnected: boolean, connectedPageName: string | null }
+Used by the public landing page to render clinic-specific welcome message and current state
+
+GET /api/onboarding/:token/start
+
+Looks up preset by token, builds OAuth URL with state encoding { mode: "onboarding", token }
+Returns the URL OR redirects directly (frontend opens in new tab)
+Scopes: instagram_basic,instagram_content_publish,pages_read_engagement,pages_show_list
+Extend meta-auth.ts callback
+After decoding state, if state.mode === "onboarding":
+
+Look up preset by token (from state)
+Exchange code for long-lived token, fetch pages (same as bulk flow)
+If only ONE Page granted, auto-save to that preset (set metaPageAccessToken, metaFacebookPageId, metaInstagramAccountId, onboardingConnectedAt = now)
+If multiple Pages granted, redirect to /onboard/:token/choose-page?key=... with a page selector specific to this onboarding flow
+Redirect them to /onboard/:token/success
+
+
+Frontend implementation
+New public route: /onboard/:token
+Routed OUTSIDE the authenticated app shell (no login required for clinics)
+Single-page React component
+Calls GET /api/onboarding/:token on mount, renders the appropriate state
+Connect button calls window.open(/api/onboarding/:token/start) in a new tab
+Polls /api/onboarding/:token every few seconds while OAuth tab is open, to detect completion
+On detected completion, transitions to success state
+New public route: /onboard/:token/choose-page
+Page selector for clinics with multiple Pages (rare for clinic owners, but covers the case).
+New section on each Preset card (existing Presets page)
+Add a collapsible "Client Onboarding" section to the preset edit form:
+
+If no token yet: button "Generate Onboarding Link"
+If token exists: shows the link in a read-only text field with a Copy button + a "Regenerate (invalidates old)" link
+Status pill: "Not connected yet" or "Connected on [date]"
+
+
+Brand config (future-proof for VVMG re-use)
+Put brand strings in a small config module so Vanessa can swap for VVMG later without code changes:
+
+// src/config/brand.ts
+
+export const BRAND = {
+
+  productName: "SOCIAL MEDIA SISTER",
+
+  tagline: "Creating Compliant Content for Aesthetic Injectors",
+
+  logoPath: "/logo.png", // adjust to wherever the file actually sits
+
+  primaryColor: "#E91976",
+
+  supportEmail: "vanessaviking78@gmail.com",
+
+  welcomeGreeting: "Ey up", // gets prepended to [Clinic Name]
+
+  welcomeBody: "wipe yer feet and come on in. Click below to connect your Facebook and Instagram so I can start posting compliant content that actually looks like you. Two minutes max.",
+
+};
+
+
+Security notes
+Anyone with the link can grant access for that specific preset. That's by design, it's how invite links work.
+Facebook itself is the gatekeeper, so the client has to log into THEIR account.
+Regenerating the token invalidates the old one immediately.
+Recommend Vanessa sends links via email or DM, not by sharing publicly.
+
+
+Acceptance criteria
+When done, Vanessa should be able to:
+
+Open any preset, click "Generate Onboarding Link", copy the URL
+Send that URL to a clinic owner
+Clinic owner opens the URL on their phone, sees the branded Social Media Sister page with their clinic name in the welcome message
+Click "Connect Facebook & Instagram", log into their own Facebook in a new tab, tick their Page, approve
+Page Access Token + Instagram Account ID save to Vanessa's preset
+Clinic sees "All done!" success message
+Vanessa's preset status flips to Connected without her having to do anything
+
+
+When done
+Restart api-server, ping Vanessa. She'll generate her first onboarding link and test it on one of the missing clinics.
