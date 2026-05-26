@@ -1621,7 +1621,7 @@ export default function SingleImage() {
                         <Select value={aiTone} onValueChange={setAiTone}>
                           <SelectTrigger className="h-12 text-base"><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            {["warm & professional", "fun & casual", "luxury & exclusive", "educational & authoritative", "friendly & approachable"].map((t) => (
+                            {["storytelling & affable", "warm & professional", "fun & casual", "luxury & exclusive", "educational & authoritative", "friendly & approachable"].map((t) => (
                               <SelectItem key={t} value={t}>{t}</SelectItem>
                             ))}
                           </SelectContent>

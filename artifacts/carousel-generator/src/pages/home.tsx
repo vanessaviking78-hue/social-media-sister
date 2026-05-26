@@ -2093,6 +2093,7 @@ export default function Home() {
                       <Select value={aiTone} onValueChange={setAiTone}>
                         <SelectTrigger className="h-12 text-base"><SelectValue /></SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="storytelling & affable">Storytelling & Affable</SelectItem>
                           <SelectItem value="warm & professional">Warm & Professional</SelectItem>
                           <SelectItem value="bold & edgy">Bold & Edgy</SelectItem>
                           <SelectItem value="luxury & aspirational">Luxury & Aspirational</SelectItem>
