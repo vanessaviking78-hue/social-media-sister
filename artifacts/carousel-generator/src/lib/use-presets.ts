@@ -80,11 +80,15 @@ export function usePresets() {
       const resp = await fetch(`${import.meta.env.BASE_URL}api/presets`);
       if (!resp.ok) throw new Error("Failed to fetch");
       const data = await resp.json();
-      const normalized: ClientPreset[] = (data.presets || []).map((p: ClientPreset & { textPosition: string }) => ({
-        ...p,
-        textPosition: normalizeTextPosition(p.textPosition),
-        defaultPostTime: p.defaultPostTime || "18:00",
-      }));
+      const normalized: ClientPreset[] = (data.presets || [])
+        .map((p: ClientPreset & { textPosition: string }) => ({
+          ...p,
+          textPosition: normalizeTextPosition(p.textPosition),
+          defaultPostTime: p.defaultPostTime || "18:00",
+        }))
+        .sort((a: ClientPreset, b: ClientPreset) =>
+          a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+        );
       setPresets(normalized);
     } catch (err) {
       console.error("Failed to fetch presets:", err);
