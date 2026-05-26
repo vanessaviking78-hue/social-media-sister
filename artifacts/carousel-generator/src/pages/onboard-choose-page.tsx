@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useLocation } from "wouter";
+import { useLocation } from "wouter";
 import { Loader2, CheckCircle2, Instagram } from "lucide-react";
 import { BRAND } from "@/config/brand";
 
@@ -11,9 +11,7 @@ interface PageOption {
   hasInstagram: boolean;
 }
 
-export default function OnboardChoosePage() {
-  const params = useParams<{ token: string }>();
-  const token = params.token || "";
+export default function OnboardChoosePage({ token }: { token: string }) {
   const [, navigate] = useLocation();
   const searchParams = new URLSearchParams(window.location.search);
   const key = searchParams.get("key") || "";

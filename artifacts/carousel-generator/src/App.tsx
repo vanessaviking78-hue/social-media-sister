@@ -68,10 +68,10 @@ function AppContent() {
     return <OnboardSuccess />;
   }
   if (isOnboardChoose && onboardChooseParams?.token) {
-    return <OnboardChoosePage />;
+    return <OnboardChoosePage token={onboardChooseParams.token} />;
   }
   if (isOnboard && onboardParams?.token) {
-    return <Onboard />;
+    return <Onboard token={onboardParams.token} />;
   }
 
   return (

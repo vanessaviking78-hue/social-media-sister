@@ -1,5 +1,4 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams } from "wouter";
 import { Loader2, CheckCircle2, Instagram, AlertCircle, Facebook } from "lucide-react";
 import { BRAND } from "@/config/brand";
 
@@ -7,9 +6,7 @@ const BASE = import.meta.env.BASE_URL || "/";
 
 type State = "loading" | "default" | "already-connected" | "connecting" | "success" | "error";
 
-export default function Onboard() {
-  const params = useParams<{ token: string }>();
-  const token = params.token || "";
+export default function Onboard({ token }: { token: string }) {
   const searchParams = new URLSearchParams(window.location.search);
   const urlError = searchParams.get("error");
 
