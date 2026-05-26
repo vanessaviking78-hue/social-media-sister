@@ -32,6 +32,7 @@ export const clientPresetsTable = pgTable("client_presets", {
   coverSubheading: text("cover_subheading").notNull().default(""),
   clientPortalToken: text("client_portal_token").unique(),
   defaultPostTime: text("default_post_time").notNull().default("18:00"),
+  onboardingConnectedAt: timestamp("onboarding_connected_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => [

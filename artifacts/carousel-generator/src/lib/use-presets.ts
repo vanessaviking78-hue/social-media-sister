@@ -48,6 +48,7 @@ export interface ClientPreset {
   coverSubheading: string;
   clientPortalToken: string | null;
   defaultPostTime: string;
+  onboardingConnectedAt: string | null;
 }
 
 export interface PresetStyleFields {

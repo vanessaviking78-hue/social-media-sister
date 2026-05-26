@@ -14,6 +14,7 @@ import videoOverlayRouter from "./video-overlay";
 import portalRouter from "./portal";
 import schedulerRouter from "./scheduler";
 import libraryRouter from "./library";
+import onboardingRouter from "./onboarding";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(videoOverlayRouter);
 router.use(portalRouter);
 router.use(schedulerRouter);
 router.use(libraryRouter);
+router.use(onboardingRouter);
 
 export default router;

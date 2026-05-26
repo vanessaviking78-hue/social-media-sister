@@ -9,21 +9,22 @@ const router: IRouter = Router();
 
 const GRAPH = "https://graph.facebook.com/v19.0";
 
-interface PageEntry {
+export interface PageEntry {
   id: string;
   name: string;
   accessToken: string;
   instagramAccountId: string | null;
 }
 
-interface PendingEntry {
+export interface PendingEntry {
   presetId?: number;
-  mode?: "bulk";
+  mode?: "bulk" | "onboarding";
+  presetToken?: string;
   pages: PageEntry[];
   expiresAt: number;
 }
 
-const pendingPageSelections = new Map<string, PendingEntry>();
+export const pendingPageSelections = new Map<string, PendingEntry>();
 
 function getAppId(): string {
   const id = process.env["META_APP_ID"];
@@ -122,7 +123,7 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
     return;
   }
 
-  let stateObj: { presetId?: unknown; mode?: string; nonce?: string };
+  let stateObj: { presetId?: unknown; mode?: string; nonce?: string; token?: string };
   try {
     stateObj = JSON.parse(Buffer.from(stateRaw, "base64url").toString()) as typeof stateObj;
   } catch {
@@ -131,15 +132,24 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
   }
 
   const isBulk = stateObj.mode === "bulk";
+  const isOnboarding = stateObj.mode === "onboarding";
+  const onboardingPresetToken = stateObj.token;
   let presetId = 0;
 
-  if (!isBulk) {
+  if (!isBulk && !isOnboarding) {
     presetId = Number(stateObj.presetId);
     if (!presetId || isNaN(presetId)) {
       res.redirect(`${front}?error=invalid_state`);
       return;
     }
   }
+
+  if (isOnboarding && !onboardingPresetToken) {
+    res.redirect(`${front}?error=invalid_state`);
+    return;
+  }
+
+  const onboardFront = isOnboarding ? `${baseUrl}/onboard/${onboardingPresetToken}` : "";
 
   try {
     const appId = getAppId();
@@ -181,6 +191,8 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
     if (pagesData.data.length === 0) {
       if (isBulk) {
         res.redirect(`${baseUrl}/presets/bulk-connect/review?error=no_pages`);
+      } else if (isOnboarding) {
+        res.redirect(`${onboardFront}?error=no_pages`);
       } else {
         res.redirect(`${front}?error=no_pages&presetId=${presetId}`);
       }
@@ -209,6 +221,40 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
       return;
     }
 
+    if (isOnboarding) {
+      const [preset] = await db
+        .select({ id: clientPresetsTable.id })
+        .from(clientPresetsTable)
+        .where(eq(clientPresetsTable.clientPortalToken, onboardingPresetToken!));
+      if (!preset) {
+        res.redirect(`${onboardFront}?error=invalid_token`);
+        return;
+      }
+      if (pages.length === 1) {
+        const page = pages[0]!;
+        await db
+          .update(clientPresetsTable)
+          .set({
+            metaPageAccessToken: page.accessToken,
+            metaFacebookPageId: page.id,
+            metaInstagramAccountId: page.instagramAccountId,
+            onboardingConnectedAt: new Date(),
+          })
+          .where(eq(clientPresetsTable.id, preset.id));
+        res.redirect(`${onboardFront}/success`);
+        return;
+      }
+      const key = randomBytes(16).toString("hex");
+      pendingPageSelections.set(key, {
+        mode: "onboarding",
+        presetToken: onboardingPresetToken!,
+        pages,
+        expiresAt: Date.now() + 10 * 60 * 1000,
+      });
+      res.redirect(`${onboardFront}/choose-page?key=${key}`);
+      return;
+    }
+
     if (pages.length === 1) {
       const page = pages[0]!;
       await db
@@ -234,6 +280,8 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
     const msg = err instanceof Error ? err.message : String(err);
     if (isBulk) {
       res.redirect(`${baseUrl}/presets/bulk-connect/review?error=${encodeURIComponent(msg)}`);
+    } else if (isOnboarding && onboardingPresetToken) {
+      res.redirect(`${onboardFront}?error=${encodeURIComponent(msg)}`);
     } else {
       res.redirect(`${front}?error=${encodeURIComponent(msg)}&presetId=${presetId}`);
     }

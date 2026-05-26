@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw, Facebook, Instagram, Unlink, ChevronDown, ChevronUp, Clock, BookOpen, Zap } from "lucide-react";
+import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw, Facebook, Instagram, Unlink, ChevronDown, ChevronUp, Clock, BookOpen, Zap, UserCheck, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -286,6 +286,108 @@ function MetaConnectSection({ editingId, editData, setEditData, onConnected }: M
           <TestMetaConnection presetId={editingId} />
         )}
       </div>
+    </div>
+  );
+}
+
+interface OnboardingLinkSectionProps {
+  editingId: number;
+  token: string | null;
+  connectedAt: string | null;
+  onGenerated: (token: string) => void;
+}
+
+function OnboardingLinkSection({ editingId, token, connectedAt, onGenerated }: OnboardingLinkSectionProps) {
+  const [generating, setGenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const onboardingUrl = token
+    ? `${window.location.origin}${BASE.replace(/\/$/, "")}/onboard/${token}`
+    : null;
+
+  const connectedDate = connectedAt
+    ? new Date(connectedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+    : null;
+
+  const generate = async () => {
+    setGenerating(true);
+    try {
+      const r = await fetch(`${BASE}api/presets/${editingId}/generate-onboarding-token`, { method: "POST" });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Failed");
+      onGenerated(d.token);
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to generate link");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const copy = async () => {
+    if (!onboardingUrl) return;
+    await navigator.clipboard.writeText(onboardingUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="border border-pink-500/20 rounded-xl p-5 bg-pink-950/10 space-y-4">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-semibold text-pink-300 flex items-center gap-2">
+          <UserCheck className="w-4 h-4" />Client Self-Serve Onboarding
+        </Label>
+        {connectedDate ? (
+          <span className="text-xs bg-green-900/40 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3" /> Connected {connectedDate}
+          </span>
+        ) : (
+          <span className="text-xs bg-gray-800 text-gray-500 border border-gray-700 px-2 py-0.5 rounded-full">
+            Not connected yet
+          </span>
+        )}
+      </div>
+
+      <p className="text-xs text-gray-400 leading-relaxed">
+        Send this link to your client. They complete the Facebook login themselves and their page is connected automatically.
+      </p>
+
+      {onboardingUrl ? (
+        <div className="space-y-2">
+          <div className="flex gap-1.5">
+            <input
+              readOnly
+              value={onboardingUrl}
+              className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-xs text-gray-300 font-mono overflow-hidden"
+              onFocus={(e) => e.target.select()}
+            />
+            <button
+              onClick={copy}
+              title="Copy link"
+              className="bg-pink-600 hover:bg-pink-500 text-white rounded-lg px-2.5 py-1.5 transition"
+            >
+              {copied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+          <button
+            onClick={generate}
+            disabled={generating}
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition disabled:opacity-50"
+          >
+            {generating ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+            Regenerate link (invalidates old one)
+          </button>
+        </div>
+      ) : (
+        <Button
+          type="button"
+          onClick={generate}
+          disabled={generating}
+          className="w-full bg-pink-600 hover:bg-pink-700 text-white font-medium text-sm h-9"
+        >
+          {generating ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Link2 className="w-4 h-4 mr-2" />}
+          {generating ? "Generating…" : "Generate Onboarding Link"}
+        </Button>
+      )}
     </div>
   );
 }
@@ -648,6 +750,14 @@ export default function PresetsPage() {
                         }
                       }}
                     />
+                    <OnboardingLinkSection
+                      editingId={editingId}
+                      token={editData.clientPortalToken ?? null}
+                      connectedAt={editData.onboardingConnectedAt ?? null}
+                      onGenerated={(newToken) => {
+                        setEditData((d) => ({ ...d, clientPortalToken: newToken, onboardingConnectedAt: null }));
+                      }}
+                    />
                     <div>
                       <Label className="text-xs text-gray-400">Default Post Time</Label>
                       <Input
@@ -698,6 +808,12 @@ export default function PresetsPage() {
                         {preset.ccWorkspaceId && <span className="text-blue-400">CC linked</span>}
                         {preset.metaInstagramAccountId && <span className="text-purple-400">Meta connected</span>}
                         {preset.logoUrl && <span className="text-green-400">Has logo</span>}
+                        {preset.onboardingConnectedAt && (
+                          <span className="flex items-center gap-1 text-pink-400"><UserCheck className="w-3 h-3" /> Client connected</span>
+                        )}
+                        {preset.clientPortalToken && !preset.onboardingConnectedAt && (
+                          <span className="flex items-center gap-1 text-amber-400"><Link2 className="w-3 h-3" /> Onboard link sent</span>
+                        )}
                       </div>
                       {preset.captionFootnote && (
                         <p className="text-xs text-gray-500 mt-1 italic">Footnote: {preset.captionFootnote}</p>

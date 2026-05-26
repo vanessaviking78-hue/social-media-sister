@@ -20,6 +20,9 @@ import VideoOverlay from "@/pages/video-overlay";
 import Scheduler from "@/pages/scheduler";
 import Library from "@/pages/library";
 import BulkConnectReview from "@/pages/bulk-connect-review";
+import Onboard from "@/pages/onboard";
+import OnboardChoosePage from "@/pages/onboard-choose-page";
+import OnboardSuccess from "@/pages/onboard-success";
 
 const queryClient = new QueryClient();
 
@@ -48,6 +51,9 @@ function AppContent() {
   const [isApprove, approveParams] = useRoute("/approve/:token");
   const [isPortal, portalParams] = useRoute("/portal/:token");
   const [isMetaOAuth] = useRoute("/oauth/meta/result");
+  const [isOnboardSuccess, onboardSuccessParams] = useRoute("/onboard/:token/success");
+  const [isOnboardChoose, onboardChooseParams] = useRoute("/onboard/:token/choose-page");
+  const [isOnboard, onboardParams] = useRoute("/onboard/:token");
 
   if (isMetaOAuth) {
     return <MetaOAuthResult />;
@@ -57,6 +63,15 @@ function AppContent() {
   }
   if (isApprove && approveParams?.token) {
     return <ApprovePublic token={approveParams.token} />;
+  }
+  if (isOnboardSuccess && onboardSuccessParams?.token) {
+    return <OnboardSuccess />;
+  }
+  if (isOnboardChoose && onboardChooseParams?.token) {
+    return <OnboardChoosePage />;
+  }
+  if (isOnboard && onboardParams?.token) {
+    return <Onboard />;
   }
 
   return (
