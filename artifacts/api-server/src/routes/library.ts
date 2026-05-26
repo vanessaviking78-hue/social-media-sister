@@ -220,7 +220,9 @@ router.post(
 
       const created = [];
       const warnings: string[] = [];
-      for (const row of rows) {
+      for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+        const row = rows[rowIdx];
+        const csvRowNum = rowIdx + 2;
         if (!row.media_filename) continue;
         const filenames = row.media_filename.split("|").map((f) => f.trim()).filter(Boolean);
         const uploadedUrls: string[] = [];
@@ -250,7 +252,8 @@ router.post(
           if (!(row.lead_in || "").trim()) missing.push("lead_in");
           if (!(row.hero_word || "").trim()) missing.push("hero_word");
           if (missing.length) {
-            warnings.push(`${row.media_filename}: hero style is missing required field(s): ${missing.join(", ")}`);
+            warnings.push(`Row ${csvRowNum} (${row.media_filename}): hero style missing ${missing.join(" and ")} — row skipped`);
+            continue;
           }
         }
 

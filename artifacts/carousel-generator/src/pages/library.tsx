@@ -242,7 +242,13 @@ export default function Library() {
         const r = await fetch(`${BASE}api/library/upload`, { method: "POST", body: fd });
         const d = await r.json();
         if (!r.ok) throw new Error(d.error || "Upload failed");
-        toast.success(`${d.count} posts added to the library`);
+        toast.success(`${d.count} post${d.count === 1 ? "" : "s"} added to the library`);
+        if (d.warnings?.length) {
+          toast.warning(
+            `${d.warnings.length} row${d.warnings.length === 1 ? "" : "s"} had issues and ${d.warnings.length === 1 ? "was" : "were"} skipped`,
+            { description: (d.warnings as string[]).join("\n"), duration: 10000 },
+          );
+        }
         await fetchItems(clientName);
       } catch (e: unknown) {
         toast.error((e as Error).message || "Upload failed");

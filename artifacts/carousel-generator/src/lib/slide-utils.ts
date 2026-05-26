@@ -642,7 +642,7 @@ export function drawHeroSlide(
   ctx.font = `700 ${heroSize}px ${heroWordFont}`;
   (ctx as any).letterSpacing = '0px';
   const sampleWord = displayHeroWord || 'X';
-  while (heroSize > 80 && ctx.measureText(sampleWord).width > maxW) {
+  while (heroSize > 120 && ctx.measureText(sampleWord).width > maxW) {
     heroSize -= 4;
     ctx.font = `700 ${heroSize}px ${heroWordFont}`;
   }
