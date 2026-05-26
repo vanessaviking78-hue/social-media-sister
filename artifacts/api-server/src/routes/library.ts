@@ -163,6 +163,23 @@ router.post(
   },
 );
 
+// PATCH /api/library/:id/thumbnail — update cached thumbnail URL after client-side compositing
+router.patch("/library/:id/thumbnail", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id || isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+    const { thumbnailUrl } = req.body as { thumbnailUrl?: string };
+    if (!thumbnailUrl?.trim()) { res.status(400).json({ error: "thumbnailUrl required" }); return; }
+    const [updated] = await db.update(contentLibraryTable).set({ thumbnailUrl: thumbnailUrl.trim() }).where(eq(contentLibraryTable.id, id)).returning({ id: contentLibraryTable.id, thumbnailUrl: contentLibraryTable.thumbnailUrl });
+    if (!updated) { res.status(404).json({ error: "Not found" }); return; }
+    res.json({ ok: true, thumbnailUrl: updated.thumbnailUrl });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Update failed";
+    req.log.error({ err }, msg);
+    res.status(500).json({ error: msg });
+  }
+});
+
 // POST /api/library/upload — CSV + zip bulk import
 router.post(
   "/library/upload",
@@ -202,6 +219,7 @@ router.post(
       req.log.info({ clientName, rowCount: rows.length, zipFiles: fileMap.size }, "Library upload started");
 
       const created = [];
+      const warnings: string[] = [];
       for (const row of rows) {
         if (!row.media_filename) continue;
         const filenames = row.media_filename.split("|").map((f) => f.trim()).filter(Boolean);
@@ -227,12 +245,21 @@ router.post(
         const textStyle = (row.text_style || "").toLowerCase().trim();
         const isValidHex = (c: string) => /^#[0-9a-fA-F]{3,8}$/.test((c || "").trim());
 
+        if (textStyle === "hero") {
+          const missing: string[] = [];
+          if (!(row.lead_in || "").trim()) missing.push("lead_in");
+          if (!(row.hero_word || "").trim()) missing.push("hero_word");
+          if (missing.length) {
+            warnings.push(`${row.media_filename}: hero style is missing required field(s): ${missing.join(", ")}`);
+          }
+        }
+
         const heroMeta = textStyle === "hero" ? {
           textStyle: "hero",
           heroLeadIn: (row.lead_in || "").trim() || null,
           heroWord: (row.hero_word || "").trim() || null,
-          heroWordColor: isValidHex(row.hero_color) ? row.hero_color.trim() : "#ffffff",
-          heroLeadInColor: isValidHex(row.leadin_color) ? row.leadin_color.trim() : "#E91976",
+          heroWordColor: isValidHex(row.hero_color) ? row.hero_color.trim() : null,
+          heroLeadInColor: isValidHex(row.leadin_color) ? row.leadin_color.trim() : null,
         } : null;
 
         const metadata: Record<string, unknown> = {};
@@ -252,8 +279,8 @@ router.post(
         created.push(item);
       }
 
-      req.log.info({ created: created.length }, "Library upload complete");
-      res.json({ items: created, count: created.length });
+      req.log.info({ created: created.length, warnings: warnings.length }, "Library upload complete");
+      res.json({ items: created, count: created.length, warnings });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Upload failed";
       req.log.error({ err }, msg);

@@ -282,7 +282,7 @@ export default function SingleImage() {
 
   useEffect(() => {
     if (currentStep !== 2) return;
-    const timer = setTimeout(renderDesignPreview, 150);
+    const timer = setTimeout(renderDesignPreview, 100);
     return () => clearTimeout(timer);
   }, [currentStep, renderDesignPreview]);
 

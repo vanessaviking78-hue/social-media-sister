@@ -59,14 +59,15 @@ function addDays(dateStr: string, n: number): string {
 function HeroThumbnail({ item }: { item: LibraryItem }) {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const meta = item.metadata as Record<string, unknown> | null;
-  const imgUrl = item.thumbnailUrl || item.mediaUrl || item.mediaUrls?.[0] || null;
+  const rawMediaUrl = item.mediaUrl || item.mediaUrls?.[0] || null;
+  const alreadyCached = !!(item.thumbnailUrl && item.thumbnailUrl !== rawMediaUrl);
 
   useEffect(() => {
-    if (!imgUrl || meta?.textStyle !== "hero") return;
+    if (!rawMediaUrl || meta?.textStyle !== "hero" || alreadyCached) return;
     let cancelled = false;
     const img = new Image();
     img.crossOrigin = "anonymous";
-    img.onload = () => {
+    img.onload = async () => {
       if (cancelled) return;
       const canvas = document.createElement("canvas");
       canvas.width = CANVAS_WIDTH;
@@ -78,19 +79,40 @@ function HeroThumbnail({ item }: { item: LibraryItem }) {
         (meta.heroWord as string) || "",
         (meta.heroLeadInColor as string) || "#E91976",
         (meta.heroWordColor as string) || "#ffffff",
-        "'Bebas Neue', sans-serif",
-        "bottom",
-        20,
-        true,
+        (meta.heroWordFont as string) || "'Bebas Neue', sans-serif",
+        ((meta.heroVerticalPosition as string) as "top" | "middle" | "bottom") || "bottom",
+        typeof meta.heroSpacing === "number" ? meta.heroSpacing : 20,
+        meta.heroUppercase !== false,
       );
-      if (!cancelled) setDataUrl(canvas.toDataURL("image/jpeg", 0.85));
+      const jpeg = canvas.toDataURL("image/jpeg", 0.85);
+      if (cancelled) return;
+      setDataUrl(jpeg);
+      try {
+        const up = await fetch(`${BASE}api/content/upload-image`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ images: [{ name: `hero-thumb-${item.id}.jpg`, base64: jpeg }] }),
+        });
+        if (up.ok && !cancelled) {
+          const upData = await up.json();
+          const url = upData.results?.[0]?.url as string | undefined;
+          if (url) {
+            await fetch(`${BASE}api/library/${item.id}/thumbnail`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ thumbnailUrl: url }),
+            });
+          }
+        }
+      } catch { /* non-fatal: thumbnail is still shown via dataUrl */ }
     };
-    img.src = imgUrl;
+    img.src = rawMediaUrl;
     return () => { cancelled = true; };
-  }, [imgUrl, meta]);
+  }, [rawMediaUrl, alreadyCached, item.id, meta]);
 
+  if (alreadyCached) return <img src={item.thumbnailUrl!} alt="" className="w-full h-full object-cover" />;
   if (dataUrl) return <img src={dataUrl} alt="" className="w-full h-full object-cover" />;
-  if (imgUrl) return <img src={imgUrl} alt="" className="w-full h-full object-cover" />;
+  if (rawMediaUrl) return <img src={rawMediaUrl} alt="" className="w-full h-full object-cover" />;
   return null;
 }
 
