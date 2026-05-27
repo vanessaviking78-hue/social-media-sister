@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import multer from "multer";
 import { db } from "@workspace/db";
-import { seamlessCarouselsTable, type SeamlessSlide } from "@workspace/db/schema";
+import { seamlessCarouselsTable, type SeamlessSlide, type CollageElement } from "@workspace/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { objectStorageClient } from "../lib/objectStorage";
 import { v4 as uuid } from "uuid";
@@ -49,61 +49,61 @@ function escXml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-function doodlePath(type: string, cx: number, cy: number, size: number): string {
+function doodlePath(type: string, cx: number, cy: number, size: number, color: string): string {
   if (type === "heart") {
-    return `<path d="M ${cx} ${cy + size * 0.3} C ${cx} ${cy} ${cx - size * 0.5} ${cy - size * 0.3} ${cx - size * 0.5} ${cy - size * 0.1} C ${cx - size * 0.5} ${cy - size * 0.5} ${cx} ${cy - size * 0.6} ${cx} ${cy - size * 0.3} C ${cx} ${cy - size * 0.6} ${cx + size * 0.5} ${cy - size * 0.5} ${cx + size * 0.5} ${cy - size * 0.1} C ${cx + size * 0.5} ${cy - size * 0.3} ${cx} ${cy} ${cx} ${cy + size * 0.3} Z" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>`;
+    return `<path d="M ${cx} ${cy + size * 0.3} C ${cx} ${cy} ${cx - size * 0.5} ${cy - size * 0.3} ${cx - size * 0.5} ${cy - size * 0.1} C ${cx - size * 0.5} ${cy - size * 0.5} ${cx} ${cy - size * 0.6} ${cx} ${cy - size * 0.3} C ${cx} ${cy - size * 0.6} ${cx + size * 0.5} ${cy - size * 0.5} ${cx + size * 0.5} ${cy - size * 0.1} C ${cx + size * 0.5} ${cy - size * 0.3} ${cx} ${cy} ${cx} ${cy + size * 0.3} Z" fill="${color}" stroke="${color}" stroke-width="1"/>`;
   }
   if (type === "star") {
-    return `<text x="${cx}" y="${cy}" font-size="${size}" text-anchor="middle" dominant-baseline="middle">✦</text>`;
+    return `<text x="${cx}" y="${cy}" font-size="${size}" text-anchor="middle" dominant-baseline="middle" fill="${color}">✦</text>`;
   }
   if (type === "arrow") {
-    return `<path d="M ${cx - size * 0.5} ${cy} Q ${cx} ${cy - size * 0.6} ${cx + size * 0.5} ${cy} M ${cx + size * 0.1} ${cy - size * 0.25} L ${cx + size * 0.5} ${cy} L ${cx + size * 0.1} ${cy + size * 0.25}" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+    return `<path d="M ${cx - size * 0.5} ${cy} Q ${cx} ${cy - size * 0.6} ${cx + size * 0.5} ${cy} M ${cx + size * 0.1} ${cy - size * 0.25} L ${cx + size * 0.5} ${cy} L ${cx + size * 0.1} ${cy + size * 0.25}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
   }
-  return `<text x="${cx}" y="${cy}" font-size="${size}" text-anchor="middle" dominant-baseline="middle">✦</text>`;
+  return "";
 }
 
 function getAnchor(position: string): { tx: number; ty: number; anchor: string } {
   const map: Record<string, { tx: number; ty: number; anchor: string }> = {
-    "top-left":    { tx: 60, ty: 80, anchor: "start" },
-    "top-right":   { tx: SLIDE_SIZE - 60, ty: 80, anchor: "end" },
+    "top-left":    { tx: 80, ty: 120, anchor: "start" },
+    "top-right":   { tx: SLIDE_SIZE - 80, ty: 120, anchor: "end" },
     "center":      { tx: SLIDE_SIZE / 2, ty: SLIDE_SIZE / 2, anchor: "middle" },
-    "bottom-left": { tx: 60, ty: SLIDE_SIZE - 80, anchor: "start" },
-    "bottom-right":{ tx: SLIDE_SIZE - 60, ty: SLIDE_SIZE - 80, anchor: "end" },
+    "bottom-left": { tx: 80, ty: SLIDE_SIZE - 120, anchor: "start" },
+    "bottom-right":{ tx: SLIDE_SIZE - 80, ty: SLIDE_SIZE - 120, anchor: "end" },
   };
-  return map[position] ?? { tx: SLIDE_SIZE / 2, ty: SLIDE_SIZE - 120, anchor: "middle" };
+  return map[position] ?? { tx: 80, ty: SLIDE_SIZE - 120, anchor: "start" };
 }
 
 function buildSlideTextSvg(slide: SeamlessSlide, scriptFont: string, textColor: string, watermark: string): string {
   if (!slide.hasText && !watermark) return `<svg xmlns="http://www.w3.org/2000/svg" width="${SLIDE_SIZE}" height="${SLIDE_SIZE}"/>`;
 
   const { tx, ty, anchor } = getAnchor(slide.position ?? "bottom-left");
-  const lineH = 54;
-  const doodleY = ty - (slide.leadIn ? lineH * 2.5 : lineH * 1.5) - 40;
+  const lineH = 60;
+  const doodleY = ty - (slide.leadIn ? lineH * 2.2 : lineH * 1.4) - 44;
 
   const doodle = slide.doodle && slide.doodle !== "none"
-    ? doodlePath(slide.doodle, tx, doodleY, 36).replace("currentColor", textColor)
+    ? doodlePath(slide.doodle, tx, doodleY, 40, textColor)
     : "";
 
-  const shadow = `<filter id="ts"><feDropShadow dx="1" dy="1" stdDeviation="3" flood-color="#000" flood-opacity="0.45"/></filter>`;
+  const shadow = `<filter id="ts" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="1" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.5"/></filter>`;
 
   const leadInSvg = slide.leadIn
-    ? `<text x="${tx}" y="${ty - (slide.title ? lineH * 1.1 : 0)}" font-family="'${scriptFont}', cursive" font-size="40" fill="${textColor}" text-anchor="${anchor}" filter="url(#ts)" opacity="0.9">${escXml(slide.leadIn)}</text>`
+    ? `<text x="${tx}" y="${ty - (slide.title ? lineH * 1.1 : 0)}" font-family="'${scriptFont}', cursive" font-size="44" fill="${textColor}" text-anchor="${anchor}" filter="url(#ts)" opacity="0.9">${escXml(slide.leadIn)}</text>`
     : "";
 
   const titleSvg = slide.title
-    ? `<text x="${tx}" y="${ty}" font-family="'${scriptFont}', 'Great Vibes', cursive" font-size="68" fill="${textColor}" text-anchor="${anchor}" filter="url(#ts)">${escXml(slide.title)}</text>`
+    ? `<text x="${tx}" y="${ty}" font-family="'${scriptFont}', cursive" font-size="76" fill="${textColor}" text-anchor="${anchor}" filter="url(#ts)">${escXml(slide.title)}</text>`
     : "";
 
   const tagSvg = slide.tagLine
-    ? `<text x="${tx}" y="${ty + lineH}" font-family="'${scriptFont}', cursive" font-size="36" fill="${textColor}" text-anchor="${anchor}" filter="url(#ts)" opacity="0.85">${escXml(slide.tagLine)}</text>`
+    ? `<text x="${tx}" y="${ty + lineH}" font-family="'${scriptFont}', cursive" font-size="40" fill="${textColor}" text-anchor="${anchor}" filter="url(#ts)" opacity="0.85">${escXml(slide.tagLine)}</text>`
     : "";
 
   const wmSvg = watermark
-    ? `<text x="${(SLIDE_SIZE / 2).toFixed(0)}" y="${(SLIDE_SIZE - 30).toFixed(0)}" font-family="'${scriptFont}', cursive" font-size="30" fill="${textColor}" text-anchor="middle" opacity="0.7" filter="url(#ts)">${escXml(watermark)}</text>`
+    ? `<text x="${(SLIDE_SIZE / 2).toFixed(0)}" y="${(SLIDE_SIZE - 36).toFixed(0)}" font-family="'${scriptFont}', cursive" font-size="32" fill="${textColor}" text-anchor="middle" opacity="0.7" filter="url(#ts)">${escXml(watermark)}</text>`
     : "";
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${SLIDE_SIZE}" height="${SLIDE_SIZE}">
-  <defs>${shadow}<style>@import url('https://fonts.googleapis.com/css2?family=${encodeURIComponent(scriptFont)}');</style></defs>
+  <defs>${shadow}<style>@import url('https://fonts.googleapis.com/css2?family=${encodeURIComponent(scriptFont.replace(/ /g, "+"))}:wght@400');</style></defs>
   ${doodle}
   ${leadInSvg}
   ${titleSvg}
@@ -112,18 +112,191 @@ function buildSlideTextSvg(slide: SeamlessSlide, scriptFont: string, textColor: 
 </svg>`;
 }
 
+// Auto-arrange algorithm — returns CollageElement[] for the "background_overlays" layout
+function autoArrangeBackgroundOverlays(
+  imageUrls: string[],
+  slideCount: number,
+): CollageElement[] {
+  const totalW = SLIDE_SIZE * slideCount;
+  const totalH = SLIDE_SIZE;
+  const elements: CollageElement[] = [];
+
+  if (!imageUrls.length) return elements;
+
+  // First image = background, stretched across full canvas at reduced opacity
+  elements.push({
+    imageUrl: imageUrls[0],
+    x: 0,
+    y: 0,
+    width: totalW,
+    height: totalH,
+    rotation: 0,
+    zIndex: 0,
+    hasBorder: false,
+    isBackground: true,
+  });
+
+  const overlays = imageUrls.slice(1);
+  if (!overlays.length) return elements;
+
+  // Target overlay tile size: ~32% of slide height with slight variation
+  const baseTile = Math.round(totalH * 0.32);
+
+  // Flowing slot positions — deliberately bridge slide seams for seamless effect
+  const slots: { cx: number; cy: number; scale: number; rot: number }[] = [];
+
+  if (slideCount === 3) {
+    slots.push(
+      { cx: SLIDE_SIZE * 0.28, cy: totalH * 0.30, scale: 0.95, rot: -3 },
+      { cx: SLIDE_SIZE * 0.82, cy: totalH * 0.65, scale: 1.05, rot: 4 },
+      { cx: SLIDE_SIZE * 1.0,  cy: totalH * 0.25, scale: 1.0,  rot: -2 }, // bridges seam 1-2
+      { cx: SLIDE_SIZE * 1.55, cy: totalH * 0.70, scale: 0.9,  rot: 5 },
+      { cx: SLIDE_SIZE * 2.0,  cy: totalH * 0.35, scale: 1.0,  rot: -4 }, // bridges seam 2-3
+      { cx: SLIDE_SIZE * 2.55, cy: totalH * 0.65, scale: 1.05, rot: 3 },
+      { cx: SLIDE_SIZE * 2.75, cy: totalH * 0.20, scale: 0.9,  rot: -5 },
+    );
+  } else if (slideCount === 4) {
+    slots.push(
+      { cx: SLIDE_SIZE * 0.25, cy: totalH * 0.28, scale: 0.95, rot: -3 },
+      { cx: SLIDE_SIZE * 0.78, cy: totalH * 0.67, scale: 1.0,  rot: 4 },
+      { cx: SLIDE_SIZE * 1.0,  cy: totalH * 0.22, scale: 1.05, rot: -2 },
+      { cx: SLIDE_SIZE * 1.5,  cy: totalH * 0.72, scale: 0.9,  rot: 5 },
+      { cx: SLIDE_SIZE * 2.0,  cy: totalH * 0.28, scale: 1.0,  rot: -4 },
+      { cx: SLIDE_SIZE * 2.55, cy: totalH * 0.68, scale: 1.05, rot: 3 },
+      { cx: SLIDE_SIZE * 3.0,  cy: totalH * 0.32, scale: 0.95, rot: -5 },
+      { cx: SLIDE_SIZE * 3.7,  cy: totalH * 0.65, scale: 1.0,  rot: 4 },
+    );
+  } else {
+    // 5 slides
+    slots.push(
+      { cx: SLIDE_SIZE * 0.25, cy: totalH * 0.30, scale: 0.95, rot: -3 },
+      { cx: SLIDE_SIZE * 0.85, cy: totalH * 0.65, scale: 1.0,  rot: 4 },
+      { cx: SLIDE_SIZE * 1.0,  cy: totalH * 0.22, scale: 1.05, rot: -2 },
+      { cx: SLIDE_SIZE * 1.6,  cy: totalH * 0.70, scale: 0.9,  rot: 5 },
+      { cx: SLIDE_SIZE * 2.0,  cy: totalH * 0.30, scale: 1.0,  rot: -4 },
+      { cx: SLIDE_SIZE * 2.55, cy: totalH * 0.68, scale: 1.05, rot: 3 },
+      { cx: SLIDE_SIZE * 3.0,  cy: totalH * 0.25, scale: 0.95, rot: -3 },
+      { cx: SLIDE_SIZE * 3.6,  cy: totalH * 0.70, scale: 1.0,  rot: 4 },
+      { cx: SLIDE_SIZE * 4.0,  cy: totalH * 0.30, scale: 1.05, rot: -2 },
+      { cx: SLIDE_SIZE * 4.7,  cy: totalH * 0.65, scale: 0.9,  rot: 5 },
+    );
+  }
+
+  overlays.forEach((url, i) => {
+    if (i >= slots.length) return;
+    const { cx, cy, scale, rot } = slots[i];
+    const tileW = Math.round(baseTile * scale * 1.1); // slightly wider for portrait photos
+    const tileH = Math.round(baseTile * scale);
+    elements.push({
+      imageUrl: url,
+      x: Math.round(cx - tileW / 2),
+      y: Math.round(cy - tileH / 2),
+      width: tileW,
+      height: tileH,
+      rotation: rot,
+      zIndex: i + 1,
+      hasBorder: true,
+      isBackground: false,
+    });
+  });
+
+  return elements;
+}
+
+function autoArrangeMosaic(imageUrls: string[], slideCount: number): CollageElement[] {
+  const totalW = SLIDE_SIZE * slideCount;
+  const totalH = SLIDE_SIZE;
+  const elements: CollageElement[] = [];
+  const count = Math.min(imageUrls.length, slideCount * 2);
+  const cols = slideCount * 2;
+  const rows = 2;
+  const cellW = Math.round(totalW / cols);
+  const cellH = Math.round(totalH / rows);
+
+  for (let i = 0; i < count; i++) {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    elements.push({
+      imageUrl: imageUrls[i],
+      x: col * cellW,
+      y: row * cellH,
+      width: cellW,
+      height: cellH,
+      rotation: 0,
+      zIndex: i,
+      hasBorder: false,
+      isBackground: false,
+    });
+  }
+  return elements;
+}
+
+function autoArrangeMagazine(imageUrls: string[], slideCount: number): CollageElement[] {
+  const totalW = SLIDE_SIZE * slideCount;
+  const totalH = SLIDE_SIZE;
+  const elements: CollageElement[] = [];
+  if (!imageUrls.length) return elements;
+
+  // Two dominant images taking ~40% canvas width each, bridging
+  const domW = Math.round(totalW * 0.42);
+  const domH = totalH;
+  elements.push({ imageUrl: imageUrls[0], x: 0, y: 0, width: domW, height: domH, rotation: 0, zIndex: 0, hasBorder: false, isBackground: false });
+  if (imageUrls[1]) {
+    elements.push({ imageUrl: imageUrls[1], x: Math.round(totalW * 0.55), y: 0, width: domW, height: domH, rotation: 0, zIndex: 1, hasBorder: false, isBackground: false });
+  }
+
+  // Accent shots
+  const accents = imageUrls.slice(2);
+  const accentSize = Math.round(totalH * 0.28);
+  accents.forEach((url, i) => {
+    elements.push({
+      imageUrl: url,
+      x: Math.round(totalW * 0.45) + (i % 2) * (accentSize + 20),
+      y: i < 2 ? 40 : Math.round(totalH * 0.55),
+      width: accentSize,
+      height: accentSize,
+      rotation: (i % 2 === 0 ? -2 : 3),
+      zIndex: i + 2,
+      hasBorder: true,
+      isBackground: false,
+    });
+  });
+
+  return elements;
+}
+
+function buildAutoArrange(layout: string, imageUrls: string[], slideCount: number): CollageElement[] {
+  if (layout === "mosaic") return autoArrangeMosaic(imageUrls, slideCount);
+  if (layout === "magazine") return autoArrangeMagazine(imageUrls, slideCount);
+  return autoArrangeBackgroundOverlays(imageUrls, slideCount);
+}
+
 // POST /api/seamless/upload
-router.post("/seamless/upload", upload.array("images", 5), async (req, res) => {
+router.post("/seamless/upload", upload.array("images", 10), async (req, res) => {
   try {
     const files = req.files as Express.Multer.File[];
-    if (!files?.length) return res.status(400).json({ error: "No images uploaded" });
+    if (!files?.length) { res.status(400).json({ error: "No images uploaded" }); return; }
 
     const urls: string[] = [];
     for (const f of files) {
-      const url = await uploadBuf(f.buffer, `source-${Date.now()}.${f.mimetype.includes("png") ? "png" : "jpg"}`, "seamless/source", f.mimetype);
+      const ext = f.mimetype.includes("png") ? "png" : "jpg";
+      const url = await uploadBuf(f.buffer, `source-${Date.now()}.${ext}`, "seamless/source", f.mimetype);
       urls.push(url);
     }
     res.json({ urls });
+  } catch (e: any) {
+    req.log.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/seamless/auto-arrange
+router.post("/seamless/auto-arrange", async (req, res) => {
+  try {
+    const { slideCount, layoutStyle, imageUrls } = req.body as { slideCount: number; layoutStyle: string; imageUrls: string[] };
+    if (!imageUrls?.length) { res.status(400).json({ error: "No imageUrls provided" }); return; }
+    const elements = buildAutoArrange(layoutStyle, imageUrls, slideCount);
+    res.json({ elements });
   } catch (e: any) {
     req.log.error(e);
     res.status(500).json({ error: e.message });
@@ -149,7 +322,7 @@ router.get("/seamless", async (req, res) => {
 router.get("/seamless/:id", async (req, res) => {
   try {
     const [row] = await db.select().from(seamlessCarouselsTable).where(eq(seamlessCarouselsTable.id, parseInt(req.params.id)));
-    if (!row) return res.status(404).json({ error: "Not found" });
+    if (!row) { res.status(404).json({ error: "Not found" }); return; }
     res.json(row);
   } catch (e: any) {
     req.log.error(e);
@@ -164,12 +337,14 @@ router.post("/seamless", async (req, res) => {
     const [inserted] = await db.insert(seamlessCarouselsTable).values({
       clientName: body.clientName ?? "",
       slideCount: body.slideCount ?? 3,
-      sourceImageUrl: body.sourceImageUrl ?? null,
-      sourceImageUrls: body.sourceImageUrls ?? null,
+      layoutStyle: body.layoutStyle ?? "background_overlays",
+      uploadedImageUrls: body.uploadedImageUrls ?? [],
+      collageElements: body.collageElements ?? [],
       slides: body.slides ?? [],
       scriptFont: body.scriptFont ?? "Allura",
       textColor: body.textColor ?? "#ffffff",
       watermark: body.watermark ?? "",
+      renderedSlideUrls: [],
     }).returning();
     res.json(inserted);
   } catch (e: any) {
@@ -186,15 +361,16 @@ router.put("/seamless/:id", async (req, res) => {
     const [updated] = await db.update(seamlessCarouselsTable).set({
       clientName: body.clientName,
       slideCount: body.slideCount,
-      sourceImageUrl: body.sourceImageUrl ?? null,
-      sourceImageUrls: body.sourceImageUrls ?? null,
+      layoutStyle: body.layoutStyle,
+      uploadedImageUrls: body.uploadedImageUrls ?? [],
+      collageElements: body.collageElements ?? [],
       slides: body.slides,
       scriptFont: body.scriptFont,
       textColor: body.textColor,
       watermark: body.watermark,
       updatedAt: new Date(),
     }).where(eq(seamlessCarouselsTable.id, id)).returning();
-    if (!updated) return res.status(404).json({ error: "Not found" });
+    if (!updated) { res.status(404).json({ error: "Not found" }); return; }
     res.json(updated);
   } catch (e: any) {
     req.log.error(e);
@@ -213,48 +389,119 @@ router.delete("/seamless/:id", async (req, res) => {
   }
 });
 
-// POST /api/seamless/:id/render — slice wide image into N slides + apply text overlays
+// Render collage element onto the wide canvas buffer using sharp
+async function renderCollage(elements: CollageElement[], slideCount: number): Promise<Buffer> {
+  const totalW = SLIDE_SIZE * slideCount;
+  const totalH = SLIDE_SIZE;
+
+  const BORDER = 12; // polaroid border px
+
+  // Sort by zIndex
+  const sorted = [...elements].sort((a, b) => a.zIndex - b.zIndex);
+
+  // Build composite layers
+  const composites: sharp.OverlayOptions[] = [];
+
+  for (const el of sorted) {
+    let buf = await fetchBuf(el.imageUrl);
+
+    if (el.isBackground) {
+      // Background: resize to full canvas, apply dark tint overlay for contrast
+      buf = await sharp(buf)
+        .resize(totalW, totalH, { fit: "cover", position: "centre" })
+        .modulate({ brightness: 0.75 })
+        .png()
+        .toBuffer();
+      composites.push({ input: buf, left: 0, top: 0, blend: "over" });
+    } else {
+      // Overlay image: resize to fit tile, optionally add polaroid border, rotate
+      const innerW = el.hasBorder ? el.width - BORDER * 2 : el.width;
+      const innerH = el.hasBorder ? el.height - BORDER * 2 : el.height;
+
+      let imgBuf = await sharp(buf)
+        .resize(innerW, innerH, { fit: "cover", position: "centre" })
+        .png()
+        .toBuffer();
+
+      if (el.hasBorder) {
+        // Add white border (polaroid style)
+        imgBuf = await sharp({
+          create: { width: el.width, height: el.height, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
+        })
+          .composite([{ input: imgBuf, left: BORDER, top: BORDER }])
+          .png()
+          .toBuffer();
+      }
+
+      // Apply rotation via SVG transform wrapper
+      if (el.rotation !== 0) {
+        const rad = (el.rotation * Math.PI) / 180;
+        const cos = Math.abs(Math.cos(rad));
+        const sin = Math.abs(Math.sin(rad));
+        const rotW = Math.ceil(el.width * cos + el.height * sin);
+        const rotH = Math.ceil(el.width * sin + el.height * cos);
+
+        const svgWrapper = `<svg xmlns="http://www.w3.org/2000/svg" width="${rotW}" height="${rotH}">
+          <image href="data:image/png;base64,${imgBuf.toString("base64")}" 
+            width="${el.width}" height="${el.height}"
+            transform="rotate(${el.rotation} ${rotW / 2} ${rotH / 2}) translate(${(rotW - el.width) / 2} ${(rotH - el.height) / 2})"/>
+        </svg>`;
+
+        imgBuf = await sharp(Buffer.from(svgWrapper)).png().toBuffer();
+
+        // Place so centre of rotated image is at the original el centre
+        const elCx = el.x + el.width / 2;
+        const elCy = el.y + el.height / 2;
+        const left = Math.round(elCx - rotW / 2);
+        const top = Math.round(elCy - rotH / 2);
+
+        // Clamp to canvas bounds
+        const cl = Math.max(0, Math.min(left, totalW - 1));
+        const ct = Math.max(0, Math.min(top, totalH - 1));
+        composites.push({ input: imgBuf, left: cl, top: ct, blend: "over" });
+      } else {
+        const left = Math.max(0, Math.min(el.x, totalW - 1));
+        const top = Math.max(0, Math.min(el.y, totalH - 1));
+        composites.push({ input: imgBuf, left, top, blend: "over" });
+      }
+    }
+  }
+
+  // Build base canvas
+  const base = await sharp({
+    create: { width: totalW, height: totalH, channels: 4, background: { r: 20, g: 20, b: 20, alpha: 1 } },
+  })
+    .composite(composites)
+    .png()
+    .toBuffer();
+
+  return base;
+}
+
+// POST /api/seamless/:id/render
 router.post("/seamless/:id/render", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const [carousel] = await db.select().from(seamlessCarouselsTable).where(eq(seamlessCarouselsTable.id, id));
-    if (!carousel) return res.status(404).json({ error: "Not found" });
+    if (!carousel) { res.status(404).json({ error: "Not found" }); return; }
 
     const n = carousel.slideCount;
     const slides = (carousel.slides ?? []) as SeamlessSlide[];
+    const elements = (carousel.collageElements ?? []) as CollageElement[];
     const scriptFont = carousel.scriptFont ?? "Allura";
     const textColor = carousel.textColor ?? "#ffffff";
     const watermark = carousel.watermark ?? "";
 
-    let wideBuffer: Buffer;
+    if (!elements.length) { res.status(400).json({ error: "No collage elements — run auto-arrange first" }); return; }
 
-    if (carousel.sourceImageUrl) {
-      wideBuffer = await fetchBuf(carousel.sourceImageUrl);
-    } else if (carousel.sourceImageUrls?.length) {
-      const bufs = await Promise.all((carousel.sourceImageUrls as string[]).map(fetchBuf));
-      const resized = await Promise.all(bufs.map((b) =>
-        sharp(b).resize(SLIDE_SIZE, SLIDE_SIZE, { fit: "cover", position: "centre" }).png().toBuffer()
-      ));
-      wideBuffer = await sharp({
-        create: { width: SLIDE_SIZE * n, height: SLIDE_SIZE, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } },
-      }).composite(resized.map((r, i) => ({ input: r, left: i * SLIDE_SIZE, top: 0 }))).png().toBuffer();
-    } else {
-      return res.status(400).json({ error: "No source image" });
-    }
+    // Render the full collage canvas
+    const wideBuffer = await renderCollage(elements, n);
 
-    const meta = await sharp(wideBuffer).metadata();
-    const imgW = meta.width ?? n * SLIDE_SIZE;
-    const imgH = meta.height ?? SLIDE_SIZE;
-
-    const normalized = await sharp(wideBuffer)
-      .resize(n * SLIDE_SIZE, SLIDE_SIZE, { fit: "fill" })
-      .png()
-      .toBuffer();
-
+    // Slice into N 1080×1080 slides and apply text overlays
     const slideUrls: string[] = [];
     for (let i = 0; i < n; i++) {
       const slide = slides[i] ?? { hasText: false, title: "", leadIn: "", tagLine: "", doodle: "none", position: "bottom-left" };
-      const cropped = await sharp(normalized)
+      const cropped = await sharp(wideBuffer)
         .extract({ left: i * SLIDE_SIZE, top: 0, width: SLIDE_SIZE, height: SLIDE_SIZE })
         .png()
         .toBuffer();
@@ -269,7 +516,9 @@ router.post("/seamless/:id/render", async (req, res) => {
       slideUrls.push(url);
     }
 
-    await db.update(seamlessCarouselsTable).set({ updatedAt: new Date() }).where(eq(seamlessCarouselsTable.id, id));
+    await db.update(seamlessCarouselsTable)
+      .set({ renderedSlideUrls: slideUrls, updatedAt: new Date() })
+      .where(eq(seamlessCarouselsTable.id, id));
 
     res.json({ slideUrls });
   } catch (e: any) {

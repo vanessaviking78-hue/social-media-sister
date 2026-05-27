@@ -5,7 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Upload, ImagePlus, BookOpen, Film, Palette, MessageSquareText, CalendarDays, BarChart3, Loader2, Download, Grid, User, Scissors } from "lucide-react";
+import {
+  Upload, ImagePlus, BookOpen, Film, Palette, MessageSquareText,
+  CalendarDays, BarChart3, Loader2, Download, Grid, User,
+  Wand2, X, ZoomIn,
+} from "lucide-react";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 
 const SCRIPT_FONTS = [
   { label: "Allura", value: "Allura" },
@@ -16,8 +22,8 @@ const SCRIPT_FONTS = [
 
 const DOODLES = [
   { label: "None", value: "none" },
-  { label: "Arrow", value: "arrow" },
   { label: "Heart", value: "heart" },
+  { label: "Arrow", value: "arrow" },
   { label: "Sparkle", value: "star" },
 ];
 
@@ -29,7 +35,26 @@ const POSITIONS = [
   { label: "Bottom right", value: "bottom-right" },
 ];
 
-type UploadMode = "single" | "multiple";
+const LAYOUTS = [
+  {
+    value: "background_overlays",
+    label: "Background + Overlays",
+    desc: "One wide background image with scattered polaroid overlays, some bridging slide seams",
+    emoji: "🖼",
+  },
+  {
+    value: "mosaic",
+    label: "Mosaic Flow",
+    desc: "All images in a flowing grid — great for product carousels or treatment overviews",
+    emoji: "⬛",
+  },
+  {
+    value: "magazine",
+    label: "Magazine Spread",
+    desc: "Two dominant images with accent shots — the most editorial look",
+    emoji: "📰",
+  },
+];
 
 type SlideConfig = {
   hasText: boolean;
@@ -43,7 +68,7 @@ type SlideConfig = {
 function defaultSlide(i: number): SlideConfig {
   return {
     hasText: i === 0,
-    title: i === 0 ? "Slide title" : "",
+    title: i === 0 ? "" : "",
     leadIn: "",
     tagLine: "",
     doodle: "none",
@@ -51,25 +76,41 @@ function defaultSlide(i: number): SlideConfig {
   };
 }
 
-const SLIDE_SIZE = 1080;
+type CollageElement = {
+  imageUrl: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  zIndex: number;
+  hasBorder: boolean;
+  isBackground: boolean;
+};
+
+type Step = "upload" | "layout" | "text" | "result";
 
 export default function SeamlessCarouselPage() {
+  const [step, setStep] = useState<Step>("upload");
   const [slideCount, setSlideCount] = useState(3);
-  const [uploadMode, setUploadMode] = useState<UploadMode>("single");
-  const [sourceFile, setSourceFile] = useState<File | null>(null);
-  const [sourceUrl, setSourceUrl] = useState<string>("");
-  const [multiFiles, setMultiFiles] = useState<File[]>([]);
-  const [multiUrls, setMultiUrls] = useState<string[]>([]);
+  const [layout, setLayout] = useState("background_overlays");
+  const [files, setFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
+  const [collageElements, setCollageElements] = useState<CollageElement[]>([]);
   const [slides, setSlides] = useState<SlideConfig[]>([defaultSlide(0), defaultSlide(1), defaultSlide(2)]);
   const [scriptFont, setScriptFont] = useState("Allura");
   const [textColor, setTextColor] = useState("#ffffff");
   const [watermark, setWatermark] = useState("");
-
-  const [generating, setGenerating] = useState(false);
+  const [carouselId, setCarouselId] = useState<number | null>(null);
   const [renderedUrls, setRenderedUrls] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [arranging, setArranging] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
 
-  const singleInputRef = useRef<HTMLInputElement>(null);
-  const multiInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
 
   const handleSlideCountChange = (n: number) => {
     setSlideCount(n);
@@ -78,96 +119,196 @@ export default function SeamlessCarouselPage() {
       while (next.length < n) next.push(defaultSlide(next.length));
       return next.slice(0, n);
     });
+    setCollageElements([]);
     setRenderedUrls([]);
   };
 
-  const handleSingleFile = (file: File) => {
-    setSourceFile(file);
-    setSourceUrl(URL.createObjectURL(file));
+  const addFiles = (incoming: File[]) => {
+    const imgs = incoming.filter((f) => f.type.startsWith("image/"));
+    const combined = [...files, ...imgs].slice(0, 10);
+    setFiles(combined);
+    setPreviewUrls(combined.map((f) => URL.createObjectURL(f)));
+    setUploadedUrls([]);
+    setCollageElements([]);
     setRenderedUrls([]);
   };
 
-  const handleMultiFiles = (files: FileList) => {
-    const arr = Array.from(files).slice(0, slideCount);
-    setMultiFiles(arr);
-    setMultiUrls(arr.map((f) => URL.createObjectURL(f)));
+  const removeFile = (i: number) => {
+    const next = files.filter((_, idx) => idx !== i);
+    setFiles(next);
+    setPreviewUrls(next.map((f) => URL.createObjectURL(f)));
+    setUploadedUrls([]);
+    setCollageElements([]);
     setRenderedUrls([]);
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    const files = e.dataTransfer.files;
-    if (!files.length) return;
-    if (uploadMode === "single") {
-      if (files[0].type.startsWith("image/")) handleSingleFile(files[0]);
-    } else {
-      const imgs = Array.from(files).filter((f) => f.type.startsWith("image/"));
-      if (imgs.length) handleMultiFiles({ ...imgs, length: imgs.length, item: (i: number) => imgs[i] } as unknown as FileList);
-    }
-  }, [uploadMode]);
+    const dropped = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
+    if (dropped.length) addFiles(dropped);
+  }, [files]);
 
   const setSlideField = (i: number, field: keyof SlideConfig, val: string | boolean) => {
     setSlides((prev) => prev.map((s, idx) => idx === i ? { ...s, [field]: val } : s));
   };
 
-  const handleGenerate = async () => {
-    const hasSource = uploadMode === "single" ? !!sourceFile : multiFiles.length > 0;
-    if (!hasSource) { toast.error("Please upload an image first"); return; }
-
-    setGenerating(true);
+  // Step 1 → Step 2: upload images, run auto-arrange
+  const handleUploadAndArrange = async () => {
+    if (files.length < 2) { toast.error("Upload at least 2 images (one background + overlays)"); return; }
+    setUploading(true);
+    const toastId = toast.loading("Uploading images…");
     try {
       const formData = new FormData();
-      if (uploadMode === "single" && sourceFile) {
-        formData.append("images", sourceFile, sourceFile.name);
-      } else {
-        multiFiles.forEach((f) => formData.append("images", f, f.name));
-      }
-
+      files.forEach((f) => formData.append("images", f, f.name));
       const uploadResp = await fetch(`${import.meta.env.BASE_URL}api/seamless/upload`, {
         method: "POST",
         body: formData,
       });
       if (!uploadResp.ok) throw new Error("Upload failed");
       const { urls } = await uploadResp.json() as { urls: string[] };
+      setUploadedUrls(urls);
+      toast.loading("Arranging collage…", { id: toastId });
 
-      const createBody = {
+      const arrResp = await fetch(`${import.meta.env.BASE_URL}api/seamless/auto-arrange`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slideCount, layoutStyle: layout, imageUrls: urls }),
+      });
+      if (!arrResp.ok) throw new Error("Auto-arrange failed");
+      const { elements } = await arrResp.json() as { elements: CollageElement[] };
+      setCollageElements(elements);
+      toast.success("Images arranged — check the preview", { id: toastId });
+      setStep("layout");
+    } catch (e: any) {
+      toast.error(e.message ?? "Something went wrong", { id: toastId });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Step 2 → Step 3: change layout + re-arrange if needed
+  const handleReArrange = async () => {
+    if (!uploadedUrls.length) return;
+    setArranging(true);
+    const id = toast.loading("Re-arranging…");
+    try {
+      const arrResp = await fetch(`${import.meta.env.BASE_URL}api/seamless/auto-arrange`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slideCount, layoutStyle: layout, imageUrls: uploadedUrls }),
+      });
+      if (!arrResp.ok) throw new Error("Auto-arrange failed");
+      const { elements } = await arrResp.json() as { elements: CollageElement[] };
+      setCollageElements(elements);
+      toast.success("Layout updated", { id });
+    } catch (e: any) {
+      toast.error(e.message ?? "Something went wrong", { id });
+    } finally {
+      setArranging(false);
+    }
+  };
+
+  // Final render
+  const handleGenerate = async () => {
+    if (!collageElements.length) { toast.error("Run auto-arrange first"); return; }
+    setGenerating(true);
+    const toastId = toast.loading("Saving & rendering slides…");
+    try {
+      // Upsert the carousel record
+      const saveBody = {
         slideCount,
-        sourceImageUrl: uploadMode === "single" ? urls[0] : null,
-        sourceImageUrls: uploadMode === "multiple" ? urls : null,
+        layoutStyle: layout,
+        uploadedImageUrls: uploadedUrls,
+        collageElements,
         slides,
         scriptFont,
         textColor,
         watermark,
       };
 
-      const createResp = await fetch(`${import.meta.env.BASE_URL}api/seamless`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(createBody),
-      });
-      if (!createResp.ok) throw new Error("Save failed");
-      const created = await createResp.json() as { id: number };
+      let id = carouselId;
+      if (id) {
+        const putResp = await fetch(`${import.meta.env.BASE_URL}api/seamless/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(saveBody),
+        });
+        if (!putResp.ok) throw new Error("Update failed");
+      } else {
+        const postResp = await fetch(`${import.meta.env.BASE_URL}api/seamless`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(saveBody),
+        });
+        if (!postResp.ok) throw new Error("Create failed");
+        const created = await postResp.json() as { id: number };
+        id = created.id;
+        setCarouselId(id);
+      }
 
-      const renderResp = await fetch(`${import.meta.env.BASE_URL}api/seamless/${created.id}/render`, {
+      toast.loading("Rendering slides — this takes a moment…", { id: toastId });
+      const renderResp = await fetch(`${import.meta.env.BASE_URL}api/seamless/${id}/render`, {
         method: "POST",
       });
       if (!renderResp.ok) throw new Error("Render failed");
       const { slideUrls } = await renderResp.json() as { slideUrls: string[] };
       setRenderedUrls(slideUrls);
-      toast.success(`${slideUrls.length} slides rendered`);
+      setStep("result");
+      toast.success(`${slideUrls.length} slides ready`, { id: toastId });
     } catch (e: any) {
-      toast.error(e.message ?? "Something went wrong");
+      toast.error(e.message ?? "Something went wrong", { id: toastId });
     } finally {
       setGenerating(false);
     }
   };
 
-  const previewSliceW = Math.floor(320 / slideCount);
-  const previewH = previewSliceW;
-  const totalPreviewW = previewSliceW * slideCount;
+  const downloadZip = async () => {
+    const id = toast.loading("Building ZIP…");
+    try {
+      const zip = new JSZip();
+      for (let i = 0; i < renderedUrls.length; i++) {
+        const res = await fetch(renderedUrls[i]);
+        const blob = await res.blob();
+        zip.file(`slide-${i + 1}.png`, blob);
+      }
+      const content = await zip.generateAsync({ type: "blob" });
+      saveAs(content, "seamless-carousel.zip");
+      toast.success("Download started", { id });
+    } catch {
+      toast.error("Download failed", { id });
+    }
+  };
+
+  // Collage preview (CSS-based, scaled to fit the right panel)
+  const PREVIEW_W = 320;
+  const TOTAL_CANVAS_W = 1080 * slideCount;
+  const TOTAL_CANVAS_H = 1080;
+  const scale = PREVIEW_W / TOTAL_CANVAS_W;
+  const PREVIEW_H = Math.round(TOTAL_CANVAS_H * scale);
 
   return (
     <div className="min-h-[100dvh] w-full pb-32">
+      {/* Lightbox */}
+      {lightboxIdx !== null && renderedUrls[lightboxIdx] && (
+        <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" onClick={() => setLightboxIdx(null)}>
+          <button className="absolute top-4 right-4 text-white/60 hover:text-white" onClick={() => setLightboxIdx(null)}><X className="w-6 h-6" /></button>
+          <div className="flex items-center gap-2 px-4">
+            {lightboxIdx > 0 && (
+              <button onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx ?? 1) - 1); }}
+                className="text-white/60 hover:text-white text-2xl px-3">‹</button>
+            )}
+            <img src={renderedUrls[lightboxIdx]} alt={`Slide ${lightboxIdx + 1}`}
+              className="max-h-[85vh] max-w-[80vw] rounded-xl shadow-2xl object-contain"
+              onClick={(e) => e.stopPropagation()} />
+            {lightboxIdx < renderedUrls.length - 1 && (
+              <button onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx ?? 0) + 1); }}
+                className="text-white/60 hover:text-white text-2xl px-3">›</button>
+            )}
+          </div>
+          <p className="absolute bottom-6 text-white/50 text-sm">{lightboxIdx + 1} / {renderedUrls.length} — click outside to close</p>
+        </div>
+      )}
+
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-4 px-6 md:px-10 flex items-center justify-between">
         <div className="flex items-center gap-3 flex-shrink-0">
           <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
@@ -192,237 +333,357 @@ export default function SeamlessCarouselPage() {
           <h1 className="font-sans font-bold text-4xl tracking-tight mb-2 flex items-center gap-3">
             <Grid className="w-9 h-9 text-pink-400" /> Seamless Carousel
           </h1>
-          <p className="text-lg text-muted-foreground">Slice one wide image into perfectly aligned carousel slides that connect edge to edge.</p>
+          <p className="text-lg text-muted-foreground">Upload 5-10 photos and the system arranges them across slides as a continuous collage — images bridge the seams so the scroll feels editorial and intentional.</p>
+        </div>
+
+        {/* Step indicator */}
+        <div className="flex items-center gap-2 mb-8">
+          {(["upload", "layout", "text", "result"] as Step[]).map((s, i) => {
+            const labels = ["1. Upload", "2. Layout", "3. Text", "4. Result"];
+            const active = step === s;
+            const done = (["upload", "layout", "text", "result"] as Step[]).indexOf(step) > i;
+            return (
+              <React.Fragment key={s}>
+                <div className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${active ? "bg-pink-500 text-white" : done ? "bg-pink-500/20 text-pink-400" : "bg-muted/40 text-muted-foreground"}`}>
+                  {labels[i]}
+                </div>
+                {i < 3 && <div className="flex-1 h-px bg-border/30" />}
+              </React.Fragment>
+            );
+          })}
         </div>
 
         <div className="flex gap-8 items-start">
           {/* Controls */}
           <div className="flex-1 min-w-0 space-y-6">
 
-            {/* Slide count + mode */}
-            <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-5">
-              <div className="space-y-2">
-                <Label className="text-base font-semibold">Number of slides</Label>
-                <div className="grid grid-cols-3 gap-3">
-                  {[3, 4, 5].map((n) => (
-                    <button key={n} onClick={() => handleSlideCountChange(n)}
-                      className={`py-3 rounded-xl text-sm font-semibold border transition-all ${slideCount === n ? "bg-primary text-primary-foreground border-primary" : "bg-accent/40 text-muted-foreground border-border/30"}`}
-                    >{n} slides</button>
-                  ))}
+            {/* ── STEP 1: Upload ── */}
+            {step === "upload" && (
+              <>
+                {/* Slide count */}
+                <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
+                  <Label className="text-base font-semibold">Number of slides</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[3, 4, 5].map((n) => (
+                      <button key={n} onClick={() => handleSlideCountChange(n)}
+                        className={`py-4 rounded-xl text-sm font-semibold border transition-all ${slideCount === n ? "bg-primary text-primary-foreground border-primary" : "bg-accent/40 text-muted-foreground border-border/30 hover:border-pink-500/40"}`}>
+                        {n} slides
+                        <span className="block text-xs font-normal opacity-70 mt-0.5">{n * 1080}×1080px total</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Upload mode</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  {(["single", "multiple"] as const).map((m) => (
-                    <button key={m} onClick={() => { setUploadMode(m); setSourceFile(null); setSourceUrl(""); setMultiFiles([]); setMultiUrls([]); setRenderedUrls([]); }}
-                      className={`py-3 rounded-xl text-sm font-semibold border transition-all ${uploadMode === m ? "bg-primary text-primary-foreground border-primary" : "bg-accent/40 text-muted-foreground border-border/30"}`}
-                    >{m === "single" ? `One wide image (${slideCount}:1 ratio)` : `${slideCount} separate images`}</button>
-                  ))}
-                </div>
-              </div>
-            </div>
 
-            {/* Image upload */}
-            <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
-              <Label className="text-base font-semibold">
-                {uploadMode === "single" ? "Upload wide image" : `Upload ${slideCount} images`}
-              </Label>
-              {uploadMode === "single" ? (
-                <div
-                  onDrop={handleDrop}
-                  onDragOver={(e) => e.preventDefault()}
-                  onClick={() => singleInputRef.current?.click()}
-                  className="border-2 border-dashed border-pink-500/30 rounded-xl p-6 text-center cursor-pointer hover:border-pink-500/60 transition-colors"
-                >
-                  {sourceUrl ? (
-                    <div className="space-y-2">
-                      <img src={sourceUrl} alt="Source" className="w-full h-32 object-cover rounded-lg" />
-                      <p className="text-xs text-muted-foreground">Click to change — ideal ratio {slideCount}:1</p>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2">
-                      <Upload className="w-7 h-7 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">Drag & drop or click to upload</p>
-                      <p className="text-xs text-pink-400/70">Ideal: {slideCount * 1080}×1080px ({slideCount}:1 ratio)</p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div
-                  onDrop={handleDrop}
-                  onDragOver={(e) => e.preventDefault()}
-                  onClick={() => multiInputRef.current?.click()}
-                  className="border-2 border-dashed border-pink-500/30 rounded-xl p-6 text-center cursor-pointer hover:border-pink-500/60 transition-colors"
-                >
-                  {multiUrls.length > 0 ? (
-                    <div className="flex gap-2 justify-center">
-                      {multiUrls.map((url, i) => (
-                        <img key={i} src={url} alt={`Slide ${i + 1}`} className="h-20 w-20 object-cover rounded-lg" />
+                {/* Image upload */}
+                <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">Upload photos</Label>
+                    <span className={`text-sm ${files.length < 2 ? "text-muted-foreground" : "text-pink-400 font-semibold"}`}>
+                      {files.length} / 10 selected
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    For "Background + Overlays": the <strong>first image</strong> becomes the background — make it your widest or most atmospheric shot. The rest become polaroid overlays.
+                  </p>
+
+                  <div
+                    ref={dropRef}
+                    onDrop={handleDrop}
+                    onDragOver={(e) => e.preventDefault()}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-pink-500/30 rounded-xl p-8 text-center cursor-pointer hover:border-pink-500/60 transition-colors"
+                  >
+                    <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">Drag & drop or click to browse</p>
+                    <p className="text-xs text-pink-400/70 mt-1">Add up to 10 photos — portrait or landscape both work</p>
+                  </div>
+                  <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
+                    onChange={(e) => { if (e.target.files) addFiles(Array.from(e.target.files)); }} />
+
+                  {files.length > 0 && (
+                    <div className="grid grid-cols-5 gap-2">
+                      {files.map((f, i) => (
+                        <div key={i} className="relative group">
+                          <img src={previewUrls[i]} alt="" className="w-full aspect-square object-cover rounded-lg" />
+                          {i === 0 && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs text-center py-0.5 rounded-b-lg">BG</div>
+                          )}
+                          <button onClick={(e) => { e.stopPropagation(); removeFile(i); }}
+                            className="absolute top-1 right-1 w-5 h-5 bg-black/70 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
                       ))}
                     </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2">
-                      <Upload className="w-7 h-7 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">Upload {slideCount} images — they'll be stitched together</p>
-                    </div>
                   )}
                 </div>
-              )}
-              <input ref={singleInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSingleFile(f); }} />
-              <input ref={multiInputRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => { if (e.target.files) handleMultiFiles(e.target.files); }} />
-            </div>
 
-            {/* Per-slide text overlays */}
-            <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-5">
-              <Label className="text-base font-semibold">Text overlays</Label>
-              {slides.map((slide, i) => (
-                <div key={i} className="border border-border/20 rounded-xl p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-muted-foreground">Slide {i + 1}</p>
-                    <button onClick={() => setSlideField(i, "hasText", !slide.hasText)}
-                      className={`relative w-10 h-5 rounded-full transition-colors ${slide.hasText ? "bg-pink-500" : "bg-gray-600"}`}>
-                      <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${slide.hasText ? "translate-x-5" : ""}`} />
-                    </button>
-                  </div>
-                  {slide.hasText && (
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Lead-in</Label>
-                          <Input value={slide.leadIn} onChange={(e) => setSlideField(i, "leadIn", e.target.value)} placeholder="My favourite" className="h-9 text-sm mt-1" />
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Title</Label>
-                          <Input value={slide.title} onChange={(e) => setSlideField(i, "title", e.target.value)} placeholder="Beachwear" className="h-9 text-sm mt-1" />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Tagline</Label>
-                          <Input value={slide.tagLine} onChange={(e) => setSlideField(i, "tagLine", e.target.value)} placeholder="inspiration" className="h-9 text-sm mt-1" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <Label className="text-xs text-muted-foreground">Doodle</Label>
-                            <Select value={slide.doodle} onValueChange={(v) => setSlideField(i, "doodle", v)}>
-                              <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
-                              <SelectContent>{DOODLES.map((d) => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}</SelectContent>
-                            </Select>
-                          </div>
-                          <div>
-                            <Label className="text-xs text-muted-foreground">Position</Label>
-                            <Select value={slide.position} onValueChange={(v) => setSlideField(i, "position", v)}>
-                              <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
-                              <SelectContent>{POSITIONS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Global style */}
-            <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
-              <Label className="text-base font-semibold">Global style</Label>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <Label className="text-sm text-muted-foreground">Script font</Label>
-                  <Select value={scriptFont} onValueChange={setScriptFont}>
-                    <SelectTrigger className="h-10">
-                      <SelectValue><span style={{ fontFamily: `'${scriptFont}', cursive` }}>{scriptFont}</span></SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SCRIPT_FONTS.map((f) => <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: `'${f.value}', cursive` }}>{f.label}</span></SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-sm text-muted-foreground">Text colour</Label>
-                  <div className="flex gap-2 items-center">
-                    <Input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-10 h-10 p-0.5 cursor-pointer" />
-                    <Input type="text" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="flex-1 h-10 font-mono text-sm" />
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-sm text-muted-foreground">Watermark (optional — e.g. @youraccount)</Label>
-                <Input value={watermark} onChange={(e) => setWatermark(e.target.value)} placeholder="@youraccount" className="h-10" />
-              </div>
-            </div>
-
-            <button
-              onClick={handleGenerate}
-              disabled={generating || (uploadMode === "single" ? !sourceFile : multiFiles.length === 0)}
-              className="btn-shimmer w-full py-5 rounded-2xl text-lg font-bold flex items-center justify-center gap-3 disabled:opacity-50"
-            >
-              {generating ? <><Loader2 className="w-5 h-5 animate-spin" /> Slicing &amp; rendering...</> : <><Scissors className="w-5 h-5" /> Generate Slides</>}
-            </button>
-          </div>
-
-          {/* Preview */}
-          <div className="hidden lg:flex flex-col gap-3 shrink-0 sticky top-24 self-start" style={{ width: Math.min(totalPreviewW, 340) }}>
-            <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground text-center">Preview</p>
-
-            {renderedUrls.length > 0 ? (
-              <div className="space-y-3">
-                <div className="flex gap-0.5 rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
-                  {renderedUrls.map((url, i) => (
-                    <img key={i} src={url} alt={`Slide ${i + 1}`} className="flex-1 object-cover" style={{ aspectRatio: "1/1" }} />
-                  ))}
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {renderedUrls.map((url, i) => (
-                    <a key={i} href={url} download={`slide-${i + 1}.png`} target="_blank" rel="noopener noreferrer">
-                      <Button size="sm" variant="outline" className="w-full gap-1 text-xs"><Download className="w-3 h-3" /> Slide {i + 1}</Button>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-2xl shadow-2xl ring-1 ring-white/10 overflow-hidden">
-                {(uploadMode === "single" && sourceUrl) ? (
-                  <div className="flex" style={{ height: previewH }}>
-                    {Array.from({ length: slideCount }).map((_, i) => (
-                      <div key={i} className="flex-1 relative overflow-hidden border-r border-white/10 last:border-0">
-                        <img src={sourceUrl} alt="" className="absolute inset-0 h-full object-cover"
-                          style={{ width: `${slideCount * 100}%`, left: `${-i * 100}%` }} />
-                        <div className="absolute inset-0 flex items-end justify-center pb-2">
-                          <span className="text-white/60 text-xs font-semibold">{i + 1}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : multiUrls.length > 0 ? (
-                  <div className="flex" style={{ height: previewH }}>
-                    {multiUrls.slice(0, slideCount).map((url, i) => (
-                      <div key={i} className="flex-1 relative overflow-hidden border-r border-white/10 last:border-0">
-                        <img src={url} alt="" className="w-full h-full object-cover" />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex" style={{ height: previewH }}>
-                    {Array.from({ length: slideCount }).map((_, i) => (
-                      <div key={i} className="flex-1 bg-muted/30 border-r border-white/10 last:border-0 flex items-center justify-center">
-                        <span className="text-muted-foreground/40 text-sm font-bold">{i + 1}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                <button
+                  onClick={handleUploadAndArrange}
+                  disabled={uploading || files.length < 2}
+                  className="btn-shimmer w-full py-5 rounded-2xl text-lg font-bold flex items-center justify-center gap-3 disabled:opacity-50"
+                >
+                  {uploading ? <><Loader2 className="w-5 h-5 animate-spin" /> Uploading & arranging…</> : <><Wand2 className="w-5 h-5" /> Upload & Auto-Arrange</>}
+                </button>
+              </>
             )}
 
+            {/* ── STEP 2: Layout ── */}
+            {step === "layout" && (
+              <>
+                <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
+                  <Label className="text-base font-semibold">Layout style</Label>
+                  <div className="space-y-3">
+                    {LAYOUTS.map((l) => (
+                      <button key={l.value} onClick={() => setLayout(l.value)}
+                        className={`w-full text-left p-4 rounded-xl border transition-all ${layout === l.value ? "border-pink-500 bg-pink-500/10" : "border-border/30 bg-accent/20 hover:border-pink-500/40"}`}>
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{l.emoji}</span>
+                          <div>
+                            <p className="font-semibold text-sm">{l.label}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{l.desc}</p>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <Button variant="outline" onClick={handleReArrange} disabled={arranging} className="w-full gap-2">
+                    {arranging ? <><Loader2 className="w-4 h-4 animate-spin" />Re-arranging…</> : <><Wand2 className="w-4 h-4" />Apply Layout</>}
+                  </Button>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setStep("upload")} className="flex-1">← Back</Button>
+                  <button onClick={() => setStep("text")}
+                    className="btn-shimmer flex-1 py-4 rounded-2xl text-base font-bold flex items-center justify-center gap-2">
+                    Next: Add Text →
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ── STEP 3: Text overlays + Global style ── */}
+            {step === "text" && (
+              <>
+                {/* Per-slide text */}
+                <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
+                  <Label className="text-base font-semibold">Text overlays per slide</Label>
+                  <p className="text-sm text-muted-foreground">Slide 1 and the last slide have text on by default. Middle slides start clean.</p>
+                  {slides.map((slide, i) => (
+                    <div key={i} className="border border-border/20 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold">Slide {i + 1}</p>
+                        <button onClick={() => setSlideField(i, "hasText", !slide.hasText)}
+                          className={`relative w-10 h-5 rounded-full transition-colors ${slide.hasText ? "bg-pink-500" : "bg-gray-600"}`}>
+                          <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${slide.hasText ? "translate-x-5" : ""}`} />
+                        </button>
+                      </div>
+                      {slide.hasText && (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Lead-in</Label>
+                              <Input value={slide.leadIn} onChange={(e) => setSlideField(i, "leadIn", e.target.value)} placeholder="My favourite" className="h-9 text-sm mt-1" />
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Title</Label>
+                              <Input value={slide.title} onChange={(e) => setSlideField(i, "title", e.target.value)} placeholder="Beachwear" className="h-9 text-sm mt-1" />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Tagline</Label>
+                              <Input value={slide.tagLine} onChange={(e) => setSlideField(i, "tagLine", e.target.value)} placeholder="inspiration" className="h-9 text-sm mt-1" />
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Doodle</Label>
+                              <Select value={slide.doodle} onValueChange={(v) => setSlideField(i, "doodle", v)}>
+                                <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+                                <SelectContent>{DOODLES.map((d) => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}</SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Position</Label>
+                              <Select value={slide.position} onValueChange={(v) => setSlideField(i, "position", v)}>
+                                <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+                                <SelectContent>{POSITIONS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Global style */}
+                <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
+                  <Label className="text-base font-semibold">Global style</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-sm text-muted-foreground">Script font</Label>
+                      <Select value={scriptFont} onValueChange={setScriptFont}>
+                        <SelectTrigger className="h-10">
+                          <SelectValue><span style={{ fontFamily: `'${scriptFont}', cursive` }}>{scriptFont}</span></SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SCRIPT_FONTS.map((f) => <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: `'${f.value}', cursive` }}>{f.label}</span></SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-sm text-muted-foreground">Text colour</Label>
+                      <div className="flex gap-2 items-center">
+                        <Input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-10 h-10 p-0.5 cursor-pointer" />
+                        <Input type="text" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="flex-1 h-10 font-mono text-sm" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm text-muted-foreground">Watermark — e.g. @youraccount</Label>
+                    <Input value={watermark} onChange={(e) => setWatermark(e.target.value)} placeholder="@youraccount" className="h-10" />
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setStep("layout")} className="flex-1">← Back</Button>
+                  <button
+                    onClick={handleGenerate}
+                    disabled={generating}
+                    className="btn-shimmer flex-1 py-5 rounded-2xl text-lg font-bold flex items-center justify-center gap-3 disabled:opacity-50"
+                  >
+                    {generating ? <><Loader2 className="w-5 h-5 animate-spin" />Rendering slides…</> : <><Wand2 className="w-5 h-5" />Generate Slides</>}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ── STEP 4: Result ── */}
+            {step === "result" && renderedUrls.length > 0 && (
+              <>
+                <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">{renderedUrls.length} slides ready</Label>
+                    <Button variant="outline" size="sm" onClick={() => setStep("text")}>← Edit text</Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {renderedUrls.map((url, i) => (
+                      <div key={i} className="relative group cursor-pointer" onClick={() => setLightboxIdx(i)}>
+                        <img src={url} alt={`Slide ${i + 1}`} className="w-full aspect-square object-cover rounded-xl" />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <ZoomIn className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">Slide {i + 1}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Button onClick={downloadZip} className="w-full py-5 text-base font-bold gap-2 rounded-2xl">
+                  <Download className="w-5 h-5" /> Download all slides as ZIP
+                </Button>
+
+                <Button variant="outline" onClick={() => {
+                  setStep("upload");
+                  setFiles([]); setPreviewUrls([]); setUploadedUrls([]);
+                  setCollageElements([]); setRenderedUrls([]); setCarouselId(null);
+                  setSlides([defaultSlide(0), defaultSlide(1), defaultSlide(2)]);
+                  setSlideCount(3);
+                }} className="w-full">
+                  Start over
+                </Button>
+              </>
+            )}
+          </div>
+
+          {/* Right panel: live preview */}
+          <div className="hidden lg:flex flex-col gap-3 shrink-0 sticky top-24 self-start" style={{ width: PREVIEW_W }}>
+            <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground text-center">Preview</p>
+
+            <div className="rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 bg-muted/20"
+              style={{ width: PREVIEW_W, height: PREVIEW_H }}>
+              {collageElements.length > 0 ? (
+                <div className="relative w-full h-full">
+                  {/* CSS-based collage preview — shows the layout at scale */}
+                  {[...collageElements].sort((a, b) => a.zIndex - b.zIndex).map((el, i) => {
+                    const scaledX = el.x * scale;
+                    const scaledY = el.y * scale;
+                    const scaledW = el.width * scale;
+                    const scaledH = el.height * scale;
+                    return (
+                      <div key={i} style={{
+                        position: "absolute",
+                        left: scaledX,
+                        top: scaledY,
+                        width: scaledW,
+                        height: scaledH,
+                        transform: `rotate(${el.rotation}deg)`,
+                        transformOrigin: "center center",
+                        zIndex: el.zIndex,
+                        boxShadow: el.hasBorder ? "0 2px 8px rgba(0,0,0,0.4)" : undefined,
+                        border: el.hasBorder ? "2px solid white" : undefined,
+                        overflow: "hidden",
+                        borderRadius: 2,
+                        filter: el.isBackground ? "brightness(0.75)" : undefined,
+                      }}>
+                        <img src={previewUrls[uploadedUrls.indexOf(el.imageUrl)] ?? el.imageUrl}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          crossOrigin="anonymous" />
+                      </div>
+                    );
+                  })}
+                  {/* Slide seam lines */}
+                  {Array.from({ length: slideCount - 1 }).map((_, i) => (
+                    <div key={i} style={{
+                      position: "absolute",
+                      left: Math.round((i + 1) * (PREVIEW_W / slideCount)),
+                      top: 0,
+                      width: 1,
+                      height: PREVIEW_H,
+                      background: "rgba(255,255,255,0.25)",
+                      zIndex: 100,
+                    }} />
+                  ))}
+                </div>
+              ) : previewUrls.length > 0 ? (
+                <div className="flex h-full">
+                  {previewUrls.slice(0, Math.min(previewUrls.length, 3)).map((url, i) => (
+                    <div key={i} className="flex-1 relative overflow-hidden border-r border-white/10 last:border-0">
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex h-full">
+                  {Array.from({ length: slideCount }).map((_, i) => (
+                    <div key={i} className="flex-1 bg-muted/30 border-r border-white/10 last:border-0 flex items-center justify-center">
+                      <span className="text-muted-foreground/40 text-sm font-bold">{i + 1}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <p className="text-xs text-muted-foreground text-center leading-snug">
-              {renderedUrls.length > 0
-                ? "Click each slide to download"
-                : uploadMode === "single"
-                  ? `Upload a ${slideCount}:1 wide image — the system will slice it`
-                  : `Upload ${slideCount} images to stitch together`}
+              {collageElements.length > 0
+                ? `${collageElements.length} elements arranged — white lines show slide seams`
+                : "Upload photos to see the collage preview"}
             </p>
+
+            {renderedUrls.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-center text-pink-400">Rendered slides</p>
+                <div className="flex gap-1 rounded-xl overflow-hidden ring-1 ring-white/10">
+                  {renderedUrls.map((url, i) => (
+                    <img key={i} src={url} alt={`Slide ${i + 1}`}
+                      className="flex-1 aspect-square object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => setLightboxIdx(i)} />
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground text-center">Click to view full size</p>
+              </div>
+            )}
           </div>
         </div>
       </main>

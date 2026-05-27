@@ -278,7 +278,6 @@ export type InsertAboutMePost = z.infer<typeof insertAboutMePostSchema>;
 export type AboutMePost = typeof aboutMePostsTable.$inferSelect;
 
 export type SeamlessSlide = {
-  imageUrl?: string;
   hasText: boolean;
   title: string;
   leadIn: string;
@@ -287,16 +286,30 @@ export type SeamlessSlide = {
   position: string;
 };
 
+export type CollageElement = {
+  imageUrl: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  zIndex: number;
+  hasBorder: boolean;
+  isBackground: boolean;
+};
+
 export const seamlessCarouselsTable = pgTable("seamless_carousels", {
   id: serial("id").primaryKey(),
   clientName: text("client_name").notNull().default(""),
   slideCount: integer("slide_count").notNull().default(3),
-  sourceImageUrl: text("source_image_url"),
-  sourceImageUrls: json("source_image_urls").$type<string[]>(),
+  layoutStyle: text("layout_style").notNull().default("background_overlays"),
+  uploadedImageUrls: json("uploaded_image_urls").$type<string[]>().notNull().default([]),
+  collageElements: json("collage_elements").$type<CollageElement[]>().notNull().default([]),
   slides: json("slides").$type<SeamlessSlide[]>().notNull().default([]),
   scriptFont: text("script_font").notNull().default("Allura"),
   textColor: text("text_color").notNull().default("#ffffff"),
   watermark: text("watermark").notNull().default(""),
+  renderedSlideUrls: json("rendered_slide_urls").$type<string[]>().notNull().default([]),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
