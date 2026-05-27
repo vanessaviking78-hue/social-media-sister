@@ -61,7 +61,7 @@ const PH_PORT = 425;
 const PH_STORY = 604;
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
-type TopperType = "rainbow" | "heart" | "star";
+type TopperType = "rainbow" | "heart" | "star" | "mirror" | "wine" | "lipstick";
 type Word = { id: string; text: string; x: number; y: number; topper?: TopperType };
 type DoodleShape = "heart-outline" | "arrow" | "sparkle";
 type DoodleEl = { id: string; shape: DoodleShape; x: number; y: number; size: number; rotation: number };
@@ -149,6 +149,57 @@ function renderHeartTopper(cx: number, ty: number, size: number) {
 function renderStarTopper(cx: number, ty: number, size: number, accent: string) {
   return <path d={starPath5(cx, ty, size * 0.52, size * 0.22)} fill="white" stroke={accent} strokeWidth={size * 0.12} />;
 }
+function renderMirrorTopper(cx: number, ty: number, size: number) {
+  const r = size * 0.42;
+  const cy_ = ty - r * 0.05;
+  const handleW = r * 0.2, handleH = r * 0.55;
+  const baseW = r * 0.7, baseH = r * 0.14;
+  return (
+    <>
+      <rect x={cx - handleW / 2} y={cy_ + r * 0.85} width={handleW} height={handleH} rx={handleW * 0.3} fill="#b8860b" />
+      <rect x={cx - baseW / 2} y={cy_ + r * 0.85 + handleH} width={baseW} height={baseH} rx={baseH * 0.3} fill="#b8860b" />
+      <circle cx={cx} cy={cy_} r={r} fill="#f5c842" stroke="#b8860b" strokeWidth={r * 0.1} />
+      <circle cx={cx} cy={cy_} r={r * 0.72} fill="#ddf0fa" opacity={0.7} />
+      <ellipse cx={cx - r * 0.22} cy={cy_ - r * 0.28} rx={r * 0.12} ry={r * 0.18} fill="white" opacity={0.65} transform={`rotate(-25 ${cx - r * 0.22} ${cy_ - r * 0.28})`} />
+    </>
+  );
+}
+function renderWineGlassTopper(cx: number, ty: number, size: number) {
+  const bW = size * 0.46, bBW = size * 0.16, bH = size * 0.48;
+  const stemW = size * 0.05, stemH = size * 0.22;
+  const baseW = size * 0.36, baseH = size * 0.09;
+  const bowlTop = ty - size * 0.35;
+  const bowlBot = bowlTop + bH;
+  const stemBot = bowlBot + stemH;
+  const wineTop = bowlTop + bH * 0.22;
+  const wineTopW = bW - (bW - bBW) * 0.22;
+  const bowl = `M ${cx - bW},${bowlTop} L ${cx + bW},${bowlTop} L ${cx + bBW},${bowlBot} L ${cx - bBW},${bowlBot} Z`;
+  const wine = `M ${cx - wineTopW},${wineTop} L ${cx + wineTopW},${wineTop} L ${cx + bBW},${bowlBot} L ${cx - bBW},${bowlBot} Z`;
+  return (
+    <>
+      <path d={wine} fill="#7B1C42" opacity={0.9} />
+      <path d={bowl} fill="none" stroke="#aaa" strokeWidth={Math.max(0.8, size * 0.05)} />
+      <rect x={cx - stemW} y={bowlBot} width={stemW * 2} height={stemH} fill="#aaa" />
+      <rect x={cx - baseW} y={stemBot} width={baseW * 2} height={baseH} rx={baseH * 0.3} fill="#aaa" />
+    </>
+  );
+}
+function renderLipstickTopper(cx: number, ty: number, size: number) {
+  const tw = size * 0.26, tubeH = size * 0.46, tipH = size * 0.3, caseH = size * 0.2;
+  const baseY = ty + size * 0.22;
+  const caseTop = baseY - caseH;
+  const tubeTop = caseTop - tubeH;
+  const tip = `M ${cx - tw / 2},${tubeTop} L ${cx - tw / 2},${tubeTop - tipH * 0.65} L ${cx + tw / 2},${tubeTop - tipH} L ${cx + tw / 2},${tubeTop} Z`;
+  return (
+    <>
+      <rect x={cx - tw / 2} y={caseTop} width={tw} height={caseH} rx={tw * 0.15} fill="#888" />
+      <rect x={cx - tw / 2} y={caseTop - tubeH * 0.07} width={tw} height={tubeH * 0.07} fill="#c0c0c0" />
+      <rect x={cx - tw / 2} y={tubeTop} width={tw} height={tubeH} fill="#CC1155" />
+      <path d={tip} fill="#E91976" />
+      <line x1={cx - tw * 0.12} y1={tubeTop - tipH * 0.8} x2={cx - tw * 0.12} y2={tubeTop} stroke="white" strokeWidth={Math.max(0.5, size * 0.03)} opacity={0.55} strokeLinecap="round" />
+    </>
+  );
+}
 
 // ─── Component ──────────────────────────────────────────────────────────────────
 export default function AboutMePage() {
@@ -164,7 +215,7 @@ export default function AboutMePage() {
   const [subtitle, setSubtitle] = useState("");
   const [titleFont, setTitleFont] = useState("Allura");
   const [accentColor, setAccentColor] = useState("#F5EEE3");
-  const [stickerTopperDefault, setStickerTopperDefault] = useState<"rainbow" | "heart" | "star" | "mixed">("mixed");
+  const [stickerTopperDefault, setStickerTopperDefault] = useState<TopperType | "mixed">("mixed");
 
   // Per-element typography
   const [titleFontSize, setTitleFontSize] = useState(90);
@@ -738,11 +789,19 @@ export default function AboutMePage() {
 
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">Default topper</Label>
-                <div className="flex gap-2 flex-wrap">
-                  {(["mixed", "rainbow", "heart", "star"] as const).map((t) => (
-                    <button key={t} onClick={() => setStickerTopperDefault(t)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all capitalize ${stickerTopperDefault === t ? "bg-pink-500 text-white border-pink-500" : "border-border/40 text-muted-foreground hover:border-pink-500/40"}`}>
-                      {t === "mixed" ? "🌈❤️⭐ Mixed" : t === "rainbow" ? "🌈 Rainbows" : t === "heart" ? "❤️ Hearts" : "⭐ Stars"}
+                <div className="flex gap-1.5 flex-wrap">
+                  {([
+                    { val: "mixed", label: "Mixed" },
+                    { val: "rainbow", label: "🌈" },
+                    { val: "heart", label: "❤️" },
+                    { val: "star", label: "⭐" },
+                    { val: "mirror", label: "🪞 Mirror" },
+                    { val: "wine", label: "🍷 Wine" },
+                    { val: "lipstick", label: "💄 Lippie" },
+                  ] as const).map(({ val, label }) => (
+                    <button key={val} onClick={() => setStickerTopperDefault(val as TopperType | "mixed")}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${stickerTopperDefault === val ? "bg-pink-500 text-white border-pink-500" : "border-border/40 text-muted-foreground hover:border-pink-500/40"}`}>
+                      {label}
                     </button>
                   ))}
                 </div>
@@ -761,6 +820,9 @@ export default function AboutMePage() {
                       <option value="rainbow">🌈 Rainbow</option>
                       <option value="heart">❤️ Heart</option>
                       <option value="star">⭐ Star</option>
+                      <option value="mirror">🪞 Mirror</option>
+                      <option value="wine">🍷 Wine glass</option>
+                      <option value="lipstick">💄 Lipstick</option>
                     </select>
                     <Button variant="ghost" size="sm" onClick={() => setWords((p) => p.filter((_, ii) => ii !== i))} className="h-9 w-9 p-0 text-muted-foreground shrink-0"><X className="w-3.5 h-3.5" /></Button>
                   </div>
@@ -1092,6 +1154,9 @@ export default function AboutMePage() {
                         {topper === "rainbow" && renderRainbowTopper(wx, topperY, topperSize)}
                         {topper === "heart" && renderHeartTopper(wx, topperY, topperSize)}
                         {topper === "star" && renderStarTopper(wx, topperY, topperSize, accentColor)}
+                        {topper === "mirror" && renderMirrorTopper(wx, topperY, topperSize)}
+                        {topper === "wine" && renderWineGlassTopper(wx, topperY, topperSize)}
+                        {topper === "lipstick" && renderLipstickTopper(wx, topperY, topperSize)}
                       </g>
                     );
                   })}

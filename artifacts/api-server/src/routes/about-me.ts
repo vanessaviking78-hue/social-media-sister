@@ -139,6 +139,54 @@ function topperStarSvg(cx: number, ty: number, size: number, accentColor: string
   return `<path d="${starPath5(cx, ty, size * 0.52, size * 0.22)}" fill="white" stroke="${accentColor}" stroke-width="${(size * 0.12).toFixed(1)}"/>`;
 }
 
+function topperMirrorSvg(cx: number, ty: number, size: number): string {
+  const r = size * 0.42;
+  const cy_ = ty - r * 0.05;
+  const handleW = r * 0.2, handleH = r * 0.55;
+  const baseW = r * 0.7, baseH = r * 0.14;
+  return [
+    `<rect x="${(cx - handleW / 2).toFixed(1)}" y="${(cy_ + r * 0.85).toFixed(1)}" width="${handleW.toFixed(1)}" height="${handleH.toFixed(1)}" rx="${(handleW * 0.3).toFixed(1)}" fill="#b8860b"/>`,
+    `<rect x="${(cx - baseW / 2).toFixed(1)}" y="${(cy_ + r * 0.85 + handleH).toFixed(1)}" width="${baseW.toFixed(1)}" height="${baseH.toFixed(1)}" rx="${(baseH * 0.3).toFixed(1)}" fill="#b8860b"/>`,
+    `<circle cx="${cx.toFixed(1)}" cy="${cy_.toFixed(1)}" r="${r.toFixed(1)}" fill="#f5c842" stroke="#b8860b" stroke-width="${(r * 0.1).toFixed(1)}"/>`,
+    `<circle cx="${cx.toFixed(1)}" cy="${cy_.toFixed(1)}" r="${(r * 0.72).toFixed(1)}" fill="#ddf0fa" opacity="0.7"/>`,
+    `<ellipse cx="${(cx - r * 0.22).toFixed(1)}" cy="${(cy_ - r * 0.28).toFixed(1)}" rx="${(r * 0.12).toFixed(1)}" ry="${(r * 0.18).toFixed(1)}" fill="white" opacity="0.65" transform="rotate(-25 ${(cx - r * 0.22).toFixed(1)} ${(cy_ - r * 0.28).toFixed(1)})"/>`,
+  ].join("");
+}
+
+function topperWineGlassSvg(cx: number, ty: number, size: number): string {
+  const bW = size * 0.46, bBW = size * 0.16, bH = size * 0.48;
+  const stemW = size * 0.05, stemH = size * 0.22;
+  const baseW = size * 0.36, baseH = size * 0.09;
+  const bowlTop = ty - size * 0.35;
+  const bowlBot = bowlTop + bH;
+  const stemBot = bowlBot + stemH;
+  const wineTop = bowlTop + bH * 0.22;
+  const wineTopW = bW - (bW - bBW) * 0.22;
+  const bowl = `M ${(cx - bW).toFixed(1)},${bowlTop.toFixed(1)} L ${(cx + bW).toFixed(1)},${bowlTop.toFixed(1)} L ${(cx + bBW).toFixed(1)},${bowlBot.toFixed(1)} L ${(cx - bBW).toFixed(1)},${bowlBot.toFixed(1)} Z`;
+  const wine = `M ${(cx - wineTopW).toFixed(1)},${wineTop.toFixed(1)} L ${(cx + wineTopW).toFixed(1)},${wineTop.toFixed(1)} L ${(cx + bBW).toFixed(1)},${bowlBot.toFixed(1)} L ${(cx - bBW).toFixed(1)},${bowlBot.toFixed(1)} Z`;
+  return [
+    `<path d="${wine}" fill="#7B1C42" opacity="0.9"/>`,
+    `<path d="${bowl}" fill="none" stroke="#aaa" stroke-width="${(size * 0.05).toFixed(1)}"/>`,
+    `<rect x="${(cx - stemW).toFixed(1)}" y="${bowlBot.toFixed(1)}" width="${(stemW * 2).toFixed(1)}" height="${stemH.toFixed(1)}" fill="#aaa"/>`,
+    `<rect x="${(cx - baseW).toFixed(1)}" y="${stemBot.toFixed(1)}" width="${(baseW * 2).toFixed(1)}" height="${baseH.toFixed(1)}" rx="${(baseH * 0.3).toFixed(1)}" fill="#aaa"/>`,
+  ].join("");
+}
+
+function topperLipstickSvg(cx: number, ty: number, size: number): string {
+  const tw = size * 0.26, tubeH = size * 0.46, tipH = size * 0.3, caseH = size * 0.2;
+  const baseY = ty + size * 0.22;
+  const caseTop = baseY - caseH;
+  const tubeTop = caseTop - tubeH;
+  const tip = `M ${(cx - tw / 2).toFixed(1)},${tubeTop.toFixed(1)} L ${(cx - tw / 2).toFixed(1)},${(tubeTop - tipH * 0.65).toFixed(1)} L ${(cx + tw / 2).toFixed(1)},${(tubeTop - tipH).toFixed(1)} L ${(cx + tw / 2).toFixed(1)},${tubeTop.toFixed(1)} Z`;
+  return [
+    `<rect x="${(cx - tw / 2).toFixed(1)}" y="${caseTop.toFixed(1)}" width="${tw.toFixed(1)}" height="${caseH.toFixed(1)}" rx="${(tw * 0.15).toFixed(1)}" fill="#888"/>`,
+    `<rect x="${(cx - tw / 2).toFixed(1)}" y="${(caseTop - tubeH * 0.07).toFixed(1)}" width="${tw.toFixed(1)}" height="${(tubeH * 0.07).toFixed(1)}" fill="#c0c0c0"/>`,
+    `<rect x="${(cx - tw / 2).toFixed(1)}" y="${tubeTop.toFixed(1)}" width="${tw.toFixed(1)}" height="${tubeH.toFixed(1)}" fill="#CC1155"/>`,
+    `<path d="${tip}" fill="#E91976"/>`,
+    `<line x1="${(cx - tw * 0.12).toFixed(1)}" y1="${(tubeTop - tipH * 0.8).toFixed(1)}" x2="${(cx - tw * 0.12).toFixed(1)}" y2="${tubeTop.toFixed(1)}" stroke="white" stroke-width="${(size * 0.03).toFixed(1)}" opacity="0.55" stroke-linecap="round"/>`,
+  ].join("");
+}
+
 function stickerSvg(
   w: { text: string; x: number; y: number; topper?: string },
   idx: number,
@@ -172,6 +220,9 @@ function stickerSvg(
   if (effective === "rainbow") topper = topperRainbowSvg(cx, topperY, topperSize);
   else if (effective === "heart") topper = topperHeartSvg(cx, topperY, topperSize);
   else if (effective === "star") topper = topperStarSvg(cx, topperY, topperSize, accentColor);
+  else if (effective === "mirror") topper = topperMirrorSvg(cx, topperY, topperSize);
+  else if (effective === "wine") topper = topperWineGlassSvg(cx, topperY, topperSize);
+  else if (effective === "lipstick") topper = topperLipstickSvg(cx, topperY, topperSize);
 
   const rotAttr = rot !== 0 ? ` transform="rotate(${rot} ${cx.toFixed(1)} ${cy.toFixed(1)})"` : "";
 
