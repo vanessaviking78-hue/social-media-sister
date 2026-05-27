@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2 } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText } from "lucide-react";
 
 const TOOLS = [
   {
@@ -146,6 +146,24 @@ const TOOLS = [
     border: "hover:border-yellow-500/50",
     iconColor: "text-yellow-400",
   },
+  {
+    href: "/dm-prompts",
+    icon: MessageSquare,
+    name: "DM Prompts",
+    description: "Generate human-sounding DM templates for new followers, enquiries, check-ins, and more.",
+    color: "from-rose-500/20 to-rose-500/5",
+    border: "hover:border-rose-500/50",
+    iconColor: "text-rose-400",
+  },
+  {
+    href: "/reel-scripts",
+    icon: ScrollText,
+    name: "Reel Scripts",
+    description: "Write a reel script with a hook, talking points, and a call to action — ready to speak on camera.",
+    color: "from-orange-500/20 to-orange-500/5",
+    border: "hover:border-orange-500/50",
+    iconColor: "text-orange-400",
+  },
 ];
 
 export default function Hub() {
@@ -169,12 +187,9 @@ export default function Hub() {
           {TOOLS.slice(0, 12).map((tool) => <ToolCard key={tool.href} tool={tool} />)}
         </div>
 
-        {/* Last row: 4 cards */}
+        {/* Last rows */}
         <div className="grid grid-cols-4 gap-4">
-          <ToolCard tool={TOOLS[12]} />
-          <ToolCard tool={TOOLS[13]} />
-          <ToolCard tool={TOOLS[14]} />
-          <ToolCard tool={TOOLS[15]} />
+          {TOOLS.slice(12).map((tool) => <ToolCard key={tool.href} tool={tool} />)}
         </div>
       </main>
 

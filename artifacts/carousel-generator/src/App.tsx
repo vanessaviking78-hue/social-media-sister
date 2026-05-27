@@ -35,6 +35,8 @@ import Terms from "@/pages/terms";
 import DataDeletion from "@/pages/data-deletion";
 import Splash from "@/pages/splash";
 import BulkImportTemplates from "@/pages/bulk-import-templates";
+import DmPrompts from "@/pages/dm-prompts";
+import ReelScripts from "@/pages/reel-scripts";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +63,8 @@ function ProtectedRouter() {
       <Route path="/ai-portrait-studio" component={AiPortraitStudio} />
       <Route path="/dm-automations" component={DmAutomations} />
       <Route path="/intake" component={Intake} />
+      <Route path="/dm-prompts" component={DmPrompts} />
+      <Route path="/reel-scripts" component={ReelScripts} />
       <Route component={NotFound} />
     </Switch>
   );

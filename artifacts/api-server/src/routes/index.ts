@@ -22,6 +22,8 @@ import dmAutomationsRouter from "./dm-automations";
 import webhooksRouter from "./webhooks";
 import intakeRouter from "./intake";
 import bulkImportRouter from "./bulkImport";
+import dmPromptsRouter from "./dm-prompts";
+import reelScriptsRouter from "./reel-scripts";
 
 const router: IRouter = Router();
 
@@ -48,5 +50,7 @@ router.use(dmAutomationsRouter);
 router.use(webhooksRouter);
 router.use(intakeRouter);
 router.use(bulkImportRouter);
+router.use(dmPromptsRouter);
+router.use(reelScriptsRouter);
 
 export default router;
