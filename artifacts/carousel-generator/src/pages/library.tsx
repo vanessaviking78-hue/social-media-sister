@@ -4,6 +4,7 @@ import {
   ArrowLeft, Layers, Image as ImageIcon, Film, BookOpen, Trash2, Calendar,
   Upload, X, CheckSquare, Square, CalendarDays, Clock, ChevronDown, Loader2,
   BarChart3, ShieldCheck, MessageSquareText, Play, Palette,
+  Archive, AlertTriangle, CheckCircle2, ExternalLink, FolderOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -135,6 +136,15 @@ export default function Library() {
   const [scheduleTime, setScheduleTime] = useState("18:00");
   const [scheduling, setScheduling] = useState(false);
 
+  const [activeTab, setActiveTab] = useState<"library" | "bulk-import">("library");
+  const [bulkJobId, setBulkJobId] = useState<string | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<{ processed: number; total: number; currentFile: string } | null>(null);
+  const [bulkSummary, setBulkSummary] = useState<Record<string, number> | null>(null);
+  const [bulkErrors, setBulkErrors] = useState<string[]>([]);
+  const [bulkDragging, setBulkDragging] = useState(false);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const bulkDropRef = useRef<HTMLDivElement>(null);
+
   const fetchPresets = useCallback(async () => {
     try {
       const r = await fetch(`${BASE}api/presets`);
@@ -169,6 +179,30 @@ export default function Library() {
     const preset = presets.find((p) => p.name === clientName);
     if (preset) setScheduleTime(preset.defaultPostTime || "18:00");
   }, [clientName, presets]);
+
+  useEffect(() => {
+    if (!bulkJobId) return;
+    const interval = setInterval(async () => {
+      try {
+        const r = await fetch(`${BASE}api/library/bulk-import-zip/jobs/${bulkJobId}`);
+        if (!r.ok) return;
+        const d = await r.json() as { status: string; progress: { processed: number; total: number; currentFile: string }; summary: Record<string, number>; errors: string[]; errorMessage?: string };
+        setBulkProgress(d.progress);
+        if (d.status === "done" || d.status === "error") {
+          clearInterval(interval);
+          setBulkUploading(false);
+          if (d.status === "done") {
+            setBulkSummary(d.summary);
+            setBulkErrors(d.errors);
+            if (clientName) await fetchItems(clientName);
+          } else {
+            toast.error(d.errorMessage || "Import failed");
+          }
+        }
+      } catch { /* polling — ignore transient errors */ }
+    }, 800);
+    return () => clearInterval(interval);
+  }, [bulkJobId, clientName, fetchItems]);
 
   const toggleSelect = (id: number) => {
     setSelectedIds((prev) => {
@@ -309,6 +343,44 @@ export default function Library() {
     }
   }
 
+  async function handleBulkDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setBulkDragging(false);
+    if (!clientName) { toast.error("Select a client first"); return; }
+    const files = Array.from(e.dataTransfer.files);
+    const zipFile = files.find((f) => f.name.toLowerCase().endsWith(".zip"));
+    if (!zipFile) { toast.error("Drop a .zip file containing your CSVs and media"); return; }
+    await startBulkImport(zipFile);
+  }
+
+  async function handleBulkFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    if (!clientName) { toast.error("Select a client first"); return; }
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    await startBulkImport(file);
+  }
+
+  async function startBulkImport(zipFile: File) {
+    setBulkJobId(null);
+    setBulkProgress(null);
+    setBulkSummary(null);
+    setBulkErrors([]);
+    setBulkUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("zip", zipFile);
+      fd.append("clientName", clientName);
+      const r = await fetch(`${BASE}api/library/bulk-import-zip`, { method: "POST", body: fd });
+      const d = await r.json() as { jobId?: string; error?: string };
+      if (!r.ok) throw new Error(d.error || "Import failed to start");
+      setBulkJobId(d.jobId ?? null);
+    } catch (e: unknown) {
+      setBulkUploading(false);
+      toast.error((e as Error).message || "Import failed");
+    }
+  }
+
   const endPreview = selectedIds.size > 1 ? addDays(scheduleDate, selectedIds.size - 1) : scheduleDate;
   const selectedCount = selectedIds.size;
 
@@ -340,10 +412,166 @@ export default function Library() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-10">
-        <div className="mb-8">
-          <h1 className="font-serif text-4xl font-semibold mb-2 tracking-tight">Content Library</h1>
-          <p className="text-lg text-muted-foreground">Bulk-upload posts for a client, then schedule them all at once.</p>
+        <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="font-serif text-4xl font-semibold mb-2 tracking-tight">Content Library</h1>
+            <p className="text-lg text-muted-foreground">Bulk-upload posts for a client, then schedule them all at once.</p>
+          </div>
+          <div className="flex bg-gray-900 border border-gray-800 rounded-xl p-1 gap-1 mt-1">
+            <button
+              onClick={() => setActiveTab("library")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "library" ? "bg-gray-700 text-white" : "text-gray-500 hover:text-gray-300"}`}
+            >
+              <FolderOpen className="w-4 h-4" />
+              Library
+            </button>
+            <button
+              onClick={() => setActiveTab("bulk-import")}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "bulk-import" ? "bg-pink-600 text-white" : "text-gray-500 hover:text-gray-300"}`}
+            >
+              <Archive className="w-4 h-4" />
+              Bulk Import
+            </button>
+          </div>
         </div>
+
+        {activeTab === "bulk-import" && (
+          <div className="space-y-6">
+            <div className="flex items-center gap-4 mb-2 flex-wrap">
+              <div className="w-72">
+                <Select value={clientName || "__none__"} onValueChange={(v) => setClientName(v === "__none__" ? "" : v)}>
+                  <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
+                    <SelectValue placeholder="Select a client..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-gray-800 border-gray-700">
+                    <SelectItem value="__none__" className="text-gray-400">Select a client...</SelectItem>
+                    {presets.map((p) => (
+                      <SelectItem key={p.id} value={p.name} className="text-white">{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <a
+                href={`${BASE}api/library/bulk-import-templates.zip`}
+                download
+                className="flex items-center gap-2 text-sm text-gray-400 hover:text-white border border-gray-700 rounded-lg px-3 py-2 transition-colors"
+              >
+                <Archive className="w-4 h-4" />
+                Download template zip
+              </a>
+              <Link href="/bulk-import-templates" className="flex items-center gap-2 text-sm text-gray-400 hover:text-white border border-gray-700 rounded-lg px-3 py-2 transition-colors">
+                <ExternalLink className="w-4 h-4" />
+                View CSV schemas
+              </Link>
+            </div>
+
+            {!bulkUploading && !bulkSummary && (
+              <div
+                ref={bulkDropRef}
+                onDragOver={(e) => { e.preventDefault(); setBulkDragging(true); }}
+                onDragLeave={() => setBulkDragging(false)}
+                onDrop={handleBulkDrop}
+                className={`relative border-2 border-dashed rounded-2xl transition-all ${
+                  bulkDragging ? "border-pink-500 bg-pink-950/20" : clientName ? "border-gray-700 hover:border-gray-600" : "border-gray-800 opacity-50"
+                }`}
+              >
+                <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
+                  <Archive className="w-12 h-12 text-gray-600 mb-4" />
+                  <p className="text-white font-medium text-lg mb-1">Drop your bulk import zip here</p>
+                  <p className="text-gray-500 text-sm max-w-md mb-6">
+                    One zip containing up to 6 CSV files plus all your media. The system detects post types from the CSV filenames — carousels.csv, singles.csv, about_mes.csv, seamless.csv, reels.csv, trial_reels.csv.
+                  </p>
+                  <label className={`cursor-pointer flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition ${clientName ? "bg-pink-600 hover:bg-pink-700 text-white" : "bg-gray-800 text-gray-500 cursor-not-allowed"}`}>
+                    <Upload className="w-4 h-4" />
+                    {clientName ? "Choose zip file" : "Select a client first"}
+                    <input
+                      type="file"
+                      accept=".zip"
+                      disabled={!clientName}
+                      className="hidden"
+                      onChange={handleBulkFileSelect}
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
+
+            {bulkUploading && (
+              <div className="border border-gray-800 rounded-2xl p-10 text-center">
+                <Loader2 className="w-10 h-10 text-pink-400 animate-spin mx-auto mb-4" />
+                <p className="text-white font-medium mb-1">
+                  {bulkProgress
+                    ? `Processing ${bulkProgress.processed} of ${bulkProgress.total} rows...`
+                    : "Uploading zip..."}
+                </p>
+                {bulkProgress?.currentFile && (
+                  <p className="text-gray-500 text-sm">Current file: {bulkProgress.currentFile}</p>
+                )}
+                {bulkProgress && bulkProgress.total > 0 && (
+                  <div className="mt-4 bg-gray-800 rounded-full h-2 max-w-md mx-auto overflow-hidden">
+                    <div
+                      className="bg-pink-500 h-2 rounded-full transition-all"
+                      style={{ width: `${Math.round((bulkProgress.processed / bulkProgress.total) * 100)}%` }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {bulkSummary && !bulkUploading && (
+              <div className="border border-gray-800 rounded-2xl p-8 space-y-6">
+                <div className="flex items-center gap-3 mb-2">
+                  <CheckCircle2 className="w-6 h-6 text-green-400" />
+                  <h2 className="text-white font-semibold text-lg">Import complete</h2>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                  {Object.entries(bulkSummary).filter(([, count]) => count > 0).map(([type, count]) => (
+                    <div key={type} className="bg-gray-900 rounded-xl p-4 text-center">
+                      <div className="text-2xl font-bold text-white mb-1">{count}</div>
+                      <div className="text-xs text-gray-400 capitalize">{type.replace(/-/g, " ")}</div>
+                    </div>
+                  ))}
+                  {Object.values(bulkSummary).every((c) => c === 0) && (
+                    <div className="col-span-full text-gray-500 text-sm">No rows were imported. Check the CSV filenames inside your zip.</div>
+                  )}
+                </div>
+                {bulkErrors.length > 0 && (
+                  <div className="bg-amber-950/30 border border-amber-700/40 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3 text-amber-400">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span className="font-medium text-sm">{bulkErrors.length} row{bulkErrors.length === 1 ? "" : "s"} had issues and were skipped</span>
+                    </div>
+                    <div className="space-y-1 max-h-40 overflow-y-auto">
+                      {bulkErrors.map((e, i) => (
+                        <p key={i} className="text-amber-300/70 text-xs font-mono">{e}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => { setBulkSummary(null); setBulkJobId(null); setBulkProgress(null); setBulkErrors([]); }}
+                    className="border-gray-700"
+                  >
+                    Import another zip
+                  </Button>
+                  <Button onClick={() => setActiveTab("library")} className="bg-pink-600 hover:bg-pink-700">
+                    View library
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="text-xs text-gray-600 space-y-1">
+              <p>Expected monthly volume per client: 12 carousels, 4 about mes, 4 seamless carousels, 5 single images, 5 reels, 10 trial reels = 40 entries</p>
+              <p>Media is matched by filename (case-insensitive). Missing files are skipped and logged. Trial reels are marked private until manually approved.</p>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "library" && (
+          <>
 
         <div className="flex items-center gap-4 mb-6 flex-wrap">
           <div className="w-72">
@@ -521,6 +749,8 @@ export default function Library() {
               );
             })}
           </div>
+        )}
+          </>
         )}
       </main>
 

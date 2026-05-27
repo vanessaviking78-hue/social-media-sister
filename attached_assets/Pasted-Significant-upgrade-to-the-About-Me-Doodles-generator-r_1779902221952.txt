@@ -1,0 +1,36 @@
+Significant upgrade to the About Me / Doodles generator: replace the existing word + arrow approach with 3D puffy sticker labels.
+
+NEW STICKER DESIGN PER WORD:
+1. A rounded rectangle panel (border-radius around 20px) with white background
+2. The word in bold uppercase, dark text colour (default near-black)
+3. A chunky 2-layer outline border in the user's chosen accent colour (outer layer slightly darker shade, inner layer the chosen colour, creates the puffy 3D effect)
+4. A soft drop shadow underneath (8px y-offset, 16px blur, 30% opacity black)
+5. Slight rotation per sticker (-8° to +8°, randomised) for casual placement feel
+6. Padding inside the sticker: 18px horizontal, 12px vertical
+
+DECORATIVE TOPPERS:
+Each sticker has ONE topper element peeking out of the top edge:
+- Rainbow arch (3-band, pink/blue/yellow, sized roughly 60% of sticker height)
+- Puffy 3D heart (pink, slight gradient for dimension)
+- Chunky 3D star (5-point, white fill with accent-colour outline)
+
+User can:
+- Pick the default topper for all stickers via a dropdown ("Rainbows" / "Hearts" / "Stars" / "Mixed")
+- Override the topper per individual sticker if they want a mix
+- Optional small sparkle SVG in opposite corner for extra flair
+
+INTERACTION:
+- Stickers remain fully draggable on the preview canvas (existing behaviour)
+- Resizable via corner handles
+- Rotatable via top handle
+- Free-position the same as before
+- The accent colour picker now controls the sticker outline AND topper outline colour (not the panel background, which stays white)
+
+REPLACES:
+The previous "text + arrow" word elements. Arrows are no longer used (the sticker IS the visual element, more memorable than an arrow line).
+
+The cut-out subject photo, glow, blurred background and title still work as before. Only the WORD elements are getting upgraded to stickers.
+
+Provide 4-5 example accent colours as swatches: hot pink, soft sage, dusty blue, peach, plum.
+
+Restart api-server when done. Vanessa will test by creating an About Me with 6 stickers (Wife, Mum, Nurse, Loyal, Wine Lover, Honest) in soft sage with mixed toppers.

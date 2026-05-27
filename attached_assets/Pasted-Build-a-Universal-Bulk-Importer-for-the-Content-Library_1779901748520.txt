@@ -1,0 +1,62 @@
+Build a Universal Bulk Importer for the Content Library.
+
+WHAT WE'RE BUILDING
+A new bulk import mode for the Content Library that accepts a single zip of CSVs + media files and creates posts of MIXED types in one upload. User drops one zip containing 1-6 CSV files (each CSV represents a post type) AND all the referenced media files. The system parses each CSV by filename convention, creates Library entries of the correct type, links them to the correct media files, and surfaces a results summary.
+
+USER FLOW
+1. On the Content Library page, the existing drop zone now accepts a SINGLE ZIP containing CSV files plus media files
+2. CSV files in the zip are auto-detected by filename convention:
+   - carousels.csv → creates Carousel Library entries
+   - singles.csv → creates Single Image Library entries
+   - about_mes.csv → creates About Me Library entries
+   - seamless.csv → creates Seamless Carousel Library entries
+   - reels.csv → creates Reel Library entries
+   - trial_reels.csv → creates Trial Reel Library entries
+3. Media files referenced in any CSV's filename columns are matched against the zip contents and uploaded to object storage
+4. Results screen shows counts per type and any errors
+
+CSV SCHEMAS (one per file)
+
+carousels.csv columns: caption, music_track, text_style, slide_1_lead_in, slide_1_hero_word, slide_1_text, slide_1_image, slide_2_text, slide_2_image, slide_3_text, slide_3_image, slide_4_text, slide_4_image, slide_5_text, slide_5_image, scheduled_date, scheduled_time
+
+singles.csv columns: caption, music_track, image_filename, text_style, overlay_text, hero_lead_in, hero_word, hero_color, leadin_color, scheduled_date, scheduled_time
+
+about_mes.csv columns: caption, music_track, title, subtitle, subject_image, background_image, words (pipe-separated), accent_color, arrow_style, scheduled_date, scheduled_time
+
+seamless.csv columns: caption, music_track, slide_count, layout_style, images (pipe-separated), text_slide_1, text_slide_2, text_slide_3, text_slide_4, text_slide_5, watermark, scheduled_date, scheduled_time
+
+reels.csv columns: caption, music_track, video_filename, cover_image, cover_text, typewriter_text, scheduled_date, scheduled_time
+
+trial_reels.csv columns: same as reels.csv but creates trial reel entries with graduation_strategy: MANUAL
+
+MEDIA FILE MATCHING
+- All filenames referenced in any CSV must exist in the zip
+- Match case-insensitively, allow nested directories (media/photo1.jpg or just photo1.jpg)
+- Upload matched files to object storage under /library/{clientName}/bulk-{importTimestamp}/{filename}
+- If a CSV references a missing filename, log the row as error and skip it (don't fail the whole import)
+
+BACKEND
+- New route: POST /api/library/bulk-import-zip with multipart form (presetId + zip)
+- Use unzipper or node-stream-zip
+- Async background job using the existing async-job pattern (return jobId immediately, poll for status)
+- For each CSV row, validate required fields per post type, match media, upload, create Library entry, optionally queue to scheduledPostsTable if scheduled_date supplied
+
+FRONTEND
+- New "Bulk Import" tab on the Content Library page
+- Big drop zone: "Drop a zip with up to 6 CSVs plus all your media files"
+- "View CSV templates" link showing column structures
+- "Download example zip" button
+- Real-time progress display during import
+- Summary card on complete with counts per type
+
+EXPECTED VOLUME PER CLIENT PER MONTH
+12 carousels, 4 about mes, 4 seamless carousels, 5 single images, 5 reels, 10 trial reels = 40 entries per zip. 30 public publishes (1/day sweet spot) plus 10 private trial reels for testing.
+
+ACCEPTANCE CRITERIA
+1. Drop a zip with 6 CSVs + matching media
+2. Watch progress
+3. See summary "Imported 12 carousels, 4 about mes, 4 seamless, 5 singles, 5 reels, 10 trial reels"
+4. View imported posts in Library grouped by type
+5. Click Auto-schedule daily, public posts queue for next 30 days, trial reels stay private
+
+Restart api-server when done. Provide downloadable example zip at thecybersuite.com/bulk-import-templates as a reference.

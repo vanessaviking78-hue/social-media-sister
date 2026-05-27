@@ -34,6 +34,7 @@ import Privacy from "@/pages/privacy";
 import Terms from "@/pages/terms";
 import DataDeletion from "@/pages/data-deletion";
 import Splash from "@/pages/splash";
+import BulkImportTemplates from "@/pages/bulk-import-templates";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +76,7 @@ function AppContent() {
   const [isPrivacy] = useRoute("/privacy");
   const [isTerms] = useRoute("/terms");
   const [isDataDeletion] = useRoute("/data-deletion");
+  const [isBulkTemplates] = useRoute("/bulk-import-templates");
   const [location] = useLocation();
   const isSplash = location === "/";
 
@@ -107,6 +109,9 @@ function AppContent() {
   }
   if (isDataDeletion) {
     return <DataDeletion />;
+  }
+  if (isBulkTemplates) {
+    return <BulkImportTemplates />;
   }
 
   return (

@@ -21,6 +21,7 @@ import aiPortraitRouter from "./aiPortrait";
 import dmAutomationsRouter from "./dm-automations";
 import webhooksRouter from "./webhooks";
 import intakeRouter from "./intake";
+import bulkImportRouter from "./bulkImport";
 
 const router: IRouter = Router();
 
@@ -46,5 +47,6 @@ router.use(aiPortraitRouter);
 router.use(dmAutomationsRouter);
 router.use(webhooksRouter);
 router.use(intakeRouter);
+router.use(bulkImportRouter);
 
 export default router;
