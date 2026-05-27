@@ -28,17 +28,27 @@ async function uploadBuf(buffer: Buffer, filename: string, folder: string, mime 
   if (!bucketId) throw new Error("DEFAULT_OBJECT_STORAGE_BUCKET_ID not set");
   const key = `${folder}/${uuid()}/${filename}`;
   await objectStorageClient.bucket(bucketId).file(key).save(buffer, {
-    public: true,
     contentType: mime,
-    metadata: { cacheControl: "public, max-age=31536000" },
+    metadata: { cacheControl: "private, max-age=3600" },
   });
-  return `https://storage.googleapis.com/${bucketId}/${key}`;
+  return `/api/ai-portrait/images/${key}`;
 }
 
-async function fetchBuf(url: string): Promise<Buffer> {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`Failed to fetch source photo: ${r.status}`);
-  return Buffer.from(await r.arrayBuffer());
+async function fetchBufFromStorage(urlOrPath: string): Promise<Buffer> {
+  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+  if (!bucketId) throw new Error("DEFAULT_OBJECT_STORAGE_BUCKET_ID not set");
+  // Accepts /api/ai-portrait/images/<key> proxy paths or legacy GCS https:// URLs
+  let key: string;
+  if (urlOrPath.startsWith("/api/ai-portrait/images/")) {
+    key = urlOrPath.slice("/api/ai-portrait/images/".length);
+  } else if (urlOrPath.startsWith("https://storage.googleapis.com/")) {
+    const u = new URL(urlOrPath);
+    key = u.pathname.slice(1).replace(`${bucketId}/`, "");
+  } else {
+    throw new Error(`Cannot resolve portrait image path: ${urlOrPath}`);
+  }
+  const [buffer] = await objectStorageClient.bucket(bucketId).file(key).download();
+  return buffer;
 }
 
 const PRIVATE_IP_PATTERNS = [
@@ -155,6 +165,27 @@ router.get("/ai-portrait/scenarios", (_req: Request, res: Response) => {
   res.json(AI_PORTRAIT_SCENARIOS);
 });
 
+router.get("/ai-portrait/images/*key", async (req: Request, res: Response) => {
+  try {
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    if (!bucketId) { res.status(500).json({ error: "Object storage not configured" }); return; }
+    const key = (req.params as Record<string, string>).key;
+    if (!key) { res.status(400).json({ error: "No key specified" }); return; }
+    const file = objectStorageClient.bucket(bucketId).file(key);
+    const [exists] = await file.exists();
+    if (!exists) { res.status(404).json({ error: "Not found" }); return; }
+    const [metadata] = await file.getMetadata();
+    const [buffer] = await file.download();
+    res.setHeader("Content-Type", (metadata.contentType as string) || "image/png");
+    res.setHeader("Cache-Control", "private, max-age=3600");
+    res.send(buffer);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Failed to serve image";
+    req.log.error({ err }, "ai-portrait image proxy failed");
+    res.status(500).json({ error: msg });
+  }
+});
+
 router.post("/ai-portrait/generate", async (req: Request, res: Response) => {
   try {
     const { sourcePhotoId, clientName = "", scenarios } = req.body as {
@@ -175,7 +206,7 @@ router.post("/ai-portrait/generate", async (req: Request, res: Response) => {
 
     setImmediate(async () => {
       try {
-        const buf = await fetchBuf(source.photoUrl);
+        const buf = await fetchBufFromStorage(source.photoUrl);
         await processPortraitJob(jobId, buf, sourcePhotoId, clientName, scenarios);
       } catch (err) {
         logger.error({ err, jobId }, "Portrait job failed at top level");
@@ -276,7 +307,7 @@ router.post("/ai-portrait/:portraitId/regenerate", async (req: Request, res: Res
 
     setImmediate(async () => {
       try {
-        const buf = await fetchBuf(source.photoUrl);
+        const buf = await fetchBufFromStorage(source.photoUrl);
         await regenerateSingleCard(jobId, portraitId, buf);
       } catch (err) {
         logger.error({ err, jobId, portraitId }, "Regen failed");

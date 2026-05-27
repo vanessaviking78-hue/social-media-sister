@@ -53,11 +53,10 @@ async function uploadBuf(buffer: Buffer, filename: string, folder: string, mime 
   if (!bucketId) throw new Error("DEFAULT_OBJECT_STORAGE_BUCKET_ID not set");
   const key = `${folder}/${uuid()}/${filename}`;
   await objectStorageClient.bucket(bucketId).file(key).save(buffer, {
-    public: true,
     contentType: mime,
-    metadata: { cacheControl: "public, max-age=31536000" },
+    metadata: { cacheControl: "private, max-age=3600" },
   });
-  return `https://storage.googleapis.com/${bucketId}/${key}`;
+  return `/api/ai-portrait/images/${key}`;
 }
 
 async function applyWatermark(imageBuffer: Buffer): Promise<Buffer> {
