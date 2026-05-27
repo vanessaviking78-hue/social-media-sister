@@ -1,0 +1,70 @@
+CONSOLIDATED FIXES ACROSS MULTIPLE FEATURES — please address all sections.
+
+These issues appear in BOTH the About Me / Doodles generator AND the Seamless Carousel generator. Likely shared rendering/UI components, so please fix once in the shared layer where possible.
+
+================================================================
+SECTION A: ABOUT ME / DOODLES — bugs and missing features
+================================================================
+
+1. FONT LIBRARY REGRESSION: the font selector currently only shows the new script fonts. Please restore the FULL existing CyberSuite font library and ADD the new script fonts to it. The user needs access to all sans-serif, serif, script, and brand fonts. Do not replace, only add.
+
+2. LOGO UPLOAD BUTTON MISSING: add an "Upload logo" button in the controls panel. User uploads a PNG (transparent background ideally). The logo appears on the preview as a draggable, resizable element. Same interaction as words and doodles.
+
+3. TEXT COLOUR OPTIONS: add a full hex colour picker AND a swatch palette of preset colours per text element (title, subtitle, each word). Each element gets its own colour control.
+
+4. TEXT SIZE: add a font-size slider or numeric input per text element (title, subtitle, each word, doodles). Live preview reflects every change.
+
+5. LETTER SPACING (DENSITY): add a tracking control per text element in pixels or em.
+
+6. LINE SPACING: add a line-height control for multi-line text elements.
+
+7. SCHEDULE BUTTON: add a "Schedule" button alongside Download and Save. It opens the existing scheduler modal used by Carousel, Single Image, Reels etc, so the user can schedule directly without leaving the page.
+
+8. BUG — TEXT NOT VISIBLE ON PREVIEW: when typing into title, subtitle or word inputs, text does not appear on the preview canvas. Debug and fix.
+
+9. BUG — DOWNLOAD PRODUCES CORRUPT FILE: downloaded PNG cannot be opened by Mac Preview ("damaged or unrecognised format"). Check server-side rendering produces a valid PNG buffer, correct Content-Type header, .png extension. Likely shares root cause with bug 8.
+
+================================================================
+SECTION B: SEAMLESS CAROUSEL — same set of issues
+================================================================
+
+The Seamless Carousel generator has the SAME issues as About Me. Please apply the same fixes:
+
+1. Restore full font library, add new fonts on top
+2. Add logo upload button (draggable + resizable on canvas)
+3. Add text colour options (hex picker + swatch palette) per text element
+4. Add text size control per text element
+5. Add letter-spacing / density control
+6. Add line-spacing control
+7. Add Post and Schedule buttons next to Save. "Post" pushes directly to IG via the existing /api/meta/push flow. "Schedule" opens the scheduler modal.
+8. BUG — text not visible on preview, same as About Me
+9. BUG — same export issue if applicable, verify the rendered carousel slides are valid PNGs
+
+================================================================
+SECTION C: MUSIC OPTION ACROSS ALL FORMATS
+================================================================
+
+Currently, music selection only exists on the Reels generator. Vanessa wants music available on ALL post formats where Instagram supports it:
+
+1. REELS — already exists, no change needed.
+
+2. CAROUSELS — add a music picker. Instagram supports music on carousels (Add Music in the post editor). When the user saves a carousel with music selected, the music metadata is included in the IG post API payload (use `audio_name` parameter on the Graph API where supported, or save as a draft with the music suggestion noted in the caption for manual addition if API doesn't yet support direct music attachment).
+
+3. STORIES — add a music picker. Instagram fully supports music on Stories via API.
+
+4. SINGLE IMAGE POSTS — Instagram now supports music on single image posts (rolling out 2025). Add a music picker. If the API does not yet expose it, save the chosen track to the post metadata and surface it as a "Recommended music" note for the user to add manually.
+
+5. ABOUT ME / DOODLES — when saving an About Me post that's destined for IG as a single image or story, the same music picker should appear.
+
+6. SEAMLESS CAROUSEL — same as Carousels, add the music picker.
+
+IMPLEMENTATION NOTES:
+- Reuse the existing music search/picker component from the Reels generator (don't rebuild from scratch)
+- Each generator gets a "Add music" button that opens the same picker modal
+- The selected track is saved against the post in the database under a `musicTrack` field (jsonb: { trackId, name, artist, durationMs, url? })
+- When pushing to IG, include music metadata in the API payload where supported
+- When music isn't yet supported by the IG API for a given format, save it as metadata anyway so the user has a record and can add manually
+
+================================================================
+
+Please tackle Section A and B in parallel (shared root causes likely), then Section C. Restart api-server when each major section is complete. Vanessa will test as you go.
