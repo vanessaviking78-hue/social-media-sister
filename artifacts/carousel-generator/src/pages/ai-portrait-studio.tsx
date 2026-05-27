@@ -313,6 +313,31 @@ export default function AiPortraitStudio() {
     a.click();
   };
 
+  const [savingAll, setSavingAll] = useState(false);
+  const handleSaveAll = async (applyWatermark: boolean) => {
+    const successful = cards.filter((c) => c.status === "success" && c.portraitId);
+    if (!successful.length) return;
+    setSavingAll(true);
+    try {
+      const r = await fetch(`${BASE}api/ai-portrait/save-batch-to-library`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          portraitIds: successful.map((c) => c.portraitId!),
+          applyWatermark,
+          clientName: clientName,
+        }),
+      });
+      const data = await r.json() as { success?: boolean; count?: number; error?: string };
+      if (!r.ok) throw new Error(data.error || "Save failed");
+      toast.success(`${data.count} portrait${data.count !== 1 ? "s" : ""} saved to Approvals`);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSavingAll(false);
+    }
+  };
+
   const [downloadingAll, setDownloadingAll] = useState(false);
   const handleDownloadAll = async () => {
     const successful = cards.filter((c) => c.status === "success" && c.outputImageUrl);
@@ -598,18 +623,40 @@ export default function AiPortraitStudio() {
               </p>
             </div>
             {cards.some((c) => c.status === "success" && c.outputImageUrl) && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleDownloadAll}
-                disabled={downloadingAll}
-                className="shrink-0 gap-1.5"
-              >
-                {downloadingAll
-                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  : <Download className="w-3.5 h-3.5" />}
-                Download All
-              </Button>
+              <div className="flex gap-2 shrink-0">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button size="sm" className="gap-1.5 bg-violet-600 hover:bg-violet-700 text-white" disabled={savingAll}>
+                      {savingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BookImage className="w-3.5 h-3.5" />}
+                      Save All to Library
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-4 space-y-3">
+                    <p className="text-sm font-medium">Save all portraits</p>
+                    <p className="text-xs text-muted-foreground">Creates one approval batch with all completed portraits. ASA compliance note added automatically.</p>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleSaveAll(false)} disabled={savingAll}>
+                        No watermark
+                      </Button>
+                      <Button size="sm" className="flex-1 text-xs bg-violet-600 hover:bg-violet-700 text-white" onClick={() => handleSaveAll(true)} disabled={savingAll}>
+                        <Palette className="w-3 h-3 mr-1" />With watermark
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleDownloadAll}
+                  disabled={downloadingAll}
+                  className="gap-1.5"
+                >
+                  {downloadingAll
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <Download className="w-3.5 h-3.5" />}
+                  Download All
+                </Button>
+              </div>
             )}
           </div>
 

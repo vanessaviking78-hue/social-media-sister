@@ -258,6 +258,48 @@ router.post("/ai-portrait/:portraitId/save-to-library", async (req: Request, res
   }
 });
 
+router.post("/ai-portrait/save-batch-to-library", async (req: Request, res: Response) => {
+  try {
+    const { portraitIds, applyWatermark = true, clientName: bodyClientName } = req.body as {
+      portraitIds: number[];
+      applyWatermark?: boolean;
+      clientName?: string;
+    };
+    if (!Array.isArray(portraitIds) || portraitIds.length === 0) {
+      res.status(400).json({ error: "portraitIds must be a non-empty array" }); return;
+    }
+
+    const portraits = await db.select().from(aiGeneratedPortraitsTable)
+      .where(eq(aiGeneratedPortraitsTable.status, "success"));
+    const matching = portraits.filter((p) => portraitIds.includes(p.id));
+    if (matching.length === 0) { res.status(404).json({ error: "No matching portraits found" }); return; }
+
+    const effectiveClientName = bodyClientName?.trim() || matching[0].clientName || "Unknown";
+    const batchName = `AI Portraits — ${effectiveClientName} — ${new Date().toLocaleDateString("en-GB")}`;
+    const token = uuid();
+    const [batch] = await db
+      .insert(approvalBatchesTable)
+      .values({ name: batchName, clientName: effectiveClientName, token, status: "pending" })
+      .returning();
+
+    const complianceNote = "This image was generated using artificial intelligence. It does not represent a real photograph. Created in accordance with ASA/CAP guidelines — AI-generated content.";
+    for (const portrait of matching) {
+      const imageUrl = applyWatermark
+        ? (portrait.outputImageUrl ?? portrait.originalImageUrl)
+        : (portrait.originalImageUrl ?? portrait.outputImageUrl);
+      if (!imageUrl) continue;
+      await db.insert(approvalImagesTable).values({ batchId: batch.id, imageUrl, status: "pending", clientNote: complianceNote });
+      await db.update(aiGeneratedPortraitsTable).set({ savedToLibrary: true }).where(eq(aiGeneratedPortraitsTable.id, portrait.id));
+    }
+
+    res.json({ success: true, batchId: batch.id, approvalToken: token, clientName: effectiveClientName, count: matching.length });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Batch save failed";
+    req.log.error({ err }, "ai-portrait/save-batch-to-library failed");
+    res.status(500).json({ error: msg });
+  }
+});
+
 router.post("/ai-portrait/source-from-url", async (req: Request, res: Response) => {
   try {
     const { photoUrl, clientName = "", notes = "" } = req.body as { photoUrl: string; clientName?: string; notes?: string };
