@@ -151,22 +151,64 @@ export default function Podcast() {
     <div className="min-h-screen bg-black text-white">
       <div className="max-w-2xl mx-auto px-6 py-16 md:py-24">
 
-        {/* Header */}
-        <div className="mb-16">
-          <img
-            src="/sms-logo.png"
-            alt="Social Media Sister"
-            className="h-12 w-12 rounded-full object-cover mb-8"
-          />
-          <h1 className="font-bold text-3xl md:text-4xl leading-tight mb-6">
-            Content Day Questions
-          </h1>
-          <p className="text-white/60 text-base md:text-lg leading-relaxed">
-            This isn't an interview. It's just a chance to get to know you — and let your followers see the face behind the business.
-          </p>
+        {/* Photo + What to Expect */}
+        <div className="mb-20">
+
+          {/* Photo */}
+          <div className="mb-10">
+            <img
+              src="/podcast-host.png"
+              alt="Social Media Sister"
+              className="w-full max-w-sm mx-auto md:mx-0 rounded-2xl object-cover grayscale"
+              style={{ aspectRatio: "3/4", objectPosition: "center top" }}
+            />
+          </div>
+
+          {/* What to Expect heading */}
+          <div className="mb-8">
+            <h1 className="font-bold text-3xl md:text-4xl leading-tight mb-3">
+              What to Expect at a Content Day
+            </h1>
+            <div style={{ width: "100%", height: "3px", background: "#E91976", borderRadius: "2px" }} />
+          </div>
+
+          {/* Copy */}
+          <div className="space-y-5 text-white/80 text-base md:text-lg leading-relaxed">
+            <p>You don't need to prepare a single thing.</p>
+            <p>
+              No notes. No practised answers. No idea in your head of what you're going to say.
+              That's not a problem. That's the whole plan.
+            </p>
+            <p>
+              The best content doesn't come from people who've rehearsed. It comes from the pause
+              before the words arrive. The moment a memory lands on your face before you've even
+              found the sentence for it. That's what your followers actually want to see.
+            </p>
+            <p>
+              I stay off camera. This is your conversation, not a performance. The questions are
+              there to get you talking — some about your work, some about you, one or two that
+              might make you stop and think for just a second.
+            </p>
+            <p>
+              We're building something that no polished, filtered, perfect-lighting video can
+              touch. We're building the version of you that people already trust, already like,
+              already want to spend time with.
+            </p>
+            <p className="text-white font-semibold">You just have to show up.</p>
+          </div>
+
+          {/* Divider */}
+          <div className="mt-14 mb-2">
+            <p className="text-white/25 text-xs uppercase tracking-widest font-semibold">
+              This isn't an interview
+            </p>
+            <p className="text-white/40 text-sm mt-2">
+              It's just a chance to get to know you — and let your followers see the face behind the business.
+            </p>
+          </div>
         </div>
 
-        {/* Sections */}
+        {/* Questions */}
         <div className="space-y-16">
           {SECTIONS.map((section) => (
             <div key={section.number}>
@@ -184,7 +226,7 @@ export default function Podcast() {
                   const num = questionNumber;
                   return (
                     <div key={num} className="flex gap-4 items-start">
-                      <span className="text-white/20 font-mono text-sm mt-1 flex-shrink-0 w-5 text-right">{num}</span>
+                      <span className="text-white/20 font-mono text-sm mt-1.5 flex-shrink-0 w-5 text-right">{num}</span>
                       <p className="text-white font-bold text-xl md:text-2xl leading-snug">
                         {q}
                       </p>
