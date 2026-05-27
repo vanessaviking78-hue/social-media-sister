@@ -2201,11 +2201,11 @@ export default function Home() {
                       </div>
                     </div>
 
-                    {csvPreview.rows.length > 0 && (
+                    {allCsvRows.length > 0 && (
                       <div className="space-y-4">
-                        <h3 className="font-medium text-lg">CSV Preview</h3>
-                        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-1">
-                          {csvPreview.rows.map((row, ri) => (
+                        <h3 className="font-medium text-lg">Your Slides <span className="text-sm font-normal text-muted-foreground ml-1">— click any text to edit it</span></h3>
+                        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-1">
+                          {allCsvRows.map((row, ri) => (
                             <div key={ri} className="rounded-xl border border-border/30 bg-accent/20 overflow-hidden">
                               <div className="px-4 py-2.5 bg-accent/30 flex items-center gap-2">
                                 <span className="text-primary font-mono text-sm font-bold">{String(ri + 1).padStart(2, "0")}</span>
@@ -2213,18 +2213,44 @@ export default function Home() {
                               </div>
                               <div className="p-4 space-y-3">
                                 {row.map((cell, ci) => (
-                                  <div key={ci} className="flex gap-3">
-                                    <span className={`text-sm font-semibold mt-0.5 flex-shrink-0 w-16 ${ci === 0 ? "text-primary" : "text-muted-foreground/60"}`}>
+                                  <div key={ci} className="flex gap-3 items-start">
+                                    <span className={`text-sm font-semibold pt-2 flex-shrink-0 w-16 ${ci === 0 ? "text-primary" : "text-muted-foreground/60"}`}>
                                       {ci === 0 ? "Hook" : `Slide ${ci + 1}`}
                                     </span>
-                                    <p className={`text-base leading-relaxed ${ci === 0 ? "text-foreground font-semibold" : "text-muted-foreground"}`}>{cell}</p>
+                                    <textarea
+                                      value={cell}
+                                      rows={1}
+                                      onChange={(e) => {
+                                        const updated = allCsvRows.map((r, rIdx) =>
+                                          rIdx === ri ? r.map((c, cIdx) => cIdx === ci ? e.target.value : c) : r
+                                        );
+                                        setAllCsvRows(updated);
+                                        setCsvPreview((prev) => ({
+                                          ...prev,
+                                          rows: updated.slice(0, 3),
+                                        }));
+                                      }}
+                                      onInput={(e) => {
+                                        const el = e.currentTarget;
+                                        el.style.height = "auto";
+                                        el.style.height = `${el.scrollHeight}px`;
+                                      }}
+                                      className={`flex-1 bg-transparent border border-transparent hover:border-border/40 focus:border-primary/60 rounded-lg px-2 py-1.5 text-base leading-relaxed resize-none overflow-hidden outline-none transition-colors min-h-[2.2rem] ${ci === 0 ? "text-foreground font-semibold" : "text-muted-foreground"}`}
+                                      style={{ height: "auto" }}
+                                      ref={(el) => {
+                                        if (el) {
+                                          el.style.height = "auto";
+                                          el.style.height = `${el.scrollHeight}px`;
+                                        }
+                                      }}
+                                    />
                                   </div>
                                 ))}
                               </div>
                             </div>
                           ))}
                         </div>
-                        <p className="text-sm text-muted-foreground/70 italic">Showing first 3 rows - each row becomes one carousel</p>
+                        <p className="text-sm text-muted-foreground/70 italic">{allCsvRows.length} carousel{allCsvRows.length !== 1 ? "s" : ""} loaded</p>
                       </div>
                     )}
                   </>
