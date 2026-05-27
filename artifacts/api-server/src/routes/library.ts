@@ -47,10 +47,10 @@ async function uploadToPublicGCS(
   const key = `library/${slug}/${uuid()}/${filename}`;
   const bucket = objectStorageClient.bucket(bucketId);
   await bucket.file(key).save(buffer, {
-    public: true,
     contentType: detectMime(filename),
+    metadata: { cacheControl: "private, max-age=3600" },
   });
-  return `https://storage.googleapis.com/${bucketId}/${key}`;
+  return `/api/media/${key}`;
 }
 
 // GET /api/library — list items for a client

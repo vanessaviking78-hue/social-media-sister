@@ -19,17 +19,28 @@ async function uploadBuf(buffer: Buffer, filename: string, folder: string, mime 
   if (!bucketId) throw new Error("DEFAULT_OBJECT_STORAGE_BUCKET_ID not set");
   const key = `${folder}/${uuid()}/${filename}`;
   await objectStorageClient.bucket(bucketId).file(key).save(buffer, {
-    public: true,
     contentType: mime,
-    metadata: { cacheControl: "public, max-age=31536000" },
+    metadata: { cacheControl: "private, max-age=3600" },
   });
-  return `https://storage.googleapis.com/${bucketId}/${key}`;
+  return `/api/media/${key}`;
 }
 
-async function fetchBuf(url: string): Promise<Buffer> {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`Failed to fetch ${url}: ${r.status}`);
-  return Buffer.from(await r.arrayBuffer());
+async function fetchBuf(urlOrPath: string): Promise<Buffer> {
+  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+  if (!bucketId) throw new Error("DEFAULT_OBJECT_STORAGE_BUCKET_ID not set");
+  let key: string;
+  if (urlOrPath.startsWith("/api/media/")) {
+    key = urlOrPath.slice("/api/media/".length);
+  } else if (urlOrPath.startsWith("https://storage.googleapis.com/")) {
+    const u = new URL(urlOrPath);
+    key = u.pathname.slice(1).replace(`${bucketId}/`, "");
+  } else {
+    const r = await fetch(urlOrPath);
+    if (!r.ok) throw new Error(`Failed to fetch ${urlOrPath}: ${r.status}`);
+    return Buffer.from(await r.arrayBuffer());
+  }
+  const [buffer] = await objectStorageClient.bucket(bucketId).file(key).download();
+  return buffer;
 }
 
 function hexToRgb(hex: string): { r: number; g: number; b: number } {

@@ -778,6 +778,26 @@ router.get("/content/images/carousel-images/:filename", async (req, res) => {
   }
 });
 
+router.get("/media/*key", async (req, res) => {
+  try {
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    if (!bucketId) return res.status(500).json({ error: "Object storage not configured" });
+    const key = (req.params as Record<string, string>).key;
+    if (!key) return res.status(400).json({ error: "No key specified" });
+    const bucket = objectStorageClient.bucket(bucketId);
+    const file = bucket.file(key);
+    const [exists] = await file.exists();
+    if (!exists) return res.status(404).json({ error: "Not found" });
+    const [metadata] = await file.getMetadata();
+    res.setHeader("Content-Type", (metadata.contentType as string) || "application/octet-stream");
+    res.setHeader("Cache-Control", "private, max-age=3600");
+    if (metadata.size) res.setHeader("Content-Length", String(metadata.size));
+    file.createReadStream().pipe(res);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to serve file" });
+  }
+});
+
 router.get("/cloud-campaign/status", async (_req, res) => {
   const apiKey = process.env.CLOUD_CAMPAIGN_API_KEY;
   const apiSecret = process.env.CLOUD_CAMPAIGN_API_SECRET;
