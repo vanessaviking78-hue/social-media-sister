@@ -56,7 +56,7 @@ async function uploadBuf(buffer: Buffer, filename: string, folder: string, mime 
     contentType: mime,
     metadata: { cacheControl: "private, max-age=3600" },
   });
-  return `/api/ai-portrait/images/${key}`;
+  return `/api/media/${key}`;
 }
 
 async function applyWatermark(imageBuffer: Buffer): Promise<Buffer> {

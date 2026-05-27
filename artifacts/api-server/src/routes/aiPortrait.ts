@@ -31,15 +31,17 @@ async function uploadBuf(buffer: Buffer, filename: string, folder: string, mime 
     contentType: mime,
     metadata: { cacheControl: "private, max-age=3600" },
   });
-  return `/api/ai-portrait/images/${key}`;
+  return `/api/media/${key}`;
 }
 
 async function fetchBufFromStorage(urlOrPath: string): Promise<Buffer> {
   const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
   if (!bucketId) throw new Error("DEFAULT_OBJECT_STORAGE_BUCKET_ID not set");
-  // Accepts /api/ai-portrait/images/<key> proxy paths or legacy GCS https:// URLs
+  // Accepts /api/media/<key>, legacy /api/ai-portrait/images/<key>, or GCS https:// URLs
   let key: string;
-  if (urlOrPath.startsWith("/api/ai-portrait/images/")) {
+  if (urlOrPath.startsWith("/api/media/")) {
+    key = urlOrPath.slice("/api/media/".length);
+  } else if (urlOrPath.startsWith("/api/ai-portrait/images/")) {
     key = urlOrPath.slice("/api/ai-portrait/images/".length);
   } else if (urlOrPath.startsWith("https://storage.googleapis.com/")) {
     const u = new URL(urlOrPath);
