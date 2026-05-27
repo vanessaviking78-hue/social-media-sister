@@ -262,6 +262,8 @@ export const aboutMePostsTable = pgTable("about_me_posts", {
   backgroundBlurAmount: integer("background_blur_amount").notNull().default(25),
   backgroundOverlayOpacity: integer("background_overlay_opacity").notNull().default(0),
   title: text("title").notNull().default("About me"),
+  subtitle: text("subtitle").notNull().default(""),
+  heartSize: integer("heart_size").notNull().default(20),
   words: json("words").$type<AboutMeWord[]>().notNull().default([]),
   arrowStyle: text("arrow_style").notNull().default("curly"),
   accentColor: text("accent_color").notNull().default("#F5EEE3"),

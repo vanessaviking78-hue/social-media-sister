@@ -43,10 +43,8 @@ async function fetchBuf(urlOrPath: string): Promise<Buffer> {
   return buffer;
 }
 
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  const clean = hex.replace("#", "");
-  const n = parseInt(clean.length === 3 ? clean.split("").map((c) => c + c).join("") : clean, 16);
-  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+function escXml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 function heartPath(hx: number, hy: number, s: number): string {
@@ -57,51 +55,58 @@ function buildSvgOverlay(
   canvasW: number,
   canvasH: number,
   title: string,
+  subtitle: string,
   titleFont: string,
   accentColor: string,
   words: AboutMeWord[],
   overlayOpacity: number,
-  photoCenterX: number,
-  photoCenterY: number,
-  cutoutW: number,
-  cutoutH: number,
+  heartSize: number,
 ): string {
   const tint = overlayOpacity > 0
     ? `<rect width="${canvasW}" height="${canvasH}" fill="${accentColor}" opacity="${overlayOpacity}"/>`
     : "";
 
+  // Heart size: server-side scale (heartSize is design unit, scale to canvas)
+  const hs = Math.round(heartSize * 2.2);
+  // Gap between heart and word text (scales with heart size)
+  const heartWordGap = Math.round(hs * 1.6 + 18);
+
   const wordsSvg = words.map((w) => {
     const wx = w.x * canvasW;
     const wy = w.y * canvasH;
-    const s = 20;
-    const hy = wy - 48;
-    return `<path d="${heartPath(wx, hy, s)}" fill="${accentColor}" opacity="0.88"/>
-<text x="${wx.toFixed(1)}" y="${wy.toFixed(1)}" font-family="Georgia, 'Times New Roman', serif" font-size="38" fill="${accentColor}" text-anchor="middle">${escXml(w.text)}</text>`;
+    const hy = wy - heartWordGap;
+    return `<path d="${heartPath(wx, hy, hs)}" fill="${accentColor}" opacity="0.9"/>
+<text x="${wx.toFixed(1)}" y="${wy.toFixed(1)}" font-family="Georgia, 'Times New Roman', serif" font-size="40" fill="${accentColor}" text-anchor="middle" letter-spacing="1">${escXml(w.text)}</text>`;
   }).join("\n");
 
   const sparkles = [
-    [0.1, 0.14, 30, 0.55],
-    [0.88, 0.52, 22, 0.42],
-    [0.18, 0.82, 18, 0.38],
-    [0.82, 0.15, 26, 0.48],
-    [0.5, 0.93, 20, 0.35],
+    [0.08, 0.11, 32, 0.5],
+    [0.9, 0.5, 22, 0.4],
+    [0.16, 0.84, 20, 0.38],
+    [0.84, 0.13, 28, 0.45],
+    [0.5, 0.95, 22, 0.35],
   ].map(([rx, ry, size, op]) =>
     `<text x="${(rx as number * canvasW).toFixed(0)}" y="${(ry as number * canvasH).toFixed(0)}" font-size="${size}" fill="${accentColor}" text-anchor="middle" opacity="${op}">✦</text>`
   ).join("\n");
 
+  // Title font Google import
+  const fontParam = encodeURIComponent(titleFont.replace(/ /g, "+"));
+  const titleFontSize = title.length > 16 ? 72 : 90;
+  const subtitleSvg = subtitle
+    ? `<text x="${(canvasW / 2).toFixed(0)}" y="${(titleFontSize + 120).toFixed(0)}" font-family="Georgia, serif" font-size="42" fill="${accentColor}" text-anchor="middle" opacity="0.85" letter-spacing="2">${escXml(subtitle.toUpperCase())}</text>`
+    : "";
+
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${canvasW}" height="${canvasH}">
   <defs>
-    <style>@import url('https://fonts.googleapis.com/css2?family=${encodeURIComponent(titleFont)}');</style>
+    <style>@import url('https://fonts.googleapis.com/css2?family=${fontParam}:wght@400');</style>
+    <filter id="shadow"><feDropShadow dx="1" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/></filter>
   </defs>
   ${tint}
-  <text x="${(canvasW / 2).toFixed(0)}" y="100" font-family="'${titleFont}', 'Allura', cursive" font-size="90" fill="${accentColor}" text-anchor="middle">${escXml(title)}</text>
+  <text x="${(canvasW / 2).toFixed(0)}" y="${titleFontSize + 30}" font-family="'${titleFont}', 'Allura', cursive" font-size="${titleFontSize}" fill="${accentColor}" text-anchor="middle" filter="url(#shadow)">${escXml(title)}</text>
+  ${subtitleSvg}
   ${wordsSvg}
   ${sparkles}
 </svg>`;
-}
-
-function escXml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 // POST /api/about-me/upload-photo
@@ -111,7 +116,7 @@ router.post("/about-me/upload-photo", upload.fields([
 ]), async (req, res) => {
   try {
     const files = req.files as Record<string, Express.Multer.File[]> | undefined;
-    if (!files) return res.status(400).json({ error: "No files uploaded" });
+    if (!files) { res.status(400).json({ error: "No files uploaded" }); return; }
 
     const result: { originalUrl?: string; cutoutUrl?: string } = {};
     if (files.original?.[0]) {
@@ -137,8 +142,7 @@ router.get("/about-me", async (req, res) => {
     if (clientName && typeof clientName === "string") {
       q = q.where(eq(aboutMePostsTable.clientName, clientName));
     }
-    const posts = await q.orderBy(desc(aboutMePostsTable.createdAt));
-    res.json(posts);
+    res.json(await q.orderBy(desc(aboutMePostsTable.createdAt)));
   } catch (e: any) {
     req.log.error(e);
     res.status(500).json({ error: e.message });
@@ -149,7 +153,7 @@ router.get("/about-me", async (req, res) => {
 router.get("/about-me/:id", async (req, res) => {
   try {
     const [post] = await db.select().from(aboutMePostsTable).where(eq(aboutMePostsTable.id, parseInt(req.params.id)));
-    if (!post) return res.status(404).json({ error: "Not found" });
+    if (!post) { res.status(404).json({ error: "Not found" }); return; }
     res.json(post);
   } catch (e: any) {
     req.log.error(e);
@@ -169,6 +173,8 @@ router.post("/about-me", async (req, res) => {
       backgroundBlurAmount: body.backgroundBlurAmount ?? 25,
       backgroundOverlayOpacity: body.backgroundOverlayOpacity ?? 0,
       title: body.title ?? "About me",
+      subtitle: body.subtitle ?? "",
+      heartSize: body.heartSize ?? 20,
       words: body.words ?? [],
       accentColor: body.accentColor ?? "#F5EEE3",
       titleFont: body.titleFont ?? "Allura",
@@ -192,13 +198,15 @@ router.put("/about-me/:id", async (req, res) => {
       backgroundBlurAmount: body.backgroundBlurAmount,
       backgroundOverlayOpacity: body.backgroundOverlayOpacity,
       title: body.title,
+      subtitle: body.subtitle ?? "",
+      heartSize: body.heartSize ?? 20,
       words: body.words,
       accentColor: body.accentColor,
       titleFont: body.titleFont,
       aspectRatio: body.aspectRatio,
       updatedAt: new Date(),
     }).where(eq(aboutMePostsTable.id, id)).returning();
-    if (!updated) return res.status(404).json({ error: "Not found" });
+    if (!updated) { res.status(404).json({ error: "Not found" }); return; }
     res.json(updated);
   } catch (e: any) {
     req.log.error(e);
@@ -222,7 +230,7 @@ router.post("/about-me/:id/render", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const [post] = await db.select().from(aboutMePostsTable).where(eq(aboutMePostsTable.id, id));
-    if (!post) return res.status(404).json({ error: "Not found" });
+    if (!post) { res.status(404).json({ error: "Not found" }); return; }
 
     const [canvasW, canvasH] = post.aspectRatio === "1080x1920" ? [1080, 1920] : [1080, 1350];
 
@@ -247,12 +255,13 @@ router.post("/about-me/:id/render", async (req, res) => {
 
     const cutoutLeft = Math.round((canvasW - cutoutW) / 2);
     const cutoutTop = Math.round(canvasH * 0.21);
-    const photoCX = canvasW / 2;
-    const photoCY = cutoutTop + cutoutH / 2;
 
     const overlayOp = (post.backgroundOverlayOpacity ?? 0) / 100;
     const words = (post.words ?? []) as AboutMeWord[];
-    const svgStr = buildSvgOverlay(canvasW, canvasH, post.title, post.titleFont ?? "Allura", post.accentColor ?? "#F5EEE3", words, overlayOp, photoCX, photoCY, cutoutW, cutoutH);
+    const heartSize = post.heartSize ?? 20;
+    const subtitle = post.subtitle ?? "";
+
+    const svgStr = buildSvgOverlay(canvasW, canvasH, post.title, subtitle, post.titleFont ?? "Allura", post.accentColor ?? "#F5EEE3", words, overlayOp, heartSize);
 
     const composed = await sharp(blurredBg)
       .composite([
