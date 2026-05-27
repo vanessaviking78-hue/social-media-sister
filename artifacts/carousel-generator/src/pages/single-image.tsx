@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import {
-  Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus, CalendarDays, CalendarClock, BarChart3, ShieldCheck, BookOpen, Film, ChevronDown, Play, Square,
+  Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus, CalendarDays, CalendarClock, BarChart3, ShieldCheck, BookOpen, Film, ChevronDown, Play, Square,
 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
@@ -72,16 +72,7 @@ export default function SingleImage() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvPreview, setCsvPreview] = useState<{ rows: string[] }>({ rows: [] });
   const [allCsvRows, setAllCsvRows] = useState<string[]>([]);
-  const [contentMode, setContentMode] = useState<"csv" | "ai">("csv");
-  const [aiIndustry, setAiIndustry] = useState("aesthetics");
   const [aiClientName, setAiClientName] = useState("");
-  const [aiTone, setAiTone] = useState("warm & professional");
-  const [aiTopics, setAiTopics] = useState("");
-  const [aiPostCount, setAiPostCount] = useState(10);
-  const [aiExtraInstructions, setAiExtraInstructions] = useState("");
-  const [aiGenerating, setAiGenerating] = useState(false);
-  const [aiProgress, setAiProgress] = useState("");
-  const [aiGeneratedTexts, setAiGeneratedTexts] = useState<string[] | null>(null);
 
   const [captions, setCaptions] = useState<string[]>([]);
   const [captionGenerating, setCaptionGenerating] = useState(false);
@@ -212,7 +203,7 @@ export default function SingleImage() {
       canvas.width = CANVAS_WIDTH;
       canvas.height = CANVAS_HEIGHT;
       const ctx = canvas.getContext("2d")!;
-      const sampleText = allCsvRows[0] || aiGeneratedTexts?.[0] || "Sample text overlay";
+      const sampleText = allCsvRows[0] || "Sample text overlay";
 
       let bgImg = designBgImgRef.current;
       if (!bgImg) {
@@ -277,7 +268,7 @@ export default function SingleImage() {
     fontFamily, subheadingFont, fontSize, textColor, lineSpacing,
     overlayColor, pageColor, cornerStyle, cornerColor, textPosition, textAlign,
     textBoxOutline, textBoxOutlineColor, logoImg, logoPosition, logoSize,
-    allCsvRows, aiGeneratedTexts,
+    allCsvRows,
   ]);
 
   useEffect(() => {
@@ -392,161 +383,10 @@ export default function SingleImage() {
     }
   };
 
-  const handleAiGenerate = async () => {
-    if (!aiIndustry.trim()) { toast.error("Please enter an industry"); return; }
-    if (!aiTopics.trim()) { toast.error("Please enter at least one topic"); return; }
-    setAiGenerating(true);
-    setAiProgress("Starting content generation...");
-    setAiGeneratedTexts(null);
-    const toastId = toast.loading("AI is writing your content...");
-
-    try {
-      const resp = await fetch(`${import.meta.env.BASE_URL}api/content/generate-single`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clientName: aiClientName,
-          industry: aiIndustry,
-          tone: aiTone,
-          topics: aiTopics,
-          postCount: photos.length > 0 ? photos.length : aiPostCount,
-          extraInstructions: aiExtraInstructions,
-        }),
-      });
-
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({ error: "Server error" }));
-        throw new Error(err.error || "Generation failed");
-      }
-
-      const reader = resp.body?.getReader();
-      if (!reader) throw new Error("No response stream");
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          try {
-            const evt = JSON.parse(line.slice(6));
-            if (evt.type === "progress") {
-              setAiProgress(`Generated ${evt.generated} of ${evt.total} posts...`);
-            } else if (evt.type === "complete") {
-              setAiGeneratedTexts(evt.texts);
-              setAiProgress("");
-              toast.success(`${evt.texts.length} single image texts generated!`, { id: toastId });
-            } else if (evt.type === "error") {
-              toast.error(evt.message);
-            }
-          } catch {}
-        }
-      }
-    } catch (e: any) {
-      toast.error("Error: " + (e?.message ?? "Unknown error"), { id: toastId });
-    } finally {
-      setAiGenerating(false);
-    }
-  };
-
-  const handleGenerateFromAi = async () => {
-    if (!photos.length) { toast.error("Please upload at least one photo"); return; }
-    if (!aiIndustry.trim()) { toast.error("Please enter an industry"); return; }
-    if (!aiTopics.trim()) { toast.error("Please enter topics"); return; }
-
-    setIsGenerating(true);
-
-    try {
-      let texts = aiGeneratedTexts;
-      if (!texts?.length) {
-        setAiGenerating(true);
-        setAiProgress("Starting content generation...");
-        const toastId = toast.loading("AI is writing your content...");
-
-        const resp = await fetch(`${import.meta.env.BASE_URL}api/content/generate-single`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            clientName: aiClientName,
-            industry: aiIndustry,
-            tone: aiTone,
-            topics: aiTopics,
-            postCount: photos.length,
-            extraInstructions: aiExtraInstructions,
-          }),
-        });
-
-        if (!resp.ok) {
-          const err = await resp.json().catch(() => ({ error: "Server error" }));
-          throw new Error(err.error || "Generation failed");
-        }
-
-        const reader = resp.body?.getReader();
-        if (!reader) throw new Error("No response stream");
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() || "";
-
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            try {
-              const evt = JSON.parse(line.slice(6));
-              if (evt.type === "progress") {
-                setAiProgress(`Generated ${evt.generated} of ${evt.total} posts...`);
-              } else if (evt.type === "complete") {
-                texts = evt.texts;
-                setAiGeneratedTexts(evt.texts);
-                setAiProgress("");
-                toast.success(`${evt.texts.length} texts generated - building images...`, { id: toastId });
-              } else if (evt.type === "error") {
-                toast.error(evt.message);
-              }
-            } catch {}
-          }
-        }
-        setAiGenerating(false);
-      }
-
-      if (!texts?.length) throw new Error("No content was generated");
-
-      const photoUrls = photos.map((f) => URL.createObjectURL(f));
-
-      if (texts.length < photos.length) {
-        toast.warning(`Only ${texts.length} text(s) generated for ${photos.length} photo(s) - extra photos will have no text overlay`);
-      }
-
-      const posts: SinglePost[] = photos.map((photo, i) => ({
-        index: i + 1,
-        text: texts[i] || "",
-        imageUrl: photoUrls[i],
-        imageName: photo.name,
-      }));
-
-      setResult({ posts, totalPosts: posts.length, sessionId: "local" });
-      setCurrentStep(4);
-      toast.success(`${posts.length} single image posts ready to download`);
-    } catch (e: any) {
-      toast.error("Error: " + (e?.message ?? "Unknown error"));
-    } finally {
-      setIsGenerating(false);
-      setAiGenerating(false);
-    }
-  };
 
   const handleStartOver = () => {
     setPhotos([]); setCsvFile(null); setCsvPreview({ rows: [] }); setAllCsvRows([]);
-    setCaptions([]); setResult(null); setAiGeneratedTexts(null); setAiProgress("");
+    setCaptions([]); setResult(null);
     setSavedCaptionIndices(new Set()); setCurrentStep(1);
   };
 
@@ -861,7 +701,7 @@ export default function SingleImage() {
   };
 
   const generateCaptions = async () => {
-    const texts = aiGeneratedTexts || (allCsvRows.length > 0 ? allCsvRows : null);
+    const texts = allCsvRows.length > 0 ? allCsvRows : null;
     if (!texts || texts.length === 0) return;
     setCaptionGenerating(true);
     setCaptionProgress("Starting caption generation...");
@@ -874,9 +714,9 @@ export default function SingleImage() {
         body: JSON.stringify({
           posts,
           clientName: aiClientName,
-          industry: aiIndustry || "aesthetics",
-          tone: aiTone,
-          extraInstructions: aiExtraInstructions,
+          industry: "aesthetics",
+          tone: "warm & professional",
+          extraInstructions: "",
           postType: "single-image",
         }),
       });
@@ -1480,15 +1320,6 @@ export default function SingleImage() {
                 </div>
               )}
 
-              <div className="flex rounded-xl overflow-hidden border border-border/30">
-                <button onClick={() => setContentMode("csv")}
-                  className={`flex-1 flex items-center justify-center gap-3 py-6 text-lg font-semibold rounded-xl transition-colors ${contentMode === "csv" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-accent text-muted-foreground"}`}
-                ><FileText className="w-6 h-6" />Upload CSV</button>
-                <button onClick={() => setContentMode("ai")}
-                  className={`flex-1 flex items-center justify-center gap-3 py-6 text-lg font-semibold rounded-xl transition-colors ${contentMode === "ai" ? "bg-primary text-primary-foreground" : "bg-card hover:bg-accent text-muted-foreground"}`}
-                ><Sparkles className="w-6 h-6" />Content Machine</button>
-              </div>
-
               <Button variant="outline" size="lg" onClick={() => { refreshLibCaptions(); setShowBrowseLibrary(!showBrowseLibrary); }} className="w-full py-5 text-base">
                 <MessageSquareText className="w-5 h-5 mr-2" />
                 {showBrowseLibrary ? "Hide Caption Library" : "Browse Caption Library"}
@@ -1538,7 +1369,6 @@ export default function SingleImage() {
                           setCsvFile(new File([blob], "library-captions.csv", { type: "text/csv" }));
                           setSelectedLibCaptionIds(new Set());
                           setShowBrowseLibrary(false);
-                          setContentMode("csv");
                           toast.success(`${selected.length} caption(s) loaded as post content`);
                         }}>
                           <Check className="w-4 h-4 mr-2" /> Use {selectedLibCaptionIds.size} Caption{selectedLibCaptionIds.size > 1 ? "s" : ""}
@@ -1549,8 +1379,7 @@ export default function SingleImage() {
                 </div>
               )}
 
-              {contentMode === "csv" && (
-                <>
+              <>
                   <div
                     className={`drop-zone-idle rounded-2xl min-h-[168px] flex flex-col items-center justify-center text-center cursor-pointer gap-3 px-8 ${isDraggingCsv ? "drop-zone-dragging" : ""}`}
                     onDragOver={(e) => { e.preventDefault(); setIsDraggingCsv(true); }}
@@ -1598,97 +1427,6 @@ export default function SingleImage() {
                     </button>
                   </div>
                 </>
-              )}
-
-              {contentMode === "ai" && (
-                <>
-                  <div className="space-y-6 rounded-2xl border border-border/30 bg-card/50 p-6">
-                    <div className="flex items-center gap-3">
-                      <Wand2 className="w-6 h-6 text-primary" />
-                      <h3 className="text-xl font-semibold">Content Machine Brief</h3>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-semibold">Client Name <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                        <Input value={aiClientName} onChange={(e) => setAiClientName(e.target.value)} placeholder="e.g. Glow Aesthetics" className="h-12 text-base" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-semibold">Industry</Label>
-                        <Input value={aiIndustry} onChange={(e) => setAiIndustry(e.target.value)} placeholder="e.g. aesthetics, dental, wellness" className="h-12 text-base" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-semibold">Tone of Voice</Label>
-                        <Select value={aiTone} onValueChange={setAiTone}>
-                          <SelectTrigger className="h-12 text-base"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {["storytelling & affable", "warm & professional", "fun & casual", "luxury & exclusive", "educational & authoritative", "friendly & approachable"].map((t) => (
-                              <SelectItem key={t} value={t}>{t}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-sm font-semibold">Number of Posts</Label>
-                        <div className="h-12 flex items-center px-4 rounded-md border border-border/30 bg-accent/20 text-base">
-                          {photos.length > 0
-                            ? <span>{photos.length} post{photos.length !== 1 ? "s" : ""} <span className="text-muted-foreground">(1 per photo)</span></span>
-                            : <span className="text-muted-foreground">Upload photos first</span>
-                          }
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold">Topics</Label>
-                      <Input value={aiTopics} onChange={(e) => setAiTopics(e.target.value)} placeholder="e.g. skin care tips, treatment benefits, client results" className="h-12 text-base" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm font-semibold">Extra Instructions <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                      <Input value={aiExtraInstructions} onChange={(e) => setAiExtraInstructions(e.target.value)} placeholder="Any additional guidance for the AI" className="h-12 text-base" />
-                    </div>
-
-                    <Button
-                      onClick={handleAiGenerate}
-                      disabled={aiGenerating}
-                      className="w-full py-6 text-lg font-bold"
-                      size="lg"
-                    >
-                      {aiGenerating ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Sparkles className="w-5 h-5 mr-2" />}
-                      {aiGenerating ? aiProgress || "Generating..." : "Generate Content"}
-                    </Button>
-                  </div>
-
-                  {aiGeneratedTexts && (
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-lg">Generated Texts</h3>
-                        <Badge variant="secondary" className="bg-green-500/20 text-green-400">{aiGeneratedTexts.length} posts</Badge>
-                      </div>
-                      <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-                        {aiGeneratedTexts.map((text, i) => (
-                          <div key={i} className="rounded-xl border border-border/30 bg-accent/20 p-4 flex gap-3">
-                            <span className="text-primary font-mono text-sm font-bold mt-0.5 flex-shrink-0">{String(i + 1).padStart(2, "0")}</span>
-                            <p className="text-base leading-relaxed text-muted-foreground">{text}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between pt-4">
-                    <Button variant="outline" onClick={() => setCurrentStep(2)} className="px-8 py-6 text-lg font-semibold" size="lg">
-                      <ChevronLeft className="w-5 h-5 mr-2" /> Back
-                    </Button>
-                    <button
-                      className="btn-shimmer px-10 py-6 rounded-2xl text-lg font-bold flex items-center gap-3"
-                      onClick={handleGenerateFromAi}
-                      disabled={isGenerating || aiGenerating}
-                    >
-                      {(isGenerating || aiGenerating) ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
-                      {(isGenerating || aiGenerating) ? "Generating..." : "Generate Posts"}
-                    </button>
-                  </div>
-                </>
-              )}
             </div>
           )}
 
