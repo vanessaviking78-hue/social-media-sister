@@ -8,6 +8,7 @@ import {
   aiGeneratedPortraitsTable,
   approvalBatchesTable,
   approvalImagesTable,
+  contentLibraryTable,
 } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { objectStorageClient } from "../lib/objectStorage";
@@ -275,24 +276,44 @@ router.post("/ai-portrait/save-batch-to-library", async (req: Request, res: Resp
     if (matching.length === 0) { res.status(404).json({ error: "No matching portraits found" }); return; }
 
     const effectiveClientName = bodyClientName?.trim() || matching[0].clientName || "Unknown";
-    const batchName = `AI Portraits — ${effectiveClientName} — ${new Date().toLocaleDateString("en-GB")}`;
-    const token = uuid();
-    const [batch] = await db
-      .insert(approvalBatchesTable)
-      .values({ name: batchName, clientName: effectiveClientName, token, status: "pending" })
-      .returning();
 
-    const complianceNote = "This image was generated using artificial intelligence. It does not represent a real photograph. Created in accordance with ASA/CAP guidelines — AI-generated content.";
+    const toInsert = [];
     for (const portrait of matching) {
       const imageUrl = applyWatermark
         ? (portrait.outputImageUrl ?? portrait.originalImageUrl)
         : (portrait.originalImageUrl ?? portrait.outputImageUrl);
       if (!imageUrl) continue;
-      await db.insert(approvalImagesTable).values({ batchId: batch.id, imageUrl, status: "pending", clientNote: complianceNote });
-      await db.update(aiGeneratedPortraitsTable).set({ savedToLibrary: true }).where(eq(aiGeneratedPortraitsTable.id, portrait.id));
+
+      const scenario = AI_PORTRAIT_SCENARIOS.find((s) => s.id === portrait.scenarioId);
+      const scenarioName = scenario?.name ?? portrait.scenarioId;
+
+      toInsert.push({
+        clientName: effectiveClientName,
+        postType: "single",
+        caption: scenarioName,
+        mediaUrl: imageUrl,
+        metadata: {
+          source: "ai-portrait",
+          scenarioId: portrait.scenarioId,
+          scenarioName,
+          portraitId: portrait.id,
+          hasWatermark: applyWatermark,
+        } as Record<string, unknown>,
+      });
     }
 
-    res.json({ success: true, batchId: batch.id, approvalToken: token, clientName: effectiveClientName, count: matching.length });
+    if (!toInsert.length) {
+      res.status(400).json({ error: "No portraits had a valid image URL" }); return;
+    }
+
+    await db.insert(contentLibraryTable).values(toInsert);
+    await Promise.all(
+      matching.map((p) =>
+        db.update(aiGeneratedPortraitsTable).set({ savedToLibrary: true }).where(eq(aiGeneratedPortraitsTable.id, p.id))
+      )
+    );
+
+    res.json({ success: true, clientName: effectiveClientName, count: toInsert.length });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Batch save failed";
     req.log.error({ err }, "ai-portrait/save-batch-to-library failed");

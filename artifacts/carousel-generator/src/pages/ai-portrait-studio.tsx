@@ -330,7 +330,7 @@ export default function AiPortraitStudio() {
       });
       const data = await r.json() as { success?: boolean; count?: number; error?: string };
       if (!r.ok) throw new Error(data.error || "Save failed");
-      toast.success(`${data.count} portrait${data.count !== 1 ? "s" : ""} saved to Approvals`);
+      toast.success(`${data.count} portrait${data.count !== 1 ? "s" : ""} saved to ${clientName ? `${clientName}'s` : "the"} Library`);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Save failed");
     } finally {
@@ -633,7 +633,7 @@ export default function AiPortraitStudio() {
                   </PopoverTrigger>
                   <PopoverContent className="w-64 p-4 space-y-3">
                     <p className="text-sm font-medium">Save all portraits</p>
-                    <p className="text-xs text-muted-foreground">Creates one approval batch with all completed portraits. ASA compliance note added automatically.</p>
+                    <p className="text-xs text-muted-foreground">Saves each portrait as a separate item in the Content Library, tagged with its scenario name.</p>
                     <div className="flex gap-2">
                       <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleSaveAll(false)} disabled={savingAll}>
                         No watermark
