@@ -151,6 +151,7 @@ export default function SeamlessCarouselPage() {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
   const [musicPickerOpen, setMusicPickerOpen] = useState(false);
+  const [firstComment, setFirstComment] = useState("");
   const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
   const [presets, setPresets] = useState<{ id: number; name: string }[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
@@ -238,6 +239,7 @@ export default function SeamlessCarouselPage() {
       caption: "",
       imageUrls: renderedUrls,
       musicTrack: musicTrack || undefined,
+      firstComment: firstComment || undefined,
     }];
     setSchedulePosts(posts);
     setScheduleOpen(true);
@@ -835,6 +837,17 @@ export default function SeamlessCarouselPage() {
                   </Select>
                 )}
 
+                <div>
+                  <label className="text-xs font-medium text-zinc-400 block mb-1">First comment (optional)</label>
+                  <textarea
+                    value={firstComment}
+                    onChange={(e) => setFirstComment(e.target.value)}
+                    placeholder="Which slide surprised you most? Comment the number below 👇"
+                    rows={2}
+                    className="w-full bg-zinc-800/60 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 resize-none focus:outline-none focus:ring-1 focus:ring-zinc-500"
+                  />
+                  <p className="text-xs text-zinc-600 mt-1">Posted 35 seconds after publishing to Instagram.</p>
+                </div>
                 <div className="flex gap-3">
                   <Button variant="outline" onClick={() => setMusicPickerOpen(true)} className={`flex-1 gap-2 ${musicTrack ? "border-green-500/40 text-green-300 hover:bg-green-950/30" : ""}`}>
                     <Music className="w-4 h-4" />{musicTrack ? musicTrack.name.slice(0, 18) : "Add music"}
@@ -854,6 +867,7 @@ export default function SeamlessCarouselPage() {
                           imageUrls: renderedUrls,
                           caption: "Seamless carousel",
                           musicTrack: musicTrack || null,
+                          firstComment: firstComment || undefined,
                         }];
                         const r = await fetch(`${BASE}/api/meta/push`, {
                           method: "POST",

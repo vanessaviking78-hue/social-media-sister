@@ -48,6 +48,9 @@ export interface ClientPreset {
   coverSubheading: string;
   clientPortalToken: string | null;
   defaultPostTime: string;
+  defaultFirstCommentCarousel: string | null;
+  defaultFirstCommentSingle: string | null;
+  defaultFirstCommentReel: string | null;
   onboardingConnectedAt: string | null;
 }
 
@@ -148,7 +151,7 @@ export function usePresets() {
     logoUrl?: string | null,
     captionFootnote?: string,
     metaFields?: { metaPageAccessToken?: string | null; metaFacebookPageId?: string | null; metaInstagramAccountId?: string | null },
-    extra?: { defaultPostTime?: string },
+    extra?: { defaultPostTime?: string; defaultFirstCommentCarousel?: string | null; defaultFirstCommentSingle?: string | null; defaultFirstCommentReel?: string | null },
   ) => {
     const body = {
       name,

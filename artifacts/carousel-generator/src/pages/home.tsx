@@ -119,6 +119,7 @@ export default function Home() {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
   const [musicPickerOpen, setMusicPickerOpen] = useState(false);
+  const [firstComment, setFirstComment] = useState("");
   const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
   const [scheduleRendering, setScheduleRendering] = useState(false);
 
@@ -167,6 +168,7 @@ export default function Home() {
     setLogoSize(preset.logoSize);
     setCoverSubheading(preset.coverSubheading || "");
     setCurrentLogoUrl(preset.logoUrl || null);
+    setFirstComment(preset.defaultFirstCommentCarousel || "");
     if (preset.logoUrl) {
       const img = new Image();
       img.crossOrigin = "anonymous";
@@ -375,7 +377,7 @@ export default function Home() {
           const fn = `meta-${String(s.groupIndex).padStart(2, "0")}-slide-${String(s.groupPosition).padStart(2, "0")}.png`;
           return urlMap.get(fn) || "";
         }).filter(Boolean);
-        posts.push({ title: `Carousel ${gi + 1}`, caption: captions[gi] || "", imageUrls, musicTrack: musicTrack || undefined });
+        posts.push({ title: `Carousel ${gi + 1}`, caption: captions[gi] || "", imageUrls, musicTrack: musicTrack || undefined, firstComment: firstComment || undefined });
       }
 
       const resp = await fetch(`${import.meta.env.BASE_URL}api/meta/push`, {
@@ -447,7 +449,7 @@ export default function Home() {
           const fn = `sched-${String(s.groupIndex).padStart(2, "0")}-slide-${String(s.groupPosition).padStart(2, "0")}.png`;
           return urlMap.get(fn) || "";
         }).filter(Boolean);
-        posts.push({ title: `Carousel ${gi + 1}`, caption: captions[gi] || "", imageUrls, musicTrack: musicTrack || undefined });
+        posts.push({ title: `Carousel ${gi + 1}`, caption: captions[gi] || "", imageUrls, musicTrack: musicTrack || undefined, firstComment: firstComment || undefined });
       }
       setSchedulePosts(posts);
       setScheduleOpen(true);
@@ -2628,6 +2630,19 @@ export default function Home() {
                           </Button>
                         </div>
                       )}
+                    </div>
+
+                    {/* First Comment */}
+                    <div className="mt-4">
+                      <label className="text-sm font-medium text-zinc-400 block mb-1.5">First comment (optional)</label>
+                      <textarea
+                        value={firstComment}
+                        onChange={(e) => setFirstComment(e.target.value)}
+                        placeholder="Which slide surprised you most? Comment the number below 👇"
+                        rows={2}
+                        className="w-full bg-zinc-800/60 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 resize-none focus:outline-none focus:ring-1 focus:ring-zinc-500"
+                      />
+                      <p className="text-xs text-zinc-600 mt-1">Posted as a comment 35 seconds after your post goes live on Instagram.</p>
                     </div>
 
                     {/* Step 4 Navigation */}

@@ -152,7 +152,19 @@ async function postReelToIG(igId: string, token: string, videoUrl: string, capti
   return igPublish(igId, token, containerId);
 }
 
-type PostContent = { imageUrls?: string[]; videoUrl?: string; caption: string; title: string; musicTrack?: { name: string; artist: string } | null };
+async function igPostComment(igMediaId: string, token: string, commentText: string): Promise<void> {
+  const res = await fetch(`${GRAPH}/${igMediaId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: commentText, access_token: token }),
+  });
+  const data = await res.json() as { error?: { message?: string } };
+  if (!res.ok) {
+    logger.warn({ igMediaId, err: data?.error?.message }, "Scheduled first comment post failed");
+  }
+}
+
+type PostContent = { imageUrls?: string[]; videoUrl?: string; caption: string; title: string; firstComment?: string; musicTrack?: { name: string; artist: string } | null };
 
 async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, preset: typeof clientPresetsTable.$inferSelect): Promise<{ igPostId?: string; fbPostId?: string }> {
   const token = preset.metaPageAccessToken;
@@ -165,6 +177,14 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
     if (!igId) throw new Error("No Instagram account ID for reel");
     if (!content.videoUrl) throw new Error("No video URL for reel");
     const igPostId = await postReelToIG(igId, token, content.videoUrl, content.caption, post.isTrial);
+    const reelFirstComment = content.firstComment?.trim();
+    if (reelFirstComment && igPostId) {
+      setTimeout(() => {
+        igPostComment(igPostId, token, reelFirstComment).catch((err) =>
+          logger.warn({ err }, "Reel first comment failed")
+        );
+      }, 35_000);
+    }
     return { igPostId };
   }
 
@@ -183,7 +203,17 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
     : "";
   const caption = content.caption + musicNote;
   if (igId) {
-    try { result.igPostId = await postCarouselToIG(igId, token, content.imageUrls, caption, audioName); }
+    try {
+      result.igPostId = await postCarouselToIG(igId, token, content.imageUrls, caption, audioName);
+      const firstCommentText = content.firstComment?.trim();
+      if (firstCommentText && result.igPostId) {
+        setTimeout(() => {
+          igPostComment(result.igPostId!, token, firstCommentText).catch((err) =>
+            logger.warn({ err }, "Scheduled first comment failed")
+          );
+        }, 35_000);
+      }
+    }
     catch (e: any) { errors.push(`IG: ${e.message}`); }
   }
   if (pageId) {

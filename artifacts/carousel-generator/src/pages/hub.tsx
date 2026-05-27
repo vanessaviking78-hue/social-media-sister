@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot } from "lucide-react";
 
 const TOOLS = [
   {
@@ -128,6 +128,15 @@ const TOOLS = [
     border: "hover:border-purple-500/50",
     iconColor: "text-purple-400",
   },
+  {
+    href: "/dm-automations",
+    icon: Bot,
+    name: "DM Responder",
+    description: "Auto-reply to Instagram DMs that match a keyword. Set it once, let it run.",
+    color: "from-cyan-500/20 to-cyan-500/5",
+    border: "hover:border-cyan-500/50",
+    iconColor: "text-cyan-400",
+  },
 ];
 
 export default function Hub() {
@@ -151,10 +160,11 @@ export default function Hub() {
           {TOOLS.slice(0, 12).map((tool) => <ToolCard key={tool.href} tool={tool} />)}
         </div>
 
-        {/* Last row: 2 cards, left-aligned */}
+        {/* Last row: 3 cards, left-aligned */}
         <div className="grid grid-cols-4 gap-4">
           <ToolCard tool={TOOLS[12]} />
           <ToolCard tool={TOOLS[13]} />
+          <ToolCard tool={TOOLS[14]} />
         </div>
       </main>
     </div>

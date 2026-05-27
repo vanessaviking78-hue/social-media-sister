@@ -28,6 +28,7 @@ import AiPortraitStudio from "@/pages/ai-portrait-studio";
 import Onboard from "@/pages/onboard";
 import OnboardChoosePage from "@/pages/onboard-choose-page";
 import OnboardSuccess from "@/pages/onboard-success";
+import DmAutomations from "@/pages/dm-automations";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ function ProtectedRouter() {
       <Route path="/about-me" component={AboutMe} />
       <Route path="/seamless-carousel" component={SeamlessCarousel} />
       <Route path="/ai-portrait-studio" component={AiPortraitStudio} />
+      <Route path="/dm-automations" component={DmAutomations} />
       <Route component={NotFound} />
     </Switch>
   );

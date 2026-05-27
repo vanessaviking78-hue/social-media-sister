@@ -424,6 +424,9 @@ export default function PresetsPage() {
   const [ccWorkspaces, setCcWorkspaces] = useState<{ id: string; name: string }[]>([]);
   const [ccWorkspacesLoading, setCcWorkspacesLoading] = useState(false);
   const [ccWorkspacesError, setCcWorkspacesError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ClientPreset | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteDeleting, setDeleteDeleting] = useState(false);
 
   useEffect(() => {
     if (editingId === null) return;
@@ -442,20 +445,29 @@ export default function PresetsPage() {
       .finally(() => setCcWorkspacesLoading(false));
   }, [editingId]);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = (id: number) => {
     const preset = presets.find((p) => p.id === id);
     if (!preset) return;
-    if (!confirm(`Delete preset "${preset.name}"?`)) return;
+    setDeleteTarget(preset);
+    setDeleteConfirmText("");
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget || deleteConfirmText !== "DELETE") return;
+    setDeleteDeleting(true);
     try {
-      await deletePreset(id);
-      if (editingId === id) {
+      await deletePreset(deleteTarget.id);
+      if (editingId === deleteTarget.id) {
         setEditingId(null);
         setEditData({});
         setEditNameError(null);
       }
-      toast.success(`Preset "${preset.name}" deleted`);
+      toast.success(`"${deleteTarget.name}" has been removed`);
+      setDeleteTarget(null);
     } catch (err: any) {
       toast.error(err?.message || "Failed to delete");
+    } finally {
+      setDeleteDeleting(false);
     }
   };
 
@@ -498,7 +510,12 @@ export default function PresetsPage() {
         metaPageAccessToken: editData.metaPageAccessToken || null,
         metaFacebookPageId: editData.metaFacebookPageId || null,
         metaInstagramAccountId: editData.metaInstagramAccountId || null,
-      }, { defaultPostTime: editData.defaultPostTime || "18:00" });
+      }, {
+        defaultPostTime: editData.defaultPostTime || "18:00",
+        defaultFirstCommentCarousel: editData.defaultFirstCommentCarousel || null,
+        defaultFirstCommentSingle: editData.defaultFirstCommentSingle || null,
+        defaultFirstCommentReel: editData.defaultFirstCommentReel || null,
+      });
       toast.success("Preset updated");
       cancelEdit();
     } catch (err: any) {
@@ -783,6 +800,39 @@ export default function PresetsPage() {
                         className="w-full bg-gray-900 border border-gray-700 text-white rounded-md px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-pink-500"
                       />
                     </div>
+                    <div className="space-y-3 border-t border-gray-800 pt-3">
+                      <p className="text-xs text-gray-500 font-medium uppercase tracking-widest">Default First Comments</p>
+                      <div>
+                        <Label className="text-xs text-gray-400">Carousel default</Label>
+                        <textarea
+                          placeholder="Which slide surprised you most? Comment the number below 👇"
+                          value={editData.defaultFirstCommentCarousel || ""}
+                          onChange={(e) => setEditData((d) => ({ ...d, defaultFirstCommentCarousel: e.target.value }))}
+                          rows={2}
+                          className="w-full bg-gray-900 border border-gray-700 text-white rounded-md px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-pink-500"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-400">Single image default</Label>
+                        <textarea
+                          placeholder="Save this one for later 💗"
+                          value={editData.defaultFirstCommentSingle || ""}
+                          onChange={(e) => setEditData((d) => ({ ...d, defaultFirstCommentSingle: e.target.value }))}
+                          rows={2}
+                          className="w-full bg-gray-900 border border-gray-700 text-white rounded-md px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-pink-500"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-400">Reel default</Label>
+                        <textarea
+                          placeholder="Drop a 🔥 if this helped"
+                          value={editData.defaultFirstCommentReel || ""}
+                          onChange={(e) => setEditData((d) => ({ ...d, defaultFirstCommentReel: e.target.value }))}
+                          rows={2}
+                          className="w-full bg-gray-900 border border-gray-700 text-white rounded-md px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-pink-500"
+                        />
+                      </div>
+                    </div>
                     <div className="flex gap-2 justify-end">
                       <Button variant="ghost" size="sm" onClick={cancelEdit} className="text-gray-400">Cancel</Button>
                       <Button size="sm" onClick={handleSaveEdit} className="bg-pink-600 hover:bg-pink-700">
@@ -840,6 +890,65 @@ export default function PresetsPage() {
           </div>
         )}
       </main>
+
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={() => !deleteDeleting && setDeleteTarget(null)}>
+          <div className="bg-zinc-900 border border-red-900/50 rounded-xl w-full max-w-md shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6 border-b border-zinc-800 flex items-center gap-3">
+              <Trash2 className="w-5 h-5 text-red-400 shrink-0" />
+              <div>
+                <h2 className="text-lg font-semibold text-white">Delete {deleteTarget.name}?</h2>
+                <p className="text-sm text-zinc-400 mt-0.5">This cannot be undone</p>
+              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-zinc-300 leading-relaxed">
+                This will permanently clear all unscheduled posts, library items, and Meta connections for this client.
+                Posted history will be kept for records.
+              </p>
+              <div className="bg-zinc-800/60 border border-zinc-700 rounded-lg p-3 text-xs text-zinc-400 space-y-1">
+                <p>What gets removed:</p>
+                <ul className="list-disc list-inside space-y-0.5 text-zinc-500">
+                  <li>All Content Library entries for this client</li>
+                  <li>All pending and draft scheduled posts</li>
+                  <li>Meta access tokens and account connections</li>
+                </ul>
+                <p className="text-zinc-500 pt-1">Published and failed post history is kept.</p>
+              </div>
+              <div>
+                <Label className="text-zinc-300 text-sm mb-1.5 block">
+                  Type <span className="font-mono font-bold text-red-400">DELETE</span> to confirm
+                </Label>
+                <Input
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && confirmDelete()}
+                  placeholder="DELETE"
+                  autoFocus
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-600 font-mono"
+                />
+              </div>
+            </div>
+            <div className="p-6 pt-0 flex gap-3 justify-end">
+              <Button
+                variant="ghost"
+                onClick={() => setDeleteTarget(null)}
+                disabled={deleteDeleting}
+                className="text-zinc-400 hover:text-white"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmDelete}
+                disabled={deleteConfirmText !== "DELETE" || deleteDeleting}
+                className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-40"
+              >
+                {deleteDeleting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Deleting…</> : "Delete permanently"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

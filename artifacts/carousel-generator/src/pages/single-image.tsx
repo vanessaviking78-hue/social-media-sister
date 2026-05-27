@@ -90,6 +90,7 @@ export default function SingleImage() {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
   const [musicPickerOpen, setMusicPickerOpen] = useState(false);
+  const [firstComment, setFirstComment] = useState("");
   const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
   const [scheduleRendering, setScheduleRendering] = useState(false);
 
@@ -169,6 +170,7 @@ export default function SingleImage() {
       setLogoImg(null);
       setLogoFile(null);
     }
+    setFirstComment(preset.defaultFirstCommentSingle || "");
   };
   const [ccPushing, setCcPushing] = useState(false);
 
@@ -550,6 +552,7 @@ export default function SingleImage() {
         caption: captions[i] || "",
         imageUrls: [urlMap.get(`sched-post-${String(post.index).padStart(2, "0")}.png`) || ""].filter(Boolean),
         musicTrack: musicTrack || undefined,
+        firstComment: firstComment || undefined,
       }));
       setSchedulePosts(posts);
       setScheduleOpen(true);
@@ -1567,6 +1570,19 @@ export default function SingleImage() {
                         </Button>
                       </div>
                     )}
+                  </div>
+
+                  {/* First Comment */}
+                  <div className="mt-4">
+                    <label className="text-sm font-medium text-zinc-400 block mb-1.5">First comment (optional)</label>
+                    <textarea
+                      value={firstComment}
+                      onChange={(e) => setFirstComment(e.target.value)}
+                      placeholder="Save this one for later 💗"
+                      rows={2}
+                      className="w-full bg-zinc-800/60 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 resize-none focus:outline-none focus:ring-1 focus:ring-zinc-500"
+                    />
+                    <p className="text-xs text-zinc-600 mt-1">Posted as a comment 35 seconds after your post goes live on Instagram.</p>
                   </div>
 
                   <div className="flex justify-between pt-4">

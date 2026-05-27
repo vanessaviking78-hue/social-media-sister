@@ -11,6 +11,8 @@ export async function runMigrations(): Promise<void> {
     await createScheduledPostsTable();
     await addSeamlessLogoConfigColumn();
     await addMusicTrackColumns();
+    await addFirstCommentColumns();
+    await createDmAutomationsTables();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -118,6 +120,54 @@ async function addMusicTrackColumns(): Promise<void> {
   await db.execute(sql`
     ALTER TABLE seamless_carousels
     ADD COLUMN IF NOT EXISTS music_track jsonb
+  `);
+}
+
+async function addFirstCommentColumns(): Promise<void> {
+  await db.execute(sql`
+    ALTER TABLE client_presets
+    ADD COLUMN IF NOT EXISTS default_first_comment_carousel text,
+    ADD COLUMN IF NOT EXISTS default_first_comment_single text,
+    ADD COLUMN IF NOT EXISTS default_first_comment_reel text
+  `);
+  await db.execute(sql`
+    ALTER TABLE about_me_posts
+    ADD COLUMN IF NOT EXISTS first_comment text
+  `);
+  await db.execute(sql`
+    ALTER TABLE seamless_carousels
+    ADD COLUMN IF NOT EXISTS first_comment text
+  `);
+}
+
+async function createDmAutomationsTables(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS dm_automations (
+      id SERIAL PRIMARY KEY,
+      preset_id INTEGER NOT NULL REFERENCES client_presets(id) ON DELETE CASCADE,
+      keyword TEXT NOT NULL,
+      reply_template TEXT NOT NULL,
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      match_exact BOOLEAN NOT NULL DEFAULT FALSE,
+      case_sensitive BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS dm_interactions (
+      id SERIAL PRIMARY KEY,
+      automation_id INTEGER REFERENCES dm_automations(id) ON DELETE SET NULL,
+      preset_id INTEGER,
+      sender_id TEXT NOT NULL,
+      ig_account_id TEXT NOT NULL,
+      message_text TEXT NOT NULL,
+      matched_keyword TEXT,
+      reply_sent BOOLEAN NOT NULL DEFAULT FALSE,
+      reply_text TEXT,
+      error_message TEXT,
+      received_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
   `);
 }
 

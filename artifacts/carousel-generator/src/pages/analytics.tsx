@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { Layers, BarChart3, Users, Download, Send, Image, Sparkles, Clock, PieChart, AlertCircle, BookOpen } from "lucide-react";
-import { useAnalytics } from "@/lib/use-analytics";
+import { Layers, BarChart3, Users, Download, Send, Image, Sparkles, Clock, PieChart, AlertCircle, BookOpen, Zap } from "lucide-react";
+import { useAnalytics, type PostTimeHeatmap } from "@/lib/use-analytics";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart as RPieChart, Pie, Cell, Legend,
@@ -33,7 +33,7 @@ function formatPeriod(period: string, group: string) {
 }
 
 export default function Analytics() {
-  const { summary, clients, overTime, byType, recent, loading, fetchAll, fetchOverTime } = useAnalytics();
+  const { summary, clients, overTime, byType, recent, postTimeHeatmap, loading, fetchAll, fetchOverTime } = useAnalytics();
   const [timeGroup, setTimeGroup] = useState<"week" | "month">("month");
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
@@ -244,6 +244,8 @@ export default function Analytics() {
               </div>
             </div>
 
+            <PostTimePredictor data={postTimeHeatmap} />
+
             <div className="bg-card border border-border/40 rounded-xl p-6 mb-8">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
@@ -269,6 +271,94 @@ export default function Analytics() {
           </>
         )}
       </main>
+    </div>
+  );
+}
+
+function PostTimePredictor({ data }: { data: PostTimeHeatmap | null }) {
+  if (!data || data.total === 0) {
+    return (
+      <div className="bg-card border border-border/40 rounded-xl p-6 mb-8">
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
+            <Zap className="w-5 h-5 text-amber-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold">Optimal Post-Time Predictor</h2>
+            <p className="text-sm text-muted-foreground">Based on your scheduled post history</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 p-4 rounded-lg bg-amber-500/5 border border-amber-500/20">
+          <Clock className="w-5 h-5 text-amber-400 shrink-0" />
+          <p className="text-sm text-foreground/80">Schedule some posts first. Once you have posting history, this section will show you when your clients tend to post and suggest the best times.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const maxDay = Math.max(...data.dayBreakdown.map((d) => d.count), 1);
+  const maxBand = Math.max(...data.timeBands.map((b) => b.count), 1);
+
+  return (
+    <div className="bg-card border border-border/40 rounded-xl p-6 mb-8">
+      <div className="flex items-center gap-3 mb-5">
+        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
+          <Zap className="w-5 h-5 text-amber-400" />
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold">Optimal Post-Time Predictor</h2>
+          <p className="text-sm text-muted-foreground">Based on {data.total} scheduled {data.total === 1 ? "post" : "posts"}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {data.topSlots.length > 0 && (
+          <div>
+            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Top slots</h3>
+            <div className="space-y-2">
+              {data.topSlots.slice(0, 3).map((s, i) => (
+                <div key={s.label} className="flex items-center justify-between rounded-lg bg-amber-500/5 border border-amber-500/20 px-3 py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-amber-400 font-bold w-4">#{i + 1}</span>
+                    <span className="text-sm font-medium">{s.label}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{s.count} post{s.count !== 1 ? "s" : ""}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div>
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">By day of week</h3>
+          <div className="space-y-1.5">
+            {data.dayBreakdown.map((d) => (
+              <div key={d.day} className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground w-7">{d.day}</span>
+                <div className="flex-1 h-2 rounded-full bg-muted/30 overflow-hidden">
+                  <div className="h-full rounded-full bg-amber-400/70 transition-all" style={{ width: `${(d.count / maxDay) * 100}%` }} />
+                </div>
+                <span className="text-xs text-muted-foreground w-6 text-right">{d.count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">By time of day</h3>
+          <div className="space-y-1.5">
+            {data.timeBands.map((b) => (
+              <div key={b.label} className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground w-32 truncate">{b.label}</span>
+                <div className="flex-1 h-2 rounded-full bg-muted/30 overflow-hidden">
+                  <div className="h-full rounded-full bg-orange-400/70 transition-all" style={{ width: `${(b.count / maxBand) * 100}%` }} />
+                </div>
+                <span className="text-xs text-muted-foreground w-6 text-right">{b.count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

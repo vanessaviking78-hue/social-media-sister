@@ -138,6 +138,18 @@ async function postToFacebook(
   return feedData.id;
 }
 
+async function igPostComment(igMediaId: string, token: string, commentText: string): Promise<void> {
+  const res = await metaFetch(`${GRAPH}/${igMediaId}/comments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: commentText, access_token: token }),
+  });
+  const data = await res.json() as any;
+  if (!res.ok) {
+    logger.warn({ igMediaId, err: data?.error?.message }, "First comment post failed");
+  }
+}
+
 router.get("/meta/test-connection", async (req: Request, res: Response) => {
   try {
     const presetId = Number(req.query.presetId);
@@ -166,7 +178,7 @@ router.get("/meta/test-connection", async (req: Request, res: Response) => {
 router.post("/meta/push", async (req: Request, res: Response) => {
   try {
     const { posts, presetId, postType } = req.body as {
-      posts: { title: string; caption: string; imageUrls: string[]; musicTrack?: { name: string; artist: string } | null }[];
+      posts: { title: string; caption: string; imageUrls: string[]; firstComment?: string; musicTrack?: { name: string; artist: string } | null }[];
       presetId: number;
       postType?: string;
     };
@@ -209,6 +221,14 @@ router.post("/meta/push", async (req: Request, res: Response) => {
         try {
           const id = await postToInstagram(igId, token, post.imageUrls, finalCaption, audioName);
           results.push({ post: post.title, platform: "instagram", status: "success", id });
+          const firstCommentText = post.firstComment?.trim() || undefined;
+          if (firstCommentText && id) {
+            setTimeout(() => {
+              igPostComment(id, token, firstCommentText).catch((err) =>
+                logger.warn({ err }, "Async first comment failed")
+              );
+            }, 35_000);
+          }
         } catch (err: any) {
           results.push({ post: post.title, platform: "instagram", status: "error", error: err.message });
         }
@@ -232,6 +252,26 @@ router.post("/meta/push", async (req: Request, res: Response) => {
     res.json({ results, summary: { total: results.length, succeeded, failed } });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Meta push failed" });
+  }
+});
+
+router.post("/meta/post-first-comment", async (req: Request, res: Response) => {
+  try {
+    const { presetId, igMediaId, commentText } = req.body as { presetId: number; igMediaId: string; commentText: string };
+    if (!presetId || !igMediaId || !commentText?.trim()) {
+      res.status(400).json({ error: "presetId, igMediaId, and commentText are required" });
+      return;
+    }
+    const [preset] = await db.select().from(clientPresetsTable).where(eq(clientPresetsTable.id, presetId));
+    if (!preset) { res.status(404).json({ error: "Preset not found" }); return; }
+    if (!preset.metaPageAccessToken) {
+      res.status(400).json({ error: "No Meta access token configured for this client" });
+      return;
+    }
+    await igPostComment(igMediaId, preset.metaPageAccessToken, commentText.trim());
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to post first comment" });
   }
 });
 

@@ -48,12 +48,18 @@ export interface RecentActivity {
   createdAt: string;
 }
 
+export interface TopSlot { day: string; hour: number; label: string; count: number; }
+export interface DayBreakdown { day: string; count: number; }
+export interface TimeBand { label: string; count: number; }
+export interface PostTimeHeatmap { topSlots: TopSlot[]; dayBreakdown: DayBreakdown[]; timeBands: TimeBand[]; total: number; }
+
 export function useAnalytics() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [clients, setClients] = useState<ClientStat[]>([]);
   const [overTime, setOverTime] = useState<OverTimePoint[]>([]);
   const [byType, setByType] = useState<TypeStat[]>([]);
   const [recent, setRecent] = useState<RecentActivity[]>([]);
+  const [postTimeHeatmap, setPostTimeHeatmap] = useState<PostTimeHeatmap | null>(null);
   const [loading, setLoading] = useState(false);
 
   const fetchSummary = useCallback(async () => {
@@ -116,11 +122,24 @@ export function useAnalytics() {
     }
   }, []);
 
+  const fetchPostTimeHeatmap = useCallback(async (presetId?: number) => {
+    try {
+      const url = presetId ? api(`/analytics/post-time-heatmap?presetId=${presetId}`) : api("/analytics/post-time-heatmap");
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch post-time data");
+      const data = await res.json();
+      setPostTimeHeatmap(data);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to load post-time data";
+      toast.error(message);
+    }
+  }, []);
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    await Promise.all([fetchSummary(), fetchClients(), fetchOverTime(), fetchByType(), fetchRecent()]);
+    await Promise.all([fetchSummary(), fetchClients(), fetchOverTime(), fetchByType(), fetchRecent(), fetchPostTimeHeatmap()]);
     setLoading(false);
-  }, [fetchSummary, fetchClients, fetchOverTime, fetchByType, fetchRecent]);
+  }, [fetchSummary, fetchClients, fetchOverTime, fetchByType, fetchRecent, fetchPostTimeHeatmap]);
 
   const logActivity = useCallback(async (params: {
     action: string;
@@ -138,5 +157,5 @@ export function useAnalytics() {
     } catch {}
   }, []);
 
-  return { summary, clients, overTime, byType, recent, loading, fetchAll, fetchOverTime, logActivity };
+  return { summary, clients, overTime, byType, recent, postTimeHeatmap, loading, fetchAll, fetchOverTime, fetchPostTimeHeatmap, logActivity };
 }

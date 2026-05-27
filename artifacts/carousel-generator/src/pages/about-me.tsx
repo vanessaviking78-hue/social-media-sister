@@ -177,6 +177,7 @@ export default function AboutMePage() {
   const [postId, setPostId] = useState<number | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
+  const [firstComment, setFirstComment] = useState("");
   const [musicPickerOpen, setMusicPickerOpen] = useState(false);
   const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
   const [presets, setPresets] = useState<{ id: number; name: string }[]>([]);
@@ -502,7 +503,7 @@ export default function AboutMePage() {
 
   const handleSchedule = () => {
     if (!renderedUrl) { toast.error("Generate your post first"); return; }
-    setSchedulePosts([{ title: title || "About Me", caption: "", imageUrls: [renderedUrl], musicTrack: musicTrack || undefined }]);
+    setSchedulePosts([{ title: title || "About Me", caption: "", imageUrls: [renderedUrl], musicTrack: musicTrack || undefined, firstComment: firstComment || undefined }]);
     setScheduleOpen(true);
   };
 
@@ -904,6 +905,7 @@ export default function AboutMePage() {
             </button>
 
             {renderedUrl && (
+              <>
               <div className="flex gap-3">
                 <Button
                   className="flex-1 gap-2 bg-green-600 hover:bg-green-700 text-white"
@@ -933,6 +935,18 @@ export default function AboutMePage() {
                   <CalendarDays className="w-4 h-4" /> Schedule
                 </Button>
               </div>
+              <div className="mt-3">
+                <label className="text-xs font-medium text-zinc-400 block mb-1">First comment (optional)</label>
+                <textarea
+                  value={firstComment}
+                  onChange={(e) => setFirstComment(e.target.value)}
+                  placeholder="Tap a heart if you've felt this way too"
+                  rows={2}
+                  className="w-full bg-zinc-800/60 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 resize-none focus:outline-none focus:ring-1 focus:ring-zinc-500"
+                />
+                <p className="text-xs text-zinc-600 mt-1">Posted 35 seconds after publishing to Instagram.</p>
+              </div>
+              </>
             )}
           </div>
 

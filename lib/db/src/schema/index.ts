@@ -32,6 +32,9 @@ export const clientPresetsTable = pgTable("client_presets", {
   coverSubheading: text("cover_subheading").notNull().default(""),
   clientPortalToken: text("client_portal_token").unique(),
   defaultPostTime: text("default_post_time").notNull().default("18:00"),
+  defaultFirstCommentCarousel: text("default_first_comment_carousel"),
+  defaultFirstCommentSingle: text("default_first_comment_single"),
+  defaultFirstCommentReel: text("default_first_comment_reel"),
   onboardingConnectedAt: timestamp("onboarding_connected_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -325,6 +328,7 @@ export const aboutMePostsTable = pgTable("about_me_posts", {
   titleFont: text("title_font").notNull().default("Allura"),
   aspectRatio: text("aspect_ratio").notNull().default("1080x1350"),
   musicTrack: json("music_track").$type<MusicTrack | null>(),
+  firstComment: text("first_comment"),
   renderedImageUrl: text("rendered_image_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -390,6 +394,7 @@ export const seamlessCarouselsTable = pgTable("seamless_carousels", {
   renderedSlideUrls: json("rendered_slide_urls").$type<string[]>().notNull().default([]),
   logoConfig: json("logo_config").$type<SeamlessLogoConfig | null>(),
   musicTrack: json("music_track").$type<MusicTrack | null>(),
+  firstComment: text("first_comment"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -441,3 +446,35 @@ export const insertAiGeneratedPortraitSchema = createInsertSchema(aiGeneratedPor
   .extend({ status: z.enum(AI_PORTRAIT_STATUSES), sourcePhotoId: z.number().int() });
 export type InsertAiGeneratedPortrait = z.infer<typeof insertAiGeneratedPortraitSchema>;
 export type AiGeneratedPortrait = typeof aiGeneratedPortraitsTable.$inferSelect;
+
+export const dmAutomationsTable = pgTable("dm_automations", {
+  id: serial("id").primaryKey(),
+  presetId: integer("preset_id").notNull().references(() => clientPresetsTable.id, { onDelete: "cascade" }),
+  keyword: text("keyword").notNull(),
+  replyTemplate: text("reply_template").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  matchExact: boolean("match_exact").notNull().default(false),
+  caseSensitive: boolean("case_sensitive").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertDmAutomationSchema = createInsertSchema(dmAutomationsTable).omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertDmAutomation = z.infer<typeof insertDmAutomationSchema>;
+export type DmAutomation = typeof dmAutomationsTable.$inferSelect;
+
+export const dmInteractionsTable = pgTable("dm_interactions", {
+  id: serial("id").primaryKey(),
+  automationId: integer("automation_id").references(() => dmAutomationsTable.id, { onDelete: "set null" }),
+  presetId: integer("preset_id"),
+  senderId: text("sender_id").notNull(),
+  igAccountId: text("ig_account_id").notNull(),
+  messageText: text("message_text").notNull(),
+  matchedKeyword: text("matched_keyword"),
+  replySent: boolean("reply_sent").notNull().default(false),
+  replyText: text("reply_text"),
+  errorMessage: text("error_message"),
+  receivedAt: timestamp("received_at").notNull().defaultNow(),
+});
+
+export type DmInteraction = typeof dmInteractionsTable.$inferSelect;

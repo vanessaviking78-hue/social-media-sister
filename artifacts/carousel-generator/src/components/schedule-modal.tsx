@@ -13,6 +13,7 @@ export type SchedulePostPayload = {
   imageUrls?: string[];
   videoUrl?: string;
   musicTrack?: { trackId: number; name: string; artist: string; durationMs: number; url: string } | null;
+  firstComment?: string;
 };
 
 type Props = {
@@ -57,6 +58,7 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
         if (isReel && post.videoUrl) content.videoUrl = post.videoUrl;
         if (!isReel && post.imageUrls) content.imageUrls = post.imageUrls;
         if (post.musicTrack) content.musicTrack = post.musicTrack;
+        if (post.firstComment) content.firstComment = post.firstComment;
         const body: Record<string, unknown> = { postType, content, scheduledAt: staggeredAt, isTrial, notes, presetId };
         const r = await fetch(`${BASE}/api/scheduler/posts`, {
           method: "POST",
