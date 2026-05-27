@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import VanessaChat from "@/components/vanessa-chat";
-import { CANVAS_WIDTH, CANVAS_HEIGHT, VIDEO_WIDTH, VIDEO_HEIGHT, FONT_OPTIONS, FONT_PAIRINGS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, compressImage, recordSlideVideo, recordGroupVideo, type AnimationType } from "@/lib/slide-utils";
+import { CANVAS_WIDTH, CANVAS_HEIGHT, VIDEO_WIDTH, VIDEO_HEIGHT, FONT_OPTIONS, FONT_PAIRINGS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, drawHeroSlide, compressImage, recordSlideVideo, recordGroupVideo, type AnimationType } from "@/lib/slide-utils";
 import { usePresets, type ClientPreset, type PresetStyleFields, type TextPosition, type TextAlign, type CornerStyle, isCornerStyle, normalizeTextPosition } from "@/lib/use-presets";
 import type { LogoPosition } from "@workspace/db/schema";
 import { useCaptions } from "@/lib/use-captions";
@@ -74,6 +74,16 @@ export default function Home() {
   const [textBoxOutlineColor, setTextBoxOutlineColor] = useState("#ffffff");
 
   const [coverSubheading, setCoverSubheading] = useState("");
+
+  const [coverStyle, setCoverStyle] = useState<"standard" | "hero">("standard");
+  const [heroLeadIn, setHeroLeadIn] = useState("");
+  const [heroWord, setHeroWord] = useState("");
+  const [heroLeadInColor, setHeroLeadInColor] = useState("#E91976");
+  const [heroWordColor, setHeroWordColor] = useState("#ffffff");
+  const [heroWordFont, setHeroWordFont] = useState("'Bebas Neue', sans-serif");
+  const [heroVerticalPosition, setHeroVerticalPosition] = useState<"top" | "middle" | "bottom">("bottom");
+  const [heroSpacing, setHeroSpacing] = useState(20);
+  const [heroUppercase, setHeroUppercase] = useState(true);
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
@@ -212,8 +222,24 @@ export default function Home() {
     canvas.width = CANVAS_WIDTH;
     canvas.height = CANVAS_HEIGHT;
     const previewText = allCsvRows[0]?.[0] ?? (coverSplit ? "Your Eyebrow|And Your Headline" : coverDropCap ? "Your headline will appear here in the chosen font" : "Your headline will appear here");
-    drawSlide(ctx, livePreviewImg, previewText, fontFamily, fontSize, true, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 4, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined });
-  }, [livePreviewImg, fontFamily, fontSize, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, contentLetterSpacing, pageColorEnd, overlayGradient, textShadow, allCsvRows]);
+    let cancelled = false;
+    void (async () => {
+      try {
+        await document.fonts.ready;
+        await Promise.all([
+          document.fonts.load(`700 80px ${fontFamily}`).catch(() => {}),
+          document.fonts.load(`400 80px ${subheadingFont}`).catch(() => {}),
+        ]);
+      } catch {}
+      if (cancelled) return;
+      if (coverStyle === "hero") {
+        drawHeroSlide(ctx, livePreviewImg, heroLeadIn || "LEAD-IN", heroWord || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
+      } else {
+        drawSlide(ctx, livePreviewImg, previewText, fontFamily, fontSize, true, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 4, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [livePreviewImg, fontFamily, fontSize, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, contentLetterSpacing, pageColorEnd, overlayGradient, textShadow, allCsvRows, coverStyle, heroLeadIn, heroWord, heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase]);
 
   const pushToCloudCampaign = async () => {
     if (!result?.slides.length) return;
@@ -233,7 +259,11 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
+        if (isCover && coverStyle === "hero") {
+          drawHeroSlide(ctx, img, heroLeadIn || "LEAD-IN", heroWord || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
+        } else {
+          drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
+        }
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -314,7 +344,11 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
+        if (isCover && coverStyle === "hero") {
+          drawHeroSlide(ctx, img, heroLeadIn || "LEAD-IN", heroWord || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
+        } else {
+          drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
+        }
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `meta-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -385,7 +419,11 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
+        if (isCover && coverStyle === "hero") {
+          drawHeroSlide(ctx, img, heroLeadIn || "LEAD-IN", heroWord || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
+        } else {
+          drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
+        }
         URL.revokeObjectURL(img.src);
         const fileName = `sched-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
         rendered.push({ name: fileName, base64: canvas.toDataURL("image/png"), groupIndex: slide.groupIndex, groupPosition: slide.groupPosition });
@@ -757,7 +795,11 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
+        if (isCover && coverStyle === "hero") {
+          drawHeroSlide(ctx, img, heroLeadIn || "LEAD-IN", heroWord || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
+        } else {
+          drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
+        }
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
         if (outBlob) {
@@ -803,7 +845,11 @@ export default function Home() {
         const canvas = document.createElement("canvas");
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
-        drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
+        if (isCover && coverStyle === "hero") {
+          drawHeroSlide(ctx, img, heroLeadIn || "LEAD-IN", heroWord || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
+        } else {
+          drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
+        }
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
         const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -1146,7 +1192,9 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-6 mt-8 pb-32">
+      <main className="max-w-6xl mx-auto px-6 mt-8 pb-32">
+        <div className="flex gap-10 items-start">
+        <div className="flex-1 min-w-0 max-w-3xl">
         {/* Step Progress Bar */}
           <div className="mb-10">
             <div className="flex items-center justify-between mb-6">
@@ -1339,11 +1387,7 @@ export default function Home() {
                   <p className="text-lg text-muted-foreground">Customise the look and feel of your carousel slides.</p>
                 </div>
 
-                {/* Two-column: settings left, live preview right */}
-                <div className="flex gap-8 items-start">
-
-                {/* LEFT: all settings */}
-                <div className="flex-1 flex flex-col gap-6 min-w-0">
+                <div className="flex flex-col gap-6">
 
                 <div className="rounded-2xl border border-pink-500/20 bg-card/50 p-6">
                   <PresetSelector
@@ -1359,6 +1403,84 @@ export default function Home() {
                     uploadLogo={uploadLogo}
                     currentLogoUrl={currentLogoUrl}
                   />
+                </div>
+
+                {/* Cover Style */}
+                <div className="space-y-4 rounded-2xl border border-border/30 bg-card/50 p-6">
+                  <Label className="text-base font-semibold">Cover Slide Style</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {(["standard", "hero"] as const).map((s) => (
+                      <button key={s} onClick={() => setCoverStyle(s)}
+                        className={`px-4 py-4 rounded-xl text-sm font-semibold transition-all border ${coverStyle === s ? "bg-primary text-primary-foreground border-primary" : "bg-accent/40 text-muted-foreground border-border/30 hover:bg-accent/60"}`}
+                      >{s === "standard" ? "Standard" : "Hero Headline"}</button>
+                    ))}
+                  </div>
+
+                  {coverStyle === "hero" && (
+                    <div className="space-y-5 pt-3 border-t border-border/20">
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground">Lead-in line</Label>
+                        <Input value={heroLeadIn} onChange={(e) => setHeroLeadIn(e.target.value)} placeholder="YOUR LEAD-IN TEXT" className="h-12 text-base" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground">Hero word</Label>
+                        <Input value={heroWord} onChange={(e) => setHeroWord(e.target.value)} placeholder="IMPACT" className="h-14 text-xl font-bold" />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm text-muted-foreground">Uppercase</Label>
+                        <button onClick={() => setHeroUppercase(!heroUppercase)}
+                          className={`relative w-12 h-6 rounded-full transition-colors ${heroUppercase ? "bg-pink-500" : "bg-gray-600"}`}>
+                          <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${heroUppercase ? "translate-x-6" : ""}`} />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm text-muted-foreground flex items-center gap-1"><Palette className="w-3 h-3" /> Lead-in colour</Label>
+                          <div className="flex gap-2">
+                            <Input type="color" value={heroLeadInColor} onChange={(e) => setHeroLeadInColor(e.target.value)} className="w-12 h-10 p-1 cursor-pointer" />
+                            <Input type="text" value={heroLeadInColor.toUpperCase()} onChange={(e) => setHeroLeadInColor(e.target.value)} className="flex-1 h-10 text-sm font-mono" />
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm text-muted-foreground flex items-center gap-1"><Palette className="w-3 h-3" /> Hero word colour</Label>
+                          <div className="flex gap-2">
+                            <Input type="color" value={heroWordColor} onChange={(e) => setHeroWordColor(e.target.value)} className="w-12 h-10 p-1 cursor-pointer" />
+                            <Input type="text" value={heroWordColor.toUpperCase()} onChange={(e) => setHeroWordColor(e.target.value)} className="flex-1 h-10 text-sm font-mono" />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground">Hero word font</Label>
+                        <Select value={heroWordFont} onValueChange={setHeroWordFont}>
+                          <SelectTrigger className="h-12 text-base">
+                            <SelectValue><span style={{ fontFamily: heroWordFont }}>{FONT_OPTIONS.find((f) => f.value === heroWordFont)?.label ?? "Font"}</span></SelectValue>
+                          </SelectTrigger>
+                          <SelectContent className="max-h-80 overflow-y-auto">
+                            {FONT_OPTIONS.map((f) => (
+                              <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm text-muted-foreground">Text position</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {(["top", "middle", "bottom"] as const).map((pos) => (
+                            <button key={pos} onClick={() => setHeroVerticalPosition(pos)}
+                              className={`px-3 py-3 rounded-lg text-sm font-semibold capitalize transition-all ${heroVerticalPosition === pos ? "bg-primary text-primary-foreground" : "bg-accent/40 text-muted-foreground hover:bg-accent/60"}`}
+                            >{pos.charAt(0).toUpperCase() + pos.slice(1)}</button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm text-muted-foreground">Spacing</Label>
+                          <span className="text-sm font-semibold tabular-nums">{heroSpacing}px</span>
+                        </div>
+                        <Slider min={0} max={80} step={4} value={[heroSpacing]} onValueChange={([v]) => setHeroSpacing(v)} className="w-full" />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1911,20 +2033,7 @@ export default function Home() {
                   )}
                 </div>
 
-                </div>{/* end LEFT settings col */}
-
-                {/* RIGHT: Sticky live preview */}
-                <div className="hidden lg:flex flex-col gap-3 shrink-0 w-72 sticky top-6 self-start">
-                  <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground text-center">Live Preview</p>
-                  <div className="rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
-                    <canvas ref={livePreviewCanvasRef} className="w-full block" style={{ aspectRatio: "4/5" }} />
-                  </div>
-                  <p className="text-xs text-muted-foreground text-center leading-snug">
-                    {photos.length > 0 ? "Cover slide — updates as you edit" : "Upload a photo in Step 1 to see a live preview"}
-                  </p>
-                </div>
-
-                </div>{/* end two-col wrapper */}
+                </div>{/* end settings */}
 
                 {/* Step 2 Navigation */}
                 <div className="flex justify-between pt-4">
@@ -2509,6 +2618,20 @@ export default function Home() {
             )}
 
           </div>
+        </div>{/* end content col */}
+
+        {/* Sticky live preview — visible on all steps */}
+        <div className="hidden lg:flex flex-col gap-3 shrink-0 w-72 sticky top-24 self-start mt-16">
+          <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground text-center">Live Preview</p>
+          <div className="rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+            <canvas ref={livePreviewCanvasRef} className="w-full block" style={{ aspectRatio: "4/5" }} />
+          </div>
+          <p className="text-xs text-muted-foreground text-center leading-snug">
+            {photos.length > 0 ? "Cover slide — updates as you edit" : "Upload a photo in Step 1 to see a live preview"}
+          </p>
+        </div>
+
+        </div>{/* end outer flex */}
       </main>
 
       {scheduleOpen && selectedPresetId && (

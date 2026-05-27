@@ -1316,7 +1316,7 @@ export default function SingleImage() {
               {textStyle === "hero" && (
                 <div className="rounded-2xl bg-primary/10 border border-primary/20 p-5">
                   <p className="text-sm font-semibold text-primary mb-1">Hero Headline mode is on</p>
-                  <p className="text-sm text-muted-foreground">Your lead-in and hero word are set in Step 2 and will be the same across all your photos. Use the AI tool below to generate Instagram captions for Step 4, or skip straight to generating.</p>
+                  <p className="text-sm text-muted-foreground">Your lead-in and hero word are set in Step 2 and apply to your image. Use the AI tool below to generate an Instagram caption for Step 4, or skip straight to generating.</p>
                 </div>
               )}
 
