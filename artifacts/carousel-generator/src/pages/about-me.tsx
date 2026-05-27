@@ -15,6 +15,7 @@ import { MusicPickerModal, MusicTrackBadge, type MusicTrack } from "@/components
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const ALL_FONTS = [
+  // Script / Handwritten
   { label: "Allura", value: "Allura", cat: "Script" },
   { label: "Great Vibes", value: "Great Vibes", cat: "Script" },
   { label: "Pinyon Script", value: "Pinyon Script", cat: "Script" },
@@ -23,15 +24,41 @@ const ALL_FONTS = [
   { label: "Pacifico", value: "Pacifico", cat: "Script" },
   { label: "Alex Brush", value: "Alex Brush", cat: "Script" },
   { label: "Kaushan Script", value: "Kaushan Script", cat: "Script" },
+  // Serif
   { label: "Playfair Display", value: "Playfair Display", cat: "Serif" },
   { label: "Cormorant Garamond", value: "Cormorant Garamond", cat: "Serif" },
+  { label: "Cormorant SC", value: "Cormorant SC", cat: "Serif" },
   { label: "Lora", value: "Lora", cat: "Serif" },
   { label: "Libre Baskerville", value: "Libre Baskerville", cat: "Serif" },
+  { label: "Merriweather", value: "Merriweather", cat: "Serif" },
+  { label: "Crimson Text", value: "Crimson Text", cat: "Serif" },
+  { label: "Bitter", value: "Bitter", cat: "Serif" },
+  { label: "Georgia", value: "Georgia", cat: "Serif" },
+  { label: "DM Serif Display", value: "DM Serif Display", cat: "Serif" },
+  { label: "Abril Fatface", value: "Abril Fatface", cat: "Serif" },
+  { label: "Cinzel", value: "Cinzel", cat: "Serif" },
+  { label: "Bodoni Moda", value: "Bodoni Moda", cat: "Serif" },
+  { label: "EB Garamond", value: "EB Garamond", cat: "Serif" },
+  { label: "Italiana", value: "Italiana", cat: "Serif" },
+  { label: "Spectral", value: "Spectral", cat: "Serif" },
+  { label: "Yeseva One", value: "Yeseva One", cat: "Serif" },
+  // Sans / Display
+  { label: "Bebas Neue", value: "Bebas Neue", cat: "Sans" },
+  { label: "Anton", value: "Anton", cat: "Sans" },
+  { label: "Oswald", value: "Oswald", cat: "Sans" },
+  { label: "Fjalla One", value: "Fjalla One", cat: "Sans" },
+  { label: "Barlow Condensed", value: "Barlow Condensed", cat: "Sans" },
+  { label: "Josefin Sans", value: "Josefin Sans", cat: "Sans" },
+  { label: "Tenor Sans", value: "Tenor Sans", cat: "Sans" },
   { label: "Poppins", value: "Poppins", cat: "Sans" },
   { label: "Montserrat", value: "Montserrat", cat: "Sans" },
   { label: "Raleway", value: "Raleway", cat: "Sans" },
   { label: "Nunito", value: "Nunito", cat: "Sans" },
   { label: "Quicksand", value: "Quicksand", cat: "Sans" },
+  { label: "Work Sans", value: "Work Sans", cat: "Sans" },
+  { label: "Inter", value: "Inter", cat: "Sans" },
+  { label: "Lato", value: "Lato", cat: "Sans" },
+  { label: "Roboto", value: "Roboto", cat: "Sans" },
 ];
 
 const ACCENT_PRESETS = [
@@ -230,7 +257,7 @@ export default function AboutMePage() {
   // Text
   const [title, setTitle] = useState("About me");
   const [subtitle, setSubtitle] = useState("");
-  const [titleFont, setTitleFont] = useState("Allura");
+  const [titleFont, setTitleFont] = useState("Bebas Neue");
   const [accentColor, setAccentColor] = useState("#F5EEE3");
   const [stickerTopperDefault, setStickerTopperDefault] = useState<TopperType | "mixed">("mixed");
 
