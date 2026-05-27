@@ -1,0 +1,232 @@
+Brief: AI Portrait Studio (Gemini Integration)
+For Vanessa to paste into the Replit Agent.
+
+
+What we're building
+A new generator page in The CyberSuite called "AI Portrait Studio". The user uploads a single reference photo of a clinic owner or team member, picks one or more scenarios from a curated library, and Google Gemini generates fresh portrait images of that person in those scenarios.
+
+Solves a real content problem for clinic owners: they reuse the same 3-4 photos because monthly photoshoots aren't realistic. With this, ONE good reference photo becomes 30+ pieces of fresh content.
+
+Based on a remix of the POVShift app pattern, integrated natively into The CyberSuite with our own scenarios, compliance disclosures and content library hooks.
+
+
+User flow
+User clicks AI Portrait Studio in the sidebar
+Lands on a page with three steps shown clearly:
+Step 1: Upload reference photo (or pick from an existing client preset's saved photo)
+Step 2: Pick scenarios (gallery of cards, multi-select up to 6 at a time to manage rate limits)
+Step 3: Generate
+After generation, results appear in a grid of cards (mimicking the ScenarioCard component from the remix), each with download button
+User can:
+Download individual results
+Save selected results to the photo approval system
+Regenerate any failed or unloved variant
+Adjust scrub colour or styling per scenario
+
+
+Scenario library (clinic-specific)
+Clinical / in-treatment-room (with scrub colour picker)
+In-clinic consultation - person in scrubs sat at a consultation desk, treatment room background, friendly composed pose
+Treatment in progress - person in scrubs with gloves, working at a treatment chair (no patient visible, no needle visible, no result depicted)
+In-clinic standing - full-length portrait in scrubs, treatment room behind, hand on hip, professional smile
+At reception - person in scrubs greeting at reception, warm welcoming pose
+Behind the scenes prep - person in scrubs preparing the treatment room, organising tools (generic, not specific medicines)
+Lifestyle / casual
+Coffee shop catch-up - person in smart casual at a coffee shop, laptop on table, latte, candid smile
+At desk planning - person in smart casual at a home office desk, notebook open, daylight from window
+Outdoor walk - person in smart casual on a city walk, golden hour light, looking off camera
+Studio portrait - person in chic black or white outfit, neutral studio background, professional editorial feel
+Holding phone - person in smart casual looking at phone, perfect for "DM me" content
+Brand / hero
+Logo wall - person in front of a clinic-style brand wall, professional headshot energy
+Behind a serum tray - person holding a tray of generic skincare bottles (no real branded products visible, no medicines)
+Reading testimonials - person looking at a tablet with a smile, candid moment
+Configurable per scenario
+Scrub colour: dropdown for clinical scenarios (Navy, Black, Burgundy, Cream, Sage, White)
+Outfit style: for lifestyle scenarios, optional colour family picker (Neutral, Pastel, Bold)
+Aspect ratio: 1:1 (IG post square), 3:4 (IG post portrait), 9:16 (IG story / reel)
+
+
+Gemini integration
+Authentication
+Add env var GEMINI_API_KEY to Replit Secrets (Vanessa will paste her key)
+Use the Gemini 2.5 Flash Image (Nano Banana) model, this is the image generation endpoint
+Library: @google/generative-ai for Node
+Prompt structure
+Each scenario has a base prompt template. The base reference photo is sent as part of the multimodal prompt so Gemini can maintain the person's likeness. Example for in-clinic consultation:
+
+Generate a high-quality professional hyper realistc portrait of the person in the reference photo.
+
+Setting: a modern aesthetic clinic consultation room with soft daylight, a clean white consultation desk, plants in the background, no medical equipment visible, no needles or syringes, no other people present.
+
+Outfit: medical scrubs in {scrubColor} colour, well-fitted, clean and pressed.
+
+Pose: seated at the desk, half-turned toward the camera, warm friendly smile.
+
+Composition: 3:4 portrait, person occupies roughly 60% of the frame, subtle depth of field with the background slightly soft.
+
+Style: editorial photography, natural skin texture, no over-smoothing, no dramatic retouching, real photo aesthetic NOT AI-rendered look.
+
+Important: maintain the person's facial features, hair colour, eye colour, ethnicity, age range and overall identity exactly as in the reference photo. Do not alter their face structure, skin tone, or any defining features.
+
+Each scenario has its own carefully written prompt with these constraints:
+
+Identity preservation: every prompt enforces "maintain facial features, skin tone, identity"
+No medical claims: no implied results, no before/after framing, no patient visible, no specific treatment shown
+No specific medicine brands: no Botox vials, no real product branding
+No needles or sharps visible: in any clinical scenario, for compliance
+Natural skin: prompt explicitly asks for natural texture, no excessive smoothing
+Rate limiting
+Gemini free tier hits 429 errors at ~15 requests per minute
+Build in a queue with 4-second spacing between requests
+Show clear "Rate limited, retrying in 30s" message in the UI on 429
+Allow user to retry individual cards manually (like the remix's design pattern)
+
+
+Compliance: AI disclosure toggle
+A mandatory feature for UK aesthetics compliance.
+
+On the Save to Content Library button, default ON:
+
+Add "AI generated portrait" watermark: a small subtle text watermark in the bottom corner of every generated image, reading "AI portrait by The CyberSuite".
+
+The user can toggle this OFF if they have other disclosure handled in the caption, but the default is ON.
+
+Additionally, when an AI portrait is used as the media for a post in the Content Library, the post's draft caption automatically includes a small disclosure line at the bottom:
+
+"AI-generated portrait. Compliant with ASA CAP code for non-misleading advertising."
+
+The user can remove this from the caption if they prefer to disclose elsewhere, but it's there by default.
+
+
+Database schema
+Two new tables:
+
+// Source reference photos
+
+aiSourcePhotosTable:
+
+  id: serial primary key
+
+  clientName: text not null
+
+  uploaderUserId: text  // for audit
+
+  photoUrl: text not null
+
+  uploadedAt: timestamp
+
+  notes: text  // optional, e.g. "Hero shot August 2026"
+
+  
+
+// Generated outputs
+
+aiGeneratedPortraitsTable:
+
+  id: serial primary key
+
+  clientName: text not null
+
+  sourcePhotoId: integer references aiSourcePhotosTable.id
+
+  scenarioId: text not null  // e.g. "in_clinic_consultation"
+
+  prompt: text  // the exact prompt used, for audit
+
+  scrubColor: text  // nullable
+
+  aspectRatio: text  // "1:1", "3:4", "9:16"
+
+  outputImageUrl: text not null
+
+  hasWatermark: boolean default true
+
+  status: text  // "success" | "failed" | "generating"
+
+  failureReason: text  // nullable, e.g. "rate_limit", "content_policy"
+
+  generatedAt: timestamp
+
+  savedToLibrary: boolean default false
+
+
+Backend implementation
+New routes in artifacts/api-server/src/routes/aiPortrait.ts:
+
+POST /api/ai-portrait/source - upload a reference photo, store in object storage, return ID
+GET /api/ai-portrait/scenarios - returns the full scenario library
+POST /api/ai-portrait/generate - body: { sourcePhotoId, scenarios: [{ id, scrubColor?, aspectRatio }] }. Returns a job ID. Generation runs in background via the existing async-job pattern. Each scenario becomes a separate job task with rate-limited queueing.
+GET /api/ai-portrait/jobs/:jobId/status - returns array of card states for polling: [{ scenarioId, status, outputUrl?, error? }]
+POST /api/ai-portrait/:portraitId/save-to-library - moves the generated image into the Content Library as a media item linked to the client preset
+POST /api/ai-portrait/:portraitId/regenerate - retries a failed card with the same prompt
+Watermark application
+After Gemini returns the raw image, the server applies the watermark using sharp:
+
+await sharp(rawBuffer)
+
+  .composite([{
+
+    input: Buffer.from('<svg>...watermark text...</svg>'),
+
+    gravity: 'southeast',
+
+    blend: 'over',
+
+  }])
+
+  .toBuffer();
+
+Watermark text: "AI portrait by The CyberSuite" in 8px white text with 80% opacity, 16px padding from bottom right.
+
+
+Frontend implementation
+New page: /ai-portrait-studio
+
+Three-column layout on desktop, stacked on mobile:
+
+Left column: Reference photo
+
+Drag and drop upload area
+Preview of uploaded photo
+"Use saved photo from preset" option
+
+Middle column: Scenarios
+
+Grid of scenario cards organised by category (Clinical / Lifestyle / Brand)
+Click to select (multi-select up to 6)
+Per-scenario settings (scrub colour, aspect ratio) shown inline when selected
+Big "Generate selected" button at the bottom
+
+Right column: Results gallery
+
+Grid of ScenarioCard components (mirroring the remix's design)
+States: idle, generating (with spinner), success (with download + save buttons), failed (with retry)
+Bulk "Save all selected to Library" button at the top
+
+
+Acceptance criteria
+When done, Vanessa should be able to:
+
+Click AI Portrait Studio
+Upload a clear headshot of a clinic owner
+Select 4 scenarios: In-clinic consultation (navy scrubs, 3:4), Coffee shop catch-up (3:4), Outdoor walk (9:16), Studio portrait (1:1)
+Click Generate
+Watch 4 cards transition from generating → success
+See generated portraits that maintain the person's identity, look natural, follow the brief
+Each portrait has a subtle "AI portrait by The CyberSuite" watermark in the corner
+Save 2-3 of them to the Content Library
+Open the photo approval, see the new media items, drop them into a carousel or single post designer
+
+
+Cost note for Vanessa
+Gemini 2.5 Flash Image is paid per image generated. As of mid-2026 the rate is roughly $0.04 per image at standard quality. Generating 50 portraits for a clinic per month = $2 per client per month. Manageable.
+
+Free tier covers about 15 requests per minute for testing, plenty to get started.
+
+Enable billing on the Google Cloud project when going to production volume.
+
+
+When done
+Restart api-server, ping Vanessa. She'll test by uploading her own headshot and generating a Coffee Shop + In-Clinic + Studio Portrait set first.
+
