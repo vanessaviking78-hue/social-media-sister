@@ -30,6 +30,9 @@ import OnboardChoosePage from "@/pages/onboard-choose-page";
 import OnboardSuccess from "@/pages/onboard-success";
 import DmAutomations from "@/pages/dm-automations";
 import Intake from "@/pages/intake";
+import Privacy from "@/pages/privacy";
+import Terms from "@/pages/terms";
+import DataDeletion from "@/pages/data-deletion";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +71,9 @@ function AppContent() {
   const [isOnboardSuccess, onboardSuccessParams] = useRoute("/onboard/:token/success");
   const [isOnboardChoose, onboardChooseParams] = useRoute("/onboard/:token/choose-page");
   const [isOnboard, onboardParams] = useRoute("/onboard/:token");
+  const [isPrivacy] = useRoute("/privacy");
+  const [isTerms] = useRoute("/terms");
+  const [isDataDeletion] = useRoute("/data-deletion");
 
   if (isMetaOAuth) {
     return <MetaOAuthResult />;
@@ -86,6 +92,15 @@ function AppContent() {
   }
   if (isOnboard && onboardParams?.token) {
     return <Onboard token={onboardParams.token} />;
+  }
+  if (isPrivacy) {
+    return <Privacy />;
+  }
+  if (isTerms) {
+    return <Terms />;
+  }
+  if (isDataDeletion) {
+    return <DataDeletion />;
   }
 
   return (

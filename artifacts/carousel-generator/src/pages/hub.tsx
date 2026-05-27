@@ -177,6 +177,12 @@ export default function Hub() {
           <ToolCard tool={TOOLS[15]} />
         </div>
       </main>
+
+      <footer className="border-t border-border/20 mt-8 px-8 py-5 flex justify-center gap-6 text-xs text-muted-foreground">
+        <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
+        <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
+        <Link href="/data-deletion" className="hover:text-foreground transition-colors">Data Deletion</Link>
+      </footer>
     </div>
   );
 }
