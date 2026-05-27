@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter, useRoute } from "wouter";
+import { Switch, Route, Router as WouterRouter, useRoute, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -75,7 +75,8 @@ function AppContent() {
   const [isPrivacy] = useRoute("/privacy");
   const [isTerms] = useRoute("/terms");
   const [isDataDeletion] = useRoute("/data-deletion");
-  const [isSplash] = useRoute("/");
+  const [location] = useLocation();
+  const isSplash = location === "/";
 
   if (isMetaOAuth) {
     return <MetaOAuthResult />;
