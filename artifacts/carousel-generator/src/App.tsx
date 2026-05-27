@@ -21,6 +21,8 @@ import Scheduler from "@/pages/scheduler";
 import Library from "@/pages/library";
 import BulkConnectReview from "@/pages/bulk-connect-review";
 import About from "@/pages/about";
+import AboutMe from "@/pages/about-me";
+import SeamlessCarousel from "@/pages/seamless-carousel";
 import Onboard from "@/pages/onboard";
 import OnboardChoosePage from "@/pages/onboard-choose-page";
 import OnboardSuccess from "@/pages/onboard-success";
@@ -44,6 +46,8 @@ function ProtectedRouter() {
       <Route path="/library" component={Library} />
       <Route path="/presets/bulk-connect/review" component={BulkConnectReview} />
       <Route path="/about" component={About} />
+      <Route path="/about-me" component={AboutMe} />
+      <Route path="/seamless-carousel" component={SeamlessCarousel} />
       <Route component={NotFound} />
     </Switch>
   );

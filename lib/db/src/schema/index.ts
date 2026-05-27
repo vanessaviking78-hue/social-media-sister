@@ -250,3 +250,58 @@ export const insertContentLibrarySchema = createInsertSchema(contentLibraryTable
   .omit({ id: true, createdAt: true });
 export type InsertContentLibrary = z.infer<typeof insertContentLibrarySchema>;
 export type ContentLibraryItem = typeof contentLibraryTable.$inferSelect;
+
+export type AboutMeWord = { text: string; x: number; y: number; arrowStyle: string };
+
+export const aboutMePostsTable = pgTable("about_me_posts", {
+  id: serial("id").primaryKey(),
+  clientName: text("client_name").notNull().default(""),
+  originalPhotoUrl: text("original_photo_url").notNull(),
+  cutoutPhotoUrl: text("cutout_photo_url").notNull(),
+  backgroundPhotoUrl: text("background_photo_url"),
+  backgroundBlurAmount: integer("background_blur_amount").notNull().default(25),
+  backgroundOverlayOpacity: integer("background_overlay_opacity").notNull().default(0),
+  title: text("title").notNull().default("About me"),
+  words: json("words").$type<AboutMeWord[]>().notNull().default([]),
+  arrowStyle: text("arrow_style").notNull().default("curly"),
+  accentColor: text("accent_color").notNull().default("#F5EEE3"),
+  titleFont: text("title_font").notNull().default("Allura"),
+  aspectRatio: text("aspect_ratio").notNull().default("1080x1350"),
+  renderedImageUrl: text("rendered_image_url"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertAboutMePostSchema = createInsertSchema(aboutMePostsTable)
+  .omit({ id: true, createdAt: true, updatedAt: true, renderedImageUrl: true });
+export type InsertAboutMePost = z.infer<typeof insertAboutMePostSchema>;
+export type AboutMePost = typeof aboutMePostsTable.$inferSelect;
+
+export type SeamlessSlide = {
+  imageUrl?: string;
+  hasText: boolean;
+  title: string;
+  leadIn: string;
+  tagLine: string;
+  doodle: string;
+  position: string;
+};
+
+export const seamlessCarouselsTable = pgTable("seamless_carousels", {
+  id: serial("id").primaryKey(),
+  clientName: text("client_name").notNull().default(""),
+  slideCount: integer("slide_count").notNull().default(3),
+  sourceImageUrl: text("source_image_url"),
+  sourceImageUrls: json("source_image_urls").$type<string[]>(),
+  slides: json("slides").$type<SeamlessSlide[]>().notNull().default([]),
+  scriptFont: text("script_font").notNull().default("Allura"),
+  textColor: text("text_color").notNull().default("#ffffff"),
+  watermark: text("watermark").notNull().default(""),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertSeamlessCarouselSchema = createInsertSchema(seamlessCarouselsTable)
+  .omit({ id: true, createdAt: true, updatedAt: true });
+export type InsertSeamlessCarousel = z.infer<typeof insertSeamlessCarouselSchema>;
+export type SeamlessCarousel = typeof seamlessCarouselsTable.$inferSelect;

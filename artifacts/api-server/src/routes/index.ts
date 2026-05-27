@@ -15,6 +15,8 @@ import portalRouter from "./portal";
 import schedulerRouter from "./scheduler";
 import libraryRouter from "./library";
 import onboardingRouter from "./onboarding";
+import aboutMeRouter from "./about-me";
+import seamlessCarouselRouter from "./seamless-carousel";
 
 const router: IRouter = Router();
 
@@ -34,5 +36,7 @@ router.use(portalRouter);
 router.use(schedulerRouter);
 router.use(libraryRouter);
 router.use(onboardingRouter);
+router.use(aboutMeRouter);
+router.use(seamlessCarouselRouter);
 
 export default router;
