@@ -4,7 +4,7 @@ import {
   Layers, Loader2, Download, X, Sparkles, Wand2,
   BookOpen, ImagePlus, CalendarDays, BarChart3, ShieldCheck,
   MessageSquareText, PenTool, ChevronLeft, ChevronRight,
-  CloudUpload, FileText, Plus, Palette, Check, Copy, Film, Play, Clock, CalendarClock,
+  CloudUpload, FileText, Plus, Palette, Check, Copy, Film, Play, Clock, CalendarClock, Music,
 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
@@ -26,6 +26,7 @@ import { usePresets, type ClientPreset, type PresetStyleFields, type TextAlign }
 import type { LogoPosition } from "@workspace/db/schema";
 import PresetSelector from "@/components/preset-selector";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
+import { MusicPickerModal, MusicTrackBadge, type MusicTrack } from "@/components/music-picker-modal";
 
 const BASE = import.meta.env.BASE_URL || "/";
 const api = (p: string) => `${BASE}api${p}`;
@@ -86,6 +87,8 @@ export default function Stories() {
   const [downloading, setDownloading] = useState(false);
   const [pushing, setPushing] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
+  const [musicPickerOpen, setMusicPickerOpen] = useState(false);
   const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
   const [scheduleRendering, setScheduleRendering] = useState(false);
 
@@ -438,6 +441,7 @@ export default function Stories() {
         title: `Story: ${questions[i]?.slice(0, 50) || `Story ${i + 1}`}`,
         caption: questions[i] || "",
         imageUrls: [allUploadResults[i]?.url].filter(Boolean),
+        musicTrack: musicTrack || undefined,
       }));
       setSchedulePosts(posts);
       setScheduleOpen(true);
@@ -871,6 +875,9 @@ export default function Stories() {
               <Button variant="outline" onClick={exportCsv}>
                 <FileText className="w-4 h-4 mr-2" />Export CSV
               </Button>
+              <Button variant="outline" onClick={() => setMusicPickerOpen(true)} className={musicTrack ? "border-green-500/40 text-green-300 hover:bg-green-950/30" : ""}>
+                <Music className="w-4 h-4 mr-2" />{musicTrack ? musicTrack.title.slice(0, 22) : "Add music"}
+              </Button>
               <Button onClick={downloadZip} disabled={downloading || previews.length === 0}>
                 {downloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
                 Download ZIP ({previews.length} stories)
@@ -924,6 +931,7 @@ export default function Stories() {
         )}
       </main>
       <canvas ref={canvasRef} width={STORY_WIDTH} height={STORY_HEIGHT} className="hidden" />
+      <MusicPickerModal open={musicPickerOpen} onClose={() => setMusicPickerOpen(false)} selectedTrack={musicTrack} onSelect={(t) => setMusicTrack(t)} />
       {scheduleOpen && selectedPresetId && (
         <ScheduleModal
           presetId={selectedPresetId}

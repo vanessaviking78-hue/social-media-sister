@@ -9,7 +9,7 @@ const router: IRouter = Router();
 
 const GRAPH = "https://graph.facebook.com/v22.0";
 
-function metaFetch(url: string, opts: RequestInit = {}, timeoutMs = 30_000): Promise<Response> {
+function metaFetch(url: string, opts: RequestInit = {}, timeoutMs = 30_000): Promise<globalThis.Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   return fetch(url, { ...opts, signal: controller.signal }).finally(() =>
@@ -22,7 +22,8 @@ async function igUploadContainer(
   token: string,
   imageUrl: string,
   isCarouselItem: boolean,
-  caption?: string
+  caption?: string,
+  audioName?: string
 ): Promise<string> {
   const params: Record<string, string> = {
     image_url: imageUrl,
@@ -30,15 +31,16 @@ async function igUploadContainer(
   };
   if (isCarouselItem) {
     params.is_carousel_item = "true";
-  } else if (caption) {
-    params.caption = caption;
+  } else {
+    if (caption) params.caption = caption;
+    if (audioName) params.audio_name = audioName;
   }
   const res = await metaFetch(`${GRAPH}/${igAccountId}/media`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),
   });
-  const data = await res.json();
+  const data = await res.json() as any;
   if (!res.ok || !data.id) {
     throw new Error(`IG media upload failed (${res.status}): ${data?.error?.message || JSON.stringify(data)}`);
   }
@@ -51,7 +53,7 @@ async function igPublish(igAccountId: string, token: string, creationId: string)
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ creation_id: creationId, access_token: token }),
   });
-  const data = await res.json();
+  const data = await res.json() as any;
   if (!res.ok || !data.id) {
     throw new Error(`IG publish failed (${res.status}): ${data?.error?.message || JSON.stringify(data)}`);
   }
@@ -62,10 +64,11 @@ async function postToInstagram(
   igAccountId: string,
   token: string,
   imageUrls: string[],
-  caption: string
+  caption: string,
+  audioName?: string
 ): Promise<string> {
   if (imageUrls.length === 1) {
-    const containerId = await igUploadContainer(igAccountId, token, imageUrls[0], false, caption);
+    const containerId = await igUploadContainer(igAccountId, token, imageUrls[0], false, caption, audioName);
     return igPublish(igAccountId, token, containerId);
   }
   const childIds: string[] = [];
@@ -73,17 +76,19 @@ async function postToInstagram(
     const id = await igUploadContainer(igAccountId, token, url, true);
     childIds.push(id);
   }
+  const carouselBody: Record<string, unknown> = {
+    media_type: "CAROUSEL",
+    children: childIds.join(","),
+    caption,
+    access_token: token,
+  };
+  if (audioName) carouselBody.audio_name = audioName;
   const carouselRes = await metaFetch(`${GRAPH}/${igAccountId}/media`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      media_type: "CAROUSEL",
-      children: childIds.join(","),
-      caption,
-      access_token: token,
-    }),
+    body: JSON.stringify(carouselBody),
   });
-  const carouselData = await carouselRes.json();
+  const carouselData = await carouselRes.json() as any;
   if (!carouselRes.ok || !carouselData.id) {
     throw new Error(`IG carousel container failed (${carouselRes.status}): ${carouselData?.error?.message || JSON.stringify(carouselData)}`);
   }
@@ -102,7 +107,7 @@ async function postToFacebook(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url: imageUrls[0], caption, access_token: token }),
     });
-    const data = await res.json();
+    const data = await res.json() as any;
     if (!res.ok) throw new Error(`FB photo post failed (${res.status}): ${data?.error?.message || JSON.stringify(data)}`);
     return data.post_id || data.id;
   }
@@ -114,7 +119,7 @@ async function postToFacebook(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url, published: false, access_token: token }),
     });
-    const data = await res.json();
+    const data = await res.json() as any;
     if (!res.ok) throw new Error(`FB photo upload failed (${res.status}): ${data?.error?.message || JSON.stringify(data)}`);
     mediaFbids.push({ media_fbid: data.id });
   }
@@ -128,7 +133,7 @@ async function postToFacebook(
       access_token: token,
     }),
   });
-  const feedData = await feedRes.json();
+  const feedData = await feedRes.json() as any;
   if (!feedRes.ok) throw new Error(`FB feed post failed (${feedRes.status}): ${feedData?.error?.message || JSON.stringify(feedData)}`);
   return feedData.id;
 }
@@ -147,7 +152,7 @@ router.get("/meta/test-connection", async (req: Request, res: Response) => {
       return;
     }
     const r = await metaFetch(`${GRAPH}/me?fields=id,name&access_token=${preset.metaPageAccessToken}`);
-    const data = await r.json();
+    const data = await r.json() as any;
     if (!r.ok) {
       res.status(400).json({ error: `Token invalid: ${data?.error?.message || "Unknown error"}` });
       return;
@@ -161,7 +166,7 @@ router.get("/meta/test-connection", async (req: Request, res: Response) => {
 router.post("/meta/push", async (req: Request, res: Response) => {
   try {
     const { posts, presetId, postType } = req.body as {
-      posts: { title: string; caption: string; imageUrls: string[] }[];
+      posts: { title: string; caption: string; imageUrls: string[]; musicTrack?: { title: string; artist: string } | null }[];
       presetId: number;
       postType?: string;
     };
@@ -188,9 +193,15 @@ router.post("/meta/push", async (req: Request, res: Response) => {
     const results: { post: string; platform: string; status: string; id?: string; error?: string }[] = [];
 
     for (const post of posts) {
+      const isStory = postType === "story" || postType === "stories";
+      const isCarousel = (post.imageUrls?.length ?? 0) > 1 || postType === "carousel" || postType === "seamless";
+      const audioName = post.musicTrack?.title && (isStory || isCarousel) ? `${post.musicTrack.title} by ${post.musicTrack.artist}` : undefined;
+      const musicNote = post.musicTrack && !audioName ? `\n\n🎵 Recommended music: ${post.musicTrack.title} by ${post.musicTrack.artist}` : "";
+      const finalCaption = post.caption + musicNote;
+
       if (igId) {
         try {
-          const id = await postToInstagram(igId, token, post.imageUrls, post.caption);
+          const id = await postToInstagram(igId, token, post.imageUrls, finalCaption, audioName);
           results.push({ post: post.title, platform: "instagram", status: "success", id });
         } catch (err: any) {
           results.push({ post: post.title, platform: "instagram", status: "error", error: err.message });
@@ -198,7 +209,7 @@ router.post("/meta/push", async (req: Request, res: Response) => {
       }
       if (pageId) {
         try {
-          const id = await postToFacebook(pageId, token, post.imageUrls, post.caption);
+          const id = await postToFacebook(pageId, token, post.imageUrls, finalCaption);
           results.push({ post: post.title, platform: "facebook", status: "success", id });
         } catch (err: any) {
           results.push({ post: post.title, platform: "facebook", status: "error", error: err.message });
@@ -388,7 +399,7 @@ router.post("/meta/push-reel", async (req: Request, res: Response) => {
 
 // GET /api/meta/push-reel/:jobId/status
 router.get("/meta/push-reel/:jobId/status", (req: Request, res: Response) => {
-  const job = reelJobs.get(req.params.jobId);
+  const job = reelJobs.get(req.params["jobId"] as string);
   if (!job) {
     res.status(404).json({ error: "Job not found — it may have expired" });
     return;

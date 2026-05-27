@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
-import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, CloudUpload, ImagePlus, CalendarDays, BarChart3, ShieldCheck, BookOpen, Film, ChevronDown, Play, Square, Share2, Clock, CalendarClock, User, Grid } from "lucide-react";
+import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, CloudUpload, ImagePlus, CalendarDays, BarChart3, ShieldCheck, BookOpen, Film, ChevronDown, Play, Square, Share2, Clock, CalendarClock, User, Grid, Music } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -22,6 +22,7 @@ import { useCaptions } from "@/lib/use-captions";
 import PresetSelector from "@/components/preset-selector";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
+import { MusicPickerModal, MusicTrackBadge, type MusicTrack } from "@/components/music-picker-modal";
 
 loadGoogleFonts();
 
@@ -116,6 +117,8 @@ export default function Home() {
   const [ccStatus, setCcStatus] = useState<{ configured: boolean; hasWorkspaces: boolean } | null>(null);
   const [metaPushing, setMetaPushing] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
+  const [musicPickerOpen, setMusicPickerOpen] = useState(false);
   const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
   const [scheduleRendering, setScheduleRendering] = useState(false);
 
@@ -372,7 +375,7 @@ export default function Home() {
           const fn = `meta-${String(s.groupIndex).padStart(2, "0")}-slide-${String(s.groupPosition).padStart(2, "0")}.png`;
           return urlMap.get(fn) || "";
         }).filter(Boolean);
-        posts.push({ title: `Carousel ${gi + 1}`, caption: captions[gi] || "", imageUrls });
+        posts.push({ title: `Carousel ${gi + 1}`, caption: captions[gi] || "", imageUrls, musicTrack: musicTrack || undefined });
       }
 
       const resp = await fetch(`${import.meta.env.BASE_URL}api/meta/push`, {
@@ -444,7 +447,7 @@ export default function Home() {
           const fn = `sched-${String(s.groupIndex).padStart(2, "0")}-slide-${String(s.groupPosition).padStart(2, "0")}.png`;
           return urlMap.get(fn) || "";
         }).filter(Boolean);
-        posts.push({ title: `Carousel ${gi + 1}`, caption: captions[gi] || "", imageUrls });
+        posts.push({ title: `Carousel ${gi + 1}`, caption: captions[gi] || "", imageUrls, musicTrack: musicTrack || undefined });
       }
       setSchedulePosts(posts);
       setScheduleOpen(true);
@@ -2378,6 +2381,9 @@ export default function Home() {
                         </p>
                       </div>
                       <div className="flex gap-3 flex-wrap justify-end">
+                        <Button variant="outline" size="lg" onClick={() => setMusicPickerOpen(true)} className={`px-8 py-4 text-lg font-bold ${musicTrack ? "border-green-500/40 text-green-300 hover:bg-green-950/30" : ""}`}>
+                          <Music className="w-5 h-5 mr-2" />{musicTrack ? musicTrack.title.slice(0, 22) : "Add music"}
+                        </Button>
                         <button className="btn-shimmer px-8 py-4 rounded-2xl text-lg font-bold flex items-center gap-3" onClick={downloadZip} data-testid="button-download-zip-bar">
                           <Download className="w-5 h-5" />Download ZIP
                         </button>
@@ -2630,6 +2636,9 @@ export default function Home() {
                         <RefreshCcw className="w-5 h-5 mr-2" /> Start Over
                       </Button>
                       <div className="flex gap-3 flex-wrap justify-end">
+                        <Button variant="outline" size="lg" onClick={() => setMusicPickerOpen(true)} className={`px-8 py-6 text-lg font-bold ${musicTrack ? "border-green-500/40 text-green-300 hover:bg-green-950/30" : ""}`} data-testid="button-add-music">
+                          <Music className="w-5 h-5 mr-2" />{musicTrack ? musicTrack.title.slice(0, 22) : "Add music"}
+                        </Button>
                         <Button variant="outline" size="lg" onClick={downloadCsv} className="px-8 py-6 text-lg font-bold" data-testid="button-download-csv">
                           <FileText className="w-5 h-5 mr-2" />Download CSV
                         </Button>
@@ -2678,6 +2687,7 @@ export default function Home() {
         </div>{/* end outer flex */}
       </main>
 
+      <MusicPickerModal open={musicPickerOpen} onClose={() => setMusicPickerOpen(false)} selectedTrack={musicTrack} onSelect={(t) => setMusicTrack(t)} />
       {scheduleOpen && selectedPresetId && (
         <ScheduleModal
           presetId={selectedPresetId}

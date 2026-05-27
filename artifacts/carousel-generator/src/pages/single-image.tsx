@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import {
-  Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus, CalendarDays, CalendarClock, BarChart3, ShieldCheck, BookOpen, Film, ChevronDown, Play, Square,
+  Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus, CalendarDays, CalendarClock, BarChart3, ShieldCheck, BookOpen, Film, ChevronDown, Play, Square, Music,
 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
@@ -19,6 +19,7 @@ import { usePresets, type ClientPreset, type PresetStyleFields, type TextPositio
 import type { LogoPosition } from "@workspace/db/schema";
 import { useCaptions } from "@/lib/use-captions";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
+import { MusicPickerModal, MusicTrackBadge, type MusicTrack } from "@/components/music-picker-modal";
 import PresetSelector from "@/components/preset-selector";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 
@@ -87,6 +88,8 @@ export default function SingleImage() {
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
   const [ccStatus, setCcStatus] = useState<{ configured: boolean } | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
+  const [musicPickerOpen, setMusicPickerOpen] = useState(false);
   const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
   const [scheduleRendering, setScheduleRendering] = useState(false);
 
@@ -546,6 +549,7 @@ export default function SingleImage() {
         title: `Post ${post.index}`,
         caption: captions[i] || "",
         imageUrls: [urlMap.get(`sched-post-${String(post.index).padStart(2, "0")}.png`) || ""].filter(Boolean),
+        musicTrack: musicTrack || undefined,
       }));
       setSchedulePosts(posts);
       setScheduleOpen(true);
@@ -1570,6 +1574,9 @@ export default function SingleImage() {
                       <RefreshCcw className="w-5 h-5 mr-2" /> Start Over
                     </Button>
                     <div className="flex gap-3 flex-wrap justify-end">
+                      <Button variant="outline" size="lg" onClick={() => setMusicPickerOpen(true)} className={`px-8 py-6 text-lg font-bold ${musicTrack ? "border-green-500/40 text-green-300 hover:bg-green-950/30" : ""}`}>
+                        <Music className="w-5 h-5 mr-2" />{musicTrack ? musicTrack.title.slice(0, 22) : "Add music"}
+                      </Button>
                       <Button variant="outline" size="lg" onClick={downloadCsv} className="px-8 py-6 text-lg font-bold">
                         <FileText className="w-5 h-5 mr-2" />Download CSV
                       </Button>
@@ -1625,6 +1632,7 @@ export default function SingleImage() {
         </div>
       )}
 
+      <MusicPickerModal open={musicPickerOpen} onClose={() => setMusicPickerOpen(false)} selectedTrack={musicTrack} onSelect={(t) => setMusicTrack(t)} />
       {scheduleOpen && selectedPresetId && (
         <ScheduleModal
           presetId={selectedPresetId}

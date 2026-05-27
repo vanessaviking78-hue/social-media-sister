@@ -10,6 +10,7 @@ export async function runMigrations(): Promise<void> {
     await addMetaConnectionColumns();
     await createScheduledPostsTable();
     await addSeamlessLogoConfigColumn();
+    await addMusicTrackColumns();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -106,6 +107,17 @@ async function addSeamlessLogoConfigColumn(): Promise<void> {
   await db.execute(sql`
     ALTER TABLE seamless_carousels
     ADD COLUMN IF NOT EXISTS logo_config jsonb
+  `);
+}
+
+async function addMusicTrackColumns(): Promise<void> {
+  await db.execute(sql`
+    ALTER TABLE about_me_posts
+    ADD COLUMN IF NOT EXISTS music_track jsonb
+  `);
+  await db.execute(sql`
+    ALTER TABLE seamless_carousels
+    ADD COLUMN IF NOT EXISTS music_track jsonb
   `);
 }
 

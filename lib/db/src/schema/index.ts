@@ -251,6 +251,14 @@ export const insertContentLibrarySchema = createInsertSchema(contentLibraryTable
 export type InsertContentLibrary = z.infer<typeof insertContentLibrarySchema>;
 export type ContentLibraryItem = typeof contentLibraryTable.$inferSelect;
 
+export type MusicTrack = {
+  id: number;
+  title: string;
+  duration: number;
+  artist: string;
+  previewUrl: string;
+};
+
 export type AboutMeWord = {
   id: string;
   text: string;
@@ -316,6 +324,7 @@ export const aboutMePostsTable = pgTable("about_me_posts", {
   accentColor: text("accent_color").notNull().default("#F5EEE3"),
   titleFont: text("title_font").notNull().default("Allura"),
   aspectRatio: text("aspect_ratio").notNull().default("1080x1350"),
+  musicTrack: json("music_track").$type<MusicTrack | null>(),
   renderedImageUrl: text("rendered_image_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -380,6 +389,7 @@ export const seamlessCarouselsTable = pgTable("seamless_carousels", {
   watermark: text("watermark").notNull().default(""),
   renderedSlideUrls: json("rendered_slide_urls").$type<string[]>().notNull().default([]),
   logoConfig: json("logo_config").$type<SeamlessLogoConfig | null>(),
+  musicTrack: json("music_track").$type<MusicTrack | null>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

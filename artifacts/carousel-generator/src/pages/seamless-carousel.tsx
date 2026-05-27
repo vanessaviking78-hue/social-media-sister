@@ -8,11 +8,12 @@ import { toast } from "sonner";
 import {
   Upload, ImagePlus, BookOpen, Film, Palette, MessageSquareText,
   CalendarDays, BarChart3, Loader2, Download, Grid, User,
-  Wand2, X, ZoomIn, Send,
+  Wand2, X, ZoomIn, Send, Music,
 } from "lucide-react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
+import { MusicPickerModal, MusicTrackBadge, type MusicTrack } from "@/components/music-picker-modal";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -148,6 +149,8 @@ export default function SeamlessCarouselPage() {
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const [logo, setLogo] = useState<LogoState | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
+  const [musicPickerOpen, setMusicPickerOpen] = useState(false);
   const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
   const [presets, setPresets] = useState<{ id: number; name: string }[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
@@ -234,6 +237,7 @@ export default function SeamlessCarouselPage() {
       title: slides[0]?.title || "Seamless Carousel",
       caption: "",
       imageUrls: renderedUrls,
+      musicTrack: musicTrack || undefined,
     }];
     setSchedulePosts(posts);
     setScheduleOpen(true);
@@ -344,6 +348,7 @@ export default function SeamlessCarouselPage() {
         textColor,
         watermark,
         logoConfig: logo ? { logoUrl: logoStoredUrl, x: logo.x, y: logo.y, scale: logo.scale, rotation: logo.rotation } : null,
+        musicTrack: musicTrack || null,
       };
 
       let id = carouselId;
@@ -408,6 +413,7 @@ export default function SeamlessCarouselPage() {
 
   return (
     <div className="min-h-[100dvh] w-full pb-32">
+      <MusicPickerModal open={musicPickerOpen} onClose={() => setMusicPickerOpen(false)} selectedTrack={musicTrack} onSelect={(t) => setMusicTrack(t)} />
       {scheduleOpen && (
         <ScheduleModal
           presetId={selectedPresetId}
@@ -830,6 +836,9 @@ export default function SeamlessCarouselPage() {
                 )}
 
                 <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setMusicPickerOpen(true)} className={`flex-1 gap-2 ${musicTrack ? "border-green-500/40 text-green-300 hover:bg-green-950/30" : ""}`}>
+                    <Music className="w-4 h-4" />{musicTrack ? musicTrack.title.slice(0, 18) : "Add music"}
+                  </Button>
                   <Button variant="outline" onClick={handleSchedule} className="flex-1 gap-2">
                     <CalendarDays className="w-4 h-4" /> Schedule
                   </Button>

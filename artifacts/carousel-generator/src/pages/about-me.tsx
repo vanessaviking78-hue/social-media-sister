@@ -8,9 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import {
   Upload, ImagePlus, BookOpen, Film, Palette, MessageSquareText,
-  CalendarDays, BarChart3, Loader2, Download, User, Grid, X, RotateCcw,
+  CalendarDays, BarChart3, Loader2, Download, User, Grid, X, RotateCcw, Music,
 } from "lucide-react";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
+import { MusicPickerModal, MusicTrackBadge, type MusicTrack } from "@/components/music-picker-modal";
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const ALL_FONTS = [
@@ -175,6 +176,8 @@ export default function AboutMePage() {
   const [renderedUrl, setRenderedUrl] = useState("");
   const [postId, setPostId] = useState<number | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
+  const [musicPickerOpen, setMusicPickerOpen] = useState(false);
   const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
   const [presets, setPresets] = useState<{ id: number; name: string }[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
@@ -468,6 +471,7 @@ export default function AboutMePage() {
         title, subtitle, heartSize,
         words: apiWords, canvasConfig,
         accentColor, titleFont, aspectRatio,
+        musicTrack: musicTrack || null,
       };
 
       let id = postId;
@@ -498,13 +502,14 @@ export default function AboutMePage() {
 
   const handleSchedule = () => {
     if (!renderedUrl) { toast.error("Generate your post first"); return; }
-    setSchedulePosts([{ title: title || "About Me", caption: "", imageUrls: [renderedUrl] }]);
+    setSchedulePosts([{ title: title || "About Me", caption: "", imageUrls: [renderedUrl], musicTrack: musicTrack || undefined }]);
     setScheduleOpen(true);
   };
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-[100dvh] w-full pb-32">
+      <MusicPickerModal open={musicPickerOpen} onClose={() => setMusicPickerOpen(false)} selectedTrack={musicTrack} onSelect={(t) => setMusicTrack(t)} />
       {scheduleOpen && (
         <ScheduleModal
           presetId={selectedPresetId}
@@ -921,6 +926,9 @@ export default function AboutMePage() {
                     <SelectContent>{presets.map((p) => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}</SelectContent>
                   </Select>
                 )}
+                <Button variant="outline" onClick={() => setMusicPickerOpen(true)} className={`flex-1 gap-2 ${musicTrack ? "border-green-500/40 text-green-300 hover:bg-green-950/30" : ""}`}>
+                  <Music className="w-4 h-4" />{musicTrack ? musicTrack.title.slice(0, 18) : "Add music"}
+                </Button>
                 <Button variant="outline" onClick={handleSchedule} className="flex-1 gap-2">
                   <CalendarDays className="w-4 h-4" /> Schedule
                 </Button>
