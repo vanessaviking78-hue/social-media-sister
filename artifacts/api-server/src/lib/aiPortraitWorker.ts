@@ -133,6 +133,16 @@ export async function processPortraitJob(
     }
 
     const prompt = buildPrompt(scenario, cfg.scrubColor, cfg.outfitStyle, cfg.aspectRatio);
+
+    // Detect actual MIME type from buffer bytes so non-JPEG uploads work correctly
+    const sharpMeta = await sharp(sourcePhotoBuffer).metadata();
+    const formatToMime: Record<string, string> = {
+      jpeg: "image/jpeg",
+      png: "image/png",
+      webp: "image/webp",
+      gif: "image/gif",
+    };
+    const sourceMime = formatToMime[sharpMeta.format ?? ""] ?? "image/jpeg";
     const base64Photo = sourcePhotoBuffer.toString("base64");
 
     let attempt = 0;
@@ -149,7 +159,7 @@ export async function processPortraitJob(
         const result = await model.generateContent([
           {
             inlineData: {
-              mimeType: "image/jpeg",
+              mimeType: sourceMime,
               data: base64Photo,
             },
           },
