@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import sharp from "sharp";
 import { v4 as uuid } from "uuid";
 import { db } from "@workspace/db";
@@ -107,7 +107,7 @@ export async function processPortraitJob(
     return;
   }
 
-  const genAI = new GoogleGenerativeAI(apiKey);
+  const genAI = new GoogleGenAI({ apiKey });
 
   for (let i = 0; i < scenarios.length; i++) {
     const cfg = scenarios[i];
@@ -149,23 +149,21 @@ export async function processPortraitJob(
 
     while (attempt < 2 && !succeeded) {
       try {
-        const model = genAI.getGenerativeModel({
+        const result = await genAI.models.generateContent({
           model: GEMINI_MODEL,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          generationConfig: { responseModalities: ["IMAGE", "TEXT"] } as any,
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { inlineData: { mimeType: sourceMime, data: base64Photo } },
+                { text: prompt },
+              ],
+            },
+          ],
+          config: { responseModalities: ["IMAGE", "TEXT"] },
         });
 
-        const result = await model.generateContent([
-          {
-            inlineData: {
-              mimeType: sourceMime,
-              data: base64Photo,
-            },
-          },
-          { text: prompt },
-        ]);
-
-        const parts = result.response.candidates?.[0]?.content?.parts ?? [];
+        const parts = result.candidates?.[0]?.content?.parts ?? [];
         const imagePart = parts.find((p: { inlineData?: { mimeType?: string; data?: string } }) => p.inlineData?.mimeType?.startsWith("image/"));
 
         if (!imagePart?.inlineData?.data) {
