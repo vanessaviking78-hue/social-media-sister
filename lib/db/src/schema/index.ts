@@ -267,10 +267,7 @@ export type AboutMeWord = {
   text: string;
   x: number;
   y: number;
-  color?: string;
-  fontSize?: number;
-  letterSpacing?: number;
-  lineHeight?: number;
+  topper?: string;
 };
 
 export type AboutMeDoodle = {
@@ -308,6 +305,7 @@ export type AboutMeCanvasConfig = {
   subtitleLetterSpacing?: number;
   subtitleLineHeight?: number;
   wordFontSize?: number;
+  stickerTopperDefault?: string;
 };
 
 export const aboutMePostsTable = pgTable("about_me_posts", {

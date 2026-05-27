@@ -104,6 +104,86 @@ function arrowPath(cx: number, cy: number, s: number): string {
   return `M ${x0},${y0} C ${c1x},${c1y} ${c2x},${c2y} ${x3},${y3} M ${ah1x},${ah1y} L ${ah2x},${ah2y} L ${ah3x},${ah3y}`;
 }
 
+function darkenHex(hex: string, amount = 0.22): string {
+  const h = hex.replace("#", "");
+  const r = Math.max(0, Math.round(parseInt(h.slice(0, 2), 16) * (1 - amount)));
+  const g = Math.max(0, Math.round(parseInt(h.slice(2, 4), 16) * (1 - amount)));
+  const b = Math.max(0, Math.round(parseInt(h.slice(4, 6), 16) * (1 - amount)));
+  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+}
+
+function starPath5(cx: number, cy: number, outer: number, inner: number): string {
+  const pts: string[] = [];
+  for (let i = 0; i < 10; i++) {
+    const rr = i % 2 === 0 ? outer : inner;
+    const a = (i * Math.PI / 5) - Math.PI / 2;
+    pts.push(`${(cx + rr * Math.cos(a)).toFixed(2)},${(cy + rr * Math.sin(a)).toFixed(2)}`);
+  }
+  return `M ${pts.join(" L ")} Z`;
+}
+
+function topperRainbowSvg(cx: number, ty: number, size: number): string {
+  const r1 = size * 0.5, r2 = size * 0.33, r3 = size * 0.18, sw = size * 0.15;
+  return [
+    `<path d="M ${(cx - r1).toFixed(1)},${ty.toFixed(1)} A ${r1.toFixed(1)},${r1.toFixed(1)} 0 0 1 ${(cx + r1).toFixed(1)},${ty.toFixed(1)}" fill="none" stroke="#E91976" stroke-width="${sw.toFixed(1)}" stroke-linecap="round"/>`,
+    `<path d="M ${(cx - r2).toFixed(1)},${ty.toFixed(1)} A ${r2.toFixed(1)},${r2.toFixed(1)} 0 0 1 ${(cx + r2).toFixed(1)},${ty.toFixed(1)}" fill="none" stroke="#7BA7C7" stroke-width="${sw.toFixed(1)}" stroke-linecap="round"/>`,
+    `<path d="M ${(cx - r3).toFixed(1)},${ty.toFixed(1)} A ${r3.toFixed(1)},${r3.toFixed(1)} 0 0 1 ${(cx + r3).toFixed(1)},${ty.toFixed(1)}" fill="none" stroke="#f8d97a" stroke-width="${sw.toFixed(1)}" stroke-linecap="round"/>`,
+  ].join("");
+}
+
+function topperHeartSvg(cx: number, ty: number, size: number): string {
+  return `<path d="${heartPath(cx, ty + size * 0.1, size * 0.55)}" fill="#E91976" opacity="0.95"/>`;
+}
+
+function topperStarSvg(cx: number, ty: number, size: number, accentColor: string): string {
+  return `<path d="${starPath5(cx, ty, size * 0.52, size * 0.22)}" fill="white" stroke="${accentColor}" stroke-width="${(size * 0.12).toFixed(1)}"/>`;
+}
+
+function stickerSvg(
+  w: { text: string; x: number; y: number; topper?: string },
+  idx: number,
+  canvasW: number,
+  canvasH: number,
+  accentColor: string,
+  topperDefault: string,
+): string {
+  const cx = w.x * canvasW;
+  const cy = w.y * canvasH;
+  const text = w.text.toUpperCase();
+  const charW = 23;
+  const padH = 28, padV = 18;
+  const fontSize = 36;
+  const sW = Math.max(170, text.length * charW + padH * 2);
+  const sH = fontSize + padV * 2;
+  const bR = 22;
+  const sLeft = cx - sW / 2;
+  const sTop = cy - sH / 2;
+  const outerPad = 5;
+
+  const ROTS = [-7, 5, -3, 8, -6, 4, -8, 6, -2, 7];
+  const rot = ROTS[idx % ROTS.length];
+
+  const effective = (w.topper as string | undefined) || (topperDefault === "mixed" ? ["rainbow", "heart", "star"][idx % 3] : topperDefault);
+  const topperSize = sH * 0.7;
+  const topperY = sTop - topperSize * 0.15;
+
+  const outerColor = darkenHex(accentColor, 0.22);
+  let topper = "";
+  if (effective === "rainbow") topper = topperRainbowSvg(cx, topperY, topperSize);
+  else if (effective === "heart") topper = topperHeartSvg(cx, topperY, topperSize);
+  else if (effective === "star") topper = topperStarSvg(cx, topperY, topperSize, accentColor);
+
+  const rotAttr = rot !== 0 ? ` transform="rotate(${rot} ${cx.toFixed(1)} ${cy.toFixed(1)})"` : "";
+
+  return `<g${rotAttr} filter="url(#stickshadow)">` +
+    `<rect x="${(sLeft - outerPad).toFixed(1)}" y="${(sTop - outerPad).toFixed(1)}" width="${(sW + outerPad * 2).toFixed(1)}" height="${(sH + outerPad * 2).toFixed(1)}" rx="${bR + 2}" ry="${bR + 2}" fill="${outerColor}"/>` +
+    `<rect x="${(sLeft - 2).toFixed(1)}" y="${(sTop - 2).toFixed(1)}" width="${(sW + 4).toFixed(1)}" height="${(sH + 4).toFixed(1)}" rx="${bR}" ry="${bR}" fill="${accentColor}"/>` +
+    `<rect x="${sLeft.toFixed(1)}" y="${sTop.toFixed(1)}" width="${sW.toFixed(1)}" height="${sH.toFixed(1)}" rx="${bR - 2}" ry="${bR - 2}" fill="white"/>` +
+    `<text x="${cx.toFixed(1)}" y="${(cy + fontSize * 0.36).toFixed(1)}" font-family="Arial, Helvetica, sans-serif" font-size="${fontSize}" font-weight="800" fill="#1a1a1a" text-anchor="middle" letter-spacing="1">${escXml(text)}</text>` +
+    topper +
+    `</g>`;
+}
+
 function doodleSvg(d: AboutMeDoodle, canvasW: number, canvasH: number, color: string): string {
   const cx = d.x * canvasW;
   const cy = d.y * canvasH;
@@ -127,7 +207,6 @@ async function buildFullSvg(
   subtitle: string,
   titleFont: string,
   accentColor: string,
-  heartSize: number,
   words: AboutMeWord[],
   cfg: AboutMeCanvasConfig,
   overlayOpacity: number,
@@ -135,6 +214,7 @@ async function buildFullSvg(
   cutoutNaturalW: number,
   cutoutNaturalH: number,
   logoDataUri: string,
+  stickerTopperDefault = "mixed",
 ): Promise<string> {
   const cc = { ...DEFAULT_CANVAS_CONFIG, ...cfg };
 
@@ -146,8 +226,6 @@ async function buildFullSvg(
   const subtitleFontSize = cc.subtitleFontSize ?? 40;
   const subtitleLetterSpacing = cc.subtitleLetterSpacing ?? 3;
   const subtitleLineHeight = cc.subtitleLineHeight ?? 1.2;
-  const wordFontSize = cc.wordFontSize ?? 40;
-
   // Cutout dimensions
   const cutoutBaseH = canvasH * 0.54;
   const cutoutDisplayH = cutoutBaseH * cc.cutoutScale;
@@ -164,15 +242,12 @@ async function buildFullSvg(
   const logoCx = cc.logoX * canvasW;
   const logoCy = cc.logoY * canvasH;
 
-  // Heart word gap
-  const hs = Math.round(heartSize * 2.2);
-  const hwg = Math.round(hs * 1.6 + 18);
-
   // Defs
   const defsContent: string[] = [];
   const fontParam = encodeURIComponent(titleFont.replace(/ /g, "+"));
   defsContent.push(`<style>@import url('https://fonts.googleapis.com/css2?family=${fontParam}:wght@400');</style>`);
   defsContent.push(`<filter id="txtshadow"><feDropShadow dx="1" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/></filter>`);
+  defsContent.push(`<filter id="stickshadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000" flood-opacity="0.28"/></filter>`);
 
   if (cc.glowEnabled) {
     defsContent.push(`<radialGradient id="glow" cx="50%" cy="50%" r="50%">
@@ -215,19 +290,9 @@ async function buildFullSvg(
     layers.push(`<text x="${(canvasW / 2).toFixed(0)}" y="${subY.toFixed(0)}" font-family="Georgia, serif" font-size="${subtitleFontSize}" fill="${subtitleColor}" text-anchor="middle" opacity="0.85" letter-spacing="${subtitleLetterSpacing}">${escXml(subtitle.toUpperCase())}</text>`);
   }
 
-  // Words with hearts
-  words.forEach((w) => {
-    const wx = w.x * canvasW;
-    const wy = w.y * canvasH;
-    const hy = wy - hwg;
-    const wColor = w.color ?? accentColor;
-    const wSize = w.fontSize ?? wordFontSize;
-    const wLetterSpacing = w.letterSpacing ?? 1;
-    const wLineHeight = w.lineHeight ?? 1.2;
-    const wHs = Math.round(heartSize * 2.2 * wLineHeight);
-    const wHy = wy - Math.round(hwg * wLineHeight);
-    layers.push(`<path d="${heartPath(wx, wHy, wHs)}" fill="${wColor}" opacity="0.9"/>`);
-    layers.push(`<text x="${wx.toFixed(1)}" y="${wy.toFixed(1)}" font-family="Georgia, serif" font-size="${wSize}" fill="${wColor}" text-anchor="middle" letter-spacing="${wLetterSpacing}">${escXml(w.text)}</text>`);
+  // Words — puffy sticker labels
+  words.forEach((w, idx) => {
+    layers.push(stickerSvg(w, idx, canvasW, canvasH, accentColor, stickerTopperDefault));
   });
 
   // Doodles
@@ -357,7 +422,6 @@ router.post("/about-me", async (req, res) => {
         backgroundOverlayOpacity: body.backgroundOverlayOpacity ?? 0,
         title: body.title ?? "About me",
         subtitle: body.subtitle ?? "",
-        heartSize: body.heartSize ?? 20,
         words: body.words ?? [],
         canvasConfig: extractCanvasConfig(body),
         accentColor: body.accentColor ?? "#F5EEE3",
@@ -387,7 +451,6 @@ router.put("/about-me/:id", async (req, res) => {
         backgroundOverlayOpacity: body.backgroundOverlayOpacity,
         title: body.title,
         subtitle: body.subtitle ?? "",
-        heartSize: body.heartSize ?? 20,
         words: body.words,
         canvasConfig: extractCanvasConfig(body),
         accentColor: body.accentColor,
@@ -470,7 +533,6 @@ router.post("/about-me/:id/render", async (req, res) => {
       post.subtitle ?? "",
       post.titleFont ?? "Allura",
       post.accentColor ?? "#F5EEE3",
-      post.heartSize ?? 20,
       words,
       cc,
       (post.backgroundOverlayOpacity ?? 0) / 100,
@@ -478,6 +540,7 @@ router.post("/about-me/:id/render", async (req, res) => {
       cutoutNaturalW,
       cutoutNaturalH,
       logoB64,
+      cc.stickerTopperDefault ?? "mixed",
     );
 
     // 5. Composite SVG onto background

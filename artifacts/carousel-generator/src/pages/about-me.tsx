@@ -35,12 +35,15 @@ const ALL_FONTS = [
 ];
 
 const ACCENT_PRESETS = [
-  { label: "Warm cream", value: "#F5EEE3" },
-  { label: "White", value: "#ffffff" },
   { label: "Hot pink", value: "#E91976" },
-  { label: "Warm grey", value: "#B8AFA6" },
-  { label: "Deep brown", value: "#5C3D2E" },
+  { label: "Soft sage", value: "#7D9E7A" },
+  { label: "Dusty blue", value: "#7BA7C7" },
+  { label: "Peach", value: "#E8A87C" },
+  { label: "Plum", value: "#6B4A7E" },
 ];
+
+const STICKER_ROTATIONS = [-7, 5, -3, 8, -6, 4, -8, 6, -2, 7];
+const MIXED_TOPPERS = ["rainbow", "heart", "star"] as const;
 
 const SCATTERED_COORDS = [
   { x: 0.10, y: 0.14 }, { x: 0.84, y: 0.12 }, { x: 0.06, y: 0.36 },
@@ -58,7 +61,8 @@ const PH_PORT = 425;
 const PH_STORY = 604;
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
-type Word = { id: string; text: string; x: number; y: number; color?: string; fontSize?: number; letterSpacing?: number; lineHeight?: number };
+type TopperType = "rainbow" | "heart" | "star";
+type Word = { id: string; text: string; x: number; y: number; topper?: TopperType };
 type DoodleShape = "heart-outline" | "arrow" | "sparkle";
 type DoodleEl = { id: string; shape: DoodleShape; x: number; y: number; size: number; rotation: number };
 type LogoState = { dataUrl: string; storedUrl: string; ar: number; x: number; y: number; scale: number; rotation: number };
@@ -108,6 +112,43 @@ function loadGFont(family: string) {
 }
 function uid() { return Math.random().toString(36).slice(2, 9); }
 function clamp(v: number, mn: number, mx: number) { return Math.max(mn, Math.min(mx, v)); }
+function darkenHex(hex: string, amount = 0.22): string {
+  const h = hex.replace("#", "");
+  const r = Math.max(0, Math.round(parseInt(h.slice(0, 2), 16) * (1 - amount)));
+  const g = Math.max(0, Math.round(parseInt(h.slice(2, 4), 16) * (1 - amount)));
+  const b = Math.max(0, Math.round(parseInt(h.slice(4, 6), 16) * (1 - amount)));
+  return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
+}
+function starPath5(cx: number, cy: number, outer: number, inner: number): string {
+  const pts: string[] = [];
+  for (let i = 0; i < 10; i++) {
+    const rr = i % 2 === 0 ? outer : inner;
+    const a = (i * Math.PI / 5) - Math.PI / 2;
+    pts.push(`${cx + rr * Math.cos(a)},${cy + rr * Math.sin(a)}`);
+  }
+  return `M ${pts.join(" L ")} Z`;
+}
+function effectiveTopper(w: Word, idx: number, def: string): TopperType {
+  if (w.topper) return w.topper;
+  if (def === "mixed") return MIXED_TOPPERS[idx % 3];
+  return def as TopperType;
+}
+function renderRainbowTopper(cx: number, ty: number, size: number) {
+  const r1 = size * 0.5, r2 = size * 0.33, r3 = size * 0.18, sw = size * 0.15;
+  return (
+    <>
+      <path d={`M ${cx - r1},${ty} A ${r1},${r1} 0 0 1 ${cx + r1},${ty}`} fill="none" stroke="#E91976" strokeWidth={sw} strokeLinecap="round" />
+      <path d={`M ${cx - r2},${ty} A ${r2},${r2} 0 0 1 ${cx + r2},${ty}`} fill="none" stroke="#7BA7C7" strokeWidth={sw} strokeLinecap="round" />
+      <path d={`M ${cx - r3},${ty} A ${r3},${r3} 0 0 1 ${cx + r3},${ty}`} fill="none" stroke="#f8d97a" strokeWidth={sw} strokeLinecap="round" />
+    </>
+  );
+}
+function renderHeartTopper(cx: number, ty: number, size: number) {
+  return <path d={heartFilled(cx, ty + size * 0.1, size * 0.55)} fill="#E91976" opacity={0.95} />;
+}
+function renderStarTopper(cx: number, ty: number, size: number, accent: string) {
+  return <path d={starPath5(cx, ty, size * 0.52, size * 0.22)} fill="white" stroke={accent} strokeWidth={size * 0.12} />;
+}
 
 // ─── Component ──────────────────────────────────────────────────────────────────
 export default function AboutMePage() {
@@ -123,7 +164,7 @@ export default function AboutMePage() {
   const [subtitle, setSubtitle] = useState("");
   const [titleFont, setTitleFont] = useState("Allura");
   const [accentColor, setAccentColor] = useState("#F5EEE3");
-  const [heartSize, setHeartSize] = useState(14);
+  const [stickerTopperDefault, setStickerTopperDefault] = useState<"rainbow" | "heart" | "star" | "mixed">("mixed");
 
   // Per-element typography
   const [titleFontSize, setTitleFontSize] = useState(90);
@@ -356,8 +397,6 @@ export default function AboutMePage() {
   const logoLeft = logoCx - logoDispW / 2;
   const logoTop = logoCy - logoDispH / 2;
 
-  const previewHs = heartSize * 0.85;
-  const hwGap = previewHs * 1.6 + 8;
 
   // ─── Resize / rotate handles for an element ───────────────────────────────
   const HRAD = 5;
@@ -443,10 +482,7 @@ export default function AboutMePage() {
 
       const apiWords = words.filter((w) => w.text.trim()).map((w) => ({
         id: w.id, text: w.text, x: w.x, y: w.y,
-        ...(w.color ? { color: w.color } : {}),
-        ...(w.fontSize ? { fontSize: w.fontSize } : {}),
-        ...(w.letterSpacing !== undefined ? { letterSpacing: w.letterSpacing } : {}),
-        ...(w.lineHeight !== undefined ? { lineHeight: w.lineHeight } : {}),
+        ...(w.topper ? { topper: w.topper } : {}),
       }));
 
       const canvasConfig = {
@@ -464,12 +500,13 @@ export default function AboutMePage() {
         subtitleFontSize,
         subtitleLetterSpacing,
         subtitleLineHeight,
+        stickerTopperDefault,
       };
 
       const body = {
         originalPhotoUrl: storedOrig, cutoutPhotoUrl: cutoutUrl ?? storedOrig,
         backgroundBlurAmount: blurAmount, backgroundOverlayOpacity: overlayOpacity,
-        title, subtitle, heartSize,
+        title, subtitle,
         words: apiWords, canvasConfig,
         accentColor, titleFont, aspectRatio,
         musicTrack: musicTrack || null,
@@ -687,58 +724,45 @@ export default function AboutMePage() {
               )}
             </div>
 
-            {/* Words */}
+            {/* Words / Stickers */}
             <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-base font-semibold">Words ({words.length}/10)</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">Drag any word on the preview to reposition it</p>
+                  <Label className="text-base font-semibold">Sticker Labels ({words.length}/10)</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">Drag any sticker on the preview to reposition it</p>
                 </div>
                 {words.length < 10 && (
                   <Button variant="outline" size="sm" onClick={addWord} className="text-pink-400 border-pink-500/30">+ Add</Button>
                 )}
               </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Default topper</Label>
+                <div className="flex gap-2 flex-wrap">
+                  {(["mixed", "rainbow", "heart", "star"] as const).map((t) => (
+                    <button key={t} onClick={() => setStickerTopperDefault(t)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all capitalize ${stickerTopperDefault === t ? "bg-pink-500 text-white border-pink-500" : "border-border/40 text-muted-foreground hover:border-pink-500/40"}`}>
+                      {t === "mixed" ? "🌈❤️⭐ Mixed" : t === "rainbow" ? "🌈 Rainbows" : t === "heart" ? "❤️ Hearts" : "⭐ Stars"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="space-y-2">
                 {words.map((w, i) => (
-                  <div key={w.id} className="space-y-1">
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex gap-2 items-center">
-                        <Input value={w.text} onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, text: e.target.value } : ww))}
-                          placeholder={`Word ${i + 1}`} className="flex-1 h-9" />
-                        <input type="color" value={w.color ?? accentColor}
-                          onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, color: e.target.value } : ww))}
-                          title="Word colour" className="w-9 h-9 p-0.5 cursor-pointer rounded border border-border/40 bg-transparent shrink-0" />
-                        {w.color && (
-                          <button onClick={() => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, color: undefined } : ww))}
-                            className="text-xs text-muted-foreground hover:text-foreground" title="Reset colour">↺</button>
-                        )}
-                        <input type="number" min={20} max={80} value={w.fontSize ?? 40}
-                          onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, fontSize: Number(e.target.value) } : ww))}
-                          className="w-14 h-9 text-xs text-center bg-muted/40 border border-border/40 rounded" title="Font size" />
-                        <Button variant="ghost" size="sm" onClick={() => setWords((p) => p.filter((_, ii) => ii !== i))} className="h-9 w-9 p-0 text-muted-foreground shrink-0"><X className="w-3.5 h-3.5" /></Button>
-                      </div>
-                      <div className="flex items-center gap-1.5 pl-0.5 flex-wrap">
-                        {["#F5EEE3","#ffffff","#000000","#E91976","#ffd700"].map(c => (
-                          <button key={c} onClick={() => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, color: c } : ww))} style={{ background: c }} className="w-5 h-5 rounded-full border border-white/30 shrink-0 hover:scale-110 transition-transform" title={c} />
-                        ))}
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 pl-0.5">
-                        <div className="flex items-center gap-1.5">
-                          <Label className="text-xs text-muted-foreground/70 w-14 shrink-0">Spacing</Label>
-                          <input type="range" min={0} max={10} step={0.5} value={w.letterSpacing ?? 1}
-                            onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, letterSpacing: Number(e.target.value) } : ww))}
-                            className="flex-1 accent-pink-500 h-1.5" />
-                          <span className="text-xs font-mono text-muted-foreground w-5 text-right">{w.letterSpacing ?? 1}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          <Label className="text-xs text-muted-foreground/70 w-14 shrink-0">Line ht</Label>
-                          <input type="range" min={0.7} max={2.5} step={0.05} value={w.lineHeight ?? 1.2}
-                            onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, lineHeight: Number(e.target.value) } : ww))}
-                            className="flex-1 accent-pink-500 h-1.5" />
-                          <span className="text-xs font-mono text-muted-foreground w-5 text-right">{(w.lineHeight ?? 1.2).toFixed(1)}</span>
-                        </div>
-                      </div>
-                    </div>
+                  <div key={w.id} className="flex gap-2 items-center">
+                    <Input value={w.text} onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, text: e.target.value } : ww))}
+                      placeholder={`Word ${i + 1}`} className="flex-1 h-9" />
+                    <select
+                      value={w.topper ?? ""}
+                      onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, topper: e.target.value ? e.target.value as TopperType : undefined } : ww))}
+                      className="h-9 rounded-md border border-border/40 bg-muted/40 text-xs px-2 text-muted-foreground shrink-0">
+                      <option value="">Default</option>
+                      <option value="rainbow">🌈 Rainbow</option>
+                      <option value="heart">❤️ Heart</option>
+                      <option value="star">⭐ Star</option>
+                    </select>
+                    <Button variant="ghost" size="sm" onClick={() => setWords((p) => p.filter((_, ii) => ii !== i))} className="h-9 w-9 p-0 text-muted-foreground shrink-0"><X className="w-3.5 h-3.5" /></Button>
                   </div>
                 ))}
               </div>
@@ -848,7 +872,7 @@ export default function AboutMePage() {
               <Label className="text-base font-semibold">Style</Label>
 
               <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Accent colour — title, words, hearts</Label>
+                <Label className="text-sm text-muted-foreground">Accent colour — sticker outlines, toppers, sparkles</Label>
                 <div className="flex gap-2 flex-wrap items-center">
                   {ACCENT_PRESETS.map((p) => (
                     <button key={p.value} onClick={() => setAccentColor(p.value)}
@@ -859,14 +883,6 @@ export default function AboutMePage() {
                   ))}
                   <Input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="w-10 h-8 p-0.5 cursor-pointer" />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm text-muted-foreground">Heart size (word markers)</Label>
-                  <span className="text-sm font-semibold">{heartSize}</span>
-                </div>
-                <Slider min={6} max={28} step={1} value={[heartSize]} onValueChange={([v]) => setHeartSize(v)} />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -1043,27 +1059,39 @@ export default function AboutMePage() {
                     );
                   })()}
 
-                  {/* Words — draggable */}
+                  {/* Words — puffy sticker labels */}
                   {words.filter((w) => w.text).map((w, i) => {
                     const wx = w.x * PW, wy = w.y * PH;
+                    const sc = PW / 1080;
+                    const fontSize = Math.round(34 * sc);
+                    const padH = Math.round(28 * sc);
+                    const padV = Math.round(18 * sc);
+                    const sW = Math.max(60, w.text.length * Math.round(22 * sc) + padH * 2);
+                    const sH = fontSize + padV * 2;
+                    const bR = Math.round(22 * sc);
+                    const sLeft = wx - sW / 2;
+                    const sTop = wy - sH / 2;
+                    const outerPad = Math.max(2, Math.round(5 * sc));
+                    const outer = darkenHex(accentColor, 0.22);
+                    const rot = STICKER_ROTATIONS[i % STICKER_ROTATIONS.length];
+                    const topper = effectiveTopper(w, i, stickerTopperDefault);
+                    const topperSize = sH * 0.7;
+                    const topperY = sTop - topperSize * 0.15;
                     return (
-                      <g key={w.id} style={{ cursor: "grab" }}
+                      <g key={w.id}
+                        transform={`rotate(${rot} ${wx} ${wy})`}
+                        style={{ cursor: "grab", filter: "drop-shadow(0 3px 7px rgba(0,0,0,0.28))" }}
                         onPointerDown={(e) => {
                           const p = svgPt(e);
                           startDrag(e, { what: "word", idx: i, sx: p.x, sy: p.y, ox: w.x, oy: w.y });
                         }}>
-                        {(() => {
-                          const wLh = w.lineHeight ?? 1.2;
-                          const wHs = previewHs * wLh;
-                          const wHGap = hwGap * wLh;
-                          return (
-                            <>
-                              <rect x={wx - 28} y={wy - wHGap - wHs} width={56} height={wHGap + wHs + 14} fill="transparent" />
-                              <path d={heartFilled(wx, wy - wHGap, wHs)} fill={w.color ?? accentColor} opacity={0.9} />
-                              <text x={wx} y={wy} fontFamily="Georgia, serif" fontSize={Math.round((w.fontSize ?? 40) * PW / 1080)} fill={w.color ?? accentColor} textAnchor="middle" letterSpacing={w.letterSpacing ?? 1}>{w.text}</text>
-                            </>
-                          );
-                        })()}
+                        <rect x={sLeft - outerPad} y={sTop - outerPad} width={sW + outerPad * 2} height={sH + outerPad * 2} rx={bR + 2} ry={bR + 2} fill={outer} />
+                        <rect x={sLeft - 1} y={sTop - 1} width={sW + 2} height={sH + 2} rx={bR} ry={bR} fill={accentColor} />
+                        <rect x={sLeft} y={sTop} width={sW} height={sH} rx={bR - 1} ry={bR - 1} fill="white" />
+                        <text x={wx} y={wy + fontSize * 0.36} fontFamily="Arial, Helvetica, sans-serif" fontSize={fontSize} fontWeight="800" fill="#1a1a1a" textAnchor="middle" letterSpacing={1}>{w.text.toUpperCase()}</text>
+                        {topper === "rainbow" && renderRainbowTopper(wx, topperY, topperSize)}
+                        {topper === "heart" && renderHeartTopper(wx, topperY, topperSize)}
+                        {topper === "star" && renderStarTopper(wx, topperY, topperSize, accentColor)}
                       </g>
                     );
                   })}
