@@ -730,19 +730,27 @@ router.post("/content/upload-video", videoUpload.single("video"), async (req, re
   }
 });
 
+function extToMime(filename: string): string {
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  const map: Record<string, string> = {
+    png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg",
+    webp: "image/webp", gif: "image/gif", mp4: "video/mp4",
+    pdf: "application/pdf",
+  };
+  return map[ext] ?? "application/octet-stream";
+}
+
 router.get("/content/videos/reel-videos/:filename", async (req, res) => {
   try {
     const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-    if (!bucketId) return res.status(500).json({ error: "Object storage not configured" });
+    if (!bucketId) { res.status(500).json({ error: "Object storage not configured" }); return; }
     const objectPath = `reel-videos/${req.params.filename}`;
-    const bucket = objectStorageClient.bucket(bucketId);
-    const file = bucket.file(objectPath);
-    const [exists] = await file.exists();
-    if (!exists) return res.status(404).json({ error: "Not found" });
-    const [buffer] = await file.download();
+    const file = objectStorageClient.bucket(bucketId).file(objectPath);
     res.setHeader("Content-Type", "video/mp4");
     res.setHeader("Cache-Control", "public, max-age=31536000");
-    res.send(buffer);
+    const stream = file.createReadStream();
+    stream.on("error", () => { if (!res.headersSent) res.status(404).json({ error: "Not found" }); });
+    stream.pipe(res);
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to serve video" });
   }
@@ -751,29 +759,15 @@ router.get("/content/videos/reel-videos/:filename", async (req, res) => {
 router.get("/content/images/carousel-images/:filename", async (req, res) => {
   try {
     const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-    if (!bucketId) {
-      return res.status(500).json({ error: "Object storage not configured" });
-    }
-
+    if (!bucketId) { res.status(500).json({ error: "Object storage not configured" }); return; }
     const objectPath = `carousel-images/${req.params.filename}`;
-    const bucket = objectStorageClient.bucket(bucketId);
-    const file = bucket.file(objectPath);
-
-    const [exists] = await file.exists();
-    if (!exists) {
-      return res.status(404).json({ error: "Image not found" });
-    }
-
-    const [metadata] = await file.getMetadata();
-    res.setHeader("Content-Type", (metadata.contentType as string) || "image/png");
+    const file = objectStorageClient.bucket(bucketId).file(objectPath);
+    res.setHeader("Content-Type", extToMime(req.params.filename) || "image/png");
     res.setHeader("Cache-Control", "public, max-age=31536000");
-    if (metadata.size) {
-      res.setHeader("Content-Length", String(metadata.size));
-    }
-
-    file.createReadStream().pipe(res);
+    const stream = file.createReadStream();
+    stream.on("error", () => { if (!res.headersSent) res.status(404).json({ error: "Not found" }); });
+    stream.pipe(res);
   } catch (err: any) {
-    console.error("Image serve error:", err);
     res.status(500).json({ error: err.message || "Failed to serve image" });
   }
 });
@@ -781,18 +775,15 @@ router.get("/content/images/carousel-images/:filename", async (req, res) => {
 router.get("/media/*key", async (req, res) => {
   try {
     const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-    if (!bucketId) return res.status(500).json({ error: "Object storage not configured" });
+    if (!bucketId) { res.status(500).json({ error: "Object storage not configured" }); return; }
     const key = (req.params as Record<string, string>).key;
-    if (!key) return res.status(400).json({ error: "No key specified" });
-    const bucket = objectStorageClient.bucket(bucketId);
-    const file = bucket.file(key);
-    const [exists] = await file.exists();
-    if (!exists) return res.status(404).json({ error: "Not found" });
-    const [metadata] = await file.getMetadata();
-    res.setHeader("Content-Type", (metadata.contentType as string) || "application/octet-stream");
+    if (!key) { res.status(400).json({ error: "No key specified" }); return; }
+    const file = objectStorageClient.bucket(bucketId).file(key);
+    res.setHeader("Content-Type", extToMime(key));
     res.setHeader("Cache-Control", "private, max-age=3600");
-    if (metadata.size) res.setHeader("Content-Length", String(metadata.size));
-    file.createReadStream().pipe(res);
+    const stream = file.createReadStream();
+    stream.on("error", () => { if (!res.headersSent) res.status(404).json({ error: "Not found" }); });
+    stream.pipe(res);
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to serve file" });
   }
