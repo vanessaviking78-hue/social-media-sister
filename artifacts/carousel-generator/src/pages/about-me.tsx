@@ -76,7 +76,9 @@ type DragOp =
   | { what: "logo-rotate"; cx: number; cy: number; sa: number; or_: number }
   | { what: "doodle"; idx: number; sx: number; sy: number; ox: number; oy: number }
   | { what: "doodle-rotate"; idx: number; cx: number; cy: number; sa: number; or_: number }
-  | { what: "doodle-resize"; idx: number; sx: number; sy: number; os: number; cx: number; cy: number; sd: number };
+  | { what: "doodle-resize"; idx: number; sx: number; sy: number; os: number; cx: number; cy: number; sd: number }
+  | { what: "title"; sx: number; sy: number; ox: number; oy: number }
+  | { what: "subtitle"; sx: number; sy: number; ox: number; oy: number };
 
 // ─── SVG path helpers ───────────────────────────────────────────────────────────
 function heartFilled(hx: number, hy: number, s: number) {
@@ -293,6 +295,27 @@ export default function AboutMePage() {
   const [subtitleBgRadius, setSubtitleBgRadius] = useState(12);
   const [subtitleBgPadding, setSubtitleBgPadding] = useState(16);
 
+  // Draggable title/subtitle offsets (normalized, 0 = default position)
+  const [titleOffX, setTitleOffX] = useState(0);
+  const [titleOffY, setTitleOffY] = useState(0);
+  const [subtitleOffX, setSubtitleOffX] = useState(0);
+  const [subtitleOffY, setSubtitleOffY] = useState(0);
+
+  // Title outline
+  const [titleOutlineEnabled, setTitleOutlineEnabled] = useState(false);
+  const [titleOutlineColor, setTitleOutlineColor] = useState("#ffffff");
+  const [titleOutlineWidth, setTitleOutlineWidth] = useState(3);
+  const [titleOutlineShadow, setTitleOutlineShadow] = useState(false);
+
+  // Subtitle outline
+  const [subtitleOutlineEnabled, setSubtitleOutlineEnabled] = useState(false);
+  const [subtitleOutlineColor, setSubtitleOutlineColor] = useState("#ffffff");
+  const [subtitleOutlineWidth, setSubtitleOutlineWidth] = useState(2);
+  const [subtitleOutlineShadow, setSubtitleOutlineShadow] = useState(false);
+
+  // "Preview at actual size" modal
+  const [showFullPreview, setShowFullPreview] = useState(false);
+
   // Caption generation
   const [generatingCaption, setGeneratingCaption] = useState(false);
   const [generatedCaption, setGeneratedCaption] = useState("");
@@ -463,6 +486,14 @@ export default function AboutMePage() {
     } else if (drag.what === "doodle-rotate") {
       const a = angleDeg(drag.cx, drag.cy, mx, my);
       setDoodles((p) => p.map((dd, i) => i === drag.idx ? { ...dd, rotation: Math.round(drag.or_ + (a - drag.sa)) } : dd));
+    } else if (drag.what === "title") {
+      const dx = mx - drag.sx, dy = my - drag.sy;
+      setTitleOffX(clamp(drag.ox + dx / PW, -0.85, 0.85));
+      setTitleOffY(clamp(drag.oy + dy / PH, -0.1, 0.9));
+    } else if (drag.what === "subtitle") {
+      const dx = mx - drag.sx, dy = my - drag.sy;
+      setSubtitleOffX(clamp(drag.ox + dx / PW, -0.85, 0.85));
+      setSubtitleOffY(clamp(drag.oy + dy / PH, -0.1, 0.9));
     }
   };
 
@@ -694,9 +725,9 @@ export default function AboutMePage() {
           <p className="text-lg text-muted-foreground">Upload your photo, scatter your words, and drag everything exactly where you want it.</p>
         </div>
 
-        <div className="flex gap-8 items-start">
+        <div className="flex flex-col lg:flex-row gap-8 items-start">
           {/* ═══ LEFT CONTROLS ═══ */}
-          <div className="flex-1 min-w-0 space-y-5">
+          <div className="w-full lg:w-[40%] min-w-0 space-y-5">
 
             {/* Photo */}
             <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-4">
@@ -837,6 +868,40 @@ export default function AboutMePage() {
                     </div>
                   </div>
                 )}
+                {/* Title outline */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button onClick={() => setTitleOutlineEnabled(p => !p)}
+                    className={`px-2.5 py-1 rounded text-xs font-semibold border transition-all ${titleOutlineEnabled ? "bg-pink-500 text-white border-pink-500" : "border-border/40 text-muted-foreground"}`}>
+                    {titleOutlineEnabled ? "✓ Outline on" : "+ Outline text"}
+                  </button>
+                  {(titleOffX !== 0 || titleOffY !== 0) && (
+                    <button onClick={() => { setTitleOffX(0); setTitleOffY(0); }}
+                      className="px-2 py-0.5 rounded text-xs border border-border/40 text-muted-foreground hover:text-foreground">
+                      ↺ Reset position
+                    </button>
+                  )}
+                </div>
+                {titleOutlineEnabled && (
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/20">
+                    <div className="flex items-center gap-2 col-span-2 flex-wrap">
+                      <Input type="color" value={titleOutlineColor} onChange={(e) => setTitleOutlineColor(e.target.value)} className="w-8 h-7 p-0.5 cursor-pointer shrink-0" />
+                      <Label className="text-xs text-muted-foreground">Outline colour</Label>
+                      {["#ffffff","#000000","#E91976","#ffd700"].map(c => (
+                        <button key={c} onClick={() => setTitleOutlineColor(c)} style={{ background: c }} className="w-5 h-5 rounded-full border border-white/30 shrink-0 hover:scale-110 transition-transform" />
+                      ))}
+                    </div>
+                    <div className="space-y-0.5">
+                      <div className="flex justify-between"><Label className="text-xs text-muted-foreground">Thickness</Label><span className="text-xs font-mono">{titleOutlineWidth}px</span></div>
+                      <input type="range" min={1} max={8} step={1} value={titleOutlineWidth} onChange={(e) => setTitleOutlineWidth(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                    </div>
+                    <div className="flex items-end pb-1">
+                      <button onClick={() => setTitleOutlineShadow(p => !p)}
+                        className={`px-2 py-0.5 rounded text-xs font-semibold border ${titleOutlineShadow ? "bg-pink-500 text-white border-pink-500" : "border-border/40 text-muted-foreground"}`}>
+                        {titleOutlineShadow ? "✓ Shadow" : "+ Shadow"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Subtitle typography */}
@@ -895,6 +960,40 @@ export default function AboutMePage() {
                       <div className="space-y-0.5 col-span-2">
                         <div className="flex justify-between"><Label className="text-xs text-muted-foreground">Padding</Label><span className="text-xs font-mono">{subtitleBgPadding}px</span></div>
                         <input type="range" min={4} max={32} step={2} value={subtitleBgPadding} onChange={(e) => setSubtitleBgPadding(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                      </div>
+                    </div>
+                  )}
+                  {/* Subtitle outline */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button onClick={() => setSubtitleOutlineEnabled(p => !p)}
+                      className={`px-2.5 py-1 rounded text-xs font-semibold border transition-all ${subtitleOutlineEnabled ? "bg-pink-500 text-white border-pink-500" : "border-border/40 text-muted-foreground"}`}>
+                      {subtitleOutlineEnabled ? "✓ Outline on" : "+ Outline text"}
+                    </button>
+                    {(subtitleOffX !== 0 || subtitleOffY !== 0) && (
+                      <button onClick={() => { setSubtitleOffX(0); setSubtitleOffY(0); }}
+                        className="px-2 py-0.5 rounded text-xs border border-border/40 text-muted-foreground hover:text-foreground">
+                        ↺ Reset position
+                      </button>
+                    )}
+                  </div>
+                  {subtitleOutlineEnabled && (
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/20">
+                      <div className="flex items-center gap-2 col-span-2 flex-wrap">
+                        <Input type="color" value={subtitleOutlineColor} onChange={(e) => setSubtitleOutlineColor(e.target.value)} className="w-8 h-7 p-0.5 cursor-pointer shrink-0" />
+                        <Label className="text-xs text-muted-foreground">Outline colour</Label>
+                        {["#ffffff","#000000","#E91976","#ffd700"].map(c => (
+                          <button key={c} onClick={() => setSubtitleOutlineColor(c)} style={{ background: c }} className="w-5 h-5 rounded-full border border-white/30 shrink-0 hover:scale-110 transition-transform" />
+                        ))}
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="flex justify-between"><Label className="text-xs text-muted-foreground">Thickness</Label><span className="text-xs font-mono">{subtitleOutlineWidth}px</span></div>
+                        <input type="range" min={1} max={8} step={1} value={subtitleOutlineWidth} onChange={(e) => setSubtitleOutlineWidth(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                      </div>
+                      <div className="flex items-end pb-1">
+                        <button onClick={() => setSubtitleOutlineShadow(p => !p)}
+                          className={`px-2 py-0.5 rounded text-xs font-semibold border ${subtitleOutlineShadow ? "bg-pink-500 text-white border-pink-500" : "border-border/40 text-muted-foreground"}`}>
+                          {subtitleOutlineShadow ? "✓ Shadow" : "+ Shadow"}
+                        </button>
                       </div>
                     </div>
                   )}
@@ -1188,12 +1287,20 @@ export default function AboutMePage() {
           </div>
 
           {/* ═══ RIGHT PREVIEW ═══ */}
-          <div className="hidden lg:flex flex-col gap-2 shrink-0 sticky top-24 self-start">
-            <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground text-center">Live Preview</p>
-            <p className="text-xs text-muted-foreground text-center">Drag anything to reposition · corner handles to resize</p>
+          <div className="w-full lg:w-[58%] flex flex-col gap-2 lg:sticky top-24 self-start">
+            <div className="flex items-center justify-between px-0.5">
+              <div>
+                <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Live Preview</p>
+                <p className="text-xs text-muted-foreground">Drag title, photo, stickers, and doodles to reposition</p>
+              </div>
+              <button onClick={() => setShowFullPreview(true)}
+                className="text-xs text-pink-400 border border-pink-500/30 px-2.5 py-1 rounded-lg hover:bg-pink-500/10 transition-colors flex items-center gap-1 shrink-0">
+                ⤢ Actual size
+              </button>
+            </div>
 
             <div className="rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 relative select-none"
-              style={{ width: PW, height: PH }}>
+              style={{ width: "100%", aspectRatio: `${PW}/${PH}` }}>
 
               {/* Blurred background */}
               {originalUrl && (
@@ -1244,7 +1351,7 @@ export default function AboutMePage() {
                     }}
                   />
 
-                  {/* Title — wrapped, aligned, optional bg panel */}
+                  {/* Title — draggable, aligned, optional bg panel + outline */}
                   {(() => {
                     const maxW = PW * 0.82;
                     let fs = Math.round(titleFontSize * PW / 1080);
@@ -1255,16 +1362,24 @@ export default function AboutMePage() {
                       lines = wrapSvgText(title, maxW, fs, titleLetterSpacing);
                     }
                     const lineH = fs * titleLineHeight;
-                    const topY = fs + 10;
-                    const xA = titleAlign === "left" ? PW * 0.09 : titleAlign === "right" ? PW * 0.91 : PW / 2;
+                    const baseX = titleAlign === "left" ? PW * 0.09 : titleAlign === "right" ? PW * 0.91 : PW / 2;
+                    const baseY = fs + 10;
+                    const xA = baseX + titleOffX * PW;
+                    const topY = baseY + titleOffY * PH;
                     const anchor = titleAlign === "left" ? "start" : titleAlign === "right" ? "end" : "middle";
                     const scF = PW / 1080;
                     const pad = Math.round(titleBgPadding * scF);
                     const estimW = Math.max(...lines.map(l => l.length)) * fs * 0.58;
                     const bgW = Math.min(PW - 4, estimW + pad * 2);
-                    const bgX = titleAlign === "center" ? PW / 2 - bgW / 2 : titleAlign === "left" ? xA - pad : xA - bgW + pad;
+                    const bgX = anchor === "middle" ? xA - bgW / 2 : anchor === "start" ? xA - pad : xA - bgW + pad;
+                    const outW = titleOutlineEnabled ? titleOutlineWidth * scF : 0;
+                    const textFilter = titleOutlineShadow ? "drop-shadow(0 2px 8px rgba(0,0,0,0.85))" : "drop-shadow(0 1px 3px rgba(0,0,0,0.4))";
                     return (
-                      <>
+                      <g style={{ cursor: (titleOffX !== 0 || titleOffY !== 0) ? "grab" : "grab" }}
+                        onPointerDown={(e) => {
+                          const p = svgPt(e);
+                          startDrag(e, { what: "title", sx: p.x, sy: p.y, ox: titleOffX, oy: titleOffY });
+                        }}>
                         {titleBgEnabled && (
                           <rect x={bgX} y={topY - fs - pad} width={bgW} height={lines.length * lineH + pad * 2}
                             rx={Math.round(titleBgRadius * scF)} fill={titleBgColor} opacity={titleBgOpacity / 100} />
@@ -1273,14 +1388,15 @@ export default function AboutMePage() {
                           <text key={li} x={xA} y={topY + li * lineH}
                             fontFamily={`'${titleFont}', cursive, serif`} fontSize={fs} fill={tc}
                             textAnchor={anchor} letterSpacing={titleLetterSpacing}
-                            style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.4))" }}>
+                            {...(titleOutlineEnabled ? { stroke: titleOutlineColor, strokeWidth: outW, paintOrder: "stroke fill" } : {})}
+                            style={{ filter: textFilter }}>
                             {line}
                           </text>
                         ))}
-                      </>
+                      </g>
                     );
                   })()}
-                  {/* Subtitle — wrapped, aligned, optional bg panel */}
+                  {/* Subtitle — draggable, aligned, optional bg panel + outline */}
                   {subtitle && (() => {
                     const maxW = PW * 0.82;
                     const titleFs = Math.round(titleFontSize * PW / 1080);
@@ -1290,16 +1406,24 @@ export default function AboutMePage() {
                     const sc_ = subtitleColor || accentColor;
                     const lines = wrapSvgText(subtitle.toUpperCase(), maxW, subFs, subtitleLetterSpacing);
                     const lineH = subFs * subtitleLineHeight;
-                    const topY = titleFs + 10 + titleTotalH + subFs + 4;
-                    const xA = subtitleAlign === "left" ? PW * 0.09 : subtitleAlign === "right" ? PW * 0.91 : PW / 2;
+                    const baseX = subtitleAlign === "left" ? PW * 0.09 : subtitleAlign === "right" ? PW * 0.91 : PW / 2;
+                    const baseY = titleFs + 10 + titleTotalH + subFs + 4;
+                    const xA = baseX + subtitleOffX * PW;
+                    const topY = baseY + subtitleOffY * PH;
                     const anchor = subtitleAlign === "left" ? "start" : subtitleAlign === "right" ? "end" : "middle";
                     const scF = PW / 1080;
                     const pad = Math.round(subtitleBgPadding * scF);
                     const estimW = Math.max(...lines.map(l => l.length)) * subFs * 0.58;
                     const bgW = Math.min(PW - 4, estimW + pad * 2);
-                    const bgX = subtitleAlign === "center" ? PW / 2 - bgW / 2 : subtitleAlign === "left" ? xA - pad : xA - bgW + pad;
+                    const bgX = anchor === "middle" ? xA - bgW / 2 : anchor === "start" ? xA - pad : xA - bgW + pad;
+                    const outW = subtitleOutlineEnabled ? subtitleOutlineWidth * scF : 0;
+                    const textFilter = subtitleOutlineShadow ? "drop-shadow(0 2px 8px rgba(0,0,0,0.85))" : undefined;
                     return (
-                      <>
+                      <g style={{ cursor: "grab" }}
+                        onPointerDown={(e) => {
+                          const p = svgPt(e);
+                          startDrag(e, { what: "subtitle", sx: p.x, sy: p.y, ox: subtitleOffX, oy: subtitleOffY });
+                        }}>
                         {subtitleBgEnabled && (
                           <rect x={bgX} y={topY - subFs - pad} width={bgW} height={lines.length * lineH + pad * 2}
                             rx={Math.round(subtitleBgRadius * scF)} fill={subtitleBgColor} opacity={subtitleBgOpacity / 100} />
@@ -1307,11 +1431,13 @@ export default function AboutMePage() {
                         {lines.map((line, li) => (
                           <text key={li} x={xA} y={topY + li * lineH}
                             fontFamily="Georgia, serif" fontSize={subFs} fill={sc_}
-                            textAnchor={anchor} opacity={0.85} letterSpacing={subtitleLetterSpacing}>
+                            textAnchor={anchor} opacity={0.85} letterSpacing={subtitleLetterSpacing}
+                            {...(subtitleOutlineEnabled ? { stroke: subtitleOutlineColor, strokeWidth: outW, paintOrder: "stroke fill" } : {})}
+                            style={textFilter ? { filter: textFilter } : undefined}>
                             {line}
                           </text>
                         ))}
-                      </>
+                      </g>
                     );
                   })()}
 
@@ -1460,6 +1586,38 @@ export default function AboutMePage() {
           </div>
         </div>
       </main>
+
+      {/* ═══ FULL SIZE PREVIEW MODAL ═══ */}
+      {showFullPreview && (
+        <div className="fixed inset-0 z-50 bg-black/92 flex items-start justify-center overflow-auto py-10 px-4"
+          onClick={() => setShowFullPreview(false)}>
+          <div className="relative flex flex-col items-center gap-4" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-4">
+              <p className="text-white/50 text-sm">{aspectRatio === "1080x1920" ? "1080 × 1920" : "1080 × 1350"}</p>
+              <button onClick={() => setShowFullPreview(false)}
+                className="text-white/60 hover:text-white border border-white/20 rounded-lg px-3 py-1 text-xs transition-colors">
+                Close ✕
+              </button>
+            </div>
+            {renderedUrl ? (
+              <img src={renderedUrl}
+                className="rounded-2xl shadow-2xl block"
+                style={{ maxWidth: "min(1080px, calc(100vw - 32px))" }}
+                alt="Full size preview" />
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-white/5 p-12 text-center space-y-4 max-w-sm">
+                <p className="text-white/60 text-sm leading-relaxed">
+                  Hit Generate &amp; Save first, then come back here to see your design at full 1080px resolution.
+                </p>
+                <button onClick={() => setShowFullPreview(false)}
+                  className="text-pink-400 text-sm underline">
+                  Close and generate
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
