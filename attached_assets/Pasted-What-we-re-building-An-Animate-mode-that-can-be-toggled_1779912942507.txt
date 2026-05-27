@@ -1,0 +1,141 @@
+What we're building
+An Animate mode that can be toggled ON for any static post type in the CyberSuite. When enabled, individual elements (text, stickers, doodles, photos) can be assigned animation styles. The post then exports as a 5-second looping MP4 reel instead of a static image, automatically published via the existing Reel flow.
+
+Applies to: Single Image, About Me / Doodles, Carousel slides (per slide), Seamless Carousel, Stories.
+
+Reels already have animation features (typewriter, cover transitions) so this brief focuses on bringing animation to the still-image generators.
+
+Animation is the killer because IG's algorithm currently rewards video content with 3-5x more reach than static. Turning any post into a "subtle motion reel" lets the same content get pushed into the Reels recommendation engine.
+
+
+Universal Animation Library
+The same animation library is available across all post types. When the user selects an element on the canvas, they get a dropdown:
+
+- None (static, default)
+
+- Fade In (0 to 100% opacity over 0.8s at loop start)
+
+- Pop In (scale 0% to 100% with bounce ease, 0.6s)
+
+- Slide In From Left / Right / Top / Bottom (translate + fade, 0.7s)
+
+- Typewriter (letters appear one by one, title/subtitle only, 1.2s)
+
+- Sparkle Twinkle (rotation + scale pulse continuous loop, for sparkles/stars)
+
+- Heart Pulse (scale 100%→120%→100% continuous loop, for hearts)
+
+- Gentle Drift (slow circular translate continuous loop, for floating elements)
+
+- Outline Glow (chunky outline pulses brightness continuous loop, for word stickers)
+
+- Photo Zoom (subtle 3% zoom-in over 5s, for subject photo or background)
+
+- Photo Drift (slow Ken Burns effect, for subject photo or background)
+
+
+Per-element timing controls
+When the user picks an animation, two extra controls appear:
+
+Start at slider (0 to 3 seconds): when in the 5-second loop the animation triggers
+Repeat toggle: "Once" (animation plays at start only) or "Continuous" (loops within the 5s)
+
+Default: elements animate sequentially with 0.2s gaps between them.
+
+
+Loop duration
+Fixed at 5 seconds. This is the sweet spot for IG Reels algorithm watch time on short content. The reel loops seamlessly back to the start for repeat plays.
+
+Optional: a future enhancement could add 7s or 10s options. For v1, 5s only.
+
+
+Per-post-type integration
+Single Image generator
+Add an "Animate" tab to the design controls
+When enabled, all text and overlay elements can be animated
+Save options become: "Save as Post" (static, current behaviour) or "Save as Reel" (animated, exports as MP4)
+About Me / Doodles generator
+Same Animate tab
+Word stickers, title, subtitle, doodles, logo, subject photo all individually animatable
+Save options: Post / Reel / Trial Reel
+Carousel generator (per slide)
+Each carousel slide gets its own animation timeline
+When Animate is enabled on ANY slide, ALL slides become Reel slides (entire carousel becomes a single video reel with slide transitions)
+Slide transitions: pick from Slide / Fade / Zoom transitions between carousel "pages"
+Saved as a single Reel instead of a multi-image carousel post
+Seamless Carousel generator
+Animation applies to overlay elements (text, doodles) on each sliced slide
+Saved as a multi-Reel set (one Reel per slide) OR as a single Reel that pans through the seamless image. User picks at save time.
+Stories generator
+Animation works natively in Stories context (Stories support video)
+Same animation library, exported as MP4 story rather than static image story
+
+
+Output pipeline
+When user clicks "Save as Reel" with animations enabled:
+
+Server receives the design JSON (positions, sizes, colours, animations per element)
+Renders 5 seconds at 30fps = 150 frames using node-canvas (or Remotion + headless Chromium, Agent's choice)
+Encodes frames to MP4 using FFmpeg with H.264 codec, 1080x1920 (or 1080x1080 if user picks square), 30fps, audio-free (music attached separately at publish time)
+Saves MP4 to object storage
+Creates Reel / Trial Reel Library entry
+Ready for publish via existing reel push flow
+Performance note
+Server-side rendering takes 8-20 seconds per 5-second reel. Run as async job using existing async-job pattern. Show progress bar in UI: "Rendering your reel... 12 seconds remaining."
+
+
+Music integration
+Animated reels can have music attached the same way regular reels can. Use the existing music picker. The MP4 is generated audio-free server-side; music gets attached at the Instagram publish stage via the existing IG API music parameter.
+
+
+Preview behaviour
+In Animate mode, the preview canvas loops the animation in real-time (browser-side rendering using CSS animations or Canvas API) so the user sees exactly what their reel will look like before saving. Updates in under 100ms when any animation control changes.
+
+A small "Play / Pause" button on the preview lets the user freeze the animation to position elements precisely.
+
+
+Database changes
+For each post type's table, add columns:
+
+isAnimated: boolean default false
+animations: jsonb (array of { elementId, animationType, startAt, repeat })
+outputType: text ("static" | "reel" | "trial_reel")
+mp4Url: text (nullable, populated when animated and rendered)
+
+Existing static workflows remain unchanged. Animation is purely additive.
+
+
+Frontend implementation
+For each generator (Single Image, About Me, Carousel, Seamless, Stories):
+
+Add an "Animate" tab/section to the controls panel
+When tab is opened, each element on the canvas becomes selectable
+Selecting an element shows:
+Animation dropdown
+Start time slider
+Repeat toggle
+Live preview loops the animation
+Save button changes label to "Save as Reel" when animations are active
+Output landing in the Reel Library (or Trial Reel Library if trial chosen)
+
+
+Acceptance criteria
+When done, Vanessa should be able to:
+
+Open Single Image generator
+Type a hero headline "5 MYTHS ABOUT POLYNUCLEOTIDES"
+Open the Animate tab
+Select the title, pick "Typewriter" animation
+Select the background image, pick "Photo Zoom"
+Add a sparkle doodle, pick "Sparkle Twinkle" with Continuous repeat
+Hit play on preview, see the design come to life
+Click "Save as Reel"
+Wait ~15 seconds while the MP4 renders
+Reel appears in the Library as a video, ready to push to IG with music attached
+
+Same workflow available in About Me, Carousel, Seamless Carousel and Stories.
+
+
+When done
+Restart api-server. Vanessa will test by animating one Single Image and one About Me post and pushing both as Trial Reels first.
+
