@@ -853,6 +853,7 @@ export default function SeamlessCarouselPage() {
                           title: slides[0]?.title || "Seamless Carousel",
                           imageUrls: renderedUrls,
                           caption: "Seamless carousel",
+                          musicTrack: musicTrack || null,
                         }];
                         const r = await fetch(`${BASE}/api/meta/push`, {
                           method: "POST",

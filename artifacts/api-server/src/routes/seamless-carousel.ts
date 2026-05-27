@@ -366,6 +366,7 @@ router.post("/seamless", async (req, res) => {
       watermark: body.watermark ?? "",
       renderedSlideUrls: [],
       logoConfig: body.logoConfig ?? null,
+      musicTrack: body.musicTrack ?? null,
     }).returning();
     res.json(inserted);
   } catch (e: any) {
@@ -390,6 +391,7 @@ router.put("/seamless/:id", async (req, res) => {
       textColor: body.textColor,
       watermark: body.watermark,
       logoConfig: body.logoConfig ?? null,
+      musicTrack: body.musicTrack ?? null,
       updatedAt: new Date(),
     }).where(eq(seamlessCarouselsTable.id, id)).returning();
     if (!updated) { res.status(404).json({ error: "Not found" }); return; }

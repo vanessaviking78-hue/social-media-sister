@@ -363,6 +363,7 @@ router.post("/about-me", async (req, res) => {
         accentColor: body.accentColor ?? "#F5EEE3",
         titleFont: body.titleFont ?? "Allura",
         aspectRatio: body.aspectRatio ?? "1080x1350",
+        musicTrack: body.musicTrack ?? null,
       })
       .returning();
     res.json(inserted);
@@ -392,6 +393,7 @@ router.put("/about-me/:id", async (req, res) => {
         accentColor: body.accentColor,
         titleFont: body.titleFont,
         aspectRatio: body.aspectRatio,
+        musicTrack: body.musicTrack ?? null,
         updatedAt: new Date(),
       })
       .where(eq(aboutMePostsTable.id, id))

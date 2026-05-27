@@ -50,10 +50,14 @@ async function ccFetch(path: string, opts: RequestInit = {}): Promise<any> {
   return data;
 }
 
-async function igUpload(igId: string, token: string, imageUrl: string, isCarouselItem: boolean, caption?: string): Promise<string> {
+async function igUpload(igId: string, token: string, imageUrl: string, isCarouselItem: boolean, caption?: string, audioName?: string): Promise<string> {
   const params: Record<string, string> = { image_url: imageUrl, access_token: token };
-  if (isCarouselItem) params.is_carousel_item = "true";
-  else if (caption) params.caption = caption;
+  if (isCarouselItem) {
+    params.is_carousel_item = "true";
+  } else {
+    if (caption) params.caption = caption;
+    if (audioName) params.audio_name = audioName;
+  }
   const res = await fetch(`${GRAPH}/${igId}/media`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -75,17 +79,19 @@ async function igPublish(igId: string, token: string, creationId: string): Promi
   return data.id;
 }
 
-async function postCarouselToIG(igId: string, token: string, imageUrls: string[], caption: string): Promise<string> {
+async function postCarouselToIG(igId: string, token: string, imageUrls: string[], caption: string, audioName?: string): Promise<string> {
   if (imageUrls.length === 1) {
-    const id = await igUpload(igId, token, imageUrls[0], false, caption);
+    const id = await igUpload(igId, token, imageUrls[0], false, caption, audioName);
     return igPublish(igId, token, id);
   }
   const childIds: string[] = [];
   for (const url of imageUrls) childIds.push(await igUpload(igId, token, url, true));
+  const carouselBody: Record<string, unknown> = { media_type: "CAROUSEL", children: childIds.join(","), caption, access_token: token };
+  if (audioName) carouselBody.audio_name = audioName;
   const res = await fetch(`${GRAPH}/${igId}/media`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ media_type: "CAROUSEL", children: childIds.join(","), caption, access_token: token }),
+    body: JSON.stringify(carouselBody),
   });
   const data = await res.json() as { id?: string; error?: { message?: string } };
   if (!res.ok || !data.id) throw new Error(`IG carousel container failed: ${data?.error?.message}`);
@@ -146,7 +152,7 @@ async function postReelToIG(igId: string, token: string, videoUrl: string, capti
   return igPublish(igId, token, containerId);
 }
 
-type PostContent = { imageUrls?: string[]; videoUrl?: string; caption: string; title: string };
+type PostContent = { imageUrls?: string[]; videoUrl?: string; caption: string; title: string; musicTrack?: { title: string; artist: string } | null };
 
 async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, preset: typeof clientPresetsTable.$inferSelect): Promise<{ igPostId?: string; fbPostId?: string }> {
   const token = preset.metaPageAccessToken;
@@ -165,8 +171,9 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
   if (!content.imageUrls?.length) throw new Error("No image URLs for carousel");
   const result: { igPostId?: string; fbPostId?: string } = {};
   const errors: string[] = [];
+  const audioName = content.musicTrack?.title || undefined;
   if (igId) {
-    try { result.igPostId = await postCarouselToIG(igId, token, content.imageUrls, content.caption); }
+    try { result.igPostId = await postCarouselToIG(igId, token, content.imageUrls, content.caption, audioName); }
     catch (e: any) { errors.push(`IG: ${e.message}`); }
   }
   if (pageId) {

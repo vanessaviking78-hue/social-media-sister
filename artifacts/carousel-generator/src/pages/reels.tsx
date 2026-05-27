@@ -9,6 +9,7 @@ import {
   ChevronRight, ChevronLeft, Clock, CalendarClock,
 } from "lucide-react";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
+import { MusicPickerModal, type MusicTrack } from "@/components/music-picker-modal";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -128,13 +129,8 @@ export default function Reels() {
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState("");
 
-  const [musicQuery, setMusicQuery] = useState("");
-  const [musicGenre, setMusicGenre] = useState("all");
-  const [musicTracks, setMusicTracks] = useState<Array<{ id: number; title: string; duration: number; artist: string; previewUrl: string }>>([]);
-  const [musicLoading, setMusicLoading] = useState(false);
-  const [selectedTrack, setSelectedTrack] = useState<{ id: number; title: string; duration: number; artist: string; previewUrl: string } | null>(null);
-  const [previewingTrackId, setPreviewingTrackId] = useState<number | null>(null);
-  const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
+  const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null);
+  const [musicPickerOpen, setMusicPickerOpen] = useState(false);
 
   const [ccWorkspaces, setCcWorkspaces] = useState<Array<{ id: string; name: string }>>([]);
   const [ccWorkspaceId, setCcWorkspaceId] = useState("");
@@ -917,25 +913,6 @@ export default function Reels() {
     }
   };
 
-  const fetchMusic = async (genreOverride?: string) => {
-    setMusicLoading(true);
-    setMusicTracks([]);
-    try {
-      const genre = genreOverride ?? musicGenre;
-      const params = new URLSearchParams();
-      if (musicQuery.trim()) params.set("q", musicQuery.trim());
-      if (genre && genre !== "all") params.set("genre", genre);
-      const res = await fetch(`${import.meta.env.BASE_URL}api/music/search?${params}`);
-      const data = await res.json();
-      if (data.error) { toast.error(data.error); return; }
-      setMusicTracks(data.tracks || []);
-      if ((data.tracks || []).length === 0) toast.info("No tracks found — try a different genre or keyword");
-    } catch {
-      toast.error("Music search failed");
-    } finally {
-      setMusicLoading(false);
-    }
-  };
 
   const handlePushToCC = async () => {
     if (!ccWorkspaceId) { toast.error("Select a Cloud Campaign workspace first"); return; }
@@ -2005,7 +1982,7 @@ export default function Reels() {
               </div>
 
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-4">
-                {selectedTrack && (
+                {selectedTrack ? (
                   <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3">
                     <Check className="w-4 h-4 text-green-400 shrink-0" />
                     <div className="flex-1 min-w-0">
@@ -2016,80 +1993,17 @@ export default function Reels() {
                       <X className="w-4 h-4" />
                     </button>
                   </div>
+                ) : (
+                  <p className="text-sm text-white/40">No track selected. You can skip this step.</p>
                 )}
-                <div className="flex gap-2">
-                  <input
-                    value={musicQuery}
-                    onChange={(e) => setMusicQuery(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && fetchMusic()}
-                    placeholder="Search tracks… (press Enter)"
-                    className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/30 outline-none focus:border-pink-500/50"
-                  />
-                  <Button onClick={() => fetchMusic()} disabled={musicLoading}
-                    className="bg-pink-600 hover:bg-pink-500 text-white px-4">
-                    {musicLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                  </Button>
-                </div>
-                <Select value={musicGenre} onValueChange={(v) => { setMusicGenre(v); fetchMusic(v); }}>
-                  <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-10 text-sm"><SelectValue placeholder="All genres" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All genres</SelectItem>
-                    <SelectItem value="pop">Pop</SelectItem>
-                    <SelectItem value="hip-hop">Hip-Hop</SelectItem>
-                    <SelectItem value="electronic">Electronic</SelectItem>
-                    <SelectItem value="jazz">Jazz</SelectItem>
-                    <SelectItem value="classical">Classical</SelectItem>
-                    <SelectItem value="r-b-soul">R&amp;B / Soul</SelectItem>
-                    <SelectItem value="ambient">Ambient</SelectItem>
-                    <SelectItem value="rock">Rock</SelectItem>
-                    <SelectItem value="country">Country</SelectItem>
-                  </SelectContent>
-                </Select>
-                {musicTracks.length > 0 && (
-                  <div className="space-y-1 border border-white/10 rounded-xl p-2 bg-black/20 max-h-80 overflow-y-auto">
-                    {musicTracks.map((track) => {
-                      const isSelected = selectedTrack?.id === track.id;
-                      const isPreviewing = previewingTrackId === track.id;
-                      return (
-                        <div
-                          key={track.id}
-                          onClick={() => {
-                            if (isSelected) { setSelectedTrack(null); }
-                            else {
-                              setSelectedTrack(track);
-                              if (audioPreviewRef.current) { audioPreviewRef.current.pause(); setPreviewingTrackId(null); }
-                            }
-                          }}
-                          className={`flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer transition-colors ${isSelected ? "bg-green-500/20 ring-1 ring-green-500/50" : "hover:bg-white/5"}`}
-                        >
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (isPreviewing) { audioPreviewRef.current?.pause(); setPreviewingTrackId(null); }
-                              else {
-                                if (audioPreviewRef.current) audioPreviewRef.current.pause();
-                                audioPreviewRef.current = new Audio(track.previewUrl);
-                                audioPreviewRef.current.play();
-                                setPreviewingTrackId(track.id);
-                                audioPreviewRef.current.onended = () => setPreviewingTrackId(null);
-                              }
-                            }}
-                            className={`shrink-0 p-1.5 rounded-lg transition-colors ${isPreviewing ? "text-pink-400 bg-pink-500/10" : "text-white/40 hover:text-pink-400"}`}
-                          >
-                            {isPreviewing ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                          </button>
-                          <div className="flex-1 min-w-0">
-                            <p className={`text-sm truncate ${isSelected ? "text-green-300 font-semibold" : "text-white"}`}>{track.title}</p>
-                            <p className="text-xs text-white/40 truncate">{track.artist} · {Math.floor(track.duration / 60)}:{String(track.duration % 60).padStart(2, "0")}</p>
-                          </div>
-                          <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-colors ${isSelected ? "bg-green-500 text-white" : "bg-white/10 text-white/50"}`}>
-                            {isSelected ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 border-white/20 text-white/70 hover:text-white"
+                  onClick={() => setMusicPickerOpen(true)}
+                >
+                  <Music className="w-4 h-4" />
+                  {selectedTrack ? "Change track" : "Browse music"}
+                </Button>
               </div>
 
               <div className="flex justify-between pt-4">
@@ -2271,6 +2185,13 @@ export default function Reels() {
           onSaved={() => setBulkSchedulePosts([])}
         />
       )}
+
+      <MusicPickerModal
+        open={musicPickerOpen}
+        onClose={() => setMusicPickerOpen(false)}
+        selectedTrack={selectedTrack}
+        onSelect={(track) => { setSelectedTrack(track); setMusicPickerOpen(false); }}
+      />
     </div>
   );
 }

@@ -1,0 +1,329 @@
+MASTER BUILD PROMPT — Next Phase of The CyberSuite
+Paste ALL of this into the Replit Agent. Build in the order presented. Restart api-server after each major feature section is complete and ping Vanessa.
+
+Priority order:
+
+Deleted Preset Cleanup (quick housekeeping)
+Engagement Automation (auto-comment, DM keyword responder, optimal times)
+Multi-Platform Posting (Google Business Profile, TikTok, Facebook Professional Mode)
+Content Machine (Google Form CSV intake → AI-generated content batches)
+
+
+FEATURE 1: DELETED PRESET CLEANUP
+When a client preset is deleted from the Presets page, the system needs to properly clean up the orphaned data instead of leaving it as a "ghost" preset. Currently a deleted preset still appears in fuzzy matching dropdowns and elsewhere.
+
+On preset delete, please:
+
+Clear all Meta-related fields on the preset row (metaPageAccessToken, metaFacebookPageId, metaInstagramAccountId, onboardingToken, clientPortalToken). If hard-deleting the row entirely, ensure these tokens are properly nulled first so no cached references remain.
+
+Delete (or soft-delete) all Content Library items associated with this preset.
+
+Delete all PENDING scheduledPostsTable rows for this preset (status = "scheduled" or "draft"). KEEP historical rows (status = "published" or "failed") for analytics and audit trail.
+
+Remove the preset from any fuzzy-match suggestion logic during Bulk Connect (it should not be returned in the list of available presets if it has been deleted).
+
+Show a confirmation modal before delete: "Delete [Preset Name]? This will permanently clear all unscheduled posts, library items and Meta connections for this client. Posted history will be kept for records. Type DELETE to confirm."
+
+After successful delete, refresh the Presets page list so the deleted preset disappears immediately.
+
+
+FEATURE 2: ENGAGEMENT AUTOMATION
+Three sub-features that turn the CyberSuite into an engagement engine.
+2A. Auto First Comment
+When a post publishes to Instagram, automatically post a pre-written first comment 30-60 seconds later.
+
+On every post creator (Carousel, Single Image, Reels, Stories, About Me, Seamless Carousel), add a new optional field "First comment" under the caption field. If left blank, fall back to the client preset's default first comment template.
+
+Defaults per post type, editable per client preset:
+
+Carousel: "Which slide surprised you most? Comment the number below 👇"
+Single Image: "Save this one for later 💗"
+Reel: "Drop a 🔥 if this helped"
+Story: (no first comment, stories don't support comments)
+About Me: "Tap a heart if you've felt this way too"
+
+Database additions:
+
+On post tables: firstComment: text, firstCommentPostedAt: timestamp
+On clientPresetsTable: defaultFirstCommentCarousel, defaultFirstCommentSingle, defaultFirstCommentReel
+
+New route in meta.ts:
+
+POST /api/meta/post-first-comment — body: { presetId, igMediaId, commentText }. Calls Meta Graph API POST /{ig-media-id}/comments with message=commentText.
+
+After the main post publishes and IG media ID is returned by Meta, wait 30 seconds, then call the first comment endpoint. Use setTimeout or a small queue, don't block the main publish response.
+
+Required Meta permission: add instagram_manage_comments to existing scope list in meta-auth.ts. Surface a "Reconnect to enable" banner on the Presets page for users with old tokens.
+2B. DM Keyword Auto-Responder
+A native DM auto-responder inside the CyberSuite that replaces ManyChat. When someone DMs a client's Instagram with a specific keyword (e.g. "POLY"), the system auto-replies with a pre-written message.
+
+New page in sidebar: DM Automations. Per client preset, user creates unlimited keyword-trigger rules:
+
+Trigger keywords (comma-separated, case-insensitive, partial match)
+Auto-reply message (rich text)
+Optional link button
+Optional image attachment
+Active/paused toggle
+Hit count display per rule
+
+Database tables:
+
+dmAutomationsTable:
+
+  id, clientName, triggerKeywords (jsonb array), replyText, replyLinkUrl,
+
+  replyLinkLabel, replyAttachmentUrl, active, triggerCount, lastTriggeredAt, createdAt
+
+dmInteractionsTable (audit trail):
+
+  id, automationId, senderIgId, senderUsername, incomingMessage, sentReplyText, firedAt
+
+Backend webhook:
+
+Set up Meta Webhooks subscription for instagram → messages
+Route: POST /api/webhooks/instagram receives Meta's POST when a DM arrives
+Verify webhook signature using META_WEBHOOK_VERIFY_TOKEN (Replit Secret)
+Parse the message, find linked client preset by Page ID, check against active automations
+On keyword match, send reply via POST /{page-id}/messages with recipient and message body
+Log to dmInteractionsTable
+
+Public webhook URL: https://thecybersuite.com/api/webhooks/instagram
+
+Required Meta permissions: add instagram_manage_messages and pages_messaging to scope list.
+
+Compliance: every auto-reply must end with an opt-out line: "Reply STOP at any time to opt out." If user replies STOP, log it and stop auto-responding to that sender.
+2C. Optimal Post-Time Predictor
+Analyses each client's audience activity insights and recommends off-peak slots where their followers are active but competition is low.
+
+On the Content Calendar page, add a button: "Suggest optimal times for [client]".
+
+Click triggers:
+
+POST /api/scheduler/analyse-optimal-times with { presetId }
+Server calls Meta Graph API GET /{ig-user-id}/insights?metric=online_followers&period=lifetime
+Algorithm:
+Identify top 30% of hours by follower activity
+EXCLUDE standard round-hour times (9:00, 12:00, 17:00, 18:00, 19:00, 20:00) where competition is highest
+Pick next-best off-peak slots with non-round minutes (:15, :22, :42, :47)
+Spread across days of week (don't cluster on Mondays)
+Return 5-7 slots formatted as { dayOfWeek, time }
+Cache result on the preset for 7 days, show "Refresh recommendations" button
+
+Database addition on clientPresetsTable:
+
+optimalPostTimes: jsonb
+optimalPostTimesUpdatedAt: timestamp
+
+Required Meta permission: instagram_manage_insights.
+
+UI: modal with a small bar chart visualisation of follower activity per hour, plus the 5-7 recommended slots with "Apply to next 14 unscheduled posts" button.
+
+
+FEATURE 3: MULTI-PLATFORM POSTING
+Three new posting destinations: Google Business Profile, TikTok, Facebook Professional Mode profiles.
+3A. Google Business Profile (GBP) Posting
+Add GBP as a posting destination alongside Instagram and Facebook. Posting weekly to GBP affects local search ranking directly.
+
+Database additions to clientPresetsTable:
+
+gbpAccessToken, gbpRefreshToken, gbpAccountId, gbpLocationId, gbpLocationName, gbpConnectedAt
+
+Google API setup:
+
+Vanessa to create a Google Cloud project at console.cloud.google.com
+Enable Google Business Profile API and Business Profile Performance API
+Create OAuth 2.0 credentials with redirect URI https://thecybersuite.com/api/google/auth/callback
+Save GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to Replit Secrets
+
+New routes in src/routes/google.ts:
+
+GET /api/google/auth/start?presetId=X — kick off OAuth
+GET /api/google/auth/callback — exchange code, fetch GBP locations, redirect to chooser if multiple
+POST /api/google/auth/select-location — save chosen location
+POST /api/google/post — body: { presetId, text, imageUrl?, ctaButton? }. Publishes standard post to GBP.
+GET /api/google/test-connection?presetId=X
+
+Frontend: add a "[ ] Push to Google Business Profile" checkbox on post creators (Single Image, Carousel, About Me) alongside the existing Push to IG / Push to FB checkboxes.
+
+Note: GBP API requires Google to approve Vanessa's project. Application takes 1-2 weeks. Apply now so it's ready by testing time.
+3B. Facebook Professional Mode Support
+Many clinic owners only have a personal Facebook profile, not a Page. Meta's Professional Mode lets them switch their profile to Page-like API access (free, takes 5 minutes).
+
+The existing OAuth flow already fetches /me/accounts which INCLUDES Professional Mode profiles. Test this and ensure it works.
+
+Add a flag during the OAuth fetch to detect profile type:
+
+Check returned account for type: "PROFILE" or category: "Profile"
+Save against the preset: metaProfileType: "page" | "professional_profile" | "business_page"
+Display the type in the Presets list with a small icon and label
+
+On the public onboarding page (/onboard/:token), add an expandable section:
+
+"Don't have a Facebook business Page?
+
+No problem. If you only have a personal Facebook profile, you can enable Professional Mode in 5 minutes (free) and we can post for you that way.
+
+Steps:
+
+Open Facebook app on your phone
+Tap your profile photo (top right)
+Tap the three dots next to your name
+Tap 'Turn on Professional Mode'
+Follow the prompts
+
+Then come back here and tap 'Connect Facebook & Instagram'. Your Professional profile will appear in the list."
+3C. TikTok Posting
+Add TikTok as a posting destination for video content.
+
+Database additions to clientPresetsTable:
+
+tiktokAccessToken, tiktokRefreshToken, tiktokOpenId, tiktokUsername, tiktokConnectedAt
+
+TikTok API setup:
+
+Vanessa to register at developers.tiktok.com
+Create app "The Cyber Suite"
+Apply for Content Posting API product (review takes 1-2 weeks)
+Redirect URI: https://thecybersuite.com/api/tiktok/auth/callback
+Save TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET to Replit Secrets
+
+New routes in src/routes/tiktok.ts:
+
+GET /api/tiktok/auth/start?presetId=X — kick off OAuth
+GET /api/tiktok/auth/callback — exchange code, save tokens
+POST /api/tiktok/post-video — body: { presetId, videoUrl, caption, hashtags }. Uploads video to TikTok.
+GET /api/tiktok/test-connection?presetId=X
+
+Frontend: on Reels creator (and Single Image creator since TikTok now supports image carousels), add a "[ ] Push to TikTok" checkbox. When ticked, show an additional caption field optimised for TikTok conventions (max 2,200 chars, 5-8 hashtags ideal).
+
+TikTok content constraints to validate before posting:
+
+Video MP4 H.264
+9:16 aspect ratio preferred
+Max 60 seconds for unverified, up to 10 minutes for verified
+Caption max 2,200 characters including hashtags
+
+
+FEATURE 4: CONTENT MACHINE (Google Form CSV Intake)
+A new onboarding feature that turns a Google Form response into 30-90 days of AI-generated content for a client.
+User flow
+Vanessa sends a new client her intake Google Form (already designed, lives in Google Forms)
+Client fills it in
+Vanessa exports the form responses as CSV from Google Forms
+New page in CyberSuite: /intake
+Upload the CSV, review parsed data, link to a client preset
+Click "Generate 30/60/90 days of content for this client"
+AI generates a mix of carousels, singles, reels and stories tailored to that client
+All generated posts land in the client's Content Library, ready to auto-schedule
+Database
+New table clientIntakeFormsTable with columns matching every field in the Google Form (basics, treatments, voice, audience, personal, FAQs, story, goals). Use jsonb for multi-value fields like treatments, FAQs, audience pains, etc.
+
+Field list (all nullable except clinicName and clientName):
+
+clinicName, igHandle, practitionerName, credentials, yearsInPractice, postcode, bookingUrl
+treatments (jsonb), priceRange, heroTreatment, newTreatments (jsonb), restrictedTopics (jsonb)
+brandToneWords (jsonb), preferredWords (jsonb), forbiddenWords (jsonb), lovedReferences (jsonb), hatedReferences (jsonb), swearingTolerance
+audienceDemographic, audienceLocation, audiencePains (jsonb), audienceDesires (jsonb), commonObjection
+hobbies, familyContext, quirkyFact, wishKnown, whyAesthetics
+faqs (jsonb), misconceptions (jsonb), unaskedQuestions (jsonb)
+journey, proudMoment, confirmationMoment, hardestPart
+goals (jsonb), bookingTarget, audienceGrowthTarget, campaigns (jsonb), notes
+Backend routes in src/routes/intake.ts
+POST /api/intake/upload-csv — accepts CSV file, parses it, returns the parsed data for review
+POST /api/intake — body: parsed intake data + clientPresetId. Saves to clientIntakeFormsTable.
+GET /api/intake/:id — fetch intake by ID
+POST /api/intake/:id/generate-content — body: { contentBatchSize: 30|60|90, mix: { carousels, singles, reels, stories } }. Generates content batches via OpenAI, saves to Content Library.
+AI prompt template
+Use OpenAI gpt-5.2 with this master system prompt:
+
+"You are writing social media content for {practitionerName} of {clinicName} ({igHandle}), an aesthetic clinic in {postcode}.
+
+VOICE RULES:
+
+Tone: {brandToneWords}
+Use words like: {preferredWords}
+NEVER use words: {forbiddenWords}
+Use British English (no American spellings)
+No em dashes anywhere
+No AI patter
+Write as the practitioner in first person
+Swearing level: {swearingTolerance}
+
+PRACTITIONER:
+
+Credentials: {credentials}, {yearsInPractice} years in practice
+Why: {whyAesthetics}
+Hobbies: {hobbies}
+Family: {familyContext}
+Quirky fact: {quirkyFact}
+
+AUDIENCE:
+
+Who: {audienceDemographic}
+Where: {audienceLocation}
+Pains: {audiencePains}
+Desires: {audienceDesires}
+Common objection: {commonObjection}
+
+TREATMENTS:
+
+Hero: {heroTreatment}
+Featured: {treatments}
+Never write about: {restrictedTopics}
+New launches: {newTreatments}
+
+STORY ANGLES:
+
+Journey: {journey}
+Proud moment: {proudMoment}
+Confirmation moment: {confirmationMoment}
+Hardest part: {hardestPart}
+
+COMPLIANCE:
+
+Comply with ASA, CAP, MHRA and JCCP UK aesthetics rules
+No before/after promises
+No guaranteed results
+No prescription medicine brand names
+No outcome claims
+Use compliance-safe language
+
+NOW GENERATE: {specificContentRequest}
+
+Output format: {outputSchema}"
+Frontend
+New page: /intake
+
+Upload CSV button (drag and drop)
+Parsed data review screen with all fields editable
+Link to client preset dropdown
+Save intake button
+"Generate content" button → modal with batch size selector (30/60/90) and content mix selector
+Progress bar during generation (could take 5-15 mins for 90 posts)
+On complete, redirect to client's Content Library
+Cost note
+Roughly $4.50 per 90-post batch in OpenAI fees. Negligible vs the time saved.
+
+
+REQUIRED ENV VARS / API APPROVALS
+Add to Replit Secrets:
+
+META_WEBHOOK_VERIFY_TOKEN (random string for Meta webhook signature verification)
+GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET (for GBP)
+TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET (for TikTok)
+OPENAI_API_KEY (probably already exists, for Content Machine)
+
+API approval applications Vanessa needs to submit:
+
+Meta App Review for Live Mode + new scopes (instagram_manage_comments, instagram_manage_messages, pages_messaging, instagram_manage_insights)
+Google Business Profile API access
+TikTok Content Posting API access
+
+All three submitted today land approved roughly the same time so testing aligns.
+
+
+WHEN EACH SECTION IS DONE
+After Feature 1: restart api-server, ping Vanessa, she'll test by deleting a dummy preset. After Feature 2: restart api-server, ping Vanessa, she'll test auto-comment on a live post and a DM keyword reply. After Feature 3: restart api-server, ping Vanessa, she'll connect GBP for one clinic and test a Professional Mode profile. After Feature 4: restart api-server, ping Vanessa, she'll fill in the intake form for Social Media Sister and generate a 30-post batch.
+
+Work through in order. Don't try to parallelise sections, they touch overlapping files.
+
