@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -117,6 +118,14 @@ export default function AiPortraitStudio() {
   const [savePopoverOpen, setSavePopoverOpen] = useState<number | null>(null);
   const [savingPortrait, setSavingPortrait] = useState<number | null>(null);
   const [regenJobIds, setRegenJobIds] = useState<Map<number, string>>(new Map());
+
+  const [animatePortraitId, setAnimatePortraitId] = useState<number | null>(null);
+  const [animateCameraMotion, setAnimateCameraMotion] = useState<string>("cinematic-drift");
+  const [animateJobId, setAnimateJobId] = useState<string | null>(null);
+  const [animateStatus, setAnimateStatus] = useState<string>("");
+  const [animateProgress, setAnimateProgress] = useState(0);
+  const [animateVideoUrl, setAnimateVideoUrl] = useState<string | null>(null);
+  const animatePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     fetch(`${BASE}api/ai-portrait/scenarios`)
@@ -304,6 +313,74 @@ export default function AiPortraitStudio() {
     }
   };
 
+  const CAMERA_MOTION_LABELS: Record<string, string> = {
+    "slow-pan-left": "Slow pan — left to right",
+    "slow-pan-right": "Slow pan — right to left",
+    "dolly-in": "Slow dolly in (zoom toward subject)",
+    "dolly-out": "Slow dolly out (pull back)",
+    "tilt-up": "Slow tilt up",
+    "cinematic-drift": "Cinematic drift (micro-pan and dolly)",
+  };
+
+  const openAnimateModal = (portraitId: number) => {
+    setAnimatePortraitId(portraitId);
+    setAnimateJobId(null);
+    setAnimateStatus("");
+    setAnimateProgress(0);
+    setAnimateVideoUrl(null);
+    if (animatePollRef.current) clearInterval(animatePollRef.current);
+  };
+
+  const closeAnimateModal = () => {
+    setAnimatePortraitId(null);
+    setAnimateJobId(null);
+    setAnimateStatus("");
+    setAnimateProgress(0);
+    setAnimateVideoUrl(null);
+    if (animatePollRef.current) { clearInterval(animatePollRef.current); animatePollRef.current = null; }
+  };
+
+  const handleAnimate = async () => {
+    if (!animatePortraitId) return;
+    setAnimateStatus("Submitting…");
+    setAnimateProgress(0.03);
+    setAnimateVideoUrl(null);
+    try {
+      const r = await fetch(`${BASE}api/ai-portrait/${animatePortraitId}/animate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cameraMotion: animateCameraMotion, clientName }),
+      });
+      const data = await r.json() as { jobId?: string; error?: string };
+      if (!r.ok) throw new Error(data.error || "Failed to start animation");
+      const jid = data.jobId!;
+      setAnimateJobId(jid);
+      setAnimateStatus("Queued…");
+      animatePollRef.current = setInterval(async () => {
+        try {
+          const sr = await fetch(`${BASE}api/ai-portrait/animate/${jid}/status`);
+          if (!sr.ok) return;
+          const sd = await sr.json() as { status: string; progress: number; message: string; videoUrl?: string; error?: string };
+          setAnimateStatus(sd.message);
+          setAnimateProgress(sd.progress);
+          if (sd.status === "done") {
+            clearInterval(animatePollRef.current!); animatePollRef.current = null;
+            setAnimateVideoUrl(`${BASE}${sd.videoUrl?.replace(/^\//, "")}`);
+            toast.success("Motion reel saved to library!");
+          } else if (sd.status === "failed") {
+            clearInterval(animatePollRef.current!); animatePollRef.current = null;
+            toast.error(sd.error || "Motion reel generation failed");
+            setAnimateStatus(sd.error || "Failed");
+          }
+        } catch {}
+      }, 2000);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Animation failed");
+      setAnimateStatus("");
+      setAnimateProgress(0);
+    }
+  };
+
   const handleDownload = (card: CardState, scenarioName: string) => {
     if (!card.outputImageUrl) return;
     const a = document.createElement("a");
@@ -402,7 +479,7 @@ export default function AiPortraitStudio() {
   const allDone = cards.length > 0 && cards.every((c) => c.status === "success" || c.status === "failed");
 
   return (
-    <div className="min-h-[100dvh] w-full bg-background">
+    <div className="min-h-[100dvh] w-full bg-background relative">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-4 px-6 md:px-10 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/hub"><img src="/sms-logo.png" alt="Social Media Sister" className="h-10 w-10 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity" /></Link>
@@ -685,6 +762,9 @@ export default function AiPortraitStudio() {
                         <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleDownload(card, name)}>
                           <Download className="w-3.5 h-3.5 mr-1.5" />Download
                         </Button>
+                        <Button size="sm" variant="outline" className="flex-1 text-xs border-violet-500/40 text-violet-300 hover:bg-violet-950/30" onClick={() => card.portraitId && openAnimateModal(card.portraitId)}>
+                          <Film className="w-3.5 h-3.5 mr-1.5" />Animate
+                        </Button>
                         <Popover open={savePopoverOpen === card.portraitId} onOpenChange={(o) => setSavePopoverOpen(o ? card.portraitId! : null)}>
                           <PopoverTrigger asChild>
                             <Button size="sm" className="flex-1 text-xs bg-violet-600 hover:bg-violet-700 text-white">
@@ -769,6 +849,70 @@ export default function AiPortraitStudio() {
           </div>
         </div>
       </div>
+
+      {/* ── Animate as Reel Modal ── */}
+      {animatePortraitId !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={(e) => { if (e.target === e.currentTarget) closeAnimateModal(); }}>
+          <div className="bg-zinc-900 border border-border/40 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Film className="w-5 h-5 text-violet-400" />
+                <h3 className="font-semibold text-base">Animate as Reel</h3>
+              </div>
+              <button onClick={closeAnimateModal} className="text-muted-foreground hover:text-white transition"><X className="w-4 h-4" /></button>
+            </div>
+
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Generates a 6-second seamless video clip from this still portrait using subtle camera motion. The person stays completely still — the camera does the work. Saved directly to your Reel Library on completion.
+            </p>
+
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground">Camera motion</Label>
+              <Select value={animateCameraMotion} onValueChange={setAnimateCameraMotion} disabled={!!animateJobId && !animateVideoUrl && !animateStatus.startsWith("Failed")}>
+                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(CAMERA_MOTION_LABELS).map(([k, label]) => (
+                    <SelectItem key={k} value={k}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {animateJobId && !animateVideoUrl && !animateStatus.startsWith("Failed") && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" />{animateStatus}</span>
+                  <span>{Math.round(animateProgress * 100)}%</span>
+                </div>
+                <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-violet-500 rounded-full transition-all duration-500" style={{ width: `${animateProgress * 100}%` }} />
+                </div>
+                <p className="text-xs text-zinc-600">AI video generation takes 30–90 seconds. You can close this modal — the reel will save automatically.</p>
+              </div>
+            )}
+
+            {animateVideoUrl && (
+              <div className="space-y-3">
+                <video src={animateVideoUrl} autoPlay loop muted playsInline className="w-full rounded-xl border border-border/30 aspect-[9/16] object-cover max-h-64" />
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => { const a = document.createElement("a"); a.href = animateVideoUrl; a.download = "motion-reel.mp4"; a.click(); }}>
+                    <Download className="w-3.5 h-3.5" />Download MP4
+                  </Button>
+                  <Button size="sm" className="flex-1 gap-1.5 bg-violet-600 hover:bg-violet-700 text-white" onClick={closeAnimateModal}>
+                    <Check className="w-3.5 h-3.5" />Done
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {!animateJobId && (
+              <Button onClick={handleAnimate} className="w-full gap-2 bg-violet-600 hover:bg-violet-700 text-white">
+                <Play className="w-4 h-4" />Generate Motion Reel
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
