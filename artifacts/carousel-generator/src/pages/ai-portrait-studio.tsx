@@ -659,11 +659,14 @@ export default function AiPortraitStudio() {
                         <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                         <p className="text-xs">{card.failureReason || "Generation failed."}</p>
                       </div>
-                      {card.portraitId && (
-                        <Button size="sm" variant="outline" className="w-full text-xs" onClick={() => handleRegenerate(card)}>
-                          <RefreshCcw className="w-3.5 h-3.5 mr-1.5" />Retry
-                        </Button>
-                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full text-xs"
+                        onClick={() => card.portraitId ? handleRegenerate(card) : handleRateLimitedRetry(card)}
+                      >
+                        <RefreshCcw className="w-3.5 h-3.5 mr-1.5" />Retry
+                      </Button>
                     </div>
                   )}
                 </div>

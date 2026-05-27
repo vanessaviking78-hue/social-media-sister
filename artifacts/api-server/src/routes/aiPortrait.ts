@@ -53,6 +53,28 @@ const PRIVATE_IP_PATTERNS = [
   /^fe80:/i,
 ];
 
+async function validateHost(host: string): Promise<void> {
+  const h = host.toLowerCase();
+  if (h === "localhost" || h === "metadata.google.internal") {
+    throw new Error("URL points to a private or reserved address");
+  }
+  for (const pattern of PRIVATE_IP_PATTERNS) {
+    if (pattern.test(h)) throw new Error("URL points to a private or reserved address");
+  }
+  try {
+    const resolved = await dnsLookup(h, { all: true });
+    for (const { address } of resolved) {
+      for (const pattern of PRIVATE_IP_PATTERNS) {
+        if (pattern.test(address)) throw new Error("URL resolves to a private or reserved address");
+      }
+    }
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "";
+    if (msg.includes("private") || msg.includes("reserved")) throw e;
+    throw new Error("Could not resolve URL hostname");
+  }
+}
+
 async function fetchBufSecure(rawUrl: string): Promise<Buffer> {
   let parsed: URL;
   try {
@@ -63,54 +85,46 @@ async function fetchBufSecure(rawUrl: string): Promise<Buffer> {
   if (parsed.protocol !== "https:") {
     throw new Error("Only HTTPS URLs are accepted");
   }
-  const hostname = parsed.hostname.toLowerCase();
-  if (hostname === "localhost" || hostname === "metadata.google.internal") {
-    throw new Error("URL points to a private or reserved address");
-  }
-  for (const pattern of PRIVATE_IP_PATTERNS) {
-    if (pattern.test(hostname)) {
-      throw new Error("URL points to a private or reserved address");
-    }
-  }
+  await validateHost(parsed.hostname);
 
-  // Resolve DNS and block private/reserved IPs at the network level
-  try {
-    const resolved = await dnsLookup(hostname, { all: true });
-    for (const { address } of resolved) {
-      for (const pattern of PRIVATE_IP_PATTERNS) {
-        if (pattern.test(address)) {
-          throw new Error("URL resolves to a private or reserved address");
-        }
-      }
-      if (address === "127.0.0.1" || address === "::1" || address === "0.0.0.0") {
-        throw new Error("URL resolves to a private or reserved address");
-      }
-    }
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : "DNS resolution failed";
-    if (msg.includes("private") || msg.includes("reserved")) throw e;
-    throw new Error("Could not resolve URL hostname");
-  }
-
+  const MAX_BYTES = 20 * 1024 * 1024;
+  const MAX_REDIRECTS = 5;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15_000);
+
   try {
-    const r = await fetch(rawUrl, {
-      signal: controller.signal,
-      redirect: "follow",
-      headers: { "User-Agent": "CyberSuite/1.0 (image-ingestion)" },
-    });
-    if (!r.ok) throw new Error(`Remote server returned ${r.status}`);
-    const contentType = r.headers.get("content-type") ?? "";
-    if (!contentType.startsWith("image/")) {
-      throw new Error("URL must point to an image (got: " + contentType + ")");
+    let currentUrl = rawUrl;
+    for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+      if (hop === MAX_REDIRECTS) throw new Error("Too many redirects");
+
+      const r = await fetch(currentUrl, {
+        signal: controller.signal,
+        redirect: "manual",
+        headers: { "User-Agent": "CyberSuite/1.0 (image-ingestion)" },
+      });
+
+      if (r.status >= 300 && r.status < 400) {
+        const location = r.headers.get("location");
+        if (!location) throw new Error("Redirect with no Location header");
+        const redirectParsed = new URL(location, currentUrl);
+        if (redirectParsed.protocol !== "https:") throw new Error("Redirect must use HTTPS");
+        await validateHost(redirectParsed.hostname);
+        currentUrl = redirectParsed.href;
+        continue;
+      }
+
+      if (!r.ok) throw new Error(`Remote server returned ${r.status}`);
+      const contentType = r.headers.get("content-type") ?? "";
+      if (!contentType.startsWith("image/")) {
+        throw new Error("URL must point to an image (got: " + contentType + ")");
+      }
+      const rawLength = parseInt(r.headers.get("content-length") ?? "0", 10);
+      if (rawLength > MAX_BYTES) throw new Error("Image exceeds 20 MB limit");
+      const arrayBuf = await r.arrayBuffer();
+      if (arrayBuf.byteLength > MAX_BYTES) throw new Error("Image exceeds 20 MB limit");
+      return Buffer.from(arrayBuf);
     }
-    const MAX_BYTES = 20 * 1024 * 1024;
-    const rawLength = parseInt(r.headers.get("content-length") ?? "0", 10);
-    if (rawLength > MAX_BYTES) throw new Error("Image exceeds 20 MB limit");
-    const arrayBuf = await r.arrayBuffer();
-    if (arrayBuf.byteLength > MAX_BYTES) throw new Error("Image exceeds 20 MB limit");
-    return Buffer.from(arrayBuf);
+    throw new Error("Too many redirects");
   } finally {
     clearTimeout(timer);
   }
@@ -254,6 +268,11 @@ router.post("/ai-portrait/:portraitId/regenerate", async (req: Request, res: Res
     if (!source) { res.status(404).json({ error: "Source photo not found" }); return; }
 
     const jobId = `ap_regen_${Date.now()}_${uuid().slice(0, 8)}`;
+
+    // Create job entry before dispatching async work so polling never races to a 404
+    createJob(jobId, [portrait.scenarioId]);
+    const _seedJob = getJob(jobId);
+    if (_seedJob?.cards[0]) _seedJob.cards[0].portraitId = portraitId;
 
     setImmediate(async () => {
       try {

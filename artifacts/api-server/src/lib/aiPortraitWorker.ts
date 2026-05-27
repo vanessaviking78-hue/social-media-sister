@@ -207,7 +207,7 @@ export async function processPortraitJob(
         } else {
           logger.error({ jobId, scenarioId: cfg.id, err: msg }, "Portrait generation failed");
 
-          await db
+          const [failedRow] = await db
             .insert(aiGeneratedPortraitsTable)
             .values({
               clientName,
@@ -220,9 +220,10 @@ export async function processPortraitJob(
               status: "failed",
               failureReason: msg,
             })
-            .catch(() => {});
+            .returning()
+            .catch(() => [] as typeof aiGeneratedPortraitsTable.$inferSelect[]);
 
-          patchCard({ status: "failed", failureReason: msg });
+          patchCard({ status: "failed", failureReason: msg, portraitId: failedRow?.id });
           break;
         }
       }
