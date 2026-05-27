@@ -167,7 +167,7 @@ router.get("/ai-portrait/jobs/:jobId/status", (req: Request, res: Response) => {
 router.post("/ai-portrait/:portraitId/save-to-library", async (req: Request, res: Response) => {
   try {
     const portraitId = Number(req.params.portraitId);
-    const { applyWatermark = true } = req.body as { applyWatermark?: boolean };
+    const { applyWatermark = true, clientName: bodyClientName } = req.body as { applyWatermark?: boolean; clientName?: string };
 
     const [portrait] = await db.select().from(aiGeneratedPortraitsTable).where(eq(aiGeneratedPortraitsTable.id, portraitId));
     if (!portrait) { res.status(404).json({ error: "Portrait not found" }); return; }
@@ -178,9 +178,11 @@ router.post("/ai-portrait/:portraitId/save-to-library", async (req: Request, res
 
     if (!imageUrl) { res.status(400).json({ error: "Portrait has no output image yet" }); return; }
 
+    const effectiveClientName = bodyClientName?.trim() || portrait.clientName || "Unknown";
+
     await db.update(aiGeneratedPortraitsTable).set({ savedToLibrary: true }).where(eq(aiGeneratedPortraitsTable.id, portraitId));
 
-    const batchName = `AI Portrait — ${portrait.clientName || "Unknown"} — ${new Date().toLocaleDateString("en-GB")}`;
+    const batchName = `AI Portrait — ${effectiveClientName} — ${new Date().toLocaleDateString("en-GB")}`;
     const token = uuid();
     const [batch] = await db
       .insert(approvalBatchesTable)
@@ -192,7 +194,7 @@ router.post("/ai-portrait/:portraitId/save-to-library", async (req: Request, res
       .insert(approvalImagesTable)
       .values({ batchId: batch.id, imageUrl, status: "pending", clientNote: complianceNote });
 
-    res.json({ success: true, batchId: batch.id, approvalToken: token });
+    res.json({ success: true, batchId: batch.id, approvalToken: token, clientName: effectiveClientName });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Save failed";
     req.log.error({ err }, "ai-portrait/save-to-library failed");

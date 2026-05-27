@@ -112,6 +112,7 @@ export default function AiPortraitStudio() {
   const [urlLoading, setUrlLoading] = useState(false);
   const [showUrlInput, setShowUrlInput] = useState(false);
 
+  const [saveClientName, setSaveClientName] = useState("");
   const [savePopoverOpen, setSavePopoverOpen] = useState<number | null>(null);
   const [savingPortrait, setSavingPortrait] = useState<number | null>(null);
   const [regenJobIds, setRegenJobIds] = useState<Map<number, string>>(new Map());
@@ -256,7 +257,7 @@ export default function AiPortraitStudio() {
       const r = await fetch(`${BASE}api/ai-portrait/${card.portraitId}/save-to-library`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ applyWatermark }),
+        body: JSON.stringify({ applyWatermark, clientName: saveClientName || clientName }),
       });
       const data = await r.json() as { success?: boolean; error?: string };
       if (!r.ok) throw new Error(data.error || "Save failed");
@@ -266,6 +267,39 @@ export default function AiPortraitStudio() {
       toast.error(e instanceof Error ? e.message : "Save failed");
     } finally {
       setSavingPortrait(null);
+    }
+  };
+
+  const handleRateLimitedRetry = async (card: CardState) => {
+    if (!sourcePhoto) { toast.error("Reference photo is no longer available — please re-upload and regenerate"); return; }
+    const cfg = selected.get(card.scenarioId) ?? { id: card.scenarioId, aspectRatio: "1:1" as const };
+    try {
+      const r = await fetch(`${BASE}api/ai-portrait/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourcePhotoId: sourcePhoto.id, clientName, scenarios: [cfg] }),
+      });
+      const data = await r.json() as { jobId?: string; error?: string };
+      if (!r.ok) throw new Error(data.error || "Retry failed");
+      const newJobId = data.jobId!;
+      setCards((prev) => prev.map((c) => c.scenarioId === card.scenarioId ? { ...c, status: "generating" } : c));
+      toast.success("Retrying portrait generation...");
+      const retryPoll = setInterval(async () => {
+        try {
+          const sr = await fetch(`${BASE}api/ai-portrait/jobs/${newJobId}/status`);
+          if (!sr.ok) { clearInterval(retryPoll); return; }
+          const sd = await sr.json() as { cards: CardState[] };
+          const updated = sd.cards.find((c) => c.scenarioId === card.scenarioId);
+          if (updated && (updated.status === "success" || updated.status === "failed")) {
+            clearInterval(retryPoll);
+            setCards((prev) => prev.map((c) => c.scenarioId === card.scenarioId ? { ...c, ...updated } : c));
+            if (updated.status === "success") toast.success("Portrait generated.");
+            else toast.error("Generation failed again.");
+          }
+        } catch {}
+      }, 500);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Retry failed");
     }
   };
 
@@ -563,9 +597,18 @@ export default function AiPortraitStudio() {
                               <BookImage className="w-3.5 h-3.5 mr-1.5" />Save to Library
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-64 p-4 space-y-3">
+                          <PopoverContent className="w-72 p-4 space-y-3">
                             <p className="text-sm font-medium">Save to Approval Library</p>
-                            <p className="text-xs text-muted-foreground">This adds the portrait to an approval batch with the ASA compliance note pre-filled.</p>
+                            <p className="text-xs text-muted-foreground">Adds the portrait to an approval batch with the ASA compliance note pre-filled.</p>
+                            <div className="space-y-1">
+                              <Label className="text-xs text-muted-foreground">Client name</Label>
+                              <Input
+                                value={saveClientName || clientName}
+                                onChange={(e) => setSaveClientName(e.target.value)}
+                                placeholder="e.g. Dr Sarah Smith"
+                                className="h-7 text-xs"
+                              />
+                            </div>
                             <div className="flex gap-2">
                               <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleSave(card, false)} disabled={savingPortrait === card.portraitId}>
                                 {savingPortrait === card.portraitId ? <Loader2 className="w-3 h-3 animate-spin" /> : "No watermark"}
@@ -599,11 +642,14 @@ export default function AiPortraitStudio() {
                         <Clock className="w-5 h-5" />
                         <p className="text-xs text-center">Rate limited. Retrying automatically in 30s.</p>
                       </div>
-                      {card.portraitId && (
-                        <Button size="sm" variant="outline" className="w-full text-xs border-amber-500/40 text-amber-300 hover:text-amber-100" onClick={() => handleRegenerate(card)}>
-                          <RefreshCcw className="w-3.5 h-3.5 mr-1.5" />Retry now
-                        </Button>
-                      )}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full text-xs border-amber-500/40 text-amber-300 hover:text-amber-100"
+                        onClick={() => card.portraitId ? handleRegenerate(card) : handleRateLimitedRetry(card)}
+                      >
+                        <RefreshCcw className="w-3.5 h-3.5 mr-1.5" />Retry now
+                      </Button>
                     </div>
                   )}
 
