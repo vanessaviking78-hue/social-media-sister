@@ -8,7 +8,7 @@ import { objectStorageClient } from "./objectStorage";
 import { logger } from "./logger";
 import { buildPrompt, AI_PORTRAIT_SCENARIOS } from "./aiPortraitScenarios";
 
-const GEMINI_MODEL = "gemini-2.0-flash-preview-image-generation";
+const GEMINI_MODEL = "gemini-2.5-flash-image";
 const REQUEST_GAP_MS = 4_000;
 const RATE_LIMIT_BACKOFF_MS = 30_000;
 
@@ -107,7 +107,7 @@ export async function processPortraitJob(
     return;
   }
 
-  const genAI = new GoogleGenAI({ apiKey, httpOptions: { apiVersion: "v1alpha" } });
+  const genAI = new GoogleGenAI({ apiKey });
 
   for (let i = 0; i < scenarios.length; i++) {
     const cfg = scenarios[i];
