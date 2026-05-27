@@ -170,7 +170,8 @@ router.get("/ai-portrait/scenarios", (_req: Request, res: Response) => {
 // Legacy image URL redirect — forwards old /api/ai-portrait/images/<key> URLs
 // to the working /api/media/<key> handler which uses the same bucket and key
 router.get("/ai-portrait/images/*key", (req: Request, res: Response) => {
-  const key = (req.params as Record<string, string>).key;
+  const rawKey = (req.params as Record<string, string | string[]>).key;
+  const key = Array.isArray(rawKey) ? rawKey.join("/") : rawKey;
   if (!key) { res.status(400).json({ error: "No key specified" }); return; }
   res.redirect(301, `/api/media/${key}`);
 });

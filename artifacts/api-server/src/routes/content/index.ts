@@ -776,16 +776,15 @@ router.get("/media/*key", async (req, res) => {
   try {
     const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
     if (!bucketId) { res.status(500).json({ error: "Object storage not configured" }); return; }
-    const key = (req.params as Record<string, string>).key;
+    // Express 5 wildcard splits multi-segment paths into an array — join them back
+    const rawKey = (req.params as Record<string, string | string[]>).key;
+    const key = Array.isArray(rawKey) ? rawKey.join("/") : rawKey;
     if (!key) { res.status(400).json({ error: "No key specified" }); return; }
-    const file = objectStorageClient.bucket(bucketId).file(key);
-    res.setHeader("Content-Type", extToMime(key));
-    res.setHeader("Cache-Control", "private, max-age=3600");
-    const stream = file.createReadStream();
-    stream.on("error", () => { if (!res.headersSent) res.status(404).json({ error: "Not found" }); });
-    stream.pipe(res);
+    const signedUrl = await signObjectURL({ bucketName: bucketId, objectName: key, method: "GET", ttlSec: 300 });
+    res.redirect(302, signedUrl);
   } catch (err: any) {
-    res.status(500).json({ error: err.message || "Failed to serve file" });
+    req.log.error({ err }, "media signed-url failed");
+    res.status(500).json({ error: err.message || "Failed to generate download URL" });
   }
 });
 
