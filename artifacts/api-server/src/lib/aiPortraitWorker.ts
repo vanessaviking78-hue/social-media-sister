@@ -8,7 +8,7 @@ import { objectStorageClient } from "./objectStorage";
 import { logger } from "./logger";
 import { buildPrompt, AI_PORTRAIT_SCENARIOS } from "./aiPortraitScenarios";
 
-const GEMINI_MODEL = "gemini-2.0-flash-exp";
+const GEMINI_MODEL = "gemini-2.0-flash-preview-image-generation";
 const REQUEST_GAP_MS = 4_000;
 const RATE_LIMIT_BACKOFF_MS = 30_000;
 
