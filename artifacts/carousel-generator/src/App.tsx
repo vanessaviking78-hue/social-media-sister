@@ -38,6 +38,7 @@ import BulkImportTemplates from "@/pages/bulk-import-templates";
 import DmPrompts from "@/pages/dm-prompts";
 import ReelScripts from "@/pages/reel-scripts";
 import Podcast from "@/pages/podcast";
+import Competition from "@/pages/competition";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +84,7 @@ function AppContent() {
   const [isDataDeletion] = useRoute("/data-deletion");
   const [isBulkTemplates] = useRoute("/bulk-import-templates");
   const [isPodcast] = useRoute("/podcast");
+  const [isCompetition] = useRoute("/competition");
   const [location] = useLocation();
   const isSplash = location === "/";
 
@@ -121,6 +123,9 @@ function AppContent() {
   }
   if (isPodcast) {
     return <Podcast />;
+  }
+  if (isCompetition) {
+    return <Competition />;
   }
 
   return (
