@@ -210,16 +210,19 @@ function stickerSvg(
   canvasH: number,
   accentColor: string,
   topperDefault: string,
+  baseFontSize = 36,
 ): string {
   const cx = w.x * canvasW;
   const cy = w.y * canvasH;
   const text = w.text.toUpperCase();
-  const charW = 23;
-  const padH = 28, padV = 18;
-  const fontSize = 36;
-  const sW = Math.max(170, text.length * charW + padH * 2);
+  const fontSize = baseFontSize;
+  const sizeRatio = baseFontSize / 36;
+  const charW = Math.round(23 * sizeRatio);
+  const padH = Math.round(28 * sizeRatio);
+  const padV = Math.round(18 * sizeRatio);
+  const bR = Math.round(22 * sizeRatio);
+  const sW = Math.max(Math.round(170 * sizeRatio), text.length * charW + padH * 2);
   const sH = fontSize + padV * 2;
-  const bR = 22;
   const sLeft = cx - sW / 2;
   const sTop = cy - sH / 2;
   const outerPad = 5;
@@ -426,8 +429,9 @@ async function buildFullSvg(
   }
 
   // Words — puffy sticker labels
+  const wordFontSize = cc.wordFontSize ?? 36;
   words.forEach((w, idx) => {
-    layers.push(stickerSvg(w, idx, canvasW, canvasH, accentColor, stickerTopperDefault));
+    layers.push(stickerSvg(w, idx, canvasW, canvasH, accentColor, stickerTopperDefault, wordFontSize));
   });
 
   // Doodles

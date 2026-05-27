@@ -253,6 +253,9 @@ export default function AboutMePage() {
     { id: uid(), text: "Fun", ...SCATTERED_COORDS[4] },
   ]);
 
+  // Sticker (word box) size
+  const [stickerFontSize, setStickerFontSize] = useState(34);
+
   // Doodles
   const [doodles, setDoodles] = useState<DoodleEl[]>([]);
   const [doodleSize, setDoodleSize] = useState(22);
@@ -621,6 +624,7 @@ export default function AboutMePage() {
         subtitleLetterSpacing,
         subtitleLineHeight,
         stickerTopperDefault,
+        wordFontSize: stickerFontSize,
         titleAlign, subtitleAlign,
         titleBgEnabled, titleBgColor, titleBgOpacity, titleBgRadius, titleBgPadding,
         subtitleBgEnabled, subtitleBgColor, subtitleBgOpacity, subtitleBgRadius, subtitleBgPadding,
@@ -1011,6 +1015,29 @@ export default function AboutMePage() {
                 {words.length < 10 && (
                   <Button variant="outline" size="sm" onClick={addWord} className="text-pink-400 border-pink-500/30">+ Add</Button>
                 )}
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-muted-foreground">Box size</Label>
+                  <span className="text-xs font-semibold tabular-nums">{stickerFontSize}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Slider
+                    min={16} max={60} step={2}
+                    value={[stickerFontSize]}
+                    onValueChange={([v]) => setStickerFontSize(v)}
+                    className="flex-1"
+                  />
+                  <div className="flex gap-1 shrink-0">
+                    {[{ label: "S", val: 20 }, { label: "M", val: 34 }, { label: "L", val: 52 }].map(({ label, val }) => (
+                      <button key={label} onClick={() => setStickerFontSize(val)}
+                        className={`px-2 py-1 rounded text-xs font-bold border transition-all ${stickerFontSize === val ? "bg-pink-500 text-white border-pink-500" : "border-border/40 text-muted-foreground hover:border-pink-500/40"}`}>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-1">
@@ -1445,12 +1472,13 @@ export default function AboutMePage() {
                   {words.filter((w) => w.text).map((w, i) => {
                     const wx = w.x * PW, wy = w.y * PH;
                     const sc = PW / 1080;
-                    const fontSize = Math.round(34 * sc);
-                    const padH = Math.round(28 * sc);
-                    const padV = Math.round(18 * sc);
-                    const sW = Math.max(60, w.text.length * Math.round(22 * sc) + padH * 2);
+                    const sizeRatio = stickerFontSize / 34;
+                    const fontSize = Math.round(stickerFontSize * sc);
+                    const padH = Math.round(28 * sc * sizeRatio);
+                    const padV = Math.round(18 * sc * sizeRatio);
+                    const sW = Math.max(60, w.text.length * Math.round(22 * sc * sizeRatio) + padH * 2);
                     const sH = fontSize + padV * 2;
-                    const bR = Math.round(22 * sc);
+                    const bR = Math.round(22 * sc * sizeRatio);
                     const sLeft = wx - sW / 2;
                     const sTop = wy - sH / 2;
                     const outerPad = Math.max(2, Math.round(5 * sc));
