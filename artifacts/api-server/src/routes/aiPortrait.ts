@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import { lookup as dnsLookup } from "node:dns/promises";
 import multer from "multer";
 import { v4 as uuid } from "uuid";
 import { db } from "@workspace/db";
@@ -71,6 +72,26 @@ async function fetchBufSecure(rawUrl: string): Promise<Buffer> {
       throw new Error("URL points to a private or reserved address");
     }
   }
+
+  // Resolve DNS and block private/reserved IPs at the network level
+  try {
+    const resolved = await dnsLookup(hostname, { all: true });
+    for (const { address } of resolved) {
+      for (const pattern of PRIVATE_IP_PATTERNS) {
+        if (pattern.test(address)) {
+          throw new Error("URL resolves to a private or reserved address");
+        }
+      }
+      if (address === "127.0.0.1" || address === "::1" || address === "0.0.0.0") {
+        throw new Error("URL resolves to a private or reserved address");
+      }
+    }
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "DNS resolution failed";
+    if (msg.includes("private") || msg.includes("reserved")) throw e;
+    throw new Error("Could not resolve URL hostname");
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15_000);
   try {
@@ -186,7 +207,7 @@ router.post("/ai-portrait/:portraitId/save-to-library", async (req: Request, res
     const token = uuid();
     const [batch] = await db
       .insert(approvalBatchesTable)
-      .values({ name: batchName, clientName: portrait.clientName, token, status: "pending" })
+      .values({ name: batchName, clientName: effectiveClientName, token, status: "pending" })
       .returning();
 
     const complianceNote = "This image was generated using artificial intelligence. It does not represent a real photograph. Created in accordance with ASA/CAP guidelines — AI-generated content.";
