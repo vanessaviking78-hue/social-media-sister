@@ -57,7 +57,7 @@ const PH_PORT = 425;
 const PH_STORY = 604;
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
-type Word = { id: string; text: string; x: number; y: number; color?: string; fontSize?: number; letterSpacing?: number };
+type Word = { id: string; text: string; x: number; y: number; color?: string; fontSize?: number; letterSpacing?: number; lineHeight?: number };
 type DoodleShape = "heart-outline" | "arrow" | "sparkle";
 type DoodleEl = { id: string; shape: DoodleShape; x: number; y: number; size: number; rotation: number };
 type LogoState = { dataUrl: string; storedUrl: string; ar: number; x: number; y: number; scale: number; rotation: number };
@@ -127,10 +127,12 @@ export default function AboutMePage() {
   // Per-element typography
   const [titleFontSize, setTitleFontSize] = useState(90);
   const [titleLetterSpacing, setTitleLetterSpacing] = useState(0);
+  const [titleLineHeight, setTitleLineHeight] = useState(1.1);
   const [titleColor, setTitleColor] = useState("");
   const [subtitleColor, setSubtitleColor] = useState("");
   const [subtitleFontSize, setSubtitleFontSize] = useState(40);
   const [subtitleLetterSpacing, setSubtitleLetterSpacing] = useState(3);
+  const [subtitleLineHeight, setSubtitleLineHeight] = useState(1.2);
 
   // Words
   const [words, setWords] = useState<Word[]>([
@@ -440,6 +442,7 @@ export default function AboutMePage() {
         ...(w.color ? { color: w.color } : {}),
         ...(w.fontSize ? { fontSize: w.fontSize } : {}),
         ...(w.letterSpacing !== undefined ? { letterSpacing: w.letterSpacing } : {}),
+        ...(w.lineHeight !== undefined ? { lineHeight: w.lineHeight } : {}),
       }));
 
       const canvasConfig = {
@@ -451,10 +454,12 @@ export default function AboutMePage() {
         doodles,
         titleFontSize,
         titleLetterSpacing,
+        titleLineHeight,
         ...(titleColor ? { titleColor } : {}),
         ...(subtitleColor ? { subtitleColor } : {}),
         subtitleFontSize,
         subtitleLetterSpacing,
+        subtitleLineHeight,
       };
 
       const body = {
@@ -622,57 +627,55 @@ export default function AboutMePage() {
               </Select>
 
               {/* Title typography */}
-              <div className="grid grid-cols-3 gap-3 pt-1 border-t border-border/20">
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Title colour</Label>
-                  <div className="flex gap-1 items-center">
-                    <Input type="color" value={titleColor || accentColor} onChange={(e) => setTitleColor(e.target.value)} className="w-10 h-8 p-0.5 cursor-pointer" />
-                    {titleColor && (
-                      <button onClick={() => setTitleColor("")} className="text-xs text-muted-foreground hover:text-foreground">↺</button>
-                    )}
-                  </div>
+              <div className="space-y-2 pt-1 border-t border-border/20">
+                <Label className="text-xs font-medium text-muted-foreground">Title</Label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Input type="color" value={titleColor || accentColor} onChange={(e) => setTitleColor(e.target.value)} className="w-9 h-7 p-0.5 cursor-pointer shrink-0" />
+                  {titleColor && <button onClick={() => setTitleColor("")} className="text-xs text-muted-foreground hover:text-foreground">↺</button>}
+                  {["#F5EEE3","#ffffff","#000000","#E91976","#ffd700"].map(c => (
+                    <button key={c} onClick={() => setTitleColor(c)} style={{ background: c }} className="w-5 h-5 rounded-full border border-white/30 shrink-0 hover:scale-110 transition-transform" title={c} />
+                  ))}
                 </div>
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs text-muted-foreground">Title size</Label>
-                    <span className="text-xs font-mono text-muted-foreground">{titleFontSize}</span>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground">Size</Label><span className="text-xs font-mono text-muted-foreground">{titleFontSize}</span></div>
+                    <input type="range" min={40} max={120} step={2} value={titleFontSize} onChange={(e) => setTitleFontSize(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
                   </div>
-                  <input type="range" min={40} max={120} step={2} value={titleFontSize} onChange={(e) => setTitleFontSize(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs text-muted-foreground">Spacing</Label>
-                    <span className="text-xs font-mono text-muted-foreground">{titleLetterSpacing}</span>
+                  <div className="space-y-0.5">
+                    <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground">Spacing</Label><span className="text-xs font-mono text-muted-foreground">{titleLetterSpacing}</span></div>
+                    <input type="range" min={0} max={12} step={0.5} value={titleLetterSpacing} onChange={(e) => setTitleLetterSpacing(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
                   </div>
-                  <input type="range" min={0} max={12} step={0.5} value={titleLetterSpacing} onChange={(e) => setTitleLetterSpacing(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                  <div className="space-y-0.5">
+                    <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground">Line height</Label><span className="text-xs font-mono text-muted-foreground">{titleLineHeight.toFixed(1)}</span></div>
+                    <input type="range" min={0.7} max={2.5} step={0.05} value={titleLineHeight} onChange={(e) => setTitleLineHeight(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                  </div>
                 </div>
               </div>
 
               {/* Subtitle typography */}
               {subtitle && (
-                <div className="grid grid-cols-3 gap-3 pt-1 border-t border-border/20">
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Subtitle colour</Label>
-                    <div className="flex gap-1 items-center">
-                      <Input type="color" value={subtitleColor || accentColor} onChange={(e) => setSubtitleColor(e.target.value)} className="w-10 h-8 p-0.5 cursor-pointer" />
-                      {subtitleColor && (
-                        <button onClick={() => setSubtitleColor("")} className="text-xs text-muted-foreground hover:text-foreground">↺</button>
-                      )}
-                    </div>
+                <div className="space-y-2 pt-1 border-t border-border/20">
+                  <Label className="text-xs font-medium text-muted-foreground">Subtitle</Label>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Input type="color" value={subtitleColor || accentColor} onChange={(e) => setSubtitleColor(e.target.value)} className="w-9 h-7 p-0.5 cursor-pointer shrink-0" />
+                    {subtitleColor && <button onClick={() => setSubtitleColor("")} className="text-xs text-muted-foreground hover:text-foreground">↺</button>}
+                    {["#F5EEE3","#ffffff","#000000","#E91976","#ffd700"].map(c => (
+                      <button key={c} onClick={() => setSubtitleColor(c)} style={{ background: c }} className="w-5 h-5 rounded-full border border-white/30 shrink-0 hover:scale-110 transition-transform" title={c} />
+                    ))}
                   </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs text-muted-foreground">Sub size</Label>
-                      <span className="text-xs font-mono text-muted-foreground">{subtitleFontSize}</span>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground">Size</Label><span className="text-xs font-mono text-muted-foreground">{subtitleFontSize}</span></div>
+                      <input type="range" min={20} max={70} step={2} value={subtitleFontSize} onChange={(e) => setSubtitleFontSize(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
                     </div>
-                    <input type="range" min={20} max={70} step={2} value={subtitleFontSize} onChange={(e) => setSubtitleFontSize(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs text-muted-foreground">Spacing</Label>
-                      <span className="text-xs font-mono text-muted-foreground">{subtitleLetterSpacing}</span>
+                    <div className="space-y-0.5">
+                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground">Spacing</Label><span className="text-xs font-mono text-muted-foreground">{subtitleLetterSpacing}</span></div>
+                      <input type="range" min={0} max={12} step={0.5} value={subtitleLetterSpacing} onChange={(e) => setSubtitleLetterSpacing(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
                     </div>
-                    <input type="range" min={0} max={12} step={0.5} value={subtitleLetterSpacing} onChange={(e) => setSubtitleLetterSpacing(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                    <div className="space-y-0.5">
+                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground">Line height</Label><span className="text-xs font-mono text-muted-foreground">{subtitleLineHeight.toFixed(1)}</span></div>
+                      <input type="range" min={0.7} max={2.5} step={0.05} value={subtitleLineHeight} onChange={(e) => setSubtitleLineHeight(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                    </div>
                   </div>
                 </div>
               )}
@@ -996,7 +999,7 @@ export default function AboutMePage() {
                     const titleFs = Math.round(titleFontSize * PW / 1080);
                     const subFs = Math.round(subtitleFontSize * PW / 1080);
                     const sc = subtitleColor || accentColor;
-                    const ty = titleFs + 10 + subFs + 4;
+                    const ty = Math.round(titleFs * titleLineHeight) + 10 + subFs + 4;
                     return (
                       <text x={PW / 2} y={ty} fontFamily="Georgia, serif" fontSize={subFs} fill={sc} textAnchor="middle" opacity={0.85} letterSpacing={subtitleLetterSpacing}>
                         {subtitle.toUpperCase()}

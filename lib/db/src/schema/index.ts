@@ -258,6 +258,8 @@ export type AboutMeWord = {
   y: number;
   color?: string;
   fontSize?: number;
+  letterSpacing?: number;
+  lineHeight?: number;
 };
 
 export type AboutMeDoodle = {
@@ -289,9 +291,11 @@ export type AboutMeCanvasConfig = {
   titleColor?: string;
   titleFontSize?: number;
   titleLetterSpacing?: number;
+  titleLineHeight?: number;
   subtitleColor?: string;
   subtitleFontSize?: number;
   subtitleLetterSpacing?: number;
+  subtitleLineHeight?: number;
   wordFontSize?: number;
 };
 

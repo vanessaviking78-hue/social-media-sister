@@ -141,9 +141,11 @@ async function buildFullSvg(
   const titleColor = cc.titleColor ?? accentColor;
   const titleFontSize = cc.titleFontSize ?? (title.length > 16 ? 72 : 90);
   const titleLetterSpacing = cc.titleLetterSpacing ?? 0;
+  const titleLineHeight = cc.titleLineHeight ?? 1.1;
   const subtitleColor = cc.subtitleColor ?? accentColor;
   const subtitleFontSize = cc.subtitleFontSize ?? 40;
   const subtitleLetterSpacing = cc.subtitleLetterSpacing ?? 3;
+  const subtitleLineHeight = cc.subtitleLineHeight ?? 1.2;
   const wordFontSize = cc.wordFontSize ?? 40;
 
   // Cutout dimensions
@@ -209,8 +211,8 @@ async function buildFullSvg(
 
   // Subtitle
   if (subtitle) {
-    const subY = titleY + subtitleFontSize + 12;
-    layers.push(`<text x="${(canvasW / 2).toFixed(0)}" y="${subY}" font-family="Georgia, serif" font-size="${subtitleFontSize}" fill="${subtitleColor}" text-anchor="middle" opacity="0.85" letter-spacing="${subtitleLetterSpacing}">${escXml(subtitle.toUpperCase())}</text>`);
+    const subY = Math.round(titleFontSize * titleLineHeight) + 28 + subtitleFontSize * subtitleLineHeight;
+    layers.push(`<text x="${(canvasW / 2).toFixed(0)}" y="${subY.toFixed(0)}" font-family="Georgia, serif" font-size="${subtitleFontSize}" fill="${subtitleColor}" text-anchor="middle" opacity="0.85" letter-spacing="${subtitleLetterSpacing}">${escXml(subtitle.toUpperCase())}</text>`);
   }
 
   // Words with hearts
@@ -220,7 +222,7 @@ async function buildFullSvg(
     const hy = wy - hwg;
     const wColor = w.color ?? accentColor;
     const wSize = w.fontSize ?? wordFontSize;
-    const wLetterSpacing = (w as { letterSpacing?: number }).letterSpacing ?? 1;
+    const wLetterSpacing = w.letterSpacing ?? 1;
     const wHs = Math.round(heartSize * 2.2);
     layers.push(`<path d="${heartPath(wx, hy, wHs)}" fill="${wColor}" opacity="0.9"/>`);
     layers.push(`<text x="${wx.toFixed(1)}" y="${wy.toFixed(1)}" font-family="Georgia, serif" font-size="${wSize}" fill="${wColor}" text-anchor="middle" letter-spacing="${wLetterSpacing}">${escXml(w.text)}</text>`);
