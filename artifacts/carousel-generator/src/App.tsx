@@ -20,6 +20,7 @@ import VideoOverlay from "@/pages/video-overlay";
 import Scheduler from "@/pages/scheduler";
 import Library from "@/pages/library";
 import BulkConnectReview from "@/pages/bulk-connect-review";
+import About from "@/pages/about";
 import Onboard from "@/pages/onboard";
 import OnboardChoosePage from "@/pages/onboard-choose-page";
 import OnboardSuccess from "@/pages/onboard-success";
@@ -42,6 +43,7 @@ function ProtectedRouter() {
       <Route path="/scheduler" component={Scheduler} />
       <Route path="/library" component={Library} />
       <Route path="/presets/bulk-connect/review" component={BulkConnectReview} />
+      <Route path="/about" component={About} />
       <Route component={NotFound} />
     </Switch>
   );
