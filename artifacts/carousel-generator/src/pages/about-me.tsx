@@ -133,6 +133,21 @@ function effectiveTopper(w: Word, idx: number, def: string): TopperType {
   if (def === "mixed") return MIXED_TOPPERS[idx % 3];
   return def as TopperType;
 }
+function wrapSvgText(text: string, maxW: number, fs: number, ls = 0): string[] {
+  if (!text) return [];
+  const cw = Math.max(1, fs * 0.58 + ls * 0.4);
+  const maxChars = Math.max(1, Math.floor(maxW / cw));
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let cur = "";
+  for (const word of words) {
+    const test = cur ? `${cur} ${word}` : word;
+    if (test.length <= maxChars || !cur) { cur = test; }
+    else { lines.push(cur); cur = word; }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
 function renderRainbowTopper(cx: number, ty: number, size: number) {
   const r1 = size * 0.5, r2 = size * 0.33, r3 = size * 0.18, sw = size * 0.15;
   return (
@@ -258,8 +273,31 @@ export default function AboutMePage() {
   const [logo, setLogo] = useState<LogoState | null>(null);
   const logoFileRef = useRef<HTMLInputElement>(null);
 
+  // Post type / output format
+  const [postType, setPostType] = useState<"post" | "reel" | "trial-reel">("post");
+  const aspectRatio = postType === "post" ? "1080x1350" : "1080x1920";
+
+  // Text alignment
+  const [titleAlign, setTitleAlign] = useState<"left" | "center" | "right">("center");
+  const [subtitleAlign, setSubtitleAlign] = useState<"left" | "center" | "right">("center");
+
+  // Text background panels
+  const [titleBgEnabled, setTitleBgEnabled] = useState(false);
+  const [titleBgColor, setTitleBgColor] = useState("#000000");
+  const [titleBgOpacity, setTitleBgOpacity] = useState(50);
+  const [titleBgRadius, setTitleBgRadius] = useState(12);
+  const [titleBgPadding, setTitleBgPadding] = useState(16);
+  const [subtitleBgEnabled, setSubtitleBgEnabled] = useState(false);
+  const [subtitleBgColor, setSubtitleBgColor] = useState("#000000");
+  const [subtitleBgOpacity, setSubtitleBgOpacity] = useState(50);
+  const [subtitleBgRadius, setSubtitleBgRadius] = useState(12);
+  const [subtitleBgPadding, setSubtitleBgPadding] = useState(16);
+
+  // Caption generation
+  const [generatingCaption, setGeneratingCaption] = useState(false);
+  const [generatedCaption, setGeneratedCaption] = useState("");
+
   // Style
-  const [aspectRatio, setAspectRatio] = useState<"1080x1350" | "1080x1920">("1080x1350");
   const [blurAmount, setBlurAmount] = useState(25);
   const [overlayOpacity, setOverlayOpacity] = useState(0);
 
@@ -552,6 +590,9 @@ export default function AboutMePage() {
         subtitleLetterSpacing,
         subtitleLineHeight,
         stickerTopperDefault,
+        titleAlign, subtitleAlign,
+        titleBgEnabled, titleBgColor, titleBgOpacity, titleBgRadius, titleBgPadding,
+        subtitleBgEnabled, subtitleBgColor, subtitleBgOpacity, subtitleBgRadius, subtitleBgPadding,
       };
 
       const body = {
@@ -559,7 +600,7 @@ export default function AboutMePage() {
         backgroundBlurAmount: blurAmount, backgroundOverlayOpacity: overlayOpacity,
         title, subtitle,
         words: apiWords, canvasConfig,
-        accentColor, titleFont, aspectRatio,
+        accentColor, titleFont, aspectRatio, postType,
         musicTrack: musicTrack || null,
       };
 
@@ -593,6 +634,24 @@ export default function AboutMePage() {
     if (!renderedUrl) { toast.error("Generate your post first"); return; }
     setSchedulePosts([{ title: title || "About Me", caption: "", imageUrls: [renderedUrl], musicTrack: musicTrack || undefined, firstComment: firstComment || undefined }]);
     setScheduleOpen(true);
+  };
+
+  const handleGenerateCaption = async () => {
+    setGeneratingCaption(true);
+    try {
+      const r = await fetch(`${import.meta.env.BASE_URL}api/about-me/generate-caption`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, subtitle, words: words.filter((w) => w.text.trim()).map((w) => ({ text: w.text })) }),
+      });
+      if (!r.ok) throw new Error("Caption generation failed");
+      const { caption } = await r.json() as { caption: string };
+      setGeneratedCaption(caption);
+    } catch (e: any) {
+      toast.error(e.message ?? "Could not generate caption");
+    } finally {
+      setGeneratingCaption(false);
+    }
   };
 
   // ─── Render ────────────────────────────────────────────────────────────────
@@ -744,6 +803,40 @@ export default function AboutMePage() {
                     <input type="range" min={0.7} max={2.5} step={0.05} value={titleLineHeight} onChange={(e) => setTitleLineHeight(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
                   </div>
                 </div>
+                <div className="flex gap-1">
+                  {(["left", "center", "right"] as const).map((a) => (
+                    <button key={a} onClick={() => setTitleAlign(a)}
+                      className={`flex-1 py-1 rounded text-xs font-bold border transition-all ${titleAlign === a ? "bg-pink-500 text-white border-pink-500" : "border-border/40 text-muted-foreground"}`}>
+                      {a === "left" ? "← L" : a === "center" ? "⬤ C" : "R →"}
+                    </button>
+                  ))}
+                </div>
+                <div>
+                  <button onClick={() => setTitleBgEnabled(p => !p)}
+                    className={`px-2.5 py-1 rounded text-xs font-semibold border transition-all ${titleBgEnabled ? "bg-pink-500 text-white border-pink-500" : "border-border/40 text-muted-foreground"}`}>
+                    {titleBgEnabled ? "✓ Panel on" : "+ Text panel"}
+                  </button>
+                </div>
+                {titleBgEnabled && (
+                  <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/20">
+                    <div className="flex items-center gap-2 col-span-2">
+                      <Input type="color" value={titleBgColor} onChange={(e) => setTitleBgColor(e.target.value)} className="w-8 h-7 p-0.5 cursor-pointer shrink-0" />
+                      <Label className="text-xs text-muted-foreground">Panel colour</Label>
+                    </div>
+                    <div className="space-y-0.5">
+                      <div className="flex justify-between"><Label className="text-xs text-muted-foreground">Opacity</Label><span className="text-xs font-mono">{titleBgOpacity}%</span></div>
+                      <input type="range" min={0} max={100} step={5} value={titleBgOpacity} onChange={(e) => setTitleBgOpacity(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <div className="flex justify-between"><Label className="text-xs text-muted-foreground">Radius</Label><span className="text-xs font-mono">{titleBgRadius}px</span></div>
+                      <input type="range" min={0} max={30} step={1} value={titleBgRadius} onChange={(e) => setTitleBgRadius(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                    </div>
+                    <div className="space-y-0.5 col-span-2">
+                      <div className="flex justify-between"><Label className="text-xs text-muted-foreground">Padding</Label><span className="text-xs font-mono">{titleBgPadding}px</span></div>
+                      <input type="range" min={4} max={32} step={2} value={titleBgPadding} onChange={(e) => setTitleBgPadding(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Subtitle typography */}
@@ -771,6 +864,40 @@ export default function AboutMePage() {
                       <input type="range" min={0.7} max={2.5} step={0.05} value={subtitleLineHeight} onChange={(e) => setSubtitleLineHeight(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
                     </div>
                   </div>
+                  <div className="flex gap-1">
+                    {(["left", "center", "right"] as const).map((a) => (
+                      <button key={a} onClick={() => setSubtitleAlign(a)}
+                        className={`flex-1 py-1 rounded text-xs font-bold border transition-all ${subtitleAlign === a ? "bg-pink-500 text-white border-pink-500" : "border-border/40 text-muted-foreground"}`}>
+                        {a === "left" ? "← L" : a === "center" ? "⬤ C" : "R →"}
+                      </button>
+                    ))}
+                  </div>
+                  <div>
+                    <button onClick={() => setSubtitleBgEnabled(p => !p)}
+                      className={`px-2.5 py-1 rounded text-xs font-semibold border transition-all ${subtitleBgEnabled ? "bg-pink-500 text-white border-pink-500" : "border-border/40 text-muted-foreground"}`}>
+                      {subtitleBgEnabled ? "✓ Panel on" : "+ Text panel"}
+                    </button>
+                  </div>
+                  {subtitleBgEnabled && (
+                    <div className="grid grid-cols-2 gap-2 pt-1 border-t border-border/20">
+                      <div className="flex items-center gap-2 col-span-2">
+                        <Input type="color" value={subtitleBgColor} onChange={(e) => setSubtitleBgColor(e.target.value)} className="w-8 h-7 p-0.5 cursor-pointer shrink-0" />
+                        <Label className="text-xs text-muted-foreground">Panel colour</Label>
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="flex justify-between"><Label className="text-xs text-muted-foreground">Opacity</Label><span className="text-xs font-mono">{subtitleBgOpacity}%</span></div>
+                        <input type="range" min={0} max={100} step={5} value={subtitleBgOpacity} onChange={(e) => setSubtitleBgOpacity(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="flex justify-between"><Label className="text-xs text-muted-foreground">Radius</Label><span className="text-xs font-mono">{subtitleBgRadius}px</span></div>
+                        <input type="range" min={0} max={30} step={1} value={subtitleBgRadius} onChange={(e) => setSubtitleBgRadius(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                      </div>
+                      <div className="space-y-0.5 col-span-2">
+                        <div className="flex justify-between"><Label className="text-xs text-muted-foreground">Padding</Label><span className="text-xs font-mono">{subtitleBgPadding}px</span></div>
+                        <input type="range" min={4} max={32} step={2} value={subtitleBgPadding} onChange={(e) => setSubtitleBgPadding(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -971,16 +1098,42 @@ export default function AboutMePage() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Format</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  {(["1080x1350", "1080x1920"] as const).map((r) => (
-                    <button key={r} onClick={() => setAspectRatio(r)}
-                      className={`px-4 py-3 rounded-xl text-sm font-semibold border transition-all ${aspectRatio === r ? "bg-primary text-primary-foreground border-primary" : "bg-accent/40 text-muted-foreground border-border/30"}`}>
-                      {r === "1080x1350" ? "Post (4:5)" : "Story (9:16)"}
+                <Label className="text-sm text-muted-foreground">Output type</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { val: "post", label: "Post (4:5)" },
+                    { val: "reel", label: "Reel (9:16)" },
+                    { val: "trial-reel", label: "Trial Reel" },
+                  ] as const).map(({ val, label }) => (
+                    <button key={val} onClick={() => setPostType(val)}
+                      className={`px-2 py-3 rounded-xl text-xs font-semibold border transition-all ${postType === val ? "bg-primary text-primary-foreground border-primary" : "bg-accent/40 text-muted-foreground border-border/30"}`}>
+                      {label}
                     </button>
                   ))}
                 </div>
+                {postType === "trial-reel" && <p className="text-xs text-muted-foreground/60">Saved as private — uses your trial reel flow.</p>}
               </div>
+            </div>
+
+            {/* Generate Caption */}
+            <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-2xl text-white leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>Caption</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">AI-generated from your words, title, and brand voice</p>
+                </div>
+                <Button variant="outline" size="sm" disabled={generatingCaption} onClick={handleGenerateCaption}
+                  className="text-pink-400 border-pink-500/30 shrink-0 gap-1.5">
+                  {generatingCaption ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Writing…</> : "Generate Caption"}
+                </Button>
+              </div>
+              <textarea
+                value={generatedCaption}
+                onChange={(e) => setGeneratedCaption(e.target.value)}
+                rows={generatedCaption ? 5 : 2}
+                placeholder="Click Generate Caption to write one with AI…"
+                className="w-full bg-zinc-800/60 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 resize-none focus:outline-none focus:ring-1 focus:ring-pink-500/50"
+              />
             </div>
 
             <button onClick={handleSave} disabled={saving || !originalFile || bgRemoving}
@@ -1091,39 +1244,74 @@ export default function AboutMePage() {
                     }}
                   />
 
-                  {/* Cutout resize handles */}
-                  {cutoutHandles(cutoutCx, cutoutCy, cutoutDispW, cutoutDispH)}
-
-                  {/* Reset cutout button */}
-                  {(cutoutScale !== 1.0 || cutoutX !== 0.5 || cutoutY !== 0.55) && (
-                    <g style={{ cursor: "pointer" }} onClick={() => { setCutoutScale(1.0); setCutoutX(0.5); setCutoutY(0.55); }}>
-                      <rect x={PW - 28} y={4} width={24} height={18} rx={4} fill="black" fillOpacity={0.5} />
-                      <text x={PW - 16} y={16} fontSize={9} fill="white" textAnchor="middle">reset</text>
-                    </g>
-                  )}
-
-                  {/* Title */}
+                  {/* Title — wrapped, aligned, optional bg panel */}
                   {(() => {
-                    const fs = Math.round(titleFontSize * PW / 1080);
+                    const maxW = PW * 0.82;
+                    let fs = Math.round(titleFontSize * PW / 1080);
                     const tc = titleColor || accentColor;
-                    const ty = fs + 10;
+                    let lines = wrapSvgText(title, maxW, fs, titleLetterSpacing);
+                    if (lines.some(l => l.length * fs * 0.58 > maxW * 1.05)) {
+                      fs = Math.round(fs * 0.88);
+                      lines = wrapSvgText(title, maxW, fs, titleLetterSpacing);
+                    }
+                    const lineH = fs * titleLineHeight;
+                    const topY = fs + 10;
+                    const xA = titleAlign === "left" ? PW * 0.09 : titleAlign === "right" ? PW * 0.91 : PW / 2;
+                    const anchor = titleAlign === "left" ? "start" : titleAlign === "right" ? "end" : "middle";
+                    const scF = PW / 1080;
+                    const pad = Math.round(titleBgPadding * scF);
+                    const estimW = Math.max(...lines.map(l => l.length)) * fs * 0.58;
+                    const bgW = Math.min(PW - 4, estimW + pad * 2);
+                    const bgX = titleAlign === "center" ? PW / 2 - bgW / 2 : titleAlign === "left" ? xA - pad : xA - bgW + pad;
                     return (
-                      <text x={PW / 2} y={ty} fontFamily={`'${titleFont}', cursive, serif`} fontSize={fs} fill={tc} textAnchor="middle"
-                        letterSpacing={titleLetterSpacing}
-                        style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.4))" }}>
-                        {title}
-                      </text>
+                      <>
+                        {titleBgEnabled && (
+                          <rect x={bgX} y={topY - fs - pad} width={bgW} height={lines.length * lineH + pad * 2}
+                            rx={Math.round(titleBgRadius * scF)} fill={titleBgColor} opacity={titleBgOpacity / 100} />
+                        )}
+                        {lines.map((line, li) => (
+                          <text key={li} x={xA} y={topY + li * lineH}
+                            fontFamily={`'${titleFont}', cursive, serif`} fontSize={fs} fill={tc}
+                            textAnchor={anchor} letterSpacing={titleLetterSpacing}
+                            style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.4))" }}>
+                            {line}
+                          </text>
+                        ))}
+                      </>
                     );
                   })()}
+                  {/* Subtitle — wrapped, aligned, optional bg panel */}
                   {subtitle && (() => {
+                    const maxW = PW * 0.82;
                     const titleFs = Math.round(titleFontSize * PW / 1080);
+                    const titleLines = wrapSvgText(title, maxW, titleFs, titleLetterSpacing);
+                    const titleTotalH = titleLines.length * titleFs * titleLineHeight;
                     const subFs = Math.round(subtitleFontSize * PW / 1080);
-                    const sc = subtitleColor || accentColor;
-                    const ty = Math.round(titleFs * titleLineHeight) + 10 + subFs + 4;
+                    const sc_ = subtitleColor || accentColor;
+                    const lines = wrapSvgText(subtitle.toUpperCase(), maxW, subFs, subtitleLetterSpacing);
+                    const lineH = subFs * subtitleLineHeight;
+                    const topY = titleFs + 10 + titleTotalH + subFs + 4;
+                    const xA = subtitleAlign === "left" ? PW * 0.09 : subtitleAlign === "right" ? PW * 0.91 : PW / 2;
+                    const anchor = subtitleAlign === "left" ? "start" : subtitleAlign === "right" ? "end" : "middle";
+                    const scF = PW / 1080;
+                    const pad = Math.round(subtitleBgPadding * scF);
+                    const estimW = Math.max(...lines.map(l => l.length)) * subFs * 0.58;
+                    const bgW = Math.min(PW - 4, estimW + pad * 2);
+                    const bgX = subtitleAlign === "center" ? PW / 2 - bgW / 2 : subtitleAlign === "left" ? xA - pad : xA - bgW + pad;
                     return (
-                      <text x={PW / 2} y={ty} fontFamily="Georgia, serif" fontSize={subFs} fill={sc} textAnchor="middle" opacity={0.85} letterSpacing={subtitleLetterSpacing}>
-                        {subtitle.toUpperCase()}
-                      </text>
+                      <>
+                        {subtitleBgEnabled && (
+                          <rect x={bgX} y={topY - subFs - pad} width={bgW} height={lines.length * lineH + pad * 2}
+                            rx={Math.round(subtitleBgRadius * scF)} fill={subtitleBgColor} opacity={subtitleBgOpacity / 100} />
+                        )}
+                        {lines.map((line, li) => (
+                          <text key={li} x={xA} y={topY + li * lineH}
+                            fontFamily="Georgia, serif" fontSize={subFs} fill={sc_}
+                            textAnchor={anchor} opacity={0.85} letterSpacing={subtitleLetterSpacing}>
+                            {line}
+                          </text>
+                        ))}
+                      </>
                     );
                   })()}
 
@@ -1248,6 +1436,15 @@ export default function AboutMePage() {
                   {[[0.07, 0.10, 12, 0.42], [0.88, 0.50, 9, 0.35], [0.15, 0.84, 8, 0.32]].map(([rx, ry, fs, op], i) => (
                     <text key={i} x={(rx as number) * PW} y={(ry as number) * PH} fontSize={fs} fill={accentColor} textAnchor="middle" opacity={op}>✦</text>
                   ))}
+
+                  {/* Cutout handles — rendered last so they stay clickable above all content */}
+                  {cutoutHandles(cutoutCx, cutoutCy, cutoutDispW, cutoutDispH)}
+                  {(cutoutScale !== 1.0 || cutoutX !== 0.5 || cutoutY !== 0.55) && (
+                    <g style={{ cursor: "pointer" }} onClick={() => { setCutoutScale(1.0); setCutoutX(0.5); setCutoutY(0.55); }}>
+                      <rect x={PW - 28} y={4} width={24} height={18} rx={4} fill="black" fillOpacity={0.5} />
+                      <text x={PW - 16} y={16} fontSize={9} fill="white" textAnchor="middle">reset</text>
+                    </g>
+                  )}
                 </svg>
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-muted/20">

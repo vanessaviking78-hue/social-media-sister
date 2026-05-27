@@ -187,6 +187,22 @@ function topperLipstickSvg(cx: number, ty: number, size: number): string {
   ].join("");
 }
 
+function wrapSvgTextBE(text: string, maxW: number, fs: number, ls = 0): string[] {
+  if (!text) return [];
+  const cw = Math.max(1, fs * 0.58 + ls * 0.4);
+  const maxChars = Math.max(1, Math.floor(maxW / cw));
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let cur = "";
+  for (const word of words) {
+    const test = cur ? `${cur} ${word}` : word;
+    if (test.length <= maxChars || !cur) { cur = test; }
+    else { lines.push(cur); cur = word; }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
 function stickerSvg(
   w: { text: string; x: number; y: number; topper?: string },
   idx: number,
@@ -348,15 +364,65 @@ async function buildFullSvg(
   const shadowFilter = cc.shadowEnabled ? ` filter="url(#cshadow)"` : "";
   layers.push(`<image href="${cutoutDataUri}" x="${cutoutLeft.toFixed(1)}" y="${cutoutTop.toFixed(1)}" width="${cutoutDisplayW.toFixed(1)}" height="${cutoutDisplayH.toFixed(1)}" preserveAspectRatio="xMidYMid meet"${shadowFilter}/>`);
 
-  // Title
-  const titleY = titleFontSize + 28;
-  const lsAttr = titleLetterSpacing > 0 ? ` letter-spacing="${titleLetterSpacing}"` : "";
-  layers.push(`<text x="${(canvasW / 2).toFixed(0)}" y="${titleY}" font-family="'${titleFont}', 'Allura', cursive" font-size="${titleFontSize}" fill="${titleColor}" text-anchor="middle" filter="url(#txtshadow)"${lsAttr}>${escXml(title)}</text>`);
+  // Text alignment + background panel settings from canvasConfig
+  const titleAlign = (cc as Record<string, unknown>).titleAlign as string ?? "center";
+  const subtitleAlign = (cc as Record<string, unknown>).subtitleAlign as string ?? "center";
+  const titleBgEnabled = Boolean((cc as Record<string, unknown>).titleBgEnabled);
+  const titleBgColor = (cc as Record<string, unknown>).titleBgColor as string ?? "#000000";
+  const titleBgOpacity = Number((cc as Record<string, unknown>).titleBgOpacity ?? 50);
+  const titleBgRadius = Number((cc as Record<string, unknown>).titleBgRadius ?? 12);
+  const titleBgPadding = Number((cc as Record<string, unknown>).titleBgPadding ?? 16);
+  const subtitleBgEnabled = Boolean((cc as Record<string, unknown>).subtitleBgEnabled);
+  const subtitleBgColor = (cc as Record<string, unknown>).subtitleBgColor as string ?? "#000000";
+  const subtitleBgOpacity = Number((cc as Record<string, unknown>).subtitleBgOpacity ?? 50);
+  const subtitleBgRadius = Number((cc as Record<string, unknown>).subtitleBgRadius ?? 12);
+  const subtitleBgPadding = Number((cc as Record<string, unknown>).subtitleBgPadding ?? 16);
 
-  // Subtitle
+  // Title — wrapped + aligned + optional bg panel
+  const maxTextW = canvasW * 0.82;
+  let titleFsEff = titleFontSize;
+  let titleLines = wrapSvgTextBE(title, maxTextW, titleFsEff, titleLetterSpacing);
+  if (titleLines.length > 1 && titleLines.some(l => l.length * titleFsEff * 0.58 > maxTextW)) {
+    titleFsEff = Math.round(titleFsEff * 0.88);
+    titleLines = wrapSvgTextBE(title, maxTextW, titleFsEff, titleLetterSpacing);
+  }
+  const titleLineH = titleFsEff * titleLineHeight;
+  const titleTopY = titleFsEff + 28;
+  const titleXA = titleAlign === "left" ? canvasW * 0.09 : titleAlign === "right" ? canvasW * 0.91 : canvasW / 2;
+  const titleAnchor = titleAlign === "left" ? "start" : titleAlign === "right" ? "end" : "middle";
+  const lsAttr = titleLetterSpacing > 0 ? ` letter-spacing="${titleLetterSpacing}"` : "";
+  if (titleBgEnabled) {
+    const estimW = Math.max(...titleLines.map(l => l.length)) * titleFsEff * 0.58;
+    const bgW = Math.min(canvasW - 4, estimW + titleBgPadding * 2);
+    const bgH = titleLines.length * titleLineH + titleBgPadding * 2;
+    const bgX = titleAlign === "center" ? canvasW / 2 - bgW / 2 : titleAlign === "left" ? titleXA - titleBgPadding : titleXA - bgW + titleBgPadding;
+    const bgY = titleTopY - titleFsEff - titleBgPadding;
+    layers.push(`<rect x="${bgX.toFixed(1)}" y="${bgY.toFixed(1)}" width="${bgW.toFixed(1)}" height="${bgH.toFixed(1)}" rx="${titleBgRadius}" fill="${titleBgColor}" opacity="${titleBgOpacity / 100}"/>`);
+  }
+  titleLines.forEach((line, li) => {
+    layers.push(`<text x="${titleXA.toFixed(0)}" y="${(titleTopY + li * titleLineH).toFixed(0)}" font-family="'${titleFont}', 'Allura', cursive" font-size="${titleFsEff}" fill="${titleColor}" text-anchor="${titleAnchor}" filter="url(#txtshadow)"${lsAttr}>${escXml(line)}</text>`);
+  });
+
+  // Subtitle — wrapped + aligned + optional bg panel
   if (subtitle) {
-    const subY = Math.round(titleFontSize * titleLineHeight) + 28 + subtitleFontSize * subtitleLineHeight;
-    layers.push(`<text x="${(canvasW / 2).toFixed(0)}" y="${subY.toFixed(0)}" font-family="Georgia, serif" font-size="${subtitleFontSize}" fill="${subtitleColor}" text-anchor="middle" opacity="0.85" letter-spacing="${subtitleLetterSpacing}">${escXml(subtitle.toUpperCase())}</text>`);
+    const titleTotalH = titleLines.length * titleLineH;
+    const subFsEff = subtitleFontSize;
+    const subLines = wrapSvgTextBE(subtitle.toUpperCase(), maxTextW, subFsEff, subtitleLetterSpacing);
+    const subLineH = subFsEff * subtitleLineHeight;
+    const subTopY = titleFsEff + 28 + titleTotalH + subFsEff + 4;
+    const subXA = subtitleAlign === "left" ? canvasW * 0.09 : subtitleAlign === "right" ? canvasW * 0.91 : canvasW / 2;
+    const subAnchor = subtitleAlign === "left" ? "start" : subtitleAlign === "right" ? "end" : "middle";
+    if (subtitleBgEnabled) {
+      const estimW = Math.max(...subLines.map(l => l.length)) * subFsEff * 0.58;
+      const bgW = Math.min(canvasW - 4, estimW + subtitleBgPadding * 2);
+      const bgH = subLines.length * subLineH + subtitleBgPadding * 2;
+      const bgX = subtitleAlign === "center" ? canvasW / 2 - bgW / 2 : subtitleAlign === "left" ? subXA - subtitleBgPadding : subXA - bgW + subtitleBgPadding;
+      const bgY = subTopY - subFsEff - subtitleBgPadding;
+      layers.push(`<rect x="${bgX.toFixed(1)}" y="${bgY.toFixed(1)}" width="${bgW.toFixed(1)}" height="${bgH.toFixed(1)}" rx="${subtitleBgRadius}" fill="${subtitleBgColor}" opacity="${subtitleBgOpacity / 100}"/>`);
+    }
+    subLines.forEach((line, li) => {
+      layers.push(`<text x="${subXA.toFixed(0)}" y="${(subTopY + li * subLineH).toFixed(0)}" font-family="Georgia, serif" font-size="${subFsEff}" fill="${subtitleColor}" text-anchor="${subAnchor}" opacity="0.85" letter-spacing="${subtitleLetterSpacing}">${escXml(line)}</text>`);
+    });
   }
 
   // Words — puffy sticker labels
@@ -632,6 +698,32 @@ router.post("/about-me/:id/render", async (req, res) => {
   } catch (e: any) {
     req.log.error(e);
     res.status(500).json({ error: e.message });
+  }
+});
+
+router.post("/about-me/generate-caption", async (req, res) => {
+  try {
+    const { openai } = await import("@workspace/integrations-openai-ai-server");
+    const { title = "", subtitle = "", words = [] } = req.body as {
+      title?: string; subtitle?: string; words?: { text: string }[];
+    };
+    const wordList = (words as { text: string }[]).map((w) => w.text).filter(Boolean).join(", ");
+    const context = [
+      title && `Title: "${title}"`,
+      subtitle && `Subtitle: "${subtitle}"`,
+      wordList && `Words on the image: ${wordList}`,
+    ].filter(Boolean).join(". ");
+    const prompt = `Write a warm, personal Instagram caption for an About Me post. ${context}. Write 3 to 5 sentences that feel honest and grounded. No hashtags. No em dashes. End with a gentle question to invite comments. Max 180 words.`;
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5.2",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 280,
+    });
+    const caption = completion.choices[0]?.message?.content?.trim() ?? "";
+    res.json({ caption });
+  } catch (e: unknown) {
+    req.log.error(e, "generate-caption failed");
+    res.status(500).json({ error: "Caption generation failed" });
   }
 });
 
