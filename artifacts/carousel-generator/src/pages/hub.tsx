@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles } from "lucide-react";
 
 const TOOLS = [
   {
@@ -119,6 +119,15 @@ const TOOLS = [
     border: "hover:border-red-500/50",
     iconColor: "text-red-400",
   },
+  {
+    href: "/ai-portrait-studio",
+    icon: Sparkles,
+    name: "AI Portrait Studio",
+    description: "Upload a reference photo and generate fresh AI portraits in multiple scenarios.",
+    color: "from-purple-500/20 to-purple-500/5",
+    border: "hover:border-purple-500/50",
+    iconColor: "text-purple-400",
+  },
 ];
 
 export default function Hub() {
@@ -142,9 +151,10 @@ export default function Hub() {
           {TOOLS.slice(0, 12).map((tool) => <ToolCard key={tool.href} tool={tool} />)}
         </div>
 
-        {/* 1 on its own, left-aligned */}
+        {/* Last row: 2 cards, left-aligned */}
         <div className="grid grid-cols-4 gap-4">
           <ToolCard tool={TOOLS[12]} />
+          <ToolCard tool={TOOLS[13]} />
         </div>
       </main>
     </div>

@@ -17,6 +17,7 @@ import libraryRouter from "./library";
 import onboardingRouter from "./onboarding";
 import aboutMeRouter from "./about-me";
 import seamlessCarouselRouter from "./seamless-carousel";
+import aiPortraitRouter from "./aiPortrait";
 
 const router: IRouter = Router();
 
@@ -38,5 +39,6 @@ router.use(libraryRouter);
 router.use(onboardingRouter);
 router.use(aboutMeRouter);
 router.use(seamlessCarouselRouter);
+router.use(aiPortraitRouter);
 
 export default router;

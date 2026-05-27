@@ -17,10 +17,19 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AiGenerateRequest,
+  AiJobStatus,
+  AiScenario,
+  AiSourcePhoto,
   CarouselResult,
   ErrorResponse,
+  GenerateAiPortraits202,
   GenerateCarouselBody,
   HealthStatus,
+  RegenerateAiPortrait202,
+  SaveAiPortraitToLibrary200,
+  SaveAiPortraitToLibraryBody,
+  UploadAiSourcePhotoBody,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -299,3 +308,526 @@ export function useGetCarouselImage<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Upload a reference source photo
+ */
+export const getUploadAiSourcePhotoUrl = () => {
+  return `/api/ai-portrait/source`;
+};
+
+export const uploadAiSourcePhoto = async (
+  uploadAiSourcePhotoBody: UploadAiSourcePhotoBody,
+  options?: RequestInit,
+): Promise<AiSourcePhoto> => {
+  const formData = new FormData();
+  formData.append(`photo`, uploadAiSourcePhotoBody.photo);
+  if (uploadAiSourcePhotoBody.clientName !== undefined) {
+    formData.append(`clientName`, uploadAiSourcePhotoBody.clientName);
+  }
+  if (uploadAiSourcePhotoBody.notes !== undefined) {
+    formData.append(`notes`, uploadAiSourcePhotoBody.notes);
+  }
+
+  return customFetch<AiSourcePhoto>(getUploadAiSourcePhotoUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getUploadAiSourcePhotoMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadAiSourcePhoto>>,
+    TError,
+    { data: BodyType<UploadAiSourcePhotoBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadAiSourcePhoto>>,
+  TError,
+  { data: BodyType<UploadAiSourcePhotoBody> },
+  TContext
+> => {
+  const mutationKey = ["uploadAiSourcePhoto"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadAiSourcePhoto>>,
+    { data: BodyType<UploadAiSourcePhotoBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return uploadAiSourcePhoto(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadAiSourcePhotoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadAiSourcePhoto>>
+>;
+export type UploadAiSourcePhotoMutationBody = BodyType<UploadAiSourcePhotoBody>;
+export type UploadAiSourcePhotoMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Upload a reference source photo
+ */
+export const useUploadAiSourcePhoto = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadAiSourcePhoto>>,
+    TError,
+    { data: BodyType<UploadAiSourcePhotoBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof uploadAiSourcePhoto>>,
+  TError,
+  { data: BodyType<UploadAiSourcePhotoBody> },
+  TContext
+> => {
+  return useMutation(getUploadAiSourcePhotoMutationOptions(options));
+};
+
+/**
+ * @summary Get all available portrait scenarios
+ */
+export const getGetAiPortraitScenariosUrl = () => {
+  return `/api/ai-portrait/scenarios`;
+};
+
+export const getAiPortraitScenarios = async (
+  options?: RequestInit,
+): Promise<AiScenario[]> => {
+  return customFetch<AiScenario[]>(getGetAiPortraitScenariosUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAiPortraitScenariosQueryKey = () => {
+  return [`/api/ai-portrait/scenarios`] as const;
+};
+
+export const getGetAiPortraitScenariosQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAiPortraitScenarios>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAiPortraitScenarios>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAiPortraitScenariosQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAiPortraitScenarios>>
+  > = ({ signal }) => getAiPortraitScenarios({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAiPortraitScenarios>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAiPortraitScenariosQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAiPortraitScenarios>>
+>;
+export type GetAiPortraitScenariosQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get all available portrait scenarios
+ */
+
+export function useGetAiPortraitScenarios<
+  TData = Awaited<ReturnType<typeof getAiPortraitScenarios>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof getAiPortraitScenarios>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAiPortraitScenariosQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Start a portrait generation job
+ */
+export const getGenerateAiPortraitsUrl = () => {
+  return `/api/ai-portrait/generate`;
+};
+
+export const generateAiPortraits = async (
+  aiGenerateRequest: AiGenerateRequest,
+  options?: RequestInit,
+): Promise<GenerateAiPortraits202> => {
+  return customFetch<GenerateAiPortraits202>(getGenerateAiPortraitsUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(aiGenerateRequest),
+  });
+};
+
+export const getGenerateAiPortraitsMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateAiPortraits>>,
+    TError,
+    { data: BodyType<AiGenerateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateAiPortraits>>,
+  TError,
+  { data: BodyType<AiGenerateRequest> },
+  TContext
+> => {
+  const mutationKey = ["generateAiPortraits"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateAiPortraits>>,
+    { data: BodyType<AiGenerateRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateAiPortraits(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateAiPortraitsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateAiPortraits>>
+>;
+export type GenerateAiPortraitsMutationBody = BodyType<AiGenerateRequest>;
+export type GenerateAiPortraitsMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Start a portrait generation job
+ */
+export const useGenerateAiPortraits = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateAiPortraits>>,
+    TError,
+    { data: BodyType<AiGenerateRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateAiPortraits>>,
+  TError,
+  { data: BodyType<AiGenerateRequest> },
+  TContext
+> => {
+  return useMutation(getGenerateAiPortraitsMutationOptions(options));
+};
+
+/**
+ * @summary Poll the status of a portrait generation job
+ */
+export const getGetAiPortraitJobStatusUrl = (jobId: string) => {
+  return `/api/ai-portrait/jobs/${jobId}/status`;
+};
+
+export const getAiPortraitJobStatus = async (
+  jobId: string,
+  options?: RequestInit,
+): Promise<AiJobStatus> => {
+  return customFetch<AiJobStatus>(getGetAiPortraitJobStatusUrl(jobId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetAiPortraitJobStatusQueryKey = (jobId: string) => {
+  return [`/api/ai-portrait/jobs/${jobId}/status`] as const;
+};
+
+export const getGetAiPortraitJobStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getAiPortraitJobStatus>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  jobId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAiPortraitJobStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetAiPortraitJobStatusQueryKey(jobId);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getAiPortraitJobStatus>>
+  > = ({ signal }) =>
+    getAiPortraitJobStatus(jobId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!jobId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getAiPortraitJobStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetAiPortraitJobStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getAiPortraitJobStatus>>
+>;
+export type GetAiPortraitJobStatusQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Poll the status of a portrait generation job
+ */
+
+export function useGetAiPortraitJobStatus<
+  TData = Awaited<ReturnType<typeof getAiPortraitJobStatus>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  jobId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getAiPortraitJobStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetAiPortraitJobStatusQueryOptions(jobId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Save a generated portrait to the content library
+ */
+export const getSaveAiPortraitToLibraryUrl = (portraitId: number) => {
+  return `/api/ai-portrait/${portraitId}/save-to-library`;
+};
+
+export const saveAiPortraitToLibrary = async (
+  portraitId: number,
+  saveAiPortraitToLibraryBody: SaveAiPortraitToLibraryBody,
+  options?: RequestInit,
+): Promise<SaveAiPortraitToLibrary200> => {
+  return customFetch<SaveAiPortraitToLibrary200>(
+    getSaveAiPortraitToLibraryUrl(portraitId),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(saveAiPortraitToLibraryBody),
+    },
+  );
+};
+
+export const getSaveAiPortraitToLibraryMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveAiPortraitToLibrary>>,
+    TError,
+    { portraitId: number; data: BodyType<SaveAiPortraitToLibraryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveAiPortraitToLibrary>>,
+  TError,
+  { portraitId: number; data: BodyType<SaveAiPortraitToLibraryBody> },
+  TContext
+> => {
+  const mutationKey = ["saveAiPortraitToLibrary"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveAiPortraitToLibrary>>,
+    { portraitId: number; data: BodyType<SaveAiPortraitToLibraryBody> }
+  > = (props) => {
+    const { portraitId, data } = props ?? {};
+
+    return saveAiPortraitToLibrary(portraitId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveAiPortraitToLibraryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveAiPortraitToLibrary>>
+>;
+export type SaveAiPortraitToLibraryMutationBody =
+  BodyType<SaveAiPortraitToLibraryBody>;
+export type SaveAiPortraitToLibraryMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Save a generated portrait to the content library
+ */
+export const useSaveAiPortraitToLibrary = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveAiPortraitToLibrary>>,
+    TError,
+    { portraitId: number; data: BodyType<SaveAiPortraitToLibraryBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof saveAiPortraitToLibrary>>,
+  TError,
+  { portraitId: number; data: BodyType<SaveAiPortraitToLibraryBody> },
+  TContext
+> => {
+  return useMutation(getSaveAiPortraitToLibraryMutationOptions(options));
+};
+
+/**
+ * @summary Retry generation for a failed portrait card
+ */
+export const getRegenerateAiPortraitUrl = (portraitId: number) => {
+  return `/api/ai-portrait/${portraitId}/regenerate`;
+};
+
+export const regenerateAiPortrait = async (
+  portraitId: number,
+  options?: RequestInit,
+): Promise<RegenerateAiPortrait202> => {
+  return customFetch<RegenerateAiPortrait202>(
+    getRegenerateAiPortraitUrl(portraitId),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getRegenerateAiPortraitMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof regenerateAiPortrait>>,
+    TError,
+    { portraitId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof regenerateAiPortrait>>,
+  TError,
+  { portraitId: number },
+  TContext
+> => {
+  const mutationKey = ["regenerateAiPortrait"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof regenerateAiPortrait>>,
+    { portraitId: number }
+  > = (props) => {
+    const { portraitId } = props ?? {};
+
+    return regenerateAiPortrait(portraitId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RegenerateAiPortraitMutationResult = NonNullable<
+  Awaited<ReturnType<typeof regenerateAiPortrait>>
+>;
+
+export type RegenerateAiPortraitMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Retry generation for a failed portrait card
+ */
+export const useRegenerateAiPortrait = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof regenerateAiPortrait>>,
+    TError,
+    { portraitId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof regenerateAiPortrait>>,
+  TError,
+  { portraitId: number },
+  TContext
+> => {
+  return useMutation(getRegenerateAiPortraitMutationOptions(options));
+};

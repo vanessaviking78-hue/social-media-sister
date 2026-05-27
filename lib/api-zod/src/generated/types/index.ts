@@ -6,8 +6,21 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./aiCardState";
+export * from "./aiCardStateStatus";
+export * from "./aiGenerateRequest";
+export * from "./aiJobStatus";
+export * from "./aiScenario";
+export * from "./aiScenarioCategory";
+export * from "./aiScenarioConfig";
+export * from "./aiSourcePhoto";
 export * from "./carouselResult";
 export * from "./carouselSlide";
 export * from "./errorResponse";
+export * from "./generateAiPortraits202";
 export * from "./generateCarouselBody";
 export * from "./healthStatus";
+export * from "./regenerateAiPortrait202";
+export * from "./saveAiPortraitToLibrary200";
+export * from "./saveAiPortraitToLibraryBody";
+export * from "./uploadAiSourcePhotoBody";

@@ -305,3 +305,44 @@ export const insertSeamlessCarouselSchema = createInsertSchema(seamlessCarousels
   .omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertSeamlessCarousel = z.infer<typeof insertSeamlessCarouselSchema>;
 export type SeamlessCarousel = typeof seamlessCarouselsTable.$inferSelect;
+
+export const aiSourcePhotosTable = pgTable("ai_source_photos", {
+  id: serial("id").primaryKey(),
+  clientName: text("client_name").notNull().default(""),
+  photoUrl: text("photo_url").notNull(),
+  notes: text("notes").notNull().default(""),
+  uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
+});
+
+export const insertAiSourcePhotoSchema = createInsertSchema(aiSourcePhotosTable)
+  .omit({ id: true, uploadedAt: true });
+export type InsertAiSourcePhoto = z.infer<typeof insertAiSourcePhotoSchema>;
+export type AiSourcePhoto = typeof aiSourcePhotosTable.$inferSelect;
+
+export const AI_PORTRAIT_STATUSES = ["generating", "success", "failed"] as const;
+export type AiPortraitStatus = typeof AI_PORTRAIT_STATUSES[number];
+
+export const aiGeneratedPortraitsTable = pgTable("ai_generated_portraits", {
+  id: serial("id").primaryKey(),
+  clientName: text("client_name").notNull().default(""),
+  sourcePhotoId: integer("source_photo_id").notNull(),
+  scenarioId: text("scenario_id").notNull(),
+  prompt: text("prompt").notNull(),
+  scrubColor: text("scrub_color"),
+  outfitStyle: text("outfit_style"),
+  aspectRatio: text("aspect_ratio").notNull().default("1:1"),
+  outputImageUrl: text("output_image_url"),
+  hasWatermark: boolean("has_watermark").notNull().default(true),
+  status: text("status").notNull().default("generating"),
+  failureReason: text("failure_reason"),
+  generatedAt: timestamp("generated_at").notNull().defaultNow(),
+  savedToLibrary: boolean("saved_to_library").notNull().default(false),
+}, (table) => [
+  check("ai_portrait_status_check", sql`${table.status} IN ('generating', 'success', 'failed')`),
+]);
+
+export const insertAiGeneratedPortraitSchema = createInsertSchema(aiGeneratedPortraitsTable)
+  .omit({ id: true, generatedAt: true })
+  .extend({ status: z.enum(AI_PORTRAIT_STATUSES) });
+export type InsertAiGeneratedPortrait = z.infer<typeof insertAiGeneratedPortraitSchema>;
+export type AiGeneratedPortrait = typeof aiGeneratedPortraitsTable.$inferSelect;

@@ -24,10 +24,6 @@ export interface CarouselSlide {
   imageName: string;
   /** When true, this slide is a pre-made cover image — render as-is with no text or overlay */
   isCoverImageSlide?: boolean;
-  /** Hero cover: lead-in line text (set per-carousel from CSV column 0 in hero mode) */
-  heroLeadIn?: string;
-  /** Hero cover: hero word text (set per-carousel from CSV column 1 in hero mode) */
-  heroWord?: string;
 }
 
 export interface CarouselResult {
@@ -47,9 +43,97 @@ export interface ErrorResponse {
   error: string;
 }
 
+export interface AiSourcePhoto {
+  id: number;
+  clientName: string;
+  photoUrl: string;
+  notes: string;
+  uploadedAt: string;
+}
+
+export type AiScenarioCategory =
+  (typeof AiScenarioCategory)[keyof typeof AiScenarioCategory];
+
+export const AiScenarioCategory = {
+  clinical: "clinical",
+  lifestyle: "lifestyle",
+  brand: "brand",
+} as const;
+
+export interface AiScenario {
+  id: string;
+  name: string;
+  category: AiScenarioCategory;
+  hasScrubColor: boolean;
+  hasOutfitStyle: boolean;
+}
+
+export interface AiScenarioConfig {
+  id: string;
+  scrubColor?: string;
+  outfitStyle?: string;
+  aspectRatio: string;
+}
+
+export interface AiGenerateRequest {
+  sourcePhotoId: number;
+  clientName?: string;
+  /** @maxItems 6 */
+  scenarios: AiScenarioConfig[];
+}
+
+export type AiCardStateStatus =
+  (typeof AiCardStateStatus)[keyof typeof AiCardStateStatus];
+
+export const AiCardStateStatus = {
+  idle: "idle",
+  generating: "generating",
+  success: "success",
+  failed: "failed",
+  "rate-limited": "rate-limited",
+} as const;
+
+export interface AiCardState {
+  scenarioId: string;
+  status: AiCardStateStatus;
+  portraitId?: number;
+  outputImageUrl?: string;
+  failureReason?: string;
+  retryAfter?: number;
+}
+
+export interface AiJobStatus {
+  cards: AiCardState[];
+}
+
 export type GenerateCarouselBody = {
   /** Photo files to cycle through across slides */
   photos: Blob[];
   /** CSV file — one row per slide, first column is the caption text */
   csv: Blob;
+};
+
+export type UploadAiSourcePhotoBody = {
+  photo: Blob;
+  clientName?: string;
+  notes?: string;
+};
+
+export type GenerateAiPortraits202 = {
+  jobId: string;
+};
+
+export type SaveAiPortraitToLibraryBody = {
+  applyWatermark?: boolean;
+};
+
+export type SaveAiPortraitToLibrary200 = {
+  success: boolean;
+  batchId: number;
+  approvalToken: string;
+};
+
+export type RegenerateAiPortrait202 = {
+  jobId: string;
+  portraitId: number;
 };

@@ -98,6 +98,182 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /ai-portrait/source:
+    post:
+      operationId: uploadAiSourcePhoto
+      tags: [ai-portrait]
+      summary: Upload a reference source photo
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                clientName:
+                  type: string
+                notes:
+                  type: string
+              required: [photo]
+      responses:
+        "200":
+          description: Source photo record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiSourcePhoto"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /ai-portrait/scenarios:
+    get:
+      operationId: getAiPortraitScenarios
+      tags: [ai-portrait]
+      summary: Get all available portrait scenarios
+      responses:
+        "200":
+          description: List of scenarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiScenario"
+
+  /ai-portrait/generate:
+    post:
+      operationId: generateAiPortraits
+      tags: [ai-portrait]
+      summary: Start a portrait generation job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AiGenerateRequest"
+      responses:
+        "202":
+          description: Job accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                required: [jobId]
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /ai-portrait/jobs/{jobId}/status:
+    get:
+      operationId: getAiPortraitJobStatus
+      tags: [ai-portrait]
+      summary: Poll the status of a portrait generation job
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Job status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiJobStatus"
+        "404":
+          description: Job not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /ai-portrait/{portraitId}/save-to-library:
+    post:
+      operationId: saveAiPortraitToLibrary
+      tags: [ai-portrait]
+      summary: Save a generated portrait to the content library
+      parameters:
+        - name: portraitId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                applyWatermark:
+                  type: boolean
+      responses:
+        "200":
+          description: Saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  batchId:
+                    type: integer
+                  approvalToken:
+                    type: string
+                required: [success, batchId, approvalToken]
+        "404":
+          description: Portrait not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /ai-portrait/{portraitId}/regenerate:
+    post:
+      operationId: regenerateAiPortrait
+      tags: [ai-portrait]
+      summary: Retry generation for a failed portrait card
+      parameters:
+        - name: portraitId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "202":
+          description: Regeneration started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobId:
+                    type: string
+                  portraitId:
+                    type: integer
+                required: [jobId, portraitId]
+        "404":
+          description: Portrait not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -174,3 +350,89 @@ components:
           type: string
       required:
         - error
+
+    AiSourcePhoto:
+      type: object
+      properties:
+        id:
+          type: integer
+        clientName:
+          type: string
+        photoUrl:
+          type: string
+        notes:
+          type: string
+        uploadedAt:
+          type: string
+          format: date-time
+      required: [id, clientName, photoUrl, notes, uploadedAt]
+
+    AiScenario:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+          enum: [clinical, lifestyle, brand]
+        hasScrubColor:
+          type: boolean
+        hasOutfitStyle:
+          type: boolean
+      required: [id, name, category, hasScrubColor, hasOutfitStyle]
+
+    AiScenarioConfig:
+      type: object
+      properties:
+        id:
+          type: string
+        scrubColor:
+          type: string
+        outfitStyle:
+          type: string
+        aspectRatio:
+          type: string
+      required: [id, aspectRatio]
+
+    AiGenerateRequest:
+      type: object
+      properties:
+        sourcePhotoId:
+          type: integer
+        clientName:
+          type: string
+        scenarios:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiScenarioConfig"
+          maxItems: 6
+      required: [sourcePhotoId, scenarios]
+
+    AiCardState:
+      type: object
+      properties:
+        scenarioId:
+          type: string
+        status:
+          type: string
+          enum: [idle, generating, success, failed, rate-limited]
+        portraitId:
+          type: integer
+        outputImageUrl:
+          type: string
+        failureReason:
+          type: string
+        retryAfter:
+          type: integer
+      required: [scenarioId, status]
+
+    AiJobStatus:
+      type: object
+      properties:
+        cards:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiCardState"
+      required: [cards]

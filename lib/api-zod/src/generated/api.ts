@@ -73,3 +73,104 @@ export const GetCarouselImageParams = zod.object({
   sessionId: zod.coerce.string(),
   filename: zod.coerce.string(),
 });
+
+/**
+ * @summary Upload a reference source photo
+ */
+export const UploadAiSourcePhotoBody = zod.object({
+  photo: zod.instanceof(File),
+  clientName: zod.string().optional(),
+  notes: zod.string().optional(),
+});
+
+export const UploadAiSourcePhotoResponse = zod.object({
+  id: zod.number(),
+  clientName: zod.string(),
+  photoUrl: zod.string(),
+  notes: zod.string(),
+  uploadedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Get all available portrait scenarios
+ */
+export const GetAiPortraitScenariosResponseItem = zod.object({
+  id: zod.string(),
+  name: zod.string(),
+  category: zod.enum(["clinical", "lifestyle", "brand"]),
+  hasScrubColor: zod.boolean(),
+  hasOutfitStyle: zod.boolean(),
+});
+export const GetAiPortraitScenariosResponse = zod.array(
+  GetAiPortraitScenariosResponseItem,
+);
+
+/**
+ * @summary Start a portrait generation job
+ */
+export const generateAiPortraitsBodyScenariosMax = 6;
+
+export const GenerateAiPortraitsBody = zod.object({
+  sourcePhotoId: zod.number(),
+  clientName: zod.string().optional(),
+  scenarios: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        scrubColor: zod.string().optional(),
+        outfitStyle: zod.string().optional(),
+        aspectRatio: zod.string(),
+      }),
+    )
+    .max(generateAiPortraitsBodyScenariosMax),
+});
+
+/**
+ * @summary Poll the status of a portrait generation job
+ */
+export const GetAiPortraitJobStatusParams = zod.object({
+  jobId: zod.coerce.string(),
+});
+
+export const GetAiPortraitJobStatusResponse = zod.object({
+  cards: zod.array(
+    zod.object({
+      scenarioId: zod.string(),
+      status: zod.enum([
+        "idle",
+        "generating",
+        "success",
+        "failed",
+        "rate-limited",
+      ]),
+      portraitId: zod.number().optional(),
+      outputImageUrl: zod.string().optional(),
+      failureReason: zod.string().optional(),
+      retryAfter: zod.number().optional(),
+    }),
+  ),
+});
+
+/**
+ * @summary Save a generated portrait to the content library
+ */
+export const SaveAiPortraitToLibraryParams = zod.object({
+  portraitId: zod.coerce.number(),
+});
+
+export const SaveAiPortraitToLibraryBody = zod.object({
+  applyWatermark: zod.boolean().optional(),
+});
+
+export const SaveAiPortraitToLibraryResponse = zod.object({
+  success: zod.boolean(),
+  batchId: zod.number(),
+  approvalToken: zod.string(),
+});
+
+/**
+ * @summary Retry generation for a failed portrait card
+ */
+export const RegenerateAiPortraitParams = zod.object({
+  portraitId: zod.coerce.number(),
+});

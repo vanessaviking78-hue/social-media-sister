@@ -24,6 +24,7 @@ import BulkConnectReview from "@/pages/bulk-connect-review";
 import About from "@/pages/about";
 import AboutMe from "@/pages/about-me";
 import SeamlessCarousel from "@/pages/seamless-carousel";
+import AiPortraitStudio from "@/pages/ai-portrait-studio";
 import Onboard from "@/pages/onboard";
 import OnboardChoosePage from "@/pages/onboard-choose-page";
 import OnboardSuccess from "@/pages/onboard-success";
@@ -50,6 +51,7 @@ function ProtectedRouter() {
       <Route path="/about" component={About} />
       <Route path="/about-me" component={AboutMe} />
       <Route path="/seamless-carousel" component={SeamlessCarousel} />
+      <Route path="/ai-portrait-studio" component={AiPortraitStudio} />
       <Route component={NotFound} />
     </Switch>
   );
