@@ -6,11 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface AiSourcePhoto {
-  id: number;
-  clientName: string;
-  uploader: string;
+export type IngestAiSourcePhotoFromUrlBody = {
   photoUrl: string;
-  notes: string;
-  uploadedAt: Date;
-}
+  clientName?: string;
+  notes?: string;
+};

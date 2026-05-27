@@ -11,6 +11,7 @@ export interface AiCardState {
   scenarioId: string;
   status: AiCardStateStatus;
   portraitId?: number;
+  originalImageUrl?: string;
   outputImageUrl?: string;
   failureReason?: string;
   retryAfter?: number;

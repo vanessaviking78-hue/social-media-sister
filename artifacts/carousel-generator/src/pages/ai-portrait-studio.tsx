@@ -108,6 +108,10 @@ export default function AiPortraitStudio() {
   const [generating, setGenerating] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const [urlInput, setUrlInput] = useState("");
+  const [urlLoading, setUrlLoading] = useState(false);
+  const [showUrlInput, setShowUrlInput] = useState(false);
+
   const [savePopoverOpen, setSavePopoverOpen] = useState<number | null>(null);
   const [savingPortrait, setSavingPortrait] = useState<number | null>(null);
   const [regenJobIds, setRegenJobIds] = useState<Map<number, string>>(new Map());
@@ -137,9 +141,31 @@ export default function AiPortraitStudio() {
           else toast.warning(`${ok} succeeded, ${failed} failed.`);
         }
       } catch {}
-    }, 1000);
+    }, 500);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [jobId]);
+
+  const handleUrlIngest = async () => {
+    if (!urlInput.trim()) return;
+    setUrlLoading(true);
+    try {
+      const r = await fetch(`${BASE}api/ai-portrait/source-from-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photoUrl: urlInput.trim(), clientName }),
+      });
+      const data = await r.json() as AiSourcePhoto & { error?: string };
+      if (!r.ok) throw new Error(data.error || "URL ingestion failed");
+      setSourcePhoto(data);
+      setPhotoPreview(data.photoUrl);
+      setShowUrlInput(false);
+      toast.success("Reference photo loaded from URL");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to load photo from URL");
+    } finally {
+      setUrlLoading(false);
+    }
+  };
 
   const handleFileDrop = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) { toast.error("Please upload an image file"); return; }
@@ -347,6 +373,43 @@ export default function AiPortraitStudio() {
               )}
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileDrop(f); }} />
             </div>
+
+            {!photoPreview && (
+              <div className="mt-2">
+                {!showUrlInput ? (
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+                    onClick={() => setShowUrlInput(true)}
+                  >
+                    Or use a photo URL instead
+                  </button>
+                ) : (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Photo URL</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        value={urlInput}
+                        onChange={(e) => setUrlInput(e.target.value)}
+                        placeholder="https://example.com/photo.jpg"
+                        className="h-8 text-xs flex-1"
+                        onKeyDown={(e) => { if (e.key === "Enter") handleUrlIngest(); }}
+                      />
+                      <Button size="sm" variant="outline" className="h-8 text-xs px-3" onClick={handleUrlIngest} disabled={urlLoading || !urlInput.trim()}>
+                        {urlLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <ChevronRight className="w-3 h-3" />}
+                      </Button>
+                    </div>
+                    <button
+                      type="button"
+                      className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+                      onClick={() => setShowUrlInput(false)}
+                    >
+                      Upload a file instead
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Summary */}

@@ -132,6 +132,39 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /ai-portrait/source-from-url:
+    post:
+      operationId: ingestAiSourcePhotoFromUrl
+      tags: [ai-portrait]
+      summary: Ingest a reference source photo from a URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                photoUrl:
+                  type: string
+                clientName:
+                  type: string
+                notes:
+                  type: string
+              required: [photoUrl]
+      responses:
+        "200":
+          description: Source photo record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiSourcePhoto"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /ai-portrait/scenarios:
     get:
       operationId: getAiPortraitScenarios
@@ -358,6 +391,8 @@ components:
           type: integer
         clientName:
           type: string
+        uploader:
+          type: string
         photoUrl:
           type: string
         notes:
@@ -365,7 +400,44 @@ components:
         uploadedAt:
           type: string
           format: date-time
-      required: [id, clientName, photoUrl, notes, uploadedAt]
+      required: [id, clientName, uploader, photoUrl, notes, uploadedAt]
+
+    AiGeneratedPortrait:
+      type: object
+      properties:
+        id:
+          type: integer
+        clientName:
+          type: string
+        sourcePhotoId:
+          type: integer
+        scenarioId:
+          type: string
+        prompt:
+          type: string
+        scrubColor:
+          type: string
+        outfitStyle:
+          type: string
+        aspectRatio:
+          type: string
+        originalImageUrl:
+          type: string
+        outputImageUrl:
+          type: string
+        hasWatermark:
+          type: boolean
+        status:
+          type: string
+          enum: [generating, success, failed]
+        failureReason:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        savedToLibrary:
+          type: boolean
+      required: [id, clientName, sourcePhotoId, scenarioId, prompt, aspectRatio, hasWatermark, status, generatedAt, savedToLibrary]
 
     AiScenario:
       type: object
@@ -420,6 +492,8 @@ components:
           enum: [idle, generating, success, failed, rate-limited]
         portraitId:
           type: integer
+        originalImageUrl:
+          type: string
         outputImageUrl:
           type: string
         failureReason:

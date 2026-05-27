@@ -8,6 +8,8 @@
 
 export * from "./aiCardState";
 export * from "./aiCardStateStatus";
+export * from "./aiGeneratedPortrait";
+export * from "./aiGeneratedPortraitStatus";
 export * from "./aiGenerateRequest";
 export * from "./aiJobStatus";
 export * from "./aiScenario";
@@ -20,6 +22,7 @@ export * from "./errorResponse";
 export * from "./generateAiPortraits202";
 export * from "./generateCarouselBody";
 export * from "./healthStatus";
+export * from "./ingestAiSourcePhotoFromUrlBody";
 export * from "./regenerateAiPortrait202";
 export * from "./saveAiPortraitToLibrary200";
 export * from "./saveAiPortraitToLibraryBody";

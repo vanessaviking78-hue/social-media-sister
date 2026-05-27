@@ -112,11 +112,16 @@ router.get("/ai-portrait/jobs/:jobId/status", (req: Request, res: Response) => {
 router.post("/ai-portrait/:portraitId/save-to-library", async (req: Request, res: Response) => {
   try {
     const portraitId = Number(req.params.portraitId);
-    const { applyWatermark: _w } = req.body as { applyWatermark?: boolean };
+    const { applyWatermark = true } = req.body as { applyWatermark?: boolean };
 
     const [portrait] = await db.select().from(aiGeneratedPortraitsTable).where(eq(aiGeneratedPortraitsTable.id, portraitId));
     if (!portrait) { res.status(404).json({ error: "Portrait not found" }); return; }
-    if (!portrait.outputImageUrl) { res.status(400).json({ error: "Portrait has no output image yet" }); return; }
+
+    const imageUrl = applyWatermark
+      ? (portrait.outputImageUrl ?? portrait.originalImageUrl)
+      : (portrait.originalImageUrl ?? portrait.outputImageUrl);
+
+    if (!imageUrl) { res.status(400).json({ error: "Portrait has no output image yet" }); return; }
 
     await db.update(aiGeneratedPortraitsTable).set({ savedToLibrary: true }).where(eq(aiGeneratedPortraitsTable.id, portraitId));
 
@@ -130,12 +135,33 @@ router.post("/ai-portrait/:portraitId/save-to-library", async (req: Request, res
     const complianceNote = "This image was generated using artificial intelligence. It does not represent a real photograph. Created in accordance with ASA/CAP guidelines — AI-generated content.";
     await db
       .insert(approvalImagesTable)
-      .values({ batchId: batch.id, imageUrl: portrait.outputImageUrl, status: "pending", clientNote: complianceNote });
+      .values({ batchId: batch.id, imageUrl, status: "pending", clientNote: complianceNote });
 
     res.json({ success: true, batchId: batch.id, approvalToken: token });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Save failed";
     req.log.error({ err }, "ai-portrait/save-to-library failed");
+    res.status(500).json({ error: msg });
+  }
+});
+
+router.post("/ai-portrait/source-from-url", async (req: Request, res: Response) => {
+  try {
+    const { photoUrl, clientName = "", notes = "" } = req.body as { photoUrl: string; clientName?: string; notes?: string };
+    if (!photoUrl) { res.status(400).json({ error: "photoUrl required" }); return; }
+
+    const imageBuf = await fetchBuf(photoUrl);
+    const uploadedUrl = await uploadBuf(imageBuf, "source.jpg", "ai-portraits/source", "image/jpeg");
+
+    const [row] = await db
+      .insert(aiSourcePhotosTable)
+      .values({ clientName, photoUrl: uploadedUrl, notes })
+      .returning();
+
+    res.json(row);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "URL ingestion failed";
+    req.log.error({ err }, "ai-portrait/source-from-url failed");
     res.status(500).json({ error: msg });
   }
 });

@@ -8,7 +8,7 @@ import { objectStorageClient } from "./objectStorage";
 import { logger } from "./logger";
 import { buildPrompt, AI_PORTRAIT_SCENARIOS } from "./aiPortraitScenarios";
 
-const GEMINI_MODEL = "gemini-2.0-flash-exp";
+const GEMINI_MODEL = "gemini-2.5-flash";
 const REQUEST_GAP_MS = 4_000;
 const RATE_LIMIT_BACKOFF_MS = 30_000;
 
@@ -132,7 +132,7 @@ export async function processPortraitJob(
       continue;
     }
 
-    const prompt = buildPrompt(scenario, cfg.scrubColor, cfg.outfitStyle);
+    const prompt = buildPrompt(scenario, cfg.scrubColor, cfg.outfitStyle, cfg.aspectRatio);
     const base64Photo = sourcePhotoBuffer.toString("base64");
 
     let attempt = 0;
@@ -163,14 +163,16 @@ export async function processPortraitJob(
           throw new Error("Gemini returned no image in response.");
         }
 
-        let imgBuffer = Buffer.from(imagePart.inlineData.data, "base64");
-        const withWatermark = await applyWatermark(imgBuffer);
-        const uploadBuffer = withWatermark;
+        const imgBuffer = Buffer.from(imagePart.inlineData.data, "base64");
 
+        const [originalUrl, watermarkedBuffer] = await Promise.all([
+          uploadBuf(imgBuffer, `portrait-${cfg.id}-original.png`, "ai-portraits/original"),
+          applyWatermark(imgBuffer),
+        ]);
         const outputUrl = await uploadBuf(
-          uploadBuffer,
-          `portrait-${cfg.id}.png`,
-          "ai-portraits",
+          watermarkedBuffer,
+          `portrait-${cfg.id}-wm.png`,
+          "ai-portraits/watermarked",
         );
 
         const [row] = await db
@@ -183,6 +185,7 @@ export async function processPortraitJob(
             scrubColor: cfg.scrubColor,
             outfitStyle: cfg.outfitStyle,
             aspectRatio: cfg.aspectRatio,
+            originalImageUrl: originalUrl,
             outputImageUrl: outputUrl,
             hasWatermark: true,
             status: "success",

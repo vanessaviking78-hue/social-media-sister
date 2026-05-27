@@ -133,7 +133,7 @@ export const AI_PORTRAIT_SCENARIOS: AiScenario[] = [
   },
 ];
 
-export function buildPrompt(scenario: AiScenario, scrubColor?: string, outfitStyle?: string): string {
+export function buildPrompt(scenario: AiScenario, scrubColor?: string, outfitStyle?: string, aspectRatio = "1:1"): string {
   let prompt = scenario.promptTemplate;
   if (scenario.hasScrubColor) {
     prompt = prompt.replace("{scrubColor}", scrubColor || "navy blue");
@@ -141,5 +141,10 @@ export function buildPrompt(scenario: AiScenario, scrubColor?: string, outfitSty
   if (scenario.hasOutfitStyle) {
     prompt = prompt.replace("{outfitStyle}", outfitStyle || "smart casual");
   }
+  const ratioDescription =
+    aspectRatio === "9:16" ? "a vertical 9:16 portrait orientation (tall and narrow)" :
+    aspectRatio === "3:4" ? "a 3:4 portrait orientation" :
+    "a square 1:1 format";
+  prompt += ` Compose the image in ${ratioDescription}.`;
   return prompt;
 }

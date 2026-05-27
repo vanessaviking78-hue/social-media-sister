@@ -46,9 +46,37 @@ export interface ErrorResponse {
 export interface AiSourcePhoto {
   id: number;
   clientName: string;
+  uploader: string;
   photoUrl: string;
   notes: string;
   uploadedAt: string;
+}
+
+export type AiGeneratedPortraitStatus =
+  (typeof AiGeneratedPortraitStatus)[keyof typeof AiGeneratedPortraitStatus];
+
+export const AiGeneratedPortraitStatus = {
+  generating: "generating",
+  success: "success",
+  failed: "failed",
+} as const;
+
+export interface AiGeneratedPortrait {
+  id: number;
+  clientName: string;
+  sourcePhotoId: number;
+  scenarioId: string;
+  prompt: string;
+  scrubColor?: string;
+  outfitStyle?: string;
+  aspectRatio: string;
+  originalImageUrl?: string;
+  outputImageUrl?: string;
+  hasWatermark: boolean;
+  status: AiGeneratedPortraitStatus;
+  failureReason?: string;
+  generatedAt: string;
+  savedToLibrary: boolean;
 }
 
 export type AiScenarioCategory =
@@ -97,6 +125,7 @@ export interface AiCardState {
   scenarioId: string;
   status: AiCardStateStatus;
   portraitId?: number;
+  originalImageUrl?: string;
   outputImageUrl?: string;
   failureReason?: string;
   retryAfter?: number;
@@ -115,6 +144,12 @@ export type GenerateCarouselBody = {
 
 export type UploadAiSourcePhotoBody = {
   photo: Blob;
+  clientName?: string;
+  notes?: string;
+};
+
+export type IngestAiSourcePhotoFromUrlBody = {
+  photoUrl: string;
   clientName?: string;
   notes?: string;
 };

@@ -309,6 +309,7 @@ export type SeamlessCarousel = typeof seamlessCarouselsTable.$inferSelect;
 export const aiSourcePhotosTable = pgTable("ai_source_photos", {
   id: serial("id").primaryKey(),
   clientName: text("client_name").notNull().default(""),
+  uploader: text("uploader").notNull().default(""),
   photoUrl: text("photo_url").notNull(),
   notes: text("notes").notNull().default(""),
   uploadedAt: timestamp("uploaded_at").notNull().defaultNow(),
@@ -325,12 +326,13 @@ export type AiPortraitStatus = typeof AI_PORTRAIT_STATUSES[number];
 export const aiGeneratedPortraitsTable = pgTable("ai_generated_portraits", {
   id: serial("id").primaryKey(),
   clientName: text("client_name").notNull().default(""),
-  sourcePhotoId: integer("source_photo_id").notNull(),
+  sourcePhotoId: integer("source_photo_id").notNull().references(() => aiSourcePhotosTable.id),
   scenarioId: text("scenario_id").notNull(),
   prompt: text("prompt").notNull(),
   scrubColor: text("scrub_color"),
   outfitStyle: text("outfit_style"),
   aspectRatio: text("aspect_ratio").notNull().default("1:1"),
+  originalImageUrl: text("original_image_url"),
   outputImageUrl: text("output_image_url"),
   hasWatermark: boolean("has_watermark").notNull().default(true),
   status: text("status").notNull().default("generating"),
@@ -342,7 +344,7 @@ export const aiGeneratedPortraitsTable = pgTable("ai_generated_portraits", {
 ]);
 
 export const insertAiGeneratedPortraitSchema = createInsertSchema(aiGeneratedPortraitsTable)
-  .omit({ id: true, generatedAt: true })
-  .extend({ status: z.enum(AI_PORTRAIT_STATUSES) });
+  .omit({ id: true, generatedAt: true, sourcePhotoId: true })
+  .extend({ status: z.enum(AI_PORTRAIT_STATUSES), sourcePhotoId: z.number().int() });
 export type InsertAiGeneratedPortrait = z.infer<typeof insertAiGeneratedPortraitSchema>;
 export type AiGeneratedPortrait = typeof aiGeneratedPortraitsTable.$inferSelect;

@@ -86,6 +86,25 @@ export const UploadAiSourcePhotoBody = zod.object({
 export const UploadAiSourcePhotoResponse = zod.object({
   id: zod.number(),
   clientName: zod.string(),
+  uploader: zod.string(),
+  photoUrl: zod.string(),
+  notes: zod.string(),
+  uploadedAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Ingest a reference source photo from a URL
+ */
+export const IngestAiSourcePhotoFromUrlBody = zod.object({
+  photoUrl: zod.string(),
+  clientName: zod.string().optional(),
+  notes: zod.string().optional(),
+});
+
+export const IngestAiSourcePhotoFromUrlResponse = zod.object({
+  id: zod.number(),
+  clientName: zod.string(),
+  uploader: zod.string(),
   photoUrl: zod.string(),
   notes: zod.string(),
   uploadedAt: zod.coerce.date(),
@@ -144,6 +163,7 @@ export const GetAiPortraitJobStatusResponse = zod.object({
         "rate-limited",
       ]),
       portraitId: zod.number().optional(),
+      originalImageUrl: zod.string().optional(),
       outputImageUrl: zod.string().optional(),
       failureReason: zod.string().optional(),
       retryAfter: zod.number().optional(),

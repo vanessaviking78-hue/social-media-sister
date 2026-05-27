@@ -26,6 +26,7 @@ import type {
   GenerateAiPortraits202,
   GenerateCarouselBody,
   HealthStatus,
+  IngestAiSourcePhotoFromUrlBody,
   RegenerateAiPortrait202,
   SaveAiPortraitToLibrary200,
   SaveAiPortraitToLibraryBody,
@@ -401,6 +402,93 @@ export const useUploadAiSourcePhoto = <
   TContext
 > => {
   return useMutation(getUploadAiSourcePhotoMutationOptions(options));
+};
+
+/**
+ * @summary Ingest a reference source photo from a URL
+ */
+export const getIngestAiSourcePhotoFromUrlUrl = () => {
+  return `/api/ai-portrait/source-from-url`;
+};
+
+export const ingestAiSourcePhotoFromUrl = async (
+  ingestAiSourcePhotoFromUrlBody: IngestAiSourcePhotoFromUrlBody,
+  options?: RequestInit,
+): Promise<AiSourcePhoto> => {
+  return customFetch<AiSourcePhoto>(getIngestAiSourcePhotoFromUrlUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(ingestAiSourcePhotoFromUrlBody),
+  });
+};
+
+export const getIngestAiSourcePhotoFromUrlMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof ingestAiSourcePhotoFromUrl>>,
+    TError,
+    { data: BodyType<IngestAiSourcePhotoFromUrlBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof ingestAiSourcePhotoFromUrl>>,
+  TError,
+  { data: BodyType<IngestAiSourcePhotoFromUrlBody> },
+  TContext
+> => {
+  const mutationKey = ["ingestAiSourcePhotoFromUrl"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof ingestAiSourcePhotoFromUrl>>,
+    { data: BodyType<IngestAiSourcePhotoFromUrlBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return ingestAiSourcePhotoFromUrl(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type IngestAiSourcePhotoFromUrlMutationResult = NonNullable<
+  Awaited<ReturnType<typeof ingestAiSourcePhotoFromUrl>>
+>;
+export type IngestAiSourcePhotoFromUrlMutationBody =
+  BodyType<IngestAiSourcePhotoFromUrlBody>;
+export type IngestAiSourcePhotoFromUrlMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Ingest a reference source photo from a URL
+ */
+export const useIngestAiSourcePhotoFromUrl = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof ingestAiSourcePhotoFromUrl>>,
+    TError,
+    { data: BodyType<IngestAiSourcePhotoFromUrlBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof ingestAiSourcePhotoFromUrl>>,
+  TError,
+  { data: BodyType<IngestAiSourcePhotoFromUrlBody> },
+  TContext
+> => {
+  return useMutation(getIngestAiSourcePhotoFromUrlMutationOptions(options));
 };
 
 /**
