@@ -174,6 +174,8 @@ export default function AboutMePage() {
   const [postId, setPostId] = useState<number | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
+  const [presets, setPresets] = useState<{ id: number; name: string }[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
 
   // Interaction
   const [drag, setDrag] = useState<DragOp | null>(null);
@@ -187,6 +189,16 @@ export default function AboutMePage() {
   // Load fonts
   useEffect(() => { ALL_FONTS.forEach((f) => loadGFont(f.value)); }, []);
   useEffect(() => { loadGFont(titleFont); }, [titleFont]);
+
+  // Load presets for scheduling
+  useEffect(() => {
+    const BASE_URL = import.meta.env.BASE_URL.replace(/\/$/, "");
+    fetch(`${BASE_URL}/api/presets`).then((r) => r.json()).then((d) => {
+      const list = Array.isArray(d?.presets) ? d.presets : Array.isArray(d) ? d : [];
+      setPresets(list.map((p: any) => ({ id: p.id, name: p.name })));
+      if (list.length === 1) setSelectedPresetId(list[0].id);
+    }).catch(() => {});
+  }, []);
 
   // Track shift key for aspect-ratio break on resize
   useEffect(() => {
@@ -488,8 +500,14 @@ export default function AboutMePage() {
   return (
     <div className="min-h-[100dvh] w-full pb-32">
       {scheduleOpen && (
-        <ScheduleModal presetId={null} presetName="" postType="about-me" posts={schedulePosts}
-          onClose={() => setScheduleOpen(false)} onSaved={() => { setScheduleOpen(false); toast.success("Scheduled"); }} />
+        <ScheduleModal
+          presetId={selectedPresetId}
+          presetName={presets.find((p) => p.id === selectedPresetId)?.name ?? ""}
+          postType="about-me"
+          posts={schedulePosts}
+          onClose={() => setScheduleOpen(false)}
+          onSaved={() => { setScheduleOpen(false); toast.success("Scheduled"); }}
+        />
       )}
 
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-4 px-6 md:px-10 flex items-center justify-between">
@@ -870,6 +888,12 @@ export default function AboutMePage() {
                 >
                   <Download className="w-4 h-4" /> Download PNG
                 </Button>
+                {presets.length > 1 && (
+                  <Select value={selectedPresetId?.toString() ?? ""} onValueChange={(v) => setSelectedPresetId(Number(v))}>
+                    <SelectTrigger className="flex-1 h-10 text-sm"><SelectValue placeholder="Select client preset" /></SelectTrigger>
+                    <SelectContent>{presets.map((p) => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                )}
                 <Button variant="outline" onClick={handleSchedule} className="flex-1 gap-2">
                   <CalendarDays className="w-4 h-4" /> Schedule
                 </Button>

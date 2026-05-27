@@ -34,6 +34,7 @@ function defaultScheduledAt() {
 export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved }: Props) {
   const [scheduledAt, setScheduledAt] = useState(defaultScheduledAt);
   const [notes, setNotes] = useState("");
+  const [caption, setCaption] = useState(() => posts[0]?.caption || "");
   const [saving, setSaving] = useState(false);
   const [isTrial, setIsTrial] = useState(false);
   const [gapMinutes, setGapMinutes] = useState("60");
@@ -44,17 +45,18 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
 
   async function handleSave() {
     if (!scheduledAt) { toast.error("Pick a date and time"); return; }
+    if (!caption.trim()) { toast.error("Add a caption before scheduling"); return; }
+    if (presetId === null) { toast.error("Select a client preset before scheduling"); return; }
     setSaving(true);
     const gap = Math.max(0, Number(gapMinutes) || 60);
     try {
       for (let i = 0; i < posts.length; i++) {
         const post = posts[i];
         const staggeredAt = new Date(new Date(scheduledAt).getTime() + i * gap * 60000).toISOString();
-        const content: SchedulePostPayload = { caption: post.caption, title: post.title };
+        const content: SchedulePostPayload = { caption: caption.trim(), title: post.title };
         if (isReel && post.videoUrl) content.videoUrl = post.videoUrl;
         if (!isReel && post.imageUrls) content.imageUrls = post.imageUrls;
-        const body: Record<string, unknown> = { postType: apiPostType, content, scheduledAt: staggeredAt, isTrial, notes };
-        if (presetId !== null) body.presetId = presetId;
+        const body: Record<string, unknown> = { postType: apiPostType, content, scheduledAt: staggeredAt, isTrial, notes, presetId };
         const r = await fetch(`${BASE}/api/scheduler/posts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -120,6 +122,17 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
               </p>
             </div>
           )}
+
+          <div>
+            <Label className="text-zinc-300 text-sm mb-1.5 block">Caption <span className="text-pink-400">*</span></Label>
+            <textarea
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              placeholder="Write your caption here..."
+              rows={3}
+              className="w-full bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 rounded-md px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-pink-500"
+            />
+          </div>
 
           <div>
             <Label className="text-zinc-300 text-sm mb-1.5 block">Notes (optional)</Label>
