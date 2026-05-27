@@ -107,7 +107,7 @@ export async function processPortraitJob(
     return;
   }
 
-  const genAI = new GoogleGenAI({ apiKey });
+  const genAI = new GoogleGenAI({ apiKey, httpOptions: { apiVersion: "v1alpha" } });
 
   for (let i = 0; i < scenarios.length; i++) {
     const cfg = scenarios[i];
