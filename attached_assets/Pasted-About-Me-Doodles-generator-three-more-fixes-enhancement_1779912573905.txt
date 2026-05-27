@@ -1,0 +1,37 @@
+About Me / Doodles generator — three more fixes/enhancements:
+
+14. AI VISION CAPTION GENERATION (massive upgrade to existing Generate Caption):
+
+When the user clicks "Generate Caption", instead of just using the words + title + brand voice as text inputs, ALSO send the RENDERED PREVIEW IMAGE of the design to GPT-4 Vision (or Gemini Pro Vision) as part of the prompt. The model should:
+- Read the words and title visible on the image
+- See the photo of the practitioner
+- Notice any visual style cues (soft pastel vs bold pink, photo expression, etc)
+- Combine with the brand voice profile from the intake form
+- Generate a caption that genuinely matches what's on screen, not just a generic generation
+
+This makes the caption 10x more relevant because it's literally describing what's been built. Use OpenAI GPT-4o (multimodal) or Gemini Pro Vision (free tier covers this for most use). Send the preview image as a base64-encoded data URL or via a temporary URL.
+
+The generated caption appears in an editable text field with a "Regenerate" button for retries.
+
+15. RESIZE WORD STICKERS:
+
+The 3D puffy sticker word elements can already be dragged, but they cannot currently be resized. Please add corner-drag-to-resize behaviour:
+- Hovering a selected sticker shows 4 corner handles
+- Grabbing a corner and dragging resizes the sticker proportionally (text scales, panel scales, border stays proportional)
+- Hold Shift while dragging to break aspect ratio (rare use case but useful)
+- Live preview reflects in real time
+
+Same resize behaviour for the title, subtitle, doodles, logo, and cut-out subject photo if not already supported.
+
+16. POST READY BUT MISSING — INVESTIGATE:
+
+When a user saves a post from the About Me / Doodles generator, the system currently shows a success message ("Post ready" or similar) but the saved post does not appear in the Content Library where the user expects to find it.
+
+Please:
+- Confirm the save endpoint is actually writing the post to the database
+- Confirm the post is linked to the correct client preset
+- Confirm the Library view filters/queries are picking up About Me posts (not just carousels and singles)
+- If the post is saving to a separate "About Me" table rather than the main library, surface it in the Library view alongside other post types
+- After save, show a toast: "Saved to [Client Name]'s Library. View it now." with a clickable link
+
+Restart api-server when done. Vanessa will test by creating an About Me, saving it, and checking the Library to confirm it appears.

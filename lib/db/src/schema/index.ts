@@ -268,6 +268,7 @@ export type AboutMeWord = {
   x: number;
   y: number;
   topper?: string;
+  rotation?: number;
 };
 
 export type AboutMeDoodle = {

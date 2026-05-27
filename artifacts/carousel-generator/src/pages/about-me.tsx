@@ -89,7 +89,7 @@ const PH_STORY = 604;
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 type TopperType = "rainbow" | "heart" | "star" | "mirror" | "wine" | "lipstick" | "box-solid" | "circle-solid" | "heart-solid";
-type Word = { id: string; text: string; x: number; y: number; topper?: TopperType };
+type Word = { id: string; text: string; x: number; y: number; topper?: TopperType; rotation?: number };
 type DoodleShape = "heart-outline" | "arrow" | "sparkle";
 type DoodleEl = { id: string; shape: DoodleShape; x: number; y: number; size: number; rotation: number };
 type LogoState = { dataUrl: string; storedUrl: string; ar: number; x: number; y: number; scale: number; rotation: number };
@@ -104,6 +104,7 @@ type DragOp =
   | { what: "doodle"; idx: number; sx: number; sy: number; ox: number; oy: number }
   | { what: "doodle-rotate"; idx: number; cx: number; cy: number; sa: number; or_: number }
   | { what: "doodle-resize"; idx: number; sx: number; sy: number; os: number; cx: number; cy: number; sd: number }
+  | { what: "word-rotate"; idx: number; cx: number; cy: number; sa: number; or_: number }
   | { what: "title"; sx: number; sy: number; ox: number; oy: number }
   | { what: "subtitle"; sx: number; sy: number; ox: number; oy: number };
 
@@ -516,6 +517,9 @@ export default function AboutMePage() {
     } else if (drag.what === "doodle-rotate") {
       const a = angleDeg(drag.cx, drag.cy, mx, my);
       setDoodles((p) => p.map((dd, i) => i === drag.idx ? { ...dd, rotation: Math.round(drag.or_ + (a - drag.sa)) } : dd));
+    } else if (drag.what === "word-rotate") {
+      const a = angleDeg(drag.cx, drag.cy, mx, my);
+      setWords((p) => p.map((w, i) => i === drag.idx ? { ...w, rotation: Math.round(drag.or_ + (a - drag.sa)) } : w));
     } else if (drag.what === "title") {
       const dx = mx - drag.sx, dy = my - drag.sy;
       setTitleOffX(clamp(drag.ox + dx / PW, -0.85, 0.85));
@@ -633,6 +637,7 @@ export default function AboutMePage() {
       const apiWords = words.filter((w) => w.text.trim()).map((w) => ({
         id: w.id, text: w.text, x: w.x, y: w.y,
         ...(w.topper ? { topper: w.topper } : {}),
+        ...(w.rotation !== undefined ? { rotation: w.rotation } : {}),
       }));
 
       const canvasConfig = {
@@ -1510,42 +1515,54 @@ export default function AboutMePage() {
                     const sTop = wy - sH / 2;
                     const outerPad = Math.max(2, Math.round(5 * sc));
                     const outer = darkenHex(accentColor, 0.22);
-                    const rot = STICKER_ROTATIONS[i % STICKER_ROTATIONS.length];
+                    const rot = w.rotation ?? STICKER_ROTATIONS[i % STICKER_ROTATIONS.length];
                     const topper = effectiveTopper(w, i, stickerTopperDefault);
                     const topperSize = sH * 0.7;
                     const topperY = sTop - topperSize * 0.15;
+                    const rotHandleY = sTop - topperSize - 10;
                     return (
-                      <g key={w.id}
-                        transform={`rotate(${rot} ${wx} ${wy})`}
-                        style={{ cursor: "grab", filter: "drop-shadow(0 3px 7px rgba(0,0,0,0.28))" }}
-                        onPointerDown={(e) => {
-                          const p = svgPt(e);
-                          startDrag(e, { what: "word", idx: i, sx: p.x, sy: p.y, ox: w.x, oy: w.y });
-                        }}>
-                        {(topper === "box-solid" || topper === "circle-solid" || topper === "heart-solid") ? (
-                          <>
-                            {topper === "box-solid" && <>
+                      <g key={w.id} transform={`rotate(${rot} ${wx} ${wy})`} style={{ filter: "drop-shadow(0 3px 7px rgba(0,0,0,0.28))" }}>
+                        {/* Drag body */}
+                        <g style={{ cursor: "grab" }}
+                          onPointerDown={(e) => {
+                            const p = svgPt(e);
+                            startDrag(e, { what: "word", idx: i, sx: p.x, sy: p.y, ox: w.x, oy: w.y });
+                          }}>
+                          {(topper === "box-solid" || topper === "circle-solid" || topper === "heart-solid") ? (
+                            <>
+                              {topper === "box-solid" && <>
+                                <rect x={sLeft - outerPad} y={sTop - outerPad} width={sW + outerPad * 2} height={sH + outerPad * 2} rx={bR + 2} ry={bR + 2} fill={outer} />
+                                <rect x={sLeft} y={sTop} width={sW} height={sH} rx={bR - 1} ry={bR - 1} fill={accentColor} />
+                              </>}
+                              {topper === "circle-solid" && <ellipse cx={wx} cy={wy} rx={sW / 2 + outerPad} ry={sH / 2 + outerPad} fill={accentColor} />}
+                              {topper === "heart-solid" && <path d={heartFilled(wx, wy + (sW + outerPad * 2) * 0.135, sW + outerPad * 2)} fill={accentColor} />}
+                              <text x={wx} y={wy + fontSize * 0.36} fontFamily="Arial, Helvetica, sans-serif" fontSize={fontSize} fontWeight="800" fill="white" textAnchor="middle" letterSpacing={1} stroke="rgba(0,0,0,0.22)" strokeWidth={1.5} paintOrder="stroke">{w.text.toUpperCase()}</text>
+                            </>
+                          ) : (
+                            <>
                               <rect x={sLeft - outerPad} y={sTop - outerPad} width={sW + outerPad * 2} height={sH + outerPad * 2} rx={bR + 2} ry={bR + 2} fill={outer} />
-                              <rect x={sLeft} y={sTop} width={sW} height={sH} rx={bR - 1} ry={bR - 1} fill={accentColor} />
-                            </>}
-                            {topper === "circle-solid" && <ellipse cx={wx} cy={wy} rx={sW / 2 + outerPad} ry={sH / 2 + outerPad} fill={accentColor} />}
-                            {topper === "heart-solid" && <path d={heartFilled(wx, wy + (sW + outerPad * 2) * 0.135, sW + outerPad * 2)} fill={accentColor} />}
-                            <text x={wx} y={wy + fontSize * 0.36} fontFamily="Arial, Helvetica, sans-serif" fontSize={fontSize} fontWeight="800" fill="white" textAnchor="middle" letterSpacing={1} stroke="rgba(0,0,0,0.22)" strokeWidth={1.5} paintOrder="stroke">{w.text.toUpperCase()}</text>
-                          </>
-                        ) : (
-                          <>
-                            <rect x={sLeft - outerPad} y={sTop - outerPad} width={sW + outerPad * 2} height={sH + outerPad * 2} rx={bR + 2} ry={bR + 2} fill={outer} />
-                            <rect x={sLeft - 1} y={sTop - 1} width={sW + 2} height={sH + 2} rx={bR} ry={bR} fill={accentColor} />
-                            <rect x={sLeft} y={sTop} width={sW} height={sH} rx={bR - 1} ry={bR - 1} fill="white" />
-                            <text x={wx} y={wy + fontSize * 0.36} fontFamily="Arial, Helvetica, sans-serif" fontSize={fontSize} fontWeight="800" fill="#1a1a1a" textAnchor="middle" letterSpacing={1}>{w.text.toUpperCase()}</text>
-                            {topper === "rainbow" && renderRainbowTopper(wx, topperY, topperSize)}
-                            {topper === "heart" && renderHeartTopper(wx, topperY, topperSize)}
-                            {topper === "star" && renderStarTopper(wx, topperY, topperSize, accentColor)}
-                            {topper === "mirror" && renderMirrorTopper(wx, topperY, topperSize)}
-                            {topper === "wine" && renderWineGlassTopper(wx, topperY, topperSize)}
-                            {topper === "lipstick" && renderLipstickTopper(wx, topperY, topperSize)}
-                          </>
-                        )}
+                              <rect x={sLeft - 1} y={sTop - 1} width={sW + 2} height={sH + 2} rx={bR} ry={bR} fill={accentColor} />
+                              <rect x={sLeft} y={sTop} width={sW} height={sH} rx={bR - 1} ry={bR - 1} fill="white" />
+                              <text x={wx} y={wy + fontSize * 0.36} fontFamily="Arial, Helvetica, sans-serif" fontSize={fontSize} fontWeight="800" fill="#1a1a1a" textAnchor="middle" letterSpacing={1}>{w.text.toUpperCase()}</text>
+                              {topper === "rainbow" && renderRainbowTopper(wx, topperY, topperSize)}
+                              {topper === "heart" && renderHeartTopper(wx, topperY, topperSize)}
+                              {topper === "star" && renderStarTopper(wx, topperY, topperSize, accentColor)}
+                              {topper === "mirror" && renderMirrorTopper(wx, topperY, topperSize)}
+                              {topper === "wine" && renderWineGlassTopper(wx, topperY, topperSize)}
+                              {topper === "lipstick" && renderLipstickTopper(wx, topperY, topperSize)}
+                            </>
+                          )}
+                        </g>
+                        {/* Rotate handle */}
+                        <line x1={wx} y1={sTop - 1} x2={wx} y2={rotHandleY + 5} stroke="white" strokeWidth={1} opacity={0.6} />
+                        <circle cx={wx} cy={rotHandleY} r={5}
+                          fill="#7c3aed" stroke="white" strokeWidth={1.5}
+                          style={{ cursor: "grab" }}
+                          onPointerDown={(e) => {
+                            const p = svgPt(e);
+                            startDrag(e, { what: "word-rotate", idx: i, cx: wx, cy: wy, sa: angleDeg(wx, wy, p.x, p.y), or_: rot });
+                          }}
+                        />
                       </g>
                     );
                   })}

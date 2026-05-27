@@ -204,7 +204,7 @@ function wrapSvgTextBE(text: string, maxW: number, fs: number, ls = 0): string[]
 }
 
 function stickerSvg(
-  w: { text: string; x: number; y: number; topper?: string },
+  w: { text: string; x: number; y: number; topper?: string; rotation?: number },
   idx: number,
   canvasW: number,
   canvasH: number,
@@ -228,7 +228,7 @@ function stickerSvg(
   const outerPad = 5;
 
   const ROTS = [-7, 5, -3, 8, -6, 4, -8, 6, -2, 7];
-  const rot = ROTS[idx % ROTS.length];
+  const rot = w.rotation !== undefined ? w.rotation : ROTS[idx % ROTS.length];
 
   const effective = (w.topper as string | undefined) || (topperDefault === "mixed" ? ["rainbow", "heart", "star"][idx % 3] : topperDefault);
   const topperSize = sH * 0.7;
