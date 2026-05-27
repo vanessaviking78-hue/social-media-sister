@@ -356,26 +356,39 @@ export default function SingleImage() {
     const toastId = toast.loading("Generating images...");
 
     try {
+      await document.fonts.ready;
       const texts = allCsvRows;
       if (textStyle === "standard" && texts.length === 0) throw new Error("CSV has no data rows");
 
-      const photoUrls = photos.map((f) => URL.createObjectURL(f));
       const postCount = photos.length;
 
       if (textStyle === "standard" && texts.length < postCount) {
         toast.warning(`Only ${texts.length} text(s) for ${postCount} photo(s) - extra photos will have no text overlay`);
       }
 
-      const posts: SinglePost[] = photos.map((photo, i) => ({
-        index: i + 1,
-        text: textStyle === "standard" ? (texts[i] || "") : "",
-        imageUrl: photoUrls[i],
-        imageName: photo.name,
-      }));
+      const posts: SinglePost[] = [];
+      for (let i = 0; i < photos.length; i++) {
+        toast.loading(`Rendering image ${i + 1} of ${photos.length}…`, { id: toastId });
+        const post: SinglePost = {
+          index: i + 1,
+          text: textStyle === "standard" ? (texts[i] || "") : "",
+          imageUrl: URL.createObjectURL(photos[i]),
+          imageName: photos[i].name,
+        };
+        const blob = await fetch(post.imageUrl).then((r) => r.blob());
+        const img = new Image();
+        await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
+        const canvas = document.createElement("canvas");
+        canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
+        renderPostToCanvas(canvas.getContext("2d")!, img, post);
+        URL.revokeObjectURL(img.src);
+        post.imageUrl = canvas.toDataURL("image/png");
+        posts.push(post);
+      }
 
       setResult({ posts, totalPosts: posts.length, sessionId: "local" });
       setCurrentStep(4);
-      toast.success(`${posts.length} single image posts ready to download`, { id: toastId });
+      toast.success(`${posts.length} single image post${posts.length !== 1 ? "s" : ""} ready`, { id: toastId });
     } catch (e: any) {
       toast.error("Error: " + (e?.message ?? "Unknown error"), { id: toastId, duration: 15000 });
     } finally {
@@ -394,22 +407,11 @@ export default function SingleImage() {
     if (!result?.posts.length) return;
     const id = toast.loading("Building ZIP...");
     try {
-      await document.fonts.ready;
       const zip = new JSZip();
       for (const post of result.posts) {
         const res = await fetch(post.imageUrl);
-        const blob = await res.blob();
-        const img = new Image();
-        await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
-        const canvas = document.createElement("canvas");
-        canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
-        const ctx = canvas.getContext("2d")!;
-        renderPostToCanvas(ctx, img, post);
-        URL.revokeObjectURL(img.src);
-        const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
-        if (outBlob) {
-          zip.file(`post-${String(post.index).padStart(2, "0")}.png`, outBlob);
-        }
+        const outBlob = await res.blob();
+        zip.file(`post-${String(post.index).padStart(2, "0")}.png`, outBlob);
       }
       const content = await zip.generateAsync({ type: "blob" });
       saveAs(content, "single-image-posts.zip");
@@ -434,25 +436,12 @@ export default function SingleImage() {
 
   const downloadCsv = async () => {
     if (!result?.posts.length) return;
-    const id = toast.loading("Rendering images...");
+    const id = toast.loading("Uploading images...");
     try {
-      await document.fonts.ready;
-      const rendered: { name: string; base64: string }[] = [];
-
-      for (const post of result.posts) {
-        const res = await fetch(post.imageUrl);
-        const blob = await res.blob();
-        const img = new Image();
-        await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
-        const canvas = document.createElement("canvas");
-        canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
-        const ctx = canvas.getContext("2d")!;
-        renderPostToCanvas(ctx, img, post);
-        URL.revokeObjectURL(img.src);
-        const dataUrl = canvas.toDataURL("image/png");
-        const fileName = `post-${String(post.index).padStart(2, "0")}.png`;
-        rendered.push({ name: fileName, base64: dataUrl });
-      }
+      const rendered: { name: string; base64: string }[] = result.posts.map((post) => ({
+        name: `post-${String(post.index).padStart(2, "0")}.png`,
+        base64: post.imageUrl,
+      }));
 
       const urlMap = new Map<string, string>();
       const PARALLEL = 3;
@@ -486,24 +475,12 @@ export default function SingleImage() {
   const pushToCloudCampaign = async () => {
     if (!result?.posts.length) return;
     setCcPushing(true);
-    const id = toast.loading("Rendering & pushing to Cloud Campaign...");
+    const id = toast.loading("Pushing to Cloud Campaign...");
     try {
-      await document.fonts.ready;
-      const rendered: { name: string; base64: string }[] = [];
-
-      for (const post of result.posts) {
-        const res = await fetch(post.imageUrl);
-        const blob = await res.blob();
-        const img = new Image();
-        await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
-        const canvas = document.createElement("canvas");
-        canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
-        const ctx = canvas.getContext("2d")!;
-        renderPostToCanvas(ctx, img, post);
-        URL.revokeObjectURL(img.src);
-        const dataUrl = canvas.toDataURL("image/png");
-        rendered.push({ name: `post-${String(post.index).padStart(2, "0")}.png`, base64: dataUrl });
-      }
+      const rendered: { name: string; base64: string }[] = result.posts.map((post) => ({
+        name: `post-${String(post.index).padStart(2, "0")}.png`,
+        base64: post.imageUrl,
+      }));
 
       const urlMap = new Map<string, string>();
       const PARALLEL = 3;
@@ -550,22 +527,12 @@ export default function SingleImage() {
     if (!result?.posts.length) return;
     if (!selectedPresetId) { toast.error("Select a client preset first"); return; }
     setScheduleRendering(true);
-    const id = toast.loading("Rendering images for scheduling...");
+    const id = toast.loading("Preparing images for scheduling...");
     try {
-      await document.fonts.ready;
-      const rendered: { name: string; base64: string }[] = [];
-      for (const post of result.posts) {
-        const res = await fetch(post.imageUrl);
-        const blob = await res.blob();
-        const img = new Image();
-        await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
-        const canvas = document.createElement("canvas");
-        canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
-        const ctx = canvas.getContext("2d")!;
-        renderPostToCanvas(ctx, img, post);
-        URL.revokeObjectURL(img.src);
-        rendered.push({ name: `sched-post-${String(post.index).padStart(2, "0")}.png`, base64: canvas.toDataURL("image/png") });
-      }
+      const rendered: { name: string; base64: string }[] = result.posts.map((post) => ({
+        name: `sched-post-${String(post.index).padStart(2, "0")}.png`,
+        base64: post.imageUrl,
+      }));
       const urlMap = new Map<string, string>();
       const PARALLEL = 3;
       for (let i = 0; i < rendered.length; i += PARALLEL) {
