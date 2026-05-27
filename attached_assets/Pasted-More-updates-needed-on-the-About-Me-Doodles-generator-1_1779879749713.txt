@@ -1,0 +1,21 @@
+More updates needed on the About Me / Doodles generator:
+
+1. ADD LOGO BUTTON: add an "Upload logo" button to the controls panel. User can upload a small logo image (PNG, transparent background preferred). Once uploaded, it appears as a draggable, resizable element on the preview canvas (same drag-and-resize behaviour as the words and doodles). User can position the logo wherever they want, typically a corner. Allow rotation too.
+
+2. CUT-OUT PHOTO POSITION + SIZE: the cut-out subject photo currently sits in a fixed centred position. Make it draggable on the preview canvas and add corner-handle resize. The user should be able to grab the cut-out, move it anywhere, and resize bigger or smaller. Maintain aspect ratio when resizing (hold shift to break ratio if needed). Live preview reflects every change immediately.
+
+3. NEW DOODLE OPTIONS:
+   - Add "Small tailed arrow" doodle - a curly hand-drawn arrow with a small tail/swash at the start (think handwritten arrow pointing to something, NOT an emoji arrow). Use SVG.
+   - Add "Hand-drawn heart" doodle - a simple outline heart in a hand-sketched style (slightly wobbly lines, not perfectly symmetrical). Use SVG.
+   - These should be in the same doodle library as the existing options, with the same size slider (Small / Medium / Large).
+   - The user should be able to drag a doodle from a small palette on the side onto the preview canvas wherever they want.
+
+4. GLOW / SHADOW OPTION FOR CUT-OUT: add a styling control for the cut-out subject photo:
+   - "Glow" toggle - adds a soft luminous glow behind the cut-out (radial gradient, customisable colour, default soft white)
+   - "Shadow" toggle - adds a soft drop shadow behind the cut-out (offset, blur, opacity sliders)
+   - Both should work independently or together
+   - Live preview must reflect both as the user toggles them
+
+5. PREVIEW VISIBILITY: any new element added to the design (logo, doodle, glow, shadow, resized cut-out) MUST appear in the live preview within 100ms. No "save then check" pattern. Everything reactive on the canvas.
+
+Restart api-server when done. I will test by uploading a logo and creating a fully styled About Me post.

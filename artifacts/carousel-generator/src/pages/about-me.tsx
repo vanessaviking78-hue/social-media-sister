@@ -8,33 +8,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import {
   Upload, ImagePlus, BookOpen, Film, Palette, MessageSquareText,
-  CalendarDays, BarChart3, Loader2, Download, User, Grid, X, GripVertical,
+  CalendarDays, BarChart3, Loader2, Download, User, Grid, X, RotateCcw,
 } from "lucide-react";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 
-// ─── Fonts ────────────────────────────────────────────────────────────────────
+// ─── Constants ─────────────────────────────────────────────────────────────────
 const ALL_FONTS = [
-  // Script / handwritten
-  { label: "Allura", value: "Allura", category: "Script" },
-  { label: "Great Vibes", value: "Great Vibes", category: "Script" },
-  { label: "Pinyon Script", value: "Pinyon Script", category: "Script" },
-  { label: "Sacramento", value: "Sacramento", category: "Script" },
-  { label: "Dancing Script", value: "Dancing Script", category: "Script" },
-  { label: "Pacifico", value: "Pacifico", category: "Script" },
-  { label: "Alex Brush", value: "Alex Brush", category: "Script" },
-  { label: "Kaushan Script", value: "Kaushan Script", category: "Script" },
-  // Serif
-  { label: "Playfair Display", value: "Playfair Display", category: "Serif" },
-  { label: "Cormorant Garamond", value: "Cormorant Garamond", category: "Serif" },
-  { label: "EB Garamond", value: "EB Garamond", category: "Serif" },
-  { label: "Libre Baskerville", value: "Libre Baskerville", category: "Serif" },
-  { label: "Lora", value: "Lora", category: "Serif" },
-  // Sans
-  { label: "Poppins", value: "Poppins", category: "Sans" },
-  { label: "Montserrat", value: "Montserrat", category: "Sans" },
-  { label: "Raleway", value: "Raleway", category: "Sans" },
-  { label: "Nunito", value: "Nunito", category: "Sans" },
-  { label: "Quicksand", value: "Quicksand", category: "Sans" },
+  { label: "Allura", value: "Allura", cat: "Script" },
+  { label: "Great Vibes", value: "Great Vibes", cat: "Script" },
+  { label: "Pinyon Script", value: "Pinyon Script", cat: "Script" },
+  { label: "Sacramento", value: "Sacramento", cat: "Script" },
+  { label: "Dancing Script", value: "Dancing Script", cat: "Script" },
+  { label: "Pacifico", value: "Pacifico", cat: "Script" },
+  { label: "Alex Brush", value: "Alex Brush", cat: "Script" },
+  { label: "Kaushan Script", value: "Kaushan Script", cat: "Script" },
+  { label: "Playfair Display", value: "Playfair Display", cat: "Serif" },
+  { label: "Cormorant Garamond", value: "Cormorant Garamond", cat: "Serif" },
+  { label: "Lora", value: "Lora", cat: "Serif" },
+  { label: "Libre Baskerville", value: "Libre Baskerville", cat: "Serif" },
+  { label: "Poppins", value: "Poppins", cat: "Sans" },
+  { label: "Montserrat", value: "Montserrat", cat: "Sans" },
+  { label: "Raleway", value: "Raleway", cat: "Sans" },
+  { label: "Nunito", value: "Nunito", cat: "Sans" },
+  { label: "Quicksand", value: "Quicksand", cat: "Sans" },
 ];
 
 const ACCENT_PRESETS = [
@@ -45,98 +41,172 @@ const ACCENT_PRESETS = [
   { label: "Deep brown", value: "#5C3D2E" },
 ];
 
-// ─── Scattered initial positions (avoids center where photo sits) ──────────────
-const SCATTERED_COORDS: { x: number; y: number }[] = [
-  { x: 0.10, y: 0.15 }, // top far-left
-  { x: 0.84, y: 0.12 }, // top far-right
-  { x: 0.06, y: 0.36 }, // mid-left upper
-  { x: 0.90, y: 0.34 }, // mid-right upper
-  { x: 0.20, y: 0.60 }, // mid-left lower
-  { x: 0.80, y: 0.62 }, // mid-right lower
-  { x: 0.08, y: 0.80 }, // bottom left
-  { x: 0.88, y: 0.80 }, // bottom right
-  { x: 0.30, y: 0.08 }, // top centre-left
-  { x: 0.70, y: 0.09 }, // top centre-right
+const SCATTERED_COORDS = [
+  { x: 0.10, y: 0.14 }, { x: 0.84, y: 0.12 }, { x: 0.06, y: 0.36 },
+  { x: 0.90, y: 0.34 }, { x: 0.16, y: 0.60 }, { x: 0.82, y: 0.62 },
+  { x: 0.08, y: 0.80 }, { x: 0.88, y: 0.80 }, { x: 0.28, y: 0.08 }, { x: 0.70, y: 0.08 },
 ];
 
-type Word = { text: string; x: number; y: number };
+const DOODLE_SCATTER = [
+  { x: 0.12, y: 0.22 }, { x: 0.82, y: 0.20 }, { x: 0.06, y: 0.68 },
+  { x: 0.88, y: 0.70 }, { x: 0.22, y: 0.10 }, { x: 0.72, y: 0.10 },
+];
 
-const PREVIEW_W = 340;
-const PREVIEW_H_PORTRAIT = 425;
-const PREVIEW_H_STORY = 604;
+const PW = 340; // preview width
+const PH_PORT = 425;
+const PH_STORY = 604;
 
-function heartPath(hx: number, hy: number, s: number): string {
+// ─── Types ──────────────────────────────────────────────────────────────────────
+type Word = { id: string; text: string; x: number; y: number };
+type DoodleShape = "heart-outline" | "arrow" | "sparkle";
+type DoodleEl = { id: string; shape: DoodleShape; x: number; y: number; size: number; rotation: number };
+type LogoState = { dataUrl: string; storedUrl: string; ar: number; x: number; y: number; scale: number; rotation: number };
+
+type DragOp =
+  | { what: "word"; idx: number; sx: number; sy: number; ox: number; oy: number }
+  | { what: "cutout"; sx: number; sy: number; ox: number; oy: number }
+  | { what: "cutout-resize"; sx: number; sy: number; os: number; cx: number; cy: number; sd: number }
+  | { what: "logo"; sx: number; sy: number; ox: number; oy: number }
+  | { what: "logo-resize"; sx: number; sy: number; os: number; cx: number; cy: number; sd: number }
+  | { what: "logo-rotate"; cx: number; cy: number; sa: number; or_: number }
+  | { what: "doodle"; idx: number; sx: number; sy: number; ox: number; oy: number }
+  | { what: "doodle-rotate"; idx: number; cx: number; cy: number; sa: number; or_: number }
+  | { what: "doodle-resize"; idx: number; sx: number; sy: number; os: number; cx: number; cy: number; sd: number };
+
+// ─── SVG path helpers ───────────────────────────────────────────────────────────
+function heartFilled(hx: number, hy: number, s: number) {
   return `M ${hx} ${hy + s * 0.28} C ${hx - s * 0.5} ${hy + s * 0.05} ${hx - s * 0.5} ${hy - s * 0.55} ${hx} ${hy - s * 0.28} C ${hx + s * 0.5} ${hy - s * 0.55} ${hx + s * 0.5} ${hy + s * 0.05} ${hx} ${hy + s * 0.28} Z`;
 }
-
-function loadGoogleFont(family: string) {
-  const id = `gfont-${family.replace(/ /g, "-")}`;
-  if (document.getElementById(id)) return;
-  const link = document.createElement("link");
-  link.id = id;
-  link.rel = "stylesheet";
-  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}&display=swap`;
-  document.head.appendChild(link);
+function heartOutline(cx: number, cy: number, s: number) {
+  return `M ${cx + 0.05 * s},${cy + 0.65 * s} C ${cx - 0.55 * s},${cy + 0.18 * s} ${cx - 1.05 * s},${cy - 0.22 * s} ${cx - 0.98 * s},${cy - 0.72 * s} C ${cx - 0.92 * s},${cy - 1.12 * s} ${cx - 0.55 * s},${cy - 1.3 * s} ${cx - 0.28 * s},${cy - 1.18 * s} C ${cx - 0.08 * s},${cy - 1.08 * s} ${cx},${cy - 0.78 * s} ${cx},${cy - 0.78 * s} C ${cx},${cy - 0.78 * s} ${cx + 0.1 * s},${cy - 1.1 * s} ${cx + 0.32 * s},${cy - 1.2 * s} C ${cx + 0.62 * s},${cy - 1.35 * s} ${cx + 1.02 * s},${cy - 1.1 * s} ${cx + 0.98 * s},${cy - 0.68 * s} C ${cx + 0.95 * s},${cy - 0.2 * s} ${cx + 0.5 * s},${cy + 0.17 * s} ${cx + 0.05 * s},${cy + 0.65 * s} Z`;
+}
+function arrowCurly(cx: number, cy: number, s: number) {
+  const x0 = cx - s * 0.88, y0 = cy + s * 0.08;
+  const c1x = cx - s * 0.3, c1y = cy - s * 0.5;
+  const c2x = cx + s * 0.15, c2y = cy - s * 0.6;
+  const x3 = cx + s * 0.78, y3 = cy - s * 0.08;
+  const ah1x = cx + s * 0.48, ah1y = cy - s * 0.55;
+  const ah3x = cx + s * 0.58, ah3y = cy + s * 0.22;
+  return `M ${x0},${y0} C ${c1x},${c1y} ${c2x},${c2y} ${x3},${y3} M ${ah1x},${ah1y} L ${x3},${y3} L ${ah3x},${ah3y}`;
 }
 
+function dist(ax: number, ay: number, bx: number, by: number) {
+  return Math.sqrt((ax - bx) ** 2 + (ay - by) ** 2);
+}
+function angleDeg(cx: number, cy: number, px: number, py: number) {
+  return Math.atan2(py - cy, px - cx) * (180 / Math.PI);
+}
+function loadGFont(family: string) {
+  const id = `gf-${family.replace(/ /g, "-")}`;
+  if (!document.getElementById(id)) {
+    const l = document.createElement("link");
+    l.id = id; l.rel = "stylesheet";
+    l.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}&display=swap`;
+    document.head.appendChild(l);
+  }
+}
+function uid() { return Math.random().toString(36).slice(2, 9); }
+function clamp(v: number, mn: number, mx: number) { return Math.max(mn, Math.min(mx, v)); }
+
+// ─── Component ──────────────────────────────────────────────────────────────────
 export default function AboutMePage() {
+  // Photo
   const [originalFile, setOriginalFile] = useState<File | null>(null);
-  const [originalUrl, setOriginalUrl] = useState<string>("");
-  const [cutoutDataUrl, setCutoutDataUrl] = useState<string>("");
+  const [originalUrl, setOriginalUrl] = useState("");
+  const [cutoutDataUrl, setCutoutDataUrl] = useState("");
+  const [cutoutAr, setCutoutAr] = useState(0.75);
   const [bgRemoving, setBgRemoving] = useState(false);
 
+  // Text
   const [title, setTitle] = useState("About me");
   const [subtitle, setSubtitle] = useState("");
-  const [words, setWords] = useState<Word[]>([
-    { text: "Wife", ...SCATTERED_COORDS[0] },
-    { text: "Mum", ...SCATTERED_COORDS[1] },
-    { text: "Nurse", ...SCATTERED_COORDS[2] },
-    { text: "Loyal", ...SCATTERED_COORDS[3] },
-    { text: "Fun", ...SCATTERED_COORDS[4] },
-  ]);
-  const [accentColor, setAccentColor] = useState("#F5EEE3");
   const [titleFont, setTitleFont] = useState("Allura");
-  const [heartSize, setHeartSize] = useState(14); // preview units (scaled up for server)
+  const [accentColor, setAccentColor] = useState("#F5EEE3");
+  const [heartSize, setHeartSize] = useState(14);
+
+  // Words
+  const [words, setWords] = useState<Word[]>([
+    { id: uid(), text: "Wife", ...SCATTERED_COORDS[0] },
+    { id: uid(), text: "Mum", ...SCATTERED_COORDS[1] },
+    { id: uid(), text: "Nurse", ...SCATTERED_COORDS[2] },
+    { id: uid(), text: "Loyal", ...SCATTERED_COORDS[3] },
+    { id: uid(), text: "Fun", ...SCATTERED_COORDS[4] },
+  ]);
+
+  // Doodles
+  const [doodles, setDoodles] = useState<DoodleEl[]>([]);
+  const [doodleSize, setDoodleSize] = useState(22);
+
+  // Cutout position
+  const [cutoutX, setCutoutX] = useState(0.5);
+  const [cutoutY, setCutoutY] = useState(0.55);
+  const [cutoutScale, setCutoutScale] = useState(1.0);
+
+  // Cutout effects
+  const [glowEnabled, setGlowEnabled] = useState(false);
+  const [glowColor, setGlowColor] = useState("#ffffff");
+  const [shadowEnabled, setShadowEnabled] = useState(false);
+  const [shadowOpacity, setShadowOpacity] = useState(0.4);
+  const [shadowBlur, setShadowBlur] = useState(12);
+  const [shadowOffX, setShadowOffX] = useState(6);
+  const [shadowOffY, setShadowOffY] = useState(8);
+
+  // Logo
+  const [logo, setLogo] = useState<LogoState | null>(null);
+  const logoFileRef = useRef<HTMLInputElement>(null);
+
+  // Style
   const [aspectRatio, setAspectRatio] = useState<"1080x1350" | "1080x1920">("1080x1350");
   const [blurAmount, setBlurAmount] = useState(25);
   const [overlayOpacity, setOverlayOpacity] = useState(0);
 
+  // Output
   const [saving, setSaving] = useState(false);
-  const [renderedUrl, setRenderedUrl] = useState<string>("");
-  const [storedOriginalUrl, setStoredOriginalUrl] = useState<string>("");
+  const [renderedUrl, setRenderedUrl] = useState("");
+  const [postId, setPostId] = useState<number | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
-  const [postId, setPostId] = useState<number | null>(null);
 
-  // Drag state
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  // Interaction
+  const [drag, setDrag] = useState<DragOp | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
-  const dropRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dropRef = useRef<HTMLDivElement>(null);
+  const shiftRef = useRef(false);
 
-  const previewH = aspectRatio === "1080x1920" ? PREVIEW_H_STORY : PREVIEW_H_PORTRAIT;
-  const previewW = PREVIEW_W;
+  const PH = aspectRatio === "1080x1920" ? PH_STORY : PH_PORT;
 
-  // Load all available fonts eagerly
+  // Load fonts
+  useEffect(() => { ALL_FONTS.forEach((f) => loadGFont(f.value)); }, []);
+  useEffect(() => { loadGFont(titleFont); }, [titleFont]);
+
+  // Track shift key for aspect-ratio break on resize
   useEffect(() => {
-    ALL_FONTS.forEach((f) => loadGoogleFont(f.value));
+    const onKey = (e: KeyboardEvent) => { shiftRef.current = e.shiftKey; };
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("keyup", onKey);
+    return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("keyup", onKey); };
   }, []);
 
-  // Load the selected title font whenever it changes
-  useEffect(() => { loadGoogleFont(titleFont); }, [titleFont]);
+  // Update cutout aspect ratio when photo changes
+  useEffect(() => {
+    const src = cutoutDataUrl || originalUrl;
+    if (!src) return;
+    const img = new Image();
+    img.onload = () => setCutoutAr(img.naturalWidth / img.naturalHeight);
+    img.src = src;
+  }, [cutoutDataUrl, originalUrl]);
 
+  // ─── Photo handling ────────────────────────────────────────────────────────
   const removeBackground = useCallback(async (file: File) => {
     setBgRemoving(true);
     try {
       const { removeBackground } = await import("@imgly/background-removal");
-      const blob = await removeBackground(file, {
-        model: "isnet",
-        output: { format: "image/png", quality: 0.95 },
-      });
+      const blob = await removeBackground(file, { model: "isnet", output: { format: "image/png", quality: 0.95 } });
       setCutoutDataUrl(URL.createObjectURL(blob));
       toast.success("Background removed");
     } catch {
-      toast.error("Background removal failed — photo uploaded as-is");
+      toast.error("Background removal failed — photo used as-is");
     } finally {
       setBgRemoving(false);
     }
@@ -157,106 +227,228 @@ export default function AboutMePage() {
     if (file?.type.startsWith("image/")) handleFileSelect(file);
   }, [handleFileSelect]);
 
-  const setWordText = (i: number, text: string) =>
-    setWords((prev) => prev.map((w, idx) => idx === i ? { ...w, text } : w));
+  // ─── Logo handling ─────────────────────────────────────────────────────────
+  const handleLogoFile = (file: File) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      setLogo({ dataUrl: url, storedUrl: "", ar: img.naturalWidth / img.naturalHeight, x: 0.84, y: 0.88, scale: 1.0, rotation: 0 });
+    };
+    img.src = url;
+  };
 
+  const uploadLogoToServer = async (dataUrl: string): Promise<string> => {
+    const blob = await fetch(dataUrl).then((r) => r.blob());
+    const fd = new FormData();
+    fd.append("logo", blob, "logo.png");
+    const r = await fetch(`${import.meta.env.BASE_URL}api/about-me/upload-logo`, { method: "POST", body: fd });
+    if (!r.ok) throw new Error("Logo upload failed");
+    const { logoUrl } = await r.json() as { logoUrl: string };
+    return logoUrl;
+  };
+
+  // ─── Words ─────────────────────────────────────────────────────────────────
   const addWord = () => {
     if (words.length >= 10) return;
     const coord = SCATTERED_COORDS[words.length] ?? { x: 0.5, y: 0.5 };
-    setWords((prev) => [...prev, { text: "", ...coord }]);
+    setWords((p) => [...p, { id: uid(), text: "", ...coord }]);
   };
 
-  const removeWord = (i: number) => setWords((prev) => prev.filter((_, idx) => idx !== i));
-
-  // ─── Drag-to-position on the SVG canvas ────────────────────────────────────
-  const getSvgPoint = (e: React.PointerEvent): { x: number; y: number } | null => {
-    const svg = svgRef.current;
-    if (!svg) return null;
-    const rect = svg.getBoundingClientRect();
-    return {
-      x: Math.max(0.02, Math.min(0.98, (e.clientX - rect.left) / rect.width)),
-      y: Math.max(0.04, Math.min(0.97, (e.clientY - rect.top) / rect.height)),
-    };
+  // ─── Doodles ───────────────────────────────────────────────────────────────
+  const addDoodle = (shape: DoodleShape) => {
+    const pos = DOODLE_SCATTER[doodles.length % DOODLE_SCATTER.length];
+    setDoodles((p) => [...p, { id: uid(), shape, x: pos.x, y: pos.y, size: doodleSize, rotation: 0 }]);
   };
 
-  const onWordPointerDown = (e: React.PointerEvent, i: number) => {
+  // ─── SVG pointer helpers ───────────────────────────────────────────────────
+  const svgPt = (e: React.PointerEvent) => {
+    const r = svgRef.current!.getBoundingClientRect();
+    return { x: (e.clientX - r.left) / r.width * PW, y: (e.clientY - r.top) / r.height * PH };
+  };
+
+  const startDrag = (e: React.PointerEvent, op: DragOp) => {
     e.preventDefault();
     e.stopPropagation();
-    setDragIdx(i);
-    (e.target as Element).setPointerCapture(e.pointerId);
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+    setDrag(op);
   };
 
-  const onSvgPointerMove = (e: React.PointerEvent) => {
-    if (dragIdx === null) return;
-    const pt = getSvgPoint(e);
-    if (!pt) return;
-    setWords((prev) => prev.map((w, i) => i === dragIdx ? { ...w, x: pt.x, y: pt.y } : w));
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!drag) return;
+    const { x: mx, y: my } = svgPt(e);
+
+    if (drag.what === "word") {
+      const dx = mx - drag.sx, dy = my - drag.sy;
+      setWords((p) => p.map((w, i) => i === drag.idx ? { ...w, x: clamp(drag.ox + dx / PW, 0.02, 0.98), y: clamp(drag.oy + dy / PH, 0.03, 0.97) } : w));
+    } else if (drag.what === "cutout") {
+      const dx = mx - drag.sx, dy = my - drag.sy;
+      setCutoutX(clamp(drag.ox + dx / PW, 0.05, 0.95));
+      setCutoutY(clamp(drag.oy + dy / PH, 0.05, 0.95));
+    } else if (drag.what === "cutout-resize") {
+      const d = dist(drag.cx, drag.cy, mx, my);
+      const newScale = clamp(drag.os * d / drag.sd, 0.2, 3.0);
+      setCutoutScale(newScale);
+    } else if (drag.what === "logo" && logo) {
+      const dx = mx - drag.sx, dy = my - drag.sy;
+      setLogo((l) => l ? { ...l, x: clamp(drag.ox + dx / PW, 0.02, 0.98), y: clamp(drag.oy + dy / PH, 0.03, 0.97) } : l);
+    } else if (drag.what === "logo-resize" && logo) {
+      const d = dist(drag.cx, drag.cy, mx, my);
+      setLogo((l) => l ? { ...l, scale: clamp(drag.os * d / drag.sd, 0.15, 5.0) } : l);
+    } else if (drag.what === "logo-rotate" && logo) {
+      const a = angleDeg(drag.cx, drag.cy, mx, my);
+      setLogo((l) => l ? { ...l, rotation: Math.round(drag.or_ + (a - drag.sa)) } : l);
+    } else if (drag.what === "doodle") {
+      const dx = mx - drag.sx, dy = my - drag.sy;
+      setDoodles((p) => p.map((d, i) => i === drag.idx ? { ...d, x: clamp(drag.ox + dx / PW, 0.02, 0.98), y: clamp(drag.oy + dy / PH, 0.03, 0.97) } : d));
+    } else if (drag.what === "doodle-resize") {
+      const d = dist(drag.cx, drag.cy, mx, my);
+      const newSize = clamp(drag.os * d / drag.sd, 8, 80);
+      setDoodles((p) => p.map((dd, i) => i === drag.idx ? { ...dd, size: newSize } : dd));
+    } else if (drag.what === "doodle-rotate") {
+      const a = angleDeg(drag.cx, drag.cy, mx, my);
+      setDoodles((p) => p.map((dd, i) => i === drag.idx ? { ...dd, rotation: Math.round(drag.or_ + (a - drag.sa)) } : dd));
+    }
   };
 
-  const onSvgPointerUp = () => setDragIdx(null);
+  const onPointerUp = () => setDrag(null);
 
-  // ─── Generate + Save ────────────────────────────────────────────────────────
+  // ─── Computed preview values ───────────────────────────────────────────────
+  const photoSrc = cutoutDataUrl || originalUrl;
+  const cutoutBaseH = PH * 0.54;
+  const cutoutDispH = cutoutBaseH * cutoutScale;
+  const cutoutDispW = Math.min(PW - 20, cutoutDispH * cutoutAr);
+  const cutoutCx = cutoutX * PW;
+  const cutoutCy = cutoutY * PH;
+  const cutoutLeft = cutoutCx - cutoutDispW / 2;
+  const cutoutTop = cutoutCy - cutoutDispH / 2;
+
+  const logoBaseH = PH * 0.13;
+  const logoDispH = logo ? logoBaseH * logo.scale : 0;
+  const logoDispW = logo ? logoDispH * logo.ar : 0;
+  const logoCx = logo ? logo.x * PW : 0;
+  const logoCy = logo ? logo.y * PH : 0;
+  const logoLeft = logoCx - logoDispW / 2;
+  const logoTop = logoCy - logoDispH / 2;
+
+  const previewHs = heartSize * 0.85;
+  const hwGap = previewHs * 1.6 + 8;
+
+  // ─── Resize / rotate handles for an element ───────────────────────────────
+  const HRAD = 5;
+  function cutoutHandles(cx: number, cy: number, hw: number, hh: number) {
+    const corners = [
+      { c: "tl", x: cx - hw / 2, y: cy - hh / 2 },
+      { c: "tr", x: cx + hw / 2, y: cy - hh / 2 },
+      { c: "bl", x: cx - hw / 2, y: cy + hh / 2 },
+      { c: "br", x: cx + hw / 2, y: cy + hh / 2 },
+    ];
+    return corners.map(({ c, x, y }) => (
+      <circle
+        key={c}
+        cx={x} cy={y} r={HRAD}
+        fill="white" stroke="#E91976" strokeWidth={1.5}
+        style={{ cursor: "nwse-resize" }}
+        onPointerDown={(e) => {
+          const sd = dist(cx, cy, svgPt(e).x, svgPt(e).y);
+          startDrag(e, { what: "cutout-resize", sx: svgPt(e).x, sy: svgPt(e).y, os: cutoutScale, cx, cy, sd: Math.max(sd, 1) });
+        }}
+      />
+    ));
+  }
+
+  function logoHandles() {
+    if (!logo) return null;
+    const corners = [
+      { c: "tl", x: logoLeft, y: logoTop },
+      { c: "tr", x: logoLeft + logoDispW, y: logoTop },
+      { c: "bl", x: logoLeft, y: logoTop + logoDispH },
+      { c: "br", x: logoLeft + logoDispW, y: logoTop + logoDispH },
+    ];
+    const rotHandleY = logoTop - 14;
+    return (
+      <g transform={`rotate(${logo.rotation} ${logoCx} ${logoCy})`}>
+        {/* Rotate handle */}
+        <line x1={logoCx} y1={logoTop - 2} x2={logoCx} y2={rotHandleY} stroke="white" strokeWidth={1} opacity={0.7} />
+        <circle cx={logoCx} cy={rotHandleY} r={HRAD}
+          fill="#7c3aed" stroke="white" strokeWidth={1.5}
+          style={{ cursor: "grab" }}
+          onPointerDown={(e) => {
+            const p = svgPt(e);
+            startDrag(e, { what: "logo-rotate", cx: logoCx, cy: logoCy, sa: angleDeg(logoCx, logoCy, p.x, p.y), or_: logo.rotation });
+          }}
+        />
+        {/* Corner resize handles */}
+        {corners.map(({ c, x, y }) => (
+          <circle key={c} cx={x} cy={y} r={HRAD}
+            fill="white" stroke="#7c3aed" strokeWidth={1.5}
+            style={{ cursor: "nwse-resize" }}
+            onPointerDown={(e) => {
+              const p = svgPt(e);
+              const sd = dist(logoCx, logoCy, p.x, p.y);
+              startDrag(e, { what: "logo-resize", sx: p.x, sy: p.y, os: logo.scale, cx: logoCx, cy: logoCy, sd: Math.max(sd, 1) });
+            }}
+          />
+        ))}
+      </g>
+    );
+  }
+
+  // ─── Save / Render ─────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!originalFile) { toast.error("Please upload a photo first"); return; }
     setSaving(true);
     try {
       const formData = new FormData();
       formData.append("original", originalFile, originalFile.name);
-
       if (cutoutDataUrl) {
         const blob = await fetch(cutoutDataUrl).then((r) => r.blob());
         formData.append("cutout", blob, "cutout.png");
       }
-
-      const uploadResp = await fetch(`${import.meta.env.BASE_URL}api/about-me/upload-photo`, {
-        method: "POST",
-        body: formData,
-      });
+      const uploadResp = await fetch(`${import.meta.env.BASE_URL}api/about-me/upload-photo`, { method: "POST", body: formData });
       if (!uploadResp.ok) throw new Error("Upload failed");
       const { originalUrl: storedOrig, cutoutUrl } = await uploadResp.json() as { originalUrl: string; cutoutUrl?: string };
-      setStoredOriginalUrl(storedOrig);
 
-      const apiWords = words
-        .filter((w) => w.text.trim())
-        .map((w) => ({ text: w.text, x: w.x, y: w.y, arrowStyle: "heart" }));
+      // Upload logo if new
+      let logoUrl = logo?.storedUrl ?? "";
+      if (logo && logo.dataUrl && !logo.storedUrl) {
+        logoUrl = await uploadLogoToServer(logo.dataUrl);
+        setLogo((l) => l ? { ...l, storedUrl: logoUrl } : l);
+      }
 
-      const saveBody = {
-        originalPhotoUrl: storedOrig,
-        cutoutPhotoUrl: cutoutUrl ?? storedOrig,
-        backgroundBlurAmount: blurAmount,
-        backgroundOverlayOpacity: overlayOpacity,
-        title,
-        subtitle,
-        heartSize,
-        words: apiWords,
-        accentColor,
-        titleFont,
-        aspectRatio,
+      const apiWords = words.filter((w) => w.text.trim()).map((w) => ({ id: w.id, text: w.text, x: w.x, y: w.y }));
+
+      const canvasConfig = {
+        cutoutX, cutoutY, cutoutScale,
+        glowEnabled, glowColor,
+        shadowEnabled, shadowOpacity, shadowBlur, shadowOffsetX: shadowOffX, shadowOffsetY: shadowOffY,
+        logoUrl,
+        logoX: logo?.x ?? 0.84, logoY: logo?.y ?? 0.88, logoScale: logo?.scale ?? 1, logoRotation: logo?.rotation ?? 0,
+        doodles,
+      };
+
+      const body = {
+        originalPhotoUrl: storedOrig, cutoutPhotoUrl: cutoutUrl ?? storedOrig,
+        backgroundBlurAmount: blurAmount, backgroundOverlayOpacity: overlayOpacity,
+        title, subtitle, heartSize,
+        words: apiWords, canvasConfig,
+        accentColor, titleFont, aspectRatio,
       };
 
       let id = postId;
       if (id) {
-        await fetch(`${import.meta.env.BASE_URL}api/about-me/${id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(saveBody),
-        });
+        await fetch(`${import.meta.env.BASE_URL}api/about-me/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       } else {
-        const createResp = await fetch(`${import.meta.env.BASE_URL}api/about-me`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(saveBody),
-        });
-        if (!createResp.ok) throw new Error("Save failed");
-        const created = await createResp.json() as { id: number };
-        id = created.id;
+        const r = await fetch(`${import.meta.env.BASE_URL}api/about-me`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        if (!r.ok) throw new Error("Save failed");
+        const { id: newId } = await r.json() as { id: number };
+        id = newId;
         setPostId(id);
       }
 
       toast.loading("Rendering image…");
-      const renderResp = await fetch(`${import.meta.env.BASE_URL}api/about-me/${id}/render`, { method: "POST" });
-      if (!renderResp.ok) throw new Error("Render failed");
-      const { renderedUrl: url } = await renderResp.json() as { renderedUrl: string };
+      const rr = await fetch(`${import.meta.env.BASE_URL}api/about-me/${id}/render`, { method: "POST" });
+      if (!rr.ok) throw new Error("Render failed");
+      const { renderedUrl: url } = await rr.json() as { renderedUrl: string };
       setRenderedUrl(url);
       toast.dismiss();
       toast.success("About Me post ready");
@@ -268,46 +460,26 @@ export default function AboutMePage() {
     }
   };
 
-  // ─── Schedule flow ───────────────────────────────────────────────────────────
-  const handleSchedule = async () => {
+  const handleSchedule = () => {
     if (!renderedUrl) { toast.error("Generate your post first"); return; }
-    // Upload the rendered image to get a storable URL for scheduling
-    const uploadUrl = renderedUrl.startsWith("/api/media/") ? renderedUrl : renderedUrl;
-    setSchedulePosts([{
-      title: title || "About Me",
-      caption: "",
-      imageUrls: [uploadUrl],
-    }]);
+    setSchedulePosts([{ title: title || "About Me", caption: "", imageUrls: [renderedUrl] }]);
     setScheduleOpen(true);
   };
 
-  const photoSrc = cutoutDataUrl || originalUrl;
-  // Heart preview size — slightly scaled for the preview canvas
-  const previewHeartSize = heartSize * 0.85;
-  const previewWordFontSize = 13;
-  const heartWordGap = previewHeartSize * 1.6 + 10;
-
+  // ─── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-[100dvh] w-full pb-32">
       {scheduleOpen && (
-        <ScheduleModal
-          presetId={null}
-          presetName=""
-          postType="about-me"
-          posts={schedulePosts}
-          onClose={() => setScheduleOpen(false)}
-          onSaved={() => { setScheduleOpen(false); toast.success("Scheduled"); }}
-        />
+        <ScheduleModal presetId={null} presetName="" postType="about-me" posts={schedulePosts}
+          onClose={() => setScheduleOpen(false)} onSaved={() => { setScheduleOpen(false); toast.success("Scheduled"); }} />
       )}
 
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-4 px-6 md:px-10 flex items-center justify-between">
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
-        </div>
-        <div className="flex items-center gap-3 flex-wrap">
+        <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
+        <div className="flex items-center gap-2 flex-wrap">
           <Link href="/"><Button variant="ghost" size="sm" className="text-muted-foreground">← Home</Button></Link>
           <Link href="/carousel"><Button variant="ghost" size="sm" className="text-muted-foreground"><ImagePlus className="w-4 h-4 mr-1" />Carousel</Button></Link>
-          <Link href="/single-image"><Button variant="ghost" size="sm" className="text-muted-foreground"><ImagePlus className="w-4 h-4 mr-1" />Single Image</Button></Link>
+          <Link href="/single-image"><Button variant="ghost" size="sm" className="text-muted-foreground"><ImagePlus className="w-4 h-4 mr-1" />Single</Button></Link>
           <Link href="/stories"><Button variant="ghost" size="sm" className="text-muted-foreground"><BookOpen className="w-4 h-4 mr-1" />Stories</Button></Link>
           <Link href="/reels"><Button variant="ghost" size="sm" className="text-muted-foreground"><Film className="w-4 h-4 mr-1" />Reels</Button></Link>
           <Link href="/seamless-carousel"><Button variant="ghost" size="sm" className="text-muted-foreground"><Grid className="w-4 h-4 mr-1" />Seamless</Button></Link>
@@ -324,38 +496,37 @@ export default function AboutMePage() {
           <h1 className="font-sans font-bold text-4xl tracking-tight mb-2 flex items-center gap-3">
             <User className="w-9 h-9 text-pink-400" /> About Me
           </h1>
-          <p className="text-lg text-muted-foreground">Upload your photo, scatter your words, and get a beautifully designed About Me post.</p>
+          <p className="text-lg text-muted-foreground">Upload your photo, scatter your words, and drag everything exactly where you want it.</p>
         </div>
 
         <div className="flex gap-8 items-start">
-          {/* Controls */}
-          <div className="flex-1 min-w-0 space-y-6">
+          {/* ═══ LEFT CONTROLS ═══ */}
+          <div className="flex-1 min-w-0 space-y-5">
 
-            {/* Photo upload */}
-            <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
+            {/* Photo */}
+            <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-4">
               <Label className="text-base font-semibold">Your Photo</Label>
-              <div
-                ref={dropRef}
-                onDrop={handleDrop}
-                onDragOver={(e) => e.preventDefault()}
+              <div ref={dropRef} onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-pink-500/30 rounded-xl p-8 text-center cursor-pointer hover:border-pink-500/60 transition-colors"
-              >
+                className="border-2 border-dashed border-pink-500/30 rounded-xl p-6 text-center cursor-pointer hover:border-pink-500/60 transition-colors">
                 {bgRemoving ? (
-                  <div className="flex flex-col items-center gap-3">
+                  <div className="flex flex-col items-center gap-2">
                     <Loader2 className="w-8 h-8 animate-spin text-pink-400" />
-                    <p className="text-sm text-muted-foreground">Removing background — takes about 15–30 seconds…</p>
+                    <p className="text-sm text-muted-foreground">Removing background — 15–30 seconds…</p>
                   </div>
                 ) : photoSrc ? (
-                  <div className="flex flex-col items-center gap-3">
-                    <img src={photoSrc} alt="Preview" className="h-28 object-contain rounded-lg" />
-                    <p className="text-xs text-muted-foreground">{cutoutDataUrl ? "Background removed" : "Original photo"} — click to change</p>
+                  <div className="flex items-center gap-4">
+                    <img src={photoSrc} alt="Preview" className="h-20 object-contain rounded-lg" />
+                    <div className="text-left">
+                      <p className="text-sm font-medium">{cutoutDataUrl ? "Background removed" : "Original photo"}</p>
+                      <p className="text-xs text-muted-foreground">Click to change</p>
+                    </div>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center gap-3">
+                  <div className="flex flex-col items-center gap-2">
                     <Upload className="w-8 h-8 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">Drag & drop or click to upload your photo</p>
-                    <p className="text-xs text-pink-400">Background removed automatically in your browser</p>
+                    <p className="text-sm text-muted-foreground">Drag & drop or click to upload</p>
+                    <p className="text-xs text-pink-400">Background removed automatically</p>
                   </div>
                 )}
               </div>
@@ -363,8 +534,27 @@ export default function AboutMePage() {
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }} />
             </div>
 
-            {/* Title + subtitle + font */}
-            <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
+            {/* Logo */}
+            <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-3">
+              <Label className="text-base font-semibold">Logo</Label>
+              {logo ? (
+                <div className="flex items-center gap-3">
+                  <img src={logo.dataUrl} alt="Logo" className="h-14 object-contain rounded bg-white/5 p-1" />
+                  <div className="flex-1 text-sm text-muted-foreground">Drag it on the preview to reposition</div>
+                  <Button variant="ghost" size="sm" onClick={() => setLogo(null)} className="text-muted-foreground"><X className="w-4 h-4" /></Button>
+                </div>
+              ) : (
+                <button onClick={() => logoFileRef.current?.click()}
+                  className="w-full border border-dashed border-border/40 rounded-xl py-4 text-sm text-muted-foreground hover:border-pink-500/40 transition-colors flex items-center justify-center gap-2">
+                  <Upload className="w-4 h-4" /> Upload logo (PNG with transparency)
+                </button>
+              )}
+              <input ref={logoFileRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoFile(f); }} />
+            </div>
+
+            {/* Title + Subtitle + Font */}
+            <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-4">
               <Label className="text-base font-semibold">Title & Font</Label>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
@@ -376,62 +566,149 @@ export default function AboutMePage() {
                   <Input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="Wife. Mum. Nurse." className="h-10" />
                 </div>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Title font</Label>
-                <Select value={titleFont} onValueChange={setTitleFont}>
-                  <SelectTrigger className="h-10">
-                    <SelectValue>
-                      <span style={{ fontFamily: `'${titleFont}', cursive, serif, sans-serif` }}>{titleFont}</span>
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {["Script", "Serif", "Sans"].map((cat) => (
-                      <React.Fragment key={cat}>
-                        <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">{cat}</div>
-                        {ALL_FONTS.filter((f) => f.category === cat).map((f) => (
-                          <SelectItem key={f.value} value={f.value}>
-                            <span style={{ fontFamily: `'${f.value}', cursive, serif, sans-serif` }}>{f.label}</span>
-                          </SelectItem>
-                        ))}
-                      </React.Fragment>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={titleFont} onValueChange={setTitleFont}>
+                <SelectTrigger className="h-10">
+                  <SelectValue><span style={{ fontFamily: `'${titleFont}', cursive, serif, sans-serif` }}>{titleFont}</span></SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {["Script", "Serif", "Sans"].map((cat) => (
+                    <React.Fragment key={cat}>
+                      <div className="px-2 py-1 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">{cat}</div>
+                      {ALL_FONTS.filter((f) => f.cat === cat).map((f) => (
+                        <SelectItem key={f.value} value={f.value}>
+                          <span style={{ fontFamily: `'${f.value}', cursive, serif, sans-serif` }}>{f.label}</span>
+                        </SelectItem>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Words — draggable on preview */}
-            <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
+            {/* Words */}
+            <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <Label className="text-base font-semibold">Words ({words.length}/10)</Label>
                   <p className="text-xs text-muted-foreground mt-0.5">Drag any word on the preview to reposition it</p>
                 </div>
                 {words.length < 10 && (
-                  <Button variant="outline" size="sm" onClick={addWord} className="text-pink-400 border-pink-500/30 shrink-0">+ Add word</Button>
+                  <Button variant="outline" size="sm" onClick={addWord} className="text-pink-400 border-pink-500/30">+ Add</Button>
                 )}
               </div>
               <div className="space-y-2">
                 {words.map((w, i) => (
-                  <div key={i} className="flex gap-2 items-center">
-                    <GripVertical className="w-4 h-4 text-muted-foreground/40 shrink-0" />
-                    <Input
-                      value={w.text}
-                      onChange={(e) => setWordText(i, e.target.value)}
-                      placeholder={`Word ${i + 1}`}
-                      className="flex-1 h-10"
-                    />
-                    <span className="text-xs text-muted-foreground/60 font-mono shrink-0 w-20 text-right">
-                      {Math.round(w.x * 100)}%, {Math.round(w.y * 100)}%
-                    </span>
-                    <Button variant="ghost" size="sm" onClick={() => removeWord(i)} className="text-muted-foreground h-10 w-10 p-0 shrink-0"><X className="w-4 h-4" /></Button>
+                  <div key={w.id} className="flex gap-2 items-center">
+                    <Input value={w.text} onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, text: e.target.value } : ww))}
+                      placeholder={`Word ${i + 1}`} className="flex-1 h-9" />
+                    <span className="text-xs text-muted-foreground/50 font-mono w-20 text-right shrink-0">{Math.round(w.x * 100)}%,{Math.round(w.y * 100)}%</span>
+                    <Button variant="ghost" size="sm" onClick={() => setWords((p) => p.filter((_, ii) => ii !== i))} className="h-9 w-9 p-0 text-muted-foreground shrink-0"><X className="w-3.5 h-3.5" /></Button>
                   </div>
                 ))}
               </div>
             </div>
 
+            {/* Doodles */}
+            <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-4">
+              <Label className="text-base font-semibold">Doodles</Label>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Default size</Label>
+                <div className="flex gap-2">
+                  {[{ label: "S", val: 14 }, { label: "M", val: 22 }, { label: "L", val: 34 }].map(({ label, val }) => (
+                    <button key={label} onClick={() => setDoodleSize(val)}
+                      className={`px-4 py-1.5 rounded-lg text-sm font-semibold border transition-all ${doodleSize === val ? "bg-pink-500 text-white border-pink-500" : "border-border/40 text-muted-foreground hover:border-pink-500/40"}`}
+                    >{label}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <button onClick={() => addDoodle("heart-outline")}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border/40 hover:border-pink-500/50 text-sm text-muted-foreground hover:text-foreground transition-all">
+                  <svg viewBox="-1.1 -1.4 2.15 2.1" width="20" height="20">
+                    <path d={heartOutline(0, 0, 1)} fill="none" stroke="currentColor" strokeWidth="0.12" strokeLinecap="round" />
+                  </svg>
+                  Heart
+                </button>
+                <button onClick={() => addDoodle("arrow")}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border/40 hover:border-pink-500/50 text-sm text-muted-foreground hover:text-foreground transition-all">
+                  <svg viewBox="-0.9 -0.7 1.7 0.35" width="28" height="14">
+                    <path d={arrowCurly(0, 0, 1)} fill="none" stroke="currentColor" strokeWidth="0.1" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  Arrow
+                </button>
+                <button onClick={() => addDoodle("sparkle")}
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl border border-border/40 hover:border-pink-500/50 text-sm text-muted-foreground hover:text-foreground transition-all">
+                  <span className="text-base leading-none">✦</span>
+                  Sparkle
+                </button>
+              </div>
+              {doodles.length > 0 && (
+                <div className="space-y-1.5">
+                  {doodles.map((d, i) => (
+                    <div key={d.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="flex-1">{d.shape} — {Math.round(d.x * 100)}%, {Math.round(d.y * 100)}%  rot:{d.rotation}°</span>
+                      <Button variant="ghost" size="sm" onClick={() => setDoodles((p) => p.filter((_, ii) => ii !== i))} className="h-7 w-7 p-0"><X className="w-3 h-3" /></Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Cutout effects */}
+            <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-4">
+              <Label className="text-base font-semibold">Subject Effects</Label>
+
+              {/* Glow */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm text-muted-foreground">Glow behind subject</Label>
+                  <button onClick={() => setGlowEnabled((v) => !v)}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${glowEnabled ? "bg-pink-500" : "bg-muted"}`}>
+                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${glowEnabled ? "translate-x-5" : "translate-x-0"}`} />
+                  </button>
+                </div>
+                {glowEnabled && (
+                  <div className="flex gap-3 items-center pl-2">
+                    <Label className="text-xs text-muted-foreground">Colour</Label>
+                    <Input type="color" value={glowColor} onChange={(e) => setGlowColor(e.target.value)} className="w-10 h-8 p-0.5 cursor-pointer" />
+                    <span className="text-xs font-mono text-muted-foreground">{glowColor}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Shadow */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm text-muted-foreground">Drop shadow</Label>
+                  <button onClick={() => setShadowEnabled((v) => !v)}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${shadowEnabled ? "bg-pink-500" : "bg-muted"}`}>
+                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${shadowEnabled ? "translate-x-5" : "translate-x-0"}`} />
+                  </button>
+                </div>
+                {shadowEnabled && (
+                  <div className="grid grid-cols-3 gap-3 pl-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Opacity</Label>
+                      <Slider min={0.05} max={0.9} step={0.05} value={[shadowOpacity]} onValueChange={([v]) => setShadowOpacity(v)} />
+                      <span className="text-xs text-muted-foreground">{Math.round(shadowOpacity * 100)}%</span>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Blur</Label>
+                      <Slider min={2} max={30} step={1} value={[shadowBlur]} onValueChange={([v]) => setShadowBlur(v)} />
+                      <span className="text-xs text-muted-foreground">{shadowBlur}px</span>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Offset X</Label>
+                      <Slider min={-20} max={20} step={1} value={[shadowOffX]} onValueChange={([v]) => setShadowOffX(v)} />
+                      <span className="text-xs text-muted-foreground">{shadowOffX}px</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Style */}
-            <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-5">
+            <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-5">
               <Label className="text-base font-semibold">Style</Label>
 
               <div className="space-y-2">
@@ -440,19 +717,18 @@ export default function AboutMePage() {
                   {ACCENT_PRESETS.map((p) => (
                     <button key={p.value} onClick={() => setAccentColor(p.value)}
                       className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${accentColor === p.value ? "border-pink-500 ring-1 ring-pink-500" : "border-border/40"}`}
-                      style={{ backgroundColor: p.value, color: p.value === "#ffffff" || p.value === "#F5EEE3" ? "#333" : "#fff" }}
-                    >{p.label}</button>
+                      style={{ backgroundColor: p.value, color: p.value === "#ffffff" || p.value === "#F5EEE3" ? "#333" : "#fff" }}>
+                      {p.label}
+                    </button>
                   ))}
                   <Input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="w-10 h-8 p-0.5 cursor-pointer" />
-                  <span className="text-xs text-muted-foreground font-mono">{accentColor}</span>
                 </div>
               </div>
 
-              {/* Heart size */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm text-muted-foreground">Heart size</Label>
-                  <span className="text-sm font-semibold tabular-nums">{heartSize}</span>
+                  <Label className="text-sm text-muted-foreground">Heart size (word markers)</Label>
+                  <span className="text-sm font-semibold">{heartSize}</span>
                 </div>
                 <Slider min={6} max={28} step={1} value={[heartSize]} onValueChange={([v]) => setHeartSize(v)} />
               </div>
@@ -461,14 +737,14 @@ export default function AboutMePage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label className="text-sm text-muted-foreground">Background blur</Label>
-                    <span className="text-sm font-semibold tabular-nums">{blurAmount}px</span>
+                    <span className="text-sm font-semibold">{blurAmount}px</span>
                   </div>
                   <Slider min={2} max={50} step={1} value={[blurAmount]} onValueChange={([v]) => setBlurAmount(v)} />
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm text-muted-foreground">Colour tint overlay</Label>
-                    <span className="text-sm font-semibold tabular-nums">{overlayOpacity}%</span>
+                    <Label className="text-sm text-muted-foreground">Tint overlay</Label>
+                    <span className="text-sm font-semibold">{overlayOpacity}%</span>
                   </div>
                   <Slider min={0} max={50} step={1} value={[overlayOpacity]} onValueChange={([v]) => setOverlayOpacity(v)} />
                 </div>
@@ -479,18 +755,16 @@ export default function AboutMePage() {
                 <div className="grid grid-cols-2 gap-3">
                   {(["1080x1350", "1080x1920"] as const).map((r) => (
                     <button key={r} onClick={() => setAspectRatio(r)}
-                      className={`px-4 py-3 rounded-xl text-sm font-semibold border transition-all ${aspectRatio === r ? "bg-primary text-primary-foreground border-primary" : "bg-accent/40 text-muted-foreground border-border/30 hover:border-pink-500/40"}`}
-                    >{r === "1080x1350" ? "Post (4:5)" : "Story (9:16)"}</button>
+                      className={`px-4 py-3 rounded-xl text-sm font-semibold border transition-all ${aspectRatio === r ? "bg-primary text-primary-foreground border-primary" : "bg-accent/40 text-muted-foreground border-border/30"}`}>
+                      {r === "1080x1350" ? "Post (4:5)" : "Story (9:16)"}
+                    </button>
                   ))}
                 </div>
               </div>
             </div>
 
-            <button
-              onClick={handleSave}
-              disabled={saving || !originalFile || bgRemoving}
-              className="btn-shimmer w-full py-5 rounded-2xl text-lg font-bold flex items-center justify-center gap-3 disabled:opacity-50"
-            >
+            <button onClick={handleSave} disabled={saving || !originalFile || bgRemoving}
+              className="btn-shimmer w-full py-5 rounded-2xl text-lg font-bold flex items-center justify-center gap-3 disabled:opacity-50">
               {saving ? <><Loader2 className="w-5 h-5 animate-spin" /> Rendering…</> : "Generate & Save"}
             </button>
 
@@ -506,106 +780,179 @@ export default function AboutMePage() {
             )}
           </div>
 
-          {/* ── Live Preview (draggable canvas) ── */}
-          <div className="hidden lg:flex flex-col gap-3 shrink-0 sticky top-24 self-start">
+          {/* ═══ RIGHT PREVIEW ═══ */}
+          <div className="hidden lg:flex flex-col gap-2 shrink-0 sticky top-24 self-start">
             <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground text-center">Live Preview</p>
-            <p className="text-xs text-muted-foreground text-center -mt-1">Drag words to reposition</p>
+            <p className="text-xs text-muted-foreground text-center">Drag anything to reposition · corner handles to resize</p>
 
-            <div
-              className="rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 relative select-none"
-              style={{ width: previewW, height: previewH }}
-            >
+            <div className="rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 relative select-none"
+              style={{ width: PW, height: PH }}>
+
+              {/* Blurred background */}
+              {originalUrl && (
+                <img src={originalUrl} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                  style={{ filter: `blur(${blurAmount * 0.4}px)`, transform: "scale(1.1)" }} />
+              )}
+              {overlayOpacity > 0 && (
+                <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: accentColor, opacity: overlayOpacity / 100 }} />
+              )}
+
               {photoSrc ? (
-                <>
-                  {/* Blurred background */}
-                  <img
-                    src={originalUrl || photoSrc}
-                    alt=""
-                    className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-                    style={{ filter: `blur(${blurAmount * 0.4}px)`, transform: "scale(1.1)" }}
-                  />
-                  {/* Accent tint */}
-                  {overlayOpacity > 0 && (
-                    <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: accentColor, opacity: overlayOpacity / 100 }} />
-                  )}
-                  {/* Cutout photo */}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none" style={{ top: "20%", bottom: "15%" }}>
-                    <img src={photoSrc} alt="Cutout" className="h-full object-contain drop-shadow-2xl" />
-                  </div>
-                  {/* SVG overlay — draggable words */}
-                  <svg
-                    ref={svgRef}
-                    className="absolute inset-0 w-full h-full"
-                    viewBox={`0 0 ${previewW} ${previewH}`}
-                    xmlns="http://www.w3.org/2000/svg"
-                    style={{ cursor: dragIdx !== null ? "grabbing" : "default" }}
-                    onPointerMove={onSvgPointerMove}
-                    onPointerUp={onSvgPointerUp}
-                    onPointerLeave={onSvgPointerUp}
-                  >
-                    {/* Title */}
-                    <text x={previewW / 2} y={38} fontFamily={`'${titleFont}', cursive, serif`} fontSize={32} fill={accentColor} textAnchor="middle"
-                      style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.4))" }}>
-                      {title}
-                    </text>
-                    {/* Subtitle */}
-                    {subtitle && (
-                      <text x={previewW / 2} y={56} fontFamily="Georgia, serif" fontSize={11} fill={accentColor} textAnchor="middle" opacity={0.85} letterSpacing={1}>
-                        {subtitle.toUpperCase()}
-                      </text>
+                <svg ref={svgRef} className="absolute inset-0 w-full h-full"
+                  viewBox={`0 0 ${PW} ${PH}`}
+                  style={{ cursor: drag ? "grabbing" : "default" }}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                  onPointerLeave={onPointerUp}>
+
+                  <defs>
+                    {glowEnabled && (
+                      <radialGradient id="pg" cx="50%" cy="50%" r="50%">
+                        <stop offset="0%" stopColor={glowColor} stopOpacity="0.65" />
+                        <stop offset="55%" stopColor={glowColor} stopOpacity="0.22" />
+                        <stop offset="100%" stopColor={glowColor} stopOpacity="0" />
+                      </radialGradient>
                     )}
-                    {/* Draggable words */}
-                    {words.filter((w) => w.text).map((w, i) => {
-                      const wx = w.x * previewW;
-                      const wy = w.y * previewH;
-                      const hy = wy - heartWordGap;
-                      const isDragging = dragIdx === i;
-                      return (
-                        <g
-                          key={i}
-                          style={{ cursor: isDragging ? "grabbing" : "grab" }}
-                          onPointerDown={(e) => onWordPointerDown(e, i)}
-                        >
-                          {/* Invisible larger hit area */}
-                          <rect
-                            x={wx - 30} y={hy - previewHeartSize}
-                            width={60} height={previewHeartSize * 2 + previewWordFontSize + 12}
-                            fill="transparent"
-                          />
-                          {/* Heart doodle — SVG path, not emoji */}
-                          <path
-                            d={heartPath(wx, hy, previewHeartSize)}
-                            fill={accentColor}
-                            opacity={isDragging ? 1 : 0.9}
-                            style={{ filter: isDragging ? "drop-shadow(0 0 4px rgba(255,255,255,0.4))" : undefined }}
-                          />
-                          {/* Word text */}
-                          <text
-                            x={wx} y={wy}
-                            fontFamily="Georgia, serif"
-                            fontSize={previewWordFontSize}
-                            fill={accentColor}
-                            textAnchor="middle"
-                          >{w.text}</text>
+                    {shadowEnabled && (
+                      <filter id="csf" x="-60%" y="-60%" width="220%" height="220%">
+                        <feDropShadow dx={shadowOffX * 0.35} dy={shadowOffY * 0.35} stdDeviation={shadowBlur * 0.25} floodColor="#000" floodOpacity={shadowOpacity} />
+                      </filter>
+                    )}
+                  </defs>
+
+                  {/* Glow behind cutout */}
+                  {glowEnabled && (
+                    <ellipse cx={cutoutCx} cy={cutoutCy} rx={cutoutDispW * 0.65} ry={cutoutDispH * 0.5} fill="url(#pg)" />
+                  )}
+
+                  {/* Cutout — draggable */}
+                  <image href={photoSrc}
+                    x={cutoutLeft} y={cutoutTop} width={cutoutDispW} height={cutoutDispH}
+                    preserveAspectRatio="xMidYMid meet"
+                    filter={shadowEnabled ? "url(#csf)" : undefined}
+                    style={{ cursor: drag?.what === "cutout" ? "grabbing" : "grab" }}
+                    onPointerDown={(e) => {
+                      const p = svgPt(e);
+                      startDrag(e, { what: "cutout", sx: p.x, sy: p.y, ox: cutoutX, oy: cutoutY });
+                    }}
+                  />
+
+                  {/* Cutout resize handles */}
+                  {cutoutHandles(cutoutCx, cutoutCy, cutoutDispW, cutoutDispH)}
+
+                  {/* Reset cutout button */}
+                  {(cutoutScale !== 1.0 || cutoutX !== 0.5 || cutoutY !== 0.55) && (
+                    <g style={{ cursor: "pointer" }} onClick={() => { setCutoutScale(1.0); setCutoutX(0.5); setCutoutY(0.55); }}>
+                      <rect x={PW - 28} y={4} width={24} height={18} rx={4} fill="black" fillOpacity={0.5} />
+                      <text x={PW - 16} y={16} fontSize={9} fill="white" textAnchor="middle">reset</text>
+                    </g>
+                  )}
+
+                  {/* Title */}
+                  <text x={PW / 2} y={36} fontFamily={`'${titleFont}', cursive, serif`} fontSize={30} fill={accentColor} textAnchor="middle"
+                    style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.4))" }}>
+                    {title}
+                  </text>
+                  {subtitle && (
+                    <text x={PW / 2} y={52} fontFamily="Georgia, serif" fontSize={10} fill={accentColor} textAnchor="middle" opacity={0.85} letterSpacing={1.5}>
+                      {subtitle.toUpperCase()}
+                    </text>
+                  )}
+
+                  {/* Words — draggable */}
+                  {words.filter((w) => w.text).map((w, i) => {
+                    const wx = w.x * PW, wy = w.y * PH;
+                    return (
+                      <g key={w.id} style={{ cursor: "grab" }}
+                        onPointerDown={(e) => {
+                          const p = svgPt(e);
+                          startDrag(e, { what: "word", idx: i, sx: p.x, sy: p.y, ox: w.x, oy: w.y });
+                        }}>
+                        <rect x={wx - 28} y={wy - hwGap - previewHs} width={56} height={hwGap + previewHs + 14} fill="transparent" />
+                        <path d={heartFilled(wx, wy - hwGap, previewHs)} fill={accentColor} opacity={0.9} />
+                        <text x={wx} y={wy} fontFamily="Georgia, serif" fontSize={12} fill={accentColor} textAnchor="middle">{w.text}</text>
+                      </g>
+                    );
+                  })}
+
+                  {/* Doodles — draggable + resize + rotate */}
+                  {doodles.map((d, i) => {
+                    const dcx = d.x * PW, dcy = d.y * PH;
+                    const s = d.size * 0.55;
+                    const sw = Math.max(1, s * 0.1);
+                    return (
+                      <g key={d.id} transform={`rotate(${d.rotation} ${dcx} ${dcy})`}>
+                        {/* Drag body */}
+                        <g style={{ cursor: "grab" }}
+                          onPointerDown={(e) => {
+                            const p = svgPt(e);
+                            startDrag(e, { what: "doodle", idx: i, sx: p.x, sy: p.y, ox: d.x, oy: d.y });
+                          }}>
+                          {d.shape === "heart-outline" && (
+                            <path d={heartOutline(dcx, dcy, s)} fill="none" stroke={accentColor} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" opacity={0.9} />
+                          )}
+                          {d.shape === "arrow" && (
+                            <path d={arrowCurly(dcx, dcy, s)} fill="none" stroke={accentColor} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" opacity={0.9} />
+                          )}
+                          {d.shape === "sparkle" && (
+                            <text x={dcx} y={dcy} fontSize={s * 1.4} fill={accentColor} textAnchor="middle" dominantBaseline="middle" opacity={0.85}>✦</text>
+                          )}
                         </g>
-                      );
-                    })}
-                    {/* Sparkles */}
-                    {[[0.08, 0.11, 13, 0.45], [0.88, 0.50, 10, 0.38], [0.16, 0.84, 9, 0.35]].map(([rx, ry, fs, op], i) => (
-                      <text key={i} x={rx as number * previewW} y={ry as number * previewH} fontSize={fs} fill={accentColor} textAnchor="middle" opacity={op}>✦</text>
-                    ))}
-                  </svg>
-                </>
+                        {/* Resize handle (bottom-right) */}
+                        <circle cx={dcx + s * 1.05} cy={dcy + s * 0.65} r={4}
+                          fill="white" stroke="#E91976" strokeWidth={1.2}
+                          style={{ cursor: "nwse-resize" }}
+                          onPointerDown={(e) => {
+                            const p = svgPt(e);
+                            const sd = dist(dcx, dcy, p.x, p.y);
+                            startDrag(e, { what: "doodle-resize", idx: i, sx: p.x, sy: p.y, os: d.size, cx: dcx, cy: dcy, sd: Math.max(sd, 1) });
+                          }}
+                        />
+                        {/* Rotate handle (top) */}
+                        <circle cx={dcx} cy={dcy - s * 1.4} r={4}
+                          fill="#7c3aed" stroke="white" strokeWidth={1.2}
+                          style={{ cursor: "grab" }}
+                          onPointerDown={(e) => {
+                            const p = svgPt(e);
+                            startDrag(e, { what: "doodle-rotate", idx: i, cx: dcx, cy: dcy, sa: angleDeg(dcx, dcy, p.x, p.y), or_: d.rotation });
+                          }}
+                        />
+                      </g>
+                    );
+                  })}
+
+                  {/* Logo — draggable + resize + rotate */}
+                  {logo && (
+                    <>
+                      <image href={logo.dataUrl}
+                        x={logoLeft} y={logoTop} width={logoDispW} height={logoDispH}
+                        preserveAspectRatio="xMidYMid meet"
+                        transform={`rotate(${logo.rotation} ${logoCx} ${logoCy})`}
+                        style={{ cursor: "grab" }}
+                        onPointerDown={(e) => {
+                          const p = svgPt(e);
+                          startDrag(e, { what: "logo", sx: p.x, sy: p.y, ox: logo.x, oy: logo.y });
+                        }}
+                      />
+                      {logoHandles()}
+                    </>
+                  )}
+
+                  {/* Sparkles */}
+                  {[[0.07, 0.10, 12, 0.42], [0.88, 0.50, 9, 0.35], [0.15, 0.84, 8, 0.32]].map(([rx, ry, fs, op], i) => (
+                    <text key={i} x={(rx as number) * PW} y={(ry as number) * PH} fontSize={fs} fill={accentColor} textAnchor="middle" opacity={op}>✦</text>
+                  ))}
+                </svg>
               ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center bg-muted/30 gap-3">
+                <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-muted/20">
                   <User className="w-12 h-12 text-muted-foreground/40" />
-                  <p className="text-sm text-muted-foreground">Upload a photo to see your preview</p>
+                  <p className="text-sm text-muted-foreground">Upload a photo to begin</p>
                 </div>
               )}
             </div>
 
-            <p className="text-xs text-muted-foreground text-center leading-snug">
-              {bgRemoving ? "Removing background…" : cutoutDataUrl ? "Background removed" : photoSrc ? "Using original photo" : "Upload a photo to begin"}
+            <p className="text-xs text-muted-foreground text-center mt-1">
+              {bgRemoving ? "Removing background…" : cutoutDataUrl ? "Background removed" : photoSrc ? "Original photo" : ""}
             </p>
           </div>
         </div>

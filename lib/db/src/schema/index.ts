@@ -251,7 +251,35 @@ export const insertContentLibrarySchema = createInsertSchema(contentLibraryTable
 export type InsertContentLibrary = z.infer<typeof insertContentLibrarySchema>;
 export type ContentLibraryItem = typeof contentLibraryTable.$inferSelect;
 
-export type AboutMeWord = { text: string; x: number; y: number; arrowStyle: string };
+export type AboutMeWord = { id: string; text: string; x: number; y: number };
+
+export type AboutMeDoodle = {
+  id: string;
+  shape: "heart-outline" | "arrow" | "sparkle";
+  x: number;
+  y: number;
+  size: number;
+  rotation: number;
+};
+
+export type AboutMeCanvasConfig = {
+  cutoutX: number;
+  cutoutY: number;
+  cutoutScale: number;
+  glowEnabled: boolean;
+  glowColor: string;
+  shadowEnabled: boolean;
+  shadowOpacity: number;
+  shadowBlur: number;
+  shadowOffsetX: number;
+  shadowOffsetY: number;
+  logoUrl: string;
+  logoX: number;
+  logoY: number;
+  logoScale: number;
+  logoRotation: number;
+  doodles: AboutMeDoodle[];
+};
 
 export const aboutMePostsTable = pgTable("about_me_posts", {
   id: serial("id").primaryKey(),
@@ -265,6 +293,7 @@ export const aboutMePostsTable = pgTable("about_me_posts", {
   subtitle: text("subtitle").notNull().default(""),
   heartSize: integer("heart_size").notNull().default(20),
   words: json("words").$type<AboutMeWord[]>().notNull().default([]),
+  canvasConfig: json("canvas_config").$type<AboutMeCanvasConfig>().notNull().default({} as AboutMeCanvasConfig),
   arrowStyle: text("arrow_style").notNull().default("curly"),
   accentColor: text("accent_color").notNull().default("#F5EEE3"),
   titleFont: text("title_font").notNull().default("Allura"),
