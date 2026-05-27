@@ -223,8 +223,10 @@ async function buildFullSvg(
     const wColor = w.color ?? accentColor;
     const wSize = w.fontSize ?? wordFontSize;
     const wLetterSpacing = w.letterSpacing ?? 1;
-    const wHs = Math.round(heartSize * 2.2);
-    layers.push(`<path d="${heartPath(wx, hy, wHs)}" fill="${wColor}" opacity="0.9"/>`);
+    const wLineHeight = w.lineHeight ?? 1.2;
+    const wHs = Math.round(heartSize * 2.2 * wLineHeight);
+    const wHy = wy - Math.round(hwg * wLineHeight);
+    layers.push(`<path d="${heartPath(wx, wHy, wHs)}" fill="${wColor}" opacity="0.9"/>`);
     layers.push(`<text x="${wx.toFixed(1)}" y="${wy.toFixed(1)}" font-family="Georgia, serif" font-size="${wSize}" fill="${wColor}" text-anchor="middle" letter-spacing="${wLetterSpacing}">${escXml(w.text)}</text>`);
   });
 

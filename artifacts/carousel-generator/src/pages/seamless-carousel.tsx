@@ -230,11 +230,11 @@ export default function SeamlessCarouselPage() {
 
   const handleSchedule = () => {
     if (!renderedUrls.length) { toast.error("Generate slides first"); return; }
-    const posts: SchedulePostPayload[] = renderedUrls.map((url, i) => ({
-      title: slides[i]?.title || `Slide ${i + 1}`,
+    const posts: SchedulePostPayload[] = [{
+      title: slides[0]?.title || "Seamless Carousel",
       caption: "",
-      imageUrls: [url],
-    }));
+      imageUrls: renderedUrls,
+    }];
     setSchedulePosts(posts);
     setScheduleOpen(true);
   };
@@ -840,11 +840,11 @@ export default function SeamlessCarouselPage() {
                       if (!renderedUrls.length) { toast.error("Generate slides first"); return; }
                       if (!selectedPresetId) { toast.error("Select a client preset first"); return; }
                       try {
-                        const posts = renderedUrls.map((url, i) => ({
-                          title: slides[i]?.title || `Slide ${i + 1}`,
-                          imageUrls: [url],
+                        const posts = [{
+                          title: slides[0]?.title || "Seamless Carousel",
+                          imageUrls: renderedUrls,
                           caption: "Seamless carousel",
-                        }));
+                        }];
                         const r = await fetch(`${BASE}/api/meta/push`, {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
