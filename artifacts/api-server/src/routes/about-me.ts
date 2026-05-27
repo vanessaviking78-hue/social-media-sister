@@ -216,6 +216,26 @@ function stickerSvg(
   const topperY = sTop - topperSize * 0.15;
 
   const outerColor = darkenHex(accentColor, 0.22);
+  const rotAttr = rot !== 0 ? ` transform="rotate(${rot} ${cx.toFixed(1)} ${cy.toFixed(1)})"` : "";
+
+  if (effective === "box-solid" || effective === "circle-solid" || effective === "heart-solid") {
+    let shape = "";
+    if (effective === "box-solid") {
+      shape =
+        `<rect x="${(sLeft - outerPad).toFixed(1)}" y="${(sTop - outerPad).toFixed(1)}" width="${(sW + outerPad * 2).toFixed(1)}" height="${(sH + outerPad * 2).toFixed(1)}" rx="${bR + 2}" ry="${bR + 2}" fill="${outerColor}"/>` +
+        `<rect x="${sLeft.toFixed(1)}" y="${sTop.toFixed(1)}" width="${sW.toFixed(1)}" height="${sH.toFixed(1)}" rx="${bR}" ry="${bR}" fill="${accentColor}"/>`;
+    } else if (effective === "circle-solid") {
+      shape = `<ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${(sW / 2 + outerPad).toFixed(1)}" ry="${(sH / 2 + outerPad).toFixed(1)}" fill="${accentColor}"/>`;
+    } else if (effective === "heart-solid") {
+      const hs = sW + outerPad * 2;
+      shape = `<path d="${heartPath(cx, cy + hs * 0.135, hs)}" fill="${accentColor}"/>`;
+    }
+    return `<g${rotAttr} filter="url(#stickshadow)">` +
+      shape +
+      `<text x="${cx.toFixed(1)}" y="${(cy + fontSize * 0.36).toFixed(1)}" font-family="Arial, Helvetica, sans-serif" font-size="${fontSize}" font-weight="800" fill="white" text-anchor="middle" letter-spacing="1" stroke="rgba(0,0,0,0.22)" stroke-width="1.5" paint-order="stroke">${escXml(text)}</text>` +
+      `</g>`;
+  }
+
   let topper = "";
   if (effective === "rainbow") topper = topperRainbowSvg(cx, topperY, topperSize);
   else if (effective === "heart") topper = topperHeartSvg(cx, topperY, topperSize);
@@ -223,8 +243,6 @@ function stickerSvg(
   else if (effective === "mirror") topper = topperMirrorSvg(cx, topperY, topperSize);
   else if (effective === "wine") topper = topperWineGlassSvg(cx, topperY, topperSize);
   else if (effective === "lipstick") topper = topperLipstickSvg(cx, topperY, topperSize);
-
-  const rotAttr = rot !== 0 ? ` transform="rotate(${rot} ${cx.toFixed(1)} ${cy.toFixed(1)})"` : "";
 
   return `<g${rotAttr} filter="url(#stickshadow)">` +
     `<rect x="${(sLeft - outerPad).toFixed(1)}" y="${(sTop - outerPad).toFixed(1)}" width="${(sW + outerPad * 2).toFixed(1)}" height="${(sH + outerPad * 2).toFixed(1)}" rx="${bR + 2}" ry="${bR + 2}" fill="${outerColor}"/>` +

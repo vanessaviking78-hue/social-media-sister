@@ -61,7 +61,7 @@ const PH_PORT = 425;
 const PH_STORY = 604;
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
-type TopperType = "rainbow" | "heart" | "star" | "mirror" | "wine" | "lipstick";
+type TopperType = "rainbow" | "heart" | "star" | "mirror" | "wine" | "lipstick" | "box-solid" | "circle-solid" | "heart-solid";
 type Word = { id: string; text: string; x: number; y: number; topper?: TopperType };
 type DoodleShape = "heart-outline" | "arrow" | "sparkle";
 type DoodleEl = { id: string; shape: DoodleShape; x: number; y: number; size: number; rotation: number };
@@ -798,6 +798,9 @@ export default function AboutMePage() {
                     { val: "mirror", label: "🪞 Mirror" },
                     { val: "wine", label: "🍷 Wine" },
                     { val: "lipstick", label: "💄 Lippie" },
+                    { val: "box-solid", label: "▬ Box" },
+                    { val: "circle-solid", label: "⬤ Circle" },
+                    { val: "heart-solid", label: "♥ Heart" },
                   ] as const).map(({ val, label }) => (
                     <button key={val} onClick={() => setStickerTopperDefault(val as TopperType | "mixed")}
                       className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${stickerTopperDefault === val ? "bg-pink-500 text-white border-pink-500" : "border-border/40 text-muted-foreground hover:border-pink-500/40"}`}>
@@ -823,6 +826,9 @@ export default function AboutMePage() {
                       <option value="mirror">🪞 Mirror</option>
                       <option value="wine">🍷 Wine glass</option>
                       <option value="lipstick">💄 Lipstick</option>
+                      <option value="box-solid">▬ Box (solid)</option>
+                      <option value="circle-solid">⬤ Circle (solid)</option>
+                      <option value="heart-solid">♥ Heart (solid)</option>
                     </select>
                     <Button variant="ghost" size="sm" onClick={() => setWords((p) => p.filter((_, ii) => ii !== i))} className="h-9 w-9 p-0 text-muted-foreground shrink-0"><X className="w-3.5 h-3.5" /></Button>
                   </div>
@@ -1147,16 +1153,30 @@ export default function AboutMePage() {
                           const p = svgPt(e);
                           startDrag(e, { what: "word", idx: i, sx: p.x, sy: p.y, ox: w.x, oy: w.y });
                         }}>
-                        <rect x={sLeft - outerPad} y={sTop - outerPad} width={sW + outerPad * 2} height={sH + outerPad * 2} rx={bR + 2} ry={bR + 2} fill={outer} />
-                        <rect x={sLeft - 1} y={sTop - 1} width={sW + 2} height={sH + 2} rx={bR} ry={bR} fill={accentColor} />
-                        <rect x={sLeft} y={sTop} width={sW} height={sH} rx={bR - 1} ry={bR - 1} fill="white" />
-                        <text x={wx} y={wy + fontSize * 0.36} fontFamily="Arial, Helvetica, sans-serif" fontSize={fontSize} fontWeight="800" fill="#1a1a1a" textAnchor="middle" letterSpacing={1}>{w.text.toUpperCase()}</text>
-                        {topper === "rainbow" && renderRainbowTopper(wx, topperY, topperSize)}
-                        {topper === "heart" && renderHeartTopper(wx, topperY, topperSize)}
-                        {topper === "star" && renderStarTopper(wx, topperY, topperSize, accentColor)}
-                        {topper === "mirror" && renderMirrorTopper(wx, topperY, topperSize)}
-                        {topper === "wine" && renderWineGlassTopper(wx, topperY, topperSize)}
-                        {topper === "lipstick" && renderLipstickTopper(wx, topperY, topperSize)}
+                        {(topper === "box-solid" || topper === "circle-solid" || topper === "heart-solid") ? (
+                          <>
+                            {topper === "box-solid" && <>
+                              <rect x={sLeft - outerPad} y={sTop - outerPad} width={sW + outerPad * 2} height={sH + outerPad * 2} rx={bR + 2} ry={bR + 2} fill={outer} />
+                              <rect x={sLeft} y={sTop} width={sW} height={sH} rx={bR - 1} ry={bR - 1} fill={accentColor} />
+                            </>}
+                            {topper === "circle-solid" && <ellipse cx={wx} cy={wy} rx={sW / 2 + outerPad} ry={sH / 2 + outerPad} fill={accentColor} />}
+                            {topper === "heart-solid" && <path d={heartFilled(wx, wy + (sW + outerPad * 2) * 0.135, sW + outerPad * 2)} fill={accentColor} />}
+                            <text x={wx} y={wy + fontSize * 0.36} fontFamily="Arial, Helvetica, sans-serif" fontSize={fontSize} fontWeight="800" fill="white" textAnchor="middle" letterSpacing={1} stroke="rgba(0,0,0,0.22)" strokeWidth={1.5} paintOrder="stroke">{w.text.toUpperCase()}</text>
+                          </>
+                        ) : (
+                          <>
+                            <rect x={sLeft - outerPad} y={sTop - outerPad} width={sW + outerPad * 2} height={sH + outerPad * 2} rx={bR + 2} ry={bR + 2} fill={outer} />
+                            <rect x={sLeft - 1} y={sTop - 1} width={sW + 2} height={sH + 2} rx={bR} ry={bR} fill={accentColor} />
+                            <rect x={sLeft} y={sTop} width={sW} height={sH} rx={bR - 1} ry={bR - 1} fill="white" />
+                            <text x={wx} y={wy + fontSize * 0.36} fontFamily="Arial, Helvetica, sans-serif" fontSize={fontSize} fontWeight="800" fill="#1a1a1a" textAnchor="middle" letterSpacing={1}>{w.text.toUpperCase()}</text>
+                            {topper === "rainbow" && renderRainbowTopper(wx, topperY, topperSize)}
+                            {topper === "heart" && renderHeartTopper(wx, topperY, topperSize)}
+                            {topper === "star" && renderStarTopper(wx, topperY, topperSize, accentColor)}
+                            {topper === "mirror" && renderMirrorTopper(wx, topperY, topperSize)}
+                            {topper === "wine" && renderWineGlassTopper(wx, topperY, topperSize)}
+                            {topper === "lipstick" && renderLipstickTopper(wx, topperY, topperSize)}
+                          </>
+                        )}
                       </g>
                     );
                   })}
