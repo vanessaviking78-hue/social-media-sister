@@ -9,6 +9,7 @@ export async function runMigrations(): Promise<void> {
     await addCoverSubheadingColumn();
     await addMetaConnectionColumns();
     await createScheduledPostsTable();
+    await addSeamlessLogoConfigColumn();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -98,6 +99,13 @@ async function createScheduledPostsTable(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `);
+}
+
+async function addSeamlessLogoConfigColumn(): Promise<void> {
+  await db.execute(sql`
+    ALTER TABLE seamless_carousels
+    ADD COLUMN IF NOT EXISTS logo_config jsonb
   `);
 }
 

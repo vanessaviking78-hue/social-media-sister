@@ -57,7 +57,7 @@ const PH_PORT = 425;
 const PH_STORY = 604;
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
-type Word = { id: string; text: string; x: number; y: number; color?: string; fontSize?: number };
+type Word = { id: string; text: string; x: number; y: number; color?: string; fontSize?: number; letterSpacing?: number };
 type DoodleShape = "heart-outline" | "arrow" | "sparkle";
 type DoodleEl = { id: string; shape: DoodleShape; x: number; y: number; size: number; rotation: number };
 type LogoState = { dataUrl: string; storedUrl: string; ar: number; x: number; y: number; scale: number; rotation: number };
@@ -439,6 +439,7 @@ export default function AboutMePage() {
         id: w.id, text: w.text, x: w.x, y: w.y,
         ...(w.color ? { color: w.color } : {}),
         ...(w.fontSize ? { fontSize: w.fontSize } : {}),
+        ...(w.letterSpacing !== undefined ? { letterSpacing: w.letterSpacing } : {}),
       }));
 
       const canvasConfig = {
@@ -691,20 +692,29 @@ export default function AboutMePage() {
               <div className="space-y-2">
                 {words.map((w, i) => (
                   <div key={w.id} className="space-y-1">
-                    <div className="flex gap-2 items-center">
-                      <Input value={w.text} onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, text: e.target.value } : ww))}
-                        placeholder={`Word ${i + 1}`} className="flex-1 h-9" />
-                      <input type="color" value={w.color ?? accentColor}
-                        onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, color: e.target.value } : ww))}
-                        title="Word colour" className="w-9 h-9 p-0.5 cursor-pointer rounded border border-border/40 bg-transparent" />
-                      {w.color && (
-                        <button onClick={() => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, color: undefined } : ww))}
-                          className="text-xs text-muted-foreground hover:text-foreground" title="Reset colour">↺</button>
-                      )}
-                      <input type="number" min={20} max={80} value={w.fontSize ?? 40}
-                        onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, fontSize: Number(e.target.value) } : ww))}
-                        className="w-14 h-9 text-xs text-center bg-muted/40 border border-border/40 rounded" title="Font size" />
-                      <Button variant="ghost" size="sm" onClick={() => setWords((p) => p.filter((_, ii) => ii !== i))} className="h-9 w-9 p-0 text-muted-foreground shrink-0"><X className="w-3.5 h-3.5" /></Button>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex gap-2 items-center">
+                        <Input value={w.text} onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, text: e.target.value } : ww))}
+                          placeholder={`Word ${i + 1}`} className="flex-1 h-9" />
+                        <input type="color" value={w.color ?? accentColor}
+                          onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, color: e.target.value } : ww))}
+                          title="Word colour" className="w-9 h-9 p-0.5 cursor-pointer rounded border border-border/40 bg-transparent" />
+                        {w.color && (
+                          <button onClick={() => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, color: undefined } : ww))}
+                            className="text-xs text-muted-foreground hover:text-foreground" title="Reset colour">↺</button>
+                        )}
+                        <input type="number" min={20} max={80} value={w.fontSize ?? 40}
+                          onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, fontSize: Number(e.target.value) } : ww))}
+                          className="w-14 h-9 text-xs text-center bg-muted/40 border border-border/40 rounded" title="Font size" />
+                        <Button variant="ghost" size="sm" onClick={() => setWords((p) => p.filter((_, ii) => ii !== i))} className="h-9 w-9 p-0 text-muted-foreground shrink-0"><X className="w-3.5 h-3.5" /></Button>
+                      </div>
+                      <div className="flex items-center gap-2 pl-0.5">
+                        <Label className="text-xs text-muted-foreground/70 w-20 shrink-0">Letter spacing</Label>
+                        <input type="range" min={0} max={10} step={0.5} value={w.letterSpacing ?? 1}
+                          onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, letterSpacing: Number(e.target.value) } : ww))}
+                          className="flex-1 accent-pink-500 h-1.5" />
+                        <span className="text-xs font-mono text-muted-foreground w-6 text-right">{w.letterSpacing ?? 1}</span>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -1005,7 +1015,7 @@ export default function AboutMePage() {
                         }}>
                         <rect x={wx - 28} y={wy - hwGap - previewHs} width={56} height={hwGap + previewHs + 14} fill="transparent" />
                         <path d={heartFilled(wx, wy - hwGap, previewHs)} fill={w.color ?? accentColor} opacity={0.9} />
-                        <text x={wx} y={wy} fontFamily="Georgia, serif" fontSize={Math.round((w.fontSize ?? 40) * PW / 1080)} fill={w.color ?? accentColor} textAnchor="middle">{w.text}</text>
+                        <text x={wx} y={wy} fontFamily="Georgia, serif" fontSize={Math.round((w.fontSize ?? 40) * PW / 1080)} fill={w.color ?? accentColor} textAnchor="middle" letterSpacing={w.letterSpacing ?? 1}>{w.text}</text>
                       </g>
                     );
                   })}

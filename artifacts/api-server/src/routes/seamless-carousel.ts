@@ -80,13 +80,19 @@ function buildSlideTextSvg(slide: SeamlessSlide, scriptFont: string, textColor: 
 
   const titleColor = slide.titleColor ?? textColor;
   const titleFontSize = slide.titleFontSize ?? 76;
+  const titleLetterSpacing = slide.titleLetterSpacing ?? 0;
+  const titleLineHeight = slide.titleLineHeight ?? 0.88;
   const leadInColor = slide.leadInColor ?? textColor;
   const leadInFontSize = slide.leadInFontSize ?? 44;
+  const leadInLetterSpacing = slide.leadInLetterSpacing ?? 0;
   const tagLineColor = slide.tagLineColor ?? textColor;
   const tagLineFontSize = slide.tagLineFontSize ?? 40;
+  const tagLineLetterSpacing = slide.tagLineLetterSpacing ?? 0;
+  const tagLineLineHeight = slide.tagLineLineHeight ?? 1.1;
 
-  const lineH = titleFontSize * 0.8;
-  const doodleY = ty - (slide.leadIn ? lineH * 2.2 : lineH * 1.4) - 44;
+  const lineH = titleFontSize * titleLineHeight;
+  const leadInGap = leadInFontSize * (slide.leadInLineHeight ?? 1.1);
+  const doodleY = ty - (slide.leadIn ? leadInGap + lineH * 0.6 : lineH * 1.4) - 44;
 
   const doodle = slide.doodle && slide.doodle !== "none"
     ? doodlePath(slide.doodle, tx, doodleY, 40, titleColor)
@@ -95,15 +101,15 @@ function buildSlideTextSvg(slide: SeamlessSlide, scriptFont: string, textColor: 
   const shadow = `<filter id="ts" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="1" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.5"/></filter>`;
 
   const leadInSvg = slide.leadIn
-    ? `<text x="${tx}" y="${ty - (slide.title ? lineH * 1.1 : 0)}" font-family="'${scriptFont}', cursive" font-size="${leadInFontSize}" fill="${leadInColor}" text-anchor="${anchor}" filter="url(#ts)" opacity="0.9">${escXml(slide.leadIn)}</text>`
+    ? `<text x="${tx}" y="${ty - (slide.title ? lineH * 1.05 : 0)}" font-family="'${scriptFont}', cursive" font-size="${leadInFontSize}" fill="${leadInColor}" text-anchor="${anchor}" filter="url(#ts)" opacity="0.9" letter-spacing="${leadInLetterSpacing}">${escXml(slide.leadIn)}</text>`
     : "";
 
   const titleSvg = slide.title
-    ? `<text x="${tx}" y="${ty}" font-family="'${scriptFont}', cursive" font-size="${titleFontSize}" fill="${titleColor}" text-anchor="${anchor}" filter="url(#ts)">${escXml(slide.title)}</text>`
+    ? `<text x="${tx}" y="${ty}" font-family="'${scriptFont}', cursive" font-size="${titleFontSize}" fill="${titleColor}" text-anchor="${anchor}" filter="url(#ts)" letter-spacing="${titleLetterSpacing}">${escXml(slide.title)}</text>`
     : "";
 
   const tagSvg = slide.tagLine
-    ? `<text x="${tx}" y="${ty + lineH}" font-family="'${scriptFont}', cursive" font-size="${tagLineFontSize}" fill="${tagLineColor}" text-anchor="${anchor}" filter="url(#ts)" opacity="0.85">${escXml(slide.tagLine)}</text>`
+    ? `<text x="${tx}" y="${ty + lineH * tagLineLineHeight}" font-family="'${scriptFont}', cursive" font-size="${tagLineFontSize}" fill="${tagLineColor}" text-anchor="${anchor}" filter="url(#ts)" opacity="0.85" letter-spacing="${tagLineLetterSpacing}">${escXml(slide.tagLine)}</text>`
     : "";
 
   const wmSvg = watermark

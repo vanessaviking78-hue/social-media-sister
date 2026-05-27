@@ -331,10 +331,16 @@ export type SeamlessSlide = {
   position: string;
   titleColor?: string;
   titleFontSize?: number;
+  titleLetterSpacing?: number;
+  titleLineHeight?: number;
   leadInColor?: string;
   leadInFontSize?: number;
+  leadInLetterSpacing?: number;
+  leadInLineHeight?: number;
   tagLineColor?: string;
   tagLineFontSize?: number;
+  tagLineLetterSpacing?: number;
+  tagLineLineHeight?: number;
 };
 
 export type SeamlessLogoConfig = {
