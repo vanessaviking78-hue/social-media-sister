@@ -702,7 +702,7 @@ export default function Stories() {
                   <h3 className="text-sm font-semibold mb-2">Heading Font</h3>
                   <Select value={font} onValueChange={setFont}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-80 overflow-y-auto">
                       {FONT_OPTIONS.map((f) => (
                         <SelectItem key={f.value} value={f.value}>
                           <span style={{ fontFamily: f.value }}>{f.label}</span>
@@ -715,7 +715,7 @@ export default function Stories() {
                   <h3 className="text-sm font-semibold mb-2">Subheading Font</h3>
                   <Select value={subheadingFont} onValueChange={setSubheadingFont}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-80 overflow-y-auto">
                       {FONT_OPTIONS.map((f) => (
                         <SelectItem key={f.value} value={f.value}>
                           <span style={{ fontFamily: f.value }}>{f.label}</span>

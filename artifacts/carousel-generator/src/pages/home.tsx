@@ -1369,7 +1369,7 @@ export default function Home() {
                       <SelectTrigger className="h-12 text-base" data-testid="select-font">
                         <SelectValue><span style={{ fontFamily }}>{selectedFontLabel}</span></SelectValue>
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-80 overflow-y-auto">
                         {FONT_OPTIONS.map((f) => (
                           <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
                         ))}
@@ -1384,7 +1384,7 @@ export default function Home() {
                       <SelectTrigger className="h-12 text-base" data-testid="select-subheading-font">
                         <SelectValue><span style={{ fontFamily: subheadingFont }}>{selectedSubheadingFontLabel}</span></SelectValue>
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="max-h-80 overflow-y-auto">
                         {FONT_OPTIONS.map((f) => (
                           <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
                         ))}

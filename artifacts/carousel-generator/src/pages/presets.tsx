@@ -647,7 +647,7 @@ export default function PresetsPage() {
                           <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-gray-800 border-gray-700">
+                          <SelectContent className="bg-gray-800 border-gray-700 max-h-80 overflow-y-auto">
                             {FONT_OPTIONS.map((f) => (
                               <SelectItem key={f.value} value={f.value} className="text-white">{f.label}</SelectItem>
                             ))}

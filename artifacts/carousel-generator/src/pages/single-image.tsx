@@ -1086,7 +1086,7 @@ export default function SingleImage() {
                         <SelectTrigger className="h-12 text-base">
                           <SelectValue><span style={{ fontFamily: heroWordFont }}>{FONT_OPTIONS.find((f) => f.value === heroWordFont)?.label ?? "Font"}</span></SelectValue>
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="max-h-80 overflow-y-auto">
                           {FONT_OPTIONS.map((f) => (
                             <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
                           ))}
@@ -1121,7 +1121,7 @@ export default function SingleImage() {
                     <SelectTrigger className="h-12 text-base">
                       <SelectValue><span style={{ fontFamily: subheadingFont }}>{selectedSubheadingFontLabel}</span></SelectValue>
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-80 overflow-y-auto">
                       {FONT_OPTIONS.map((f) => (
                         <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
                       ))}
