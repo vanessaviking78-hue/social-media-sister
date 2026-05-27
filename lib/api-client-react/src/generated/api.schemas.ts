@@ -140,15 +140,15 @@ export interface AiJobStatus {
  */
 export interface MusicTrack {
   /** Unique track identifier */
-  id: number;
+  trackId: number;
   /** Track title */
-  title: string;
+  name: string;
   /** Artist name */
   artist: string;
-  /** Track duration in seconds */
-  duration: number;
+  /** Track duration in milliseconds */
+  durationMs: number;
   /** URL to a short audio preview clip */
-  previewUrl: string;
+  url: string;
 }
 
 /**

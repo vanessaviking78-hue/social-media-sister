@@ -5,11 +5,11 @@ import { toast } from "sonner";
 import { Music, Search, Play, Square, Check, X, Loader2, Plus } from "lucide-react";
 
 export type MusicTrack = {
-  id: number;
-  title: string;
-  duration: number;
+  trackId: number;
+  name: string;
+  durationMs: number;
   artist: string;
-  previewUrl: string;
+  url: string;
 };
 
 interface Props {
@@ -69,20 +69,20 @@ export function MusicPickerModal({ open, onClose, selectedTrack, onSelect }: Pro
   };
 
   const togglePreview = (track: MusicTrack) => {
-    if (previewingId === track.id) {
+    if (previewingId === track.trackId) {
       stopPreview();
     } else {
       stopPreview();
-      audioRef.current = new Audio(track.previewUrl);
+      audioRef.current = new Audio(track.url);
       audioRef.current.play();
-      setPreviewingId(track.id);
+      setPreviewingId(track.trackId);
       audioRef.current.onended = () => setPreviewingId(null);
     }
   };
 
   const handleSelect = (track: MusicTrack) => {
     stopPreview();
-    if (selectedTrack?.id === track.id) {
+    if (selectedTrack?.trackId === track.trackId) {
       onSelect(null);
     } else {
       onSelect(track);
@@ -111,7 +111,7 @@ export function MusicPickerModal({ open, onClose, selectedTrack, onSelect }: Pro
           <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3">
             <Check className="w-4 h-4 text-green-400 shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-green-300 truncate">{selectedTrack.title}</p>
+              <p className="text-sm font-semibold text-green-300 truncate">{selectedTrack.name}</p>
               <p className="text-xs text-muted-foreground truncate">{selectedTrack.artist}</p>
             </div>
             <button onClick={() => { onSelect(null); }} className="text-muted-foreground hover:text-red-400 transition-colors">
@@ -143,11 +143,12 @@ export function MusicPickerModal({ open, onClose, selectedTrack, onSelect }: Pro
         {tracks.length > 0 && (
           <div className="space-y-1 border border-border/30 rounded-xl p-2 bg-muted/20 max-h-72 overflow-y-auto">
             {tracks.map((track) => {
-              const isSelected = selectedTrack?.id === track.id;
-              const isPreviewing = previewingId === track.id;
+              const isSelected = selectedTrack?.trackId === track.trackId;
+              const isPreviewing = previewingId === track.trackId;
+              const durationSec = Math.floor(track.durationMs / 1000);
               return (
                 <div
-                  key={track.id}
+                  key={track.trackId}
                   onClick={() => handleSelect(track)}
                   className={`flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer transition-colors ${isSelected ? "bg-green-500/20 ring-1 ring-green-500/40" : "hover:bg-muted/50"}`}
                 >
@@ -158,9 +159,9 @@ export function MusicPickerModal({ open, onClose, selectedTrack, onSelect }: Pro
                     {isPreviewing ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                   </button>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm truncate ${isSelected ? "text-green-300 font-semibold" : ""}`}>{track.title}</p>
+                    <p className={`text-sm truncate ${isSelected ? "text-green-300 font-semibold" : ""}`}>{track.name}</p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {track.artist} · {Math.floor(track.duration / 60)}:{String(track.duration % 60).padStart(2, "0")}
+                      {track.artist} · {Math.floor(durationSec / 60)}:{String(durationSec % 60).padStart(2, "0")}
                     </p>
                   </div>
                   <div className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center transition-colors ${isSelected ? "bg-green-500 text-white" : "bg-muted/60 text-muted-foreground"}`}>
@@ -189,7 +190,7 @@ export function MusicTrackBadge({ track, onRemove }: { track: MusicTrack; onRemo
   return (
     <div className="flex items-center gap-2 bg-green-500/10 border border-green-500/30 rounded-lg px-3 py-2 text-sm">
       <Music className="w-3.5 h-3.5 text-green-400 shrink-0" />
-      <span className="text-green-300 font-medium truncate">{track.title}</span>
+      <span className="text-green-300 font-medium truncate">{track.name}</span>
       <span className="text-muted-foreground truncate">by {track.artist}</span>
       <button onClick={onRemove} className="ml-auto text-muted-foreground hover:text-red-400 shrink-0">
         <X className="w-3.5 h-3.5" />

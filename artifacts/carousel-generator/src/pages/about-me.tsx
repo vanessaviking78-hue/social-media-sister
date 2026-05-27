@@ -927,7 +927,7 @@ export default function AboutMePage() {
                   </Select>
                 )}
                 <Button variant="outline" onClick={() => setMusicPickerOpen(true)} className={`flex-1 gap-2 ${musicTrack ? "border-green-500/40 text-green-300 hover:bg-green-950/30" : ""}`}>
-                  <Music className="w-4 h-4" />{musicTrack ? musicTrack.title.slice(0, 18) : "Add music"}
+                  <Music className="w-4 h-4" />{musicTrack ? musicTrack.name.slice(0, 18) : "Add music"}
                 </Button>
                 <Button variant="outline" onClick={handleSchedule} className="flex-1 gap-2">
                   <CalendarDays className="w-4 h-4" /> Schedule

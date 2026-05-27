@@ -166,7 +166,7 @@ router.get("/meta/test-connection", async (req: Request, res: Response) => {
 router.post("/meta/push", async (req: Request, res: Response) => {
   try {
     const { posts, presetId, postType } = req.body as {
-      posts: { title: string; caption: string; imageUrls: string[]; musicTrack?: { title: string; artist: string } | null }[];
+      posts: { title: string; caption: string; imageUrls: string[]; musicTrack?: { name: string; artist: string } | null }[];
       presetId: number;
       postType?: string;
     };
@@ -197,11 +197,11 @@ router.post("/meta/push", async (req: Request, res: Response) => {
       const isStory = postType === "story" || postType === "stories";
       const isSeamless = postType === "seamless";
       const supportsAudioAttachment = isMultiImage || isStory || isSeamless;
-      const audioName = post.musicTrack?.title && supportsAudioAttachment
-        ? `${post.musicTrack.title} by ${post.musicTrack.artist}`
+      const audioName = post.musicTrack?.name && supportsAudioAttachment
+        ? `${post.musicTrack.name} by ${post.musicTrack.artist}`
         : undefined;
       const musicNote = post.musicTrack && !audioName
-        ? `\n\n🎵 Recommended music: ${post.musicTrack.title} by ${post.musicTrack.artist}`
+        ? `\n\n🎵 Recommended music: ${post.musicTrack.name} by ${post.musicTrack.artist}`
         : "";
       const finalCaption = post.caption + musicNote;
 

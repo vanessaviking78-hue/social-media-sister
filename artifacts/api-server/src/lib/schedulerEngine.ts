@@ -152,7 +152,7 @@ async function postReelToIG(igId: string, token: string, videoUrl: string, capti
   return igPublish(igId, token, containerId);
 }
 
-type PostContent = { imageUrls?: string[]; videoUrl?: string; caption: string; title: string; musicTrack?: { title: string; artist: string } | null };
+type PostContent = { imageUrls?: string[]; videoUrl?: string; caption: string; title: string; musicTrack?: { name: string; artist: string } | null };
 
 async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, preset: typeof clientPresetsTable.$inferSelect): Promise<{ igPostId?: string; fbPostId?: string }> {
   const token = preset.metaPageAccessToken;
@@ -172,11 +172,14 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
   const result: { igPostId?: string; fbPostId?: string } = {};
   const errors: string[] = [];
   const isMultiImage = content.imageUrls.length > 1;
-  const audioName = content.musicTrack?.title && isMultiImage
-    ? `${content.musicTrack.title} by ${content.musicTrack.artist}`
+  const isStoryFormat = post.postType === "story" || post.postType === "stories";
+  const isSeamlessFormat = post.postType === "seamless";
+  const supportsAudioAttachment = isMultiImage || isStoryFormat || isSeamlessFormat;
+  const audioName = content.musicTrack?.name && supportsAudioAttachment
+    ? `${content.musicTrack.name} by ${content.musicTrack.artist}`
     : undefined;
   const musicNote = content.musicTrack && !audioName
-    ? `\n\n🎵 Recommended music: ${content.musicTrack.title} by ${content.musicTrack.artist}`
+    ? `\n\n🎵 Recommended music: ${content.musicTrack.name} by ${content.musicTrack.artist}`
     : "";
   const caption = content.caption + musicNote;
   if (igId) {

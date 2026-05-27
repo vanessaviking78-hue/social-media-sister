@@ -818,11 +818,11 @@ router.get("/music/search", async (req, res) => {
     const tracks = (data.data || [])
       .filter((h: any) => h.preview)
       .map((h: any) => ({
-        id: h.id,
-        title: h.title || "Untitled",
-        duration: h.duration || 0,
+        trackId: h.id,
+        name: h.title || "Untitled",
+        durationMs: (h.duration || 0) * 1000,
         artist: h.artist?.name || "Unknown",
-        previewUrl: h.preview,
+        url: h.preview,
       }));
     res.json({ tracks, total: data.total || tracks.length });
   } catch (err: any) {

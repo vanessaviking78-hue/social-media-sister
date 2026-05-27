@@ -863,7 +863,7 @@ export default function Reels() {
       canvas.height = VIDEO_HEIGHT;
       const ctx = canvas.getContext("2d")!;
       setExportProgress("Recording…");
-      if (selectedTrack?.previewUrl) setExportProgress("Fetching audio…");
+      if (selectedTrack?.url) setExportProgress("Fetching audio…");
       const blob = await recordReelVideo(canvas, slideDurationSec * 1000, fadeDurationMs, slides.length, (slideIndex, slideProgress) => {
         const slide = slides[slideIndex];
         const mediaBg = (slide.videoElement ?? slide.imageElement) as HTMLImageElement | null;
@@ -901,10 +901,10 @@ export default function Reels() {
             coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch,
           );
         }
-      }, 30, selectedTrack?.previewUrl);
+      }, 30, selectedTrack?.url);
       setExportProgress("Saving…");
       saveAs(blob, `reel-${Date.now()}.webm`);
-      toast.success(selectedTrack ? `Exported with "${selectedTrack.title}"!` : "Reel exported!");
+      toast.success(selectedTrack ? `Exported with "${selectedTrack.name}"!` : "Reel exported!");
     } catch (e: any) {
       toast.error(e?.message || "Export failed");
     } finally {
@@ -964,10 +964,10 @@ export default function Reels() {
         }
       };
       let audioArrayBuffer: ArrayBuffer | undefined;
-      if (selectedTrack?.previewUrl) {
+      if (selectedTrack?.url) {
         setCcPushProgress("Fetching audio…");
         try {
-          const r = await fetch(selectedTrack.previewUrl);
+          const r = await fetch(selectedTrack.url);
           audioArrayBuffer = await r.arrayBuffer();
         } catch { /* skip audio on error */ }
       }
@@ -983,7 +983,7 @@ export default function Reels() {
         setCcPushProgress("Encoding WebM…");
         videoBlob = await recordReelVideo(
           canvas, slideDurationSec * 1000, fadeDurationMs, slides.length, animateFn, 30,
-          selectedTrack?.previewUrl,
+          selectedTrack?.url,
         );
       }
       setCcPushProgress("Uploading video…");
@@ -1069,10 +1069,10 @@ export default function Reels() {
         }
       };
       let audioArrayBuffer: ArrayBuffer | undefined;
-      if (selectedTrack?.previewUrl) {
+      if (selectedTrack?.url) {
         setIgPushProgress("Fetching audio…");
         try {
-          const r = await fetch(selectedTrack.previewUrl);
+          const r = await fetch(selectedTrack.url);
           audioArrayBuffer = await r.arrayBuffer();
         } catch { /* skip audio on error */ }
       }
@@ -1088,7 +1088,7 @@ export default function Reels() {
         setIgPushProgress("Encoding WebM…");
         videoBlob = await recordReelVideo(
           canvas, slideDurationSec * 1000, fadeDurationMs, slides.length, animateFn, 30,
-          selectedTrack?.previewUrl,
+          selectedTrack?.url,
         );
       }
       setIgPushProgress("Uploading video…");
@@ -1147,8 +1147,8 @@ export default function Reels() {
         }
       };
       let audioArrayBuffer: ArrayBuffer | undefined;
-      if (selectedTrack?.previewUrl) {
-        try { const r = await fetch(selectedTrack.previewUrl); audioArrayBuffer = await r.arrayBuffer(); } catch { }
+      if (selectedTrack?.url) {
+        try { const r = await fetch(selectedTrack.url); audioArrayBuffer = await r.arrayBuffer(); } catch { }
       }
       let videoBlob: Blob;
       try {
@@ -1156,7 +1156,7 @@ export default function Reels() {
         videoBlob = await recordReelVideoMp4(canvas, slideDurationSec * 1000, fadeDurationMs, slides.length, animateFn, 30, (pct) => toast.loading(`Encoding ${Math.round(pct * 100)}%...`, { id }), audioArrayBuffer);
       } catch {
         toast.loading("Encoding WebM...", { id });
-        videoBlob = await recordReelVideo(canvas, slideDurationSec * 1000, fadeDurationMs, slides.length, animateFn, 30, selectedTrack?.previewUrl);
+        videoBlob = await recordReelVideo(canvas, slideDurationSec * 1000, fadeDurationMs, slides.length, animateFn, 30, selectedTrack?.url);
       }
       toast.loading("Uploading video...", { id });
       const form = new FormData();
@@ -1295,7 +1295,7 @@ export default function Reels() {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <p className="text-xs text-white/30">Slide {displayIdx + 1} of {slides.length} · 9:16 · {(slides.length * slideDurationSec).toFixed(0)}s{selectedTrack ? ` · 🎵 ${selectedTrack.title}` : ""}</p>
+            <p className="text-xs text-white/30">Slide {displayIdx + 1} of {slides.length} · 9:16 · {(slides.length * slideDurationSec).toFixed(0)}s{selectedTrack ? ` · 🎵 ${selectedTrack.name}` : ""}</p>
             <button onClick={() => { setIsPlaying((p) => !p); setPreviewIdx(0); }}
               className="flex items-center gap-1 text-xs text-white/50 hover:text-white/80 border border-white/15 hover:border-white/30 rounded-lg px-3 py-1.5 transition-colors">
               {isPlaying ? <><Square className="w-3 h-3" />Stop</> : <><Play className="w-3 h-3" />Play</>}
@@ -1986,7 +1986,7 @@ export default function Reels() {
                   <div className="flex items-center gap-3 bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-3">
                     <Check className="w-4 h-4 text-green-400 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-green-300 truncate">{selectedTrack.title}</p>
+                      <p className="text-sm font-semibold text-green-300 truncate">{selectedTrack.name}</p>
                       <p className="text-sm text-white/40 truncate">{selectedTrack.artist}</p>
                     </div>
                     <button onClick={() => setSelectedTrack(null)} className="text-white/30 hover:text-red-400 transition-colors">

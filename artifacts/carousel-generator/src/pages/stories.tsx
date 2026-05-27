@@ -876,7 +876,7 @@ export default function Stories() {
                 <FileText className="w-4 h-4 mr-2" />Export CSV
               </Button>
               <Button variant="outline" onClick={() => setMusicPickerOpen(true)} className={musicTrack ? "border-green-500/40 text-green-300 hover:bg-green-950/30" : ""}>
-                <Music className="w-4 h-4 mr-2" />{musicTrack ? musicTrack.title.slice(0, 22) : "Add music"}
+                <Music className="w-4 h-4 mr-2" />{musicTrack ? musicTrack.name.slice(0, 22) : "Add music"}
               </Button>
               <Button onClick={downloadZip} disabled={downloading || previews.length === 0}>
                 {downloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
@@ -935,7 +935,7 @@ export default function Stories() {
       {scheduleOpen && selectedPresetId && (
         <ScheduleModal
           presetId={selectedPresetId}
-          postType="carousel"
+          postType="story"
           posts={schedulePosts}
           onClose={() => setScheduleOpen(false)}
         />

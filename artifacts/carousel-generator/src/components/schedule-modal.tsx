@@ -12,7 +12,7 @@ export type SchedulePostPayload = {
   caption: string;
   imageUrls?: string[];
   videoUrl?: string;
-  musicTrack?: { id: number; title: string; artist: string; duration: number; previewUrl: string } | null;
+  musicTrack?: { trackId: number; name: string; artist: string; durationMs: number; url: string } | null;
 };
 
 type Props = {
@@ -42,7 +42,6 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
 
   const isBulk = posts.length > 1;
   const isReel = postType === "reel";
-  const apiPostType = isReel ? "reel" : "carousel";
 
   async function handleSave() {
     if (!scheduledAt) { toast.error("Pick a date and time"); return; }
@@ -58,7 +57,7 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
         if (isReel && post.videoUrl) content.videoUrl = post.videoUrl;
         if (!isReel && post.imageUrls) content.imageUrls = post.imageUrls;
         if (post.musicTrack) content.musicTrack = post.musicTrack;
-        const body: Record<string, unknown> = { postType: apiPostType, content, scheduledAt: staggeredAt, isTrial, notes, presetId };
+        const body: Record<string, unknown> = { postType, content, scheduledAt: staggeredAt, isTrial, notes, presetId };
         const r = await fetch(`${BASE}/api/scheduler/posts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },

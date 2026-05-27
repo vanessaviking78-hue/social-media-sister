@@ -515,22 +515,22 @@ components:
       type: object
       description: A music track selected from the in-app music library
       properties:
-        id:
+        trackId:
           type: integer
           description: Unique track identifier
-        title:
+        name:
           type: string
           description: Track title
         artist:
           type: string
           description: Artist name
-        duration:
+        durationMs:
           type: integer
-          description: Track duration in seconds
-        previewUrl:
+          description: Track duration in milliseconds
+        url:
           type: string
           description: URL to a short audio preview clip
-      required: [id, title, artist, duration, previewUrl]
+      required: [trackId, name, artist, durationMs, url]
 
     MetaPushPost:
       type: object

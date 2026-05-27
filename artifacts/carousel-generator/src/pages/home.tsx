@@ -2382,7 +2382,7 @@ export default function Home() {
                       </div>
                       <div className="flex gap-3 flex-wrap justify-end">
                         <Button variant="outline" size="lg" onClick={() => setMusicPickerOpen(true)} className={`px-8 py-4 text-lg font-bold ${musicTrack ? "border-green-500/40 text-green-300 hover:bg-green-950/30" : ""}`}>
-                          <Music className="w-5 h-5 mr-2" />{musicTrack ? musicTrack.title.slice(0, 22) : "Add music"}
+                          <Music className="w-5 h-5 mr-2" />{musicTrack ? musicTrack.name.slice(0, 22) : "Add music"}
                         </Button>
                         <button className="btn-shimmer px-8 py-4 rounded-2xl text-lg font-bold flex items-center gap-3" onClick={downloadZip} data-testid="button-download-zip-bar">
                           <Download className="w-5 h-5" />Download ZIP
@@ -2637,7 +2637,7 @@ export default function Home() {
                       </Button>
                       <div className="flex gap-3 flex-wrap justify-end">
                         <Button variant="outline" size="lg" onClick={() => setMusicPickerOpen(true)} className={`px-8 py-6 text-lg font-bold ${musicTrack ? "border-green-500/40 text-green-300 hover:bg-green-950/30" : ""}`} data-testid="button-add-music">
-                          <Music className="w-5 h-5 mr-2" />{musicTrack ? musicTrack.title.slice(0, 22) : "Add music"}
+                          <Music className="w-5 h-5 mr-2" />{musicTrack ? musicTrack.name.slice(0, 22) : "Add music"}
                         </Button>
                         <Button variant="outline" size="lg" onClick={downloadCsv} className="px-8 py-6 text-lg font-bold" data-testid="button-download-csv">
                           <FileText className="w-5 h-5 mr-2" />Download CSV

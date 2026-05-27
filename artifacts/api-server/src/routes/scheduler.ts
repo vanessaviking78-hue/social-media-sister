@@ -46,7 +46,7 @@ router.post("/scheduler/posts", async (req, res) => {
     } = req.body as {
       presetId: number;
       clientName?: string;
-      postType: "carousel" | "reel";
+      postType: "carousel" | "reel" | "story" | "stories" | "single-image" | "about-me" | "seamless";
       content: { imageUrls?: string[]; videoUrl?: string; caption: string; title: string };
       scheduledAt: string;
       isTrial?: boolean;
