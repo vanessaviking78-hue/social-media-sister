@@ -15,9 +15,9 @@ export type SchedulePostPayload = {
 };
 
 type Props = {
-  presetId: number;
+  presetId: number | null;
   presetName?: string;
-  postType: "carousel" | "reel";
+  postType: string;
   posts: SchedulePostPayload[];
   onClose: () => void;
   onSaved?: () => void;
@@ -39,6 +39,8 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
   const [gapMinutes, setGapMinutes] = useState("60");
 
   const isBulk = posts.length > 1;
+  const isReel = postType === "reel";
+  const apiPostType = isReel ? "reel" : "carousel";
 
   async function handleSave() {
     if (!scheduledAt) { toast.error("Pick a date and time"); return; }
@@ -49,12 +51,14 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
         const post = posts[i];
         const staggeredAt = new Date(new Date(scheduledAt).getTime() + i * gap * 60000).toISOString();
         const content: SchedulePostPayload = { caption: post.caption, title: post.title };
-        if (postType === "reel" && post.videoUrl) content.videoUrl = post.videoUrl;
-        if (postType === "carousel" && post.imageUrls) content.imageUrls = post.imageUrls;
+        if (isReel && post.videoUrl) content.videoUrl = post.videoUrl;
+        if (!isReel && post.imageUrls) content.imageUrls = post.imageUrls;
+        const body: Record<string, unknown> = { postType: apiPostType, content, scheduledAt: staggeredAt, isTrial, notes };
+        if (presetId !== null) body.presetId = presetId;
         const r = await fetch(`${BASE}/api/scheduler/posts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ presetId, postType, content, scheduledAt: staggeredAt, isTrial, notes }),
+          body: JSON.stringify(body),
         });
         if (!r.ok) {
           const err = await r.json().catch(() => ({ error: "Failed" }));
@@ -112,7 +116,7 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
                 className="bg-zinc-800 border-zinc-700 text-white"
               />
               <p className="text-xs text-zinc-500 mt-1.5">
-                Posts will be staggered — reel 1 at the chosen time, reel 2 {gapMinutes} min later, and so on.
+                Posts will be staggered — post 1 at the chosen time, post 2 {gapMinutes} min later, and so on.
               </p>
             </div>
           )}
@@ -127,7 +131,7 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
             />
           </div>
 
-          {postType === "reel" && (
+          {isReel && (
             <label className="flex items-center gap-3 cursor-pointer select-none">
               <input
                 type="checkbox"
@@ -144,7 +148,7 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={saving} className="bg-pink-600 hover:bg-pink-700 text-white">
-            {saving ? "Scheduling..." : isBulk ? `Schedule ${posts.length} reels` : "Schedule"}
+            {saving ? "Scheduling..." : "Schedule"}
           </Button>
         </div>
       </div>

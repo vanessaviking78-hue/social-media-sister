@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import multer from "multer";
 import { db } from "@workspace/db";
-import { seamlessCarouselsTable, type SeamlessSlide, type CollageElement } from "@workspace/db/schema";
+import { seamlessCarouselsTable, type SeamlessSlide, type CollageElement, type SeamlessLogoConfig } from "@workspace/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { objectStorageClient } from "../lib/objectStorage";
 import { v4 as uuid } from "uuid";
@@ -77,25 +77,33 @@ function buildSlideTextSvg(slide: SeamlessSlide, scriptFont: string, textColor: 
   if (!slide.hasText && !watermark) return `<svg xmlns="http://www.w3.org/2000/svg" width="${SLIDE_SIZE}" height="${SLIDE_SIZE}"/>`;
 
   const { tx, ty, anchor } = getAnchor(slide.position ?? "bottom-left");
-  const lineH = 60;
+
+  const titleColor = slide.titleColor ?? textColor;
+  const titleFontSize = slide.titleFontSize ?? 76;
+  const leadInColor = slide.leadInColor ?? textColor;
+  const leadInFontSize = slide.leadInFontSize ?? 44;
+  const tagLineColor = slide.tagLineColor ?? textColor;
+  const tagLineFontSize = slide.tagLineFontSize ?? 40;
+
+  const lineH = titleFontSize * 0.8;
   const doodleY = ty - (slide.leadIn ? lineH * 2.2 : lineH * 1.4) - 44;
 
   const doodle = slide.doodle && slide.doodle !== "none"
-    ? doodlePath(slide.doodle, tx, doodleY, 40, textColor)
+    ? doodlePath(slide.doodle, tx, doodleY, 40, titleColor)
     : "";
 
   const shadow = `<filter id="ts" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="1" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.5"/></filter>`;
 
   const leadInSvg = slide.leadIn
-    ? `<text x="${tx}" y="${ty - (slide.title ? lineH * 1.1 : 0)}" font-family="'${scriptFont}', cursive" font-size="44" fill="${textColor}" text-anchor="${anchor}" filter="url(#ts)" opacity="0.9">${escXml(slide.leadIn)}</text>`
+    ? `<text x="${tx}" y="${ty - (slide.title ? lineH * 1.1 : 0)}" font-family="'${scriptFont}', cursive" font-size="${leadInFontSize}" fill="${leadInColor}" text-anchor="${anchor}" filter="url(#ts)" opacity="0.9">${escXml(slide.leadIn)}</text>`
     : "";
 
   const titleSvg = slide.title
-    ? `<text x="${tx}" y="${ty}" font-family="'${scriptFont}', cursive" font-size="76" fill="${textColor}" text-anchor="${anchor}" filter="url(#ts)">${escXml(slide.title)}</text>`
+    ? `<text x="${tx}" y="${ty}" font-family="'${scriptFont}', cursive" font-size="${titleFontSize}" fill="${titleColor}" text-anchor="${anchor}" filter="url(#ts)">${escXml(slide.title)}</text>`
     : "";
 
   const tagSvg = slide.tagLine
-    ? `<text x="${tx}" y="${ty + lineH}" font-family="'${scriptFont}', cursive" font-size="40" fill="${textColor}" text-anchor="${anchor}" filter="url(#ts)" opacity="0.85">${escXml(slide.tagLine)}</text>`
+    ? `<text x="${tx}" y="${ty + lineH}" font-family="'${scriptFont}', cursive" font-size="${tagLineFontSize}" fill="${tagLineColor}" text-anchor="${anchor}" filter="url(#ts)" opacity="0.85">${escXml(slide.tagLine)}</text>`
     : "";
 
   const wmSvg = watermark
@@ -123,7 +131,6 @@ function autoArrangeBackgroundOverlays(
 
   if (!imageUrls.length) return elements;
 
-  // First image = background, stretched across full canvas at reduced opacity
   elements.push({
     imageUrl: imageUrls[0],
     x: 0,
@@ -139,19 +146,17 @@ function autoArrangeBackgroundOverlays(
   const overlays = imageUrls.slice(1);
   if (!overlays.length) return elements;
 
-  // Target overlay tile size: ~32% of slide height with slight variation
   const baseTile = Math.round(totalH * 0.32);
 
-  // Flowing slot positions — deliberately bridge slide seams for seamless effect
   const slots: { cx: number; cy: number; scale: number; rot: number }[] = [];
 
   if (slideCount === 3) {
     slots.push(
       { cx: SLIDE_SIZE * 0.28, cy: totalH * 0.30, scale: 0.95, rot: -3 },
       { cx: SLIDE_SIZE * 0.82, cy: totalH * 0.65, scale: 1.05, rot: 4 },
-      { cx: SLIDE_SIZE * 1.0,  cy: totalH * 0.25, scale: 1.0,  rot: -2 }, // bridges seam 1-2
+      { cx: SLIDE_SIZE * 1.0,  cy: totalH * 0.25, scale: 1.0,  rot: -2 },
       { cx: SLIDE_SIZE * 1.55, cy: totalH * 0.70, scale: 0.9,  rot: 5 },
-      { cx: SLIDE_SIZE * 2.0,  cy: totalH * 0.35, scale: 1.0,  rot: -4 }, // bridges seam 2-3
+      { cx: SLIDE_SIZE * 2.0,  cy: totalH * 0.35, scale: 1.0,  rot: -4 },
       { cx: SLIDE_SIZE * 2.55, cy: totalH * 0.65, scale: 1.05, rot: 3 },
       { cx: SLIDE_SIZE * 2.75, cy: totalH * 0.20, scale: 0.9,  rot: -5 },
     );
@@ -167,7 +172,6 @@ function autoArrangeBackgroundOverlays(
       { cx: SLIDE_SIZE * 3.7,  cy: totalH * 0.65, scale: 1.0,  rot: 4 },
     );
   } else {
-    // 5 slides
     slots.push(
       { cx: SLIDE_SIZE * 0.25, cy: totalH * 0.30, scale: 0.95, rot: -3 },
       { cx: SLIDE_SIZE * 0.85, cy: totalH * 0.65, scale: 1.0,  rot: 4 },
@@ -185,7 +189,7 @@ function autoArrangeBackgroundOverlays(
   overlays.forEach((url, i) => {
     if (i >= slots.length) return;
     const { cx, cy, scale, rot } = slots[i];
-    const tileW = Math.round(baseTile * scale * 1.1); // slightly wider for portrait photos
+    const tileW = Math.round(baseTile * scale * 1.1);
     const tileH = Math.round(baseTile * scale);
     elements.push({
       imageUrl: url,
@@ -237,7 +241,6 @@ function autoArrangeMagazine(imageUrls: string[], slideCount: number): CollageEl
   const elements: CollageElement[] = [];
   if (!imageUrls.length) return elements;
 
-  // Two dominant images taking ~40% canvas width each, bridging
   const domW = Math.round(totalW * 0.42);
   const domH = totalH;
   elements.push({ imageUrl: imageUrls[0], x: 0, y: 0, width: domW, height: domH, rotation: 0, zIndex: 0, hasBorder: false, isBackground: false });
@@ -245,7 +248,6 @@ function autoArrangeMagazine(imageUrls: string[], slideCount: number): CollageEl
     elements.push({ imageUrl: imageUrls[1], x: Math.round(totalW * 0.55), y: 0, width: domW, height: domH, rotation: 0, zIndex: 1, hasBorder: false, isBackground: false });
   }
 
-  // Accent shots
   const accents = imageUrls.slice(2);
   const accentSize = Math.round(totalH * 0.28);
   accents.forEach((url, i) => {
@@ -284,6 +286,18 @@ router.post("/seamless/upload", upload.array("images", 10), async (req, res) => 
       urls.push(url);
     }
     res.json({ urls });
+  } catch (e: any) {
+    req.log.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// POST /api/seamless/upload-logo
+router.post("/seamless/upload-logo", upload.single("logo"), async (req, res) => {
+  try {
+    if (!req.file) { res.status(400).json({ error: "No file" }); return; }
+    const url = await uploadBuf(req.file.buffer, `logo-${Date.now()}.png`, "seamless/logos", req.file.mimetype);
+    res.json({ logoUrl: url });
   } catch (e: any) {
     req.log.error(e);
     res.status(500).json({ error: e.message });
@@ -345,6 +359,7 @@ router.post("/seamless", async (req, res) => {
       textColor: body.textColor ?? "#ffffff",
       watermark: body.watermark ?? "",
       renderedSlideUrls: [],
+      logoConfig: body.logoConfig ?? null,
     }).returning();
     res.json(inserted);
   } catch (e: any) {
@@ -368,6 +383,7 @@ router.put("/seamless/:id", async (req, res) => {
       scriptFont: body.scriptFont,
       textColor: body.textColor,
       watermark: body.watermark,
+      logoConfig: body.logoConfig ?? null,
       updatedAt: new Date(),
     }).where(eq(seamlessCarouselsTable.id, id)).returning();
     if (!updated) { res.status(404).json({ error: "Not found" }); return; }
@@ -394,19 +410,16 @@ async function renderCollage(elements: CollageElement[], slideCount: number): Pr
   const totalW = SLIDE_SIZE * slideCount;
   const totalH = SLIDE_SIZE;
 
-  const BORDER = 12; // polaroid border px
+  const BORDER = 12;
 
-  // Sort by zIndex
   const sorted = [...elements].sort((a, b) => a.zIndex - b.zIndex);
 
-  // Build composite layers
   const composites: sharp.OverlayOptions[] = [];
 
   for (const el of sorted) {
     let buf = await fetchBuf(el.imageUrl);
 
     if (el.isBackground) {
-      // Background: resize to full canvas, apply dark tint overlay for contrast
       buf = await sharp(buf)
         .resize(totalW, totalH, { fit: "cover", position: "centre" })
         .modulate({ brightness: 0.75 })
@@ -414,7 +427,6 @@ async function renderCollage(elements: CollageElement[], slideCount: number): Pr
         .toBuffer();
       composites.push({ input: buf, left: 0, top: 0, blend: "over" });
     } else {
-      // Overlay image: resize to fit tile, optionally add polaroid border, rotate
       const innerW = el.hasBorder ? el.width - BORDER * 2 : el.width;
       const innerH = el.hasBorder ? el.height - BORDER * 2 : el.height;
 
@@ -424,7 +436,6 @@ async function renderCollage(elements: CollageElement[], slideCount: number): Pr
         .toBuffer();
 
       if (el.hasBorder) {
-        // Add white border (polaroid style)
         imgBuf = await sharp({
           create: { width: el.width, height: el.height, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
         })
@@ -433,7 +444,6 @@ async function renderCollage(elements: CollageElement[], slideCount: number): Pr
           .toBuffer();
       }
 
-      // Apply rotation via SVG transform wrapper
       if (el.rotation !== 0) {
         const rad = (el.rotation * Math.PI) / 180;
         const cos = Math.abs(Math.cos(rad));
@@ -449,13 +459,11 @@ async function renderCollage(elements: CollageElement[], slideCount: number): Pr
 
         imgBuf = await sharp(Buffer.from(svgWrapper)).png().toBuffer();
 
-        // Place so centre of rotated image is at the original el centre
         const elCx = el.x + el.width / 2;
         const elCy = el.y + el.height / 2;
         const left = Math.round(elCx - rotW / 2);
         const top = Math.round(elCy - rotH / 2);
 
-        // Clamp to canvas bounds
         const cl = Math.max(0, Math.min(left, totalW - 1));
         const ct = Math.max(0, Math.min(top, totalH - 1));
         composites.push({ input: imgBuf, left: cl, top: ct, blend: "over" });
@@ -467,7 +475,6 @@ async function renderCollage(elements: CollageElement[], slideCount: number): Pr
     }
   }
 
-  // Build base canvas
   const base = await sharp({
     create: { width: totalW, height: totalH, channels: 4, background: { r: 20, g: 20, b: 20, alpha: 1 } },
   })
@@ -476,6 +483,47 @@ async function renderCollage(elements: CollageElement[], slideCount: number): Pr
     .toBuffer();
 
   return base;
+}
+
+// Composite logo onto a slide buffer
+async function compositeLogoOnSlide(
+  slideBuf: Buffer,
+  logoBuf: Buffer,
+  logoConfig: SeamlessLogoConfig,
+): Promise<Buffer> {
+  const logoMeta = await sharp(logoBuf).metadata();
+  const logoAr = (logoMeta.width ?? 1) / (logoMeta.height ?? 1);
+  const logoBaseH = Math.round(SLIDE_SIZE * 0.12 * logoConfig.scale);
+  const logoW = Math.round(logoBaseH * logoAr);
+  const logoH = logoBaseH;
+
+  let resizedLogo = await sharp(logoBuf)
+    .resize(logoW, logoH, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer();
+
+  // Apply rotation if needed
+  if (logoConfig.rotation !== 0) {
+    const rad = (logoConfig.rotation * Math.PI) / 180;
+    const cos = Math.abs(Math.cos(rad));
+    const sin = Math.abs(Math.sin(rad));
+    const rotW = Math.ceil(logoW * cos + logoH * sin);
+    const rotH = Math.ceil(logoW * sin + logoH * cos);
+    const svgWrapper = `<svg xmlns="http://www.w3.org/2000/svg" width="${rotW}" height="${rotH}">
+      <image href="data:image/png;base64,${resizedLogo.toString("base64")}"
+        width="${logoW}" height="${logoH}"
+        transform="rotate(${logoConfig.rotation} ${rotW / 2} ${rotH / 2}) translate(${(rotW - logoW) / 2} ${(rotH - logoH) / 2})"/>
+    </svg>`;
+    resizedLogo = await sharp(Buffer.from(svgWrapper)).png().toBuffer();
+    const rotMeta = await sharp(resizedLogo).metadata();
+    const left = Math.max(0, Math.round(logoConfig.x * SLIDE_SIZE - (rotMeta.width ?? rotW) / 2));
+    const top = Math.max(0, Math.round(logoConfig.y * SLIDE_SIZE - (rotMeta.height ?? rotH) / 2));
+    return sharp(slideBuf).composite([{ input: resizedLogo, left, top, blend: "over" }]).png().toBuffer();
+  }
+
+  const left = Math.max(0, Math.round(logoConfig.x * SLIDE_SIZE - logoW / 2));
+  const top = Math.max(0, Math.round(logoConfig.y * SLIDE_SIZE - logoH / 2));
+  return sharp(slideBuf).composite([{ input: resizedLogo, left, top, blend: "over" }]).png().toBuffer();
 }
 
 // POST /api/seamless/:id/render
@@ -491,28 +539,48 @@ router.post("/seamless/:id/render", async (req, res) => {
     const scriptFont = carousel.scriptFont ?? "Allura";
     const textColor = carousel.textColor ?? "#ffffff";
     const watermark = carousel.watermark ?? "";
+    const logoConfig = carousel.logoConfig as SeamlessLogoConfig | null;
 
     if (!elements.length) { res.status(400).json({ error: "No collage elements — run auto-arrange first" }); return; }
+
+    // Fetch logo buffer once if needed
+    let logoBuf: Buffer | null = null;
+    if (logoConfig?.logoUrl) {
+      try {
+        logoBuf = await fetchBuf(logoConfig.logoUrl);
+      } catch {
+        req.log.warn("Failed to fetch seamless logo, skipping");
+      }
+    }
 
     // Render the full collage canvas
     const wideBuffer = await renderCollage(elements, n);
 
-    // Slice into N 1080×1080 slides and apply text overlays
+    // Slice into N 1080×1080 slides and apply text overlays + logo
     const slideUrls: string[] = [];
     for (let i = 0; i < n; i++) {
       const slide = slides[i] ?? { hasText: false, title: "", leadIn: "", tagLine: "", doodle: "none", position: "bottom-left" };
-      const cropped = await sharp(wideBuffer)
+      let cropped = await sharp(wideBuffer)
         .extract({ left: i * SLIDE_SIZE, top: 0, width: SLIDE_SIZE, height: SLIDE_SIZE })
         .png()
         .toBuffer();
 
       const textSvg = buildSlideTextSvg(slide, scriptFont, textColor, watermark);
-      const withText = await sharp(cropped)
+      cropped = await sharp(cropped)
         .composite([{ input: Buffer.from(textSvg), left: 0, top: 0, blend: "over" }])
         .png()
         .toBuffer();
 
-      const url = await uploadBuf(withText, `seamless-slide-${i + 1}-${Date.now()}.png`, "seamless/rendered");
+      // Composite logo if present
+      if (logoBuf && logoConfig) {
+        try {
+          cropped = await compositeLogoOnSlide(cropped, logoBuf, logoConfig);
+        } catch {
+          req.log.warn(`Logo composite failed for slide ${i + 1}, skipping`);
+        }
+      }
+
+      const url = await uploadBuf(cropped, `seamless-slide-${i + 1}-${Date.now()}.png`, "seamless/rendered");
       slideUrls.push(url);
     }
 

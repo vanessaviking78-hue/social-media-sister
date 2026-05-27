@@ -36,6 +36,11 @@ const DEFAULT_CANVAS_CONFIG: AboutMeCanvasConfig = {
   logoScale: 1.0,
   logoRotation: 0,
   doodles: [],
+  titleFontSize: 90,
+  titleLetterSpacing: 0,
+  subtitleFontSize: 40,
+  subtitleLetterSpacing: 3,
+  wordFontSize: 40,
 };
 
 async function uploadBuf(
@@ -112,7 +117,6 @@ function doodleSvg(d: AboutMeDoodle, canvasW: number, canvasH: number, color: st
   if (d.shape === "arrow") {
     return `<path d="${arrowPath(cx, cy, s)}" fill="none" stroke="${color}" stroke-width="${Math.max(2, s * 0.07)}" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"${transform}/>`;
   }
-  // sparkle
   return `<text x="${cx}" y="${cy}" font-size="${s * 0.7}" fill="${color}" text-anchor="middle" opacity="0.85"${transform}>✦</text>`;
 }
 
@@ -133,6 +137,14 @@ async function buildFullSvg(
   logoDataUri: string,
 ): Promise<string> {
   const cc = { ...DEFAULT_CANVAS_CONFIG, ...cfg };
+
+  const titleColor = cc.titleColor ?? accentColor;
+  const titleFontSize = cc.titleFontSize ?? (title.length > 16 ? 72 : 90);
+  const titleLetterSpacing = cc.titleLetterSpacing ?? 0;
+  const subtitleColor = cc.subtitleColor ?? accentColor;
+  const subtitleFontSize = cc.subtitleFontSize ?? 40;
+  const subtitleLetterSpacing = cc.subtitleLetterSpacing ?? 3;
+  const wordFontSize = cc.wordFontSize ?? 40;
 
   // Cutout dimensions
   const cutoutBaseH = canvasH * 0.54;
@@ -191,14 +203,14 @@ async function buildFullSvg(
   layers.push(`<image href="${cutoutDataUri}" x="${cutoutLeft.toFixed(1)}" y="${cutoutTop.toFixed(1)}" width="${cutoutDisplayW.toFixed(1)}" height="${cutoutDisplayH.toFixed(1)}" preserveAspectRatio="xMidYMid meet"${shadowFilter}/>`);
 
   // Title
-  const titleFontSize = title.length > 16 ? 72 : 90;
   const titleY = titleFontSize + 28;
-  layers.push(`<text x="${(canvasW / 2).toFixed(0)}" y="${titleY}" font-family="'${titleFont}', 'Allura', cursive" font-size="${titleFontSize}" fill="${accentColor}" text-anchor="middle" filter="url(#txtshadow)">${escXml(title)}</text>`);
+  const lsAttr = titleLetterSpacing > 0 ? ` letter-spacing="${titleLetterSpacing}"` : "";
+  layers.push(`<text x="${(canvasW / 2).toFixed(0)}" y="${titleY}" font-family="'${titleFont}', 'Allura', cursive" font-size="${titleFontSize}" fill="${titleColor}" text-anchor="middle" filter="url(#txtshadow)"${lsAttr}>${escXml(title)}</text>`);
 
   // Subtitle
   if (subtitle) {
-    const subY = titleY + 52;
-    layers.push(`<text x="${(canvasW / 2).toFixed(0)}" y="${subY}" font-family="Georgia, serif" font-size="40" fill="${accentColor}" text-anchor="middle" opacity="0.85" letter-spacing="3">${escXml(subtitle.toUpperCase())}</text>`);
+    const subY = titleY + subtitleFontSize + 12;
+    layers.push(`<text x="${(canvasW / 2).toFixed(0)}" y="${subY}" font-family="Georgia, serif" font-size="${subtitleFontSize}" fill="${subtitleColor}" text-anchor="middle" opacity="0.85" letter-spacing="${subtitleLetterSpacing}">${escXml(subtitle.toUpperCase())}</text>`);
   }
 
   // Words with hearts
@@ -206,8 +218,11 @@ async function buildFullSvg(
     const wx = w.x * canvasW;
     const wy = w.y * canvasH;
     const hy = wy - hwg;
-    layers.push(`<path d="${heartPath(wx, hy, hs)}" fill="${accentColor}" opacity="0.9"/>`);
-    layers.push(`<text x="${wx.toFixed(1)}" y="${wy.toFixed(1)}" font-family="Georgia, serif" font-size="40" fill="${accentColor}" text-anchor="middle" letter-spacing="1">${escXml(w.text)}</text>`);
+    const wColor = w.color ?? accentColor;
+    const wSize = w.fontSize ?? wordFontSize;
+    const wHs = Math.round(heartSize * 2.2);
+    layers.push(`<path d="${heartPath(wx, hy, wHs)}" fill="${wColor}" opacity="0.9"/>`);
+    layers.push(`<text x="${wx.toFixed(1)}" y="${wy.toFixed(1)}" font-family="Georgia, serif" font-size="${wSize}" fill="${wColor}" text-anchor="middle" letter-spacing="1">${escXml(w.text)}</text>`);
   });
 
   // Doodles
@@ -217,17 +232,21 @@ async function buildFullSvg(
 
   // Logo
   if (logoDataUri && cc.logoUrl) {
-    const logoMeta = await sharp(Buffer.from(logoDataUri.split(",")[1] ?? "", "base64")).metadata();
-    const logoAr = (logoMeta.width ?? 1) / (logoMeta.height ?? 1);
-    const logoDisplayW = logoDisplayH * logoAr;
-    const logoLeft = logoCx - logoDisplayW / 2;
-    const logoTop = logoCy - logoDisplayH / 2;
-    const logoRot = cc.logoRotation ?? 0;
-    const rotAttr = logoRot !== 0 ? ` transform="rotate(${logoRot} ${logoCx.toFixed(1)} ${logoCy.toFixed(1)})"` : "";
-    layers.push(`<image href="${logoDataUri}" x="${logoLeft.toFixed(1)}" y="${logoTop.toFixed(1)}" width="${logoDisplayW.toFixed(1)}" height="${logoDisplayH.toFixed(1)}" preserveAspectRatio="xMidYMid meet"${rotAttr}/>`);
+    try {
+      const logoMeta = await sharp(Buffer.from(logoDataUri.split(",")[1] ?? "", "base64")).metadata();
+      const logoAr = (logoMeta.width ?? 1) / (logoMeta.height ?? 1);
+      const logoDisplayW = logoDisplayH * logoAr;
+      const logoLeft = logoCx - logoDisplayW / 2;
+      const logoTop = logoCy - logoDisplayH / 2;
+      const logoRot = cc.logoRotation ?? 0;
+      const rotAttr = logoRot !== 0 ? ` transform="rotate(${logoRot} ${logoCx.toFixed(1)} ${logoCy.toFixed(1)})"` : "";
+      layers.push(`<image href="${logoDataUri}" x="${logoLeft.toFixed(1)}" y="${logoTop.toFixed(1)}" width="${logoDisplayW.toFixed(1)}" height="${logoDisplayH.toFixed(1)}" preserveAspectRatio="xMidYMid meet"${rotAttr}/>`);
+    } catch {
+      // skip logo if metadata fails
+    }
   }
 
-  // Sparkles
+  // Accent sparkles
   [
     [0.08, 0.10, 30, 0.5],
     [0.9, 0.5, 22, 0.4],
@@ -435,7 +454,7 @@ router.post("/about-me/:id/render", async (req, res) => {
       }
     }
 
-    // 4. Build comprehensive SVG
+    // 4. Build SVG overlay (text, doodles, logo as data URI)
     const words = (post.words ?? []) as AboutMeWord[];
     const svgStr = await buildFullSvg(
       canvasW,

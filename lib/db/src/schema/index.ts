@@ -251,7 +251,14 @@ export const insertContentLibrarySchema = createInsertSchema(contentLibraryTable
 export type InsertContentLibrary = z.infer<typeof insertContentLibrarySchema>;
 export type ContentLibraryItem = typeof contentLibraryTable.$inferSelect;
 
-export type AboutMeWord = { id: string; text: string; x: number; y: number };
+export type AboutMeWord = {
+  id: string;
+  text: string;
+  x: number;
+  y: number;
+  color?: string;
+  fontSize?: number;
+};
 
 export type AboutMeDoodle = {
   id: string;
@@ -279,6 +286,13 @@ export type AboutMeCanvasConfig = {
   logoScale: number;
   logoRotation: number;
   doodles: AboutMeDoodle[];
+  titleColor?: string;
+  titleFontSize?: number;
+  titleLetterSpacing?: number;
+  subtitleColor?: string;
+  subtitleFontSize?: number;
+  subtitleLetterSpacing?: number;
+  wordFontSize?: number;
 };
 
 export const aboutMePostsTable = pgTable("about_me_posts", {
@@ -315,6 +329,20 @@ export type SeamlessSlide = {
   tagLine: string;
   doodle: string;
   position: string;
+  titleColor?: string;
+  titleFontSize?: number;
+  leadInColor?: string;
+  leadInFontSize?: number;
+  tagLineColor?: string;
+  tagLineFontSize?: number;
+};
+
+export type SeamlessLogoConfig = {
+  logoUrl: string;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
 };
 
 export type CollageElement = {
@@ -341,6 +369,7 @@ export const seamlessCarouselsTable = pgTable("seamless_carousels", {
   textColor: text("text_color").notNull().default("#ffffff"),
   watermark: text("watermark").notNull().default(""),
   renderedSlideUrls: json("rendered_slide_urls").$type<string[]>().notNull().default([]),
+  logoConfig: json("logo_config").$type<SeamlessLogoConfig | null>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

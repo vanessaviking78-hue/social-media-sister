@@ -8,16 +8,32 @@ import { toast } from "sonner";
 import {
   Upload, ImagePlus, BookOpen, Film, Palette, MessageSquareText,
   CalendarDays, BarChart3, Loader2, Download, Grid, User,
-  Wand2, X, ZoomIn,
+  Wand2, X, ZoomIn, Send,
 } from "lucide-react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 const SCRIPT_FONTS = [
-  { label: "Allura", value: "Allura" },
-  { label: "Great Vibes", value: "Great Vibes" },
-  { label: "Pinyon Script", value: "Pinyon Script" },
-  { label: "Sacramento", value: "Sacramento" },
+  { label: "Allura", value: "Allura", cat: "Script" },
+  { label: "Great Vibes", value: "Great Vibes", cat: "Script" },
+  { label: "Pinyon Script", value: "Pinyon Script", cat: "Script" },
+  { label: "Sacramento", value: "Sacramento", cat: "Script" },
+  { label: "Dancing Script", value: "Dancing Script", cat: "Script" },
+  { label: "Pacifico", value: "Pacifico", cat: "Script" },
+  { label: "Alex Brush", value: "Alex Brush", cat: "Script" },
+  { label: "Kaushan Script", value: "Kaushan Script", cat: "Script" },
+  { label: "Playfair Display", value: "Playfair Display", cat: "Serif" },
+  { label: "Cormorant Garamond", value: "Cormorant Garamond", cat: "Serif" },
+  { label: "Lora", value: "Lora", cat: "Serif" },
+  { label: "Libre Baskerville", value: "Libre Baskerville", cat: "Serif" },
+  { label: "Poppins", value: "Poppins", cat: "Sans" },
+  { label: "Montserrat", value: "Montserrat", cat: "Sans" },
+  { label: "Raleway", value: "Raleway", cat: "Sans" },
+  { label: "Nunito", value: "Nunito", cat: "Sans" },
+  { label: "Quicksand", value: "Quicksand", cat: "Sans" },
 ];
 
 const DOODLES = [
@@ -63,6 +79,22 @@ type SlideConfig = {
   tagLine: string;
   doodle: string;
   position: string;
+  titleColor?: string;
+  titleFontSize?: number;
+  leadInColor?: string;
+  leadInFontSize?: number;
+  tagLineColor?: string;
+  tagLineFontSize?: number;
+};
+
+type LogoState = {
+  dataUrl: string;
+  storedUrl: string;
+  ar: number;
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
 };
 
 function defaultSlide(i: number): SlideConfig {
@@ -108,8 +140,12 @@ export default function SeamlessCarouselPage() {
   const [arranging, setArranging] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+  const [logo, setLogo] = useState<LogoState | null>(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoFileRef = useRef<HTMLInputElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
 
   const handleSlideCountChange = (n: number) => {
@@ -148,8 +184,39 @@ export default function SeamlessCarouselPage() {
     if (dropped.length) addFiles(dropped);
   }, [files]);
 
-  const setSlideField = (i: number, field: keyof SlideConfig, val: string | boolean) => {
+  const setSlideField = (i: number, field: keyof SlideConfig, val: string | boolean | number) => {
     setSlides((prev) => prev.map((s, idx) => idx === i ? { ...s, [field]: val } : s));
+  };
+
+  const handleLogoFile = async (file: File) => {
+    const dataUrl = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target!.result as string);
+      reader.readAsDataURL(file);
+    });
+    const img = new Image();
+    img.onload = () => setLogo({ dataUrl, storedUrl: "", ar: img.naturalWidth / img.naturalHeight, x: 0.5, y: 0.88, scale: 1, rotation: 0 });
+    img.src = dataUrl;
+  };
+
+  const uploadLogoToServer = async (dataUrl: string): Promise<string> => {
+    const blob = await fetch(dataUrl).then((r) => r.blob());
+    const fd = new FormData(); fd.append("logo", blob, "logo.png");
+    const r = await fetch(`${BASE}/api/seamless/upload-logo`, { method: "POST", body: fd });
+    if (!r.ok) throw new Error("Logo upload failed");
+    const { logoUrl } = await r.json() as { logoUrl: string };
+    return logoUrl;
+  };
+
+  const handleSchedule = () => {
+    if (!renderedUrls.length) { toast.error("Generate slides first"); return; }
+    const posts: SchedulePostPayload[] = renderedUrls.map((url, i) => ({
+      title: slides[i]?.title || `Slide ${i + 1}`,
+      caption: "",
+      imageUrls: [url],
+    }));
+    setSchedulePosts(posts);
+    setScheduleOpen(true);
   };
 
   // Step 1 → Step 2: upload images, run auto-arrange
@@ -215,6 +282,17 @@ export default function SeamlessCarouselPage() {
     const toastId = toast.loading("Saving & rendering slides…");
     try {
       // Upsert the carousel record
+      // Upload logo if needed
+      let logoStoredUrl = logo?.storedUrl ?? "";
+      if (logo && logo.dataUrl && !logo.storedUrl) {
+        try {
+          logoStoredUrl = await uploadLogoToServer(logo.dataUrl);
+          setLogo((l) => l ? { ...l, storedUrl: logoStoredUrl } : l);
+        } catch {
+          toast.error("Logo upload failed — continuing without logo");
+        }
+      }
+
       const saveBody = {
         slideCount,
         layoutStyle: layout,
@@ -224,6 +302,7 @@ export default function SeamlessCarouselPage() {
         scriptFont,
         textColor,
         watermark,
+        logoConfig: logo ? { logoUrl: logoStoredUrl, x: logo.x, y: logo.y, scale: logo.scale, rotation: logo.rotation } : null,
       };
 
       let id = carouselId;
@@ -288,6 +367,17 @@ export default function SeamlessCarouselPage() {
 
   return (
     <div className="min-h-[100dvh] w-full pb-32">
+      {scheduleOpen && (
+        <ScheduleModal
+          presetId={null}
+          presetName=""
+          postType="seamless"
+          posts={schedulePosts}
+          onClose={() => setScheduleOpen(false)}
+          onSaved={() => { setScheduleOpen(false); toast.success("Scheduled"); }}
+        />
+      )}
+
       {/* Lightbox */}
       {lightboxIdx !== null && renderedUrls[lightboxIdx] && (
         <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" onClick={() => setLightboxIdx(null)}>
@@ -510,6 +600,57 @@ export default function SeamlessCarouselPage() {
                               </Select>
                             </div>
                           </div>
+                          {/* Per-element colour + size overrides */}
+                          <details className="group">
+                            <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground select-none">Colour &amp; size overrides ▸</summary>
+                            <div className="mt-2 grid grid-cols-3 gap-2 pl-1">
+                              {slide.leadIn && (
+                                <>
+                                  <div className="space-y-0.5">
+                                    <Label className="text-xs text-muted-foreground/70">Lead-in colour</Label>
+                                    <input type="color" value={slide.leadInColor ?? textColor} onChange={(e) => setSlideField(i, "leadInColor", e.target.value)} className="w-9 h-7 p-0.5 cursor-pointer rounded border border-border/40 bg-transparent" />
+                                  </div>
+                                  <div className="space-y-0.5 col-span-2">
+                                    <div className="flex items-center justify-between">
+                                      <Label className="text-xs text-muted-foreground/70">Lead-in size</Label>
+                                      <span className="text-xs font-mono text-muted-foreground">{slide.leadInFontSize ?? 44}</span>
+                                    </div>
+                                    <input type="range" min={20} max={80} step={2} value={slide.leadInFontSize ?? 44} onChange={(e) => setSlideField(i, "leadInFontSize", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                  </div>
+                                </>
+                              )}
+                              {slide.title && (
+                                <>
+                                  <div className="space-y-0.5">
+                                    <Label className="text-xs text-muted-foreground/70">Title colour</Label>
+                                    <input type="color" value={slide.titleColor ?? textColor} onChange={(e) => setSlideField(i, "titleColor", e.target.value)} className="w-9 h-7 p-0.5 cursor-pointer rounded border border-border/40 bg-transparent" />
+                                  </div>
+                                  <div className="space-y-0.5 col-span-2">
+                                    <div className="flex items-center justify-between">
+                                      <Label className="text-xs text-muted-foreground/70">Title size</Label>
+                                      <span className="text-xs font-mono text-muted-foreground">{slide.titleFontSize ?? 76}</span>
+                                    </div>
+                                    <input type="range" min={32} max={120} step={2} value={slide.titleFontSize ?? 76} onChange={(e) => setSlideField(i, "titleFontSize", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                  </div>
+                                </>
+                              )}
+                              {slide.tagLine && (
+                                <>
+                                  <div className="space-y-0.5">
+                                    <Label className="text-xs text-muted-foreground/70">Tagline colour</Label>
+                                    <input type="color" value={slide.tagLineColor ?? textColor} onChange={(e) => setSlideField(i, "tagLineColor", e.target.value)} className="w-9 h-7 p-0.5 cursor-pointer rounded border border-border/40 bg-transparent" />
+                                  </div>
+                                  <div className="space-y-0.5 col-span-2">
+                                    <div className="flex items-center justify-between">
+                                      <Label className="text-xs text-muted-foreground/70">Tagline size</Label>
+                                      <span className="text-xs font-mono text-muted-foreground">{slide.tagLineFontSize ?? 40}</span>
+                                    </div>
+                                    <input type="range" min={20} max={80} step={2} value={slide.tagLineFontSize ?? 40} onChange={(e) => setSlideField(i, "tagLineFontSize", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </details>
                         </div>
                       )}
                     </div>
@@ -542,6 +683,33 @@ export default function SeamlessCarouselPage() {
                   <div className="space-y-1">
                     <Label className="text-sm text-muted-foreground">Watermark — e.g. @youraccount</Label>
                     <Input value={watermark} onChange={(e) => setWatermark(e.target.value)} placeholder="@youraccount" className="h-10" />
+                  </div>
+                  {/* Logo */}
+                  <div className="space-y-2 pt-2 border-t border-border/20">
+                    <Label className="text-sm text-muted-foreground">Logo (optional)</Label>
+                    {logo ? (
+                      <div className="flex items-center gap-3">
+                        <img src={logo.dataUrl} alt="Logo" className="h-12 object-contain rounded bg-white/5 p-1" />
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs text-muted-foreground">Size</Label>
+                            <span className="text-xs font-mono text-muted-foreground">{Math.round(logo.scale * 100)}%</span>
+                          </div>
+                          <input type="range" min={0.3} max={3} step={0.05} value={logo.scale} onChange={(e) => setLogo((l) => l ? { ...l, scale: Number(e.target.value) } : l)} className="w-full accent-pink-500 h-1.5" />
+                          <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                            <label>X <input type="range" min={0} max={1} step={0.01} value={logo.x} onChange={(e) => setLogo((l) => l ? { ...l, x: Number(e.target.value) } : l)} className="w-full accent-pink-500 h-1.5 mt-0.5" /></label>
+                            <label>Y <input type="range" min={0} max={1} step={0.01} value={logo.y} onChange={(e) => setLogo((l) => l ? { ...l, y: Number(e.target.value) } : l)} className="w-full accent-pink-500 h-1.5 mt-0.5" /></label>
+                          </div>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => setLogo(null)} className="text-muted-foreground shrink-0"><X className="w-4 h-4" /></Button>
+                      </div>
+                    ) : (
+                      <button onClick={() => logoFileRef.current?.click()}
+                        className="w-full border border-dashed border-border/40 rounded-xl py-3 text-sm text-muted-foreground hover:border-pink-500/40 transition-colors flex items-center justify-center gap-2">
+                        <Upload className="w-4 h-4" /> Upload logo (PNG with transparency)
+                      </button>
+                    )}
+                    <input ref={logoFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoFile(f); }} />
                   </div>
                 </div>
 
@@ -582,6 +750,30 @@ export default function SeamlessCarouselPage() {
                 <Button onClick={downloadZip} className="w-full py-5 text-base font-bold gap-2 rounded-2xl">
                   <Download className="w-5 h-5" /> Download all slides as ZIP
                 </Button>
+
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={handleSchedule} className="flex-1 gap-2">
+                    <CalendarDays className="w-4 h-4" /> Schedule
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 gap-2"
+                    onClick={async () => {
+                      if (!renderedUrls.length) { toast.error("Generate slides first"); return; }
+                      try {
+                        const r = await fetch(`${BASE}/api/meta/push`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ imageUrls: renderedUrls, caption: "", postType: "carousel" }),
+                        });
+                        if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error((e as any).error || "Post failed"); }
+                        toast.success("Posted to Instagram");
+                      } catch (e: any) { toast.error(e.message || "Post failed"); }
+                    }}
+                  >
+                    <Send className="w-4 h-4" /> Post to IG
+                  </Button>
+                </div>
 
                 <Button variant="outline" onClick={() => {
                   setStep("upload");
@@ -645,6 +837,75 @@ export default function SeamlessCarouselPage() {
                       zIndex: 100,
                     }} />
                   ))}
+
+                  {/* Text overlays per slide */}
+                  {slides.map((slide, i) => {
+                    if (!slide.hasText || (!slide.title && !slide.leadIn && !slide.tagLine)) return null;
+                    const slideW = PREVIEW_W / slideCount;
+                    const slideLeft = i * slideW;
+                    const pos = slide.position ?? "bottom-left";
+                    const isLeft = pos.includes("left") || pos === "center";
+                    const isTop = pos.includes("top");
+                    const isCenter = pos === "center";
+                    const titleFs = Math.round((slide.titleFontSize ?? 76) * scale);
+                    const leadFs = Math.round((slide.leadInFontSize ?? 44) * scale);
+                    const tagFs = Math.round((slide.tagLineFontSize ?? 40) * scale);
+                    return (
+                      <div key={i} style={{
+                        position: "absolute",
+                        left: slideLeft + (isCenter ? 0 : isLeft ? slideW * 0.07 : undefined as any),
+                        right: !isLeft && !isCenter ? (PREVIEW_W - slideLeft - slideW) + slideW * 0.07 : undefined,
+                        width: isCenter ? slideW : undefined,
+                        top: isTop ? PREVIEW_H * 0.09 : undefined,
+                        bottom: !isTop ? PREVIEW_H * 0.11 : undefined,
+                        zIndex: 200,
+                        textAlign: isCenter ? "center" : isLeft ? "left" : "right",
+                        pointerEvents: "none",
+                      }}>
+                        {slide.leadIn && (
+                          <div style={{ fontFamily: `'${scriptFont}', cursive`, fontSize: leadFs, color: slide.leadInColor ?? textColor, textShadow: "0 1px 3px rgba(0,0,0,0.6)", lineHeight: 1.2, whiteSpace: "nowrap" }}>
+                            {slide.leadIn}
+                          </div>
+                        )}
+                        {slide.title && (
+                          <div style={{ fontFamily: `'${scriptFont}', cursive`, fontSize: titleFs, color: slide.titleColor ?? textColor, textShadow: "0 1px 4px rgba(0,0,0,0.7)", lineHeight: 1.1, whiteSpace: "nowrap" }}>
+                            {slide.title}
+                          </div>
+                        )}
+                        {slide.tagLine && (
+                          <div style={{ fontFamily: `'${scriptFont}', cursive`, fontSize: tagFs, color: slide.tagLineColor ?? textColor, textShadow: "0 1px 3px rgba(0,0,0,0.6)", lineHeight: 1.2, whiteSpace: "nowrap", opacity: 0.85 }}>
+                            {slide.tagLine}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                  {/* Logo overlay in preview */}
+                  {logo && (
+                    <div style={{
+                      position: "absolute",
+                      pointerEvents: "none",
+                      zIndex: 210,
+                    }}>
+                      {Array.from({ length: slideCount }).map((_, i) => {
+                        const slideW = PREVIEW_W / slideCount;
+                        const logoH = Math.round(PREVIEW_H * 0.12 * logo.scale);
+                        const logoW = Math.round(logoH * logo.ar);
+                        return (
+                          <img key={i} src={logo.dataUrl} alt="logo" style={{
+                            position: "absolute",
+                            left: i * slideW + logo.x * slideW - logoW / 2,
+                            top: logo.y * PREVIEW_H - logoH / 2,
+                            width: logoW,
+                            height: logoH,
+                            objectFit: "contain",
+                            opacity: 0.85,
+                          }} />
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               ) : previewUrls.length > 0 ? (
                 <div className="flex h-full">

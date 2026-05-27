@@ -57,7 +57,7 @@ const PH_PORT = 425;
 const PH_STORY = 604;
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
-type Word = { id: string; text: string; x: number; y: number };
+type Word = { id: string; text: string; x: number; y: number; color?: string; fontSize?: number };
 type DoodleShape = "heart-outline" | "arrow" | "sparkle";
 type DoodleEl = { id: string; shape: DoodleShape; x: number; y: number; size: number; rotation: number };
 type LogoState = { dataUrl: string; storedUrl: string; ar: number; x: number; y: number; scale: number; rotation: number };
@@ -123,6 +123,14 @@ export default function AboutMePage() {
   const [titleFont, setTitleFont] = useState("Allura");
   const [accentColor, setAccentColor] = useState("#F5EEE3");
   const [heartSize, setHeartSize] = useState(14);
+
+  // Per-element typography
+  const [titleFontSize, setTitleFontSize] = useState(90);
+  const [titleLetterSpacing, setTitleLetterSpacing] = useState(0);
+  const [titleColor, setTitleColor] = useState("");
+  const [subtitleColor, setSubtitleColor] = useState("");
+  const [subtitleFontSize, setSubtitleFontSize] = useState(40);
+  const [subtitleLetterSpacing, setSubtitleLetterSpacing] = useState(3);
 
   // Words
   const [words, setWords] = useState<Word[]>([
@@ -415,7 +423,11 @@ export default function AboutMePage() {
         setLogo((l) => l ? { ...l, storedUrl: logoUrl } : l);
       }
 
-      const apiWords = words.filter((w) => w.text.trim()).map((w) => ({ id: w.id, text: w.text, x: w.x, y: w.y }));
+      const apiWords = words.filter((w) => w.text.trim()).map((w) => ({
+        id: w.id, text: w.text, x: w.x, y: w.y,
+        ...(w.color ? { color: w.color } : {}),
+        ...(w.fontSize ? { fontSize: w.fontSize } : {}),
+      }));
 
       const canvasConfig = {
         cutoutX, cutoutY, cutoutScale,
@@ -424,6 +436,12 @@ export default function AboutMePage() {
         logoUrl,
         logoX: logo?.x ?? 0.84, logoY: logo?.y ?? 0.88, logoScale: logo?.scale ?? 1, logoRotation: logo?.rotation ?? 0,
         doodles,
+        titleFontSize,
+        titleLetterSpacing,
+        ...(titleColor ? { titleColor } : {}),
+        ...(subtitleColor ? { subtitleColor } : {}),
+        subtitleFontSize,
+        subtitleLetterSpacing,
       };
 
       const body = {
@@ -583,6 +601,62 @@ export default function AboutMePage() {
                   ))}
                 </SelectContent>
               </Select>
+
+              {/* Title typography */}
+              <div className="grid grid-cols-3 gap-3 pt-1 border-t border-border/20">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Title colour</Label>
+                  <div className="flex gap-1 items-center">
+                    <Input type="color" value={titleColor || accentColor} onChange={(e) => setTitleColor(e.target.value)} className="w-10 h-8 p-0.5 cursor-pointer" />
+                    {titleColor && (
+                      <button onClick={() => setTitleColor("")} className="text-xs text-muted-foreground hover:text-foreground">↺</button>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs text-muted-foreground">Title size</Label>
+                    <span className="text-xs font-mono text-muted-foreground">{titleFontSize}</span>
+                  </div>
+                  <input type="range" min={40} max={120} step={2} value={titleFontSize} onChange={(e) => setTitleFontSize(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs text-muted-foreground">Spacing</Label>
+                    <span className="text-xs font-mono text-muted-foreground">{titleLetterSpacing}</span>
+                  </div>
+                  <input type="range" min={0} max={12} step={0.5} value={titleLetterSpacing} onChange={(e) => setTitleLetterSpacing(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                </div>
+              </div>
+
+              {/* Subtitle typography */}
+              {subtitle && (
+                <div className="grid grid-cols-3 gap-3 pt-1 border-t border-border/20">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Subtitle colour</Label>
+                    <div className="flex gap-1 items-center">
+                      <Input type="color" value={subtitleColor || accentColor} onChange={(e) => setSubtitleColor(e.target.value)} className="w-10 h-8 p-0.5 cursor-pointer" />
+                      {subtitleColor && (
+                        <button onClick={() => setSubtitleColor("")} className="text-xs text-muted-foreground hover:text-foreground">↺</button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs text-muted-foreground">Sub size</Label>
+                      <span className="text-xs font-mono text-muted-foreground">{subtitleFontSize}</span>
+                    </div>
+                    <input type="range" min={20} max={70} step={2} value={subtitleFontSize} onChange={(e) => setSubtitleFontSize(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs text-muted-foreground">Spacing</Label>
+                      <span className="text-xs font-mono text-muted-foreground">{subtitleLetterSpacing}</span>
+                    </div>
+                    <input type="range" min={0} max={12} step={0.5} value={subtitleLetterSpacing} onChange={(e) => setSubtitleLetterSpacing(Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Words */}
@@ -598,11 +672,22 @@ export default function AboutMePage() {
               </div>
               <div className="space-y-2">
                 {words.map((w, i) => (
-                  <div key={w.id} className="flex gap-2 items-center">
-                    <Input value={w.text} onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, text: e.target.value } : ww))}
-                      placeholder={`Word ${i + 1}`} className="flex-1 h-9" />
-                    <span className="text-xs text-muted-foreground/50 font-mono w-20 text-right shrink-0">{Math.round(w.x * 100)}%,{Math.round(w.y * 100)}%</span>
-                    <Button variant="ghost" size="sm" onClick={() => setWords((p) => p.filter((_, ii) => ii !== i))} className="h-9 w-9 p-0 text-muted-foreground shrink-0"><X className="w-3.5 h-3.5" /></Button>
+                  <div key={w.id} className="space-y-1">
+                    <div className="flex gap-2 items-center">
+                      <Input value={w.text} onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, text: e.target.value } : ww))}
+                        placeholder={`Word ${i + 1}`} className="flex-1 h-9" />
+                      <input type="color" value={w.color ?? accentColor}
+                        onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, color: e.target.value } : ww))}
+                        title="Word colour" className="w-9 h-9 p-0.5 cursor-pointer rounded border border-border/40 bg-transparent" />
+                      {w.color && (
+                        <button onClick={() => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, color: undefined } : ww))}
+                          className="text-xs text-muted-foreground hover:text-foreground" title="Reset colour">↺</button>
+                      )}
+                      <input type="number" min={20} max={80} value={w.fontSize ?? 40}
+                        onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, fontSize: Number(e.target.value) } : ww))}
+                        className="w-14 h-9 text-xs text-center bg-muted/40 border border-border/40 rounded" title="Font size" />
+                      <Button variant="ghost" size="sm" onClick={() => setWords((p) => p.filter((_, ii) => ii !== i))} className="h-9 w-9 p-0 text-muted-foreground shrink-0"><X className="w-3.5 h-3.5" /></Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -770,9 +855,21 @@ export default function AboutMePage() {
 
             {renderedUrl && (
               <div className="flex gap-3">
-                <a href={renderedUrl} download="about-me.png" target="_blank" rel="noopener noreferrer" className="flex-1">
-                  <Button className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"><Download className="w-4 h-4" /> Download PNG</Button>
-                </a>
+                <Button
+                  className="flex-1 gap-2 bg-green-600 hover:bg-green-700 text-white"
+                  onClick={async () => {
+                    try {
+                      const resp = await fetch(renderedUrl);
+                      const blob = await resp.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url; a.download = "about-me.png"; a.click();
+                      URL.revokeObjectURL(url);
+                    } catch { window.open(renderedUrl, "_blank"); }
+                  }}
+                >
+                  <Download className="w-4 h-4" /> Download PNG
+                </Button>
                 <Button variant="outline" onClick={handleSchedule} className="flex-1 gap-2">
                   <CalendarDays className="w-4 h-4" /> Schedule
                 </Button>
@@ -849,15 +946,29 @@ export default function AboutMePage() {
                   )}
 
                   {/* Title */}
-                  <text x={PW / 2} y={36} fontFamily={`'${titleFont}', cursive, serif`} fontSize={30} fill={accentColor} textAnchor="middle"
-                    style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.4))" }}>
-                    {title}
-                  </text>
-                  {subtitle && (
-                    <text x={PW / 2} y={52} fontFamily="Georgia, serif" fontSize={10} fill={accentColor} textAnchor="middle" opacity={0.85} letterSpacing={1.5}>
-                      {subtitle.toUpperCase()}
-                    </text>
-                  )}
+                  {(() => {
+                    const fs = Math.round(titleFontSize * PW / 1080);
+                    const tc = titleColor || accentColor;
+                    const ty = fs + 10;
+                    return (
+                      <text x={PW / 2} y={ty} fontFamily={`'${titleFont}', cursive, serif`} fontSize={fs} fill={tc} textAnchor="middle"
+                        letterSpacing={titleLetterSpacing}
+                        style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.4))" }}>
+                        {title}
+                      </text>
+                    );
+                  })()}
+                  {subtitle && (() => {
+                    const titleFs = Math.round(titleFontSize * PW / 1080);
+                    const subFs = Math.round(subtitleFontSize * PW / 1080);
+                    const sc = subtitleColor || accentColor;
+                    const ty = titleFs + 10 + subFs + 4;
+                    return (
+                      <text x={PW / 2} y={ty} fontFamily="Georgia, serif" fontSize={subFs} fill={sc} textAnchor="middle" opacity={0.85} letterSpacing={subtitleLetterSpacing}>
+                        {subtitle.toUpperCase()}
+                      </text>
+                    );
+                  })()}
 
                   {/* Words — draggable */}
                   {words.filter((w) => w.text).map((w, i) => {
@@ -869,8 +980,8 @@ export default function AboutMePage() {
                           startDrag(e, { what: "word", idx: i, sx: p.x, sy: p.y, ox: w.x, oy: w.y });
                         }}>
                         <rect x={wx - 28} y={wy - hwGap - previewHs} width={56} height={hwGap + previewHs + 14} fill="transparent" />
-                        <path d={heartFilled(wx, wy - hwGap, previewHs)} fill={accentColor} opacity={0.9} />
-                        <text x={wx} y={wy} fontFamily="Georgia, serif" fontSize={12} fill={accentColor} textAnchor="middle">{w.text}</text>
+                        <path d={heartFilled(wx, wy - hwGap, previewHs)} fill={w.color ?? accentColor} opacity={0.9} />
+                        <text x={wx} y={wy} fontFamily="Georgia, serif" fontSize={Math.round((w.fontSize ?? 40) * PW / 1080)} fill={w.color ?? accentColor} textAnchor="middle">{w.text}</text>
                       </g>
                     );
                   })}

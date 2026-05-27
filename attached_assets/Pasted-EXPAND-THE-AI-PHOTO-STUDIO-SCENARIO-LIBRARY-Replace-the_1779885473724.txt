@@ -1,0 +1,87 @@
+EXPAND THE AI PHOTO STUDIO SCENARIO LIBRARY
+
+Replace the current scenario list with 15 curated scenarios across 3 categories, plus a custom background upload option. All scenarios must enforce identity preservation, no medical claims, natural skin texture, no needles or sharps visible, no specific medicine brand names.
+
+================================================================
+CATEGORY 1: STUDIO (5 scenarios)
+================================================================
+
+1. EDITORIAL HEADSHOT
+   Setting: clean neutral grey-beige studio backdrop, soft three-point lighting, professional fashion-magazine aesthetic. Pose: close to camera, three-quarter angle, confident gentle smile. Outfit: smart casual blazer or knitwear.
+
+2. BLACK BACKDROP DRAMATIC
+   Setting: deep black studio backdrop, dramatic single-source lighting from the side, moody high-contrast editorial feel. Pose: looking slightly off-camera, serious confident expression. Outfit: black blazer or chic black knitwear, minimal jewellery.
+
+3. WHITE BACKDROP CLEAN
+   Setting: bright white seamless backdrop, even soft light, minimalist clean aesthetic. Pose: warm friendly smile, eyes to camera, natural posture. Outfit: white shirt, cream knitwear, or chosen scrub colour.
+
+4. SOFT PASTEL BACKDROP
+   Setting: warm soft pastel backdrop (blush pink, soft beige, dusty sage, configurable), warm soft lighting, fresh feminine editorial feel. Pose: relaxed natural smile, soft shoulders. Outfit: smart casual in complementary tones.
+
+5. BRAND BACKDROP
+   Setting: solid colour backdrop matching the clinic's brand colour (configurable hex input, defaults to client preset's primary brand colour). Pose: confident, hands relaxed, eyes to camera. Outfit: smart casual or scrubs in the colour palette.
+
+================================================================
+CATEGORY 2: CLINIC BOKEH (5 scenarios — clinical vibes, location unrecognisable)
+================================================================
+
+All clinic scenarios use heavy background blur (bokeh) so the specific clinic isn't identifiable. Generic clinical feel without revealing any actual location. Universal across all clients.
+
+1. TREATMENT ROOM BOKEH
+   Setting: out-of-focus modern aesthetic treatment room, soft warm clinical lighting, hint of clean lines and pale neutrals in the background, heavily blurred. Outfit: scrubs in chosen colour. Pose: composed professional smile, eye contact.
+
+2. RECEPTION DESK BOKEH
+   Setting: blurred reception area with hints of soft tones, plants and clean surfaces, daylight ambient feel, heavily blurred. Outfit: smart casual or scrubs. Pose: relaxed warm welcoming smile.
+
+3. CONSULTATION ROOM BOKEH
+   Setting: out-of-focus consultation room with hints of a desk and chairs, soft daylight, calm aesthetic, heavily blurred. Outfit: smart blazer or scrubs. Pose: seated three-quarter angle, attentive expression.
+
+4. TREATMENT CHAIR BOKEH
+   Setting: heavily blurred treatment chair shape with surrounding clinical environment, soft cinematic lighting. Person standing beside it, professional. Outfit: scrubs in chosen colour. Pose: hand resting on chair edge, confident smile.
+
+5. CLINIC GREENERY BOKEH
+   Setting: blurred clinic environment with greenery and plants softened in the background, warm welcoming feel, heavily blurred. Outfit: smart casual or scrubs. Pose: natural, approachable, warm smile.
+
+================================================================
+CATEGORY 3: LIFESTYLE (5 scenarios)
+================================================================
+
+1. COFFEE SHOP CATCH-UP
+   Setting: cosy modern coffee shop, warm daylight from window, laptop and latte on table, candid relaxed moment. Outfit: smart casual layered, knitwear or blazer. Pose: half-smile, eyes to camera, relaxed.
+
+2. OUTDOOR GOLDEN HOUR WALK
+   Setting: city street or park path during golden hour, soft warm sunlight, casually walking, candid editorial. Outfit: smart casual coat or layered seasonal wear. Pose: mid-stride, looking ahead or gentle smile to camera.
+
+3. HOME OFFICE DESK
+   Setting: tidy home office with daylight, notebook open, plants in shot, productive calm vibe. Outfit: smart casual top, knitwear or shirt. Pose: at the desk, looking up from work with warm smile.
+
+4. CAFE TERRACE BRUNCH
+   Setting: outdoor cafe terrace, warm light, plates with brunch, foliage around, lifestyle editorial feel. Outfit: smart casual, summery layering. Pose: relaxed at the table, candid laugh or composed smile.
+
+5. PARK BENCH CANDID
+   Setting: park bench surrounded by autumn or spring foliage, soft daylight, casual candid moment. Outfit: cosy knitwear or coat. Pose: relaxed seated pose, looking off-camera or gentle smile.
+
+================================================================
+BONUS: UPLOAD YOUR OWN BACKGROUND
+================================================================
+
+A 16th option in the scenario library labelled "Upload your own background".
+
+When selected:
+- User uploads their own background image (their actual clinic, branded wall, exterior, anywhere they want to be placed)
+- Gemini receives BOTH images in the prompt: the person reference photo (first) and the custom background (second)
+- Prompt instructs Gemini to place the person naturally into the supplied background while maintaining their identity exactly
+- Same compliance rules apply
+
+Prompt template:
+"Generate a high-quality professional portrait of the person in the FIRST reference image, placed naturally into the setting shown in the SECOND reference image. Outfit: {outfitSelection}. Pose: natural, professional. Composition: {aspectRatio}, person occupies roughly 50-60% of the frame. Style: editorial photography, natural skin texture, no over-smoothing. CRITICAL: maintain the person's facial features, hair colour, eye colour, ethnicity and identity exactly as in the FIRST reference photo. CRITICAL: use the SECOND image as the literal background setting, do not alter its character or environment."
+
+================================================================
+
+UI changes:
+- Replace the existing scenario gallery with the 16 scenarios above, grouped into 3 collapsible sections (Studio, Clinic Bokeh, Lifestyle) plus the standalone Upload Your Own Background card
+- Each scenario card shows a small preview thumbnail (you can use a representative stock generation as the placeholder)
+- Selecting a scenario surfaces only the relevant configuration options (e.g. scrub colour for clinic scenarios, backdrop colour for brand scenarios, no extra config for lifestyle)
+- Multi-select up to 6 at once (for batch generation respecting rate limits)
+
+Restart api-server when done.
