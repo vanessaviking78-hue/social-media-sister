@@ -202,7 +202,7 @@ export default function AiPortraitStudio() {
       const next = new Map(prev);
       if (next.has(id)) { next.delete(id); return next; }
       if (next.size >= 6) { toast.warning("Maximum 6 scenarios per generation run"); return prev; }
-      const existing = configs.get(id) ?? { id, aspectRatio: "1:1" };
+      const existing = configs.get(id) ?? { id, aspectRatio: "3:4" };
       next.set(id, existing);
       return next;
     });
@@ -218,7 +218,7 @@ export default function AiPortraitStudio() {
     });
     setConfigs((prev) => {
       const next = new Map(prev);
-      const cur = next.get(scenarioId) ?? { id: scenarioId, aspectRatio: "1:1" };
+      const cur = next.get(scenarioId) ?? { id: scenarioId, aspectRatio: "3:4" };
       next.set(scenarioId, { ...cur, ...patch });
       return next;
     });
@@ -272,7 +272,7 @@ export default function AiPortraitStudio() {
 
   const handleRateLimitedRetry = async (card: CardState) => {
     if (!sourcePhoto) { toast.error("Reference photo is no longer available — please re-upload and regenerate"); return; }
-    const cfg = selected.get(card.scenarioId) ?? { id: card.scenarioId, aspectRatio: "1:1" as const };
+    const cfg = selected.get(card.scenarioId) ?? { id: card.scenarioId, aspectRatio: "3:4" as const };
     try {
       const r = await fetch(`${BASE}api/ai-portrait/generate`, {
         method: "POST",
