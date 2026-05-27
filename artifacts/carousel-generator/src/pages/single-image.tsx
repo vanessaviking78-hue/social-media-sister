@@ -14,7 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import VanessaChat from "@/components/vanessa-chat";
-import { CANVAS_WIDTH, CANVAS_HEIGHT, VIDEO_WIDTH, VIDEO_HEIGHT, FONT_OPTIONS, FONT_PAIRINGS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, drawHeroSlide, compressImage, recordSlideVideo, type AnimationType } from "@/lib/slide-utils";
+import { CANVAS_WIDTH, CANVAS_HEIGHT, VIDEO_WIDTH, VIDEO_HEIGHT, FONT_OPTIONS, FONT_PAIRINGS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, drawHeroSlide, compressImage, recordSlideVideo, recordReelVideoMp4, type AnimationType } from "@/lib/slide-utils";
+import { type ReelAnimType, type ElementAnimation, REEL_ANIM_LABELS, applyPhotoAnimation, applyTextAnimation } from "@/lib/animate-utils";
 import { usePresets, type ClientPreset, type PresetStyleFields, type TextPosition, type TextAlign, type CornerStyle, isCornerStyle, normalizeTextPosition } from "@/lib/use-presets";
 import type { LogoPosition } from "@workspace/db/schema";
 import { useCaptions } from "@/lib/use-captions";
@@ -109,6 +110,16 @@ export default function SingleImage() {
   const [videoPreviewPlaying, setVideoPreviewPlaying] = useState(false);
   const videoPreviewCanvasRef = useRef<HTMLCanvasElement>(null);
   const videoPreviewRafRef = useRef<number | null>(null);
+
+  const [animateOpen, setAnimateOpen] = useState(false);
+  const [animatePhotoAnim, setAnimatePhotoAnim] = useState<ElementAnimation>({ type: "photo-zoom", startAt: 0, repeat: true });
+  const [animateTextAnim, setAnimateTextAnim] = useState<ElementAnimation>({ type: "fade-in", startAt: 0.3, repeat: false });
+  const [animateRendering, setAnimateRendering] = useState(false);
+  const [animateProgress, setAnimateProgress] = useState(0);
+  const [animatePreviewPlaying, setAnimatePreviewPlaying] = useState(false);
+  const animatePreviewCanvasRef = useRef<HTMLCanvasElement>(null);
+  const animatePreviewRafRef = useRef<number | null>(null);
+  const [animateClientName, setAnimateClientName] = useState("");
 
   const [designPreviewDataUrl, setDesignPreviewDataUrl] = useState<string | null>(null);
   const designBgImgRef = useRef<HTMLImageElement | null>(null);
@@ -671,6 +682,171 @@ export default function SingleImage() {
       toast.error('Video export failed: ' + (e?.message || 'Unknown error'), { id });
     } finally {
       setVideoExporting(false);
+    }
+  };
+
+  const stopAnimatePreview = () => {
+    if (animatePreviewRafRef.current !== null) {
+      cancelAnimationFrame(animatePreviewRafRef.current);
+      animatePreviewRafRef.current = null;
+    }
+    setAnimatePreviewPlaying(false);
+  };
+
+  useEffect(() => () => stopAnimatePreview(), []);
+
+  const playAnimatePreview = async () => {
+    if (!result?.posts.length || !animatePreviewCanvasRef.current) return;
+    stopAnimatePreview();
+    const post = result.posts[0];
+    try {
+      const res = await fetch(post.imageUrl);
+      const blob = await res.blob();
+      const objUrl = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onerror = () => URL.revokeObjectURL(objUrl);
+      img.onload = () => {
+        URL.revokeObjectURL(objUrl);
+        const canvas = animatePreviewCanvasRef.current;
+        if (!canvas) return;
+        const W = CANVAS_WIDTH;
+        const H = CANVAS_HEIGHT;
+        canvas.width = W;
+        canvas.height = H;
+        const ctx = canvas.getContext('2d')!;
+        const DURATION_MS = 5000;
+        const startTime = performance.now();
+        setAnimatePreviewPlaying(true);
+        const tick = () => {
+          const elapsed = (performance.now() - startTime) % DURATION_MS;
+          const t = elapsed / DURATION_MS;
+          ctx.clearRect(0, 0, W, H);
+          ctx.save();
+          if (animatePhotoAnim.type === "none") {
+            const ar = img.naturalWidth / img.naturalHeight;
+            const canvasAr = W / H;
+            let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
+            if (ar > canvasAr) { sw = Math.round(sh * canvasAr); sx = Math.round((img.naturalWidth - sw) / 2); }
+            else { sh = Math.round(sw / canvasAr); sy = Math.round((img.naturalHeight - sh) / 2); }
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
+          } else {
+            applyPhotoAnimation(ctx, img, animatePhotoAnim, t, W, H);
+          }
+          ctx.restore();
+          const overlayColor2 = overlayColor || "rgba(0,0,0,0.4)";
+          ctx.fillStyle = overlayColor2;
+          ctx.fillRect(0, 0, W, H);
+          if (animateTextAnim.type !== "none") {
+            const text = post.text || (textStyle === "hero" ? [heroLeadIn, heroWord].filter(Boolean).join(" ") : "");
+            if (text) {
+              applyTextAnimation(ctx, text, animateTextAnim, t, W, H, textColor, fontFamily, fontSize, textPosition as "top" | "center" | "bottom");
+            }
+          }
+          animatePreviewRafRef.current = requestAnimationFrame(tick);
+        };
+        animatePreviewRafRef.current = requestAnimationFrame(tick);
+      };
+      img.src = objUrl;
+    } catch {
+      setAnimatePreviewPlaying(false);
+    }
+  };
+
+  const saveAsReel = async () => {
+    if (!result?.posts.length) return;
+    const clientName = animateClientName || aiClientName || "Unknown";
+    setAnimateRendering(true);
+    setAnimateProgress(0);
+    const toastId = toast.loading("Rendering reel…");
+    try {
+      await document.fonts.ready;
+      const W = CANVAS_WIDTH;
+      const H = CANVAS_HEIGHT;
+      const canvas = document.createElement("canvas");
+      canvas.width = W;
+      canvas.height = H;
+
+      const post = result.posts[0];
+      const res = await fetch(post.imageUrl);
+      const blob = await res.blob();
+      const img = new Image();
+      await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = () => fail(new Error("img load failed")); img.src = URL.createObjectURL(blob); });
+
+      const DURATION_MS = 5000;
+      const FPS = 30;
+
+      const animateFn = (_slideIndex: number, progress: number) => {
+        const ctx = canvas.getContext("2d")!;
+        ctx.clearRect(0, 0, W, H);
+        ctx.save();
+        if (animatePhotoAnim.type === "none") {
+          const ar = img.naturalWidth / img.naturalHeight;
+          const canvasAr = W / H;
+          let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
+          if (ar > canvasAr) { sw = Math.round(sh * canvasAr); sx = Math.round((img.naturalWidth - sw) / 2); }
+          else { sh = Math.round(sw / canvasAr); sy = Math.round((img.naturalHeight - sh) / 2); }
+          ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
+        } else {
+          applyPhotoAnimation(ctx, img, animatePhotoAnim, progress, W, H);
+        }
+        ctx.restore();
+        ctx.fillStyle = overlayColor || "rgba(0,0,0,0.4)";
+        ctx.fillRect(0, 0, W, H);
+        if (animateTextAnim.type !== "none") {
+          const text = post.text || (textStyle === "hero" ? [heroLeadIn, heroWord].filter(Boolean).join(" ") : "");
+          if (text) {
+            const ctx2 = canvas.getContext("2d")!;
+            applyTextAnimation(ctx2, text, animateTextAnim, progress, W, H, textColor, fontFamily, fontSize, textPosition as "top" | "center" | "bottom");
+          }
+        }
+      };
+
+      toast.loading("Encoding MP4… (this takes ~15 seconds)", { id: toastId });
+      const mp4Blob = await recordReelVideoMp4(
+        canvas,
+        DURATION_MS,
+        0,
+        1,
+        animateFn,
+        FPS,
+        (pct) => setAnimateProgress(pct),
+      );
+
+      toast.loading("Uploading reel…", { id: toastId });
+      const formData = new FormData();
+      formData.append("video", mp4Blob, "animated-reel.mp4");
+      const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!uploadRes.ok) throw new Error("Upload failed");
+      const { proxyUrl } = await uploadRes.json() as { url: string; proxyUrl: string };
+
+      toast.loading("Saving to library…", { id: toastId });
+      const caption = captions[0] || "";
+      await fetch(`${import.meta.env.BASE_URL}api/library`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientName,
+          postType: "reel",
+          caption,
+          mediaUrl: proxyUrl,
+          metadata: {
+            source: "single-image-animate",
+            photoAnim: animatePhotoAnim.type,
+            textAnim: animateTextAnim.type,
+            durationSec: 5,
+          },
+        }),
+      });
+
+      toast.success("Reel saved to library! Ready to publish.", { id: toastId });
+    } catch (e: any) {
+      toast.error("Reel rendering failed: " + (e?.message || "Unknown error"), { id: toastId });
+    } finally {
+      setAnimateRendering(false);
+      setAnimateProgress(0);
     }
   };
 
@@ -1500,7 +1676,130 @@ export default function SingleImage() {
                     )}
                   </div>
 
-                  {/* Video Export Panel */}
+                  {/* Animate & Save as Reel Panel */}
+                  <div id="si-animate-panel" className="rounded-2xl border border-pink-500/30 bg-pink-950/10 overflow-hidden">
+                    <button
+                      className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-pink-950/20 transition-colors"
+                      onClick={() => setAnimateOpen((v) => !v)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-pink-400" />
+                        <span className="font-semibold text-white">Animate &amp; Save as Reel</span>
+                        <span className="text-xs text-pink-400/70 ml-1">5-second MP4 loop · IG Reels algorithm</span>
+                      </div>
+                      <ChevronDown className={`w-4 h-4 text-pink-400 transition-transform ${animateOpen ? "rotate-180" : ""}`} />
+                    </button>
+                    {animateOpen && (
+                      <div className="px-5 pb-5 space-y-5 border-t border-pink-500/20">
+                        <p className="text-xs text-gray-400 pt-4">Turns your first image into a 5-second MP4 reel. IG rewards video content with 3-5x more reach than static posts.</p>
+
+                        {/* Client name */}
+                        <div className="flex items-center gap-3">
+                          <label className="text-sm text-gray-400 whitespace-nowrap">Save to client</label>
+                          <Input
+                            value={animateClientName || aiClientName}
+                            onChange={(e) => setAnimateClientName(e.target.value)}
+                            placeholder="Client name (for library)"
+                            className="flex-1 bg-gray-800/60 border-gray-700 text-white text-sm h-9"
+                          />
+                        </div>
+
+                        {/* Photo animation */}
+                        <div className="space-y-2">
+                          <p className="text-sm font-semibold text-white">Photo animation</p>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {(["none", "photo-zoom", "photo-drift"] as ReelAnimType[]).map((type) => (
+                              <button
+                                key={type}
+                                onClick={() => setAnimatePhotoAnim((a) => ({ ...a, type }))}
+                                className={`px-3 py-2 rounded-xl text-sm text-left transition-all border ${animatePhotoAnim.type === type ? "bg-pink-600 border-pink-500 text-white" : "bg-gray-800/60 border-gray-700 text-gray-300 hover:border-pink-500/50"}`}
+                              >
+                                <div className="font-bold text-xs mb-0.5">{REEL_ANIM_LABELS[type].label}</div>
+                                <div className={`text-xs font-normal ${animatePhotoAnim.type === type ? "text-pink-200" : "text-gray-500"}`}>{REEL_ANIM_LABELS[type].desc}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Text animation */}
+                        <div className="space-y-2">
+                          <p className="text-sm font-semibold text-white">Text animation</p>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {(["none", "fade-in", "pop-in", "slide-left", "slide-right", "slide-bottom", "typewriter", "gentle-drift", "outline-glow"] as ReelAnimType[]).map((type) => (
+                              <button
+                                key={type}
+                                onClick={() => setAnimateTextAnim((a) => ({ ...a, type }))}
+                                className={`px-3 py-2 rounded-xl text-sm text-left transition-all border ${animateTextAnim.type === type ? "bg-pink-600 border-pink-500 text-white" : "bg-gray-800/60 border-gray-700 text-gray-300 hover:border-pink-500/50"}`}
+                              >
+                                <div className="font-bold text-xs mb-0.5">{REEL_ANIM_LABELS[type].label}</div>
+                                <div className={`text-xs font-normal ${animateTextAnim.type === type ? "text-pink-200" : "text-gray-500"}`}>{REEL_ANIM_LABELS[type].desc}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Text start-at */}
+                        {animateTextAnim.type !== "none" && (
+                          <div className="flex items-center gap-3 bg-gray-800/40 rounded-xl px-4 py-3">
+                            <span className="text-sm font-semibold text-white whitespace-nowrap">Text starts at</span>
+                            <input
+                              type="range" min={0} max={3} step={0.1} value={animateTextAnim.startAt}
+                              onChange={(e) => setAnimateTextAnim((a) => ({ ...a, startAt: parseFloat(e.target.value) }))}
+                              className="flex-1 accent-pink-500"
+                            />
+                            <span className="text-sm font-bold text-pink-300 w-10 text-right">{animateTextAnim.startAt.toFixed(1)}s</span>
+                          </div>
+                        )}
+
+                        {/* Live preview */}
+                        <div className="flex gap-4 items-start">
+                          <div className="flex flex-col gap-2 flex-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={animatePreviewPlaying ? stopAnimatePreview : playAnimatePreview}
+                              disabled={animateRendering || !result?.posts.length}
+                              className="border-pink-500/50 text-pink-300 hover:bg-pink-950/40 whitespace-nowrap"
+                            >
+                              {animatePreviewPlaying ? <><Square className="w-3 h-3 mr-1.5 fill-current" />Stop Preview</> : <><Play className="w-3 h-3 mr-1.5 fill-current" />Preview (loops 5 s)</>}
+                            </Button>
+                            <p className="text-xs text-gray-500">Previews first image. Loops every 5 seconds.</p>
+                          </div>
+                          <canvas
+                            ref={animatePreviewCanvasRef}
+                            style={{ width: '77px', height: '96px', borderRadius: '6px', flexShrink: 0, border: '1px solid #374151', background: '#000' }}
+                          />
+                        </div>
+
+                        {/* Progress bar */}
+                        {animateRendering && (
+                          <div className="space-y-1">
+                            <div className="flex justify-between text-xs text-gray-400">
+                              <span>Encoding MP4…</span>
+                              <span>{Math.round(animateProgress * 100)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-700 rounded-full h-2">
+                              <div className="bg-pink-500 h-2 rounded-full transition-all" style={{ width: `${animateProgress * 100}%` }} />
+                            </div>
+                            <p className="text-xs text-gray-500">This takes about 15 seconds. Keep this tab open.</p>
+                          </div>
+                        )}
+
+                        <Button
+                          onClick={saveAsReel}
+                          disabled={animateRendering || !result?.posts.length}
+                          className="w-full bg-pink-600 hover:bg-pink-700 text-white px-6 py-3 font-bold"
+                          size="lg"
+                        >
+                          {animateRendering
+                            ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Rendering reel… {Math.round(animateProgress * 100)}%</>
+                            : <><Sparkles className="w-4 h-4 mr-2" />Save as Reel</>}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Video Export Panel (legacy WebM zip) */}
                   <div id="si-video-export-panel" className="rounded-2xl border border-purple-500/20 bg-purple-950/10 overflow-hidden">
                     <button
                       className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-purple-950/20 transition-colors"
@@ -1528,7 +1827,6 @@ export default function SingleImage() {
                             </button>
                           ))}
                         </div>
-                        {/* Duration slider */}
                         <div className="flex items-center gap-3 bg-gray-800/40 rounded-xl px-4 py-3">
                           <span className="text-sm font-semibold text-white whitespace-nowrap">Clip duration</span>
                           <input
@@ -1538,7 +1836,6 @@ export default function SingleImage() {
                           />
                           <span className="text-sm font-bold text-purple-300 w-8 text-right">{videoDurationSec}s</span>
                         </div>
-                        {/* Animation preview */}
                         <div className="flex gap-4 items-start">
                           <div className="flex flex-col gap-2">
                             <Button
