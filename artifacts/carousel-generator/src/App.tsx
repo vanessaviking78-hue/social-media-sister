@@ -29,6 +29,7 @@ import Onboard from "@/pages/onboard";
 import OnboardChoosePage from "@/pages/onboard-choose-page";
 import OnboardSuccess from "@/pages/onboard-success";
 import DmAutomations from "@/pages/dm-automations";
+import Intake from "@/pages/intake";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +55,7 @@ function ProtectedRouter() {
       <Route path="/seamless-carousel" component={SeamlessCarousel} />
       <Route path="/ai-portrait-studio" component={AiPortraitStudio} />
       <Route path="/dm-automations" component={DmAutomations} />
+      <Route path="/intake" component={Intake} />
       <Route component={NotFound} />
     </Switch>
   );

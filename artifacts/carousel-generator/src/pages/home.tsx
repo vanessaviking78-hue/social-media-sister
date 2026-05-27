@@ -116,6 +116,9 @@ export default function Home() {
   const [ccPushing, setCcPushing] = useState(false);
   const [ccStatus, setCcStatus] = useState<{ configured: boolean; hasWorkspaces: boolean } | null>(null);
   const [metaPushing, setMetaPushing] = useState(false);
+  const [metaPlatforms, setMetaPlatforms] = useState<string[]>(["instagram", "facebook"]);
+  const toggleMetaPlatform = (p: string) =>
+    setMetaPlatforms((prev) => prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
   const [musicPickerOpen, setMusicPickerOpen] = useState(false);
@@ -383,7 +386,7 @@ export default function Home() {
       const resp = await fetch(`${import.meta.env.BASE_URL}api/meta/push`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ posts, presetId: selectedPreset!.id, postType: "carousel" }),
+        body: JSON.stringify({ posts, presetId: selectedPreset!.id, postType: "carousel", platforms: metaPlatforms }),
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "Push failed");
@@ -2402,10 +2405,20 @@ export default function Home() {
                           </Button>
                         )}
                         {presets.find((p) => p.id === selectedPresetId)?.metaInstagramAccountId || presets.find((p) => p.id === selectedPresetId)?.metaFacebookPageId ? (
-                          <Button size="lg" onClick={pushToMeta} disabled={metaPushing} className="px-8 py-4 text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white" data-testid="button-push-meta-bar">
-                            {metaPushing ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Share2 className="w-5 h-5 mr-2" />}
-                            {metaPushing ? "Posting..." : "Post to Instagram & Facebook"}
-                          </Button>
+                          <div className="flex flex-col gap-1.5 items-end">
+                            <div className="flex gap-1.5">
+                              {presets.find((p) => p.id === selectedPresetId)?.metaInstagramAccountId && (
+                                <button onClick={() => toggleMetaPlatform("instagram")} className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${metaPlatforms.includes("instagram") ? "bg-pink-600/30 border-pink-500/50 text-pink-300" : "border-zinc-700 text-zinc-500 line-through"}`}>📷 Instagram</button>
+                              )}
+                              {presets.find((p) => p.id === selectedPresetId)?.metaFacebookPageId && (
+                                <button onClick={() => toggleMetaPlatform("facebook")} className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${metaPlatforms.includes("facebook") ? "bg-blue-600/30 border-blue-500/50 text-blue-300" : "border-zinc-700 text-zinc-500 line-through"}`}>f Facebook</button>
+                              )}
+                            </div>
+                            <Button size="lg" onClick={pushToMeta} disabled={metaPushing || metaPlatforms.length === 0} className="px-8 py-4 text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white" data-testid="button-push-meta-bar">
+                              {metaPushing ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Share2 className="w-5 h-5 mr-2" />}
+                              {metaPushing ? "Posting..." : `Post to ${metaPlatforms.includes("instagram") && metaPlatforms.includes("facebook") ? "Instagram & Facebook" : metaPlatforms.includes("instagram") ? "Instagram" : metaPlatforms.includes("facebook") ? "Facebook" : "…"}`}
+                            </Button>
+                          </div>
                         ) : null}
                         {selectedPresetId && (
                           <Button size="lg" onClick={scheduleCarousels} disabled={scheduleRendering} variant="outline" className="px-8 py-4 text-lg font-bold border-pink-500/40 text-pink-300 hover:bg-pink-950/30" data-testid="button-schedule-bar">
@@ -2667,10 +2680,20 @@ export default function Home() {
                           </Button>
                         )}
                         {presets.find((p) => p.id === selectedPresetId)?.metaInstagramAccountId || presets.find((p) => p.id === selectedPresetId)?.metaFacebookPageId ? (
-                          <Button size="lg" onClick={pushToMeta} disabled={metaPushing} className="px-10 py-6 text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white" data-testid="button-push-meta">
-                            {metaPushing ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Share2 className="w-5 h-5 mr-2" />}
-                            {metaPushing ? "Posting..." : "Post to Instagram & Facebook"}
-                          </Button>
+                          <div className="flex flex-col gap-1.5 items-end">
+                            <div className="flex gap-1.5">
+                              {presets.find((p) => p.id === selectedPresetId)?.metaInstagramAccountId && (
+                                <button onClick={() => toggleMetaPlatform("instagram")} className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${metaPlatforms.includes("instagram") ? "bg-pink-600/30 border-pink-500/50 text-pink-300" : "border-zinc-700 text-zinc-500 line-through"}`}>📷 Instagram</button>
+                              )}
+                              {presets.find((p) => p.id === selectedPresetId)?.metaFacebookPageId && (
+                                <button onClick={() => toggleMetaPlatform("facebook")} className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${metaPlatforms.includes("facebook") ? "bg-blue-600/30 border-blue-500/50 text-blue-300" : "border-zinc-700 text-zinc-500 line-through"}`}>f Facebook</button>
+                              )}
+                            </div>
+                            <Button size="lg" onClick={pushToMeta} disabled={metaPushing || metaPlatforms.length === 0} className="px-10 py-6 text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white" data-testid="button-push-meta">
+                              {metaPushing ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <Share2 className="w-5 h-5 mr-2" />}
+                              {metaPushing ? "Posting..." : `Post to ${metaPlatforms.includes("instagram") && metaPlatforms.includes("facebook") ? "Instagram & Facebook" : metaPlatforms.includes("instagram") ? "Instagram" : metaPlatforms.includes("facebook") ? "Facebook" : "…"}`}
+                            </Button>
+                          </div>
                         ) : null}
                         {selectedPresetId && (
                           <Button size="lg" onClick={scheduleCarousels} disabled={scheduleRendering} variant="outline" className="px-10 py-6 text-lg font-bold border-pink-500/40 text-pink-300 hover:bg-pink-950/30" data-testid="button-schedule">

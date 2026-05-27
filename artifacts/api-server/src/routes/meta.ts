@@ -177,11 +177,15 @@ router.get("/meta/test-connection", async (req: Request, res: Response) => {
 
 router.post("/meta/push", async (req: Request, res: Response) => {
   try {
-    const { posts, presetId, postType } = req.body as {
+    const { posts, presetId, postType, platforms } = req.body as {
       posts: { title: string; caption: string; imageUrls: string[]; firstComment?: string; musicTrack?: { name: string; artist: string } | null }[];
       presetId: number;
       postType?: string;
+      platforms?: string[];
     };
+
+    const wantIg = !platforms || platforms.includes("instagram");
+    const wantFb = !platforms || platforms.includes("facebook");
 
     if (!posts?.length) { res.status(400).json({ error: "No posts provided" }); return; }
     if (!presetId) { res.status(400).json({ error: "presetId required" }); return; }
@@ -217,7 +221,7 @@ router.post("/meta/push", async (req: Request, res: Response) => {
         : "";
       const finalCaption = post.caption + musicNote;
 
-      if (igId) {
+      if (igId && wantIg) {
         try {
           const id = await postToInstagram(igId, token, post.imageUrls, finalCaption, audioName);
           results.push({ post: post.title, platform: "instagram", status: "success", id });
@@ -233,7 +237,7 @@ router.post("/meta/push", async (req: Request, res: Response) => {
           results.push({ post: post.title, platform: "instagram", status: "error", error: err.message });
         }
       }
-      if (pageId) {
+      if (pageId && wantFb) {
         try {
           const id = await postToFacebook(pageId, token, post.imageUrls, finalCaption);
           results.push({ post: post.title, platform: "facebook", status: "success", id });
@@ -245,8 +249,9 @@ router.post("/meta/push", async (req: Request, res: Response) => {
 
     const succeeded = results.filter((r) => r.status === "success").length;
     const failed = results.filter((r) => r.status === "error").length;
+    const platformCount = (igId && wantIg ? 1 : 0) + (pageId && wantFb ? 1 : 0);
     if (succeeded > 0) {
-      logActivity({ action: "pushed", postType: (postType as any) || "carousel", postCount: Math.ceil(succeeded / ((igId ? 1 : 0) + (pageId ? 1 : 0))) });
+      logActivity({ action: "pushed", postType: (postType as any) || "carousel", postCount: Math.ceil(succeeded / Math.max(platformCount, 1)) });
     }
 
     res.json({ results, summary: { total: results.length, succeeded, failed } });

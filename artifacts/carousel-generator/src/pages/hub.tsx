@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2 } from "lucide-react";
 
 const TOOLS = [
   {
@@ -137,6 +137,15 @@ const TOOLS = [
     border: "hover:border-cyan-500/50",
     iconColor: "text-cyan-400",
   },
+  {
+    href: "/intake",
+    icon: Wand2,
+    name: "Content Machine",
+    description: "Upload a client intake form, pick a batch size, and generate a month of ready-to-post captions.",
+    color: "from-yellow-500/20 to-yellow-500/5",
+    border: "hover:border-yellow-500/50",
+    iconColor: "text-yellow-400",
+  },
 ];
 
 export default function Hub() {
@@ -160,11 +169,12 @@ export default function Hub() {
           {TOOLS.slice(0, 12).map((tool) => <ToolCard key={tool.href} tool={tool} />)}
         </div>
 
-        {/* Last row: 3 cards, left-aligned */}
+        {/* Last row: 4 cards */}
         <div className="grid grid-cols-4 gap-4">
           <ToolCard tool={TOOLS[12]} />
           <ToolCard tool={TOOLS[13]} />
           <ToolCard tool={TOOLS[14]} />
+          <ToolCard tool={TOOLS[15]} />
         </div>
       </main>
     </div>

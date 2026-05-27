@@ -20,6 +20,7 @@ import seamlessCarouselRouter from "./seamless-carousel";
 import aiPortraitRouter from "./aiPortrait";
 import dmAutomationsRouter from "./dm-automations";
 import webhooksRouter from "./webhooks";
+import intakeRouter from "./intake";
 
 const router: IRouter = Router();
 
@@ -44,5 +45,6 @@ router.use(seamlessCarouselRouter);
 router.use(aiPortraitRouter);
 router.use(dmAutomationsRouter);
 router.use(webhooksRouter);
+router.use(intakeRouter);
 
 export default router;

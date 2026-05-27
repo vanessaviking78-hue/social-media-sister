@@ -478,3 +478,18 @@ export const dmInteractionsTable = pgTable("dm_interactions", {
 });
 
 export type DmInteraction = typeof dmInteractionsTable.$inferSelect;
+
+export const intakeBatchesTable = pgTable("intake_batches", {
+  id: serial("id").primaryKey(),
+  clientName: text("client_name").notNull().default(""),
+  presetId: integer("preset_id").references(() => clientPresetsTable.id, { onDelete: "set null" }),
+  status: text("status").notNull().default("pending"),
+  formDataJson: json("form_data_json").$type<Record<string, string>[]>(),
+  generatedCount: integer("generated_count").notNull().default(0),
+  totalCount: integer("total_count").notNull().default(0),
+  contentMix: json("content_mix").$type<string[]>(),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type IntakeBatch = typeof intakeBatchesTable.$inferSelect;
