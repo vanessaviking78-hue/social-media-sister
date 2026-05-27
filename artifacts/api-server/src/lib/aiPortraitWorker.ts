@@ -8,7 +8,7 @@ import { objectStorageClient } from "./objectStorage";
 import { logger } from "./logger";
 import { buildPrompt, AI_PORTRAIT_SCENARIOS } from "./aiPortraitScenarios";
 
-const GEMINI_MODEL = "gemini-2.5-flash";
+const GEMINI_MODEL = "gemini-2.0-flash-exp";
 const REQUEST_GAP_MS = 4_000;
 const RATE_LIMIT_BACKOFF_MS = 30_000;
 
@@ -152,7 +152,7 @@ export async function processPortraitJob(
         const model = genAI.getGenerativeModel({
           model: GEMINI_MODEL,
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          generationConfig: { responseModalities: ["image", "text"] } as any,
+          generationConfig: { responseModalities: ["IMAGE", "TEXT"] } as any,
         });
 
         const result = await model.generateContent([
