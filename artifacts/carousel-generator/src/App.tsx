@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthGate } from "@/components/auth-gate";
 import NotFound from "@/pages/not-found";
+import Hub from "@/pages/hub";
 import Home from "@/pages/home";
 import SingleImage from "@/pages/single-image";
 import Stories from "@/pages/stories";
@@ -32,7 +33,8 @@ const queryClient = new QueryClient();
 function ProtectedRouter() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path="/" component={Hub} />
+      <Route path="/carousel" component={Home} />
       <Route path="/single-image" component={SingleImage} />
       <Route path="/stories" component={Stories} />
       <Route path="/presets" component={Presets} />
