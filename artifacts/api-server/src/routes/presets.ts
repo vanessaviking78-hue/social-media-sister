@@ -4,11 +4,19 @@ import {
   clientPresetsTable,
   contentLibraryTable,
   scheduledPostsTable,
+  approvalBatchesTable,
+  approvalImagesTable,
+  calendarPostsTable,
+  aboutMePostsTable,
+  seamlessCarouselsTable,
+  aiSourcePhotosTable,
+  aiGeneratedPortraitsTable,
+  dmInteractionsTable,
   TEXT_POSITIONS,
   TEXT_ALIGNS,
   LOGO_POSITIONS,
 } from "@workspace/db/schema";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 const VALID_TEXT_POSITIONS = new Set(TEXT_POSITIONS);
 const VALID_TEXT_ALIGNS = new Set(TEXT_ALIGNS);
@@ -107,31 +115,35 @@ router.delete("/presets/:id", async (req, res) => {
     const [preset] = await db.select().from(clientPresetsTable).where(eq(clientPresetsTable.id, id));
     if (!preset) { res.status(404).json({ error: "Preset not found" }); return; }
 
-    const ACTIVE_STATUSES = ["pending", "processing"] as const;
+    const clientName = preset.name;
 
-    const [deletedLibrary, deletedScheduled] = await Promise.all([
-      db.delete(contentLibraryTable)
-        .where(eq(contentLibraryTable.clientName, preset.name))
-        .returning({ id: contentLibraryTable.id }),
-      db.delete(scheduledPostsTable)
-        .where(
-          and(
-            eq(scheduledPostsTable.presetId, id),
-            inArray(scheduledPostsTable.status, [...ACTIVE_STATUSES]),
-          ),
-        )
-        .returning({ id: scheduledPostsTable.id }),
+    const batches = await db
+      .select({ id: approvalBatchesTable.id })
+      .from(approvalBatchesTable)
+      .where(eq(approvalBatchesTable.presetId, id));
+    const batchIds = batches.map((b) => b.id);
+
+    if (batchIds.length > 0) {
+      await db.delete(approvalImagesTable).where(inArray(approvalImagesTable.batchId, batchIds));
+    }
+
+    await Promise.all([
+      db.delete(approvalBatchesTable).where(eq(approvalBatchesTable.presetId, id)),
+      db.delete(scheduledPostsTable).where(eq(scheduledPostsTable.presetId, id)),
+      db.delete(dmInteractionsTable).where(eq(dmInteractionsTable.presetId, id)),
+      db.delete(contentLibraryTable).where(eq(contentLibraryTable.clientName, clientName)),
+      db.delete(calendarPostsTable).where(eq(calendarPostsTable.clientName, clientName)),
+      db.delete(aboutMePostsTable).where(eq(aboutMePostsTable.clientName, clientName)),
+      db.delete(seamlessCarouselsTable).where(eq(seamlessCarouselsTable.clientName, clientName)),
+      db.delete(aiGeneratedPortraitsTable).where(eq(aiGeneratedPortraitsTable.clientName, clientName)),
     ]);
+
+    await db.delete(aiSourcePhotosTable).where(eq(aiSourcePhotosTable.clientName, clientName));
 
     await db.delete(clientPresetsTable).where(eq(clientPresetsTable.id, id));
 
-    res.json({
-      success: true,
-      deleted: {
-        libraryItems: deletedLibrary.length,
-        pendingPosts: deletedScheduled.length,
-      },
-    });
+    req.log.info({ id, clientName }, "Preset hard-deleted with all related data");
+    res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to delete preset" });
   }
