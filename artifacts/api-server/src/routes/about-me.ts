@@ -721,7 +721,7 @@ router.post("/about-me/generate-caption", async (req, res) => {
     const completion = await openai.chat.completions.create({
       model: "gpt-5.2",
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 280,
+      max_completion_tokens: 280,
     });
     const caption = completion.choices[0]?.message?.content?.trim() ?? "";
     res.json({ caption });
