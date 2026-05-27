@@ -273,9 +273,76 @@ function autoArrangeMagazine(imageUrls: string[], slideCount: number): CollageEl
   return elements;
 }
 
+function autoArrangeSingleFeature(imageUrls: string[], slideCount: number): CollageElement[] {
+  const totalW = SLIDE_SIZE * slideCount;
+  const totalH = SLIDE_SIZE;
+  const elements: CollageElement[] = [];
+  if (!imageUrls.length) return elements;
+
+  // Hero image takes ~60% of canvas width, centered
+  const heroW = Math.round(totalW * 0.60);
+  const heroX = Math.round((totalW - heroW) / 2);
+  elements.push({
+    imageUrl: imageUrls[0],
+    x: heroX, y: 0, width: heroW, height: totalH,
+    rotation: 0, zIndex: 0, hasBorder: false, isBackground: false,
+  });
+
+  // Accent images fill left + right margins
+  const accentW = Math.round(totalW * 0.18);
+  const accentH = Math.round(totalH * 0.42);
+  const accents = imageUrls.slice(1, 7);
+  const accentSlots = [
+    { x: Math.round(heroX * 0.1), y: Math.round(totalH * 0.08), rot: -3 },
+    { x: Math.round(heroX * 0.05), y: Math.round(totalH * 0.55), rot: 4 },
+    { x: Math.round(totalW - heroX * 0.1 - accentW), y: Math.round(totalH * 0.10), rot: 3 },
+    { x: Math.round(totalW - heroX * 0.05 - accentW), y: Math.round(totalH * 0.57), rot: -4 },
+    { x: Math.round(heroX * 0.5 - accentW / 2), y: Math.round(totalH * 0.30), rot: 5 },
+    { x: Math.round(totalW - heroX * 0.5 - accentW / 2), y: Math.round(totalH * 0.30), rot: -5 },
+  ];
+  accents.forEach((url, i) => {
+    if (i >= accentSlots.length) return;
+    const s = accentSlots[i];
+    elements.push({
+      imageUrl: url, x: s.x, y: s.y, width: accentW, height: accentH,
+      rotation: s.rot, zIndex: i + 1, hasBorder: true, isBackground: false,
+    });
+  });
+  return elements;
+}
+
+function autoArrangeFree(imageUrls: string[], slideCount: number): CollageElement[] {
+  const totalW = SLIDE_SIZE * slideCount;
+  const totalH = SLIDE_SIZE;
+  const elements: CollageElement[] = [];
+  const count = Math.min(imageUrls.length, 10);
+  const baseSize = Math.round(totalH * 0.38);
+  const rots = [-5, 4, -3, 5, -4, 3, -2, 5, -5, 3];
+  const xs = [0.05, 0.22, 0.40, 0.58, 0.75, 0.12, 0.30, 0.50, 0.68, 0.85];
+  const ys = [0.05, 0.50, 0.08, 0.52, 0.04, 0.55, 0.10, 0.48, 0.06, 0.52];
+  for (let i = 0; i < count; i++) {
+    const scale = 0.85 + (i % 3) * 0.1;
+    const w = Math.round(baseSize * scale * 1.05);
+    const h = Math.round(baseSize * scale);
+    elements.push({
+      imageUrl: imageUrls[i],
+      x: Math.round(xs[i] * totalW),
+      y: Math.round(ys[i] * totalH),
+      width: w, height: h,
+      rotation: rots[i],
+      zIndex: i,
+      hasBorder: i % 3 !== 0,
+      isBackground: false,
+    });
+  }
+  return elements;
+}
+
 function buildAutoArrange(layout: string, imageUrls: string[], slideCount: number): CollageElement[] {
   if (layout === "mosaic") return autoArrangeMosaic(imageUrls, slideCount);
   if (layout === "magazine") return autoArrangeMagazine(imageUrls, slideCount);
+  if (layout === "single_feature") return autoArrangeSingleFeature(imageUrls, slideCount);
+  if (layout === "free") return autoArrangeFree(imageUrls, slideCount);
   return autoArrangeBackgroundOverlays(imageUrls, slideCount);
 }
 
@@ -424,7 +491,7 @@ async function renderCollage(elements: CollageElement[], slideCount: number): Pr
 
   const composites: sharp.OverlayOptions[] = [];
 
-  for (const el of sorted) {
+  for (let el of sorted) {
     let buf = await fetchBuf(el.imageUrl);
 
     if (el.isBackground) {
@@ -444,12 +511,18 @@ async function renderCollage(elements: CollageElement[], slideCount: number): Pr
         .toBuffer();
 
       if (el.hasBorder) {
-        imgBuf = await sharp({
-          create: { width: el.width, height: el.height, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
-        })
-          .composite([{ input: imgBuf, left: BORDER, top: BORDER }])
-          .png()
-          .toBuffer();
+        // White polaroid border + soft drop shadow via SVG filter
+        const shadowPad = 18;
+        const frameW = el.width + shadowPad * 2;
+        const frameH = el.height + shadowPad * 2;
+        const frameSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${frameW}" height="${frameH}">
+          <defs><filter id="sh" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="2" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.45"/></filter></defs>
+          <rect x="${shadowPad}" y="${shadowPad}" width="${el.width}" height="${el.height}" fill="white" filter="url(#sh)" rx="2"/>
+          <image href="data:image/png;base64,${imgBuf.toString("base64")}" x="${shadowPad + BORDER}" y="${shadowPad + BORDER}" width="${innerW}" height="${innerH}"/>
+        </svg>`;
+        imgBuf = await sharp(Buffer.from(frameSvg)).png().toBuffer();
+        // Adjust x,y to account for shadow padding
+        el = { ...el, x: el.x - shadowPad, y: el.y - shadowPad, width: frameW, height: frameH };
       }
 
       if (el.rotation !== 0) {

@@ -499,6 +499,60 @@ router.post(
   },
 );
 
+// ─── Template data ──────────────────────────────────────────────────────────
+const ABOUT_ME_TEMPLATES = [
+  { id: "custom", label: "Custom (write your own)" },
+  { id: "treatment-intro", label: "5 THINGS YOU DIDN'T KNOW ABOUT [TREATMENT]" },
+  { id: "embarrassing-things", label: "5 EMBARRASSING THINGS I'VE DONE AS AN INJECTOR" },
+  { id: "cant-live-without", label: "5 THINGS I CAN'T LIVE WITHOUT" },
+  { id: "brain-itch", label: "5 THINGS THAT MAKE MY BRAIN ITCH IN AESTHETICS" },
+  { id: "awake-at-night", label: "5 THINGS THAT KEEP ME AWAKE AT NIGHT" },
+  { id: "myths", label: "5 MYTHS I'M SICK OF HEARING" },
+  { id: "questions-before-booking", label: "5 QUESTIONS YOU SHOULD ALWAYS ASK BEFORE BOOKING" },
+  { id: "clinic-mistakes", label: "5 MISTAKES I SEE CLINICS MAKING" },
+  { id: "wish-clients-knew", label: "5 THINGS I WISH MY CLIENTS KNEW" },
+  { id: "unexpected-truths", label: "5 UNEXPECTED TRUTHS ABOUT BEING AN AESTHETIC PRACTITIONER" },
+] as const;
+
+const TEMPLATE_TREATMENTS = [
+  "Dermal Fillers", "Lips", "Cheeks", "Jawline", "Chin",
+  "Nasolabial Folds", "Marionette Lines", "Skin Boosters", "Polynucleotides",
+  "Biostimulators", "Tear Trough Filler", "Non-Surgical Rhinoplasty",
+  "Chin and Jawline Volume Loss", "Wart Removal", "Hand Treatments",
+  "LED Mask", "Peri-Oral Filler", "Sunkeos", "Profhilo", "Temple Filler",
+  "PRP", "Exosomes", "PRP and Exosomes for Hair Loss",
+];
+
+const WORD_HINTS: Record<string, string[]> = {
+  "treatment-intro": ["e.g. Pain is minimal if you prepare", "e.g. There's a sweet spot with filler", "e.g. It doesn't last forever", "e.g. Symmetry isn't the goal", "e.g. Trust matters more than price"],
+  "embarrassing-things": ["e.g. Cried at work", "e.g. Wrong syringe day", "e.g. Called a client by wrong name", "e.g. Forgot to charge", "e.g. Jabbed myself"],
+  "cant-live-without": ["e.g. Good lighting", "e.g. My planner", "e.g. Strong coffee", "e.g. My team", "e.g. Quiet Sundays"],
+  "brain-itch": ["e.g. Unblended lip liner", "e.g. Overfilled cheeks", "e.g. Stock photo websites", "e.g. Jargon-heavy clinics", "e.g. Trend-chasing"],
+  "awake-at-night": ["e.g. A client in pain", "e.g. Industry regulation", "e.g. Social media comparison", "e.g. Did I charge enough?", "e.g. Burnout"],
+  "myths": ["e.g. It looks fake", "e.g. It's just vanity", "e.g. It's permanent", "e.g. It's only for older skin", "e.g. Anyone can do it"],
+  "questions-before-booking": ["e.g. Are you insured?", "e.g. How long training?", "e.g. What's the aftercare?", "e.g. Can I see results?", "e.g. What if I react?"],
+  "clinic-mistakes": ["e.g. No consultation", "e.g. Chasing trends", "e.g. Ignoring aftercare", "e.g. No clear pricing", "e.g. Weak social presence"],
+  "wish-clients-knew": ["e.g. Results take time", "e.g. Less is more", "e.g. Hydration matters", "e.g. SPF daily", "e.g. Trust the process"],
+  "unexpected-truths": ["e.g. Boundaries are everything", "e.g. Self-doubt is normal", "e.g. Your clients mirror your energy", "e.g. Rest is productive", "e.g. Comparison kills creativity"],
+};
+
+const BANNED_TERMS = ["botox", "anti-wrinkle", "azzalure", "bocouture", "dysport", "vistabel", "xeomin", "letybo", "daxxify", "jeuveau"];
+
+function complianceCheck(title: string): string | null {
+  const lower = title.toLowerCase();
+  for (const term of BANNED_TERMS) {
+    if (lower.includes(term)) {
+      return `"${term}" cannot appear in the title. Please use a treatment from the approved list.`;
+    }
+  }
+  return null;
+}
+
+// GET /api/about-me/templates
+router.get("/about-me/templates", (_req, res) => {
+  res.json({ templates: ABOUT_ME_TEMPLATES, treatments: TEMPLATE_TREATMENTS, hints: WORD_HINTS });
+});
+
 // POST /api/about-me/upload-logo
 router.post("/about-me/upload-logo", upload.single("logo"), async (req, res) => {
   try {
@@ -550,6 +604,8 @@ function extractCanvasConfig(body: any): AboutMeCanvasConfig {
 router.post("/about-me", async (req, res) => {
   try {
     const body = req.body;
+    const complianceErr = complianceCheck(body.title ?? "");
+    if (complianceErr) { res.status(422).json({ error: complianceErr, compliance: true }); return; }
     const [inserted] = await db
       .insert(aboutMePostsTable)
       .values({
@@ -567,6 +623,8 @@ router.post("/about-me", async (req, res) => {
         titleFont: body.titleFont ?? "Allura",
         aspectRatio: body.aspectRatio ?? "1080x1350",
         musicTrack: body.musicTrack ?? null,
+        templateId: body.templateId ?? null,
+        templateTreatment: body.templateTreatment ?? null,
       })
       .returning();
     res.json(inserted);
@@ -581,6 +639,8 @@ router.put("/about-me/:id", async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const body = req.body;
+    const complianceErr = complianceCheck(body.title ?? "");
+    if (complianceErr) { res.status(422).json({ error: complianceErr, compliance: true }); return; }
     const [updated] = await db
       .update(aboutMePostsTable)
       .set({
@@ -596,6 +656,8 @@ router.put("/about-me/:id", async (req, res) => {
         titleFont: body.titleFont,
         aspectRatio: body.aspectRatio,
         musicTrack: body.musicTrack ?? null,
+        templateId: body.templateId ?? null,
+        templateTreatment: body.templateTreatment ?? null,
         updatedAt: new Date(),
       })
       .where(eq(aboutMePostsTable.id, id))

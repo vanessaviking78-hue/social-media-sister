@@ -8,10 +8,67 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import {
   Upload, ImagePlus, BookOpen, Film, Palette, MessageSquareText,
-  CalendarDays, BarChart3, Loader2, Download, User, Grid, X, RotateCcw, Music,
+  CalendarDays, BarChart3, Loader2, Download, User, Grid, X, RotateCcw, Music, Play, Square,
 } from "lucide-react";
+import { CANVAS_WIDTH, CANVAS_HEIGHT, recordReelVideoMp4 } from "@/lib/slide-utils";
+import { type ReelAnimType, type ElementAnimation, REEL_ANIM_LABELS, applyPhotoAnimation } from "@/lib/animate-utils";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { MusicPickerModal, MusicTrackBadge, type MusicTrack } from "@/components/music-picker-modal";
+
+// ─── Template data ─────────────────────────────────────────────────────────────
+const ABOUT_ME_TEMPLATES = [
+  { id: "custom", label: "Custom (write your own)" },
+  { id: "treatment-intro", label: "5 THINGS YOU DIDN'T KNOW ABOUT [TREATMENT]" },
+  { id: "embarrassing-things", label: "5 EMBARRASSING THINGS I'VE DONE AS AN INJECTOR" },
+  { id: "cant-live-without", label: "5 THINGS I CAN'T LIVE WITHOUT" },
+  { id: "brain-itch", label: "5 THINGS THAT MAKE MY BRAIN ITCH IN AESTHETICS" },
+  { id: "awake-at-night", label: "5 THINGS THAT KEEP ME AWAKE AT NIGHT" },
+  { id: "myths", label: "5 MYTHS I'M SICK OF HEARING" },
+  { id: "questions-before-booking", label: "5 QUESTIONS YOU SHOULD ALWAYS ASK BEFORE BOOKING" },
+  { id: "clinic-mistakes", label: "5 MISTAKES I SEE CLINICS MAKING" },
+  { id: "wish-clients-knew", label: "5 THINGS I WISH MY CLIENTS KNEW" },
+  { id: "unexpected-truths", label: "5 UNEXPECTED TRUTHS ABOUT BEING AN AESTHETIC PRACTITIONER" },
+];
+
+const TEMPLATE_TREATMENTS = [
+  "Dermal Fillers", "Lips", "Cheeks", "Jawline", "Chin",
+  "Nasolabial Folds", "Marionette Lines", "Skin Boosters", "Polynucleotides",
+  "Biostimulators", "Tear Trough Filler", "Non-Surgical Rhinoplasty",
+  "Chin and Jawline Volume Loss", "Wart Removal", "Hand Treatments",
+  "LED Mask", "Peri-Oral Filler", "Sunkeos", "Profhilo", "Temple Filler",
+  "PRP", "Exosomes", "PRP and Exosomes for Hair Loss",
+];
+
+const WORD_HINTS: Record<string, string[]> = {
+  "treatment-intro": ["e.g. Pain is minimal if you prepare", "e.g. There's a sweet spot with filler", "e.g. It doesn't last forever", "e.g. Symmetry isn't the goal", "e.g. Trust matters more than price"],
+  "embarrassing-things": ["e.g. Cried at work", "e.g. Wrong syringe day", "e.g. Called client wrong name", "e.g. Forgot to charge", "e.g. Jabbed myself"],
+  "cant-live-without": ["e.g. Good lighting", "e.g. My planner", "e.g. Strong coffee", "e.g. My team", "e.g. Quiet Sundays"],
+  "brain-itch": ["e.g. Unblended lip liner", "e.g. Overfilled cheeks", "e.g. Stock photo websites", "e.g. Jargon-heavy clinics", "e.g. Trend-chasing"],
+  "awake-at-night": ["e.g. A client in pain", "e.g. Industry regulation", "e.g. Social media comparison", "e.g. Did I charge enough?", "e.g. Burnout"],
+  "myths": ["e.g. It looks fake", "e.g. It's just vanity", "e.g. It's permanent", "e.g. It's only for older skin", "e.g. Anyone can do it"],
+  "questions-before-booking": ["e.g. Are you insured?", "e.g. How long training?", "e.g. What's the aftercare?", "e.g. Can I see results?", "e.g. What if I react?"],
+  "clinic-mistakes": ["e.g. No consultation", "e.g. Chasing trends", "e.g. Ignoring aftercare", "e.g. No clear pricing", "e.g. Weak social presence"],
+  "wish-clients-knew": ["e.g. Results take time", "e.g. Less is more", "e.g. Hydration matters", "e.g. SPF daily", "e.g. Trust the process"],
+  "unexpected-truths": ["e.g. Boundaries are everything", "e.g. Self-doubt is normal", "e.g. Your clients mirror your energy", "e.g. Rest is productive", "e.g. Comparison kills creativity"],
+};
+
+const BANNED_TERMS = ["botox", "anti-wrinkle", "azzalure", "bocouture", "dysport", "vistabel", "xeomin", "letybo", "daxxify", "jeuveau"];
+
+function titleComplianceError(title: string): string | null {
+  const lower = title.toLowerCase();
+  for (const term of BANNED_TERMS) {
+    if (lower.includes(term)) return `"${term}" can't appear in the title. Pick from the approved treatment list instead.`;
+  }
+  return null;
+}
+
+function buildTemplateTitle(templateId: string, treatment: string): string {
+  if (templateId === "treatment-intro") {
+    return `5 THINGS YOU DIDN'T KNOW ABOUT ${treatment.toUpperCase()}`;
+  }
+  const t = ABOUT_ME_TEMPLATES.find((t) => t.id === templateId);
+  return t ? t.label : "";
+}
 
 // ─── Constants ─────────────────────────────────────────────────────────────────
 const ALL_FONTS = [
@@ -347,6 +404,42 @@ export default function AboutMePage() {
   // "Preview at actual size" modal
   const [showFullPreview, setShowFullPreview] = useState(false);
 
+  // Template Pack
+  const [templateId, setTemplateId] = useState("custom");
+  const [templateTreatment, setTemplateTreatment] = useState(TEMPLATE_TREATMENTS[0]);
+  const isCustomTemplate = templateId === "custom";
+  const complianceErr = isCustomTemplate ? titleComplianceError(title) : null;
+
+  const handleTemplateChange = (newId: string) => {
+    setTemplateId(newId);
+    if (newId === "custom") {
+      setTitle("About me");
+    } else if (newId === "treatment-intro") {
+      setTitle(buildTemplateTitle("treatment-intro", templateTreatment));
+    } else {
+      const t = ABOUT_ME_TEMPLATES.find((t) => t.id === newId);
+      if (t) setTitle(t.label);
+    }
+    if (newId !== "custom") {
+      const hints = WORD_HINTS[newId] ?? [];
+      setWords((prev) => {
+        const base = prev.length >= 5 ? prev.slice(0, 5) : [
+          ...prev,
+          ...Array.from({ length: 5 - prev.length }, (_, i) => ({ id: uid(), text: "", ...SCATTERED_COORDS[prev.length + i] ?? SCATTERED_COORDS[i] })),
+        ];
+        return base.map((w, i) => ({ ...w, text: w.text || "" }));
+      });
+      void hints;
+    }
+  };
+
+  const handleTreatmentChange = (treatment: string) => {
+    setTemplateTreatment(treatment);
+    if (templateId === "treatment-intro") {
+      setTitle(buildTemplateTitle("treatment-intro", treatment));
+    }
+  };
+
   // Caption generation
   const [generatingCaption, setGeneratingCaption] = useState(false);
   const [generatedCaption, setGeneratedCaption] = useState("");
@@ -358,6 +451,13 @@ export default function AboutMePage() {
   // Output
   const [saving, setSaving] = useState(false);
   const [renderedUrl, setRenderedUrl] = useState("");
+  const [animOpen, setAnimOpen] = useState(false);
+  const [animPhotoType, setAnimPhotoType] = useState<ReelAnimType>("photo-zoom");
+  const [animRendering, setAnimRendering] = useState(false);
+  const [animProgress, setAnimProgress] = useState(0);
+  const animPreviewRaf = useRef<number | null>(null);
+  const animPreviewCanvas = useRef<HTMLCanvasElement>(null);
+  const [animPreviewPlaying, setAnimPreviewPlaying] = useState(false);
   const [postId, setPostId] = useState<number | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
@@ -615,6 +715,7 @@ export default function AboutMePage() {
   // ─── Save / Render ─────────────────────────────────────────────────────────
   const handleSave = async () => {
     if (!originalFile) { toast.error("Please upload a photo first"); return; }
+    if (complianceErr) { toast.error(complianceErr); return; }
     setSaving(true);
     try {
       const formData = new FormData();
@@ -669,6 +770,8 @@ export default function AboutMePage() {
         words: apiWords, canvasConfig,
         accentColor, titleFont, aspectRatio, postType,
         musicTrack: musicTrack || null,
+        templateId: templateId === "custom" ? null : templateId,
+        templateTreatment: templateId === "treatment-intro" ? templateTreatment : null,
       };
 
       let id = postId;
@@ -719,6 +822,82 @@ export default function AboutMePage() {
     } finally {
       setGeneratingCaption(false);
     }
+  };
+
+  const stopAnimPreview = () => {
+    if (animPreviewRaf.current !== null) { cancelAnimationFrame(animPreviewRaf.current); animPreviewRaf.current = null; }
+    setAnimPreviewPlaying(false);
+  };
+  useEffect(() => () => stopAnimPreview(), []);
+
+  const playAnimPreview = async () => {
+    if (!renderedUrl || !animPreviewCanvas.current) return;
+    stopAnimPreview();
+    try {
+      const res = await fetch(renderedUrl);
+      const blob = await res.blob();
+      const objUrl = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onerror = () => URL.revokeObjectURL(objUrl);
+      img.onload = () => {
+        URL.revokeObjectURL(objUrl);
+        const canvas = animPreviewCanvas.current;
+        if (!canvas) return;
+        const W = CANVAS_WIDTH; const H = CANVAS_HEIGHT;
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext("2d")!;
+        const startTime = performance.now();
+        setAnimPreviewPlaying(true);
+        const tick = () => {
+          const t = ((performance.now() - startTime) % 5000) / 5000;
+          ctx.clearRect(0, 0, W, H);
+          ctx.save();
+          applyPhotoAnimation(ctx, img, { type: animPhotoType, startAt: 0, repeat: true }, t, W, H);
+          ctx.restore();
+          animPreviewRaf.current = requestAnimationFrame(tick);
+        };
+        animPreviewRaf.current = requestAnimationFrame(tick);
+      };
+      img.src = objUrl;
+    } catch { setAnimPreviewPlaying(false); }
+  };
+
+  const saveAboutMeAsReel = async () => {
+    if (!renderedUrl) { toast.error("Generate your post first"); return; }
+    setAnimRendering(true); setAnimProgress(0);
+    const toastId = toast.loading("Rendering reel…");
+    try {
+      const W = CANVAS_WIDTH; const H = CANVAS_HEIGHT;
+      const canvas = document.createElement("canvas");
+      canvas.width = W; canvas.height = H;
+      const res = await fetch(renderedUrl);
+      const blob = await res.blob();
+      const img = new Image();
+      await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = () => fail(new Error("img load failed")); img.src = URL.createObjectURL(blob); });
+      const animateFn = (_si: number, progress: number) => {
+        const ctx = canvas.getContext("2d")!;
+        ctx.clearRect(0, 0, W, H);
+        ctx.save();
+        applyPhotoAnimation(ctx, img, { type: animPhotoType, startAt: 0, repeat: true }, progress, W, H);
+        ctx.restore();
+      };
+      toast.loading("Encoding MP4… (~15 seconds)", { id: toastId });
+      const mp4Blob = await recordReelVideoMp4(canvas, 5000, 0, 1, animateFn, 30, (pct) => setAnimProgress(pct));
+      toast.loading("Uploading reel…", { id: toastId });
+      const fd = new FormData();
+      fd.append("video", mp4Blob, "about-me-reel.mp4");
+      const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, { method: "POST", body: fd });
+      if (!uploadRes.ok) throw new Error("Upload failed");
+      const { proxyUrl } = await uploadRes.json() as { proxyUrl: string; url: string };
+      await fetch(`${import.meta.env.BASE_URL}api/library`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientName: "", postType: "reel", caption: generatedCaption || title || "", mediaUrl: proxyUrl, metadata: { source: "about-me-animate", photoAnim: animPhotoType } }),
+      });
+      toast.success("Reel saved to library!", { id: toastId });
+    } catch (e: any) {
+      toast.error("Rendering failed: " + (e?.message || "Unknown error"), { id: toastId });
+    } finally { setAnimRendering(false); setAnimProgress(0); }
   };
 
   // ─── Render ────────────────────────────────────────────────────────────────
@@ -815,13 +994,54 @@ export default function AboutMePage() {
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoFile(f); }} />
             </div>
 
+            {/* Template Pack */}
+            <div className="rounded-2xl border border-pink-500/30 bg-pink-950/20 p-5 space-y-3">
+              <Label className="text-2xl text-white leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>Template Pack</Label>
+              <p className="text-xs text-muted-foreground">Pick a viral template to skip the blank-page problem. Your title fills automatically.</p>
+              <Select value={templateId} onValueChange={handleTemplateChange}>
+                <SelectTrigger className="h-10 border-pink-500/30">
+                  <SelectValue placeholder="Choose a template…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ABOUT_ME_TEMPLATES.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {templateId === "treatment-intro" && (
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Treatment</Label>
+                  <Select value={templateTreatment} onValueChange={handleTreatmentChange}>
+                    <SelectTrigger className="h-9 border-pink-500/30">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TEMPLATE_TREATMENTS.map((t) => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {!isCustomTemplate && (
+                <p className="text-xs text-pink-400/80 bg-pink-500/10 rounded-lg px-3 py-2">
+                  Title is locked to the template. Switch back to Custom to write your own.
+                </p>
+              )}
+            </div>
+
             {/* Title + Subtitle + Font */}
             <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-4">
               <Label className="text-2xl text-white leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>Title & Font</Label>
+              {complianceErr && (
+                <div className="rounded-lg bg-red-900/40 border border-red-500/50 px-3 py-2 text-xs text-red-300">
+                  {complianceErr}
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Title</Label>
-                  <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="About me" className="h-10" />
+                  <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="About me" className="h-10" readOnly={!isCustomTemplate} disabled={!isCustomTemplate} />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Subtitle (optional)</Label>
@@ -1096,10 +1316,12 @@ export default function AboutMePage() {
               </div>
 
               <div className="space-y-2">
-                {words.map((w, i) => (
-                  <div key={w.id} className="flex gap-2 items-center">
+                {words.map((w, i) => {
+                  const hints = WORD_HINTS[templateId] ?? [];
+                  const ph = hints[i] ?? `Word ${i + 1}`;
+                  return (<div key={w.id} className="flex gap-2 items-center">
                     <Input value={w.text} onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, text: e.target.value } : ww))}
-                      placeholder={`Word ${i + 1}`} className="flex-1 h-9" />
+                      placeholder={ph} className="flex-1 h-9" />
                     <select
                       value={w.topper ?? ""}
                       onChange={(e) => setWords((p) => p.map((ww, ii) => ii === i ? { ...ww, topper: e.target.value ? e.target.value as TopperType : undefined } : ww))}
@@ -1117,7 +1339,8 @@ export default function AboutMePage() {
                     </select>
                     <Button variant="ghost" size="sm" onClick={() => setWords((p) => p.filter((_, ii) => ii !== i))} className="h-9 w-9 p-0 text-muted-foreground shrink-0"><X className="w-3.5 h-3.5" /></Button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -1342,6 +1565,40 @@ export default function AboutMePage() {
                 <p className="text-xs text-zinc-600 mt-1">Posted 35 seconds after publishing to Instagram.</p>
               </div>
               </>
+            )}
+
+            {/* ── Animate as Reel ── */}
+            {renderedUrl && (
+              <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-3 mt-2">
+                <button onClick={() => setAnimOpen((v) => !v)} className="flex items-center justify-between w-full">
+                  <span className="flex items-center gap-2 text-sm font-semibold"><Film className="w-4 h-4 text-pink-400" /> Animate &amp; Save as Reel</span>
+                  <span className="text-xs text-muted-foreground">{animOpen ? "▲" : "▼"}</span>
+                </button>
+                {animOpen && (
+                  <div className="space-y-3 pt-1 border-t border-border/20">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Animation style</Label>
+                      <Select value={animPhotoType} onValueChange={(v) => { setAnimPhotoType(v as ReelAnimType); stopAnimPreview(); }}>
+                        <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(REEL_ANIM_LABELS).map(([k, label]) => (
+                            <SelectItem key={k} value={k}>{label.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <canvas ref={animPreviewCanvas} className={`w-full rounded-xl ${animPreviewPlaying ? "block" : "hidden"}`} style={{ aspectRatio: "1/1" }} />
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={animPreviewPlaying ? stopAnimPreview : playAnimPreview}>
+                        {animPreviewPlaying ? <><Square className="w-3.5 h-3.5" /> Stop</> : <><Play className="w-3.5 h-3.5" /> Preview</>}
+                      </Button>
+                      <Button size="sm" className="flex-1 gap-1.5 bg-pink-600 hover:bg-pink-700 text-white" onClick={saveAboutMeAsReel} disabled={animRendering}>
+                        {animRendering ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {Math.round(animProgress * 100)}%</> : <><Film className="w-3.5 h-3.5" /> Save Reel</>}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
 

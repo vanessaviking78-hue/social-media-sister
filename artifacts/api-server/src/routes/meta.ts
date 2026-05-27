@@ -278,6 +278,64 @@ router.post("/meta/post-first-comment", async (req: Request, res: Response) => {
   }
 });
 
+router.post("/meta/push-story", async (req: Request, res: Response) => {
+  try {
+    const { presetId, imageUrls, clientName } = req.body as {
+      presetId: number;
+      imageUrls: string[];
+      clientName?: string;
+    };
+
+    if (!presetId) { res.status(400).json({ error: "presetId required" }); return; }
+    if (!imageUrls?.length) { res.status(400).json({ error: "imageUrls required" }); return; }
+
+    const [preset] = await db.select().from(clientPresetsTable).where(eq(clientPresetsTable.id, presetId));
+    if (!preset) { res.status(404).json({ error: "Preset not found" }); return; }
+
+    const token = preset.metaPageAccessToken;
+    const igId = preset.metaInstagramAccountId;
+
+    if (!token) {
+      res.status(400).json({ error: "No Meta access token configured for this client." });
+      return;
+    }
+    if (!igId) {
+      res.status(400).json({ error: "No Instagram Account ID configured for this client." });
+      return;
+    }
+
+    const results: { imageIndex: number; status: string; id?: string; error?: string }[] = [];
+
+    for (let i = 0; i < imageUrls.length; i++) {
+      try {
+        const containerRes = await metaFetch(`${GRAPH}/${igId}/media`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image_url: imageUrls[i], media_type: "STORIES", access_token: token }),
+        });
+        const containerData = await containerRes.json() as any;
+        if (!containerRes.ok || !containerData.id) {
+          throw new Error(`Story container failed (${containerRes.status}): ${containerData?.error?.message || JSON.stringify(containerData)}`);
+        }
+        const postId = await igPublish(igId, token, containerData.id as string);
+        results.push({ imageIndex: i, status: "success", id: postId });
+      } catch (err: any) {
+        results.push({ imageIndex: i, status: "error", error: err.message });
+      }
+    }
+
+    const succeeded = results.filter((r) => r.status === "success").length;
+    const failed = results.filter((r) => r.status === "error").length;
+    if (succeeded > 0) {
+      logActivity({ action: "pushed", postType: "story", postCount: succeeded, clientName });
+    }
+
+    res.json({ results, summary: { total: results.length, succeeded, failed } });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Story push failed" });
+  }
+});
+
 // ---------------------------------------------------------------------------
 // Async reel job store
 // Reel container creation + polling takes up to 2 min, which exceeds the

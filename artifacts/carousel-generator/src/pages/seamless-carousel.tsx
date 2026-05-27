@@ -71,6 +71,18 @@ const LAYOUTS = [
     desc: "Two dominant images with accent shots — the most editorial look",
     emoji: "📰",
   },
+  {
+    value: "single_feature",
+    label: "Single Feature + Accents",
+    desc: "One hero image spans most of the canvas, smaller accent shots fill the edges",
+    emoji: "⭐",
+  },
+  {
+    value: "free",
+    label: "Free Arrangement",
+    desc: "Images scattered freely across the full canvas — relaxed and organic",
+    emoji: "✨",
+  },
 ];
 
 type SlideConfig = {
@@ -826,9 +838,35 @@ export default function SeamlessCarouselPage() {
                   </div>
                 </div>
 
-                <Button onClick={downloadZip} className="w-full py-5 text-base font-bold gap-2 rounded-2xl">
-                  <Download className="w-5 h-5" /> Download all slides as ZIP
-                </Button>
+                <div className="flex gap-3">
+                  <Button onClick={downloadZip} className="flex-1 py-5 text-base font-bold gap-2 rounded-2xl">
+                    <Download className="w-5 h-5" /> Download ZIP
+                  </Button>
+                  <Button variant="outline" className="flex-1 py-5 text-base font-bold gap-2 rounded-2xl"
+                    onClick={async () => {
+                      if (!renderedUrls.length) { toast.error("Generate slides first"); return; }
+                      const id = toast.loading("Saving to library…");
+                      try {
+                        const r = await fetch(`${BASE}/api/library`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            clientName: presets.find((p) => p.id === selectedPresetId)?.name ?? "",
+                            postType: "seamless",
+                            caption: slides[0]?.title || "Seamless Carousel",
+                            mediaUrls: renderedUrls,
+                            thumbnailUrl: renderedUrls[0] ?? "",
+                            metadata: { slideCount: renderedUrls.length, layoutStyle: layout },
+                          }),
+                        });
+                        if (!r.ok) throw new Error("Save failed");
+                        toast.success("Saved to library", { id });
+                      } catch (e: any) { toast.error(e.message || "Save failed", { id }); }
+                    }}
+                  >
+                    <BookOpen className="w-5 h-5" /> Save to Library
+                  </Button>
+                </div>
 
                 {presets.length > 1 && (
                   <Select value={selectedPresetId?.toString() ?? ""} onValueChange={(v) => setSelectedPresetId(Number(v))}>

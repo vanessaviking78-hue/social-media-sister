@@ -329,6 +329,8 @@ export const aboutMePostsTable = pgTable("about_me_posts", {
   musicTrack: json("music_track").$type<MusicTrack | null>(),
   firstComment: text("first_comment"),
   renderedImageUrl: text("rendered_image_url"),
+  templateId: text("template_id"),
+  templateTreatment: text("template_treatment"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

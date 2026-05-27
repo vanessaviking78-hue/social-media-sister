@@ -1,0 +1,107 @@
+OVERNIGHT BUILD QUEUE — please work through in priority order. Restart api-server and ping me after EACH numbered section completes. No need to wait for me before moving to the next section unless explicitly stated.
+
+================================================================
+SECTION 1 — ABOUT ME TEMPLATE PACK (Task #43)
+================================================================
+
+Add a "Template Pack" dropdown to the existing About Me / Doodles generator. User picks from 10 viral templates to skip the "what do I write?" step.
+
+Dropdown options (exact wording, all caps when displayed in the title):
+1. Custom (default, user writes their own title)
+2. 5 THINGS YOU DIDN'T KNOW ABOUT [TREATMENT]
+3. 5 EMBARRASSING THINGS I'VE DONE AS AN INJECTOR
+4. 5 THINGS I CAN'T LIVE WITHOUT
+5. 5 THINGS THAT MAKE MY BRAIN ITCH IN AESTHETICS
+6. 5 THINGS THAT KEEP ME AWAKE AT NIGHT
+7. 5 MYTHS I'M SICK OF HEARING
+8. 5 QUESTIONS YOU SHOULD ALWAYS ASK BEFORE BOOKING
+9. 5 MISTAKES I SEE CLINICS MAKING
+10. 5 THINGS I WISH MY CLIENTS KNEW
+11. 5 UNEXPECTED TRUTHS ABOUT BEING AN AESTHETIC PRACTITIONER
+
+When user picks any non-Custom template, title field auto-fills and locks. 5 word slots open up with context-aware placeholder hints (e.g. for "5 embarrassing things": "e.g. Cried at work, Wrong syringe day"). Switching back to Custom unlocks the field.
+
+When user picks template 2 (treatment intro), a SECOND dropdown appears with the treatment list:
+Dermal Fillers, Lips, Cheeks, Jawline, Chin, Nasolabial Folds, Marionette Lines, Skin Boosters, Polynucleotides, Biostimulators, Tear Trough Filler, Non-Surgical Rhinoplasty, Chin and Jawline Volume Loss, Wart Removal, Hand Treatments, LED Mask, Peri-Oral Filler, Sunkeos, Profhilo, Temple Filler, PRP, Exosomes, PRP and Exosomes for Hair Loss.
+
+CRITICAL EXCLUSIONS — never offer in treatment dropdown:
+Botox, anti-wrinkle, any prescription muscle relaxant brand name (Azzalure, Bocouture, Dysport, Vistabel, Xeomin, Letybo, Daxxify, Jeuveau). If user types these into a Custom title manually, surface a warning and block save until they change.
+
+Title format example: "5 THINGS YOU DIDN'T KNOW ABOUT POLYNUCLEOTIDES" (template + selected treatment joined cleanly).
+
+Database: add templateId (nullable text) and templateTreatment (nullable text) columns to the about me posts table.
+
+Backend: GET /api/about-me/templates returns the template list, treatment list, and word slot hints. Compliance validation on save.
+
+Restart api-server, ping me when Section 1 is done.
+
+================================================================
+SECTION 2 — FINISH SEAMLESS CAROUSEL GENERATOR (Task #28)
+================================================================
+
+Complete the Seamless Carousel feature per the existing brief. Key requirements:
+- User uploads 5-10 images
+- Pick slide count: 3, 4 or 5
+- Pick layout style: Background+scattered overlays / Mosaic flow / Magazine spread / Single feature+accents / Free arrangement
+- Auto-arrange algorithm places images across the canvas with some BRIDGING slide boundaries (this creates the seamless effect)
+- Per-slide text overlay toggles (script title, lead-in, tag-line, doodle)
+- Optional IG handle watermark
+- Slight random rotation per overlay (-5° to +5°) for casual feel
+- Polaroid borders on overlay images (8-12px white)
+- Soft drop shadow on overlays
+- Live preview shows all N slides side by side with proper boundary bridging
+- Slice the full collage canvas into 1080x1080 squares for IG carousel output
+- Save as a multi-slide carousel post in Content Library
+
+Restart api-server, ping me when Section 2 is done.
+
+================================================================
+SECTION 3 — UNIVERSAL ANIMATION MODE (Task #44)
+================================================================
+
+Add Animate tab to ALL static post generators (Single Image, About Me, Carousel, Seamless Carousel, Stories).
+
+Animation library per element:
+- None (default)
+- Fade In (0.8s on loop start)
+- Pop In (0.6s with bounce)
+- Slide In From Left / Right / Top / Bottom (0.7s)
+- Typewriter (1.2s, title/subtitle only)
+- Sparkle Twinkle (continuous loop)
+- Heart Pulse (continuous loop)
+- Gentle Drift (continuous loop)
+- Outline Glow (continuous loop)
+- Photo Zoom (3% over 5s, for subject photo or background)
+- Photo Drift (slow Ken Burns)
+
+Per-element: Start at slider (0-3s), Repeat toggle (Once / Continuous).
+
+Loop duration: 5 seconds, seamless. Output as 1080x1920 MP4 at 30fps, H.264 codec, audio-free (music attached at IG publish stage).
+
+When user picks Save as Reel or Trial Reel with animations enabled, server renders frames via node-canvas or Remotion + headless Chromium, encodes via FFmpeg, saves to object storage, creates Reel/Trial Reel Library entry.
+
+Async job pattern with progress bar (rendering takes 8-20 seconds).
+
+Live preview LOOPS the animation browser-side in real time so user sees exactly what'll publish before saving.
+
+Restart api-server, ping me when Section 3 is done.
+
+================================================================
+SECTION 4 — PUSH TO IG STORIES (Task #26)
+================================================================
+
+Add API publishing for Instagram Stories.
+
+Endpoint: POST /api/meta/push-story with { presetId, mediaUrl, mediaType: "image" | "video" }
+- For image stories: POST /{ig-user-id}/media with media_type=STORIES and image_url, then POST to /{ig-user-id}/media_publish
+- For video stories: same flow but with video_url (up to 60 seconds)
+
+Add Push to IG Story button to the Stories generator page. Also add to the Library so any saved image/video can be pushed as a Story.
+
+Note for the user: interactive stickers (polls, questions, etc) are NOT supported via API. Only static image/video stories. Surface a small note next to the Push to Story button: "API supports static stories only. For interactive stickers, post manually."
+
+Restart api-server, ping me when Section 4 is done.
+
+================================================================
+
+THANK YOU. Work through sequentially. If any section hits a blocker, skip to the next and flag the blocker in your ping. Vanessa launches Friday 5th June, all four sections need to be working by Thursday 4th June latest.

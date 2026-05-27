@@ -19,8 +19,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import {
   FONT_OPTIONS, LOGO_POSITIONS, STORY_BACKGROUNDS,
-  STORY_WIDTH, STORY_HEIGHT, drawStory, loadGoogleFonts,
+  STORY_WIDTH, STORY_HEIGHT, drawStory, loadGoogleFonts, recordReelVideoMp4,
 } from "@/lib/slide-utils";
+import { type ReelAnimType, REEL_ANIM_LABELS, applyPhotoAnimation } from "@/lib/animate-utils";
 import { authHeaders } from "@/lib/use-approval";
 import { usePresets, type ClientPreset, type PresetStyleFields, type TextAlign } from "@/lib/use-presets";
 import type { LogoPosition } from "@workspace/db/schema";
@@ -91,6 +92,9 @@ export default function Stories() {
   const [musicPickerOpen, setMusicPickerOpen] = useState(false);
   const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
   const [scheduleRendering, setScheduleRendering] = useState(false);
+  const [animPhotoType, setAnimPhotoType] = useState<ReelAnimType>("photo-zoom");
+  const [animRendering, setAnimRendering] = useState(false);
+  const [animProgress, setAnimProgress] = useState(0);
 
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
   const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null>(null);
@@ -347,6 +351,43 @@ export default function Stories() {
     }
   }, [step]);
 
+  const saveStoryAsReel = async () => {
+    if (!previews.length) { toast.error("Generate stories first"); return; }
+    setAnimRendering(true); setAnimProgress(0);
+    const toastId = toast.loading("Rendering reel…");
+    try {
+      const W = STORY_WIDTH; const H = STORY_HEIGHT;
+      const canvas = document.createElement("canvas");
+      canvas.width = W; canvas.height = H;
+      const dataUrl = previews[previewIdx] ?? previews[0];
+      const img = new Image();
+      await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = () => fail(new Error("img load failed")); img.src = dataUrl; });
+      const animateFn = (_si: number, progress: number) => {
+        const ctx = canvas.getContext("2d")!;
+        ctx.clearRect(0, 0, W, H);
+        ctx.save();
+        applyPhotoAnimation(ctx, img, { type: animPhotoType, startAt: 0, repeat: true }, progress, W, H);
+        ctx.restore();
+      };
+      toast.loading("Encoding MP4… (~15 seconds)", { id: toastId });
+      const mp4Blob = await recordReelVideoMp4(canvas, 5000, 0, 1, animateFn, 30, (pct) => setAnimProgress(pct));
+      toast.loading("Uploading reel…", { id: toastId });
+      const fd = new FormData();
+      fd.append("video", mp4Blob, "story-reel.mp4");
+      const uploadRes = await fetch(api("/content/upload-video"), { method: "POST", body: fd });
+      if (!uploadRes.ok) throw new Error("Upload failed");
+      const { proxyUrl } = await uploadRes.json() as { proxyUrl: string; url: string };
+      await fetch(api("/library"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientName, postType: "reel", caption: questions[previewIdx] || "", mediaUrl: proxyUrl, metadata: { source: "story-animate", photoAnim: animPhotoType } }),
+      });
+      toast.success("Reel saved to library!", { id: toastId });
+    } catch (e: any) {
+      toast.error("Rendering failed: " + (e?.message || "Unknown error"), { id: toastId });
+    } finally { setAnimRendering(false); setAnimProgress(0); }
+  };
+
   const downloadZip = useCallback(async () => {
     if (previews.length === 0) { toast.error("No stories to download"); return; }
     setDownloading(true);
@@ -416,6 +457,50 @@ export default function Stories() {
       setPushing(false);
     }
   }, [previews, questions, selectedCcWorkspace, ccWorkspaces]);
+
+  const pushToIG = useCallback(async () => {
+    if (previews.length === 0) { toast.error("No stories to push"); return; }
+    if (!selectedPresetId) { toast.error("Please select a preset first"); return; }
+    setPushing(true);
+    const toastId = toast.loading(`Uploading ${previews.length} stor${previews.length === 1 ? "y" : "ies"}…`);
+    try {
+      const allUrls: string[] = [];
+      const batchSize = 5;
+      for (let i = 0; i < previews.length; i += batchSize) {
+        const batch = previews.slice(i, i + batchSize);
+        const uploadRes = await fetch(api("/content/upload-image"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...authHeaders() },
+          body: JSON.stringify({
+            images: batch.map((p, j) => ({ name: `ig-story-${i + j + 1}.png`, base64: p })),
+          }),
+        });
+        if (!uploadRes.ok) throw new Error("Image upload failed");
+        const { results } = await uploadRes.json() as { results: { url: string }[] };
+        allUrls.push(...results.map((r) => r.url));
+      }
+      toast.loading(`Posting to Instagram Stories…`, { id: toastId });
+      const pushRes = await fetch(api("/meta/push-story"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders() },
+        body: JSON.stringify({ presetId: selectedPresetId, imageUrls: allUrls, clientName }),
+      });
+      const pushData = await pushRes.json() as { summary?: { succeeded: number; failed: number }; error?: string };
+      if (!pushRes.ok) throw new Error(pushData.error || "Push failed");
+      const { succeeded = 0, failed = 0 } = pushData.summary ?? {};
+      if (succeeded > 0 && failed === 0) {
+        toast.success(`${succeeded} stor${succeeded === 1 ? "y" : "ies"} posted to Instagram!`, { id: toastId });
+      } else if (succeeded > 0) {
+        toast.warning(`${succeeded} posted, ${failed} failed`, { id: toastId });
+      } else {
+        toast.error("All stories failed to post", { id: toastId });
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Push to Instagram failed", { id: toastId });
+    } finally {
+      setPushing(false);
+    }
+  }, [previews, selectedPresetId, clientName]);
 
   const scheduleStories = useCallback(async () => {
     if (previews.length === 0) { toast.error("No stories to schedule"); return; }
@@ -882,6 +967,17 @@ export default function Stories() {
                 {downloading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
                 Download ZIP ({previews.length} stories)
               </Button>
+              <Select value={animPhotoType} onValueChange={(v) => setAnimPhotoType(v as ReelAnimType)}>
+                <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(REEL_ANIM_LABELS).map(([k, label]) => (
+                    <SelectItem key={k} value={k}>{label.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={saveStoryAsReel} disabled={animRendering || previews.length === 0} variant="outline" className="border-pink-500/40 text-pink-300 hover:bg-pink-950/30">
+                {animRendering ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{Math.round(animProgress * 100)}%</> : <><Film className="w-4 h-4 mr-2" />Animate as Reel</>}
+              </Button>
               {ccWorkspaces.length > 0 && (
                 <Select value={selectedCcWorkspace || "__none__"} onValueChange={(v) => setSelectedCcWorkspace(v === "__none__" ? "" : v)}>
                   <SelectTrigger className="w-[200px]">
@@ -894,6 +990,12 @@ export default function Stories() {
                     ))}
                   </SelectContent>
                 </Select>
+              )}
+              {selectedPresetId && (
+                <Button onClick={pushToIG} disabled={pushing || previews.length === 0} variant="outline" className="border-pink-500/40 text-pink-300 hover:bg-pink-950/30">
+                  {pushing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CloudUpload className="w-4 h-4 mr-2" />}
+                  Push to IG Story
+                </Button>
               )}
               <Button onClick={pushToCC} disabled={pushing || previews.length === 0 || !selectedCcWorkspace} variant="secondary">
                 {pushing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CloudUpload className="w-4 h-4 mr-2" />}
