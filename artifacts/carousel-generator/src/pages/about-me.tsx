@@ -15,13 +15,6 @@ const SCRIPT_FONTS = [
   { label: "Sacramento", value: "Sacramento" },
 ];
 
-const ARROW_STYLES = [
-  { label: "Curly", value: "curly" },
-  { label: "Straight", value: "straight" },
-  { label: "Looped", value: "loop" },
-  { label: "Dashed Arc", value: "dashed" },
-];
-
 const WORD_POSITIONS = [
   { label: "Top left", value: "tl" },
   { label: "Top right", value: "tr" },
@@ -54,18 +47,8 @@ const PREVIEW_W = 360;
 const PREVIEW_H_PORTRAIT = 450;
 const PREVIEW_H_STORY = 640;
 
-function buildArrowSvgPath(sx: number, sy: number, ex: number, ey: number, style: string): string {
-  const cx = (sx + ex) / 2 + (ey - sy) * 0.25;
-  const cy = (sy + ey) / 2 - (ex - sx) * 0.25;
-  const angle = Math.atan2(ey - cy, ex - cx);
-  const ah = 8;
-  const ax1 = ex - ah * Math.cos(angle - 0.45);
-  const ay1 = ey - ah * Math.sin(angle - 0.45);
-  const ax2 = ex - ah * Math.cos(angle + 0.45);
-  const ay2 = ey - ah * Math.sin(angle + 0.45);
-  const head = `M ${ax1.toFixed(1)} ${ay1.toFixed(1)} L ${ex.toFixed(1)} ${ey.toFixed(1)} L ${ax2.toFixed(1)} ${ay2.toFixed(1)}`;
-  if (style === "straight") return `M ${sx.toFixed(1)} ${sy.toFixed(1)} L ${ex.toFixed(1)} ${ey.toFixed(1)} ${head}`;
-  return `M ${sx.toFixed(1)} ${sy.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)} ${head}`;
+function heartPath(hx: number, hy: number, s: number): string {
+  return `M ${hx} ${hy + s * 0.28} C ${hx - s * 0.5} ${hy + s * 0.05} ${hx - s * 0.5} ${hy - s * 0.55} ${hx} ${hy - s * 0.28} C ${hx + s * 0.5} ${hy - s * 0.55} ${hx + s * 0.5} ${hy + s * 0.05} ${hx} ${hy + s * 0.28} Z`;
 }
 
 export default function AboutMePage() {
@@ -82,7 +65,6 @@ export default function AboutMePage() {
     { text: "Loyal", pos: "mr" },
     { text: "Fun", pos: "bl" },
   ]);
-  const [arrowStyle, setArrowStyle] = useState("curly");
   const [accentColor, setAccentColor] = useState("#F5EEE3");
   const [titleFont, setTitleFont] = useState("Allura");
   const [aspectRatio, setAspectRatio] = useState<"1080x1350" | "1080x1920">("1080x1350");
@@ -171,7 +153,7 @@ export default function AboutMePage() {
         .filter((w) => w.text.trim())
         .map((w) => {
           const coords = DEFAULT_POSITION_COORDS[w.pos] ?? { x: 0.5, y: 0.5 };
-          return { text: w.text, x: coords.x, y: coords.y, arrowStyle };
+          return { text: w.text, x: coords.x, y: coords.y };
         });
 
       const createResp = await fetch(`${import.meta.env.BASE_URL}api/about-me`, {
@@ -184,7 +166,6 @@ export default function AboutMePage() {
           backgroundOverlayOpacity: overlayOpacity,
           title,
           words: apiWords,
-          arrowStyle,
           accentColor,
           titleFont,
           aspectRatio,
@@ -334,17 +315,7 @@ export default function AboutMePage() {
               <Label className="text-base font-semibold">Style</Label>
 
               <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Arrow style</Label>
-                <Select value={arrowStyle} onValueChange={setArrowStyle}>
-                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {ARROW_STYLES.map((a) => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm text-muted-foreground">Accent colour (title, words, arrows)</Label>
+                <Label className="text-sm text-muted-foreground">Accent colour (title, words, hearts)</Label>
                 <div className="flex gap-2 flex-wrap">
                   {ACCENT_PRESETS.map((p) => (
                     <button key={p.value} onClick={() => setAccentColor(p.value)}
@@ -421,24 +392,19 @@ export default function AboutMePage() {
                   <div className="absolute inset-0 flex items-center justify-center" style={{ top: "20%", bottom: "20%" }}>
                     <img src={photoSrc} alt="Cutout" className="h-full object-contain drop-shadow-2xl" />
                   </div>
-                  {/* SVG overlay: title + words + arrows */}
+                  {/* SVG overlay: title + words + hearts */}
                   <svg className="absolute inset-0 w-full h-full" viewBox={`0 0 ${previewW} ${previewH}`} xmlns="http://www.w3.org/2000/svg">
                     <text x={previewW / 2} y={44} fontFamily={`'${titleFont}', cursive`} fontSize={36} fill={accentColor} textAnchor="middle">{title}</text>
                     {words.filter((w) => w.text).map((w, i) => {
                       const coords = DEFAULT_POSITION_COORDS[w.pos] ?? { x: 0.5, y: 0.5 };
                       const wx = coords.x * previewW;
                       const wy = coords.y * previewH;
-                      const cx = previewW / 2;
-                      const cy = previewH * 0.52;
-                      const seed = i * 137.5;
-                      const tx = cx + Math.cos(seed) * previewW * 0.15;
-                      const ty = cy + Math.sin(seed) * previewH * 0.15;
-                      const path = buildArrowSvgPath(wx, wy + 4, tx, ty, arrowStyle);
-                      const dash = arrowStyle === "dashed" ? "6 4" : undefined;
+                      const s = 9;
+                      const hy = wy - 20;
                       return (
                         <g key={i}>
+                          <path d={heartPath(wx, hy, s)} fill={accentColor} opacity={0.88} />
                           <text x={wx} y={wy} fontFamily="Georgia, serif" fontSize={15} fill={accentColor} textAnchor="middle">{w.text}</text>
-                          <path d={path} stroke={accentColor} strokeWidth={1.5} fill="none" strokeLinecap="round" strokeLinejoin="round" opacity={0.85} strokeDasharray={dash} />
                         </g>
                       );
                     })}

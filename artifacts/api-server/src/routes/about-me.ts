@@ -49,29 +49,8 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
 }
 
-function buildArrowPath(sx: number, sy: number, ex: number, ey: number, style: string): string {
-  const cx = (sx + ex) / 2 + (ey - sy) * 0.25;
-  const cy = (sy + ey) / 2 - (ex - sx) * 0.25;
-  const angle = Math.atan2(ey - cy, ex - cx);
-  const ah = 14;
-  const ax1 = ex - ah * Math.cos(angle - 0.45);
-  const ay1 = ey - ah * Math.sin(angle - 0.45);
-  const ax2 = ex - ah * Math.cos(angle + 0.45);
-  const ay2 = ey - ah * Math.sin(angle + 0.45);
-  const head = `M ${ax1.toFixed(1)} ${ay1.toFixed(1)} L ${ex.toFixed(1)} ${ey.toFixed(1)} L ${ax2.toFixed(1)} ${ay2.toFixed(1)}`;
-
-  if (style === "straight") {
-    return `M ${sx.toFixed(1)} ${sy.toFixed(1)} L ${ex.toFixed(1)} ${ey.toFixed(1)} ${head}`;
-  }
-  if (style === "dashed") {
-    return `M ${sx.toFixed(1)} ${sy.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)} ${head}`;
-  }
-  if (style === "loop") {
-    const lx = cx + (ey - sy) * 0.15;
-    const ly = cy - (ex - sx) * 0.15;
-    return `M ${sx.toFixed(1)} ${sy.toFixed(1)} C ${cx.toFixed(1)} ${cy.toFixed(1)} ${lx.toFixed(1)} ${ly.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)} ${head}`;
-  }
-  return `M ${sx.toFixed(1)} ${sy.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)} ${head}`;
+function heartPath(hx: number, hy: number, s: number): string {
+  return `M ${hx} ${hy + s * 0.28} C ${hx - s * 0.5} ${hy + s * 0.05} ${hx - s * 0.5} ${hy - s * 0.55} ${hx} ${hy - s * 0.28} C ${hx + s * 0.5} ${hy - s * 0.55} ${hx + s * 0.5} ${hy + s * 0.05} ${hx} ${hy + s * 0.28} Z`;
 }
 
 function buildSvgOverlay(
@@ -81,7 +60,6 @@ function buildSvgOverlay(
   titleFont: string,
   accentColor: string,
   words: AboutMeWord[],
-  arrowStyle: string,
   overlayOpacity: number,
   photoCenterX: number,
   photoCenterY: number,
@@ -92,17 +70,13 @@ function buildSvgOverlay(
     ? `<rect width="${canvasW}" height="${canvasH}" fill="${accentColor}" opacity="${overlayOpacity}"/>`
     : "";
 
-  const wordsSvg = words.map((w, i) => {
+  const wordsSvg = words.map((w) => {
     const wx = w.x * canvasW;
     const wy = w.y * canvasH;
-    const seed = i * 137.5;
-    const tx = photoCenterX + Math.cos(seed) * cutoutW * 0.28;
-    const ty = photoCenterY + Math.sin(seed) * cutoutH * 0.28;
-    const path = buildArrowPath(wx, wy + 4, tx, ty, w.arrowStyle || arrowStyle);
-    const dashAttr = (w.arrowStyle || arrowStyle) === "dashed" ? 'stroke-dasharray="8 5"' : "";
-    const underline = i % 3 === 0 ? 'text-decoration="underline"' : "";
-    return `<text x="${wx.toFixed(1)}" y="${wy.toFixed(1)}" font-family="Georgia, 'Times New Roman', serif" font-size="38" fill="${accentColor}" text-anchor="middle" ${underline}>${escXml(w.text)}</text>
-<path d="${path}" stroke="${accentColor}" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.88" ${dashAttr}/>`;
+    const s = 20;
+    const hy = wy - 48;
+    return `<path d="${heartPath(wx, hy, s)}" fill="${accentColor}" opacity="0.88"/>
+<text x="${wx.toFixed(1)}" y="${wy.toFixed(1)}" font-family="Georgia, 'Times New Roman', serif" font-size="38" fill="${accentColor}" text-anchor="middle">${escXml(w.text)}</text>`;
   }).join("\n");
 
   const sparkles = [
@@ -196,7 +170,6 @@ router.post("/about-me", async (req, res) => {
       backgroundOverlayOpacity: body.backgroundOverlayOpacity ?? 0,
       title: body.title ?? "About me",
       words: body.words ?? [],
-      arrowStyle: body.arrowStyle ?? "curly",
       accentColor: body.accentColor ?? "#F5EEE3",
       titleFont: body.titleFont ?? "Allura",
       aspectRatio: body.aspectRatio ?? "1080x1350",
@@ -220,7 +193,6 @@ router.put("/about-me/:id", async (req, res) => {
       backgroundOverlayOpacity: body.backgroundOverlayOpacity,
       title: body.title,
       words: body.words,
-      arrowStyle: body.arrowStyle,
       accentColor: body.accentColor,
       titleFont: body.titleFont,
       aspectRatio: body.aspectRatio,
@@ -280,7 +252,7 @@ router.post("/about-me/:id/render", async (req, res) => {
 
     const overlayOp = (post.backgroundOverlayOpacity ?? 0) / 100;
     const words = (post.words ?? []) as AboutMeWord[];
-    const svgStr = buildSvgOverlay(canvasW, canvasH, post.title, post.titleFont ?? "Allura", post.accentColor ?? "#F5EEE3", words, post.arrowStyle ?? "curly", overlayOp, photoCX, photoCY, cutoutW, cutoutH);
+    const svgStr = buildSvgOverlay(canvasW, canvasH, post.title, post.titleFont ?? "Allura", post.accentColor ?? "#F5EEE3", words, overlayOp, photoCX, photoCY, cutoutW, cutoutH);
 
     const composed = await sharp(blurredBg)
       .composite([
