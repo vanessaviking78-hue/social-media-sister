@@ -1,0 +1,57 @@
+NEW FEATURE: Image-to-Motion Reel
+
+In the AI Portrait Studio (and as a standalone option in the Library), add a button: "Animate as Reel".
+
+When clicked on any saved portrait or uploaded image, the system generates a 6-second video clip from that still image with the following motion characteristics:
+
+CRITICAL MOTION RULES:
+- The subject (person) must remain ENTIRELY still
+- No mouth movement
+- No facial expression changes
+- No body movement
+- No hair movement (or only the tiniest natural drift, not exaggerated)
+- The CAMERA does the work: slow subtle pan, dolly, or zoom
+
+CAMERA MOTION OPTIONS (user picks from dropdown):
+- Slow pan left to right (subtle, 2-3% of frame width)
+- Slow pan right to left
+- Slow dolly in (gentle zoom toward subject, 3% increase over 6s)
+- Slow dolly out (gentle pull-back zoom)
+- Slow tilt up (camera lifts subtly)
+- Cinematic drift (combined micro-pan and dolly for dreamy editorial feel)
+
+LOOP REQUIREMENT:
+The 6-second clip must loop seamlessly back to the start. Use one of:
+- Ping-pong technique (3s forward, 3s reverse = seamless loop)
+- Generate with explicit seamless-loop instruction to the AI model
+- Post-process crossfade between end and start frame
+
+TECHNICAL IMPLEMENTATION:
+Use an image-to-video AI model. Recommended options in order of quality:
+1. Runway Gen-4 Turbo (best for portraits, ~$0.50 per 5s clip)
+2. Luma Dream Machine (good quality, ~$0.40 per clip)
+3. Kling AI (best motion quality but slower API)
+
+Send the source image plus a prompt like:
+"Cinematic portrait video. The person remains completely still with no facial movement, no mouth movement, no expression change. Subtle slow camera {pan/dolly/tilt} motion. Editorial photography aesthetic. 6 seconds, seamless loop. Soft natural lighting unchanged. High quality, no AI artifacts."
+
+OUTPUT:
+- 1080x1920 MP4 (9:16 vertical for Reels)
+- H.264 codec
+- 30fps
+- Audio-free (music attached at IG publish stage via existing flow)
+- Saved to object storage
+- Creates Reel Library entry tagged "Motion Portrait"
+- Ready for Push to IG Reel via existing flow
+
+UI INTEGRATION:
+- Button "Animate as Reel" appears under each completed AI portrait
+- Also appears as an action in the Library on any saved image
+- Modal opens with camera motion dropdown + Generate button
+- Progress bar while AI model renders (15-30 seconds)
+- Result appears with Preview + Save to Library + Push to IG buttons
+
+COST AWARENESS:
+Each generation costs ~£0.40-0.50 in API fees. For the DIY tier, cap at 10 motion reels per month. For DIY Pro, unlimited. Track usage per client preset.
+
+Restart api-server when done. Vanessa will test by taking one of her existing AI portraits and animating it with the "Cinematic drift" option.

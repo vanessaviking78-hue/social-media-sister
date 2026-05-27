@@ -20,6 +20,12 @@ import {
   processPortraitJob,
   regenerateSingleCard,
 } from "../lib/aiPortraitWorker";
+import {
+  createMotionJob,
+  getMotionJob,
+  processMotionJob,
+  type CameraMotion,
+} from "../lib/motionReelWorker";
 
 const router: IRouter = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -340,6 +346,59 @@ router.post("/ai-portrait/source-from-url", async (req: Request, res: Response) 
     req.log.error({ err }, "ai-portrait/source-from-url failed");
     res.status(500).json({ error: msg });
   }
+});
+
+router.post("/ai-portrait/:portraitId/animate", async (req: Request, res: Response) => {
+  try {
+    const portraitId = Number(req.params.portraitId);
+    const { cameraMotion = "cinematic-drift", clientName: reqClientName } = req.body as {
+      cameraMotion?: CameraMotion;
+      clientName?: string;
+    };
+
+    const [portrait] = await db
+      .select()
+      .from(aiGeneratedPortraitsTable)
+      .where(eq(aiGeneratedPortraitsTable.id, portraitId));
+    if (!portrait) { res.status(404).json({ error: "Portrait not found" }); return; }
+
+    const imageUrl = portrait.originalImageUrl ?? portrait.outputImageUrl;
+    if (!imageUrl) { res.status(400).json({ error: "Portrait has no image URL" }); return; }
+
+    const [source] = await db
+      .select()
+      .from(aiSourcePhotosTable)
+      .where(eq(aiSourcePhotosTable.id, portrait.sourcePhotoId));
+
+    const clientName = reqClientName || source?.clientName || "";
+    const scenarioName = portrait.scenarioId;
+
+    const imageBuf = await fetchBufFromStorage(imageUrl);
+    const imageMime = "image/jpeg";
+
+    const jobId = `mr_${Date.now()}_${uuid().slice(0, 8)}`;
+    createMotionJob(jobId);
+
+    setImmediate(async () => {
+      try {
+        await processMotionJob(jobId, imageBuf, imageMime, cameraMotion, clientName, scenarioName);
+      } catch (err) {
+        logger.error({ err, jobId }, "processMotionJob wrapper failed");
+      }
+    });
+
+    res.status(202).json({ jobId });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Animate failed";
+    req.log.error({ err }, "ai-portrait/animate failed");
+    res.status(500).json({ error: msg });
+  }
+});
+
+router.get("/ai-portrait/animate/:jobId/status", (req: Request, res: Response) => {
+  const job = getMotionJob(req.params.jobId);
+  if (!job) { res.status(404).json({ error: "Job not found" }); return; }
+  res.json(job);
 });
 
 router.post("/ai-portrait/:portraitId/regenerate", async (req: Request, res: Response) => {

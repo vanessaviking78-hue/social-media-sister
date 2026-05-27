@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import JSZip from "jszip";
 import {
   Sparkles, Upload, X, Check, Download, RefreshCcw, Loader2, AlertCircle,
-  ChevronRight, Clock, BookImage, Palette,
+  ChevronRight, Clock, BookImage, Palette, Film, Play, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
