@@ -995,28 +995,6 @@ export default function SingleImage() {
                 <p className="text-lg text-muted-foreground">Customise the look and feel of your single image posts.</p>
               </div>
 
-              <div className="rounded-2xl border border-border/30 bg-card/50 p-4 flex flex-col items-center gap-3">
-                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide w-full">Live Preview <span className="normal-case font-normal text-xs">(first image style)</span></p>
-                {designPreviewDataUrl ? (
-                  <img
-                    src={designPreviewDataUrl}
-                    alt="Design preview"
-                    className="w-full max-w-xs rounded-xl shadow-lg object-contain"
-                    style={{ aspectRatio: `${CANVAS_WIDTH}/${CANVAS_HEIGHT}` }}
-                  />
-                ) : (
-                  <div
-                    className="w-full max-w-xs rounded-xl bg-accent/30 flex items-center justify-center"
-                    style={{ aspectRatio: `${CANVAS_WIDTH}/${CANVAS_HEIGHT}` }}
-                  >
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                  </div>
-                )}
-                {!photos[0] && (
-                  <p className="text-xs text-muted-foreground">Upload a photo in Step 1 to preview your image background</p>
-                )}
-              </div>
-
               <div className="rounded-2xl border border-pink-500/20 bg-card/50 p-6">
                 <PresetSelector
                   presets={presets}
@@ -1138,21 +1116,11 @@ export default function SingleImage() {
                 </div>
 
                 <div className="space-y-4 rounded-2xl border border-border/30 bg-card/50 p-6">
-                  <Label className="text-base font-semibold">Text Size</Label>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">First image</span>
-                      <span className="text-sm font-semibold tabular-nums">{fontSize}px</span>
-                    </div>
-                    <Slider min={28} max={96} step={2} value={[fontSize]} onValueChange={([v]) => setFontSize(v)} className="w-full" />
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">Text Size</Label>
+                    <span className="text-base font-semibold tabular-nums">{fontSize}px</span>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Remaining images</span>
-                      <span className="text-sm font-semibold tabular-nums">{contentFontSize}px</span>
-                    </div>
-                    <Slider min={28} max={96} step={2} value={[contentFontSize]} onValueChange={([v]) => setContentFontSize(v)} className="w-full" />
-                  </div>
+                  <Slider min={28} max={96} step={2} value={[fontSize]} onValueChange={([v]) => { setFontSize(v); setContentFontSize(v); }} className="w-full" />
                 </div>
 
                 <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
@@ -1664,6 +1632,31 @@ export default function SingleImage() {
           )}
         </div>
       </main>
+
+      {/* Floating live preview — visible on steps 2 & 3 */}
+      {(currentStep === 2 || currentStep === 3) && (
+        <div className="fixed top-24 right-4 z-30 w-44 rounded-2xl overflow-hidden border border-border/40 bg-card shadow-2xl shadow-black/40">
+          <div className="px-3 py-2 text-xs font-semibold text-muted-foreground bg-card border-b border-border/30 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            Live Preview
+          </div>
+          {designPreviewDataUrl ? (
+            <img
+              src={designPreviewDataUrl}
+              alt="Live preview"
+              className="w-full object-contain"
+              style={{ aspectRatio: `${CANVAS_WIDTH}/${CANVAS_HEIGHT}` }}
+            />
+          ) : (
+            <div
+              className="w-full bg-accent/20 flex items-center justify-center"
+              style={{ aspectRatio: `${CANVAS_WIDTH}/${CANVAS_HEIGHT}` }}
+            >
+              <Loader2 className="w-5 h-5 animate-spin text-muted-foreground/50" />
+            </div>
+          )}
+        </div>
+      )}
 
       {scheduleOpen && selectedPresetId && (
         <ScheduleModal
