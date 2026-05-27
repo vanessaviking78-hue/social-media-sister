@@ -24,6 +24,10 @@ export interface CarouselSlide {
   imageName: string;
   /** When true, this slide is a pre-made cover image — render as-is with no text or overlay */
   isCoverImageSlide?: boolean;
+  /** Hero cover: lead-in line text (set per-carousel from CSV column 0 in hero mode) */
+  heroLeadIn?: string;
+  /** Hero cover: hero word text (set per-carousel from CSV column 1 in hero mode) */
+  heroWord?: string;
 }
 
 export interface CarouselResult {

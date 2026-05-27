@@ -1,0 +1,311 @@
+Brief: About Me / Doodles + Seamless Carousel Generator
+For Vanessa to paste into the Replit Agent. Two related design features to build together (or independently if easier).
+
+
+What we're building
+A new generator page in the CyberSuite called "About Me" (or "Doodles", Vanessa's call). The user uploads a photo of themselves, types a title and up to 10 descriptive words, picks an arrow style and the system auto-builds a beautifully designed About Me post in the style of the Pinterest/IG trend.
+
+Output is a single image (1080x1350 portrait OR 1080x1920 story) ready to push to IG or save to the Content Library.
+Visual reference
+Background: a heavily blurred version of the same photo, filling the whole canvas. Gives that dreamy magazine feel.
+
+Foreground: cut-out subject photo (background removed) layered ON TOP of the blurred background. Centred or slightly off-centre.
+
+Title: elegant script at the top.
+
+Words: 5-10 single words scattered around the photo, each with a hand-drawn doodle arrow pointing from the word to the relevant area of the image.
+
+Decorations: optional sparkle or heart elements.
+
+
+User flow
+User clicks About Me in the sidebar
+Lands on a generator page split into two panels: controls on the left, live preview on the right
+Controls panel:
+Upload subject photo (drag and drop or click to browse). System auto-removes the background to give a clean cut-out.
+Background photo option: by default, the system uses the SAME uploaded photo, blurred heavily, as the background. The user can override this with a separate uploaded background image if they want (e.g. clinic interior, scenic shot).
+Background blur amount: slider (10-40px Gaussian blur), default 25px
+Background overlay opacity: slider (0-50%), adds a soft tint of the chosen accent colour on top of the blurred background for legibility
+Title text input (e.g. "About me", "Meet your injector", "Behind the scenes")
+10 word slots: each is a single text input plus a small position selector (top-left, top-right, middle-left, middle-right, bottom-left, bottom-right, etc) OR a drag-to-position picker on the preview
+Arrow style selector: dropdown with 5-8 different doodle arrow styles (curly, straight, looped, dashed, hand-drawn squiggle, etc)
+Accent colour: picker for the title, words and arrows. Default soft warm cream #F5EEE3. Options for white, hot pink (brand), warm grey, deep brown.
+Title font: dropdown of script options (Allura, Great Vibes, Pinyon Script, Sacramento)
+Aspect ratio: 1080x1350 (single post), 1080x1920 (story)
+Right panel: live preview that updates within 100ms as user types
+Save button: saves to Content Library OR pushes direct to IG via existing push flow
+
+
+Word + arrow placement
+Auto-layout algorithm: spread the words evenly around the photo cut-out, with arrows curving from each word toward a sensible point on the photo (face area, hand, etc).
+
+If user picks manual positioning, allow drag-to-place on the preview canvas. The arrow auto-redraws to point from the word to the photo's centre or nearest visible edge.
+
+Default placement when user just types and doesn't drag:
+
+Top half: 4 words around the head
+Middle: 2-3 words at shoulder/hand level
+Bottom: 3 words around legs/feet area
+
+Each word has an associated arrow style (use the user's selected style, with subtle variations so they don't all look identical).
+
+
+Visual elements
+Title
+Top of the canvas, centred
+Script font selected by user (default Allura)
+Size around 72-96px depending on length
+Colour: contrasting against the background (dark text on cream background)
+Small decorative element near the title (sparkle SVG, optional)
+Cut-out photo
+Centred horizontally, vertically positioned around 30-40% from the top (so words fit above and around)
+Background removed via API
+Soft drop shadow underneath for depth (4px y-offset, 15% opacity, blur 20px)
+Photo scaled to fill roughly 50-60% of the canvas height
+Words
+Each word in a clean serif or sans-serif font (NOT script, contrast with the title)
+Size around 32-40px
+Colour matches title colour
+Some words can have a small underline swash (for variety, every 3rd word maybe)
+Arrows
+SVG paths, hand-drawn aesthetic
+Curve from the end of the word toward the photo
+Arrowhead at the photo end
+Same colour as words
+Stroke width around 2px
+Decorative elements
+Optional sparkles, hearts, stars sprinkled around (3-5 max)
+Same colour as title/words
+Adds personality without overwhelming
+
+
+Data model
+Add a new table aboutMePostsTable:
+
+id: serial primary key
+
+clientName: text not null
+
+originalPhotoUrl: text not null      // the raw uploaded photo
+
+cutoutPhotoUrl: text not null         // the background-removed version
+
+backgroundPhotoUrl: text              // optional, defaults to same as original
+
+backgroundBlurAmount: integer         // pixel value, default 25
+
+backgroundOverlayOpacity: integer     // percentage, default 0
+
+title: text not null
+
+words: jsonb                          // array of { text, position: { x, y }, arrowStyle }
+
+arrowStyle: text                      // default style
+
+accentColor: text                     // for title/words/arrows
+
+titleFont: text
+
+aspectRatio: text                     // "1080x1350" or "1080x1920"
+
+renderedImageUrl: text                // the final composed image
+
+createdAt: timestamp
+
+updatedAt: timestamp
+
+
+Backend implementation
+New routes in artifacts/api-server/src/routes/aboutMe.ts
+POST /api/about-me/upload-photo - accepts photo, calls remove.bg API (or similar), returns transparent PNG URL
+POST /api/about-me - creates an About Me post record
+GET /api/about-me - lists user's About Me posts
+GET /api/about-me/:id - get one
+PUT /api/about-me/:id - update
+DELETE /api/about-me/:id
+POST /api/about-me/:id/render - generates the final composed image using node-canvas or sharp, saves to object storage, returns URL
+Background removal
+Use remove.bg API (https://www.remove.bg/api). Free tier 50 calls per month, paid tier is cheap. Add REMOVEBG_API_KEY to Replit Secrets.
+
+If remove.bg is unavailable, fall back to a free alternative like Photoroom API or rembg (self-hosted).
+Image composition
+Use sharp (preferred, fast, handles blur natively) or node-canvas to compose the final image. Order of layers, bottom to top:
+
+Background layer: take the background photo (defaults to the same uploaded photo), apply Gaussian blur at the user's blur amount setting (default 25px), fill the entire canvas. Use sharp().blur(amount) for native fast blur.
+Overlay tint: if the user has set overlay opacity > 0, paint a semi-transparent layer of the accent colour over the blurred background.
+Cut-out subject photo: paste the background-removed PNG of the subject on top. Position centred or per user's drag placement. Add a subtle drop shadow (4px y, blur 20, 15% opacity).
+Title text: render at the top using the selected script font.
+Words: for each word, render text at its position.
+Arrows: draw SVG arrow paths from each word toward the subject.
+Decorative elements: small sparkles/hearts on top.
+Export as PNG at 1080x1350 or 1080x1920.
+
+
+Frontend implementation
+New page: /about-me
+Two-panel layout:
+
+Left: controls (photo upload, title, 10 word inputs, style pickers)
+Right: live preview canvas (HTML5 canvas or SVG, real-time updates)
+Preview canvas
+Use SVG for the preview (fast, scalable). Draws:
+
+Background rectangle
+Photo as element
+Title as 
+Each word as + arrow as 
+Decorative elements as small SVG paths
+
+Updates within 100ms of any input change.
+Save flow
+User clicks Save:
+
+Server renders the final 1080x1350 PNG using node-canvas
+Saves to object storage
+Returns URL
+User sees: "Saved to Library" with a Push to IG button next to it
+
+
+Arrow style library (5 styles minimum)
+Build these as SVG path generators, each takes a startX/startY and endX/endY and returns a curved path:
+
+Curly squiggle - wavy line with small curves
+Loop arrow - one full loop in the middle
+Hand-drawn straight - mostly straight but with slight wobble
+Dashed arc - dashed line in a gentle curve
+Double-back - arrow that doubles back on itself
+
+Each one has a small arrowhead at the end pointing toward the photo.
+
+
+Acceptance criteria
+When done, Vanessa should be able to:
+
+Click About Me in the sidebar
+Upload a photo, see the background auto-removed within 5 seconds
+Type "About me" in the title
+Type 5-10 descriptive words (Wife, Mum, Nurse, Loyal, Friends, Fun, Family, Music, Wine, Honest)
+Pick an arrow style from the dropdown
+See the preview update in real time as she types
+Save the post to her Content Library OR push direct to IG
+The final image looks like the Pinterest-style About Me trend
+
+
+Future-proof note
+This template is designed to be re-usable for other "doodle" formats:
+
+"Things I love"
+"My non-negotiables"
+"A day in my life"
+Team member introductions
+
+After v1 launches, we'll add a "Template type" dropdown so the user can switch between About Me, Things I Love, etc. Same engine, different titles and default word sets.
+
+
+
+
+FEATURE 2: SEAMLESS CAROUSEL GENERATOR
+What we're building
+A new generator page called "Seamless Carousel". User uploads a single wide image (or up to 3 separate images), and the system slices/composites it into 3, 4 or 5 IG-square slides that line up seamlessly when scrolled in the Instagram carousel. Each slide can have its own optional text overlay (script title, sans-serif tagline, small doodles).
+
+This is the format that makes people swipe to the end because they NEED to see the whole picture. High engagement, on-trend, perfect for aesthetics storytelling.
+User flow
+User clicks Seamless Carousel in the sidebar
+Lands on a generator page split into controls (left) and live preview (right)
+Controls panel:
+Number of slides: dropdown 3, 4, or 5 (default 3)
+Upload mode: toggle between "One wide image" (system slices) OR "Multiple images" (system composites side by side)
+Image upload (drag and drop, accepts JPG/PNG)
+If "One wide image": user uploads ONE image that ideally has the correct aspect ratio (3:1 for 3 slides, 4:1 for 4 slides, 5:1 for 5 slides). System slices into N equal squares.
+If "Multiple images": user uploads N separate images, system composites them edge-to-edge. Optional "smart blend" toggle that adds a tiny gradient overlap at the seams so colour/light feels continuous.
+Text overlays per slide: for each slide, optionally toggle ON a text overlay with:
+Script title (e.g. "Beachwear", "Follow me")
+Lead-in line above it (e.g. "My favourite")
+Tag line below it (e.g. "inspiration", "for fashion ideas & trends")
+Position picker (Top-left, Top-right, Centre, Bottom-left, Bottom-right)
+Doodle decoration toggle (arrow, heart, sparkle, star)
+Slide 2 / middle slides: usually left text-free so the image breathes. Default: text OFF for middle slides.
+Watermark: optional IG handle text at the bottom (e.g. "@reallygoodsite") in a small script font. Pulls from client preset if available.
+Script font: dropdown (Allura, Great Vibes, Pinyon Script, Sacramento)
+Text colour: picker, default white with subtle drop shadow for legibility
+Right panel: live preview showing all N slides side by side, scaled to fit. Updates within 100ms.
+Save button: saves as a carousel post in the Content Library with all N slides as the slide images. Ready to push to IG as a real Instagram carousel (the IG app will swipe through them in order).
+Slicing logic
+For a 3-slide carousel:
+
+User uploads a 3240x1080 wide image (or any image with 3:1 ratio, system scales)
+System crops into three 1080x1080 squares: pixels 0-1080 for slide 1, 1080-2160 for slide 2, 2160-3240 for slide 3
+Each square becomes a separate slide image
+
+For 4 slides: same logic but 4320x1080 input → four 1080x1080 outputs For 5 slides: 5400x1080 → five 1080x1080 outputs
+
+If the user uploads an image that's NOT the correct aspect ratio, system either:
+
+Letterboxes (adds matching colour bars top/bottom)
+Centre-crops (uses the middle portion)
+Asks the user which they prefer
+Text overlay rendering
+Same approach as the About Me generator. Use sharp or node-canvas to render text onto each slide AFTER slicing:
+
+Slice the image into N squares
+For each square that has text overlay enabled, render the script title, lead-in, tag-line and doodle on top
+Apply subtle drop shadow for legibility
+Export each square as a separate PNG
+Data model
+Add a new table seamlessCarouselsTable:
+
+id: serial primary key
+
+clientName: text not null
+
+slideCount: integer  // 3, 4, or 5
+
+sourceImageUrl: text  // the original wide image, or null if user uploaded separates
+
+sourceImageUrls: jsonb  // array of separate image URLs if upload mode was "multiple"
+
+slides: jsonb  // array of { imageUrl, hasText, title, leadIn, tagLine, doodle, position, watermark }
+
+scriptFont: text
+
+textColor: text
+
+watermark: text  // IG handle
+
+createdAt: timestamp
+
+updatedAt: timestamp
+Backend implementation
+New routes in artifacts/api-server/src/routes/seamlessCarousel.ts:
+
+POST /api/seamless/upload-wide - accepts the single wide image, returns URL
+POST /api/seamless/upload-separates - accepts multiple images, composites them into a wide image side by side, returns URL
+POST /api/seamless - creates a seamless carousel record
+POST /api/seamless/:id/render - slices the wide image into N slides, applies text overlays, returns array of slide image URLs
+POST /api/seamless/:id/save-to-library - adds the rendered slides to the Content Library as a carousel post ready for scheduling/pushing
+
+Use sharp for the slicing and text composition (fast, native, handles transparency well).
+Frontend implementation
+New page: /seamless-carousel
+
+Two-panel layout same as About Me:
+
+Left: controls (slide count, upload, per-slide text toggles)
+Right: live preview showing all N slides side by side at scaled-down size, with a small "View at IG size" toggle that previews each slide individually at full 1080x1080
+Acceptance criteria
+When done, Vanessa should be able to:
+
+Click Seamless Carousel in the sidebar
+Pick 3 slides
+Upload a wide beach photo (3240x1080)
+Toggle text overlay on slide 1: title "Beachwear", lead-in "My favourite", tag "inspiration", arrow doodle, bottom-left position
+Leave slide 2 text-free
+Toggle text overlay on slide 3: title "Follow me", tag "for fashion ideas & trends", heart doodle, right side position
+See the live preview update as she types
+Save to Content Library
+The carousel appears in her Library as a 3-slide post, ready to push to IG or auto-schedule
+
+
+When done (both features)
+Restart api-server, ping Vanessa. She'll test About Me first with her own photo, then test Seamless Carousel with a beach scene or treatment storytelling image.
+

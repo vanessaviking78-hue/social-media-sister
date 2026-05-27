@@ -260,7 +260,7 @@ export default function Home() {
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
         if (isCover && coverStyle === "hero") {
-          drawHeroSlide(ctx, img, heroLeadIn || "LEAD-IN", heroWord || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
+          drawHeroSlide(ctx, img, (slide.heroLeadIn || heroLeadIn) || "LEAD-IN", (slide.heroWord || heroWord) || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
         } else {
           drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
         }
@@ -345,7 +345,7 @@ export default function Home() {
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
         if (isCover && coverStyle === "hero") {
-          drawHeroSlide(ctx, img, heroLeadIn || "LEAD-IN", heroWord || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
+          drawHeroSlide(ctx, img, (slide.heroLeadIn || heroLeadIn) || "LEAD-IN", (slide.heroWord || heroWord) || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
         } else {
           drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
         }
@@ -420,7 +420,7 @@ export default function Home() {
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
         if (isCover && coverStyle === "hero") {
-          drawHeroSlide(ctx, img, heroLeadIn || "LEAD-IN", heroWord || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
+          drawHeroSlide(ctx, img, (slide.heroLeadIn || heroLeadIn) || "LEAD-IN", (slide.heroWord || heroWord) || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
         } else {
           drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
         }
@@ -566,19 +566,45 @@ export default function Home() {
             isCoverImageSlide: true,
           });
         }
-        for (let si = 0; si < postRows[pi].length; si++) {
+        if (coverStyle === "hero" && !useCoverImages) {
           slides.push({
             slideIndex: idx++,
             groupIndex: pi + 1,
-            groupPosition: useCoverImages ? si + 2 : si + 1,
-            text: postRows[pi][si],
+            groupPosition: 1,
+            text: "",
             imageUrl: photoUrl,
             imageName: photos[pi % photos.length].name,
+            heroLeadIn: postRows[pi][0] ?? "",
+            heroWord: postRows[pi][1] ?? "",
           });
+          const contentCols = postRows[pi].slice(2);
+          for (let si = 0; si < contentCols.length; si++) {
+            slides.push({
+              slideIndex: idx++,
+              groupIndex: pi + 1,
+              groupPosition: si + 2,
+              text: contentCols[si],
+              imageUrl: photoUrl,
+              imageName: photos[pi % photos.length].name,
+            });
+          }
+        } else {
+          for (let si = 0; si < postRows[pi].length; si++) {
+            slides.push({
+              slideIndex: idx++,
+              groupIndex: pi + 1,
+              groupPosition: useCoverImages ? si + 2 : si + 1,
+              text: postRows[pi][si],
+              imageUrl: photoUrl,
+              imageName: photos[pi % photos.length].name,
+            });
+          }
         }
       }
 
-      const slidesPerCarouselFinal = slidesPerCarousel + (useCoverImages ? 1 : 0);
+      const slidesPerCarouselFinal = (coverStyle === "hero" && !useCoverImages)
+        ? slidesPerCarousel - 1
+        : slidesPerCarousel + (useCoverImages ? 1 : 0);
       setResult({ slides, totalSlides: slides.length, slidesPerCarousel: slidesPerCarouselFinal, totalCarousels: postRows.length, sessionId: "local" });
       setCurrentStep(4);
       toast.success(`${slides.length} slides generated — ready to download`, { id: toastId });
@@ -796,7 +822,7 @@ export default function Home() {
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
         if (isCover && coverStyle === "hero") {
-          drawHeroSlide(ctx, img, heroLeadIn || "LEAD-IN", heroWord || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
+          drawHeroSlide(ctx, img, (slide.heroLeadIn || heroLeadIn) || "LEAD-IN", (slide.heroWord || heroWord) || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
         } else {
           drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
         }
@@ -846,7 +872,7 @@ export default function Home() {
         canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
         const ctx = canvas.getContext("2d")!;
         if (isCover && coverStyle === "hero") {
-          drawHeroSlide(ctx, img, heroLeadIn || "LEAD-IN", heroWord || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
+          drawHeroSlide(ctx, img, (slide.heroLeadIn || heroLeadIn) || "LEAD-IN", (slide.heroWord || heroWord) || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
         } else {
           drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide });
         }
@@ -1418,8 +1444,13 @@ export default function Home() {
 
                   {coverStyle === "hero" && (
                     <div className="space-y-5 pt-3 border-t border-border/20">
+                      <div className="rounded-xl bg-pink-950/30 border border-pink-500/20 px-4 py-3 text-xs text-pink-200/80 leading-relaxed space-y-1">
+                        <p className="font-semibold text-pink-300">CSV column order in hero mode</p>
+                        <p>Column 1: lead-in text &nbsp;·&nbsp; Column 2: hero word &nbsp;·&nbsp; Columns 3+: slide content</p>
+                        <p className="text-pink-300/60">Each row can have a different lead-in and hero word. The inputs below are fallbacks used when no CSV is loaded.</p>
+                      </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-muted-foreground">Lead-in line</Label>
+                        <Label className="text-sm text-muted-foreground">Lead-in line (fallback)</Label>
                         <Input value={heroLeadIn} onChange={(e) => setHeroLeadIn(e.target.value)} placeholder="YOUR LEAD-IN TEXT" className="h-12 text-base" />
                       </div>
                       <div className="space-y-2">
