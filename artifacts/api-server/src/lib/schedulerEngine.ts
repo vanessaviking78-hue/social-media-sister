@@ -120,7 +120,7 @@ async function postCarouselToFB(pageId: string, token: string, imageUrls: string
   return data.id;
 }
 
-async function postReelToIG(igId: string, token: string, videoUrl: string, caption: string, isTrial: boolean): Promise<string> {
+async function postReelToIG(igId: string, token: string, videoUrl: string, caption: string, isTrial: boolean, audioName?: string): Promise<string> {
   const body: Record<string, unknown> = {
     media_type: "REELS",
     video_url: videoUrl,
@@ -128,6 +128,7 @@ async function postReelToIG(igId: string, token: string, videoUrl: string, capti
     access_token: token,
   };
   if (isTrial) body.trial_params = JSON.stringify({ graduation_strategy: "MANUAL" });
+  if (audioName) body.audio_name = audioName;
 
   const containerRes = await fetch(`${GRAPH}/${igId}/media`, {
     method: "POST",
@@ -176,7 +177,10 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
   if (post.postType === "reel") {
     if (!igId) throw new Error("No Instagram account ID for reel");
     if (!content.videoUrl) throw new Error("No video URL for reel");
-    const igPostId = await postReelToIG(igId, token, content.videoUrl, content.caption, post.isTrial);
+    const reelAudioName = content.musicTrack?.name
+      ? `${content.musicTrack.name} by ${content.musicTrack.artist}`
+      : undefined;
+    const igPostId = await postReelToIG(igId, token, content.videoUrl, content.caption, post.isTrial, reelAudioName);
     const reelFirstComment = content.firstComment?.trim();
     if (reelFirstComment && igPostId) {
       setTimeout(() => {
@@ -198,10 +202,8 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
   const audioName = content.musicTrack?.name && supportsAudioAttachment
     ? `${content.musicTrack.name} by ${content.musicTrack.artist}`
     : undefined;
-  const musicNote = content.musicTrack && !audioName
-    ? `\n\n🎵 Recommended music: ${content.musicTrack.name} by ${content.musicTrack.artist}`
-    : "";
-  const caption = content.caption + musicNote;
+  // Music is saved as post metadata only. Never append music text to the published caption.
+  const caption = content.caption;
   if (igId) {
     try {
       result.igPostId = await postCarouselToIG(igId, token, content.imageUrls, caption, audioName);

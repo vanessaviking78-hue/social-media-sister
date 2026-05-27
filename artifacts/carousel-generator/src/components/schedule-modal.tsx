@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { CalendarClock } from "lucide-react";
+import { CalendarClock, Music, AlertTriangle } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -43,6 +43,17 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
 
   const isBulk = posts.length > 1;
   const isReel = postType === "reel";
+
+  // Determine if any post has music selected but the post type doesn't support
+  // native audio attachment via the Meta API.
+  const hasMusicSelected = posts.some((p) => p.musicTrack);
+  const musicSupportedByApi =
+    postType === "reel" ||
+    postType === "story" ||
+    postType === "stories" ||
+    postType === "seamless" ||
+    (postType === "carousel" && posts.some((p) => (p.imageUrls?.length ?? 0) > 1));
+  const showMusicWarning = hasMusicSelected && !musicSupportedByApi;
 
   async function handleSave() {
     if (!scheduledAt) { toast.error("Pick a date and time"); return; }
@@ -146,6 +157,19 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
               className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
             />
           </div>
+
+          {showMusicWarning && (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-1.5">
+              <div className="flex items-center gap-2 text-amber-400">
+                <Music className="w-4 h-4 shrink-0" />
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span className="text-xs font-semibold">Music won't attach automatically</span>
+              </div>
+              <p className="text-xs text-amber-300/80 leading-relaxed">
+                Instagram's API doesn't support automatic music attachment for this post type. Your music selection will be saved as a note against the post for your reference. To use this track on the live post, add it manually in the Instagram app after publishing. Reels support music natively if you'd like to switch format.
+              </p>
+            </div>
+          )}
 
           {isReel && (
             <label className="flex items-center gap-3 cursor-pointer select-none">

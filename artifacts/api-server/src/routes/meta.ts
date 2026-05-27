@@ -216,10 +216,8 @@ router.post("/meta/push", async (req: Request, res: Response) => {
       const audioName = post.musicTrack?.name && supportsAudioAttachment
         ? `${post.musicTrack.name} by ${post.musicTrack.artist}`
         : undefined;
-      const musicNote = post.musicTrack && !audioName
-        ? `\n\n🎵 Recommended music: ${post.musicTrack.name} by ${post.musicTrack.artist}`
-        : "";
-      const finalCaption = post.caption + musicNote;
+      // Music is saved as post metadata only. Never append music text to the published caption.
+      const finalCaption = post.caption;
 
       if (igId && wantIg) {
         try {

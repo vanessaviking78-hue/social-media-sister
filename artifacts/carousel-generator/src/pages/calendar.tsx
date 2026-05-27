@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import {
   Layers, ChevronLeft, ChevronRight, Plus, X, Trash2, Pencil, CalendarDays, MessageSquareText,
   ImageIcon, GripVertical, Filter, BarChart3, ShieldCheck, BookOpen, Clock, PanelRightOpen, PanelRightClose,
+  Music, AlertTriangle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -111,6 +112,34 @@ export default function Calendar() {
   const [libraryLoading, setLibraryLoading] = useState(false);
 
   const { posts, allClients, loading, fetchPosts, fetchClients, createPost, updatePost, deletePost } = useCalendar();
+
+  // Music issues audit — upcoming scheduled posts where music is selected but the
+  // post type doesn't support native audio attachment via the Meta API.
+  const [musicIssues, setMusicIssues] = useState<{ id: number; clientName: string; postType: string; scheduledAt: string; musicTrack: { name: string; artist: string } }[]>([]);
+  const [musicIssuesDismissed, setMusicIssuesDismissed] = useState(false);
+
+  useEffect(() => {
+    const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+    fetch(`${BASE}/api/scheduler/posts?status=pending`)
+      .then((r) => r.json())
+      .then((data: { posts?: { id: number; clientName: string; postType: string; scheduledAt: string; content: { musicTrack?: { name: string; artist: string } | null; imageUrls?: string[] } }[] }) => {
+        const issues = (data.posts || []).filter((p) => {
+          if (!p.content?.musicTrack) return false;
+          const pt = p.postType;
+          if (pt === "reel" || pt === "story" || pt === "stories" || pt === "seamless") return false;
+          if (pt === "carousel" && (p.content.imageUrls?.length ?? 0) > 1) return false;
+          return true;
+        }).map((p) => ({
+          id: p.id,
+          clientName: p.clientName,
+          postType: p.postType,
+          scheduledAt: p.scheduledAt,
+          musicTrack: p.content.musicTrack!,
+        }));
+        setMusicIssues(issues);
+      })
+      .catch(() => { /* silent — non-critical audit */ });
+  }, []);
 
   const dragPostId = useRef<number | null>(null);
   const dragLibraryItemId = useRef<number | null>(null);
@@ -337,6 +366,43 @@ export default function Calendar() {
             <p className="text-muted-foreground mt-1">Plan and organise your content across clients.</p>
           </div>
         </div>
+
+        {/* Music issues audit banner */}
+        {musicIssues.length > 0 && !musicIssuesDismissed && (
+          <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="flex items-center gap-1.5 text-amber-400 mt-0.5 shrink-0">
+                  <Music className="w-4 h-4" />
+                  <AlertTriangle className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-amber-400">
+                    {musicIssues.length === 1 ? "1 scheduled post" : `${musicIssues.length} scheduled posts`} with music that won't attach automatically
+                  </p>
+                  <p className="text-xs text-amber-300/70 mt-0.5 mb-3">
+                    Instagram's API doesn't support automatic music attachment for these post types. The music is saved as a note only. To use the track, add it manually in the Instagram app after publishing, or reschedule as a Reel.
+                  </p>
+                  <div className="space-y-1.5">
+                    {musicIssues.map((issue) => (
+                      <div key={issue.id} className="flex items-center gap-2 text-xs text-amber-200/80">
+                        <span className="inline-block px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono capitalize">{issue.postType}</span>
+                        <span className="font-medium">{issue.clientName}</span>
+                        <span className="text-amber-300/50">·</span>
+                        <span>{new Date(issue.scheduledAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                        <span className="text-amber-300/50">·</span>
+                        <span className="italic">{issue.musicTrack.name} — {issue.musicTrack.artist}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <button onClick={() => setMusicIssuesDismissed(true)} className="text-amber-400/60 hover:text-amber-400 transition-colors shrink-0 mt-0.5">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
