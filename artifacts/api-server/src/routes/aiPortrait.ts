@@ -167,25 +167,12 @@ router.get("/ai-portrait/scenarios", (_req: Request, res: Response) => {
   res.json(AI_PORTRAIT_SCENARIOS);
 });
 
-router.get("/ai-portrait/images/*key", async (req: Request, res: Response) => {
-  try {
-    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-    if (!bucketId) { res.status(500).json({ error: "Object storage not configured" }); return; }
-    const key = (req.params as Record<string, string>).key;
-    if (!key) { res.status(400).json({ error: "No key specified" }); return; }
-    const file = objectStorageClient.bucket(bucketId).file(key);
-    const [exists] = await file.exists();
-    if (!exists) { res.status(404).json({ error: "Not found" }); return; }
-    const [metadata] = await file.getMetadata();
-    const [buffer] = await file.download();
-    res.setHeader("Content-Type", (metadata.contentType as string) || "image/png");
-    res.setHeader("Cache-Control", "private, max-age=3600");
-    res.send(buffer);
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Failed to serve image";
-    req.log.error({ err }, "ai-portrait image proxy failed");
-    res.status(500).json({ error: msg });
-  }
+// Legacy image URL redirect — forwards old /api/ai-portrait/images/<key> URLs
+// to the working /api/media/<key> handler which uses the same bucket and key
+router.get("/ai-portrait/images/*key", (req: Request, res: Response) => {
+  const key = (req.params as Record<string, string>).key;
+  if (!key) { res.status(400).json({ error: "No key specified" }); return; }
+  res.redirect(301, `/api/media/${key}`);
 });
 
 router.post("/ai-portrait/generate", async (req: Request, res: Response) => {
