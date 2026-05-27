@@ -317,14 +317,14 @@ export default function Library() {
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur border-b border-border/20">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2">
+            <Link href="/hub" className="flex items-center gap-2">
               <ArrowLeft className="w-4 h-4 text-white/60" />
               <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
             </Link>
             <span className="bg-gray-700 text-gray-300 text-xs px-2 py-0.5 rounded">Content Library</span>
           </div>
           <nav className="flex items-center gap-6 text-sm font-medium">
-            <Link href="/" className="text-muted-foreground hover:text-white transition">Carousel</Link>
+            <Link href="/hub" className="text-muted-foreground hover:text-white transition">Carousel</Link>
             <Link href="/single-image" className="text-muted-foreground hover:text-white transition">Single Image</Link>
             <Link href="/stories" className="text-muted-foreground hover:text-white transition">Stories</Link>
             <Link href="/reels" className="text-muted-foreground hover:text-white transition">Reels</Link>

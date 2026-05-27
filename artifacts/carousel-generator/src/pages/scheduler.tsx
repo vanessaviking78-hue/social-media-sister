@@ -328,7 +328,7 @@ export default function Scheduler() {
 
       <div className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center gap-4 mb-8">
-          <Link href="/">
+          <Link href="/hub">
             <button className="text-zinc-400 hover:text-white transition-colors">
               <ArrowLeft size={20} />
             </button>

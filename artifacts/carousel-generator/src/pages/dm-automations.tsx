@@ -154,7 +154,7 @@ export default function DmAutomations() {
   return (
     <div className="min-h-[100dvh] bg-background">
       <header className="border-b border-border/30 py-4 px-6 flex items-center gap-3">
-        <Link href="/">
+        <Link href="/hub">
           <Button variant="ghost" size="icon" className="shrink-0"><ArrowLeft className="h-4 w-4" /></Button>
         </Link>
         <MessageSquareText className="h-5 w-5 text-cyan-400" />

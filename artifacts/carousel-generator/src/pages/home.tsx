@@ -1142,8 +1142,8 @@ export default function Home() {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-4 px-6 md:px-10 flex items-center justify-between">
         <div className="flex items-center gap-3 flex-shrink-0">
-          <Link href="/"><img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity" /></Link>
-          <Link href="/"><Button variant="outline" size="sm" className="text-muted-foreground border-border/40 text-xs">← All Tools</Button></Link>
+          <Link href="/hub"><img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity" /></Link>
+          <Link href="/hub"><Button variant="outline" size="sm" className="text-muted-foreground border-border/40 text-xs">← All Tools</Button></Link>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/single-image">

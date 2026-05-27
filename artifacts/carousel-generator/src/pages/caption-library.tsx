@@ -134,16 +134,16 @@ export default function CaptionLibrary() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-50 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center gap-4 px-6">
-          <Link href="/" className="text-muted-foreground hover:text-foreground transition-colors">
+          <Link href="/hub" className="text-muted-foreground hover:text-foreground transition-colors">
             <ChevronLeft className="w-5 h-5" />
           </Link>
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/hub" className="flex items-center gap-2">
             <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
           </Link>
           <span className="text-xs font-semibold text-muted-foreground bg-accent/50 px-2 py-1 rounded-full">Caption Library</span>
           <div className="flex-1" />
           <nav className="flex items-center gap-6">
-            <Link href="/" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <Link href="/hub" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
               Carousel
             </Link>
             <Link href="/single-image" className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">

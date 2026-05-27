@@ -552,14 +552,14 @@ export default function PresetsPage() {
       <header className="sticky top-0 z-50 bg-background/80 backdrop-blur border-b border-border/20">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2">
+            <Link href="/hub" className="flex items-center gap-2">
               <ArrowLeft className="w-4 h-4 text-white/60" />
               <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
             </Link>
             <span className="bg-gray-700 text-gray-300 text-xs px-2 py-0.5 rounded">Client Presets</span>
           </div>
           <nav className="flex items-center gap-6 text-sm font-medium">
-            <Link href="/" className="text-muted-foreground hover:text-white transition">Carousel</Link>
+            <Link href="/hub" className="text-muted-foreground hover:text-white transition">Carousel</Link>
             <Link href="/single-image" className="text-muted-foreground hover:text-white transition">Single Image</Link>
             <Link href="/stories" className="text-muted-foreground hover:text-white transition">Stories</Link>
             <Link href="/reels" className="text-muted-foreground hover:text-white transition">Reels</Link>
@@ -633,7 +633,7 @@ export default function PresetsPage() {
             <Layers className="w-12 h-12 mx-auto text-gray-600 mb-4" />
             <p className="text-lg text-muted-foreground mb-2">No presets yet</p>
             <p className="text-sm text-gray-500 mb-6">Create your first preset in Step 2 of any post creation mode</p>
-            <Link href="/">
+            <Link href="/hub">
               <Button className="bg-pink-600 hover:bg-pink-700">Go to Carousel Mode</Button>
             </Link>
           </div>

@@ -760,7 +760,7 @@ export default function SingleImage() {
           <Badge variant="secondary" className="bg-accent text-xs">Single Image</Badge>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/">
+          <Link href="/hub">
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <ArrowLeftRight className="w-4 h-4 mr-2" />
               Carousel Mode

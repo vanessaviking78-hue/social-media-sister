@@ -1226,7 +1226,7 @@ export default function Reels() {
           <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
         </div>
         <div className="flex items-center gap-2 ml-4 flex-wrap">
-          <Link href="/"><Button variant="ghost" size="sm" className="text-muted-foreground"><ImagePlus className="w-4 h-4 mr-2" />Carousel</Button></Link>
+          <Link href="/hub"><Button variant="ghost" size="sm" className="text-muted-foreground"><ImagePlus className="w-4 h-4 mr-2" />Carousel</Button></Link>
           <Link href="/single-image"><Button variant="ghost" size="sm" className="text-muted-foreground"><ImageIcon className="w-4 h-4 mr-2" />Single Image</Button></Link>
           <Link href="/stories"><Button variant="ghost" size="sm" className="text-muted-foreground"><BookOpen className="w-4 h-4 mr-2" />Stories</Button></Link>
           <Button variant="ghost" size="sm" className="text-pink-400 bg-pink-400/10 pointer-events-none"><Film className="w-4 h-4 mr-2" />Reels</Button>

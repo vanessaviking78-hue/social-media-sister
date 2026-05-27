@@ -33,13 +33,14 @@ import Intake from "@/pages/intake";
 import Privacy from "@/pages/privacy";
 import Terms from "@/pages/terms";
 import DataDeletion from "@/pages/data-deletion";
+import Splash from "@/pages/splash";
 
 const queryClient = new QueryClient();
 
 function ProtectedRouter() {
   return (
     <Switch>
-      <Route path="/" component={Hub} />
+      <Route path="/hub" component={Hub} />
       <Route path="/carousel" component={Home} />
       <Route path="/single-image" component={SingleImage} />
       <Route path="/stories" component={Stories} />
@@ -74,6 +75,7 @@ function AppContent() {
   const [isPrivacy] = useRoute("/privacy");
   const [isTerms] = useRoute("/terms");
   const [isDataDeletion] = useRoute("/data-deletion");
+  const [isSplash] = useRoute("/");
 
   if (isMetaOAuth) {
     return <MetaOAuthResult />;
@@ -92,6 +94,9 @@ function AppContent() {
   }
   if (isOnboard && onboardParams?.token) {
     return <Onboard token={onboardParams.token} />;
+  }
+  if (isSplash) {
+    return <Splash />;
   }
   if (isPrivacy) {
     return <Privacy />;

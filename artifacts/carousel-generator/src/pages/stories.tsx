@@ -468,7 +468,7 @@ export default function Stories() {
           <Badge variant="secondary" className="bg-accent text-xs">Stories</Badge>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/"><Button variant="ghost" size="sm" className="text-muted-foreground"><Layers className="w-4 h-4 mr-2" />Carousel</Button></Link>
+          <Link href="/hub"><Button variant="ghost" size="sm" className="text-muted-foreground"><Layers className="w-4 h-4 mr-2" />Carousel</Button></Link>
           <Link href="/single-image"><Button variant="ghost" size="sm" className="text-muted-foreground"><ImagePlus className="w-4 h-4 mr-2" />Single Image</Button></Link>
           <Link href="/stories"><Button variant="ghost" size="sm" className="text-pink-400 bg-pink-500/10"><BookOpen className="w-4 h-4 mr-2" />Stories</Button></Link>
           <Link href="/reels"><Button variant="ghost" size="sm" className="text-muted-foreground"><Film className="w-4 h-4 mr-2" />Reels</Button></Link>

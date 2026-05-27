@@ -185,7 +185,7 @@ export default function Intake() {
     <div className="min-h-[100dvh] bg-background text-foreground">
       {/* Header */}
       <header className="border-b border-border/30 py-4 px-6 flex items-center gap-4">
-        <Link href="/">
+        <Link href="/hub">
           <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-foreground">
             <ChevronLeft className="w-4 h-4" />
             Hub

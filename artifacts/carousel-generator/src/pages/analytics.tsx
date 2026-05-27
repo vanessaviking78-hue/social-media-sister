@@ -55,13 +55,13 @@ export default function Analytics() {
       <header className="border-b border-border/40 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2">
+            <Link href="/hub" className="flex items-center gap-2">
               <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
             </Link>
             <span className="bg-gray-700 text-gray-300 text-xs px-2 py-0.5 rounded">Analytics</span>
           </div>
           <nav className="flex items-center gap-6 text-sm font-medium">
-            <Link href="/" className="text-muted-foreground hover:text-foreground transition">Carousel</Link>
+            <Link href="/hub" className="text-muted-foreground hover:text-foreground transition">Carousel</Link>
             <Link href="/single-image" className="text-muted-foreground hover:text-foreground transition">Single Image</Link>
             <Link href="/stories" className="text-muted-foreground hover:text-foreground transition">Stories</Link>
             <Link href="/reels" className="text-muted-foreground hover:text-foreground transition">Reels</Link>
