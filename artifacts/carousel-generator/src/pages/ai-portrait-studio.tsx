@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
+import JSZip from "jszip";
 import {
   Sparkles, Upload, X, Check, Download, RefreshCcw, Loader2, AlertCircle,
   ChevronRight, Clock, BookImage, Palette,
@@ -312,6 +313,36 @@ export default function AiPortraitStudio() {
     a.click();
   };
 
+  const [downloadingAll, setDownloadingAll] = useState(false);
+  const handleDownloadAll = async () => {
+    const successful = cards.filter((c) => c.status === "success" && c.outputImageUrl);
+    if (!successful.length) return;
+    setDownloadingAll(true);
+    const toastId = toast.loading(`Packing ${successful.length} portrait${successful.length > 1 ? "s" : ""}…`);
+    try {
+      const zip = new JSZip();
+      await Promise.all(successful.map(async (card) => {
+        const sc = scenarioById(card.scenarioId);
+        const name = (sc?.name ?? card.scenarioId).toLowerCase().replace(/\s+/g, "-");
+        const resp = await fetch(card.outputImageUrl!);
+        const blob = await resp.blob();
+        zip.file(`portrait-${name}.png`, blob);
+      }));
+      const blob = await zip.generateAsync({ type: "blob" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `${clientName ? clientName.replace(/\s+/g, "-") + "-" : ""}portraits.zip`;
+      a.click();
+      toast.dismiss(toastId);
+      toast.success("All portraits downloaded");
+    } catch {
+      toast.dismiss(toastId);
+      toast.error("Download failed — try individual downloads instead");
+    } finally {
+      setDownloadingAll(false);
+    }
+  };
+
   const handleRegenerate = async (card: CardState) => {
     if (!card.portraitId) return;
     try {
@@ -555,15 +586,31 @@ export default function AiPortraitStudio() {
 
         {/* RIGHT: Results */}
         <div className="space-y-4">
-          <div>
-            <h2 className="font-semibold text-base mb-1">Results</h2>
-            <p className="text-sm text-muted-foreground">
-              {cards.length === 0
-                ? "Your generated portraits will appear here."
-                : allDone
-                ? "Generation complete."
-                : "Generating portraits — each takes around 15 seconds."}
-            </p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="font-semibold text-base mb-1">Results</h2>
+              <p className="text-sm text-muted-foreground">
+                {cards.length === 0
+                  ? "Your generated portraits will appear here."
+                  : allDone
+                  ? "Generation complete."
+                  : "Generating portraits — each takes around 15 seconds."}
+              </p>
+            </div>
+            {cards.some((c) => c.status === "success" && c.outputImageUrl) && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleDownloadAll}
+                disabled={downloadingAll}
+                className="shrink-0 gap-1.5"
+              >
+                {downloadingAll
+                  ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  : <Download className="w-3.5 h-3.5" />}
+                Download All
+              </Button>
+            )}
           </div>
 
           {cards.length === 0 && !generating && (
