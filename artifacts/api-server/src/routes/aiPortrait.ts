@@ -40,6 +40,61 @@ async function fetchBuf(url: string): Promise<Buffer> {
   return Buffer.from(await r.arrayBuffer());
 }
 
+const PRIVATE_IP_PATTERNS = [
+  /^127\./,
+  /^10\./,
+  /^172\.(1[6-9]|2\d|3[01])\./,
+  /^192\.168\./,
+  /^169\.254\./,
+  /^0\.0\.0\.0/,
+  /^::1$/,
+  /^fc00:/i,
+  /^fe80:/i,
+];
+
+async function fetchBufSecure(rawUrl: string): Promise<Buffer> {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw new Error("Invalid URL format");
+  }
+  if (parsed.protocol !== "https:") {
+    throw new Error("Only HTTPS URLs are accepted");
+  }
+  const hostname = parsed.hostname.toLowerCase();
+  if (hostname === "localhost" || hostname === "metadata.google.internal") {
+    throw new Error("URL points to a private or reserved address");
+  }
+  for (const pattern of PRIVATE_IP_PATTERNS) {
+    if (pattern.test(hostname)) {
+      throw new Error("URL points to a private or reserved address");
+    }
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const r = await fetch(rawUrl, {
+      signal: controller.signal,
+      redirect: "follow",
+      headers: { "User-Agent": "CyberSuite/1.0 (image-ingestion)" },
+    });
+    if (!r.ok) throw new Error(`Remote server returned ${r.status}`);
+    const contentType = r.headers.get("content-type") ?? "";
+    if (!contentType.startsWith("image/")) {
+      throw new Error("URL must point to an image (got: " + contentType + ")");
+    }
+    const MAX_BYTES = 20 * 1024 * 1024;
+    const rawLength = parseInt(r.headers.get("content-length") ?? "0", 10);
+    if (rawLength > MAX_BYTES) throw new Error("Image exceeds 20 MB limit");
+    const arrayBuf = await r.arrayBuffer();
+    if (arrayBuf.byteLength > MAX_BYTES) throw new Error("Image exceeds 20 MB limit");
+    return Buffer.from(arrayBuf);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 router.post("/ai-portrait/source", upload.single("photo"), async (req: Request, res: Response) => {
   try {
     const file = req.file;
@@ -150,7 +205,7 @@ router.post("/ai-portrait/source-from-url", async (req: Request, res: Response) 
     const { photoUrl, clientName = "", notes = "" } = req.body as { photoUrl: string; clientName?: string; notes?: string };
     if (!photoUrl) { res.status(400).json({ error: "photoUrl required" }); return; }
 
-    const imageBuf = await fetchBuf(photoUrl);
+    const imageBuf = await fetchBufSecure(photoUrl);
     const uploadedUrl = await uploadBuf(imageBuf, "source.jpg", "ai-portraits/source", "image/jpeg");
 
     const [row] = await db

@@ -261,8 +261,39 @@ export async function regenerateSingleCard(
     [{ id: portrait.scenarioId, scrubColor: portrait.scrubColor ?? undefined, outfitStyle: portrait.outfitStyle ?? undefined, aspectRatio: portrait.aspectRatio }],
   );
 
-  await db
-    .update(aiGeneratedPortraitsTable)
-    .set({ status: portrait.status, outputImageUrl: portrait.outputImageUrl })
-    .where(eq(aiGeneratedPortraitsTable.id, portraitId));
+  const updatedJob = jobs.get(jobId);
+  const updatedCard = updatedJob?.cards.find((c) => c.scenarioId === portrait.scenarioId);
+
+  if (updatedCard?.status === "success" && updatedCard.portraitId && updatedCard.portraitId !== portraitId) {
+    const newRow = await db.query.aiGeneratedPortraitsTable.findFirst({
+      where: eq(aiGeneratedPortraitsTable.id, updatedCard.portraitId),
+    });
+    if (newRow) {
+      await db
+        .update(aiGeneratedPortraitsTable)
+        .set({
+          status: "success",
+          outputImageUrl: newRow.outputImageUrl,
+          originalImageUrl: newRow.originalImageUrl,
+          failureReason: null,
+        })
+        .where(eq(aiGeneratedPortraitsTable.id, portraitId))
+        .catch(() => {});
+      await db
+        .delete(aiGeneratedPortraitsTable)
+        .where(eq(aiGeneratedPortraitsTable.id, updatedCard.portraitId))
+        .catch(() => {});
+      const jobRef = jobs.get(jobId);
+      if (jobRef) {
+        const cardIdx = jobRef.cards.findIndex((c) => c.scenarioId === portrait.scenarioId);
+        if (cardIdx !== -1) jobRef.cards[cardIdx].portraitId = portraitId;
+      }
+    }
+  } else if (updatedCard?.status === "failed") {
+    await db
+      .update(aiGeneratedPortraitsTable)
+      .set({ status: "failed", failureReason: updatedCard.failureReason ?? "Unknown error" })
+      .where(eq(aiGeneratedPortraitsTable.id, portraitId))
+      .catch(() => {});
+  }
 }

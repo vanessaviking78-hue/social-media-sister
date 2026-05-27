@@ -594,9 +594,16 @@ export default function AiPortraitStudio() {
                   )}
 
                   {card.status === "rate-limited" && (
-                    <div className="flex flex-col items-center justify-center py-8 gap-2 text-amber-400">
-                      <Clock className="w-5 h-5" />
-                      <p className="text-xs">Rate limited — retrying in 30s</p>
+                    <div className="p-4 space-y-3">
+                      <div className="flex flex-col items-center gap-2 text-amber-400">
+                        <Clock className="w-5 h-5" />
+                        <p className="text-xs text-center">Rate limited. Retrying automatically in 30s.</p>
+                      </div>
+                      {card.portraitId && (
+                        <Button size="sm" variant="outline" className="w-full text-xs border-amber-500/40 text-amber-300 hover:text-amber-100" onClick={() => handleRegenerate(card)}>
+                          <RefreshCcw className="w-3.5 h-3.5 mr-1.5" />Retry now
+                        </Button>
+                      )}
                     </div>
                   )}
 
