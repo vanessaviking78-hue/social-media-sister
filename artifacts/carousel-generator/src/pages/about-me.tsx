@@ -641,7 +641,7 @@ export default function AboutMePage() {
 
             {/* Photo */}
             <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-4">
-              <Label className="text-base font-semibold">Your Photo</Label>
+              <Label className="text-2xl text-white leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>Your Photo</Label>
               <div ref={dropRef} onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}
                 onClick={() => fileInputRef.current?.click()}
                 className="border-2 border-dashed border-pink-500/30 rounded-xl p-6 text-center cursor-pointer hover:border-pink-500/60 transition-colors">
@@ -672,7 +672,7 @@ export default function AboutMePage() {
 
             {/* Logo */}
             <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-3">
-              <Label className="text-base font-semibold">Logo</Label>
+              <Label className="text-2xl text-white leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>Logo</Label>
               {logo ? (
                 <div className="flex items-center gap-3">
                   <img src={logo.dataUrl} alt="Logo" className="h-14 object-contain rounded bg-white/5 p-1" />
@@ -691,7 +691,7 @@ export default function AboutMePage() {
 
             {/* Title + Subtitle + Font */}
             <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-4">
-              <Label className="text-base font-semibold">Title & Font</Label>
+              <Label className="text-2xl text-white leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>Title & Font</Label>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs text-muted-foreground">Title</Label>
@@ -779,7 +779,7 @@ export default function AboutMePage() {
             <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label className="text-base font-semibold">Sticker Labels ({words.length}/10)</Label>
+                  <Label className="text-2xl text-white leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>Sticker Labels ({words.length}/10)</Label>
                   <p className="text-xs text-muted-foreground mt-0.5">Drag any sticker on the preview to reposition it</p>
                 </div>
                 {words.length < 10 && (
@@ -838,7 +838,7 @@ export default function AboutMePage() {
 
             {/* Doodles */}
             <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-4">
-              <Label className="text-base font-semibold">Doodles</Label>
+              <Label className="text-2xl text-white leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>Doodles</Label>
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Default size</Label>
                 <div className="flex gap-2">
@@ -884,7 +884,7 @@ export default function AboutMePage() {
 
             {/* Cutout effects */}
             <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-4">
-              <Label className="text-base font-semibold">Subject Effects</Label>
+              <Label className="text-2xl text-white leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>Subject Effects</Label>
 
               {/* Glow */}
               <div className="space-y-3">
@@ -937,7 +937,7 @@ export default function AboutMePage() {
 
             {/* Style */}
             <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-5">
-              <Label className="text-base font-semibold">Style</Label>
+              <Label className="text-2xl text-white leading-tight" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>Style</Label>
 
               <div className="space-y-2">
                 <Label className="text-sm text-muted-foreground">Accent colour — sticker outlines, toppers, sparkles</Label>
