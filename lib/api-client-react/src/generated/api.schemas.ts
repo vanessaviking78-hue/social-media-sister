@@ -135,6 +135,99 @@ export interface AiJobStatus {
   cards: AiCardState[];
 }
 
+/**
+ * A music track selected from the in-app music library
+ */
+export interface MusicTrack {
+  /** Unique track identifier */
+  id: number;
+  /** Track title */
+  title: string;
+  /** Artist name */
+  artist: string;
+  /** Track duration in seconds */
+  duration: number;
+  /** URL to a short audio preview clip */
+  previewUrl: string;
+}
+
+/**
+ * A single post to push to Meta (Instagram / Facebook)
+ */
+export interface MetaPushPost {
+  title: string;
+  caption: string;
+  imageUrls: string[];
+  musicTrack?: MusicTrack | null;
+}
+
+export type SchedulePostBodyPostType =
+  (typeof SchedulePostBodyPostType)[keyof typeof SchedulePostBodyPostType];
+
+export const SchedulePostBodyPostType = {
+  carousel: "carousel",
+  reel: "reel",
+} as const;
+
+export type SchedulePostBodyPostsItem = {
+  title: string;
+  caption: string;
+  imageUrls?: string[];
+  videoUrl?: string;
+  musicTrack?: MusicTrack | null;
+};
+
+export type SchedulePostBodyPlatform =
+  (typeof SchedulePostBodyPlatform)[keyof typeof SchedulePostBodyPlatform];
+
+export const SchedulePostBodyPlatform = {
+  meta: "meta",
+  cloud_campaign: "cloud_campaign",
+  both: "both",
+} as const;
+
+/**
+ * Request body for scheduling a post
+ */
+export interface SchedulePostBody {
+  presetId: number;
+  postType: SchedulePostBodyPostType;
+  scheduledAt: string;
+  posts: SchedulePostBodyPostsItem[];
+  platform?: SchedulePostBodyPlatform;
+  isTrial?: boolean;
+}
+
+export type AboutMePostBodyWordsItem = { [key: string]: unknown };
+
+/**
+ * Request body for creating or updating an About Me post
+ */
+export interface AboutMePostBody {
+  clientName: string;
+  title?: string;
+  subtitle?: string;
+  words?: AboutMePostBodyWordsItem[];
+  accentColor?: string;
+  titleFont?: string;
+  aspectRatio?: string;
+  musicTrack?: MusicTrack | null;
+}
+
+export type SeamlessCarouselBodySlidesItem = { [key: string]: unknown };
+
+/**
+ * Request body for creating or updating a Seamless Carousel
+ */
+export interface SeamlessCarouselBody {
+  clientName: string;
+  slideCount?: number;
+  slides?: SeamlessCarouselBodySlidesItem[];
+  scriptFont?: string;
+  textColor?: string;
+  musicTrack?: MusicTrack | null;
+}
+
 export type GenerateCarouselBody = {
   /** Photo files to cycle through across slides */
   photos: Blob[];

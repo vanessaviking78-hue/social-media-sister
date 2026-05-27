@@ -510,3 +510,125 @@ components:
           items:
             $ref: "#/components/schemas/AiCardState"
       required: [cards]
+
+    MusicTrack:
+      type: object
+      description: A music track selected from the in-app music library
+      properties:
+        id:
+          type: integer
+          description: Unique track identifier
+        title:
+          type: string
+          description: Track title
+        artist:
+          type: string
+          description: Artist name
+        duration:
+          type: integer
+          description: Track duration in seconds
+        previewUrl:
+          type: string
+          description: URL to a short audio preview clip
+      required: [id, title, artist, duration, previewUrl]
+
+    MetaPushPost:
+      type: object
+      description: A single post to push to Meta (Instagram / Facebook)
+      properties:
+        title:
+          type: string
+        caption:
+          type: string
+        imageUrls:
+          type: array
+          items:
+            type: string
+        musicTrack:
+          $ref: "#/components/schemas/MusicTrack"
+          nullable: true
+      required: [title, caption, imageUrls]
+
+    SchedulePostBody:
+      type: object
+      description: Request body for scheduling a post
+      properties:
+        presetId:
+          type: integer
+        postType:
+          type: string
+          enum: [carousel, reel]
+        scheduledAt:
+          type: string
+          format: date-time
+        posts:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              caption:
+                type: string
+              imageUrls:
+                type: array
+                items:
+                  type: string
+              videoUrl:
+                type: string
+              musicTrack:
+                $ref: "#/components/schemas/MusicTrack"
+                nullable: true
+            required: [title, caption]
+        platform:
+          type: string
+          enum: [meta, cloud_campaign, both]
+        isTrial:
+          type: boolean
+      required: [presetId, postType, scheduledAt, posts]
+
+    AboutMePostBody:
+      type: object
+      description: Request body for creating or updating an About Me post
+      properties:
+        clientName:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        words:
+          type: array
+          items:
+            type: object
+        accentColor:
+          type: string
+        titleFont:
+          type: string
+        aspectRatio:
+          type: string
+        musicTrack:
+          $ref: "#/components/schemas/MusicTrack"
+          nullable: true
+      required: [clientName]
+
+    SeamlessCarouselBody:
+      type: object
+      description: Request body for creating or updating a Seamless Carousel
+      properties:
+        clientName:
+          type: string
+        slideCount:
+          type: integer
+        slides:
+          type: array
+          items:
+            type: object
+        scriptFont:
+          type: string
+        textColor:
+          type: string
+        musicTrack:
+          $ref: "#/components/schemas/MusicTrack"
+          nullable: true
+      required: [clientName]

@@ -171,13 +171,20 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
   if (!content.imageUrls?.length) throw new Error("No image URLs for carousel");
   const result: { igPostId?: string; fbPostId?: string } = {};
   const errors: string[] = [];
-  const audioName = content.musicTrack?.title || undefined;
+  const isMultiImage = content.imageUrls.length > 1;
+  const audioName = content.musicTrack?.title && isMultiImage
+    ? `${content.musicTrack.title} by ${content.musicTrack.artist}`
+    : undefined;
+  const musicNote = content.musicTrack && !audioName
+    ? `\n\n🎵 Recommended music: ${content.musicTrack.title} by ${content.musicTrack.artist}`
+    : "";
+  const caption = content.caption + musicNote;
   if (igId) {
-    try { result.igPostId = await postCarouselToIG(igId, token, content.imageUrls, content.caption, audioName); }
+    try { result.igPostId = await postCarouselToIG(igId, token, content.imageUrls, caption, audioName); }
     catch (e: any) { errors.push(`IG: ${e.message}`); }
   }
   if (pageId) {
-    try { result.fbPostId = await postCarouselToFB(pageId, token, content.imageUrls, content.caption); }
+    try { result.fbPostId = await postCarouselToFB(pageId, token, content.imageUrls, caption); }
     catch (e: any) { errors.push(`FB: ${e.message}`); }
   }
   if (!igId && !pageId) throw new Error("No IG or FB account configured for this client");

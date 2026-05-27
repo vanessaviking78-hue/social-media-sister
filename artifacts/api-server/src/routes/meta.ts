@@ -193,10 +193,16 @@ router.post("/meta/push", async (req: Request, res: Response) => {
     const results: { post: string; platform: string; status: string; id?: string; error?: string }[] = [];
 
     for (const post of posts) {
+      const isMultiImage = (post.imageUrls?.length ?? 0) > 1;
       const isStory = postType === "story" || postType === "stories";
-      const isCarousel = (post.imageUrls?.length ?? 0) > 1 || postType === "carousel" || postType === "seamless";
-      const audioName = post.musicTrack?.title && (isStory || isCarousel) ? `${post.musicTrack.title} by ${post.musicTrack.artist}` : undefined;
-      const musicNote = post.musicTrack && !audioName ? `\n\n🎵 Recommended music: ${post.musicTrack.title} by ${post.musicTrack.artist}` : "";
+      const isSeamless = postType === "seamless";
+      const supportsAudioAttachment = isMultiImage || isStory || isSeamless;
+      const audioName = post.musicTrack?.title && supportsAudioAttachment
+        ? `${post.musicTrack.title} by ${post.musicTrack.artist}`
+        : undefined;
+      const musicNote = post.musicTrack && !audioName
+        ? `\n\n🎵 Recommended music: ${post.musicTrack.title} by ${post.musicTrack.artist}`
+        : "";
       const finalCaption = post.caption + musicNote;
 
       if (igId) {
