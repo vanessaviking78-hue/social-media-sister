@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import {
   Upload, ImagePlus, BookOpen, Film, Palette, MessageSquareText,
-  CalendarDays, BarChart3, Loader2, Download, User, Grid, X, RotateCcw, Music, Play, Square,
+  CalendarDays, BarChart3, Loader2, Download, User, Grid, X, RotateCcw, Music, Play, Square, Maximize2,
 } from "lucide-react";
 import { CANVAS_WIDTH, CANVAS_HEIGHT, ALL_FONTS, recordReelVideoMp4 } from "@/lib/slide-utils";
 import { type ReelAnimType, type ElementAnimation, REEL_ANIM_LABELS, applyPhotoAnimation } from "@/lib/animate-utils";
@@ -264,6 +264,10 @@ export default function AboutMePage() {
   const [cutoutDataUrl, setCutoutDataUrl] = useState("");
   const [cutoutAr, setCutoutAr] = useState(0.75);
   const [bgRemoving, setBgRemoving] = useState(false);
+
+  type ToolId = "templates" | "photos" | "text" | "shapes" | "stickers" | "layers";
+  const [activeTool, setActiveTool] = useState<ToolId | null>(null);
+  const toggleTool = (id: ToolId) => setActiveTool((prev) => (prev === id ? null : id));
 
   // Text
   const [title, setTitle] = useState("About me");
@@ -855,7 +859,7 @@ export default function AboutMePage() {
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-[100dvh] w-full pb-32">
+    <div className="h-[100dvh] w-full flex flex-col overflow-hidden">
       <MusicPickerModal open={musicPickerOpen} onClose={() => setMusicPickerOpen(false)} selectedTrack={musicTrack} onSelect={(t) => setMusicTrack(t)} />
       {scheduleOpen && (
         <ScheduleModal
@@ -885,17 +889,225 @@ export default function AboutMePage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 mt-8">
-        <div className="mb-8">
-          <h1 className="font-sans font-bold text-4xl tracking-tight mb-2 flex items-center gap-3">
-            <User className="w-9 h-9 text-pink-400" /> About Me
-          </h1>
-          <p className="text-lg text-muted-foreground">Upload your photo, scatter your words, and drag everything exactly where you want it.</p>
+      {/* ── Body: Rail | Panel | Editing area | Live preview ── */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+
+        {/* ── Left Rail (60px) ── */}
+        <div style={{ width: 60, minWidth: 60 }} className="flex flex-col items-center py-3 gap-0.5 bg-[#0f0f0f] border-r border-zinc-800/60 shrink-0 z-10">
+          {(
+            [
+              {
+                id: "templates" as ToolId,
+                label: "Templates",
+                icon: (active: boolean) => (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "#E91976" : "white"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                ),
+              },
+              {
+                id: "photos" as ToolId,
+                label: "Photos",
+                icon: (active: boolean) => (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "#E91976" : "white"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                  </svg>
+                ),
+              },
+              {
+                id: "text" as ToolId,
+                label: "Text",
+                icon: (active: boolean) => (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "#E91976" : "white"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="4 7 4 4 20 4 20 7" /><line x1="9" y1="20" x2="15" y2="20" /><line x1="12" y1="4" x2="12" y2="20" />
+                  </svg>
+                ),
+              },
+              {
+                id: "shapes" as ToolId,
+                label: "Shapes",
+                icon: (active: boolean) => (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "#E91976" : "white"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="9" /><polyline points="12 8 14.5 13 17 13 15 15.5 15.8 18 12 16.5 8.2 18 9 15.5 7 13 9.5 13 12 8" />
+                  </svg>
+                ),
+              },
+              {
+                id: "stickers" as ToolId,
+                label: "Stickers",
+                icon: (active: boolean) => (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "#E91976" : "white"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="9" /><path d="M8.5 14.5s1 2 3.5 2 3.5-2 3.5-2" />
+                    <line x1="9" y1="9" x2="9.01" y2="9" strokeWidth="2.5" /><line x1="15" y1="9" x2="15.01" y2="9" strokeWidth="2.5" />
+                  </svg>
+                ),
+              },
+              {
+                id: "layers" as ToolId,
+                label: "Layers",
+                icon: (active: boolean) => (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "#E91976" : "white"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" />
+                  </svg>
+                ),
+              },
+            ] as const
+          ).map(({ id, label, icon }) => {
+            const isActive = activeTool === id;
+            return (
+              <button
+                key={id}
+                onClick={() => toggleTool(id)}
+                className="flex flex-col items-center gap-1 py-3 px-1 w-full transition-colors relative group"
+                style={{ backgroundColor: isActive ? "rgba(233,25,118,0.09)" : undefined }}
+              >
+                {isActive && (
+                  <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full bg-[#E91976]" />
+                )}
+                {icon(isActive)}
+                <span className="text-[9px] font-semibold tracking-wide uppercase" style={{ color: isActive ? "#E91976" : "#52525b" }}>
+                  {label}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8 items-start">
-          {/* ═══ LEFT CONTROLS ═══ */}
-          <div className="w-full lg:w-[40%] min-w-0 space-y-5">
+        {/* ── Slide-out Panel (260px) ── */}
+        <div
+          style={{
+            width: activeTool ? 260 : 0,
+            minWidth: activeTool ? 260 : 0,
+            transition: "width 180ms cubic-bezier(0.4,0,0.2,1), min-width 180ms cubic-bezier(0.4,0,0.2,1)",
+          }}
+          className="bg-[#161616] border-r border-zinc-800/60 flex flex-col shrink-0 overflow-hidden z-10"
+        >
+          {activeTool && (
+            <>
+              <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/60 shrink-0">
+                <span className="text-sm font-semibold text-white capitalize">{activeTool}</span>
+                <button
+                  onClick={() => setActiveTool(null)}
+                  className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-zinc-700/60 transition-colors"
+                >
+                  <X className="w-3 h-3 text-zinc-500" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                {activeTool === "templates" && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">About Me templates</p>
+                    <p className="text-xs text-zinc-400 leading-relaxed">Choose a template pack in the controls to apply a complete style — colours, fonts, and layout in one click.</p>
+                    <div className="rounded-lg border border-zinc-700/50 bg-zinc-800/40 px-3 py-4 text-center">
+                      <p className="text-xs text-zinc-500">Scroll down to Template Pack in the controls panel</p>
+                    </div>
+                  </div>
+                )}
+                {activeTool === "photos" && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Your photo</p>
+                    <p className="text-xs text-zinc-400 leading-relaxed">Upload a portrait photo. Background removal is automatic — you can toggle it on or off.</p>
+                    {photoSrc ? (
+                      <div className="rounded-lg overflow-hidden border border-zinc-700/50">
+                        <img src={photoSrc} alt="Uploaded" className="w-full object-cover" style={{ maxHeight: 140 }} />
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-zinc-700/50 bg-zinc-800/40 px-3 py-6 text-center">
+                        <p className="text-xs text-zinc-500">No photo uploaded yet</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {activeTool === "text" && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Title & font</p>
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-zinc-600">Title text</p>
+                      <p className="text-xs text-zinc-300 font-medium">{title || "(empty)"}</p>
+                      <p className="text-xs text-zinc-600 pt-1">Title font</p>
+                      <p className="text-xs text-zinc-300 font-medium">{titleFont}</p>
+                      <p className="text-xs text-zinc-600 pt-1">Accent colour</p>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded-full border border-zinc-600" style={{ backgroundColor: accentColor }} />
+                        <p className="text-xs text-zinc-300 font-mono">{accentColor}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {activeTool === "shapes" && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Doodles & shapes</p>
+                    <p className="text-xs text-zinc-400 leading-relaxed">Doodle type, size, colour, and density controls are in the Doodles section of the controls panel.</p>
+                    <div className="rounded-lg border border-zinc-700/50 bg-zinc-800/40 px-3 py-4 text-center">
+                      <p className="text-xs text-zinc-500">Scroll to Doodles in controls</p>
+                    </div>
+                  </div>
+                )}
+                {activeTool === "stickers" && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Sticker labels</p>
+                    <p className="text-xs text-zinc-400 leading-relaxed">Add up to 10 word stickers. Each one is draggable on the canvas.</p>
+                    <div className="rounded-lg border border-zinc-700/50 bg-zinc-800/40 px-3 py-4 text-center">
+                      <p className="text-xs text-zinc-500">Scroll to Sticker Labels in controls</p>
+                    </div>
+                  </div>
+                )}
+                {activeTool === "layers" && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Elements</p>
+                    <p className="text-xs text-zinc-400 leading-relaxed">Drag elements directly on the preview canvas to reposition them.</p>
+                    <div className="space-y-1.5 pt-1">
+                      {[
+                        { label: "Photo", present: !!photoSrc },
+                        { label: "Title text", present: !!title },
+                        { label: "Subtitle", present: !!subtitle },
+                        { label: "Word stickers", present: words.length > 0 },
+                        { label: "Doodles", present: true },
+                      ].map(({ label, present }) => (
+                        <div key={label} className="flex items-center gap-2 rounded bg-zinc-800/50 border border-zinc-700/30 px-3 py-1.5">
+                          <div className={`w-1.5 h-1.5 rounded-full ${present ? "bg-green-400" : "bg-zinc-600"}`} />
+                          <span className="text-xs text-zinc-300">{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── Editing area (controls) ── */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+          {/* Compact top strip */}
+          <div className="h-12 border-b border-border/30 bg-background/80 backdrop-blur flex items-center px-4 gap-3 shrink-0">
+            <User className="w-4 h-4 text-pink-400 shrink-0" />
+            <span className="text-sm font-semibold text-foreground">About Me</span>
+            <span className="text-zinc-700 text-xs">·</span>
+            <span className="text-xs text-muted-foreground">Drag the title, photo, stickers, and doodles to reposition on the canvas</span>
+            {renderedUrl && (
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  onClick={() => setShowFullPreview(true)}
+                  className="flex items-center gap-1.5 px-3 h-7 rounded-md bg-zinc-800 text-zinc-300 text-xs font-medium hover:bg-zinc-700 transition-colors"
+                >
+                  <Maximize2 className="w-3 h-3" /> Full size
+                </button>
+                <a href={renderedUrl} download="about-me.png"
+                  className="flex items-center gap-1.5 px-3 h-7 rounded-md bg-[#E91976] text-white text-xs font-bold hover:bg-pink-600 transition-colors"
+                >
+                  <Download className="w-3 h-3" /> Download PNG
+                </a>
+              </div>
+            )}
+          </div>
+
+          {/* Scrollable controls */}
+          <div className="flex-1 overflow-y-auto">
+          <div className="px-6 py-6 pb-32">
+          <div className="space-y-5">
 
             {/* Photo */}
             <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-4">
@@ -1554,13 +1766,17 @@ export default function AboutMePage() {
               </div>
             )}
           </div>
+          </div>{/* closes px-6 py-6 pb-32 */}
+          </div>{/* closes flex-1 overflow-y-auto */}
+        </div>{/* closes editing area */}
 
-          {/* ═══ RIGHT PREVIEW ═══ */}
-          <div className="w-full lg:w-[58%] flex flex-col gap-2 lg:sticky top-24 self-start">
-            <div className="flex items-center justify-between px-0.5">
+        {/* ═══ RIGHT PREVIEW ═══ */}
+        <div className="hidden lg:flex flex-col shrink-0 border-l border-zinc-800/60 bg-background/50 overflow-y-auto" style={{ width: 380 }}>
+          <div className="px-4 py-4 flex flex-col gap-3 h-full">
+            <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground">Live Preview</p>
-                <p className="text-xs text-muted-foreground">Drag title, photo, stickers, and doodles to reposition</p>
+                <p className="text-xs text-muted-foreground">Drag to reposition</p>
               </div>
               <button onClick={() => setShowFullPreview(true)}
                 className="text-xs text-pink-400 border border-pink-500/30 px-2.5 py-1 rounded-lg hover:bg-pink-500/10 transition-colors flex items-center gap-1 shrink-0">
@@ -1867,7 +2083,7 @@ export default function AboutMePage() {
             </p>
           </div>
         </div>
-      </main>
+      </div>{/* closes body flex */}
 
       {/* ═══ FULL SIZE PREVIEW MODAL ═══ */}
       {showFullPreview && (
