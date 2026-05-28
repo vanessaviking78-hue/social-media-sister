@@ -10,7 +10,7 @@ const router: IRouter = Router();
 
 router.post("/bundle/generate", async (req, res) => {
   try {
-    const { clinicName, igHandle, treatmentFocus, brandColour, voiceStyle } = req.body;
+    const { clinicName, igHandle, treatmentFocus, brandColour, voiceStyle, topics } = req.body;
 
     if (!clinicName || !treatmentFocus) {
       res.status(400).json({ error: "clinicName and treatmentFocus are required" });
@@ -18,6 +18,14 @@ router.post("/bundle/generate", async (req, res) => {
     }
 
     const voicePrompt = getVoiceSystemPrompt(voiceStyle || "northern-grit");
+
+    const topicLines = Array.isArray(topics) && topics.length === 4
+      ? `\nCONTENT ANGLES (use these as the specific angle/topic for each format — adapt to the clinic's treatment focus):
+- Carousel: "${topics[0]}"
+- About Me: "${topics[1]}"
+- Reel: "${topics[2]}"
+- Seamless: "${topics[3]}"\n`
+      : "";
 
     const systemPrompt = `${voicePrompt}
 
@@ -27,7 +35,7 @@ CLINIC DETAILS:
 - Name: ${clinicName}
 - Instagram handle: ${igHandle || "not provided"}
 - Treatment focus: ${treatmentFocus}
-
+${topicLines}
 Generate 4 content pieces in this exact JSON structure (no extra text, no markdown fences):
 {
   "carousel": {

@@ -43,6 +43,7 @@ import BundleBuilder from "@/pages/bundle-builder";
 import BundlePreview from "@/pages/bundle-preview";
 import FounderSignup from "@/pages/founder-signup";
 import FounderWelcome from "@/pages/founder-welcome";
+import StrategyLibrary from "@/pages/strategy-library";
 
 const queryClient = new QueryClient();
 
@@ -72,6 +73,7 @@ function ProtectedRouter() {
       <Route path="/dm-prompts" component={DmPrompts} />
       <Route path="/reel-scripts" component={ReelScripts} />
       <Route path="/bundle-builder" component={BundleBuilder} />
+      <Route path="/strategy-library" component={StrategyLibrary} />
       <Route component={NotFound} />
     </Switch>
   );

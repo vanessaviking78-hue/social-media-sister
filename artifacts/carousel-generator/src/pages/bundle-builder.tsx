@@ -1,13 +1,31 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Link, useLocation } from "wouter";
-import { Package, ArrowLeft, Sparkles, Loader2, Copy, Check, ExternalLink } from "lucide-react";
+import { Package, ArrowLeft, Sparkles, Loader2, Copy, Check, ExternalLink, Shuffle, ChevronDown, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import VoiceStyleSelector from "@/components/voice-style-selector";
 import { toast } from "sonner";
+import { authHeaders } from "@/lib/use-approval";
 
 const BASE = import.meta.env.BASE_URL || "/";
+
+function api(path: string) {
+  return `${BASE}api/${path}`;
+}
+
+interface Topic {
+  id: number;
+  topic: string;
+}
+
+const FORMAT_LABELS = ["Carousel", "About Me", "Reel", "Seamless"];
+
+function pickRandom<T>(arr: T[], n: number): T[] {
+  const shuffled = [...arr].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, n);
+}
 
 export default function BundleBuilder() {
   const [, navigate] = useLocation();
@@ -20,9 +38,39 @@ export default function BundleBuilder() {
   const [result, setResult] = useState<{ token: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const [allTopics, setAllTopics] = useState<Topic[]>([]);
+  const [selectedTopics, setSelectedTopics] = useState<string[]>(["", "", "", ""]);
+  const [topicsLoaded, setTopicsLoaded] = useState(false);
+
   const bundleUrl = result
     ? `${window.location.origin}${BASE.replace(/\/$/, "")}/bundle/${result.token}`
     : null;
+
+  const applyRandomTopics = useCallback((pool: Topic[]) => {
+    if (pool.length === 0) return;
+    const picks = pickRandom(pool, Math.min(4, pool.length));
+    const filled: string[] = ["", "", "", ""].map((_, i) => picks[i]?.topic ?? "");
+    setSelectedTopics(filled);
+  }, []);
+
+  useEffect(() => {
+    fetch(api("strategy-topics"), { headers: authHeaders() })
+      .then((r) => r.json())
+      .then((data: Topic[]) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setAllTopics(data);
+          applyRandomTopics(data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setTopicsLoaded(true));
+  }, [applyRandomTopics]);
+
+  const randomiseAll = () => applyRandomTopics(allTopics);
+
+  const setSlotTopic = (idx: number, value: string) => {
+    setSelectedTopics((prev) => prev.map((t, i) => i === idx ? value : t));
+  };
 
   const handleGenerate = async () => {
     if (!clinicName.trim() || !treatmentFocus.trim()) {
@@ -31,15 +79,17 @@ export default function BundleBuilder() {
     }
     setGenerating(true);
     try {
-      const resp = await fetch(`${BASE}api/bundle/generate`, {
+      const activeTopics = selectedTopics.filter(Boolean);
+      const resp = await fetch(api("bundle/generate"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(),
         body: JSON.stringify({
           clinicName: clinicName.trim(),
           igHandle: igHandle.trim(),
           treatmentFocus: treatmentFocus.trim(),
           brandColour,
           voiceStyle,
+          topics: activeTopics.length === 4 ? activeTopics : undefined,
         }),
       });
       const data = await resp.json();
@@ -63,10 +113,16 @@ export default function BundleBuilder() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-2xl mx-auto px-6 py-10 space-y-8">
-        <div>
+        <div className="flex items-center justify-between">
           <Link href="/hub">
             <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground -ml-2">
               <ArrowLeft className="w-4 h-4 mr-1" /> Hub
+            </Button>
+          </Link>
+          <Link href="/strategy-library">
+            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground gap-1.5">
+              <BookOpen className="w-3.5 h-3.5" />
+              Strategy Library
             </Button>
           </Link>
         </div>
@@ -85,6 +141,7 @@ export default function BundleBuilder() {
 
         {!result ? (
           <div className="space-y-6">
+            {/* Clinic Details */}
             <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="clinicName" className="text-base font-medium">Clinic name</Label>
@@ -147,6 +204,64 @@ export default function BundleBuilder() {
               </div>
             </div>
 
+            {/* Content Angles */}
+            <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-medium">Content angles</h2>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    {allTopics.length > 0
+                      ? "4 topics picked at random from your Strategy Library. Override any slot below."
+                      : "No topics in Strategy Library yet."}
+                  </p>
+                </div>
+                {allTopics.length > 0 && (
+                  <Button variant="outline" size="sm" onClick={randomiseAll} className="flex-shrink-0 gap-1.5">
+                    <Shuffle className="w-3.5 h-3.5" />
+                    Randomise
+                  </Button>
+                )}
+              </div>
+
+              {allTopics.length === 0 && topicsLoaded ? (
+                <div className="rounded-xl border border-dashed border-border/40 py-5 text-center space-y-2">
+                  <p className="text-sm text-muted-foreground">Topics will be picked once you add some to the Strategy Library.</p>
+                  <Link href="/strategy-library">
+                    <Button variant="outline" size="sm">
+                      <BookOpen className="w-3.5 h-3.5 mr-1.5" />
+                      Open Strategy Library
+                    </Button>
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {FORMAT_LABELS.map((label, idx) => (
+                    <div key={label} className="flex items-center gap-3">
+                      <span className="text-xs text-muted-foreground font-medium w-20 flex-shrink-0">{label}</span>
+                      <Select
+                        value={selectedTopics[idx] || "__none__"}
+                        onValueChange={(v) => setSlotTopic(idx, v === "__none__" ? "" : v)}
+                      >
+                        <SelectTrigger className="flex-1 h-10 text-sm">
+                          <SelectValue placeholder="No topic selected" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">
+                            <span className="text-muted-foreground">No topic</span>
+                          </SelectItem>
+                          {allTopics.map((t) => (
+                            <SelectItem key={t.id} value={t.topic}>
+                              {t.topic}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <Button
               size="lg"
               onClick={handleGenerate}
@@ -206,6 +321,7 @@ export default function BundleBuilder() {
                     setIgHandle("");
                     setTreatmentFocus("");
                     setBrandColour("#ec4899");
+                    applyRandomTopics(allTopics);
                   }}
                   className="flex-1"
                 >
