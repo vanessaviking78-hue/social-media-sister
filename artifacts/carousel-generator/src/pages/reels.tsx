@@ -23,6 +23,7 @@ import Papa from "papaparse";
 import JSZip from "jszip";
 import type { LogoPosition } from "@workspace/db/schema";
 import { saveAs } from "file-saver";
+import { CAROUSEL_TEMPLATES } from "@/lib/carousel-templates";
 
 loadGoogleFonts();
 
@@ -87,6 +88,33 @@ async function pollReelJob(
   }
   throw new Error("Reel timed out after 5 minutes — please try again");
 }
+
+const REEL_TEMPLATE_PRESETS: Record<string, {
+  pageColor?: string;
+  overlayOpacity?: number;
+  textColor?: string;
+  textPosition?: "top" | "center" | "bottom";
+  textAlign?: "left" | "center" | "right";
+  fontFamily?: string;
+}> = {
+  full_fade:         { overlayOpacity: 50, textColor: "#ffffff", textPosition: "center", textAlign: "center" },
+  notecard:          { overlayOpacity: 0,  textColor: "#2c2c2c", textPosition: "bottom", textAlign: "left",   pageColor: "#f5f0e8" },
+  torn_scrapbook:    { overlayOpacity: 30, textColor: "#1a1a1a", textPosition: "bottom", textAlign: "left" },
+  bold_editorial:    { overlayOpacity: 0,  textColor: "#ffffff", textPosition: "center", textAlign: "center", pageColor: "#0a0a0a", fontFamily: "'Montserrat', sans-serif" },
+  dark_doodle:       { overlayOpacity: 70, textColor: "#ffffff", textPosition: "bottom", textAlign: "center", pageColor: "#1a1a2e" },
+  numbered_steps:    { overlayOpacity: 40, textColor: "#ffffff", textPosition: "center", textAlign: "left" },
+  split_panel:       { overlayOpacity: 0,  textColor: "#ffffff", textPosition: "center", textAlign: "center" },
+  polaroid_scrapbook:{ overlayOpacity: 20, textColor: "#2c2c2c", textPosition: "bottom", textAlign: "center" },
+  editorial_minimal: { overlayOpacity: 0,  textColor: "#1a1a1a", textPosition: "bottom", textAlign: "left",   pageColor: "#f8f8f6" },
+  paper_cutout:      { overlayOpacity: 30, textColor: "#2c2c2c", textPosition: "bottom", textAlign: "center" },
+  textured_graphic:  { overlayOpacity: 60, textColor: "#ffffff", textPosition: "center", textAlign: "center" },
+  dark_photo_steps:  { overlayOpacity: 70, textColor: "#ffffff", textPosition: "bottom", textAlign: "left",   pageColor: "#0d0d0d" },
+  background_overlays: { overlayOpacity: 40, textColor: "#ffffff", textPosition: "center", textAlign: "center" },
+  mosaic:            { overlayOpacity: 50, textColor: "#ffffff", textPosition: "center", textAlign: "center" },
+  magazine:          { overlayOpacity: 35, textColor: "#ffffff", textPosition: "bottom", textAlign: "left" },
+  single_feature:    { overlayOpacity: 45, textColor: "#ffffff", textPosition: "center", textAlign: "center" },
+  free:              { overlayOpacity: 40, textColor: "#ffffff", textPosition: "center", textAlign: "center" },
+};
 
 export default function Reels() {
   const [slides, setSlides] = useState<ReelSlide[]>([
@@ -193,6 +221,19 @@ export default function Reels() {
   const [aiSlideCount, setAiSlideCount] = useState(5);
 
   const [reelStep, setReelStep] = useState(1);
+  const [reelTemplate, setReelTemplate] = useState("");
+
+  const handleSelectReelTemplate = (id: string) => {
+    setReelTemplate(id);
+    const p = REEL_TEMPLATE_PRESETS[id];
+    if (!p) return;
+    if (p.pageColor !== undefined) setPageColor(p.pageColor);
+    if (p.overlayOpacity !== undefined) setOverlayOpacity(p.overlayOpacity);
+    if (p.textColor !== undefined) setTextColor(p.textColor);
+    if (p.textPosition !== undefined) setTextPosition(p.textPosition);
+    if (p.textAlign !== undefined) setTextAlign(p.textAlign);
+    if (p.fontFamily !== undefined) setFontFamily(p.fontFamily);
+  };
 
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const exportCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -1241,7 +1282,80 @@ export default function Reels() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto w-full px-6 mt-8 pb-32">
+      <main className={`mx-auto w-full px-6 mt-8 pb-32 ${reelTemplate === "" ? "max-w-7xl" : "max-w-3xl"}`}>
+
+        {/* ══ TEMPLATE PICKER ══ */}
+        {reelTemplate === "" && (
+          <div className="space-y-10">
+            <div>
+              <h1 className="font-bold text-3xl text-white mb-2 flex items-center gap-3">
+                <Film className="w-8 h-8 text-pink-400" /> Reel Creator
+              </h1>
+              <p className="text-white/50">Choose a visual style to set the mood — you can adjust everything afterwards.</p>
+            </div>
+            {[
+              { key: "template" as const, label: "Slide Templates", desc: "Graphic overlays styled per-slide." },
+              { key: "seamless" as const, label: "Seamless Styles", desc: "Full-bleed photo with a clean overlay." },
+            ].map(cat => (
+              <div key={cat.key}>
+                <h2 className="text-lg font-semibold text-white mb-1">{cat.label}</h2>
+                <p className="text-sm text-white/40 mb-4">{cat.desc}</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {CAROUSEL_TEMPLATES.filter(t => t.category === cat.key).map(tpl => (
+                    <button
+                      key={tpl.id}
+                      onClick={() => handleSelectReelTemplate(tpl.id)}
+                      className="group relative rounded-2xl overflow-hidden text-left transition-all duration-200 ring-1 ring-white/10 hover:ring-2 hover:ring-pink-400/60 hover:shadow-lg hover:shadow-pink-500/10 focus:outline-none"
+                    >
+                      <div className="relative h-44 w-full overflow-hidden">
+                        <img
+                          src={import.meta.env.BASE_URL.replace(/\/$/, "") + tpl.thumb}
+                          alt={tpl.name}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                      </div>
+                      <div className="bg-white/[0.04] border-t border-white/10 p-3">
+                        <p className="font-semibold text-sm text-white leading-tight">{tpl.name}</p>
+                        <p className="text-xs text-white/40 mt-0.5 leading-snug line-clamp-2">{tpl.desc}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <div className="text-center pt-4">
+              <button onClick={() => handleSelectReelTemplate("background_overlays")} className="text-sm text-white/30 hover:text-white/60 transition-colors underline underline-offset-4">
+                Skip — start with defaults
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ══ NORMAL STEP UI (once template chosen) ══ */}
+        {reelTemplate !== "" && (<>
+
+        {/* Active template badge */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            {(() => {
+              const tpl = CAROUSEL_TEMPLATES.find(t => t.id === reelTemplate);
+              return tpl ? (
+                <>
+                  <img src={import.meta.env.BASE_URL.replace(/\/$/, "") + tpl.thumb} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                  <div>
+                    <p className="text-sm font-semibold text-white">{tpl.name}</p>
+                    <p className="text-xs text-white/40">Style applied to your reel</p>
+                  </div>
+                </>
+              ) : null;
+            })()}
+          </div>
+          <button onClick={() => setReelTemplate("")} className="text-xs text-white/30 hover:text-pink-400 transition-colors">
+            ← Change style
+          </button>
+        </div>
 
         {/* Step progress bar */}
         <div className="mb-10">
@@ -2161,6 +2275,7 @@ export default function Reels() {
           )}
 
         </div>
+        </>)}
       </main>
 
       <canvas ref={exportCanvasRef} className="hidden" />

@@ -338,7 +338,526 @@ function autoArrangeFree(imageUrls: string[], slideCount: number): CollageElemen
   return elements;
 }
 
+// ─── TEMPLATE STYLES ────────────────────────────────────────────────────────
+
+const TEMPLATE_STYLES = new Set([
+  "full_fade", "notecard", "torn_scrapbook", "bold_editorial",
+  "dark_doodle", "numbered_steps", "split_panel", "polaroid_scrapbook",
+  "editorial_minimal", "paper_cutout", "textured_graphic", "dark_photo_steps",
+]);
+
+function wrapLines(text: string, maxChars: number): string[] {
+  if (!text) return [];
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    if ((cur + " " + w).trim().length <= maxChars) cur = (cur + " " + w).trim();
+    else { if (cur) lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+async function resizeWithPlacement(buf: Buffer, el: CollageElement): Promise<Buffer> {
+  const S = SLIDE_SIZE;
+  const tw = Math.max(el.width || S, S);
+  const th = Math.max(el.height || S, S);
+  const resized = await sharp(buf).resize(tw, th, { fit: "fill" }).png().toBuffer();
+  const px = Math.max(0, Math.min(Math.round(-el.x), tw - S));
+  const py = Math.max(0, Math.min(Math.round(-el.y), th - S));
+  if (px === 0 && py === 0 && tw === S && th === S) return resized;
+  return sharp(resized).extract({ left: px, top: py, width: S, height: S }).png().toBuffer();
+}
+
+// ── Full Frame Fade ──────────────────────────────────────────────────────────
+async function renderFullFade(buf: Buffer, el: CollageElement, slide: SeamlessSlide, font: string, textColor: string, watermark: string): Promise<Buffer> {
+  const S = SLIDE_SIZE;
+  let bg = await resizeWithPlacement(buf, el);
+  bg = await sharp(bg).modulate({ brightness: 0.52, saturation: 0.85 }).png().toBuffer();
+  const vignette = `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}">
+    <defs><radialGradient id="v" cx="50%" cy="55%" r="68%">
+      <stop offset="20%" stop-color="black" stop-opacity="0"/>
+      <stop offset="100%" stop-color="black" stop-opacity="0.65"/>
+    </radialGradient></defs>
+    <rect width="${S}" height="${S}" fill="url(#v)"/>
+  </svg>`;
+  bg = await sharp(bg).composite([{ input: Buffer.from(vignette), blend: "over" }]).png().toBuffer();
+  const textSvg = buildSlideTextSvg(slide, font, textColor, watermark);
+  return sharp(bg).composite([{ input: Buffer.from(textSvg), blend: "over" }]).png().toBuffer();
+}
+
+// ── Notecard ─────────────────────────────────────────────────────────────────
+async function renderNotecard(buf: Buffer, el: CollageElement, slide: SeamlessSlide, font: string): Promise<Buffer> {
+  const S = SLIDE_SIZE;
+  let bg = await resizeWithPlacement(buf, el);
+  bg = await sharp(bg).modulate({ brightness: 0.62, saturation: 0.7 }).png().toBuffer();
+  const title = slide.title || "";
+  const body = slide.tagLine || "";
+  const sub = slide.leadIn || "";
+  const cardW = 740, cardH = 660;
+  const cx = (S - cardW) / 2, cy = (S - cardH) / 2;
+  const titleLines = wrapLines(title, 22);
+  const bodyLines = wrapLines(body, 38);
+  const titleFs = title.length > 20 ? 56 : 68;
+  let ty = cy + 125;
+  let titleSvg = "";
+  for (const line of titleLines) {
+    titleSvg += `<text x="${S / 2}" y="${ty}" font-family="Georgia, serif" font-size="${titleFs}" font-weight="bold" text-anchor="middle" fill="#1A1A1A">${escXml(line)}</text>`;
+    ty += titleFs * 1.2;
+  }
+  const divY = ty + 15;
+  let bY = divY + 55;
+  let bodySvg = "";
+  for (const line of bodyLines) {
+    bodySvg += `<text x="${S / 2}" y="${bY}" font-family="Arial, sans-serif" font-size="34" text-anchor="middle" fill="#444">${escXml(line)}</text>`;
+    bY += 48;
+  }
+  const subSvg = sub ? `<text x="${S / 2}" y="${cy + cardH - 55}" font-family="Georgia, serif" font-size="30" font-style="italic" text-anchor="middle" fill="#888">${escXml(sub)}</text>` : "";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}">
+    <defs><filter id="sh" x="-10%" y="-10%" width="120%" height="130%"><feDropShadow dx="0" dy="14" stdDeviation="26" flood-color="#000" flood-opacity="0.4"/></filter></defs>
+    <rect x="${cx}" y="${cy}" width="${cardW}" height="${cardH}" fill="white" rx="3" filter="url(#sh)" opacity="0.97"/>
+    <ellipse cx="${S / 2}" cy="${cy + 2}" rx="20" ry="13" fill="#B8A898" opacity="0.75"/>
+    <circle cx="${S / 2}" cy="${cy - 6}" r="14" fill="#8B7355" opacity="0.9"/>
+    <circle cx="${S / 2}" cy="${cy - 6}" r="6" fill="#6A5240"/>
+    ${titleSvg}
+    <line x1="${cx + 55}" y1="${divY - 8}" x2="${cx + cardW - 55}" y2="${divY - 8}" stroke="#E0D8D0" stroke-width="1.5"/>
+    ${bodySvg}
+    ${subSvg}
+  </svg>`;
+  return sharp(bg).composite([{ input: Buffer.from(svg), blend: "over" }]).png().toBuffer();
+}
+
+// ── Torn Scrapbook ────────────────────────────────────────────────────────────
+async function renderTornScrapbook(buf: Buffer, el: CollageElement, slide: SeamlessSlide, font: string): Promise<Buffer> {
+  const S = SLIDE_SIZE;
+  const title = slide.title || "";
+  const body = slide.tagLine || "";
+  const sub = slide.leadIn || "";
+  const bgBuf = await sharp({ create: { width: S, height: S, channels: 4, background: { r: 240, g: 230, b: 211, alpha: 1 } } }).png().toBuffer();
+  const photoW = 700, photoH = 710, photoX = (S - photoW) / 2 + 20, photoY = 50;
+  const photoCrop = await resizeWithPlacement(buf, el);
+  const photoResized = await sharp(photoCrop).resize(photoW, photoH, { fit: "cover" }).png().toBuffer();
+  const tornY = photoY + photoH - 100;
+  const titleLines = wrapLines(title, 20);
+  const bodyLines = wrapLines(body, 30);
+  let tY = tornY + 110;
+  let titleSvg = "";
+  const titleFs = title.length > 22 ? 60 : 72;
+  for (const l of titleLines) {
+    titleSvg += `<text x="${S / 2}" y="${tY}" font-family="Georgia, serif" font-size="${titleFs}" font-weight="bold" text-anchor="middle" fill="#2A1F10">${escXml(l)}</text>`;
+    tY += titleFs * 1.15;
+  }
+  let bodySvg = "";
+  for (const l of bodyLines) {
+    bodySvg += `<text x="${S / 2}" y="${tY}" font-family="Arial, sans-serif" font-size="34" text-anchor="middle" fill="#5A4A35">${escXml(l)}</text>`;
+    tY += 50;
+  }
+  const subSvg = sub ? `<text x="${S / 2}" y="${S - 68}" font-family="Georgia, serif" font-size="38" font-style="italic" text-anchor="middle" fill="#8A6A45">${escXml(sub)}</text>` : "";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}">
+    <defs><filter id="sh"><feDropShadow dx="4" dy="10" stdDeviation="18" flood-color="#000" flood-opacity="0.3"/></filter></defs>
+    <ellipse cx="88" cy="88" rx="48" ry="22" fill="#8BA888" opacity="0.45" transform="rotate(-35 88 88)"/>
+    <ellipse cx="72" cy="112" rx="40" ry="18" fill="#6A8A68" opacity="0.35" transform="rotate(-50 72 112)"/>
+    <ellipse cx="${S - 85}" cy="${S - 90}" rx="44" ry="20" fill="#C8A97E" opacity="0.4" transform="rotate(25 ${S - 85} ${S - 90})"/>
+    <g transform="rotate(-3 ${S / 2} ${photoY + photoH / 2})">
+      <rect x="${photoX - 14}" y="${photoY - 14}" width="${photoW + 28}" height="${photoH + 28}" fill="white" filter="url(#sh)"/>
+      <image href="data:image/png;base64,${photoResized.toString("base64")}" x="${photoX}" y="${photoY}" width="${photoW}" height="${photoH}"/>
+    </g>
+    <path d="M 0 ${tornY} L 42 ${tornY - 36} L 95 ${tornY + 18} L 148 ${tornY - 28} L 205 ${tornY + 16} L 265 ${tornY - 32} L 328 ${tornY + 18} L 388 ${tornY - 26} L 450 ${tornY + 22} L 514 ${tornY - 30} L 575 ${tornY + 16} L 636 ${tornY - 28} L 696 ${tornY + 20} L 756 ${tornY - 24} L 818 ${tornY + 18} L 878 ${tornY - 30} L 938 ${tornY + 14} L 1000 ${tornY - 22} L ${S} ${tornY + 12} L ${S} ${S} L 0 ${S} Z" fill="white" opacity="0.96"/>
+    ${titleSvg}${bodySvg}${subSvg}
+  </svg>`;
+  return sharp(bgBuf).composite([{ input: Buffer.from(svg), blend: "over" }]).png().toBuffer();
+}
+
+// ── Bold Editorial ────────────────────────────────────────────────────────────
+async function renderBoldEditorial(slide: SeamlessSlide): Promise<Buffer> {
+  const S = SLIDE_SIZE;
+  const title = slide.title || "";
+  const body = slide.tagLine || "";
+  const sub = slide.leadIn || "";
+  const titleLines = wrapLines(title, 14);
+  const bodyLines = wrapLines(body, 28);
+  const titleFs = 118;
+  let tY = 260;
+  let titleSvg = "";
+  for (const l of titleLines) {
+    titleSvg += `<text x="80" y="${tY}" font-family="Georgia, serif" font-size="${titleFs}" font-weight="bold" fill="#1A1A1A" letter-spacing="-2">${escXml(l)}</text>`;
+    tY += titleFs * 1.05;
+  }
+  let bY = tY + 40;
+  let bodySvg = "";
+  for (const l of bodyLines) {
+    bodySvg += `<text x="80" y="${bY}" font-family="Arial, sans-serif" font-size="40" fill="#1A1A1A" opacity="0.65">${escXml(l)}</text>`;
+    bY += 56;
+  }
+  const subSvg = sub ? `<text x="80" y="${S - 80}" font-family="Arial, sans-serif" font-size="30" fill="#1A1A1A" opacity="0.45">${escXml(sub)}</text>` : "";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}">
+    <rect width="${S}" height="${S}" fill="#F5F0E8"/>
+    <text x="80" y="72" font-family="Arial, sans-serif" font-size="24" fill="#1A1A1A" opacity="0.35" letter-spacing="5">STUDIO</text>
+    <line x1="80" y1="90" x2="${S - 80}" y2="90" stroke="#1A1A1A" stroke-width="1" opacity="0.12"/>
+    <rect x="80" y="155" width="85" height="8" fill="#2563EB" rx="2"/>
+    ${titleSvg}${bodySvg}${subSvg}
+    <text x="${S - 80}" y="${S - 58}" font-family="Arial, sans-serif" font-size="28" fill="#1A1A1A" opacity="0.28" text-anchor="end">&#8594;</text>
+  </svg>`;
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+// ── Dark Doodle ───────────────────────────────────────────────────────────────
+async function renderDarkDoodle(buf: Buffer, el: CollageElement, slide: SeamlessSlide, font: string, textColor: string): Promise<Buffer> {
+  const S = SLIDE_SIZE;
+  const title = slide.title || "";
+  const body = slide.tagLine || "";
+  const sub = slide.leadIn || "";
+  const photoSize = 700;
+  const photoX = (S - photoSize) / 2, photoY = (S - photoSize) / 2 + 30;
+  const photoCrop = await resizeWithPlacement(buf, el);
+  const photoResized = await sharp(photoCrop).resize(photoSize, photoSize, { fit: "cover" }).png().toBuffer();
+  const titleLines = wrapLines(title, 24);
+  const bodyLines = wrapLines(body, 34);
+  const titleFs = title.length > 20 ? 56 : 68;
+  let tY = 105;
+  let titleSvg = "";
+  for (const l of titleLines) {
+    titleSvg += `<text x="${S / 2}" y="${tY}" font-family="Georgia, serif" font-size="${titleFs}" fill="${escXml(textColor)}" text-anchor="middle" filter="url(#ts)">${escXml(l)}</text>`;
+    tY += titleFs * 1.1;
+  }
+  const bodyRev = [...bodyLines].reverse();
+  let bY = S - 185;
+  let bodySvg = "";
+  for (const l of bodyRev) {
+    bodySvg = `<text x="${S / 2}" y="${bY}" font-family="Arial, sans-serif" font-size="34" fill="rgba(255,255,255,0.7)" text-anchor="middle">${escXml(l)}</text>` + bodySvg;
+    bY -= 48;
+  }
+  const subSvg = sub ? `<text x="${S / 2}" y="${S - 68}" font-family="Georgia, serif" font-size="30" fill="rgba(255,255,255,0.5)" text-anchor="middle" font-style="italic">${escXml(sub)}</text>` : "";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}">
+    <defs>
+      <filter id="sh"><feDropShadow dx="0" dy="10" stdDeviation="22" flood-color="#000" flood-opacity="0.5"/></filter>
+      <filter id="ts"><feDropShadow dx="1" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.6"/></filter>
+    </defs>
+    <rect width="${S}" height="${S}" fill="#17120A"/>
+    <rect x="${photoX - 14}" y="${photoY - 14}" width="${photoSize + 28}" height="${photoSize + 28}" fill="white" filter="url(#sh)"/>
+    <image href="data:image/png;base64,${photoResized.toString("base64")}" x="${photoX}" y="${photoY}" width="${photoSize}" height="${photoSize}"/>
+    <text x="92" y="192" font-family="Arial, sans-serif" font-size="52" fill="rgba(255,255,255,0.22)" transform="rotate(-15 92 192)">&#9733;</text>
+    <text x="${S - 98}" y="208" font-family="Arial, sans-serif" font-size="44" fill="rgba(255,255,255,0.18)" transform="rotate(10 ${S - 98} 208)">&#9825;</text>
+    <text x="88" y="${S - 138}" font-family="Arial, sans-serif" font-size="46" fill="rgba(255,255,255,0.16)" transform="rotate(5 88 ${S - 138})">&#10022;</text>
+    <text x="${S - 102}" y="${S - 115}" font-family="Arial, sans-serif" font-size="42" fill="rgba(255,255,255,0.18)" transform="rotate(-8 ${S - 102} ${S - 115})">&#10053;</text>
+    ${titleSvg}${bodySvg}${subSvg}
+  </svg>`;
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+// ── Numbered Steps ────────────────────────────────────────────────────────────
+async function renderNumberedSteps(buf: Buffer, el: CollageElement, slide: SeamlessSlide, stepNum: number): Promise<Buffer> {
+  const S = SLIDE_SIZE;
+  const title = slide.title || "";
+  const body = slide.tagLine || "";
+  const sub = slide.leadIn || "";
+  const photoW = 350, photoH = 330, photoX = S - photoW - 58, photoY = S - photoH - 60;
+  const photoCrop = await resizeWithPlacement(buf, el);
+  const photoResized = await sharp(photoCrop).resize(photoW, photoH, { fit: "cover" }).png().toBuffer();
+  const titleLines = wrapLines(title, 18);
+  const bodyLines = wrapLines(body, 28);
+  const titleFs = title.length > 20 ? 72 : 86;
+  let tY = 330;
+  let titleSvg = "";
+  for (const l of titleLines) {
+    titleSvg += `<text x="72" y="${tY}" font-family="Georgia, serif" font-size="${titleFs}" font-weight="bold" fill="#1A1A1A">${escXml(l)}</text>`;
+    tY += titleFs * 1.1;
+  }
+  let bY = tY + 32;
+  let bodySvg = "";
+  for (const l of bodyLines) {
+    bodySvg += `<text x="72" y="${bY}" font-family="Arial, sans-serif" font-size="36" fill="#1A1A1A" opacity="0.62">${escXml(l)}</text>`;
+    bY += 52;
+  }
+  const subSvg = sub ? `<text x="72" y="${S - 75}" font-family="Arial, sans-serif" font-size="28" fill="#1A1A1A" opacity="0.42">${escXml(sub)}</text>` : "";
+  const numStr = String(stepNum).padStart(2, "0");
+  const circR = 90, circX = S - circR - 58, circY = circR + 52;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}">
+    <defs><filter id="sh"><feDropShadow dx="0" dy="8" stdDeviation="18" flood-color="#000" flood-opacity="0.16"/></filter></defs>
+    <rect width="${S}" height="${S}" fill="#F8F5F0"/>
+    <line x1="72" y1="80" x2="${S - 72}" y2="80" stroke="#1A1A1A" stroke-width="1" opacity="0.12"/>
+    <text x="72" y="64" font-family="Arial, sans-serif" font-size="22" fill="#1A1A1A" opacity="0.32" letter-spacing="4">YOUR BRAND</text>
+    <circle cx="${circX}" cy="${circY}" r="${circR}" fill="#1C1C1C" opacity="0.07"/>
+    <circle cx="${circX}" cy="${circY}" r="${circR - 10}" fill="#1C1C1C" opacity="0.1"/>
+    <text x="${circX}" y="${circY + 38}" font-family="Georgia, serif" font-size="100" font-weight="bold" text-anchor="middle" fill="#1C1C1C">${escXml(numStr)}</text>
+    <rect x="72" y="178" width="65" height="6" fill="#1C1C1C" rx="3" opacity="0.7"/>
+    ${titleSvg}${bodySvg}${subSvg}
+    <rect x="${photoX - 10}" y="${photoY - 10}" width="${photoW + 20}" height="${photoH + 20}" fill="white" filter="url(#sh)"/>
+    <image href="data:image/png;base64,${photoResized.toString("base64")}" x="${photoX}" y="${photoY}" width="${photoW}" height="${photoH}"/>
+    <text x="${S - 72}" y="${S - 60}" font-family="Arial, sans-serif" font-size="34" fill="#1A1A1A" opacity="0.28" text-anchor="end">&#8594;</text>
+  </svg>`;
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+// ── Split Panel ───────────────────────────────────────────────────────────────
+async function renderSplitPanel(buf: Buffer, el: CollageElement, slide: SeamlessSlide): Promise<Buffer> {
+  const S = SLIDE_SIZE;
+  const photoW = 510;
+  const title = slide.title || "";
+  const body = slide.tagLine || "";
+  const sub = slide.leadIn || "";
+  const photoCrop = await resizeWithPlacement(buf, el);
+  const photoResized = await sharp(photoCrop).resize(photoW, S, { fit: "cover" }).png().toBuffer();
+  const panelX = photoW;
+  const titleLines = wrapLines(title, 16);
+  const bodyLines = wrapLines(body, 22);
+  const titleFs = title.length > 18 ? 62 : 72;
+  let tY = 235;
+  let titleSvg = "";
+  for (const l of titleLines) {
+    titleSvg += `<text x="${panelX + 58}" y="${tY}" font-family="Georgia, serif" font-size="${titleFs}" font-weight="bold" fill="white" letter-spacing="-1">${escXml(l)}</text>`;
+    tY += titleFs * 1.15;
+  }
+  let bY = tY + 28;
+  let bodySvg = "";
+  for (const l of bodyLines) {
+    bodySvg += `<text x="${panelX + 58}" y="${bY}" font-family="Arial, sans-serif" font-size="33" fill="rgba(255,255,255,0.72)">${escXml(l)}</text>`;
+    bY += 46;
+  }
+  const subSvg = sub ? `<text x="${panelX + 58}" y="${S - 80}" font-family="Georgia, serif" font-size="36" fill="rgba(255,255,255,0.55)" font-style="italic">${escXml(sub)}</text>` : "";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}">
+    <image href="data:image/png;base64,${photoResized.toString("base64")}" x="0" y="0" width="${photoW}" height="${S}"/>
+    <rect x="${panelX}" y="0" width="${S - panelX}" height="${S}" fill="#1E1414"/>
+    <line x1="${panelX + 58}" y1="152" x2="${S - 58}" y2="152" stroke="rgba(255,255,255,0.14)" stroke-width="1"/>
+    <text x="${panelX + 58}" y="68" font-family="Arial, sans-serif" font-size="22" fill="rgba(255,255,255,0.42)" letter-spacing="3">YOUR BRAND</text>
+    ${titleSvg}${bodySvg}${subSvg}
+    <text x="${S - 58}" y="${S - 58}" font-family="Arial, sans-serif" font-size="32" fill="rgba(255,255,255,0.3)" text-anchor="end">&#8594;</text>
+  </svg>`;
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+// ── Polaroid Scrapbook ────────────────────────────────────────────────────────
+async function renderPolaroidScrapbook(buf: Buffer, el: CollageElement, slide: SeamlessSlide, font: string): Promise<Buffer> {
+  const S = SLIDE_SIZE;
+  const title = slide.title || "";
+  const body = slide.tagLine || "";
+  const polW = 600, polH = 640;
+  const polX = (S - polW) / 2 - 55, polY = (S - polH) / 2 - 95;
+  const photoCrop = await resizeWithPlacement(buf, el);
+  const photoResized = await sharp(photoCrop).resize(polW - 28, polH - 88, { fit: "cover" }).png().toBuffer();
+  const titleLines = wrapLines(title, 22);
+  const bodyLines = wrapLines(body, 30);
+  let tY = polY + polH + 58;
+  let titleSvg = "";
+  for (const l of titleLines) {
+    titleSvg += `<text x="${S / 2 + 38}" y="${tY}" font-family="Georgia, serif" font-size="66" fill="white" text-anchor="middle" filter="url(#ts)">${escXml(l)}</text>`;
+    tY += 80;
+  }
+  let bodySvg = "";
+  for (const l of bodyLines) {
+    bodySvg += `<text x="${S / 2 + 38}" y="${tY}" font-family="Arial, sans-serif" font-size="34" fill="rgba(255,255,255,0.72)" text-anchor="middle">${escXml(l)}</text>`;
+    tY += 50;
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}">
+    <defs>
+      <filter id="sh"><feDropShadow dx="2" dy="8" stdDeviation="18" flood-color="#000" flood-opacity="0.45"/></filter>
+      <filter id="ts"><feDropShadow dx="1" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.5"/></filter>
+    </defs>
+    <rect width="${S}" height="${S}" fill="#2D5A1B"/>
+    <circle cx="90" cy="120" r="55" fill="rgba(255,255,255,0.08)"/>
+    <circle cx="${S - 95}" cy="${S - 110}" r="45" fill="rgba(255,255,255,0.06)"/>
+    <g transform="rotate(-5 ${polX + polW / 2} ${polY + polH / 2})">
+      <rect x="${polX}" y="${polY}" width="${polW}" height="${polH}" fill="white" filter="url(#sh)"/>
+      <image href="data:image/png;base64,${photoResized.toString("base64")}" x="${polX + 14}" y="${polY + 14}" width="${polW - 28}" height="${polH - 88}"/>
+    </g>
+    ${titleSvg}${bodySvg}
+  </svg>`;
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+// ── Editorial Minimal ─────────────────────────────────────────────────────────
+async function renderEditorialMinimal(buf: Buffer, el: CollageElement, slide: SeamlessSlide, stepNum: number): Promise<Buffer> {
+  const S = SLIDE_SIZE;
+  const title = slide.title || "";
+  const body = slide.tagLine || "";
+  const sub = slide.leadIn || "";
+  let bg = await resizeWithPlacement(buf, el);
+  bg = await sharp(bg).greyscale().png().toBuffer();
+  const panelW = 475;
+  const titleLines = wrapLines(title, 16);
+  const bodyLines = wrapLines(body, 22);
+  const titleFs = title.length > 18 ? 60 : 72;
+  let tY = 248;
+  let titleSvg = "";
+  for (const l of titleLines) {
+    titleSvg += `<text x="56" y="${tY}" font-family="Georgia, serif" font-size="${titleFs}" font-weight="bold" fill="#1A1A1A">${escXml(l)}</text>`;
+    tY += titleFs * 1.1;
+  }
+  let bY = tY + 28;
+  let bodySvg = "";
+  for (const l of bodyLines) {
+    bodySvg += `<text x="56" y="${bY}" font-family="Arial, sans-serif" font-size="32" fill="#333">${escXml(l)}</text>`;
+    bY += 46;
+  }
+  const subSvg = sub ? `<text x="56" y="${S - 75}" font-family="Arial, sans-serif" font-size="26" fill="#555" font-style="italic">${escXml(sub)}</text>` : "";
+  const numStr = String(stepNum).padStart(2, "0");
+  const panel = `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}">
+    <rect x="0" y="0" width="${panelW}" height="${S}" fill="white" opacity="0.93"/>
+    <text x="${panelW + 22}" y="195" font-family="Georgia, serif" font-size="155" font-weight="bold" fill="white" opacity="0.14">${escXml(numStr)}</text>
+    <text x="56" y="72" font-family="Arial, sans-serif" font-size="22" fill="#1A1A1A" opacity="0.38" letter-spacing="4">YOUR BRAND</text>
+    <line x1="56" y1="90" x2="${panelW - 56}" y2="90" stroke="#1A1A1A" stroke-width="1" opacity="0.14"/>
+    ${titleSvg}${bodySvg}${subSvg}
+    <text x="${panelW - 56}" y="${S - 58}" font-family="Arial, sans-serif" font-size="28" fill="#1A1A1A" opacity="0.32" text-anchor="end">&#8594;</text>
+  </svg>`;
+  return sharp(bg).composite([{ input: Buffer.from(panel), blend: "over" }]).png().toBuffer();
+}
+
+// ── Paper Cutout ──────────────────────────────────────────────────────────────
+async function renderPaperCutout(buf: Buffer, el: CollageElement, slide: SeamlessSlide): Promise<Buffer> {
+  const S = SLIDE_SIZE;
+  const title = slide.title || "";
+  const body = slide.tagLine || "";
+  const photoW = 680, photoH = 660;
+  const photoX = (S - photoW) / 2 + 28, photoY = (S - photoH) / 2 - 55;
+  const photoCrop = await resizeWithPlacement(buf, el);
+  const photoResized = await sharp(photoCrop).resize(photoW, photoH, { fit: "cover" }).png().toBuffer();
+  const bgBuf = await sharp({ create: { width: S, height: S, channels: 4, background: { r: 244, g: 239, b: 230, alpha: 1 } } }).png().toBuffer();
+  const titleLines = wrapLines(title, 24);
+  const bodyLines = wrapLines(body, 34);
+  let tY = photoY + photoH + 55;
+  let titleSvg = "";
+  for (const l of titleLines) {
+    titleSvg += `<text x="${S / 2}" y="${tY}" font-family="Georgia, serif" font-size="64" font-weight="bold" text-anchor="middle" fill="#1A1A1A">${escXml(l)}</text>`;
+    tY += 76;
+  }
+  let bodySvg = "";
+  for (const l of bodyLines) {
+    bodySvg += `<text x="${S / 2}" y="${tY}" font-family="Arial, sans-serif" font-size="34" text-anchor="middle" fill="#555">${escXml(l)}</text>`;
+    tY += 50;
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}">
+    <defs><filter id="sh"><feDropShadow dx="3" dy="8" stdDeviation="16" flood-color="#000" flood-opacity="0.26"/></filter></defs>
+    <text x="72" y="132" font-family="Arial, sans-serif" font-size="64" fill="rgba(26,26,26,0.11)" transform="rotate(-15 72 132)">&#10051;</text>
+    <text x="${S - 92}" y="162" font-family="Arial, sans-serif" font-size="56" fill="rgba(26,26,26,0.09)" transform="rotate(10 ${S - 92} 162)">&#10044;</text>
+    <text x="98" y="${S - 122}" font-family="Arial, sans-serif" font-size="50" fill="rgba(26,26,26,0.08)" transform="rotate(5 98 ${S - 122})">&#10052;</text>
+    <text x="${S - 88}" y="${S - 97}" font-family="Arial, sans-serif" font-size="58" fill="rgba(26,26,26,0.1)" transform="rotate(-8 ${S - 88} ${S - 97})">&#10056;</text>
+    <g transform="rotate(-2 ${S / 2} ${S / 2})">
+      <rect x="${photoX - 13}" y="${photoY - 13}" width="${photoW + 26}" height="${photoH + 26}" fill="white" filter="url(#sh)"/>
+      <image href="data:image/png;base64,${photoResized.toString("base64")}" x="${photoX}" y="${photoY}" width="${photoW}" height="${photoH}"/>
+    </g>
+    ${titleSvg}${bodySvg}
+  </svg>`;
+  return sharp(bgBuf).composite([{ input: Buffer.from(svg), blend: "over" }]).png().toBuffer();
+}
+
+// ── Textured Graphic ──────────────────────────────────────────────────────────
+async function renderTexturedGraphic(slide: SeamlessSlide): Promise<Buffer> {
+  const S = SLIDE_SIZE;
+  const title = slide.title || "";
+  const body = slide.tagLine || "";
+  const sub = slide.leadIn || "";
+  const titleLines = wrapLines(title, 12);
+  const bodyLines = wrapLines(body, 28);
+  const titleFs = 122;
+  let tY = 168;
+  let titleSvg = "";
+  for (const l of titleLines) {
+    titleSvg += `<text x="72" y="${tY}" font-family="Impact, Arial, sans-serif" font-size="${titleFs}" font-weight="900" fill="#1A1A1A" letter-spacing="-2">${escXml(l)}</text>`;
+    tY += titleFs * 0.94;
+  }
+  const boxPad = 22, boxH = bodyLines.length * 54 + boxPad * 2;
+  const boxSvg = bodyLines.length ? `<rect x="72" y="${tY + 32}" width="720" height="${boxH}" fill="#EA580C" rx="4"/>` : "";
+  let bY = tY + 32 + boxPad + 40;
+  let bodySvg = "";
+  for (const l of bodyLines) {
+    bodySvg += `<text x="${72 + boxPad}" y="${bY}" font-family="Arial, sans-serif" font-size="38" fill="white" font-weight="bold">${escXml(l)}</text>`;
+    bY += 54;
+  }
+  const subSvg = sub ? `<text x="72" y="${S - 75}" font-family="Arial, sans-serif" font-size="28" fill="#1A1A1A" opacity="0.48">${escXml(sub)}</text>` : "";
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}">
+    <defs><marker id="arr" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#EA580C"/></marker></defs>
+    <rect width="${S}" height="${S}" fill="#E8DDD0"/>
+    <text x="72" y="66" font-family="Arial, sans-serif" font-size="24" fill="#1A1A1A" opacity="0.38" letter-spacing="4">HARPER RUSSO</text>
+    <text x="${S - 72}" y="66" font-family="Arial, sans-serif" font-size="24" fill="#1A1A1A" opacity="0.38" text-anchor="end">#content</text>
+    <line x1="72" y1="82" x2="${S - 72}" y2="82" stroke="#1A1A1A" stroke-width="1" opacity="0.1"/>
+    ${titleSvg}${boxSvg}${bodySvg}${subSvg}
+    <path d="M 680 ${tY - 28} Q 820 ${tY - 98} 890 ${tY + 38}" fill="none" stroke="#EA580C" stroke-width="4.5" stroke-dasharray="13,8" marker-end="url(#arr)"/>
+    <text x="${S - 72}" y="${S - 55}" font-family="Arial, sans-serif" font-size="26" fill="#1A1A1A" opacity="0.32" text-anchor="end">2025</text>
+  </svg>`;
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+// ── Dark Photo Steps ──────────────────────────────────────────────────────────
+async function renderDarkPhotoSteps(buf: Buffer, el: CollageElement, slide: SeamlessSlide, stepNum: number): Promise<Buffer> {
+  const S = SLIDE_SIZE;
+  const title = slide.title || "";
+  const body = slide.tagLine || "";
+  const sub = slide.leadIn || "";
+  let bg = await resizeWithPlacement(buf, el);
+  bg = await sharp(bg).modulate({ brightness: 0.44, saturation: 0.72 }).png().toBuffer();
+  const grad = `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}">
+    <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="black" stop-opacity="0.18"/>
+      <stop offset="45%" stop-color="black" stop-opacity="0.52"/>
+      <stop offset="100%" stop-color="black" stop-opacity="0.82"/>
+    </linearGradient></defs>
+    <rect width="${S}" height="${S}" fill="url(#g)"/>
+  </svg>`;
+  bg = await sharp(bg).composite([{ input: Buffer.from(grad), blend: "over" }]).png().toBuffer();
+  const numStr = String(stepNum).padStart(2, "0");
+  const titleLines = wrapLines(title, 20);
+  const bodyLines = wrapLines(body, 30);
+  const titleFs = title.length > 22 ? 66 : 80;
+  let tY = S - 490;
+  let titleSvg = "";
+  for (const l of titleLines) {
+    titleSvg += `<text x="72" y="${tY}" font-family="Georgia, serif" font-size="${titleFs}" font-weight="bold" fill="white" filter="url(#ts)">${escXml(l)}</text>`;
+    tY += titleFs * 1.1;
+  }
+  let bY = tY + 18;
+  let bodySvg = "";
+  for (const l of bodyLines) {
+    bodySvg += `<text x="72" y="${bY}" font-family="Arial, sans-serif" font-size="36" fill="rgba(255,255,255,0.72)">${escXml(l)}</text>`;
+    bY += 50;
+  }
+  const subSvg = sub ? `<text x="72" y="${S - 75}" font-family="Arial, sans-serif" font-size="28" fill="rgba(255,255,255,0.48)">${escXml(sub)}</text>` : "";
+  const dots = Array.from({ length: 5 }, (_, i) => `<circle cx="${72 + i * 30}" cy="${S - 60}" r="${i === (stepNum - 1) % 5 ? 8 : 4.5}" fill="${i === (stepNum - 1) % 5 ? "white" : "rgba(255,255,255,0.3)"}"/>`).join("");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}">
+    <defs><filter id="ts"><feDropShadow dx="1" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.6"/></filter></defs>
+    <text x="72" y="70" font-family="Arial, sans-serif" font-size="24" fill="rgba(255,255,255,0.48)" letter-spacing="3">YOUR BRAND</text>
+    <rect x="${S - 152}" y="33" width="112" height="56" rx="28" fill="rgba(255,255,255,0.14)"/>
+    <text x="${S - 96}" y="74" font-family="Georgia, serif" font-size="32" font-weight="bold" fill="white" text-anchor="middle">${escXml(numStr)}</text>
+    <text x="72" y="${tY - titleFs * titleLines.length - 28}" font-family="Arial, sans-serif" font-size="25" fill="rgba(255,255,255,0.52)" letter-spacing="4">STEP ${stepNum}</text>
+    ${titleSvg}${bodySvg}${subSvg}${dots}
+    <text x="${S - 72}" y="${S - 58}" font-family="Arial, sans-serif" font-size="38" fill="rgba(255,255,255,0.42)" text-anchor="end">&#8594;</text>
+  </svg>`;
+  return sharp(bg).composite([{ input: Buffer.from(svg), blend: "over" }]).png().toBuffer();
+}
+
+// ── Dispatcher ────────────────────────────────────────────────────────────────
+async function dispatchTemplateRender(
+  buf: Buffer, el: CollageElement, slide: SeamlessSlide,
+  slideIdx: number, layout: string, font: string, textColor: string, watermark: string,
+): Promise<Buffer> {
+  const step = slideIdx + 1;
+  switch (layout) {
+    case "full_fade":          return renderFullFade(buf, el, slide, font, textColor, watermark);
+    case "notecard":           return renderNotecard(buf, el, slide, font);
+    case "torn_scrapbook":     return renderTornScrapbook(buf, el, slide, font);
+    case "bold_editorial":     return renderBoldEditorial(slide);
+    case "dark_doodle":        return renderDarkDoodle(buf, el, slide, font, textColor);
+    case "numbered_steps":     return renderNumberedSteps(buf, el, slide, step);
+    case "split_panel":        return renderSplitPanel(buf, el, slide);
+    case "polaroid_scrapbook": return renderPolaroidScrapbook(buf, el, slide, font);
+    case "editorial_minimal":  return renderEditorialMinimal(buf, el, slide, step);
+    case "paper_cutout":       return renderPaperCutout(buf, el, slide);
+    case "textured_graphic":   return renderTexturedGraphic(slide);
+    case "dark_photo_steps":   return renderDarkPhotoSteps(buf, el, slide, step);
+    default:                   return renderFullFade(buf, el, slide, font, textColor, watermark);
+  }
+}
+
+function autoArrangeTemplate(imageUrls: string[], slideCount: number): CollageElement[] {
+  return Array.from({ length: slideCount }, (_, i) => ({
+    imageUrl: imageUrls[i % Math.max(imageUrls.length, 1)] ?? "",
+    x: 0, y: 0, width: SLIDE_SIZE, height: SLIDE_SIZE,
+    rotation: 0, zIndex: 0, hasBorder: false, isBackground: true,
+  }));
+}
+
 function buildAutoArrange(layout: string, imageUrls: string[], slideCount: number): CollageElement[] {
+  if (TEMPLATE_STYLES.has(layout)) return autoArrangeTemplate(imageUrls, slideCount);
   if (layout === "mosaic") return autoArrangeMosaic(imageUrls, slideCount);
   if (layout === "magazine") return autoArrangeMagazine(imageUrls, slideCount);
   if (layout === "single_feature") return autoArrangeSingleFeature(imageUrls, slideCount);
@@ -622,7 +1141,9 @@ router.post("/seamless/:id/render", async (req, res) => {
     const watermark = carousel.watermark ?? "";
     const logoConfig = carousel.logoConfig as SeamlessLogoConfig | null;
 
-    if (!elements.length) { res.status(400).json({ error: "No collage elements — run auto-arrange first" }); return; }
+    if (!TEMPLATE_STYLES.has(carousel.layoutStyle) && !elements.length) {
+      res.status(400).json({ error: "No collage elements — run auto-arrange first" }); return;
+    }
 
     // Fetch logo buffer once if needed
     let logoBuf: Buffer | null = null;
@@ -632,6 +1153,39 @@ router.post("/seamless/:id/render", async (req, res) => {
       } catch {
         req.log.warn("Failed to fetch seamless logo, skipping");
       }
+    }
+
+    // Template-based per-slide rendering
+    if (TEMPLATE_STYLES.has(carousel.layoutStyle)) {
+      const uploadedUrls = (carousel.uploadedImageUrls ?? []) as string[];
+      const slideUrls: string[] = [];
+      for (let i = 0; i < n; i++) {
+        const slide = slides[i] ?? { hasText: false, title: "", leadIn: "", tagLine: "", doodle: "none", position: "bottom-left" };
+        const fallbackUrl = uploadedUrls[i % Math.max(uploadedUrls.length, 1)] ?? "";
+        const el = (elements[i] ?? {
+          imageUrl: fallbackUrl,
+          x: 0, y: 0, width: SLIDE_SIZE, height: SLIDE_SIZE,
+          rotation: 0, zIndex: 0, hasBorder: false, isBackground: true,
+        }) as CollageElement;
+        const photoUrl = el.imageUrl || fallbackUrl;
+        let photoBuf: Buffer;
+        try {
+          photoBuf = photoUrl
+            ? await fetchBuf(photoUrl)
+            : await sharp({ create: { width: SLIDE_SIZE, height: SLIDE_SIZE, channels: 4, background: { r: 30, g: 30, b: 30, alpha: 1 } } }).png().toBuffer();
+        } catch {
+          photoBuf = await sharp({ create: { width: SLIDE_SIZE, height: SLIDE_SIZE, channels: 4, background: { r: 30, g: 30, b: 30, alpha: 1 } } }).png().toBuffer();
+        }
+        let slideBuf = await dispatchTemplateRender(photoBuf, el, slide, i, carousel.layoutStyle, scriptFont, textColor, watermark);
+        if (logoBuf && logoConfig) {
+          try { slideBuf = await compositeLogoOnSlide(slideBuf, logoBuf, logoConfig); } catch { req.log.warn(`Logo composite failed for slide ${i + 1}, skipping`); }
+        }
+        const url = await uploadBuf(slideBuf, `seamless-slide-${i + 1}-${Date.now()}.png`, "seamless/rendered");
+        slideUrls.push(url);
+      }
+      await db.update(seamlessCarouselsTable).set({ renderedSlideUrls: slideUrls, updatedAt: new Date() }).where(eq(seamlessCarouselsTable.id, id));
+      res.json({ slideUrls });
+      return;
     }
 
     // Render the full collage canvas
