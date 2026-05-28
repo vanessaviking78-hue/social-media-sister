@@ -41,6 +41,8 @@ import Podcast from "@/pages/podcast";
 import Competition from "@/pages/competition";
 import BundleBuilder from "@/pages/bundle-builder";
 import BundlePreview from "@/pages/bundle-preview";
+import BundleRequest from "@/pages/bundle-request";
+import BundleRequestsDashboard from "@/pages/bundle-requests-dashboard";
 import FounderSignup from "@/pages/founder-signup";
 import FounderWelcome from "@/pages/founder-welcome";
 import StrategyLibrary from "@/pages/strategy-library";
@@ -73,6 +75,7 @@ function ProtectedRouter() {
       <Route path="/dm-prompts" component={DmPrompts} />
       <Route path="/reel-scripts" component={ReelScripts} />
       <Route path="/bundle-builder" component={BundleBuilder} />
+      <Route path="/bundle-requests" component={BundleRequestsDashboard} />
       <Route path="/strategy-library" component={StrategyLibrary} />
       <Route component={NotFound} />
     </Switch>
@@ -95,6 +98,7 @@ function AppContent() {
   const [isBundle, bundleParams] = useRoute("/bundle/:token");
   const [isFounderSignup] = useRoute("/founder-signup");
   const [isFounderWelcome] = useRoute("/founder-welcome");
+  const [isTrialBundle] = useRoute("/trialbundle");
   const [location] = useLocation();
   const isSplash = location === "/";
 
@@ -145,6 +149,9 @@ function AppContent() {
   }
   if (isFounderWelcome) {
     return <FounderWelcome />;
+  }
+  if (isTrialBundle) {
+    return <BundleRequest />;
   }
 
   return (

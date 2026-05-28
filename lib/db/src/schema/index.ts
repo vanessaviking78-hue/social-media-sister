@@ -534,6 +534,19 @@ export const insertTrialBundleSchema = createInsertSchema(trialBundlesTable)
 export type InsertTrialBundle = z.infer<typeof insertTrialBundleSchema>;
 export type TrialBundle = typeof trialBundlesTable.$inferSelect;
 
+export const bundleRequestsTable = pgTable("bundle_requests", {
+  id: serial("id").primaryKey(),
+  clinicName: text("clinic_name").notNull(),
+  igHandle: text("ig_handle"),
+  email: text("email").notNull(),
+  treatmentFocus: text("treatment_focus").notNull(),
+  status: text("status").notNull().default("pending_review"),
+  bundleToken: text("bundle_token"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type BundleRequest = typeof bundleRequestsTable.$inferSelect;
+
 export const strategyTopicsTable = pgTable("strategy_topics", {
   id: serial("id").primaryKey(),
   userId: text("user_id").notNull().default("default"),

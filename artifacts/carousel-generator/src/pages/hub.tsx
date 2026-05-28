@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox } from "lucide-react";
 
 const TOOLS = [
   {
@@ -172,6 +172,15 @@ const TOOLS = [
     color: "from-yellow-500/20 to-yellow-500/5",
     border: "hover:border-yellow-500/50",
     iconColor: "text-yellow-400",
+  },
+  {
+    href: "/bundle-requests",
+    icon: Inbox,
+    name: "Bundle Requests",
+    description: "Review inbound trial bundle requests from /trialbundle. Generate or decline each one.",
+    color: "from-pink-500/20 to-pink-500/5",
+    border: "hover:border-pink-500/50",
+    iconColor: "text-pink-400",
   },
 ];
 
