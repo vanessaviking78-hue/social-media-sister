@@ -193,6 +193,9 @@ export default function Reels() {
   const [aiSlideCount, setAiSlideCount] = useState(5);
 
   const [reelStep, setReelStep] = useState(1);
+  type ToolId = "templates" | "photos" | "text" | "shapes" | "stickers" | "layers";
+  const [activeTool, setActiveTool] = useState<ToolId | null>(null);
+  const toggleTool = (id: ToolId) => setActiveTool((prev) => (prev === id ? null : id));
 
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const exportCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -1220,7 +1223,7 @@ export default function Reels() {
   const displayIdx = isPlaying ? previewIdx : activeIdx;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col">
+    <div className="h-[100dvh] bg-[#0a0a0f] text-white flex flex-col overflow-hidden">
       <header className="border-b border-white/10 px-6 py-3 flex items-center gap-4 shrink-0">
         <div className="flex items-center gap-3 flex-shrink-0">
           <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
@@ -1241,69 +1244,258 @@ export default function Reels() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto w-full px-6 mt-8 pb-32">
+      {/* ── Body row ── */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
 
-        {/* Step progress bar */}
-        <div className="mb-10">
-          <div className="flex items-center justify-between mb-6">
+        {/* ── Left Rail (60px) ── */}
+        <div style={{ width: 60, minWidth: 60 }} className="flex flex-col items-center py-3 gap-0.5 bg-[#0f0f0f] border-r border-zinc-800/60 shrink-0 z-10">
+          {(
+            [
+              {
+                id: "templates" as ToolId,
+                label: "Templates",
+                icon: (active: boolean) => (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "#E91976" : "white"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                ),
+              },
+              {
+                id: "photos" as ToolId,
+                label: "Photos",
+                icon: (active: boolean) => (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "#E91976" : "white"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                  </svg>
+                ),
+              },
+              {
+                id: "text" as ToolId,
+                label: "Text",
+                icon: (active: boolean) => (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "#E91976" : "white"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="4 7 4 4 20 4 20 7" /><line x1="9" y1="20" x2="15" y2="20" /><line x1="12" y1="4" x2="12" y2="20" />
+                  </svg>
+                ),
+              },
+              {
+                id: "shapes" as ToolId,
+                label: "Shapes",
+                icon: (active: boolean) => (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "#E91976" : "white"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="9" /><polyline points="12 8 14.5 13 17 13 15 15.5 15.8 18 12 16.5 8.2 18 9 15.5 7 13 9.5 13 12 8" />
+                  </svg>
+                ),
+              },
+              {
+                id: "stickers" as ToolId,
+                label: "Stickers",
+                icon: (active: boolean) => (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "#E91976" : "white"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="9" /><path d="M8.5 14.5s1 2 3.5 2 3.5-2 3.5-2" />
+                    <line x1="9" y1="9" x2="9.01" y2="9" strokeWidth="2.5" /><line x1="15" y1="9" x2="15.01" y2="9" strokeWidth="2.5" />
+                  </svg>
+                ),
+              },
+              {
+                id: "layers" as ToolId,
+                label: "Layers",
+                icon: (active: boolean) => (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "#E91976" : "white"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" />
+                  </svg>
+                ),
+              },
+            ] as const
+          ).map(({ id, label, icon }) => {
+            const isActive = activeTool === id;
+            return (
+              <button
+                key={id}
+                onClick={() => toggleTool(id)}
+                className="flex flex-col items-center gap-1 py-3 px-1 w-full transition-colors relative group"
+                style={{ backgroundColor: isActive ? "rgba(233,25,118,0.09)" : undefined }}
+              >
+                {isActive && (
+                  <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full bg-[#E91976]" />
+                )}
+                {icon(isActive)}
+                <span className="text-[9px] font-semibold tracking-wide uppercase" style={{ color: isActive ? "#E91976" : "#52525b" }}>
+                  {label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Slide-out Panel (260px) ── */}
+        <div
+          style={{
+            width: activeTool ? 260 : 0,
+            minWidth: activeTool ? 260 : 0,
+            transition: "width 180ms cubic-bezier(0.4,0,0.2,1), min-width 180ms cubic-bezier(0.4,0,0.2,1)",
+          }}
+          className="bg-[#161616] border-r border-zinc-800/60 flex flex-col shrink-0 overflow-hidden z-10"
+        >
+          {activeTool && (
+            <>
+              <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/60 shrink-0">
+                <span className="text-sm font-semibold text-white capitalize">{activeTool}</span>
+                <button
+                  onClick={() => setActiveTool(null)}
+                  className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-zinc-700/60 transition-colors"
+                >
+                  <X className="w-3 h-3 text-zinc-500" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                {activeTool === "templates" && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Bulk &amp; presets</p>
+                    <p className="text-xs text-zinc-400 leading-relaxed">Switch to Bulk Reels mode in Step 1 to upload a CSV and generate multiple reels at once.</p>
+                    <div className="rounded-lg border border-zinc-700/50 bg-zinc-800/40 px-3 py-4 text-center">
+                      <p className="text-xs text-zinc-500">Step 2 → Presets for saved brand styles</p>
+                    </div>
+                  </div>
+                )}
+                {activeTool === "photos" && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Slide media</p>
+                    <p className="text-xs text-zinc-400 leading-relaxed">Each slide can have a background image or video. Add them in Step 1.</p>
+                    {slides.some((s) => s.imageFile) ? (
+                      <div className="space-y-2">
+                        {slides.filter((s) => s.imageFile).slice(0, 5).map((s, i) => (
+                          <div key={i} className="flex items-center gap-2 rounded bg-zinc-800/50 border border-zinc-700/30 px-2 py-1.5">
+                            <img src={URL.createObjectURL(s.imageFile!)} className="w-8 h-12 rounded object-cover shrink-0" alt="" />
+                            <span className="text-xs text-zinc-300 truncate">{s.imageFile!.name}</span>
+                          </div>
+                        ))}
+                        {slides.filter((s) => s.imageFile).length > 5 && (
+                          <p className="text-xs text-zinc-500 text-center">+{slides.filter((s) => s.imageFile).length - 5} more</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-zinc-700/50 bg-zinc-800/40 px-3 py-6 text-center">
+                        <p className="text-xs text-zinc-500">No images yet — go to Step 1</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {activeTool === "text" && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Type settings</p>
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-zinc-600">Font</p>
+                      <p className="text-xs text-zinc-300 font-medium truncate">{fontFamily}</p>
+                      <p className="text-xs text-zinc-600 pt-1">Font size</p>
+                      <p className="text-xs text-zinc-300 font-medium">{fontSize}px</p>
+                      <p className="text-xs text-zinc-600 pt-1">Text colour</p>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded border border-zinc-600" style={{ backgroundColor: textColor }} />
+                        <p className="text-xs text-zinc-300 font-mono">{textColor}</p>
+                      </div>
+                      <p className="text-xs text-zinc-600 pt-1">Text position</p>
+                      <p className="text-xs text-zinc-300 font-medium capitalize">{textPosition}</p>
+                    </div>
+                  </div>
+                )}
+                {activeTool === "shapes" && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Overlay &amp; background</p>
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-zinc-600">Overlay opacity</p>
+                      <p className="text-xs text-zinc-300 font-medium">{overlayOpacity}%</p>
+                      <p className="text-xs text-zinc-600 pt-1">Page colour</p>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 rounded border border-zinc-600" style={{ backgroundColor: pageColor }} />
+                        <p className="text-xs text-zinc-300 font-mono">{pageColor}</p>
+                      </div>
+                      <p className="text-xs text-zinc-600 pt-1">Slide duration</p>
+                      <p className="text-xs text-zinc-300 font-medium">{slideDurationSec}s per slide</p>
+                    </div>
+                  </div>
+                )}
+                {activeTool === "stickers" && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Music &amp; timing</p>
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-zinc-600">Track</p>
+                      <p className="text-xs text-zinc-300 font-medium">{selectedTrack ? selectedTrack.name : "(none selected)"}</p>
+                      <p className="text-xs text-zinc-600 pt-1">Fade</p>
+                      <p className="text-xs text-zinc-300 font-medium">{fadeDurationMs}ms</p>
+                    </div>
+                    <p className="text-xs text-zinc-500 leading-relaxed pt-1">Pick a track in Step 3. Reel total is {(slides.length * slideDurationSec).toFixed(0)}s.</p>
+                  </div>
+                )}
+                {activeTool === "layers" && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Progress</p>
+                    <div className="space-y-1.5">
+                      {[
+                        { num: 1, label: "Slides", done: reelStep > 1 },
+                        { num: 2, label: "Style", done: reelStep > 2 },
+                        { num: 3, label: "Music", done: reelStep > 3 },
+                        { num: 4, label: "Export & Post", done: false },
+                      ].map(({ num, label, done }) => (
+                        <button
+                          key={num}
+                          onClick={() => setReelStep(num)}
+                          className="w-full flex items-center gap-2 rounded bg-zinc-800/50 border border-zinc-700/30 px-3 py-1.5 hover:bg-zinc-700/50 transition-colors"
+                        >
+                          <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${done ? "bg-green-500/20 border border-green-500/40" : num === reelStep ? "bg-pink-500/20 border border-pink-500/40" : "border border-zinc-600"}`}>
+                            {done && <Check className="w-2.5 h-2.5 text-green-400" />}
+                            {!done && num === reelStep && <span className="w-1.5 h-1.5 rounded-full bg-pink-400" />}
+                          </div>
+                          <span className="text-xs text-zinc-300">{num}. {label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── Editing area ── */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+          {/* Compact step-tab strip */}
+          <div className="h-12 border-b border-zinc-800/60 bg-[#0a0a0f]/80 backdrop-blur flex items-center px-4 gap-1 shrink-0 overflow-x-auto">
             {[
               { num: 1, label: "Slides", icon: Layers },
               { num: 2, label: "Style", icon: Palette },
               { num: 3, label: "Music", icon: Music },
               { num: 4, label: "Export & Post", icon: Download },
-            ].map((step, i) => (
-              <React.Fragment key={step.num}>
-                <button
-                  onClick={() => setReelStep(step.num)}
-                  className={`flex flex-col items-center gap-2 transition-all ${
-                    reelStep === step.num ? "text-pink-400" : reelStep > step.num ? "text-green-400" : "text-white/25"
-                  }`}
-                >
-                  <div className={`w-14 h-14 rounded-full flex items-center justify-center font-bold transition-all ${
-                    reelStep === step.num
-                      ? "bg-pink-600 text-white shadow-lg shadow-pink-500/30"
-                      : reelStep > step.num
-                      ? "bg-green-500/20 text-green-400 border-2 border-green-500/30"
-                      : "bg-white/5 text-white/25"
-                  }`}>
-                    {reelStep > step.num ? <Check className="w-6 h-6" /> : <step.icon className="w-6 h-6" />}
-                  </div>
-                  <span className="text-sm font-semibold">{step.num}. {step.label}</span>
-                </button>
-                {i < 3 && (
-                  <div className={`flex-1 h-1 rounded-full mx-3 mt-[-20px] ${reelStep > step.num ? "bg-green-500/30" : "bg-white/10"}`} />
-                )}
-              </React.Fragment>
-            ))}
+            ].map((step, i) => {
+              const isActive = reelStep === step.num;
+              const isDone = reelStep > step.num;
+              return (
+                <React.Fragment key={step.num}>
+                  <button
+                    onClick={() => setReelStep(step.num)}
+                    className={`flex items-center gap-1.5 px-3 h-7 rounded-full text-xs font-semibold shrink-0 transition-colors ${
+                      isActive
+                        ? "bg-pink-600 text-white"
+                        : isDone
+                        ? "bg-green-500/15 text-green-400 border border-green-500/30"
+                        : "text-zinc-600 hover:text-zinc-400"
+                    }`}
+                  >
+                    {isDone ? <Check className="w-3 h-3" /> : <step.icon className="w-3 h-3" />}
+                    {step.num}. {step.label}
+                  </button>
+                  {i < 3 && <span className="text-zinc-700 text-xs shrink-0">›</span>}
+                </React.Fragment>
+              );
+            })}
           </div>
-        </div>
 
-        {/* ═══ Persistent live preview (always visible) ═══ */}
-        <div className="mb-8 flex flex-col items-center gap-3">
-          <div className="relative" style={{ width: PREVIEW_W, height: PREVIEW_H }}>
-            <canvas
-              ref={previewCanvasRef}
-              width={VIDEO_WIDTH}
-              height={VIDEO_HEIGHT}
-              style={{ width: PREVIEW_W, height: PREVIEW_H, borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", display: "block" }}
-            />
-            <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
-              {slides.map((_, i) => (
-                <button key={i} onClick={() => { setActiveIdx(i); setIsPlaying(false); }}
-                  className={`w-1.5 h-1.5 rounded-full transition-colors ${displayIdx === i ? "bg-pink-400" : "bg-white/25 hover:bg-white/50"}`} />
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <p className="text-xs text-white/30">Slide {displayIdx + 1} of {slides.length} · 9:16 · {(slides.length * slideDurationSec).toFixed(0)}s{selectedTrack ? ` · 🎵 ${selectedTrack.name}` : ""}</p>
-            <button onClick={() => { setIsPlaying((p) => !p); setPreviewIdx(0); }}
-              className="flex items-center gap-1 text-xs text-white/50 hover:text-white/80 border border-white/15 hover:border-white/30 rounded-lg px-3 py-1.5 transition-colors">
-              {isPlaying ? <><Square className="w-3 h-3" />Stop</> : <><Play className="w-3 h-3" />Play</>}
-            </button>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-8">
+          {/* Scrollable step content */}
+          <div className="flex-1 overflow-y-auto">
+          <div className="max-w-3xl mx-auto px-6 py-8 pb-32">
+          <div className="flex flex-col gap-8">
 
           {/* ═══════ STEP 1: SLIDES ═══════ */}
           {reelStep === 1 && (
@@ -2160,8 +2352,42 @@ export default function Reels() {
             </div>
           )}
 
+          </div>
+          </div>
+          </div>
+        </div>{/* closes editing area */}
+
+        {/* ── Right preview column ── */}
+        <div className="hidden lg:flex flex-col shrink-0 border-l border-zinc-800/60 bg-[#0a0a0f]/80" style={{ width: 288 }}>
+          <div className="px-4 py-3 border-b border-zinc-800/60 shrink-0 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            <p className="text-xs font-semibold tracking-widest uppercase text-zinc-500">Live Preview</p>
+          </div>
+          <div className="flex-1 overflow-y-auto flex flex-col items-center p-4 gap-3">
+            <div className="relative" style={{ width: PREVIEW_W, height: PREVIEW_H }}>
+              <canvas
+                ref={previewCanvasRef}
+                width={VIDEO_WIDTH}
+                height={VIDEO_HEIGHT}
+                style={{ width: PREVIEW_W, height: PREVIEW_H, borderRadius: 10, border: "1px solid rgba(255,255,255,0.1)", display: "block" }}
+              />
+              <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
+                {slides.map((_, i) => (
+                  <button key={i} onClick={() => { setActiveIdx(i); setIsPlaying(false); }}
+                    className={`w-1.5 h-1.5 rounded-full transition-colors ${displayIdx === i ? "bg-pink-400" : "bg-white/25 hover:bg-white/50"}`} />
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-col items-center gap-2 w-full">
+              <p className="text-[10px] text-zinc-600">Slide {displayIdx + 1} / {slides.length} · 9:16 · {(slides.length * slideDurationSec).toFixed(0)}s{selectedTrack ? ` · ${selectedTrack.name}` : ""}</p>
+              <button onClick={() => { setIsPlaying((p) => !p); setPreviewIdx(0); }}
+                className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 border border-zinc-700/50 hover:border-zinc-500 rounded-lg px-3 py-1.5 transition-colors">
+                {isPlaying ? <><Square className="w-3 h-3" />Stop</> : <><Play className="w-3 h-3" />Play</>}
+              </button>
+            </div>
+          </div>
         </div>
-      </main>
+      </div>{/* closes body flex */}
 
       <canvas ref={exportCanvasRef} className="hidden" />
 
