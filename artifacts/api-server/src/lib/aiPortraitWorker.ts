@@ -6,7 +6,7 @@ import { aiGeneratedPortraitsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { objectStorageClient } from "./objectStorage";
 import { logger } from "./logger";
-import { buildPrompt, AI_PORTRAIT_SCENARIOS } from "./aiPortraitScenarios";
+import { buildPrompt, buildCustomPrompt, AI_PORTRAIT_SCENARIOS } from "./aiPortraitScenarios";
 
 const GEMINI_MODEL = "gemini-2.5-flash-image";
 const REQUEST_GAP_MS = 4_000;
@@ -59,6 +59,24 @@ async function uploadBuf(buffer: Buffer, filename: string, folder: string, mime 
   return `/api/media/${key}`;
 }
 
+async function fetchBufFromStorageLocal(urlOrPath: string): Promise<Buffer> {
+  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+  if (!bucketId) throw new Error("DEFAULT_OBJECT_STORAGE_BUCKET_ID not set");
+  let key: string;
+  if (urlOrPath.startsWith("/api/media/")) {
+    key = urlOrPath.slice("/api/media/".length);
+  } else if (urlOrPath.startsWith("/api/ai-portrait/images/")) {
+    key = urlOrPath.slice("/api/ai-portrait/images/".length);
+  } else if (urlOrPath.startsWith("https://storage.googleapis.com/")) {
+    const u = new URL(urlOrPath);
+    key = u.pathname.slice(1).replace(`${bucketId}/`, "");
+  } else {
+    throw new Error(`Cannot resolve image path: ${urlOrPath}`);
+  }
+  const [buffer] = await objectStorageClient.bucket(bucketId).file(key).download();
+  return buffer;
+}
+
 async function applyWatermark(imageBuffer: Buffer): Promise<Buffer> {
   const meta = await sharp(imageBuffer).metadata();
   const w = meta.width ?? 1024;
@@ -83,6 +101,10 @@ interface ScenarioConfig {
   id: string;
   scrubColor?: string;
   outfitStyle?: string;
+  outfitType?: string;
+  backgroundType?: string;
+  backdropColor?: string;
+  backgroundImageUrl?: string;
   aspectRatio: string;
 }
 
@@ -125,13 +147,44 @@ export async function processPortraitJob(
 
     patchCard({ status: "generating" });
 
-    const scenario = AI_PORTRAIT_SCENARIOS.find((s) => s.id === cfg.id);
-    if (!scenario) {
-      patchCard({ status: "failed", failureReason: "Unknown scenario id." });
-      continue;
-    }
+    // Build prompt — custom outfit/background system takes priority over legacy scenarios
+    let prompt: string;
+    let backgroundImageUrl = cfg.backgroundImageUrl;
 
-    const prompt = buildPrompt(scenario, cfg.scrubColor, cfg.outfitStyle, cfg.aspectRatio);
+    if (cfg.outfitType) {
+      prompt = buildCustomPrompt({
+        outfitType: cfg.outfitType as Parameters<typeof buildCustomPrompt>[0]["outfitType"],
+        backgroundType: (cfg.backgroundType ?? "white-studio") as Parameters<typeof buildCustomPrompt>[0]["backgroundType"],
+        scrubColor: cfg.scrubColor,
+        backdropColor: cfg.backdropColor,
+        aspectRatio: cfg.aspectRatio,
+      });
+    } else if (cfg.outfitStyle?.startsWith("{")) {
+      // Regen of a custom portrait — outfitStyle stores the original config as JSON
+      try {
+        const parsed = JSON.parse(cfg.outfitStyle) as {
+          outfitType?: string; backgroundType?: string;
+          scrubColor?: string; backdropColor?: string; backgroundImageUrl?: string;
+        };
+        if (parsed.backgroundImageUrl && !backgroundImageUrl) backgroundImageUrl = parsed.backgroundImageUrl;
+        prompt = buildCustomPrompt({
+          outfitType: (parsed.outfitType ?? "white-shirt-jeans") as Parameters<typeof buildCustomPrompt>[0]["outfitType"],
+          backgroundType: (parsed.backgroundType ?? "white-studio") as Parameters<typeof buildCustomPrompt>[0]["backgroundType"],
+          scrubColor: cfg.scrubColor ?? parsed.scrubColor,
+          backdropColor: parsed.backdropColor,
+          aspectRatio: cfg.aspectRatio,
+        });
+      } catch {
+        prompt = buildCustomPrompt({ outfitType: "white-shirt-jeans", backgroundType: "white-studio", aspectRatio: cfg.aspectRatio });
+      }
+    } else {
+      const scenario = AI_PORTRAIT_SCENARIOS.find((s) => s.id === cfg.id);
+      if (!scenario) {
+        patchCard({ status: "failed", failureReason: "Unknown scenario id." });
+        continue;
+      }
+      prompt = buildPrompt(scenario, cfg.scrubColor, cfg.outfitStyle, cfg.aspectRatio);
+    }
 
     // Detect actual MIME type from buffer bytes so non-JPEG uploads work correctly
     const sharpMeta = await sharp(sourcePhotoBuffer).metadata();
@@ -143,6 +196,19 @@ export async function processPortraitJob(
     };
     const sourceMime = formatToMime[sharpMeta.format ?? ""] ?? "image/jpeg";
     const base64Photo = sourcePhotoBuffer.toString("base64");
+
+    // Fetch uploaded background image when "upload-own" background type is used
+    let backgroundImagePart: { inlineData: { mimeType: string; data: string } } | null = null;
+    if (backgroundImageUrl) {
+      try {
+        const bgBuf = await fetchBufFromStorageLocal(backgroundImageUrl);
+        const bgMeta = await sharp(bgBuf).metadata();
+        const bgMime = formatToMime[bgMeta.format ?? ""] ?? "image/jpeg";
+        backgroundImagePart = { inlineData: { mimeType: bgMime, data: bgBuf.toString("base64") } };
+      } catch (e) {
+        logger.warn({ err: e, backgroundImageUrl }, "Failed to fetch background image — generating without it");
+      }
+    }
 
     let attempt = 0;
     let succeeded = false;
@@ -156,6 +222,7 @@ export async function processPortraitJob(
               role: "user",
               parts: [
                 { inlineData: { mimeType: sourceMime, data: base64Photo } },
+                ...(backgroundImagePart ? [backgroundImagePart] : []),
                 { text: prompt },
               ],
             },
@@ -182,6 +249,10 @@ export async function processPortraitJob(
           "ai-portraits/watermarked",
         );
 
+        const storedOutfitStyle = cfg.outfitType
+          ? JSON.stringify({ outfitType: cfg.outfitType, backgroundType: cfg.backgroundType, backdropColor: cfg.backdropColor, backgroundImageUrl })
+          : cfg.outfitStyle;
+
         const [row] = await db
           .insert(aiGeneratedPortraitsTable)
           .values({
@@ -190,7 +261,7 @@ export async function processPortraitJob(
             scenarioId: cfg.id,
             prompt,
             scrubColor: cfg.scrubColor,
-            outfitStyle: cfg.outfitStyle,
+            outfitStyle: storedOutfitStyle,
             aspectRatio: cfg.aspectRatio,
             originalImageUrl: originalUrl,
             outputImageUrl: outputUrl,
@@ -222,7 +293,7 @@ export async function processPortraitJob(
               scenarioId: cfg.id,
               prompt,
               scrubColor: cfg.scrubColor,
-              outfitStyle: cfg.outfitStyle,
+              outfitStyle: cfg.outfitType ? JSON.stringify({ outfitType: cfg.outfitType, backgroundType: cfg.backgroundType, backdropColor: cfg.backdropColor, backgroundImageUrl }) : cfg.outfitStyle,
               aspectRatio: cfg.aspectRatio,
               status: "failed",
               failureReason: msg,

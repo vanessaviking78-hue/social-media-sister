@@ -174,6 +174,22 @@ router.get("/ai-portrait/scenarios", (_req: Request, res: Response) => {
   res.json(AI_PORTRAIT_SCENARIOS);
 });
 
+router.post("/ai-portrait/background-image", upload.single("image"), async (req: Request, res: Response) => {
+  try {
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ error: "image file required" });
+      return;
+    }
+    const imageUrl = await uploadBuf(file.buffer, "background.jpg", "ai-portraits/background", file.mimetype);
+    res.json({ url: imageUrl });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Upload failed";
+    req.log.error({ err }, "ai-portrait/background-image upload failed");
+    res.status(500).json({ error: msg });
+  }
+});
+
 // Legacy image URL redirect — forwards old /api/ai-portrait/images/<key> URLs
 // to the working /api/media/<key> handler which uses the same bucket and key
 router.get("/ai-portrait/images/*key", (req: Request, res: Response) => {
@@ -188,7 +204,16 @@ router.post("/ai-portrait/generate", async (req: Request, res: Response) => {
     const { sourcePhotoId, clientName = "", scenarios } = req.body as {
       sourcePhotoId: number;
       clientName?: string;
-      scenarios: Array<{ id: string; scrubColor?: string; outfitStyle?: string; aspectRatio: string }>;
+      scenarios: Array<{
+        id: string;
+        scrubColor?: string;
+        outfitStyle?: string;
+        outfitType?: string;
+        backgroundType?: string;
+        backdropColor?: string;
+        backgroundImageUrl?: string;
+        aspectRatio: string;
+      }>;
     };
 
     if (!sourcePhotoId) { res.status(400).json({ error: "sourcePhotoId required" }); return; }

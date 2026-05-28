@@ -15,24 +15,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const BASE = import.meta.env.BASE_URL;
 
-type ScenarioCategory = "clinical" | "lifestyle" | "brand";
+type OutfitType = "white-shirt-jeans" | "black-tee-trousers" | "floral-boho" | "scrubs";
+type BackgroundType = "clinic-bokeh" | "white-studio" | "black-studio" | "custom-color" | "upload-own";
 type CardStatus = "idle" | "generating" | "success" | "failed" | "rate-limited";
 type AspectRatio = "1:1" | "3:4" | "9:16";
-
-interface AiScenario {
-  id: string;
-  name: string;
-  category: ScenarioCategory;
-  hasScrubColor: boolean;
-  hasOutfitStyle: boolean;
-}
-
-interface ScenarioConfig {
-  id: string;
-  scrubColor?: string;
-  outfitStyle?: string;
-  aspectRatio: AspectRatio;
-}
 
 interface CardState {
   scenarioId: string;
@@ -51,29 +37,21 @@ interface AiSourcePhoto {
   uploadedAt: string;
 }
 
-const CATEGORY_LABELS: Record<ScenarioCategory, string> = {
-  clinical: "Clinical",
-  lifestyle: "Lifestyle",
-  brand: "Brand",
-};
-
-const CATEGORY_COLORS: Record<ScenarioCategory, string> = {
-  clinical: "from-cyan-500/20 to-cyan-500/5 border-cyan-500/30 hover:border-cyan-500/60",
-  lifestyle: "from-emerald-500/20 to-emerald-500/5 border-emerald-500/30 hover:border-emerald-500/60",
-  brand: "from-violet-500/20 to-violet-500/5 border-violet-500/30 hover:border-violet-500/60",
-};
-
-const CATEGORY_BADGE: Record<ScenarioCategory, string> = {
-  clinical: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30",
-  lifestyle: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-  brand: "bg-violet-500/20 text-violet-300 border-violet-500/30",
-};
-
 const ASPECT_OPTIONS: AspectRatio[] = ["1:1", "3:4", "9:16"];
 
-const OUTFIT_OPTIONS = [
-  "smart casual", "business professional", "athleisure / activewear",
-  "casual everyday", "elegant / formal", "creative / artistic",
+const OUTFIT_OPTIONS: { value: OutfitType; label: string }[] = [
+  { value: "white-shirt-jeans", label: "White sharp shirt with jeans" },
+  { value: "black-tee-trousers", label: "Black long-sleeved tee with black trousers" },
+  { value: "floral-boho", label: "Floral boho dress with cardigan" },
+  { value: "scrubs", label: "Scrubs" },
+];
+
+const BACKGROUND_OPTIONS: { value: BackgroundType; label: string }[] = [
+  { value: "clinic-bokeh", label: "Clinic — bokeh, unrecognisable" },
+  { value: "white-studio", label: "White studio backdrop" },
+  { value: "black-studio", label: "Black studio backdrop" },
+  { value: "custom-color", label: "Custom colour backdrop" },
+  { value: "upload-own", label: "Upload your own studio/clinic" },
 ];
 
 const SCRUB_COLORS = [
@@ -91,9 +69,30 @@ const SCRUB_COLORS = [
   { label: "Teal", value: "teal" },
 ];
 
+function cardDisplayName(scenarioId: string): string {
+  if (scenarioId.startsWith("custom")) {
+    const parts = scenarioId.split("|");
+    if (parts.length >= 3) {
+      const outfitLabel = OUTFIT_OPTIONS.find((o) => o.value === parts[1])?.label ?? parts[1];
+      const bgLabel = BACKGROUND_OPTIONS.find((b) => b.value === parts[2])?.label ?? parts[2];
+      return `${outfitLabel} — ${bgLabel}`;
+    }
+    if (parts.length === 2) return OUTFIT_OPTIONS.find((o) => o.value === parts[1])?.label ?? parts[1];
+    return "Custom portrait";
+  }
+  return scenarioId;
+}
+
 export default function AiPortraitStudio() {
-  const [scenarios, setScenarios] = useState<AiScenario[]>([]);
-  const [loadingScenarios, setLoadingScenarios] = useState(true);
+  const [outfitType, setOutfitType] = useState<OutfitType>("white-shirt-jeans");
+  const [scrubColor, setScrubColor] = useState("navy blue");
+  const [backgroundType, setBackgroundType] = useState<BackgroundType>("clinic-bokeh");
+  const [backdropColor, setBackdropColor] = useState("#ffffff");
+  const [backgroundPreviewUrl, setBackgroundPreviewUrl] = useState<string | null>(null);
+  const [backgroundUploadedUrl, setBackgroundUploadedUrl] = useState<string | null>(null);
+  const [backgroundUploading, setBackgroundUploading] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>("3:4");
+  const backgroundFileInputRef = useRef<HTMLInputElement>(null);
 
   const [sourcePhoto, setSourcePhoto] = useState<AiSourcePhoto | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -101,9 +100,6 @@ export default function AiPortraitStudio() {
   const [clientName, setClientName] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const [selected, setSelected] = useState<Map<string, ScenarioConfig>>(new Map());
-  const [configs, setConfigs] = useState<Map<string, ScenarioConfig>>(new Map());
 
   const [jobId, setJobId] = useState<string | null>(null);
   const [cards, setCards] = useState<CardState[]>([]);
@@ -126,13 +122,6 @@ export default function AiPortraitStudio() {
   const [animateProgress, setAnimateProgress] = useState(0);
   const [animateVideoUrl, setAnimateVideoUrl] = useState<string | null>(null);
   const animatePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    fetch(`${BASE}api/ai-portrait/scenarios`)
-      .then((r) => r.json())
-      .then((data: AiScenario[]) => { setScenarios(data); setLoadingScenarios(false); })
-      .catch(() => { toast.error("Failed to load scenarios"); setLoadingScenarios(false); });
-  }, []);
 
   useEffect(() => {
     if (!jobId) return;
@@ -207,38 +196,32 @@ export default function AiPortraitStudio() {
     if (file) handleFileDrop(file);
   }, [handleFileDrop]);
 
-  const toggleScenario = (id: string) => {
-    setSelected((prev) => {
-      const next = new Map(prev);
-      if (next.has(id)) { next.delete(id); return next; }
-      if (next.size >= 6) { toast.warning("Maximum 6 scenarios per generation run"); return prev; }
-      const existing = configs.get(id) ?? { id, aspectRatio: "3:4" };
-      next.set(id, existing);
-      return next;
-    });
-  };
-
-  const updateConfig = (scenarioId: string, patch: Partial<ScenarioConfig>) => {
-    setSelected((prev) => {
-      const next = new Map(prev);
-      const cur = next.get(scenarioId);
-      if (!cur) return prev;
-      next.set(scenarioId, { ...cur, ...patch });
-      return next;
-    });
-    setConfigs((prev) => {
-      const next = new Map(prev);
-      const cur = next.get(scenarioId) ?? { id: scenarioId, aspectRatio: "3:4" };
-      next.set(scenarioId, { ...cur, ...patch });
-      return next;
-    });
+  const handleBackgroundFileSelect = async (file: File) => {
+    if (!file.type.startsWith("image/")) { toast.error("Please upload an image file"); return; }
+    setBackgroundPreviewUrl(URL.createObjectURL(file));
+    setBackgroundUploadedUrl(null);
+    setBackgroundUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("image", file);
+      const r = await fetch(`${BASE}api/ai-portrait/background-image`, { method: "POST", body: fd });
+      const data = await r.json() as { url?: string; error?: string };
+      if (!r.ok) throw new Error(data.error || "Upload failed");
+      setBackgroundUploadedUrl(data.url!);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Upload failed");
+      setBackgroundPreviewUrl(null);
+    } finally {
+      setBackgroundUploading(false);
+    }
   };
 
   const handleGenerate = async () => {
     if (!sourcePhoto) { toast.error("Upload a reference photo first"); return; }
-    if (selected.size === 0) { toast.error("Select at least one scenario"); return; }
+    if (backgroundType === "upload-own" && !backgroundUploadedUrl) { toast.error("Upload a background image first"); return; }
+    const scenarioId = `custom|${outfitType}|${backgroundType}`;
     setGenerating(true);
-    setCards([...selected.values()].map((cfg) => ({ scenarioId: cfg.id, status: "idle" })));
+    setCards([{ scenarioId, status: "idle" }]);
     try {
       const r = await fetch(`${BASE}api/ai-portrait/generate`, {
         method: "POST",
@@ -246,13 +229,21 @@ export default function AiPortraitStudio() {
         body: JSON.stringify({
           sourcePhotoId: sourcePhoto.id,
           clientName,
-          scenarios: [...selected.values()],
+          scenarios: [{
+            id: scenarioId,
+            outfitType,
+            backgroundType,
+            scrubColor: outfitType === "scrubs" ? scrubColor : undefined,
+            backdropColor: backgroundType === "custom-color" ? backdropColor : undefined,
+            backgroundImageUrl: backgroundType === "upload-own" ? backgroundUploadedUrl : undefined,
+            aspectRatio,
+          }],
         }),
       });
       const data = await r.json() as { jobId?: string; error?: string };
       if (!r.ok) throw new Error(data.error || "Failed to start generation");
       setJobId(data.jobId!);
-      toast.success("Generation started — results appear as each portrait finishes.");
+      toast.success("Generation started — your portrait will appear in around 15 seconds.");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed";
       toast.error(msg);
@@ -282,7 +273,15 @@ export default function AiPortraitStudio() {
 
   const handleRateLimitedRetry = async (card: CardState) => {
     if (!sourcePhoto) { toast.error("Reference photo is no longer available — please re-upload and regenerate"); return; }
-    const cfg = selected.get(card.scenarioId) ?? { id: card.scenarioId, aspectRatio: "3:4" as const };
+    const cfg = {
+      id: card.scenarioId,
+      outfitType,
+      backgroundType,
+      scrubColor: outfitType === "scrubs" ? scrubColor : undefined,
+      backdropColor: backgroundType === "custom-color" ? backdropColor : undefined,
+      backgroundImageUrl: backgroundType === "upload-own" ? backgroundUploadedUrl ?? undefined : undefined,
+      aspectRatio,
+    };
     try {
       const r = await fetch(`${BASE}api/ai-portrait/generate`, {
         method: "POST",
@@ -424,8 +423,7 @@ export default function AiPortraitStudio() {
     try {
       const zip = new JSZip();
       await Promise.all(successful.map(async (card) => {
-        const sc = scenarioById(card.scenarioId);
-        const name = (sc?.name ?? card.scenarioId).toLowerCase().replace(/\s+/g, "-");
+        const name = cardDisplayName(card.scenarioId).toLowerCase().replace(/\s+/g, "-");
         const resp = await fetch(card.outputImageUrl!);
         const blob = await resp.blob();
         zip.file(`portrait-${name}.png`, blob);
@@ -470,11 +468,6 @@ export default function AiPortraitStudio() {
       toast.error(e instanceof Error ? e.message : "Regen failed");
     }
   };
-
-  const scenarioById = (id: string) => scenarios.find((s) => s.id === id);
-  const categorised = (["clinical", "lifestyle", "brand"] as ScenarioCategory[])
-    .map((cat) => ({ cat, items: scenarios.filter((s) => s.category === cat) }))
-    .filter((g) => g.items.length > 0);
 
   const allDone = cards.length > 0 && cards.every((c) => c.status === "success" || c.status === "failed");
 
@@ -579,111 +572,144 @@ export default function AiPortraitStudio() {
             )}
           </div>
 
-          {/* Summary */}
-          {selected.size > 0 && (
-            <div className="rounded-xl border border-border/30 bg-muted/30 p-4 space-y-2">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Selected</p>
-              {[...selected.values()].map((cfg) => {
-                const sc = scenarioById(cfg.id);
-                return sc ? (
-                  <div key={cfg.id} className="flex items-center justify-between gap-2">
-                    <span className="text-sm truncate">{sc.name}</span>
-                    <button onClick={() => toggleScenario(cfg.id)}><X className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" /></button>
-                  </div>
-                ) : null;
-              })}
-              <p className="text-xs text-muted-foreground mt-1">{selected.size}/6 selected</p>
-            </div>
-          )}
-
           <Button
             className="w-full bg-violet-600 hover:bg-violet-700 text-white"
-            disabled={!sourcePhoto || selected.size === 0 || generating}
+            disabled={!sourcePhoto || generating || (backgroundType === "upload-own" && !backgroundUploadedUrl)}
             onClick={handleGenerate}
           >
-            {generating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating...</> : <><Sparkles className="w-4 h-4 mr-2" />Generate {selected.size > 0 ? `${selected.size} Portrait${selected.size > 1 ? "s" : ""}` : "Portraits"}</>}
+            {generating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating...</> : <><Sparkles className="w-4 h-4 mr-2" />Generate Portrait</>}
           </Button>
           {!sourcePhoto && <p className="text-xs text-muted-foreground text-center">Upload a photo to get started</p>}
+          {backgroundType === "upload-own" && !backgroundUploadedUrl && sourcePhoto && (
+            <p className="text-xs text-muted-foreground text-center">Upload a background image in the options panel</p>
+          )}
         </div>
 
-        {/* MIDDLE: Scenario selector */}
+        {/* MIDDLE: Look configuration */}
         <div className="space-y-6">
           <div>
-            <h2 className="font-semibold text-base mb-1">Choose Scenarios</h2>
-            <p className="text-sm text-muted-foreground">Pick up to 6. Each generates one portrait.</p>
+            <h2 className="font-semibold text-base mb-1">Choose Your Look</h2>
+            <p className="text-sm text-muted-foreground">Pick an outfit and a background. One portrait per run — regenerate as many times as you like.</p>
           </div>
-          {loadingScenarios ? (
-            <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
-          ) : (
-            <div className="space-y-5">
-              {categorised.map(({ cat, items }) => (
-                <div key={cat}>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">{CATEGORY_LABELS[cat]}</p>
-                  <div className="space-y-2">
-                    {items.map((sc) => {
-                      const isSelected = selected.has(sc.id);
-                      const cfg = selected.get(sc.id);
-                      return (
-                        <div key={sc.id} className={`rounded-xl border bg-gradient-to-br ${CATEGORY_COLORS[cat]} transition-all`}>
-                          <div
-                            className="flex items-center gap-3 p-3 cursor-pointer"
-                            onClick={() => toggleScenario(sc.id)}
-                          >
-                            <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"}`}>
-                              {isSelected && <Check className="w-3 h-3 text-white" />}
-                            </div>
-                            <span className="text-sm font-medium flex-1">{sc.name}</span>
-                            <Badge variant="outline" className={`text-xs ${CATEGORY_BADGE[cat]}`}>{CATEGORY_LABELS[cat]}</Badge>
-                          </div>
 
-                          {isSelected && cfg && (
-                            <div className="px-3 pb-3 pt-0 space-y-2 border-t border-border/20 mt-0 pt-2" onClick={(e) => e.stopPropagation()}>
-                              {sc.hasScrubColor && (
-                                <div className="flex items-center gap-2">
-                                  <Label className="text-xs text-muted-foreground w-20 flex-shrink-0">Scrub colour</Label>
-                                  <select
-                                    className="flex-1 rounded-md border border-border/40 bg-background text-xs px-2 py-1"
-                                    value={cfg.scrubColor ?? "navy blue"}
-                                    onChange={(e) => updateConfig(sc.id, { scrubColor: e.target.value })}
-                                  >
-                                    {SCRUB_COLORS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                                  </select>
-                                </div>
-                              )}
-                              {sc.hasOutfitStyle && (
-                                <div className="flex items-center gap-2">
-                                  <Label className="text-xs text-muted-foreground w-20 flex-shrink-0">Outfit style</Label>
-                                  <select
-                                    className="flex-1 rounded-md border border-border/40 bg-background text-xs px-2 py-1"
-                                    value={cfg.outfitStyle ?? "smart casual"}
-                                    onChange={(e) => updateConfig(sc.id, { outfitStyle: e.target.value })}
-                                  >
-                                    {OUTFIT_OPTIONS.map((o) => <option key={o} value={o}>{o}</option>)}
-                                  </select>
-                                </div>
-                              )}
-                              <div className="flex items-center gap-2">
-                                <Label className="text-xs text-muted-foreground w-20 flex-shrink-0">Aspect ratio</Label>
-                                <div className="flex gap-1">
-                                  {ASPECT_OPTIONS.map((ar) => (
-                                    <button
-                                      key={ar}
-                                      className={`px-2 py-0.5 rounded text-xs border transition-colors ${cfg.aspectRatio === ar ? "bg-violet-500 border-violet-500 text-white" : "border-border/40 text-muted-foreground hover:border-border"}`}
-                                      onClick={() => updateConfig(sc.id, { aspectRatio: ar })}
-                                    >{ar}</button>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
+          {/* Outfit */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Outfit</Label>
+            <Select value={outfitType} onValueChange={(v) => setOutfitType(v as OutfitType)}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {OUTFIT_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {outfitType === "scrubs" && (
+              <div className="flex items-center gap-2 pl-1">
+                <Label className="text-xs text-muted-foreground w-24 flex-shrink-0">Scrub colour</Label>
+                <select
+                  className="flex-1 rounded-md border border-border/40 bg-background text-xs px-2 py-1.5"
+                  value={scrubColor}
+                  onChange={(e) => setScrubColor(e.target.value)}
+                >
+                  {SCRUB_COLORS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+
+          {/* Background */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Background</Label>
+            <Select value={backgroundType} onValueChange={(v) => {
+              setBackgroundType(v as BackgroundType);
+              if (v !== "upload-own") {
+                setBackgroundPreviewUrl(null);
+                setBackgroundUploadedUrl(null);
+              }
+            }}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {BACKGROUND_OPTIONS.map((b) => <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+
+            {backgroundType === "custom-color" && (
+              <div className="flex items-center gap-3 pl-1">
+                <Label className="text-xs text-muted-foreground w-24 flex-shrink-0">Backdrop colour</Label>
+                <div className="flex items-center gap-2 flex-1">
+                  <input
+                    type="color"
+                    value={backdropColor}
+                    onChange={(e) => setBackdropColor(e.target.value)}
+                    className="w-8 h-7 rounded border border-border/40 cursor-pointer bg-transparent"
+                  />
+                  <Input
+                    value={backdropColor}
+                    onChange={(e) => setBackdropColor(e.target.value)}
+                    placeholder="#ffffff"
+                    className="h-7 text-xs font-mono flex-1"
+                    maxLength={7}
+                  />
                 </div>
+              </div>
+            )}
+
+            {backgroundType === "upload-own" && (
+              <div className="space-y-2 pl-1">
+                <p className="text-xs text-muted-foreground">Upload a photo of your actual studio or clinic. The AI will place the person naturally within it.</p>
+                {backgroundPreviewUrl ? (
+                  <div className="relative">
+                    <img src={backgroundPreviewUrl} alt="Background" className="w-full rounded-lg object-cover max-h-40 border border-border/30" />
+                    {backgroundUploading && (
+                      <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                        <Loader2 className="w-5 h-5 animate-spin text-white" />
+                      </div>
+                    )}
+                    {!backgroundUploading && (
+                      <button
+                        className="absolute top-2 right-2 bg-black/60 rounded-full p-1 hover:bg-black/80"
+                        onClick={() => { setBackgroundPreviewUrl(null); setBackgroundUploadedUrl(null); }}
+                      >
+                        <X className="w-3 h-3 text-white" />
+                      </button>
+                    )}
+                    {backgroundUploadedUrl && (
+                      <div className="absolute bottom-2 left-2">
+                        <Badge className="bg-green-500/80 text-white text-xs border-0"><Check className="w-3 h-3 mr-1" />Uploaded</Badge>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div
+                    className="rounded-lg border-2 border-dashed border-border/40 hover:border-border/70 cursor-pointer flex flex-col items-center justify-center py-8 gap-2 text-muted-foreground transition-colors"
+                    onClick={() => backgroundFileInputRef.current?.click()}
+                  >
+                    <Upload className="w-6 h-6 opacity-50" />
+                    <p className="text-xs">Click to upload background image</p>
+                  </div>
+                )}
+                <input
+                  ref={backgroundFileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBackgroundFileSelect(f); e.target.value = ""; }}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Aspect ratio */}
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Aspect ratio</Label>
+            <div className="flex gap-2">
+              {ASPECT_OPTIONS.map((ar) => (
+                <button
+                  key={ar}
+                  className={`px-3 py-1 rounded text-xs border transition-colors ${aspectRatio === ar ? "bg-violet-500 border-violet-500 text-white" : "border-border/40 text-muted-foreground hover:border-border"}`}
+                  onClick={() => setAspectRatio(ar)}
+                >{ar}</button>
               ))}
             </div>
-          )}
+          </div>
         </div>
 
         {/* RIGHT: Results */}
@@ -746,8 +772,7 @@ export default function AiPortraitStudio() {
 
           <div className="space-y-4">
             {cards.map((card) => {
-              const sc = scenarioById(card.scenarioId);
-              const name = sc?.name ?? card.scenarioId;
+              const name = cardDisplayName(card.scenarioId);
               return (
                 <div key={card.scenarioId} className="rounded-xl border border-border/30 bg-muted/20 overflow-hidden">
                   <div className="px-4 py-3 flex items-center justify-between gap-2 border-b border-border/20">

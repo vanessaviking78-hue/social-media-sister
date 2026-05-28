@@ -148,3 +148,58 @@ export function buildPrompt(scenario: AiScenario, scrubColor?: string, outfitSty
   prompt += ` Compose the image in ${ratioDescription}.`;
   return prompt;
 }
+
+// ─── Custom outfit + background portrait system ────────────────────────────
+
+export type OutfitType = "white-shirt-jeans" | "black-tee-trousers" | "floral-boho" | "scrubs";
+export type BackgroundType = "clinic-bokeh" | "white-studio" | "black-studio" | "custom-color" | "upload-own";
+
+export interface CustomPortraitConfig {
+  outfitType: OutfitType;
+  backgroundType: BackgroundType;
+  scrubColor?: string;
+  backdropColor?: string;
+  aspectRatio?: string;
+}
+
+function outfitDescription(outfitType: OutfitType, scrubColor?: string): string {
+  switch (outfitType) {
+    case "white-shirt-jeans":
+      return "a white crisp fitted shirt tucked into well-fitted dark jeans";
+    case "black-tee-trousers":
+      return "a fitted black long-sleeved top with neat tailored black trousers";
+    case "floral-boho":
+      return "a flowing floral boho-style dress with a relaxed open-front cardigan";
+    case "scrubs":
+      return `${scrubColor ?? "navy blue"} medical scrubs`;
+  }
+}
+
+function backgroundDescription(backgroundType: BackgroundType, backdropColor?: string): string {
+  switch (backgroundType) {
+    case "clinic-bokeh":
+      return "a soft warm bokeh background suggesting a clinic or medical environment — unidentifiable, no recognisable branding, no medical equipment, no anatomy diagrams, no visible text or sharp details";
+    case "white-studio":
+      return "a clean pure white studio backdrop";
+    case "black-studio":
+      return "a deep matte black studio backdrop";
+    case "custom-color":
+      return `a plain smooth studio backdrop in the colour ${backdropColor ?? "#ffffff"}`;
+    case "upload-own":
+      return "the provided background image as the setting, placing the person naturally within the environment shown in the second image";
+  }
+}
+
+export function buildCustomPrompt(cfg: CustomPortraitConfig): string {
+  const outfit = outfitDescription(cfg.outfitType, cfg.scrubColor);
+  const bg = backgroundDescription(cfg.backgroundType, cfg.backdropColor);
+  const ratioDescription =
+    cfg.aspectRatio === "9:16" ? "a vertical 9:16 portrait orientation (tall and narrow)" :
+    cfg.aspectRatio === "3:4" ? "a 3:4 portrait orientation" :
+    "a square 1:1 format";
+  return `A professional portrait photograph of the person from the reference photo, wearing ${outfit}. The background is ${bg}.
+
+Maintain the person's exact facial features, skin tone, hair colour, and likeness from the reference photo with complete accuracy. Do not alter, slim, retouch, or beautify the face in any way. Natural, unretouched-looking skin. No medical equipment, syringes, needles, or clinical devices in frame unless they are a natural part of the chosen background. No branded products visible. Make no medical claims in imagery. Professional, warm, approachable expression.
+
+Compose the image in ${ratioDescription}.`.trim();
+}
