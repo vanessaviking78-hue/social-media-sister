@@ -41,6 +41,8 @@ import Podcast from "@/pages/podcast";
 import Competition from "@/pages/competition";
 import BundleBuilder from "@/pages/bundle-builder";
 import BundlePreview from "@/pages/bundle-preview";
+import FounderSignup from "@/pages/founder-signup";
+import FounderWelcome from "@/pages/founder-welcome";
 
 const queryClient = new QueryClient();
 
@@ -89,6 +91,8 @@ function AppContent() {
   const [isPodcast] = useRoute("/podcast");
   const [isCompetition] = useRoute("/competition");
   const [isBundle, bundleParams] = useRoute("/bundle/:token");
+  const [isFounderSignup] = useRoute("/founder-signup");
+  const [isFounderWelcome] = useRoute("/founder-welcome");
   const [location] = useLocation();
   const isSplash = location === "/";
 
@@ -133,6 +137,12 @@ function AppContent() {
   }
   if (isBundle && bundleParams?.token) {
     return <BundlePreview token={bundleParams.token} />;
+  }
+  if (isFounderSignup) {
+    return <FounderSignup />;
+  }
+  if (isFounderWelcome) {
+    return <FounderWelcome />;
   }
 
   return (

@@ -533,3 +533,15 @@ export const insertTrialBundleSchema = createInsertSchema(trialBundlesTable)
   .omit({ id: true, createdAt: true });
 export type InsertTrialBundle = z.infer<typeof insertTrialBundleSchema>;
 export type TrialBundle = typeof trialBundlesTable.$inferSelect;
+
+export const founderSignupsTable = pgTable("founder_signups", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  clinicName: text("clinic_name").notNull().default(""),
+  phone: text("phone").notNull().default(""),
+  bundleToken: text("bundle_token"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type FounderSignup = typeof founderSignupsTable.$inferSelect;

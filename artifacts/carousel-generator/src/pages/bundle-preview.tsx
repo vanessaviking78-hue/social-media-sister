@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Copy, Check, Package, Grid, User, Film, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Copy, Check, Package, Grid, User, Film, Image as ImageIcon, Loader2, Star, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { BRAND } from "@/config/brand";
+
+const CALENDLY_URL = "https://calendly.com/socialmediasister/15min";
+const FOUNDER_TOTAL = 20;
 
 const BASE = import.meta.env.BASE_URL || "/";
 
@@ -56,6 +60,7 @@ export default function BundlePreview({ token }: { token: string }) {
   const [bundle, setBundle] = useState<Bundle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [spotsRemaining, setSpotsRemaining] = useState<number>(FOUNDER_TOTAL);
 
   useEffect(() => {
     fetch(`${BASE}api/bundle/${token}`)
@@ -67,6 +72,13 @@ export default function BundlePreview({ token }: { token: string }) {
       .catch(() => setError("Failed to load bundle"))
       .finally(() => setLoading(false));
   }, [token]);
+
+  useEffect(() => {
+    fetch(`${BASE}api/bundle/founder-spots`)
+      .then((r) => r.json())
+      .then((d) => { if (typeof d.remaining === "number") setSpotsRemaining(d.remaining); })
+      .catch(() => {});
+  }, []);
 
   if (loading) {
     return (
@@ -244,8 +256,67 @@ export default function BundlePreview({ token }: { token: string }) {
           </div>
         </section>
 
-        <div className="text-center pt-4 pb-12">
-          <p className="text-sm text-muted-foreground/60">Powered by The CyberSuite</p>
+        {/* Founder Rate CTA */}
+        <section className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(233,25,118,0.12) 0%, rgba(233,25,118,0.04) 100%)", border: "1px solid rgba(233,25,118,0.25)" }}>
+          <div className="px-7 py-8 space-y-5">
+            <div className="flex items-center gap-2">
+              <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+              <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: BRAND.primaryColor }}>Founder Rate</span>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight">This content, every week. £97/month — locked for life.</h2>
+              <p className="text-muted-foreground text-sm mt-2 leading-relaxed max-w-lg">
+                Everything you just saw, built for your clinic, posted consistently. The CyberSuite handles the content. You focus on the clinic.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                {Array.from({ length: FOUNDER_TOTAL }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="w-2 h-2 rounded-full transition-colors"
+                    style={{
+                      background: i < (FOUNDER_TOTAL - spotsRemaining)
+                        ? BRAND.primaryColor
+                        : "rgba(255,255,255,0.12)",
+                    }}
+                  />
+                ))}
+              </div>
+              <span className="text-sm font-semibold" style={{ color: spotsRemaining > 5 ? "rgba(255,255,255,0.6)" : BRAND.primaryColor }}>
+                {spotsRemaining > 0
+                  ? `${spotsRemaining} of ${FOUNDER_TOTAL} founder spots remaining`
+                  : "All founder spots claimed"}
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-1">
+              <a
+                href={`/founder-signup?clinic=${encodeURIComponent(bundle.clinicName)}&bundle=${token}`}
+                className="inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold transition-opacity hover:opacity-90"
+                style={{ background: BRAND.primaryColor, color: "#fff" }}
+              >
+                <Star className="w-4 h-4" />
+                Claim my founder spot — £97/mo
+              </a>
+              <a
+                href={CALENDLY_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm font-semibold border transition-colors hover:bg-accent/30"
+                style={{ borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.7)" }}
+              >
+                <Calendar className="w-4 h-4" />
+                Book a 15-min call with Vanessa
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <div className="text-center pb-8">
+          <p className="text-sm text-muted-foreground/40">Powered by The CyberSuite</p>
         </div>
       </div>
     </div>

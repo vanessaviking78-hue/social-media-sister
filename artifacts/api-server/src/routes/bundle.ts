@@ -1,8 +1,8 @@
 import { Router, type IRouter } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { db } from "@workspace/db";
-import { trialBundlesTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { trialBundlesTable, founderSignupsTable } from "@workspace/db/schema";
+import { eq, count } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { getVoiceSystemPrompt } from "../lib/voicePrompts";
 
@@ -100,6 +100,52 @@ Voice style: follow the system prompt voice exactly. All content MHRA/ASA compli
     if (!res.headersSent) {
       res.status(500).json({ error: err.message || "Bundle generation failed" });
     }
+  }
+});
+
+const FOUNDER_TOTAL = 20;
+
+router.get("/bundle/founder-spots", async (req, res) => {
+  try {
+    const [{ value: claimed }] = await db
+      .select({ value: count() })
+      .from(founderSignupsTable);
+    const remaining = Math.max(0, FOUNDER_TOTAL - Number(claimed));
+    res.json({ remaining, claimed: Number(claimed), total: FOUNDER_TOTAL });
+  } catch (err: any) {
+    req.log?.error({ err }, "Founder spots fetch error");
+    res.status(500).json({ error: "Failed to fetch founder spots" });
+  }
+});
+
+router.post("/bundle/founder-signup", async (req, res) => {
+  try {
+    const { name, email, clinicName, phone, bundleToken } = req.body;
+    if (!name || !email) {
+      res.status(400).json({ error: "name and email are required" });
+      return;
+    }
+    const [{ value: claimed }] = await db
+      .select({ value: count() })
+      .from(founderSignupsTable);
+    if (Number(claimed) >= FOUNDER_TOTAL) {
+      res.status(409).json({ error: "All founder spots have been claimed" });
+      return;
+    }
+    const [signup] = await db
+      .insert(founderSignupsTable)
+      .values({
+        name: name.trim(),
+        email: email.trim(),
+        clinicName: clinicName?.trim() ?? "",
+        phone: phone?.trim() ?? "",
+        bundleToken: bundleToken || null,
+      })
+      .returning();
+    res.json({ id: signup.id, remaining: Math.max(0, FOUNDER_TOTAL - Number(claimed) - 1) });
+  } catch (err: any) {
+    req.log?.error({ err }, "Founder signup error");
+    res.status(500).json({ error: err.message || "Signup failed" });
   }
 });
 
