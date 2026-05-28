@@ -17,22 +17,19 @@ import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   VIDEO_WIDTH, VIDEO_HEIGHT, FONT_OPTIONS, loadGoogleFonts,
-  drawSlide, drawHeroSlide, recordReelVideo, recordReelVideoMp4, drawTypewriterSlide, drawTypewriterOnVideo,
+  drawSlide, recordReelVideo, recordReelVideoMp4, drawTypewriterSlide, drawTypewriterOnVideo,
 } from "@/lib/slide-utils";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import type { LogoPosition } from "@workspace/db/schema";
 import { saveAs } from "file-saver";
-import { CAROUSEL_TEMPLATES } from "@/lib/carousel-templates";
 
 loadGoogleFonts();
 
 type ReelSlide = {
   id: string;
-  mode: "cover" | "typewriter" | "image-typewriter" | "hero";
+  mode: "cover" | "typewriter" | "image-typewriter";
   text: string;
-  heroLeadIn: string;
-  heroWord: string;
   imageFile: File | null;
   imageElement: HTMLImageElement | null;
   videoFile: File | null;
@@ -91,36 +88,9 @@ async function pollReelJob(
   throw new Error("Reel timed out after 5 minutes — please try again");
 }
 
-const REEL_TEMPLATE_PRESETS: Record<string, {
-  pageColor?: string;
-  overlayOpacity?: number;
-  textColor?: string;
-  textPosition?: "top" | "center" | "bottom";
-  textAlign?: "left" | "center" | "right";
-  fontFamily?: string;
-}> = {
-  full_fade:         { overlayOpacity: 50, textColor: "#ffffff", textPosition: "center", textAlign: "center" },
-  notecard:          { overlayOpacity: 0,  textColor: "#2c2c2c", textPosition: "bottom", textAlign: "left",   pageColor: "#f5f0e8" },
-  torn_scrapbook:    { overlayOpacity: 30, textColor: "#1a1a1a", textPosition: "bottom", textAlign: "left" },
-  bold_editorial:    { overlayOpacity: 0,  textColor: "#ffffff", textPosition: "center", textAlign: "center", pageColor: "#0a0a0a", fontFamily: "'Montserrat', sans-serif" },
-  dark_doodle:       { overlayOpacity: 70, textColor: "#ffffff", textPosition: "bottom", textAlign: "center", pageColor: "#1a1a2e" },
-  numbered_steps:    { overlayOpacity: 40, textColor: "#ffffff", textPosition: "center", textAlign: "left" },
-  split_panel:       { overlayOpacity: 0,  textColor: "#ffffff", textPosition: "center", textAlign: "center" },
-  polaroid_scrapbook:{ overlayOpacity: 20, textColor: "#2c2c2c", textPosition: "bottom", textAlign: "center" },
-  editorial_minimal: { overlayOpacity: 0,  textColor: "#1a1a1a", textPosition: "bottom", textAlign: "left",   pageColor: "#f8f8f6" },
-  paper_cutout:      { overlayOpacity: 30, textColor: "#2c2c2c", textPosition: "bottom", textAlign: "center" },
-  textured_graphic:  { overlayOpacity: 60, textColor: "#ffffff", textPosition: "center", textAlign: "center" },
-  dark_photo_steps:  { overlayOpacity: 70, textColor: "#ffffff", textPosition: "bottom", textAlign: "left",   pageColor: "#0d0d0d" },
-  background_overlays: { overlayOpacity: 40, textColor: "#ffffff", textPosition: "center", textAlign: "center" },
-  mosaic:            { overlayOpacity: 50, textColor: "#ffffff", textPosition: "center", textAlign: "center" },
-  magazine:          { overlayOpacity: 35, textColor: "#ffffff", textPosition: "bottom", textAlign: "left" },
-  single_feature:    { overlayOpacity: 45, textColor: "#ffffff", textPosition: "center", textAlign: "center" },
-  free:              { overlayOpacity: 40, textColor: "#ffffff", textPosition: "center", textAlign: "center" },
-};
-
 export default function Reels() {
   const [slides, setSlides] = useState<ReelSlide[]>([
-    { id: crypto.randomUUID(), mode: "image-typewriter", text: "", heroLeadIn: "", heroWord: "", imageFile: null, imageElement: null, videoFile: null, videoElement: null, imageOffsetY: 0 },
+    { id: crypto.randomUUID(), mode: "image-typewriter", text: "", imageFile: null, imageElement: null, videoFile: null, videoElement: null, imageOffsetY: 0 },
   ]);
   const [activeIdx, setActiveIdx] = useState(0);
 
@@ -194,12 +164,6 @@ export default function Reels() {
 
   const [typewriterBgColor, setTypewriterBgColor] = useState("#0d0d0d");
   const [typewriterFill, setTypewriterFill] = useState(0.7);
-  const [heroLeadInColor, setHeroLeadInColor] = useState("#E91976");
-  const [heroWordColor, setHeroWordColor] = useState("#ffffff");
-  const [heroWordFont, setHeroWordFont] = useState("'Bebas Neue', sans-serif");
-  const [heroVerticalPosition, setHeroVerticalPosition] = useState<"top" | "middle" | "bottom">("bottom");
-  const [heroSpacing, setHeroSpacing] = useState(20);
-  const [heroUppercase, setHeroUppercase] = useState(true);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [previewIdx, setPreviewIdx] = useState(0);
@@ -229,19 +193,6 @@ export default function Reels() {
   const [aiSlideCount, setAiSlideCount] = useState(5);
 
   const [reelStep, setReelStep] = useState(1);
-  const [reelTemplate, setReelTemplate] = useState("");
-
-  const handleSelectReelTemplate = (id: string) => {
-    setReelTemplate(id);
-    const p = REEL_TEMPLATE_PRESETS[id];
-    if (!p) return;
-    if (p.pageColor !== undefined) setPageColor(p.pageColor);
-    if (p.overlayOpacity !== undefined) setOverlayOpacity(p.overlayOpacity);
-    if (p.textColor !== undefined) setTextColor(p.textColor);
-    if (p.textPosition !== undefined) setTextPosition(p.textPosition);
-    if (p.textAlign !== undefined) setTextAlign(p.textAlign);
-    if (p.fontFamily !== undefined) setFontFamily(p.fontFamily);
-  };
 
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const exportCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -282,13 +233,6 @@ export default function Reels() {
         { imageOffsetY: slide.imageOffsetY, canvasW: VIDEO_WIDTH, canvasH: VIDEO_HEIGHT }
       );
       drawTypewriterOnVideo(ctx, slide.text, progress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
-    } else if (slide.mode === "hero") {
-      const mediaBg = (slide.videoElement ?? slide.imageElement) as HTMLImageElement | null;
-      drawHeroSlide(ctx, mediaBg, slide.heroLeadIn || "LEAD-IN", slide.heroWord || "HERO",
-        heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase,
-        overlayColor, logoImg, logoPosition, logoSize, pageColor, "none", "#ffffff",
-        { imageOffsetY: slide.imageOffsetY, canvasW: VIDEO_WIDTH, canvasH: VIDEO_HEIGHT }
-      );
     } else {
       const mediaBg = (slide.videoElement ?? slide.imageElement) as HTMLImageElement | null;
       drawSlide(
@@ -416,7 +360,7 @@ export default function Reels() {
   const bulkMediaInputRef = useRef<HTMLInputElement>(null);
   const bulkMediaElementsRef = useRef<Array<HTMLImageElement | HTMLVideoElement | null>>([]);
 
-  const toggleSlideMode = (idx: number, mode: "cover" | "typewriter" | "image-typewriter" | "hero") => {
+  const toggleSlideMode = (idx: number, mode: "cover" | "typewriter" | "image-typewriter") => {
     setSlides((prev) => prev.map((s, i) => (i === idx ? { ...s, mode } : s)));
   };
 
@@ -440,7 +384,7 @@ export default function Reels() {
             rawMode === "cover" ? "cover"
             : rawMode === "image-typewriter" ? "image-typewriter"
             : "typewriter";
-          return { id: crypto.randomUUID(), mode, text, heroLeadIn: "", heroWord: "", imageFile: null, imageElement: null, videoFile: null, videoElement: null, imageOffsetY: 0 } satisfies ReelSlide;
+          return { id: crypto.randomUUID(), mode, text, imageFile: null, imageElement: null, videoFile: null, videoElement: null, imageOffsetY: 0 } satisfies ReelSlide;
         });
         setSlides(newSlides);
         setActiveIdx(0);
@@ -505,8 +449,6 @@ export default function Reels() {
                 id: crypto.randomUUID(),
                 mode: "image-typewriter" as const,
                 text,
-                heroLeadIn: "",
-                heroWord: "",
                 imageFile: null,
                 imageElement: null,
                 videoFile: null,
@@ -832,7 +774,7 @@ export default function Reels() {
 
   const addSlide = () => {
     if (slides.length >= 10) return;
-    const newSlide = { id: crypto.randomUUID(), mode: "typewriter" as const, text: "", heroLeadIn: "", heroWord: "", imageFile: null, imageElement: null, videoFile: null, videoElement: null, imageOffsetY: 0 };
+    const newSlide = { id: crypto.randomUUID(), mode: "typewriter" as const, text: "", imageFile: null, imageElement: null, videoFile: null, videoElement: null, imageOffsetY: 0 };
     setSlides((prev) => [...prev, newSlide]);
     setActiveIdx(slides.length);
   };
@@ -845,12 +787,6 @@ export default function Reels() {
 
   const updateText = (idx: number, text: string) => {
     setSlides((prev) => prev.map((s, i) => (i === idx ? { ...s, text } : s)));
-  };
-  const updateHeroLeadIn = (idx: number, heroLeadIn: string) => {
-    setSlides((prev) => prev.map((s, i) => (i === idx ? { ...s, heroLeadIn } : s)));
-  };
-  const updateHeroWord = (idx: number, heroWord: string) => {
-    setSlides((prev) => prev.map((s, i) => (i === idx ? { ...s, heroWord } : s)));
   };
 
   const updateImageOffset = (idx: number, offsetY: number) => {
@@ -949,12 +885,6 @@ export default function Reels() {
             coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch,
           );
           drawTypewriterOnVideo(ctx, slide.text, slideProgress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
-        } else if (slide.mode === "hero") {
-          drawHeroSlide(ctx, mediaBg, slide.heroLeadIn || "LEAD-IN", slide.heroWord || "HERO",
-            heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase,
-            overlayColor, logoImg, logoPosition, logoSize, pageColor, "none", "#ffffff",
-            { imageOffsetY: slide.imageOffsetY, canvasW: VIDEO_WIDTH, canvasH: VIDEO_HEIGHT }
-          );
         } else {
           drawSlide(
             ctx, mediaBg, slide.text,
@@ -1016,12 +946,6 @@ export default function Reels() {
             coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch,
           );
           drawTypewriterOnVideo(ctx, slide.text, slideProgress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
-        } else if (slide.mode === "hero") {
-          drawHeroSlide(ctx, mediaBg, slide.heroLeadIn || "LEAD-IN", slide.heroWord || "HERO",
-            heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase,
-            overlayColor, logoImg, logoPosition, logoSize, pageColor, "none", "#ffffff",
-            { imageOffsetY: slide.imageOffsetY, canvasW: VIDEO_WIDTH, canvasH: VIDEO_HEIGHT }
-          );
         } else {
           drawSlide(
             ctx, mediaBg, slide.text,
@@ -1127,12 +1051,6 @@ export default function Reels() {
             coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch,
           );
           drawTypewriterOnVideo(ctx, slide.text, slideProgress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
-        } else if (slide.mode === "hero") {
-          drawHeroSlide(ctx, mediaBg, slide.heroLeadIn || "LEAD-IN", slide.heroWord || "HERO",
-            heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase,
-            overlayColor, logoImg, logoPosition, logoSize, pageColor, "none", "#ffffff",
-            { imageOffsetY: slide.imageOffsetY, canvasW: VIDEO_WIDTH, canvasH: VIDEO_HEIGHT }
-          );
         } else {
           drawSlide(
             ctx, mediaBg, slide.text,
@@ -1224,8 +1142,6 @@ export default function Reels() {
         } else if (slide.mode === "image-typewriter") {
           drawSlide(ctx, mediaBg, "", fontFamily, fontSize, true, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, "none", "#ffffff", 1, 1, textPosition, false, fontFamily, textAlign, false, "#ffffff", "", letterSpacing, false, false, "'Great Vibes', cursive", coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch);
           drawTypewriterOnVideo(ctx, slide.text, slideProgress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
-        } else if (slide.mode === "hero") {
-          drawHeroSlide(ctx, mediaBg, slide.heroLeadIn || "LEAD-IN", slide.heroWord || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, "none", "#ffffff", { imageOffsetY: slide.imageOffsetY, canvasW: VIDEO_WIDTH, canvasH: VIDEO_HEIGHT });
         } else {
           drawSlide(ctx, mediaBg, slide.text, fontFamily, fontSize, true, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, "none", "#ffffff", 1, 1, textPosition, true, fontFamily, textAlign, false, "#ffffff", "", letterSpacing, false, false, "'Great Vibes', cursive", coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch);
         }
@@ -1325,80 +1241,7 @@ export default function Reels() {
         </div>
       </header>
 
-      <main className={`mx-auto w-full px-6 mt-8 pb-32 ${reelTemplate === "" ? "max-w-7xl" : "max-w-3xl"}`}>
-
-        {/* ══ TEMPLATE PICKER ══ */}
-        {reelTemplate === "" && (
-          <div className="space-y-10">
-            <div>
-              <h1 className="font-bold text-3xl text-white mb-2 flex items-center gap-3">
-                <Film className="w-8 h-8 text-pink-400" /> Reel Creator
-              </h1>
-              <p className="text-white/50">Choose a visual style to set the mood — you can adjust everything afterwards.</p>
-            </div>
-            {[
-              { key: "template" as const, label: "Slide Templates", desc: "Graphic overlays styled per-slide." },
-              { key: "seamless" as const, label: "Seamless Styles", desc: "Full-bleed photo with a clean overlay." },
-            ].map(cat => (
-              <div key={cat.key}>
-                <h2 className="text-lg font-semibold text-white mb-1">{cat.label}</h2>
-                <p className="text-sm text-white/40 mb-4">{cat.desc}</p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {CAROUSEL_TEMPLATES.filter(t => t.category === cat.key).map(tpl => (
-                    <button
-                      key={tpl.id}
-                      onClick={() => handleSelectReelTemplate(tpl.id)}
-                      className="group relative rounded-2xl overflow-hidden text-left transition-all duration-200 ring-1 ring-white/10 hover:ring-2 hover:ring-pink-400/60 hover:shadow-lg hover:shadow-pink-500/10 focus:outline-none"
-                    >
-                      <div className="relative h-44 w-full overflow-hidden">
-                        <img
-                          src={import.meta.env.BASE_URL.replace(/\/$/, "") + tpl.thumb}
-                          alt={tpl.name}
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-                      </div>
-                      <div className="bg-white/[0.04] border-t border-white/10 p-3">
-                        <p className="font-semibold text-sm text-white leading-tight">{tpl.name}</p>
-                        <p className="text-xs text-white/40 mt-0.5 leading-snug line-clamp-2">{tpl.desc}</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-
-            <div className="text-center pt-4">
-              <button onClick={() => handleSelectReelTemplate("background_overlays")} className="text-sm text-white/30 hover:text-white/60 transition-colors underline underline-offset-4">
-                Skip — start with defaults
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ══ NORMAL STEP UI (once template chosen) ══ */}
-        {reelTemplate !== "" && (<>
-
-        {/* Active template badge */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            {(() => {
-              const tpl = CAROUSEL_TEMPLATES.find(t => t.id === reelTemplate);
-              return tpl ? (
-                <>
-                  <img src={import.meta.env.BASE_URL.replace(/\/$/, "") + tpl.thumb} alt="" className="w-10 h-10 rounded-lg object-cover" />
-                  <div>
-                    <p className="text-sm font-semibold text-white">{tpl.name}</p>
-                    <p className="text-xs text-white/40">Style applied to your reel</p>
-                  </div>
-                </>
-              ) : null;
-            })()}
-          </div>
-          <button onClick={() => setReelTemplate("")} className="text-xs text-white/30 hover:text-pink-400 transition-colors">
-            ← Change style
-          </button>
-        </div>
+      <main className="max-w-3xl mx-auto w-full px-6 mt-8 pb-32">
 
         {/* Step progress bar */}
         <div className="mb-10">
@@ -1522,7 +1365,6 @@ export default function Reels() {
                                 { m: "cover" as const, label: "Img", title: "Image + static text" },
                                 { m: "typewriter" as const, label: "Aa", title: "Text only (typewriter)" },
                                 { m: "image-typewriter" as const, label: "Img+Aa", title: "Image + typewriter text" },
-                                { m: "hero" as const, label: "Hero", title: "Hero text (bold impact overlay)" },
                               ]).map(({ m, label, title }) => (
                                 <button
                                   key={m}
@@ -1543,32 +1385,15 @@ export default function Reels() {
                               )}
                             </div>
                           </div>
-                          {slide.mode === "hero" ? (
-                            <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
-                              <input
-                                value={slide.heroLeadIn}
-                                onChange={(e) => updateHeroLeadIn(idx, e.target.value)}
-                                placeholder="Lead-in text (e.g. INTRODUCING)"
-                                className="w-full bg-transparent text-sm text-white placeholder:text-white/30 outline-none border border-white/10 rounded-lg px-2.5 py-2 focus:border-pink-500/50"
-                              />
-                              <input
-                                value={slide.heroWord}
-                                onChange={(e) => updateHeroWord(idx, e.target.value)}
-                                placeholder="Hero word (e.g. IMPACT)"
-                                className="w-full bg-transparent text-base font-bold text-white placeholder:text-white/30 outline-none border border-white/10 rounded-lg px-2.5 py-2 focus:border-pink-500/50"
-                              />
-                            </div>
-                          ) : (
-                            <textarea
-                              value={slide.text}
-                              onChange={(e) => updateText(idx, e.target.value)}
-                              placeholder={slide.mode === "cover" && coverSplit ? "Eyebrow|Headline" : "Slide text…"}
-                              rows={2}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-full bg-transparent text-sm text-white placeholder:text-white/30 resize-none outline-none border border-white/10 rounded-lg p-2.5 focus:border-pink-500/50"
-                            />
-                          )}
-                          {(slide.mode === "cover" || slide.mode === "image-typewriter" || slide.mode === "hero") && (
+                          <textarea
+                            value={slide.text}
+                            onChange={(e) => updateText(idx, e.target.value)}
+                            placeholder={slide.mode === "cover" && coverSplit ? "Eyebrow|Headline" : "Slide text…"}
+                            rows={2}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full bg-transparent text-sm text-white placeholder:text-white/30 resize-none outline-none border border-white/10 rounded-lg p-2.5 focus:border-pink-500/50"
+                          />
+                          {(slide.mode === "cover" || slide.mode === "image-typewriter") && (
                             <div className="space-y-2">
                               <label className={`flex items-center gap-2 cursor-pointer rounded-lg px-3 py-2 text-sm transition-colors ${
                                 (slide.imageFile || slide.videoFile)
@@ -2065,51 +1890,6 @@ export default function Reels() {
                 )}
               </div>
 
-              {/* Hero Text Style */}
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-5">
-                <h3 className="text-base font-semibold text-white/70">Hero Text Style</h3>
-                <p className="text-xs text-white/30">Controls how all slides set to Hero mode are rendered.</p>
-                <div className="space-y-2">
-                  <Label className="text-sm text-white/50">Hero font</Label>
-                  <Select value={heroWordFont} onValueChange={setHeroWordFont}>
-                    <SelectTrigger className="bg-white/5 border-white/10 text-white/80 h-10"><SelectValue /></SelectTrigger>
-                    <SelectContent>{FONT_OPTIONS.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Label className="text-sm text-white/50 flex-1">Lead-in colour</Label>
-                  <input type="color" value={heroLeadInColor} onChange={(e) => setHeroLeadInColor(e.target.value)}
-                    className="w-10 h-10 rounded-lg border border-white/20 bg-transparent cursor-pointer" />
-                </div>
-                <div className="flex items-center gap-3">
-                  <Label className="text-sm text-white/50 flex-1">Hero word colour</Label>
-                  <input type="color" value={heroWordColor} onChange={(e) => setHeroWordColor(e.target.value)}
-                    className="w-10 h-10 rounded-lg border border-white/20 bg-transparent cursor-pointer" />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm text-white/50">Position</Label>
-                  <div className="flex gap-2">
-                    {(["top", "middle", "bottom"] as const).map((pos) => (
-                      <button key={pos} onClick={() => setHeroVerticalPosition(pos)}
-                        className={`flex-1 py-2.5 rounded-lg text-sm capitalize transition-colors ${heroVerticalPosition === pos ? "bg-pink-600 text-white" : "border border-white/15 text-white/40 hover:border-white/30"}`}>
-                        {pos}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <Label className="text-sm text-white/50">Spacing</Label>
-                    <span className="text-sm font-semibold text-white">{heroSpacing}px</span>
-                  </div>
-                  <Slider min={0} max={80} step={4} value={[heroSpacing]} onValueChange={([v]) => setHeroSpacing(v)} />
-                </div>
-                <button onClick={() => setHeroUppercase((p) => !p)}
-                  className={`w-full py-2.5 rounded-lg text-sm transition-colors ${heroUppercase ? "bg-pink-600 text-white" : "border border-white/15 text-white/40 hover:border-white/30"}`}>
-                  ALL CAPS
-                </button>
-              </div>
-
               {/* Logo */}
               <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-4">
                 <h3 className="text-base font-semibold text-white/70">Logo</h3>
@@ -2381,7 +2161,6 @@ export default function Reels() {
           )}
 
         </div>
-        </>)}
       </main>
 
       <canvas ref={exportCanvasRef} className="hidden" />

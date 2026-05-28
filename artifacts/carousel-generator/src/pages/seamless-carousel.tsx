@@ -4,18 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import {
   Upload, ImagePlus, BookOpen, Film, Palette, MessageSquareText,
   CalendarDays, BarChart3, Loader2, Download, Grid, User,
-  X, ZoomIn, Send, Music, Check, ChevronLeft, ChevronRight, RotateCcw,
+  Wand2, X, ZoomIn, Send, Music,
 } from "lucide-react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { MusicPickerModal, MusicTrackBadge, type MusicTrack } from "@/components/music-picker-modal";
-import { CAROUSEL_TEMPLATES, TEMPLATE_STYLE_IDS } from "@/lib/carousel-templates";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -54,6 +52,39 @@ const POSITIONS = [
   { label: "Bottom right", value: "bottom-right" },
 ];
 
+const LAYOUTS = [
+  {
+    value: "background_overlays",
+    label: "Background + Overlays",
+    desc: "One wide background image with scattered polaroid overlays, some bridging slide seams",
+    emoji: "🖼",
+  },
+  {
+    value: "mosaic",
+    label: "Mosaic Flow",
+    desc: "All images in a flowing grid — great for product carousels or treatment overviews",
+    emoji: "⬛",
+  },
+  {
+    value: "magazine",
+    label: "Magazine Spread",
+    desc: "Two dominant images with accent shots — the most editorial look",
+    emoji: "📰",
+  },
+  {
+    value: "single_feature",
+    label: "Single Feature + Accents",
+    desc: "One hero image spans most of the canvas, smaller accent shots fill the edges",
+    emoji: "⭐",
+  },
+  {
+    value: "free",
+    label: "Free Arrangement",
+    desc: "Images scattered freely across the full canvas — relaxed and organic",
+    emoji: "✨",
+  },
+];
+
 type SlideConfig = {
   hasText: boolean;
   title: string;
@@ -85,6 +116,17 @@ type LogoState = {
   rotation: number;
 };
 
+function defaultSlide(i: number): SlideConfig {
+  return {
+    hasText: i === 0,
+    title: i === 0 ? "" : "",
+    leadIn: "",
+    tagLine: "",
+    doodle: "none",
+    position: "bottom-left",
+  };
+}
+
 type CollageElement = {
   imageUrl: string;
   x: number;
@@ -97,31 +139,16 @@ type CollageElement = {
   isBackground: boolean;
 };
 
-type PhotoPlacement = { panX: number; panY: number; zoom: number };
-type DragState = { slideIdx: number; startX: number; startY: number; startPanX: number; startPanY: number };
-type Step = "template" | "upload" | "arrange" | "text" | "result";
-
-function defaultSlide(i: number): SlideConfig {
-  return { hasText: i === 0, title: "", leadIn: "", tagLine: "", doodle: "none", position: "bottom-left" };
-}
-
-function defaultPlacement(): PhotoPlacement {
-  return { panX: 0.5, panY: 0.5, zoom: 1.0 };
-}
-
-const PREVIEW_TILE = 300;
+type Step = "upload" | "layout" | "text" | "result";
 
 export default function SeamlessCarouselPage() {
-  const [step, setStep] = useState<Step>("template");
-  const [selectedTemplate, setSelectedTemplate] = useState("");
+  const [step, setStep] = useState<Step>("upload");
   const [slideCount, setSlideCount] = useState(3);
+  const [layout, setLayout] = useState("background_overlays");
   const [files, setFiles] = useState<File[]>([]);
   const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
   const [collageElements, setCollageElements] = useState<CollageElement[]>([]);
-  const [placements, setPlacements] = useState<PhotoPlacement[]>([defaultPlacement(), defaultPlacement(), defaultPlacement()]);
-  const [dragState, setDragState] = useState<DragState | null>(null);
-  const [activeSlide, setActiveSlide] = useState(0);
   const [slides, setSlides] = useState<SlideConfig[]>([defaultSlide(0), defaultSlide(1), defaultSlide(2)]);
   const [scriptFont, setScriptFont] = useState("Allura");
   const [textColor, setTextColor] = useState("#ffffff");
@@ -129,6 +156,7 @@ export default function SeamlessCarouselPage() {
   const [carouselId, setCarouselId] = useState<number | null>(null);
   const [renderedUrls, setRenderedUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [arranging, setArranging] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
   const [logo, setLogo] = useState<LogoState | null>(null);
@@ -146,30 +174,12 @@ export default function SeamlessCarouselPage() {
   const logoFileRef = useRef<HTMLInputElement>(null);
   const dropRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
-  const arrangePanelRef = useRef<HTMLDivElement>(null);
-
-  const isTemplateStyle = TEMPLATE_STYLE_IDS.has(selectedTemplate);
-  const currentTemplate = CAROUSEL_TEMPLATES.find(t => t.id === selectedTemplate);
-  const needsPhoto = currentTemplate?.needsPhoto ?? true;
-
-  useEffect(() => {
-    fetch(`${BASE}/api/presets`).then(r => r.json()).then(d => {
-      const list = Array.isArray(d?.presets) ? d.presets : Array.isArray(d) ? d : [];
-      setPresets(list.map((p: any) => ({ id: p.id, name: p.name })));
-      if (list.length === 1) setSelectedPresetId(list[0].id);
-    }).catch(() => {});
-  }, []);
 
   const handleSlideCountChange = (n: number) => {
     setSlideCount(n);
-    setSlides(prev => {
+    setSlides((prev) => {
       const next = [...prev];
       while (next.length < n) next.push(defaultSlide(next.length));
-      return next.slice(0, n);
-    });
-    setPlacements(prev => {
-      const next = [...prev];
-      while (next.length < n) next.push(defaultPlacement());
       return next.slice(0, n);
     });
     setCollageElements([]);
@@ -177,11 +187,10 @@ export default function SeamlessCarouselPage() {
   };
 
   const addFiles = (incoming: File[]) => {
-    const imgs = incoming.filter(f => f.type.startsWith("image/"));
-    const max = isTemplateStyle ? slideCount : 10;
-    const combined = [...files, ...imgs].slice(0, max);
+    const imgs = incoming.filter((f) => f.type.startsWith("image/"));
+    const combined = [...files, ...imgs].slice(0, 10);
     setFiles(combined);
-    setPreviewUrls(combined.map(f => URL.createObjectURL(f)));
+    setPreviewUrls(combined.map((f) => URL.createObjectURL(f)));
     setUploadedUrls([]);
     setCollageElements([]);
     setRenderedUrls([]);
@@ -190,7 +199,7 @@ export default function SeamlessCarouselPage() {
   const removeFile = (i: number) => {
     const next = files.filter((_, idx) => idx !== i);
     setFiles(next);
-    setPreviewUrls(next.map(f => URL.createObjectURL(f)));
+    setPreviewUrls(next.map((f) => URL.createObjectURL(f)));
     setUploadedUrls([]);
     setCollageElements([]);
     setRenderedUrls([]);
@@ -198,18 +207,27 @@ export default function SeamlessCarouselPage() {
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
-    const dropped = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
+    const dropped = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
     if (dropped.length) addFiles(dropped);
-  }, [files, isTemplateStyle, slideCount]);
+  }, [files]);
 
   const setSlideField = (i: number, field: keyof SlideConfig, val: string | boolean | number) => {
-    setSlides(prev => prev.map((s, idx) => idx === i ? { ...s, [field]: val } : s));
+    setSlides((prev) => prev.map((s, idx) => idx === i ? { ...s, [field]: val } : s));
   };
 
+  // Load presets
+  useEffect(() => {
+    fetch(`${BASE}/api/presets`).then((r) => r.json()).then((d) => {
+      const list = Array.isArray(d?.presets) ? d.presets : Array.isArray(d) ? d : [];
+      setPresets(list.map((p: any) => ({ id: p.id, name: p.name })));
+      if (list.length === 1) setSelectedPresetId(list[0].id);
+    }).catch(() => {});
+  }, []);
+
   const handleLogoFile = async (file: File) => {
-    const dataUrl = await new Promise<string>(resolve => {
+    const dataUrl = await new Promise<string>((resolve) => {
       const reader = new FileReader();
-      reader.onload = e => resolve(e.target!.result as string);
+      reader.onload = (e) => resolve(e.target!.result as string);
       reader.readAsDataURL(file);
     });
     const img = new Image();
@@ -218,7 +236,7 @@ export default function SeamlessCarouselPage() {
   };
 
   const uploadLogoToServer = async (dataUrl: string): Promise<string> => {
-    const blob = await fetch(dataUrl).then(r => r.blob());
+    const blob = await fetch(dataUrl).then((r) => r.blob());
     const fd = new FormData(); fd.append("logo", blob, "logo.png");
     const r = await fetch(`${BASE}/api/seamless/upload-logo`, { method: "POST", body: fd });
     if (!r.ok) throw new Error("Logo upload failed");
@@ -226,67 +244,67 @@ export default function SeamlessCarouselPage() {
     return logoUrl;
   };
 
-  const handleSelectTemplate = (id: string) => {
-    setSelectedTemplate(id);
-    setFiles([]);
-    setPreviewUrls([]);
-    setUploadedUrls([]);
-    setCollageElements([]);
-    setRenderedUrls([]);
-    setCarouselId(null);
-    setStep("upload");
+  const handleSchedule = () => {
+    if (!renderedUrls.length) { toast.error("Generate slides first"); return; }
+    const posts: SchedulePostPayload[] = [{
+      title: slides[0]?.title || "Seamless Carousel",
+      caption: "",
+      imageUrls: renderedUrls,
+      musicTrack: musicTrack || undefined,
+      firstComment: firstComment || undefined,
+    }];
+    setSchedulePosts(posts);
+    setScheduleOpen(true);
   };
 
-  // Upload and arrange (upload step → arrange step)
+  const startLogoDrag = (e: React.PointerEvent) => {
+    if (!logo) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setLogoDragging(true);
+    setLogoDragStart({ px: e.clientX, py: e.clientY, ox: logo.x, oy: logo.y });
+  };
+
+  const onPreviewPointerMove = (e: React.PointerEvent) => {
+    if (!logoDragging || !logoDragStart || !logo || !previewRef.current) return;
+    const rect = previewRef.current.getBoundingClientRect();
+    const slideW = rect.width / slideCount;
+    const dx = (e.clientX - logoDragStart.px) / slideW;
+    const dy = (e.clientY - logoDragStart.py) / rect.height;
+    setLogo((l) => l ? { ...l, x: Math.max(0, Math.min(1, logoDragStart.ox + dx)), y: Math.max(0, Math.min(1, logoDragStart.oy + dy)) } : l);
+  };
+
+  const onPreviewPointerUp = () => {
+    setLogoDragging(false);
+    setLogoDragStart(null);
+  };
+
+  // Step 1 → Step 2: upload images, run auto-arrange
   const handleUploadAndArrange = async () => {
-    if (!needsPhoto) {
-      const elements = Array.from({ length: slideCount }, (_, i) => ({
-        imageUrl: "", x: 0, y: 0, width: 1080, height: 1080,
-        rotation: 0, zIndex: i, hasBorder: false, isBackground: false,
-      }));
-      setCollageElements(elements);
-      setPlacements(Array.from({ length: slideCount }, defaultPlacement));
-      setStep("arrange");
-      return;
-    }
-    const minFiles = isTemplateStyle ? 1 : 2;
-    if (files.length < minFiles) {
-      toast.error(isTemplateStyle ? "Upload at least one photo" : "Upload at least 2 photos");
-      return;
-    }
+    if (files.length < 2) { toast.error("Upload at least 2 images (one background + overlays)"); return; }
     setUploading(true);
-    const toastId = toast.loading("Uploading photos…");
+    const toastId = toast.loading("Uploading images…");
     try {
-      const fd = new FormData();
-      files.forEach(f => fd.append("images", f, f.name));
-      const uploadResp = await fetch(`${import.meta.env.BASE_URL}api/seamless/upload`, { method: "POST", body: fd });
+      const formData = new FormData();
+      files.forEach((f) => formData.append("images", f, f.name));
+      const uploadResp = await fetch(`${import.meta.env.BASE_URL}api/seamless/upload`, {
+        method: "POST",
+        body: formData,
+      });
       if (!uploadResp.ok) throw new Error("Upload failed");
       const { urls } = await uploadResp.json() as { urls: string[] };
       setUploadedUrls(urls);
+      toast.loading("Arranging collage…", { id: toastId });
 
-      if (isTemplateStyle) {
-        const elements = Array.from({ length: slideCount }, (_, i) => ({
-          imageUrl: urls[i % urls.length],
-          x: 0, y: 0, width: 1080, height: 1080,
-          rotation: 0, zIndex: i, hasBorder: false, isBackground: true,
-        }));
-        setCollageElements(elements);
-        setPlacements(Array.from({ length: slideCount }, defaultPlacement));
-        toast.success("Photos uploaded — now adjust framing", { id: toastId });
-        setStep("arrange");
-      } else {
-        toast.loading("Arranging collage…", { id: toastId });
-        const arrResp = await fetch(`${import.meta.env.BASE_URL}api/seamless/auto-arrange`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ slideCount, layoutStyle: selectedTemplate, imageUrls: urls }),
-        });
-        if (!arrResp.ok) throw new Error("Auto-arrange failed");
-        const { elements } = await arrResp.json() as { elements: CollageElement[] };
-        setCollageElements(elements);
-        toast.success("Images arranged — check the preview", { id: toastId });
-        setStep("arrange");
-      }
+      const arrResp = await fetch(`${import.meta.env.BASE_URL}api/seamless/auto-arrange`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slideCount, layoutStyle: layout, imageUrls: urls }),
+      });
+      if (!arrResp.ok) throw new Error("Auto-arrange failed");
+      const { elements } = await arrResp.json() as { elements: CollageElement[] };
+      setCollageElements(elements);
+      toast.success("Images arranged — check the preview", { id: toastId });
+      setStep("layout");
     } catch (e: any) {
       toast.error(e.message ?? "Something went wrong", { id: toastId });
     } finally {
@@ -294,72 +312,49 @@ export default function SeamlessCarouselPage() {
     }
   };
 
-  // Arrange step → Text step: bake placement state into collage elements
-  const handleArrangeContinue = () => {
-    if (isTemplateStyle && uploadedUrls.length > 0) {
-      const S = 1080;
-      const elements = Array.from({ length: slideCount }, (_, i) => {
-        const p = placements[i] ?? defaultPlacement();
-        const photoW = Math.round(S * p.zoom);
-        const photoH = Math.round(S * p.zoom);
-        const x = Math.round(540 - p.panX * photoW);
-        const y = Math.round(540 - p.panY * photoH);
-        return {
-          imageUrl: uploadedUrls[i % uploadedUrls.length],
-          x, y, width: photoW, height: photoH,
-          rotation: 0, zIndex: i, hasBorder: false, isBackground: true,
-        };
+  // Step 2 → Step 3: change layout + re-arrange if needed
+  const handleReArrange = async () => {
+    if (!uploadedUrls.length) return;
+    setArranging(true);
+    const id = toast.loading("Re-arranging…");
+    try {
+      const arrResp = await fetch(`${import.meta.env.BASE_URL}api/seamless/auto-arrange`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slideCount, layoutStyle: layout, imageUrls: uploadedUrls }),
       });
+      if (!arrResp.ok) throw new Error("Auto-arrange failed");
+      const { elements } = await arrResp.json() as { elements: CollageElement[] };
       setCollageElements(elements);
+      toast.success("Layout updated", { id });
+    } catch (e: any) {
+      toast.error(e.message ?? "Something went wrong", { id });
+    } finally {
+      setArranging(false);
     }
-    setStep("text");
-  };
-
-  // Drag handlers for per-slide photo pan
-  const handleSlidePointerDown = (e: React.PointerEvent, slideIdx: number) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const p = placements[slideIdx] ?? defaultPlacement();
-    setDragState({ slideIdx, startX: e.clientX, startY: e.clientY, startPanX: p.panX, startPanY: p.panY });
-  };
-
-  const handleArrangePointerMove = (e: React.PointerEvent) => {
-    if (!dragState) return;
-    const p = placements[dragState.slideIdx] ?? defaultPlacement();
-    const panScale = PREVIEW_TILE * p.zoom;
-    const dx = (e.clientX - dragState.startX) / panScale;
-    const dy = (e.clientY - dragState.startY) / panScale;
-    const newPanX = Math.max(0, Math.min(1, dragState.startPanX - dx));
-    const newPanY = Math.max(0, Math.min(1, dragState.startPanY - dy));
-    setPlacements(prev => prev.map((pl, i) => i === dragState.slideIdx ? { ...pl, panX: newPanX, panY: newPanY } : pl));
-  };
-
-  const handleArrangePointerUp = () => setDragState(null);
-
-  const setPlacementZoom = (slideIdx: number, zoom: number) => {
-    setPlacements(prev => prev.map((p, i) => i === slideIdx ? { ...p, zoom } : p));
-  };
-
-  const resetPlacement = (slideIdx: number) => {
-    setPlacements(prev => prev.map((p, i) => i === slideIdx ? defaultPlacement() : p));
   };
 
   // Final render
   const handleGenerate = async () => {
+    if (!collageElements.length) { toast.error("Run auto-arrange first"); return; }
     setGenerating(true);
     const toastId = toast.loading("Saving & rendering slides…");
     try {
+      // Upsert the carousel record
+      // Upload logo if needed
       let logoStoredUrl = logo?.storedUrl ?? "";
       if (logo && logo.dataUrl && !logo.storedUrl) {
         try {
           logoStoredUrl = await uploadLogoToServer(logo.dataUrl);
-          setLogo(l => l ? { ...l, storedUrl: logoStoredUrl } : l);
+          setLogo((l) => l ? { ...l, storedUrl: logoStoredUrl } : l);
         } catch {
           toast.error("Logo upload failed — continuing without logo");
         }
       }
+
       const saveBody = {
         slideCount,
-        layoutStyle: selectedTemplate,
+        layoutStyle: layout,
         uploadedImageUrls: uploadedUrls,
         collageElements,
         slides,
@@ -369,19 +364,31 @@ export default function SeamlessCarouselPage() {
         logoConfig: logo ? { logoUrl: logoStoredUrl, x: logo.x, y: logo.y, scale: logo.scale, rotation: logo.rotation } : null,
         musicTrack: musicTrack || null,
       };
+
       let id = carouselId;
       if (id) {
-        const r = await fetch(`${import.meta.env.BASE_URL}api/seamless/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(saveBody) });
-        if (!r.ok) throw new Error("Update failed");
+        const putResp = await fetch(`${import.meta.env.BASE_URL}api/seamless/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(saveBody),
+        });
+        if (!putResp.ok) throw new Error("Update failed");
       } else {
-        const r = await fetch(`${import.meta.env.BASE_URL}api/seamless`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(saveBody) });
-        if (!r.ok) throw new Error("Create failed");
-        const created = await r.json() as { id: number };
+        const postResp = await fetch(`${import.meta.env.BASE_URL}api/seamless`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(saveBody),
+        });
+        if (!postResp.ok) throw new Error("Create failed");
+        const created = await postResp.json() as { id: number };
         id = created.id;
         setCarouselId(id);
       }
-      toast.loading("Rendering slides — hang on a moment…", { id: toastId });
-      const renderResp = await fetch(`${import.meta.env.BASE_URL}api/seamless/${id}/render`, { method: "POST" });
+
+      toast.loading("Rendering slides — this takes a moment…", { id: toastId });
+      const renderResp = await fetch(`${import.meta.env.BASE_URL}api/seamless/${id}/render`, {
+        method: "POST",
+      });
       if (!renderResp.ok) throw new Error("Render failed");
       const { slideUrls } = await renderResp.json() as { slideUrls: string[] };
       setRenderedUrls(slideUrls);
@@ -404,56 +411,27 @@ export default function SeamlessCarouselPage() {
         zip.file(`slide-${i + 1}.png`, blob);
       }
       const content = await zip.generateAsync({ type: "blob" });
-      saveAs(content, "carousel.zip");
+      saveAs(content, "seamless-carousel.zip");
       toast.success("Download started", { id });
-    } catch { toast.error("Download failed", { id }); }
+    } catch {
+      toast.error("Download failed", { id });
+    }
   };
 
-  const handleSchedule = () => {
-    if (!renderedUrls.length) { toast.error("Generate slides first"); return; }
-    setSchedulePosts([{ title: slides[0]?.title || "Seamless Carousel", caption: "", imageUrls: renderedUrls, musicTrack: musicTrack || undefined, firstComment: firstComment || undefined }]);
-    setScheduleOpen(true);
-  };
-
-  const startLogoDrag = (e: React.PointerEvent) => {
-    if (!logo) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    setLogoDragging(true);
-    setLogoDragStart({ px: e.clientX, py: e.clientY, ox: logo.x, oy: logo.y });
-  };
-
-  const onPreviewPointerMove = (e: React.PointerEvent) => {
-    if (!logoDragging || !logoDragStart || !logo || !previewRef.current) return;
-    const rect = previewRef.current.getBoundingClientRect();
-    const slideW = rect.width / slideCount;
-    const dx = (e.clientX - logoDragStart.px) / slideW;
-    const dy = (e.clientY - logoDragStart.py) / rect.height;
-    setLogo(l => l ? { ...l, x: Math.max(0, Math.min(1, logoDragStart.ox + dx)), y: Math.max(0, Math.min(1, logoDragStart.oy + dy)) } : l);
-  };
-
-  const onPreviewPointerUp = () => { setLogoDragging(false); setLogoDragStart(null); };
-
-  // Collage preview scale (for seamless layout preview)
+  // Collage preview (CSS-based, scaled to fit the right panel)
   const PREVIEW_W = 320;
   const TOTAL_CANVAS_W = 1080 * slideCount;
+  const TOTAL_CANVAS_H = 1080;
   const scale = PREVIEW_W / TOTAL_CANVAS_W;
-  const PREVIEW_H = Math.round(1080 * scale);
-
-  const STEP_LABELS = ["1. Style", "2. Upload", "3. Arrange", "4. Text", "5. Result"];
-  const STEPS: Step[] = ["template", "upload", "arrange", "text", "result"];
-
-  const templateCategories = [
-    { key: "template" as const, label: "Slide Templates" },
-    { key: "seamless" as const, label: "Seamless Bridging" },
-  ];
+  const PREVIEW_H = Math.round(TOTAL_CANVAS_H * scale);
 
   return (
     <div className="min-h-[100dvh] w-full pb-32">
-      <MusicPickerModal open={musicPickerOpen} onClose={() => setMusicPickerOpen(false)} selectedTrack={musicTrack} onSelect={t => setMusicTrack(t)} />
+      <MusicPickerModal open={musicPickerOpen} onClose={() => setMusicPickerOpen(false)} selectedTrack={musicTrack} onSelect={(t) => setMusicTrack(t)} />
       {scheduleOpen && (
         <ScheduleModal
           presetId={selectedPresetId}
-          presetName={presets.find(p => p.id === selectedPresetId)?.name ?? ""}
+          presetName={presets.find((p) => p.id === selectedPresetId)?.name ?? ""}
           postType="seamless"
           posts={schedulePosts}
           onClose={() => setScheduleOpen(false)}
@@ -467,11 +445,15 @@ export default function SeamlessCarouselPage() {
           <button className="absolute top-4 right-4 text-white/60 hover:text-white" onClick={() => setLightboxIdx(null)}><X className="w-6 h-6" /></button>
           <div className="flex items-center gap-2 px-4">
             {lightboxIdx > 0 && (
-              <button onClick={e => { e.stopPropagation(); setLightboxIdx((lightboxIdx ?? 1) - 1); }} className="text-white/60 hover:text-white text-3xl px-3">‹</button>
+              <button onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx ?? 1) - 1); }}
+                className="text-white/60 hover:text-white text-2xl px-3">‹</button>
             )}
-            <img src={renderedUrls[lightboxIdx]} alt={`Slide ${lightboxIdx + 1}`} className="max-h-[85vh] max-w-[80vw] rounded-xl shadow-2xl object-contain" onClick={e => e.stopPropagation()} />
+            <img src={renderedUrls[lightboxIdx]} alt={`Slide ${lightboxIdx + 1}`}
+              className="max-h-[85vh] max-w-[80vw] rounded-xl shadow-2xl object-contain"
+              onClick={(e) => e.stopPropagation()} />
             {lightboxIdx < renderedUrls.length - 1 && (
-              <button onClick={e => { e.stopPropagation(); setLightboxIdx((lightboxIdx ?? 0) + 1); }} className="text-white/60 hover:text-white text-3xl px-3">›</button>
+              <button onClick={(e) => { e.stopPropagation(); setLightboxIdx((lightboxIdx ?? 0) + 1); }}
+                className="text-white/60 hover:text-white text-2xl px-3">›</button>
             )}
           </div>
           <p className="absolute bottom-6 text-white/50 text-sm">{lightboxIdx + 1} / {renderedUrls.length} — click outside to close</p>
@@ -482,12 +464,16 @@ export default function SeamlessCarouselPage() {
         <div className="flex items-center gap-3 flex-shrink-0">
           <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap">
           <Link href="/hub"><Button variant="ghost" size="sm" className="text-muted-foreground">← Home</Button></Link>
           <Link href="/carousel"><Button variant="ghost" size="sm" className="text-muted-foreground"><ImagePlus className="w-4 h-4 mr-1" />Carousel</Button></Link>
+          <Link href="/single-image"><Button variant="ghost" size="sm" className="text-muted-foreground"><ImagePlus className="w-4 h-4 mr-1" />Single Image</Button></Link>
+          <Link href="/stories"><Button variant="ghost" size="sm" className="text-muted-foreground"><BookOpen className="w-4 h-4 mr-1" />Stories</Button></Link>
           <Link href="/reels"><Button variant="ghost" size="sm" className="text-muted-foreground"><Film className="w-4 h-4 mr-1" />Reels</Button></Link>
+          <Link href="/about-me"><Button variant="ghost" size="sm" className="text-muted-foreground"><User className="w-4 h-4 mr-1" />About Me</Button></Link>
           <Link href="/presets"><Button variant="ghost" size="sm" className="text-muted-foreground"><Palette className="w-4 h-4 mr-1" />Presets</Button></Link>
           <Link href="/captions"><Button variant="ghost" size="sm" className="text-muted-foreground"><MessageSquareText className="w-4 h-4 mr-1" />Captions</Button></Link>
+          <Link href="/library"><Button variant="ghost" size="sm" className="text-muted-foreground"><BookOpen className="w-4 h-4 mr-1" />Library</Button></Link>
           <Link href="/calendar"><Button variant="ghost" size="sm" className="text-muted-foreground"><CalendarDays className="w-4 h-4 mr-1" />Calendar</Button></Link>
           <Link href="/analytics"><Button variant="ghost" size="sm" className="text-muted-foreground"><BarChart3 className="w-4 h-4 mr-1" />Analytics</Button></Link>
         </div>
@@ -496,584 +482,626 @@ export default function SeamlessCarouselPage() {
       <main className="max-w-7xl mx-auto px-6 mt-8">
         <div className="mb-8">
           <h1 className="font-sans font-bold text-4xl tracking-tight mb-2 flex items-center gap-3">
-            <Grid className="w-9 h-9 text-pink-400" /> Carousel Creator
+            <Grid className="w-9 h-9 text-pink-400" /> Seamless Carousel
           </h1>
-          <p className="text-lg text-muted-foreground">
-            {step === "template"
-              ? "Pick a style and the tool builds your slides around it."
-              : `${currentTemplate?.name ?? "Carousel"} — ${currentTemplate?.desc ?? ""}`}
-          </p>
+          <p className="text-lg text-muted-foreground">Upload 5-10 photos and the system arranges them across slides as a continuous collage — images bridge the seams so the scroll feels editorial and intentional.</p>
         </div>
 
         {/* Step indicator */}
         <div className="flex items-center gap-2 mb-8">
-          {STEPS.map((s, i) => {
+          {(["upload", "layout", "text", "result"] as Step[]).map((s, i) => {
+            const labels = ["1. Upload", "2. Layout", "3. Text", "4. Result"];
             const active = step === s;
-            const done = STEPS.indexOf(step) > i;
+            const done = (["upload", "layout", "text", "result"] as Step[]).indexOf(step) > i;
             return (
               <React.Fragment key={s}>
-                <div className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap ${active ? "bg-pink-500 text-white" : done ? "bg-pink-500/20 text-pink-400" : "bg-muted/40 text-muted-foreground"}`}>
-                  {STEP_LABELS[i]}
+                <div className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-all ${active ? "bg-pink-500 text-white" : done ? "bg-pink-500/20 text-pink-400" : "bg-muted/40 text-muted-foreground"}`}>
+                  {labels[i]}
                 </div>
-                {i < STEPS.length - 1 && <div className="flex-1 h-px bg-border/30" />}
+                {i < 3 && <div className="flex-1 h-px bg-border/30" />}
               </React.Fragment>
             );
           })}
         </div>
 
-        {/* ── STEP 0: TEMPLATE PICKER (full width) ── */}
-        {step === "template" && (
-          <div className="space-y-10">
-            {templateCategories.map(cat => (
-              <div key={cat.key}>
-                <h2 className="text-xl font-semibold mb-1">{cat.label}</h2>
-                {cat.key === "seamless" && (
-                  <p className="text-sm text-muted-foreground mb-4">One continuous image bridge across all slide seams — upload 5-10 photos and they flow together.</p>
-                )}
-                {cat.key === "template" && (
-                  <p className="text-sm text-muted-foreground mb-4">Each slide is styled individually. Upload one photo per slide.</p>
-                )}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {CAROUSEL_TEMPLATES.filter(t => t.category === cat.key).map(tpl => {
-                    const selected = selectedTemplate === tpl.id;
-                    return (
-                      <button
-                        key={tpl.id}
-                        onClick={() => handleSelectTemplate(tpl.id)}
-                        className={`group relative rounded-2xl overflow-hidden text-left transition-all duration-200 focus:outline-none ${selected ? "ring-4 ring-pink-500 shadow-lg shadow-pink-500/25" : "ring-1 ring-border/20 hover:ring-2 hover:ring-pink-400/50 hover:shadow-md"}`}
-                      >
-                        {/* Thumbnail */}
-                        <div className="relative h-48 w-full overflow-hidden">
-                          <img
-                            src={import.meta.env.BASE_URL.replace(/\/$/, "") + tpl.thumb}
-                            alt={tpl.name}
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                          {selected && (
-                            <div className="absolute top-3 right-3 w-7 h-7 bg-pink-500 rounded-full flex items-center justify-center">
-                              <Check className="w-4 h-4 text-white" />
-                            </div>
-                          )}
-                        </div>
-                        {/* Info */}
-                        <div className="bg-card p-3">
-                          <p className="font-semibold text-sm leading-tight">{tpl.name}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5 leading-snug line-clamp-2">{tpl.desc}</p>
-                        </div>
+        <div className="flex gap-8 items-start">
+          {/* Controls */}
+          <div className="flex-1 min-w-0 space-y-6">
+
+            {/* ── STEP 1: Upload ── */}
+            {step === "upload" && (
+              <>
+                {/* Slide count */}
+                <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
+                  <Label className="text-base font-semibold">Number of slides</Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[3, 4, 5].map((n) => (
+                      <button key={n} onClick={() => handleSlideCountChange(n)}
+                        className={`py-4 rounded-xl text-sm font-semibold border transition-all ${slideCount === n ? "bg-primary text-primary-foreground border-primary" : "bg-accent/40 text-muted-foreground border-border/30 hover:border-pink-500/40"}`}>
+                        {n} slides
+                        <span className="block text-xs font-normal opacity-70 mt-0.5">{n * 1080}×1080px total</span>
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
 
-            {selectedTemplate && (
-              <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t border-border/30 p-4 flex justify-center z-40">
-                <Button size="lg" className="bg-pink-500 hover:bg-pink-600 text-white px-10" onClick={() => setStep("upload")}>
-                  Continue with {currentTemplate?.name} →
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
+                {/* Image upload */}
+                <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">Upload photos</Label>
+                    <span className={`text-sm ${files.length < 2 ? "text-muted-foreground" : "text-pink-400 font-semibold"}`}>
+                      {files.length} / 10 selected
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    For "Background + Overlays": the <strong>first image</strong> becomes the background — make it your widest or most atmospheric shot. The rest become polaroid overlays.
+                  </p>
 
-        {/* ── STEPS 1-4: Upload / Arrange / Text / Result (left + right panel) ── */}
-        {step !== "template" && (
-          <div className="flex gap-8 items-start">
-            <div className="flex-1 min-w-0 space-y-6">
+                  <div
+                    ref={dropRef}
+                    onDrop={handleDrop}
+                    onDragOver={(e) => e.preventDefault()}
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-pink-500/30 rounded-xl p-8 text-center cursor-pointer hover:border-pink-500/60 transition-colors"
+                  >
+                    <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">Drag & drop or click to browse</p>
+                    <p className="text-xs text-pink-400/70 mt-1">Add up to 10 photos — portrait or landscape both work</p>
+                  </div>
+                  <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden"
+                    onChange={(e) => { if (e.target.files) addFiles(Array.from(e.target.files)); }} />
 
-              {/* ── STEP 1: Upload ── */}
-              {step === "upload" && (
-                <>
-                  <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-base font-semibold">Number of slides</Label>
-                      <button onClick={() => setStep("template")} className="text-xs text-muted-foreground hover:text-pink-400 transition-colors">
-                        ← Change style
-                      </button>
-                    </div>
+                  {files.length > 0 && (
                     <div className="grid grid-cols-5 gap-2">
-                      {[3, 4, 5, 6, 7].map(n => (
-                        <button key={n} onClick={() => handleSlideCountChange(n)}
-                          className={`py-2 rounded-lg text-sm font-semibold border transition-colors ${slideCount === n ? "bg-pink-500 text-white border-pink-500" : "bg-card border-border/30 hover:border-pink-400/50"}`}>
-                          {n}
-                        </button>
+                      {files.map((f, i) => (
+                        <div key={i} className="relative group">
+                          <img src={previewUrls[i]} alt="" className="w-full aspect-square object-cover rounded-lg" />
+                          {i === 0 && (
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs text-center py-0.5 rounded-b-lg">BG</div>
+                          )}
+                          <button onClick={(e) => { e.stopPropagation(); removeFile(i); }}
+                            className="absolute top-1 right-1 w-5 h-5 bg-black/70 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
                       ))}
                     </div>
-                    {isTemplateStyle && (
-                      <p className="text-xs text-muted-foreground">
-                        {needsPhoto
-                          ? `Upload up to ${slideCount} photos — one per slide. If you upload fewer, photos repeat across slides.`
-                          : "This style uses text only — no photos needed."}
-                      </p>
-                    )}
-                    {!isTemplateStyle && (
-                      <p className="text-xs text-muted-foreground">Upload 5-10 photos — they'll flow together across slide seams.</p>
-                    )}
-                  </div>
-
-                  {needsPhoto && (
-                    <div
-                      ref={dropRef}
-                      onDrop={handleDrop}
-                      onDragOver={e => e.preventDefault()}
-                      className="rounded-2xl border-2 border-dashed border-border/40 bg-card/30 p-8 text-center hover:border-pink-400/50 transition-colors cursor-pointer"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden"
-                        onChange={e => { if (e.target.files) addFiles(Array.from(e.target.files)); }} />
-                      <Upload className="w-10 h-10 mx-auto text-muted-foreground mb-3" />
-                      <p className="font-semibold mb-1">Drop photos here or click to browse</p>
-                      <p className="text-sm text-muted-foreground">
-                        {isTemplateStyle ? `Up to ${slideCount} photos` : "5-10 photos recommended"}
-                      </p>
-                    </div>
                   )}
+                </div>
 
-                  {previewUrls.length > 0 && (
-                    <div className="rounded-2xl border border-border/30 bg-card/50 p-5">
-                      <p className="font-semibold text-sm mb-3">{previewUrls.length} photo{previewUrls.length !== 1 ? "s" : ""} selected</p>
-                      <div className="flex flex-wrap gap-3">
-                        {previewUrls.map((url, i) => (
-                          <div key={i} className="relative group">
-                            <img src={url} alt="" className="w-20 h-20 object-cover rounded-lg" />
-                            {isTemplateStyle && (
-                              <div className="absolute top-1 left-1 bg-black/60 text-white text-xs rounded px-1 py-0.5">
-                                {i < slideCount ? `Slide ${i + 1}` : "Extra"}
-                              </div>
-                            )}
-                            <button onClick={() => removeFile(i)}
-                              className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <X className="w-3 h-3" />
-                            </button>
+                <button
+                  onClick={handleUploadAndArrange}
+                  disabled={uploading || files.length < 2}
+                  className="btn-shimmer w-full py-5 rounded-2xl text-lg font-bold flex items-center justify-center gap-3 disabled:opacity-50"
+                >
+                  {uploading ? <><Loader2 className="w-5 h-5 animate-spin" /> Uploading & arranging…</> : <><Wand2 className="w-5 h-5" /> Upload & Auto-Arrange</>}
+                </button>
+              </>
+            )}
+
+            {/* ── STEP 2: Layout ── */}
+            {step === "layout" && (
+              <>
+                <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
+                  <Label className="text-base font-semibold">Layout style</Label>
+                  <div className="space-y-3">
+                    {LAYOUTS.map((l) => (
+                      <button key={l.value} onClick={() => setLayout(l.value)}
+                        className={`w-full text-left p-4 rounded-xl border transition-all ${layout === l.value ? "border-pink-500 bg-pink-500/10" : "border-border/30 bg-accent/20 hover:border-pink-500/40"}`}>
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">{l.emoji}</span>
+                          <div>
+                            <p className="font-semibold text-sm">{l.label}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{l.desc}</p>
                           </div>
-                        ))}
-                        {needsPhoto && (
-                          <button onClick={() => fileInputRef.current?.click()}
-                            className="w-20 h-20 rounded-lg border-2 border-dashed border-border/40 flex items-center justify-center hover:border-pink-400/50 transition-colors">
-                            <ImagePlus className="w-5 h-5 text-muted-foreground" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <Button size="lg" className="w-full bg-pink-500 hover:bg-pink-600 text-white" onClick={handleUploadAndArrange} disabled={uploading || (needsPhoto && files.length === 0)}>
-                    {uploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Uploading…</> : needsPhoto ? "Upload & Continue →" : "Continue to Text →"}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  <Button variant="outline" onClick={handleReArrange} disabled={arranging} className="w-full gap-2">
+                    {arranging ? <><Loader2 className="w-4 h-4 animate-spin" />Re-arranging…</> : <><Wand2 className="w-4 h-4" />Apply Layout</>}
                   </Button>
-                </>
-              )}
+                </div>
 
-              {/* ── STEP 2: Arrange ── */}
-              {step === "arrange" && (
-                <>
-                  {isTemplateStyle && needsPhoto ? (
-                    <div
-                      ref={arrangePanelRef}
-                      onPointerMove={handleArrangePointerMove}
-                      onPointerUp={handleArrangePointerUp}
-                    >
-                      <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-5">
-                        <div>
-                          <h2 className="text-lg font-semibold mb-1">Adjust your photos</h2>
-                          <p className="text-sm text-muted-foreground">Drag each photo to reposition it within the frame. Use the zoom slider to crop in tighter.</p>
-                        </div>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setStep("upload")} className="flex-1">← Back</Button>
+                  <button onClick={() => setStep("text")}
+                    className="btn-shimmer flex-1 py-4 rounded-2xl text-base font-bold flex items-center justify-center gap-2">
+                    Next: Add Text →
+                  </button>
+                </div>
+              </>
+            )}
 
-                        {/* Slide selector tabs */}
-                        <div className="flex gap-2 flex-wrap">
-                          {Array.from({ length: slideCount }, (_, i) => (
-                            <button key={i} onClick={() => setActiveSlide(i)}
-                              className={`px-3 py-1.5 rounded-full text-sm font-semibold transition-colors ${activeSlide === i ? "bg-pink-500 text-white" : "bg-muted/50 text-muted-foreground hover:bg-muted"}`}>
-                              Slide {i + 1}
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* Active slide photo crop editor */}
-                        {Array.from({ length: slideCount }, (_, slideIdx) => {
-                          if (slideIdx !== activeSlide) return null;
-                          const p = placements[slideIdx] ?? defaultPlacement();
-                          const photoUrl = previewUrls[slideIdx % previewUrls.length] ?? previewUrls[0];
-                          const photoW = PREVIEW_TILE * p.zoom;
-                          const photoH = PREVIEW_TILE * p.zoom;
-                          const photoLeft = 150 - p.panX * photoW;
-                          const photoTop = 150 - p.panY * photoH;
-
-                          return (
-                            <div key={slideIdx} className="space-y-4">
-                              <div className="flex justify-center">
-                                <div
-                                  className="relative bg-muted rounded-xl overflow-hidden cursor-move select-none"
-                                  style={{ width: PREVIEW_TILE, height: PREVIEW_TILE }}
-                                >
-                                  {photoUrl ? (
-                                    <img
-                                      src={photoUrl}
-                                      alt={`Slide ${slideIdx + 1}`}
-                                      className="absolute pointer-events-none"
-                                      style={{ width: photoW, height: photoH, left: photoLeft, top: photoTop, objectFit: "cover" }}
-                                      onPointerDown={e => handleSlidePointerDown(e, slideIdx)}
-                                      draggable={false}
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">No photo</div>
-                                  )}
-
-                                  {/* Template style label overlay */}
-                                  <div className="absolute bottom-2 left-2 right-2 bg-black/50 rounded-lg p-2 pointer-events-none">
-                                    <p className="text-white text-xs text-center font-medium">{currentTemplate?.name}</p>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Zoom slider */}
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                  <Label className="text-sm">Zoom</Label>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs text-muted-foreground">{Math.round(p.zoom * 100)}%</span>
-                                    <button onClick={() => resetPlacement(slideIdx)} className="text-xs text-muted-foreground hover:text-pink-400 flex items-center gap-1 transition-colors">
-                                      <RotateCcw className="w-3 h-3" /> Reset
-                                    </button>
-                                  </div>
-                                </div>
-                                <Slider
-                                  min={100} max={300} step={5}
-                                  value={[Math.round(p.zoom * 100)]}
-                                  onValueChange={([v]) => setPlacementZoom(slideIdx, v / 100)}
-                                />
-                              </div>
-
-                              {/* Photo source selector (which uploaded photo for this slide) */}
-                              {previewUrls.length > 1 && (
-                                <div className="space-y-2">
-                                  <Label className="text-sm">Photo for this slide</Label>
-                                  <div className="flex gap-2 flex-wrap">
-                                    {previewUrls.slice(0, slideCount).map((url, pi) => (
-                                      <button key={pi} onClick={() => {
-                                        setCollageElements(prev => prev.map((el, i) => i === slideIdx ? { ...el, imageUrl: uploadedUrls[pi] ?? el.imageUrl } : el));
-                                        setPlacements(prev => prev.map((pl, i) => i === slideIdx ? defaultPlacement() : pl));
-                                      }}
-                                        className={`relative rounded-lg overflow-hidden ${collageElements[slideIdx]?.imageUrl === (uploadedUrls[pi] ?? "") ? "ring-2 ring-pink-500" : "opacity-60 hover:opacity-100"}`}>
-                                        <img src={url} alt="" className="w-14 h-14 object-cover" />
-                                      </button>
+            {/* ── STEP 3: Text overlays + Global style ── */}
+            {step === "text" && (
+              <>
+                {/* Per-slide text */}
+                <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
+                  <Label className="text-base font-semibold">Text overlays per slide</Label>
+                  <p className="text-sm text-muted-foreground">Slide 1 and the last slide have text on by default. Middle slides start clean.</p>
+                  {slides.map((slide, i) => (
+                    <div key={i} className="border border-border/20 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold">Slide {i + 1}</p>
+                        <button onClick={() => setSlideField(i, "hasText", !slide.hasText)}
+                          className={`relative w-10 h-5 rounded-full transition-colors ${slide.hasText ? "bg-pink-500" : "bg-gray-600"}`}>
+                          <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${slide.hasText ? "translate-x-5" : ""}`} />
+                        </button>
+                      </div>
+                      {slide.hasText && (
+                        <div className="space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Lead-in</Label>
+                              <Input value={slide.leadIn} onChange={(e) => setSlideField(i, "leadIn", e.target.value)} placeholder="My favourite" className="h-9 text-sm mt-1" />
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Title</Label>
+                              <Input value={slide.title} onChange={(e) => setSlideField(i, "title", e.target.value)} placeholder="Beachwear" className="h-9 text-sm mt-1" />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Tagline</Label>
+                              <Input value={slide.tagLine} onChange={(e) => setSlideField(i, "tagLine", e.target.value)} placeholder="inspiration" className="h-9 text-sm mt-1" />
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Doodle</Label>
+                              <Select value={slide.doodle} onValueChange={(v) => setSlideField(i, "doodle", v)}>
+                                <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+                                <SelectContent>{DOODLES.map((d) => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}</SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-xs text-muted-foreground">Position</Label>
+                              <Select value={slide.position} onValueChange={(v) => setSlideField(i, "position", v)}>
+                                <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+                                <SelectContent>{POSITIONS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          {/* Per-element colour + size overrides */}
+                          <details className="group">
+                            <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground select-none">Colour, size &amp; spacing overrides ▸</summary>
+                            <div className="mt-2 space-y-3 pl-1">
+                              {slide.leadIn && (
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs font-medium text-muted-foreground/80">Lead-in</Label>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <input type="color" value={slide.leadInColor ?? textColor} onChange={(e) => setSlideField(i, "leadInColor", e.target.value)} className="w-8 h-6 p-0.5 cursor-pointer rounded border border-border/40 bg-transparent shrink-0" />
+                                    {["#ffffff","#000000","#F5EEE3","#E91976","#ffd700"].map(c => (
+                                      <button key={c} onClick={() => setSlideField(i, "leadInColor", c)} style={{ background: c }} className="w-5 h-5 rounded-full border border-white/30 shrink-0 hover:scale-110 transition-transform" title={c} />
                                     ))}
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div className="space-y-0.5">
+                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Size</Label><span className="text-xs font-mono text-muted-foreground">{slide.leadInFontSize ?? 44}</span></div>
+                                      <input type="range" min={20} max={80} step={2} value={slide.leadInFontSize ?? 44} onChange={(e) => setSlideField(i, "leadInFontSize", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                    </div>
+                                    <div className="space-y-0.5">
+                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Spacing</Label><span className="text-xs font-mono text-muted-foreground">{slide.leadInLetterSpacing ?? 0}</span></div>
+                                      <input type="range" min={0} max={10} step={0.5} value={slide.leadInLetterSpacing ?? 0} onChange={(e) => setSlideField(i, "leadInLetterSpacing", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                    </div>
+                                    <div className="space-y-0.5">
+                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Line height</Label><span className="text-xs font-mono text-muted-foreground">{(slide.leadInLineHeight ?? 1.2).toFixed(1)}</span></div>
+                                      <input type="range" min={0.8} max={2.5} step={0.1} value={slide.leadInLineHeight ?? 1.2} onChange={(e) => setSlideField(i, "leadInLineHeight", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              {slide.title && (
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs font-medium text-muted-foreground/80">Title</Label>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <input type="color" value={slide.titleColor ?? textColor} onChange={(e) => setSlideField(i, "titleColor", e.target.value)} className="w-8 h-6 p-0.5 cursor-pointer rounded border border-border/40 bg-transparent shrink-0" />
+                                    {["#ffffff","#000000","#F5EEE3","#E91976","#ffd700"].map(c => (
+                                      <button key={c} onClick={() => setSlideField(i, "titleColor", c)} style={{ background: c }} className="w-5 h-5 rounded-full border border-white/30 shrink-0 hover:scale-110 transition-transform" title={c} />
+                                    ))}
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div className="space-y-0.5">
+                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Size</Label><span className="text-xs font-mono text-muted-foreground">{slide.titleFontSize ?? 76}</span></div>
+                                      <input type="range" min={32} max={120} step={2} value={slide.titleFontSize ?? 76} onChange={(e) => setSlideField(i, "titleFontSize", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                    </div>
+                                    <div className="space-y-0.5">
+                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Spacing</Label><span className="text-xs font-mono text-muted-foreground">{slide.titleLetterSpacing ?? 0}</span></div>
+                                      <input type="range" min={0} max={10} step={0.5} value={slide.titleLetterSpacing ?? 0} onChange={(e) => setSlideField(i, "titleLetterSpacing", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                    </div>
+                                    <div className="space-y-0.5">
+                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Line height</Label><span className="text-xs font-mono text-muted-foreground">{(slide.titleLineHeight ?? 0.88).toFixed(2)}</span></div>
+                                      <input type="range" min={0.6} max={2.0} step={0.05} value={slide.titleLineHeight ?? 0.88} onChange={(e) => setSlideField(i, "titleLineHeight", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              {slide.tagLine && (
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs font-medium text-muted-foreground/80">Tagline</Label>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <input type="color" value={slide.tagLineColor ?? textColor} onChange={(e) => setSlideField(i, "tagLineColor", e.target.value)} className="w-8 h-6 p-0.5 cursor-pointer rounded border border-border/40 bg-transparent shrink-0" />
+                                    {["#ffffff","#000000","#F5EEE3","#E91976","#ffd700"].map(c => (
+                                      <button key={c} onClick={() => setSlideField(i, "tagLineColor", c)} style={{ background: c }} className="w-5 h-5 rounded-full border border-white/30 shrink-0 hover:scale-110 transition-transform" title={c} />
+                                    ))}
+                                  </div>
+                                  <div className="grid grid-cols-3 gap-2">
+                                    <div className="space-y-0.5">
+                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Size</Label><span className="text-xs font-mono text-muted-foreground">{slide.tagLineFontSize ?? 40}</span></div>
+                                      <input type="range" min={20} max={80} step={2} value={slide.tagLineFontSize ?? 40} onChange={(e) => setSlideField(i, "tagLineFontSize", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                    </div>
+                                    <div className="space-y-0.5">
+                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Spacing</Label><span className="text-xs font-mono text-muted-foreground">{slide.tagLineLetterSpacing ?? 0}</span></div>
+                                      <input type="range" min={0} max={10} step={0.5} value={slide.tagLineLetterSpacing ?? 0} onChange={(e) => setSlideField(i, "tagLineLetterSpacing", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                    </div>
+                                    <div className="space-y-0.5">
+                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Line height</Label><span className="text-xs font-mono text-muted-foreground">{(slide.tagLineLineHeight ?? 1.1).toFixed(1)}</span></div>
+                                      <input type="range" min={0.8} max={2.5} step={0.1} value={slide.tagLineLineHeight ?? 1.1} onChange={(e) => setSlideField(i, "tagLineLineHeight", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                    </div>
                                   </div>
                                 </div>
                               )}
                             </div>
-                          );
-                        })}
-
-                        {/* Navigation between slides */}
-                        <div className="flex justify-between pt-2">
-                          <Button variant="outline" size="sm" onClick={() => setActiveSlide(i => Math.max(0, i - 1))} disabled={activeSlide === 0}>
-                            <ChevronLeft className="w-4 h-4 mr-1" /> Previous
-                          </Button>
-                          {activeSlide < slideCount - 1 ? (
-                            <Button variant="outline" size="sm" onClick={() => setActiveSlide(i => Math.min(slideCount - 1, i + 1))}>
-                              Next <ChevronRight className="w-4 h-4 ml-1" />
-                            </Button>
-                          ) : (
-                            <Button size="sm" className="bg-pink-500 hover:bg-pink-600 text-white" onClick={handleArrangeContinue}>
-                              Add text →
-                            </Button>
-                          )}
+                          </details>
                         </div>
-                      </div>
-
-                      {/* All slides at a glance */}
-                      <div className="rounded-2xl border border-border/30 bg-card/50 p-5">
-                        <p className="font-semibold text-sm mb-3">All slides</p>
-                        <div className="flex gap-3 overflow-x-auto pb-2">
-                          {Array.from({ length: slideCount }, (_, i) => {
-                            const p = placements[i] ?? defaultPlacement();
-                            const url = previewUrls[i % previewUrls.length] ?? previewUrls[0];
-                            const sz = 90;
-                            const photoW = sz * p.zoom;
-                            const photoLeft = sz / 2 - p.panX * photoW;
-                            const photoTop = sz / 2 - p.panY * photoW;
-                            return (
-                              <button key={i} onClick={() => setActiveSlide(i)}
-                                className={`relative flex-shrink-0 rounded-xl overflow-hidden transition-all ${activeSlide === i ? "ring-2 ring-pink-500" : "ring-1 ring-border/20 opacity-70 hover:opacity-100"}`}
-                                style={{ width: sz, height: sz }}>
-                                {url && <img src={url} alt="" className="absolute pointer-events-none" style={{ width: photoW, height: photoW, left: photoLeft, top: photoTop, objectFit: "cover" }} />}
-                                <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs rounded px-1">{i + 1}</div>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <Button size="lg" className="w-full bg-pink-500 hover:bg-pink-600 text-white" onClick={handleArrangeContinue}>
-                        Looks good, add text →
-                      </Button>
+                      )}
                     </div>
-                  ) : (
-                    /* Seamless layout arrange view */
-                    <>
-                      <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
-                        <h2 className="text-lg font-semibold">Collage preview</h2>
-                        <p className="text-sm text-muted-foreground">Your photos are arranged across the canvas. The preview below shows how they bridge across slide seams.</p>
-                        <div
-                          ref={previewRef}
-                          className="relative overflow-hidden rounded-xl bg-muted select-none"
-                          style={{ width: PREVIEW_W, height: PREVIEW_H }}
-                          onPointerMove={onPreviewPointerMove}
-                          onPointerUp={onPreviewPointerUp}
-                        >
-                          {collageElements.map((el, i) => {
-                            const elLeft = el.x * scale;
-                            const elTop = el.y * scale;
-                            const elW = el.width * scale;
-                            const elH = el.height * scale;
-                            return (
-                              <div key={i} className="absolute" style={{ left: elLeft, top: elTop, width: elW, height: elH, transform: `rotate(${el.rotation}deg)`, zIndex: el.zIndex }}>
-                                <img src={el.imageUrl} alt="" className="w-full h-full object-cover" style={{ borderRadius: el.hasBorder ? 4 : 0, border: el.hasBorder ? "2px solid white" : "none" }} />
-                              </div>
-                            );
-                          })}
-                          {logo && (
-                            <img src={logo.dataUrl} alt="Logo"
-                              className="absolute cursor-move"
-                              style={{ left: `${logo.x * 100}%`, top: `${logo.y * 100}%`, height: `${logo.scale * 8}%`, transform: "translate(-50%, -50%)", filter: "drop-shadow(0 1px 3px rgba(0,0,0,.5))", zIndex: 99 }}
-                              onPointerDown={startLogoDrag}
-                            />
-                          )}
-                        </div>
-                      </div>
-                      <Button size="lg" className="w-full bg-pink-500 hover:bg-pink-600 text-white" onClick={() => setStep("text")}>
-                        Add text →
-                      </Button>
-                    </>
-                  )}
-                </>
-              )}
+                  ))}
+                </div>
 
-              {/* ── STEP 3: Text ── */}
-              {step === "text" && (
-                <>
-                  <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
-                    <h2 className="text-lg font-semibold">Global settings</h2>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <Label className="text-sm">Font</Label>
-                        <Select value={scriptFont} onValueChange={setScriptFont}>
-                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            {["Script", "Serif", "Sans"].map(cat => (
-                              <React.Fragment key={cat}>
-                                <div className="px-2 py-1 text-xs text-muted-foreground font-semibold uppercase tracking-wide">{cat}</div>
-                                {SCRIPT_FONTS.filter(f => f.cat === cat).map(f => (
-                                  <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
-                                ))}
-                              </React.Fragment>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-sm">Text colour</Label>
-                        <input type="color" value={textColor} onChange={e => setTextColor(e.target.value)} className="h-9 w-full rounded-md border border-border/30 bg-card cursor-pointer" />
-                      </div>
+                {/* Global style */}
+                <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
+                  <Label className="text-base font-semibold">Global style</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-sm text-muted-foreground">Script font</Label>
+                      <Select value={scriptFont} onValueChange={setScriptFont}>
+                        <SelectTrigger className="h-10">
+                          <SelectValue><span style={{ fontFamily: `'${scriptFont}', cursive` }}>{scriptFont}</span></SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {SCRIPT_FONTS.map((f) => <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: `'${f.value}', cursive` }}>{f.label}</span></SelectItem>)}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-sm">Watermark (optional)</Label>
-                      <Input placeholder="e.g. @yourbrand" value={watermark} onChange={e => setWatermark(e.target.value)} />
+                      <Label className="text-sm text-muted-foreground">Text colour</Label>
+                      <div className="flex gap-2 items-center">
+                        <Input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-10 h-10 p-0.5 cursor-pointer" />
+                        <Input type="text" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="flex-1 h-10 font-mono text-sm" />
+                      </div>
                     </div>
                   </div>
-
-                  {/* Per-slide text */}
-                  <div className="space-y-4">
-                    {slides.map((slide, i) => (
-                      <div key={i} className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-semibold">Slide {i + 1}</h3>
-                          <label className="flex items-center gap-2 cursor-pointer">
-                            <span className="text-sm text-muted-foreground">Add text</span>
-                            <div className={`w-10 h-5 rounded-full transition-colors relative ${slide.hasText ? "bg-pink-500" : "bg-muted"}`}
-                              onClick={() => setSlideField(i, "hasText", !slide.hasText)}>
-                              <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${slide.hasText ? "translate-x-5" : "translate-x-0.5"}`} />
-                            </div>
-                          </label>
+                  <div className="space-y-1">
+                    <Label className="text-sm text-muted-foreground">Watermark — e.g. @youraccount</Label>
+                    <Input value={watermark} onChange={(e) => setWatermark(e.target.value)} placeholder="@youraccount" className="h-10" />
+                  </div>
+                  {/* Logo */}
+                  <div className="space-y-2 pt-2 border-t border-border/20">
+                    <Label className="text-sm text-muted-foreground">Logo (optional)</Label>
+                    {logo ? (
+                      <div className="flex items-center gap-3">
+                        <img src={logo.dataUrl} alt="Logo" className="h-12 object-contain rounded bg-white/5 p-1" />
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <Label className="text-xs text-muted-foreground">Size</Label>
+                            <span className="text-xs font-mono text-muted-foreground">{Math.round(logo.scale * 100)}%</span>
+                          </div>
+                          <input type="range" min={0.3} max={3} step={0.05} value={logo.scale} onChange={(e) => setLogo((l) => l ? { ...l, scale: Number(e.target.value) } : l)} className="w-full accent-pink-500 h-1.5" />
+                          <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                            <label>X <input type="range" min={0} max={1} step={0.01} value={logo.x} onChange={(e) => setLogo((l) => l ? { ...l, x: Number(e.target.value) } : l)} className="w-full accent-pink-500 h-1.5 mt-0.5" /></label>
+                            <label>Y <input type="range" min={0} max={1} step={0.01} value={logo.y} onChange={(e) => setLogo((l) => l ? { ...l, y: Number(e.target.value) } : l)} className="w-full accent-pink-500 h-1.5 mt-0.5" /></label>
+                          </div>
                         </div>
-                        {slide.hasText && (
-                          <div className="space-y-3">
-                            <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground">Heading</Label>
-                              <Input placeholder="Main heading…" value={slide.title} onChange={e => setSlideField(i, "title", e.target.value)} />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground">Body text</Label>
-                              <Input placeholder="Supporting text…" value={slide.tagLine} onChange={e => setSlideField(i, "tagLine", e.target.value)} />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground">Sub-text (smaller, below)</Label>
-                              <Input placeholder="Optional sub-text…" value={slide.leadIn} onChange={e => setSlideField(i, "leadIn", e.target.value)} />
-                            </div>
-                            {!isTemplateStyle && (
-                              <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                  <Label className="text-xs text-muted-foreground">Position</Label>
-                                  <Select value={slide.position} onValueChange={v => setSlideField(i, "position", v)}>
-                                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                                    <SelectContent>{POSITIONS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
-                                  </Select>
-                                </div>
-                                <div className="space-y-1">
-                                  <Label className="text-xs text-muted-foreground">Doodle</Label>
-                                  <Select value={slide.doodle} onValueChange={v => setSlideField(i, "doodle", v)}>
-                                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                                    <SelectContent>{DOODLES.map(d => <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>)}</SelectContent>
-                                  </Select>
-                                </div>
-                              </div>
-                            )}
+                        <Button variant="ghost" size="sm" onClick={() => setLogo(null)} className="text-muted-foreground shrink-0"><X className="w-4 h-4" /></Button>
+                      </div>
+                    ) : (
+                      <button onClick={() => logoFileRef.current?.click()}
+                        className="w-full border border-dashed border-border/40 rounded-xl py-3 text-sm text-muted-foreground hover:border-pink-500/40 transition-colors flex items-center justify-center gap-2">
+                        <Upload className="w-4 h-4" /> Upload logo (PNG with transparency)
+                      </button>
+                    )}
+                    <input ref={logoFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleLogoFile(f); }} />
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setStep("layout")} className="flex-1">← Back</Button>
+                  <button
+                    onClick={handleGenerate}
+                    disabled={generating}
+                    className="btn-shimmer flex-1 py-5 rounded-2xl text-lg font-bold flex items-center justify-center gap-3 disabled:opacity-50"
+                  >
+                    {generating ? <><Loader2 className="w-5 h-5 animate-spin" />Rendering slides…</> : <><Wand2 className="w-5 h-5" />Generate Slides</>}
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ── STEP 4: Result ── */}
+            {step === "result" && renderedUrls.length > 0 && (
+              <>
+                <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">{renderedUrls.length} slides ready</Label>
+                    <Button variant="outline" size="sm" onClick={() => setStep("text")}>← Edit text</Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {renderedUrls.map((url, i) => (
+                      <div key={i} className="relative group cursor-pointer" onClick={() => setLightboxIdx(i)}>
+                        <img src={url} alt={`Slide ${i + 1}`} className="w-full aspect-square object-cover rounded-xl" />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <ZoomIn className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-0.5 rounded-full">Slide {i + 1}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <Button onClick={downloadZip} className="flex-1 py-5 text-base font-bold gap-2 rounded-2xl">
+                    <Download className="w-5 h-5" /> Download ZIP
+                  </Button>
+                  <Button variant="outline" className="flex-1 py-5 text-base font-bold gap-2 rounded-2xl"
+                    onClick={async () => {
+                      if (!renderedUrls.length) { toast.error("Generate slides first"); return; }
+                      const id = toast.loading("Saving to library…");
+                      try {
+                        const r = await fetch(`${BASE}/api/library`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            clientName: presets.find((p) => p.id === selectedPresetId)?.name ?? "",
+                            postType: "seamless",
+                            caption: slides[0]?.title || "Seamless Carousel",
+                            mediaUrls: renderedUrls,
+                            thumbnailUrl: renderedUrls[0] ?? "",
+                            metadata: { slideCount: renderedUrls.length, layoutStyle: layout },
+                          }),
+                        });
+                        if (!r.ok) throw new Error("Save failed");
+                        toast.success("Saved to library", { id });
+                      } catch (e: any) { toast.error(e.message || "Save failed", { id }); }
+                    }}
+                  >
+                    <BookOpen className="w-5 h-5" /> Save to Library
+                  </Button>
+                </div>
+
+                {presets.length > 1 && (
+                  <Select value={selectedPresetId?.toString() ?? ""} onValueChange={(v) => setSelectedPresetId(Number(v))}>
+                    <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Select client preset" /></SelectTrigger>
+                    <SelectContent>{presets.map((p) => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                )}
+
+                <div>
+                  <label className="text-xs font-medium text-zinc-400 block mb-1">First comment (optional)</label>
+                  <textarea
+                    value={firstComment}
+                    onChange={(e) => setFirstComment(e.target.value)}
+                    placeholder="Which slide surprised you most? Comment the number below 👇"
+                    rows={2}
+                    className="w-full bg-zinc-800/60 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 resize-none focus:outline-none focus:ring-1 focus:ring-zinc-500"
+                  />
+                  <p className="text-xs text-zinc-600 mt-1">Posted 35 seconds after publishing to Instagram.</p>
+                </div>
+                <div className="flex gap-3">
+                  <Button variant="outline" onClick={() => setMusicPickerOpen(true)} className={`flex-1 gap-2 ${musicTrack ? "border-green-500/40 text-green-300 hover:bg-green-950/30" : ""}`}>
+                    <Music className="w-4 h-4" />{musicTrack ? musicTrack.name.slice(0, 18) : "Add music"}
+                  </Button>
+                  <Button variant="outline" onClick={handleSchedule} className="flex-1 gap-2">
+                    <CalendarDays className="w-4 h-4" /> Schedule
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 gap-2"
+                    onClick={async () => {
+                      if (!renderedUrls.length) { toast.error("Generate slides first"); return; }
+                      if (!selectedPresetId) { toast.error("Select a client preset first"); return; }
+                      try {
+                        const posts = [{
+                          title: slides[0]?.title || "Seamless Carousel",
+                          imageUrls: renderedUrls,
+                          caption: "Seamless carousel",
+                          musicTrack: musicTrack || null,
+                          firstComment: firstComment || undefined,
+                        }];
+                        const r = await fetch(`${BASE}/api/meta/push`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ posts, presetId: selectedPresetId, postType: "carousel" }),
+                        });
+                        if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error((e as any).error || "Post failed"); }
+                        toast.success("Posted to Instagram");
+                      } catch (e: any) { toast.error(e.message || "Post failed"); }
+                    }}
+                  >
+                    <Send className="w-4 h-4" /> Post to IG
+                  </Button>
+                </div>
+
+                <Button variant="outline" onClick={() => {
+                  setStep("upload");
+                  setFiles([]); setPreviewUrls([]); setUploadedUrls([]);
+                  setCollageElements([]); setRenderedUrls([]); setCarouselId(null);
+                  setSlides([defaultSlide(0), defaultSlide(1), defaultSlide(2)]);
+                  setSlideCount(3);
+                }} className="w-full">
+                  Start over
+                </Button>
+              </>
+            )}
+          </div>
+
+          {/* Right panel: live preview */}
+          <div className="hidden lg:flex flex-col gap-3 shrink-0 sticky top-24 self-start" style={{ width: PREVIEW_W }}>
+            <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground text-center">Preview</p>
+
+            <div className="rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 bg-muted/20"
+              style={{ width: PREVIEW_W, height: PREVIEW_H }}>
+              {collageElements.length > 0 ? (
+                <div
+                  ref={previewRef}
+                  className="relative w-full h-full"
+                  onPointerMove={onPreviewPointerMove}
+                  onPointerUp={onPreviewPointerUp}
+                  onPointerLeave={onPreviewPointerUp}
+                  style={{ cursor: logoDragging ? "grabbing" : undefined }}
+                >
+                  {/* CSS-based collage preview — shows the layout at scale */}
+                  {[...collageElements].sort((a, b) => a.zIndex - b.zIndex).map((el, i) => {
+                    const scaledX = el.x * scale;
+                    const scaledY = el.y * scale;
+                    const scaledW = el.width * scale;
+                    const scaledH = el.height * scale;
+                    return (
+                      <div key={i} style={{
+                        position: "absolute",
+                        left: scaledX,
+                        top: scaledY,
+                        width: scaledW,
+                        height: scaledH,
+                        transform: `rotate(${el.rotation}deg)`,
+                        transformOrigin: "center center",
+                        zIndex: el.zIndex,
+                        boxShadow: el.hasBorder ? "0 2px 8px rgba(0,0,0,0.4)" : undefined,
+                        border: el.hasBorder ? "2px solid white" : undefined,
+                        overflow: "hidden",
+                        borderRadius: 2,
+                        filter: el.isBackground ? "brightness(0.75)" : undefined,
+                      }}>
+                        <img src={previewUrls[uploadedUrls.indexOf(el.imageUrl)] ?? el.imageUrl}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          crossOrigin="anonymous" />
+                      </div>
+                    );
+                  })}
+                  {/* Slide seam lines */}
+                  {Array.from({ length: slideCount - 1 }).map((_, i) => (
+                    <div key={i} style={{
+                      position: "absolute",
+                      left: Math.round((i + 1) * (PREVIEW_W / slideCount)),
+                      top: 0,
+                      width: 1,
+                      height: PREVIEW_H,
+                      background: "rgba(255,255,255,0.25)",
+                      zIndex: 100,
+                    }} />
+                  ))}
+
+                  {/* Text overlays per slide */}
+                  {slides.map((slide, i) => {
+                    if (!slide.hasText || (!slide.title && !slide.leadIn && !slide.tagLine)) return null;
+                    const slideW = PREVIEW_W / slideCount;
+                    const slideLeft = i * slideW;
+                    const pos = slide.position ?? "bottom-left";
+                    const isLeft = pos.includes("left") || pos === "center";
+                    const isTop = pos.includes("top");
+                    const isCenter = pos === "center";
+                    const titleFs = Math.round((slide.titleFontSize ?? 76) * scale);
+                    const leadFs = Math.round((slide.leadInFontSize ?? 44) * scale);
+                    const tagFs = Math.round((slide.tagLineFontSize ?? 40) * scale);
+                    return (
+                      <div key={i} style={{
+                        position: "absolute",
+                        left: slideLeft + (isCenter ? 0 : isLeft ? slideW * 0.07 : undefined as any),
+                        right: !isLeft && !isCenter ? (PREVIEW_W - slideLeft - slideW) + slideW * 0.07 : undefined,
+                        width: isCenter ? slideW : undefined,
+                        top: isTop ? PREVIEW_H * 0.09 : undefined,
+                        bottom: !isTop ? PREVIEW_H * 0.11 : undefined,
+                        zIndex: 200,
+                        textAlign: isCenter ? "center" : isLeft ? "left" : "right",
+                        pointerEvents: "none",
+                      }}>
+                        {slide.leadIn && (
+                          <div style={{ fontFamily: `'${scriptFont}', cursive`, fontSize: leadFs, color: slide.leadInColor ?? textColor, textShadow: "0 1px 3px rgba(0,0,0,0.6)", lineHeight: slide.leadInLineHeight ?? 1.2, letterSpacing: slide.leadInLetterSpacing ?? 0, whiteSpace: "nowrap" }}>
+                            {slide.leadIn}
+                          </div>
+                        )}
+                        {slide.title && (
+                          <div style={{ fontFamily: `'${scriptFont}', cursive`, fontSize: titleFs, color: slide.titleColor ?? textColor, textShadow: "0 1px 4px rgba(0,0,0,0.7)", lineHeight: slide.titleLineHeight ?? 1.1, letterSpacing: slide.titleLetterSpacing ?? 0, whiteSpace: "nowrap" }}>
+                            {slide.title}
+                          </div>
+                        )}
+                        {slide.tagLine && (
+                          <div style={{ fontFamily: `'${scriptFont}', cursive`, fontSize: tagFs, color: slide.tagLineColor ?? textColor, textShadow: "0 1px 3px rgba(0,0,0,0.6)", lineHeight: slide.tagLineLineHeight ?? 1.2, letterSpacing: slide.tagLineLetterSpacing ?? 0, whiteSpace: "nowrap", opacity: 0.85 }}>
+                            {slide.tagLine}
                           </div>
                         )}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
 
-                  {/* Logo */}
-                  <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-3">
-                    <h3 className="font-semibold text-sm">Logo (optional)</h3>
-                    <input ref={logoFileRef} type="file" accept="image/*" className="hidden" onChange={e => { if (e.target.files?.[0]) handleLogoFile(e.target.files[0]); }} />
-                    {logo ? (
-                      <div className="flex items-center gap-3">
-                        <img src={logo.dataUrl} alt="Logo" className="h-10 object-contain rounded" />
-                        <div className="flex-1 space-y-2">
-                          <Label className="text-xs text-muted-foreground">Scale</Label>
-                          <Slider min={30} max={200} step={5} value={[Math.round(logo.scale * 100)]} onValueChange={([v]) => setLogo(l => l ? { ...l, scale: v / 100 } : l)} />
-                        </div>
-                        <button onClick={() => setLogo(null)} className="text-muted-foreground hover:text-red-400 transition-colors"><X className="w-4 h-4" /></button>
-                      </div>
-                    ) : (
-                      <Button variant="outline" size="sm" onClick={() => logoFileRef.current?.click()}>
-                        <ImagePlus className="w-4 h-4 mr-2" /> Add logo
-                      </Button>
-                    )}
-                  </div>
-
-                  {/* Music */}
-                  <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-3">
-                    <h3 className="font-semibold text-sm">Music (optional)</h3>
-                    {musicTrack ? (
-                      <div className="flex items-center gap-2">
-                        <MusicTrackBadge track={musicTrack} onRemove={() => setMusicTrack(null)} />
-                      </div>
-                    ) : (
-                      <Button variant="outline" size="sm" onClick={() => setMusicPickerOpen(true)}>
-                        <Music className="w-4 h-4 mr-2" /> Pick music
-                      </Button>
-                    )}
-                  </div>
-
-                  <Button size="lg" className="w-full bg-pink-500 hover:bg-pink-600 text-white" onClick={handleGenerate} disabled={generating}>
-                    {generating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Rendering slides…</> : "Generate slides →"}
-                  </Button>
-                </>
-              )}
-
-              {/* ── STEP 4: Result ── */}
-              {step === "result" && (
-                <>
-                  <div className="rounded-2xl border border-border/30 bg-card/50 p-6">
-                    <h2 className="text-lg font-semibold mb-4">Your slides are ready</h2>
-                    <div className="grid grid-cols-3 gap-3">
-                      {renderedUrls.map((url, i) => (
-                        <button key={i} onClick={() => setLightboxIdx(i)} className="relative rounded-xl overflow-hidden hover:ring-2 hover:ring-pink-500 transition-all">
-                          <img src={url} alt={`Slide ${i + 1}`} className="w-full aspect-square object-cover" />
-                          <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs rounded px-1">{i + 1}</div>
-                        </button>
-                      ))}
+                  {/* Logo overlay in preview — draggable */}
+                  {logo && Array.from({ length: slideCount }).map((_, i) => {
+                    const slideW = PREVIEW_W / slideCount;
+                    const logoH = Math.round(PREVIEW_H * 0.12 * logo.scale);
+                    const logoW = Math.round(logoH * logo.ar);
+                    return (
+                      <img
+                        key={i}
+                        src={logo.dataUrl}
+                        alt="logo"
+                        onPointerDown={i === 0 ? startLogoDrag : undefined}
+                        style={{
+                          position: "absolute",
+                          left: i * slideW + logo.x * slideW - logoW / 2,
+                          top: logo.y * PREVIEW_H - logoH / 2,
+                          width: logoW,
+                          height: logoH,
+                          objectFit: "contain",
+                          opacity: 0.85,
+                          zIndex: 210,
+                          cursor: i === 0 ? (logoDragging ? "grabbing" : "grab") : "default",
+                          userSelect: "none",
+                          touchAction: "none",
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              ) : previewUrls.length > 0 ? (
+                <div className="flex h-full">
+                  {previewUrls.slice(0, Math.min(previewUrls.length, 3)).map((url, i) => (
+                    <div key={i} className="flex-1 relative overflow-hidden border-r border-white/10 last:border-0">
+                      <img src={url} alt="" className="w-full h-full object-cover" />
                     </div>
-                  </div>
-
-                  <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-3">
-                    <h3 className="font-semibold text-sm">First comment (optional)</h3>
-                    <Input placeholder="Caption or first comment…" value={firstComment} onChange={e => setFirstComment(e.target.value)} />
-                  </div>
-
-                  {/* Preset */}
-                  {presets.length > 0 && (
-                    <div className="rounded-2xl border border-border/30 bg-card/50 p-5 space-y-3">
-                      <h3 className="font-semibold text-sm">Post as</h3>
-                      <Select value={selectedPresetId?.toString() ?? ""} onValueChange={v => setSelectedPresetId(Number(v))}>
-                        <SelectTrigger><SelectValue placeholder="Select account…" /></SelectTrigger>
-                        <SelectContent>{presets.map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}</SelectContent>
-                      </Select>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex h-full">
+                  {Array.from({ length: slideCount }).map((_, i) => (
+                    <div key={i} className="flex-1 bg-muted/30 border-r border-white/10 last:border-0 flex items-center justify-center">
+                      <span className="text-muted-foreground/40 text-sm font-bold">{i + 1}</span>
                     </div>
-                  )}
-
-                  <div className="flex gap-3 flex-wrap">
-                    <Button variant="outline" className="flex-1" onClick={downloadZip}>
-                      <Download className="w-4 h-4 mr-2" /> Download ZIP
-                    </Button>
-                    <Button variant="outline" className="flex-1" onClick={() => setMusicPickerOpen(true)}>
-                      <Music className="w-4 h-4 mr-2" /> {musicTrack ? "Change music" : "Add music"}
-                    </Button>
-                    <Button className="flex-1 bg-pink-500 hover:bg-pink-600 text-white" onClick={handleSchedule}>
-                      <Send className="w-4 h-4 mr-2" /> Schedule / Post
-                    </Button>
-                  </div>
-
-                  <button onClick={() => { setStep("template"); setSelectedTemplate(""); setFiles([]); setPreviewUrls([]); setUploadedUrls([]); setCollageElements([]); setRenderedUrls([]); setCarouselId(null); }}
-                    className="text-sm text-muted-foreground hover:text-pink-400 transition-colors w-full text-center pt-2">
-                    Start a new carousel
-                  </button>
-                </>
+                  ))}
+                </div>
               )}
             </div>
 
-            {/* ── RIGHT PANEL ── */}
-            <div className="w-72 flex-shrink-0 space-y-4 sticky top-24">
-              <div className="rounded-2xl border border-border/30 bg-card/50 p-4 space-y-3">
-                <p className="text-sm font-semibold text-muted-foreground">Style</p>
-                <div className="relative rounded-xl overflow-hidden">
-                  <img
-                    src={import.meta.env.BASE_URL.replace(/\/$/, "") + (currentTemplate?.thumb ?? "/carousel-templates/full-fade.jpg")}
-                    alt={currentTemplate?.name ?? ""}
-                    className="w-full h-40 object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <p className="absolute bottom-3 left-3 text-white font-semibold text-sm">{currentTemplate?.name}</p>
+            <p className="text-xs text-muted-foreground text-center leading-snug">
+              {collageElements.length > 0
+                ? `${collageElements.length} elements arranged — white lines show slide seams`
+                : "Upload photos to see the collage preview"}
+            </p>
+
+            {renderedUrls.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-center text-pink-400">Rendered slides</p>
+                <div className="flex gap-1 rounded-xl overflow-hidden ring-1 ring-white/10">
+                  {renderedUrls.map((url, i) => (
+                    <img key={i} src={url} alt={`Slide ${i + 1}`}
+                      className="flex-1 aspect-square object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => setLightboxIdx(i)} />
+                  ))}
                 </div>
-                <button onClick={() => setStep("template")} className="text-xs text-muted-foreground hover:text-pink-400 transition-colors w-full text-center">
-                  ← Change style
-                </button>
+                <p className="text-xs text-muted-foreground text-center">Click to view full size</p>
               </div>
-
-              {step === "result" && renderedUrls.length > 0 && (
-                <div className="rounded-2xl border border-border/30 bg-card/50 p-4 space-y-2">
-                  <p className="text-sm font-semibold text-muted-foreground">Preview</p>
-                  <div className="space-y-2">
-                    {renderedUrls.slice(0, 4).map((url, i) => (
-                      <button key={i} onClick={() => setLightboxIdx(i)} className="block w-full rounded-lg overflow-hidden hover:ring-2 hover:ring-pink-500 transition-all">
-                        <img src={url} alt="" className="w-full aspect-square object-cover" />
-                      </button>
-                    ))}
-                    {renderedUrls.length > 4 && (
-                      <p className="text-xs text-muted-foreground text-center">+{renderedUrls.length - 4} more — click a slide to view all</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {step !== "result" && previewUrls.length > 0 && (
-                <div className="rounded-2xl border border-border/30 bg-card/50 p-4 space-y-2">
-                  <p className="text-sm font-semibold text-muted-foreground">Photos uploaded</p>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {previewUrls.map((url, i) => (
-                      <img key={i} src={url} alt="" className="w-full aspect-square object-cover rounded-lg" />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            )}
           </div>
-        )}
+        </div>
       </main>
     </div>
   );
