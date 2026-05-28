@@ -503,47 +503,123 @@ async function renderBoldEditorial(slide: SeamlessSlide): Promise<Buffer> {
 }
 
 // ── Dark Doodle ───────────────────────────────────────────────────────────────
-async function renderDarkDoodle(buf: Buffer, el: CollageElement, slide: SeamlessSlide, font: string, textColor: string): Promise<Buffer> {
+async function renderDarkDoodle(buf: Buffer, el: CollageElement, slide: SeamlessSlide, font: string, textColor: string, slideIdx: number): Promise<Buffer> {
   const S = SLIDE_SIZE;
   const title = slide.title || "";
-  const body = slide.tagLine || "";
-  const sub = slide.leadIn || "";
-  const photoSize = 700;
-  const photoX = (S - photoSize) / 2, photoY = (S - photoSize) / 2 + 30;
-  const photoCrop = await resizeWithPlacement(buf, el);
-  const photoResized = await sharp(photoCrop).resize(photoSize, photoSize, { fit: "cover" }).png().toBuffer();
-  const titleLines = wrapLines(title, 24);
-  const bodyLines = wrapLines(body, 34);
-  const titleFs = title.length > 20 ? 56 : 68;
-  let tY = 105;
+  const body  = slide.tagLine || "";
+  const sub   = slide.leadIn || "";
+
+  // ── Per-slide layout variant (position + tilt) ───────────────────────────────
+  const variants = [
+    { polW: 660, polH: 680, cx: S / 2,       cy: S / 2 + 10,  rot: -3 },
+    { polW: 650, polH: 680, cx: S / 2 + 22,  cy: S / 2 + 5,   rot:  2 },
+    { polW: 660, polH: 680, cx: S / 2 - 18,  cy: S / 2 - 5,   rot: -1 },
+  ];
+  const { polW, polH, cx, cy, rot } = variants[slideIdx % 3];
+  const polX = Math.round(cx - polW / 2);
+  const polY = Math.round(cy - polH / 2);
+
+  // Polaroid internal dimensions
+  const imgPad    = 14;   // white border on three sides
+  const bottomPad = 74;   // wider white strip at bottom (polaroid feel)
+  const imgW = polW - imgPad * 2;
+  const imgH = polH - imgPad * 2 - bottomPad;
+
+  // ── Photo ────────────────────────────────────────────────────────────────────
+  const photoCrop   = await resizeWithPlacement(buf, el);
+  const photoResized = await sharp(photoCrop).resize(imgW, imgH, { fit: "cover" }).png().toBuffer();
+  const photoB64    = photoResized.toString("base64");
+
+  // ── Title — editorial italic serif, above the card ──────────────────────────
+  const titleLines = wrapLines(title, 20);
+  const titleFs    = title.length > 22 ? 54 : title.length > 14 ? 62 : 70;
+  const lineH      = titleFs * 1.18;
+  let tY = polY - 52 - (titleLines.length - 1) * lineH;
   let titleSvg = "";
   for (const l of titleLines) {
-    titleSvg += `<text x="${S / 2}" y="${tY}" font-family="Georgia, serif" font-size="${titleFs}" fill="${escXml(textColor)}" text-anchor="middle" filter="url(#ts)">${escXml(l)}</text>`;
-    tY += titleFs * 1.1;
+    titleSvg += `<text x="${S / 2}" y="${tY}" font-family="Georgia, serif" font-style="italic" font-size="${titleFs}" fill="rgba(255,255,255,0.93)" text-anchor="middle" filter="url(#ts)" letter-spacing="1">${escXml(l)}</text>`;
+    tY += lineH;
   }
-  const bodyRev = [...bodyLines].reverse();
-  let bY = S - 185;
+
+  // ── Body — below the card ────────────────────────────────────────────────────
+  const bodyLines = wrapLines(body, 28);
+  let bY = polY + polH + 60;
   let bodySvg = "";
-  for (const l of bodyRev) {
-    bodySvg = `<text x="${S / 2}" y="${bY}" font-family="Arial, sans-serif" font-size="34" fill="rgba(255,255,255,0.7)" text-anchor="middle">${escXml(l)}</text>` + bodySvg;
-    bY -= 48;
+  for (const l of bodyLines) {
+    bodySvg += `<text x="${S / 2}" y="${bY}" font-family="Georgia, serif" font-size="33" fill="rgba(255,255,255,0.72)" text-anchor="middle" font-style="italic">${escXml(l)}</text>`;
+    bY += 48;
   }
-  const subSvg = sub ? `<text x="${S / 2}" y="${S - 68}" font-family="Georgia, serif" font-size="30" fill="rgba(255,255,255,0.5)" text-anchor="middle" font-style="italic">${escXml(sub)}</text>` : "";
+  const subSvg = sub
+    ? `<text x="${S / 2}" y="${bY + 16}" font-family="Georgia, serif" font-size="27" fill="rgba(255,255,255,0.48)" text-anchor="middle" font-style="italic">${escXml(sub)}</text>`
+    : "";
+
+  // ── Chalk doodle accents — SVG paths only, 3 sets cycling per slide ──────────
+  // L/R/T/B = edges of the polaroid card (before rotation)
+  const L = polX, R = polX + polW, T = polY, B = polY + polH;
+
+  // Set 0: curved arrow (TL) + cross-sparkle (TR) + s-swash (BL) + curl (BR)
+  const d0 = `
+    <path d="M ${L-82} ${T+98} C ${L-54} ${T+46} ${L-16} ${T+27} ${L+26} ${T+38}" fill="none" stroke="rgba(255,255,255,0.52)" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M ${L+26} ${T+38} L ${L+13} ${T+24} M ${L+26} ${T+38} L ${L+15} ${T+53}" fill="none" stroke="rgba(255,255,255,0.52)" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M ${R+46} ${T+44} L ${R+46} ${T+14} M ${R+30} ${T+29} L ${R+62} ${T+29}" fill="none" stroke="rgba(255,255,255,0.42)" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M ${R+38} ${T+21} L ${R+54} ${T+37} M ${R+54} ${T+21} L ${R+38} ${T+37}" fill="none" stroke="rgba(255,255,255,0.42)" stroke-width="1.8" stroke-linecap="round"/>
+    <path d="M ${L-84} ${B-62} Q ${L-52} ${B-102} ${L-14} ${B-82} Q ${L+14} ${B-60} ${L-8} ${B-40}" fill="none" stroke="rgba(255,255,255,0.38)" stroke-width="2.0" stroke-linecap="round"/>
+    <path d="M ${R+46} ${B-54} Q ${R+80} ${B-44} ${R+88} ${B-20} Q ${R+86} ${B-2} ${R+60} ${B}" fill="none" stroke="rgba(255,255,255,0.38)" stroke-width="1.9" stroke-linecap="round"/>`;
+
+  // Set 1: teardrop-swirl (TL) + dot-cluster (TR) + 4-pt sparkle (BL) + arc-curl (BR)
+  const d1 = `
+    <path d="M ${L-76} ${T+64} Q ${L-50} ${T+28} ${L-10} ${T+41} Q ${L+4} ${T+62} ${L-24} ${T+78}" fill="none" stroke="rgba(255,255,255,0.50)" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M ${L-62} ${T+38} Q ${L-28} ${T+34} ${L-10} ${T+41}" fill="none" stroke="rgba(255,255,255,0.26)" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="3,4"/>
+    <circle cx="${R+54}" cy="${T+28}" r="4.5" fill="rgba(255,255,255,0.48)"/>
+    <circle cx="${R+72}" cy="${T+48}" r="3.2" fill="rgba(255,255,255,0.36)"/>
+    <circle cx="${R+86}" cy="${T+30}" r="2.5" fill="rgba(255,255,255,0.28)"/>
+    <path d="M ${L-80} ${B-46} L ${L-80} ${B-80} M ${L-96} ${B-63} L ${L-64} ${B-63} M ${L-89} ${B-75} L ${L-71} ${B-51} M ${L-71} ${B-75} L ${L-89} ${B-51}" fill="none" stroke="rgba(255,255,255,0.44)" stroke-width="1.9" stroke-linecap="round"/>
+    <path d="M ${R+48} ${B-88} Q ${R+84} ${B-78} ${R+88} ${B-50} Q ${R+86} ${B-30} ${R+62} ${B-28}" fill="none" stroke="rgba(255,255,255,0.42)" stroke-width="2.0" stroke-linecap="round"/>`;
+
+  // Set 2: 4-pt sparkle (TL) + upward arrow (TR) + leaf (BL) + dot-cluster (BR)
+  const d2 = `
+    <path d="M ${L-70} ${T+78} L ${L-70} ${T+44} M ${L-87} ${T+55} L ${L-53} ${T+55} M ${L-79} ${T+49} L ${L-61} ${T+67} M ${L-61} ${T+49} L ${L-79} ${T+67}" fill="none" stroke="rgba(255,255,255,0.46)" stroke-width="1.9" stroke-linecap="round"/>
+    <path d="M ${R+60} ${T+78} L ${R+60} ${T+28}" fill="none" stroke="rgba(255,255,255,0.50)" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M ${R+44} ${T+46} L ${R+60} ${T+28} L ${R+76} ${T+46}" fill="none" stroke="rgba(255,255,255,0.50)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M ${L-88} ${B-40} Q ${L-62} ${B-84} ${L-20} ${B-68} Q ${L-6} ${B-36} ${L-56} ${B-36} Z" fill="none" stroke="rgba(255,255,255,0.44)" stroke-width="2.0" stroke-linecap="round"/>
+    <path d="M ${L-54} ${B-58} Q ${L-30} ${B-64} ${L-20} ${B-68}" fill="none" stroke="rgba(255,255,255,0.26)" stroke-width="1.4" stroke-linecap="round"/>
+    <circle cx="${R+54}" cy="${B-82}" r="5.0" fill="rgba(255,255,255,0.44)"/>
+    <circle cx="${R+72}" cy="${B-66}" r="3.5" fill="rgba(255,255,255,0.34)"/>
+    <circle cx="${R+85}" cy="${B-84}" r="2.5" fill="rgba(255,255,255,0.26)"/>
+    <circle cx="${R+63}" cy="${B-52}" r="2.0" fill="rgba(255,255,255,0.22)"/>`;
+
+  const doodles = [d0, d1, d2][slideIdx % 3];
+
+  // ── Chalkboard background — dark slate green with chalk grain ────────────────
+  const bgBuf = await sharp({
+    create: {
+      width: S, height: S, channels: 4,
+      background: { r: 38, g: 52, b: 38, alpha: 1 },
+      noise: { type: "gaussian", mean: 0, sigma: 8 },
+    },
+  }).png().toBuffer();
+
+  // ── Overlay SVG (transparent bg — card + doodles + text) ─────────────────────
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}">
     <defs>
-      <filter id="sh"><feDropShadow dx="0" dy="10" stdDeviation="22" flood-color="#000" flood-opacity="0.5"/></filter>
-      <filter id="ts"><feDropShadow dx="1" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.6"/></filter>
+      <filter id="sh" x="-25%" y="-25%" width="150%" height="150%">
+        <feDropShadow dx="0" dy="16" stdDeviation="30" flood-color="#000" flood-opacity="0.72"/>
+      </filter>
+      <filter id="ts" x="-10%" y="-10%" width="120%" height="120%">
+        <feDropShadow dx="0" dy="2" stdDeviation="5" flood-color="#000" flood-opacity="0.72"/>
+      </filter>
     </defs>
-    <rect width="${S}" height="${S}" fill="#17120A"/>
-    <rect x="${photoX - 14}" y="${photoY - 14}" width="${photoSize + 28}" height="${photoSize + 28}" fill="white" filter="url(#sh)"/>
-    <image href="data:image/png;base64,${photoResized.toString("base64")}" x="${photoX}" y="${photoY}" width="${photoSize}" height="${photoSize}"/>
-    <text x="92" y="192" font-family="Arial, sans-serif" font-size="52" fill="rgba(255,255,255,0.22)" transform="rotate(-15 92 192)">&#9733;</text>
-    <text x="${S - 98}" y="208" font-family="Arial, sans-serif" font-size="44" fill="rgba(255,255,255,0.18)" transform="rotate(10 ${S - 98} 208)">&#9825;</text>
-    <text x="88" y="${S - 138}" font-family="Arial, sans-serif" font-size="46" fill="rgba(255,255,255,0.16)" transform="rotate(5 88 ${S - 138})">&#10022;</text>
-    <text x="${S - 102}" y="${S - 115}" font-family="Arial, sans-serif" font-size="42" fill="rgba(255,255,255,0.18)" transform="rotate(-8 ${S - 102} ${S - 115})">&#10053;</text>
+    <g transform="rotate(${rot} ${cx} ${cy})">
+      <rect x="${polX}" y="${polY}" width="${polW}" height="${polH}" fill="white" filter="url(#sh)" rx="2"/>
+      <image href="data:image/png;base64,${photoB64}" x="${polX + imgPad}" y="${polY + imgPad}" width="${imgW}" height="${imgH}" preserveAspectRatio="xMidYMid slice"/>
+    </g>
+    ${doodles}
     ${titleSvg}${bodySvg}${subSvg}
   </svg>`;
-  return sharp(Buffer.from(svg)).png().toBuffer();
+
+  return sharp(bgBuf)
+    .composite([{ input: Buffer.from(svg), blend: "over" }])
+    .png().toBuffer();
 }
 
 // ── Numbered Steps ────────────────────────────────────────────────────────────
@@ -836,7 +912,7 @@ async function dispatchTemplateRender(
     case "notecard":           return renderNotecard(buf, el, slide, font);
     case "torn_scrapbook":     return renderTornScrapbook(buf, el, slide, font);
     case "bold_editorial":     return renderBoldEditorial(slide);
-    case "dark_doodle":        return renderDarkDoodle(buf, el, slide, font, textColor);
+    case "dark_doodle":        return renderDarkDoodle(buf, el, slide, font, textColor, slideIdx);
     case "numbered_steps":     return renderNumberedSteps(buf, el, slide, step);
     case "split_panel":        return renderSplitPanel(buf, el, slide);
     case "polaroid_scrapbook": return renderPolaroidScrapbook(buf, el, slide, font);
