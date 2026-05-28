@@ -96,6 +96,9 @@ export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
 
   const [currentStep, setCurrentStep] = useState(1);
+  type ToolId = "templates" | "photos" | "text" | "shapes" | "stickers" | "layers";
+  const [activeTool, setActiveTool] = useState<ToolId | null>(null);
+  const toggleTool = (id: ToolId) => setActiveTool((prev) => (prev === id ? null : id));
   const [contentMode, setContentMode] = useState<"csv" | "ai">("csv");
   const [aiClientName, setAiClientName] = useState("");
   const [aiIndustry, setAiIndustry] = useState("");
@@ -1141,7 +1144,7 @@ export default function Home() {
   const previewLogoH = Math.round(logoSize * previewLogoScale);
 
   return (
-    <div className="min-h-[100dvh] w-full pb-32">
+    <div className="h-[100dvh] w-full flex flex-col overflow-hidden">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-4 px-6 md:px-10 flex items-center justify-between">
         <div className="flex items-center gap-3 flex-shrink-0">
@@ -1242,49 +1245,250 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-6 mt-8 pb-32">
-        <div className="flex gap-10 items-start">
-        <div className="flex-1 min-w-0 max-w-3xl">
-        {/* Step Progress Bar */}
-          <div className="mb-10">
-            <div className="flex items-center justify-between mb-6">
-              {[
-                { num: 1, label: "Images", icon: ImageIcon },
-                { num: 2, label: "Font & Layout", icon: Type },
-                { num: 3, label: "Content", icon: PenTool },
-                { num: 4, label: "Generate", icon: Sparkles },
-              ].map((step, i) => (
-                <React.Fragment key={step.num}>
-                  <button
-                    onClick={() => setCurrentStep(step.num)}
-                    className={`flex flex-col items-center gap-2 transition-all ${
-                      currentStep === step.num
-                        ? "text-primary"
-                        : currentStep > step.num
-                        ? "text-green-400"
-                        : "text-muted-foreground/40"
-                    }`}
-                  >
-                    <div
-                      className={`w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold transition-all ${
-                        currentStep === step.num
-                          ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
-                          : currentStep > step.num
-                          ? "bg-green-500/20 text-green-400 border-2 border-green-500/30"
-                          : "bg-accent/30 text-muted-foreground/40"
-                      }`}
+      {/* ── Body: Rail | Panel | Editing area | Live preview ── */}
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+
+        {/* ── Left Rail (60px) ── */}
+        <div style={{ width: 60, minWidth: 60 }} className="flex flex-col items-center py-3 gap-0.5 bg-[#0f0f0f] border-r border-zinc-800/60 shrink-0 z-10">
+          {(
+            [
+              {
+                id: "templates" as ToolId,
+                label: "Templates",
+                icon: (active: boolean) => (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "#E91976" : "white"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+                  </svg>
+                ),
+              },
+              {
+                id: "photos" as ToolId,
+                label: "Photos",
+                icon: (active: boolean) => (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "#E91976" : "white"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" />
+                  </svg>
+                ),
+              },
+              {
+                id: "text" as ToolId,
+                label: "Text",
+                icon: (active: boolean) => (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "#E91976" : "white"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="4 7 4 4 20 4 20 7" /><line x1="9" y1="20" x2="15" y2="20" /><line x1="12" y1="4" x2="12" y2="20" />
+                  </svg>
+                ),
+              },
+              {
+                id: "shapes" as ToolId,
+                label: "Shapes",
+                icon: (active: boolean) => (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "#E91976" : "white"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="9" /><polyline points="12 8 14.5 13 17 13 15 15.5 15.8 18 12 16.5 8.2 18 9 15.5 7 13 9.5 13 12 8" />
+                  </svg>
+                ),
+              },
+              {
+                id: "stickers" as ToolId,
+                label: "Stickers",
+                icon: (active: boolean) => (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "#E91976" : "white"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="9" /><path d="M8.5 14.5s1 2 3.5 2 3.5-2 3.5-2" />
+                    <line x1="9" y1="9" x2="9.01" y2="9" strokeWidth="2.5" /><line x1="15" y1="9" x2="15.01" y2="9" strokeWidth="2.5" />
+                  </svg>
+                ),
+              },
+              {
+                id: "layers" as ToolId,
+                label: "Layers",
+                icon: (active: boolean) => (
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={active ? "#E91976" : "white"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" />
+                  </svg>
+                ),
+              },
+            ] as const
+          ).map(({ id, label, icon }) => {
+            const isActive = activeTool === id;
+            return (
+              <button
+                key={id}
+                onClick={() => toggleTool(id)}
+                className="flex flex-col items-center gap-1 py-3 px-1 w-full transition-colors relative group"
+                style={{ backgroundColor: isActive ? "rgba(233,25,118,0.09)" : undefined }}
+              >
+                {isActive && (
+                  <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full bg-[#E91976]" />
+                )}
+                {icon(isActive)}
+                <span className="text-[9px] font-semibold tracking-wide uppercase" style={{ color: isActive ? "#E91976" : "#52525b" }}>
+                  {label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ── Slide-out Panel (260px) ── */}
+        <div
+          style={{
+            width: activeTool ? 260 : 0,
+            minWidth: activeTool ? 260 : 0,
+            transition: "width 180ms cubic-bezier(0.4,0,0.2,1), min-width 180ms cubic-bezier(0.4,0,0.2,1)",
+          }}
+          className="bg-[#161616] border-r border-zinc-800/60 flex flex-col shrink-0 overflow-hidden z-10"
+        >
+          {activeTool && (
+            <>
+              <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/60 shrink-0">
+                <span className="text-sm font-semibold text-white capitalize">{activeTool}</span>
+                <button
+                  onClick={() => setActiveTool(null)}
+                  className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-zinc-700/60 transition-colors"
+                >
+                  <X className="w-3 h-3 text-zinc-500" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                {activeTool === "templates" && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Brand presets</p>
+                    <p className="text-xs text-zinc-400 leading-relaxed">Load a saved brand preset to apply fonts, colours, and layout in one click.</p>
+                    <button
+                      onClick={() => { setActiveTool(null); setCurrentStep(1); }}
+                      className="w-full py-2 px-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-medium transition-colors text-left"
                     >
-                      {currentStep > step.num ? <Check className="w-6 h-6" /> : <step.icon className="w-6 h-6" />}
+                      Go to Images step →
+                    </button>
+                  </div>
+                )}
+                {activeTool === "photos" && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Upload photos</p>
+                    <p className="text-xs text-zinc-400 leading-relaxed">Add your images in Step 1. Drag and drop, or click to browse.</p>
+                    <button
+                      onClick={() => { setActiveTool(null); setCurrentStep(1); }}
+                      className="w-full py-2 px-3 rounded-lg bg-[#E91976]/20 hover:bg-[#E91976]/30 text-pink-300 text-xs font-medium transition-colors text-left border border-[#E91976]/30"
+                    >
+                      Open Step 1: Images →
+                    </button>
+                    {photos.length > 0 && (
+                      <p className="text-xs text-zinc-500">{photos.length} photo{photos.length !== 1 ? "s" : ""} uploaded</p>
+                    )}
+                  </div>
+                )}
+                {activeTool === "text" && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Typography</p>
+                    <p className="text-xs text-zinc-400 leading-relaxed">Font, size, spacing, and colour controls live in Step 2.</p>
+                    <button
+                      onClick={() => { setActiveTool(null); setCurrentStep(2); }}
+                      className="w-full py-2 px-3 rounded-lg bg-[#E91976]/20 hover:bg-[#E91976]/30 text-pink-300 text-xs font-medium transition-colors text-left border border-[#E91976]/30"
+                    >
+                      Open Step 2: Font & Layout →
+                    </button>
+                    <div className="pt-1 space-y-1.5">
+                      <p className="text-xs text-zinc-600">Current headline font</p>
+                      <p className="text-xs text-zinc-300 font-medium truncate">{FONT_OPTIONS.find((f) => f.value === fontFamily)?.label ?? fontFamily}</p>
+                      <p className="text-xs text-zinc-600 pt-1">Current body font</p>
+                      <p className="text-xs text-zinc-300 font-medium truncate">{FONT_OPTIONS.find((f) => f.value === subheadingFont)?.label ?? subheadingFont}</p>
                     </div>
-                    <span className="text-sm font-semibold">{step.num}. {step.label}</span>
-                  </button>
-                  {i < 3 && (
-                    <div className={`flex-1 h-1 rounded-full mx-3 mt-[-20px] ${currentStep > step.num ? "bg-green-500/30" : "bg-accent/20"}`} />
+                  </div>
+                )}
+                {activeTool === "shapes" && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Corner & overlay styles</p>
+                    <p className="text-xs text-zinc-400 leading-relaxed">Shape and overlay options live in Step 2.</p>
+                    <button
+                      onClick={() => { setActiveTool(null); setCurrentStep(2); }}
+                      className="w-full py-2 px-3 rounded-lg bg-[#E91976]/20 hover:bg-[#E91976]/30 text-pink-300 text-xs font-medium transition-colors text-left border border-[#E91976]/30"
+                    >
+                      Open Step 2: Font & Layout →
+                    </button>
+                    <p className="text-xs text-zinc-600 pt-1">Active corner style</p>
+                    <p className="text-xs text-zinc-300 font-medium capitalize">{cornerStyle || "none"}</p>
+                  </div>
+                )}
+                {activeTool === "stickers" && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Stickers</p>
+                    <div className="rounded-lg border border-zinc-700/50 bg-zinc-800/40 px-3 py-4 text-center">
+                      <p className="text-xs text-zinc-500">Coming soon</p>
+                      <p className="text-xs text-zinc-600 mt-1">Decorative overlays and badges</p>
+                    </div>
+                  </div>
+                )}
+                {activeTool === "layers" && (
+                  <div className="space-y-3">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Slides</p>
+                    {result ? (
+                      (result.carousels as Array<{ slides: Array<{ text?: string }> }>).map((carousel, i: number) => (
+                        <div key={i} className="flex items-center gap-2 rounded-lg bg-zinc-800/50 border border-zinc-700/40 px-3 py-2">
+                          <span className="text-xs text-zinc-500 font-mono w-4 shrink-0">{i + 1}</span>
+                          <p className="text-xs text-zinc-300 truncate">{carousel.slides[0]?.text ?? `Carousel ${i + 1}`}</p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="rounded-lg border border-zinc-700/50 bg-zinc-800/40 px-3 py-4 text-center">
+                        <p className="text-xs text-zinc-500">Generate carousels first</p>
+                        <p className="text-xs text-zinc-600 mt-1">Layers appear here once slides are created</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── Editing area ── */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+          {/* Compact step tab strip */}
+          <div className="h-12 border-b border-border/30 bg-background/80 backdrop-blur flex items-center px-4 gap-1 shrink-0">
+            {[
+              { num: 1, label: "Images", icon: ImageIcon },
+              { num: 2, label: "Font & Layout", icon: Type },
+              { num: 3, label: "Content", icon: PenTool },
+              { num: 4, label: "Generate", icon: Sparkles },
+            ].map((step, i) => (
+              <React.Fragment key={step.num}>
+                <button
+                  onClick={() => setCurrentStep(step.num)}
+                  className={`flex items-center gap-1.5 px-3 h-8 rounded-md text-xs font-semibold transition-all ${
+                    currentStep === step.num
+                      ? "bg-[#E91976]/15 text-[#E91976] border border-[#E91976]/30"
+                      : currentStep > step.num
+                      ? "text-green-400 hover:bg-green-500/10"
+                      : "text-muted-foreground/50 hover:text-muted-foreground hover:bg-accent/30"
+                  }`}
+                >
+                  {currentStep > step.num ? (
+                    <Check className="w-3 h-3" />
+                  ) : (
+                    <step.icon className="w-3 h-3" />
                   )}
-                </React.Fragment>
-              ))}
-            </div>
+                  <span>{step.num}. {step.label}</span>
+                </button>
+                {i < 3 && <span className="text-zinc-700 text-xs">›</span>}
+              </React.Fragment>
+            ))}
+            {result && (
+              <div className="ml-auto flex items-center gap-2">
+                <button onClick={handleStartOver} className="flex items-center gap-1 px-2 h-7 rounded text-xs text-muted-foreground hover:text-foreground transition-colors">
+                  <RefreshCcw className="w-3 h-3" /> Start over
+                </button>
+                <button onClick={downloadZip} className="flex items-center gap-1.5 px-3 h-7 rounded-md bg-[#E91976] text-white text-xs font-bold hover:bg-pink-600 transition-colors">
+                  <Download className="w-3 h-3" /> Download ZIP
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* Scrollable step content */}
+          <div className="flex-1 overflow-y-auto">
+          <div className="max-w-3xl px-6 py-8 pb-32 mx-auto">
 
           <div className="flex flex-col gap-8">
 
@@ -2739,10 +2943,12 @@ export default function Home() {
             )}
 
           </div>
-        </div>{/* end content col */}
+          </div>{/* end scrollable content */}
+          </div>{/* end max-w-3xl */}
+          </div>{/* end editing area */}
 
-        {/* Sticky live preview — visible on all steps */}
-        <div className="hidden lg:flex flex-col gap-3 shrink-0 w-72 sticky top-24 self-start mt-16">
+        {/* ── Right-side live preview ── */}
+        <div className="hidden lg:flex flex-col gap-4 shrink-0 w-72 border-l border-border/30 bg-background/50 px-4 py-6 overflow-y-auto">
           <p className="text-xs font-semibold tracking-widest uppercase text-muted-foreground text-center">Live Preview</p>
           <div className="rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
             <canvas ref={livePreviewCanvasRef} className="w-full block" style={{ aspectRatio: "4/5" }} />
@@ -2752,8 +2958,7 @@ export default function Home() {
           </p>
         </div>
 
-        </div>{/* end outer flex */}
-      </main>
+        </div>{/* end body flex */}
 
       <MusicPickerModal open={musicPickerOpen} onClose={() => setMusicPickerOpen(false)} selectedTrack={musicTrack} onSelect={(t) => setMusicTrack(t)} />
       {scheduleOpen && selectedPresetId && (
