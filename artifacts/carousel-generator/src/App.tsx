@@ -39,6 +39,8 @@ import DmPrompts from "@/pages/dm-prompts";
 import ReelScripts from "@/pages/reel-scripts";
 import Podcast from "@/pages/podcast";
 import Competition from "@/pages/competition";
+import BundleBuilder from "@/pages/bundle-builder";
+import BundlePreview from "@/pages/bundle-preview";
 
 const queryClient = new QueryClient();
 
@@ -67,6 +69,7 @@ function ProtectedRouter() {
       <Route path="/intake" component={Intake} />
       <Route path="/dm-prompts" component={DmPrompts} />
       <Route path="/reel-scripts" component={ReelScripts} />
+      <Route path="/bundle-builder" component={BundleBuilder} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -85,6 +88,7 @@ function AppContent() {
   const [isBulkTemplates] = useRoute("/bulk-import-templates");
   const [isPodcast] = useRoute("/podcast");
   const [isCompetition] = useRoute("/competition");
+  const [isBundle, bundleParams] = useRoute("/bundle/:token");
   const [location] = useLocation();
   const isSplash = location === "/";
 
@@ -126,6 +130,9 @@ function AppContent() {
   }
   if (isCompetition) {
     return <Competition />;
+  }
+  if (isBundle && bundleParams?.token) {
+    return <BundlePreview token={bundleParams.token} />;
   }
 
   return (

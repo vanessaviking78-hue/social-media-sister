@@ -36,6 +36,7 @@ export const clientPresetsTable = pgTable("client_presets", {
   defaultFirstCommentSingle: text("default_first_comment_single"),
   defaultFirstCommentReel: text("default_first_comment_reel"),
   onboardingConnectedAt: timestamp("onboarding_connected_at"),
+  voiceStyle: text("voice_style").notNull().default("northern-grit"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => [
@@ -43,7 +44,18 @@ export const clientPresetsTable = pgTable("client_presets", {
   check("client_presets_corner_style_check", sql`${table.cornerStyle} IN ('none', 'triangle', 'arc', 'double-line', 'frame')`),
   check("client_presets_text_align_check", sql`${table.textAlign} IN ('left', 'center', 'right')`),
   check("client_presets_logo_position_check", sql`${table.logoPosition} IN ('top-right', 'top-left', 'bottom-right', 'bottom-left', 'none')`),
+  check("client_presets_voice_style_check", sql`${table.voiceStyle} IN ('northern-grit', 'whimsical', 'professional-warmth', 'girly-sweet')`),
 ]);
+
+export const VOICE_STYLES = ["northern-grit", "whimsical", "professional-warmth", "girly-sweet"] as const;
+export type VoiceStyle = typeof VOICE_STYLES[number];
+
+export const VOICE_STYLE_LABELS: Record<VoiceStyle, string> = {
+  "northern-grit": "Northern Grit",
+  "whimsical": "Whimsical",
+  "professional-warmth": "Professional with Warmth",
+  "girly-sweet": "Girly and Sweet",
+};
 
 export const TEXT_POSITIONS = ["top", "center", "bottom"] as const;
 export type TextPosition = typeof TEXT_POSITIONS[number];
@@ -64,6 +76,7 @@ export const insertPresetSchema = createInsertSchema(clientPresetsTable)
     cornerStyle: z.enum(CORNER_STYLES),
     textAlign: z.enum(TEXT_ALIGNS),
     logoPosition: z.enum(LOGO_POSITIONS),
+    voiceStyle: z.enum(VOICE_STYLES).optional().default("northern-grit"),
   });
 export type InsertPreset = z.infer<typeof insertPresetSchema>;
 export type ClientPreset = typeof clientPresetsTable.$inferSelect;
@@ -494,3 +507,29 @@ export const intakeBatchesTable = pgTable("intake_batches", {
 });
 
 export type IntakeBatch = typeof intakeBatchesTable.$inferSelect;
+
+export type BundleSlide = { heading: string; body: string };
+
+export type BundleContent = {
+  carousel: { slides: BundleSlide[]; caption: string };
+  aboutMe: { intro: string; caption: string };
+  reel: { script: string; caption: string };
+  seamless: { tagline: string; caption: string };
+};
+
+export const trialBundlesTable = pgTable("trial_bundles", {
+  id: serial("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  clinicName: text("clinic_name").notNull(),
+  igHandle: text("ig_handle").notNull().default(""),
+  treatmentFocus: text("treatment_focus").notNull().default(""),
+  brandColour: text("brand_colour").notNull().default("#ec4899"),
+  voiceStyle: text("voice_style").notNull().default("northern-grit"),
+  content: json("content").$type<BundleContent>().notNull().default({} as BundleContent),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertTrialBundleSchema = createInsertSchema(trialBundlesTable)
+  .omit({ id: true, createdAt: true });
+export type InsertTrialBundle = z.infer<typeof insertTrialBundleSchema>;
+export type TrialBundle = typeof trialBundlesTable.$inferSelect;

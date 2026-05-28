@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package } from "lucide-react";
 
 const TOOLS = [
   {
@@ -163,6 +163,15 @@ const TOOLS = [
     color: "from-orange-500/20 to-orange-500/5",
     border: "hover:border-orange-500/50",
     iconColor: "text-orange-400",
+  },
+  {
+    href: "/bundle-builder",
+    icon: Package,
+    name: "Trial Bundle",
+    description: "Generate a full content preview bundle to share with a new clinic prospect. One link, four formats.",
+    color: "from-yellow-500/20 to-yellow-500/5",
+    border: "hover:border-yellow-500/50",
+    iconColor: "text-yellow-400",
   },
 ];
 

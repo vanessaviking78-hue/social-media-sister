@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { usePresets, type ClientPreset, type PresetStyleFields, type TextAlign } from "@/lib/use-presets";
 import { FONT_OPTIONS } from "@/lib/slide-utils";
+import VoiceStyleSelector from "@/components/voice-style-selector";
 
 const BASE = import.meta.env.BASE_URL || "/";
 
@@ -515,6 +516,7 @@ export default function PresetsPage() {
         defaultFirstCommentCarousel: editData.defaultFirstCommentCarousel || null,
         defaultFirstCommentSingle: editData.defaultFirstCommentSingle || null,
         defaultFirstCommentReel: editData.defaultFirstCommentReel || null,
+        voiceStyle: editData.voiceStyle || "northern-grit",
       });
       toast.success("Preset updated");
       cancelEdit();
@@ -789,6 +791,18 @@ export default function PresetsPage() {
                         className="bg-gray-900 border-gray-700 text-white"
                       />
                       <p className="text-xs text-gray-500 mt-1">Used when auto-scheduling from the Content Library.</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-400">Caption voice style</Label>
+                      <div className="mt-1">
+                        <VoiceStyleSelector
+                          value={editData.voiceStyle || "northern-grit"}
+                          onChange={(v) => setEditData((d) => ({ ...d, voiceStyle: v }))}
+                          size="sm"
+                          showLabel={false}
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">Applied automatically when generating captions for this client.</p>
                     </div>
                     <div>
                       <Label className="text-xs text-gray-400">Caption Footnote (appended to AI-generated captions)</Label>

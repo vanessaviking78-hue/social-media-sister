@@ -1,0 +1,26 @@
+THREE ADDITIONS / CHANGES to the priority list:
+
+A. SCRAP TASK 6 (Cloud Campaign workspace dropdown). I'm leaving Cloud Campaign on 5 June. No need to fix it, just leave the existing field, I'll stop using CC entirely after launch.
+
+B. CAPTION VOICE — replace the single warmer/wittier voice update with a DROPDOWN of 4 voice styles the user picks before generating any caption:
+
+   1. NORTHERN GRIT — blunt, witty, real, properly Vanessa. No em dashes, no Americanisations, no AI patter, no "here's the thing", no "fluff or faff". First person.
+   2. WHIMSICAL — Bruce Springsteen audiobook style. Romantic, narrative, observational, soulful. NO direct references to Bruce, his lyrics or his songs — just the literary style of his memoir prose. First person.
+   3. PROFESSIONAL WITH WARMTH — credible, expert, but human. For clinic owners who want to sound clinical-but-likable. No clinical jargon overload.
+   4. GIRLY AND SWEET — warm, light, friendly, soft. For consumer-facing brands who want approachable feminine energy.
+
+   The dropdown lives on every caption-generation point in the app (Single Image, Carousel, Reel, About Me, Seamless, Stories, AI Portrait Studio). Default to Northern Grit. Save the user's choice per client preset so it auto-loads.
+
+   Every generated caption still auto-appends a "Comment [WORD] for more info" CTA regardless of voice style.
+
+C. PROMOTE TRIAL BUNDLE WORKFLOW to TIER 1 (pre-launch):
+   - User uploads new client details (clinic name, IG handle, treatment focus, brand colour)
+   - User picks voice style from the 4 above
+   - System generates: 1 standard carousel + 1 seamless carousel + 1 about me/treatment post + 1 reel
+   - All outputs land in a new "Bundle Preview" page the user can share with the new clinic
+   - One-click "Send Bundle Link" generates a public preview URL the prospect can view
+   - This is the centrepiece of Vanessa's launch offer
+
+D. HERO TEXT OPTION on ALL formats — Single Image, Carousel slides, Reels, Stories, About Me, Seamless. The Hero Headline style (lead-in + huge hero word) should be available everywhere as a text style option, not just Single Image.
+
+Restart api-server and ping between sections.

@@ -24,6 +24,7 @@ import intakeRouter from "./intake";
 import bulkImportRouter from "./bulkImport";
 import dmPromptsRouter from "./dm-prompts";
 import reelScriptsRouter from "./reel-scripts";
+import bundleRouter from "./bundle";
 
 const router: IRouter = Router();
 
@@ -52,5 +53,6 @@ router.use(intakeRouter);
 router.use(bulkImportRouter);
 router.use(dmPromptsRouter);
 router.use(reelScriptsRouter);
+router.use(bundleRouter);
 
 export default router;

@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import {
   FONT_OPTIONS, LOGO_POSITIONS, STORY_BACKGROUNDS,
-  STORY_WIDTH, STORY_HEIGHT, drawStory, loadGoogleFonts, recordReelVideoMp4,
+  STORY_WIDTH, STORY_HEIGHT, drawStory, drawHeroSlide, loadGoogleFonts, recordReelVideoMp4,
 } from "@/lib/slide-utils";
 import { type ReelAnimType, REEL_ANIM_LABELS, applyPhotoAnimation } from "@/lib/animate-utils";
 import { authHeaders } from "@/lib/use-approval";
@@ -93,6 +93,16 @@ export default function Stories() {
   const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
   const [scheduleRendering, setScheduleRendering] = useState(false);
   const [animPhotoType, setAnimPhotoType] = useState<ReelAnimType>("photo-zoom");
+
+  const [heroEnabled, setHeroEnabled] = useState(false);
+  const [heroLeadIn, setHeroLeadIn] = useState("");
+  const [heroWord, setHeroWord] = useState("");
+  const [heroLeadInColor, setHeroLeadInColor] = useState("#E91976");
+  const [heroWordColor, setHeroWordColor] = useState("#ffffff");
+  const [heroWordFont, setHeroWordFont] = useState("'Bebas Neue', sans-serif");
+  const [heroVerticalPosition, setHeroVerticalPosition] = useState<"top" | "middle" | "bottom">("bottom");
+  const [heroSpacing, setHeroSpacing] = useState(20);
+  const [heroUppercase, setHeroUppercase] = useState(true);
   const [animRendering, setAnimRendering] = useState(false);
   const [animProgress, setAnimProgress] = useState(0);
 
@@ -325,6 +335,13 @@ export default function Stories() {
         [shuffled[j], shuffled[k]] = [shuffled[k], shuffled[j]];
       }
       const urls: string[] = [];
+
+      if (heroEnabled && (heroLeadIn.trim() || heroWord.trim())) {
+        const heroBg = shuffled[0] ?? null;
+        drawHeroSlide(ctx, heroBg, heroLeadIn, heroWord, heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImgRef.current, logoPosition, logoSize, "#000000", "none", "#000000", { canvasW: STORY_WIDTH, canvasH: STORY_HEIGHT });
+        urls.push(canvas.toDataURL("image/png"));
+      }
+
       for (let i = 0; i < questions.length; i++) {
         const bgImg = shuffled[i % shuffled.length];
         const frameFontSize = i === 0 ? fontSize : contentFontSize;
@@ -336,7 +353,7 @@ export default function Stories() {
     } catch (err: any) {
       toast.error("Failed to render previews. Check your background image.");
     }
-  }, [questions, bgFiles, font, subheadingFont, fontSize, contentFontSize, textColor, overlayColor, footerText, logoPosition, logoSize, bgOpacity, loadBgImg, textAlign, textBoxOutline, textBoxOutlineColor]);
+  }, [questions, bgFiles, font, subheadingFont, fontSize, contentFontSize, textColor, overlayColor, footerText, logoPosition, logoSize, bgOpacity, loadBgImg, textAlign, textBoxOutline, textBoxOutlineColor, heroEnabled, heroLeadIn, heroWord, heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase]);
 
   useEffect(() => {
     if (step === "design" && questions.length > 0) {
@@ -866,6 +883,68 @@ export default function Stories() {
               <div className="bg-card border border-border/40 rounded-xl p-5">
                 <h3 className="text-sm font-semibold mb-2">Footer Text</h3>
                 <Input value={footerText} onChange={(e) => setFooterText(e.target.value)} placeholder="Type your answer in the comments" />
+              </div>
+
+              <div className="bg-card border border-border/40 rounded-xl p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold">Hero Title Slide</h3>
+                  <button onClick={() => setHeroEnabled((v) => !v)}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${heroEnabled ? "bg-pink-500" : "bg-gray-600"}`}>
+                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${heroEnabled ? "translate-x-5" : ""}`} />
+                  </button>
+                </div>
+                <p className="text-xs text-muted-foreground">Prepends a bold impact slide to the start of your story set.</p>
+                {heroEnabled && (
+                  <div className="space-y-4 pt-1">
+                    <div>
+                      <Label className="text-xs text-muted-foreground block mb-1">Lead-in text</Label>
+                      <Input value={heroLeadIn} onChange={(e) => setHeroLeadIn(e.target.value)} placeholder="e.g. This week I'm talking about" />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground block mb-1">Hero word</Label>
+                      <Input value={heroWord} onChange={(e) => setHeroWord(e.target.value)} placeholder="e.g. BOTOX" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Hero font</Label>
+                      <Select value={heroWordFont} onValueChange={setHeroWordFont}>
+                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectContent>{FONT_OPTIONS.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex gap-3">
+                      <div className="flex items-center gap-2 flex-1">
+                        <Label className="text-xs text-muted-foreground">Lead-in</Label>
+                        <input type="color" value={heroLeadInColor} onChange={(e) => setHeroLeadInColor(e.target.value)} className="w-8 h-8 rounded cursor-pointer border border-border/40 bg-transparent" />
+                      </div>
+                      <div className="flex items-center gap-2 flex-1">
+                        <Label className="text-xs text-muted-foreground">Hero word</Label>
+                        <input type="color" value={heroWordColor} onChange={(e) => setHeroWordColor(e.target.value)} className="w-8 h-8 rounded cursor-pointer border border-border/40 bg-transparent" />
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs text-muted-foreground block mb-2">Position</Label>
+                      <div className="grid grid-cols-3 gap-1">
+                        {(["top", "middle", "bottom"] as const).map((pos) => (
+                          <button key={pos} onClick={() => setHeroVerticalPosition(pos)}
+                            className={`py-2 rounded text-xs font-semibold capitalize transition-all ${heroVerticalPosition === pos ? "bg-pink-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`}>
+                            {pos}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="flex justify-between mb-1">
+                        <Label className="text-xs text-muted-foreground">Spacing</Label>
+                        <span className="text-xs font-semibold">{heroSpacing}px</span>
+                      </div>
+                      <Slider value={[heroSpacing]} onValueChange={([v]) => setHeroSpacing(v)} min={0} max={80} step={4} />
+                    </div>
+                    <button onClick={() => setHeroUppercase((v) => !v)}
+                      className={`w-full py-2 rounded-lg text-sm transition-all ${heroUppercase ? "bg-pink-600 text-white" : "bg-gray-700 text-gray-300 hover:bg-gray-600"}`}>
+                      ALL CAPS
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="bg-card border border-border/40 rounded-xl p-5 space-y-3">

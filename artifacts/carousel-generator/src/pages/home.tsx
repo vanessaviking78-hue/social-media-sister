@@ -23,6 +23,7 @@ import PresetSelector from "@/components/preset-selector";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { MusicPickerModal, MusicTrackBadge, type MusicTrack } from "@/components/music-picker-modal";
+import VoiceStyleSelector from "@/components/voice-style-selector";
 
 loadGoogleFonts();
 
@@ -110,6 +111,7 @@ export default function Home() {
 
 
   const [captions, setCaptions] = useState<string[]>([]);
+  const [voiceStyle, setVoiceStyle] = useState("northern-grit");
   const [captionGenerating, setCaptionGenerating] = useState(false);
   const [captionProgress, setCaptionProgress] = useState("");
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -172,6 +174,7 @@ export default function Home() {
     setCoverSubheading(preset.coverSubheading || "");
     setCurrentLogoUrl(preset.logoUrl || null);
     setFirstComment(preset.defaultFirstCommentCarousel || "");
+    setVoiceStyle(preset.voiceStyle || "northern-grit");
     if (preset.logoUrl) {
       const img = new Image();
       img.crossOrigin = "anonymous";
@@ -1081,7 +1084,7 @@ export default function Home() {
           posts,
           clientName: aiClientName,
           industry: aiIndustry || "aesthetics",
-          tone: aiTone,
+          voiceStyle,
           extraInstructions: aiExtraInstructions,
         }),
       });
@@ -2593,6 +2596,7 @@ export default function Home() {
                           <h2 className="font-sans font-bold text-3xl tracking-tight">Post Captions</h2>
                         </div>
                         <div className="flex items-center gap-3">
+                          <VoiceStyleSelector value={voiceStyle} onChange={setVoiceStyle} size="sm" />
                           {captions.length > 0 && (
                             <Button variant="outline" size="lg" onClick={copyAllCaptions} className="py-4 text-base">
                               {copiedIndex === -1 ? <><Check className="w-5 h-5 mr-2" />Copied!</> : <><Copy className="w-5 h-5 mr-2" />Copy All</>}

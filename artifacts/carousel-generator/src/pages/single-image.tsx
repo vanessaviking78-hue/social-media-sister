@@ -21,6 +21,7 @@ import type { LogoPosition } from "@workspace/db/schema";
 import { useCaptions } from "@/lib/use-captions";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { MusicPickerModal, MusicTrackBadge, type MusicTrack } from "@/components/music-picker-modal";
+import VoiceStyleSelector from "@/components/voice-style-selector";
 import PresetSelector from "@/components/preset-selector";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 
@@ -77,6 +78,7 @@ export default function SingleImage() {
   const [aiClientName, setAiClientName] = useState("");
 
   const [captions, setCaptions] = useState<string[]>([]);
+  const [voiceStyle, setVoiceStyle] = useState("northern-grit");
   const [captionGenerating, setCaptionGenerating] = useState(false);
   const [captionProgress, setCaptionProgress] = useState("");
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
@@ -172,6 +174,7 @@ export default function SingleImage() {
     setLogoPosition(preset.logoPosition);
     setLogoSize(preset.logoSize);
     setCurrentLogoUrl(preset.logoUrl || null);
+    setVoiceStyle(preset.voiceStyle || "northern-grit");
     if (preset.logoUrl) {
       const img = new Image();
       img.crossOrigin = "anonymous";
@@ -873,7 +876,7 @@ export default function SingleImage() {
           posts,
           clientName: aiClientName,
           industry: "aesthetics",
-          tone: "warm & professional",
+          voiceStyle,
           extraInstructions: "",
           postType: "single-image",
         }),
@@ -1597,7 +1600,8 @@ export default function SingleImage() {
                         <MessageSquareText className="w-5 h-5" />
                         Captions
                       </h3>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 items-center">
+                        <VoiceStyleSelector value={voiceStyle} onChange={setVoiceStyle} size="sm" />
                         {captions.length > 1 && (
                           <Button variant="outline" size="sm" onClick={copyAllCaptions}>
                             {copiedIndex === -1 ? <><Check className="w-4 h-4 mr-1 text-green-400" /> Copied All</> : <><Copy className="w-4 h-4 mr-1" /> Copy All</>}
