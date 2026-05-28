@@ -14,28 +14,9 @@ import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { MusicPickerModal, MusicTrackBadge, type MusicTrack } from "@/components/music-picker-modal";
+import { ALL_FONTS } from "@/lib/slide-utils";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-const SCRIPT_FONTS = [
-  { label: "Allura", value: "Allura", cat: "Script" },
-  { label: "Great Vibes", value: "Great Vibes", cat: "Script" },
-  { label: "Pinyon Script", value: "Pinyon Script", cat: "Script" },
-  { label: "Sacramento", value: "Sacramento", cat: "Script" },
-  { label: "Dancing Script", value: "Dancing Script", cat: "Script" },
-  { label: "Pacifico", value: "Pacifico", cat: "Script" },
-  { label: "Alex Brush", value: "Alex Brush", cat: "Script" },
-  { label: "Kaushan Script", value: "Kaushan Script", cat: "Script" },
-  { label: "Playfair Display", value: "Playfair Display", cat: "Serif" },
-  { label: "Cormorant Garamond", value: "Cormorant Garamond", cat: "Serif" },
-  { label: "Lora", value: "Lora", cat: "Serif" },
-  { label: "Libre Baskerville", value: "Libre Baskerville", cat: "Serif" },
-  { label: "Poppins", value: "Poppins", cat: "Sans" },
-  { label: "Montserrat", value: "Montserrat", cat: "Sans" },
-  { label: "Raleway", value: "Raleway", cat: "Sans" },
-  { label: "Nunito", value: "Nunito", cat: "Sans" },
-  { label: "Quicksand", value: "Quicksand", cat: "Sans" },
-];
 
 const DOODLES = [
   { label: "None", value: "none" },
@@ -753,13 +734,22 @@ export default function SeamlessCarouselPage() {
                   <Label className="text-base font-semibold">Global style</Label>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
-                      <Label className="text-sm text-muted-foreground">Script font</Label>
+                      <Label className="text-sm text-muted-foreground">Font</Label>
                       <Select value={scriptFont} onValueChange={setScriptFont}>
                         <SelectTrigger className="h-10">
-                          <SelectValue><span style={{ fontFamily: `'${scriptFont}', cursive` }}>{scriptFont}</span></SelectValue>
+                          <SelectValue><span style={{ fontFamily: `'${scriptFont}', cursive, serif, sans-serif` }}>{scriptFont}</span></SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                          {SCRIPT_FONTS.map((f) => <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: `'${f.value}', cursive` }}>{f.label}</span></SelectItem>)}
+                          {(["Script", "Serif", "Sans"] as const).map((cat) => (
+                            <React.Fragment key={cat}>
+                              <div className="px-2 py-1 text-xs font-semibold text-muted-foreground/70 uppercase tracking-wider">{cat}</div>
+                              {ALL_FONTS.filter((f) => f.cat === cat).map((f) => (
+                                <SelectItem key={f.value} value={f.value}>
+                                  <span style={{ fontFamily: `'${f.value}', cursive, serif, sans-serif` }}>{f.label}</span>
+                                </SelectItem>
+                              ))}
+                            </React.Fragment>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
