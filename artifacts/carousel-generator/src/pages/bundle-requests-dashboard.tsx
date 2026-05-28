@@ -55,7 +55,7 @@ export default function BundleRequestsDashboard() {
     actionState[id] ?? { generating: false, declining: false, bundleUrl: null, copied: false };
 
   const patchAction = (id: number, patch: Partial<ActionState>) =>
-    setActionState((prev) => ({ ...prev, [id]: { ...getAction(id), ...patch } }));
+    setActionState((prev) => ({ ...prev, [id]: { ...(prev[id] ?? { generating: false, declining: false, bundleUrl: null, copied: false }), ...patch } }));
 
   const fetchRequests = useCallback(async () => {
     setLoading(true);

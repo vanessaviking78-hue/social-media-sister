@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link, useLocation } from "wouter";
-import { Package, ArrowLeft, Sparkles, Loader2, Copy, Check, ExternalLink, Shuffle, ChevronDown, BookOpen } from "lucide-react";
+import { Package, ArrowLeft, Sparkles, Loader2, Copy, Check, ExternalLink, Shuffle, ChevronDown, BookOpen, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -119,12 +119,20 @@ export default function BundleBuilder() {
               <ArrowLeft className="w-4 h-4 mr-1" /> Hub
             </Button>
           </Link>
-          <Link href="/strategy-library">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground gap-1.5">
-              <BookOpen className="w-3.5 h-3.5" />
-              Strategy Library
-            </Button>
-          </Link>
+          <div className="flex items-center gap-1">
+            <Link href="/bundle-requests">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground gap-1.5">
+                <Inbox className="w-3.5 h-3.5" />
+                Requests
+              </Button>
+            </Link>
+            <Link href="/strategy-library">
+              <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground gap-1.5">
+                <BookOpen className="w-3.5 h-3.5" />
+                Strategy Library
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <div className="space-y-2">
