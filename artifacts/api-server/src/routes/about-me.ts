@@ -334,7 +334,7 @@ async function buildFullSvg(
   const defsContent: string[] = [];
   const fontParam = encodeURIComponent(titleFont.replace(/ /g, "+"));
   defsContent.push(`<style>@import url('https://fonts.googleapis.com/css2?family=${fontParam}:wght@400');</style>`);
-  defsContent.push(`<filter id="txtshadow"><feDropShadow dx="1" dy="2" stdDeviation="3" flood-color="#000" flood-opacity="0.3"/></filter>`);
+  defsContent.push(`<filter id="txtshadow"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/></filter>`);
   defsContent.push(`<filter id="stickshadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000" flood-opacity="0.28"/></filter>`);
 
   if (cc.glowEnabled) {
@@ -424,7 +424,7 @@ async function buildFullSvg(
       layers.push(`<rect x="${bgX.toFixed(1)}" y="${bgY.toFixed(1)}" width="${bgW.toFixed(1)}" height="${bgH.toFixed(1)}" rx="${subtitleBgRadius}" fill="${subtitleBgColor}" opacity="${subtitleBgOpacity / 100}"/>`);
     }
     subLines.forEach((line, li) => {
-      layers.push(`<text x="${subXA.toFixed(0)}" y="${(subTopY + li * subLineH).toFixed(0)}" font-family="Georgia, serif" font-size="${subFsEff}" fill="${subtitleColor}" text-anchor="${subAnchor}" opacity="0.85" letter-spacing="${subtitleLetterSpacing}">${escXml(line)}</text>`);
+      layers.push(`<text x="${subXA.toFixed(0)}" y="${(subTopY + li * subLineH).toFixed(0)}" font-family="Georgia, serif" font-size="${subFsEff}" fill="${subtitleColor}" text-anchor="${subAnchor}" opacity="0.85" letter-spacing="${subtitleLetterSpacing}" filter="url(#txtshadow)">${escXml(line)}</text>`);
     });
   }
 

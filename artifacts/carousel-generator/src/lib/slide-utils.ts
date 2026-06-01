@@ -385,12 +385,10 @@ export function drawSlide(
 
   const activeFont = isCoverSlide ? font : (subheadingFont || font);
 
-  if (opts?.textShadow) {
-    ctx.shadowColor = 'rgba(0,0,0,0.85)';
-    ctx.shadowBlur = opts.textShadow;
-    ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 2;
-  }
+  ctx.shadowColor = opts?.textShadow ? 'rgba(0,0,0,0.85)' : 'rgba(0,0,0,0.4)';
+  ctx.shadowBlur = opts?.textShadow ?? 8;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 2;
 
   ctx.fillStyle = textColor;
   ctx.textBaseline = "top";
@@ -743,7 +741,7 @@ export function drawHeroSlide(
     (ctx as any).letterSpacing = `${LEAD_IN_LETTER_SPACING}px`;
     ctx.fillStyle = leadInColor;
     ctx.shadowColor = 'rgba(0,0,0,0.4)';
-    ctx.shadowBlur = 6;
+    ctx.shadowBlur = 8;
     ctx.shadowOffsetY = 2;
     ctx.shadowOffsetX = 0;
     ctx.fillText(displayLeadIn, W / 2, blockStartY);
@@ -755,9 +753,9 @@ export function drawHeroSlide(
     ctx.font = `700 ${heroSize}px ${heroWordFont}`;
     (ctx as any).letterSpacing = '0px';
     ctx.fillStyle = heroWordColor;
-    ctx.shadowColor = 'rgba(0,0,0,0.1)';
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
     ctx.shadowBlur = 8;
-    ctx.shadowOffsetY = 4;
+    ctx.shadowOffsetY = 2;
     ctx.shadowOffsetX = 0;
     ctx.fillText(displayHeroWord, W / 2, blockStartY + leadInLineH + spacing);
     ctx.restore();
@@ -950,6 +948,10 @@ export function drawStory(
 
   const totalTextH = lines.length * lineH;
   const textStartY = sqY + Math.round((squareSize - totalTextH) / 2);
+  ctx.shadowColor = 'rgba(0,0,0,0.4)';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 2;
   lines.forEach((line, i) => {
     ctx.fillText(line, textX, textStartY + i * lineH);
   });
@@ -960,6 +962,9 @@ export function drawStory(
   ctx.textAlign = "center";
   ctx.fillText(footerText, W / 2, sqY + squareSize + 50);
   ctx.globalAlpha = 1.0;
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
 
   if (logoImg) {
     const margin = 40;
@@ -1368,6 +1373,10 @@ export function drawTypewriterOnVideo(
   ctx.fillRect(0, backdropY, W, backdropH);
 
   ctx.fillStyle = textColor;
+  ctx.shadowColor = 'rgba(0,0,0,0.4)';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 2;
   for (let i = 0; i < lines.length; i++) {
     ctx.fillText(lines[i], W / 2, baseY + i * lineH);
   }

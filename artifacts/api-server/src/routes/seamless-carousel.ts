@@ -98,7 +98,7 @@ function buildSlideTextSvg(slide: SeamlessSlide, scriptFont: string, textColor: 
     ? doodlePath(slide.doodle, tx, doodleY, 40, titleColor)
     : "";
 
-  const shadow = `<filter id="ts" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="1" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.5"/></filter>`;
+  const shadow = `<filter id="ts" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/></filter>`;
 
   const leadInSvg = slide.leadIn
     ? `<text x="${tx}" y="${ty - (slide.title ? lineH * 1.05 : 0)}" font-family="'${scriptFont}', cursive" font-size="${leadInFontSize}" fill="${leadInColor}" text-anchor="${anchor}" filter="url(#ts)" opacity="0.9" letter-spacing="${leadInLetterSpacing}">${escXml(slide.leadIn)}</text>`
