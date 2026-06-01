@@ -70,7 +70,7 @@ export default function VideoOverlay() {
   const [scheduleRendering, setScheduleRendering] = useState(false);
 
   const [textColor, setTextColor] = useState("#ffffff");
-  const [fontFamily, setFontFamily] = useState("'Playfair Display', serif");
+  const [fontFamily, setFontFamily] = useState("'DM Serif Display', serif");
   const [fontSize, setFontSize] = useState(72);
   const [lineSpacing, setLineSpacing] = useState(1.3);
   const [overlayPosition, setOverlayPosition] = useState<"top" | "center" | "bottom">("center");

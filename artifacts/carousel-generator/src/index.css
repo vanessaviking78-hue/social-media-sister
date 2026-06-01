@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Poppins:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Serif+Display:ital@0;1&family=Prata&family=Anton&family=Poppins:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
@@ -90,8 +90,8 @@
   --input: 240 12% 14%;
   --ring: 328 100% 57%;
 
-  --app-font-sans: 'Poppins', 'Plus Jakarta Sans', sans-serif;
-  --app-font-serif: 'Poppins', 'Plus Jakarta Sans', sans-serif;
+  --app-font-sans: 'Prata', serif;
+  --app-font-serif: 'DM Serif Display', serif;
   --app-font-mono: Menlo, monospace;
 
   --radius: 0.75rem;
@@ -115,9 +115,12 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-smooth: antialiased;
   }
   body {
-    @apply font-sans antialiased bg-background text-foreground selection:bg-primary/30;
+    @apply font-sans bg-background text-foreground selection:bg-primary/30;
   }
 }
 

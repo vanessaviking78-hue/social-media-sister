@@ -24,6 +24,7 @@ import { MusicPickerModal, MusicTrackBadge, type MusicTrack } from "@/components
 import VoiceStyleSelector from "@/components/voice-style-selector";
 import PresetSelector from "@/components/preset-selector";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
+import { FontSwitcher } from "@/components/font-switcher";
 
 loadGoogleFonts();
 
@@ -47,8 +48,8 @@ export default function SingleImage() {
   const [logoPosition, setLogoPosition] = useState<LogoPosition>("top-right");
   const [logoSize, setLogoSize] = useState(140);
 
-  const [fontFamily, setFontFamily] = useState("Inter, sans-serif");
-  const [subheadingFont, setSubheadingFont] = useState("Inter, sans-serif");
+  const [fontFamily, setFontFamily] = useState("'DM Serif Display', serif");
+  const [subheadingFont, setSubheadingFont] = useState("'Prata', serif");
   const [fontSize, setFontSize] = useState(52);
   const [contentFontSize, setContentFontSize] = useState(44);
   const [textColor, setTextColor] = useState("#ffffff");
@@ -1169,15 +1170,19 @@ export default function SingleImage() {
                   </div>
                 )}
                 {activeTool === "text" && (
-                  <div className="space-y-3">
-                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Font settings</p>
-                    <div className="space-y-1.5">
-                      <p className="text-xs text-zinc-600">Heading font</p>
-                      <p className="text-xs text-zinc-300 font-medium">{selectedFontLabel}</p>
-                      <p className="text-xs text-zinc-600 pt-1">Subheading font</p>
-                      <p className="text-xs text-zinc-300 font-medium">{selectedSubheadingFontLabel}</p>
-                      <p className="text-xs text-zinc-600 pt-1">Font size</p>
-                      <p className="text-xs text-zinc-300 font-medium">{fontSize}px</p>
+                  <div className="space-y-4">
+                    <FontSwitcher
+                      headingFont={fontFamily}
+                      onHeadingChange={setFontFamily}
+                      onBodyChange={setSubheadingFont}
+                    />
+                    <div className="pt-2 border-t border-zinc-800/60 space-y-1.5">
+                      <p className="text-[10px] text-zinc-600 uppercase tracking-wider">Current heading</p>
+                      <p className="text-xs text-zinc-300 font-medium truncate">{selectedFontLabel}</p>
+                      <p className="text-[10px] text-zinc-600 uppercase tracking-wider pt-1">Current body</p>
+                      <p className="text-xs text-zinc-300 font-medium truncate">{selectedSubheadingFontLabel}</p>
+                      <p className="text-[10px] text-zinc-600 uppercase tracking-wider pt-1">Font size</p>
+                      <p className="text-xs text-zinc-300 font-medium">{fontSize}px — set in Step 2</p>
                     </div>
                   </div>
                 )}

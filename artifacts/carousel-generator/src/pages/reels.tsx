@@ -94,7 +94,7 @@ export default function Reels() {
   ]);
   const [activeIdx, setActiveIdx] = useState(0);
 
-  const [fontFamily, setFontFamily] = useState("'Playfair Display', serif");
+  const [fontFamily, setFontFamily] = useState("'DM Serif Display', serif");
   const [fontSize, setFontSize] = useState(90);
   const [textColor, setTextColor] = useState("#ffffff");
   const [overlayOpacity, setOverlayOpacity] = useState(40);

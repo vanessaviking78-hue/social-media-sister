@@ -24,6 +24,7 @@ import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { MusicPickerModal, MusicTrackBadge, type MusicTrack } from "@/components/music-picker-modal";
 import VoiceStyleSelector from "@/components/voice-style-selector";
+import { FontSwitcher } from "@/components/font-switcher";
 
 loadGoogleFonts();
 
@@ -42,8 +43,8 @@ export default function Home() {
 
   const [fontSize, setFontSize] = useState(52);
   const [contentFontSize, setContentFontSize] = useState(44);
-  const [fontFamily, setFontFamily] = useState("'Cinzel', serif");
-  const [subheadingFont, setSubheadingFont] = useState("'Cinzel', serif");
+  const [fontFamily, setFontFamily] = useState("'DM Serif Display', serif");
+  const [subheadingFont, setSubheadingFont] = useState("'Prata', serif");
   const [textColor, setTextColor] = useState("#ffffff");
   const [lineSpacing, setLineSpacing] = useState(0.9);
   const [coverLetterSpacing, setCoverLetterSpacing] = useState(0);
@@ -1379,20 +1380,20 @@ export default function Home() {
                   </div>
                 )}
                 {activeTool === "text" && (
-                  <div className="space-y-3">
-                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Typography</p>
-                    <p className="text-xs text-zinc-400 leading-relaxed">Font, size, spacing, and colour controls live in Step 2.</p>
-                    <button
-                      onClick={() => { setActiveTool(null); setCurrentStep(2); }}
-                      className="w-full py-2 px-3 rounded-lg bg-[#E91976]/20 hover:bg-[#E91976]/30 text-pink-300 text-xs font-medium transition-colors text-left border border-[#E91976]/30"
-                    >
-                      Open Step 2: Font & Layout →
-                    </button>
-                    <div className="pt-1 space-y-1.5">
-                      <p className="text-xs text-zinc-600">Current headline font</p>
-                      <p className="text-xs text-zinc-300 font-medium truncate">{FONT_OPTIONS.find((f) => f.value === fontFamily)?.label ?? fontFamily}</p>
-                      <p className="text-xs text-zinc-600 pt-1">Current body font</p>
-                      <p className="text-xs text-zinc-300 font-medium truncate">{FONT_OPTIONS.find((f) => f.value === subheadingFont)?.label ?? subheadingFont}</p>
+                  <div className="space-y-4">
+                    <FontSwitcher
+                      headingFont={fontFamily}
+                      onHeadingChange={setFontFamily}
+                      onBodyChange={setSubheadingFont}
+                    />
+                    <div className="pt-2 border-t border-zinc-800/60 space-y-2">
+                      <p className="text-xs text-zinc-400 leading-relaxed">Fine-tune size, spacing, and colour in Step 2.</p>
+                      <button
+                        onClick={() => { setActiveTool(null); setCurrentStep(2); }}
+                        className="w-full py-2 px-3 rounded-lg bg-[#E91976]/20 hover:bg-[#E91976]/30 text-pink-300 text-xs font-medium transition-colors text-left border border-[#E91976]/30"
+                      >
+                        Open Step 2: Font & Layout →
+                      </button>
                     </div>
                   </div>
                 )}

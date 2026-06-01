@@ -28,6 +28,7 @@ import type { LogoPosition } from "@workspace/db/schema";
 import PresetSelector from "@/components/preset-selector";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { MusicPickerModal, MusicTrackBadge, type MusicTrack } from "@/components/music-picker-modal";
+import { FontSwitcher } from "@/components/font-switcher";
 
 const BASE = import.meta.env.BASE_URL || "/";
 const api = (p: string) => `${BASE}api${p}`;
@@ -753,6 +754,12 @@ export default function Stories() {
                 {/* Text */}
                 {activeTool === "text" && (
                   <div className="space-y-4">
+                    <FontSwitcher
+                      headingFont={font}
+                      onHeadingChange={setFont}
+                      onBodyChange={setSubheadingFont}
+                    />
+                    <div className="border-t border-zinc-800/60 pt-3 space-y-4">
                     <div className="space-y-1.5">
                       <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Heading font</p>
                       <Select value={font} onValueChange={setFont}>
@@ -817,6 +824,7 @@ export default function Stories() {
                           <Input value={textBoxOutlineColor} onChange={(e) => setTextBoxOutlineColor(e.target.value)} className="flex-1 h-7 text-xs font-mono bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
                         </div>
                       )}
+                    </div>
                     </div>
                   </div>
                 )}
