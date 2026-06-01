@@ -9,18 +9,17 @@ export default function Competition() {
     <div style={{
       background: "#0a0a0a",
       color: "#ffffff",
-      fontFamily: "'Montserrat', sans-serif",
+      fontFamily: "'League Spartan', sans-serif",
       minHeight: "100vh",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300;400;600;700&display=swap');
 
         .prize-item {
           background: #ff2d78;
-          font-family: 'Montserrat', sans-serif;
+          font-family: 'League Spartan', sans-serif;
           font-weight: 700;
           font-size: 14px;
           line-height: 1.5;
@@ -39,7 +38,7 @@ export default function Competition() {
           margin-bottom: 20px;
         }
         .enter-box p {
-          font-family: 'Montserrat', sans-serif;
+          font-family: 'League Spartan', sans-serif;
           font-weight: 700;
           font-size: 13px;
           line-height: 1.7;
@@ -89,7 +88,7 @@ export default function Competition() {
 
         {/* Brand */}
         <div style={{
-          fontFamily: "'Montserrat', sans-serif",
+          fontFamily: "'League Spartan', sans-serif",
           fontWeight: 300,
           fontSize: "11px",
           letterSpacing: "6px",
@@ -208,7 +207,7 @@ export default function Competition() {
 
             {/* T&Cs */}
             <p style={{
-              fontFamily: "'Montserrat', sans-serif",
+              fontFamily: "'League Spartan', sans-serif",
               fontWeight: 300,
               fontSize: "10px",
               color: "rgba(255,255,255,0.35)",
@@ -240,7 +239,7 @@ export default function Competition() {
             Social Media Sister
           </div>
           <div style={{
-            fontFamily: "'Montserrat', sans-serif",
+            fontFamily: "'League Spartan', sans-serif",
             fontWeight: 300,
             fontSize: "11px",
             letterSpacing: "3px",
