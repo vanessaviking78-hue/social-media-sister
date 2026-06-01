@@ -415,7 +415,7 @@ export default function Library() {
       <main className="max-w-6xl mx-auto px-6 py-10">
         <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="font-serif text-4xl font-semibold mb-2 tracking-tight">Content Library</h1>
+            <h1 className="font-sans text-4xl font-semibold mb-2 tracking-tight">Content Library</h1>
             <p className="text-lg text-muted-foreground">Bulk-upload posts for a client, then schedule them all at once.</p>
           </div>
           <div className="flex bg-gray-900 border border-gray-800 rounded-xl p-1 gap-1 mt-1">

@@ -362,7 +362,7 @@ export default function Calendar() {
       <main className="max-w-[1400px] mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="font-serif text-4xl font-semibold tracking-tight">Content Calendar</h1>
+            <h1 className="font-sans text-4xl font-semibold tracking-tight">Content Calendar</h1>
             <p className="text-muted-foreground mt-1">Plan and organise your content across clients.</p>
           </div>
         </div>

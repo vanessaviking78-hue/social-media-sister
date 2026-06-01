@@ -140,7 +140,7 @@ export default function BundleBuilder() {
             <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
               <Package className="w-6 h-6 text-yellow-400" />
             </div>
-            <h1 className="font-serif text-4xl font-semibold tracking-tight">Trial Bundle Builder</h1>
+            <h1 className="font-sans text-4xl font-semibold tracking-tight">Trial Bundle Builder</h1>
           </div>
           <p className="text-lg text-muted-foreground">
             Enter a prospect clinic's details and generate four pieces of content in their voice. Send them one link and let the work speak for itself.

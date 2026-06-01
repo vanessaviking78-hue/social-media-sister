@@ -145,7 +145,7 @@ export default function StrategyLibrary() {
               <BookOpen className="w-5 h-5 text-violet-400" />
             </div>
             <div>
-              <h1 className="font-serif text-3xl font-semibold tracking-tight">Strategy Library</h1>
+              <h1 className="font-sans text-3xl font-semibold tracking-tight">Strategy Library</h1>
               <p className="text-sm text-muted-foreground">{topics.length} topic{topics.length !== 1 ? "s" : ""}</p>
             </div>
           </div>

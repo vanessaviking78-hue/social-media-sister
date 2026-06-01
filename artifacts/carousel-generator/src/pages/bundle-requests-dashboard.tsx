@@ -144,7 +144,7 @@ export default function BundleRequestsDashboard() {
               <Inbox className="w-5 h-5 text-pink-400" />
             </div>
             <div>
-              <h1 className="font-serif text-3xl font-semibold tracking-tight">Bundle Requests</h1>
+              <h1 className="font-sans text-3xl font-semibold tracking-tight">Bundle Requests</h1>
               {pendingCount > 0 && (
                 <p className="text-sm text-pink-400 font-medium">{pendingCount} pending review</p>
               )}

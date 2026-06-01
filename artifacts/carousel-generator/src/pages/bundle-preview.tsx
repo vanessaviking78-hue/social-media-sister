@@ -114,7 +114,7 @@ export default function BundlePreview({ token }: { token: string }) {
               <Package className="w-6 h-6" style={{ color: brandColour }} />
             </div>
             <div>
-              <h1 className="font-serif text-3xl font-semibold tracking-tight">{clinicName}</h1>
+              <h1 className="font-sans text-3xl font-semibold tracking-tight">{clinicName}</h1>
               <p className="text-muted-foreground text-sm mt-1">
                 {treatmentFocus} · {VOICE_LABELS[voiceStyle] || voiceStyle} voice
               </p>

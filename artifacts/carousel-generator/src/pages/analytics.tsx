@@ -78,7 +78,7 @@ export default function Analytics() {
 
       <main className="max-w-[1400px] mx-auto px-6 py-8">
         <div className="mb-8">
-          <h1 className="font-serif text-4xl font-semibold tracking-tight">Analytics Dashboard</h1>
+          <h1 className="font-sans text-4xl font-semibold tracking-tight">Analytics Dashboard</h1>
           <p className="text-muted-foreground mt-1">Track your content creation activity across all tools.</p>
         </div>
 

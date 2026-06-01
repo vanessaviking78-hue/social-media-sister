@@ -1308,7 +1308,7 @@ export default function SingleImage() {
           {currentStep === 1 && (
             <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
               <div>
-                <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 1: Your Images</h2>
+                <h2 className="font-sans text-4xl font-semibold mb-3 tracking-tight">Step 1: Your Images</h2>
                 <p className="text-lg text-muted-foreground">Upload your photos and add your logo. Each photo becomes one post.</p>
               </div>
 
@@ -1391,7 +1391,7 @@ export default function SingleImage() {
           {currentStep === 2 && (
             <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
               <div>
-                <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 2: Font & Layout</h2>
+                <h2 className="font-sans text-4xl font-semibold mb-3 tracking-tight">Step 2: Font & Layout</h2>
                 <p className="text-lg text-muted-foreground">Customise the look and feel of your single image posts.</p>
               </div>
 
@@ -1685,7 +1685,7 @@ export default function SingleImage() {
           {currentStep === 3 && (
             <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
               <div>
-                <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 3: Your Content</h2>
+                <h2 className="font-sans text-4xl font-semibold mb-3 tracking-tight">Step 3: Your Content</h2>
                 <p className="text-lg text-muted-foreground">Add the text for each single image post. One line per post.</p>
               </div>
 
@@ -1809,7 +1809,7 @@ export default function SingleImage() {
           {currentStep === 4 && (
             <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-300">
               <div>
-                <h2 className="font-serif text-4xl font-semibold mb-3 tracking-tight">Step 4: Your Posts</h2>
+                <h2 className="font-sans text-4xl font-semibold mb-3 tracking-tight">Step 4: Your Posts</h2>
                 <p className="text-lg text-muted-foreground">
                   {result ? `${result.totalPosts} single image posts ready` : "Generate your posts to see them here."}
                 </p>

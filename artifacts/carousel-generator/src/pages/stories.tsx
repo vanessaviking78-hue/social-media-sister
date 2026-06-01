@@ -1048,7 +1048,7 @@ export default function Stories() {
                 {step === "content" && (
                   <>
                     <div>
-                      <h2 className="font-serif text-3xl font-semibold mb-2 tracking-tight">Step 1: Your Questions</h2>
+                      <h2 className="font-sans text-3xl font-semibold mb-2 tracking-tight">Step 1: Your Questions</h2>
                       <p className="text-base text-muted-foreground">Add engagement questions via AI, CSV, or by hand. Each question becomes one story frame.</p>
                     </div>
 
@@ -1136,7 +1136,7 @@ export default function Stories() {
                 {step === "design" && (
                   <>
                     <div>
-                      <h2 className="font-serif text-3xl font-semibold mb-2 tracking-tight">Step 2: Design</h2>
+                      <h2 className="font-sans text-3xl font-semibold mb-2 tracking-tight">Step 2: Design</h2>
                       <p className="text-base text-muted-foreground">Customise your stories using the tools in the left rail. Changes update the live preview on the right.</p>
                     </div>
 
@@ -1174,7 +1174,7 @@ export default function Stories() {
                 {step === "generate" && (
                   <>
                     <div>
-                      <h2 className="font-serif text-3xl font-semibold mb-2 tracking-tight">Step 3: Export</h2>
+                      <h2 className="font-sans text-3xl font-semibold mb-2 tracking-tight">Step 3: Export</h2>
                       <p className="text-base text-muted-foreground">
                         {previews.length > 0 ? `${previews.length} stor${previews.length === 1 ? "y" : "ies"} ready.` : "Rendering your stories…"}
                       </p>

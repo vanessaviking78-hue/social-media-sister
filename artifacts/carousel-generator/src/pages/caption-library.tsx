@@ -173,7 +173,7 @@ export default function CaptionLibrary() {
 
       <main className="container px-6 py-10 max-w-5xl mx-auto">
         <div className="mb-8">
-          <h1 className="font-serif text-4xl font-semibold mb-2">Caption Library</h1>
+          <h1 className="font-sans text-4xl font-semibold mb-2">Caption Library</h1>
           <p className="text-lg text-muted-foreground">
             Save, organise, and reuse your best captions. Browse by category, client, or keyword.
           </p>
