@@ -16,6 +16,7 @@ import {
   loadGoogleFonts, drawSlide,
 } from "@/lib/slide-utils";
 import type { TextPosition } from "@/lib/use-presets";
+import { getBrandDefaults } from "@/lib/brand-defaults";
 
 loadGoogleFonts();
 
@@ -63,15 +64,23 @@ export default function PhotoCarousel() {
   const [isExporting, setIsExporting] = useState(false);
 
   // Global style controls
-  const [fontFamily, setFontFamily] = useState("'DM Serif Display', serif");
+  const [fontFamily, setFontFamily] = useState(() => getBrandDefaults().fontFamily);
   const [fontSize, setFontSize] = useState(52);
-  const [textColor, setTextColor] = useState("#ffffff");
+  const [textColor, setTextColor] = useState(() => getBrandDefaults().secondaryColor);
   const [textPosition, setTextPosition] = useState<TextPosition>("center");
   const [overlayOpacity, setOverlayOpacity] = useState(40);
 
   // Logo — fixed to bottom-left at LOGO_SIZE
   const [logoObjectUrl, setLogoObjectUrl] = useState<string | null>(null);
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    const bd = getBrandDefaults();
+    if (bd.logoDataUrl) {
+      setLogoObjectUrl(bd.logoDataUrl);
+      loadImg(bd.logoDataUrl).then(setLogoImg).catch(() => {});
+    }
+  }, []);
 
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);

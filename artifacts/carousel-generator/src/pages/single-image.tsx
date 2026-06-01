@@ -17,6 +17,7 @@ import VanessaChat from "@/components/vanessa-chat";
 import { CANVAS_WIDTH, CANVAS_HEIGHT, VIDEO_WIDTH, VIDEO_HEIGHT, RENDER_SCALE, FONT_OPTIONS, FONT_PAIRINGS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, drawHeroSlide, compressImage, recordSlideVideo, recordReelVideoMp4, type AnimationType } from "@/lib/slide-utils";
 import { type ReelAnimType, type ElementAnimation, REEL_ANIM_LABELS, applyPhotoAnimation, applyTextAnimation } from "@/lib/animate-utils";
 import { usePresets, type ClientPreset, type PresetStyleFields, type TextPosition, type TextAlign, type CornerStyle, isCornerStyle, normalizeTextPosition } from "@/lib/use-presets";
+import { getBrandDefaults } from "@/lib/brand-defaults";
 import type { LogoPosition } from "@workspace/db/schema";
 import { useCaptions } from "@/lib/use-captions";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
@@ -48,14 +49,24 @@ export default function SingleImage() {
   const [logoPosition, setLogoPosition] = useState<LogoPosition>("top-right");
   const [logoSize, setLogoSize] = useState(140);
 
-  const [fontFamily, setFontFamily] = useState("'DM Serif Display', serif");
-  const [subheadingFont, setSubheadingFont] = useState("'Prata', serif");
+  useEffect(() => {
+    const bd = getBrandDefaults();
+    if (bd.logoDataUrl) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => setLogoImg(img);
+      img.src = bd.logoDataUrl;
+    }
+  }, []);
+
+  const [fontFamily, setFontFamily] = useState(() => getBrandDefaults().fontFamily);
+  const [subheadingFont, setSubheadingFont] = useState(() => getBrandDefaults().subheadingFont);
   const [fontSize, setFontSize] = useState(52);
   const [contentFontSize, setContentFontSize] = useState(44);
-  const [textColor, setTextColor] = useState("#ffffff");
+  const [textColor, setTextColor] = useState(() => getBrandDefaults().secondaryColor);
   const [lineSpacing, setLineSpacing] = useState(0.9);
   const [overlayColor, setOverlayColor] = useState("rgba(0,0,0,0.5)");
-  const [pageColor, setPageColor] = useState("#000000");
+  const [pageColor, setPageColor] = useState(() => getBrandDefaults().primaryColor);
   const [cornerStyle, setCornerStyle] = useState<CornerStyle>("none");
   const [cornerColor, setCornerColor] = useState("#d4af37");
   const [textPosition, setTextPosition] = useState<TextPosition>("bottom");

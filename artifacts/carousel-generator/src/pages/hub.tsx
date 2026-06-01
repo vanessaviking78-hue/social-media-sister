@@ -75,6 +75,15 @@ const TOOLS = [
     iconColor: "text-cyan-400",
   },
   {
+    href: "/brand",
+    icon: Wand2,
+    name: "Brand Settings",
+    description: "Set your default logo, colours and fonts. Applied automatically when you open any generator.",
+    color: "from-[#E91976]/20 to-[#E91976]/5",
+    border: "hover:border-[#E91976]/50",
+    iconColor: "text-[#E91976]",
+  },
+  {
     href: "/presets",
     icon: Palette,
     name: "Presets",

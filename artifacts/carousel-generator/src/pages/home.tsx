@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import VanessaChat from "@/components/vanessa-chat";
 import { CANVAS_WIDTH, CANVAS_HEIGHT, VIDEO_WIDTH, VIDEO_HEIGHT, RENDER_SCALE, FONT_OPTIONS, FONT_PAIRINGS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, drawHeroSlide, compressImage, recordSlideVideo, recordGroupVideo, type AnimationType } from "@/lib/slide-utils";
 import { usePresets, type ClientPreset, type PresetStyleFields, type TextPosition, type TextAlign, type CornerStyle, isCornerStyle, normalizeTextPosition } from "@/lib/use-presets";
+import { getBrandDefaults } from "@/lib/brand-defaults";
 import type { LogoPosition } from "@workspace/db/schema";
 import { useCaptions } from "@/lib/use-captions";
 import PresetSelector from "@/components/preset-selector";
@@ -43,9 +44,9 @@ export default function Home() {
 
   const [fontSize, setFontSize] = useState(52);
   const [contentFontSize, setContentFontSize] = useState(44);
-  const [fontFamily, setFontFamily] = useState("'DM Serif Display', serif");
-  const [subheadingFont, setSubheadingFont] = useState("'Prata', serif");
-  const [textColor, setTextColor] = useState("#ffffff");
+  const [fontFamily, setFontFamily] = useState(() => getBrandDefaults().fontFamily);
+  const [subheadingFont, setSubheadingFont] = useState(() => getBrandDefaults().subheadingFont);
+  const [textColor, setTextColor] = useState(() => getBrandDefaults().secondaryColor);
   const [lineSpacing, setLineSpacing] = useState(0.9);
   const [coverLetterSpacing, setCoverLetterSpacing] = useState(0);
   const [contentLetterSpacing, setContentLetterSpacing] = useState(0);
@@ -67,7 +68,7 @@ export default function Home() {
   const [coverHeadlineWeight, setCoverHeadlineWeight] = useState(700);
   const [coverEyebrowArch, setCoverEyebrowArch] = useState(0.4);
   const [overlayColor, setOverlayColor] = useState("rgba(0,0,0,0.5)");
-  const [pageColor, setPageColor] = useState("#000000");
+  const [pageColor, setPageColor] = useState(() => getBrandDefaults().primaryColor);
   const [cornerStyle, setCornerStyle] = useState<CornerStyle>("none");
   const [cornerColor, setCornerColor] = useState("#d4af37");
   const [textPosition, setTextPosition] = useState<TextPosition>("bottom");
@@ -93,6 +94,16 @@ export default function Home() {
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
   const [logoPosition, setLogoPosition] = useState<LogoPosition>("top-right");
   const [logoSize, setLogoSize] = useState(140);
+
+  useEffect(() => {
+    const bd = getBrandDefaults();
+    if (bd.logoDataUrl) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => { setLogoImg(img); setLogoPreviewUrl(bd.logoDataUrl); };
+      img.src = bd.logoDataUrl;
+    }
+  }, []);
 
   const [isGenerating, setIsGenerating] = useState(false);
 
