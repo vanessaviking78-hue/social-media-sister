@@ -1241,12 +1241,6 @@ export default function Home() {
               Approvals
             </Button>
           </Link>
-          <Link href="/scheduler">
-            <Button variant="ghost" size="sm" className="text-muted-foreground">
-              <Clock className="w-4 h-4 mr-2" />
-              Scheduler
-            </Button>
-          </Link>
           {result && (
             <>
               <Button variant="outline" size="sm" onClick={handleStartOver} className="text-muted-foreground border-muted-foreground/20 hover:text-foreground">

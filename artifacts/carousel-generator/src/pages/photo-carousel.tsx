@@ -2,8 +2,9 @@ import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import {
   ChevronLeft, ChevronRight, Upload, Image as ImageIcon,
-  ImagePlus, FileText, Download, X, Loader2,
+  ImagePlus, FileText, Download, X, Loader2, CalendarClock,
 } from "lucide-react";
+import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -15,7 +16,7 @@ import {
   CANVAS_WIDTH, CANVAS_HEIGHT, RENDER_SCALE, FONT_OPTIONS,
   loadGoogleFonts, drawSlide,
 } from "@/lib/slide-utils";
-import type { TextPosition } from "@/lib/use-presets";
+import { usePresets, type TextPosition } from "@/lib/use-presets";
 import { getBrandDefaults } from "@/lib/brand-defaults";
 
 loadGoogleFonts();
@@ -62,6 +63,12 @@ export default function PhotoCarousel() {
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
+  const [scheduleRendering, setScheduleRendering] = useState(false);
+  const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
+
+  const { presets } = usePresets();
 
   // Global style controls
   const [fontFamily, setFontFamily] = useState(() => getBrandDefaults().fontFamily);
@@ -328,6 +335,51 @@ export default function PhotoCarousel() {
     }
   }, [slides, fontFamily, fontSize, textColor, overlayColor, logoImg, textPosition]);
 
+  const uploadOneImage = async (name: string, base64: string): Promise<string> => {
+    const resp = await fetch(`${import.meta.env.BASE_URL}api/content/upload-image`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images: [{ name, base64 }] }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || "Upload failed");
+    return data.results?.[0]?.url || "";
+  };
+
+  const handleSchedule = async () => {
+    if (slides.length === 0) { toast.error("Add some images first."); return; }
+    const unloaded = slides.filter((s) => !s.imgEl);
+    if (unloaded.length > 0) { toast.error("Images are still loading. Try again in a moment."); return; }
+    setScheduleRendering(true);
+    const toastId = toast.loading("Preparing slides for scheduling...");
+    try {
+      const imageUrls: string[] = [];
+      const PARALLEL = 3;
+      for (let i = 0; i < slides.length; i += PARALLEL) {
+        toast.loading(`Uploading ${imageUrls.length + 1} of ${slides.length}...`, { id: toastId });
+        const batch = slides.slice(i, i + PARALLEL);
+        const urls = await Promise.all(batch.map(async (slide, bi) => {
+          const canvas = document.createElement("canvas");
+          canvas.width = CANVAS_WIDTH * RENDER_SCALE;
+          canvas.height = CANVAS_HEIGHT * RENDER_SCALE;
+          const ctx = canvas.getContext("2d")!;
+          ctx.scale(RENDER_SCALE, RENDER_SCALE);
+          drawSlide(ctx, slide.imgEl!, slide.text, fontFamily, fontSize, false, textColor, 1.2, overlayColor, logoImg, "bottom-left", LOGO_SIZE, "#000000", "none", "#000000", undefined, undefined, textPosition, true);
+          const base64 = canvas.toDataURL("image/png").split(",")[1];
+          return uploadOneImage(`photo-carousel-${i + bi + 1}.png`, base64);
+        }));
+        imageUrls.push(...urls);
+      }
+      toast.dismiss(toastId);
+      setSchedulePosts([{ title: "Photo Carousel", caption: "", imageUrls }]);
+      setScheduleOpen(true);
+    } catch (e: any) {
+      toast.error("Failed to prepare images: " + (e?.message || ""), { id: toastId });
+    } finally {
+      setScheduleRendering(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-zinc-950 text-white overflow-hidden">
       {/* ── Top bar ─────────────────────────────────────── */}
@@ -487,7 +539,24 @@ export default function PhotoCarousel() {
               onChange={handleCsvImport}
             />
 
-            {/* Export */}
+            {/* Client preset (for scheduling) */}
+            {presets.length > 0 && (
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-widest text-white/40">Client</Label>
+                <select
+                  value={selectedPresetId ?? ""}
+                  onChange={(e) => setSelectedPresetId(e.target.value ? Number(e.target.value) : null)}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-pink-500/50 transition-colors"
+                >
+                  <option value="">No client</option>
+                  {presets.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Download */}
             <Button
               onClick={handleExport}
               disabled={slides.length === 0 || isExporting}
@@ -497,7 +566,21 @@ export default function PhotoCarousel() {
               {isExporting ? (
                 <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Exporting…</>
               ) : (
-                <><Download className="w-3.5 h-3.5 mr-1.5" />Export ZIP</>
+                <><Download className="w-3.5 h-3.5 mr-1.5" />Download ZIP</>
+              )}
+            </Button>
+
+            {/* Schedule */}
+            <Button
+              onClick={handleSchedule}
+              disabled={slides.length === 0 || scheduleRendering}
+              className="w-full bg-zinc-800 hover:bg-zinc-700 disabled:opacity-40 text-white/80 hover:text-white text-xs font-medium h-8 border border-white/10"
+              size="sm"
+            >
+              {scheduleRendering ? (
+                <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Preparing…</>
+              ) : (
+                <><CalendarClock className="w-3.5 h-3.5 mr-1.5" />Schedule</>
               )}
             </Button>
           </div>
@@ -646,6 +729,17 @@ export default function PhotoCarousel() {
         </aside>
       </div>
     </div>
+
+    {scheduleOpen && (
+      <ScheduleModal
+        presetId={selectedPresetId}
+        presetName={presets.find((p) => p.id === selectedPresetId)?.name}
+        postType="carousel"
+        posts={schedulePosts}
+        onClose={() => setScheduleOpen(false)}
+        onSaved={() => setScheduleOpen(false)}
+      />
+    )}
   );
 }
 

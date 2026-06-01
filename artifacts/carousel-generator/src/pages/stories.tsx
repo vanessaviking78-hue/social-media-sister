@@ -647,7 +647,6 @@ export default function Stories() {
           <Link href="/library"><Button variant="ghost" size="sm" className="text-muted-foreground h-8 text-xs"><BookOpen className="w-3.5 h-3.5 mr-1.5" />Library</Button></Link>
           <Link href="/calendar"><Button variant="ghost" size="sm" className="text-muted-foreground h-8 text-xs"><CalendarDays className="w-3.5 h-3.5 mr-1.5" />Calendar</Button></Link>
           <Link href="/analytics"><Button variant="ghost" size="sm" className="text-muted-foreground h-8 text-xs"><BarChart3 className="w-3.5 h-3.5 mr-1.5" />Analytics</Button></Link>
-          <Link href="/scheduler"><Button variant="ghost" size="sm" className="text-muted-foreground h-8 text-xs"><Clock className="w-3.5 h-3.5 mr-1.5" />Scheduler</Button></Link>
         </div>
       </header>
 
