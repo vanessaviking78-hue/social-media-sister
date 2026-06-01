@@ -7,6 +7,7 @@ export const CANVAS_WIDTH = 1080;
 export const CANVAS_HEIGHT = 1350;
 export const VIDEO_WIDTH = 1080;
 export const VIDEO_HEIGHT = 1920;
+export const RENDER_SCALE = 2;
 
 export type AnimationType = 'ken-burns' | 'slide-in-text' | 'typewriter' | 'fade-overlay';
 

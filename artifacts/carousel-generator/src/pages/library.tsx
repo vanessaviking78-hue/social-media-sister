@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { drawHeroSlide, CANVAS_WIDTH, CANVAS_HEIGHT } from "@/lib/slide-utils";
+import { drawHeroSlide, CANVAS_WIDTH, CANVAS_HEIGHT, RENDER_SCALE } from "@/lib/slide-utils";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -71,9 +71,10 @@ function HeroThumbnail({ item }: { item: LibraryItem }) {
     img.onload = async () => {
       if (cancelled) return;
       const canvas = document.createElement("canvas");
-      canvas.width = CANVAS_WIDTH;
-      canvas.height = CANVAS_HEIGHT;
+      canvas.width = CANVAS_WIDTH * RENDER_SCALE;
+      canvas.height = CANVAS_HEIGHT * RENDER_SCALE;
       const ctx = canvas.getContext("2d")!;
+      ctx.scale(RENDER_SCALE, RENDER_SCALE);
       drawHeroSlide(
         ctx, img,
         (meta.heroLeadIn as string) || "",

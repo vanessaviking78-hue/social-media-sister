@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import {
   FONT_OPTIONS, LOGO_POSITIONS, STORY_BACKGROUNDS,
-  STORY_WIDTH, STORY_HEIGHT, drawStory, drawHeroSlide, loadGoogleFonts, recordReelVideoMp4,
+  STORY_WIDTH, STORY_HEIGHT, RENDER_SCALE, drawStory, drawHeroSlide, loadGoogleFonts, recordReelVideoMp4,
 } from "@/lib/slide-utils";
 import { type ReelAnimType, REEL_ANIM_LABELS, applyPhotoAnimation } from "@/lib/animate-utils";
 import { authHeaders } from "@/lib/use-approval";
@@ -331,9 +331,10 @@ export default function Stories() {
     if (questions.length === 0) return;
     try {
       const canvas = document.createElement("canvas");
-      canvas.width = STORY_WIDTH;
-      canvas.height = STORY_HEIGHT;
+      canvas.width = STORY_WIDTH * RENDER_SCALE;
+      canvas.height = STORY_HEIGHT * RENDER_SCALE;
       const ctx = canvas.getContext("2d")!;
+      ctx.scale(RENDER_SCALE, RENDER_SCALE);
       const bgImgs = await Promise.all(bgFiles.map((f) => loadBgImg(f)));
       const shuffled = [...bgImgs];
       for (let j = shuffled.length - 1; j > 0; j--) {

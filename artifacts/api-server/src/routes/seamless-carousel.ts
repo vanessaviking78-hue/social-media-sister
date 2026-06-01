@@ -661,6 +661,11 @@ router.post("/seamless/:id/render", async (req, res) => {
         }
       }
 
+      cropped = await sharp(cropped)
+        .resize(SLIDE_SIZE * 2, SLIDE_SIZE * 2, { kernel: "lanczos3" })
+        .png()
+        .toBuffer();
+
       const url = await uploadBuf(cropped, `seamless-slide-${i + 1}-${Date.now()}.png`, "seamless/rendered");
       slideUrls.push(url);
     }

@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import VanessaChat from "@/components/vanessa-chat";
-import { CANVAS_WIDTH, CANVAS_HEIGHT, VIDEO_WIDTH, VIDEO_HEIGHT, FONT_OPTIONS, FONT_PAIRINGS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, drawHeroSlide, compressImage, recordSlideVideo, recordGroupVideo, type AnimationType } from "@/lib/slide-utils";
+import { CANVAS_WIDTH, CANVAS_HEIGHT, VIDEO_WIDTH, VIDEO_HEIGHT, RENDER_SCALE, FONT_OPTIONS, FONT_PAIRINGS, CORNER_STYLES, LOGO_POSITIONS, loadGoogleFonts, drawSlide, drawHeroSlide, compressImage, recordSlideVideo, recordGroupVideo, type AnimationType } from "@/lib/slide-utils";
 import { usePresets, type ClientPreset, type PresetStyleFields, type TextPosition, type TextAlign, type CornerStyle, isCornerStyle, normalizeTextPosition } from "@/lib/use-presets";
 import type { LogoPosition } from "@workspace/db/schema";
 import { useCaptions } from "@/lib/use-captions";
@@ -272,8 +272,9 @@ export default function Home() {
         const img = new Image();
         await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
         const canvas = document.createElement("canvas");
-        canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
+        canvas.width = CANVAS_WIDTH * RENDER_SCALE; canvas.height = CANVAS_HEIGHT * RENDER_SCALE;
         const ctx = canvas.getContext("2d")!;
+        ctx.scale(RENDER_SCALE, RENDER_SCALE);
         if (isCover && coverStyle === "hero") {
           drawHeroSlide(ctx, img, (slide.heroLeadIn || heroLeadIn) || "LEAD-IN", (slide.heroWord || heroWord) || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
         } else {
@@ -357,8 +358,9 @@ export default function Home() {
         const img = new Image();
         await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
         const canvas = document.createElement("canvas");
-        canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
+        canvas.width = CANVAS_WIDTH * RENDER_SCALE; canvas.height = CANVAS_HEIGHT * RENDER_SCALE;
         const ctx = canvas.getContext("2d")!;
+        ctx.scale(RENDER_SCALE, RENDER_SCALE);
         if (isCover && coverStyle === "hero") {
           drawHeroSlide(ctx, img, (slide.heroLeadIn || heroLeadIn) || "LEAD-IN", (slide.heroWord || heroWord) || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
         } else {
@@ -432,8 +434,9 @@ export default function Home() {
         const img = new Image();
         await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
         const canvas = document.createElement("canvas");
-        canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
+        canvas.width = CANVAS_WIDTH * RENDER_SCALE; canvas.height = CANVAS_HEIGHT * RENDER_SCALE;
         const ctx = canvas.getContext("2d")!;
+        ctx.scale(RENDER_SCALE, RENDER_SCALE);
         if (isCover && coverStyle === "hero") {
           drawHeroSlide(ctx, img, (slide.heroLeadIn || heroLeadIn) || "LEAD-IN", (slide.heroWord || heroWord) || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
         } else {
@@ -834,8 +837,9 @@ export default function Home() {
         const img = new Image();
         await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
         const canvas = document.createElement("canvas");
-        canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
+        canvas.width = CANVAS_WIDTH * RENDER_SCALE; canvas.height = CANVAS_HEIGHT * RENDER_SCALE;
         const ctx = canvas.getContext("2d")!;
+        ctx.scale(RENDER_SCALE, RENDER_SCALE);
         if (isCover && coverStyle === "hero") {
           drawHeroSlide(ctx, img, (slide.heroLeadIn || heroLeadIn) || "LEAD-IN", (slide.heroWord || heroWord) || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
         } else {
@@ -884,8 +888,9 @@ export default function Home() {
         const img = new Image();
         await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
         const canvas = document.createElement("canvas");
-        canvas.width = CANVAS_WIDTH; canvas.height = CANVAS_HEIGHT;
+        canvas.width = CANVAS_WIDTH * RENDER_SCALE; canvas.height = CANVAS_HEIGHT * RENDER_SCALE;
         const ctx = canvas.getContext("2d")!;
+        ctx.scale(RENDER_SCALE, RENDER_SCALE);
         if (isCover && coverStyle === "hero") {
           drawHeroSlide(ctx, img, (slide.heroLeadIn || heroLeadIn) || "LEAD-IN", (slide.heroWord || heroWord) || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
         } else {

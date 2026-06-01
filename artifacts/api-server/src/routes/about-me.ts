@@ -745,8 +745,13 @@ router.post("/about-me/:id/render", async (req, res) => {
     );
 
     // 5. Composite SVG onto background
-    const composed = await sharp(blurredBg)
+    const composedBase = await sharp(blurredBg)
       .composite([{ input: Buffer.from(svgStr), left: 0, top: 0, blend: "over" }])
+      .png()
+      .toBuffer();
+
+    const composed = await sharp(composedBase)
+      .resize(canvasW * 2, canvasH * 2, { kernel: "lanczos3" })
       .png()
       .toBuffer();
 
