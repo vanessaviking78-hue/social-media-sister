@@ -26,11 +26,17 @@ const LOGO_SIZE = 120;
 
 interface Slide {
   id: string;
-  file: File;
+  file: File | null;
   objectUrl: string;
   imgEl: HTMLImageElement | null;
   text: string;
   loaded: boolean;
+}
+
+interface CarouselBatch {
+  id: string;
+  name: string;
+  slides: Slide[];
 }
 
 function makeId() {
@@ -46,6 +52,10 @@ function makeSlide(file: File): Slide {
     text: "",
     loaded: false,
   };
+}
+
+function makeTextSlide(text: string): Slide {
+  return { id: makeId(), file: null, objectUrl: "", imgEl: null, text, loaded: true };
 }
 
 function loadImg(src: string): Promise<HTMLImageElement> {
@@ -67,6 +77,8 @@ export default function PhotoCarousel() {
   const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
   const [scheduleRendering, setScheduleRendering] = useState(false);
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
+  const [batches, setBatches] = useState<CarouselBatch[]>([]);
+  const [activeBatchId, setActiveBatchId] = useState<string | null>(null);
 
   const { presets } = usePresets();
 
@@ -120,7 +132,7 @@ export default function PhotoCarousel() {
   // Cleanup object URLs on unmount
   useEffect(() => {
     return () => {
-      slides.forEach((s) => URL.revokeObjectURL(s.objectUrl));
+      slides.forEach((s) => { if (s.objectUrl) URL.revokeObjectURL(s.objectUrl); });
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -250,6 +262,28 @@ export default function PhotoCarousel() {
     setLogoImg(null);
   }, [logoObjectUrl]);
 
+  const openBatch = useCallback(
+    (id: string) => {
+      const batch = batches.find((b) => b.id === id);
+      if (!batch) return;
+      setSlides(batch.slides);
+      setSelectedIdx(0);
+      setActiveBatchId(id);
+    },
+    [batches],
+  );
+
+  const closeBatch = useCallback(() => {
+    if (activeBatchId) {
+      setBatches((prev) =>
+        prev.map((b) => (b.id === activeBatchId ? { ...b, slides } : b)),
+      );
+    }
+    setSlides([]);
+    setSelectedIdx(0);
+    setActiveBatchId(null);
+  }, [activeBatchId, slides]);
+
   const handleCsvImport = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -258,23 +292,40 @@ export default function PhotoCarousel() {
         skipEmptyLines: true,
         complete: (result) => {
           const rows = result.data;
-          let populated = 0;
-          setSlides((prev) =>
-            prev.map((slide, i) => {
-              const row = rows[i];
-              if (!row) return slide;
-              const text = row.find((c) => c.trim()) ?? "";
-              if (text) populated++;
-              return { ...slide, text };
-            }),
-          );
-          toast.success(`Text filled for ${populated} slide${populated !== 1 ? "s" : ""}.`);
+          if (rows.length === 0) { toast.error("No rows found in that CSV."); return; }
+
+          // Distribute any already-loaded images across carousels in sequence
+          const slidePool = [...slides];
+
+          const newBatches: CarouselBatch[] = rows.map((row) => {
+            const name = row[0]?.trim() || "Untitled";
+            const textCells = row.slice(1, 13);
+            // Find where the meaningful content ends
+            let lastNonEmpty = -1;
+            for (let i = textCells.length - 1; i >= 0; i--) {
+              if (textCells[i]?.trim()) { lastNonEmpty = i; break; }
+            }
+            const texts = lastNonEmpty >= 0
+              ? textCells.slice(0, lastNonEmpty + 1).map((t) => t?.trim() ?? "")
+              : [];
+            const batchSlides: Slide[] = texts.map((text) => {
+              const existing = slidePool.shift();
+              return existing ? { ...existing, text } : makeTextSlide(text);
+            });
+            return { id: makeId(), name, slides: batchSlides };
+          });
+
+          setBatches(newBatches);
+          setSlides([]);
+          setSelectedIdx(0);
+          setActiveBatchId(null);
+          toast.success(`${newBatches.length} carousel${newBatches.length !== 1 ? "s" : ""} created from CSV.`);
         },
         error: () => toast.error("Could not read that CSV."),
       });
       e.target.value = "";
     },
-    [],
+    [slides],
   );
 
   const handleExport = useCallback(async () => {
@@ -380,17 +431,48 @@ export default function PhotoCarousel() {
     }
   };
 
+  // ── Batch list view ─────────────────────────────────────────────────────────
+  if (batches.length > 0 && activeBatchId === null) {
+    return (
+      <CarouselBatchList
+        batches={batches}
+        onOpen={openBatch}
+        onClear={() => setBatches([])}
+        onImportCsv={() => csvInputRef.current?.click()}
+        csvInputRef={csvInputRef}
+        onCsvChange={handleCsvImport}
+      />
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-zinc-950 text-white overflow-hidden">
       {/* ── Top bar ─────────────────────────────────────── */}
       <header className="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-black/50 shrink-0">
-        <Link href="/hub" className="text-white/40 hover:text-white transition-colors">
-          <ChevronLeft className="w-5 h-5" />
-        </Link>
+        {activeBatchId ? (
+          <button
+            onClick={closeBatch}
+            className="text-white/40 hover:text-white transition-colors"
+            title="Back to carousel list"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+        ) : (
+          <Link href="/hub" className="text-white/40 hover:text-white transition-colors">
+            <ChevronLeft className="w-5 h-5" />
+          </Link>
+        )}
         <h1 className="text-sm font-semibold tracking-widest uppercase text-white/80">
-          Photo Carousel
+          {activeBatchId
+            ? (batches.find((b) => b.id === activeBatchId)?.name ?? "Photo Carousel")
+            : "Photo Carousel"}
         </h1>
-        {slides.length > 0 && (
+        {activeBatchId && (
+          <span className="ml-1 text-xs text-white/30">
+            {batches.findIndex((b) => b.id === activeBatchId) + 1} / {batches.length}
+          </span>
+        )}
+        {!activeBatchId && slides.length > 0 && (
           <span className="ml-1 text-xs text-white/30">
             {slides.length} / {MAX_SLIDES} slides
           </span>
@@ -524,12 +606,11 @@ export default function PhotoCarousel() {
           <div className="border-t border-white/8 pt-4 space-y-2.5">
             {/* CSV import */}
             <button
-              onClick={() => slides.length > 0 && csvInputRef.current?.click()}
-              disabled={slides.length === 0}
-              className="flex items-center gap-2 w-full px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[11px] text-white/50 hover:text-white/80 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              onClick={() => csvInputRef.current?.click()}
+              className="flex items-center gap-2 w-full px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-[11px] text-white/50 hover:text-white/80 transition-colors"
             >
               <FileText className="w-3.5 h-3.5 shrink-0" />
-              Import CSV text
+              Import CSV (batch)
             </button>
             <input
               ref={csvInputRef}
@@ -728,18 +809,117 @@ export default function PhotoCarousel() {
           </div>
         </aside>
       </div>
-    </div>
 
-    {scheduleOpen && (
-      <ScheduleModal
-        presetId={selectedPresetId}
-        presetName={presets.find((p) => p.id === selectedPresetId)?.name}
-        postType="carousel"
-        posts={schedulePosts}
-        onClose={() => setScheduleOpen(false)}
-        onSaved={() => setScheduleOpen(false)}
-      />
-    )}
+      {scheduleOpen && (
+        <ScheduleModal
+          presetId={selectedPresetId}
+          presetName={presets.find((p) => p.id === selectedPresetId)?.name}
+          postType="carousel"
+          posts={schedulePosts}
+          onClose={() => setScheduleOpen(false)}
+          onSaved={() => setScheduleOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Carousel batch list ───────────────────────────────────────────────────────
+
+interface CarouselBatchListProps {
+  batches: CarouselBatch[];
+  onOpen: (id: string) => void;
+  onClear: () => void;
+  onImportCsv: () => void;
+  csvInputRef: React.RefObject<HTMLInputElement | null>;
+  onCsvChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+function CarouselBatchList({
+  batches, onOpen, onClear, onImportCsv, csvInputRef, onCsvChange,
+}: CarouselBatchListProps) {
+  return (
+    <div className="flex flex-col h-screen bg-zinc-950 text-white overflow-hidden">
+      <header className="flex items-center gap-3 px-4 py-3 border-b border-white/10 bg-black/50 shrink-0">
+        <Link href="/hub" className="text-white/40 hover:text-white transition-colors">
+          <ChevronLeft className="w-5 h-5" />
+        </Link>
+        <h1 className="text-sm font-semibold tracking-widest uppercase text-white/80">
+          Photo Carousel
+        </h1>
+        <span className="ml-1 text-xs text-white/30">
+          {batches.length} carousel{batches.length !== 1 ? "s" : ""}
+        </span>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={onImportCsv}
+            className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/70 transition-colors"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            Replace CSV
+          </button>
+          <button
+            onClick={onClear}
+            className="flex items-center gap-1.5 text-xs text-white/30 hover:text-red-400/70 transition-colors ml-2"
+          >
+            <X className="w-3.5 h-3.5" />
+            Clear all
+          </button>
+        </div>
+        <input
+          ref={csvInputRef}
+          type="file"
+          accept=".csv"
+          className="hidden"
+          onChange={onCsvChange}
+        />
+      </header>
+
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
+          {batches.map((batch, idx) => {
+            const imageCount = batch.slides.filter((s) => s.objectUrl).length;
+            const slideCount = batch.slides.length;
+            return (
+              <div
+                key={batch.id}
+                className="bg-zinc-900/80 border border-white/10 rounded-xl p-4 flex flex-col gap-3 hover:border-white/20 transition-colors"
+              >
+                <div>
+                  <p className="text-[10px] text-white/25 uppercase tracking-widest mb-1">
+                    #{idx + 1}
+                  </p>
+                  <h3 className="text-sm font-semibold text-white leading-snug line-clamp-2">
+                    {batch.name}
+                  </h3>
+                </div>
+
+                <div className="flex items-center gap-3 text-[11px]">
+                  <span className="text-white/40">
+                    {slideCount} slide{slideCount !== 1 ? "s" : ""}
+                  </span>
+                  {imageCount > 0 ? (
+                    <span className="text-emerald-400/70">
+                      {imageCount} image{imageCount !== 1 ? "s" : ""}
+                    </span>
+                  ) : (
+                    <span className="text-amber-400/50">No images yet</span>
+                  )}
+                </div>
+
+                <Button
+                  size="sm"
+                  className="w-full bg-pink-600 hover:bg-pink-500 text-white text-xs h-8 mt-auto"
+                  onClick={() => onOpen(batch.id)}
+                >
+                  Open
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
