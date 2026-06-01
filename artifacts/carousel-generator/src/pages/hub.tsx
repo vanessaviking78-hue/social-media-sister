@@ -12,6 +12,15 @@ const TOOLS = [
     iconColor: "text-pink-400",
   },
   {
+    href: "/photo-carousel",
+    icon: ImagePlus,
+    name: "Photo Carousel",
+    description: "Upload up to 12 photos, add text to each slide and export as a ZIP.",
+    color: "from-rose-500/20 to-rose-500/5",
+    border: "hover:border-rose-500/50",
+    iconColor: "text-rose-400",
+  },
+  {
     href: "/single-image",
     icon: ImagePlus,
     name: "Single Image",

@@ -46,6 +46,7 @@ import BundleRequestsDashboard from "@/pages/bundle-requests-dashboard";
 import FounderSignup from "@/pages/founder-signup";
 import FounderWelcome from "@/pages/founder-welcome";
 import StrategyLibrary from "@/pages/strategy-library";
+import PhotoCarousel from "@/pages/photo-carousel";
 
 const queryClient = new QueryClient();
 
@@ -77,6 +78,7 @@ function ProtectedRouter() {
       <Route path="/bundle-builder" component={BundleBuilder} />
       <Route path="/bundle-requests" component={BundleRequestsDashboard} />
       <Route path="/strategy-library" component={StrategyLibrary} />
+      <Route path="/photo-carousel" component={PhotoCarousel} />
       <Route component={NotFound} />
     </Switch>
   );

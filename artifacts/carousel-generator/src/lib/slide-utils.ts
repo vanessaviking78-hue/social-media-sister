@@ -57,7 +57,6 @@ export const FONT_OPTIONS = [
   { label: "Cormorant Garamond", value: "'Cormorant Garamond', serif" },
   { label: "Anton", value: "'Anton', sans-serif" },
   { label: "Poppins", value: "'Poppins', sans-serif" },
-  { label: "Bebas Neue", value: "'Bebas Neue', sans-serif" },
   { label: "Allura", value: "'Allura', cursive" },
   { label: "Pinyon Script", value: "'Pinyon Script', cursive" },
   { label: "Sacramento", value: "'Sacramento', cursive" },
