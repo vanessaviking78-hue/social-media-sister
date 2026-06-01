@@ -51,7 +51,7 @@ export default function Splash() {
           display: block;
         }
         .splash-tap {
-          font-family: 'Bebas Neue', sans-serif;
+          font-family: 'League Spartan', sans-serif;
           font-size: 24px;
           color: #E91976;
           letter-spacing: 0.2em;
@@ -66,7 +66,7 @@ export default function Splash() {
           align-items: center;
           justify-content: space-between;
           padding: 0 32px;
-          font-family: 'Inter', sans-serif;
+          font-family: 'League Spartan', sans-serif;
           font-size: 11px;
           color: rgba(255,255,255,0.4);
         }

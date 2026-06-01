@@ -21,7 +21,7 @@ export default function FounderWelcome() {
   const firstName = name.split(" ")[0];
 
   return (
-    <div className="min-h-screen bg-black text-white" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div className="min-h-screen bg-black text-white" style={{ fontFamily: "'League Spartan', sans-serif" }}>
       <div className="max-w-2xl mx-auto px-6 py-14 space-y-12">
 
         <div className="space-y-4">
@@ -35,7 +35,7 @@ export default function FounderWelcome() {
 
           <h1
             style={{
-              fontFamily: "'Bebas Neue', sans-serif",
+              fontFamily: "'League Spartan', sans-serif",
               fontSize: "clamp(2.8rem, 11vw, 4.5rem)",
               lineHeight: 1,
               color: "#ffffff",

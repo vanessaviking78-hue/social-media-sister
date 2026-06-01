@@ -579,8 +579,8 @@ export default function PresetsPage() {
       <main className="max-w-5xl mx-auto px-6 py-10">
         <div className="mb-8 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-semibold mb-2 tracking-tight" style={{ fontFamily: "'Poppins', 'Plus Jakarta Sans', sans-serif" }}>Client Brand Presets</h1>
-            <p className="text-xl" style={{ color: "rgba(255,255,255,0.9)", fontFamily: "'Poppins', 'Plus Jakarta Sans', sans-serif" }}>Manage saved brand settings for all your clients. Use presets in any post creation mode to quickly apply a client's look.</p>
+            <h1 className="text-4xl font-semibold mb-2 tracking-tight">Client Brand Presets</h1>
+            <p className="text-xl" style={{ color: "rgba(255,255,255,0.9)" }}>Manage saved brand settings for all your clients. Use presets in any post creation mode to quickly apply a client's look.</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <Button

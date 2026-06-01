@@ -60,7 +60,7 @@ export default function FounderSignup() {
   const spotsLeft = remaining ?? FOUNDER_TOTAL;
 
   return (
-    <div className="min-h-screen bg-black text-white" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div className="min-h-screen bg-black text-white" style={{ fontFamily: "'League Spartan', sans-serif" }}>
       <div className="max-w-lg mx-auto px-6 py-14 space-y-10">
 
         <div className="space-y-3">
@@ -70,7 +70,7 @@ export default function FounderSignup() {
           </div>
           <h1
             style={{
-              fontFamily: "'Bebas Neue', sans-serif",
+              fontFamily: "'League Spartan', sans-serif",
               fontSize: "clamp(2.6rem, 10vw, 4rem)",
               lineHeight: 1,
               color: BRAND.primaryColor,

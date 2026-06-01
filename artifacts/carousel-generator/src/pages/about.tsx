@@ -70,7 +70,7 @@ export default function About() {
         }
 
         .ticker-item {
-          font-family: 'Poppins', sans-serif;
+          font-family: 'League Spartan', sans-serif;
           font-size: clamp(3rem, 8vw, 7rem);
           font-weight: 900;
           letter-spacing: 0.08em;

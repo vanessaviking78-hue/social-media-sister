@@ -53,20 +53,20 @@ export default function BulkImportTemplates() {
   const [open, setOpen] = useState<string | null>(null);
 
   return (
-    <div style={{ background: "#000", minHeight: "100vh", color: "#fff", fontFamily: "'Inter', sans-serif" }}>
+    <div style={{ background: "#000", minHeight: "100vh", color: "#fff", fontFamily: "'League Spartan', sans-serif" }}>
       <div style={{ maxWidth: 820, margin: "0 auto", padding: "40px 24px 80px" }}>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 48 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <img src="/sms-logo.png" alt="Social Media Sister" style={{ height: 44, width: 44, borderRadius: "50%", objectFit: "cover" }} />
-            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: "#E91976", letterSpacing: 1 }}>The CyberSuite</span>
+            <span style={{ fontFamily: "'League Spartan', sans-serif", fontSize: 22, color: "#E91976", letterSpacing: 1 }}>The CyberSuite</span>
           </div>
           <Link href="/hub" style={{ color: "#aaa", fontSize: 13, textDecoration: "none", borderBottom: "1px solid #333", paddingBottom: 1 }}>
             Back to The CyberSuite
           </Link>
         </div>
 
-        <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 52, color: "#E91976", letterSpacing: 2, marginBottom: 8, lineHeight: 1 }}>
+        <h1 style={{ fontFamily: "'League Spartan', sans-serif", fontSize: 52, color: "#E91976", letterSpacing: 2, marginBottom: 8, lineHeight: 1 }}>
           Bulk Import Templates
         </h1>
         <p style={{ color: "#888", fontSize: 15, marginBottom: 40, lineHeight: 1.7 }}>
@@ -119,7 +119,7 @@ export default function BulkImportTemplates() {
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <span style={{
-                    fontFamily: "'Bebas Neue', sans-serif",
+                    fontFamily: "'League Spartan', sans-serif",
                     fontSize: 13,
                     color: schema.color,
                     background: `${schema.color}22`,

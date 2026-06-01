@@ -54,7 +54,7 @@ export default function OnboardChoosePage({ token }: { token: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div className="min-h-screen bg-black text-white" style={{ fontFamily: "'League Spartan', sans-serif" }}>
       <div className="px-5 pt-6 pb-2">
         <img
           src="/sms-logo.png"
@@ -66,7 +66,7 @@ export default function OnboardChoosePage({ token }: { token: string }) {
       <div className="px-5 pb-10 pt-6" style={{ maxWidth: 560 }}>
         <h1
           style={{
-            fontFamily: "'Bebas Neue', sans-serif",
+            fontFamily: "'League Spartan', sans-serif",
             fontSize: "clamp(2.8rem, 12vw, 4.5rem)",
             lineHeight: 1,
             color: BRAND.primaryColor,

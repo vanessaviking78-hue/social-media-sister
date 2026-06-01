@@ -81,7 +81,7 @@ export default function Onboard({ token }: { token: string }) {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white" style={{ fontFamily: "Inter, sans-serif" }}>
+    <div className="min-h-screen bg-black text-white" style={{ fontFamily: "'League Spartan', sans-serif" }}>
       {/* Header */}
       <div className="px-5 pt-6 pb-2">
         <img
@@ -104,7 +104,7 @@ export default function Onboard({ token }: { token: string }) {
           <>
             <h1
               style={{
-                fontFamily: "'Bebas Neue', sans-serif",
+                fontFamily: "'League Spartan', sans-serif",
                 fontSize: "clamp(2.8rem, 12vw, 4.5rem)",
                 lineHeight: 1,
                 color: BRAND.primaryColor,
@@ -166,7 +166,7 @@ export default function Onboard({ token }: { token: string }) {
           <>
             <h1
               style={{
-                fontFamily: "'Bebas Neue', sans-serif",
+                fontFamily: "'League Spartan', sans-serif",
                 fontSize: "clamp(2.8rem, 12vw, 4.5rem)",
                 lineHeight: 1,
                 color: BRAND.primaryColor,
@@ -198,7 +198,7 @@ export default function Onboard({ token }: { token: string }) {
           <>
             <h1
               style={{
-                fontFamily: "'Bebas Neue', sans-serif",
+                fontFamily: "'League Spartan', sans-serif",
                 fontSize: "clamp(2.8rem, 12vw, 4.5rem)",
                 lineHeight: 1,
                 color: BRAND.primaryColor,
@@ -230,7 +230,7 @@ export default function Onboard({ token }: { token: string }) {
           <>
             <h1
               style={{
-                fontFamily: "'Bebas Neue', sans-serif",
+                fontFamily: "'League Spartan', sans-serif",
                 fontSize: "clamp(2.8rem, 12vw, 4.5rem)",
                 lineHeight: 1,
                 color: BRAND.primaryColor,

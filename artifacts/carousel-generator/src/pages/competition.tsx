@@ -102,7 +102,7 @@ export default function Competition() {
 
         {/* Main title */}
         <h1 className="comp-title" style={{
-          fontFamily: "'Bebas Neue', sans-serif",
+          fontFamily: "'League Spartan', sans-serif",
           fontSize: "clamp(68px, 14vw, 130px)",
           lineHeight: 0.88,
           textAlign: "center",
@@ -151,7 +151,7 @@ export default function Competition() {
 
             {/* Prize headline */}
             <div style={{
-              fontFamily: "'Bebas Neue', sans-serif",
+              fontFamily: "'League Spartan', sans-serif",
               fontSize: "clamp(52px, 9vw, 90px)",
               lineHeight: 1,
               color: "#ffffff",
@@ -160,7 +160,7 @@ export default function Competition() {
               £5K
             </div>
             <div style={{
-              fontFamily: "'Bebas Neue', sans-serif",
+              fontFamily: "'League Spartan', sans-serif",
               fontSize: "32px",
               letterSpacing: "2px",
               color: "#ff2d78",
@@ -231,7 +231,7 @@ export default function Competition() {
           alignItems: "center",
         }}>
           <div style={{
-            fontFamily: "'Bebas Neue', sans-serif",
+            fontFamily: "'League Spartan', sans-serif",
             fontSize: "22px",
             letterSpacing: "2px",
             color: "#ffffff",
