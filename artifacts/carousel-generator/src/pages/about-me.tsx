@@ -41,12 +41,39 @@ type TextBlock = {
   bgColor: string;
   bgOpacity: number;
   fontSize: number;
+  left?: number;
+  top?: number;
+  width?: number;
+  scaleX?: number;
+  scaleY?: number;
+  angle?: number;
 };
 
 type DoodleState = {
   id: string;
   shapeId: string;
   color: string;
+  left?: number;
+  top?: number;
+  scaleX?: number;
+  scaleY?: number;
+  angle?: number;
+};
+
+type LogoGeo = { left: number; top: number; scaleX: number; scaleY: number } | null;
+
+type CanvasDraftState = {
+  bgType: "photo" | "colour";
+  bgColour: string;
+  overlayOpacity: number;
+  photoUrl: string;
+  cutoutUrl: string;
+  logoUrl: string | null;
+  logoGeo: LogoGeo;
+  format: "post" | "story";
+  textBlocks: TextBlock[];
+  doodles: DoodleState[];
+  useOriginal: boolean;
 };
 
 type DoodleShape = { id: string; label: string; svg: string };
@@ -144,6 +171,8 @@ export default function AboutMePage() {
   const [scheduleRendering, setScheduleRendering] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [restoreKey, setRestoreKey] = useState(0);
 
   // Refs
   const canvasElRef = useRef<HTMLCanvasElement>(null);
@@ -155,6 +184,10 @@ export default function AboutMePage() {
   const subjectObjRef = useRef<FabricImage | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const isDirtyRef = useRef(false);
+  const pendingLogoGeoRef = useRef<LogoGeo>(null);
+  const pendingRestoreRef = useRef<CanvasDraftState | null>(null);
+  const lastPresetIdRef = useRef<number | null>(null);
 
   const { presets } = usePresets();
   const selectedPreset = presets.find(p => p.id === selectedPresetId) ?? null;
@@ -196,6 +229,24 @@ export default function AboutMePage() {
       const tb = (e as any).target as Textbox;
       const id = (tb as any).__amId;
       if (id) setTextBlocks(prev => prev.map(b => b.id === id ? { ...b, text: tb.text ?? "" } : b));
+    });
+
+    canvas.on("object:modified", (e) => {
+      isDirtyRef.current = true;
+      const obj = (e as any).target;
+      if (!obj) return;
+      const id = (obj as any).__amId;
+      const type = (obj as any).__amType;
+      if (type === "text") {
+        setTextBlocks(prev => prev.map(b => b.id === id
+          ? { ...b, left: obj.left, top: obj.top, width: obj.width, scaleX: obj.scaleX, scaleY: obj.scaleY, angle: obj.angle }
+          : b));
+      }
+      if (type === "doodle") {
+        setDoodles(prev => prev.map(d => d.id === id
+          ? { ...d, left: obj.left, top: obj.top, scaleX: obj.scaleX, scaleY: obj.scaleY, angle: obj.angle }
+          : d));
+      }
     });
 
     // Re-render after web fonts load
@@ -380,9 +431,13 @@ export default function AboutMePage() {
       const ar = elem.width / elem.height;
       const lw = ar >= 1 ? maxSz : maxSz * ar;
       const lh = ar >= 1 ? maxSz / ar : maxSz;
+      const geo = pendingLogoGeoRef.current;
+      pendingLogoGeoRef.current = null;
       const logo = new FabricImage(elem, {
-        left: DISPLAY_W - lw - 10, top: DISPLAY_H - lh - 10,
-        scaleX: lw / elem.width, scaleY: lh / elem.height,
+        left: geo?.left ?? DISPLAY_W - lw - 10,
+        top: geo?.top ?? DISPLAY_H - lh - 10,
+        scaleX: geo?.scaleX ?? lw / elem.width,
+        scaleY: geo?.scaleY ?? lh / elem.height,
         selectable: true, evented: true,
         originX: "left", originY: "top",
       });
@@ -396,10 +451,14 @@ export default function AboutMePage() {
 
   useEffect(() => { if (logoUrl) void applyLogo(logoUrl); }, [logoUrl, applyLogo]);
 
-  // Auto-load logo from selected preset
+  // Auto-load logo when preset changes — always replace with new preset's logo
   useEffect(() => {
-    if (selectedPreset?.logoUrl && !logoUrl) setLogoUrl(selectedPreset.logoUrl);
-  }, [selectedPreset?.logoUrl]); // eslint-disable-line
+    if (selectedPresetId === lastPresetIdRef.current) return;
+    lastPresetIdRef.current = selectedPresetId;
+    if (selectedPreset?.logoUrl) {
+      setLogoUrl(selectedPreset.logoUrl);
+    }
+  }, [selectedPresetId, selectedPreset?.logoUrl]);
 
   const removeLogo = useCallback(() => {
     const canvas = fabricRef.current;
@@ -499,6 +558,152 @@ export default function AboutMePage() {
     finally { setLogoUploading(false); }
   }, []);
 
+  // ── Save / load draft ─────────────────────────────────────────────────────
+  const restoreCanvasObjects = useCallback(async (state: CanvasDraftState) => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    // Remove existing user objects (text, logo, doodle)
+    const toRemove = canvas.getObjects().filter(o => {
+      const t = (o as any).__amType;
+      return t === "text" || t === "logo" || t === "doodle";
+    });
+    toRemove.forEach(o => canvas.remove(o));
+    blockMapRef.current.clear();
+    doodleMapRef.current.clear();
+    logoObjRef.current = null;
+
+    // Re-create text blocks with saved geometry
+    for (const block of state.textBlocks) {
+      const tb = new Textbox(block.text, {
+        left: block.left ?? 20, top: block.top ?? 24,
+        width: block.width ?? DISPLAY_W - 40,
+        scaleX: block.scaleX ?? 1, scaleY: block.scaleY ?? 1,
+        angle: block.angle ?? 0,
+        fontSize: block.fontSize, fontFamily: block.fontFamily,
+        fill: block.fontColor, textAlign: "center", editable: true,
+        originX: "left", originY: "top",
+      });
+      if (block.bgEnabled) tb.set({ backgroundColor: hexToRgba(block.bgColor, block.bgOpacity) });
+      (tb as any).__amId = block.id;
+      (tb as any).__amType = "text";
+      canvas.add(tb);
+      blockMapRef.current.set(block.id, tb);
+    }
+
+    // Re-create doodles with saved geometry
+    for (const doodle of state.doodles) {
+      const shape = DOODLES.find(d => d.id === doodle.shapeId);
+      if (!shape) continue;
+      try {
+        const { objects } = await loadSVGFromString(shape.svg);
+        const valid = objects.filter((o): o is FabricObject => o !== null);
+        valid.forEach(obj => obj.set({ stroke: doodle.color, fill: "transparent" }));
+        const group = new Group(valid, {
+          left: doodle.left ?? DISPLAY_W / 2 - 40,
+          top: doodle.top ?? DISPLAY_H / 2 - 40,
+          scaleX: doodle.scaleX ?? 0.8, scaleY: doodle.scaleY ?? 0.8,
+          angle: doodle.angle ?? 0,
+          selectable: true, evented: true,
+          originX: "left", originY: "top",
+        });
+        (group as any).__amId = doodle.id;
+        (group as any).__amType = "doodle";
+        canvas.add(group);
+        doodleMapRef.current.set(doodle.id, group);
+      } catch {}
+    }
+
+    // Logo: set pending geo so applyLogo picks it up, then trigger via logoUrl
+    if (state.logoUrl) {
+      pendingLogoGeoRef.current = state.logoGeo;
+      setLogoUrl(state.logoUrl);
+    }
+
+    canvas.requestRenderAll();
+  }, [DISPLAY_H]);
+
+  // Triggered after state has been committed from a draft load
+  useEffect(() => {
+    if (!pendingRestoreRef.current) return;
+    const state = pendingRestoreRef.current;
+    pendingRestoreRef.current = null;
+    void restoreCanvasObjects(state);
+  }, [restoreKey, restoreCanvasObjects]);
+
+  const loadDraftForClient = useCallback(async (clientName: string) => {
+    if (!clientName) return;
+    try {
+      const resp = await fetch(`${BASE}/api/about-me/canvas-draft?clientName=${encodeURIComponent(clientName)}`);
+      if (!resp.ok) return;
+      const draft: { stateJson: string } = await resp.json();
+      const state = JSON.parse(draft.stateJson) as CanvasDraftState;
+      // Restore page state
+      if (state.bgType) setBgType(state.bgType);
+      if (state.bgColour) setBgColour(state.bgColour);
+      if (state.overlayOpacity != null) setOverlayOpacity(state.overlayOpacity);
+      if (state.photoUrl) setPhotoUrl(state.photoUrl);
+      if (state.cutoutUrl) setCutoutUrl(state.cutoutUrl);
+      if (state.format) setFormat(state.format);
+      if (state.useOriginal != null) setUseOriginal(state.useOriginal);
+      if (state.textBlocks) setTextBlocks(state.textBlocks);
+      if (state.doodles) setDoodles(state.doodles);
+      // Store full state for canvas restore (runs after state commit via restoreKey)
+      pendingRestoreRef.current = state;
+      setRestoreKey(k => k + 1);
+    } catch {}
+  }, []);
+
+  // Auto-load draft when preset changes
+  useEffect(() => {
+    if (selectedPreset?.name) void loadDraftForClient(selectedPreset.name);
+  }, [selectedPresetId]); // eslint-disable-line
+
+  const saveDraft = useCallback(async () => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const clientName = selectedPreset?.name ?? "__default__";
+    setSavingDraft(true);
+    try {
+      // Enrich text blocks and doodles with current Fabric geometry
+      const enrichedBlocks = textBlocks.map(b => {
+        const tb = blockMapRef.current.get(b.id);
+        return tb ? { ...b, left: tb.left, top: tb.top, width: tb.width, scaleX: tb.scaleX, scaleY: tb.scaleY, angle: tb.angle } : b;
+      });
+      const enrichedDoodles = doodles.map(d => {
+        const g = doodleMapRef.current.get(d.id);
+        return g ? { ...d, left: g.left, top: g.top, scaleX: g.scaleX, scaleY: g.scaleY, angle: g.angle } : d;
+      });
+      const logoGeo: LogoGeo = logoObjRef.current
+        ? { left: logoObjRef.current.left ?? 0, top: logoObjRef.current.top ?? 0, scaleX: logoObjRef.current.scaleX ?? 1, scaleY: logoObjRef.current.scaleY ?? 1 }
+        : null;
+      const stateJson = JSON.stringify({
+        bgType, bgColour, overlayOpacity, photoUrl, cutoutUrl,
+        logoUrl, logoGeo, format, textBlocks: enrichedBlocks,
+        doodles: enrichedDoodles, useOriginal,
+      } satisfies CanvasDraftState);
+      const resp = await fetch(`${BASE}/api/about-me/canvas-draft`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientName, stateJson }),
+      });
+      if (!resp.ok) throw new Error("Save failed");
+      isDirtyRef.current = false;
+      toast.success("Layout saved");
+    } catch (e: any) { toast.error("Failed to save: " + e.message); }
+    finally { setSavingDraft(false); }
+  }, [bgType, bgColour, overlayOpacity, photoUrl, cutoutUrl, logoUrl, format, textBlocks, doodles, useOriginal, selectedPreset?.name]);
+
+  const saveLogoToPreset = useCallback(async () => {
+    if (!selectedPresetId || !logoUrl) return;
+    try {
+      const resp = await fetch(`${BASE}/api/presets/${selectedPresetId}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ logoUrl }),
+      });
+      if (!resp.ok) throw new Error("Update failed");
+      toast.success("Logo saved to preset");
+    } catch (e: any) { toast.error("Failed: " + e.message); }
+  }, [selectedPresetId, logoUrl]);
+
   // ── Export ────────────────────────────────────────────────────────────────
   const handleDownload = useCallback(async () => {
     const canvas = fabricRef.current;
@@ -552,6 +757,11 @@ export default function AboutMePage() {
         </Link>
         <h1 className="text-sm font-semibold tracking-widest uppercase text-white/80">About Me</h1>
         <div className="ml-auto flex items-center gap-2">
+          <Button onClick={saveDraft} disabled={savingDraft} size="sm" variant="outline"
+            className="text-xs h-7 px-3 border-white/20 text-white/70 hover:text-white">
+            {savingDraft ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : null}
+            Save
+          </Button>
           <Button onClick={handleDownload} disabled={exporting} size="sm"
             className="bg-pink-600 hover:bg-pink-500 text-white text-xs h-7 px-3">
             {exporting ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1" />}
@@ -769,15 +979,23 @@ export default function AboutMePage() {
             <div className="space-y-2">
               <Label className="text-[10px] uppercase tracking-widest text-white/40">Logo</Label>
               {logoUrl ? (
-                <div className="flex items-center gap-3 p-2 rounded-xl border border-white/10 bg-white/5">
-                  <img src={logoUrl} alt="Logo" className="h-10 w-10 object-contain rounded" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-white/60">Logo loaded</p>
-                    <p className="text-[10px] text-white/30">Drag to reposition on canvas</p>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-3 p-2 rounded-xl border border-white/10 bg-white/5">
+                    <img src={logoUrl} alt="Logo" className="h-10 w-10 object-contain rounded" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-white/60">Logo loaded</p>
+                      <p className="text-[10px] text-white/30">Drag to reposition on canvas</p>
+                    </div>
+                    <button onClick={removeLogo} className="text-white/30 hover:text-red-400 transition-colors shrink-0">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                  <button onClick={removeLogo} className="text-white/30 hover:text-red-400 transition-colors shrink-0">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+                  {selectedPresetId && logoUrl !== selectedPreset?.logoUrl && (
+                    <button onClick={saveLogoToPreset}
+                      className="w-full py-1 text-[10px] text-pink-400/70 hover:text-pink-400 border border-pink-500/20 hover:border-pink-500/40 rounded-lg transition-colors">
+                      Save logo to preset
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div onClick={() => logoInputRef.current?.click()}

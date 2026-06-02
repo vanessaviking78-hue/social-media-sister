@@ -3,6 +3,7 @@ import multer from "multer";
 import { db } from "@workspace/db";
 import {
   aboutMePostsTable,
+  aboutMeCanvasDraftsTable,
   type AboutMeWord,
   type AboutMeDoodle,
   type AboutMeCanvasConfig,
@@ -675,6 +676,43 @@ router.delete("/about-me/:id", async (req, res) => {
   try {
     await db.delete(aboutMePostsTable).where(eq(aboutMePostsTable.id, parseInt(req.params.id)));
     res.json({ ok: true });
+  } catch (e: any) {
+    req.log.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// GET /api/about-me/canvas-draft?clientName=X
+router.get("/about-me/canvas-draft", async (req, res) => {
+  try {
+    const clientName = typeof req.query.clientName === "string" ? req.query.clientName : "";
+    if (!clientName) { res.status(400).json({ error: "clientName required" }); return; }
+    const [draft] = await db
+      .select()
+      .from(aboutMeCanvasDraftsTable)
+      .where(eq(aboutMeCanvasDraftsTable.clientName, clientName));
+    if (!draft) { res.status(404).json({ error: "No draft" }); return; }
+    res.json(draft);
+  } catch (e: any) {
+    req.log.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// PUT /api/about-me/canvas-draft
+router.put("/about-me/canvas-draft", async (req, res) => {
+  try {
+    const { clientName, stateJson } = req.body;
+    if (!clientName || !stateJson) { res.status(400).json({ error: "clientName and stateJson required" }); return; }
+    const [result] = await db
+      .insert(aboutMeCanvasDraftsTable)
+      .values({ clientName, stateJson })
+      .onConflictDoUpdate({
+        target: aboutMeCanvasDraftsTable.clientName,
+        set: { stateJson, updatedAt: new Date() },
+      })
+      .returning();
+    res.json(result);
   } catch (e: any) {
     req.log.error(e);
     res.status(500).json({ error: e.message });

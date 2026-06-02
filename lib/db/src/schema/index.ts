@@ -356,6 +356,14 @@ export const insertAboutMePostSchema = createInsertSchema(aboutMePostsTable)
 export type InsertAboutMePost = z.infer<typeof insertAboutMePostSchema>;
 export type AboutMePost = typeof aboutMePostsTable.$inferSelect;
 
+export const aboutMeCanvasDraftsTable = pgTable("about_me_canvas_drafts", {
+  id: serial("id").primaryKey(),
+  clientName: text("client_name").notNull().unique(),
+  stateJson: text("state_json").notNull(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+export type AboutMeCanvasDraft = typeof aboutMeCanvasDraftsTable.$inferSelect;
+
 export type SeamlessSlide = {
   hasText: boolean;
   title: string;
