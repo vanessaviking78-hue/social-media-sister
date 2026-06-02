@@ -289,12 +289,38 @@ export type AboutMeWord = {
 
 export type AboutMeDoodle = {
   id: string;
-  shape: "heart-outline" | "arrow" | "sparkle";
-  x: number;
-  y: number;
-  size: number;
-  rotation: number;
+  shape: "heart-outline" | "arrow" | "sparkle" | "heart" | "star" | "pencil" | "syringe" | "caduceus" | "flower" | "squiggle";
+  x?: number;
+  y?: number;
+  size?: number;
+  rotation?: number;
+  color?: string;
+  shapeId?: string;
+  left?: number;
+  top?: number;
+  scaleX?: number;
+  scaleY?: number;
+  angle?: number;
 };
+
+export type AboutMeTextBlock = {
+  id: string;
+  text: string;
+  fontFamily: string;
+  fontColor: string;
+  bgEnabled: boolean;
+  bgColor: string;
+  bgOpacity: number;
+  fontSize: number;
+  left?: number;
+  top?: number;
+  width?: number;
+  scaleX?: number;
+  scaleY?: number;
+  angle?: number;
+};
+
+export type AboutMeLogoGeo = { left: number; top: number; scaleX: number; scaleY: number } | null;
 
 export type AboutMeCanvasConfig = {
   cutoutX: number;
@@ -323,6 +349,15 @@ export type AboutMeCanvasConfig = {
   subtitleLineHeight?: number;
   wordFontSize?: number;
   stickerTopperDefault?: string;
+  textBlocks?: AboutMeTextBlock[];
+  logoGeo?: AboutMeLogoGeo;
+  bgType?: "photo" | "colour";
+  bgColour?: string;
+  overlayOpacity?: number;
+  format?: "post" | "story";
+  useOriginal?: boolean;
+  photoUrl?: string;
+  cutoutUrl?: string;
 };
 
 export const aboutMePostsTable = pgTable("about_me_posts", {

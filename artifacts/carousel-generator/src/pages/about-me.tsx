@@ -63,17 +63,17 @@ type DoodleState = {
 type LogoGeo = { left: number; top: number; scaleX: number; scaleY: number } | null;
 
 type CanvasDraftState = {
-  bgType: "photo" | "colour";
-  bgColour: string;
-  overlayOpacity: number;
-  photoUrl: string;
-  cutoutUrl: string;
-  logoUrl: string | null;
-  logoGeo: LogoGeo;
-  format: "post" | "story";
-  textBlocks: TextBlock[];
-  doodles: DoodleState[];
-  useOriginal: boolean;
+  bgType?: "photo" | "colour";
+  bgColour?: string;
+  overlayOpacity?: number;
+  photoUrl?: string;
+  cutoutUrl?: string;
+  logoUrl?: string | null;
+  logoGeo?: LogoGeo;
+  format?: "post" | "story";
+  textBlocks?: TextBlock[];
+  doodles?: DoodleState[];
+  useOriginal?: boolean;
 };
 
 type DoodleShape = { id: string; label: string; svg: string };
@@ -128,6 +128,27 @@ function hexToRgba(hex: string, opacity: number): string {
   const g = parseInt(h.slice(2, 4), 16);
   const b = parseInt(h.slice(4, 6), 16);
   return `rgba(${r},${g},${b},${opacity / 100})`;
+}
+
+async function ensureDurableUrl(url: string, base: string): Promise<string> {
+  if (!url || !url.startsWith("blob:")) return url;
+  try {
+    const blob = await fetch(url).then(r => r.blob());
+    const reader = new FileReader();
+    const base64 = await new Promise<string>((res, rej) => {
+      reader.onload = () => res((reader.result as string).split(",")[1] ?? "");
+      reader.onerror = rej;
+      reader.readAsDataURL(blob);
+    });
+    const ext = blob.type.includes("png") ? "png" : "jpg";
+    const resp = await fetch(`${base}/api/content/upload-image`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images: [{ name: `photo.${ext}`, base64 }] }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error ?? "Upload failed");
+    return data.results?.[0]?.url ?? url;
+  } catch { return url; }
 }
 
 const DEFAULT_BLOCK: TextBlock = {
@@ -573,7 +594,7 @@ export default function AboutMePage() {
     logoObjRef.current = null;
 
     // Re-create text blocks with saved geometry
-    for (const block of state.textBlocks) {
+    for (const block of state.textBlocks ?? []) {
       const tb = new Textbox(block.text, {
         left: block.left ?? 20, top: block.top ?? 24,
         width: block.width ?? DISPLAY_W - 40,
@@ -591,7 +612,7 @@ export default function AboutMePage() {
     }
 
     // Re-create doodles with saved geometry
-    for (const doodle of state.doodles) {
+    for (const doodle of state.doodles ?? []) {
       const shape = DOODLES.find(d => d.id === doodle.shapeId);
       if (!shape) continue;
       try {
@@ -615,7 +636,7 @@ export default function AboutMePage() {
 
     // Logo: set pending geo so applyLogo picks it up, then trigger via logoUrl
     if (state.logoUrl) {
-      pendingLogoGeoRef.current = state.logoGeo;
+      pendingLogoGeoRef.current = state.logoGeo ?? null;
       setLogoUrl(state.logoUrl);
     }
 
@@ -635,8 +656,8 @@ export default function AboutMePage() {
     try {
       const resp = await fetch(`${BASE}/api/about-me/canvas-draft?clientName=${encodeURIComponent(clientName)}`);
       if (!resp.ok) return;
-      const draft: { stateJson: string } = await resp.json();
-      const state = JSON.parse(draft.stateJson) as CanvasDraftState;
+      const { canvasConfig } = await resp.json() as { canvasConfig: CanvasDraftState };
+      const state = canvasConfig;
       // Restore page state
       if (state.bgType) setBgType(state.bgType);
       if (state.bgColour) setBgColour(state.bgColour);
@@ -664,6 +685,9 @@ export default function AboutMePage() {
     const clientName = selectedPreset?.name ?? "__default__";
     setSavingDraft(true);
     try {
+      // Upload any blob: URLs to object storage to get durable URLs
+      const durablePhotoUrl = await ensureDurableUrl(photoUrl, BASE);
+      const durableCutoutUrl = await ensureDurableUrl(cutoutUrl, BASE);
       // Enrich text blocks and doodles with current Fabric geometry
       const enrichedBlocks = textBlocks.map(b => {
         const tb = blockMapRef.current.get(b.id);
@@ -676,16 +700,20 @@ export default function AboutMePage() {
       const logoGeo: LogoGeo = logoObjRef.current
         ? { left: logoObjRef.current.left ?? 0, top: logoObjRef.current.top ?? 0, scaleX: logoObjRef.current.scaleX ?? 1, scaleY: logoObjRef.current.scaleY ?? 1 }
         : null;
-      const stateJson = JSON.stringify({
-        bgType, bgColour, overlayOpacity, photoUrl, cutoutUrl,
+      const canvasConfig: CanvasDraftState = {
+        bgType, bgColour, overlayOpacity,
+        photoUrl: durablePhotoUrl, cutoutUrl: durableCutoutUrl,
         logoUrl, logoGeo, format, textBlocks: enrichedBlocks,
         doodles: enrichedDoodles, useOriginal,
-      } satisfies CanvasDraftState);
+      };
       const resp = await fetch(`${BASE}/api/about-me/canvas-draft`, {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientName, stateJson }),
+        body: JSON.stringify({ clientName, canvasConfig }),
       });
       if (!resp.ok) throw new Error("Save failed");
+      // Update local state with durable URLs so restores work without re-uploading
+      if (durablePhotoUrl !== photoUrl) setPhotoUrl(durablePhotoUrl);
+      if (durableCutoutUrl !== cutoutUrl) setCutoutUrl(durableCutoutUrl);
       isDirtyRef.current = false;
       toast.success("Layout saved");
     } catch (e: any) { toast.error("Failed to save: " + e.message); }

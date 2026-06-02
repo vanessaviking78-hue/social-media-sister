@@ -274,9 +274,9 @@ function stickerSvg(
 }
 
 function doodleSvg(d: AboutMeDoodle, canvasW: number, canvasH: number, color: string): string {
-  const cx = d.x * canvasW;
-  const cy = d.y * canvasH;
-  const s = d.size * 2.2;
+  const cx = (d.x ?? 0.5) * canvasW;
+  const cy = (d.y ?? 0.5) * canvasH;
+  const s = (d.size ?? 20) * 2.2;
   const rot = d.rotation ?? 0;
   const transform = rot !== 0 ? ` transform="rotate(${rot} ${cx} ${cy})"` : "";
 
@@ -692,7 +692,8 @@ router.get("/about-me/canvas-draft", async (req, res) => {
       .from(aboutMeCanvasDraftsTable)
       .where(eq(aboutMeCanvasDraftsTable.clientName, clientName));
     if (!draft) { res.status(404).json({ error: "No draft" }); return; }
-    res.json(draft);
+    const canvasConfig = JSON.parse(draft.stateJson) as AboutMeCanvasConfig;
+    res.json({ canvasConfig });
   } catch (e: any) {
     req.log.error(e);
     res.status(500).json({ error: e.message });
@@ -702,17 +703,17 @@ router.get("/about-me/canvas-draft", async (req, res) => {
 // PUT /api/about-me/canvas-draft
 router.put("/about-me/canvas-draft", async (req, res) => {
   try {
-    const { clientName, stateJson } = req.body;
-    if (!clientName || !stateJson) { res.status(400).json({ error: "clientName and stateJson required" }); return; }
-    const [result] = await db
+    const { clientName, canvasConfig } = req.body;
+    if (!clientName || !canvasConfig) { res.status(400).json({ error: "clientName and canvasConfig required" }); return; }
+    const stateJson = JSON.stringify(canvasConfig);
+    await db
       .insert(aboutMeCanvasDraftsTable)
       .values({ clientName, stateJson })
       .onConflictDoUpdate({
         target: aboutMeCanvasDraftsTable.clientName,
         set: { stateJson, updatedAt: new Date() },
-      })
-      .returning();
-    res.json(result);
+      });
+    res.json({ ok: true });
   } catch (e: any) {
     req.log.error(e);
     res.status(500).json({ error: e.message });
