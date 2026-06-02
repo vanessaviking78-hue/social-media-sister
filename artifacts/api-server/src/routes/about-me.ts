@@ -581,6 +581,59 @@ router.get("/about-me", async (req, res) => {
   }
 });
 
+// GET /api/about-me/canvas-draft?clientName=X
+router.get("/about-me/canvas-draft", async (req, res) => {
+  try {
+    const clientName = typeof req.query.clientName === "string" ? req.query.clientName : "";
+    if (!clientName) { res.status(400).json({ error: "clientName required" }); return; }
+    const [draft] = await db
+      .select()
+      .from(aboutMeCanvasDraftsTable)
+      .where(eq(aboutMeCanvasDraftsTable.clientName, clientName));
+    if (!draft) { res.status(404).json({ error: "No draft" }); return; }
+    const canvasConfig = JSON.parse(draft.stateJson) as AboutMeCanvasConfig;
+    res.json({ canvasConfig });
+  } catch (e: any) {
+    req.log.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// PUT /api/about-me/canvas-draft
+router.put("/about-me/canvas-draft", async (req, res) => {
+  try {
+    const { clientName, canvasConfig } = req.body;
+    if (!clientName || !canvasConfig) { res.status(400).json({ error: "clientName and canvasConfig required" }); return; }
+    const stateJson = JSON.stringify(canvasConfig);
+    // Persist draft
+    await db
+      .insert(aboutMeCanvasDraftsTable)
+      .values({ clientName, stateJson })
+      .onConflictDoUpdate({
+        target: aboutMeCanvasDraftsTable.clientName,
+        set: { stateJson, updatedAt: new Date() },
+      });
+    // Also sync canvasConfig onto the most-recent about_me_posts record for this
+    // client so that reopening a saved post restores the Fabric canvas layout.
+    const [latest] = await db
+      .select({ id: aboutMePostsTable.id })
+      .from(aboutMePostsTable)
+      .where(eq(aboutMePostsTable.clientName, clientName))
+      .orderBy(desc(aboutMePostsTable.updatedAt))
+      .limit(1);
+    if (latest) {
+      await db
+        .update(aboutMePostsTable)
+        .set({ canvasConfig, updatedAt: new Date() })
+        .where(eq(aboutMePostsTable.id, latest.id));
+    }
+    res.json({ ok: true });
+  } catch (e: any) {
+    req.log.error(e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // GET /api/about-me/:id
 router.get("/about-me/:id", async (req, res) => {
   try {
@@ -675,59 +728,6 @@ router.put("/about-me/:id", async (req, res) => {
 router.delete("/about-me/:id", async (req, res) => {
   try {
     await db.delete(aboutMePostsTable).where(eq(aboutMePostsTable.id, parseInt(req.params.id)));
-    res.json({ ok: true });
-  } catch (e: any) {
-    req.log.error(e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// GET /api/about-me/canvas-draft?clientName=X
-router.get("/about-me/canvas-draft", async (req, res) => {
-  try {
-    const clientName = typeof req.query.clientName === "string" ? req.query.clientName : "";
-    if (!clientName) { res.status(400).json({ error: "clientName required" }); return; }
-    const [draft] = await db
-      .select()
-      .from(aboutMeCanvasDraftsTable)
-      .where(eq(aboutMeCanvasDraftsTable.clientName, clientName));
-    if (!draft) { res.status(404).json({ error: "No draft" }); return; }
-    const canvasConfig = JSON.parse(draft.stateJson) as AboutMeCanvasConfig;
-    res.json({ canvasConfig });
-  } catch (e: any) {
-    req.log.error(e);
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// PUT /api/about-me/canvas-draft
-router.put("/about-me/canvas-draft", async (req, res) => {
-  try {
-    const { clientName, canvasConfig } = req.body;
-    if (!clientName || !canvasConfig) { res.status(400).json({ error: "clientName and canvasConfig required" }); return; }
-    const stateJson = JSON.stringify(canvasConfig);
-    // Persist draft
-    await db
-      .insert(aboutMeCanvasDraftsTable)
-      .values({ clientName, stateJson })
-      .onConflictDoUpdate({
-        target: aboutMeCanvasDraftsTable.clientName,
-        set: { stateJson, updatedAt: new Date() },
-      });
-    // Also sync canvasConfig onto the most-recent about_me_posts record for this
-    // client so that reopening a saved post restores the Fabric canvas layout.
-    const [latest] = await db
-      .select({ id: aboutMePostsTable.id })
-      .from(aboutMePostsTable)
-      .where(eq(aboutMePostsTable.clientName, clientName))
-      .orderBy(desc(aboutMePostsTable.updatedAt))
-      .limit(1);
-    if (latest) {
-      await db
-        .update(aboutMePostsTable)
-        .set({ canvasConfig, updatedAt: new Date() })
-        .where(eq(aboutMePostsTable.id, latest.id));
-    }
     res.json({ ok: true });
   } catch (e: any) {
     req.log.error(e);
