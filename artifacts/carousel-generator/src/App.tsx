@@ -48,6 +48,7 @@ import FounderWelcome from "@/pages/founder-welcome";
 import StrategyLibrary from "@/pages/strategy-library";
 import PhotoCarousel from "@/pages/photo-carousel";
 import Brand from "@/pages/brand";
+import UploadSchedule from "@/pages/upload-schedule";
 
 const queryClient = new QueryClient();
 
@@ -81,6 +82,7 @@ function ProtectedRouter() {
       <Route path="/strategy-library" component={StrategyLibrary} />
       <Route path="/photo-carousel" component={PhotoCarousel} />
       <Route path="/brand" component={Brand} />
+      <Route path="/upload-schedule" component={UploadSchedule} />
       <Route component={NotFound} />
     </Switch>
   );

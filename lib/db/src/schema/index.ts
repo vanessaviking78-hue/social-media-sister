@@ -224,6 +224,9 @@ export const scheduledPostsTable = pgTable("scheduled_posts", {
     videoUrl?: string;
     caption: string;
     title: string;
+    platforms?: string[];
+    firstComment?: string;
+    musicTrack?: { name: string; artist: string } | null;
   }>(),
   scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
   status: text("status").notNull().default("pending"),

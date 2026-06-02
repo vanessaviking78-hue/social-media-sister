@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud } from "lucide-react";
 
 const TOOLS = [
   {
@@ -199,6 +199,15 @@ const TOOLS = [
     color: "from-pink-500/20 to-pink-500/5",
     border: "hover:border-pink-500/50",
     iconColor: "text-pink-400",
+  },
+  {
+    href: "/upload-schedule",
+    icon: UploadCloud,
+    name: "Upload & Schedule",
+    description: "Upload images made in Canva or anywhere else. Write or generate a caption, pick a time, and queue it.",
+    color: "from-green-500/20 to-green-500/5",
+    border: "hover:border-green-500/50",
+    iconColor: "text-green-400",
   },
 ];
 

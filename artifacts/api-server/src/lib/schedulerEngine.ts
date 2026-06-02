@@ -165,7 +165,7 @@ async function igPostComment(igMediaId: string, token: string, commentText: stri
   }
 }
 
-type PostContent = { imageUrls?: string[]; videoUrl?: string; caption: string; title: string; firstComment?: string; musicTrack?: { name: string; artist: string } | null };
+type PostContent = { imageUrls?: string[]; videoUrl?: string; caption: string; title: string; firstComment?: string; musicTrack?: { name: string; artist: string } | null; platforms?: string[] };
 
 async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, preset: typeof clientPresetsTable.$inferSelect): Promise<{ igPostId?: string; fbPostId?: string }> {
   const token = preset.metaPageAccessToken;
@@ -204,7 +204,11 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
     : undefined;
   // Music is saved as post metadata only. Never append music text to the published caption.
   const caption = content.caption;
-  if (igId) {
+  // Per-post platform selection: if content.platforms is set, only fire the requested rails.
+  // If absent (legacy posts), default to both.
+  const wantIG = !content.platforms || content.platforms.includes("instagram");
+  const wantFB = !content.platforms || content.platforms.includes("facebook");
+  if (igId && wantIG) {
     try {
       result.igPostId = await postCarouselToIG(igId, token, content.imageUrls, caption, audioName);
       const firstCommentText = content.firstComment?.trim();
@@ -218,7 +222,7 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
     }
     catch (e: any) { errors.push(`IG: ${e.message}`); }
   }
-  if (pageId) {
+  if (pageId && wantFB) {
     try { result.fbPostId = await postCarouselToFB(pageId, token, content.imageUrls, caption); }
     catch (e: any) { errors.push(`FB: ${e.message}`); }
   }
