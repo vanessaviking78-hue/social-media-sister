@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers } from "lucide-react";
 
 const TOOLS = [
   {
@@ -208,6 +208,15 @@ const TOOLS = [
     color: "from-green-500/20 to-green-500/5",
     border: "hover:border-green-500/50",
     iconColor: "text-green-400",
+  },
+  {
+    href: "/bulk-carousel",
+    icon: Layers,
+    name: "Bulk Carousel Creator",
+    description: "Upload a CSV and image folder. Renders branded 4-slide carousels for every row and exports a master ZIP or sends direct to the scheduler.",
+    color: "from-cyan-500/20 to-cyan-500/5",
+    border: "hover:border-cyan-500/50",
+    iconColor: "text-cyan-400",
   },
 ];
 
