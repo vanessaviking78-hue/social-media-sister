@@ -83,6 +83,7 @@
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
+    "fabric": "^7.4.0",
     "mp4-muxer": "^5.2.2",
     "onnxruntime-web": "1.21.0"
   }
