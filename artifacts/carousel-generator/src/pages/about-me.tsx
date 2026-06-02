@@ -210,7 +210,7 @@ export default function AboutMePage() {
   const pendingRestoreRef = useRef<CanvasDraftState | null>(null);
   const lastPresetIdRef = useRef<number | null>(null);
 
-  const { presets } = usePresets();
+  const { presets, fetchPresets } = usePresets();
   const selectedPreset = presets.find(p => p.id === selectedPresetId) ?? null;
 
   const CH = format === "story" ? CANVAS_H_STORY : CANVAS_H_POST;
@@ -728,9 +728,10 @@ export default function AboutMePage() {
         body: JSON.stringify({ logoUrl }),
       });
       if (!resp.ok) throw new Error("Update failed");
+      await fetchPresets();
       toast.success("Logo saved to preset");
     } catch (e: any) { toast.error("Failed: " + e.message); }
-  }, [selectedPresetId, logoUrl]);
+  }, [selectedPresetId, logoUrl, fetchPresets]);
 
   // ── Export ────────────────────────────────────────────────────────────────
   const handleDownload = useCallback(async () => {

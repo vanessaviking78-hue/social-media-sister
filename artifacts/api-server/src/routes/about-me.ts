@@ -706,6 +706,7 @@ router.put("/about-me/canvas-draft", async (req, res) => {
     const { clientName, canvasConfig } = req.body;
     if (!clientName || !canvasConfig) { res.status(400).json({ error: "clientName and canvasConfig required" }); return; }
     const stateJson = JSON.stringify(canvasConfig);
+    // Persist draft
     await db
       .insert(aboutMeCanvasDraftsTable)
       .values({ clientName, stateJson })
@@ -713,6 +714,20 @@ router.put("/about-me/canvas-draft", async (req, res) => {
         target: aboutMeCanvasDraftsTable.clientName,
         set: { stateJson, updatedAt: new Date() },
       });
+    // Also sync canvasConfig onto the most-recent about_me_posts record for this
+    // client so that reopening a saved post restores the Fabric canvas layout.
+    const [latest] = await db
+      .select({ id: aboutMePostsTable.id })
+      .from(aboutMePostsTable)
+      .where(eq(aboutMePostsTable.clientName, clientName))
+      .orderBy(desc(aboutMePostsTable.updatedAt))
+      .limit(1);
+    if (latest) {
+      await db
+        .update(aboutMePostsTable)
+        .set({ canvasConfig, updatedAt: new Date() })
+        .where(eq(aboutMePostsTable.id, latest.id));
+    }
     res.json({ ok: true });
   } catch (e: any) {
     req.log.error(e);

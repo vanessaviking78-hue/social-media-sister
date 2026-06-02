@@ -13,6 +13,7 @@ export async function runMigrations(): Promise<void> {
     await addMusicTrackColumns();
     await addFirstCommentColumns();
     await createDmAutomationsTables();
+    await createAboutMeCanvasDraftsTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -167,6 +168,17 @@ async function createDmAutomationsTables(): Promise<void> {
       reply_text TEXT,
       error_message TEXT,
       received_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
+async function createAboutMeCanvasDraftsTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS about_me_canvas_drafts (
+      id SERIAL PRIMARY KEY,
+      client_name TEXT NOT NULL UNIQUE,
+      state_json TEXT NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
 }
