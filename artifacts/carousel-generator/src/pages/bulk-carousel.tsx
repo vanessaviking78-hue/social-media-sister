@@ -19,7 +19,7 @@ loadGoogleFonts();
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const W = 1080;
-const H = 1350;
+const H = 1440;
 const SCALE = 2;
 const EDITOR_W = 360;
 const EDITOR_SCALE = EDITOR_W / W;

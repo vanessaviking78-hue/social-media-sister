@@ -2626,7 +2626,7 @@ export default function Home() {
                       <div>
                         <h2 className="font-sans font-bold text-4xl mb-2 tracking-tight">Your Carousels are Ready</h2>
                         <p className="text-lg text-muted-foreground">
-                          {result.totalCarousels} carousels &times; {result.slidesPerCarousel} slides at 1080 &times; 1350 px
+                          {result.totalCarousels} carousels &times; {result.slidesPerCarousel} slides at 1080 &times; 1440 px
                         </p>
                       </div>
                       <div className="flex gap-3 flex-wrap justify-end">

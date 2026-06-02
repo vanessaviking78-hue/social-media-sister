@@ -20,7 +20,7 @@ import { usePresets } from "@/lib/use-presets";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const CANVAS_W = 1080;
-const CANVAS_H_POST = 1350;
+const CANVAS_H_POST = 1440;
 const CANVAS_H_STORY = 1920;
 const DISPLAY_W = 330;
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -1111,7 +1111,7 @@ export default function AboutMePage() {
           <div className="flex flex-col items-center gap-3">
             <canvas ref={canvasElRef} className="rounded-xl shadow-2xl shadow-black/60" />
             <p className="text-[10px] text-white/20 uppercase tracking-widest">
-              {format === "post" ? "1080 × 1350" : "1080 × 1920"} · Click to select · Double-click text to edit
+              {format === "post" ? "1080 × 1440" : "1080 × 1920"} · Click to select · Double-click text to edit
             </p>
           </div>
         </main>
