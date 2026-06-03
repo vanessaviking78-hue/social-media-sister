@@ -126,8 +126,17 @@ This is Vanessa talking directly to a mate who happens to run a clinic. Direct. 
 Rhythm: short, complete sentences. Vary sentence length but keep them punchy. Land ideas plainly. No meandering.${base}`;
 }
 
-function buildPersonalityContext(targetAudience?: string, contentPillars?: string, brandNotes?: string): string {
+const VOICE_STYLE_DESCRIPTIONS: Record<string, string> = {
+  "whimsical": "Whimsical voice: narrative, observational, soulful. Sentences build slowly toward something real. Small ordinary moments made meaningful. Unhurried.",
+  "professional-warmth": "Professional with Warmth voice: expert but human. Knowledgeable and credible without being cold or corporate. Warm, approachable, reassuring.",
+  "girly-sweet": "Girly and Sweet voice: warm, light, friendly, inclusive. Like chatting with a kind friend who genuinely knows their subject. Gentle and celebratory, not breathless.",
+};
+
+function buildPersonalityContext(targetAudience?: string, contentPillars?: string, brandNotes?: string, voiceStyle?: string): string {
   const parts: string[] = [];
+  if (voiceStyle && VOICE_STYLE_DESCRIPTIONS[voiceStyle]) {
+    parts.push(`Voice style: ${VOICE_STYLE_DESCRIPTIONS[voiceStyle]}`);
+  }
   if (targetAudience) parts.push(`Target audience: ${targetAudience}`);
   if (contentPillars) parts.push(`Content pillars: ${contentPillars}`);
   if (brandNotes) parts.push(`Brand personality and notes: ${brandNotes}`);
@@ -234,6 +243,7 @@ router.post("/content/generate", async (req, res) => {
       targetAudience,
       contentPillars,
       brandNotes,
+      voiceStyle,
     } = req.body;
 
     if (!industry || !tone || !topics || !postCount) {
@@ -248,7 +258,7 @@ router.post("/content/generate", async (req, res) => {
 
     const systemPrompt = `${CONTENT_SYSTEM}
 
-You are generating carousel post content for a ${industry} business.${clientName ? ` Client: "${clientName}".` : ""} Write in a ${tone} tone.${buildPersonalityContext(targetAudience, contentPillars, brandNotes)}
+You are generating carousel post content for a ${industry} business.${clientName ? ` Client: "${clientName}".` : ""} Write in a ${tone} tone.${buildPersonalityContext(targetAudience, contentPillars, brandNotes, voiceStyle)}
 
 Slide structure — follow this exactly:
 - Slide 1 is the HOOK. Under 10 words. Sounds like something a real person would actually say. Quiet, specific, honest. Not a marketing line. No banned openers. No generic "Are you tired of..." or "It's time to..." — follow the GOOD hook patterns in the voice rules above.
@@ -336,7 +346,7 @@ ${extraInstructions ? `\nAdditional instructions: ${extraInstructions}` : ""}`;
 
 router.post("/content/generate-single", async (req, res) => {
   try {
-    const { clientName, industry, tone, topics, postCount, extraInstructions, targetAudience, contentPillars, brandNotes } = req.body;
+    const { clientName, industry, tone, topics, postCount, extraInstructions, targetAudience, contentPillars, brandNotes, voiceStyle: singleVoiceStyle } = req.body;
 
     if (!industry || !tone || !topics || !postCount) {
       res.status(400).json({ error: "Missing required fields" });
@@ -348,7 +358,7 @@ router.post("/content/generate-single", async (req, res) => {
 
     const systemPrompt = `${CONTENT_SYSTEM}
 
-You are generating short text overlays for single-image Instagram posts for a ${industry} business.${clientName ? ` Client: "${clientName}".` : ""} Write in a ${tone} tone.${buildPersonalityContext(targetAudience, contentPillars, brandNotes)}
+You are generating short text overlays for single-image Instagram posts for a ${industry} business.${clientName ? ` Client: "${clientName}".` : ""} Write in a ${tone} tone.${buildPersonalityContext(targetAudience, contentPillars, brandNotes, singleVoiceStyle)}
 
 Rules:
 - Each text is a standalone image overlay — under 12 words, readable at a glance
@@ -586,7 +596,7 @@ Output ONLY a valid JSON array of ${imageCount} objects, each with "prompt" (the
 
 router.post("/content/generate-story-questions", async (req, res) => {
   try {
-    const { clientName, industry, tone, topics, questionCount, extraInstructions, targetAudience, contentPillars, brandNotes } = req.body;
+    const { clientName, industry, tone, topics, questionCount, extraInstructions, targetAudience, contentPillars, brandNotes, voiceStyle: storyVoiceStyle } = req.body;
 
     if (!industry || !tone || !topics || !questionCount) {
       res.status(400).json({ error: "Missing required fields" });
@@ -598,7 +608,7 @@ router.post("/content/generate-story-questions", async (req, res) => {
 
     const systemPrompt = `${VANESSA_SYSTEM}
 
-You are now generating Instagram Story engagement questions. Write in a ${tone} tone of voice.${clientName ? ` You are creating content for "${clientName}".` : ""} The industry is: ${industry}.${buildPersonalityContext(targetAudience, contentPillars, brandNotes)}
+You are now generating Instagram Story engagement questions. Write in a ${tone} tone of voice.${clientName ? ` You are creating content for "${clientName}".` : ""} The industry is: ${industry}.${buildPersonalityContext(targetAudience, contentPillars, brandNotes, storyVoiceStyle)}
 
 Generate exactly ${count} engagement questions for Instagram Stories.
 

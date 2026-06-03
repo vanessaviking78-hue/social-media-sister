@@ -422,6 +422,10 @@ export default function PresetsPage() {
   const [quickAddName, setQuickAddName] = useState("");
   const [quickAddSaving, setQuickAddSaving] = useState(false);
   const [quickAddError, setQuickAddError] = useState<string | null>(null);
+  const [quickAddVoiceStyle, setQuickAddVoiceStyle] = useState("northern-grit");
+  const [quickAddTargetAudience, setQuickAddTargetAudience] = useState("");
+  const [quickAddContentPillars, setQuickAddContentPillars] = useState("");
+  const [quickAddBrandNotes, setQuickAddBrandNotes] = useState("");
   const [ccWorkspaces, setCcWorkspaces] = useState<{ id: string; name: string }[]>([]);
   const [ccWorkspacesLoading, setCcWorkspacesLoading] = useState(false);
   const [ccWorkspacesError, setCcWorkspacesError] = useState<string | null>(null);
@@ -538,9 +542,18 @@ export default function PresetsPage() {
     setQuickAddSaving(true);
     setQuickAddError(null);
     try {
-      await savePreset(quickAddName.trim(), DEFAULT_STYLES);
+      await savePreset(quickAddName.trim(), DEFAULT_STYLES, undefined, undefined, undefined, {
+        voiceStyle: quickAddVoiceStyle,
+        targetAudience: quickAddTargetAudience.trim() || null,
+        contentPillars: quickAddContentPillars.trim() || null,
+        brandNotes: quickAddBrandNotes.trim() || null,
+      });
       toast.success(`"${quickAddName.trim()}" added`);
       setQuickAddName("");
+      setQuickAddVoiceStyle("northern-grit");
+      setQuickAddTargetAudience("");
+      setQuickAddContentPillars("");
+      setQuickAddBrandNotes("");
       setShowQuickAdd(false);
     } catch (err: any) {
       const message = err?.message || "Failed to add client";
@@ -594,7 +607,7 @@ export default function PresetsPage() {
               <Zap className="w-4 h-4" /> Bulk Connect All Clients
             </Button>
             <Button
-              onClick={() => { setShowQuickAdd(true); setQuickAddName(""); setQuickAddError(null); }}
+              onClick={() => { setShowQuickAdd(true); setQuickAddName(""); setQuickAddVoiceStyle("northern-grit"); setQuickAddTargetAudience(""); setQuickAddContentPillars(""); setQuickAddBrandNotes(""); setQuickAddError(null); }}
               className="bg-pink-600 hover:bg-pink-700 flex items-center gap-2"
             >
               <Plus className="w-4 h-4" /> Add New Client
@@ -603,31 +616,73 @@ export default function PresetsPage() {
         </div>
 
         {showQuickAdd && (
-          <div className="mb-6 rounded-2xl border border-pink-500/30 bg-pink-950/20 p-5 flex items-end gap-3">
-            <div className="flex-1">
-              <Label className="text-xs text-gray-400 mb-1 block">Client name</Label>
-              <Input
-                autoFocus
-                placeholder="e.g. Glow Studio"
-                value={quickAddName}
-                onChange={(e) => { setQuickAddName(e.target.value); setQuickAddError(null); }}
-                onKeyDown={(e) => { if (e.key === "Enter") handleQuickAdd(); if (e.key === "Escape") { setShowQuickAdd(false); setQuickAddError(null); } }}
-                className={`bg-gray-900 border-gray-700 text-white ${quickAddError ? "border-red-500 focus-visible:ring-red-500" : ""}`}
-              />
-              {quickAddError && (
-                <p className="text-xs text-red-400 mt-1.5">{quickAddError}</p>
-              )}
+          <div className="mb-6 rounded-2xl border border-pink-500/30 bg-pink-950/20 p-5 space-y-4">
+            <div className="flex items-end gap-3">
+              <div className="flex-1">
+                <Label className="text-xs text-gray-400 mb-1 block">Client name</Label>
+                <Input
+                  autoFocus
+                  placeholder="e.g. Glow Studio"
+                  value={quickAddName}
+                  onChange={(e) => { setQuickAddName(e.target.value); setQuickAddError(null); }}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleQuickAdd(); if (e.key === "Escape") { setShowQuickAdd(false); setQuickAddError(null); } }}
+                  className={`bg-gray-900 border-gray-700 text-white ${quickAddError ? "border-red-500 focus-visible:ring-red-500" : ""}`}
+                />
+                {quickAddError && (
+                  <p className="text-xs text-red-400 mt-1.5">{quickAddError}</p>
+                )}
+              </div>
+              <Button
+                onClick={handleQuickAdd}
+                disabled={!quickAddName.trim() || quickAddSaving}
+                className="bg-pink-600 hover:bg-pink-700"
+              >
+                <Save className="w-4 h-4 mr-1" /> {quickAddSaving ? "Saving…" : "Save"}
+              </Button>
+              <Button variant="ghost" onClick={() => { setShowQuickAdd(false); setQuickAddError(null); }} className="text-gray-400">
+                <X className="w-4 h-4" />
+              </Button>
             </div>
-            <Button
-              onClick={handleQuickAdd}
-              disabled={!quickAddName.trim() || quickAddSaving}
-              className="bg-pink-600 hover:bg-pink-700"
-            >
-              <Save className="w-4 h-4 mr-1" /> {quickAddSaving ? "Saving…" : "Save"}
-            </Button>
-            <Button variant="ghost" onClick={() => { setShowQuickAdd(false); setQuickAddError(null); }} className="text-gray-400">
-              <X className="w-4 h-4" />
-            </Button>
+            <div className="border-t border-pink-500/20 pt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Brain className="w-3.5 h-3.5 text-pink-400" />
+                <span className="text-xs font-medium text-pink-300">Brand personality (optional — you can fill this in later)</span>
+              </div>
+              <div className="grid grid-cols-1 gap-3">
+                <div>
+                  <Label className="text-xs text-gray-400 mb-1 block">Voice style</Label>
+                  <VoiceStyleSelector value={quickAddVoiceStyle} onChange={setQuickAddVoiceStyle} />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-400 mb-1 block">Target audience</Label>
+                  <Input
+                    placeholder="e.g. Women 30-55 interested in aesthetics"
+                    value={quickAddTargetAudience}
+                    onChange={(e) => setQuickAddTargetAudience(e.target.value)}
+                    className="bg-gray-900 border-gray-700 text-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-400 mb-1 block">Content pillars</Label>
+                  <Input
+                    placeholder="e.g. Education, Results, Behind the scenes"
+                    value={quickAddContentPillars}
+                    onChange={(e) => setQuickAddContentPillars(e.target.value)}
+                    className="bg-gray-900 border-gray-700 text-white"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-400 mb-1 block">Brand notes</Label>
+                  <textarea
+                    placeholder="e.g. Warm and approachable, avoid clinical jargon"
+                    value={quickAddBrandNotes}
+                    onChange={(e) => setQuickAddBrandNotes(e.target.value)}
+                    rows={2}
+                    className="w-full bg-gray-900 border border-gray-700 text-white rounded-md px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-pink-500"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

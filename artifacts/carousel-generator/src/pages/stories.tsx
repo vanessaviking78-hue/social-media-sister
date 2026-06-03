@@ -256,6 +256,7 @@ export default function Stories() {
           targetAudience: storyPreset?.targetAudience || undefined,
           contentPillars: storyPreset?.contentPillars || undefined,
           brandNotes: storyPreset?.brandNotes || undefined,
+          voiceStyle: storyPreset?.voiceStyle || undefined,
         }),
       });
       if (!res.ok) {

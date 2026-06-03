@@ -14,6 +14,7 @@ export async function runMigrations(): Promise<void> {
     await addFirstCommentColumns();
     await createDmAutomationsTables();
     await createAboutMeCanvasDraftsTable();
+    await addPersonalityProfileColumns();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -180,6 +181,15 @@ async function createAboutMeCanvasDraftsTable(): Promise<void> {
       state_json TEXT NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `);
+}
+
+async function addPersonalityProfileColumns(): Promise<void> {
+  await db.execute(sql`
+    ALTER TABLE client_presets
+    ADD COLUMN IF NOT EXISTS target_audience text,
+    ADD COLUMN IF NOT EXISTS content_pillars text,
+    ADD COLUMN IF NOT EXISTS brand_notes text
   `);
 }
 

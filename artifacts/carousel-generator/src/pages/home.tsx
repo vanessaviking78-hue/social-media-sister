@@ -669,6 +669,7 @@ export default function Home() {
           targetAudience: aiPreset?.targetAudience || undefined,
           contentPillars: aiPreset?.contentPillars || undefined,
           brandNotes: aiPreset?.brandNotes || undefined,
+          voiceStyle: aiPreset?.voiceStyle || voiceStyle,
         }),
       });
 

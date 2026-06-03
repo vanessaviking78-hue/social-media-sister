@@ -124,7 +124,7 @@ export function usePresets() {
     return data.results?.[0]?.url || "";
   }, []);
 
-  const savePreset = useCallback(async (name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null, captionFootnote?: string) => {
+  const savePreset = useCallback(async (name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null, captionFootnote?: string, personalityFields?: { voiceStyle?: string; targetAudience?: string | null; contentPillars?: string | null; brandNotes?: string | null }) => {
     const body = {
       name,
       ...styles,
@@ -132,6 +132,7 @@ export function usePresets() {
       ccWorkspaceId: ccWorkspaceId || null,
       logoUrl: logoUrl || null,
       captionFootnote: captionFootnote || "",
+      ...(personalityFields || {}),
     };
     const resp = await fetch(`${import.meta.env.BASE_URL}api/presets`, {
       method: "POST",
