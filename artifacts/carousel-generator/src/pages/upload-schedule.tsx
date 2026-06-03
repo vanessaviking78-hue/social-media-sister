@@ -300,7 +300,7 @@ export default function UploadSchedule() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur border-b border-white/5 px-4 py-3 flex items-center gap-3">
         <Link href="/hub">
           <button className="text-zinc-400 hover:text-white transition-colors p-1">
@@ -354,6 +354,7 @@ export default function UploadSchedule() {
                   onDragOver={(e) => handleThumbDragOver(idx, e)}
                   onDrop={(e) => handleThumbDrop(idx, e)}
                   onDragEnd={handleThumbDragEnd}
+                  style={{ touchAction: "pan-y" }}
                   className={`relative rounded-lg overflow-hidden aspect-square bg-zinc-900 cursor-grab active:cursor-grabbing border-2 transition-all ${
                     dragOverIdx === idx ? "border-pink-500 scale-105" : "border-transparent"
                   }`}
