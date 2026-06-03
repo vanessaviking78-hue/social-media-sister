@@ -301,10 +301,11 @@ export default function UploadSchedule() {
 
   return (
     <div
-      className="bg-background text-foreground"
-      style={{ height: "100vh", overflowY: "scroll", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+      className="bg-background text-foreground flex flex-col"
+      style={{ height: "100vh" } as React.CSSProperties}
     >
-      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur border-b border-white/5 px-4 py-3 flex items-center gap-3">
+      {/* Header — outside scroll container so it never moves */}
+      <div className="shrink-0 bg-background border-b border-white/5 px-4 py-3 flex items-center gap-3">
         <Link href="/hub">
           <button className="text-zinc-400 hover:text-white transition-colors p-1">
             <ArrowLeft size={18} />
@@ -314,6 +315,11 @@ export default function UploadSchedule() {
         <span className="text-zinc-500 text-sm">Schedule content you made in Canva or anywhere else.</span>
       </div>
 
+      {/* Scrollable body */}
+      <div
+        className="flex-1 overflow-y-auto"
+        style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+      >
       <div className="max-w-5xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
 
         {/* LEFT — Images */}
@@ -534,6 +540,7 @@ export default function UploadSchedule() {
             </Link>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
