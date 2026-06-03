@@ -50,6 +50,7 @@ import PhotoCarousel from "@/pages/photo-carousel";
 import Brand from "@/pages/brand";
 import UploadSchedule from "@/pages/upload-schedule";
 import BulkCarousel from "@/pages/bulk-carousel";
+import BulkStories from "@/pages/bulk-stories";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +86,7 @@ function ProtectedRouter() {
       <Route path="/brand" component={Brand} />
       <Route path="/upload-schedule" component={UploadSchedule} />
       <Route path="/bulk-carousel" component={BulkCarousel} />
+      <Route path="/bulk-stories" component={BulkStories} />
       <Route component={NotFound} />
     </Switch>
   );

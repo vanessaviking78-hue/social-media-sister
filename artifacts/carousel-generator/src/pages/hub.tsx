@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange } from "lucide-react";
 
 const TOOLS = [
   {
@@ -217,6 +217,15 @@ const TOOLS = [
     color: "from-cyan-500/20 to-cyan-500/5",
     border: "hover:border-cyan-500/50",
     iconColor: "text-cyan-400",
+  },
+  {
+    href: "/bulk-stories",
+    icon: CalendarRange,
+    name: "Bulk Story Scheduler",
+    description: "Upload a CSV of story questions and a set of images. Queues a full month of story posts with polls, quizzes, or question boxes in one go.",
+    color: "from-violet-500/20 to-violet-500/5",
+    border: "hover:border-violet-500/50",
+    iconColor: "text-violet-400",
   },
 ];
 
