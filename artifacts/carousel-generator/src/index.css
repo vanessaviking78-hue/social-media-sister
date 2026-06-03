@@ -119,17 +119,8 @@
     -moz-osx-font-smoothing: grayscale;
     font-smooth: antialiased;
   }
-  html {
-    height: 100%;
-  }
   body {
     @apply font-sans bg-background text-foreground selection:bg-primary/30;
-    min-height: 100%;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  #root {
-    min-height: 100%;
   }
 }
 
