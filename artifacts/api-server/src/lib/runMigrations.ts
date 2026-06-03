@@ -15,6 +15,7 @@ export async function runMigrations(): Promise<void> {
     await createDmAutomationsTables();
     await createAboutMeCanvasDraftsTable();
     await addPersonalityProfileColumns();
+    await addStickerConfigColumn();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -181,6 +182,13 @@ async function createAboutMeCanvasDraftsTable(): Promise<void> {
       state_json TEXT NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `);
+}
+
+async function addStickerConfigColumn(): Promise<void> {
+  await db.execute(sql`
+    ALTER TABLE scheduled_posts
+    ADD COLUMN IF NOT EXISTS sticker_config jsonb
   `);
 }
 

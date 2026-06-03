@@ -36,4 +36,5 @@ export * from "./schedulePostBodyPostsItem";
 export * from "./schedulePostBodyPostType";
 export * from "./seamlessCarouselBody";
 export * from "./seamlessCarouselBodySlidesItem";
+export * from "./stickerConfig";
 export * from "./uploadAiSourcePhotoBody";

@@ -214,6 +214,41 @@ export interface AboutMePostBody {
   musicTrack?: MusicTrack | null;
 }
 
+/**
+ * Configuration for an Instagram interactive Story sticker (Poll, Quiz, or Question box). Applied by Instagram at publish time.
+ */
+export type StickerConfig =
+  | {
+      type: "poll";
+      /** The poll question shown above the vote buttons */
+      question: string;
+      /**
+       * Exactly two answer labels
+       * @minItems 2
+       * @maxItems 2
+       */
+      options: string[];
+    }
+  | {
+      type: "quiz";
+      question: string;
+      /**
+       * @minItems 2
+       * @maxItems 4
+       */
+      options: string[];
+      /**
+       * Zero-based index of the correct option
+       * @minimum 0
+       */
+      correctIndex: number;
+    }
+  | {
+      type: "question";
+      /** Prompt text shown above the response box */
+      question: string;
+    };
+
 export type SeamlessCarouselBodySlidesItem = { [key: string]: unknown };
 
 /**

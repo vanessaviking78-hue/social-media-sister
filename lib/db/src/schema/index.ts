@@ -208,6 +208,11 @@ export const insertApprovalImageSchema = createInsertSchema(approvalImagesTable)
 export type InsertApprovalImage = z.infer<typeof insertApprovalImageSchema>;
 export type ApprovalImage = typeof approvalImagesTable.$inferSelect;
 
+export type StickerConfig =
+  | { type: "poll"; question: string; options: [string, string] }
+  | { type: "quiz"; question: string; options: string[]; correctIndex: number }
+  | { type: "question"; question: string };
+
 export const SCHEDULED_POST_STATUSES = ["pending", "processing", "published", "failed", "cancelled"] as const;
 export type ScheduledPostStatus = typeof SCHEDULED_POST_STATUSES[number];
 
@@ -239,6 +244,7 @@ export const scheduledPostsTable = pgTable("scheduled_posts", {
   ccStatus: text("cc_status").notNull().default("pending"),
   ccResult: json("cc_result").$type<{ postId?: string; error?: string } | null>(),
   ccPostedAt: timestamp("cc_posted_at", { withTimezone: true }),
+  stickerConfig: json("sticker_config").$type<StickerConfig | null>(),
   isTrial: boolean("is_trial").notNull().default(false),
   notes: text("notes").notNull().default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),

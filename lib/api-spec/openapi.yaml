@@ -612,6 +612,59 @@ components:
           nullable: true
       required: [clientName]
 
+    StickerConfig:
+      type: object
+      description: Configuration for an Instagram interactive Story sticker (Poll, Quiz, or Question box). Applied by Instagram at publish time.
+      discriminator:
+        propertyName: type
+      oneOf:
+        - type: object
+          description: Poll sticker — two-option audience vote
+          properties:
+            type:
+              type: string
+              enum: [poll]
+            question:
+              type: string
+              description: The poll question shown above the vote buttons
+            options:
+              type: array
+              items:
+                type: string
+              minItems: 2
+              maxItems: 2
+              description: Exactly two answer labels
+          required: [type, question, options]
+        - type: object
+          description: Quiz sticker — one correct answer from up to four choices
+          properties:
+            type:
+              type: string
+              enum: [quiz]
+            question:
+              type: string
+            options:
+              type: array
+              items:
+                type: string
+              minItems: 2
+              maxItems: 4
+            correctIndex:
+              type: integer
+              minimum: 0
+              description: Zero-based index of the correct option
+          required: [type, question, options, correctIndex]
+        - type: object
+          description: Question box sticker — open-ended text response from followers
+          properties:
+            type:
+              type: string
+              enum: [question]
+            question:
+              type: string
+              description: Prompt text shown above the response box
+          required: [type, question]
+
     SeamlessCarouselBody:
       type: object
       description: Request body for creating or updating a Seamless Carousel

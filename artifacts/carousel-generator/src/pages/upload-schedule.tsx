@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Upload, X, GripVertical, Wand2, ChevronDown, ChevronUp, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Upload, X, GripVertical, Wand2, ChevronDown, ChevronUp, CheckCircle2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,8 @@ const MAX_IMAGES = 12;
 
 type ImageItem = { file: File; localUrl: string };
 type Platform = "instagram" | "facebook";
+type PostTypeOption = "carousel" | "story";
+type StickerType = "none" | "poll" | "quiz" | "question";
 
 function toBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -109,8 +111,15 @@ export default function UploadSchedule() {
   const [platforms, setPlatforms] = useState<Set<Platform>>(
     new Set(["instagram", "facebook"])
   );
+  const [postType, setPostType] = useState<PostTypeOption>("carousel");
+  const [stickerType, setStickerType] = useState<StickerType>("none");
+  const [stickerQuestion, setStickerQuestion] = useState("");
+  const [stickerOptions, setStickerOptions] = useState(["", "", "", ""]);
+  const [stickerCorrectIndex, setStickerCorrectIndex] = useState(0);
   const [scheduling, setScheduling] = useState(false);
   const [scheduled, setScheduled] = useState(false);
+
+  const showSticker = postType === "story" && platforms.has("instagram");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragFromIdx = useRef<number | null>(null);
@@ -246,12 +255,27 @@ export default function UploadSchedule() {
       toast.loading("Queuing post...", { id });
 
       const scheduledAt = new Date(`${date}T${time}:00`).toISOString();
+
+      let stickerConfig: object | null = null;
+      if (postType === "story" && platforms.has("instagram") && stickerType !== "none" && stickerQuestion.trim()) {
+        if (stickerType === "poll" && stickerOptions[0].trim() && stickerOptions[1].trim()) {
+          stickerConfig = { type: "poll", question: stickerQuestion.trim(), options: [stickerOptions[0].trim(), stickerOptions[1].trim()] };
+        } else if (stickerType === "quiz") {
+          const validOpts = stickerOptions.map(o => o.trim()).filter(Boolean);
+          if (validOpts.length >= 2) {
+            stickerConfig = { type: "quiz", question: stickerQuestion.trim(), options: validOpts, correctIndex: Math.min(stickerCorrectIndex, validOpts.length - 1) };
+          }
+        } else if (stickerType === "question") {
+          stickerConfig = { type: "question", question: stickerQuestion.trim() };
+        }
+      }
+
       const res = await fetch(`${BASE}/api/scheduler/posts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           presetId: Number(presetId),
-          postType: "carousel",
+          postType,
           content: {
             imageUrls,
             caption: caption.trim(),
@@ -259,6 +283,7 @@ export default function UploadSchedule() {
             platforms: Array.from(platforms),
           },
           scheduledAt,
+          stickerConfig,
         }),
       });
 
@@ -458,6 +483,25 @@ export default function UploadSchedule() {
             </p>
 
             <div>
+              <Label className="text-xs text-zinc-500 mb-1.5 block">Post type</Label>
+              <div className="flex gap-2">
+                {(["carousel", "story"] as PostTypeOption[]).map((pt) => (
+                  <button
+                    key={pt}
+                    onClick={() => setPostType(pt)}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
+                      postType === pt
+                        ? "bg-pink-600/20 border-pink-500/50 text-pink-300"
+                        : "bg-zinc-900 border-white/10 text-zinc-500 hover:border-white/20"
+                    }`}
+                  >
+                    {pt === "carousel" ? "Carousel / Image" : "Story"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
               <Label className="text-xs text-zinc-500 mb-1.5 block">Client</Label>
               <Select
                 value={presetId}
@@ -523,6 +567,110 @@ export default function UploadSchedule() {
                 Posting fires via the client's connected Meta account.
               </p>
             </div>
+
+            {showSticker && (
+              <div className="border border-white/8 rounded-xl p-4 flex flex-col gap-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={13} className="text-pink-400" />
+                  <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">Interactive Sticker</p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {(["none", "poll", "quiz", "question"] as StickerType[]).map((st) => (
+                    <button
+                      key={st}
+                      onClick={() => setStickerType(st)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                        stickerType === st
+                          ? "bg-pink-600/20 border-pink-500/50 text-pink-300"
+                          : "bg-zinc-900 border-white/10 text-zinc-500 hover:border-white/20"
+                      }`}
+                    >
+                      {st === "none" ? "None" : st === "poll" ? "Poll" : st === "quiz" ? "Quiz" : "Question box"}
+                    </button>
+                  ))}
+                </div>
+
+                {stickerType !== "none" && (
+                  <div className="flex flex-col gap-3">
+                    <div>
+                      <Label className="text-xs text-zinc-500 mb-1.5 block">
+                        {stickerType === "question" ? "Prompt" : "Question"}
+                      </Label>
+                      <Input
+                        value={stickerQuestion}
+                        onChange={(e) => setStickerQuestion(e.target.value)}
+                        placeholder={
+                          stickerType === "poll"
+                            ? "Would you rather...?"
+                            : stickerType === "quiz"
+                            ? "How many treatments does it take...?"
+                            : "Ask me anything about..."
+                        }
+                        className="bg-zinc-900 border-white/10 text-sm placeholder:text-zinc-600"
+                      />
+                    </div>
+
+                    {stickerType === "poll" && (
+                      <div>
+                        <Label className="text-xs text-zinc-500 mb-1.5 block">Options</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {[0, 1].map((i) => (
+                            <Input
+                              key={i}
+                              value={stickerOptions[i]}
+                              onChange={(e) => {
+                                const next = [...stickerOptions];
+                                next[i] = e.target.value;
+                                setStickerOptions(next);
+                              }}
+                              placeholder={i === 0 ? "Yes" : "No"}
+                              className="bg-zinc-900 border-white/10 text-sm placeholder:text-zinc-600"
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {stickerType === "quiz" && (
+                      <div>
+                        <Label className="text-xs text-zinc-500 mb-1.5 block">
+                          Options — tap the circle to mark the correct answer
+                        </Label>
+                        <div className="flex flex-col gap-2">
+                          {[0, 1, 2, 3].map((i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <button
+                                onClick={() => setStickerCorrectIndex(i)}
+                                className={`w-4 h-4 rounded-full border flex-shrink-0 transition-all ${
+                                  stickerCorrectIndex === i
+                                    ? "bg-emerald-500 border-emerald-400"
+                                    : "border-white/20 hover:border-white/40"
+                                }`}
+                              />
+                              <Input
+                                value={stickerOptions[i]}
+                                onChange={(e) => {
+                                  const next = [...stickerOptions];
+                                  next[i] = e.target.value;
+                                  setStickerOptions(next);
+                                }}
+                                placeholder={`Option ${i + 1}${i >= 2 ? " (optional)" : ""}`}
+                                className="bg-zinc-900 border-white/10 text-sm placeholder:text-zinc-600"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <p className="text-[11px] text-zinc-600">
+                  Instagram applies the sticker at publish time. It cannot be previewed in the app.
+                </p>
+              </div>
+            )}
 
             <Button
               onClick={handleSchedule}

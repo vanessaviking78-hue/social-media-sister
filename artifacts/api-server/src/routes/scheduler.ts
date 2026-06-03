@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { scheduledPostsTable, clientPresetsTable } from "@workspace/db/schema";
+import { scheduledPostsTable, clientPresetsTable, type StickerConfig } from "@workspace/db/schema";
 import { eq, desc, and, gte, lte, sql, inArray } from "drizzle-orm";
 
 const router = Router();
@@ -43,6 +43,7 @@ router.post("/scheduler/posts", async (req, res) => {
       scheduledAt,
       isTrial,
       notes,
+      stickerConfig,
     } = req.body as {
       presetId: number;
       clientName?: string;
@@ -51,6 +52,7 @@ router.post("/scheduler/posts", async (req, res) => {
       scheduledAt: string;
       isTrial?: boolean;
       notes?: string;
+      stickerConfig?: StickerConfig | null;
     };
 
     if (!presetId) { res.status(400).json({ error: "presetId required" }); return; }
@@ -71,6 +73,7 @@ router.post("/scheduler/posts", async (req, res) => {
         scheduledAt: new Date(scheduledAt),
         isTrial: isTrial ?? false,
         notes: notes ?? "",
+        stickerConfig: stickerConfig ?? null,
       })
       .returning();
 

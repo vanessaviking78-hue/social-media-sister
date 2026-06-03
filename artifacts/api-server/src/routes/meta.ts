@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { db } from "@workspace/db";
-import { clientPresetsTable } from "@workspace/db/schema";
+import { clientPresetsTable, type StickerConfig } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logActivity } from "../lib/activityLog";
 import { logger } from "../lib/logger";
@@ -280,10 +280,11 @@ router.post("/meta/post-first-comment", async (req: Request, res: Response) => {
 
 router.post("/meta/push-story", async (req: Request, res: Response) => {
   try {
-    const { presetId, imageUrls, clientName } = req.body as {
+    const { presetId, imageUrls, clientName, stickerConfig } = req.body as {
       presetId: number;
       imageUrls: string[];
       clientName?: string;
+      stickerConfig?: StickerConfig | null;
     };
 
     if (!presetId) { res.status(400).json({ error: "presetId required" }); return; }
@@ -308,10 +309,33 @@ router.post("/meta/push-story", async (req: Request, res: Response) => {
 
     for (let i = 0; i < imageUrls.length; i++) {
       try {
+        const containerBody: Record<string, unknown> = {
+          image_url: imageUrls[i],
+          media_type: "STORIES",
+          access_token: token,
+        };
+        if (stickerConfig) {
+          if (stickerConfig.type === "poll") {
+            containerBody.poll_sticker = JSON.stringify({
+              question: stickerConfig.question,
+              options: stickerConfig.options,
+            });
+          } else if (stickerConfig.type === "quiz") {
+            containerBody.quiz_sticker = JSON.stringify({
+              question: stickerConfig.question,
+              options: stickerConfig.options,
+              correct_option: stickerConfig.correctIndex,
+            });
+          } else if (stickerConfig.type === "question") {
+            containerBody.question_sticker = JSON.stringify({
+              question: stickerConfig.question,
+            });
+          }
+        }
         const containerRes = await metaFetch(`${GRAPH}/${igId}/media`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image_url: imageUrls[i], media_type: "STORIES", access_token: token }),
+          body: JSON.stringify(containerBody),
         });
         const containerData = await containerRes.json() as any;
         if (!containerRes.ok || !containerData.id) {
