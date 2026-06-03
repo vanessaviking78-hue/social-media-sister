@@ -557,7 +557,7 @@ components:
           type: integer
         postType:
           type: string
-          enum: [carousel, reel]
+          enum: [carousel, reel, story]
         scheduledAt:
           type: string
           format: date-time
@@ -585,6 +585,10 @@ components:
           enum: [meta, cloud_campaign, both]
         isTrial:
           type: boolean
+        stickerConfig:
+          $ref: "#/components/schemas/StickerConfig"
+          nullable: true
+          description: Interactive Instagram Story sticker (Poll, Quiz, or Question box). Only applicable when postType is "story" and Instagram is a target platform.
       required: [presetId, postType, scheduledAt, posts]
 
     AboutMePostBody:

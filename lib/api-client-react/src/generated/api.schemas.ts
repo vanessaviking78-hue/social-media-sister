@@ -167,6 +167,7 @@ export type SchedulePostBodyPostType =
 export const SchedulePostBodyPostType = {
   carousel: "carousel",
   reel: "reel",
+  story: "story",
 } as const;
 
 export type SchedulePostBodyPostsItem = {
@@ -185,34 +186,6 @@ export const SchedulePostBodyPlatform = {
   cloud_campaign: "cloud_campaign",
   both: "both",
 } as const;
-
-/**
- * Request body for scheduling a post
- */
-export interface SchedulePostBody {
-  presetId: number;
-  postType: SchedulePostBodyPostType;
-  scheduledAt: string;
-  posts: SchedulePostBodyPostsItem[];
-  platform?: SchedulePostBodyPlatform;
-  isTrial?: boolean;
-}
-
-export type AboutMePostBodyWordsItem = { [key: string]: unknown };
-
-/**
- * Request body for creating or updating an About Me post
- */
-export interface AboutMePostBody {
-  clientName: string;
-  title?: string;
-  subtitle?: string;
-  words?: AboutMePostBodyWordsItem[];
-  accentColor?: string;
-  titleFont?: string;
-  aspectRatio?: string;
-  musicTrack?: MusicTrack | null;
-}
 
 /**
  * Configuration for an Instagram interactive Story sticker (Poll, Quiz, or Question box). Applied by Instagram at publish time.
@@ -248,6 +221,36 @@ export type StickerConfig =
       /** Prompt text shown above the response box */
       question: string;
     };
+
+/**
+ * Request body for scheduling a post
+ */
+export interface SchedulePostBody {
+  presetId: number;
+  postType: SchedulePostBodyPostType;
+  scheduledAt: string;
+  posts: SchedulePostBodyPostsItem[];
+  platform?: SchedulePostBodyPlatform;
+  isTrial?: boolean;
+  /** Interactive Instagram Story sticker (Poll, Quiz, or Question box). Only applicable when postType is "story" and Instagram is a target platform. */
+  stickerConfig?: StickerConfig | null;
+}
+
+export type AboutMePostBodyWordsItem = { [key: string]: unknown };
+
+/**
+ * Request body for creating or updating an About Me post
+ */
+export interface AboutMePostBody {
+  clientName: string;
+  title?: string;
+  subtitle?: string;
+  words?: AboutMePostBodyWordsItem[];
+  accentColor?: string;
+  titleFont?: string;
+  aspectRatio?: string;
+  musicTrack?: MusicTrack | null;
+}
 
 export type SeamlessCarouselBodySlidesItem = { [key: string]: unknown };
 

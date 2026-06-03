@@ -8,6 +8,7 @@
 import type { SchedulePostBodyPlatform } from "./schedulePostBodyPlatform";
 import type { SchedulePostBodyPostsItem } from "./schedulePostBodyPostsItem";
 import type { SchedulePostBodyPostType } from "./schedulePostBodyPostType";
+import type { StickerConfig } from "./stickerConfig";
 
 /**
  * Request body for scheduling a post
@@ -19,4 +20,6 @@ export interface SchedulePostBody {
   posts: SchedulePostBodyPostsItem[];
   platform?: SchedulePostBodyPlatform;
   isTrial?: boolean;
+  /** Interactive Instagram Story sticker (Poll, Quiz, or Question box). Only applicable when postType is "story" and Instagram is a target platform. */
+  stickerConfig?: StickerConfig | null;
 }

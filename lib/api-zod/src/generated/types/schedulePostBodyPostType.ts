@@ -12,4 +12,5 @@ export type SchedulePostBodyPostType =
 export const SchedulePostBodyPostType = {
   carousel: "carousel",
   reel: "reel",
+  story: "story",
 } as const;

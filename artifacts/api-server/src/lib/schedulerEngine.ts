@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { clientPresetsTable, scheduledPostsTable } from "@workspace/db/schema";
+import { clientPresetsTable, scheduledPostsTable, type StickerConfig } from "@workspace/db/schema";
 import { eq, lte, and } from "drizzle-orm";
 import { logger } from "./logger";
 
@@ -153,6 +153,51 @@ async function postReelToIG(igId: string, token: string, videoUrl: string, capti
   return igPublish(igId, token, containerId);
 }
 
+async function postStoryToIG(
+  igId: string,
+  token: string,
+  imageUrls: string[],
+  stickerConfig?: StickerConfig | null,
+): Promise<string[]> {
+  const postIds: string[] = [];
+  for (const url of imageUrls) {
+    const body: Record<string, unknown> = {
+      image_url: url,
+      media_type: "STORIES",
+      access_token: token,
+    };
+    if (stickerConfig) {
+      if (stickerConfig.type === "poll") {
+        body.poll_sticker = JSON.stringify({
+          question: stickerConfig.question,
+          options: stickerConfig.options,
+        });
+      } else if (stickerConfig.type === "quiz") {
+        body.quiz_sticker = JSON.stringify({
+          question: stickerConfig.question,
+          options: stickerConfig.options,
+          correct_option: stickerConfig.correctIndex,
+        });
+      } else if (stickerConfig.type === "question") {
+        body.question_sticker = JSON.stringify({
+          question: stickerConfig.question,
+        });
+      }
+    }
+    const containerRes = await fetch(`${GRAPH}/${igId}/media`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const containerData = await containerRes.json() as { id?: string; error?: { message?: string } };
+    if (!containerRes.ok || !containerData.id) {
+      throw new Error(`Story container failed: ${containerData?.error?.message || JSON.stringify(containerData)}`);
+    }
+    postIds.push(await igPublish(igId, token, containerData.id));
+  }
+  return postIds;
+}
+
 async function igPostComment(igMediaId: string, token: string, commentText: string): Promise<void> {
   const res = await fetch(`${GRAPH}/${igMediaId}/comments`, {
     method: "POST",
@@ -192,13 +237,27 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
     return { igPostId };
   }
 
-  if (!content.imageUrls?.length) throw new Error("No image URLs for carousel");
+  if (!content.imageUrls?.length) throw new Error("No image URLs");
   const result: { igPostId?: string; fbPostId?: string } = {};
   const errors: string[] = [];
-  const isMultiImage = content.imageUrls.length > 1;
   const isStoryFormat = post.postType === "story" || post.postType === "stories";
+
+  if (isStoryFormat) {
+    if (!igId) throw new Error("No Instagram account ID configured — stories require an Instagram account");
+    const stickerConfig = (post.stickerConfig as StickerConfig | null | undefined) ?? null;
+    try {
+      const storyIds = await postStoryToIG(igId, token, content.imageUrls, stickerConfig);
+      result.igPostId = storyIds[0];
+    } catch (e: any) {
+      errors.push(`IG story: ${e.message}`);
+    }
+    if (errors.length > 0 && !result.igPostId) throw new Error(errors.join("; "));
+    return result;
+  }
+
+  const isMultiImage = content.imageUrls.length > 1;
   const isSeamlessFormat = post.postType === "seamless";
-  const supportsAudioAttachment = isMultiImage || isStoryFormat || isSeamlessFormat;
+  const supportsAudioAttachment = isMultiImage || isSeamlessFormat;
   const audioName = content.musicTrack?.name && supportsAudioAttachment
     ? `${content.musicTrack.name} by ${content.musicTrack.artist}`
     : undefined;
