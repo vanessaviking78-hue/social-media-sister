@@ -300,7 +300,7 @@ export default function UploadSchedule() {
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground overflow-y-auto" style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}>
+    <div className="min-h-screen bg-background text-foreground">
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur border-b border-white/5 px-4 py-3 flex items-center gap-3">
         <Link href="/hub">
           <button className="text-zinc-400 hover:text-white transition-colors p-1">
