@@ -53,6 +53,9 @@ export interface ClientPreset {
   defaultFirstCommentReel: string | null;
   onboardingConnectedAt: string | null;
   voiceStyle: string;
+  targetAudience: string | null;
+  contentPillars: string | null;
+  brandNotes: string | null;
 }
 
 export interface PresetStyleFields {
@@ -152,7 +155,7 @@ export function usePresets() {
     logoUrl?: string | null,
     captionFootnote?: string,
     metaFields?: { metaPageAccessToken?: string | null; metaFacebookPageId?: string | null; metaInstagramAccountId?: string | null },
-    extra?: { defaultPostTime?: string; defaultFirstCommentCarousel?: string | null; defaultFirstCommentSingle?: string | null; defaultFirstCommentReel?: string | null; voiceStyle?: string },
+    extra?: { defaultPostTime?: string; defaultFirstCommentCarousel?: string | null; defaultFirstCommentSingle?: string | null; defaultFirstCommentReel?: string | null; voiceStyle?: string; targetAudience?: string | null; contentPillars?: string | null; brandNotes?: string | null },
   ) => {
     const body = {
       name,

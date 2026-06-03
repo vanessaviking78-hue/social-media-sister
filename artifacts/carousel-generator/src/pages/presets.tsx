@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "wouter";
-import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw, Facebook, Instagram, Unlink, ChevronDown, ChevronUp, Clock, BookOpen, Zap, UserCheck, Link2 } from "lucide-react";
+import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw, Facebook, Instagram, Unlink, ChevronDown, ChevronUp, Clock, BookOpen, Zap, UserCheck, Link2, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -517,6 +517,9 @@ export default function PresetsPage() {
         defaultFirstCommentSingle: editData.defaultFirstCommentSingle || null,
         defaultFirstCommentReel: editData.defaultFirstCommentReel || null,
         voiceStyle: editData.voiceStyle || "northern-grit",
+        targetAudience: editData.targetAudience || null,
+        contentPillars: editData.contentPillars || null,
+        brandNotes: editData.brandNotes || null,
       });
       toast.success("Preset updated");
       cancelEdit();
@@ -648,6 +651,56 @@ export default function PresetsPage() {
               >
                 {editingId === preset.id ? (
                   <div className="space-y-4">
+                    {/* Brand Personality */}
+                    <div className="border border-pink-500/20 rounded-xl p-5 bg-pink-950/10 space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Brain className="w-4 h-4 text-pink-400" />
+                        <Label className="text-sm font-semibold text-pink-300">Brand Personality</Label>
+                        <span className="text-xs text-gray-500">Woven into every AI generation for this client</span>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-400">Caption voice style</Label>
+                        <div className="mt-1">
+                          <VoiceStyleSelector
+                            value={editData.voiceStyle || "northern-grit"}
+                            onChange={(v) => setEditData((d) => ({ ...d, voiceStyle: v }))}
+                            size="sm"
+                            showLabel={false}
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Applied automatically when generating captions for this client.</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-400">Target audience</Label>
+                        <Input
+                          placeholder="e.g. Women 30-55, interested in non-surgical aesthetics, disposable income"
+                          value={editData.targetAudience || ""}
+                          onChange={(e) => setEditData((d) => ({ ...d, targetAudience: e.target.value || null }))}
+                          className="bg-gray-900 border-gray-700 text-white mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-400">Content pillars</Label>
+                        <Input
+                          placeholder="e.g. Education, Behind the scenes, Results, Promotions, Confidence"
+                          value={editData.contentPillars || ""}
+                          onChange={(e) => setEditData((d) => ({ ...d, contentPillars: e.target.value || null }))}
+                          className="bg-gray-900 border-gray-700 text-white mt-1"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">The recurring themes and topics this client focuses on.</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-400">Brand notes</Label>
+                        <textarea
+                          placeholder="e.g. Warm and approachable tone, avoid clinical jargon, emphasise natural results and consultations over procedures"
+                          value={editData.brandNotes || ""}
+                          onChange={(e) => setEditData((d) => ({ ...d, brandNotes: e.target.value || null }))}
+                          rows={3}
+                          className="w-full mt-1 bg-gray-900 border border-gray-700 text-white rounded-md px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-pink-500"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Anything the AI should know about this client's tone, personality, or specific requirements.</p>
+                      </div>
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label className="text-xs text-gray-400">Name</Label>
@@ -793,18 +846,6 @@ export default function PresetsPage() {
                       <p className="text-xs text-gray-500 mt-1">Used when auto-scheduling from the Content Library.</p>
                     </div>
                     <div>
-                      <Label className="text-xs text-gray-400">Caption voice style</Label>
-                      <div className="mt-1">
-                        <VoiceStyleSelector
-                          value={editData.voiceStyle || "northern-grit"}
-                          onChange={(v) => setEditData((d) => ({ ...d, voiceStyle: v }))}
-                          size="sm"
-                          showLabel={false}
-                        />
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">Applied automatically when generating captions for this client.</p>
-                    </div>
-                    <div>
                       <Label className="text-xs text-gray-400">Caption Footnote (appended to AI-generated captions)</Label>
                       <textarea
                         placeholder="e.g. 📍 123 High Street, London | @clinicname"
@@ -886,6 +927,11 @@ export default function PresetsPage() {
                       </div>
                       {preset.captionFootnote && (
                         <p className="text-xs text-gray-500 mt-1 italic">Footnote: {preset.captionFootnote}</p>
+                      )}
+                      {(preset.targetAudience || preset.contentPillars || preset.brandNotes) && (
+                        <p className="text-xs text-pink-400 mt-1 flex items-center gap-1">
+                          <Brain className="w-3 h-3" /> Brand profile set
+                        </p>
                       )}
                     </div>
                     <div className="flex items-center gap-1">

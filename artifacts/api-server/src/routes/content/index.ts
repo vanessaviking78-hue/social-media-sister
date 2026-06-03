@@ -126,6 +126,15 @@ This is Vanessa talking directly to a mate who happens to run a clinic. Direct. 
 Rhythm: short, complete sentences. Vary sentence length but keep them punchy. Land ideas plainly. No meandering.${base}`;
 }
 
+function buildPersonalityContext(targetAudience?: string, contentPillars?: string, brandNotes?: string): string {
+  const parts: string[] = [];
+  if (targetAudience) parts.push(`Target audience: ${targetAudience}`);
+  if (contentPillars) parts.push(`Content pillars: ${contentPillars}`);
+  if (brandNotes) parts.push(`Brand personality and notes: ${brandNotes}`);
+  if (parts.length === 0) return "";
+  return `\n\nCLIENT PROFILE\n${parts.join("\n")}`;
+}
+
 const router: IRouter = Router();
 
 const VANESSA_SYSTEM = `You are Vanessa, the Social Media Sister AI — a social media strategist specialising in aesthetic clinics, dental practices, skin clinics, and wellness businesses. You have deep expertise in MHRA/ASA compliance, writing hooks and captions that convert, and social media strategy for clinics.
@@ -222,6 +231,9 @@ router.post("/content/generate", async (req, res) => {
       postCount,
       slidesPerPost,
       extraInstructions,
+      targetAudience,
+      contentPillars,
+      brandNotes,
     } = req.body;
 
     if (!industry || !tone || !topics || !postCount) {
@@ -236,7 +248,7 @@ router.post("/content/generate", async (req, res) => {
 
     const systemPrompt = `${CONTENT_SYSTEM}
 
-You are generating carousel post content for a ${industry} business.${clientName ? ` Client: "${clientName}".` : ""} Write in a ${tone} tone.
+You are generating carousel post content for a ${industry} business.${clientName ? ` Client: "${clientName}".` : ""} Write in a ${tone} tone.${buildPersonalityContext(targetAudience, contentPillars, brandNotes)}
 
 Slide structure — follow this exactly:
 - Slide 1 is the HOOK. Under 10 words. Sounds like something a real person would actually say. Quiet, specific, honest. Not a marketing line. No banned openers. No generic "Are you tired of..." or "It's time to..." — follow the GOOD hook patterns in the voice rules above.
@@ -324,7 +336,7 @@ ${extraInstructions ? `\nAdditional instructions: ${extraInstructions}` : ""}`;
 
 router.post("/content/generate-single", async (req, res) => {
   try {
-    const { clientName, industry, tone, topics, postCount, extraInstructions } = req.body;
+    const { clientName, industry, tone, topics, postCount, extraInstructions, targetAudience, contentPillars, brandNotes } = req.body;
 
     if (!industry || !tone || !topics || !postCount) {
       res.status(400).json({ error: "Missing required fields" });
@@ -336,7 +348,7 @@ router.post("/content/generate-single", async (req, res) => {
 
     const systemPrompt = `${CONTENT_SYSTEM}
 
-You are generating short text overlays for single-image Instagram posts for a ${industry} business.${clientName ? ` Client: "${clientName}".` : ""} Write in a ${tone} tone.
+You are generating short text overlays for single-image Instagram posts for a ${industry} business.${clientName ? ` Client: "${clientName}".` : ""} Write in a ${tone} tone.${buildPersonalityContext(targetAudience, contentPillars, brandNotes)}
 
 Rules:
 - Each text is a standalone image overlay — under 12 words, readable at a glance
@@ -400,7 +412,7 @@ ${extraInstructions ? `\nAdditional instructions: ${extraInstructions}` : ""}`;
 
 router.post("/content/captions", async (req, res) => {
   try {
-    const { posts, clientName, industry, extraInstructions, postType, voiceStyle } = req.body;
+    const { posts, clientName, industry, extraInstructions, postType, voiceStyle, targetAudience, contentPillars, brandNotes } = req.body;
     if (!posts || !Array.isArray(posts) || posts.length === 0) {
       res.status(400).json({ error: "Posts array required" });
       return;
@@ -414,7 +426,7 @@ router.post("/content/captions", async (req, res) => {
 
     const systemPrompt = `${voicePrompt}
 
-You are now generating Instagram/social media captions for ${postsLabel}.${clientName ? ` You are creating content for "${clientName}".` : ""} The industry is: ${industry || "aesthetics"}.
+You are now generating Instagram/social media captions for ${postsLabel}.${clientName ? ` You are creating content for "${clientName}".` : ""} The industry is: ${industry || "aesthetics"}.${buildPersonalityContext(targetAudience, contentPillars, brandNotes)}
 
 You will receive the ${isSingle ? "overlay text" : "slide text"} for each ${postLabel}. Write a caption for each one that:
 - Opens with a strong first line (this shows as the preview before "...more") - make it curiosity-driven or benefit-led, in the voice style above
@@ -574,7 +586,7 @@ Output ONLY a valid JSON array of ${imageCount} objects, each with "prompt" (the
 
 router.post("/content/generate-story-questions", async (req, res) => {
   try {
-    const { clientName, industry, tone, topics, questionCount, extraInstructions } = req.body;
+    const { clientName, industry, tone, topics, questionCount, extraInstructions, targetAudience, contentPillars, brandNotes } = req.body;
 
     if (!industry || !tone || !topics || !questionCount) {
       res.status(400).json({ error: "Missing required fields" });
@@ -586,7 +598,7 @@ router.post("/content/generate-story-questions", async (req, res) => {
 
     const systemPrompt = `${VANESSA_SYSTEM}
 
-You are now generating Instagram Story engagement questions. Write in a ${tone} tone of voice.${clientName ? ` You are creating content for "${clientName}".` : ""} The industry is: ${industry}.
+You are now generating Instagram Story engagement questions. Write in a ${tone} tone of voice.${clientName ? ` You are creating content for "${clientName}".` : ""} The industry is: ${industry}.${buildPersonalityContext(targetAudience, contentPillars, brandNotes)}
 
 Generate exactly ${count} engagement questions for Instagram Stories.
 

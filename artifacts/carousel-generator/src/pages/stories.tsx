@@ -245,6 +245,7 @@ export default function Stories() {
     setGenerating(true);
     setProgress("Starting...");
     try {
+      const storyPreset = presets.find((p) => p.id === selectedPresetId);
       const res = await fetch(api("/content/generate-story-questions"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders() },
@@ -252,6 +253,9 @@ export default function Stories() {
           clientName, industry, tone,
           topics: topics.split(",").map((t) => t.trim()).filter(Boolean),
           questionCount, extraInstructions,
+          targetAudience: storyPreset?.targetAudience || undefined,
+          contentPillars: storyPreset?.contentPillars || undefined,
+          brandNotes: storyPreset?.brandNotes || undefined,
         }),
       });
       if (!res.ok) {

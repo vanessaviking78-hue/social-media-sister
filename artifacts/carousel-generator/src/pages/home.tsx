@@ -654,6 +654,7 @@ export default function Home() {
     const toastId = toast.loading("AI is writing your content...");
 
     try {
+      const aiPreset = presets.find((p) => p.id === selectedPresetId);
       const resp = await fetch(`/api/content/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -665,6 +666,9 @@ export default function Home() {
           postCount: aiPostCount,
           slidesPerPost: 5,
           extraInstructions: aiExtraInstructions,
+          targetAudience: aiPreset?.targetAudience || undefined,
+          contentPillars: aiPreset?.contentPillars || undefined,
+          brandNotes: aiPreset?.brandNotes || undefined,
         }),
       });
 
@@ -1097,6 +1101,7 @@ export default function Home() {
     setCaptionProgress("Starting caption generation...");
     setCaptions([]);
     try {
+      const captionPreset = presets.find((p) => p.id === selectedPresetId);
       const resp = await fetch(`${import.meta.env.BASE_URL}api/content/captions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1106,6 +1111,9 @@ export default function Home() {
           industry: aiIndustry || "aesthetics",
           voiceStyle,
           extraInstructions: aiExtraInstructions,
+          targetAudience: captionPreset?.targetAudience || undefined,
+          contentPillars: captionPreset?.contentPillars || undefined,
+          brandNotes: captionPreset?.brandNotes || undefined,
         }),
       });
       const reader = resp.body!.getReader();

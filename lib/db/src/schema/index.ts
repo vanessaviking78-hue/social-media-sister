@@ -37,6 +37,9 @@ export const clientPresetsTable = pgTable("client_presets", {
   defaultFirstCommentReel: text("default_first_comment_reel"),
   onboardingConnectedAt: timestamp("onboarding_connected_at"),
   voiceStyle: text("voice_style").notNull().default("northern-grit"),
+  targetAudience: text("target_audience"),
+  contentPillars: text("content_pillars"),
+  brandNotes: text("brand_notes"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => [

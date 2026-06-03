@@ -887,6 +887,7 @@ export default function SingleImage() {
     setCaptions([]);
     try {
       const posts = texts.map((t) => [t]);
+      const siPreset = presets.find((p) => p.id === selectedPresetId);
       const resp = await fetch(`${import.meta.env.BASE_URL}api/content/captions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -897,6 +898,9 @@ export default function SingleImage() {
           voiceStyle,
           extraInstructions: "",
           postType: "single-image",
+          targetAudience: siPreset?.targetAudience || undefined,
+          contentPillars: siPreset?.contentPillars || undefined,
+          brandNotes: siPreset?.brandNotes || undefined,
         }),
       });
       const reader = resp.body!.getReader();
