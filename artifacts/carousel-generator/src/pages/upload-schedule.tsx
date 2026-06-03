@@ -302,7 +302,7 @@ export default function UploadSchedule() {
   return (
     <div
       className="bg-background text-foreground"
-      style={{ height: "100svh", overflowY: "auto", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+      style={{ height: "100vh", overflowY: "scroll", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
     >
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur border-b border-white/5 px-4 py-3 flex items-center gap-3">
         <Link href="/hub">
