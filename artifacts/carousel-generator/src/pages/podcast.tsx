@@ -1,11 +1,3 @@
-import { useState, useEffect } from "react";
-import { Eye, EyeOff, Lock } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-
-const PODCAST_KEY = "podcast-auth";
-const CORRECT = "Podcast26";
-
 const SECTIONS = [
   {
     number: "01",
@@ -67,84 +59,7 @@ const SECTIONS = [
   },
 ];
 
-function PasswordGate({ onAuth }: { onAuth: () => void }) {
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (password === CORRECT) {
-      localStorage.setItem(PODCAST_KEY, "true");
-      onAuth();
-    } else {
-      setError("Incorrect password");
-      setPassword("");
-    }
-  }
-
-  return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-10">
-          <img
-            src="/sms-logo.png"
-            alt="Social Media Sister"
-            className="h-20 w-20 rounded-full object-cover mx-auto mb-6"
-          />
-          <p className="text-white/50 text-sm">Enter the password to view</p>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-            <Input
-              type={showPassword ? "text" : "password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              className="pl-10 pr-11 h-12 text-base bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-white/30"
-              autoFocus
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/70 transition-colors"
-              tabIndex={-1}
-            >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
-          {error && <p className="text-red-400 text-sm text-center">{error}</p>}
-          <Button
-            type="submit"
-            disabled={!password}
-            className="w-full h-12 text-base bg-white text-black hover:bg-white/90 font-semibold"
-          >
-            Enter
-          </Button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 export default function Podcast() {
-  const [authed, setAuthed] = useState(false);
-  const [checking, setChecking] = useState(true);
-
-  useEffect(() => {
-    if (localStorage.getItem(PODCAST_KEY) === "true") {
-      setAuthed(true);
-    }
-    setChecking(false);
-  }, []);
-
-  if (checking) return null;
-  if (!authed) return <PasswordGate onAuth={() => setAuthed(true)} />;
-
   let questionNumber = 0;
 
   return (
