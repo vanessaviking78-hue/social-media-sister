@@ -1456,6 +1456,100 @@ export default function Stories() {
                       </div>
                     </div>
 
+                    {/* Interactive Sticker inline card */}
+                    <div className="rounded-2xl border border-pink-500/30 bg-pink-950/10 p-6 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-pink-300 uppercase tracking-wider flex items-center gap-2">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="6" width="5" height="14" rx="1.5" fill="#f9a8d4" opacity="0.6"/>
+                            <rect x="10" y="2" width="5" height="18" rx="1.5" fill="#f9a8d4"/>
+                            <rect x="17" y="9" width="5" height="11" rx="1.5" fill="#f9a8d4" opacity="0.8"/>
+                          </svg>
+                          Interactive Sticker
+                        </h3>
+                        {stickerConfig && (
+                          <button onClick={() => setStickerConfig(null)} className="text-[10px] text-zinc-500 hover:text-red-400 transition-colors">Remove</button>
+                        )}
+                      </div>
+                      <p className="text-xs text-zinc-500">Add a sticker that bakes into every exported story frame. Drag to reposition in the right preview.</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {(["poll","question","countdown","link"] as const).map((t) => {
+                          const labels = { poll: "Poll", question: "Question Box", countdown: "Countdown", link: "Link" };
+                          const isActive = stickerConfig?.type === t;
+                          return (
+                            <button key={t} onClick={() => {
+                              if (isActive) { setStickerConfig(null); return; }
+                              if (t === "poll") setStickerConfig({ type: "poll", question: "Which do you prefer?", optionA: "This", optionB: "That" });
+                              else if (t === "question") setStickerConfig({ type: "question", prompt: "Ask me anything" });
+                              else if (t === "countdown") setStickerConfig({ type: "countdown", eventName: "Coming soon", endDate: new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 16) });
+                              else setStickerConfig({ type: "link", url: "", displayText: "" });
+                            }}
+                            className={`rounded-xl border py-2 px-3 text-xs font-semibold transition-all text-left ${isActive ? "border-pink-500 bg-pink-500/20 text-pink-300" : "border-zinc-700/60 bg-zinc-800/40 text-zinc-400 hover:border-zinc-600"}`}>
+                              {labels[t]}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {stickerConfig?.type === "poll" && (
+                        <div className="space-y-3 pt-1">
+                          <div>
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Question</p>
+                            <input value={stickerConfig.question} onChange={(e) => setStickerConfig({ ...stickerConfig, question: e.target.value })} placeholder="Which do you prefer?" className="w-full h-8 rounded-lg border border-zinc-700/50 bg-zinc-800/60 px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-pink-500/50" />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Option A</p>
+                              <input value={stickerConfig.optionA} onChange={(e) => setStickerConfig({ ...stickerConfig, optionA: e.target.value })} placeholder="Option A" className="w-full h-8 rounded-lg border border-zinc-700/50 bg-zinc-800/60 px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-pink-500/50" />
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Option B</p>
+                              <input value={stickerConfig.optionB} onChange={(e) => setStickerConfig({ ...stickerConfig, optionB: e.target.value })} placeholder="Option B" className="w-full h-8 rounded-lg border border-zinc-700/50 bg-zinc-800/60 px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-pink-500/50" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {stickerConfig?.type === "question" && (
+                        <div className="pt-1">
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Prompt text</p>
+                          <input value={stickerConfig.prompt} onChange={(e) => setStickerConfig({ ...stickerConfig, prompt: e.target.value })} placeholder="Ask me anything" className="w-full h-8 rounded-lg border border-zinc-700/50 bg-zinc-800/60 px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-pink-500/50" />
+                        </div>
+                      )}
+
+                      {stickerConfig?.type === "countdown" && (
+                        <div className="space-y-2 pt-1">
+                          <div>
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Event name</p>
+                            <input value={stickerConfig.eventName} onChange={(e) => setStickerConfig({ ...stickerConfig, eventName: e.target.value })} placeholder="Coming soon" className="w-full h-8 rounded-lg border border-zinc-700/50 bg-zinc-800/60 px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-pink-500/50" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">End date &amp; time</p>
+                            <input type="datetime-local" value={stickerConfig.endDate} onChange={(e) => setStickerConfig({ ...stickerConfig, endDate: e.target.value })} className="w-full h-8 rounded-lg border border-zinc-700/50 bg-zinc-800/60 px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-pink-500/50" />
+                          </div>
+                        </div>
+                      )}
+
+                      {stickerConfig?.type === "link" && (
+                        <div className="space-y-2 pt-1">
+                          <div>
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">URL</p>
+                            <input value={stickerConfig.url} onChange={(e) => setStickerConfig({ ...stickerConfig, url: e.target.value })} placeholder="https://example.com" className="w-full h-8 rounded-lg border border-zinc-700/50 bg-zinc-800/60 px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-pink-500/50" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Display text</p>
+                            <input value={stickerConfig.displayText} onChange={(e) => setStickerConfig({ ...stickerConfig, displayText: e.target.value })} placeholder="Learn more" className="w-full h-8 rounded-lg border border-zinc-700/50 bg-zinc-800/60 px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-pink-500/50" />
+                          </div>
+                        </div>
+                      )}
+
+                      {stickerConfig && (
+                        <button onClick={renderPreviews} className="w-full rounded-xl border border-pink-500/30 bg-pink-500/10 py-2 text-xs font-semibold text-pink-300 hover:bg-pink-500/20 transition-colors flex items-center justify-center gap-1.5">
+                          <Sparkles className="w-3 h-3" /> Apply to Preview
+                        </button>
+                      )}
+                    </div>
+
                     <div className="flex justify-between pt-4">
                       <Button variant="outline" onClick={() => setStep("content")} className="px-8 py-5 text-base font-semibold" size="lg">
                         <ChevronLeft className="w-4 h-4 mr-2" /> Back
