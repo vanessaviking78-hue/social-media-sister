@@ -1,8 +1,19 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { db } from "@workspace/db";
 import { trialBundlesTable, founderSignupsTable } from "@workspace/db/schema";
 import { eq, count } from "drizzle-orm";
 import { generateBundleContent } from "../lib/generateBundleContent";
+
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const appPassword = process.env.APP_PASSWORD;
+  if (!appPassword) { next(); return; }
+  const provided = (req.headers["x-app-password"] as string | undefined)?.trim().toLowerCase();
+  if (provided !== appPassword.trim().toLowerCase()) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  next();
+}
 
 const router: IRouter = Router();
 
@@ -97,6 +108,34 @@ router.get("/bundle/:token", async (req, res) => {
   } catch (err: any) {
     req.log?.error({ err }, "Bundle fetch error");
     res.status(500).json({ error: err.message || "Failed to fetch bundle" });
+  }
+});
+
+router.patch("/bundle/:token/images", requireAuth, async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { renderedImageUrls } = req.body;
+    if (!renderedImageUrls || typeof renderedImageUrls !== "object") {
+      res.status(400).json({ error: "renderedImageUrls is required" });
+      return;
+    }
+    const [bundle] = await db
+      .select({ id: trialBundlesTable.id })
+      .from(trialBundlesTable)
+      .where(eq(trialBundlesTable.token, token))
+      .limit(1);
+    if (!bundle) {
+      res.status(404).json({ error: "Bundle not found" });
+      return;
+    }
+    await db
+      .update(trialBundlesTable)
+      .set({ renderedImageUrls })
+      .where(eq(trialBundlesTable.token, token));
+    res.json({ ok: true });
+  } catch (err: any) {
+    req.log?.error({ err }, "Bundle image save error");
+    res.status(500).json({ error: err.message || "Failed to save images" });
   }
 });
 

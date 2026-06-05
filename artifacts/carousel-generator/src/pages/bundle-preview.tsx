@@ -47,6 +47,13 @@ interface BundleContent {
   seamless: { tagline: string; caption: string };
 }
 
+interface RenderedImages {
+  carousel?: string[];
+  aboutMe?: string[];
+  stories?: string[];
+  reel?: string[];
+}
+
 interface Bundle {
   clinicName: string;
   igHandle: string;
@@ -54,6 +61,32 @@ interface Bundle {
   brandColour: string;
   voiceStyle: string;
   content: BundleContent;
+  renderedImageUrls?: RenderedImages | null;
+}
+
+function RenderedFrames({
+  urls,
+  isStory = false,
+}: {
+  urls: string[];
+  isStory?: boolean;
+}) {
+  if (!urls || urls.length === 0) return null;
+  const thumbW = isStory ? 120 : 160;
+  const thumbH = isStory ? 213 : 213;
+  return (
+    <div className="flex gap-3 overflow-x-auto pb-1">
+      {urls.map((url, i) => (
+        <img
+          key={i}
+          src={url}
+          alt={`Frame ${i + 1}`}
+          style={{ width: thumbW, height: thumbH, objectFit: "cover", flexShrink: 0 }}
+          className="rounded-xl border border-border/20 shadow-md"
+        />
+      ))}
+    </div>
+  );
 }
 
 export default function BundlePreview({ token }: { token: string }) {
@@ -97,7 +130,8 @@ export default function BundlePreview({ token }: { token: string }) {
     );
   }
 
-  const { content, clinicName, treatmentFocus, brandColour, voiceStyle } = bundle;
+  const { content, clinicName, treatmentFocus, brandColour, voiceStyle, renderedImageUrls } = bundle;
+  const ri = renderedImageUrls ?? {};
 
   return (
     <div className="min-h-screen bg-background">
@@ -139,6 +173,11 @@ export default function BundlePreview({ token }: { token: string }) {
               </span>
             )}
           </div>
+
+          {ri.carousel && ri.carousel.length > 0 && (
+            <RenderedFrames urls={ri.carousel} />
+          )}
+
           <div className="rounded-2xl border border-border/30 bg-card/50 overflow-hidden">
             <div className="divide-y divide-border/20">
               {content.carousel.slides.map((slide, i) => (
@@ -171,6 +210,11 @@ export default function BundlePreview({ token }: { token: string }) {
             <User className="w-5 h-5 text-rose-400" />
             <h2 className="font-semibold text-lg">About Me Post</h2>
           </div>
+
+          {ri.aboutMe && ri.aboutMe.length > 0 && (
+            <RenderedFrames urls={ri.aboutMe} />
+          )}
+
           <div className="rounded-2xl border border-border/30 bg-card/50 overflow-hidden">
             <div className="px-5 py-5 space-y-2">
               <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-3">Intro text</p>
@@ -194,6 +238,11 @@ export default function BundlePreview({ token }: { token: string }) {
             <Film className="w-5 h-5 text-teal-400" />
             <h2 className="font-semibold text-lg">Reel</h2>
           </div>
+
+          {ri.reel && ri.reel.length > 0 && (
+            <RenderedFrames urls={ri.reel} />
+          )}
+
           <div className="rounded-2xl border border-border/30 bg-card/50 overflow-hidden">
             <div className="px-5 py-5">
               <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-4">Overlay text lines</p>
@@ -222,6 +271,17 @@ export default function BundlePreview({ token }: { token: string }) {
             </div>
           </div>
         </section>
+
+        {/* Stories */}
+        {ri.stories && ri.stories.length > 0 && (
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Grid className="w-5 h-5 text-purple-400" />
+              <h2 className="font-semibold text-lg">Story Frames</h2>
+            </div>
+            <RenderedFrames urls={ri.stories} isStory />
+          </section>
+        )}
 
         {/* Seamless Carousel */}
         <section className="space-y-4">

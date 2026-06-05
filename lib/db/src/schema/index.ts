@@ -572,6 +572,13 @@ export type BundleContent = {
   seamless: { tagline: string; caption: string };
 };
 
+export type RenderedBundleImages = {
+  carousel?: string[];
+  aboutMe?: string[];
+  stories?: string[];
+  reel?: string[];
+};
+
 export const trialBundlesTable = pgTable("trial_bundles", {
   id: serial("id").primaryKey(),
   token: text("token").notNull().unique(),
@@ -581,6 +588,7 @@ export const trialBundlesTable = pgTable("trial_bundles", {
   brandColour: text("brand_colour").notNull().default("#ec4899"),
   voiceStyle: text("voice_style").notNull().default("northern-grit"),
   content: json("content").$type<BundleContent>().notNull().default({} as BundleContent),
+  renderedImageUrls: json("rendered_image_urls").$type<RenderedBundleImages>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
