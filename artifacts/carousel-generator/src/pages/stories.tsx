@@ -213,6 +213,7 @@ export default function Stories() {
   const [step, setStep] = useState<Step>("content");
   const [questions, setQuestions] = useState<string[]>([]);
   const [selectedBgs, setSelectedBgs] = useState<Set<string>>(new Set([STORY_BACKGROUNDS[0].file]));
+  const [uploadedBgs, setUploadedBgs] = useState<{ id: string; url: string; name: string }[]>([]);
   const [font, setFont] = useState(() => getBrandDefaults().fontFamily);
   const [subheadingFont, setSubheadingFont] = useState(() => getBrandDefaults().subheadingFont);
   const [fontSize, setFontSize] = useState(54);
@@ -277,6 +278,9 @@ export default function Stories() {
   const [stickerConfig, setStickerConfig] = useState<StickerConfig | null>(null);
   const [stickerPos, setStickerPos] = useState({ x: 0.5, y: 0.65 });
   const [isDraggingSticker, setIsDraggingSticker] = useState(false);
+  const bgFileInputRef = useRef<HTMLInputElement>(null);
+  const bgDragItem = useRef<number | null>(null);
+  const bgDragOver = useRef<number | null>(null);
   const stickerPosRef = useRef({ x: 0.5, y: 0.65 });
   stickerPosRef.current = stickerPos;
   const previewContainerRef = useRef<HTMLDivElement>(null);
@@ -379,7 +383,7 @@ export default function Stories() {
       img.crossOrigin = "anonymous";
       img.onload = () => { bgImgCache.current[file] = img; resolve(img); };
       img.onerror = reject;
-      img.src = `${BASE}story-backgrounds/${file}`;
+      img.src = (file.startsWith("blob:") || file.startsWith("data:")) ? file : `${BASE}story-backgrounds/${file}`;
     });
   }, []);
 
@@ -401,6 +405,40 @@ export default function Stories() {
 
   const selectOneBg = useCallback((file: string) => {
     setSelectedBgs(new Set([file]));
+  }, []);
+
+  const handleBgImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    const newItems = files.map((f) => ({
+      id: `upload-${Date.now()}-${f.name}`,
+      url: URL.createObjectURL(f),
+      name: f.name,
+    }));
+    setUploadedBgs((prev) => [...prev, ...newItems]);
+    e.target.value = "";
+  }, []);
+
+  const removeUploadedBg = useCallback((id: string) => {
+    setUploadedBgs((prev) => {
+      const item = prev.find((b) => b.id === id);
+      if (item) URL.revokeObjectURL(item.url);
+      return prev.filter((b) => b.id !== id);
+    });
+  }, []);
+
+  const handleBgDragEnd = useCallback(() => {
+    const from = bgDragItem.current;
+    const to = bgDragOver.current;
+    if (from === null || to === null || from === to) { bgDragItem.current = null; bgDragOver.current = null; return; }
+    setUploadedBgs((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+    bgDragItem.current = null;
+    bgDragOver.current = null;
   }, []);
 
   const generateAI = useCallback(async () => {
@@ -494,8 +532,12 @@ export default function Stories() {
   }, []);
 
   const overlayColor = makeOverlayRgba(overlayBaseColor, overlayOpacity);
-  const bgFilesKey = Array.from(selectedBgs).sort().join(",");
-  const bgFiles = React.useMemo(() => Array.from(selectedBgs), [bgFilesKey]);
+  const bgFilesKey = [...uploadedBgs.map((b) => b.id), ...Array.from(selectedBgs).sort()].join(",");
+  const bgFiles = React.useMemo(
+    () => [...uploadedBgs.map((b) => b.url), ...Array.from(selectedBgs)],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [bgFilesKey],
+  );
 
   const renderPreviews = useCallback(async () => {
     if (questions.length === 0) return;
@@ -905,31 +947,95 @@ export default function Stories() {
                 {/* Backgrounds */}
                 {activeTool === "photos" && (
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">{selectedBgs.size} selected</p>
-                      <button onClick={selectAllBgs} className="text-xs text-pink-400 hover:text-pink-300 transition-colors">Use All</button>
-                    </div>
-                    <p className="text-xs text-zinc-400 leading-relaxed">Click to toggle. Double-click to use only that one. Multiple backgrounds rotate across stories.</p>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {STORY_BACKGROUNDS.map((bg) => {
-                        const isSelected = selectedBgs.has(bg.file);
-                        return (
+                    <input
+                      ref={bgFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={handleBgImageUpload}
+                    />
+
+                    {/* Uploaded images */}
+                    {uploadedBgs.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Your images ({uploadedBgs.length})</p>
                           <button
-                            key={bg.file}
-                            onClick={() => toggleBg(bg.file)}
-                            onDoubleClick={() => selectOneBg(bg.file)}
-                            className={`relative aspect-[9/16] rounded-md overflow-hidden border transition-all ${isSelected ? "border-pink-500 ring-1 ring-pink-500/40" : "border-zinc-700/50 opacity-50 hover:opacity-80"}`}
+                            onClick={() => bgFileInputRef.current?.click()}
+                            className="text-xs text-pink-400 hover:text-pink-300 transition-colors"
                           >
-                            <img src={`${BASE}story-backgrounds/${bg.file}`} alt={bg.label} className="w-full h-full object-cover" />
-                            {isSelected && (
-                              <div className="absolute inset-0 bg-pink-500/20 flex items-center justify-center">
-                                <Check className="w-4 h-4 text-white drop-shadow" />
-                              </div>
-                            )}
+                            + Add more
                           </button>
-                        );
-                      })}
+                        </div>
+                        <p className="text-xs text-zinc-500">Drag to reorder. Your images appear first.</p>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {uploadedBgs.map((bg, i) => (
+                            <div
+                              key={bg.id}
+                              draggable
+                              onDragStart={() => { bgDragItem.current = i; }}
+                              onDragEnter={() => { bgDragOver.current = i; }}
+                              onDragEnd={handleBgDragEnd}
+                              onDragOver={(e) => e.preventDefault()}
+                              className="relative aspect-[9/16] rounded-md overflow-hidden border border-pink-500 ring-1 ring-pink-500/40 cursor-grab active:cursor-grabbing group"
+                            >
+                              <img src={bg.url} alt={bg.name} className="w-full h-full object-cover pointer-events-none" />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors" />
+                              <button
+                                onClick={() => removeUploadedBg(bg.id)}
+                                className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600/80"
+                              >
+                                <X className="w-3 h-3 text-white" />
+                              </button>
+                              <div className="absolute bottom-1 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span className="text-[9px] text-white/80 bg-black/50 rounded px-1">drag to reorder</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Preset backgrounds */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">{selectedBgs.size} preset{selectedBgs.size !== 1 ? "s" : ""} selected</p>
+                        <div className="flex items-center gap-2">
+                          {uploadedBgs.length === 0 && (
+                            <button
+                              onClick={() => bgFileInputRef.current?.click()}
+                              className="text-xs text-pink-400 hover:text-pink-300 transition-colors"
+                            >
+                              + Upload images
+                            </button>
+                          )}
+                          <button onClick={selectAllBgs} className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors">Use All</button>
+                        </div>
+                      </div>
+                      <p className="text-xs text-zinc-400 leading-relaxed">Click to toggle. Double-click to use only that one.</p>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {STORY_BACKGROUNDS.map((bg) => {
+                          const isSelected = selectedBgs.has(bg.file);
+                          return (
+                            <button
+                              key={bg.file}
+                              onClick={() => toggleBg(bg.file)}
+                              onDoubleClick={() => selectOneBg(bg.file)}
+                              className={`relative aspect-[9/16] rounded-md overflow-hidden border transition-all ${isSelected ? "border-pink-500 ring-1 ring-pink-500/40" : "border-zinc-700/50 opacity-50 hover:opacity-80"}`}
+                            >
+                              <img src={`${BASE}story-backgrounds/${bg.file}`} alt={bg.label} className="w-full h-full object-cover" />
+                              {isSelected && (
+                                <div className="absolute inset-0 bg-pink-500/20 flex items-center justify-center">
+                                  <Check className="w-4 h-4 text-white drop-shadow" />
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
+
                     <div className="space-y-1.5 pt-2 border-t border-zinc-800/60">
                       <div className="flex items-center justify-between">
                         <p className="text-xs text-zinc-400">Background opacity</p>
