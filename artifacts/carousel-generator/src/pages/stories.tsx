@@ -706,7 +706,6 @@ export default function Stories() {
 
   const scheduleStories = useCallback(async () => {
     if (previews.length === 0) { toast.error("No stories to schedule"); return; }
-    if (!selectedPresetId) { toast.error("Select a client preset first"); return; }
     setScheduleRendering(true);
     const id = toast.loading("Uploading stories for scheduling...");
     try {
@@ -738,7 +737,7 @@ export default function Stories() {
     } finally {
       setScheduleRendering(false);
     }
-  }, [previews, questions, selectedPresetId]);
+  }, [previews, questions, musicTrack]);
 
   const exportCsv = useCallback(() => {
     if (questions.length === 0) return;
@@ -1565,6 +1564,29 @@ export default function Stories() {
                       </p>
                     </div>
 
+                    {/* Primary CTA row */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button
+                        size="lg"
+                        variant="outline"
+                        onClick={downloadZip}
+                        disabled={downloading || previews.length === 0}
+                        className="py-6 text-base font-semibold gap-2 rounded-2xl"
+                      >
+                        {downloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                        Download ZIP
+                      </Button>
+                      <Button
+                        size="lg"
+                        onClick={scheduleStories}
+                        disabled={scheduleRendering || previews.length === 0}
+                        className="py-6 text-base font-semibold gap-2 rounded-2xl bg-[#E91976] hover:bg-pink-600 text-white"
+                      >
+                        {scheduleRendering ? <Loader2 className="w-4 h-4 animate-spin" /> : <CalendarClock className="w-4 h-4" />}
+                        {scheduleRendering ? "Preparing..." : "Schedule"}
+                      </Button>
+                    </div>
+
                     <div className="rounded-2xl border border-border/30 bg-card/50 p-5 flex flex-wrap gap-2">
                       <Button variant="outline" size="sm" onClick={exportCsv}>
                         <FileText className="w-3.5 h-3.5 mr-1.5" />Export CSV
@@ -1597,16 +1619,10 @@ export default function Stories() {
                         Push to CC
                       </Button>
                       {selectedPresetId && (
-                        <>
-                          <Button size="sm" onClick={pushToIG} disabled={pushing || previews.length === 0} variant="outline" className="border-pink-500/40 text-pink-300 hover:bg-pink-950/30">
-                            {pushing ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <CloudUpload className="w-3.5 h-3.5 mr-1.5" />}
-                            Push to IG Story
-                          </Button>
-                          <Button size="sm" onClick={scheduleStories} disabled={scheduleRendering || previews.length === 0} variant="outline" className="border-pink-500/40 text-pink-300 hover:bg-pink-950/30">
-                            {scheduleRendering ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <CalendarClock className="w-3.5 h-3.5 mr-1.5" />}
-                            {scheduleRendering ? "Preparing..." : "Schedule"}
-                          </Button>
-                        </>
+                        <Button size="sm" onClick={pushToIG} disabled={pushing || previews.length === 0} variant="outline" className="border-pink-500/40 text-pink-300 hover:bg-pink-950/30">
+                          {pushing ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <CloudUpload className="w-3.5 h-3.5 mr-1.5" />}
+                          Push to IG Story
+                        </Button>
                       )}
                     </div>
 
@@ -1772,9 +1788,10 @@ export default function Stories() {
 
       <canvas ref={canvasRef} width={STORY_WIDTH} height={STORY_HEIGHT} className="hidden" />
       <MusicPickerModal open={musicPickerOpen} onClose={() => setMusicPickerOpen(false)} selectedTrack={musicTrack} onSelect={(t) => setMusicTrack(t)} />
-      {scheduleOpen && selectedPresetId && (
+      {scheduleOpen && (
         <ScheduleModal
           presetId={selectedPresetId}
+          presets={presets.map((p) => ({ id: p.id, name: p.name }))}
           postType="story"
           posts={schedulePosts}
           onClose={() => setScheduleOpen(false)}

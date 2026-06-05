@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { CalendarClock, Music, AlertTriangle } from "lucide-react";
 
@@ -14,7 +15,11 @@ export type SchedulePostPayload = {
   videoUrl?: string;
   musicTrack?: { trackId: number; name: string; artist: string; durationMs: number; url: string } | null;
   firstComment?: string;
+  platforms?: string[];
 };
+
+type Preset = { id: number; name: string };
+type Platform = "instagram" | "facebook";
 
 type Props = {
   presetId: number | null;
@@ -23,6 +28,7 @@ type Props = {
   posts: SchedulePostPayload[];
   onClose: () => void;
   onSaved?: () => void;
+  presets?: Preset[];
 };
 
 function defaultScheduledAt() {
@@ -33,19 +39,20 @@ function defaultScheduledAt() {
   return d.toISOString().slice(0, 16);
 }
 
-export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved }: Props) {
+export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets }: Props) {
   const [scheduledAt, setScheduledAt] = useState(defaultScheduledAt);
   const [notes, setNotes] = useState("");
   const [caption, setCaption] = useState(() => posts[0]?.caption || "");
   const [saving, setSaving] = useState(false);
   const [isTrial, setIsTrial] = useState(false);
   const [gapMinutes, setGapMinutes] = useState("60");
+  const [activePresetId, setActivePresetId] = useState<number | null>(presetId);
+  const [platforms, setPlatforms] = useState<Set<Platform>>(new Set(["instagram"]));
 
   const isBulk = posts.length > 1;
   const isReel = postType === "reel";
+  const showPresetSelector = (presets?.length ?? 0) > 0;
 
-  // Determine if any post has music selected but the post type doesn't support
-  // native audio attachment via the Meta API.
   const hasMusicSelected = posts.some((p) => p.musicTrack);
   const musicSupportedByApi =
     postType === "reel" ||
@@ -55,22 +62,36 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
     (postType === "carousel" && posts.some((p) => (p.imageUrls?.length ?? 0) > 1));
   const showMusicWarning = hasMusicSelected && !musicSupportedByApi;
 
+  function togglePlatform(p: Platform) {
+    setPlatforms((prev) => {
+      const next = new Set(prev);
+      if (next.has(p) && next.size === 1) return next;
+      if (next.has(p)) { next.delete(p); } else { next.add(p); }
+      return next;
+    });
+  }
+
+  const effectivePresetId = activePresetId;
+  const effectivePresetName = presetName ?? presets?.find((p) => p.id === activePresetId)?.name;
+
   async function handleSave() {
     if (!scheduledAt) { toast.error("Pick a date and time"); return; }
     if (!caption.trim()) { toast.error("Add a caption before scheduling"); return; }
-    if (presetId === null) { toast.error("Select a client preset before scheduling"); return; }
+    if (effectivePresetId === null) { toast.error("Select a client before scheduling"); return; }
+    if (platforms.size === 0) { toast.error("Select at least one platform"); return; }
     setSaving(true);
     const gap = Math.max(0, Number(gapMinutes) || 60);
+    const platformList = Array.from(platforms);
     try {
       for (let i = 0; i < posts.length; i++) {
         const post = posts[i];
         const staggeredAt = new Date(new Date(scheduledAt).getTime() + i * gap * 60000).toISOString();
-        const content: SchedulePostPayload = { caption: caption.trim(), title: post.title };
+        const content: SchedulePostPayload = { caption: caption.trim(), title: post.title, platforms: platformList };
         if (isReel && post.videoUrl) content.videoUrl = post.videoUrl;
         if (!isReel && post.imageUrls) content.imageUrls = post.imageUrls;
         if (post.musicTrack) content.musicTrack = post.musicTrack;
         if (post.firstComment) content.firstComment = post.firstComment;
-        const body: Record<string, unknown> = { postType, content, scheduledAt: staggeredAt, isTrial, notes, presetId };
+        const body: Record<string, unknown> = { postType, content, scheduledAt: staggeredAt, isTrial, notes, presetId: effectivePresetId };
         const r = await fetch(`${BASE}/api/scheduler/posts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -91,13 +112,13 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
     }
   }
 
-  const label = presetName ? `${presetName} · ` : "";
+  const label = effectivePresetName ? `${effectivePresetName} · ` : "";
   const countLabel = posts.length === 1 ? "1 post" : `${posts.length} posts`;
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div
-        className="bg-zinc-900 border border-zinc-700 rounded-xl w-full max-w-md"
+        className="bg-zinc-900 border border-zinc-700 rounded-xl w-full max-w-md max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6 border-b border-zinc-800 flex items-center gap-3">
@@ -108,6 +129,26 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
           </div>
         </div>
         <div className="p-6 space-y-4">
+
+          {showPresetSelector && (
+            <div>
+              <Label className="text-zinc-300 text-sm mb-1.5 block">Client</Label>
+              <Select
+                value={activePresetId !== null ? String(activePresetId) : ""}
+                onValueChange={(v) => setActivePresetId(Number(v))}
+              >
+                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                  <SelectValue placeholder="Pick a client" />
+                </SelectTrigger>
+                <SelectContent>
+                  {presets!.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div>
             <Label className="text-zinc-300 text-sm mb-1.5 block">
               {isBulk ? "First post date and time" : "Date and time"}
@@ -136,6 +177,30 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
               </p>
             </div>
           )}
+
+          <div>
+            <Label className="text-zinc-300 text-sm mb-1.5 block">Platforms</Label>
+            <div className="flex gap-2">
+              {(["instagram", "facebook"] as Platform[]).map((p) => {
+                const active = platforms.has(p);
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => togglePlatform(p)}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
+                      active
+                        ? "bg-pink-600/20 border-pink-500/50 text-pink-300"
+                        : "bg-zinc-800 border-zinc-700 text-zinc-500 hover:border-zinc-600"
+                    }`}
+                  >
+                    {p.charAt(0).toUpperCase() + p.slice(1)}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-zinc-600 mt-1.5">Fires via the client's connected Meta account.</p>
+          </div>
 
           <div>
             <Label className="text-zinc-300 text-sm mb-1.5 block">Caption <span className="text-pink-400">*</span></Label>
