@@ -175,6 +175,64 @@ router.get("/meta/test-connection", async (req: Request, res: Response) => {
   }
 });
 
+// Returns the resolved Instagram username + Facebook page name for a preset's stored credentials.
+// Used by the scheduling UI to confirm which account will receive the post before it fires.
+router.get("/meta/ig-account-info", async (req: Request, res: Response) => {
+  try {
+    const presetId = Number(req.query.presetId);
+    if (isNaN(presetId)) { res.status(400).json({ error: "presetId required" }); return; }
+    const [preset] = await db.select().from(clientPresetsTable).where(eq(clientPresetsTable.id, presetId));
+    if (!preset) { res.status(404).json({ error: "Preset not found" }); return; }
+
+    const token = preset.metaPageAccessToken;
+    const igId  = preset.metaInstagramAccountId;
+    const pageId = preset.metaFacebookPageId;
+
+    const result: {
+      ig?: { id: string; username: string; name: string };
+      fb?: { id: string; name: string };
+      igError?: string;
+      fbError?: string;
+    } = {};
+
+    if (token && igId) {
+      try {
+        const r = await metaFetch(`${GRAPH}/${igId}?fields=id,username,name&access_token=${token}`);
+        const data = await r.json() as any;
+        if (r.ok && data.username) {
+          result.ig = { id: data.id, username: data.username, name: data.name };
+        } else {
+          result.igError = data?.error?.message || "Could not resolve Instagram account";
+        }
+      } catch (e: any) {
+        result.igError = e.message;
+      }
+    } else {
+      result.igError = !token ? "No Meta access token configured for this client" : "No Instagram Account ID configured";
+    }
+
+    if (token && pageId) {
+      try {
+        const r = await metaFetch(`${GRAPH}/${pageId}?fields=id,name&access_token=${token}`);
+        const data = await r.json() as any;
+        if (r.ok && data.name) {
+          result.fb = { id: data.id, name: data.name };
+        } else {
+          result.fbError = data?.error?.message || "Could not resolve Facebook page";
+        }
+      } catch (e: any) {
+        result.fbError = e.message;
+      }
+    } else if (!pageId) {
+      result.fbError = "No Facebook Page ID configured";
+    }
+
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Account lookup failed" });
+  }
+});
+
 router.post("/meta/push", async (req: Request, res: Response) => {
   try {
     const { posts, presetId, postType, platforms } = req.body as {

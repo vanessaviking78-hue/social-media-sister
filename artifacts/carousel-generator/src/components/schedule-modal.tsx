@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { CalendarClock, Music, AlertTriangle } from "lucide-react";
+import { CalendarClock, Music, AlertTriangle, CheckCircle2, Loader2, Instagram, Facebook } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -20,6 +20,13 @@ export type SchedulePostPayload = {
 
 type Preset = { id: number; name: string };
 type Platform = "instagram" | "facebook";
+
+type AccountInfo = {
+  ig?: { id: string; username: string; name: string };
+  fb?: { id: string; name: string };
+  igError?: string;
+  fbError?: string;
+};
 
 type Props = {
   presetId: number | null;
@@ -48,6 +55,9 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
   const [gapMinutes, setGapMinutes] = useState("60");
   const [activePresetId, setActivePresetId] = useState<number | null>(presetId);
   const [platforms, setPlatforms] = useState<Set<Platform>>(new Set(["instagram"]));
+  const [accountInfo, setAccountInfo] = useState<AccountInfo | null>(null);
+  const [accountLoading, setAccountLoading] = useState(false);
+  const accountCache = useRef<Record<number, AccountInfo>>({});
 
   const isBulk = posts.length > 1;
   const isReel = postType === "reel";
@@ -61,6 +71,29 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
     postType === "seamless" ||
     (postType === "carousel" && posts.some((p) => (p.imageUrls?.length ?? 0) > 1));
   const showMusicWarning = hasMusicSelected && !musicSupportedByApi;
+
+  useEffect(() => {
+    if (activePresetId === null) {
+      setAccountInfo(null);
+      return;
+    }
+    if (accountCache.current[activePresetId]) {
+      setAccountInfo(accountCache.current[activePresetId]);
+      return;
+    }
+    setAccountLoading(true);
+    setAccountInfo(null);
+    fetch(`${BASE}/api/meta/ig-account-info?presetId=${activePresetId}`)
+      .then((r) => r.json())
+      .then((data: AccountInfo) => {
+        accountCache.current[activePresetId] = data;
+        setAccountInfo(data);
+      })
+      .catch(() => {
+        setAccountInfo({ igError: "Could not reach server", fbError: "Could not reach server" });
+      })
+      .finally(() => setAccountLoading(false));
+  }, [activePresetId]);
 
   function togglePlatform(p: Platform) {
     setPlatforms((prev) => {
@@ -114,6 +147,9 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
 
   const label = effectivePresetName ? `${effectivePresetName} · ` : "";
   const countLabel = posts.length === 1 ? "1 post" : `${posts.length} posts`;
+
+  const wantIg = platforms.has("instagram");
+  const wantFb = platforms.has("facebook");
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -199,8 +235,59 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
                 );
               })}
             </div>
-            <p className="text-[11px] text-zinc-600 mt-1.5">Fires via the client's connected Meta account.</p>
           </div>
+
+          {/* Account confirmation — shows which account each platform will post to */}
+          {activePresetId !== null && (
+            <div className="rounded-lg border border-zinc-700/60 bg-zinc-800/50 overflow-hidden">
+              <div className="px-3 py-2 border-b border-zinc-700/40 flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Posting to</span>
+                {accountLoading && <Loader2 className="w-3 h-3 text-zinc-500 animate-spin" />}
+              </div>
+              <div className="divide-y divide-zinc-700/30">
+
+                {wantIg && (
+                  <div className="flex items-center gap-2.5 px-3 py-2.5">
+                    <Instagram className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                    {accountLoading ? (
+                      <span className="text-xs text-zinc-500 italic">Checking…</span>
+                    ) : accountInfo?.ig ? (
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                        <span className="text-xs text-zinc-100 font-medium truncate">@{accountInfo.ig.username}</span>
+                        <span className="text-xs text-zinc-500 truncate hidden sm:block">· {accountInfo.ig.name}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span className="text-xs text-amber-300/90 truncate">{accountInfo?.igError ?? "Not configured"}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {wantFb && (
+                  <div className="flex items-center gap-2.5 px-3 py-2.5">
+                    <Facebook className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                    {accountLoading ? (
+                      <span className="text-xs text-zinc-500 italic">Checking…</span>
+                    ) : accountInfo?.fb ? (
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                        <span className="text-xs text-zinc-100 font-medium truncate">{accountInfo.fb.name}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span className="text-xs text-amber-300/90 truncate">{accountInfo?.fbError ?? "Not configured"}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+              </div>
+            </div>
+          )}
 
           <div>
             <Label className="text-zinc-300 text-sm mb-1.5 block">Caption <span className="text-pink-400">*</span></Label>
