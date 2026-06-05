@@ -4,7 +4,7 @@ import {
   Layers, Loader2, Download, X, Sparkles, Wand2,
   BookOpen, ImagePlus, CalendarDays, BarChart3, ShieldCheck,
   MessageSquareText, PenTool, ChevronLeft, ChevronRight,
-  CloudUpload, FileText, Plus, Palette, Check, Copy, Film, Play, Clock, CalendarClock, Music,
+  CloudUpload, FileText, Plus, Palette, Check, Copy, Film, Play, Clock, CalendarClock, Music, Link2,
 } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
@@ -53,6 +53,142 @@ function compressForUpload(dataUrl: string): Promise<string> {
     img.onerror = () => reject(new Error("Failed to compress image for upload"));
     img.src = dataUrl;
   });
+}
+
+// ─── Interactive sticker types ───────────────────────────────────────────────
+interface PollSticker      { type: "poll";      question: string; optionA: string; optionB: string; }
+interface QuestionSticker  { type: "question";  prompt: string; }
+interface CountdownSticker { type: "countdown"; eventName: string; endDate: string; }
+interface LinkSticker      { type: "link";      url: string; displayText: string; }
+type StickerConfig = PollSticker | QuestionSticker | CountdownSticker | LinkSticker;
+
+// ─── Canvas helpers ───────────────────────────────────────────────────────────
+function canvasRoundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number, y: number, w: number, h: number, r: number,
+) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function truncateCanvas(ctx: CanvasRenderingContext2D, text: string, maxW: number): string {
+  if (ctx.measureText(text).width <= maxW) return text;
+  let t = text;
+  while (t.length > 0 && ctx.measureText(t + "\u2026").width > maxW) t = t.slice(0, -1);
+  return t + "\u2026";
+}
+
+function drawInteractiveSticker(
+  ctx: CanvasRenderingContext2D,
+  config: StickerConfig,
+  cx: number,
+  cy: number,
+) {
+  ctx.save();
+  const shadow = () => { ctx.shadowColor = "rgba(0,0,0,0.28)"; ctx.shadowBlur = 22; ctx.shadowOffsetY = 5; };
+  const noShadow = () => { ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; };
+
+  if (config.type === "poll") {
+    const W = 640, H = 248;
+    const x = cx - W / 2, y = cy - H / 2;
+    shadow();
+    canvasRoundRect(ctx, x, y, W, H, 28);
+    ctx.fillStyle = "rgba(255,255,255,0.97)"; ctx.fill();
+    noShadow();
+    ctx.fillStyle = "#999"; ctx.font = "600 22px 'Inter',Arial,sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("POLL", cx, y + 44);
+    ctx.fillStyle = "#111"; ctx.font = "bold 36px 'Inter',Arial,sans-serif";
+    ctx.fillText(truncateCanvas(ctx, config.question || "Which do you prefer?", W - 64), cx, y + 94);
+    const btnY = y + 118, btnH = 82, btnW = (W - 72) / 2;
+    const aX = x + 20, bX = x + 20 + btnW + 32;
+    canvasRoundRect(ctx, aX, btnY, btnW, btnH, 18);
+    ctx.fillStyle = "rgba(233,25,118,0.10)"; ctx.fill();
+    ctx.strokeStyle = "rgba(233,25,118,0.70)"; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = "#E91976"; ctx.font = "bold 30px 'Inter',Arial,sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(truncateCanvas(ctx, config.optionA || "A", btnW - 28), aX + btnW / 2, btnY + 50);
+    canvasRoundRect(ctx, bX, btnY, btnW, btnH, 18);
+    ctx.fillStyle = "rgba(139,92,246,0.10)"; ctx.fill();
+    ctx.strokeStyle = "rgba(139,92,246,0.70)"; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = "#7c3aed";
+    ctx.fillText(truncateCanvas(ctx, config.optionB || "B", btnW - 28), bX + btnW / 2, btnY + 50);
+
+  } else if (config.type === "question") {
+    const W = 620, H = 216;
+    const x = cx - W / 2, y = cy - H / 2;
+    shadow();
+    canvasRoundRect(ctx, x, y, W, H, 28);
+    ctx.fillStyle = "rgba(255,243,196,0.97)"; ctx.fill();
+    noShadow();
+    ctx.fillStyle = "#b45309"; ctx.font = "600 23px 'Inter',Arial,sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("ASK ME A QUESTION", cx, y + 48);
+    ctx.fillStyle = "#78350f"; ctx.font = "bold 38px 'Inter',Arial,sans-serif";
+    ctx.fillText(truncateCanvas(ctx, config.prompt || "Ask me anything", W - 64), cx, y + 108);
+    canvasRoundRect(ctx, x + 24, y + 132, W - 48, 52, 14);
+    ctx.fillStyle = "rgba(251,191,36,0.28)"; ctx.fill();
+    ctx.fillStyle = "rgba(161,115,30,0.55)"; ctx.font = "italic 24px 'Inter',Arial,sans-serif";
+    ctx.fillText("Type something\u2026", cx, y + 165);
+
+  } else if (config.type === "countdown") {
+    const W = 640, H = 248;
+    const x = cx - W / 2, y = cy - H / 2;
+    shadow();
+    canvasRoundRect(ctx, x, y, W, H, 28);
+    ctx.fillStyle = "rgba(10,10,20,0.96)"; ctx.fill();
+    noShadow();
+    ctx.strokeStyle = "#E91976"; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(x + 32, y + 3); ctx.lineTo(x + W - 32, y + 3); ctx.stroke();
+    ctx.fillStyle = "#fff"; ctx.font = "600 28px 'Inter',Arial,sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(truncateCanvas(ctx, config.eventName || "COUNTDOWN", W - 64), cx, y + 56);
+    const diff = Math.max(0, new Date(config.endDate).getTime() - Date.now());
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    const parts = [
+      { v: String(d).padStart(2, "0"), l: "DAYS" },
+      { v: String(h).padStart(2, "0"), l: "HRS" },
+      { v: String(m).padStart(2, "0"), l: "MIN" },
+      { v: String(s).padStart(2, "0"), l: "SEC" },
+    ];
+    const colW = W / 4;
+    parts.forEach((p, i) => {
+      const colCx = x + colW * i + colW / 2;
+      ctx.fillStyle = "#E91976"; ctx.font = "900 68px 'Inter',Arial,sans-serif"; ctx.textAlign = "center";
+      ctx.fillText(p.v, colCx, y + 160);
+      ctx.fillStyle = "rgba(255,255,255,0.40)"; ctx.font = "600 18px 'Inter',Arial,sans-serif";
+      ctx.fillText(p.l, colCx, y + 190);
+    });
+    for (let i = 1; i < 4; i++) {
+      const sx = x + colW * i;
+      ctx.fillStyle = "rgba(255,255,255,0.25)";
+      ctx.beginPath(); ctx.arc(sx, y + 136, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(sx, y + 162, 5, 0, Math.PI * 2); ctx.fill();
+    }
+
+  } else if (config.type === "link") {
+    const label = config.displayText || config.url || "Visit Link";
+    ctx.font = "bold 32px 'Inter',Arial,sans-serif";
+    const W = Math.max(300, Math.min(580, ctx.measureText(label).width + 130));
+    const H = 96;
+    const x = cx - W / 2, y = cy - H / 2;
+    shadow();
+    canvasRoundRect(ctx, x, y, W, H, H / 2);
+    ctx.fillStyle = "rgba(255,255,255,0.97)"; ctx.fill();
+    noShadow();
+    const ix = x + 42, iy = cy;
+    ctx.strokeStyle = "#555"; ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.ellipse(ix - 9, iy, 13, 9, -0.5, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(ix + 9, iy, 13, 9, -0.5, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = "#1a1a1a"; ctx.font = "bold 32px 'Inter',Arial,sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(truncateCanvas(ctx, label, W - 110), cx + 20, cy + 12);
+  }
+
+  ctx.restore();
 }
 
 const OVERLAY_BASE_COLORS = [
@@ -134,9 +270,16 @@ export default function Stories() {
   const [ccWorkspaces, setCcWorkspaces] = useState<{ id: string; name: string }[]>([]);
   const [selectedCcWorkspace, setSelectedCcWorkspace] = useState<string>("");
 
-  type ToolId = "templates" | "photos" | "text" | "shapes" | "stickers" | "layers";
+  type ToolId = "templates" | "photos" | "text" | "shapes" | "stickers" | "interactive" | "layers";
   const [activeTool, setActiveTool] = useState<ToolId | null>(null);
   const toggleTool = (id: ToolId) => setActiveTool((prev) => (prev === id ? null : id));
+
+  const [stickerConfig, setStickerConfig] = useState<StickerConfig | null>(null);
+  const [stickerPos, setStickerPos] = useState({ x: 0.5, y: 0.65 });
+  const [isDraggingSticker, setIsDraggingSticker] = useState(false);
+  const stickerPosRef = useRef({ x: 0.5, y: 0.65 });
+  stickerPosRef.current = stickerPos;
+  const previewContainerRef = useRef<HTMLDivElement>(null);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bgImgCache = useRef<Record<string, HTMLImageElement>>({});
@@ -380,6 +523,11 @@ export default function Stories() {
         const bgImg = shuffled[i % shuffled.length];
         const frameFontSize = i === 0 ? fontSize : contentFontSize;
         drawStory(ctx, bgImg, questions[i], font, frameFontSize, textColor, overlayColor, footerText, logoImgRef.current, logoPosition, logoSize, bgOpacity, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor);
+        if (stickerConfig) {
+          const cx = stickerPosRef.current.x * STORY_WIDTH;
+          const cy = stickerPosRef.current.y * STORY_HEIGHT;
+          drawInteractiveSticker(ctx, stickerConfig, cx, cy);
+        }
         urls.push(canvas.toDataURL("image/png"));
       }
       setPreviews(urls);
@@ -387,7 +535,7 @@ export default function Stories() {
     } catch (err: any) {
       toast.error("Failed to render previews. Check your background image.");
     }
-  }, [questions, bgFiles, font, subheadingFont, fontSize, contentFontSize, textColor, overlayColor, footerText, logoPosition, logoSize, bgOpacity, loadBgImg, textAlign, textBoxOutline, textBoxOutlineColor, heroEnabled, heroLeadIn, heroWord, heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase]);
+  }, [questions, bgFiles, font, subheadingFont, fontSize, contentFontSize, textColor, overlayColor, footerText, logoPosition, logoSize, bgOpacity, loadBgImg, textAlign, textBoxOutline, textBoxOutlineColor, heroEnabled, heroLeadIn, heroWord, heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, stickerConfig]);
 
   useEffect(() => {
     if (step === "design" && questions.length > 0) {
@@ -649,6 +797,18 @@ export default function Stories() {
       ),
     },
     {
+      id: "interactive" as ToolId,
+      label: "Stickers",
+      icon: (active: boolean) => (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="6" width="5" height="14" rx="1.5" fill={active ? "#E91976" : "white"} opacity={active ? 1 : 0.45}/>
+          <rect x="10" y="2" width="5" height="18" rx="1.5" fill={active ? "#E91976" : "white"}/>
+          <rect x="17" y="9" width="5" height="11" rx="1.5" fill={active ? "#E91976" : "white"} opacity={active ? 1 : 0.65}/>
+          <line x1="2" y1="21" x2="22" y2="21" stroke={active ? "#E91976" : "#52525b"} strokeWidth="1.5"/>
+        </svg>
+      ),
+    },
+    {
       id: "layers" as ToolId,
       label: "Progress",
       icon: (active: boolean) => (
@@ -716,7 +876,7 @@ export default function Stories() {
             <>
               <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800/60 shrink-0">
                 <span className="text-sm font-semibold text-white capitalize">
-                  {activeTool === "templates" ? "Presets" : activeTool === "photos" ? "Backgrounds" : activeTool === "shapes" ? "Overlay" : activeTool === "stickers" ? "Hero Slide" : activeTool === "layers" ? "Progress" : "Text"}
+                  {activeTool === "templates" ? "Presets" : activeTool === "photos" ? "Backgrounds" : activeTool === "shapes" ? "Overlay" : activeTool === "stickers" ? "Hero Slide" : activeTool === "interactive" ? "Interactive Sticker" : activeTool === "layers" ? "Progress" : "Text"}
                 </span>
                 <button onClick={() => setActiveTool(null)} className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-zinc-700/60 transition-colors">
                   <X className="w-3 h-3 text-zinc-500" />
@@ -977,6 +1137,107 @@ export default function Stories() {
                   </div>
                 )}
 
+                {/* Interactive Sticker */}
+                {activeTool === "interactive" && (
+                  <div className="space-y-4">
+                    <p className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Choose a sticker type</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {([
+                        { type: "poll" as const, label: "Poll", icon: <BarChart3 className="w-4 h-4" />, desc: "Two options" },
+                        { type: "question" as const, label: "Question", icon: <MessageSquareText className="w-4 h-4" />, desc: "Open prompt" },
+                        { type: "countdown" as const, label: "Countdown", icon: <Clock className="w-4 h-4" />, desc: "Event timer" },
+                        { type: "link" as const, label: "Link", icon: <Link2 className="w-4 h-4" />, desc: "URL or CTA" },
+                      ]).map(({ type, label, icon, desc }) => {
+                        const isActive = stickerConfig?.type === type;
+                        return (
+                          <button
+                            key={type}
+                            onClick={() => {
+                              if (isActive) { setStickerConfig(null); return; }
+                              if (type === "poll") setStickerConfig({ type: "poll", question: "Which do you prefer?", optionA: "Option A", optionB: "Option B" });
+                              else if (type === "question") setStickerConfig({ type: "question", prompt: "Ask me anything" });
+                              else if (type === "countdown") {
+                                const d = new Date(); d.setDate(d.getDate() + 7);
+                                setStickerConfig({ type: "countdown", eventName: "Coming soon", endDate: d.toISOString().slice(0, 16) });
+                              }
+                              else setStickerConfig({ type: "link", url: "https://", displayText: "Learn more" });
+                            }}
+                            className={`rounded-xl border text-left p-2.5 transition-all ${isActive ? "border-pink-500/60 bg-pink-500/15" : "border-zinc-700/40 bg-zinc-800/50 hover:bg-zinc-700/50"}`}
+                          >
+                            <div className={`mb-1 ${isActive ? "text-pink-400" : "text-zinc-400"}`}>{icon}</div>
+                            <p className="text-xs font-semibold text-zinc-200">{label}</p>
+                            <p className="text-[10px] text-zinc-500 mt-0.5">{desc}</p>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {stickerConfig?.type === "poll" && (
+                      <div className="space-y-3 pt-2 border-t border-zinc-800/60">
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Question</p>
+                          <Input value={stickerConfig.question} onChange={(e) => setStickerConfig({ ...stickerConfig, question: e.target.value })} placeholder="Which do you prefer?" className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Option A</p>
+                            <Input value={stickerConfig.optionA} onChange={(e) => setStickerConfig({ ...stickerConfig, optionA: e.target.value })} placeholder="Option A" className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Option B</p>
+                            <Input value={stickerConfig.optionB} onChange={(e) => setStickerConfig({ ...stickerConfig, optionB: e.target.value })} placeholder="Option B" className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {stickerConfig?.type === "question" && (
+                      <div className="space-y-1 pt-2 border-t border-zinc-800/60">
+                        <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Prompt text</p>
+                        <Input value={stickerConfig.prompt} onChange={(e) => setStickerConfig({ ...stickerConfig, prompt: e.target.value })} placeholder="Ask me anything" className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
+                      </div>
+                    )}
+
+                    {stickerConfig?.type === "countdown" && (
+                      <div className="space-y-3 pt-2 border-t border-zinc-800/60">
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Event name</p>
+                          <Input value={stickerConfig.eventName} onChange={(e) => setStickerConfig({ ...stickerConfig, eventName: e.target.value })} placeholder="Coming soon" className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">End date &amp; time</p>
+                          <Input type="datetime-local" value={stickerConfig.endDate} onChange={(e) => setStickerConfig({ ...stickerConfig, endDate: e.target.value })} className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
+                        </div>
+                      </div>
+                    )}
+
+                    {stickerConfig?.type === "link" && (
+                      <div className="space-y-3 pt-2 border-t border-zinc-800/60">
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">URL</p>
+                          <Input value={stickerConfig.url} onChange={(e) => setStickerConfig({ ...stickerConfig, url: e.target.value })} placeholder="https://example.com" className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Display text</p>
+                          <Input value={stickerConfig.displayText} onChange={(e) => setStickerConfig({ ...stickerConfig, displayText: e.target.value })} placeholder="Learn more" className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
+                        </div>
+                      </div>
+                    )}
+
+                    {stickerConfig && (
+                      <div className="space-y-2 pt-2 border-t border-zinc-800/60">
+                        <p className="text-[10px] text-zinc-500 leading-relaxed">Drag the sticker in the right preview to position it, then click Refresh to re-bake.</p>
+                        <button
+                          onClick={() => setStickerConfig(null)}
+                          className="w-full py-1.5 rounded text-xs font-semibold text-red-400 hover:bg-red-900/20 transition-colors border border-red-900/30"
+                        >
+                          Remove sticker
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Progress */}
                 {activeTool === "layers" && (
                   <div className="space-y-3">
@@ -1178,6 +1439,7 @@ export default function Stories() {
                           { id: "text" as ToolId, label: "Text & Fonts", desc: "Fonts, sizes, colours" },
                           { id: "shapes" as ToolId, label: "Overlay", desc: "Colour, opacity, footer" },
                           { id: "stickers" as ToolId, label: "Hero Slide", desc: "Bold intro slide" },
+                          { id: "interactive" as ToolId, label: "Interactive Sticker", desc: "Poll, question, countdown, link" },
                         ]).map(({ id, label, desc }) => (
                           <button key={id} onClick={() => toggleTool(id)}
                             className={`rounded-xl border text-left p-3 transition-all ${activeTool === id ? "border-pink-500/50 bg-pink-500/10" : "border-border/30 bg-background/50 hover:border-border/60"}`}>
@@ -1290,14 +1552,101 @@ export default function Stories() {
             <p className="text-[9px] font-semibold uppercase tracking-widest text-zinc-600 self-start">Preview</p>
             {previews.length > 0 ? (
               <>
-                <div className="relative w-full">
+                <div
+                  ref={previewContainerRef}
+                  className="relative w-full select-none"
+                  style={{ aspectRatio: "9/16", cursor: isDraggingSticker ? "grabbing" : "default" }}
+                  onPointerMove={(e) => {
+                    if (!isDraggingSticker) return;
+                    const rect = previewContainerRef.current?.getBoundingClientRect();
+                    if (!rect) return;
+                    setStickerPos({
+                      x: Math.max(0.05, Math.min(0.95, (e.clientX - rect.left) / rect.width)),
+                      y: Math.max(0.05, Math.min(0.95, (e.clientY - rect.top) / rect.height)),
+                    });
+                  }}
+                  onPointerUp={() => {
+                    if (isDraggingSticker) { setIsDraggingSticker(false); renderPreviews(); }
+                  }}
+                  onPointerLeave={() => {
+                    if (isDraggingSticker) { setIsDraggingSticker(false); renderPreviews(); }
+                  }}
+                >
                   <img
                     src={previews[previewIdx]}
                     alt={`Story ${previewIdx + 1}`}
-                    className="w-full rounded-lg object-cover shadow-xl"
-                    style={{ aspectRatio: "9/16" }}
+                    className="w-full h-full rounded-lg object-cover shadow-xl"
+                    draggable={false}
                   />
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/60 backdrop-blur rounded-full px-3 py-1">
+                  {stickerConfig && (
+                    <div
+                      className="absolute z-10 touch-none"
+                      style={{
+                        left: `${stickerPos.x * 100}%`,
+                        top: `${stickerPos.y * 100}%`,
+                        transform: "translate(-50%, -50%)",
+                        cursor: isDraggingSticker ? "grabbing" : "grab",
+                        opacity: isDraggingSticker ? 0.85 : 1,
+                        filter: isDraggingSticker ? "drop-shadow(0 4px 12px rgba(0,0,0,0.5))" : undefined,
+                      }}
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        setIsDraggingSticker(true);
+                        (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+                      }}
+                    >
+                      {stickerConfig.type === "poll" && (
+                        <div className="bg-white rounded-2xl shadow-xl overflow-hidden" style={{ width: 136 }}>
+                          <div className="px-2.5 pt-2 pb-1">
+                            <p className="text-center text-[7px] text-gray-400 font-semibold uppercase tracking-wider">POLL</p>
+                            <p className="text-center text-[10px] font-bold text-gray-800 leading-tight mt-0.5 line-clamp-2">{stickerConfig.question}</p>
+                          </div>
+                          <div className="flex gap-1 px-2 pb-2">
+                            <div className="flex-1 rounded-xl bg-pink-50 border border-pink-300 py-1 text-center text-[8px] font-bold text-pink-600 truncate px-1">{stickerConfig.optionA || "A"}</div>
+                            <div className="flex-1 rounded-xl bg-purple-50 border border-purple-300 py-1 text-center text-[8px] font-bold text-purple-600 truncate px-1">{stickerConfig.optionB || "B"}</div>
+                          </div>
+                        </div>
+                      )}
+                      {stickerConfig.type === "question" && (
+                        <div className="rounded-2xl shadow-xl overflow-hidden" style={{ width: 132, background: "#fffbdc" }}>
+                          <div className="px-2.5 py-2">
+                            <p className="text-[7px] text-amber-500 font-semibold uppercase tracking-wider">ASK ME A QUESTION</p>
+                            <p className="text-[10px] font-bold text-amber-900 mt-0.5 line-clamp-2">{stickerConfig.prompt}</p>
+                            <div className="mt-1.5 h-3 rounded-full bg-amber-200/60" />
+                          </div>
+                        </div>
+                      )}
+                      {stickerConfig.type === "countdown" && (() => {
+                        const diff = Math.max(0, new Date(stickerConfig.endDate).getTime() - Date.now());
+                        const parts = [
+                          { v: String(Math.floor(diff / 86400000)).padStart(2, "0"), l: "D" },
+                          { v: String(Math.floor((diff % 86400000) / 3600000)).padStart(2, "0"), l: "H" },
+                          { v: String(Math.floor((diff % 3600000) / 60000)).padStart(2, "0"), l: "M" },
+                          { v: String(Math.floor((diff % 60000) / 1000)).padStart(2, "0"), l: "S" },
+                        ];
+                        return (
+                          <div className="rounded-2xl shadow-xl text-center" style={{ width: 136, background: "rgba(10,10,20,0.95)", borderTop: "3px solid #E91976" }}>
+                            <p className="text-[9px] font-semibold text-white pt-2 px-2 truncate">{stickerConfig.eventName}</p>
+                            <div className="flex justify-center gap-1.5 px-2 py-2">
+                              {parts.map((p) => (
+                                <div key={p.l} className="flex flex-col items-center">
+                                  <span className="text-[14px] font-black text-[#E91976] tabular-nums leading-none">{p.v}</span>
+                                  <span className="text-[7px] text-zinc-500">{p.l}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                      {stickerConfig.type === "link" && (
+                        <div className="bg-white rounded-full shadow-xl flex items-center gap-1.5 px-3 py-1.5" style={{ maxWidth: 136 }}>
+                          <Link2 className="w-3 h-3 text-gray-500 shrink-0" />
+                          <span className="text-[9px] font-semibold text-gray-700 truncate">{stickerConfig.displayText || stickerConfig.url || "Link"}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/60 backdrop-blur rounded-full px-3 py-1 z-20">
                     <button onClick={() => setPreviewIdx(Math.max(0, previewIdx - 1))} disabled={previewIdx === 0} className="text-white disabled:opacity-30 transition-opacity">
                       <ChevronLeft className="w-3.5 h-3.5" />
                     </button>
