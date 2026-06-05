@@ -742,7 +742,7 @@ router.post("/content/upload-image", async (req, res) => {
       return res.status(400).json({ error: "Maximum 5 images per request" });
     }
 
-    const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+    const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
     const bucket = objectStorageClient.bucket(bucketId);
     const results: { name: string; url: string }[] = [];
 

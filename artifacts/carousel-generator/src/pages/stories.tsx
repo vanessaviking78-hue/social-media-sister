@@ -34,6 +34,27 @@ import { FontSwitcher } from "@/components/font-switcher";
 const BASE = import.meta.env.BASE_URL || "/";
 const api = (p: string) => `${BASE}api${p}`;
 
+// Canvas PNG exports are 5-8MB — too large for the 15MB server limit and slow to upload.
+// Re-encode as JPEG (85% quality) before sending: typically reduces to 200-500KB.
+function compressForUpload(dataUrl: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = img.width;
+      c.height = img.height;
+      const ctx = c.getContext("2d");
+      if (!ctx) { reject(new Error("No canvas context")); return; }
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0);
+      resolve(c.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = () => reject(new Error("Failed to compress image for upload"));
+    img.src = dataUrl;
+  });
+}
+
 const OVERLAY_BASE_COLORS = [
   { label: "Pink", r: 236, g: 72, b: 153 },
   { label: "Purple", r: 139, g: 92, b: 246 },
@@ -453,13 +474,14 @@ export default function Stories() {
     try {
       const allUploadResults: { name: string; url: string }[] = [];
       const batchSize = 5;
-      for (let i = 0; i < previews.length; i += batchSize) {
-        const batch = previews.slice(i, i + batchSize);
+      const compressedPreviews = await Promise.all(previews.map(compressForUpload));
+      for (let i = 0; i < compressedPreviews.length; i += batchSize) {
+        const batch = compressedPreviews.slice(i, i + batchSize);
         const uploadRes = await fetch(api("/content/upload-image"), {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({
-            images: batch.map((p, j) => ({ name: `story-${i + j + 1}.png`, base64: p })),
+            images: batch.map((p, j) => ({ name: `story-${i + j + 1}.jpg`, base64: p })),
           }),
         });
         if (!uploadRes.ok) throw new Error("Image upload failed");
@@ -497,13 +519,14 @@ export default function Stories() {
     try {
       const allUrls: string[] = [];
       const batchSize = 5;
-      for (let i = 0; i < previews.length; i += batchSize) {
-        const batch = previews.slice(i, i + batchSize);
+      const compressedPreviews = await Promise.all(previews.map(compressForUpload));
+      for (let i = 0; i < compressedPreviews.length; i += batchSize) {
+        const batch = compressedPreviews.slice(i, i + batchSize);
         const uploadRes = await fetch(api("/content/upload-image"), {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({
-            images: batch.map((p, j) => ({ name: `ig-story-${i + j + 1}.png`, base64: p })),
+            images: batch.map((p, j) => ({ name: `ig-story-${i + j + 1}.jpg`, base64: p })),
           }),
         });
         if (!uploadRes.ok) throw new Error("Image upload failed");
@@ -541,12 +564,13 @@ export default function Stories() {
     try {
       const allUploadResults: { name: string; url: string }[] = [];
       const batchSize = 5;
-      for (let i = 0; i < previews.length; i += batchSize) {
-        const batch = previews.slice(i, i + batchSize);
+      const compressedPreviews = await Promise.all(previews.map(compressForUpload));
+      for (let i = 0; i < compressedPreviews.length; i += batchSize) {
+        const batch = compressedPreviews.slice(i, i + batchSize);
         const uploadRes = await fetch(api("/content/upload-image"), {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders() },
-          body: JSON.stringify({ images: batch.map((p, j) => ({ name: `story-sched-${i + j + 1}.png`, base64: p })) }),
+          body: JSON.stringify({ images: batch.map((p, j) => ({ name: `story-sched-${i + j + 1}.jpg`, base64: p })) }),
         });
         if (!uploadRes.ok) throw new Error("Image upload failed");
         const { results } = await uploadRes.json();
