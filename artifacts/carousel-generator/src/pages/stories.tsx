@@ -94,28 +94,36 @@ function drawInteractiveSticker(
   const noShadow = () => { ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; };
 
   if (config.type === "poll") {
-    const W = 640, H = 248;
+    const W = 640, H = 256;
     const x = cx - W / 2, y = cy - H / 2;
     shadow();
     canvasRoundRect(ctx, x, y, W, H, 28);
     ctx.fillStyle = "rgba(255,255,255,0.97)"; ctx.fill();
     noShadow();
-    ctx.fillStyle = "#999"; ctx.font = "600 22px 'Inter',Arial,sans-serif"; ctx.textAlign = "center";
-    ctx.fillText("POLL", cx, y + 44);
-    ctx.fillStyle = "#111"; ctx.font = "bold 36px 'Inter',Arial,sans-serif";
-    ctx.fillText(truncateCanvas(ctx, config.question || "Which do you prefer?", W - 64), cx, y + 94);
-    const btnY = y + 118, btnH = 82, btnW = (W - 72) / 2;
+    // "POLL" badge — compact at top
+    ctx.fillStyle = "#aaa"; ctx.font = "700 18px 'Inter',Arial,sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("POLL", cx, y + 30);
+    // Thin separator
+    ctx.strokeStyle = "rgba(0,0,0,0.08)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x + 40, y + 44); ctx.lineTo(x + W - 40, y + 44); ctx.stroke();
+    // Question text — vertically centred between separator (y+44) and button row (y+138)
+    // Centre of that space: (44+138)/2 = 91; add ~13px for cap-height baseline offset → y+104
+    ctx.fillStyle = "#111"; ctx.font = "bold 34px 'Inter',Arial,sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(truncateCanvas(ctx, config.question || "Which do you prefer?", W - 64), cx, y + 104);
+    // Buttons — start at y+138, height 76px, equal left/right padding 20px, gap 32px between
+    const btnY = y + 138, btnH = 76, btnW = (W - 72) / 2;
     const aX = x + 20, bX = x + 20 + btnW + 32;
     canvasRoundRect(ctx, aX, btnY, btnW, btnH, 18);
     ctx.fillStyle = "rgba(233,25,118,0.10)"; ctx.fill();
     ctx.strokeStyle = "rgba(233,25,118,0.70)"; ctx.lineWidth = 2.5; ctx.stroke();
-    ctx.fillStyle = "#E91976"; ctx.font = "bold 30px 'Inter',Arial,sans-serif"; ctx.textAlign = "center";
-    ctx.fillText(truncateCanvas(ctx, config.optionA || "A", btnW - 28), aX + btnW / 2, btnY + 50);
+    // Button text baseline: btnY + btnH/2 + fontSize*0.35 ≈ btnY+38+10 = btnY+48
+    ctx.fillStyle = "#E91976"; ctx.font = "bold 28px 'Inter',Arial,sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(truncateCanvas(ctx, config.optionA || "A", btnW - 28), aX + btnW / 2, btnY + 48);
     canvasRoundRect(ctx, bX, btnY, btnW, btnH, 18);
     ctx.fillStyle = "rgba(139,92,246,0.10)"; ctx.fill();
     ctx.strokeStyle = "rgba(139,92,246,0.70)"; ctx.lineWidth = 2.5; ctx.stroke();
     ctx.fillStyle = "#7c3aed";
-    ctx.fillText(truncateCanvas(ctx, config.optionB || "B", btnW - 28), bX + btnW / 2, btnY + 50);
+    ctx.fillText(truncateCanvas(ctx, config.optionB || "B", btnW - 28), bX + btnW / 2, btnY + 48);
 
   } else if (config.type === "question") {
     const W = 620, H = 216;
@@ -1340,6 +1348,11 @@ export default function Stories() {
                         </button>
                       </div>
                     )}
+
+                    <div className="mt-2 rounded-xl border border-amber-500/20 bg-amber-950/20 p-3 space-y-1">
+                      <p className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider">Visual overlay only</p>
+                      <p className="text-[10px] text-amber-200/70 leading-relaxed">The Instagram API does not support native tappable stickers on scheduled posts. These elements are baked into the image as graphics. To add real interactive stickers, open the story in Instagram after posting and add them manually.</p>
+                    </div>
                   </div>
                 )}
 
@@ -1731,6 +1744,15 @@ export default function Stories() {
                         </Button>
                       )}
                     </div>
+
+                    {stickerConfig && (
+                      <div className="rounded-xl border border-amber-500/20 bg-amber-950/20 px-4 py-3 flex gap-2.5 items-start">
+                        <span className="text-amber-400 text-sm mt-0.5 shrink-0">&#9888;</span>
+                        <p className="text-xs text-amber-200/80 leading-relaxed">
+                          Interactive elements are visual overlays only. To add native tappable Instagram stickers, open the story in Instagram after posting and add them manually.
+                        </p>
+                      </div>
+                    )}
 
                     {previews.length > 0 ? (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
