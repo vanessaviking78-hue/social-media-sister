@@ -1433,20 +1433,26 @@ export default function Stories() {
                     <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
                       <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Quick access</h3>
                       <div className="grid grid-cols-2 gap-3">
-                        {([
-                          { id: "templates" as ToolId, label: "Brand Presets", desc: "Load saved brand styles" },
-                          { id: "photos" as ToolId, label: "Backgrounds", desc: "Pick story backgrounds" },
-                          { id: "text" as ToolId, label: "Text & Fonts", desc: "Fonts, sizes, colours" },
-                          { id: "shapes" as ToolId, label: "Overlay", desc: "Colour, opacity, footer" },
-                          { id: "stickers" as ToolId, label: "Hero Slide", desc: "Bold intro slide" },
-                          { id: "interactive" as ToolId, label: "Interactive Sticker", desc: "Poll, question, countdown, link" },
-                        ]).map(({ id, label, desc }) => (
-                          <button key={id} onClick={() => toggleTool(id)}
-                            className={`rounded-xl border text-left p-3 transition-all ${activeTool === id ? "border-pink-500/50 bg-pink-500/10" : "border-border/30 bg-background/50 hover:border-border/60"}`}>
-                            <p className="text-sm font-semibold">{label}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
-                          </button>
-                        ))}
+                        {(["templates","photos","text","shapes","stickers","interactive"] as ToolId[]).map((id) => {
+                          const meta: Record<ToolId, { label: string; desc: string }> = {
+                            templates: { label: "Brand Presets", desc: "Load saved brand styles" },
+                            photos: { label: "Backgrounds", desc: "Pick story backgrounds" },
+                            text: { label: "Text & Fonts", desc: "Fonts, sizes, colours" },
+                            shapes: { label: "Overlay", desc: "Colour, opacity, footer" },
+                            stickers: { label: "Hero Slide", desc: "Bold intro slide" },
+                            interactive: { label: "Interactive Sticker", desc: "Poll, question, countdown, link" },
+                            layers: { label: "Progress", desc: "" },
+                          };
+                          const { label, desc } = meta[id];
+                          const isActive = activeTool === id;
+                          return (
+                            <button key={id} onClick={() => toggleTool(id)}
+                              className={`rounded-xl border text-left p-3 transition-all ${isActive ? "border-pink-500/50 bg-pink-500/10" : id === "interactive" ? "border-pink-500/20 bg-pink-950/20 hover:border-pink-500/40" : "border-border/30 bg-background/50 hover:border-border/60"}`}>
+                              <p className="text-sm font-semibold">{label}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
