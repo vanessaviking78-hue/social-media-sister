@@ -16,6 +16,7 @@ export async function runMigrations(): Promise<void> {
     await createAboutMeCanvasDraftsTable();
     await addPersonalityProfileColumns();
     await addStickerConfigColumn();
+    await addRenderedImageUrlsColumn();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -198,6 +199,13 @@ async function addPersonalityProfileColumns(): Promise<void> {
     ADD COLUMN IF NOT EXISTS target_audience text,
     ADD COLUMN IF NOT EXISTS content_pillars text,
     ADD COLUMN IF NOT EXISTS brand_notes text
+  `);
+}
+
+async function addRenderedImageUrlsColumn(): Promise<void> {
+  await db.execute(sql`
+    ALTER TABLE trial_bundles
+    ADD COLUMN IF NOT EXISTS rendered_image_urls jsonb
   `);
 }
 
