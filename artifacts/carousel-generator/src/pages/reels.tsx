@@ -6,7 +6,7 @@ import {
   BarChart3, ShieldCheck, Film, Image as ImageIcon,
   Music, Search, X, Send, FileText, Sparkles, ChevronDown, Check,
   ExternalLink, AlertCircle, CheckCircle2, KeyRound, ChevronUp, Settings,
-  ChevronRight, ChevronLeft, Clock, CalendarClock,
+  ChevronRight, ChevronLeft, Clock, CalendarClock, Copy, Wand2,
 } from "lucide-react";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { MusicPickerModal, type MusicTrack } from "@/components/music-picker-modal";
@@ -25,6 +25,50 @@ import type { LogoPosition } from "@workspace/db/schema";
 import { saveAs } from "file-saver";
 
 loadGoogleFonts();
+
+const VOICE_STYLES = [
+  { value: "northern-grit",      label: "Northern Grit (Vanessa)" },
+  { value: "whimsical",          label: "Whimsical" },
+  { value: "professional-warmth", label: "Professional Warmth" },
+  { value: "girly-sweet",        label: "Girly & Sweet" },
+] as const;
+
+async function generateCaptionFromBrief(
+  brief: string,
+  clientName: string,
+  voiceStyle: string,
+): Promise<string> {
+  const res = await fetch(`${import.meta.env.BASE_URL}api/content/captions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      posts: [[brief]],
+      postType: "single-image",
+      clientName,
+      voiceStyle,
+    }),
+  });
+  if (!res.ok || !res.body) throw new Error("Caption generation failed");
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let caption = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+    for (const line of lines) {
+      if (!line.startsWith("data: ")) continue;
+      try {
+        const data = JSON.parse(line.slice(6));
+        if (data.type === "complete" && data.captions?.[0]) caption = data.captions[0];
+      } catch { /* skip */ }
+    }
+  }
+  return caption;
+}
 
 type ReelSlide = {
   id: string;
@@ -146,6 +190,13 @@ export default function Reels() {
   const [igPresetId, setIgPresetId] = useState("");
   const [igCaption, setIgCaption] = useState("");
   const [igPushing, setIgPushing] = useState(false);
+
+  const [captionOpen,       setCaptionOpen]       = useState(false);
+  const [captionBrief,      setCaptionBrief]      = useState("");
+  const [captionVoiceStyle, setCaptionVoiceStyle] = useState("northern-grit");
+  const [captionOutput,     setCaptionOutput]     = useState("");
+  const [captionGenerating, setCaptionGenerating] = useState(false);
+  const [captionCopied,     setCaptionCopied]     = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [schedulePost, setSchedulePost] = useState<SchedulePostPayload | null>(null);
   const [scheduleRendering, setScheduleRendering] = useState(false);
@@ -853,6 +904,32 @@ export default function Reels() {
     const img = new Image();
     img.onload = () => { setLogoFile(file); setLogoImg(img); };
     img.src = url;
+  };
+
+  const handleGenerateCaption = async () => {
+    if (!captionBrief.trim()) { toast.error("Write a brief first — what is this reel about?"); return; }
+    const clientName = igPresets.find((p) => String(p.id) === igPresetId)?.name ?? "";
+    setCaptionGenerating(true);
+    try {
+      const result = await generateCaptionFromBrief(captionBrief, clientName, captionVoiceStyle);
+      if (!result) { toast.error("Nothing came back — try again."); return; }
+      setCaptionOutput(result);
+      setCcCaption(result);
+      setIgCaption(result);
+      toast.success("Caption generated and pre-filled below.");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Generation failed");
+    } finally {
+      setCaptionGenerating(false);
+    }
+  };
+
+  const handleCopyCaption = () => {
+    if (!captionOutput) return;
+    void navigator.clipboard.writeText(captionOutput).then(() => {
+      setCaptionCopied(true);
+      setTimeout(() => setCaptionCopied(false), 2000);
+    });
   };
 
   const handleExport = async () => {
@@ -2216,6 +2293,88 @@ export default function Reels() {
               <div>
                 <h2 className="font-sans font-bold text-4xl mb-3 tracking-tight">Step 4: Export &amp; Post</h2>
                 <p className="text-lg text-white/50">Preview your reel, export, and publish.</p>
+              </div>
+
+              {/* Generate Caption */}
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-4">
+                <button
+                  onClick={() => setCaptionOpen((o) => !o)}
+                  className="w-full flex items-center justify-between text-left group"
+                >
+                  <h3 className="text-base font-semibold text-white/70 flex items-center gap-2 group-hover:text-white/90 transition-colors">
+                    <Wand2 className="w-4 h-4 text-pink-400" />
+                    Generate Caption
+                  </h3>
+                  {captionOpen ? <ChevronUp className="w-4 h-4 text-white/30" /> : <ChevronDown className="w-4 h-4 text-white/30" />}
+                </button>
+
+                {captionOpen && (
+                  <div className="space-y-3 pt-1">
+                    <div>
+                      <label className="text-xs text-white/40 uppercase tracking-wide font-semibold mb-1.5 block">Brief</label>
+                      <textarea
+                        value={captionBrief}
+                        onChange={(e) => setCaptionBrief(e.target.value)}
+                        placeholder="Describe what this reel is about — the treatment, the moment, the message."
+                        rows={3}
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/25 outline-none focus:border-pink-500/50 resize-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-white/40 uppercase tracking-wide font-semibold mb-1.5 block">Voice style</label>
+                      <Select value={captionVoiceStyle} onValueChange={setCaptionVoiceStyle}>
+                        <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-10 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {VOICE_STYLES.map((v) => (
+                            <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Button
+                      onClick={handleGenerateCaption}
+                      disabled={captionGenerating || !captionBrief.trim()}
+                      size="sm"
+                      className="bg-pink-600 hover:bg-pink-500 text-white"
+                    >
+                      {captionGenerating
+                        ? <><Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />Generating…</>
+                        : <><Sparkles className="w-3.5 h-3.5 mr-2" />Generate Caption</>}
+                    </Button>
+
+                    {captionOutput && (
+                      <div className="space-y-2 pt-1">
+                        <label className="text-xs text-white/40 uppercase tracking-wide font-semibold block">Caption</label>
+                        <div className="relative">
+                          <textarea
+                            value={captionOutput}
+                            onChange={(e) => {
+                              setCaptionOutput(e.target.value);
+                              setCcCaption(e.target.value);
+                              setIgCaption(e.target.value);
+                            }}
+                            rows={6}
+                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-pink-500/50 resize-none"
+                          />
+                          <button
+                            onClick={handleCopyCaption}
+                            title="Copy to clipboard"
+                            className="absolute top-2 right-2 flex items-center gap-1 text-xs text-white/30 hover:text-white/70 bg-black/40 rounded px-2 py-1 transition-colors"
+                          >
+                            {captionCopied
+                              ? <><Check className="w-3 h-3 text-green-400" />Copied</>
+                              : <><Copy className="w-3 h-3" />Copy</>}
+                          </button>
+                        </div>
+                        <p className="text-xs text-white/25 italic">Caption pre-filled in Cloud Campaign and Instagram fields below. Edit freely.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Export */}
