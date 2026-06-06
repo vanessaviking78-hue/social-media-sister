@@ -846,27 +846,33 @@ export default function CsvSlideCarousel() {
             onDrop={handleCsvDrop}
             onDragOver={e => { e.preventDefault(); setCsvDrag(true); }}
             onDragLeave={() => setCsvDrag(false)}
-            onClick={() => csvInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-3 cursor-pointer transition-colors ${
+            className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-4 transition-colors ${
               csvDrag ? "border-primary/60 bg-primary/5" :
               csvRows.length ? "border-emerald-500/40 bg-emerald-500/5" :
-              "border-border/40 hover:border-border/70"
+              "border-border/40"
             }`}
           >
             {csvRows.length ? (
               <>
                 <CheckCircle2 className="w-8 h-8 text-emerald-400" />
                 <p className="text-sm font-medium text-emerald-400">{csvRows.length} row{csvRows.length !== 1 ? "s" : ""} loaded</p>
-                <p className="text-xs text-muted-foreground">Click to replace</p>
+                <label htmlFor="csv-file-input" className="cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">Replace file</label>
               </>
             ) : (
               <>
                 <FileText className="w-8 h-8 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground">Drop CSV here or click to browse</p>
+                <p className="text-xs text-muted-foreground">Drop a CSV here, or</p>
+                <label
+                  htmlFor="csv-file-input"
+                  className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <Upload className="w-4 h-4" />
+                  Choose CSV file
+                </label>
               </>
             )}
           </div>
-          <input ref={csvInputRef} type="file" accept=".csv" className="hidden"
+          <input id="csv-file-input" ref={csvInputRef} type="file" accept=".csv" className="hidden"
             onChange={e => { if (e.target.files?.[0]) parseCsv(e.target.files[0]); e.target.value = ""; }} />
           {csvError && <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-2">{csvError}</p>}
         </section>
