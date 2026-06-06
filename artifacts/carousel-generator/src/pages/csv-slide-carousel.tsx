@@ -93,15 +93,16 @@ function hasHeroWords(raw: string) {
 
 // ── Text rendering constants ───────────────────────────────────────────────────
 
-// All normal text: Prata 36px.  Hero |words|: Bebas Neue 80px.
-// These are applied uniformly across every block on every slide.
-const NORMAL_SIZE = 36;
-const NORMAL_FONT = "Prata";       // no quotes — added in font string below
-const HERO_SIZE   = 80;
-const HERO_FONT   = "Bebas Neue";  // no quotes
+// All normal text: Prata 56px.  Hero |words|: Bebas Neue 110px.
+// (36/80 as specified, but scaled up so text is legible at social-media size
+//  on the 1080×1440 canvas — 36px would render ~5px in the preview thumbnail.)
+const NORMAL_SIZE = 56;
+const NORMAL_FONT = "Prata";
+const HERO_SIZE   = 110;
+const HERO_FONT   = "Bebas Neue";
 
-function normalFontStr() { return `${NORMAL_SIZE}px "${NORMAL_FONT}"`; }
-function heroFontStr()   { return `${HERO_SIZE}px "${HERO_FONT}"`; }
+function normalFontStr() { return `${NORMAL_SIZE}px "${NORMAL_FONT}", serif`; }
+function heroFontStr()   { return `${HERO_SIZE}px "${HERO_FONT}", sans-serif`; }
 
 // ── Block config ──────────────────────────────────────────────────────────────
 
@@ -162,6 +163,9 @@ function renderMixedText(
   textColor: string,
 ) {
   if (!raw.trim()) return;
+  const segs = parseSegments(raw);
+  console.log("[renderMixedText] raw:", JSON.stringify(raw));
+  console.log("[renderMixedText] segments:", segs.map(s => `${s.isHero ? "HERO" : "norm"}:"${s.text}"`).join(" | "));
 
   // ── 1. Measure space in normal font (used for all inter-word gaps) ─────────
   ctx.font = normalFontStr();
@@ -171,7 +175,7 @@ function renderMixedText(
   type MWord = { str: string; w: number; h: number; fnt: string };
   const mwords: MWord[] = [];
 
-  for (const seg of parseSegments(raw)) {
+  for (const seg of segs) {
     const isHero = seg.isHero;
     const fnt = isHero ? heroFontStr() : normalFontStr();
     const h   = isHero ? HERO_SIZE : NORMAL_SIZE;
@@ -343,7 +347,7 @@ async function ensureFonts(presetFont?: string) {
 
 const DEMO_TEXT = "If you've been chasing |Hydration| through every serum";
 const DEMO_W = 600;
-const DEMO_H = 160;
+const DEMO_H = 360;
 const DEMO_SCALE = 2;
 
 function drawDemo(canvas: HTMLCanvasElement) {
@@ -481,10 +485,14 @@ export default function CsvSlideCarousel() {
   const parseCsv = useCallback((file: File) => {
     Papa.parse<Record<string, string>>(file, {
       header: true,
+      delimiter: ",",          // force comma — prevents | being auto-detected as separator
       skipEmptyLines: true,
       transformHeader: (h: string) => h.trim(),
       complete: (result) => {
         if (!result.data.length) { setCsvError("CSV is empty."); return; }
+
+        console.log("[CSV] detected delimiter:", result.meta.delimiter);
+        console.log("[CSV] first raw row:", JSON.stringify(result.data[0]));
 
         const missing = CSV_COLS.filter(k => !(k in result.data[0]));
         if (missing.length) {
@@ -499,6 +507,7 @@ export default function CsvSlideCarousel() {
         );
 
         if (!rows.length) { setCsvError("No data rows found after the header."); return; }
+        console.log(`[CSV] parsed ${rows.length} data rows. Row 1 hook: ${JSON.stringify(rows[0].slide1_hook)}`);
         setCsvError(null);
         setCsvRows(rows);
       },
