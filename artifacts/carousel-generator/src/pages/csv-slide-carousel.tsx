@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, Upload, FileText, Download, Loader2, CalendarClock,
-  CheckCircle2, X,
+  CheckCircle2, X, Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,10 +22,13 @@ const W = 1080;
 const H = 1440;
 const SCALE = 2;
 
-const CSV_COLS = [
-  "slide1_hook", "slide1_subtitle", "slide2_body", "slide3_body",
-  "slide4_cta", "image_filename", "logo_filename",
+// These 5 columns are REQUIRED. image_filename and logo_filename are optional
+// — when absent, the preset logo / no image is used instead.
+const REQUIRED_CSV_COLS = [
+  "slide1_hook", "slide1_subtitle", "slide2_body", "slide3_body", "slide4_cta",
 ] as const;
+
+const CSV_COLS = [...REQUIRED_CSV_COLS, "image_filename", "logo_filename"] as const;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -35,8 +38,8 @@ type CsvRow = {
   slide2_body: string;
   slide3_body: string;
   slide4_cta: string;
-  image_filename: string;
-  logo_filename: string;
+  image_filename?: string;  // optional — falls back to no image
+  logo_filename?: string;   // optional — falls back to preset logo
 };
 
 type BlockId = "hook" | "subtitle" | "body2" | "body3" | "cta";
@@ -52,8 +55,8 @@ type CarouselItem = {
   id: string;
   rowNum: number;
   hook: string;
-  imageFilename: string;
-  logoFilename: string;
+  imageFilename: string | undefined;
+  logoFilename: string | undefined;
   blocks: Block[];
   image: HTMLImageElement | null;
   logo: HTMLImageElement | null;
@@ -277,15 +280,22 @@ function renderSlide(
 
   if (image) {
     if (slideNum === 1) {
-      drawCover(ctx, image, 0.42);
-      const [r, g, b] = hexToRgb(pageColor);
-      ctx.fillStyle = `rgba(${r},${g},${b},0.50)`;
+      drawCover(ctx, image, 0.55);
+      // Always use a dark overlay on slide 1 so white text stays readable
+      // regardless of the preset's pageColor (which could be light/white).
+      ctx.fillStyle = "rgba(0,0,0,0.45)";
       ctx.fillRect(0, 0, W, H);
     } else {
       drawCover(ctx, image, 1.0);
       ctx.fillStyle = overlayColor;
       ctx.fillRect(0, 0, W, H);
     }
+  }
+
+  if (slideNum === 1) {
+    const s1 = blocks.filter(b => (["hook", "subtitle"] as string[]).includes(b.id));
+    console.log("[Slide1] blocks →", s1.map(b => ({ id: b.id, len: b.text?.length, preview: b.text?.slice(0, 60) })));
+    console.log("[Slide1] textColor:", textColor, "hasImage:", !!image);
   }
 
   ctx.shadowColor   = "rgba(0,0,0,0.75)";
@@ -394,12 +404,14 @@ async function uploadDataUrls(dataUrls: string[], names: string[]): Promise<stri
 }
 
 function makeSampleCsv(): string {
-  return [
-    CSV_COLS.join(","),
-    "If you've been chasing |Hydration| through every serum,Most people are missing this one thing,Your skin barrier does more than you think.,Here's what to look for on the label.,Book a |skin| consultation today,clinic-photo.jpg,clinic-logo.png",
-    "|Collagen| starts declining at 25,The science is simpler than you think,Small |changes| add up fast.,Let's break it down slide by slide.,Start your skin plan |now|,photo2.jpg,clinic-logo.png",
-    "",
-  ].join("\n");
+  // 5-column format — image_filename and logo_filename are optional extras
+  // Use |word| syntax for hero (Bebas Neue) words in any column
+  const headers = REQUIRED_CSV_COLS.join(",");
+  const rows = [
+    `"If you've been chasing |Hydration| through every serum","Most people are missing this one thing","Your skin barrier does more than you think.","Here's what to look for on the label.","Book a |skin| consultation today"`,
+    `"|Collagen| starts declining at 25","The science is simpler than you think","Small |changes| add up fast.","Let's break it down slide by slide.","Start your skin plan |now|"`,
+  ];
+  return [headers, ...rows, ""].join("\n");
 }
 
 // ── Drop zone component ───────────────────────────────────────────────────────
@@ -494,17 +506,20 @@ export default function CsvSlideCarousel() {
         console.log("[CSV] detected delimiter:", result.meta.delimiter);
         console.log("[CSV] first raw row:", JSON.stringify(result.data[0]));
 
-        const missing = CSV_COLS.filter(k => !(k in result.data[0]));
+        // Only the 5 content columns are required; image/logo are optional
+        const missing = REQUIRED_CSV_COLS.filter(k => !(k in result.data[0]));
         if (missing.length) {
-          setCsvError(`Missing columns: ${missing.join(", ")}. Make sure the first row is a header row.`);
+          setCsvError(`Missing columns: ${missing.join(", ")}. Make sure the first row is a header row matching the template.`);
           return;
         }
 
-        // Defensive: remove any row whose slide1_hook value literally equals
-        // the column name — that's a header row that slipped into the data.
-        const rows = (result.data as unknown as CsvRow[]).filter(
-          row => row.slide1_hook?.trim() !== "slide1_hook",
-        );
+        // Defensive: drop any row that looks like a header row leaked into data.
+        // This catches BOM issues or PapaParse edge cases.
+        const rows = (result.data as unknown as CsvRow[]).filter(row => {
+          const hook = row.slide1_hook?.trim() ?? "";
+          // If the hook field literally equals one of our column names, it's a header row
+          return hook.length > 0 && !(REQUIRED_CSV_COLS as readonly string[]).includes(hook);
+        });
 
         if (!rows.length) { setCsvError("No data rows found after the header."); return; }
         console.log(`[CSV] parsed ${rows.length} data rows. Row 1 hook: ${JSON.stringify(rows[0].slide1_hook)}`);
@@ -548,11 +563,18 @@ export default function CsvSlideCarousel() {
         const row = csvRows[i];
 
         let image: HTMLImageElement | null = null;
-        const imgFile = imageFiles.get(normName(row.image_filename));
+        // image_filename is optional — if the column is absent we skip per-row images
+        const imgFile = row.image_filename ? imageFiles.get(normName(row.image_filename)) : undefined;
         if (imgFile) { try { image = await loadImg(URL.createObjectURL(imgFile)); } catch {} }
 
+        // Fall back to first uploaded image if no per-row image_filename column
+        if (!image && imageFiles.size > 0 && !row.image_filename) {
+          const firstImgFile = imageFiles.values().next().value;
+          if (firstImgFile) { try { image = await loadImg(URL.createObjectURL(firstImgFile)); } catch {} }
+        }
+
         let logo: HTMLImageElement | null = null;
-        const logoFile = logoFiles.get(normName(row.logo_filename));
+        const logoFile = row.logo_filename ? logoFiles.get(normName(row.logo_filename)) : undefined;
         if (logoFile)                    { try { logo = await loadImg(URL.createObjectURL(logoFile)); } catch {} }
         else if (selectedPreset.logoUrl) { try { logo = await loadImg(selectedPreset.logoUrl);        } catch {} }
 
@@ -626,6 +648,46 @@ export default function CsvSlideCarousel() {
       if (has && e.platforms.length === 1) return e;
       return { ...e, platforms: has ? e.platforms.filter(x => x !== p) : [...e.platforms, p] };
     }));
+
+  // ── Post directly to Instagram / Facebook ────────────────────────────────────
+
+  const handlePostToMeta = async (platforms: ("instagram" | "facebook")[]) => {
+    if (!selectedPresetId) { toast.error("Select a client preset before posting."); return; }
+    const label = platforms.includes("instagram") && platforms.includes("facebook")
+      ? "Instagram & Facebook"
+      : platforms.includes("instagram") ? "Instagram" : "Facebook";
+    const tid = toast.loading(`Uploading images for ${label}...`);
+    try {
+      const posts: { title: string; caption: string; imageUrls: string[] }[] = [];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        toast.loading(`Uploading carousel ${i + 1} / ${items.length}...`, { id: tid });
+        const names = item.thumbs.map((_, j) => `carousel-${item.rowNum}-slide${j + 1}.png`);
+        const imageUrls = await uploadDataUrls(item.thumbs, names);
+        posts.push({
+          title: displayText(item.hook).slice(0, 80) || `Carousel ${item.rowNum}`,
+          caption: "",
+          imageUrls,
+        });
+      }
+      toast.loading(`Posting to ${label}...`, { id: tid });
+      const res = await fetch(`${BASE}/api/meta/push`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ posts, presetId: selectedPresetId, postType: "carousel", platforms }),
+      });
+      const data = await res.json() as { summary?: { succeeded: number; failed: number }; error?: string };
+      if (!res.ok) throw new Error(data.error || "Meta push failed");
+      const succeeded = data.summary?.succeeded ?? 0;
+      const failed    = data.summary?.failed ?? 0;
+      toast.success(
+        `Posted to ${label}: ${succeeded} succeeded${failed ? `, ${failed} failed` : ""}.`,
+        { id: tid, duration: 6000 },
+      );
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : String(e), { id: tid });
+    }
+  };
 
   const handleScheduleAll = async () => {
     const bad = scheduleEntries.findIndex(e => !e.presetId);
@@ -783,12 +845,21 @@ export default function CsvSlideCarousel() {
           </button>
           <h1 className="font-bold text-lg">Preview</h1>
           <span className="text-muted-foreground text-sm ml-1">{items.length} carousel{items.length !== 1 ? "s" : ""}</span>
-          <div className="ml-auto flex gap-2">
+          <div className="ml-auto flex gap-2 flex-wrap justify-end">
             <Button variant="outline" size="sm" onClick={downloadAll}>
               <Download className="w-4 h-4 mr-2" />Download All
             </Button>
+            <Button variant="outline" size="sm" onClick={() => handlePostToMeta(["instagram"])}>
+              <Send className="w-4 h-4 mr-2" />Post to Instagram
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => handlePostToMeta(["facebook"])}>
+              <Send className="w-4 h-4 mr-2" />Post to Facebook
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => handlePostToMeta(["instagram", "facebook"])}>
+              <Send className="w-4 h-4 mr-2" />Post to Both
+            </Button>
             <Button size="sm" onClick={goToSchedule}>
-              <CalendarClock className="w-4 h-4 mr-2" />Send to Scheduler
+              <CalendarClock className="w-4 h-4 mr-2" />Schedule
             </Button>
           </div>
         </header>
@@ -826,8 +897,8 @@ export default function CsvSlideCarousel() {
     hookDisplay: displayText(row.slide1_hook),
     hasHero:  hasHeroWords(row.slide1_hook) || hasHeroWords(row.slide1_subtitle)
            || hasHeroWords(row.slide2_body)  || hasHeroWords(row.slide3_body) || hasHeroWords(row.slide4_cta),
-    hasImage: imageFiles.has(normName(row.image_filename)),
-    hasLogo:  logoFiles.has(normName(row.logo_filename)),
+    hasImage: row.image_filename ? imageFiles.has(normName(row.image_filename)) : imageFiles.size > 0,
+    hasLogo:  row.logo_filename  ? logoFiles.has(normName(row.logo_filename))   : logoFiles.size > 0,
   }));
 
   return (
