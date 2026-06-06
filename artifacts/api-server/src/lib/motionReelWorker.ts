@@ -81,6 +81,18 @@ function patch(jobId: string, update: Partial<MotionJob>): void {
   if (job) motionJobs.set(jobId, { ...job, ...update });
 }
 
+async function safeJson<T>(res: Response, context: string): Promise<T> {
+  const text = await res.text();
+  if (!text.trim()) {
+    throw new Error(`${context} returned an empty response (HTTP ${res.status})`);
+  }
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(`${context} returned an unexpected response (HTTP ${res.status}): ${text.slice(0, 300)}`);
+  }
+}
+
 async function uploadToImgBB(imageBuffer: Buffer, mimeType: string): Promise<string> {
   const apiKey = process.env.IMGBB_API_KEY;
   if (!apiKey) throw new Error("IMGBB_API_KEY not set — needed to create public image URL for video AI");
@@ -93,9 +105,9 @@ async function uploadToImgBB(imageBuffer: Buffer, mimeType: string): Promise<str
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: form.toString(),
   });
-  const data = await res.json() as any;
+  const data = await safeJson<{ data?: { url?: string }; error?: { message?: string } }>(res, "ImgBB upload");
   if (!res.ok || !data?.data?.url) {
-    throw new Error(`ImgBB upload failed: ${data?.error?.message || res.status}`);
+    throw new Error(`ImgBB upload failed (${res.status}): ${data?.error?.message || "no image URL returned"}`);
   }
   return data.data.url as string;
 }
@@ -117,9 +129,9 @@ async function submitFalJob(imageUrl: string, motion: CameraMotion): Promise<str
     headers: { "Authorization": `Key ${falKey}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const data = await res.json() as any;
+  const data = await safeJson<{ request_id?: string; error?: string }>(res, "Fal.ai submission");
   if (!res.ok || !data?.request_id) {
-    throw new Error(`Fal.ai submission failed (${res.status}): ${JSON.stringify(data)}`);
+    throw new Error(`Fal.ai submission failed (${res.status}): ${data?.error ?? JSON.stringify(data)}`);
   }
   return data.request_id as string;
 }
@@ -135,13 +147,19 @@ async function pollFalJob(requestId: string, jobId: string): Promise<string> {
     attempts++;
     const progress = Math.min(0.2 + (attempts / maxAttempts) * 0.65, 0.85);
     patch(jobId, { progress, message: `AI processing… (${Math.round(progress * 100)}%)` });
-    const sr = await fetch(statusUrl, { headers: { "Authorization": `Key ${falKey}` } });
-    const sd = await sr.json() as any;
+    let sd: { status?: string; error?: string } = {};
+    try {
+      const sr = await fetch(statusUrl, { headers: { "Authorization": `Key ${falKey}` } });
+      sd = await safeJson<typeof sd>(sr, "Fal.ai status");
+    } catch (err: unknown) {
+      logger.warn({ err, requestId, attempts }, "Fal status poll error — retrying");
+      continue;
+    }
     if (sd?.status === "COMPLETED") {
       const rr = await fetch(resultUrl, { headers: { "Authorization": `Key ${falKey}` } });
-      const rd = await rr.json() as any;
+      const rd = await safeJson<{ video?: { url?: string } }>(rr, "Fal.ai result");
       const url = rd?.video?.url;
-      if (!url) throw new Error("Fal.ai returned no video URL");
+      if (!url) throw new Error("Fal.ai completed but returned no video URL");
       return url as string;
     }
     if (sd?.status === "FAILED") {

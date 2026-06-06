@@ -121,6 +121,7 @@ export default function AiPortraitStudio() {
   const [animateStatus, setAnimateStatus] = useState<string>("");
   const [animateProgress, setAnimateProgress] = useState(0);
   const [animateVideoUrl, setAnimateVideoUrl] = useState<string | null>(null);
+  const [animateFailed, setAnimateFailed] = useState(false);
   const animatePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -327,6 +328,7 @@ export default function AiPortraitStudio() {
     setAnimateStatus("");
     setAnimateProgress(0);
     setAnimateVideoUrl(null);
+    setAnimateFailed(false);
     if (animatePollRef.current) clearInterval(animatePollRef.current);
   };
 
@@ -336,6 +338,16 @@ export default function AiPortraitStudio() {
     setAnimateStatus("");
     setAnimateProgress(0);
     setAnimateVideoUrl(null);
+    setAnimateFailed(false);
+    if (animatePollRef.current) { clearInterval(animatePollRef.current); animatePollRef.current = null; }
+  };
+
+  const resetAnimateForRetry = () => {
+    setAnimateJobId(null);
+    setAnimateStatus("");
+    setAnimateProgress(0);
+    setAnimateVideoUrl(null);
+    setAnimateFailed(false);
     if (animatePollRef.current) { clearInterval(animatePollRef.current); animatePollRef.current = null; }
   };
 
@@ -368,14 +380,17 @@ export default function AiPortraitStudio() {
             toast.success("Motion reel saved to library!");
           } else if (sd.status === "failed") {
             clearInterval(animatePollRef.current!); animatePollRef.current = null;
+            setAnimateFailed(true);
+            setAnimateStatus(sd.error || "Generation failed");
             toast.error(sd.error || "Motion reel generation failed");
-            setAnimateStatus(sd.error || "Failed");
           }
         } catch {}
       }, 2000);
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Animation failed");
-      setAnimateStatus("");
+      const msg = e instanceof Error ? e.message : "Animation failed";
+      toast.error(msg);
+      setAnimateFailed(true);
+      setAnimateStatus(msg);
       setAnimateProgress(0);
     }
   };
@@ -903,7 +918,7 @@ export default function AiPortraitStudio() {
               </Select>
             </div>
 
-            {animateJobId && !animateVideoUrl && !animateStatus.startsWith("Failed") && (
+            {animateJobId && !animateVideoUrl && !animateFailed && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span className="flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" />{animateStatus}</span>
@@ -913,6 +928,18 @@ export default function AiPortraitStudio() {
                   <div className="h-full bg-violet-500 rounded-full transition-all duration-500" style={{ width: `${animateProgress * 100}%` }} />
                 </div>
                 <p className="text-xs text-zinc-600">AI video generation takes 30–90 seconds. You can close this modal — the reel will save automatically.</p>
+              </div>
+            )}
+
+            {animateFailed && (
+              <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-300 leading-relaxed">{animateStatus || "Generation failed — please try again."}</p>
+                </div>
+                <Button size="sm" variant="outline" onClick={resetAnimateForRetry} className="w-full border-red-500/30 text-red-300 hover:bg-red-500/10">
+                  Try again
+                </Button>
               </div>
             )}
 
@@ -930,7 +957,7 @@ export default function AiPortraitStudio() {
               </div>
             )}
 
-            {!animateJobId && (
+            {!animateJobId && !animateFailed && (
               <Button onClick={handleAnimate} className="w-full gap-2 bg-violet-600 hover:bg-violet-700 text-white">
                 <Play className="w-4 h-4" />Generate Motion Reel
               </Button>
