@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties } from "lucide-react";
 
 const TOOLS = [
   {
@@ -217,6 +217,15 @@ const TOOLS = [
     color: "from-cyan-500/20 to-cyan-500/5",
     border: "hover:border-cyan-500/50",
     iconColor: "text-cyan-400",
+  },
+  {
+    href: "/csv-slide-carousel",
+    icon: TableProperties,
+    name: "CSV Slide Carousel",
+    description: "Upload images, logos and a CSV. Each row becomes a branded 4-slide carousel. Use a | prefix on the hook for a Bebas Neue hero headline. Logos matched per row by filename.",
+    color: "from-sky-500/20 to-sky-500/5",
+    border: "hover:border-sky-500/50",
+    iconColor: "text-sky-400",
   },
   {
     href: "/bulk-stories",
