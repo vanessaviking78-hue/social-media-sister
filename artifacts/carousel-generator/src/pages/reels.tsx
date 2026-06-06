@@ -84,6 +84,8 @@ type ReelSlide = {
 const PREVIEW_SCALE = 0.22;
 const PREVIEW_W = Math.round(VIDEO_WIDTH * PREVIEW_SCALE);
 const PREVIEW_H = Math.round(VIDEO_HEIGHT * PREVIEW_SCALE);
+const THUMB_W = 80;
+const THUMB_H = Math.round(THUMB_W * (VIDEO_HEIGHT / VIDEO_WIDTH));
 
 async function pollReelJob(
   jobId: string,
@@ -250,12 +252,14 @@ export default function Reels() {
 
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const exportCanvasRef = useRef<HTMLCanvasElement>(null);
+  const thumbnailCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [slideThumbnails, setSlideThumbnails] = useState<string[]>([]);
   const animFrameRef = useRef<number | null>(null);
 
   const overlayColor = `rgba(0,0,0,${(overlayOpacity / 100).toFixed(2)})`;
 
-  function drawCurrentSlide(idx: number, progress: number = 1) {
-    const canvas = previewCanvasRef.current;
+  function drawCurrentSlide(idx: number, progress: number = 1, targetCanvas?: HTMLCanvasElement | null) {
+    const canvas = targetCanvas ?? previewCanvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -316,6 +320,28 @@ export default function Reels() {
     drawCurrentSlide(activeIdx, 1);
   }, [
     slides, activeIdx, isPlaying, reelStep,
+    fontFamily, fontSize, textColor, overlayOpacity, pageColor,
+    lineSpacing, textPosition, textAlign,
+    logoImg, logoPosition, logoSize,
+    mainFontWeight, letterSpacing,
+    coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio,
+    coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight,
+    coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch,
+    typewriterBgColor, typewriterFill,
+  ]);
+
+  useEffect(() => {
+    const canvas = thumbnailCanvasRef.current;
+    if (!canvas) return;
+    canvas.width = VIDEO_WIDTH;
+    canvas.height = VIDEO_HEIGHT;
+    const thumbs = slides.map((_, i) => {
+      drawCurrentSlide(i, 1, canvas);
+      return canvas.toDataURL("image/jpeg", 0.7);
+    });
+    setSlideThumbnails(thumbs);
+  }, [
+    slides,
     fontFamily, fontSize, textColor, overlayOpacity, pageColor,
     lineSpacing, textPosition, textAlign,
     logoImg, logoPosition, logoSize,
@@ -1654,66 +1680,78 @@ export default function Reels() {
                               )}
                             </div>
                           </div>
-                          <textarea
-                            value={slide.text}
-                            onChange={(e) => updateText(idx, e.target.value)}
-                            placeholder={slide.mode === "cover" && coverSplit ? "Eyebrow|Headline" : "Slide text…"}
-                            rows={2}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full bg-transparent text-sm text-white placeholder:text-white/30 resize-none outline-none border border-white/10 rounded-lg p-2.5 focus:border-pink-500/50"
-                          />
-                          {(slide.mode === "cover" || slide.mode === "image-typewriter") && (
-                            <div className="space-y-2">
-                              <label className={`flex items-center gap-2 cursor-pointer rounded-lg px-3 py-2 text-sm transition-colors ${
-                                (slide.imageFile || slide.videoFile)
-                                  ? "text-white/50 hover:text-white/70 border border-white/10"
-                                  : "border border-dashed border-white/20 hover:border-pink-500/60 text-white/40 hover:text-white/70 justify-center"
-                              }`}>
-                                <Upload className="w-4 h-4 shrink-0" />
-                                {slide.videoFile
-                                  ? (slide.videoFile.name.length > 26 ? slide.videoFile.name.slice(0, 26) + "…" : slide.videoFile.name)
-                                  : slide.imageFile
-                                  ? (slide.imageFile.name.length > 26 ? slide.imageFile.name.slice(0, 26) + "…" : slide.imageFile.name)
-                                  : slide.mode === "image-typewriter" ? "Upload photo or video (required)" : "Upload photo or video (optional)"}
-                                <input
-                                  type="file"
-                                  accept="image/*,video/*"
-                                  className="hidden"
-                                  onClick={(e) => e.stopPropagation()}
-                                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSlideMedia(idx, f); }}
-                                />
-                              </label>
-                              {slide.mode === "image-typewriter" && !slide.imageElement && !slide.videoElement && (
-                                <p className="text-xs text-amber-400/70 italic text-center">Upload a photo or video, add text, then press ▶ Preview</p>
-                              )}
-                              {(slide.imageElement || slide.videoElement) && slides.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={(e) => { e.stopPropagation(); handleRepeatMediaToAll(idx); }}
-                                  className="w-full text-xs text-white/40 hover:text-pink-400 border border-white/10 hover:border-pink-500/40 rounded-lg px-3 py-1.5 transition-colors text-center"
-                                >
-                                  Use on all slides
-                                </button>
-                              )}
-                              {slide.imageElement && (
-                                <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
-                                  <div className="flex justify-between text-xs text-white/25">
-                                    <span>▲ Top</span>
-                                    <span className="text-white/40">Image position</span>
-                                    <span>Bottom ▼</span>
-                                  </div>
-                                  <Slider
-                                    min={0} max={100} step={1}
-                                    value={[Math.round((slide.imageOffsetY + 1) * 50)]}
-                                    onValueChange={([v]) => updateImageOffset(idx, parseFloat(((v / 50) - 1).toFixed(3)))}
-                                  />
+                          <div className="flex gap-3 items-start">
+                            <div className="flex-1 min-w-0 space-y-2">
+                              <textarea
+                                value={slide.text}
+                                onChange={(e) => updateText(idx, e.target.value)}
+                                placeholder={slide.mode === "cover" && coverSplit ? "Eyebrow|Headline" : "Slide text…"}
+                                rows={2}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-full bg-transparent text-sm text-white placeholder:text-white/30 resize-none outline-none border border-white/10 rounded-lg p-2.5 focus:border-pink-500/50"
+                              />
+                              {(slide.mode === "cover" || slide.mode === "image-typewriter") && (
+                                <div className="space-y-2">
+                                  <label className={`flex items-center gap-2 cursor-pointer rounded-lg px-3 py-2 text-sm transition-colors ${
+                                    (slide.imageFile || slide.videoFile)
+                                      ? "text-white/50 hover:text-white/70 border border-white/10"
+                                      : "border border-dashed border-white/20 hover:border-pink-500/60 text-white/40 hover:text-white/70 justify-center"
+                                  }`}>
+                                    <Upload className="w-4 h-4 shrink-0" />
+                                    {slide.videoFile
+                                      ? (slide.videoFile.name.length > 26 ? slide.videoFile.name.slice(0, 26) + "…" : slide.videoFile.name)
+                                      : slide.imageFile
+                                      ? (slide.imageFile.name.length > 26 ? slide.imageFile.name.slice(0, 26) + "…" : slide.imageFile.name)
+                                      : slide.mode === "image-typewriter" ? "Upload photo or video (required)" : "Upload photo or video (optional)"}
+                                    <input
+                                      type="file"
+                                      accept="image/*,video/*"
+                                      className="hidden"
+                                      onClick={(e) => e.stopPropagation()}
+                                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSlideMedia(idx, f); }}
+                                    />
+                                  </label>
+                                  {slide.mode === "image-typewriter" && !slide.imageElement && !slide.videoElement && (
+                                    <p className="text-xs text-amber-400/70 italic text-center">Upload a photo or video to see the preview</p>
+                                  )}
+                                  {(slide.imageElement || slide.videoElement) && slides.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); handleRepeatMediaToAll(idx); }}
+                                      className="w-full text-xs text-white/40 hover:text-pink-400 border border-white/10 hover:border-pink-500/40 rounded-lg px-3 py-1.5 transition-colors text-center"
+                                    >
+                                      Use on all slides
+                                    </button>
+                                  )}
+                                  {slide.imageElement && (
+                                    <div className="space-y-1" onClick={(e) => e.stopPropagation()}>
+                                      <div className="flex justify-between text-xs text-white/25">
+                                        <span>▲ Top</span>
+                                        <span className="text-white/40">Image position</span>
+                                        <span>Bottom ▼</span>
+                                      </div>
+                                      <Slider
+                                        min={0} max={100} step={1}
+                                        value={[Math.round((slide.imageOffsetY + 1) * 50)]}
+                                        onValueChange={([v]) => updateImageOffset(idx, parseFloat(((v / 50) - 1).toFixed(3)))}
+                                      />
+                                    </div>
+                                  )}
                                 </div>
                               )}
+                              {slide.mode === "typewriter" && (
+                                <p className="text-xs text-white/30 italic">Text-only slide — preview updates in real time on the right.</p>
+                              )}
                             </div>
-                          )}
-                          {slide.mode === "typewriter" && (
-                            <p className="text-xs text-white/30 italic">Press ▶ Preview in Step 4 to see the typewriter animation</p>
-                          )}
+                            {slideThumbnails[idx] && (
+                              <img
+                                src={slideThumbnails[idx]}
+                                alt={`Slide ${idx + 1} preview`}
+                                style={{ width: THUMB_W, height: THUMB_H, borderRadius: 8, border: "1px solid rgba(255,255,255,0.1)", flexShrink: 0 }}
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -2549,6 +2587,7 @@ export default function Reels() {
       </div>{/* closes body flex */}
 
       <canvas ref={exportCanvasRef} className="hidden" />
+      <canvas ref={thumbnailCanvasRef} className="hidden" />
 
       {scheduleOpen && igPresetId && (
         <ScheduleModal
