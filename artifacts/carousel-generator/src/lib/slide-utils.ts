@@ -234,6 +234,103 @@ function drawArcText(
   ctx.textBaseline = savedBaseline as CanvasTextBaseline;
 }
 
+// ── Inline hero markup ────────────────────────────────────────────────────
+// Wrap any word in |pipes| in your slide text to render it in Bebas Neue
+// at 2× size. Works in every carousel tool that uses drawSlide.
+//
+// Example CSV cell:  "The secret to |growth| is consistency"
+
+export function hasInlineHero(text: string): boolean {
+  return /\|[^|]+\|/.test(text);
+}
+
+function parseInlineSegments(raw: string): Array<{ text: string; isHero: boolean }> {
+  return raw
+    .split(/\|([^|]+)\|/)
+    .map((p, i) => ({ text: p, isHero: i % 2 === 1 }))
+    .filter((s) => s.text.length > 0);
+}
+
+const INLINE_NORMAL_FONT = "'Prata', serif";
+const INLINE_HERO_FONT   = "'Bebas Neue', sans-serif";
+
+function drawInlineHeroText(
+  ctx: CanvasRenderingContext2D,
+  raw: string,
+  centerX: number,
+  centerY: number,
+  maxW: number,
+  textColor: string,
+  normalFont: string,
+  normalSize: number,
+) {
+  if (!raw.trim()) return;
+  const heroSize = Math.round(normalSize * 1.9);
+  const segs = parseInlineSegments(raw);
+
+  ctx.font = `${normalSize}px ${normalFont}`;
+  const SPACE_W = ctx.measureText("\u00A0").width;
+
+  type MWord = { str: string; w: number; h: number; fnt: string };
+  const mwords: MWord[] = [];
+
+  for (const seg of segs) {
+    const fnt = seg.isHero
+      ? `700 ${heroSize}px ${INLINE_HERO_FONT}`
+      : `400 ${normalSize}px ${normalFont}`;
+    const h   = seg.isHero ? heroSize : normalSize;
+    ctx.font = fnt;
+    for (const word of seg.text.split(/\s+/).filter(Boolean)) {
+      const str = seg.isHero ? word.toUpperCase() : word;
+      mwords.push({ str, w: ctx.measureText(str).width, h, fnt });
+    }
+  }
+
+  if (!mwords.length) return;
+
+  type Line = { words: MWord[]; lineW: number; lineH: number };
+  const lines: Line[] = [];
+  let cur: Line = { words: [], lineW: 0, lineH: 0 };
+
+  for (const mw of mwords) {
+    const needed = cur.words.length === 0 ? mw.w : cur.lineW + SPACE_W + mw.w;
+    if (needed > maxW && cur.words.length > 0) {
+      lines.push(cur);
+      cur = { words: [mw], lineW: mw.w, lineH: mw.h };
+    } else {
+      if (cur.words.length > 0) cur.lineW += SPACE_W;
+      cur.words.push(mw);
+      cur.lineW += mw.w;
+      cur.lineH = Math.max(cur.lineH, mw.h);
+    }
+  }
+  if (cur.words.length) lines.push(cur);
+
+  const LINE_GAP = 8;
+  const totalH = lines.reduce((s, l) => s + l.lineH, 0) + Math.max(0, lines.length - 1) * LINE_GAP;
+
+  ctx.fillStyle = textColor;
+  ctx.textAlign  = "left";
+  ctx.textBaseline = "alphabetic";
+
+  let topY = centerY - totalH / 2;
+  for (const line of lines) {
+    const baseline = topY + line.lineH;
+    let x = centerX - line.lineW / 2;
+    for (let i = 0; i < line.words.length; i++) {
+      const mw = line.words[i];
+      ctx.font = mw.fnt;
+      ctx.fillText(mw.str, x, baseline);
+      if (i < line.words.length - 1) x += mw.w + SPACE_W;
+    }
+    topY += line.lineH + LINE_GAP;
+  }
+
+  ctx.textAlign    = "center";
+  ctx.textBaseline = "top";
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function drawSlide(
   ctx: CanvasRenderingContext2D,
   img: HTMLImageElement | null,
@@ -397,6 +494,9 @@ export function drawSlide(
   const maxW = W - hPad * 2;
   const hasCoverSubheading = isCoverSlide && !isLastSlide && !!coverSubheading?.trim();
   const isSplit = coverSplit && isCoverSlide && displayText.includes('|');
+  // Inline hero markup: |word| renders in Bebas Neue at 2× size.
+  // Wins over normal text rendering but not over coverSplit (which uses | as a divider).
+  const useInlineHero = hasInlineHero(displayText) && !isSplit;
 
   // Auto-shrink font so all text fits vertically within the canvas
   let currentSize = ctaSize;
@@ -525,8 +625,17 @@ export function drawSlide(
 
   if (showTextOverlay && !opts?.overlayGradient) {
     const boxPad = Math.round(H * 0.025);
-    const boxTop = Math.max(0, startY - boxPad);
-    const boxBot = Math.min(H, startY + combinedTotalH + boxPad);
+    let boxTop: number, boxBot: number;
+    if (useInlineHero) {
+      const heroCenter = activeTextPos === 'top' ? Math.round(H * 0.28)
+        : activeTextPos === 'center' ? Math.round(H * 0.5)
+        : Math.round(H * 0.72);
+      boxTop = Math.max(0, heroCenter - 230 - boxPad);
+      boxBot = Math.min(H, heroCenter + 230 + boxPad);
+    } else {
+      boxTop = Math.max(0, startY - boxPad);
+      boxBot = Math.min(H, startY + combinedTotalH + boxPad);
+    }
     ctx.fillStyle = effectiveOverlayColor;
     ctx.fillRect(0, boxTop, W, boxBot - boxTop);
     if (textBoxOutline) {
@@ -583,6 +692,11 @@ export function drawSlide(
     for (let i = 1; i < lines.length; i++) {
       ctx.fillText(lines[i], startX, startY + bigSize + (i - 1) * lineH);
     }
+  } else if (useInlineHero) {
+    const heroCenter = activeTextPos === 'top' ? Math.round(H * 0.28)
+      : activeTextPos === 'center' ? Math.round(H * 0.5)
+      : Math.round(H * 0.72);
+    drawInlineHeroText(ctx, displayText, W / 2, heroCenter, maxW, textColor, activeFont, ctaSize);
   } else {
     lines.forEach((line, i) => ctx.fillText(line, startX, startY + i * lineH));
   }
