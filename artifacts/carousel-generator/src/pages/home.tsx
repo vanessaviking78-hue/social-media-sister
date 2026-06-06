@@ -1564,6 +1564,10 @@ export default function Home() {
 
                   {useCoverImages && (
                     <div className="flex flex-col gap-3">
+                      <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2.5 text-xs text-amber-300">
+                        <span className="mt-0.5 shrink-0">⚠️</span>
+                        <span><strong>Text is turned off on slide 1.</strong> These images are treated as pre-designed covers. Your CSV hook text will appear on slides 2, 3, 4 only. Switch this off if you want your hook text on slide 1.</span>
+                      </div>
                       <div
                         className={`drop-zone-idle rounded-xl min-h-[140px] flex flex-col items-center justify-center text-center cursor-pointer gap-3 px-8 ${isDraggingCoverPhotos ? "drop-zone-dragging" : ""}`}
                         onDragOver={(e) => { e.preventDefault(); setIsDraggingCoverPhotos(true); }}
