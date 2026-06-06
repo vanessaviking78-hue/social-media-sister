@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, Upload, FileText, Download, Loader2, CalendarClock,
@@ -43,7 +43,7 @@ type BlockId = "hook" | "subtitle" | "body2" | "body3" | "cta";
 
 type Block = {
   id: BlockId;
-  text: string; // raw text, may contain |word| markers
+  text: string;
   x: number;
   y: number;
 };
@@ -51,7 +51,7 @@ type Block = {
 type CarouselItem = {
   id: string;
   rowNum: number;
-  hook: string; // raw hook text (may contain |word| markers)
+  hook: string;
   imageFilename: string;
   logoFilename: string;
   blocks: Block[];
@@ -72,16 +72,13 @@ type Phase = "upload" | "preview" | "schedule" | "done";
 
 // ── Inline hero parsing ───────────────────────────────────────────────────────
 
-type Segment = { text: string; isHero: boolean };
-
 /** Split "some |Word| text" into alternating normal/hero segments. */
-function parseSegments(raw: string): Segment[] {
+function parseSegments(raw: string): Array<{ text: string; isHero: boolean }> {
+  // split on |...|  — capturing group keeps the matched content
   const parts = raw.split(/\|([^|]+)\|/);
-  const result: Segment[] = [];
-  parts.forEach((p, i) => {
-    if (p) result.push({ text: p, isHero: i % 2 === 1 });
-  });
-  return result;
+  return parts
+    .map((p, i) => ({ text: p, isHero: i % 2 === 1 }))
+    .filter(s => s.text.length > 0);
 }
 
 /** Strip all |pipe| markers for plain UI display. */
@@ -89,10 +86,22 @@ function displayText(raw: string) {
   return raw.replace(/\|([^|]*)\|/g, "$1");
 }
 
-/** Check whether a text string contains any |hero| markers. */
+/** Returns true if the string contains at least one |hero| marker. */
 function hasHeroWords(raw: string) {
   return /\|[^|]+\|/.test(raw);
 }
+
+// ── Text rendering constants ───────────────────────────────────────────────────
+
+// All normal text: Prata 36px.  Hero |words|: Bebas Neue 80px.
+// These are applied uniformly across every block on every slide.
+const NORMAL_SIZE = 36;
+const NORMAL_FONT = "Prata";       // no quotes — added in font string below
+const HERO_SIZE   = 80;
+const HERO_FONT   = "Bebas Neue";  // no quotes
+
+function normalFontStr() { return `${NORMAL_SIZE}px "${NORMAL_FONT}"`; }
+function heroFontStr()   { return `${HERO_SIZE}px "${HERO_FONT}"`; }
 
 // ── Block config ──────────────────────────────────────────────────────────────
 
@@ -103,31 +112,20 @@ const SLIDE_BLOCK_IDS: Record<number, BlockId[]> = {
   4: ["cta"],
 };
 
-type BlockStyle = {
-  normalFont: string;
-  normalSize: number;
-  heroFont: string;
-  heroSize: number;
-  maxW: number;
-  label: string;
-};
-
-const HERO_FONT = '"Bebas Neue"';
-
-function resolveBlockStyle(id: BlockId, preset: ClientPreset): BlockStyle {
-  const presetFont = preset.fontFamily || '"DM Serif Display", serif';
+/** Max pixel width for text wrap, per block. */
+function blockMaxW(id: BlockId): number {
   switch (id) {
-    case "hook":     return { normalFont: presetFont,          normalSize: 88,  heroFont: HERO_FONT, heroSize: 148, maxW: W - 100, label: "Hook"     };
-    case "subtitle": return { normalFont: 'italic "Prata"',   normalSize: 42,  heroFont: HERO_FONT, heroSize:  82, maxW: W - 180, label: "Subtitle" };
-    case "body2":    return { normalFont: '"Prata"',           normalSize: 48,  heroFont: HERO_FONT, heroSize:  92, maxW: W - 160, label: "Body"     };
-    case "body3":    return { normalFont: '"Prata"',           normalSize: 48,  heroFont: HERO_FONT, heroSize:  92, maxW: W - 160, label: "Body"     };
-    case "cta":      return { normalFont: presetFont,          normalSize: 70,  heroFont: HERO_FONT, heroSize: 118, maxW: W - 140, label: "CTA"      };
+    case "hook":     return W - 100;
+    case "subtitle": return W - 180;
+    case "body2":    return W - 140;
+    case "body3":    return W - 140;
+    case "cta":      return W - 140;
   }
 }
 
 const DEFAULT_POSITIONS: Record<BlockId, { x: number; y: number }> = {
-  hook:     { x: 0.5, y: 0.52 },
-  subtitle: { x: 0.5, y: 0.69 },
+  hook:     { x: 0.5, y: 0.42 },
+  subtitle: { x: 0.5, y: 0.62 },
   body2:    { x: 0.5, y: 0.50 },
   body3:    { x: 0.5, y: 0.50 },
   cta:      { x: 0.5, y: 0.50 },
@@ -145,66 +143,15 @@ function makeBlocks(row: CsvRow): Block[] {
 
 // ── Mixed-font canvas rendering ───────────────────────────────────────────────
 
-type WordToken = { word: string; isHero: boolean };
-
-function tokenize(segments: Segment[]): WordToken[] {
-  const tokens: WordToken[] = [];
-  for (const seg of segments) {
-    for (const w of seg.text.split(/\s+/)) {
-      if (w) tokens.push({ word: w, isHero: seg.isHero });
-    }
-  }
-  return tokens;
-}
-
-type LayoutWord = { word: string; fontStr: string; w: number; size: number; isHero: boolean };
-type LayoutLine = { words: LayoutWord[]; lineW: number; lineH: number };
-
-function buildLines(
-  ctx: CanvasRenderingContext2D,
-  tokens: WordToken[],
-  maxW: number,
-  normalFont: string, normalSize: number,
-  heroFont: string,  heroSize: number,
-): LayoutLine[] {
-  const lines: LayoutLine[] = [];
-  let cur: LayoutLine = { words: [], lineW: 0, lineH: 0 };
-
-  for (const tok of tokens) {
-    const fontStr = tok.isHero ? `${heroSize}px ${heroFont}` : `${normalSize}px ${normalFont}`;
-    const size    = tok.isHero ? heroSize : normalSize;
-    const word    = tok.isHero ? tok.word.toUpperCase() : tok.word;
-    ctx.font = fontStr;
-    const ww = ctx.measureText(word).width;
-
-    // Space before this word (use a space measured in the previous word's font)
-    let spaceW = 0;
-    if (cur.words.length > 0) {
-      const prevFont = cur.words[cur.words.length - 1].fontStr;
-      ctx.font = prevFont;
-      spaceW = ctx.measureText(" ").width;
-    }
-
-    const needed = cur.words.length === 0 ? ww : cur.lineW + spaceW + ww;
-    if (needed > maxW && cur.words.length > 0) {
-      lines.push(cur);
-      cur = { words: [{ word, fontStr, w: ww, size, isHero: tok.isHero }], lineW: ww, lineH: size };
-    } else {
-      if (cur.words.length > 0) cur.lineW += spaceW;
-      cur.words.push({ word, fontStr, w: ww, size, isHero: tok.isHero });
-      cur.lineW += ww;
-      cur.lineH = Math.max(cur.lineH, size);
-    }
-  }
-  if (cur.words.length) lines.push(cur);
-  return lines;
-}
-
 /**
- * Render text with inline |hero| word markers onto a canvas context.
- * Hero words appear in Bebas Neue at heroSize; surrounding words use normalFont/normalSize.
- * Words in the same line share a common baseline (bottom of tallest word).
- * centerX / centerY mark the centre of the entire text block.
+ * Renders `raw` onto `ctx` centred at (centerX, centerY) within maxW pixels.
+ *
+ * Words wrapped in |pipes| → Bebas Neue HERO_SIZE px, uppercased.
+ * All other words          → Prata NORMAL_SIZE px.
+ *
+ * Words are placed left-to-right on each line; lines share a common
+ * alphabetic baseline set at the bottom of the tallest word on that line.
+ * Space width is always measured using the normal font for consistency.
  */
 function renderMixedText(
   ctx: CanvasRenderingContext2D,
@@ -212,47 +159,76 @@ function renderMixedText(
   centerX: number,
   centerY: number,
   maxW: number,
-  normalFont: string,
-  normalSize: number,
-  heroFont: string,
-  heroSize: number,
   textColor: string,
 ) {
-  const tokens = tokenize(parseSegments(raw));
-  if (!tokens.length) return;
+  if (!raw.trim()) return;
 
-  const lines = buildLines(ctx, tokens, maxW, normalFont, normalSize, heroFont, heroSize);
-  if (!lines.length) return;
+  // ── 1. Measure space in normal font (used for all inter-word gaps) ─────────
+  ctx.font = normalFontStr();
+  const SPACE = ctx.measureText(" ").width;
 
-  const LINE_GAP = Math.round(normalSize * 0.28);
+  // ── 2. Build measured word list ────────────────────────────────────────────
+  type MWord = { str: string; w: number; h: number; fnt: string };
+  const mwords: MWord[] = [];
+
+  for (const seg of parseSegments(raw)) {
+    const isHero = seg.isHero;
+    const fnt = isHero ? heroFontStr() : normalFontStr();
+    const h   = isHero ? HERO_SIZE : NORMAL_SIZE;
+    ctx.font  = fnt;
+    for (const word of seg.text.split(/\s+/).filter(Boolean)) {
+      const str = isHero ? word.toUpperCase() : word;
+      mwords.push({ str, w: ctx.measureText(str).width, h, fnt });
+    }
+  }
+
+  if (!mwords.length) return;
+
+  // ── 3. Wrap into lines ─────────────────────────────────────────────────────
+  type Line = { words: MWord[]; lineW: number; lineH: number };
+  const lines: Line[] = [];
+  let cur: Line = { words: [], lineW: 0, lineH: 0 };
+
+  for (const mw of mwords) {
+    const needed = cur.words.length === 0 ? mw.w : cur.lineW + SPACE + mw.w;
+    if (needed > maxW && cur.words.length > 0) {
+      lines.push(cur);
+      cur = { words: [mw], lineW: mw.w, lineH: mw.h };
+    } else {
+      if (cur.words.length > 0) cur.lineW += SPACE;
+      cur.words.push(mw);
+      cur.lineW += mw.w;
+      cur.lineH = Math.max(cur.lineH, mw.h);
+    }
+  }
+  if (cur.words.length) lines.push(cur);
+
+  // ── 4. Compute total block height ──────────────────────────────────────────
+  const LINE_GAP = 10;
   const totalH = lines.reduce((s, l) => s + l.lineH, 0) + (lines.length - 1) * LINE_GAP;
 
-  let topY = centerY - totalH / 2;
+  // ── 5. Draw ────────────────────────────────────────────────────────────────
+  ctx.fillStyle = textColor;
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = textColor;
+
+  let topY = centerY - totalH / 2;
 
   for (const line of lines) {
-    const baseline = topY + line.lineH;
-    let curX = centerX - line.lineW / 2;
+    const baseline = topY + line.lineH;   // alphabetic baseline at bottom of line height
+    let x = centerX - line.lineW / 2;
 
     for (let i = 0; i < line.words.length; i++) {
-      const lw = line.words[i];
-      ctx.font = lw.fontStr;
-      ctx.fillText(lw.word, curX, baseline);
-
-      if (i < line.words.length - 1) {
-        // Space width: measure in the smaller of the two adjacent fonts for natural spacing
-        const nextFont = line.words[i + 1].fontStr;
-        ctx.font = lw.size <= line.words[i + 1].size ? lw.fontStr : nextFont;
-        curX += lw.w + ctx.measureText(" ").width;
-      }
+      const mw = line.words[i];
+      ctx.font = mw.fnt;
+      ctx.fillText(mw.str, x, baseline);
+      if (i < line.words.length - 1) x += mw.w + SPACE;
     }
 
     topY += line.lineH + LINE_GAP;
   }
 
-  // Restore defaults so logo drawing isn't affected
+  // Restore
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 }
@@ -283,7 +259,7 @@ function renderSlide(
   scale = SCALE,
 ): string {
   const canvas = document.createElement("canvas");
-  canvas.width = W * scale;
+  canvas.width  = W * scale;
   canvas.height = H * scale;
   const ctx = canvas.getContext("2d")!;
   ctx.scale(scale, scale);
@@ -292,11 +268,9 @@ function renderSlide(
   const overlayColor = preset.overlayColor || "rgba(0,0,0,0.55)";
   const textColor    = preset.textColor    || "#ffffff";
 
-  // Background
   ctx.fillStyle = pageColor;
   ctx.fillRect(0, 0, W, H);
 
-  // Image
   if (image) {
     if (slideNum === 1) {
       drawCover(ctx, image, 0.42);
@@ -310,32 +284,26 @@ function renderSlide(
     }
   }
 
-  // Text — shadow applied once, re-used across all blocks
-  ctx.shadowColor = "rgba(0,0,0,0.75)";
-  ctx.shadowBlur = 18;
+  ctx.shadowColor   = "rgba(0,0,0,0.75)";
+  ctx.shadowBlur    = 18;
   ctx.shadowOffsetY = 3;
 
   const activeIds = SLIDE_BLOCK_IDS[slideNum];
   for (const block of blocks.filter(b => activeIds.includes(b.id))) {
     if (!block.text.trim()) continue;
-    const st = resolveBlockStyle(block.id, preset);
     renderMixedText(
       ctx,
       block.text,
       block.x * W,
       block.y * H,
-      st.maxW,
-      st.normalFont,
-      st.normalSize,
-      st.heroFont,
-      st.heroSize,
+      blockMaxW(block.id),
       textColor,
     );
   }
 
-  // Logo — clear shadow first
   ctx.shadowColor = "transparent";
-  ctx.shadowBlur = 0;
+  ctx.shadowBlur  = 0;
+
   if (logoImg) {
     const MAX = 110, PAD = 44;
     const asp = logoImg.width / logoImg.height;
@@ -356,28 +324,60 @@ function renderAllThumbs(
   return ([1, 2, 3, 4] as const).map(n => renderSlide(n, item.blocks, item.image, item.logo, preset));
 }
 
+// ── Font loading ──────────────────────────────────────────────────────────────
+
+async function ensureFonts(presetFont?: string) {
+  await document.fonts.ready;
+  await Promise.all([
+    document.fonts.load(`400 100px "${NORMAL_FONT}"`).catch(() => {}),
+    document.fonts.load(`italic 400 100px "${NORMAL_FONT}"`).catch(() => {}),
+    document.fonts.load(`400 100px "${HERO_FONT}"`).catch(() => {}),
+    ...(presetFont ? [
+      document.fonts.load(`400 100px ${presetFont}`).catch(() => {}),
+      document.fonts.load(`700 100px ${presetFont}`).catch(() => {}),
+    ] : []),
+  ]);
+}
+
+// ── Demo canvas ───────────────────────────────────────────────────────────────
+
+const DEMO_TEXT = "If you've been chasing |Hydration| through every serum";
+const DEMO_W = 600;
+const DEMO_H = 160;
+const DEMO_SCALE = 2;
+
+function drawDemo(canvas: HTMLCanvasElement) {
+  canvas.width  = DEMO_W * DEMO_SCALE;
+  canvas.height = DEMO_H * DEMO_SCALE;
+  canvas.style.width  = `${DEMO_W}px`;
+  canvas.style.height = `${DEMO_H}px`;
+  const ctx = canvas.getContext("2d")!;
+  ctx.scale(DEMO_SCALE, DEMO_SCALE);
+  ctx.fillStyle = "#0f172a";
+  ctx.fillRect(0, 0, DEMO_W, DEMO_H);
+  renderMixedText(ctx, DEMO_TEXT, DEMO_W / 2, DEMO_H / 2, DEMO_W - 40, "#f8fafc");
+}
+
 // ── Misc helpers ──────────────────────────────────────────────────────────────
 
 function loadImg(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
-    img.onload = () => resolve(img);
+    img.onload  = () => resolve(img);
     img.onerror = () => reject(new Error("Image load failed"));
     img.src = src;
   });
 }
 
-function normName(name: string) {
-  return name.trim().toLowerCase();
-}
+function normName(name: string) { return name.trim().toLowerCase(); }
 
 async function uploadDataUrls(dataUrls: string[], names: string[]): Promise<string[]> {
   const BATCH = 4;
   const urls: string[] = [];
   for (let i = 0; i < dataUrls.length; i += BATCH) {
     const images = dataUrls.slice(i, i + BATCH).map((du, j) => ({ name: names[i + j], base64: du }));
-    const res = await fetch(`${BASE}/api/content/upload-image`, {
+    const res  = await fetch(`${BASE}/api/content/upload-image`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ images }),
@@ -392,8 +392,8 @@ async function uploadDataUrls(dataUrls: string[], names: string[]): Promise<stri
 function makeSampleCsv(): string {
   return [
     CSV_COLS.join(","),
-    "If you've been chasing |Hydration| through every serum,Most people are missing this one thing,Your skin barrier does more than you think.,Here's what to look for on the label.,Book a skin consultation today,clinic-photo.jpg,clinic-logo.png",
-    "|Collagen| starts declining at 25 and most people don't know it,The science is simpler than you think,Let's break it down slide by slide.,Small changes add up fast.,Start your skin plan now,photo2.jpg,clinic-logo.png",
+    "If you've been chasing |Hydration| through every serum,Most people are missing this one thing,Your skin barrier does more than you think.,Here's what to look for on the label.,Book a |skin| consultation today,clinic-photo.jpg,clinic-logo.png",
+    "|Collagen| starts declining at 25,The science is simpler than you think,Small |changes| add up fast.,Let's break it down slide by slide.,Start your skin plan |now|,photo2.jpg,clinic-logo.png",
     "",
   ].join("\n");
 }
@@ -401,11 +401,10 @@ function makeSampleCsv(): string {
 // ── Drop zone component ───────────────────────────────────────────────────────
 
 function DropZone({
-  label, hint, fileCount, active, color,
+  label, fileCount, active, color,
   onDragOver, onDragLeave, onDrop, onClick,
 }: {
-  label: string; hint: string; fileCount: number;
-  active: boolean; color: string;
+  label: string; fileCount: number; active: boolean; color: string;
   onDragOver: () => void; onDragLeave: () => void;
   onDrop: (e: React.DragEvent) => void; onClick: () => void;
 }) {
@@ -431,7 +430,6 @@ function DropZone({
         <>
           <Upload className="w-7 h-7 text-muted-foreground" />
           <p className="text-sm font-medium">{label}</p>
-          <p className="text-xs text-muted-foreground">{hint}</p>
         </>
       )}
     </div>
@@ -447,24 +445,36 @@ export default function CsvSlideCarousel() {
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
   const [csvError, setCsvError] = useState<string | null>(null);
   const [imageFiles, setImageFiles] = useState<Map<string, File>>(new Map());
-  const [logoFiles, setLogoFiles] = useState<Map<string, File>>(new Map());
-  const [csvDrag, setCsvDrag] = useState(false);
-  const [imgDrag, setImgDrag] = useState(false);
-  const [logoDrag, setLogoDrag] = useState(false);
+  const [logoFiles,  setLogoFiles]  = useState<Map<string, File>>(new Map());
+  const [csvDrag,   setCsvDrag]    = useState(false);
+  const [imgDrag,   setImgDrag]    = useState(false);
+  const [logoDrag,  setLogoDrag]   = useState(false);
 
-  const [items, setItems] = useState<CarouselItem[]>([]);
-  const [rendering, setRendering] = useState(false);
+  const [items,          setItems]          = useState<CarouselItem[]>([]);
+  const [rendering,      setRendering]      = useState(false);
   const [renderProgress, setRenderProgress] = useState(0);
 
   const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
-  const [scheduling, setScheduling] = useState(false);
+  const [scheduling,      setScheduling]      = useState(false);
 
   const csvInputRef  = useRef<HTMLInputElement>(null);
   const imgInputRef  = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const demoCanvasRef = useRef<HTMLCanvasElement>(null);
 
   const { presets } = usePresets();
-  const selectedPreset = useMemo(() => presets.find(p => p.id === selectedPresetId) ?? null, [presets, selectedPresetId]);
+  const selectedPreset = useMemo(
+    () => presets.find(p => p.id === selectedPresetId) ?? null,
+    [presets, selectedPresetId],
+  );
+
+  // ── Demo canvas — loads fonts then draws proof-of-concept render ─────────────
+
+  useEffect(() => {
+    ensureFonts().then(() => {
+      if (demoCanvasRef.current) drawDemo(demoCanvasRef.current);
+    });
+  }, []);
 
   // ── CSV ───────────────────────────────────────────────────────────────────────
 
@@ -472,14 +482,27 @@ export default function CsvSlideCarousel() {
     Papa.parse<Record<string, string>>(file, {
       header: true,
       skipEmptyLines: true,
+      transformHeader: (h: string) => h.trim(),
       complete: (result) => {
         if (!result.data.length) { setCsvError("CSV is empty."); return; }
+
         const missing = CSV_COLS.filter(k => !(k in result.data[0]));
-        if (missing.length) { setCsvError(`Missing columns: ${missing.join(", ")}`); return; }
+        if (missing.length) {
+          setCsvError(`Missing columns: ${missing.join(", ")}. Make sure the first row is a header row.`);
+          return;
+        }
+
+        // Defensive: remove any row whose slide1_hook value literally equals
+        // the column name — that's a header row that slipped into the data.
+        const rows = (result.data as unknown as CsvRow[]).filter(
+          row => row.slide1_hook?.trim() !== "slide1_hook",
+        );
+
+        if (!rows.length) { setCsvError("No data rows found after the header."); return; }
         setCsvError(null);
-        setCsvRows(result.data as unknown as CsvRow[]);
+        setCsvRows(rows);
       },
-      error: e => setCsvError(e.message),
+      error: (e: Error) => setCsvError(e.message),
     });
   }, []);
 
@@ -509,18 +532,9 @@ export default function CsvSlideCarousel() {
     setRendering(true);
     setRenderProgress(0);
     try {
-      await document.fonts.ready;
-      // Explicitly load every font that canvas rendering will use.
-      // document.fonts.ready alone doesn't download fonts that aren't used in DOM layout.
-      const presetFont = selectedPreset.fontFamily || '"DM Serif Display", serif';
-      await Promise.all([
-        document.fonts.load(`400 100px "Bebas Neue"`).catch(() => {}),
-        document.fonts.load(`400 100px "Prata"`).catch(() => {}),
-        document.fonts.load(`italic 400 100px "Prata"`).catch(() => {}),
-        document.fonts.load(`400 100px ${presetFont}`).catch(() => {}),
-        document.fonts.load(`700 100px ${presetFont}`).catch(() => {}),
-      ]);
+      await ensureFonts(selectedPreset.fontFamily);
       const rendered: CarouselItem[] = [];
+
       for (let i = 0; i < csvRows.length; i++) {
         const row = csvRows[i];
 
@@ -530,17 +544,18 @@ export default function CsvSlideCarousel() {
 
         let logo: HTMLImageElement | null = null;
         const logoFile = logoFiles.get(normName(row.logo_filename));
-        if (logoFile)                { try { logo = await loadImg(URL.createObjectURL(logoFile)); } catch {} }
-        else if (selectedPreset.logoUrl) { try { logo = await loadImg(selectedPreset.logoUrl);          } catch {} }
+        if (logoFile)                    { try { logo = await loadImg(URL.createObjectURL(logoFile)); } catch {} }
+        else if (selectedPreset.logoUrl) { try { logo = await loadImg(selectedPreset.logoUrl);        } catch {} }
 
         const blocks = makeBlocks(row);
         const thumbs = renderAllThumbs({ blocks, image, logo }, selectedPreset);
+
         rendered.push({
           id: `item-${i}`,
           rowNum: i + 1,
           hook: row.slide1_hook,
           imageFilename: row.image_filename,
-          logoFilename: row.logo_filename,
+          logoFilename:  row.logo_filename,
           blocks,
           image,
           logo,
@@ -548,10 +563,11 @@ export default function CsvSlideCarousel() {
         });
         setRenderProgress(Math.round(((i + 1) / csvRows.length) * 100));
       }
+
       setItems(rendered);
       setPhase("preview");
-    } catch (e: any) {
-      toast.error("Render failed: " + e.message);
+    } catch (e: unknown) {
+      toast.error("Render failed: " + (e instanceof Error ? e.message : String(e)));
     } finally {
       setRendering(false);
     }
@@ -562,7 +578,7 @@ export default function CsvSlideCarousel() {
   const downloadSingle = async (item: CarouselItem) => {
     const zip = new JSZip();
     item.thumbs.forEach((du, i) => zip.file(`slide${i + 1}.png`, du.split(",")[1], { base64: true }));
-    const blob = await zip.generateAsync({ type: "blob" });
+    const blob  = await zip.generateAsync({ type: "blob" });
     const label = displayText(item.hook).slice(0, 30).replace(/[^a-z0-9]/gi, "-") || `carousel-${item.rowNum}`;
     saveAs(blob, `${label}.zip`);
   };
@@ -578,7 +594,7 @@ export default function CsvSlideCarousel() {
       const blob = await zip.generateAsync({ type: "blob" });
       saveAs(blob, "carousels.zip");
       toast.success("Download started.", { id: tid });
-    } catch (e: any) { toast.error(e.message, { id: tid }); }
+    } catch (e: unknown) { toast.error(String(e), { id: tid }); }
   };
 
   // ── Schedule ──────────────────────────────────────────────────────────────────
@@ -609,10 +625,10 @@ export default function CsvSlideCarousel() {
     const tid = toast.loading("Uploading and queueing...");
     try {
       for (let i = 0; i < items.length; i++) {
-        const item = items[i];
+        const item  = items[i];
         const entry = scheduleEntries[i];
         toast.loading(`Scheduling ${i + 1} / ${items.length}...`, { id: tid });
-        const names = item.thumbs.map((_, j) => `carousel-${i + 1}-slide${j + 1}.png`);
+        const names     = item.thumbs.map((_, j) => `carousel-${i + 1}-slide${j + 1}.png`);
         const imageUrls = await uploadDataUrls(item.thumbs, names);
         const res = await fetch(`${BASE}/api/scheduler/posts`, {
           method: "POST",
@@ -635,8 +651,8 @@ export default function CsvSlideCarousel() {
       }
       toast.success(`${items.length} carousels queued.`, { id: tid });
       setPhase("done");
-    } catch (e: any) {
-      toast.error(e.message, { id: tid });
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : String(e), { id: tid });
     } finally { setScheduling(false); }
   };
 
@@ -799,7 +815,8 @@ export default function CsvSlideCarousel() {
   const rowStats = csvRows.map(row => ({
     ...row,
     hookDisplay: displayText(row.slide1_hook),
-    hasHero: hasHeroWords(row.slide1_hook) || hasHeroWords(row.slide1_subtitle) || hasHeroWords(row.slide2_body) || hasHeroWords(row.slide3_body) || hasHeroWords(row.slide4_cta),
+    hasHero:  hasHeroWords(row.slide1_hook) || hasHeroWords(row.slide1_subtitle)
+           || hasHeroWords(row.slide2_body)  || hasHeroWords(row.slide3_body) || hasHeroWords(row.slide4_cta),
     hasImage: imageFiles.has(normName(row.image_filename)),
     hasLogo:  logoFiles.has(normName(row.logo_filename)),
   }));
@@ -849,15 +866,36 @@ export default function CsvSlideCarousel() {
               <Download className="w-3.5 h-3.5" />Download template
             </button>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Columns: {CSV_COLS.join(", ")}. Wrap any word in <code className="bg-muted/40 px-1 rounded">|pipes|</code> to render it in Bebas Neue at display size — works in any column.
-          </p>
+
+          {/* Pipe syntax explanation + live demo */}
+          <div className="rounded-xl border border-border/40 bg-muted/20 p-4 space-y-3">
+            <p className="text-sm">
+              Columns: <span className="font-mono text-xs bg-muted/60 px-1 rounded">{CSV_COLS.join(", ")}</span>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Wrap any word in <code className="bg-muted/60 px-1.5 py-0.5 rounded text-xs font-mono">|pipes|</code> to render it in{" "}
+              <strong className="text-foreground">Bebas Neue 80px</strong>. Surrounding words render in{" "}
+              <strong className="text-foreground">Prata 36px</strong>. Works in any column.
+            </p>
+            <div className="space-y-1.5">
+              <p className="text-xs text-muted-foreground">Live preview — fonts load in a moment:</p>
+              <canvas
+                ref={demoCanvasRef}
+                className="rounded-lg w-full max-w-[600px] block"
+                style={{ imageRendering: "auto" }}
+              />
+              <p className="text-xs text-muted-foreground/60 font-mono">
+                If you've been chasing |Hydration| through every serum
+              </p>
+            </div>
+          </div>
+
           <div
             onDrop={handleCsvDrop}
             onDragOver={e => { e.preventDefault(); setCsvDrag(true); }}
             onDragLeave={() => setCsvDrag(false)}
             className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-4 transition-colors ${
-              csvDrag ? "border-primary/60 bg-primary/5" :
+              csvDrag   ? "border-primary/60 bg-primary/5" :
               csvRows.length ? "border-emerald-500/40 bg-emerald-500/5" :
               "border-border/40"
             }`}
@@ -866,7 +904,9 @@ export default function CsvSlideCarousel() {
               <>
                 <CheckCircle2 className="w-8 h-8 text-emerald-400" />
                 <p className="text-sm font-medium text-emerald-400">{csvRows.length} row{csvRows.length !== 1 ? "s" : ""} loaded</p>
-                <label htmlFor="csv-file-input" className="cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">Replace file</label>
+                <label htmlFor="csv-file-input" className="cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
+                  Replace file
+                </label>
               </>
             ) : (
               <>
@@ -891,15 +931,14 @@ export default function CsvSlideCarousel() {
         <section className="space-y-4">
           <h2 className="font-semibold text-base">3. Upload images &amp; logos</h2>
           <p className="text-sm text-muted-foreground">
-            Files are matched by filename to the <code className="bg-muted/40 px-1 rounded">image_filename</code> and <code className="bg-muted/40 px-1 rounded">logo_filename</code> columns. Case-insensitive.
+            Files are matched by filename to <code className="bg-muted/40 px-1 rounded text-xs">image_filename</code> and{" "}
+            <code className="bg-muted/40 px-1 rounded text-xs">logo_filename</code>. Case-insensitive.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-sm font-medium">Carousel images</Label>
-              <p className="text-xs text-muted-foreground">Matched by image_filename column.</p>
               <DropZone
-                label="Drop images" hint="Matched by image_filename"
-                fileCount={imageFiles.size} active={imgDrag} color="violet"
+                label="Drop images" fileCount={imageFiles.size} active={imgDrag} color="violet"
                 onDragOver={() => setImgDrag(true)} onDragLeave={() => setImgDrag(false)}
                 onDrop={handleImgDrop} onClick={() => imgInputRef.current?.click()}
               />
@@ -920,10 +959,8 @@ export default function CsvSlideCarousel() {
             </div>
             <div className="space-y-2">
               <Label className="text-sm font-medium">Logo files</Label>
-              <p className="text-xs text-muted-foreground">Matched by logo_filename. Falls back to preset logo.</p>
               <DropZone
-                label="Drop logos" hint="Matched by logo_filename"
-                fileCount={logoFiles.size} active={logoDrag} color="indigo"
+                label="Drop logos" fileCount={logoFiles.size} active={logoDrag} color="indigo"
                 onDragOver={() => setLogoDrag(true)} onDragLeave={() => setLogoDrag(false)}
                 onDrop={handleLogoDrop} onClick={() => logoInputRef.current?.click()}
               />
