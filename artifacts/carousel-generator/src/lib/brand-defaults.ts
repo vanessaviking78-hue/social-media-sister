@@ -12,8 +12,8 @@ const FACTORY: BrandDefaults = {
   logoDataUrl: null,
   primaryColor: "#000000",
   secondaryColor: "#ffffff",
-  fontFamily: "'DM Serif Display', serif",
-  subheadingFont: "'Prata', serif",
+  fontFamily: "'Bebas Neue', sans-serif",
+  subheadingFont: "'Bebas Neue', sans-serif",
 };
 
 export function getBrandDefaults(): BrandDefaults {

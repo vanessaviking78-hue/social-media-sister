@@ -708,6 +708,20 @@ export function drawSlide(
     subheadingLines.forEach((line, i) => ctx.fillText(line, startX, subStartY + i * subheadingLineH));
   }
 
+  // Decorative thin line under slide 1 (cover) text
+  if (isCoverSlide && !isLastSlide && displayText && !useInlineHero) {
+    ctx.shadowBlur = 0;
+    ctx.shadowColor = 'transparent';
+    const lineGap = Math.round(currentSize * 0.22);
+    const lineY = startY + eyebrowTotalH + effectiveTotalH + (hasCoverSubheading ? subheadingGap + subheadingTotalH : 0) + lineGap;
+    const lineLen = Math.round(W * 0.55);
+    const lineX = Math.round(W / 2 - lineLen / 2);
+    ctx.fillStyle = textColor;
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(lineX, lineY, lineLen, 2);
+    ctx.globalAlpha = 1.0;
+  }
+
   if (textSlideOffset !== 0) {
     ctx.restore();
   }

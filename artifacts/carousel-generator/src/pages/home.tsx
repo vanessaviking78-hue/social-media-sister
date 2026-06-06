@@ -54,7 +54,7 @@ export default function Home() {
   const [overlayGradient, setOverlayGradient] = useState(false);
   const [textShadow, setTextShadow] = useState(0);
   const [coverUppercase, setCoverUppercase] = useState(false);
-  const [coverDropCap, setCoverDropCap] = useState(true);
+  const [coverDropCap, setCoverDropCap] = useState(false);
   const [coverDropCapFont, setCoverDropCapFont] = useState("'Great Vibes', cursive");
   const [coverSplit, setCoverSplit] = useState(false);
   const [coverEyebrowFont, setCoverEyebrowFont] = useState("'Cormorant Garamond', serif");
@@ -72,7 +72,7 @@ export default function Home() {
   const [cornerStyle, setCornerStyle] = useState<CornerStyle>("none");
   const [cornerColor, setCornerColor] = useState("#d4af37");
   const [textPosition, setTextPosition] = useState<TextPosition>("bottom");
-  const [textAlign, setTextAlign] = useState<TextAlign>("left");
+  const [textAlign, setTextAlign] = useState<TextAlign>("center");
   const [showTextOverlay, setShowTextOverlay] = useState(true);
   const [textBoxOutline, setTextBoxOutline] = useState(false);
   const [textBoxOutlineColor, setTextBoxOutlineColor] = useState("#ffffff");
