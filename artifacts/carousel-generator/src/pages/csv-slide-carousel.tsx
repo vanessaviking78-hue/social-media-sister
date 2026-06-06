@@ -167,8 +167,6 @@ function renderMixedText(
 ) {
   if (!raw.trim()) return;
   const segs = parseSegments(raw);
-  console.log("[renderMixedText] raw:", JSON.stringify(raw));
-  console.log("[renderMixedText] segments:", segs.map(s => `${s.isHero ? "HERO" : "norm"}:"${s.text}"`).join(" | "));
 
   // ── 1. Measure space in normal font (used for all inter-word gaps) ─────────
   ctx.font = normalFontStr();
@@ -279,23 +277,12 @@ function renderSlide(
   ctx.fillRect(0, 0, W, H);
 
   if (image) {
-    if (slideNum === 1) {
-      drawCover(ctx, image, 0.55);
-      // Always use a dark overlay on slide 1 so white text stays readable
-      // regardless of the preset's pageColor (which could be light/white).
-      ctx.fillStyle = "rgba(0,0,0,0.45)";
-      ctx.fillRect(0, 0, W, H);
-    } else {
-      drawCover(ctx, image, 1.0);
-      ctx.fillStyle = overlayColor;
-      ctx.fillRect(0, 0, W, H);
-    }
-  }
-
-  if (slideNum === 1) {
-    const s1 = blocks.filter(b => (["hook", "subtitle"] as string[]).includes(b.id));
-    console.log("[Slide1] blocks →", s1.map(b => ({ id: b.id, len: b.text?.length, preview: b.text?.slice(0, 60) })));
-    console.log("[Slide1] textColor:", textColor, "hasImage:", !!image);
+    // Slide 1: show image at reduced opacity so the page colour bleeds through,
+    // giving it a branded tint. All slides share the same overlayColor + textColor
+    // so the preset's pairing is always respected.
+    drawCover(ctx, image, slideNum === 1 ? 0.65 : 1.0);
+    ctx.fillStyle = overlayColor;
+    ctx.fillRect(0, 0, W, H);
   }
 
   ctx.shadowColor   = "rgba(0,0,0,0.75)";
