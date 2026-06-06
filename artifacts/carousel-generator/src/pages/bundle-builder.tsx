@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import {
   Package, ArrowLeft, Sparkles, Loader2, Copy, Check, ExternalLink,
-  Shuffle, BookOpen, Inbox, ImagePlus, X, Upload,
+  Shuffle, BookOpen, Inbox, ImagePlus, X, Upload, RefreshCw, Dices,
   ChevronRight, ChevronLeft, Image as ImageIcon, User, Film, Grid,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,10 @@ interface BundleContent {
   aboutMe: { intro: string; caption: string };
   reel: { script: string; caption: string };
   seamless: { tagline: string; caption: string };
+}
+interface PieceSource { topic: string; captionUsed: boolean; }
+interface PickAndMixSources {
+  carousel: PieceSource; aboutMe: PieceSource; reel: PieceSource; seamless: PieceSource;
 }
 type TextPos = "top" | "center" | "bottom";
 
@@ -308,6 +312,10 @@ export default function BundleBuilder() {
   const [saving, setSaving] = useState(false);
   const [savedUrls, setSavedUrls] = useState<Record<string, string[]> | null>(null);
 
+  const [pickAndMix, setPickAndMix] = useState(false);
+  const [sources, setSources] = useState<PickAndMixSources | null>(null);
+  const [rerolling, setRerolling] = useState<string | null>(null);
+
   const bundleUrl = result
     ? `${window.location.origin}${BASE.replace(/\/$/, "")}/bundle/${result.token}`
     : null;
@@ -477,25 +485,64 @@ export default function BundleBuilder() {
     setGenerating(true);
     setPreviews(null);
     setSavedUrls(null);
+    setSources(null);
     try {
-      const activeTopics = selectedTopics.filter(Boolean);
-      const resp = await fetch(api("bundle/generate"), {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({
-          clinicName: clinicName.trim(), igHandle: igHandle.trim(),
-          treatmentFocus: treatmentFocus.trim(), brandColour, voiceStyle,
-          topics: activeTopics.length === 4 ? activeTopics : undefined,
-        }),
-      });
+      let resp: Response;
+      if (pickAndMix) {
+        resp = await fetch(api("bundle/pick-and-mix"), {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            clinicName: clinicName.trim(), igHandle: igHandle.trim(),
+            treatmentFocus: treatmentFocus.trim(), brandColour, voiceStyle,
+            presetId: selectedPreset?.id,
+          }),
+        });
+      } else {
+        const activeTopics = selectedTopics.filter(Boolean);
+        resp = await fetch(api("bundle/generate"), {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            clinicName: clinicName.trim(), igHandle: igHandle.trim(),
+            treatmentFocus: treatmentFocus.trim(), brandColour, voiceStyle,
+            topics: activeTopics.length === 4 ? activeTopics : undefined,
+          }),
+        });
+      }
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "Generation failed");
       setResult(data);
+      if (data.sources) setSources(data.sources);
       toast.success("Bundle ready.");
     } catch (err: any) {
       toast.error(err.message || "Something went wrong");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleReroll = async (piece: "carousel" | "aboutMe" | "reel" | "seamless") => {
+    if (!result?.token) return;
+    setRerolling(piece);
+    try {
+      const resp = await fetch(api(`bundle/${result.token}/regenerate-piece`), {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ piece, voiceStyle, presetId: selectedPreset?.id }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Re-roll failed");
+      setResult((prev) => {
+        if (!prev?.content) return prev;
+        return { ...prev, content: { ...prev.content, [piece]: data.data } as BundleContent };
+      });
+      setSources((prev) => prev ? { ...prev, [piece]: data.source } : prev);
+      toast.success("Re-rolled.");
+    } catch (err: any) {
+      toast.error(err.message || "Re-roll failed");
+    } finally {
+      setRerolling(null);
     }
   };
 
@@ -507,7 +554,7 @@ export default function BundleBuilder() {
   };
 
   const resetAll = () => {
-    setResult(null); setPreviews(null); setSavedUrls(null);
+    setResult(null); setPreviews(null); setSavedUrls(null); setSources(null);
     setClinicName(""); setIgHandle(""); setTreatmentFocus("");
     setBrandColour("#ec4899"); setSelectedPreset(null);
     applyRandomTopics(allTopics);
@@ -672,59 +719,102 @@ export default function BundleBuilder() {
               )}
             </div>
 
-            {/* Content Angles */}
-            <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-medium">Content angles</h2>
-                  <p className="text-sm text-muted-foreground mt-0.5">
-                    {allTopics.length > 0 ? "4 topics picked at random from your Strategy Library. Override any slot below." : "No topics in Strategy Library yet."}
-                  </p>
+            {/* Pick and Mix toggle */}
+            <div
+              className={`rounded-2xl border p-5 cursor-pointer transition-colors ${
+                pickAndMix
+                  ? "border-violet-500/40 bg-violet-950/20"
+                  : "border-border/30 bg-card/50 hover:border-border/50"
+              }`}
+              onClick={() => setPickAndMix((v) => !v)}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${pickAndMix ? "bg-violet-500/20" : "bg-accent/30"}`}>
+                    <Dices className={`w-4 h-4 ${pickAndMix ? "text-violet-400" : "text-muted-foreground"}`} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`font-medium text-sm ${pickAndMix ? "text-violet-300" : ""}`}>Pick and Mix mode</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-snug">
+                      {pickAndMix
+                        ? "Topics are drawn randomly from your Strategy Library, filtered by treatment focus and any brand rules in the selected preset."
+                        : "Let the AI draft everything from scratch, or switch this on to pull angles from your Strategy Library."}
+                    </p>
+                  </div>
                 </div>
-                {allTopics.length > 0 && (
-                  <Button variant="outline" size="sm" onClick={() => applyRandomTopics(allTopics)} className="flex-shrink-0 gap-1.5">
-                    <Shuffle className="w-3.5 h-3.5" /> Randomise
-                  </Button>
+                <div
+                  className={`w-10 h-6 rounded-full flex-shrink-0 transition-colors relative ${pickAndMix ? "bg-violet-500" : "bg-accent/40"}`}
+                  role="switch"
+                  aria-checked={pickAndMix}
+                >
+                  <span
+                    className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${pickAndMix ? "translate-x-4" : "translate-x-0.5"}`}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Content Angles — hidden when Pick and Mix is on */}
+            {!pickAndMix && (
+              <div className="rounded-2xl border border-border/30 bg-card/50 p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-base font-medium">Content angles</h2>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {allTopics.length > 0 ? "4 topics picked at random from your Strategy Library. Override any slot below." : "No topics in Strategy Library yet."}
+                    </p>
+                  </div>
+                  {allTopics.length > 0 && (
+                    <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); applyRandomTopics(allTopics); }} className="flex-shrink-0 gap-1.5">
+                      <Shuffle className="w-3.5 h-3.5" /> Randomise
+                    </Button>
+                  )}
+                </div>
+                {allTopics.length === 0 && topicsLoaded ? (
+                  <div className="rounded-xl border border-dashed border-border/40 py-5 text-center space-y-2">
+                    <p className="text-sm text-muted-foreground">Topics will be picked once you add some to the Strategy Library.</p>
+                    <Link href="/strategy-library">
+                      <Button variant="outline" size="sm"><BookOpen className="w-3.5 h-3.5 mr-1.5" />Open Strategy Library</Button>
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {FORMAT_LABELS.map((label, idx) => (
+                      <div key={label} className="flex items-center gap-3">
+                        <span className="text-xs text-muted-foreground font-medium w-20 flex-shrink-0">{label}</span>
+                        <Select
+                          value={selectedTopics[idx] || "__none__"}
+                          onValueChange={(v) => setSelectedTopics((prev) => prev.map((t, i) => i === idx ? (v === "__none__" ? "" : v) : t))}
+                        >
+                          <SelectTrigger className="flex-1 h-10 text-sm"><SelectValue placeholder="No topic selected" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__"><span className="text-muted-foreground">No topic</span></SelectItem>
+                            {allTopics.map((t) => (<SelectItem key={t.id} value={t.topic}>{t.topic}</SelectItem>))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
-              {allTopics.length === 0 && topicsLoaded ? (
-                <div className="rounded-xl border border-dashed border-border/40 py-5 text-center space-y-2">
-                  <p className="text-sm text-muted-foreground">Topics will be picked once you add some to the Strategy Library.</p>
-                  <Link href="/strategy-library">
-                    <Button variant="outline" size="sm"><BookOpen className="w-3.5 h-3.5 mr-1.5" />Open Strategy Library</Button>
-                  </Link>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {FORMAT_LABELS.map((label, idx) => (
-                    <div key={label} className="flex items-center gap-3">
-                      <span className="text-xs text-muted-foreground font-medium w-20 flex-shrink-0">{label}</span>
-                      <Select
-                        value={selectedTopics[idx] || "__none__"}
-                        onValueChange={(v) => setSelectedTopics((prev) => prev.map((t, i) => i === idx ? (v === "__none__" ? "" : v) : t))}
-                      >
-                        <SelectTrigger className="flex-1 h-10 text-sm"><SelectValue placeholder="No topic selected" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__"><span className="text-muted-foreground">No topic</span></SelectItem>
-                          {allTopics.map((t) => (<SelectItem key={t.id} value={t.topic}>{t.topic}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            )}
 
             <Button
               size="lg" onClick={handleGenerate}
               disabled={generating || !clinicName.trim() || !treatmentFocus.trim()}
-              className="w-full py-6 text-lg font-semibold btn-shimmer"
+              className={`w-full py-6 text-lg font-semibold btn-shimmer ${pickAndMix ? "bg-violet-600 hover:bg-violet-500" : ""}`}
             >
-              {generating ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Generating content...</> : <><Sparkles className="w-5 h-5 mr-2" />Generate Bundle</>}
+              {generating
+                ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />{pickAndMix ? "Mixing content..." : "Generating content..."}</>
+                : pickAndMix
+                  ? <><Dices className="w-5 h-5 mr-2" />Pick and Mix</>
+                  : <><Sparkles className="w-5 h-5 mr-2" />Generate Bundle</>}
             </Button>
             {generating && (
               <p className="text-center text-sm text-muted-foreground animate-pulse">
-                Creating carousel, about me, reel, and seamless content. This takes about 20 seconds.
+                {pickAndMix
+                  ? "Drawing topics from your library and writing each piece. Takes about 20 seconds."
+                  : "Creating carousel, about me, reel, and seamless content. This takes about 20 seconds."}
               </p>
             )}
           </div>
@@ -764,6 +854,16 @@ export default function BundleBuilder() {
                   <span className="text-xs text-muted-foreground bg-accent/30 px-2 py-0.5 rounded-full ml-1">
                     {content.carousel.slides.length} slides
                   </span>
+                  {sources?.carousel?.topic && (
+                    <span className="ml-auto text-xs text-violet-400/80 bg-violet-950/30 border border-violet-500/20 px-2.5 py-0.5 rounded-full truncate max-w-[200px]" title={sources.carousel.topic}>
+                      ↗ {sources.carousel.topic}
+                    </span>
+                  )}
+                  {sources && (
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 flex-shrink-0" onClick={() => handleReroll("carousel")} disabled={!!rerolling} title="Re-roll this piece">
+                      {rerolling === "carousel" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                    </Button>
+                  )}
                 </div>
                 {hasImages && (
                   <div className="px-5 pt-4 pb-1">
@@ -801,6 +901,16 @@ export default function BundleBuilder() {
                 <div className="px-5 py-4 border-b border-border/20 flex items-center gap-2">
                   <User className="w-4 h-4 text-rose-400" />
                   <span className="font-semibold text-base">About Me Post</span>
+                  {sources?.aboutMe?.topic && (
+                    <span className="ml-auto text-xs text-violet-400/80 bg-violet-950/30 border border-violet-500/20 px-2.5 py-0.5 rounded-full truncate max-w-[200px]" title={sources.aboutMe.topic}>
+                      ↗ {sources.aboutMe.topic}
+                    </span>
+                  )}
+                  {sources && (
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 flex-shrink-0" onClick={() => handleReroll("aboutMe")} disabled={!!rerolling} title="Re-roll this piece">
+                      {rerolling === "aboutMe" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                    </Button>
+                  )}
                 </div>
                 {hasImages && (
                   <div className="px-5 pt-4 pb-1">
@@ -831,6 +941,16 @@ export default function BundleBuilder() {
                 <div className="px-5 py-4 border-b border-border/20 flex items-center gap-2">
                   <Film className="w-4 h-4 text-teal-400" />
                   <span className="font-semibold text-base">Reel</span>
+                  {sources?.reel?.topic && (
+                    <span className="ml-auto text-xs text-violet-400/80 bg-violet-950/30 border border-violet-500/20 px-2.5 py-0.5 rounded-full truncate max-w-[200px]" title={sources.reel.topic}>
+                      ↗ {sources.reel.topic}
+                    </span>
+                  )}
+                  {sources && (
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 flex-shrink-0" onClick={() => handleReroll("reel")} disabled={!!rerolling} title="Re-roll this piece">
+                      {rerolling === "reel" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                    </Button>
+                  )}
                 </div>
                 {hasImages && (
                   <div className="px-5 pt-4 pb-1">
@@ -896,6 +1016,16 @@ export default function BundleBuilder() {
                 <div className="px-5 py-4 border-b border-border/20 flex items-center gap-2">
                   <Grid className="w-4 h-4 text-amber-400" />
                   <span className="font-semibold text-base">Seamless Carousel</span>
+                  {sources?.seamless?.topic && (
+                    <span className="ml-auto text-xs text-violet-400/80 bg-violet-950/30 border border-violet-500/20 px-2.5 py-0.5 rounded-full truncate max-w-[200px]" title={sources.seamless.topic}>
+                      ↗ {sources.seamless.topic}
+                    </span>
+                  )}
+                  {sources && (
+                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 flex-shrink-0" onClick={() => handleReroll("seamless")} disabled={!!rerolling} title="Re-roll this piece">
+                      {rerolling === "seamless" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                    </Button>
+                  )}
                 </div>
                 <div className="px-5 py-6">
                   <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider mb-4">Tagline</p>

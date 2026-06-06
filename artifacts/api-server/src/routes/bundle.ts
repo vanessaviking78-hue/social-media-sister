@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { trialBundlesTable, founderSignupsTable } from "@workspace/db/schema";
 import { eq, count } from "drizzle-orm";
 import { generateBundleContent } from "../lib/generateBundleContent";
+import { pickAndMixBundle, regenerateBundlePiece } from "../lib/pickAndMixBundle";
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   const appPassword = process.env.APP_PASSWORD;
@@ -16,6 +17,44 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
 }
 
 const router: IRouter = Router();
+
+router.post("/bundle/pick-and-mix", requireAuth, async (req, res) => {
+  try {
+    const { clinicName, igHandle, treatmentFocus, brandColour, voiceStyle, presetId } = req.body;
+    if (!clinicName || !treatmentFocus) {
+      res.status(400).json({ error: "clinicName and treatmentFocus are required" });
+      return;
+    }
+    const result = await pickAndMixBundle({
+      clinicName, igHandle, treatmentFocus, brandColour, voiceStyle,
+      presetId: presetId ? Number(presetId) : undefined,
+    });
+    res.json(result);
+  } catch (err: any) {
+    req.log?.error({ err }, "Pick and Mix bundle error");
+    if (!res.headersSent) res.status(500).json({ error: err.message || "Pick and Mix failed" });
+  }
+});
+
+router.post("/bundle/:token/regenerate-piece", requireAuth, async (req, res) => {
+  try {
+    const { token } = req.params;
+    const tokenStr = Array.isArray(token) ? token[0] : token;
+    const { piece, voiceStyle, presetId } = req.body;
+    const VALID_PIECES = ["carousel", "aboutMe", "reel", "seamless"] as const;
+    if (!(VALID_PIECES as readonly string[]).includes(piece as string)) {
+      res.status(400).json({ error: "piece must be one of: carousel, aboutMe, reel, seamless" });
+      return;
+    }
+    const result = await regenerateBundlePiece(
+      tokenStr, piece, voiceStyle, presetId ? Number(presetId) : undefined,
+    );
+    res.json(result);
+  } catch (err: any) {
+    req.log?.error({ err }, "Bundle piece regeneration error");
+    if (!res.headersSent) res.status(500).json({ error: err.message || "Regeneration failed" });
+  }
+});
 
 router.post("/bundle/generate", async (req, res) => {
   try {
@@ -119,10 +158,11 @@ router.patch("/bundle/:token/images", requireAuth, async (req, res) => {
       res.status(400).json({ error: "renderedImageUrls is required" });
       return;
     }
+    const tokenStr = Array.isArray(token) ? token[0] : token;
     const [bundle] = await db
       .select({ id: trialBundlesTable.id })
       .from(trialBundlesTable)
-      .where(eq(trialBundlesTable.token, token))
+      .where(eq(trialBundlesTable.token, tokenStr))
       .limit(1);
     if (!bundle) {
       res.status(404).json({ error: "Bundle not found" });
@@ -131,7 +171,7 @@ router.patch("/bundle/:token/images", requireAuth, async (req, res) => {
     await db
       .update(trialBundlesTable)
       .set({ renderedImageUrls })
-      .where(eq(trialBundlesTable.token, token));
+      .where(eq(trialBundlesTable.token, tokenStr));
     res.json({ ok: true });
   } catch (err: any) {
     req.log?.error({ err }, "Bundle image save error");
