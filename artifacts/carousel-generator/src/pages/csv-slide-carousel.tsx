@@ -510,6 +510,16 @@ export default function CsvSlideCarousel() {
     setRenderProgress(0);
     try {
       await document.fonts.ready;
+      // Explicitly load every font that canvas rendering will use.
+      // document.fonts.ready alone doesn't download fonts that aren't used in DOM layout.
+      const presetFont = selectedPreset.fontFamily || '"DM Serif Display", serif';
+      await Promise.all([
+        document.fonts.load(`400 100px "Bebas Neue"`).catch(() => {}),
+        document.fonts.load(`400 100px "Prata"`).catch(() => {}),
+        document.fonts.load(`italic 400 100px "Prata"`).catch(() => {}),
+        document.fonts.load(`400 100px ${presetFont}`).catch(() => {}),
+        document.fonts.load(`700 100px ${presetFont}`).catch(() => {}),
+      ]);
       const rendered: CarouselItem[] = [];
       for (let i = 0; i < csvRows.length; i++) {
         const row = csvRows[i];
