@@ -314,9 +314,9 @@ export default function CsvSlideCarousel() {
   const [showSchedule,     setShowSchedule]     = useState(false);
   const [scheduleUrls,     setScheduleUrls]     = useState<string[]>([]);
 
-  const [bgPhotoFile,  setBgPhotoFile]  = useState<File | null>(null);
+  const [bgPhotoFiles, setBgPhotoFiles] = useState<File[]>([]);
+  const [bgPhotoUrls,  setBgPhotoUrls]  = useState<string[]>([]);
   const [bgPhotoDrag,  setBgPhotoDrag]  = useState(false);
-  const [bgPhotoUrl,   setBgPhotoUrl]   = useState<string | null>(null);
 
   const fileInputRef    = useRef<HTMLInputElement>(null);
   const bgPhotoInputRef = useRef<HTMLInputElement>(null);
@@ -359,23 +359,25 @@ export default function CsvSlideCarousel() {
     if (file) parseCsv(file);
   };
 
-  const handleBgPhoto = useCallback((file: File) => {
-    const url = URL.createObjectURL(file);
-    setBgPhotoFile(file);
-    setBgPhotoUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url; });
+  const handleBgPhotos = useCallback((incoming: File[]) => {
+    setBgPhotoUrls(prev => { prev.forEach(u => URL.revokeObjectURL(u)); return []; });
+    const sorted = [...incoming].sort((a, b) => a.name.localeCompare(b.name));
+    setBgPhotoFiles(sorted);
+    setBgPhotoUrls(sorted.map(f => URL.createObjectURL(f)));
   }, []);
 
-  const loadBgImg = useCallback(async (): Promise<HTMLImageElement | null> => {
-    if (!bgPhotoUrl) return null;
-    try { return await loadImg(bgPhotoUrl); } catch { return null; }
-  }, [bgPhotoUrl]);
+  const loadBgImgs = useCallback(async (): Promise<HTMLImageElement[]> => {
+    if (!bgPhotoUrls.length) return [];
+    const results = await Promise.allSettled(bgPhotoUrls.map(u => loadImg(u)));
+    return results.flatMap(r => r.status === "fulfilled" ? [r.value] : []);
+  }, [bgPhotoUrls]);
 
-  const renderThumbs = useCallback(async (preset: ClientPreset, slideList: SlideData[], bg: HTMLImageElement | null = null) => {
+  const renderThumbs = useCallback(async (preset: ClientPreset, slideList: SlideData[], bgImgs: HTMLImageElement[] = []) => {
     setRendering(true);
     try {
       await warmFonts();
       const logoImg = await loadPresetLogo(preset);
-      setThumbs(slideList.map(s => renderSlide(s, preset, logoImg, 1, bg)));
+      setThumbs(slideList.map((s, i) => renderSlide(s, preset, logoImg, 1, bgImgs[i] ?? bgImgs[0] ?? null)));
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Render failed");
     } finally {
@@ -386,8 +388,8 @@ export default function CsvSlideCarousel() {
   const handleGenerate = async () => {
     if (!selectedPreset) { toast.error("Select a client preset first"); return; }
     if (!slides.length)  { toast.error("Upload a CSV first"); return; }
-    const bg = await loadBgImg();
-    await renderThumbs(selectedPreset, slides, bg);
+    const bgImgs = await loadBgImgs();
+    await renderThumbs(selectedPreset, slides, bgImgs);
     setPhase("preview");
   };
 
@@ -395,8 +397,8 @@ export default function CsvSlideCarousel() {
     setSelectedPresetId(id);
     const p = presets.find(x => x.id === id);
     if (p && slides.length) {
-      const bg = await loadBgImg();
-      await renderThumbs(p, slides, bg);
+      const bgImgs = await loadBgImgs();
+      await renderThumbs(p, slides, bgImgs);
     }
   };
 
@@ -405,10 +407,10 @@ export default function CsvSlideCarousel() {
     setExporting(true);
     try {
       await warmFonts();
-      const [logoImg, bgImg] = await Promise.all([loadPresetLogo(selectedPreset), loadBgImg()]);
+      const [logoImg, bgImgs] = await Promise.all([loadPresetLogo(selectedPreset), loadBgImgs()]);
       const zip = new JSZip();
       for (let i = 0; i < slides.length; i++) {
-        const png = renderSlide(slides[i], selectedPreset, logoImg, SCALE, bgImg);
+        const png = renderSlide(slides[i], selectedPreset, logoImg, SCALE, bgImgs[i] ?? bgImgs[0] ?? null);
         const b64 = png.split(",")[1];
         const tag = slides[i].isHero ? "hero" : "slide";
         zip.file(`${String(i + 1).padStart(3, "0")}-${tag}.png`, b64, { base64: true });
@@ -428,8 +430,8 @@ export default function CsvSlideCarousel() {
     setScheduling(true);
     try {
       await warmFonts();
-      const [logoImg, bgImg] = await Promise.all([loadPresetLogo(selectedPreset), loadBgImg()]);
-      const dataUrls = slides.map(s => renderSlide(s, selectedPreset, logoImg, SCALE, bgImg));
+      const [logoImg, bgImgs] = await Promise.all([loadPresetLogo(selectedPreset), loadBgImgs()]);
+      const dataUrls = slides.map((s, i) => renderSlide(s, selectedPreset, logoImg, SCALE, bgImgs[i] ?? bgImgs[0] ?? null));
       const names    = slides.map((s, i) =>
         `${String(i + 1).padStart(3, "0")}-${s.isHero ? "hero" : "slide"}.png`,
       );
@@ -479,31 +481,52 @@ export default function CsvSlideCarousel() {
 
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Background Photo <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <Label className="text-sm font-medium">
+                  Background Photos{" "}
+                  <span className="text-muted-foreground font-normal">(optional — one per slide, matched by filename order)</span>
+                </Label>
                 <div
-                  onDrop={e => { e.preventDefault(); setBgPhotoDrag(false); const f = e.dataTransfer.files[0]; if (f) handleBgPhoto(f); }}
+                  onDrop={e => {
+                    e.preventDefault(); setBgPhotoDrag(false);
+                    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith("image/"));
+                    if (files.length) handleBgPhotos(files);
+                  }}
                   onDragOver={e => { e.preventDefault(); setBgPhotoDrag(true); }}
                   onDragLeave={() => setBgPhotoDrag(false)}
                   onClick={() => bgPhotoInputRef.current?.click()}
                   className={[
                     "border-2 border-dashed rounded-xl p-6 flex flex-col items-center gap-3",
                     "cursor-pointer transition-colors select-none",
-                    bgPhotoDrag  ? "border-amber-500/60 bg-amber-500/5" :
-                    bgPhotoFile  ? "border-amber-500/40 bg-amber-500/5" :
+                    bgPhotoDrag    ? "border-amber-500/60 bg-amber-500/5" :
+                    bgPhotoFiles.length ? "border-amber-500/40 bg-amber-500/5" :
                                    "border-border/40 hover:border-border/60",
                   ].join(" ")}
                 >
-                  {bgPhotoFile ? (
+                  {bgPhotoFiles.length > 0 ? (
                     <>
-                      <CheckCircle2 className="w-8 h-8 text-amber-400" />
-                      <p className="text-sm font-medium text-amber-400 truncate max-w-[180px]">{bgPhotoFile.name}</p>
-                      <p className="text-xs text-muted-foreground">Click to replace</p>
+                      <CheckCircle2 className="w-8 h-8 text-amber-400 shrink-0" />
+                      <p className="text-sm font-medium text-amber-400">
+                        {bgPhotoFiles.length} photo{bgPhotoFiles.length !== 1 ? "s" : ""} loaded
+                      </p>
+                      <div className="w-full max-h-28 overflow-y-auto space-y-0.5 text-left">
+                        {bgPhotoFiles.map((f, i) => (
+                          <p key={i} className="text-[11px] text-muted-foreground truncate px-1">
+                            <span className="text-amber-500/70 font-mono mr-1">{String(i + 1).padStart(2, "0")}.</span>
+                            {f.name}
+                          </p>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">Click to replace all</p>
                     </>
                   ) : (
                     <>
                       <ImageIcon className="w-8 h-8 text-muted-foreground" />
-                      <p className="text-sm font-medium">Drop photo here or click to browse</p>
-                      <p className="text-xs text-muted-foreground text-center">JPG or PNG. Drawn behind the overlay on every slide.</p>
+                      <p className="text-sm font-medium">Drop photos here or click to browse</p>
+                      <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                        Select multiple JPG / PNG files.<br />
+                        Photo 1 → slide 1, photo 2 → slide 2, and so on.<br />
+                        If you upload fewer photos than slides, the last photo repeats.
+                      </p>
                     </>
                   )}
                 </div>
@@ -511,9 +534,24 @@ export default function CsvSlideCarousel() {
                   ref={bgPhotoInputRef}
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
+                  multiple
                   className="hidden"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) handleBgPhoto(f); e.target.value = ""; }}
+                  onChange={e => {
+                    const files = Array.from(e.target.files ?? []);
+                    if (files.length) handleBgPhotos(files);
+                    e.target.value = "";
+                  }}
                 />
+                {bgPhotoFiles.length > 0 && slides.length > 0 && bgPhotoFiles.length < slides.length && (
+                  <p className="text-xs text-amber-500/80">
+                    {bgPhotoFiles.length} photo{bgPhotoFiles.length !== 1 ? "s" : ""} for {slides.length} slides — last photo repeats for the remaining {slides.length - bgPhotoFiles.length}.
+                  </p>
+                )}
+                {bgPhotoFiles.length > 0 && slides.length > 0 && bgPhotoFiles.length === slides.length && (
+                  <p className="text-xs text-green-500/80">
+                    Perfect — {bgPhotoFiles.length} photos matched to {slides.length} slides.
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
