@@ -1,19 +1,20 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Link } from "wouter";
 import {
-  ArrowLeft, Upload, FileText, Download, Loader2, CalendarClock,
-  CheckCircle2, X, Send,
+  ArrowLeft, FileText, Download, Loader2, CalendarClock, CheckCircle2, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { loadGoogleFonts } from "@/lib/slide-utils";
 import { usePresets, type ClientPreset } from "@/lib/use-presets";
+import { ScheduleModal } from "@/components/schedule-modal";
 
 loadGoogleFonts();
 
@@ -22,245 +23,90 @@ const W = 1080;
 const H = 1440;
 const SCALE = 2;
 
-// These 5 columns are REQUIRED. image_filename and logo_filename are optional
-// — when absent, the preset logo / no image is used instead.
-const REQUIRED_CSV_COLS = [
-  "slide1_hook", "slide1_subtitle", "slide2_body", "slide3_body", "slide4_cta",
-] as const;
+type SlideData = { text: string; isHero: boolean };
+type Phase = "upload" | "preview";
 
-const CSV_COLS = [...REQUIRED_CSV_COLS, "image_filename", "logo_filename"] as const;
-
-// ── Types ─────────────────────────────────────────────────────────────────────
-
-type CsvRow = {
-  slide1_hook: string;
-  slide1_subtitle: string;
-  slide2_body: string;
-  slide3_body: string;
-  slide4_cta: string;
-  image_filename?: string;  // optional — falls back to no image
-  logo_filename?: string;   // optional — falls back to preset logo
-};
-
-type BlockId = "hook" | "subtitle" | "body2" | "body3" | "cta";
-
-type Block = {
-  id: BlockId;
-  text: string;
-  x: number;
-  y: number;
-};
-
-type CarouselItem = {
-  id: string;
-  rowNum: number;
-  hook: string;
-  imageFilename: string | undefined;
-  logoFilename: string | undefined;
-  blocks: Block[];
-  image: HTMLImageElement | null;
-  logo: HTMLImageElement | null;
-  thumbs: string[];
-};
-
-type ScheduleEntry = {
-  date: string;
-  time: string;
-  platforms: ("instagram" | "facebook")[];
-  presetId: number | null;
-  caption: string;
-};
-
-type Phase = "upload" | "preview" | "schedule" | "done";
-
-// ── Inline hero parsing ───────────────────────────────────────────────────────
-
-/** Split "some |Word| text" into alternating normal/hero segments. */
-function parseSegments(raw: string): Array<{ text: string; isHero: boolean }> {
-  // split on |...|  — capturing group keeps the matched content
-  const parts = raw.split(/\|([^|]+)\|/);
-  return parts
-    .map((p, i) => ({ text: p, isHero: i % 2 === 1 }))
-    .filter(s => s.text.length > 0);
+function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    const test = cur ? cur + " " + w : w;
+    if (cur && ctx.measureText(test).width > maxW) { lines.push(cur); cur = w; }
+    else { cur = test; }
+  }
+  if (cur) lines.push(cur);
+  return lines.length ? lines : [""];
 }
 
-/** Strip all |pipe| markers for plain UI display. */
-function displayText(raw: string) {
-  return raw.replace(/\|([^|]*)\|/g, "$1");
+function parseOverlayColor(color: string): string {
+  if (color.startsWith("rgba") || color.startsWith("rgb")) return color;
+  if (color.startsWith("#")) {
+    const h = color.slice(1).padEnd(6, "0");
+    const r = parseInt(h.slice(0, 2), 16) || 0;
+    const g = parseInt(h.slice(2, 4), 16) || 0;
+    const b = parseInt(h.slice(4, 6), 16) || 0;
+    return `rgba(${r},${g},${b},0.5)`;
+  }
+  return color;
 }
 
-/** Returns true if the string contains at least one |hero| marker. */
-function hasHeroWords(raw: string) {
-  return /\|[^|]+\|/.test(raw);
-}
-
-// ── Text rendering constants ───────────────────────────────────────────────────
-
-// All normal text: Prata 56px.  Hero |words|: Bebas Neue 110px.
-// (36/80 as specified, but scaled up so text is legible at social-media size
-//  on the 1080×1440 canvas — 36px would render ~5px in the preview thumbnail.)
-const NORMAL_SIZE = 56;
-const NORMAL_FONT = "Prata";
-const HERO_SIZE   = 110;
-const HERO_FONT   = "Bebas Neue";
-
-function normalFontStr() { return `${NORMAL_SIZE}px "${NORMAL_FONT}", serif`; }
-function heroFontStr()   { return `${HERO_SIZE}px "${HERO_FONT}", sans-serif`; }
-
-// ── Block config ──────────────────────────────────────────────────────────────
-
-const SLIDE_BLOCK_IDS: Record<number, BlockId[]> = {
-  1: ["hook", "subtitle"],
-  2: ["body2"],
-  3: ["body3"],
-  4: ["cta"],
-};
-
-/** Max pixel width for text wrap, per block. */
-function blockMaxW(id: BlockId): number {
-  switch (id) {
-    case "hook":     return W - 100;
-    case "subtitle": return W - 180;
-    case "body2":    return W - 140;
-    case "body3":    return W - 140;
-    case "cta":      return W - 140;
+function drawCornerDecoration(ctx: CanvasRenderingContext2D, style: string, color: string) {
+  if (!style || style === "none") return;
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  const S = 180;
+  if (style === "triangle") {
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(S, 0); ctx.lineTo(0, S); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(W, H); ctx.lineTo(W - S, H); ctx.lineTo(W, H - S); ctx.closePath(); ctx.fill();
+  } else if (style === "arc") {
+    ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.arc(0, 0, S, 0, Math.PI / 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(W, H, S, Math.PI, 1.5 * Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(W, 0, S, 0.5 * Math.PI, Math.PI); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, H, S, 1.5 * Math.PI, 2 * Math.PI); ctx.stroke();
+  } else if (style === "double-line") {
+    ctx.lineWidth = 4;
+    [0, 12].forEach(off => { ctx.strokeRect(30 + off, 30 + off, W - 2 * (30 + off), H - 2 * (30 + off)); });
+  } else if (style === "frame") {
+    ctx.lineWidth = 5;
+    const L = 120, M = 40;
+    ctx.beginPath();
+    ctx.moveTo(M, M + L); ctx.lineTo(M, M); ctx.lineTo(M + L, M);
+    ctx.moveTo(W - M - L, M); ctx.lineTo(W - M, M); ctx.lineTo(W - M, M + L);
+    ctx.moveTo(W - M, H - M - L); ctx.lineTo(W - M, H - M); ctx.lineTo(W - M - L, H - M);
+    ctx.moveTo(M + L, H - M); ctx.lineTo(M, H - M); ctx.lineTo(M, H - M - L);
+    ctx.stroke();
   }
 }
 
-const DEFAULT_POSITIONS: Record<BlockId, { x: number; y: number }> = {
-  hook:     { x: 0.5, y: 0.42 },
-  subtitle: { x: 0.5, y: 0.62 },
-  body2:    { x: 0.5, y: 0.50 },
-  body3:    { x: 0.5, y: 0.50 },
-  cta:      { x: 0.5, y: 0.50 },
-};
-
-function makeBlocks(row: CsvRow): Block[] {
-  return [
-    { id: "hook",     text: row.slide1_hook,     ...DEFAULT_POSITIONS.hook     },
-    { id: "subtitle", text: row.slide1_subtitle,  ...DEFAULT_POSITIONS.subtitle },
-    { id: "body2",    text: row.slide2_body,      ...DEFAULT_POSITIONS.body2    },
-    { id: "body3",    text: row.slide3_body,      ...DEFAULT_POSITIONS.body3    },
-    { id: "cta",      text: row.slide4_cta,       ...DEFAULT_POSITIONS.cta      },
-  ];
-}
-
-// ── Mixed-font canvas rendering ───────────────────────────────────────────────
-
-/**
- * Renders `raw` onto `ctx` centred at (centerX, centerY) within maxW pixels.
- *
- * Words wrapped in |pipes| → Bebas Neue HERO_SIZE px, uppercased.
- * All other words          → Prata NORMAL_SIZE px.
- *
- * Words are placed left-to-right on each line; lines share a common
- * alphabetic baseline set at the bottom of the tallest word on that line.
- * Space width is always measured using the normal font for consistency.
- */
-function renderMixedText(
+function drawLogo(
   ctx: CanvasRenderingContext2D,
-  raw: string,
-  centerX: number,
-  centerY: number,
-  maxW: number,
-  textColor: string,
+  logoImg: HTMLImageElement,
+  position: string,
+  size: number,
 ) {
-  if (!raw.trim()) return;
-  const segs = parseSegments(raw);
-
-  // ── 1. Measure space in normal font (used for all inter-word gaps) ─────────
-  ctx.font = normalFontStr();
-  const SPACE = ctx.measureText(" ").width;
-
-  // ── 2. Build measured word list ────────────────────────────────────────────
-  type MWord = { str: string; w: number; h: number; fnt: string };
-  const mwords: MWord[] = [];
-
-  for (const seg of segs) {
-    const isHero = seg.isHero;
-    const fnt = isHero ? heroFontStr() : normalFontStr();
-    const h   = isHero ? HERO_SIZE : NORMAL_SIZE;
-    ctx.font  = fnt;
-    for (const word of seg.text.split(/\s+/).filter(Boolean)) {
-      const str = isHero ? word.toUpperCase() : word;
-      mwords.push({ str, w: ctx.measureText(str).width, h, fnt });
-    }
-  }
-
-  if (!mwords.length) return;
-
-  // ── 3. Wrap into lines ─────────────────────────────────────────────────────
-  type Line = { words: MWord[]; lineW: number; lineH: number };
-  const lines: Line[] = [];
-  let cur: Line = { words: [], lineW: 0, lineH: 0 };
-
-  for (const mw of mwords) {
-    const needed = cur.words.length === 0 ? mw.w : cur.lineW + SPACE + mw.w;
-    if (needed > maxW && cur.words.length > 0) {
-      lines.push(cur);
-      cur = { words: [mw], lineW: mw.w, lineH: mw.h };
-    } else {
-      if (cur.words.length > 0) cur.lineW += SPACE;
-      cur.words.push(mw);
-      cur.lineW += mw.w;
-      cur.lineH = Math.max(cur.lineH, mw.h);
-    }
-  }
-  if (cur.words.length) lines.push(cur);
-
-  // ── 4. Compute total block height ──────────────────────────────────────────
-  const LINE_GAP = 10;
-  const totalH = lines.reduce((s, l) => s + l.lineH, 0) + (lines.length - 1) * LINE_GAP;
-
-  // ── 5. Draw ────────────────────────────────────────────────────────────────
-  ctx.fillStyle = textColor;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "alphabetic";
-
-  let topY = centerY - totalH / 2;
-
-  for (const line of lines) {
-    const baseline = topY + line.lineH;   // alphabetic baseline at bottom of line height
-    let x = centerX - line.lineW / 2;
-
-    for (let i = 0; i < line.words.length; i++) {
-      const mw = line.words[i];
-      ctx.font = mw.fnt;
-      ctx.fillText(mw.str, x, baseline);
-      if (i < line.words.length - 1) x += mw.w + SPACE;
-    }
-
-    topY += line.lineH + LINE_GAP;
-  }
-
-  // Restore
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-}
-
-// ── Image helpers ─────────────────────────────────────────────────────────────
-
-function hexToRgb(hex: string): [number, number, number] {
-  const h = (hex.startsWith("#") ? hex.slice(1) : hex).padEnd(6, "0");
-  return [parseInt(h.slice(0, 2), 16) || 0, parseInt(h.slice(2, 4), 16) || 0, parseInt(h.slice(4, 6), 16) || 0];
-}
-
-function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, alpha: number) {
-  const s = Math.max(W / img.width, H / img.height);
-  const iw = img.width * s, ih = img.height * s;
-  ctx.globalAlpha = alpha;
-  ctx.drawImage(img, (W - iw) / 2, (H - ih) / 2, iw, ih);
+  if (!position || position === "none") return;
+  const PAD = 44;
+  const asp = logoImg.naturalWidth / logoImg.naturalHeight;
+  const lw = asp >= 1 ? size : size * asp;
+  const lh = asp >= 1 ? size / asp : size;
+  let x = 0, y = 0;
+  if (position === "top-left")       { x = PAD;          y = PAD; }
+  else if (position === "top-right") { x = W - lw - PAD; y = PAD; }
+  else if (position === "bottom-left"){ x = PAD;          y = H - lh - PAD; }
+  else                               { x = W - lw - PAD; y = H - lh - PAD; }
+  ctx.shadowBlur = 0;
+  ctx.shadowColor = "transparent";
+  ctx.globalAlpha = 0.92;
+  ctx.drawImage(logoImg, x, y, lw, lh);
   ctx.globalAlpha = 1;
 }
 
-// ── Slide renderer ────────────────────────────────────────────────────────────
-
 function renderSlide(
-  slideNum: 1 | 2 | 3 | 4,
-  blocks: Block[],
-  image: HTMLImageElement | null,
-  logoImg: HTMLImageElement | null,
+  slide: SlideData,
   preset: ClientPreset,
+  logoImg: HTMLImageElement | null,
   scale = SCALE,
 ): string {
   const canvas = document.createElement("canvas");
@@ -269,97 +115,47 @@ function renderSlide(
   const ctx = canvas.getContext("2d")!;
   ctx.scale(scale, scale);
 
-  const pageColor    = preset.pageColor    || "#1a1a2e";
-  const overlayColor = preset.overlayColor || "rgba(0,0,0,0.55)";
-  const textColor    = preset.textColor    || "#ffffff";
-
-  ctx.fillStyle = pageColor;
+  ctx.fillStyle = preset.pageColor || "#000000";
   ctx.fillRect(0, 0, W, H);
 
-  if (image) {
-    // Slide 1: show image at reduced opacity so the page colour bleeds through,
-    // giving it a branded tint. All slides share the same overlayColor + textColor
-    // so the preset's pairing is always respected.
-    drawCover(ctx, image, slideNum === 1 ? 0.65 : 1.0);
-    ctx.fillStyle = overlayColor;
-    ctx.fillRect(0, 0, W, H);
-  }
+  const overlay = parseOverlayColor(preset.overlayColor || "rgba(0,0,0,0.5)");
+  ctx.fillStyle = overlay;
+  ctx.fillRect(0, 0, W, H);
 
-  ctx.shadowColor   = "rgba(0,0,0,0.75)";
-  ctx.shadowBlur    = 18;
+  drawCornerDecoration(ctx, preset.cornerStyle || "none", preset.cornerColor || "#d4af37");
+
+  ctx.textAlign    = "center";
+  ctx.textBaseline = "top";
+  ctx.fillStyle    = preset.textColor || "#ffffff";
+  ctx.shadowColor  = "rgba(0,0,0,0.75)";
+  ctx.shadowBlur   = 18;
+  ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 3;
 
-  const activeIds = SLIDE_BLOCK_IDS[slideNum];
-  for (const block of blocks.filter(b => activeIds.includes(b.id))) {
-    if (!block.text.trim()) continue;
-    renderMixedText(
-      ctx,
-      block.text,
-      block.x * W,
-      block.y * H,
-      blockMaxW(block.id),
-      textColor,
-    );
+  if (slide.isHero) {
+    const size  = 120;
+    const lineH = Math.round(size * 1.15);
+    ctx.font = `700 ${size}px 'Bebas Neue', sans-serif`;
+    const lines    = wrapText(ctx, slide.text.toUpperCase(), W - 120);
+    const totalH   = lines.length * lineH;
+    let y = Math.round(H / 2 - totalH / 2);
+    for (const line of lines) { ctx.fillText(line, W / 2, y); y += lineH; }
+  } else {
+    const size  = 52;
+    const lineH = Math.round(size * 1.5);
+    ctx.font = `400 ${size}px 'Prata', serif`;
+    const lines    = wrapText(ctx, slide.text, W - 160);
+    const totalH   = lines.length * lineH;
+    let y = Math.round(H / 2 - totalH / 2);
+    for (const line of lines) { ctx.fillText(line, W / 2, y); y += lineH; }
   }
 
-  ctx.shadowColor = "transparent";
-  ctx.shadowBlur  = 0;
-
   if (logoImg) {
-    const MAX = 110, PAD = 44;
-    const asp = logoImg.width / logoImg.height;
-    const lw = asp >= 1 ? MAX : MAX * asp;
-    const lh = asp >= 1 ? MAX / asp : MAX;
-    ctx.globalAlpha = 0.92;
-    ctx.drawImage(logoImg, W - lw - PAD, H - lh - PAD, lw, lh);
-    ctx.globalAlpha = 1;
+    drawLogo(ctx, logoImg, preset.logoPosition || "bottom-right", preset.logoSize || 110);
   }
 
   return canvas.toDataURL("image/png");
 }
-
-function renderAllThumbs(
-  item: Pick<CarouselItem, "blocks" | "image" | "logo">,
-  preset: ClientPreset,
-): string[] {
-  return ([1, 2, 3, 4] as const).map(n => renderSlide(n, item.blocks, item.image, item.logo, preset));
-}
-
-// ── Font loading ──────────────────────────────────────────────────────────────
-
-async function ensureFonts(presetFont?: string) {
-  await document.fonts.ready;
-  await Promise.all([
-    document.fonts.load(`400 100px "${NORMAL_FONT}"`).catch(() => {}),
-    document.fonts.load(`italic 400 100px "${NORMAL_FONT}"`).catch(() => {}),
-    document.fonts.load(`400 100px "${HERO_FONT}"`).catch(() => {}),
-    ...(presetFont ? [
-      document.fonts.load(`400 100px ${presetFont}`).catch(() => {}),
-      document.fonts.load(`700 100px ${presetFont}`).catch(() => {}),
-    ] : []),
-  ]);
-}
-
-// ── Demo canvas ───────────────────────────────────────────────────────────────
-
-const DEMO_TEXT = "If you've been chasing |Hydration| through every serum";
-const DEMO_W = 600;
-const DEMO_H = 360;
-const DEMO_SCALE = 2;
-
-function drawDemo(canvas: HTMLCanvasElement) {
-  canvas.width  = DEMO_W * DEMO_SCALE;
-  canvas.height = DEMO_H * DEMO_SCALE;
-  canvas.style.width  = `${DEMO_W}px`;
-  canvas.style.height = `${DEMO_H}px`;
-  const ctx = canvas.getContext("2d")!;
-  ctx.scale(DEMO_SCALE, DEMO_SCALE);
-  ctx.fillStyle = "#0f172a";
-  ctx.fillRect(0, 0, DEMO_W, DEMO_H);
-  renderMixedText(ctx, DEMO_TEXT, DEMO_W / 2, DEMO_H / 2, DEMO_W - 40, "#f8fafc");
-}
-
-// ── Misc helpers ──────────────────────────────────────────────────────────────
 
 function loadImg(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -370,8 +166,6 @@ function loadImg(src: string): Promise<HTMLImageElement> {
     img.src = src;
   });
 }
-
-function normName(name: string) { return name.trim().toLowerCase(); }
 
 async function uploadDataUrls(dataUrls: string[], names: string[]): Promise<string[]> {
   const BATCH = 4;
@@ -390,729 +184,413 @@ async function uploadDataUrls(dataUrls: string[], names: string[]): Promise<stri
   return urls;
 }
 
-function makeSampleCsv(): string {
-  // 5-column format — image_filename and logo_filename are optional extras
-  // Use |word| syntax for hero (Bebas Neue) words in any column
-  const headers = REQUIRED_CSV_COLS.join(",");
-  const rows = [
-    `"If you've been chasing |Hydration| through every serum","Most people are missing this one thing","Your skin barrier does more than you think.","Here's what to look for on the label.","Book a |skin| consultation today"`,
-    `"|Collagen| starts declining at 25","The science is simpler than you think","Small |changes| add up fast.","Let's break it down slide by slide.","Start your skin plan |now|"`,
-  ];
-  return [headers, ...rows, ""].join("\n");
+async function warmFonts() {
+  await Promise.allSettled([
+    document.fonts.load("700 120px 'Bebas Neue', sans-serif"),
+    document.fonts.load("400 52px 'Prata', serif"),
+  ]);
 }
 
-// ── Drop zone component ───────────────────────────────────────────────────────
-
-function DropZone({
-  label, fileCount, active, color,
-  onDragOver, onDragLeave, onDrop, onClick,
-}: {
-  label: string; fileCount: number; active: boolean; color: string;
-  onDragOver: () => void; onDragLeave: () => void;
-  onDrop: (e: React.DragEvent) => void; onClick: () => void;
-}) {
-  return (
-    <div
-      onDrop={onDrop}
-      onDragOver={e => { e.preventDefault(); onDragOver(); }}
-      onDragLeave={onDragLeave}
-      onClick={onClick}
-      className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center gap-2.5 cursor-pointer transition-colors ${
-        active ? "border-primary/60 bg-primary/5" :
-        fileCount ? `border-${color}-500/40 bg-${color}-500/5` :
-        "border-border/40 hover:border-border/70"
-      }`}
-    >
-      {fileCount ? (
-        <>
-          <CheckCircle2 className={`w-7 h-7 text-${color}-400`} />
-          <p className={`text-sm font-medium text-${color}-400`}>{fileCount} file{fileCount !== 1 ? "s" : ""} ready</p>
-          <p className="text-xs text-muted-foreground">Click or drop to add more</p>
-        </>
-      ) : (
-        <>
-          <Upload className="w-7 h-7 text-muted-foreground" />
-          <p className="text-sm font-medium">{label}</p>
-        </>
-      )}
-    </div>
-  );
+async function loadPresetLogo(preset: ClientPreset): Promise<HTMLImageElement | null> {
+  if (!preset.logoUrl) return null;
+  try { return await loadImg(preset.logoUrl); } catch { return null; }
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Main component ─────────────────────────────────────────────────────────────
 
 export default function CsvSlideCarousel() {
+  const { presets, loading: presetsLoading } = usePresets();
   const [phase, setPhase] = useState<Phase>("upload");
 
+  const [csvFile,          setCsvFile]          = useState<File | null>(null);
+  const [slides,           setSlides]           = useState<SlideData[]>([]);
+  const [csvError,         setCsvError]         = useState<string | null>(null);
+  const [csvDrag,          setCsvDrag]          = useState(false);
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
-  const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
-  const [csvError, setCsvError] = useState<string | null>(null);
-  const [imageFiles, setImageFiles] = useState<Map<string, File>>(new Map());
-  const [logoFiles,  setLogoFiles]  = useState<Map<string, File>>(new Map());
-  const [csvDrag,   setCsvDrag]    = useState(false);
-  const [imgDrag,   setImgDrag]    = useState(false);
-  const [logoDrag,  setLogoDrag]   = useState(false);
 
-  const [items,          setItems]          = useState<CarouselItem[]>([]);
-  const [rendering,      setRendering]      = useState(false);
-  const [renderProgress, setRenderProgress] = useState(0);
+  const [thumbs,           setThumbs]           = useState<string[]>([]);
+  const [rendering,        setRendering]        = useState(false);
+  const [exporting,        setExporting]        = useState(false);
+  const [scheduling,       setScheduling]       = useState(false);
+  const [showSchedule,     setShowSchedule]     = useState(false);
+  const [scheduleUrls,     setScheduleUrls]     = useState<string[]>([]);
 
-  const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
-  const [scheduling,      setScheduling]      = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const csvInputRef  = useRef<HTMLInputElement>(null);
-  const imgInputRef  = useRef<HTMLInputElement>(null);
-  const logoInputRef = useRef<HTMLInputElement>(null);
-  const demoCanvasRef = useRef<HTMLCanvasElement>(null);
+  const selectedPreset = presets.find(p => p.id === selectedPresetId) ?? null;
 
-  const { presets } = usePresets();
-  const selectedPreset = useMemo(
-    () => presets.find(p => p.id === selectedPresetId) ?? null,
-    [presets, selectedPresetId],
-  );
-
-  // ── Demo canvas — loads fonts then draws proof-of-concept render ─────────────
-
-  useEffect(() => {
-    ensureFonts().then(() => {
-      if (demoCanvasRef.current) drawDemo(demoCanvasRef.current);
-    });
-  }, []);
-
-  // ── CSV ───────────────────────────────────────────────────────────────────────
+  // ── CSV parsing ───────────────────────────────────────────────────────────────
 
   const parseCsv = useCallback((file: File) => {
-    Papa.parse<Record<string, string>>(file, {
-      header: true,
-      delimiter: ",",          // force comma — prevents | being auto-detected as separator
+    setCsvError(null);
+    Papa.parse<string[]>(file, {
       skipEmptyLines: true,
-      transformHeader: (h: string) => h.trim(),
       complete: (result) => {
-        if (!result.data.length) { setCsvError("CSV is empty."); return; }
-
-        console.log("[CSV] detected delimiter:", result.meta.delimiter);
-        console.log("[CSV] first raw row:", JSON.stringify(result.data[0]));
-
-        // Only the 5 content columns are required; image/logo are optional
-        const missing = REQUIRED_CSV_COLS.filter(k => !(k in result.data[0]));
-        if (missing.length) {
-          setCsvError(`Missing columns: ${missing.join(", ")}. Make sure the first row is a header row matching the template.`);
-          return;
-        }
-
-        // Defensive: drop any row that looks like a header row leaked into data.
-        // This catches BOM issues or PapaParse edge cases.
-        const rows = (result.data as unknown as CsvRow[]).filter(row => {
-          const hook = row.slide1_hook?.trim() ?? "";
-          // If the hook field literally equals one of our column names, it's a header row
-          return hook.length > 0 && !(REQUIRED_CSV_COLS as readonly string[]).includes(hook);
+        const rows = result.data;
+        if (!rows.length) { setCsvError("CSV is empty"); return; }
+        const dataRows = rows.slice(1); // skip header row
+        if (!dataRows.length) { setCsvError("No data rows after the header"); return; }
+        const parsed: SlideData[] = dataRows.flatMap(row => {
+          const raw = (Array.isArray(row) ? row[0] : String(row)).trim();
+          if (!raw) return [];
+          return [{ text: raw.startsWith("|") ? raw.slice(1).trimStart() : raw, isHero: raw.startsWith("|") }];
         });
-
-        if (!rows.length) { setCsvError("No data rows found after the header."); return; }
-        console.log(`[CSV] parsed ${rows.length} data rows. Row 1 hook: ${JSON.stringify(rows[0].slide1_hook)}`);
-        setCsvError(null);
-        setCsvRows(rows);
+        if (!parsed.length) { setCsvError("No valid text rows found"); return; }
+        setSlides(parsed);
+        setCsvFile(file);
       },
-      error: (e: Error) => setCsvError(e.message),
+      error: (err: Error) => setCsvError(err.message),
     });
   }, []);
 
   const handleCsvDrop = (e: React.DragEvent) => {
-    e.preventDefault(); setCsvDrag(false);
-    const file = Array.from(e.dataTransfer.files).find(f => f.name.endsWith(".csv"));
-    if (file) parseCsv(file); else toast.error("Drop a CSV file.");
+    e.preventDefault();
+    setCsvDrag(false);
+    const file = e.dataTransfer.files[0];
+    if (file) parseCsv(file);
   };
 
-  // ── File maps ─────────────────────────────────────────────────────────────────
+  // ── Thumbnail rendering ───────────────────────────────────────────────────────
 
-  const addFiles = (setter: React.Dispatch<React.SetStateAction<Map<string, File>>>, files: File[]) => {
-    setter(prev => {
-      const next = new Map(prev);
-      for (const f of files.filter(f => f.type.startsWith("image/"))) next.set(normName(f.name), f);
-      return next;
-    });
-  };
-
-  const handleImgDrop  = (e: React.DragEvent) => { e.preventDefault(); setImgDrag(false);  addFiles(setImageFiles, Array.from(e.dataTransfer.files)); };
-  const handleLogoDrop = (e: React.DragEvent) => { e.preventDefault(); setLogoDrag(false); addFiles(setLogoFiles,  Array.from(e.dataTransfer.files)); };
-
-  // ── Generate ──────────────────────────────────────────────────────────────────
-
-  const handleGenerate = async () => {
-    if (!csvRows.length || !selectedPreset) return;
+  const renderThumbs = useCallback(async (preset: ClientPreset, slideList: SlideData[]) => {
     setRendering(true);
-    setRenderProgress(0);
     try {
-      await ensureFonts(selectedPreset.fontFamily);
-      const rendered: CarouselItem[] = [];
-
-      for (let i = 0; i < csvRows.length; i++) {
-        const row = csvRows[i];
-
-        let image: HTMLImageElement | null = null;
-        // image_filename is optional — if the column is absent we skip per-row images
-        const imgFile = row.image_filename ? imageFiles.get(normName(row.image_filename)) : undefined;
-        if (imgFile) { try { image = await loadImg(URL.createObjectURL(imgFile)); } catch {} }
-
-        // Fall back to first uploaded image if no per-row image_filename column
-        if (!image && imageFiles.size > 0 && !row.image_filename) {
-          const firstImgFile = imageFiles.values().next().value;
-          if (firstImgFile) { try { image = await loadImg(URL.createObjectURL(firstImgFile)); } catch {} }
-        }
-
-        let logo: HTMLImageElement | null = null;
-        const logoFile = row.logo_filename ? logoFiles.get(normName(row.logo_filename)) : undefined;
-        if (logoFile)                    { try { logo = await loadImg(URL.createObjectURL(logoFile)); } catch {} }
-        else if (selectedPreset.logoUrl) { try { logo = await loadImg(selectedPreset.logoUrl);        } catch {} }
-
-        const blocks = makeBlocks(row);
-        const thumbs = renderAllThumbs({ blocks, image, logo }, selectedPreset);
-
-        rendered.push({
-          id: `item-${i}`,
-          rowNum: i + 1,
-          hook: row.slide1_hook,
-          imageFilename: row.image_filename,
-          logoFilename:  row.logo_filename,
-          blocks,
-          image,
-          logo,
-          thumbs,
-        });
-        setRenderProgress(Math.round(((i + 1) / csvRows.length) * 100));
-      }
-
-      setItems(rendered);
-      setPhase("preview");
-    } catch (e: unknown) {
-      toast.error("Render failed: " + (e instanceof Error ? e.message : String(e)));
+      await warmFonts();
+      const logoImg = await loadPresetLogo(preset);
+      setThumbs(slideList.map(s => renderSlide(s, preset, logoImg, 1)));
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Render failed");
     } finally {
       setRendering(false);
     }
+  }, []);
+
+  const handleGenerate = async () => {
+    if (!selectedPreset) { toast.error("Select a client preset first"); return; }
+    if (!slides.length)  { toast.error("Upload a CSV first"); return; }
+    await renderThumbs(selectedPreset, slides);
+    setPhase("preview");
   };
 
-  // ── Export ────────────────────────────────────────────────────────────────────
-
-  const downloadSingle = async (item: CarouselItem) => {
-    const zip = new JSZip();
-    item.thumbs.forEach((du, i) => zip.file(`slide${i + 1}.png`, du.split(",")[1], { base64: true }));
-    const blob  = await zip.generateAsync({ type: "blob" });
-    const label = displayText(item.hook).slice(0, 30).replace(/[^a-z0-9]/gi, "-") || `carousel-${item.rowNum}`;
-    saveAs(blob, `${label}.zip`);
+  const handlePresetSwitch = async (id: number) => {
+    setSelectedPresetId(id);
+    const p = presets.find(x => x.id === id);
+    if (p && slides.length) await renderThumbs(p, slides);
   };
 
-  const downloadAll = async () => {
-    const tid = toast.loading("Building ZIP...");
+  // ── Export helpers ────────────────────────────────────────────────────────────
+
+  const handleDownload = async () => {
+    if (!selectedPreset) return;
+    setExporting(true);
     try {
+      await warmFonts();
+      const logoImg = await loadPresetLogo(selectedPreset);
       const zip = new JSZip();
-      items.forEach((item, i) => {
-        const folder = zip.folder(`carousel-${i + 1}`) ?? zip;
-        item.thumbs.forEach((du, j) => folder.file(`slide${j + 1}.png`, du.split(",")[1], { base64: true }));
-      });
-      const blob = await zip.generateAsync({ type: "blob" });
-      saveAs(blob, "carousels.zip");
-      toast.success("Download started.", { id: tid });
-    } catch (e: unknown) { toast.error(String(e), { id: tid }); }
-  };
-
-  // ── Schedule ──────────────────────────────────────────────────────────────────
-
-  const goToSchedule = () => {
-    const today = new Date().toISOString().slice(0, 10);
-    setScheduleEntries(items.map(() => ({
-      date: today, time: "09:00", platforms: ["instagram"], presetId: selectedPresetId, caption: "",
-    })));
-    setPhase("schedule");
-  };
-
-  const updateEntry = <K extends keyof ScheduleEntry>(i: number, k: K, v: ScheduleEntry[K]) =>
-    setScheduleEntries(prev => prev.map((e, idx) => idx === i ? { ...e, [k]: v } : e));
-
-  const togglePlatform = (i: number, p: "instagram" | "facebook") =>
-    setScheduleEntries(prev => prev.map((e, idx) => {
-      if (idx !== i) return e;
-      const has = e.platforms.includes(p);
-      if (has && e.platforms.length === 1) return e;
-      return { ...e, platforms: has ? e.platforms.filter(x => x !== p) : [...e.platforms, p] };
-    }));
-
-  // ── Post directly to Instagram / Facebook ────────────────────────────────────
-
-  const handlePostToMeta = async (platforms: ("instagram" | "facebook")[]) => {
-    if (!selectedPresetId) { toast.error("Select a client preset before posting."); return; }
-    const label = platforms.includes("instagram") && platforms.includes("facebook")
-      ? "Instagram & Facebook"
-      : platforms.includes("instagram") ? "Instagram" : "Facebook";
-    const tid = toast.loading(`Uploading images for ${label}...`);
-    try {
-      const posts: { title: string; caption: string; imageUrls: string[] }[] = [];
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        toast.loading(`Uploading carousel ${i + 1} / ${items.length}...`, { id: tid });
-        const names = item.thumbs.map((_, j) => `carousel-${item.rowNum}-slide${j + 1}.png`);
-        const imageUrls = await uploadDataUrls(item.thumbs, names);
-        posts.push({
-          title: displayText(item.hook).slice(0, 80) || `Carousel ${item.rowNum}`,
-          caption: "",
-          imageUrls,
-        });
+      for (let i = 0; i < slides.length; i++) {
+        const png = renderSlide(slides[i], selectedPreset, logoImg, SCALE);
+        const b64 = png.split(",")[1];
+        const tag = slides[i].isHero ? "hero" : "slide";
+        zip.file(`${String(i + 1).padStart(3, "0")}-${tag}.png`, b64, { base64: true });
       }
-      toast.loading(`Posting to ${label}...`, { id: tid });
-      const res = await fetch(`${BASE}/api/meta/push`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ posts, presetId: selectedPresetId, postType: "carousel", platforms }),
-      });
-      const data = await res.json() as { summary?: { succeeded: number; failed: number }; error?: string };
-      if (!res.ok) throw new Error(data.error || "Meta push failed");
-      const succeeded = data.summary?.succeeded ?? 0;
-      const failed    = data.summary?.failed ?? 0;
-      toast.success(
-        `Posted to ${label}: ${succeeded} succeeded${failed ? `, ${failed} failed` : ""}.`,
-        { id: tid, duration: 6000 },
-      );
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : String(e), { id: tid });
+      const blob = await zip.generateAsync({ type: "blob" });
+      saveAs(blob, `csv-slides-${Date.now()}.zip`);
+      toast.success("ZIP downloaded");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Export failed");
+    } finally {
+      setExporting(false);
     }
   };
 
-  const handleScheduleAll = async () => {
-    const bad = scheduleEntries.findIndex(e => !e.presetId);
-    if (bad !== -1) { toast.error(`Row ${bad + 1}: select a client account.`); return; }
+  const handleSchedule = async () => {
+    if (!selectedPreset) return;
     setScheduling(true);
-    const tid = toast.loading("Uploading and queueing...");
     try {
-      for (let i = 0; i < items.length; i++) {
-        const item  = items[i];
-        const entry = scheduleEntries[i];
-        toast.loading(`Scheduling ${i + 1} / ${items.length}...`, { id: tid });
-        const names     = item.thumbs.map((_, j) => `carousel-${i + 1}-slide${j + 1}.png`);
-        const imageUrls = await uploadDataUrls(item.thumbs, names);
-        const res = await fetch(`${BASE}/api/scheduler/posts`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            presetId: entry.presetId,
-            postType: "carousel",
-            content: {
-              imageUrls, caption: entry.caption || "",
-              title: displayText(item.hook).slice(0, 80) || `Carousel ${item.rowNum}`,
-              platforms: entry.platforms,
-            },
-            scheduledAt: new Date(`${entry.date}T${entry.time}`).toISOString(),
-          }),
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: "Failed" }));
-          throw new Error(`Row ${i + 1}: ${err.error}`);
-        }
-      }
-      toast.success(`${items.length} carousels queued.`, { id: tid });
-      setPhase("done");
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : String(e), { id: tid });
-    } finally { setScheduling(false); }
+      await warmFonts();
+      const logoImg = await loadPresetLogo(selectedPreset);
+      const dataUrls = slides.map(s => renderSlide(s, selectedPreset, logoImg, SCALE));
+      const names    = slides.map((s, i) =>
+        `${String(i + 1).padStart(3, "0")}-${s.isHero ? "hero" : "slide"}.png`,
+      );
+      const toastId = toast.loading(`Uploading ${slides.length} image${slides.length !== 1 ? "s" : ""}…`);
+      const urls = await uploadDataUrls(dataUrls, names);
+      toast.dismiss(toastId);
+      setScheduleUrls(urls);
+      setShowSchedule(true);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setScheduling(false);
+    }
   };
 
-  const resetAll = () => {
-    setCsvRows([]); setCsvError(null);
-    setImageFiles(new Map()); setLogoFiles(new Map());
-    setItems([]); setSelectedPresetId(null);
-    setPhase("upload");
-  };
+  // ── Render ────────────────────────────────────────────────────────────────────
 
-  // ── Done ──────────────────────────────────────────────────────────────────────
-
-  if (phase === "done") {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6 p-8">
-        <CheckCircle2 className="w-14 h-14 text-emerald-400" />
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">All queued</h2>
-          <p className="text-muted-foreground">{items.length} carousel{items.length !== 1 ? "s" : ""} added to the scheduler.</p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" asChild><Link href="/scheduler">View queue</Link></Button>
-          <Button onClick={resetAll}>Start again</Button>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Schedule phase ─────────────────────────────────────────────────────────────
-
-  if (phase === "schedule") {
-    return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b border-border/30 px-6 py-4 flex items-center gap-3 sticky top-0 bg-background/95 backdrop-blur z-10">
-          <button onClick={() => setPhase("preview")} className="text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="w-5 h-5" />
+  return (
+    <div className="min-h-[100dvh] bg-background">
+      <header className="border-b border-border/30 py-4 px-6 flex items-center gap-3">
+        <Link href="/hub">
+          <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="w-4 h-4" />
+            All Tools
           </button>
-          <h1 className="font-bold text-lg">Schedule Carousels</h1>
-          <span className="text-muted-foreground text-sm ml-1">{items.length} posts</span>
-        </header>
+        </Link>
+        <span className="text-border/60">·</span>
+        <h1 className="font-semibold text-sm">CSV Slide Carousel</h1>
+      </header>
 
-        <div className="max-w-4xl mx-auto px-6 py-8">
-          <p className="text-sm text-muted-foreground mb-6">Set a date, time and platform for each carousel.</p>
-          <div className="space-y-3">
-            {items.map((item, i) => {
-              const entry = scheduleEntries[i];
-              if (!entry) return null;
-              return (
-                <div key={item.id} className="border border-border/40 rounded-xl p-4 bg-card/40">
-                  <div className="flex flex-col gap-3">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <p className="font-semibold text-sm">Row {item.rowNum}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1 max-w-xs">{displayText(item.hook)}</p>
-                      </div>
-                      <div className="flex gap-1 shrink-0">
-                        {item.thumbs.map((du, si) => (
-                          <img key={si} src={du} alt="" className="w-10 rounded" style={{ aspectRatio: "4/5", objectFit: "cover" }} />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Client</Label>
-                        <Select value={entry.presetId?.toString() ?? ""} onValueChange={v => updateEntry(i, "presetId", v ? parseInt(v) : null)}>
-                          <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick client" /></SelectTrigger>
-                          <SelectContent>{presets.map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Date</Label>
-                        <Input type="date" value={entry.date} onChange={e => updateEntry(i, "date", e.target.value)} className="h-8 text-xs" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Time</Label>
-                        <Input type="time" value={entry.time} onChange={e => updateEntry(i, "time", e.target.value)} className="h-8 text-xs" />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Platforms</Label>
-                        <div className="flex gap-1.5 h-8">
-                          {(["instagram", "facebook"] as const).map(p => (
-                            <button key={p} onClick={() => togglePlatform(i, p)}
-                              className={`flex-1 rounded text-xs font-medium border transition-colors ${entry.platforms.includes(p) ? "bg-primary text-primary-foreground border-primary" : "text-muted-foreground border-border/40 hover:border-border"}`}>
-                              {p === "instagram" ? "IG" : "FB"}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-muted-foreground">Caption (optional)</Label>
-                      <Input placeholder="Leave blank to fill in later..." value={entry.caption}
-                        onChange={e => updateEntry(i, "caption", e.target.value)} className="h-8 text-xs" />
-                    </div>
-                  </div>
+      <main className="max-w-4xl mx-auto px-6 py-8">
+
+        {/* ── Upload phase ── */}
+        {phase === "upload" && (
+          <div className="space-y-8">
+            <div>
+              <h2 className="text-2xl font-bold mb-1">CSV Slide Carousel</h2>
+              <p className="text-muted-foreground text-sm leading-relaxed max-w-xl">
+                Upload a CSV — each row becomes one branded slide. Rows starting with{" "}
+                <code className="bg-muted/60 px-1.5 py-0.5 rounded text-xs font-mono">|</code>{" "}
+                become large Bebas Neue hero headlines. Everything else is body text in Prata.
+              </p>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              {/* CSV drop zone */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">CSV File</Label>
+                <div
+                  onDrop={handleCsvDrop}
+                  onDragOver={e => { e.preventDefault(); setCsvDrag(true); }}
+                  onDragLeave={() => setCsvDrag(false)}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={[
+                    "border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-3",
+                    "cursor-pointer transition-colors select-none",
+                    csvDrag  ? "border-sky-500/60 bg-sky-500/5" :
+                    csvFile  ? "border-sky-500/40 bg-sky-500/5" :
+                               "border-border/40 hover:border-border/60",
+                  ].join(" ")}
+                >
+                  {csvFile ? (
+                    <>
+                      <CheckCircle2 className="w-8 h-8 text-sky-400" />
+                      <p className="text-sm font-medium text-sky-400">{csvFile.name}</p>
+                      <p className="text-xs text-muted-foreground">{slides.length} slide{slides.length !== 1 ? "s" : ""} — click to replace</p>
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="w-8 h-8 text-muted-foreground" />
+                      <p className="text-sm font-medium">Drop CSV here or click to browse</p>
+                      <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                        Any header. First column used.<br />
+                        Prefix a row with <code className="font-mono">|</code> for a hero headline.
+                      </p>
+                    </>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-          <div className="mt-8 flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setPhase("preview")} disabled={scheduling}>Back</Button>
-            <Button onClick={handleScheduleAll} disabled={scheduling} className="min-w-40">
-              {scheduling ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Scheduling...</> : `Schedule All (${items.length})`}
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Preview phase ──────────────────────────────────────────────────────────────
-
-  if (phase === "preview") {
-    return (
-      <div className="min-h-screen bg-background">
-        <header className="border-b border-border/30 px-6 py-4 flex items-center gap-3 sticky top-0 bg-background/95 backdrop-blur z-10">
-          <button onClick={() => setPhase("upload")} className="text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 className="font-bold text-lg">Preview</h1>
-          <span className="text-muted-foreground text-sm ml-1">{items.length} carousel{items.length !== 1 ? "s" : ""}</span>
-          <div className="ml-auto flex gap-2 flex-wrap justify-end">
-            <Button variant="outline" size="sm" onClick={downloadAll}>
-              <Download className="w-4 h-4 mr-2" />Download All
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => handlePostToMeta(["instagram"])}>
-              <Send className="w-4 h-4 mr-2" />Post to Instagram
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => handlePostToMeta(["facebook"])}>
-              <Send className="w-4 h-4 mr-2" />Post to Facebook
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => handlePostToMeta(["instagram", "facebook"])}>
-              <Send className="w-4 h-4 mr-2" />Post to Both
-            </Button>
-            <Button size="sm" onClick={goToSchedule}>
-              <CalendarClock className="w-4 h-4 mr-2" />Schedule
-            </Button>
-          </div>
-        </header>
-
-        <div className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {items.map(item => (
-            <div key={item.id} className="border border-border/40 rounded-xl overflow-hidden bg-card/40">
-              <div className="flex gap-1 p-3 bg-black/20">
-                {item.thumbs.map((du, si) => (
-                  <img key={si} src={du} alt={`slide ${si + 1}`} className="flex-1 rounded object-cover" style={{ aspectRatio: "4/5" }} />
-                ))}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="hidden"
+                  onChange={e => {
+                    const f = e.target.files?.[0];
+                    if (f) parseCsv(f);
+                    e.target.value = "";
+                  }}
+                />
+                {csvError && <p className="text-xs text-destructive">{csvError}</p>}
               </div>
-              <div className="px-4 py-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm text-muted-foreground">Row {item.rowNum}</p>
-                  <p className="text-xs truncate mt-0.5">{displayText(item.hook)}</p>
+
+              {/* Preset selector */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Client Preset</Label>
+                <Select
+                  value={selectedPresetId ? String(selectedPresetId) : ""}
+                  onValueChange={v => setSelectedPresetId(Number(v))}
+                >
+                  <SelectTrigger className="bg-muted/30 border-border/40">
+                    <SelectValue placeholder={presetsLoading ? "Loading…" : "Select a client"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {presets.map(p => (
+                      <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedPreset && (
+                  <div className="flex items-center gap-2 flex-wrap mt-1">
+                    <div
+                      className="w-3.5 h-3.5 rounded-full border border-border/40 shrink-0"
+                      style={{ background: selectedPreset.pageColor }}
+                    />
+                    <span className="text-xs text-muted-foreground truncate">{selectedPreset.fontFamily}</span>
+                    {selectedPreset.logoUrl && (
+                      <span className="text-xs text-muted-foreground">· logo attached</span>
+                    )}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground leading-relaxed pt-1">
+                  Background colour, overlay, text colour, corner style and logo all come from the preset.
+                </p>
+              </div>
+            </div>
+
+            {/* Slide list preview */}
+            {slides.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  {slides.length} slide{slides.length !== 1 ? "s" : ""} parsed
+                </p>
+                <div className="bg-muted/20 border border-border/30 rounded-xl divide-y divide-border/20 max-h-60 overflow-y-auto">
+                  {slides.slice(0, 30).map((s, i) => (
+                    <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                      <span className="text-xs text-muted-foreground w-5 shrink-0 text-right">{i + 1}</span>
+                      {s.isHero ? (
+                        <span className="text-[9px] font-semibold uppercase tracking-widest bg-sky-500/20 text-sky-400 border border-sky-500/30 rounded px-1.5 py-0.5 shrink-0">
+                          Hero
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-semibold uppercase tracking-widest bg-muted/40 text-muted-foreground rounded px-1.5 py-0.5 shrink-0">
+                          Body
+                        </span>
+                      )}
+                      <span className="text-sm text-foreground/80 truncate">{s.text}</span>
+                    </div>
+                  ))}
+                  {slides.length > 30 && (
+                    <div className="px-4 py-2 text-xs text-muted-foreground">
+                      …and {slides.length - 30} more
+                    </div>
+                  )}
                 </div>
-                <Button variant="outline" size="sm" onClick={() => downloadSingle(item)}>
-                  <Download className="w-3.5 h-3.5 mr-1.5" />ZIP
+              </div>
+            )}
+
+            <Button
+              onClick={handleGenerate}
+              disabled={!slides.length || !selectedPreset || rendering}
+              className="bg-sky-600 hover:bg-sky-700 text-white"
+            >
+              {rendering
+                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Rendering…</>
+                : "Generate Slides"}
+            </Button>
+          </div>
+        )}
+
+        {/* ── Preview phase ── */}
+        {phase === "preview" && (
+          <div className="space-y-6">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <h2 className="text-2xl font-bold mb-1">Preview</h2>
+                <p className="text-muted-foreground text-sm">
+                  {slides.length} slide{slides.length !== 1 ? "s" : ""} · {selectedPreset?.name}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button variant="outline" size="sm" onClick={() => setPhase("upload")}>
+                  <ArrowLeft className="w-4 h-4 mr-1.5" />Back
+                </Button>
+
+                <Select
+                  value={selectedPresetId ? String(selectedPresetId) : ""}
+                  onValueChange={v => handlePresetSwitch(Number(v))}
+                  disabled={rendering}
+                >
+                  <SelectTrigger className="h-9 text-sm bg-muted/30 border-border/40 w-44">
+                    <SelectValue placeholder="Switch preset" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {presets.map(p => (
+                      <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => selectedPreset && renderThumbs(selectedPreset, slides)}
+                  disabled={rendering || !selectedPreset}
+                >
+                  {rendering
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <><RefreshCw className="w-4 h-4 mr-1.5" />Re-render</>}
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDownload}
+                  disabled={exporting || rendering}
+                >
+                  {exporting
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <><Download className="w-4 h-4 mr-1.5" />ZIP</>}
+                </Button>
+
+                <Button
+                  size="sm"
+                  onClick={handleSchedule}
+                  disabled={scheduling || rendering}
+                  className="bg-pink-600 hover:bg-pink-700 text-white"
+                >
+                  {scheduling
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <><CalendarClock className="w-4 h-4 mr-1.5" />Schedule</>}
                 </Button>
               </div>
             </div>
-          ))}
-        </div>
-      </div>
-    );
-  }
 
-  // ── Upload phase ───────────────────────────────────────────────────────────────
-
-  const canGenerate = csvRows.length > 0 && selectedPresetId !== null;
-
-  const rowStats = csvRows.map(row => ({
-    ...row,
-    hookDisplay: displayText(row.slide1_hook),
-    hasHero:  hasHeroWords(row.slide1_hook) || hasHeroWords(row.slide1_subtitle)
-           || hasHeroWords(row.slide2_body)  || hasHeroWords(row.slide3_body) || hasHeroWords(row.slide4_cta),
-    hasImage: row.image_filename ? imageFiles.has(normName(row.image_filename)) : imageFiles.size > 0,
-    hasLogo:  row.logo_filename  ? logoFiles.has(normName(row.logo_filename))   : logoFiles.size > 0,
-  }));
-
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border/30 px-6 py-4 flex items-center gap-3">
-        <Link href="/hub" className="text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
-        <div>
-          <h1 className="font-bold text-lg leading-none">CSV Slide Carousel</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">One CSV row per carousel. Images and logos matched by filename.</p>
-        </div>
-      </header>
-
-      <div className="max-w-3xl mx-auto px-6 py-10 space-y-10">
-
-        {/* Step 1 */}
-        <section className="space-y-3">
-          <h2 className="font-semibold text-base">1. Choose a client</h2>
-          <p className="text-sm text-muted-foreground">Brand colours and fallback logo come from the preset. Per-row logos override it.</p>
-          <Select value={selectedPresetId?.toString() ?? ""} onValueChange={v => setSelectedPresetId(v ? parseInt(v) : null)}>
-            <SelectTrigger className="max-w-sm"><SelectValue placeholder="Select a client preset..." /></SelectTrigger>
-            <SelectContent>{presets.map(p => <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>)}</SelectContent>
-          </Select>
-          {selectedPreset && (
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border/30 max-w-sm">
-              {selectedPreset.logoUrl && <img src={selectedPreset.logoUrl} alt="logo" className="h-8 w-8 object-contain rounded" />}
-              <div className="flex gap-2 items-center">
-                <div className="w-5 h-5 rounded" style={{ background: selectedPreset.pageColor || "#1a1a2e" }} />
-                <div className="w-5 h-5 rounded border border-border/20" style={{ background: selectedPreset.textColor || "#fff" }} />
-                <span className="text-xs text-muted-foreground ml-1">{selectedPreset.name}</span>
+            {rendering && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Rendering thumbnails…
               </div>
-            </div>
-          )}
-        </section>
-
-        {/* Step 2 */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-base">2. Upload your CSV</h2>
-            <button
-              onClick={() => saveAs(new Blob([makeSampleCsv()], { type: "text/csv" }), "csv-carousel-template.csv")}
-              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors"
-            >
-              <Download className="w-3.5 h-3.5" />Download template
-            </button>
-          </div>
-
-          {/* Pipe syntax explanation + live demo */}
-          <div className="rounded-xl border border-border/40 bg-muted/20 p-4 space-y-3">
-            <p className="text-sm">
-              Columns: <span className="font-mono text-xs bg-muted/60 px-1 rounded">{CSV_COLS.join(", ")}</span>
-            </p>
-            <p className="text-sm text-muted-foreground">
-              Wrap any word in <code className="bg-muted/60 px-1.5 py-0.5 rounded text-xs font-mono">|pipes|</code> to render it in{" "}
-              <strong className="text-foreground">Bebas Neue 80px</strong>. Surrounding words render in{" "}
-              <strong className="text-foreground">Prata 36px</strong>. Works in any column.
-            </p>
-            <div className="space-y-1.5">
-              <p className="text-xs text-muted-foreground">Live preview — fonts load in a moment:</p>
-              <canvas
-                ref={demoCanvasRef}
-                className="rounded-lg w-full max-w-[600px] block"
-                style={{ imageRendering: "auto" }}
-              />
-              <p className="text-xs text-muted-foreground/60 font-mono">
-                If you've been chasing |Hydration| through every serum
-              </p>
-            </div>
-          </div>
-
-          <div
-            onDrop={handleCsvDrop}
-            onDragOver={e => { e.preventDefault(); setCsvDrag(true); }}
-            onDragLeave={() => setCsvDrag(false)}
-            className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-4 transition-colors ${
-              csvDrag   ? "border-primary/60 bg-primary/5" :
-              csvRows.length ? "border-emerald-500/40 bg-emerald-500/5" :
-              "border-border/40"
-            }`}
-          >
-            {csvRows.length ? (
-              <>
-                <CheckCircle2 className="w-8 h-8 text-emerald-400" />
-                <p className="text-sm font-medium text-emerald-400">{csvRows.length} row{csvRows.length !== 1 ? "s" : ""} loaded</p>
-                <label htmlFor="csv-file-input" className="cursor-pointer text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
-                  Replace file
-                </label>
-              </>
-            ) : (
-              <>
-                <FileText className="w-8 h-8 text-muted-foreground" />
-                <p className="text-xs text-muted-foreground">Drop a CSV here, or</p>
-                <label
-                  htmlFor="csv-file-input"
-                  className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-                >
-                  <Upload className="w-4 h-4" />
-                  Choose CSV file
-                </label>
-              </>
             )}
-          </div>
-          <input id="csv-file-input" ref={csvInputRef} type="file" accept=".csv" className="hidden"
-            onChange={e => { if (e.target.files?.[0]) parseCsv(e.target.files[0]); e.target.value = ""; }} />
-          {csvError && <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-2">{csvError}</p>}
-        </section>
 
-        {/* Step 3 */}
-        <section className="space-y-4">
-          <h2 className="font-semibold text-base">3. Upload images &amp; logos</h2>
-          <p className="text-sm text-muted-foreground">
-            Files are matched by filename to <code className="bg-muted/40 px-1 rounded text-xs">image_filename</code> and{" "}
-            <code className="bg-muted/40 px-1 rounded text-xs">logo_filename</code>. Case-insensitive.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Carousel images</Label>
-              <DropZone
-                label="Drop images" fileCount={imageFiles.size} active={imgDrag} color="violet"
-                onDragOver={() => setImgDrag(true)} onDragLeave={() => setImgDrag(false)}
-                onDrop={handleImgDrop} onClick={() => imgInputRef.current?.click()}
-              />
-              <input ref={imgInputRef} type="file" accept="image/*" multiple className="hidden"
-                onChange={e => { if (e.target.files) addFiles(setImageFiles, Array.from(e.target.files)); e.target.value = ""; }} />
-              {imageFiles.size > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {[...imageFiles.values()].map((f, i) => (
-                    <div key={i} className="flex items-center gap-1 text-xs bg-muted/40 rounded-full px-2.5 py-1">
-                      <span className="truncate max-w-28">{f.name}</span>
-                      <button onClick={() => setImageFiles(prev => { const n = new Map(prev); n.delete(normName(f.name)); return n; })} className="ml-0.5 text-muted-foreground hover:text-foreground">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+              {thumbs.map((thumb, i) => (
+                <div key={i} className="relative rounded-lg overflow-hidden border border-border/30">
+                  <img
+                    src={thumb}
+                    alt={`Slide ${i + 1}`}
+                    className="w-full object-cover"
+                    style={{ aspectRatio: `${W}/${H}` }}
+                    draggable={false}
+                  />
+                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-2 py-1.5 bg-gradient-to-t from-black/70 to-transparent">
+                    <span className="text-[10px] text-white/70 font-medium">{i + 1}</span>
+                    {slides[i]?.isHero && (
+                      <span className="text-[9px] bg-sky-600 text-white px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">
+                        Hero
+                      </span>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Logo files</Label>
-              <DropZone
-                label="Drop logos" fileCount={logoFiles.size} active={logoDrag} color="indigo"
-                onDragOver={() => setLogoDrag(true)} onDragLeave={() => setLogoDrag(false)}
-                onDrop={handleLogoDrop} onClick={() => logoInputRef.current?.click()}
-              />
-              <input ref={logoInputRef} type="file" accept="image/*" multiple className="hidden"
-                onChange={e => { if (e.target.files) addFiles(setLogoFiles, Array.from(e.target.files)); e.target.value = ""; }} />
-              {logoFiles.size > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {[...logoFiles.values()].map((f, i) => (
-                    <div key={i} className="flex items-center gap-1 text-xs bg-muted/40 rounded-full px-2.5 py-1">
-                      <span className="truncate max-w-28">{f.name}</span>
-                      <button onClick={() => setLogoFiles(prev => { const n = new Map(prev); n.delete(normName(f.name)); return n; })} className="ml-0.5 text-muted-foreground hover:text-foreground">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+              ))}
             </div>
           </div>
-        </section>
+        )}
+      </main>
 
-        {/* Step 4: Review */}
-        {csvRows.length > 0 && (
-          <section className="space-y-3">
-            <h2 className="font-semibold text-base">4. Review rows</h2>
-            <div className="border border-border/40 rounded-xl overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead className="bg-muted/30 text-muted-foreground">
-                    <tr>
-                      <th className="text-left px-3 py-2 font-medium w-8">#</th>
-                      <th className="text-left px-3 py-2 font-medium">Hook</th>
-                      <th className="text-left px-3 py-2 font-medium">Subtitle</th>
-                      <th className="text-left px-3 py-2 font-medium">CTA</th>
-                      <th className="text-center px-3 py-2 font-medium">Image</th>
-                      <th className="text-center px-3 py-2 font-medium">Logo</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/20">
-                    {rowStats.map((row, i) => (
-                      <tr key={i} className="hover:bg-muted/10">
-                        <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
-                        <td className="px-3 py-2 max-w-[160px]">
-                          <span className="font-medium truncate block" title={row.slide1_hook}>{row.hookDisplay}</span>
-                          {row.hasHero && <span className="text-[10px] text-amber-400/80 mt-0.5 block">has inline hero words</span>}
-                        </td>
-                        <td className="px-3 py-2 text-muted-foreground max-w-[140px] truncate">{displayText(row.slide1_subtitle)}</td>
-                        <td className="px-3 py-2 text-muted-foreground max-w-[120px] truncate">{displayText(row.slide4_cta)}</td>
-                        <td className="px-3 py-2 text-center">
-                          <div className="flex flex-col items-center gap-0.5">
-                            {row.hasImage ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <X className="w-3.5 h-3.5 text-amber-400/60" />}
-                            <span className="text-muted-foreground/60 text-[10px] truncate max-w-16">{row.image_filename}</span>
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          <div className="flex flex-col items-center gap-0.5">
-                            {row.hasLogo ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> : <span className="text-amber-400/60 text-[10px]">preset</span>}
-                            <span className="text-muted-foreground/60 text-[10px] truncate max-w-16">{row.logo_filename}</span>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            {rowStats.some(r => !r.hasImage) && <p className="text-xs text-amber-400">Rows without a matched image render with a solid brand colour background.</p>}
-            {rowStats.some(r => !r.hasLogo)  && <p className="text-xs text-muted-foreground">Rows without a matched logo fall back to the preset logo.</p>}
-          </section>
-        )}
-
-        {/* Generate */}
-        {canGenerate && (
-          <div className="flex justify-end">
-            <Button onClick={handleGenerate} disabled={rendering} size="lg" className="min-w-52">
-              {rendering
-                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Rendering... {renderProgress}%</>
-                : `Generate ${csvRows.length} carousel${csvRows.length !== 1 ? "s" : ""}`}
-            </Button>
-          </div>
-        )}
-        {!canGenerate && csvRows.length > 0 && !selectedPresetId && (
-          <p className="text-sm text-amber-400 text-right">Select a client preset to continue.</p>
-        )}
-      </div>
+      {showSchedule && selectedPreset && (
+        <ScheduleModal
+          presetId={selectedPreset.id}
+          presetName={selectedPreset.name}
+          postType="carousel"
+          posts={[{
+            title:     `CSV Slides · ${selectedPreset.name}`,
+            caption:   "",
+            imageUrls: scheduleUrls,
+          }]}
+          onClose={() => setShowSchedule(false)}
+          onSaved={() => setShowSchedule(false)}
+          presets={presets.map(p => ({ id: p.id, name: p.name }))}
+        />
+      )}
     </div>
   );
 }
