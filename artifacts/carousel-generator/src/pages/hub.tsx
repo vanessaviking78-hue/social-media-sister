@@ -222,7 +222,7 @@ const TOOLS = [
     href: "/csv-slide-carousel",
     icon: TableProperties,
     name: "CSV Slide Carousel",
-    description: "Upload images, logos and a CSV. Each row becomes a branded 4-slide carousel. Use a | prefix on the hook for a Bebas Neue hero headline. Logos matched per row by filename.",
+    description: "Upload a single-column CSV. Each row becomes one branded slide. Prefix a row with | for a big hero headline, add a subtitle in column 2. Downloads as ZIP or sends to the scheduler.",
     color: "from-sky-500/20 to-sky-500/5",
     border: "hover:border-sky-500/50",
     iconColor: "text-sky-400",
