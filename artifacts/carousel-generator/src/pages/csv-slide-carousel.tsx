@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { Link } from "wouter";
 import {
-  ArrowLeft, FileText, Download, Loader2, CalendarClock, CheckCircle2, RefreshCw,
+  ArrowLeft, FileText, Download, Loader2, CalendarClock, CheckCircle2, RefreshCw, ImageIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -115,7 +115,7 @@ function drawLogo(ctx: CanvasRenderingContext2D, logoImg: HTMLImageElement, posi
   ctx.globalAlpha = 1;
 }
 
-function renderSlide(slide: SlideData, preset: ClientPreset, logoImg: HTMLImageElement | null, scale = SCALE): string {
+function renderSlide(slide: SlideData, preset: ClientPreset, logoImg: HTMLImageElement | null, scale = SCALE, bgImg: HTMLImageElement | null = null): string {
   const canvas = document.createElement("canvas");
   canvas.width  = W * scale;
   canvas.height = H * scale;
@@ -124,6 +124,15 @@ function renderSlide(slide: SlideData, preset: ClientPreset, logoImg: HTMLImageE
 
   ctx.fillStyle = preset.pageColor || "#000000";
   ctx.fillRect(0, 0, W, H);
+
+  if (bgImg) {
+    const s = Math.max(W / bgImg.naturalWidth, H / bgImg.naturalHeight);
+    const dw = bgImg.naturalWidth * s;
+    const dh = bgImg.naturalHeight * s;
+    const dx = (W - dw) / 2;
+    const dy = (H - dh) / 2;
+    ctx.drawImage(bgImg, dx, dy, dw, dh);
+  }
 
   const overlay = parseOverlayColor(preset.overlayColor || "rgba(0,0,0,0.5)");
   ctx.fillStyle = overlay;
@@ -305,7 +314,12 @@ export default function CsvSlideCarousel() {
   const [showSchedule,     setShowSchedule]     = useState(false);
   const [scheduleUrls,     setScheduleUrls]     = useState<string[]>([]);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [bgPhotoFile,  setBgPhotoFile]  = useState<File | null>(null);
+  const [bgPhotoDrag,  setBgPhotoDrag]  = useState(false);
+  const [bgPhotoUrl,   setBgPhotoUrl]   = useState<string | null>(null);
+
+  const fileInputRef    = useRef<HTMLInputElement>(null);
+  const bgPhotoInputRef = useRef<HTMLInputElement>(null);
 
   const selectedPreset = presets.find(p => p.id === selectedPresetId) ?? null;
 
@@ -345,12 +359,23 @@ export default function CsvSlideCarousel() {
     if (file) parseCsv(file);
   };
 
-  const renderThumbs = useCallback(async (preset: ClientPreset, slideList: SlideData[]) => {
+  const handleBgPhoto = useCallback((file: File) => {
+    const url = URL.createObjectURL(file);
+    setBgPhotoFile(file);
+    setBgPhotoUrl(prev => { if (prev) URL.revokeObjectURL(prev); return url; });
+  }, []);
+
+  const loadBgImg = useCallback(async (): Promise<HTMLImageElement | null> => {
+    if (!bgPhotoUrl) return null;
+    try { return await loadImg(bgPhotoUrl); } catch { return null; }
+  }, [bgPhotoUrl]);
+
+  const renderThumbs = useCallback(async (preset: ClientPreset, slideList: SlideData[], bg: HTMLImageElement | null = null) => {
     setRendering(true);
     try {
       await warmFonts();
       const logoImg = await loadPresetLogo(preset);
-      setThumbs(slideList.map(s => renderSlide(s, preset, logoImg, 1)));
+      setThumbs(slideList.map(s => renderSlide(s, preset, logoImg, 1, bg)));
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Render failed");
     } finally {
@@ -361,14 +386,18 @@ export default function CsvSlideCarousel() {
   const handleGenerate = async () => {
     if (!selectedPreset) { toast.error("Select a client preset first"); return; }
     if (!slides.length)  { toast.error("Upload a CSV first"); return; }
-    await renderThumbs(selectedPreset, slides);
+    const bg = await loadBgImg();
+    await renderThumbs(selectedPreset, slides, bg);
     setPhase("preview");
   };
 
   const handlePresetSwitch = async (id: number) => {
     setSelectedPresetId(id);
     const p = presets.find(x => x.id === id);
-    if (p && slides.length) await renderThumbs(p, slides);
+    if (p && slides.length) {
+      const bg = await loadBgImg();
+      await renderThumbs(p, slides, bg);
+    }
   };
 
   const handleDownload = async () => {
@@ -376,10 +405,10 @@ export default function CsvSlideCarousel() {
     setExporting(true);
     try {
       await warmFonts();
-      const logoImg = await loadPresetLogo(selectedPreset);
+      const [logoImg, bgImg] = await Promise.all([loadPresetLogo(selectedPreset), loadBgImg()]);
       const zip = new JSZip();
       for (let i = 0; i < slides.length; i++) {
-        const png = renderSlide(slides[i], selectedPreset, logoImg, SCALE);
+        const png = renderSlide(slides[i], selectedPreset, logoImg, SCALE, bgImg);
         const b64 = png.split(",")[1];
         const tag = slides[i].isHero ? "hero" : "slide";
         zip.file(`${String(i + 1).padStart(3, "0")}-${tag}.png`, b64, { base64: true });
@@ -399,8 +428,8 @@ export default function CsvSlideCarousel() {
     setScheduling(true);
     try {
       await warmFonts();
-      const logoImg = await loadPresetLogo(selectedPreset);
-      const dataUrls = slides.map(s => renderSlide(s, selectedPreset, logoImg, SCALE));
+      const [logoImg, bgImg] = await Promise.all([loadPresetLogo(selectedPreset), loadBgImg()]);
+      const dataUrls = slides.map(s => renderSlide(s, selectedPreset, logoImg, SCALE, bgImg));
       const names    = slides.map((s, i) =>
         `${String(i + 1).padStart(3, "0")}-${s.isHero ? "hero" : "slide"}.png`,
       );
@@ -449,6 +478,44 @@ export default function CsvSlideCarousel() {
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Background Photo <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                <div
+                  onDrop={e => { e.preventDefault(); setBgPhotoDrag(false); const f = e.dataTransfer.files[0]; if (f) handleBgPhoto(f); }}
+                  onDragOver={e => { e.preventDefault(); setBgPhotoDrag(true); }}
+                  onDragLeave={() => setBgPhotoDrag(false)}
+                  onClick={() => bgPhotoInputRef.current?.click()}
+                  className={[
+                    "border-2 border-dashed rounded-xl p-6 flex flex-col items-center gap-3",
+                    "cursor-pointer transition-colors select-none",
+                    bgPhotoDrag  ? "border-amber-500/60 bg-amber-500/5" :
+                    bgPhotoFile  ? "border-amber-500/40 bg-amber-500/5" :
+                                   "border-border/40 hover:border-border/60",
+                  ].join(" ")}
+                >
+                  {bgPhotoFile ? (
+                    <>
+                      <CheckCircle2 className="w-8 h-8 text-amber-400" />
+                      <p className="text-sm font-medium text-amber-400 truncate max-w-[180px]">{bgPhotoFile.name}</p>
+                      <p className="text-xs text-muted-foreground">Click to replace</p>
+                    </>
+                  ) : (
+                    <>
+                      <ImageIcon className="w-8 h-8 text-muted-foreground" />
+                      <p className="text-sm font-medium">Drop photo here or click to browse</p>
+                      <p className="text-xs text-muted-foreground text-center">JPG or PNG. Drawn behind the overlay on every slide.</p>
+                    </>
+                  )}
+                </div>
+                <input
+                  ref={bgPhotoInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) handleBgPhoto(f); e.target.value = ""; }}
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label className="text-sm font-medium">CSV File</Label>
                 <div
