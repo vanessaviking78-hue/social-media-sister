@@ -254,6 +254,19 @@ function parseInlineSegments(raw: string): Array<{ text: string; isHero: boolean
 const INLINE_NORMAL_FONT = "'Prata', serif";
 const INLINE_HERO_FONT   = "'Bebas Neue', sans-serif";
 
+function wrapWords(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    const test = cur ? cur + " " + w : w;
+    if (cur && ctx.measureText(test).width > maxW) { lines.push(cur); cur = w; }
+    else { cur = test; }
+  }
+  if (cur) lines.push(cur);
+  return lines.length ? lines : [""];
+}
+
 function drawInlineHeroText(
   ctx: CanvasRenderingContext2D,
   raw: string,
@@ -265,69 +278,55 @@ function drawInlineHeroText(
   normalSize: number,
 ) {
   if (!raw.trim()) return;
-  const heroSize = Math.round(normalSize * 1.9);
+
+  const heroSize   = Math.round(normalSize * 1.85);
+  const heroLineH  = Math.round(heroSize * 1.1);
+  const normalLineH = Math.round(normalSize * 1.5);
+  const SEG_GAP    = Math.round(normalSize * 0.45);
+
   const segs = parseInlineSegments(raw);
 
-  ctx.font = `${normalSize}px ${normalFont}`;
-  const SPACE_W = ctx.measureText("\u00A0").width;
-
-  type MWord = { str: string; w: number; h: number; fnt: string };
-  const mwords: MWord[] = [];
-
-  for (const seg of segs) {
-    const fnt = seg.isHero
-      ? `700 ${heroSize}px ${INLINE_HERO_FONT}`
-      : `400 ${normalSize}px ${normalFont}`;
-    const h   = seg.isHero ? heroSize : normalSize;
-    ctx.font = fnt;
-    for (const word of seg.text.split(/\s+/).filter(Boolean)) {
-      const str = seg.isHero ? word.toUpperCase() : word;
-      mwords.push({ str, w: ctx.measureText(str).width, h, fnt });
-    }
-  }
-
-  if (!mwords.length) return;
-
-  type Line = { words: MWord[]; lineW: number; lineH: number };
-  const lines: Line[] = [];
-  let cur: Line = { words: [], lineW: 0, lineH: 0 };
-
-  for (const mw of mwords) {
-    const needed = cur.words.length === 0 ? mw.w : cur.lineW + SPACE_W + mw.w;
-    if (needed > maxW && cur.words.length > 0) {
-      lines.push(cur);
-      cur = { words: [mw], lineW: mw.w, lineH: mw.h };
+  type RenderedSeg = { lines: string[]; isHero: boolean; lineH: number; font: string };
+  const renderedSegs: RenderedSeg[] = segs.map(seg => {
+    if (seg.isHero) {
+      ctx.font = `700 ${heroSize}px ${INLINE_HERO_FONT}`;
+      return {
+        lines: wrapWords(ctx, seg.text.toUpperCase(), maxW),
+        isHero: true,
+        lineH: heroLineH,
+        font: `700 ${heroSize}px ${INLINE_HERO_FONT}`,
+      };
     } else {
-      if (cur.words.length > 0) cur.lineW += SPACE_W;
-      cur.words.push(mw);
-      cur.lineW += mw.w;
-      cur.lineH = Math.max(cur.lineH, mw.h);
+      ctx.font = `400 ${normalSize}px ${normalFont}`;
+      return {
+        lines: wrapWords(ctx, seg.text, maxW),
+        isHero: false,
+        lineH: normalLineH,
+        font: `400 ${normalSize}px ${normalFont}`,
+      };
     }
-  }
-  if (cur.words.length) lines.push(cur);
+  });
 
-  const LINE_GAP = 8;
-  const totalH = lines.reduce((s, l) => s + l.lineH, 0) + Math.max(0, lines.length - 1) * LINE_GAP;
-
-  ctx.fillStyle = textColor;
-  ctx.textAlign  = "left";
-  ctx.textBaseline = "alphabetic";
-
-  let topY = centerY - totalH / 2;
-  for (const line of lines) {
-    const baseline = topY + line.lineH;
-    let x = centerX - line.lineW / 2;
-    for (let i = 0; i < line.words.length; i++) {
-      const mw = line.words[i];
-      ctx.font = mw.fnt;
-      ctx.fillText(mw.str, x, baseline);
-      if (i < line.words.length - 1) x += mw.w + SPACE_W;
-    }
-    topY += line.lineH + LINE_GAP;
+  let totalH = 0;
+  for (let i = 0; i < renderedSegs.length; i++) {
+    totalH += renderedSegs[i].lines.length * renderedSegs[i].lineH;
+    if (i < renderedSegs.length - 1) totalH += SEG_GAP;
   }
 
   ctx.textAlign    = "center";
   ctx.textBaseline = "top";
+  ctx.fillStyle    = textColor;
+
+  let y = centerY - totalH / 2;
+  for (let i = 0; i < renderedSegs.length; i++) {
+    const seg = renderedSegs[i];
+    ctx.font = seg.font;
+    for (const line of seg.lines) {
+      ctx.fillText(line, centerX, y);
+      y += seg.lineH;
+    }
+    if (i < renderedSegs.length - 1) y += SEG_GAP;
+  }
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
