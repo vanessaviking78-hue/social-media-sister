@@ -372,7 +372,7 @@ export function drawSlide(
   coverEyebrowArch: number = 0,
   animationType?: AnimationType,
   animationProgress?: number,
-  opts?: { imageOffsetX?: number; imageOffsetY?: number; canvasW?: number; canvasH?: number; contentLetterSpacing?: number; pageColorEnd?: string; overlayGradient?: boolean; textShadow?: number; isCoverImageSlide?: boolean }
+  opts?: { imageOffsetX?: number; imageOffsetY?: number; canvasW?: number; canvasH?: number; contentLetterSpacing?: number; pageColorEnd?: string; overlayGradient?: boolean; textShadow?: number; isCoverImageSlide?: boolean; noOverlay?: boolean }
 ) {
   const W = opts?.canvasW ?? CANVAS_WIDTH;
   const H = opts?.canvasH ?? CANVAS_HEIGHT;
@@ -429,7 +429,7 @@ export function drawSlide(
 
   if (opts?.isCoverImageSlide) return;
 
-  if (opts?.overlayGradient && img) {
+  if (opts?.overlayGradient && img && !opts?.noOverlay) {
     const grad = ctx.createLinearGradient(0, 0, 0, H);
     grad.addColorStop(0, 'rgba(0,0,0,0)');
     grad.addColorStop(0.42, 'rgba(0,0,0,0)');
@@ -622,7 +622,7 @@ export function drawSlide(
     ctx.translate(0, textSlideOffset);
   }
 
-  if (showTextOverlay && !opts?.overlayGradient) {
+  if (showTextOverlay && !opts?.overlayGradient && !opts?.noOverlay) {
     const boxPad = Math.round(H * 0.025);
     let boxTop: number, boxBot: number;
     if (useInlineHero) {
