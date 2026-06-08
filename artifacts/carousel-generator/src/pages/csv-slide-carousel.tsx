@@ -23,7 +23,7 @@ const W = 1080;
 const H = 1440;
 const SCALE = 2;
 
-type SlideData = { text: string; isHero: boolean };
+type SlideData = { text: string; isHero: boolean; subtitle?: string };
 type Phase = "upload" | "preview";
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
@@ -133,13 +133,34 @@ function renderSlide(
   ctx.shadowOffsetY = 3;
 
   if (slide.isHero) {
-    const size  = 120;
-    const lineH = Math.round(size * 1.15);
-    ctx.font = `700 ${size}px 'Bebas Neue', sans-serif`;
-    const lines    = wrapText(ctx, slide.text.toUpperCase(), W - 120);
-    const totalH   = lines.length * lineH;
+    const heroSize   = 120;
+    const heroLineH  = Math.round(heroSize * 1.15);
+    const subSize    = 38;
+    const subLineH   = Math.round(subSize * 1.4);
+    const subGap     = 28;
+
+    ctx.font = `700 ${heroSize}px 'Bebas Neue', sans-serif`;
+    const heroLines = wrapText(ctx, slide.text.toUpperCase(), W - 120);
+    const heroH     = heroLines.length * heroLineH;
+
+    const sub        = slide.subtitle?.trim() ?? "";
+    ctx.font = `400 ${subSize}px 'Prata', serif`;
+    const subLines   = sub ? wrapText(ctx, sub, W - 160) : [];
+    const subH       = subLines.length > 0 ? subGap + subLines.length * subLineH : 0;
+
+    const totalH = heroH + subH;
     let y = Math.round(H / 2 - totalH / 2);
-    for (const line of lines) { ctx.fillText(line, W / 2, y); y += lineH; }
+
+    ctx.font = `700 ${heroSize}px 'Bebas Neue', sans-serif`;
+    for (const line of heroLines) { ctx.fillText(line, W / 2, y); y += heroLineH; }
+
+    if (subLines.length > 0) {
+      y += subGap;
+      ctx.font = `400 ${subSize}px 'Prata', serif`;
+      ctx.globalAlpha = 0.88;
+      for (const line of subLines) { ctx.fillText(line, W / 2, y); y += subLineH; }
+      ctx.globalAlpha = 1;
+    }
   } else {
     const size  = 52;
     const lineH = Math.round(size * 1.5);
@@ -188,6 +209,7 @@ async function warmFonts() {
   await Promise.allSettled([
     document.fonts.load("700 120px 'Bebas Neue', sans-serif"),
     document.fonts.load("400 52px 'Prata', serif"),
+    document.fonts.load("400 38px 'Prata', serif"),
   ]);
 }
 
@@ -231,9 +253,15 @@ export default function CsvSlideCarousel() {
         const dataRows = rows.slice(1); // skip header row
         if (!dataRows.length) { setCsvError("No data rows after the header"); return; }
         const parsed: SlideData[] = dataRows.flatMap(row => {
-          const raw = (Array.isArray(row) ? row[0] : String(row)).trim();
-          if (!raw) return [];
-          return [{ text: raw.startsWith("|") ? raw.slice(1).trimStart() : raw, isHero: raw.startsWith("|") }];
+          const col0 = (Array.isArray(row) ? row[0] : String(row)).trim();
+          if (!col0) return [];
+          const col1 = Array.isArray(row) ? (row[1] ?? "").trim() : "";
+          const isHero = col0.startsWith("|");
+          return [{
+            text:     isHero ? col0.slice(1).trimStart() : col0,
+            isHero,
+            subtitle: col1 || undefined,
+          }];
         });
         if (!parsed.length) { setCsvError("No valid text rows found"); return; }
         setSlides(parsed);
@@ -350,7 +378,7 @@ export default function CsvSlideCarousel() {
               <p className="text-muted-foreground text-sm leading-relaxed max-w-xl">
                 Upload a CSV — each row becomes one branded slide. Rows starting with{" "}
                 <code className="bg-muted/60 px-1.5 py-0.5 rounded text-xs font-mono">|</code>{" "}
-                become large Bebas Neue hero headlines. Everything else is body text in Prata.
+                become big Bebas Neue hero headlines. Add a second column for an optional subtitle below the headline. Everything else is body text in Prata.
               </p>
             </div>
 
@@ -382,8 +410,9 @@ export default function CsvSlideCarousel() {
                       <FileText className="w-8 h-8 text-muted-foreground" />
                       <p className="text-sm font-medium">Drop CSV here or click to browse</p>
                       <p className="text-xs text-muted-foreground text-center leading-relaxed">
-                        Any header. First column used.<br />
-                        Prefix a row with <code className="font-mono">|</code> for a hero headline.
+                        Any headers. Column 1 = slide text.<br />
+                        Column 2 = subtitle (optional, hero slides only).<br />
+                        Prefix col 1 with <code className="font-mono">|</code> for a hero headline.
                       </p>
                     </>
                   )}
@@ -444,18 +473,23 @@ export default function CsvSlideCarousel() {
                 </p>
                 <div className="bg-muted/20 border border-border/30 rounded-xl divide-y divide-border/20 max-h-60 overflow-y-auto">
                   {slides.slice(0, 30).map((s, i) => (
-                    <div key={i} className="flex items-center gap-3 px-4 py-2.5">
-                      <span className="text-xs text-muted-foreground w-5 shrink-0 text-right">{i + 1}</span>
+                    <div key={i} className="flex items-start gap-3 px-4 py-2.5">
+                      <span className="text-xs text-muted-foreground w-5 shrink-0 text-right pt-0.5">{i + 1}</span>
                       {s.isHero ? (
-                        <span className="text-[9px] font-semibold uppercase tracking-widest bg-sky-500/20 text-sky-400 border border-sky-500/30 rounded px-1.5 py-0.5 shrink-0">
+                        <span className="text-[9px] font-semibold uppercase tracking-widest bg-sky-500/20 text-sky-400 border border-sky-500/30 rounded px-1.5 py-0.5 shrink-0 mt-0.5">
                           Hero
                         </span>
                       ) : (
-                        <span className="text-[9px] font-semibold uppercase tracking-widest bg-muted/40 text-muted-foreground rounded px-1.5 py-0.5 shrink-0">
+                        <span className="text-[9px] font-semibold uppercase tracking-widest bg-muted/40 text-muted-foreground rounded px-1.5 py-0.5 shrink-0 mt-0.5">
                           Body
                         </span>
                       )}
-                      <span className="text-sm text-foreground/80 truncate">{s.text}</span>
+                      <div className="min-w-0">
+                        <span className="text-sm text-foreground/80 truncate block">{s.text}</span>
+                        {s.subtitle && (
+                          <span className="text-xs text-muted-foreground truncate block mt-0.5 italic">{s.subtitle}</span>
+                        )}
+                      </div>
                     </div>
                   ))}
                   {slides.length > 30 && (
