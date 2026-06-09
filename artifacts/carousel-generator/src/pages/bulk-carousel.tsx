@@ -593,6 +593,7 @@ export default function BulkCarousel() {
     Papa.parse<Record<string, string>>(file, {
       header: true,
       skipEmptyLines: true,
+      delimiter: ",",
       complete: (result) => {
         if (!result.data.length) { setCsvError("CSV is empty."); return; }
         const parsedKeys = Object.keys(result.data[0] || {}).map(k => k.trim());
