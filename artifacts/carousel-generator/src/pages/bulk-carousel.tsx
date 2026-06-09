@@ -693,6 +693,7 @@ export default function BulkCarousel() {
   // Upload state
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvError, setCsvError] = useState<string | null>(null);
   const [csvAttempted, setCsvAttempted] = useState(false);
   const [coverFiles, setCoverFiles] = useState<File[]>([]);
@@ -744,7 +745,7 @@ export default function BulkCarousel() {
   const handleCsvDrop = (e: React.DragEvent) => {
     e.preventDefault(); setCsvDrag(false);
     const file = Array.from(e.dataTransfer.files).find(f => f.name.endsWith(".csv"));
-    if (file) { setCsvAttempted(true); parseCsv(file); } else toast.error("Drop a CSV file.");
+    if (file) { setCsvFile(file); setCsvAttempted(true); parseCsv(file); } else toast.error("Drop a CSV file.");
   };
 
   // ── Image sets ───────────────────────────────────────────────────────────────
@@ -942,7 +943,7 @@ export default function BulkCarousel() {
         </div>
         <div className="flex gap-3">
           <Button variant="outline" asChild><Link href="/scheduler">View queue</Link></Button>
-          <Button onClick={() => { setCsvRows([]); setCoverFiles([]); setBodyFiles([]); setItems([]); setSelectedPresetId(null); setCsvError(null); setCsvAttempted(false); setPhase("upload"); }}>
+          <Button onClick={() => { setCsvRows([]); setCoverFiles([]); setBodyFiles([]); setItems([]); setSelectedPresetId(null); setCsvFile(null); setCsvError(null); setCsvAttempted(false); setPhase("upload"); }}>
             Start again
           </Button>
         </div>
@@ -1209,8 +1210,8 @@ export default function BulkCarousel() {
               </>
             )}
           </div>
-          <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={e => { if (e.target.files?.[0]) { setCsvAttempted(true); parseCsv(e.target.files[0]); } e.target.value = ""; }} />
-          {csvAttempted && csvError && <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-2">{csvError}</p>}
+          <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={e => { if (e.target.files?.[0]) { setCsvFile(e.target.files[0]); setCsvAttempted(true); parseCsv(e.target.files[0]); } e.target.value = ""; }} />
+          {csvFile !== null && csvAttempted && csvError && <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-2">{csvError}</p>}
         </section>
 
         {/* Step 3: Images */}
