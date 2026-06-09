@@ -112,22 +112,9 @@ function hexToRgb(hex: string): [number, number, number] {
   return [parseInt(h.slice(0,2),16)||0, parseInt(h.slice(2,4),16)||0, parseInt(h.slice(4,6),16)||0];
 }
 
-// Parse |pipe| markers: returns heroText (piped words) and subText (surrounding text)
-function parseHeroSub(hookText: string): { heroText: string; subText: string } {
-  const parts = hookText.split(/\|([^|]+)\|/);
-  const hero = parts.filter((_, i) => i % 2 === 1).join(" ").trim().toUpperCase();
-  const sub  = parts.filter((_, i) => i % 2 === 0).map(p => p.trim()).filter(Boolean).join(" ").trim();
-  return { heroText: hero || hookText.replace(/\|([^|]+)\|/g, "$1").toUpperCase(), subText: sub };
+function stripPipes(t: string): string {
+  return t.replace(/\|([^|]+)\|/g, "$1");
 }
-
-// Slide 1 hero-layout constants
-const S1_HERO_SIZE   = Math.round(H * 0.19);
-const S1_SUB_SIZE    = Math.round(H * 0.045);
-const S1_HERO_LINE_H = Math.round(S1_HERO_SIZE * 1.05);
-const S1_SUB_LINE_H  = Math.round(S1_SUB_SIZE  * 1.2);
-const S1_BOTTOM_PAD  = 80;
-const S1_BASE_GAP    = 32;
-const S1_PAD_X       = 90;
 
 function wrapCanvas(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
   const words = text.split(" ");
@@ -206,40 +193,44 @@ function renderSlideCanvas(
     ctx.shadowOffsetY = 3;
 
     if (slideNum === 1) {
-      // ── New bottom-anchored hero layout ─────────────────────────────────────
-      const hookText = blocks.find(b => b.id === "hook")?.text ?? "";
-      const subColText = blocks.find(b => b.id === "subtitle")?.text ?? "";
-      const { heroText, subText: hookSub } = parseHeroSub(hookText);
-      // Subtitle = subtitle column + non-piped surrounding text from hook
-      const fullSub = [subColText, hookSub].filter(Boolean).join(" ").trim();
+      // ── Slide 1: hook (upper) then subtitle (below) ──────────────────────────
+      const hookText = stripPipes(blocks.find(b => b.id === "hook")?.text ?? "").trim();
+      const subText  = stripPipes(blocks.find(b => b.id === "subtitle")?.text ?? "").trim();
 
-      ctx.font = `700 ${S1_HERO_SIZE}px 'Bebas Neue', sans-serif`;
-      const heroLines = heroText ? wrapCanvas(ctx, heroText, W - S1_PAD_X * 2) : [];
+      const HOOK_SIZE   = 108;
+      const HOOK_LINE_H = Math.round(HOOK_SIZE * 1.10);
+      const SUB_SIZE    = 44;
+      const SUB_LINE_H  = Math.round(SUB_SIZE  * 1.40);
+      const PAD_X       = 90;
+      const HOOK_Y      = Math.round(H * 0.38);  // center of first hook line
+      const BLOCK_GAP   = Math.round(lineSpacing * 48);
 
-      ctx.font = `400 ${S1_SUB_SIZE}px 'Bebas Neue', sans-serif`;
-      const subLines  = fullSub ? wrapCanvas(ctx, fullSub.toUpperCase(), W - S1_PAD_X * 2) : [];
+      ctx.textBaseline = "middle";
 
-      const heroH = heroLines.length * S1_HERO_LINE_H;
-      const subH  = subLines.length  * S1_SUB_LINE_H;
-      const gap   = Math.round(lineSpacing * S1_BASE_GAP);
+      ctx.font = `700 ${HOOK_SIZE}px 'Bebas Neue', sans-serif`;
+      const hookLines = hookText ? wrapCanvas(ctx, hookText.toUpperCase(), W - PAD_X * 2) : [];
 
-      const heroStartY = H - S1_BOTTOM_PAD - heroH;
-      const subStartY  = heroStartY - gap - subH;
+      ctx.font = `italic 400 ${SUB_SIZE}px 'Prata', serif`;
+      const subLines  = subText  ? wrapCanvas(ctx, subText, W - PAD_X * 2) : [];
 
-      // Subtitle — smaller Bebas Neue in accent colour
-      if (subLines.length > 0) {
-        ctx.font      = `400 ${S1_SUB_SIZE}px 'Bebas Neue', sans-serif`;
-        ctx.fillStyle = accentColor;
-        let y = subStartY;
-        for (const line of subLines) { ctx.fillText(line, W / 2, y); y += S1_SUB_LINE_H; }
+      // Hook — upper portion, white
+      if (hookLines.length > 0) {
+        ctx.font      = `700 ${HOOK_SIZE}px 'Bebas Neue', sans-serif`;
+        ctx.fillStyle = "#ffffff";
+        let y = HOOK_Y;
+        for (const line of hookLines) { ctx.fillText(line, W / 2, y); y += HOOK_LINE_H; }
       }
 
-      // Hero word — large Bebas Neue, always white
-      if (heroLines.length > 0) {
-        ctx.font      = `700 ${S1_HERO_SIZE}px 'Bebas Neue', sans-serif`;
-        ctx.fillStyle = "#ffffff";
-        let y = heroStartY;
-        for (const line of heroLines) { ctx.fillText(line, W / 2, y); y += S1_HERO_LINE_H; }
+      // Subtitle — directly below hook with a clear gap, accent colour
+      if (subLines.length > 0) {
+        const hookBottom = hookLines.length > 0
+          ? HOOK_Y + (hookLines.length - 1) * HOOK_LINE_H + HOOK_SIZE / 2
+          : Math.round(H * 0.45);
+        const subY = hookBottom + BLOCK_GAP + SUB_SIZE / 2;
+        ctx.font      = `italic 400 ${SUB_SIZE}px 'Prata', serif`;
+        ctx.fillStyle = accentColor;
+        let y = subY;
+        for (const line of subLines) { ctx.fillText(line, W / 2, y); y += SUB_LINE_H; }
       }
 
     } else {
@@ -251,7 +242,7 @@ function renderSlideCanvas(
         if (!block.text.trim()) continue;
         const st = BLOCK_STYLE[block.id];
         ctx.font = `${st.size}px ${st.font}`;
-        const lines = wrapCanvas(ctx, block.text, st.maxW);
+        const lines = wrapCanvas(ctx, stripPipes(block.text), st.maxW);
         const totalH = lines.length * st.size * st.lineH;
         const cx = block.x * W;
         let y = block.y * H - totalH / 2 + (st.size * st.lineH) / 2;
