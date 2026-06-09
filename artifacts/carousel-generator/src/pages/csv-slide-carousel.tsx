@@ -23,7 +23,7 @@ const W = 1080;
 const H = 1440;
 const SCALE = 2;
 
-const CAROUSEL_SIZE = 5;
+const CAROUSEL_SIZE = 4;
 
 const HERO_SIZE  = 110;
 const BODY_SIZE  = 50;
@@ -193,6 +193,9 @@ function renderSlide(slide: SlideData, preset: ClientPreset, logoImg: HTMLImageE
     for (let i = 0; i < renderedSegs.length; i++) {
       const seg = renderedSegs[i];
       ctx.font = seg.font;
+      ctx.fillStyle = seg.isHero
+        ? (preset.cornerColor || "#d4af37")
+        : (preset.textColor || "#ffffff");
       for (const line of seg.lines) {
         ctx.fillText(line, W / 2, y);
         y += seg.lineH;
@@ -341,16 +344,25 @@ export default function CsvSlideCarousel() {
         const dataRows = rows.slice(1);
         if (!dataRows.length) { setCsvError("No data rows after the header"); return; }
         const parsed: SlideData[] = dataRows.flatMap(row => {
-          const rawText = (Array.isArray(row) ? row[0] : String(row)).trim();
-          if (!rawText) return [];
-          const col1    = Array.isArray(row) ? (row[1] ?? "").trim() : "";
-          const isHero  = /\|[^|]+\|/.test(rawText);
-          return [{
-            rawText,
-            text:     rawText.replace(/\|([^|]+)\|/g, "$1"),
-            isHero,
-            subtitle: col1 || undefined,
-          }];
+          const cols = Array.isArray(row)
+            ? [row[0] ?? "", row[1] ?? "", row[2] ?? "", row[3] ?? ""].map(c => String(c).trim())
+            : [String(row).trim(), "", "", ""];
+          if (!cols[0]) return [];
+          const slides: SlideData[] = [];
+          // Slide 1 — hook: pipe markers parsed into hero/body segments
+          const hook = cols[0];
+          slides.push({
+            rawText: hook,
+            text:    hook.replace(/\|([^|]+)\|/g, "$1"),
+            isHero:  /\|[^|]+\|/.test(hook),
+          });
+          // Slides 2-4 — body / cta: plain Prata, no pipe parsing
+          for (let c = 1; c <= 3; c++) {
+            if (cols[c]) {
+              slides.push({ rawText: cols[c], text: cols[c], isHero: false });
+            }
+          }
+          return slides;
         });
         if (!parsed.length) { setCsvError("No valid text rows found"); return; }
         setSlides(parsed);
@@ -486,15 +498,20 @@ export default function CsvSlideCarousel() {
             <div>
               <h2 className="text-2xl font-bold mb-1">CSV Slide Carousel</h2>
               <p className="text-muted-foreground text-sm leading-relaxed max-w-xl">
-                Upload a CSV and photos — every 5 rows become one carousel. 30 rows gives you 6 carousels of 5 slides each. Wrap a word or phrase in{" "}
+                Each row in your CSV becomes one carousel of 4 slides. 4 columns per row:{" "}
+                <span className="text-foreground/70 font-medium">hook, body, body, CTA</span>.
+                Wrap words in{" "}
                 <code className="bg-muted/60 px-1.5 py-0.5 rounded text-xs font-mono">|pipes|</code>{" "}
-                to make it big Bebas Neue. Everything else is smaller Prata. Add a second column for a subtitle.
+                on the hook column — piped words render big in Bebas Neue, everything else in Prata.
               </p>
-              <div className="mt-3 bg-muted/30 border border-border/30 rounded-lg px-4 py-3 text-xs font-mono text-muted-foreground space-y-1 max-w-md">
-                <div>text,subtitle</div>
-                <div>She said <span className="text-sky-400">|YES|</span> to the treatment,optional subtitle here</div>
-                <div>This is a plain body slide,</div>
-                <div>Your skin can <span className="text-sky-400">|HEAL|</span>,given the right conditions</div>
+              <div className="mt-3 bg-muted/30 border border-border/30 rounded-lg px-4 py-3 text-xs font-mono text-muted-foreground space-y-2 max-w-lg">
+                <div className="text-muted-foreground/60">slide1_hook,slide2_body,slide3_body,slide4_cta</div>
+                <div>
+                  <span className="text-sky-400">|HEAL|</span> your skin,Your skin repairs naturally,This treatment supports that process,Book your appointment
+                </div>
+                <div>
+                  Say <span className="text-sky-400">|YES|</span> to yourself,Small changes add up,You deserve to feel good,Book a free consultation
+                </div>
               </div>
             </div>
 
