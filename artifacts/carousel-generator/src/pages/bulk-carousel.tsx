@@ -694,6 +694,7 @@ export default function BulkCarousel() {
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
   const [csvError, setCsvError] = useState<string | null>(null);
+  const [csvAttempted, setCsvAttempted] = useState(false);
   const [coverFiles, setCoverFiles] = useState<File[]>([]);
   const [bodyFiles, setBodyFiles] = useState<File[]>([]);
   const [csvDrag, setCsvDrag] = useState(false);
@@ -724,6 +725,7 @@ export default function BulkCarousel() {
   // ── CSV ──────────────────────────────────────────────────────────────────────
 
   const parseCsv = useCallback((file: File) => {
+    setCsvAttempted(true);
     Papa.parse<Record<string, string>>(file, {
       header: true,
       skipEmptyLines: true,
@@ -941,7 +943,7 @@ export default function BulkCarousel() {
         </div>
         <div className="flex gap-3">
           <Button variant="outline" asChild><Link href="/scheduler">View queue</Link></Button>
-          <Button onClick={() => { setCsvRows([]); setCoverFiles([]); setBodyFiles([]); setItems([]); setSelectedPresetId(null); setPhase("upload"); }}>
+          <Button onClick={() => { setCsvRows([]); setCoverFiles([]); setBodyFiles([]); setItems([]); setSelectedPresetId(null); setCsvError(null); setCsvAttempted(false); setPhase("upload"); }}>
             Start again
           </Button>
         </div>
@@ -1209,7 +1211,7 @@ export default function BulkCarousel() {
             )}
           </div>
           <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={e => { if (e.target.files?.[0]) parseCsv(e.target.files[0]); e.target.value = ""; }} />
-          {csvError && <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-2">{csvError}</p>}
+          {csvAttempted && csvError && <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-2">{csvError}</p>}
         </section>
 
         {/* Step 3: Images */}
