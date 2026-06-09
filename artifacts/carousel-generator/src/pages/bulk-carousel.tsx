@@ -118,6 +118,43 @@ function stripPipes(t: string): string {
   return t.replace(/\|([^|]+)\|/g, "$1");
 }
 
+/** Draw a single canvas line, rendering the hero word (between pipes) in heroColor. */
+function renderHookLine(
+  ctx: CanvasRenderingContext2D,
+  line: string,           // already uppercased, pipes stripped
+  heroWord: string | null, // already uppercased
+  cx: number,
+  y: number,
+  normalColor: string,
+  heroColor: string,
+) {
+  if (!heroWord) {
+    ctx.fillStyle = normalColor;
+    ctx.fillText(line, cx, y);
+    return;
+  }
+  const idx = line.indexOf(heroWord);
+  if (idx === -1) {
+    ctx.fillStyle = normalColor;
+    ctx.fillText(line, cx, y);
+    return;
+  }
+  const before  = line.slice(0, idx);
+  const hero    = line.slice(idx, idx + heroWord.length);
+  const after   = line.slice(idx + heroWord.length);
+  const totalW  = ctx.measureText(line).width;
+  const startX  = cx - totalW / 2;
+  const beforeW = ctx.measureText(before).width;
+  const heroW   = ctx.measureText(hero).width;
+  const saved   = ctx.textAlign as CanvasTextAlign;
+  ctx.textAlign = "left";
+  if (before) { ctx.fillStyle = normalColor; ctx.fillText(before, startX, y); }
+  ctx.fillStyle = heroColor;
+  ctx.fillText(hero, startX + beforeW, y);
+  if (after)  { ctx.fillStyle = normalColor; ctx.fillText(after,  startX + beforeW + heroW, y); }
+  ctx.textAlign = saved;
+}
+
 function wrapCanvas(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
   const words = text.split(" ");
   const lines: string[] = [];
@@ -216,7 +253,11 @@ function renderSlideCanvas(
       ctx.textAlign    = "center";
       ctx.textBaseline = "top";
 
-      // Measure wrapped lines (after stripping pipes)
+      // Extract hero word (text wrapped in |pipes|) for accent-colour rendering
+      const heroMatch = hookRaw.match(/\|([^|]+)\|/);
+      const heroWord  = heroMatch ? heroMatch[1].toUpperCase() : null;
+
+      // Measure wrapped lines (pipes stripped, uppercased)
       ctx.font = `700 ${HOOK_SIZE}px 'Bebas Neue', sans-serif`;
       const hookLines = hookRaw.trim()
         ? wrapCanvas(ctx, stripPipes(hookRaw).trim().toUpperCase(), W - PAD_X * 2)
@@ -227,14 +268,14 @@ function renderSlideCanvas(
         ? wrapCanvas(ctx, stripPipes(subRaw).trim(), W - PAD_X * 2)
         : [];
 
-      // Hook — grows upward from just above subtitle anchor, white
+      // Hook — grows upward from just above subtitle anchor
+      // Hero word rendered in accent colour; rest in white
       if (hookLines.length > 0) {
         const hookStartY = SUB_TOP - GAP - hookLines.length * HOOK_LINE_H;
-        ctx.font      = `700 ${HOOK_SIZE}px 'Bebas Neue', sans-serif`;
-        ctx.fillStyle = "#ffffff";
+        ctx.font = `700 ${HOOK_SIZE}px 'Bebas Neue', sans-serif`;
         let y = hookStartY;
         for (const line of hookLines) {
-          ctx.fillText(stripPipes(line), W / 2, y);
+          renderHookLine(ctx, line, heroWord, W / 2, y, "#ffffff", accentColor);
           y += HOOK_LINE_H;
         }
       }
@@ -561,7 +602,17 @@ function SlideEditorModal({ item, preset, logoImg, onSave, onClose }: EditorProp
                         zIndex: 11,
                       }}
                     >
-                      {block.id === "hook" ? block.text.replace(/\|([^|]+)\|/g, "$1").toUpperCase() : block.text}
+                      {block.id === "hook"
+                        ? (() => {
+                            const ac = preset.cornerColor || "#d4af37";
+                            return block.text.split(/(\|[^|]+\|)/).map((part, i) => {
+                              const m = part.match(/^\|([^|]+)\|$/);
+                              return m
+                                ? <span key={i} style={{ color: ac }}>{m[1].toUpperCase()}</span>
+                                : part.toUpperCase();
+                            });
+                          })()
+                        : block.text}
                     </span>
                   )}
 
@@ -1250,7 +1301,7 @@ export default function BulkCarousel() {
                     {csvRows.map((row, i) => (
                       <tr key={i} className="hover:bg-muted/10">
                         <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
-                        <td className="px-3 py-2 font-medium max-w-[160px] truncate">{row.slide1_hook}</td>
+                        <td className="px-3 py-2 font-medium max-w-[160px] truncate">{stripPipes(row.slide1_hook)}</td>
                         <td className="px-3 py-2 text-muted-foreground max-w-[140px] truncate">{row.slide1_subtitle}</td>
                         <td className="px-3 py-2 text-muted-foreground max-w-[120px] truncate">{row.slide4_cta}</td>
                         <td className="px-3 py-2 text-center">
