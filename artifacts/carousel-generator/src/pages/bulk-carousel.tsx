@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, Upload, FileText, Download, Loader2, CalendarClock,
@@ -112,6 +112,23 @@ function hexToRgb(hex: string): [number, number, number] {
   return [parseInt(h.slice(0,2),16)||0, parseInt(h.slice(2,4),16)||0, parseInt(h.slice(4,6),16)||0];
 }
 
+// Parse |pipe| markers: returns heroText (piped words) and subText (surrounding text)
+function parseHeroSub(hookText: string): { heroText: string; subText: string } {
+  const parts = hookText.split(/\|([^|]+)\|/);
+  const hero = parts.filter((_, i) => i % 2 === 1).join(" ").trim().toUpperCase();
+  const sub  = parts.filter((_, i) => i % 2 === 0).map(p => p.trim()).filter(Boolean).join(" ").trim();
+  return { heroText: hero || hookText.replace(/\|([^|]+)\|/g, "$1").toUpperCase(), subText: sub };
+}
+
+// Slide 1 hero-layout constants
+const S1_HERO_SIZE   = Math.round(H * 0.19);
+const S1_SUB_SIZE    = Math.round(H * 0.045);
+const S1_HERO_LINE_H = Math.round(S1_HERO_SIZE * 1.05);
+const S1_SUB_LINE_H  = Math.round(S1_SUB_SIZE  * 1.2);
+const S1_BOTTOM_PAD  = 80;
+const S1_BASE_GAP    = 32;
+const S1_PAD_X       = 90;
+
 function wrapCanvas(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
   const words = text.split(" ");
   const lines: string[] = [];
@@ -141,7 +158,8 @@ function renderSlideCanvas(
   logoImg: HTMLImageElement | null,
   preset: ClientPreset,
   scale = SCALE,
-  bgOnly = false
+  bgOnly = false,
+  lineSpacing = 1.2
 ): string {
   const canvas = document.createElement("canvas");
   canvas.width = W * scale;
@@ -152,19 +170,17 @@ function renderSlideCanvas(
   const pageColor = preset.pageColor || "#1a1a2e";
   const overlayColor = preset.overlayColor || "rgba(0,0,0,0.55)";
   const textColor = preset.textColor || "#ffffff";
+  const accentColor = preset.cornerColor || "#d4af37";
 
-  // Background
+  // Background fill
   ctx.fillStyle = pageColor;
   ctx.fillRect(0, 0, W, H);
 
-  // Image
+  // Image layer
   const img = slideNum === 1 ? coverImg : bodyImg;
   if (img) {
     if (slideNum === 1) {
-      drawCover(ctx, img, 0.42);
-      const [r,g,b] = hexToRgb(pageColor);
-      ctx.fillStyle = `rgba(${r},${g},${b},0.50)`;
-      ctx.fillRect(0, 0, W, H);
+      drawCover(ctx, img, 1.0);
     } else {
       drawCover(ctx, img, 1.0);
       ctx.fillStyle = overlayColor;
@@ -172,41 +188,88 @@ function renderSlideCanvas(
     }
   }
 
+  // Slide 1 gets a bottom gradient; slides 2-4 get nothing extra (overlay already applied above)
+  if (slideNum === 1) {
+    const grad = ctx.createLinearGradient(0, H * 0.5, 0, H);
+    grad.addColorStop(0, "rgba(0,0,0,0)");
+    grad.addColorStop(1, "rgba(0,0,0,0.6)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+  }
+
   if (!bgOnly) {
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = textColor;
-    ctx.shadowColor = "rgba(0,0,0,0.75)";
-    ctx.shadowBlur = 16;
+    ctx.textAlign    = "center";
+    ctx.textBaseline = "top";
+    ctx.shadowColor  = "rgba(0,0,0,0.75)";
+    ctx.shadowBlur   = 18;
+    ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 3;
 
-    const activeIds = SLIDE_BLOCK_IDS[slideNum];
-    for (const block of blocks.filter(b => activeIds.includes(b.id))) {
-      if (!block.text.trim()) continue;
-      const st = BLOCK_STYLE[block.id];
-      ctx.font = `${st.size}px ${st.font}`;
-      const rawText = block.id === "hook" ? block.text.toUpperCase() : block.text;
-      const lines = wrapCanvas(ctx, rawText, st.maxW);
-      const totalH = lines.length * st.size * st.lineH;
-      const cx = block.x * W;
-      let y = block.y * H - totalH / 2 + (st.size * st.lineH) / 2;
-      for (const line of lines) {
-        ctx.fillText(line, cx, y);
-        y += st.size * st.lineH;
+    if (slideNum === 1) {
+      // ── New bottom-anchored hero layout ─────────────────────────────────────
+      const hookText = blocks.find(b => b.id === "hook")?.text ?? "";
+      const subColText = blocks.find(b => b.id === "subtitle")?.text ?? "";
+      const { heroText, subText: hookSub } = parseHeroSub(hookText);
+      // Subtitle = subtitle column + non-piped surrounding text from hook
+      const fullSub = [subColText, hookSub].filter(Boolean).join(" ").trim();
+
+      ctx.font = `700 ${S1_HERO_SIZE}px 'Bebas Neue', sans-serif`;
+      const heroLines = heroText ? wrapCanvas(ctx, heroText, W - S1_PAD_X * 2) : [];
+
+      ctx.font = `400 ${S1_SUB_SIZE}px 'Bebas Neue', sans-serif`;
+      const subLines  = fullSub ? wrapCanvas(ctx, fullSub.toUpperCase(), W - S1_PAD_X * 2) : [];
+
+      const heroH = heroLines.length * S1_HERO_LINE_H;
+      const subH  = subLines.length  * S1_SUB_LINE_H;
+      const gap   = Math.round(lineSpacing * S1_BASE_GAP);
+
+      const heroStartY = H - S1_BOTTOM_PAD - heroH;
+      const subStartY  = heroStartY - gap - subH;
+
+      // Subtitle — smaller Bebas Neue in accent colour
+      if (subLines.length > 0) {
+        ctx.font      = `400 ${S1_SUB_SIZE}px 'Bebas Neue', sans-serif`;
+        ctx.fillStyle = accentColor;
+        let y = subStartY;
+        for (const line of subLines) { ctx.fillText(line, W / 2, y); y += S1_SUB_LINE_H; }
+      }
+
+      // Hero word — large Bebas Neue in white
+      if (heroLines.length > 0) {
+        ctx.font      = `700 ${S1_HERO_SIZE}px 'Bebas Neue', sans-serif`;
+        ctx.fillStyle = textColor;
+        let y = heroStartY;
+        for (const line of heroLines) { ctx.fillText(line, W / 2, y); y += S1_HERO_LINE_H; }
+      }
+
+    } else {
+      // ── Slides 2-4 unchanged ────────────────────────────────────────────────
+      ctx.fillStyle = textColor;
+      ctx.textBaseline = "middle";
+      const activeIds = SLIDE_BLOCK_IDS[slideNum];
+      for (const block of blocks.filter(b => activeIds.includes(b.id))) {
+        if (!block.text.trim()) continue;
+        const st = BLOCK_STYLE[block.id];
+        ctx.font = `${st.size}px ${st.font}`;
+        const lines = wrapCanvas(ctx, block.text, st.maxW);
+        const totalH = lines.length * st.size * st.lineH;
+        const cx = block.x * W;
+        let y = block.y * H - totalH / 2 + (st.size * st.lineH) / 2;
+        for (const line of lines) { ctx.fillText(line, cx, y); y += st.size * st.lineH; }
       }
     }
   }
 
-  // Logo
+  // Logo — top-left
   ctx.shadowColor = "transparent";
-  ctx.shadowBlur = 0;
+  ctx.shadowBlur  = 0;
   if (logoImg) {
     const MAX = 110, PAD = 44;
     const asp = logoImg.width / logoImg.height;
     const lw = asp >= 1 ? MAX : MAX * asp;
     const lh = asp >= 1 ? MAX / asp : MAX;
     ctx.globalAlpha = 0.92;
-    ctx.drawImage(logoImg, W - lw - PAD, H - lh - PAD, lw, lh);
+    ctx.drawImage(logoImg, PAD, PAD, lw, lh);
     ctx.globalAlpha = 1;
   }
 
@@ -216,10 +279,11 @@ function renderSlideCanvas(
 function renderAllThumbs(
   item: Pick<CarouselItem, "blocks" | "coverImg" | "bodyImg">,
   logoImg: HTMLImageElement | null,
-  preset: ClientPreset
+  preset: ClientPreset,
+  lineSpacing = 1.2
 ): string[] {
   return ([1,2,3,4] as const).map(n =>
-    renderSlideCanvas(n, item.blocks, item.coverImg, item.bodyImg, logoImg, preset)
+    renderSlideCanvas(n, item.blocks, item.coverImg, item.bodyImg, logoImg, preset, SCALE, false, lineSpacing)
   );
 }
 
@@ -418,7 +482,7 @@ function SlideEditorModal({ item, preset, logoImg, onSave, onClose }: EditorProp
                         zIndex: 11,
                       }}
                     >
-                      {block.id === "hook" ? block.text.toUpperCase() : block.text}
+                      {block.id === "hook" ? block.text.replace(/\|([^|]+)\|/g, "$1").toUpperCase() : block.text}
                     </span>
                   )}
 
@@ -504,6 +568,9 @@ export default function BulkCarousel() {
   const [renderProgress, setRenderProgress] = useState(0);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const logoImgRef = useRef<HTMLImageElement | null>(null);
+  const [lineSpacing, setLineSpacing] = useState(1.2);
+  const lineSpacingRef = useRef(1.2);
+  useEffect(() => { lineSpacingRef.current = lineSpacing; }, [lineSpacing]);
 
   // Schedule state
   const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
@@ -577,7 +644,7 @@ export default function BulkCarousel() {
         if (bodyFiles[i])  try { bodyImg  = await loadImg(URL.createObjectURL(bodyFiles[i]));  } catch {}
 
         const blocks = makeBlocks(row);
-        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset);
+        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, lineSpacing);
         rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.slide1_hook, blocks, coverImg, bodyImg, thumbs });
         setRenderProgress(Math.round(((i + 1) / csvRows.length) * 100));
       }
@@ -597,10 +664,24 @@ export default function BulkCarousel() {
     if (!selectedPreset) return;
     setItems(prev => prev.map(item => {
       if (item.id !== id) return item;
-      const thumbs = renderAllThumbs({ blocks: newBlocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, logoImgRef.current, selectedPreset);
+      const thumbs = renderAllThumbs({ blocks: newBlocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, logoImgRef.current, selectedPreset, lineSpacingRef.current);
       return { ...item, blocks: newBlocks, thumbs };
     }));
   };
+
+  // Live re-render slide 1 thumbnails when line spacing changes
+  useEffect(() => {
+    if (phase !== "preview" || !selectedPreset || !items.length) return;
+    const id = setTimeout(() => {
+      const ls = lineSpacingRef.current;
+      setItems(prev => prev.map(item => {
+        const thumb1 = renderSlideCanvas(1, item.blocks, item.coverImg, item.bodyImg, logoImgRef.current, selectedPreset!, SCALE, false, ls);
+        return { ...item, thumbs: [thumb1, ...item.thumbs.slice(1)] };
+      }));
+    }, 180);
+    return () => clearTimeout(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lineSpacing]);
 
   // ── Export ───────────────────────────────────────────────────────────────────
 
@@ -837,6 +918,20 @@ export default function BulkCarousel() {
           </button>
           <h1 className="font-bold text-lg">Preview</h1>
           <span className="text-muted-foreground text-sm ml-1">{items.length} carousel{items.length !== 1 ? "s" : ""}</span>
+          <div className="flex items-center gap-2 ml-4 shrink-0">
+            <Label className="text-xs text-muted-foreground whitespace-nowrap">
+              Line spacing <span className="font-mono text-foreground/70 ml-1">{lineSpacing.toFixed(1)}</span>
+            </Label>
+            <input
+              type="range"
+              min={0.8}
+              max={2.0}
+              step={0.1}
+              value={lineSpacing}
+              onChange={e => setLineSpacing(Number(e.target.value))}
+              className="w-28 accent-sky-500"
+            />
+          </div>
           <div className="ml-auto flex gap-2">
             <Button variant="outline" size="sm" onClick={downloadAll}>
               <Download className="w-4 h-4 mr-2" />Download All
