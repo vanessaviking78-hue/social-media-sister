@@ -23,6 +23,8 @@ const W = 1080;
 const H = 1440;
 const SCALE = 2;
 
+const CAROUSEL_SIZE = 5;
+
 const HERO_SIZE  = 110;
 const BODY_SIZE  = 50;
 const SUB_SIZE   = 36;
@@ -264,6 +266,12 @@ async function loadPresetLogo(preset: ClientPreset): Promise<HTMLImageElement | 
   try { return await loadImg(preset.logoUrl); } catch { return null; }
 }
 
+function chunkSlides(arr: SlideData[], size: number): SlideData[][] {
+  const out: SlideData[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
 function SlideListRow({ slide, index }: { slide: SlideData; index: number }) {
   const parts = slide.rawText.split(/\|([^|]+)\|/);
   return (
@@ -312,7 +320,7 @@ export default function CsvSlideCarousel() {
   const [exporting,        setExporting]        = useState(false);
   const [scheduling,       setScheduling]       = useState(false);
   const [showSchedule,     setShowSchedule]     = useState(false);
-  const [scheduleUrls,     setScheduleUrls]     = useState<string[]>([]);
+  const [scheduleUrls,     setScheduleUrls]     = useState<string[][]>([]);
 
   const [bgPhotoFiles, setBgPhotoFiles] = useState<File[]>([]);
   const [bgPhotoUrls,  setBgPhotoUrls]  = useState<string[]>([]);
@@ -409,15 +417,21 @@ export default function CsvSlideCarousel() {
       await warmFonts();
       const [logoImg, bgImgs] = await Promise.all([loadPresetLogo(selectedPreset), loadBgImgs()]);
       const zip = new JSZip();
-      for (let i = 0; i < slides.length; i++) {
-        const png = renderSlide(slides[i], selectedPreset, logoImg, SCALE, bgImgs[i] ?? bgImgs[0] ?? null);
-        const b64 = png.split(",")[1];
-        const tag = slides[i].isHero ? "hero" : "slide";
-        zip.file(`${String(i + 1).padStart(3, "0")}-${tag}.png`, b64, { base64: true });
-      }
+      const carousels = chunkSlides(slides, CAROUSEL_SIZE);
+      let globalIdx = 0;
+      carousels.forEach((group, ci) => {
+        const folder = `carousel-${String(ci + 1).padStart(2, "0")}`;
+        group.forEach((slide, si) => {
+          const png = renderSlide(slide, selectedPreset, logoImg, SCALE, bgImgs[globalIdx] ?? bgImgs[bgImgs.length - 1] ?? null);
+          const b64 = png.split(",")[1];
+          const tag = slide.isHero ? "hero" : "slide";
+          zip.file(`${folder}/${String(si + 1).padStart(3, "0")}-${tag}.png`, b64, { base64: true });
+          globalIdx++;
+        });
+      });
       const blob = await zip.generateAsync({ type: "blob" });
       saveAs(blob, `csv-slides-${Date.now()}.zip`);
-      toast.success("ZIP downloaded");
+      toast.success(`${carousels.length} carousel${carousels.length !== 1 ? "s" : ""} downloaded`);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Export failed");
     } finally {
@@ -431,14 +445,19 @@ export default function CsvSlideCarousel() {
     try {
       await warmFonts();
       const [logoImg, bgImgs] = await Promise.all([loadPresetLogo(selectedPreset), loadBgImgs()]);
-      const dataUrls = slides.map((s, i) => renderSlide(s, selectedPreset, logoImg, SCALE, bgImgs[i] ?? bgImgs[0] ?? null));
-      const names    = slides.map((s, i) =>
-        `${String(i + 1).padStart(3, "0")}-${s.isHero ? "hero" : "slide"}.png`,
-      );
+      const carousels = chunkSlides(slides, CAROUSEL_SIZE);
       const toastId = toast.loading(`Uploading ${slides.length} image${slides.length !== 1 ? "s" : ""}…`);
-      const urls = await uploadDataUrls(dataUrls, names);
+      let globalIdx = 0;
+      const grouped: string[][] = [];
+      for (const group of carousels) {
+        const dataUrls = group.map(s => renderSlide(s, selectedPreset, logoImg, SCALE, bgImgs[globalIdx] ?? bgImgs[bgImgs.length - 1] ?? null));
+        const names = group.map((s, si) => `${String(si + 1).padStart(3, "0")}-${s.isHero ? "hero" : "slide"}.png`);
+        const urls = await uploadDataUrls(dataUrls, names);
+        grouped.push(urls);
+        globalIdx += group.length;
+      }
       toast.dismiss(toastId);
-      setScheduleUrls(urls);
+      setScheduleUrls(grouped);
       setShowSchedule(true);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Upload failed");
@@ -467,9 +486,9 @@ export default function CsvSlideCarousel() {
             <div>
               <h2 className="text-2xl font-bold mb-1">CSV Slide Carousel</h2>
               <p className="text-muted-foreground text-sm leading-relaxed max-w-xl">
-                Upload a CSV — each row becomes one branded slide. Wrap a word or phrase in{" "}
+                Upload a CSV and photos — every 5 rows become one carousel. 30 rows gives you 6 carousels of 5 slides each. Wrap a word or phrase in{" "}
                 <code className="bg-muted/60 px-1.5 py-0.5 rounded text-xs font-mono">|pipes|</code>{" "}
-                to make it big Bebas Neue. Everything else on that slide is smaller Prata. No pipes — plain Prata body slide. Add a second column for a subtitle line below.
+                to make it big Bebas Neue. Everything else is smaller Prata. Add a second column for a subtitle.
               </p>
               <div className="mt-3 bg-muted/30 border border-border/30 rounded-lg px-4 py-3 text-xs font-mono text-muted-foreground space-y-1 max-w-md">
                 <div>text,subtitle</div>
@@ -669,7 +688,7 @@ export default function CsvSlideCarousel() {
               <div>
                 <h2 className="text-2xl font-bold mb-1">Preview</h2>
                 <p className="text-muted-foreground text-sm">
-                  {slides.length} slide{slides.length !== 1 ? "s" : ""} · {selectedPreset?.name}
+                  {chunkSlides(slides, CAROUSEL_SIZE).length} carousel{chunkSlides(slides, CAROUSEL_SIZE).length !== 1 ? "s" : ""} · {slides.length} slides · {selectedPreset?.name}
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -695,7 +714,7 @@ export default function CsvSlideCarousel() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => selectedPreset && renderThumbs(selectedPreset, slides)}
+                  onClick={async () => { if (selectedPreset) { const bg = await loadBgImgs(); renderThumbs(selectedPreset, slides, bg); } }}
                   disabled={rendering || !selectedPreset}
                 >
                   {rendering
@@ -734,26 +753,62 @@ export default function CsvSlideCarousel() {
               </div>
             )}
 
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-              {thumbs.map((thumb, i) => (
-                <div key={i} className="relative rounded-lg overflow-hidden border border-border/30">
-                  <img
-                    src={thumb}
-                    alt={`Slide ${i + 1}`}
-                    className="w-full object-cover"
-                    style={{ aspectRatio: `${W}/${H}` }}
-                    draggable={false}
-                  />
-                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-2 py-1.5 bg-gradient-to-t from-black/70 to-transparent">
-                    <span className="text-[10px] text-white/70 font-medium">{i + 1}</span>
-                    {slides[i]?.isHero && (
-                      <span className="text-[9px] bg-sky-600 text-white px-1.5 py-0.5 rounded font-semibold uppercase tracking-wider">
-                        Hero
+            <div className="space-y-8">
+              {chunkSlides(slides, CAROUSEL_SIZE).map((group, ci) => {
+                const totalCarousels = chunkSlides(slides, CAROUSEL_SIZE).length;
+                const globalStart = ci * CAROUSEL_SIZE;
+                return (
+                  <div key={ci} className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                        Carousel {ci + 1} of {totalCarousels}
                       </span>
-                    )}
+                      <div className="h-px flex-1 bg-border/30" />
+                      <span className="text-[11px] text-muted-foreground/60">
+                        {group.length} slide{group.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="flex gap-3 overflow-x-auto pb-1">
+                      {group.map((slide, si) => {
+                        const globalI = globalStart + si;
+                        const thumb = thumbs[globalI];
+                        return (
+                          <div
+                            key={si}
+                            className="relative rounded-lg overflow-hidden border border-border/30 shrink-0"
+                            style={{ width: 120 }}
+                          >
+                            {thumb ? (
+                              <img
+                                src={thumb}
+                                alt={`Carousel ${ci + 1}, slide ${si + 1}`}
+                                className="w-full object-cover"
+                                style={{ aspectRatio: `${W}/${H}` }}
+                                draggable={false}
+                              />
+                            ) : (
+                              <div
+                                className="w-full bg-muted/30 flex items-center justify-center"
+                                style={{ aspectRatio: `${W}/${H}` }}
+                              >
+                                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-1.5 py-1 bg-gradient-to-t from-black/70 to-transparent">
+                              <span className="text-[10px] text-white/70 font-medium">{si + 1}</span>
+                              {slide.isHero && (
+                                <span className="text-[8px] bg-sky-600 text-white px-1 py-0.5 rounded font-semibold uppercase tracking-wider">
+                                  Hero
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -764,11 +819,11 @@ export default function CsvSlideCarousel() {
           presetId={selectedPreset.id}
           presetName={selectedPreset.name}
           postType="carousel"
-          posts={[{
-            title:     `CSV Slides · ${selectedPreset.name}`,
+          posts={scheduleUrls.map((urls, i) => ({
+            title:     `Carousel ${i + 1} of ${scheduleUrls.length} · ${selectedPreset.name}`,
             caption:   "",
-            imageUrls: scheduleUrls,
-          }]}
+            imageUrls: urls,
+          }))}
           onClose={() => setShowSchedule(false)}
           onSaved={() => setShowSchedule(false)}
           presets={presets.map(p => ({ id: p.id, name: p.name }))}
