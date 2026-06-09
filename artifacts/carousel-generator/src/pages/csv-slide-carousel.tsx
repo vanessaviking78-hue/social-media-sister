@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, FileText, Download, Loader2, CalendarClock, CheckCircle2, RefreshCw, ImageIcon,
@@ -25,14 +25,17 @@ const SCALE = 2;
 
 const CAROUSEL_SIZE = 4;
 
-const HERO_SIZE  = 110;
-const BODY_SIZE  = 50;
-const SUB_SIZE   = 36;
-const HERO_LINE_H = Math.round(HERO_SIZE * 1.08);
+const BODY_SIZE   = 50;
 const BODY_LINE_H = Math.round(BODY_SIZE * 1.55);
-const SUB_LINE_H  = Math.round(SUB_SIZE * 1.45);
-const SEG_GAP    = 28;
-const PAD        = 90;
+const PAD         = 90;
+
+// Slide 1 hero layout
+const S1_HERO_SIZE   = Math.round(H * 0.19);        // ~274 px — large hero word
+const S1_SUB_SIZE    = Math.round(H * 0.045);       // ~65 px  — subtitle above hero
+const S1_HERO_LINE_H = Math.round(S1_HERO_SIZE * 1.05);
+const S1_SUB_LINE_H  = Math.round(S1_SUB_SIZE  * 1.2);
+const S1_BOTTOM_PAD  = 80;
+const S1_BASE_GAP    = 32;
 
 type Segment = { text: string; isHero: boolean };
 type SlideData = { rawText: string; text: string; isHero: boolean; subtitle?: string };
@@ -117,7 +120,7 @@ function drawLogo(ctx: CanvasRenderingContext2D, logoImg: HTMLImageElement, posi
   ctx.globalAlpha = 1;
 }
 
-function renderSlide(slide: SlideData, preset: ClientPreset, logoImg: HTMLImageElement | null, scale = SCALE, bgImg: HTMLImageElement | null = null): string {
+function renderSlide(slide: SlideData, preset: ClientPreset, logoImg: HTMLImageElement | null, scale = SCALE, bgImg: HTMLImageElement | null = null, lineSpacing = 1.2): string {
   const canvas = document.createElement("canvas");
   canvas.width  = W * scale;
   canvas.height = H * scale;
@@ -136,85 +139,73 @@ function renderSlide(slide: SlideData, preset: ClientPreset, logoImg: HTMLImageE
     ctx.drawImage(bgImg, dx, dy, dw, dh);
   }
 
-  const overlay = parseOverlayColor(preset.overlayColor || "rgba(0,0,0,0.5)");
-  ctx.fillStyle = overlay;
-  ctx.fillRect(0, 0, W, H);
+  if (slide.isHero) {
+    // bottom gradient: transparent at mid-canvas → black 60% at bottom
+    const grad = ctx.createLinearGradient(0, H * 0.5, 0, H);
+    grad.addColorStop(0, "rgba(0,0,0,0)");
+    grad.addColorStop(1, "rgba(0,0,0,0.6)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+  } else {
+    const overlay = parseOverlayColor(preset.overlayColor || "rgba(0,0,0,0.5)");
+    ctx.fillStyle = overlay;
+    ctx.fillRect(0, 0, W, H);
+  }
 
   drawCornerDecoration(ctx, preset.cornerStyle || "none", preset.cornerColor || "#d4af37");
 
   ctx.textAlign    = "center";
   ctx.textBaseline = "top";
-  ctx.fillStyle    = preset.textColor || "#ffffff";
-  ctx.shadowColor  = "rgba(0,0,0,0.7)";
-  ctx.shadowBlur   = 16;
+  ctx.shadowColor  = "rgba(0,0,0,0.75)";
+  ctx.shadowBlur   = 18;
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 3;
 
   if (slide.isHero) {
     const segments = parseSegments(slide.rawText);
 
-    type RenderedSeg = { lines: string[]; isHero: boolean; lineH: number; size: number; font: string };
-    const renderedSegs: RenderedSeg[] = segments.map(seg => {
-      if (seg.isHero) {
-        ctx.font = `700 ${HERO_SIZE}px 'Bebas Neue', sans-serif`;
-        return {
-          lines: wrapText(ctx, seg.text.toUpperCase(), W - PAD * 2),
-          isHero: true,
-          lineH: HERO_LINE_H,
-          size: HERO_SIZE,
-          font: `700 ${HERO_SIZE}px 'Bebas Neue', sans-serif`,
-        };
-      } else {
-        ctx.font = `400 ${BODY_SIZE}px 'Prata', serif`;
-        return {
-          lines: wrapText(ctx, seg.text, W - PAD * 2),
-          isHero: false,
-          lineH: BODY_LINE_H,
-          size: BODY_SIZE,
-          font: `400 ${BODY_SIZE}px 'Prata', serif`,
-        };
-      }
-    });
+    // Separate piped (hero) words from surrounding (subtitle) text
+    const heroText = segments.filter(s => s.isHero).map(s => s.text.toUpperCase()).join(" ").trim();
+    const subText  = segments.filter(s => !s.isHero).map(s => s.text.trim()).filter(Boolean).join(" ").trim();
 
-    let totalH = renderedSegs.reduce((acc, s, i) => {
-      return acc + s.lines.length * s.lineH + (i < renderedSegs.length - 1 ? SEG_GAP : 0);
-    }, 0);
+    ctx.font = `700 ${S1_HERO_SIZE}px 'Bebas Neue', sans-serif`;
+    const heroLines = heroText ? wrapText(ctx, heroText, W - PAD * 2) : [];
 
-    const sub = slide.subtitle?.trim() ?? "";
-    let subLines: string[] = [];
-    if (sub) {
-      ctx.font = `400 ${SUB_SIZE}px 'Prata', serif`;
-      subLines = wrapText(ctx, sub, W - PAD * 2);
-      totalH += SEG_GAP + subLines.length * SUB_LINE_H;
-    }
+    ctx.font = `400 ${S1_SUB_SIZE}px 'Bebas Neue', sans-serif`;
+    const subLines  = subText  ? wrapText(ctx, subText,  W - PAD * 2) : [];
 
-    let y = Math.round(H / 2 - totalH / 2);
+    const heroH = heroLines.length * S1_HERO_LINE_H;
+    const subH  = subLines.length  * S1_SUB_LINE_H;
+    const gap   = Math.round(lineSpacing * S1_BASE_GAP);
 
-    for (let i = 0; i < renderedSegs.length; i++) {
-      const seg = renderedSegs[i];
-      ctx.font = seg.font;
-      ctx.fillStyle = seg.isHero
-        ? (preset.cornerColor || "#d4af37")
-        : (preset.textColor || "#ffffff");
-      for (const line of seg.lines) {
-        ctx.fillText(line, W / 2, y);
-        y += seg.lineH;
-      }
-      if (i < renderedSegs.length - 1) y += SEG_GAP;
-    }
+    // Anchor from bottom: hero word at very bottom, subtitle sits above it
+    const heroStartY = H - S1_BOTTOM_PAD - heroH;
+    const subStartY  = heroStartY - gap - subH;
 
+    // Draw subtitle — smaller Bebas Neue in accent/brand colour
     if (subLines.length > 0) {
-      y += SEG_GAP;
-      ctx.font = `400 ${SUB_SIZE}px 'Prata', serif`;
-      ctx.globalAlpha = 0.82;
+      ctx.font      = `400 ${S1_SUB_SIZE}px 'Bebas Neue', sans-serif`;
+      ctx.fillStyle = preset.cornerColor || "#d4af37";
+      let y = subStartY;
       for (const line of subLines) {
         ctx.fillText(line, W / 2, y);
-        y += SUB_LINE_H;
+        y += S1_SUB_LINE_H;
       }
-      ctx.globalAlpha = 1;
+    }
+
+    // Draw hero word — large Bebas Neue in white
+    if (heroLines.length > 0) {
+      ctx.font      = `700 ${S1_HERO_SIZE}px 'Bebas Neue', sans-serif`;
+      ctx.fillStyle = preset.textColor || "#ffffff";
+      let y = heroStartY;
+      for (const line of heroLines) {
+        ctx.fillText(line, W / 2, y);
+        y += S1_HERO_LINE_H;
+      }
     }
 
   } else {
+    ctx.fillStyle = preset.textColor || "#ffffff";
     ctx.font = `400 ${BODY_SIZE}px 'Prata', serif`;
     const lines  = wrapText(ctx, slide.text, W - PAD * 2);
     const totalH = lines.length * BODY_LINE_H;
@@ -223,7 +214,7 @@ function renderSlide(slide: SlideData, preset: ClientPreset, logoImg: HTMLImageE
   }
 
   if (logoImg) {
-    drawLogo(ctx, logoImg, preset.logoPosition || "bottom-right", preset.logoSize || 110);
+    drawLogo(ctx, logoImg, preset.logoPosition || "top-left", preset.logoSize || 110);
   }
 
   return canvas.toDataURL("image/png");
@@ -258,9 +249,9 @@ async function uploadDataUrls(dataUrls: string[], names: string[]): Promise<stri
 
 async function warmFonts() {
   await Promise.allSettled([
-    document.fonts.load(`700 ${HERO_SIZE}px 'Bebas Neue', sans-serif`),
+    document.fonts.load(`700 ${S1_HERO_SIZE}px 'Bebas Neue', sans-serif`),
+    document.fonts.load(`400 ${S1_SUB_SIZE}px 'Bebas Neue', sans-serif`),
     document.fonts.load(`400 ${BODY_SIZE}px 'Prata', serif`),
-    document.fonts.load(`400 ${SUB_SIZE}px 'Prata', serif`),
   ]);
 }
 
@@ -329,6 +320,10 @@ export default function CsvSlideCarousel() {
   const [bgPhotoUrls,  setBgPhotoUrls]  = useState<string[]>([]);
   const [bgPhotoDrag,  setBgPhotoDrag]  = useState(false);
 
+  const [lineSpacing, setLineSpacing] = useState(1.2);
+  const lineSpacingRef = useRef(lineSpacing);
+  useEffect(() => { lineSpacingRef.current = lineSpacing; }, [lineSpacing]);
+
   const fileInputRef    = useRef<HTMLInputElement>(null);
   const bgPhotoInputRef = useRef<HTMLInputElement>(null);
 
@@ -392,12 +387,12 @@ export default function CsvSlideCarousel() {
     return results.flatMap(r => r.status === "fulfilled" ? [r.value] : []);
   }, [bgPhotoUrls]);
 
-  const renderThumbs = useCallback(async (preset: ClientPreset, slideList: SlideData[], bgImgs: HTMLImageElement[] = []) => {
+  const renderThumbs = useCallback(async (preset: ClientPreset, slideList: SlideData[], bgImgs: HTMLImageElement[] = [], ls = 1.2) => {
     setRendering(true);
     try {
       await warmFonts();
       const logoImg = await loadPresetLogo(preset);
-      setThumbs(slideList.map((s, i) => renderSlide(s, preset, logoImg, 1, bgImgs[i] ?? bgImgs[0] ?? null)));
+      setThumbs(slideList.map((s, i) => renderSlide(s, preset, logoImg, 1, bgImgs[i] ?? bgImgs[0] ?? null, ls)));
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Render failed");
     } finally {
@@ -409,7 +404,7 @@ export default function CsvSlideCarousel() {
     if (!selectedPreset) { toast.error("Select a client preset first"); return; }
     if (!slides.length)  { toast.error("Upload a CSV first"); return; }
     const bgImgs = await loadBgImgs();
-    await renderThumbs(selectedPreset, slides, bgImgs);
+    await renderThumbs(selectedPreset, slides, bgImgs, lineSpacing);
     setPhase("preview");
   };
 
@@ -418,7 +413,7 @@ export default function CsvSlideCarousel() {
     const p = presets.find(x => x.id === id);
     if (p && slides.length) {
       const bgImgs = await loadBgImgs();
-      await renderThumbs(p, slides, bgImgs);
+      await renderThumbs(p, slides, bgImgs, lineSpacing);
     }
   };
 
@@ -434,7 +429,7 @@ export default function CsvSlideCarousel() {
       carousels.forEach((group, ci) => {
         const folder = `carousel-${String(ci + 1).padStart(2, "0")}`;
         group.forEach((slide, si) => {
-          const png = renderSlide(slide, selectedPreset, logoImg, SCALE, bgImgs[globalIdx] ?? bgImgs[bgImgs.length - 1] ?? null);
+          const png = renderSlide(slide, selectedPreset, logoImg, SCALE, bgImgs[globalIdx] ?? bgImgs[bgImgs.length - 1] ?? null, lineSpacing);
           const b64 = png.split(",")[1];
           const tag = slide.isHero ? "hero" : "slide";
           zip.file(`${folder}/${String(si + 1).padStart(3, "0")}-${tag}.png`, b64, { base64: true });
@@ -462,7 +457,7 @@ export default function CsvSlideCarousel() {
       let globalIdx = 0;
       const grouped: string[][] = [];
       for (const group of carousels) {
-        const dataUrls = group.map((s, si) => renderSlide(s, selectedPreset, logoImg, SCALE, bgImgs[globalIdx + si] ?? bgImgs[bgImgs.length - 1] ?? null));
+        const dataUrls = group.map((s, si) => renderSlide(s, selectedPreset, logoImg, SCALE, bgImgs[globalIdx + si] ?? bgImgs[bgImgs.length - 1] ?? null, lineSpacing));
         const names = group.map((s, si) => `${String(si + 1).padStart(3, "0")}-${s.isHero ? "hero" : "slide"}.png`);
         const urls = await uploadDataUrls(dataUrls, names);
         grouped.push(urls);
@@ -477,6 +472,17 @@ export default function CsvSlideCarousel() {
       setScheduling(false);
     }
   };
+
+  // Live re-render when line spacing changes (preview phase only)
+  useEffect(() => {
+    if (phase !== "preview" || !selectedPreset || !slides.length) return;
+    const id = setTimeout(async () => {
+      const bgImgs = await loadBgImgs();
+      renderThumbs(selectedPreset, slides, bgImgs, lineSpacingRef.current);
+    }, 180);
+    return () => clearTimeout(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lineSpacing]);
 
   return (
     <div className="min-h-[100dvh] bg-background">
@@ -731,7 +737,7 @@ export default function CsvSlideCarousel() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={async () => { if (selectedPreset) { const bg = await loadBgImgs(); renderThumbs(selectedPreset, slides, bg); } }}
+                  onClick={async () => { if (selectedPreset) { const bg = await loadBgImgs(); renderThumbs(selectedPreset, slides, bg, lineSpacing); } }}
                   disabled={rendering || !selectedPreset}
                 >
                   {rendering
@@ -769,6 +775,23 @@ export default function CsvSlideCarousel() {
                 Rendering thumbnails…
               </div>
             )}
+
+            <div className="flex items-center gap-4 bg-muted/20 border border-border/30 rounded-xl px-5 py-3">
+              <Label className="text-xs font-medium text-muted-foreground shrink-0 w-28">
+                Line spacing
+                <span className="ml-2 font-mono text-foreground/70">{lineSpacing.toFixed(1)}</span>
+              </Label>
+              <input
+                type="range"
+                min={0.8}
+                max={2.0}
+                step={0.1}
+                value={lineSpacing}
+                onChange={e => setLineSpacing(Number(e.target.value))}
+                className="flex-1 accent-sky-500"
+              />
+              <span className="text-[11px] text-muted-foreground/60 shrink-0">Slide 1 only</span>
+            </div>
 
             <div className="space-y-8">
               {chunkSlides(slides, CAROUSEL_SIZE).map((group, ci) => {
