@@ -487,6 +487,19 @@ export default function CsvSlideCarousel() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lineSpacing]);
 
+  // Auto re-render after any Vite HMR update (so code fixes take effect without manual clicks)
+  useEffect(() => {
+    if (!import.meta.hot) return;
+    const handler = async () => {
+      if (phase !== "preview" || !selectedPreset || !slides.length || rendering) return;
+      const bgImgs = await loadBgImgs();
+      renderThumbs(selectedPreset, slides, bgImgs, lineSpacingRef.current);
+    };
+    import.meta.hot.on("vite:afterUpdate", handler);
+    return () => { import.meta.hot!.off("vite:afterUpdate", handler); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, slides, selectedPreset, rendering]);
+
   return (
     <div className="min-h-[100dvh] bg-background">
       <header className="border-b border-border/30 py-4 px-6 flex items-center gap-3">
@@ -738,13 +751,13 @@ export default function CsvSlideCarousel() {
                 </Select>
 
                 <Button
-                  variant="outline"
                   size="sm"
                   onClick={async () => { if (selectedPreset) { const bg = await loadBgImgs(); renderThumbs(selectedPreset, slides, bg, lineSpacing); } }}
                   disabled={rendering || !selectedPreset}
+                  className="bg-sky-600 hover:bg-sky-700 text-white"
                 >
                   {rendering
-                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />Rendering…</>
                     : <><RefreshCw className="w-4 h-4 mr-1.5" />Re-render</>}
                 </Button>
 

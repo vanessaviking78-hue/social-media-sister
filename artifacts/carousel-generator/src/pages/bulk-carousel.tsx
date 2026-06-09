@@ -683,6 +683,22 @@ export default function BulkCarousel() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lineSpacing]);
 
+  // Auto re-render all slides after any Vite HMR update
+  useEffect(() => {
+    if (!import.meta.hot) return;
+    const handler = () => {
+      if (phase !== "preview" || !selectedPreset || !items.length) return;
+      const ls = lineSpacingRef.current;
+      setItems(prev => prev.map(item => ({
+        ...item,
+        thumbs: renderAllThumbs(item, logoImgRef.current, selectedPreset!, ls),
+      })));
+    };
+    import.meta.hot.on("vite:afterUpdate", handler);
+    return () => { import.meta.hot!.off("vite:afterUpdate", handler); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, items, selectedPreset]);
+
   // ── Export ───────────────────────────────────────────────────────────────────
 
   const downloadSingle = async (item: CarouselItem) => {
