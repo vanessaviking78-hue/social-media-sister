@@ -193,44 +193,57 @@ function renderSlideCanvas(
     ctx.shadowOffsetY = 3;
 
     if (slideNum === 1) {
-      // ── Slide 1: hook (upper) then subtitle (below) ──────────────────────────
-      const hookText = stripPipes(blocks.find(b => b.id === "hook")?.text ?? "").trim();
-      const subText  = stripPipes(blocks.find(b => b.id === "subtitle")?.text ?? "").trim();
+      // ── Slide 1 layout ───────────────────────────────────────────────────────
+      // Physical canvas is H*scale tall. User target: hook ~Y1400, sub ~Y1650
+      // on a 2160px physical canvas (scale=1.5). In logical coords (÷scale):
+      //   hook anchor ≈ 933, sub anchor ≈ 1100  →  H*0.65 and H*0.764
+      const hookRaw = blocks.find(b => b.id === "hook")?.text ?? "";
+      const subRaw  = blocks.find(b => b.id === "subtitle")?.text ?? "";
 
       const HOOK_SIZE   = 108;
-      const HOOK_LINE_H = Math.round(HOOK_SIZE * 1.10);
+      const HOOK_LINE_H = Math.round(HOOK_SIZE * 1.10); // 119
       const SUB_SIZE    = 44;
-      const SUB_LINE_H  = Math.round(SUB_SIZE  * 1.40);
+      const SUB_LINE_H  = Math.round(SUB_SIZE  * 1.40); // 62
       const PAD_X       = 90;
-      const HOOK_Y      = Math.round(H * 0.38);  // center of first hook line
-      const BLOCK_GAP   = Math.round(lineSpacing * 48);
+      const GAP         = 40;
+      // Subtitle top-edge fixed anchor (≈ physical Y 1650 on 2160px canvas)
+      const SUB_TOP     = Math.round(H * 0.764); // ≈ 1100 logical
 
-      ctx.textBaseline = "middle";
+      ctx.textAlign    = "center";
+      ctx.textBaseline = "top";
 
+      // Measure wrapped lines (after stripping pipes)
       ctx.font = `700 ${HOOK_SIZE}px 'Bebas Neue', sans-serif`;
-      const hookLines = hookText ? wrapCanvas(ctx, hookText.toUpperCase(), W - PAD_X * 2) : [];
+      const hookLines = hookRaw.trim()
+        ? wrapCanvas(ctx, stripPipes(hookRaw).trim().toUpperCase(), W - PAD_X * 2)
+        : [];
 
       ctx.font = `italic 400 ${SUB_SIZE}px 'Prata', serif`;
-      const subLines  = subText  ? wrapCanvas(ctx, subText, W - PAD_X * 2) : [];
+      const subLines = subRaw.trim()
+        ? wrapCanvas(ctx, stripPipes(subRaw).trim(), W - PAD_X * 2)
+        : [];
 
-      // Hook — upper portion, white
+      // Hook — grows upward from just above subtitle anchor, white
       if (hookLines.length > 0) {
+        const hookStartY = SUB_TOP - GAP - hookLines.length * HOOK_LINE_H;
         ctx.font      = `700 ${HOOK_SIZE}px 'Bebas Neue', sans-serif`;
         ctx.fillStyle = "#ffffff";
-        let y = HOOK_Y;
-        for (const line of hookLines) { ctx.fillText(line, W / 2, y); y += HOOK_LINE_H; }
+        let y = hookStartY;
+        for (const line of hookLines) {
+          ctx.fillText(stripPipes(line), W / 2, y);
+          y += HOOK_LINE_H;
+        }
       }
 
-      // Subtitle — directly below hook with a clear gap, accent colour
+      // Subtitle — fixed at SUB_TOP, accent colour, pipes stripped at draw time
       if (subLines.length > 0) {
-        const hookBottom = hookLines.length > 0
-          ? HOOK_Y + (hookLines.length - 1) * HOOK_LINE_H + HOOK_SIZE / 2
-          : Math.round(H * 0.45);
-        const subY = hookBottom + BLOCK_GAP + SUB_SIZE / 2;
         ctx.font      = `italic 400 ${SUB_SIZE}px 'Prata', serif`;
         ctx.fillStyle = accentColor;
-        let y = subY;
-        for (const line of subLines) { ctx.fillText(line, W / 2, y); y += SUB_LINE_H; }
+        let y = SUB_TOP;
+        for (const line of subLines) {
+          ctx.fillText(stripPipes(line), W / 2, y);
+          y += SUB_LINE_H;
+        }
       }
 
     } else {
