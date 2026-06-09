@@ -165,8 +165,11 @@ function renderSlide(slide: SlideData, preset: ClientPreset, logoImg: HTMLImageE
     const segments = parseSegments(slide.rawText);
 
     // Separate piped (hero) words from surrounding (subtitle) text
-    const heroText = segments.filter(s => s.isHero).map(s => s.text.toUpperCase()).join(" ").trim();
-    const subText  = segments.filter(s => !s.isHero).map(s => s.text.trim()).filter(Boolean).join(" ").trim();
+    // If no pipes present, treat the whole text as the hero word
+    const rawHero = segments.filter(s => s.isHero).map(s => s.text.toUpperCase()).join(" ").trim();
+    const rawSub  = segments.filter(s => !s.isHero).map(s => s.text.trim()).filter(Boolean).join(" ").trim();
+    const heroText = rawHero || rawSub.toUpperCase();
+    const subText  = rawHero ? rawSub : "";
 
     ctx.font = `700 ${S1_HERO_SIZE}px 'Bebas Neue', sans-serif`;
     const heroLines = heroText ? wrapText(ctx, heroText, W - PAD * 2) : [];
@@ -193,10 +196,10 @@ function renderSlide(slide: SlideData, preset: ClientPreset, logoImg: HTMLImageE
       }
     }
 
-    // Draw hero word — large Bebas Neue in white
+    // Draw hero word — large Bebas Neue, always white
     if (heroLines.length > 0) {
       ctx.font      = `700 ${S1_HERO_SIZE}px 'Bebas Neue', sans-serif`;
-      ctx.fillStyle = preset.textColor || "#ffffff";
+      ctx.fillStyle = "#ffffff";
       let y = heroStartY;
       for (const line of heroLines) {
         ctx.fillText(line, W / 2, y);

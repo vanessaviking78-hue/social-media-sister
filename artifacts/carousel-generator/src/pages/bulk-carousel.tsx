@@ -234,10 +234,10 @@ function renderSlideCanvas(
         for (const line of subLines) { ctx.fillText(line, W / 2, y); y += S1_SUB_LINE_H; }
       }
 
-      // Hero word — large Bebas Neue in white
+      // Hero word — large Bebas Neue, always white
       if (heroLines.length > 0) {
         ctx.font      = `700 ${S1_HERO_SIZE}px 'Bebas Neue', sans-serif`;
-        ctx.fillStyle = textColor;
+        ctx.fillStyle = "#ffffff";
         let y = heroStartY;
         for (const line of heroLines) { ctx.fillText(line, W / 2, y); y += S1_HERO_LINE_H; }
       }
