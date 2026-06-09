@@ -118,11 +118,13 @@ function stripPipes(t: string): string {
   return t.replace(/\|([^|]+)\|/g, "$1");
 }
 
-/** Draw a single canvas line, rendering the hero word (between pipes) in heroColor. */
+/** Draw a single canvas line, rendering the hero word (between pipes) in heroColor.
+ *  Matches on whole word tokens only (strips punctuation before comparing),
+ *  so |YOU| never accidentally colours the YOU inside YOUR. */
 function renderHookLine(
   ctx: CanvasRenderingContext2D,
-  line: string,           // already uppercased, pipes stripped
-  heroWord: string | null, // already uppercased
+  line: string,            // already uppercased, pipes stripped
+  heroWord: string | null, // already uppercased, no punctuation
   cx: number,
   y: number,
   normalColor: string,
@@ -133,25 +135,31 @@ function renderHookLine(
     ctx.fillText(line, cx, y);
     return;
   }
-  const idx = line.indexOf(heroWord);
-  if (idx === -1) {
+  // Split line into space tokens and find the one whose letters match heroWord exactly
+  const tokens   = line.split(" ");
+  const heroIdx  = tokens.findIndex(
+    tok => tok.replace(/[^a-zA-Z]/g, "").toUpperCase() === heroWord.toUpperCase()
+  );
+  if (heroIdx === -1) {
     ctx.fillStyle = normalColor;
     ctx.fillText(line, cx, y);
     return;
   }
-  const before  = line.slice(0, idx);
-  const hero    = line.slice(idx, idx + heroWord.length);
-  const after   = line.slice(idx + heroWord.length);
+  // Reconstruct segments, preserving original spacing
+  const beforeStr = heroIdx > 0 ? tokens.slice(0, heroIdx).join(" ") + " " : "";
+  const heroStr   = tokens[heroIdx];
+  const afterStr  = heroIdx < tokens.length - 1 ? " " + tokens.slice(heroIdx + 1).join(" ") : "";
+
   const totalW  = ctx.measureText(line).width;
   const startX  = cx - totalW / 2;
-  const beforeW = ctx.measureText(before).width;
-  const heroW   = ctx.measureText(hero).width;
+  const beforeW = ctx.measureText(beforeStr).width;
+  const heroW   = ctx.measureText(heroStr).width;
   const saved   = ctx.textAlign as CanvasTextAlign;
   ctx.textAlign = "left";
-  if (before) { ctx.fillStyle = normalColor; ctx.fillText(before, startX, y); }
+  if (beforeStr) { ctx.fillStyle = normalColor; ctx.fillText(beforeStr, startX, y); }
   ctx.fillStyle = heroColor;
-  ctx.fillText(hero, startX + beforeW, y);
-  if (after)  { ctx.fillStyle = normalColor; ctx.fillText(after,  startX + beforeW + heroW, y); }
+  ctx.fillText(heroStr, startX + beforeW, y);
+  if (afterStr)  { ctx.fillStyle = normalColor; ctx.fillText(afterStr, startX + beforeW + heroW, y); }
   ctx.textAlign = saved;
 }
 
