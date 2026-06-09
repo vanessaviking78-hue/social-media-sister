@@ -41,8 +41,10 @@ type BlockId = "hook" | "subtitle" | "body2" | "body3" | "cta";
 type Block = {
   id: BlockId;
   text: string;
-  x: number; // 0-1 horizontal centre fraction
-  y: number; // 0-1 vertical centre fraction
+  x: number;       // 0-1 horizontal centre fraction
+  y: number;       // 0-1 vertical centre fraction
+  w?: number;      // width as fraction of W (defaults to BLOCK_STYLE[id].maxW / W)
+  fontSize?: number; // canvas-pixel font size override (defaults to BLOCK_STYLE[id].size)
 };
 
 type CarouselItem = {
@@ -200,10 +202,12 @@ function renderSlideCanvas(
       const hookRaw = blocks.find(b => b.id === "hook")?.text ?? "";
       const subRaw  = blocks.find(b => b.id === "subtitle")?.text ?? "";
 
-      const HOOK_SIZE   = 108;
-      const HOOK_LINE_H = Math.round(HOOK_SIZE * 1.10); // 119
-      const SUB_SIZE    = 44;
-      const SUB_LINE_H  = Math.round(SUB_SIZE  * 1.40); // 62
+      const hookBlock   = blocks.find(b => b.id === "hook");
+      const subBlock    = blocks.find(b => b.id === "subtitle");
+      const HOOK_SIZE   = hookBlock?.fontSize ?? 108;
+      const HOOK_LINE_H = Math.round(HOOK_SIZE * 1.10);
+      const SUB_SIZE    = subBlock?.fontSize  ?? 44;
+      const SUB_LINE_H  = Math.round(SUB_SIZE  * 1.40);
       const PAD_X       = 90;
       const GAP         = 40;
       // Subtitle top-edge fixed anchor (≈ physical Y 1650 on 2160px canvas)
@@ -254,12 +258,14 @@ function renderSlideCanvas(
       for (const block of blocks.filter(b => activeIds.includes(b.id))) {
         if (!block.text.trim()) continue;
         const st = BLOCK_STYLE[block.id];
-        ctx.font = `${st.size}px ${st.font}`;
-        const lines = wrapCanvas(ctx, stripPipes(block.text), st.maxW);
-        const totalH = lines.length * st.size * st.lineH;
+        const fontSize = block.fontSize ?? st.size;
+        const maxW = block.w ? block.w * W : st.maxW;
+        ctx.font = `${fontSize}px ${st.font}`;
+        const lines = wrapCanvas(ctx, stripPipes(block.text), maxW);
+        const totalH = lines.length * fontSize * st.lineH;
         const cx = block.x * W;
-        let y = block.y * H - totalH / 2 + (st.size * st.lineH) / 2;
-        for (const line of lines) { ctx.fillText(line, cx, y); y += st.size * st.lineH; }
+        let y = block.y * H - totalH / 2 + (fontSize * st.lineH) / 2;
+        for (const line of lines) { ctx.fillText(stripPipes(line), cx, y); y += fontSize * st.lineH; }
       }
     }
   }
@@ -344,6 +350,9 @@ function SlideEditorModal({ item, preset, logoImg, onSave, onClose }: EditorProp
   const [dragging, setDragging] = useState<{
     id: BlockId; startPx: number; startPy: number; startBx: number; startBy: number;
   } | null>(null);
+  const [resizing, setResizing] = useState<{
+    id: BlockId; startDist: number; startW: number; startFontSize: number;
+  } | null>(null);
   const [editingId, setEditingId] = useState<BlockId | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -359,15 +368,35 @@ function SlideEditorModal({ item, preset, logoImg, onSave, onClose }: EditorProp
   const activeBlocks = blocks.filter(b => activeBlockIds.includes(b.id));
 
   const handleContainerPointerMove = (e: React.PointerEvent) => {
-    if (!dragging || !containerRef.current) return;
+    if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const dx = (e.clientX - dragging.startPx) / rect.width;
-    const dy = (e.clientY - dragging.startPy) / rect.height;
-    setBlocks(prev => prev.map(b =>
-      b.id === dragging.id
-        ? { ...b, x: Math.max(0.04, Math.min(0.96, dragging.startBx + dx)), y: Math.max(0.04, Math.min(0.96, dragging.startBy + dy)) }
-        : b
-    ));
+
+    if (dragging) {
+      const dx = (e.clientX - dragging.startPx) / rect.width;
+      const dy = (e.clientY - dragging.startPy) / rect.height;
+      setBlocks(prev => prev.map(b =>
+        b.id === dragging.id
+          ? { ...b, x: Math.max(0.04, Math.min(0.96, dragging.startBx + dx)), y: Math.max(0.04, Math.min(0.96, dragging.startBy + dy)) }
+          : b
+      ));
+    }
+
+    if (resizing) {
+      const block = blocks.find(b => b.id === resizing.id);
+      if (!block) return;
+      const bx = block.x * rect.width + rect.left;
+      const by = block.y * rect.height + rect.top;
+      const dist = Math.sqrt((e.clientX - bx) ** 2 + (e.clientY - by) ** 2) || 1;
+      const scale = dist / resizing.startDist;
+      setBlocks(prev => prev.map(b =>
+        b.id === resizing.id
+          ? { ...b,
+              w: Math.max(0.1, Math.min(0.95, resizing.startW * scale)),
+              fontSize: Math.round(Math.max(8, Math.min(400, resizing.startFontSize * scale))),
+            }
+          : b
+      ));
+    }
   };
 
   const handleBlockDown = (e: React.PointerEvent, block: Block) => {
@@ -376,6 +405,22 @@ function SlideEditorModal({ item, preset, logoImg, onSave, onClose }: EditorProp
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     setDragging({ id: block.id, startPx: e.clientX, startPy: e.clientY, startBx: block.x, startBy: block.y });
+  };
+
+  const handleCornerDown = (e: React.PointerEvent, block: Block) => {
+    e.preventDefault();
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    const rect = containerRef.current!.getBoundingClientRect();
+    const bx = block.x * rect.width + rect.left;
+    const by = block.y * rect.height + rect.top;
+    const dist = Math.sqrt((e.clientX - bx) ** 2 + (e.clientY - by) ** 2) || 50;
+    setResizing({
+      id: block.id,
+      startDist: dist,
+      startW: block.w ?? (BLOCK_STYLE[block.id].maxW / W),
+      startFontSize: block.fontSize ?? BLOCK_STYLE[block.id].size,
+    });
   };
 
   const handleTextChange = (id: BlockId, text: string) =>
@@ -400,7 +445,7 @@ function SlideEditorModal({ item, preset, logoImg, onSave, onClose }: EditorProp
           {([1,2,3,4] as const).map(n => (
             <button
               key={n}
-              onClick={() => { setEditingId(null); setDragging(null); setActiveSlide(n); }}
+              onClick={() => { setEditingId(null); setDragging(null); setResizing(null); setActiveSlide(n); }}
               className={`flex-1 py-2.5 text-sm font-medium transition-colors ${activeSlide === n ? "text-foreground border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"}`}
             >
               Slide {n}
@@ -411,7 +456,7 @@ function SlideEditorModal({ item, preset, logoImg, onSave, onClose }: EditorProp
         <div className="p-4">
           <p className="text-xs text-muted-foreground mb-3">
             <GripVertical className="w-3 h-3 inline mr-1 opacity-60" />
-            Drag text to reposition. Double-click to edit content.
+            Drag to reposition. Drag corners to resize. Double-click to edit content.
           </p>
 
           {/* Slide canvas area */}
@@ -420,7 +465,7 @@ function SlideEditorModal({ item, preset, logoImg, onSave, onClose }: EditorProp
             className="relative mx-auto overflow-hidden rounded-lg select-none touch-none"
             style={{ width: displayW, height: displayH }}
             onPointerMove={handleContainerPointerMove}
-            onPointerUp={() => setDragging(null)}
+            onPointerUp={() => { setDragging(null); setResizing(null); }}
           >
             <img
               src={bgUrls[activeSlide - 1]}
@@ -430,9 +475,20 @@ function SlideEditorModal({ item, preset, logoImg, onSave, onClose }: EditorProp
 
             {activeBlocks.map(block => {
               const st = BLOCK_STYLE[block.id];
-              const dispSize = Math.max(10, Math.round(st.size * EDITOR_SCALE));
+              const dispFontSize = Math.max(8, Math.round((block.fontSize ?? st.size) * EDITOR_SCALE));
+              const blockW = block.w ?? (st.maxW / W);
+              const blockDisplayW = Math.round(blockW * displayW);
               const isEditing = editingId === block.id;
               const isDraggingThis = dragging?.id === block.id;
+              const isResizingThis = resizing?.id === block.id;
+              const isActive = isDraggingThis || isResizingThis;
+              const CORNER_SIZE = 8;
+              const corners = [
+                { top: -CORNER_SIZE / 2, left: -CORNER_SIZE / 2, cursor: "nw-resize" },
+                { top: -CORNER_SIZE / 2, right: -CORNER_SIZE / 2, cursor: "ne-resize" },
+                { bottom: -CORNER_SIZE / 2, left: -CORNER_SIZE / 2, cursor: "sw-resize" },
+                { bottom: -CORNER_SIZE / 2, right: -CORNER_SIZE / 2, cursor: "se-resize" },
+              ] as const;
               return (
                 <div
                   key={block.id}
@@ -442,19 +498,38 @@ function SlideEditorModal({ item, preset, logoImg, onSave, onClose }: EditorProp
                     top: `${block.y * 100}%`,
                     transform: "translate(-50%, -50%)",
                     zIndex: 10,
-                    maxWidth: `${(st.maxW / W) * 100}%`,
+                    width: blockDisplayW,
                     textAlign: "center",
                     cursor: isDraggingThis ? "grabbing" : isEditing ? "text" : "grab",
                     touchAction: "none",
                   }}
                   onPointerDown={e => !isEditing && handleBlockDown(e, block)}
-                  onPointerUp={() => { setDragging(null); }}
-                  onDoubleClick={() => { setDragging(null); setEditingId(block.id); }}
+                  onPointerUp={() => { setDragging(null); setResizing(null); }}
+                  onDoubleClick={() => { setDragging(null); setResizing(null); setEditingId(block.id); }}
                 >
                   {/* Drag handle ring */}
                   {!isEditing && (
-                    <div className={`absolute -inset-1.5 rounded-md border transition-colors ${isDraggingThis ? "border-primary/80 bg-primary/10" : "border-white/20 hover:border-white/50"}`} />
+                    <div className={`absolute -inset-1.5 rounded-md border transition-colors ${isActive ? "border-primary/80 bg-primary/10" : "border-white/20 hover:border-white/50"}`} />
                   )}
+
+                  {/* Corner resize handles */}
+                  {!isEditing && corners.map((c, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        position: "absolute",
+                        width: CORNER_SIZE,
+                        height: CORNER_SIZE,
+                        borderRadius: 2,
+                        background: "#ffffff",
+                        border: "1.5px solid rgba(0,0,0,0.5)",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
+                        zIndex: 20,
+                        ...c,
+                      }}
+                      onPointerDown={e => { e.preventDefault(); e.stopPropagation(); handleCornerDown(e, block); }}
+                    />
+                  ))}
 
                   {isEditing ? (
                     <input
@@ -466,16 +541,16 @@ function SlideEditorModal({ item, preset, logoImg, onSave, onClose }: EditorProp
                       className="bg-black/70 border border-white/40 rounded px-2 py-0.5 outline-none text-center relative z-20"
                       style={{
                         fontFamily: st.font.replace(/"/g, "'"),
-                        fontSize: dispSize,
+                        fontSize: dispFontSize,
                         color: tc,
-                        width: `${Math.round(st.maxW * EDITOR_SCALE)}px`,
+                        width: blockDisplayW,
                       }}
                     />
                   ) : (
                     <span
                       style={{
                         fontFamily: st.font.replace(/"/g, "'"),
-                        fontSize: dispSize,
+                        fontSize: dispFontSize,
                         lineHeight: st.lineH,
                         color: tc,
                         textShadow: "0 2px 12px rgba(0,0,0,0.95)",
