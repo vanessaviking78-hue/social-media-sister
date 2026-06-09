@@ -595,7 +595,8 @@ export default function BulkCarousel() {
       skipEmptyLines: true,
       complete: (result) => {
         if (!result.data.length) { setCsvError("CSV is empty."); return; }
-        const missing = CSV_COLS.filter(k => !(k in result.data[0]));
+        const parsedKeys = Object.keys(result.data[0] || {}).map(k => k.trim());
+        const missing = CSV_COLS.filter(k => !parsedKeys.includes(k));
         if (missing.length) { setCsvError(`Missing columns: ${missing.join(", ")}`); return; }
         setCsvError(null);
         setCsvRows(result.data as unknown as CsvRow[]);
