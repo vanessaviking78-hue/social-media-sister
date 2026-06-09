@@ -450,7 +450,7 @@ export default function CsvSlideCarousel() {
       let globalIdx = 0;
       const grouped: string[][] = [];
       for (const group of carousels) {
-        const dataUrls = group.map(s => renderSlide(s, selectedPreset, logoImg, SCALE, bgImgs[globalIdx] ?? bgImgs[bgImgs.length - 1] ?? null));
+        const dataUrls = group.map((s, si) => renderSlide(s, selectedPreset, logoImg, SCALE, bgImgs[globalIdx + si] ?? bgImgs[bgImgs.length - 1] ?? null));
         const names = group.map((s, si) => `${String(si + 1).padStart(3, "0")}-${s.isHero ? "hero" : "slide"}.png`);
         const urls = await uploadDataUrls(dataUrls, names);
         grouped.push(urls);
