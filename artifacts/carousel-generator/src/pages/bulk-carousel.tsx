@@ -725,7 +725,6 @@ export default function BulkCarousel() {
   // ── CSV ──────────────────────────────────────────────────────────────────────
 
   const parseCsv = useCallback((file: File) => {
-    setCsvAttempted(true);
     Papa.parse<Record<string, string>>(file, {
       header: true,
       skipEmptyLines: true,
@@ -745,7 +744,7 @@ export default function BulkCarousel() {
   const handleCsvDrop = (e: React.DragEvent) => {
     e.preventDefault(); setCsvDrag(false);
     const file = Array.from(e.dataTransfer.files).find(f => f.name.endsWith(".csv"));
-    if (file) parseCsv(file); else toast.error("Drop a CSV file.");
+    if (file) { setCsvAttempted(true); parseCsv(file); } else toast.error("Drop a CSV file.");
   };
 
   // ── Image sets ───────────────────────────────────────────────────────────────
@@ -1210,7 +1209,7 @@ export default function BulkCarousel() {
               </>
             )}
           </div>
-          <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={e => { if (e.target.files?.[0]) parseCsv(e.target.files[0]); e.target.value = ""; }} />
+          <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={e => { if (e.target.files?.[0]) { setCsvAttempted(true); parseCsv(e.target.files[0]); } e.target.value = ""; }} />
           {csvAttempted && csvError && <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-2">{csvError}</p>}
         </section>
 
