@@ -193,7 +193,8 @@ function renderSlideCanvas(
   preset: ClientPreset,
   scale = SCALE,
   bgOnly = false,
-  lineSpacing = 1.2
+  lineSpacing = 1.2,
+  accentOverride?: string
 ): string {
   const canvas = document.createElement("canvas");
   canvas.width = W * scale;
@@ -204,7 +205,7 @@ function renderSlideCanvas(
   const pageColor = preset.pageColor || "#1a1a2e";
   const overlayColor = preset.overlayColor || "rgba(0,0,0,0.55)";
   const textColor = preset.textColor || "#ffffff";
-  const accentColor = preset.cornerColor || "#d4af37";
+  const accentColor = accentOverride ?? preset.cornerColor ?? "#d4af37";
 
   // Background fill
   ctx.fillStyle = pageColor;
@@ -271,7 +272,7 @@ function renderSlideCanvas(
         ? wrapCanvas(ctx, stripPipes(hookRaw).trim().toUpperCase(), W - PAD_X * 2)
         : [];
 
-      ctx.font = `italic 400 ${SUB_SIZE}px 'Prata', serif`;
+      ctx.font = `400 ${SUB_SIZE}px 'Prata', serif`;
       const subLines = subRaw.trim()
         ? wrapCanvas(ctx, stripPipes(subRaw).trim(), W - PAD_X * 2)
         : [];
@@ -290,7 +291,7 @@ function renderSlideCanvas(
 
       // Subtitle — fixed at SUB_TOP, accent colour, pipes stripped at draw time
       if (subLines.length > 0) {
-        ctx.font      = `italic 400 ${SUB_SIZE}px 'Prata', serif`;
+        ctx.font      = `400 ${SUB_SIZE}px 'Prata', serif`;
         ctx.fillStyle = accentColor;
         let y = SUB_TOP;
         for (const line of subLines) {
@@ -339,10 +340,11 @@ function renderAllThumbs(
   item: Pick<CarouselItem, "blocks" | "coverImg" | "bodyImg">,
   logoImg: HTMLImageElement | null,
   preset: ClientPreset,
-  lineSpacing = 1.2
+  lineSpacing = 1.2,
+  accentOverride?: string
 ): string[] {
   return ([1,2,3,4] as const).map(n =>
-    renderSlideCanvas(n, item.blocks, item.coverImg, item.bodyImg, logoImg, preset, SCALE, false, lineSpacing)
+    renderSlideCanvas(n, item.blocks, item.coverImg, item.bodyImg, logoImg, preset, SCALE, false, lineSpacing, accentOverride)
   );
 }
 
@@ -389,11 +391,12 @@ type EditorProps = {
   item: CarouselItem;
   preset: ClientPreset;
   logoImg: HTMLImageElement | null;
+  heroWordColor: string;
   onSave: (blocks: Block[]) => void;
   onClose: () => void;
 };
 
-function SlideEditorModal({ item, preset, logoImg, onSave, onClose }: EditorProps) {
+function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave, onClose }: EditorProps) {
   const [activeSlide, setActiveSlide] = useState<1|2|3|4>(1);
   const [blocks, setBlocks] = useState<Block[]>(() => item.blocks.map(b => ({ ...b })));
   const [dragging, setDragging] = useState<{
@@ -612,7 +615,7 @@ function SlideEditorModal({ item, preset, logoImg, onSave, onClose }: EditorProp
                     >
                       {block.id === "hook"
                         ? (() => {
-                            const ac = preset.cornerColor || "#d4af37";
+                            const ac = heroWordColor;
                             return block.text.split(/(\|[^|]+\|)/).map((part, i) => {
                               const m = part.match(/^\|([^|]+)\|$/);
                               return m
@@ -708,7 +711,10 @@ export default function BulkCarousel() {
   const logoImgRef = useRef<HTMLImageElement | null>(null);
   const [lineSpacing, setLineSpacing] = useState(1.2);
   const lineSpacingRef = useRef(1.2);
+  const [heroWordColor, setHeroWordColor] = useState("#C4879A");
+  const heroWordColorRef = useRef("#C4879A");
   useEffect(() => { lineSpacingRef.current = lineSpacing; }, [lineSpacing]);
+  useEffect(() => { heroWordColorRef.current = heroWordColor; }, [heroWordColor]);
 
   // Schedule state
   const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
@@ -801,7 +807,7 @@ export default function BulkCarousel() {
         if (bodyFiles[i])  try { bodyImg  = await loadImg(URL.createObjectURL(bodyFiles[i]));  } catch {}
 
         const blocks = makeBlocks(row);
-        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, lineSpacing);
+        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, lineSpacing, heroWordColor);
         rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.slide1_hook, blocks, coverImg, bodyImg, thumbs });
         setRenderProgress(Math.round(((i + 1) / csvRows.length) * 100));
       }
@@ -821,7 +827,7 @@ export default function BulkCarousel() {
     if (!selectedPreset) return;
     setItems(prev => prev.map(item => {
       if (item.id !== id) return item;
-      const thumbs = renderAllThumbs({ blocks: newBlocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, logoImgRef.current, selectedPreset, lineSpacingRef.current);
+      const thumbs = renderAllThumbs({ blocks: newBlocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, logoImgRef.current, selectedPreset, lineSpacingRef.current, heroWordColorRef.current);
       return { ...item, blocks: newBlocks, thumbs };
     }));
   };
@@ -832,7 +838,7 @@ export default function BulkCarousel() {
     const id = setTimeout(() => {
       const ls = lineSpacingRef.current;
       setItems(prev => prev.map(item => {
-        const thumb1 = renderSlideCanvas(1, item.blocks, item.coverImg, item.bodyImg, logoImgRef.current, selectedPreset!, SCALE, false, ls);
+        const thumb1 = renderSlideCanvas(1, item.blocks, item.coverImg, item.bodyImg, logoImgRef.current, selectedPreset!, SCALE, false, ls, heroWordColorRef.current);
         return { ...item, thumbs: [thumb1, ...item.thumbs.slice(1)] };
       }));
     }, 180);
@@ -848,7 +854,7 @@ export default function BulkCarousel() {
       const ls = lineSpacingRef.current;
       setItems(prev => prev.map(item => ({
         ...item,
-        thumbs: renderAllThumbs(item, logoImgRef.current, selectedPreset!, ls),
+        thumbs: renderAllThumbs(item, logoImgRef.current, selectedPreset!, ls, heroWordColorRef.current),
       })));
     };
     import.meta.hot.on("vite:afterUpdate", handler);
@@ -1080,6 +1086,7 @@ export default function BulkCarousel() {
             item={editingItem}
             preset={selectedPreset}
             logoImg={logoImgRef.current}
+            heroWordColor={heroWordColor}
             onSave={blocks => handleSaveEdit(editingItem.id, blocks)}
             onClose={() => setEditingItemId(null)}
           />
@@ -1117,7 +1124,7 @@ export default function BulkCarousel() {
 
         <div className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
           {items.map(item => (
-            <div key={item.id} className="border border-border/40 rounded-xl overflow-hidden bg-card/40">
+            <div key={item.id} className="rounded-xl overflow-hidden bg-card/40">
               <div className="flex gap-1 p-3 bg-black/20">
                 {item.thumbs.map((du, si) => (
                   <img key={si} src={du} alt={`slide ${si + 1}`} className="flex-1 rounded object-cover" style={{ aspectRatio: "4/5" }} />
@@ -1200,6 +1207,16 @@ export default function BulkCarousel() {
             </button>
           </div>
           <p className="text-sm text-muted-foreground">Required columns: {CSV_COLS.join(", ")}. Each row becomes one carousel.</p>
+
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-muted-foreground whitespace-nowrap">Hero Word Colour</label>
+            <input
+              type="color"
+              value={heroWordColor}
+              onChange={e => setHeroWordColor(e.target.value)}
+              className="h-8 w-14 rounded cursor-pointer border border-border/40 bg-transparent p-0.5"
+            />
+          </div>
 
           <div
             onDrop={handleCsvDrop}
