@@ -286,7 +286,13 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
     catch (e: any) { errors.push(`FB: ${e.message}`); }
   }
   if (!igId && !pageId) throw new Error("No IG or FB account configured for this client");
-  if (errors.length > 0 && !result.igPostId && !result.fbPostId) throw new Error(errors.join("; "));
+  if (errors.length > 0) {
+    logger.warn(
+      { errors, igPosted: !!result.igPostId, fbPosted: !!result.fbPostId, postId: post.id },
+      "Meta rail posting error(s) — one or more platforms failed",
+    );
+    throw new Error(errors.join("; "));
+  }
   return result;
 }
 
