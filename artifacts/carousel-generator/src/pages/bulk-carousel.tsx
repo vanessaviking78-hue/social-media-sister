@@ -1167,50 +1167,57 @@ export default function BulkCarousel() {
           />
         )}
 
-        <header className="border-b border-border/30 px-6 py-4 flex items-center gap-3 sticky top-0 bg-background/95 backdrop-blur z-10">
-          <button onClick={() => setPhase("upload")} className="text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 className="font-bold text-lg">Preview</h1>
-          <span className="text-muted-foreground text-sm ml-1">{items.length} carousel{items.length !== 1 ? "s" : ""}</span>
-          <div className="flex items-center gap-2 ml-4 shrink-0">
-            <Label className="text-xs text-muted-foreground whitespace-nowrap">
-              Line spacing <span className="font-mono text-foreground/70 ml-1">{lineSpacing.toFixed(1)}</span>
-            </Label>
-            <input
-              type="range"
-              min={0.8}
-              max={2.0}
-              step={0.1}
-              value={lineSpacing}
-              onChange={e => setLineSpacing(Number(e.target.value))}
-              className="w-28 accent-sky-500"
-            />
-          </div>
-          <div className="ml-auto flex gap-2">
-            <Button variant="outline" size="sm" onClick={downloadAll}>
-              <Download className="w-4 h-4 mr-2" />Download All
-            </Button>
-            <Button size="sm" onClick={goToSchedule}>
-              <CalendarClock className="w-4 h-4 mr-2" />Send to Scheduler
-            </Button>
-          </div>
-        </header>
+        <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border/30">
+          <header className="px-6 py-4 flex items-center gap-3">
+            <button onClick={() => setPhase("upload")} className="text-muted-foreground hover:text-foreground transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h1 className="font-bold text-lg">Preview</h1>
+            <span className="text-muted-foreground text-sm ml-1">{items.length} carousel{items.length !== 1 ? "s" : ""}</span>
+            <div className="flex items-center gap-2 ml-4 shrink-0">
+              <Label className="text-xs text-muted-foreground whitespace-nowrap">
+                Line spacing <span className="font-mono text-foreground/70 ml-1">{lineSpacing.toFixed(1)}</span>
+              </Label>
+              <input
+                type="range"
+                min={0.8}
+                max={2.0}
+                step={0.1}
+                value={lineSpacing}
+                onChange={e => setLineSpacing(Number(e.target.value))}
+                className="w-28 accent-sky-500"
+              />
+            </div>
+            <div className="ml-auto flex gap-2">
+              <Button variant="outline" size="sm" onClick={downloadAll}>
+                <Download className="w-4 h-4 mr-2" />Download All
+              </Button>
+              <Button size="sm" onClick={goToSchedule}>
+                <CalendarClock className="w-4 h-4 mr-2" />Send to Scheduler
+              </Button>
+            </div>
+          </header>
 
-        <div className="max-w-5xl mx-auto px-6 pt-6 pb-2 flex items-center justify-between gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={generateAllCaptions}
-            disabled={generatingAll}
-          >
-            {generatingAll
-              ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating {generateAllProgress?.current} of {generateAllProgress?.total}…</>
-              : <><Sparkles className="w-4 h-4 mr-2" />Generate All Captions</>}
-          </Button>
+          <div className="px-6 py-3 border-t border-border/20 bg-primary/5 flex items-center gap-4">
+            <Button
+              size="default"
+              onClick={generateAllCaptions}
+              disabled={generatingAll}
+              className="font-semibold"
+            >
+              {generatingAll
+                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating {generateAllProgress?.current} of {generateAllProgress?.total}…</>
+                : <><Sparkles className="w-4 h-4 mr-2" />Generate All Captions</>}
+            </Button>
+            {!generatingAll && (
+              <span className="text-xs text-muted-foreground">
+                Generate AI captions for all {items.length} carousel{items.length !== 1 ? "s" : ""} at once.
+              </span>
+            )}
+          </div>
         </div>
 
-        <div className="max-w-5xl mx-auto px-6 py-4 grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="max-w-5xl mx-auto px-6 py-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
           {items.map(item => (
             <div key={item.id} className="rounded-xl overflow-hidden bg-card/40">
               <div className="flex gap-1 p-3 bg-black/20">
@@ -1262,6 +1269,19 @@ export default function BulkCarousel() {
               )}
             </div>
           ))}
+        </div>
+
+        <div className="max-w-5xl mx-auto px-6 py-8 flex justify-center">
+          <Button
+            size="lg"
+            onClick={generateAllCaptions}
+            disabled={generatingAll}
+            className="font-semibold px-8"
+          >
+            {generatingAll
+              ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" />Generating {generateAllProgress?.current} of {generateAllProgress?.total}…</>
+              : <><Sparkles className="w-5 h-5 mr-2" />Generate All Captions</>}
+          </Button>
         </div>
       </div>
     );
