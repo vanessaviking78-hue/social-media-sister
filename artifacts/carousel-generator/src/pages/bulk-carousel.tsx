@@ -80,7 +80,7 @@ type BlockStyle = { font: string; size: number; lineH: number; maxW: number; lab
 
 const BLOCK_STYLE: Record<BlockId, BlockStyle> = {
   hook:     { font: '"Bebas Neue"',       size: 108, lineH: 1.10, maxW: W - 120, label: "Hook"     },
-  subtitle: { font: 'italic "Prata"',     size:  44, lineH: 1.40, maxW: W - 180, label: "Subtitle" },
+  subtitle: { font: '"Prata"',             size:  44, lineH: 1.40, maxW: W - 180, label: "Subtitle" },
   body2:    { font: '"Prata"',             size:  50, lineH: 1.50, maxW: W - 160, label: "Body"     },
   body3:    { font: '"Prata"',             size:  50, lineH: 1.50, maxW: W - 160, label: "Body"     },
   cta:      { font: '"DM Serif Display"',  size:  76, lineH: 1.35, maxW: W - 140, label: "CTA"      },
@@ -272,7 +272,7 @@ function renderSlideCanvas(
         ? wrapCanvas(ctx, stripPipes(hookRaw).trim().toUpperCase(), W - PAD_X * 2)
         : [];
 
-      ctx.font = `400 ${SUB_SIZE}px 'Prata', serif`;
+      ctx.font = `normal 400 ${SUB_SIZE}px 'Prata', serif`;
       const subLines = subRaw.trim()
         ? wrapCanvas(ctx, stripPipes(subRaw).trim(), W - PAD_X * 2)
         : [];
@@ -291,7 +291,7 @@ function renderSlideCanvas(
 
       // Subtitle — fixed at SUB_TOP, accent colour, pipes stripped at draw time
       if (subLines.length > 0) {
-        ctx.font      = `400 ${SUB_SIZE}px 'Prata', serif`;
+        ctx.font      = `normal 400 ${SUB_SIZE}px 'Prata', serif`;
         ctx.fillStyle = accentColor;
         let y = SUB_TOP;
         for (const line of subLines) {
