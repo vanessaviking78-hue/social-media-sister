@@ -724,29 +724,36 @@ export default function BulkCarousel() {
   // ── CSV ──────────────────────────────────────────────────────────────────────
 
   const parseCsv = useCallback((file: File) => {
+    const setCsvError = (err: string | null) => setCsvState({ file, error: err, rows: [] });
+    const setCsvRows = (rows: Record<string, string>[]) => setCsvState({ file, error: null, rows: rows as CsvRow[] });
+
     const reader = new FileReader();
-    reader.onload = (evt) => {
-      const text = evt.target?.result as string ?? "";
-      const firstLine = text.split(/\r?\n/)[0] ?? "";
-      const commas = (firstLine.match(/,/g) ?? []).length;
-      const semis  = (firstLine.match(/;/g) ?? []).length;
-      const tabs   = (firstLine.match(/\t/g) ?? []).length;
-      const delimiter = semis > commas && semis >= tabs ? ";" : tabs > commas ? "\t" : ",";
-      Papa.parse<Record<string, string>>(text, {
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const firstLine = text.split('\n')[0];
+      const commas = (firstLine.match(/,/g) || []).length;
+      const semis = (firstLine.match(/;/g) || []).length;
+      const tabs = (firstLine.match(/\t/g) || []).length;
+      const delim = tabs > commas && tabs > semis ? '\t' : semis > commas ? ';' : ',';
+      Papa.parse(text, {
         header: true,
+        delimiter: delim,
         skipEmptyLines: true,
-        delimiter,
-        complete: (result) => {
-          if (!result.data.length) { setCsvState({ file, error: "CSV is empty.", rows: [] }); return; }
-          const parsedKeys = Object.keys(result.data[0] || {}).map(k => k.trim());
-          const missing = CSV_COLS.filter(k => !parsedKeys.includes(k));
-          if (missing.length) { setCsvState({ file, error: `Missing columns: ${missing.join(", ")}`, rows: [] }); return; }
-          setCsvState({ file, error: null, rows: result.data as unknown as CsvRow[] });
+        complete: (results) => {
+          const required = ['slide1_hook','slide1_subtitle','slide2_body','slide3_body','slide4_cta'];
+          const headers = (results.meta.fields || []).map((h: string) => h.trim());
+          const missing = required.filter(col => !headers.includes(col));
+          if (missing.length > 0) {
+            setCsvError(`Missing columns: ${missing.join(', ')}`);
+            return;
+          }
+          setCsvError(null);
+          const rows = results.data as Record<string, string>[];
+          setCsvRows(rows);
         },
-        error: (e: { message: string }) => setCsvState({ file, error: e.message, rows: [] }),
+        error: (e: Error) => setCsvError(e.message),
       });
     };
-    reader.onerror = () => setCsvState({ file, error: "Could not read file.", rows: [] });
     reader.readAsText(file);
   }, []);
 
