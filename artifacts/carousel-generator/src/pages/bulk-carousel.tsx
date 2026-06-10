@@ -960,9 +960,11 @@ export default function BulkCarousel() {
   // ── Schedule ─────────────────────────────────────────────────────────────────
 
   const goToSchedule = () => {
-    const today = new Date().toISOString().slice(0, 10);
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().slice(0, 10);
     setScheduleEntries(items.map(() => ({
-      date: today, time: "09:00",
+      date: tomorrowStr, time: "18:15",
       platforms: ["instagram"],
       presetId: selectedPresetId,
       caption: "",
