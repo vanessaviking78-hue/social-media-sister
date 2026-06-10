@@ -77,27 +77,13 @@ type CanvasDraftState = {
 };
 
 type DoodleShape = { id: string; label: string; svg: string };
+type StickerLibraryItem = { id: string; name: string; dataUrl: string };
+type StickerInstance = { id: string; libraryId: string; left?: number; top?: number; scaleX?: number; scaleY?: number; angle?: number };
 
 // ── Doodle shapes ─────────────────────────────────────────────────────────────
 const DOODLES: DoodleShape[] = [
-  { id: "heart", label: "Heart",
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50,82 C16,62 4,40 22,22 C31,13 50,24 50,36 C50,24 69,13 78,22 C96,40 84,62 50,82Z" fill="none" stroke="#9ca3af" stroke-width="3.5" stroke-linejoin="round"/></svg>` },
-  { id: "star", label: "Star",
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50,8 L62,36 L92,38 L69,59 L76,88 L50,73 L24,88 L31,59 L8,38 L38,36Z" fill="none" stroke="#9ca3af" stroke-width="3.5" stroke-linejoin="round"/></svg>` },
   { id: "arrow", label: "Arrow",
     svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M12,65 C14,35 48,15 82,38" fill="none" stroke="#9ca3af" stroke-width="3.5" stroke-linecap="round"/><path d="M68,24 L83,38 L70,52" fill="none" stroke="#9ca3af" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg>` },
-  { id: "pencil", label: "Pencil",
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="38" y="20" width="24" height="55" rx="4" fill="none" stroke="#9ca3af" stroke-width="3"/><path d="M38,75 L50,92 L62,75" fill="none" stroke="#9ca3af" stroke-width="3" stroke-linejoin="round"/><line x1="38" y1="33" x2="62" y2="33" stroke="#9ca3af" stroke-width="2.5"/></svg>` },
-  { id: "syringe", label: "Syringe",
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect x="32" y="28" width="36" height="44" rx="5" fill="none" stroke="#9ca3af" stroke-width="3"/><line x1="50" y1="12" x2="50" y2="28" stroke="#9ca3af" stroke-width="3" stroke-linecap="round"/><line x1="50" y1="72" x2="50" y2="88" stroke="#9ca3af" stroke-width="3" stroke-linecap="round"/><line x1="32" y1="46" x2="68" y2="46" stroke="#9ca3af" stroke-width="2"/><line x1="32" y1="56" x2="68" y2="56" stroke="#9ca3af" stroke-width="2"/></svg>` },
-  { id: "caduceus", label: "Caduceus",
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><line x1="50" y1="8" x2="50" y2="92" stroke="#9ca3af" stroke-width="3" stroke-linecap="round"/><path d="M32,32 C32,16 68,16 68,32 C68,48 32,48 32,64 C32,80 68,80 68,64" fill="none" stroke="#9ca3af" stroke-width="2.5" stroke-linecap="round"/><path d="M42,8 L58,8 L50,17Z" fill="none" stroke="#9ca3af" stroke-width="2.5" stroke-linejoin="round"/></svg>` },
-  { id: "flower", label: "Flower",
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="9" fill="none" stroke="#9ca3af" stroke-width="3"/><ellipse cx="50" cy="24" rx="9" ry="14" fill="none" stroke="#9ca3af" stroke-width="2.5"/><ellipse cx="50" cy="76" rx="9" ry="14" fill="none" stroke="#9ca3af" stroke-width="2.5"/><ellipse cx="24" cy="50" rx="14" ry="9" fill="none" stroke="#9ca3af" stroke-width="2.5"/><ellipse cx="76" cy="50" rx="14" ry="9" fill="none" stroke="#9ca3af" stroke-width="2.5"/><ellipse cx="31" cy="31" rx="9" ry="14" fill="none" stroke="#9ca3af" stroke-width="2.5" transform="rotate(-45 31 31)"/><ellipse cx="69" cy="31" rx="9" ry="14" fill="none" stroke="#9ca3af" stroke-width="2.5" transform="rotate(45 69 31)"/><ellipse cx="31" cy="69" rx="9" ry="14" fill="none" stroke="#9ca3af" stroke-width="2.5" transform="rotate(45 31 69)"/><ellipse cx="69" cy="69" rx="9" ry="14" fill="none" stroke="#9ca3af" stroke-width="2.5" transform="rotate(-45 69 69)"/></svg>` },
-  { id: "sparkle", label: "Sparkle",
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M50,8 L56,44 L92,50 L56,56 L50,92 L44,56 L8,50 L44,44Z" fill="none" stroke="#9ca3af" stroke-width="3.5" stroke-linejoin="round"/></svg>` },
-  { id: "squiggle", label: "Squiggle",
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 110 60"><path d="M5,30 C15,10 25,50 35,30 C45,10 55,50 65,30 C75,10 85,50 95,30" fill="none" stroke="#9ca3af" stroke-width="3.5" stroke-linecap="round"/></svg>` },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -182,9 +168,13 @@ export default function AboutMePage() {
   // Doodles
   const [doodles, setDoodles] = useState<DoodleState[]>([]);
 
+  // Stickers
+  const [stickerLibrary, setStickerLibrary] = useState<StickerLibraryItem[]>([]);
+  const [stickerInstances, setStickerInstances] = useState<StickerInstance[]>([]);
+
   // Selection
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [selectedType, setSelectedType] = useState<"text" | "logo" | "doodle" | null>(null);
+  const [selectedType, setSelectedType] = useState<"text" | "logo" | "doodle" | "sticker" | null>(null);
 
   // Client + export
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
@@ -200,11 +190,13 @@ export default function AboutMePage() {
   const fabricRef = useRef<FabricCanvas | null>(null);
   const blockMapRef = useRef<Map<string, Textbox>>(new Map());
   const doodleMapRef = useRef<Map<string, Group>>(new Map());
+  const stickerMapRef = useRef<Map<string, FabricImage>>(new Map());
   const logoObjRef = useRef<FabricImage | null>(null);
   const bgLayersRef = useRef<FabricObject[]>([]);
   const subjectObjRef = useRef<FabricImage | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const stickerInputRef = useRef<HTMLInputElement>(null);
   const isDirtyRef = useRef(false);
   const pendingLogoGeoRef = useRef<LogoGeo>(null);
   const pendingRestoreRef = useRef<CanvasDraftState | null>(null);
@@ -267,6 +259,11 @@ export default function AboutMePage() {
         setDoodles(prev => prev.map(d => d.id === id
           ? { ...d, left: obj.left, top: obj.top, scaleX: obj.scaleX, scaleY: obj.scaleY, angle: obj.angle }
           : d));
+      }
+      if (type === "sticker") {
+        setStickerInstances(prev => prev.map(s => s.id === id
+          ? { ...s, left: obj.left, top: obj.top, scaleX: obj.scaleX, scaleY: obj.scaleY, angle: obj.angle }
+          : s));
       }
     });
 
@@ -512,6 +509,58 @@ export default function AboutMePage() {
       setSelectedId(id); setSelectedType("doodle");
     } catch (e) { console.error("Doodle load failed", e); }
   }, [DISPLAY_H]);
+
+  const addStickerToCanvas = useCallback(async (item: StickerLibraryItem) => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const id = uid();
+    setStickerInstances(prev => [...prev, { id, libraryId: item.id }]);
+    try {
+      const img = await FabricImage.fromURL(item.dataUrl);
+      const scale = Math.min(0.25, 160 / Math.max(img.width ?? 1, img.height ?? 1));
+      img.set({
+        left: DISPLAY_W / 2 - (img.width ?? 100) * scale / 2,
+        top: DISPLAY_H / 2 - (img.height ?? 100) * scale / 2,
+        scaleX: scale, scaleY: scale,
+        selectable: true, evented: true,
+        originX: "left", originY: "top",
+      });
+      (img as any).__amId = id;
+      (img as any).__amType = "sticker";
+      canvas.add(img);
+      canvas.setActiveObject(img);
+      stickerMapRef.current.set(id, img);
+      canvas.renderAll();
+      setSelectedId(id); setSelectedType("sticker");
+    } catch (e) { console.error("Sticker load failed", e); }
+  }, [DISPLAY_H]);
+
+  const removeSticker = useCallback((id: string) => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const obj = stickerMapRef.current.get(id);
+    if (obj) { canvas.remove(obj); stickerMapRef.current.delete(id); canvas.renderAll(); }
+    setStickerInstances(prev => prev.filter(s => s.id !== id));
+    setSelectedId(null); setSelectedType(null);
+  }, []);
+
+  const selectSticker = useCallback((id: string) => {
+    const canvas = fabricRef.current;
+    const obj = stickerMapRef.current.get(id);
+    if (canvas && obj) { canvas.setActiveObject(obj); canvas.renderAll(); }
+    setSelectedId(id); setSelectedType("sticker");
+  }, []);
+
+  const handleStickerUpload = useCallback((files: FileList | null) => {
+    if (!files) return;
+    const promises = Array.from(files).map(f => new Promise<StickerLibraryItem>((res, rej) => {
+      const reader = new FileReader();
+      reader.onload = () => res({ id: uid(), name: f.name.replace(/\.[^.]+$/, ""), dataUrl: reader.result as string });
+      reader.onerror = rej;
+      reader.readAsDataURL(f);
+    }));
+    Promise.all(promises).then(items => setStickerLibrary(prev => [...prev, ...items]));
+  }, []);
 
   const removeDoodle = useCallback((id: string) => {
     const canvas = fabricRef.current;
@@ -1073,6 +1122,49 @@ export default function AboutMePage() {
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* Stickers */}
+            <div className="space-y-2 border-t border-white/8 pt-4">
+              <Label className="text-[10px] uppercase tracking-widest text-white/40">Stickers</Label>
+              <p className="text-[10px] text-white/25">Upload PNG stickers from Canva. Click to add. Drag to reposition, resize with handles.</p>
+              <button onClick={() => stickerInputRef.current?.click()}
+                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-white/20 hover:border-pink-500/50 hover:bg-pink-500/5 active:scale-95 transition-all text-[10px] text-white/40 hover:text-white/70">
+                <Upload className="w-3 h-3" />
+                Upload Stickers
+              </button>
+              {stickerLibrary.length > 0 && (
+                <div className="grid grid-cols-3 gap-1.5">
+                  {stickerLibrary.map(item => (
+                    <button key={item.id} onClick={() => addStickerToCanvas(item)}
+                      className="aspect-square flex flex-col items-center justify-center gap-1 rounded-lg border border-white/10 hover:border-violet-500/50 hover:bg-violet-500/10 active:scale-95 transition-all p-1.5 overflow-hidden">
+                      <img src={item.dataUrl} alt={item.name} className="w-9 h-9 object-contain" />
+                      <span className="text-[9px] text-white/30 leading-none truncate w-full text-center">{item.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {stickerInstances.length > 0 && (
+                <div className="space-y-1 mt-1">
+                  <p className="text-[10px] text-white/30 uppercase tracking-widest">On canvas</p>
+                  {stickerInstances.map(s => {
+                    const libItem = stickerLibrary.find(l => l.id === s.libraryId);
+                    return (
+                      <div key={s.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors ${selectedId === s.id ? "bg-violet-500/20 border border-violet-500/40" : "bg-white/5 border border-transparent"}`}>
+                        <button className="flex items-center gap-2 flex-1 min-w-0" onClick={() => selectSticker(s.id)}>
+                          {libItem && <img src={libItem.dataUrl} alt={libItem.name} className="w-5 h-5 object-contain shrink-0" />}
+                          <span className="text-xs text-white/70 truncate">{libItem?.name ?? "Sticker"}</span>
+                        </button>
+                        <button onClick={() => removeSticker(s.id)} className="text-white/20 hover:text-red-400 transition-colors p-0.5 shrink-0">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <input ref={stickerInputRef} type="file" accept="image/png,image/*" multiple className="hidden"
+                onChange={e => { handleStickerUpload(e.target.files); e.target.value = ""; }} />
             </div>
 
             {/* Format + Client */}
