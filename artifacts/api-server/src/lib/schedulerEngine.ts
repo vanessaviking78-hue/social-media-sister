@@ -267,6 +267,9 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
   // If absent (legacy posts), default to both.
   const wantIG = !content.platforms || content.platforms.includes("instagram");
   const wantFB = !content.platforms || content.platforms.includes("facebook");
+  if (wantIG && !igId) errors.push("IG: No Instagram Account ID configured for this client preset");
+  if (wantFB && !pageId) errors.push("FB: No Facebook Page ID configured for this client preset");
+
   if (igId && wantIG) {
     try {
       result.igPostId = await postCarouselToIG(igId, token, content.imageUrls, caption, audioName);
@@ -285,7 +288,6 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
     try { result.fbPostId = await postCarouselToFB(pageId, token, content.imageUrls, caption); }
     catch (e: any) { errors.push(`FB: ${e.message}`); }
   }
-  if (!igId && !pageId) throw new Error("No IG or FB account configured for this client");
   if (errors.length > 0) {
     logger.warn(
       { errors, igPosted: !!result.igPostId, fbPosted: !!result.fbPostId, postId: post.id },
