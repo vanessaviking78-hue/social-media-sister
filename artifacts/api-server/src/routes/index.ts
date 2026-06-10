@@ -28,6 +28,7 @@ import bundleRouter from "./bundle";
 import bundleRequestsRouter from "./bundle-requests";
 import strategyTopicsRouter from "./strategy-topics";
 import contentPreviewRouter from "./content-preview";
+import storiesRouter from "./stories";
 
 const router: IRouter = Router();
 
@@ -60,5 +61,6 @@ router.use(bundleRouter);
 router.use(bundleRequestsRouter);
 router.use(strategyTopicsRouter);
 router.use(contentPreviewRouter);
+router.use(storiesRouter);
 
 export default router;

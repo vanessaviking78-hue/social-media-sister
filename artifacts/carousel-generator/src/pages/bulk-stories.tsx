@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, Upload, FileText, Download, Loader2,
-  CheckCircle2, X, CalendarDays, Sparkles,
+  CheckCircle2, X, CalendarDays, Sparkles, RefreshCcw, Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -127,6 +127,74 @@ function parseCsvRows(rows: Record<string, string>[]): StoryEntry[] {
 
 const MAX_IMAGES = 10;
 
+// ── AI Question card rendering ────────────────────────────────────────────────
+
+function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let cur = "";
+  for (const word of words) {
+    const test = cur ? `${cur} ${word}` : word;
+    if (ctx.measureText(test).width > maxWidth && cur) {
+      lines.push(cur);
+      cur = word;
+    } else {
+      cur = test;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+async function renderQuestionCard(question: string, bgColour: string): Promise<File> {
+  const W = 1080, H = 1920;
+  const canvas = document.createElement("canvas");
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d")!;
+
+  try { await document.fonts.load(`140px "Bebas Neue"`); } catch { /* fallback to sans-serif */ }
+
+  ctx.fillStyle = bgColour;
+  ctx.fillRect(0, 0, W, H);
+
+  const maxTextW = W * 0.80;
+  let fontSize = 148;
+
+  const getLines = (fs: number) => {
+    ctx.font = `${fs}px "Bebas Neue", Impact, sans-serif`;
+    return wrapCanvasText(ctx, question, maxTextW);
+  };
+
+  let lines = getLines(fontSize);
+  while (lines.length > 5 && fontSize > 64) {
+    fontSize -= 10;
+    lines = getLines(fontSize);
+  }
+
+  const lh = fontSize * 1.22;
+  const totalH = lines.length * lh;
+  const startY = (H - totalH) / 2 + fontSize * 0.85;
+
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  ctx.shadowColor = "rgba(0,0,0,0.40)";
+  ctx.shadowBlur = 20;
+  ctx.shadowOffsetY = 6;
+
+  lines.forEach((line, i) => {
+    ctx.fillText(line, W / 2, startY + i * lh);
+  });
+
+  return new Promise((resolve) => {
+    canvas.toBlob(
+      (blob) => resolve(new File([blob!], `q-card-${Date.now()}-${Math.random().toString(36).slice(2)}.png`, { type: "image/png" })),
+      "image/png",
+    );
+  });
+}
+
 function buildStickerConfig(entry: StoryEntry): object | null {
   if (entry.stickerType === "none" || !entry.question) return null;
   if (entry.stickerType === "poll" && entry.options.length >= 2) {
@@ -170,6 +238,11 @@ export default function BulkStories() {
   const [imgDragOver, setImgDragOver] = useState(false);
   const [doneCount, setDoneCount] = useState(0);
   const [errorCount, setErrorCount] = useState(0);
+
+  const [generatedQuestions, setGeneratedQuestions] = useState<string[]>([]);
+  const [selectedQs, setSelectedQs] = useState<Set<number>>(new Set());
+  const [generatingQuestions, setGeneratingQuestions] = useState(false);
+  const [renderingCards, setRenderingCards] = useState(false);
 
   const csvInputRef = useRef<HTMLInputElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
@@ -225,6 +298,87 @@ export default function BulkStories() {
     setEntries(updated);
     setPhase("preview");
   }, [presetId, entries, images]);
+
+  const handleGenerateQuestions = useCallback(async () => {
+    if (!presetId) { toast.error("Pick a client first"); return; }
+    setGeneratingQuestions(true);
+    try {
+      const res = await fetch(`${BASE}/api/stories/generate-questions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientName: selectedPreset?.name }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Generation failed");
+      setGeneratedQuestions(data.questions ?? []);
+      setSelectedQs(new Set());
+    } catch (err: any) {
+      toast.error("Could not generate questions: " + err.message);
+    } finally {
+      setGeneratingQuestions(false);
+    }
+  }, [presetId, selectedPreset]);
+
+  const handleAddSelectedToStories = useCallback(async () => {
+    if (!selectedPreset) { toast.error("Pick a client first"); return; }
+    const indices = [...selectedQs].sort((a, b) => a - b);
+    if (!indices.length) { toast.error("Select at least one question"); return; }
+
+    setRenderingCards(true);
+    try {
+      const bgColour = selectedPreset.accentColor || "#e91976";
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const newImages: ImageItem[] = [];
+      const newEntries: StoryEntry[] = [];
+
+      for (let i = 0; i < indices.length; i++) {
+        const qi = indices[i];
+        const question = generatedQuestions[qi];
+        const file = await renderQuestionCard(question, bgColour);
+        const localUrl = URL.createObjectURL(file);
+        newImages.push({ file, localUrl });
+
+        const d = new Date(tomorrow);
+        d.setDate(d.getDate() + i);
+        const date = d.toISOString().slice(0, 10);
+
+        newEntries.push({
+          id: `ai-q-${qi}-${Date.now()}-${i}`,
+          rowNum: i + 1,
+          date,
+          time: "09:00",
+          stickerType: "none",
+          question,
+          options: [],
+          correctIndex: 0,
+          caption: "",
+          fontSize: 64,
+          imageFile: file,
+          imageLocalUrl: localUrl,
+          status: "idle",
+        });
+      }
+
+      setImages((prev) => {
+        const merged = [...newImages, ...prev];
+        return merged.slice(0, MAX_IMAGES);
+      });
+      setEntries((prev) => {
+        const merged = [...newEntries, ...prev].map((e, i) => ({ ...e, rowNum: i + 1 }));
+        return merged;
+      });
+
+      toast.success(
+        `${newEntries.length} question ${newEntries.length === 1 ? "card" : "cards"} added to your stories`,
+      );
+    } catch (err: any) {
+      toast.error("Failed to render cards: " + err.message);
+    } finally {
+      setRenderingCards(false);
+    }
+  }, [selectedPreset, selectedQs, generatedQuestions]);
 
   const handleScheduleAll = useCallback(async () => {
     if (!presetId || !selectedPreset) return;
@@ -334,6 +488,111 @@ export default function BulkStories() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Generate Questions */}
+          <div className="border border-white/8 rounded-xl p-5 flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">AI Question Generator</p>
+                <p className="text-xs text-zinc-600 mt-0.5">Generate engagement questions and render them as story cards</p>
+              </div>
+              <div className="flex items-center gap-2">
+                {generatedQuestions.length > 0 && (
+                  <button
+                    onClick={handleGenerateQuestions}
+                    disabled={generatingQuestions || !presetId}
+                    className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-pink-400 transition-colors disabled:opacity-40 px-2.5 py-1.5 rounded-lg hover:bg-white/5 border border-white/8"
+                  >
+                    <RefreshCcw size={12} className={generatingQuestions ? "animate-spin" : ""} />
+                    Regenerate
+                  </button>
+                )}
+                <Button
+                  onClick={handleGenerateQuestions}
+                  disabled={!presetId || generatingQuestions}
+                  size="sm"
+                  className="bg-zinc-800 hover:bg-zinc-700 text-white border border-white/10"
+                >
+                  {generatingQuestions ? (
+                    <><Loader2 size={13} className="mr-1.5 animate-spin" />Generating...</>
+                  ) : (
+                    <><Sparkles size={13} className="mr-1.5 text-pink-400" />Generate Questions</>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {!presetId && (
+              <p className="text-xs text-zinc-600 italic">Pick a client above to enable question generation.</p>
+            )}
+
+            {generatedQuestions.length > 0 && (
+              <>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-zinc-500">
+                    {selectedQs.size} of {generatedQuestions.length} selected
+                  </p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setSelectedQs(new Set(generatedQuestions.map((_, i) => i)))}
+                      className="text-xs text-zinc-500 hover:text-pink-400 transition-colors"
+                    >
+                      Select all
+                    </button>
+                    <span className="text-zinc-700">·</span>
+                    <button
+                      onClick={() => setSelectedQs(new Set())}
+                      className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col divide-y divide-white/5 rounded-xl overflow-hidden border border-white/8">
+                  {generatedQuestions.map((q, i) => (
+                    <label
+                      key={i}
+                      className="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-white/[0.03] transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedQs.has(i)}
+                        onChange={(e) =>
+                          setSelectedQs((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(i); else next.delete(i);
+                            return next;
+                          })
+                        }
+                        className="mt-0.5 h-4 w-4 accent-pink-500 flex-shrink-0"
+                      />
+                      <span
+                        className="text-sm text-zinc-200 leading-snug"
+                        style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", letterSpacing: "0.5px" }}
+                      >
+                        {q}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+
+                {selectedQs.size > 0 && (
+                  <Button
+                    onClick={handleAddSelectedToStories}
+                    disabled={renderingCards}
+                    className="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold"
+                  >
+                    {renderingCards ? (
+                      <><Loader2 size={14} className="mr-2 animate-spin" />Rendering cards...</>
+                    ) : (
+                      <><Plus size={14} className="mr-2" />Add {selectedQs.size} Selected to Stories</>
+                    )}
+                  </Button>
+                )}
+              </>
+            )}
           </div>
 
           {/* Images */}
