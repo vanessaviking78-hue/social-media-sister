@@ -726,20 +726,31 @@ export default function BulkCarousel() {
   // ── CSV ──────────────────────────────────────────────────────────────────────
 
   const parseCsv = useCallback((file: File) => {
-    Papa.parse<Record<string, string>>(file, {
-      header: true,
-      skipEmptyLines: true,
-      delimiter: ",",
-      complete: (result) => {
-        if (!result.data.length) { setCsvError("CSV is empty."); return; }
-        const parsedKeys = Object.keys(result.data[0] || {}).map(k => k.trim());
-        const missing = CSV_COLS.filter(k => !parsedKeys.includes(k));
-        if (missing.length) { setCsvError(`Missing columns: ${missing.join(", ")}`); return; }
-        setCsvError(null);
-        setCsvRows(result.data as unknown as CsvRow[]);
-      },
-      error: e => setCsvError(e.message),
-    });
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = evt.target?.result as string ?? "";
+      const firstLine = text.split(/\r?\n/)[0] ?? "";
+      const commas = (firstLine.match(/,/g) ?? []).length;
+      const semis  = (firstLine.match(/;/g) ?? []).length;
+      const tabs   = (firstLine.match(/\t/g) ?? []).length;
+      const delimiter = semis > commas && semis >= tabs ? ";" : tabs > commas ? "\t" : ",";
+      Papa.parse<Record<string, string>>(text, {
+        header: true,
+        skipEmptyLines: true,
+        delimiter,
+        complete: (result) => {
+          if (!result.data.length) { setCsvError("CSV is empty."); return; }
+          const parsedKeys = Object.keys(result.data[0] || {}).map(k => k.trim());
+          const missing = CSV_COLS.filter(k => !parsedKeys.includes(k));
+          if (missing.length) { setCsvError(`Missing columns: ${missing.join(", ")}`); return; }
+          setCsvError(null);
+          setCsvRows(result.data as unknown as CsvRow[]);
+        },
+        error: (e: { message: string }) => setCsvError(e.message),
+      });
+    };
+    reader.onerror = () => setCsvError("Could not read file.");
+    reader.readAsText(file);
   }, []);
 
   const handleCsvDrop = (e: React.DragEvent) => {
