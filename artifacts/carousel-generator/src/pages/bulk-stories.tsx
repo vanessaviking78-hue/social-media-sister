@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, Upload, FileText, Download, Loader2,
@@ -170,6 +170,13 @@ export default function BulkStories() {
   const csvInputRef = useRef<HTMLInputElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
 
+  // Clear uploads on every page visit so previous session images don't persist
+  useEffect(() => {
+    setImages([]);
+    setEntries([]);
+    setPhase("upload");
+  }, []);
+
   const selectedPreset = presets.find((p) => String(p.id) === presetId);
 
   const handleImages = useCallback((files: File[]) => {
@@ -284,10 +291,19 @@ export default function BulkStories() {
               <ArrowLeft size={18} />
             </button>
           </Link>
-          <div>
+          <div className="flex-1">
             <h1 className="font-semibold text-base leading-none">Bulk Story Scheduler</h1>
             <p className="text-xs text-zinc-500 mt-1">Upload images and a CSV to queue a month of story sticker posts at once.</p>
           </div>
+          {(images.length > 0 || entries.length > 0) && (
+            <button
+              onClick={() => { setImages([]); setEntries([]); }}
+              className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-red-400 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-500/10 border border-white/8"
+            >
+              <X size={12} />
+              Clear All
+            </button>
+          )}
         </div>
 
         <div className="max-w-3xl mx-auto px-6 py-8 flex flex-col gap-6">
