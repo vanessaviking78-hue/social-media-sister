@@ -89,11 +89,12 @@ export default function AiPortraitStudio() {
   const pollRef                   = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Save state ─────────────────────────────────────────────────────────────
-  const [saveClientName, setSaveClientName]   = useState("");
-  const [savePopoverOpen, setSavePopoverOpen] = useState<number | null>(null);
-  const [savingPortrait, setSavingPortrait]   = useState<number | null>(null);
-  const [savingAll, setSavingAll]             = useState(false);
-  const [downloadingAll, setDownloadingAll]   = useState(false);
+  const [saveClientName, setSaveClientName]     = useState("");
+  const [savePopoverOpen, setSavePopoverOpen]   = useState<number | null>(null);
+  const [savingPortrait, setSavingPortrait]     = useState<number | null>(null);
+  const [savingAll, setSavingAll]               = useState(false);
+  const [savingAllToLibrary, setSavingAllToLibrary] = useState(false);
+  const [downloadingAll, setDownloadingAll]     = useState(false);
 
   // ── Polling ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -255,6 +256,35 @@ export default function AiPortraitStudio() {
     }
   };
 
+  const handleSaveAllToLibrary = async () => {
+    const successful = cards.filter((c) => c.status === "success" && c.outputImageUrl);
+    if (!successful.length) return;
+    setSavingAllToLibrary(true);
+    try {
+      const name = saveClientName || clientName;
+      const items = successful.map((c) => ({
+        clientName: name || "Unknown",
+        postType: "single-image",
+        caption: "",
+        mediaUrl: c.outputImageUrl!,
+        thumbnailUrl: c.outputImageUrl!,
+        metadata: { source: "ai-photo-studio", preset: c.scenarioId },
+      }));
+      const r = await fetch(`${BASE}api/library/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items }),
+      });
+      const data = await r.json() as { count?: number; error?: string };
+      if (!r.ok) throw new Error(data.error || "Save failed");
+      toast.success(`${data.count} image${data.count !== 1 ? "s" : ""} saved to ${name || "library"}'s media library`);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSavingAllToLibrary(false);
+    }
+  };
+
   // ── Download ───────────────────────────────────────────────────────────────
   const handleDownload = (card: CardState) => {
     if (!card.outputImageUrl) return;
@@ -281,9 +311,11 @@ export default function AiPortraitStudio() {
         zip.file(`portrait-${name}.png`, await resp.blob());
       }));
       const blob = await zip.generateAsync({ type: "blob" });
+      const today = new Date().toISOString().slice(0, 10);
+      const slug = clientName ? clientName.replace(/\s+/g, "-").toLowerCase() : "client";
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
-      a.download = `${clientName ? clientName.replace(/\s+/g, "-") + "-" : ""}portraits.zip`;
+      a.download = `ai-photos-${slug}-${today}.zip`;
       a.click();
       toast.dismiss(tid);
       toast.success("All portraits downloaded");
@@ -532,28 +564,39 @@ export default function AiPortraitStudio() {
                     </Badge>
                   )}
                 </div>
-                {allDone && successCount > 1 && (
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="text-xs h-7" onClick={handleDownloadAll} disabled={downloadingAll}>
-                      {downloadingAll ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
+                
+              </div>
+
+              {/* ── Bulk action banner ── */}
+              {successCount >= 1 && (
+                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-violet-500/25 bg-violet-500/8 px-4 py-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-violet-300">
+                      {successCount} image{successCount !== 1 ? "s" : ""} ready
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Download them all at once or drop them straight into the media library.</p>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    <Button
+                      onClick={handleDownloadAll}
+                      disabled={downloadingAll}
+                      className="bg-violet-600 hover:bg-violet-700 text-white h-9 text-xs font-medium"
+                    >
+                      {downloadingAll ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1.5" />}
                       Download All
                     </Button>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" size="sm" className="text-xs h-7" disabled={savingAll}>
-                          {savingAll ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <BookImage className="w-3 h-3 mr-1" />}
-                          Save All
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-52 p-3 space-y-2">
-                        <p className="text-xs font-medium">Save all {successCount} portraits</p>
-                        <Button size="sm" className="w-full text-xs h-7" onClick={() => handleSaveAll(true)}>With watermark</Button>
-                        <Button size="sm" variant="outline" className="w-full text-xs h-7" onClick={() => handleSaveAll(false)}>Without watermark</Button>
-                      </PopoverContent>
-                    </Popover>
+                    <Button
+                      onClick={handleSaveAllToLibrary}
+                      disabled={savingAllToLibrary}
+                      variant="outline"
+                      className="border-violet-500/40 text-violet-300 hover:bg-violet-500/15 hover:text-violet-200 h-9 text-xs font-medium"
+                    >
+                      {savingAllToLibrary ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <BookImage className="w-3.5 h-3.5 mr-1.5" />}
+                      Save All to Library
+                    </Button>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
                 {cards.map((card) => {
