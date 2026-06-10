@@ -289,11 +289,18 @@ export default function BulkStories() {
 
   const handlePreview = useCallback(() => {
     if (!presetId) { toast.error("Pick a client first"); return; }
-    if (!entries.length) { toast.error("Upload a CSV first"); return; }
-    if (!images.length) { toast.error("Upload at least one story image"); return; }
-    const updated = entries.map((e, i) => {
-      const img = images[Math.min(i, images.length - 1)];
-      return { ...e, imageFile: img.file, imageLocalUrl: img.localUrl };
+    if (!entries.length) { toast.error("Upload a CSV or add AI question cards first"); return; }
+    const csvEntries = entries.filter((e) => !e.imageFile);
+    if (csvEntries.length > 0 && !images.length) {
+      toast.error("Upload at least one story image for your CSV rows"); return;
+    }
+    // Map only entries that don't already have an image (CSV rows) to uploaded images
+    let csvImageIdx = 0;
+    const updated = entries.map((e) => {
+      if (e.imageFile) return e; // AI-rendered card — already has its image
+      const img = images[Math.min(csvImageIdx, images.length - 1)];
+      csvImageIdx++;
+      return { ...e, imageFile: img?.file ?? null, imageLocalUrl: img?.localUrl ?? null };
     });
     setEntries(updated);
     setPhase("preview");
@@ -330,7 +337,6 @@ export default function BulkStories() {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      const newImages: ImageItem[] = [];
       const newEntries: StoryEntry[] = [];
 
       for (let i = 0; i < indices.length; i++) {
@@ -338,7 +344,6 @@ export default function BulkStories() {
         const question = generatedQuestions[qi];
         const file = await renderQuestionCard(question, bgColour);
         const localUrl = URL.createObjectURL(file);
-        newImages.push({ file, localUrl });
 
         const d = new Date(tomorrow);
         d.setDate(d.getDate() + i);
@@ -361,10 +366,8 @@ export default function BulkStories() {
         });
       }
 
-      setImages((prev) => {
-        const merged = [...newImages, ...prev];
-        return merged.slice(0, MAX_IMAGES);
-      });
+      // AI cards carry their own imageFile — don't put them in the shared images
+      // array, which is reserved for CSV-row background images.
       setEntries((prev) => {
         const merged = [...newEntries, ...prev].map((e, i) => ({ ...e, rowNum: i + 1 }));
         return merged;
@@ -384,13 +387,15 @@ export default function BulkStories() {
     if (!presetId || !selectedPreset) return;
     setPhase("scheduling");
 
-    const imageFiles = entries
-      .map((e) => e.imageFile)
-      .filter((f): f is File => !!f);
+    // Build index-safe mapping: only entries with an imageFile get uploaded.
+    // Preserve the entry index so uploadedUrls[j] maps back to the right entry.
+    const fileEntries: Array<{ entryIdx: number; file: File }> = [];
+    entries.forEach((e, i) => { if (e.imageFile) fileEntries.push({ entryIdx: i, file: e.imageFile }); });
 
-    let uploadedUrls: string[] = [];
+    let urlByEntryIdx = new Map<number, string>();
     try {
-      uploadedUrls = await uploadBatch(imageFiles);
+      const urls = await uploadBatch(fileEntries.map((x) => x.file));
+      fileEntries.forEach((x, j) => urlByEntryIdx.set(x.entryIdx, urls[j]));
     } catch (err: any) {
       toast.error("Image upload failed: " + err.message);
       setPhase("preview");
@@ -402,7 +407,7 @@ export default function BulkStories() {
 
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
-      const imageUrl = uploadedUrls[i];
+      const imageUrl = urlByEntryIdx.get(i);
 
       setEntries((prev) => prev.map((e, j) => j === i ? { ...e, status: "scheduling" } : e));
 
