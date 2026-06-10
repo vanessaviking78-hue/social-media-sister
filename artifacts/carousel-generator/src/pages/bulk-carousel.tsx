@@ -1390,7 +1390,7 @@ export default function BulkCarousel() {
         {csvRows.length > 0 && (
           <section className="space-y-3">
             <h2 className="font-semibold text-base">4. Review rows</h2>
-            <div className="rounded-xl overflow-hidden border border-border/20">
+            <div className="rounded-xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead className="bg-muted/30 text-muted-foreground">
