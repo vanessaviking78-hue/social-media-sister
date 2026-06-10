@@ -721,6 +721,8 @@ export default function BulkCarousel() {
   // Caption state
   const [captionMap, setCaptionMap] = useState<Record<string, string>>({});
   const [generatingCaptionId, setGeneratingCaptionId] = useState<string | null>(null);
+  const [generatingAll, setGeneratingAll] = useState(false);
+  const [generateAllProgress, setGenerateAllProgress] = useState<{ current: number; total: number } | null>(null);
 
   // Schedule state
   const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
@@ -922,6 +924,37 @@ export default function BulkCarousel() {
     } finally {
       setGeneratingCaptionId(null);
     }
+  };
+
+  const generateAllCaptions = async () => {
+    setGeneratingAll(true);
+    setGenerateAllProgress({ current: 0, total: items.length });
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      setGenerateAllProgress({ current: i + 1, total: items.length });
+      try {
+        const res = await fetch(`${BASE}/api/carousel/generate-caption`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            hook:     item.blocks.find(b => b.id === "hook")?.text     ?? "",
+            subtitle: item.blocks.find(b => b.id === "subtitle")?.text ?? "",
+            body2:    item.blocks.find(b => b.id === "body2")?.text    ?? "",
+            body3:    item.blocks.find(b => b.id === "body3")?.text    ?? "",
+            cta:      item.blocks.find(b => b.id === "cta")?.text      ?? "",
+          }),
+        });
+        if (res.ok) {
+          const { caption } = await res.json() as { caption: string };
+          setCaptionMap(prev => ({ ...prev, [item.id]: caption }));
+        }
+      } catch {
+        // continue to next item on failure
+      }
+    }
+    setGeneratingAll(false);
+    setGenerateAllProgress(null);
+    toast.success("All captions generated.");
   };
 
   // ── Schedule ─────────────────────────────────────────────────────────────────
@@ -1158,7 +1191,20 @@ export default function BulkCarousel() {
           </div>
         </header>
 
-        <div className="max-w-5xl mx-auto px-6 py-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="max-w-5xl mx-auto px-6 pt-6 pb-2 flex items-center justify-between gap-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={generateAllCaptions}
+            disabled={generatingAll}
+          >
+            {generatingAll
+              ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating {generateAllProgress?.current} of {generateAllProgress?.total}…</>
+              : <><Sparkles className="w-4 h-4 mr-2" />Generate All Captions</>}
+          </Button>
+        </div>
+
+        <div className="max-w-5xl mx-auto px-6 py-4 grid grid-cols-1 sm:grid-cols-2 gap-6">
           {items.map(item => (
             <div key={item.id} className="rounded-xl overflow-hidden bg-card/40">
               <div className="flex gap-1 p-3 bg-black/20">
