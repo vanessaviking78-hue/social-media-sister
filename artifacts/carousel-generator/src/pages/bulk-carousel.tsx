@@ -729,10 +729,9 @@ export default function BulkCarousel() {
 
   // ── CSV ──────────────────────────────────────────────────────────────────────
 
-  const parseCsv = useCallback((file: File) => {
+  const parseCsv = (file: File) => {
     const setCsvError = (err: string | null) => setCsvState({ file, error: err, rows: [] });
     const setCsvRows = (rows: Record<string, string>[]) => setCsvState({ file, error: null, rows: rows as CsvRow[] });
-
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
@@ -757,11 +756,11 @@ export default function BulkCarousel() {
           const rows = results.data as Record<string, string>[];
           setCsvRows(rows);
         },
-        error: (e: Error) => setCsvError(e.message),
+        error: (err: Error) => setCsvError(err.message),
       });
     };
     reader.readAsText(file);
-  }, []);
+  };
 
   const handleCsvDrop = (e: React.DragEvent) => {
     e.preventDefault(); setCsvDrag(false);
