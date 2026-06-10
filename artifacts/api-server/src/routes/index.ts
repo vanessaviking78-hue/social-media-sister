@@ -27,6 +27,7 @@ import reelScriptsRouter from "./reel-scripts";
 import bundleRouter from "./bundle";
 import bundleRequestsRouter from "./bundle-requests";
 import strategyTopicsRouter from "./strategy-topics";
+import contentPreviewRouter from "./content-preview";
 
 const router: IRouter = Router();
 
@@ -58,5 +59,6 @@ router.use(reelScriptsRouter);
 router.use(bundleRouter);
 router.use(bundleRequestsRouter);
 router.use(strategyTopicsRouter);
+router.use(contentPreviewRouter);
 
 export default router;

@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye } from "lucide-react";
 
 const TOOLS = [
   {
@@ -235,6 +235,15 @@ const TOOLS = [
     color: "from-violet-500/20 to-violet-500/5",
     border: "hover:border-violet-500/50",
     iconColor: "text-violet-400",
+  },
+  {
+    href: "/preview",
+    icon: Eye,
+    name: "Client Content Preview",
+    description: "Share a public preview link with each client so they can see their upcoming scheduled posts, as an Instagram grid or calendar view.",
+    color: "from-emerald-500/20 to-emerald-500/5",
+    border: "hover:border-emerald-500/50",
+    iconColor: "text-emerald-400",
   },
 ];
 

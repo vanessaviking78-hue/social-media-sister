@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Trash2, Plus, BarChart3, Calendar, Film, Layers, ChevronDown, ChevronUp, Edit2 } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Trash2, Plus, BarChart3, Calendar, Film, Layers, ChevronDown, ChevronUp, Edit2, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -391,6 +391,19 @@ export default function Scheduler() {
                 ))}
               </SelectContent>
             </Select>
+          )}
+
+          {filterClient !== "all" && tab !== "dashboard" && (
+            <a
+              href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/preview/${filterClient.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-pink-400 transition-colors px-3 py-1.5 rounded-lg border border-zinc-700 hover:border-pink-500/40 whitespace-nowrap"
+              title="Open client content preview"
+            >
+              <ExternalLink size={12} />
+              Preview Feed
+            </a>
           )}
 
           <button onClick={load} className="ml-auto p-2 text-zinc-400 hover:text-white transition-colors" title="Refresh">

@@ -52,6 +52,8 @@ import UploadSchedule from "@/pages/upload-schedule";
 import BulkCarousel from "@/pages/bulk-carousel";
 import BulkStories from "@/pages/bulk-stories";
 import CsvSlideCarousel from "@/pages/csv-slide-carousel";
+import ContentPreview from "@/pages/content-preview";
+import PreviewIndex from "@/pages/preview-index";
 
 const queryClient = new QueryClient();
 
@@ -89,6 +91,7 @@ function ProtectedRouter() {
       <Route path="/bulk-carousel" component={BulkCarousel} />
       <Route path="/bulk-stories" component={BulkStories} />
       <Route path="/csv-slide-carousel" component={CsvSlideCarousel} />
+      <Route path="/preview" component={PreviewIndex} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -111,6 +114,7 @@ function AppContent() {
   const [isFounderSignup] = useRoute("/founder-signup");
   const [isFounderWelcome] = useRoute("/founder-welcome");
   const [isTrialBundle] = useRoute("/trialbundle");
+  const [isContentPreview, contentPreviewParams] = useRoute("/preview/:clientSlug");
   const [location] = useLocation();
   const isSplash = location === "/";
 
@@ -164,6 +168,9 @@ function AppContent() {
   }
   if (isTrialBundle) {
     return <BundleRequest />;
+  }
+  if (isContentPreview && contentPreviewParams?.clientSlug) {
+    return <ContentPreview clientSlug={contentPreviewParams.clientSlug} />;
   }
 
   return (
