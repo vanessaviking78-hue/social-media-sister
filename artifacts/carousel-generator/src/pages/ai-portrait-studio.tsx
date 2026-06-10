@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import JSZip from "jszip";
 import {
   Sparkles, Upload, X, Check, Download, RefreshCcw, Loader2, AlertCircle,
-  ChevronRight, Clock, BookImage, Palette, Film, Play, ExternalLink,
+  Clock, BookImage, ChevronDown, ChevronUp, Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 const BASE = import.meta.env.BASE_URL;
 
-type OutfitType = "white-shirt-jeans" | "black-tee-trousers" | "floral-boho" | "scrubs";
-type BackgroundType = "clinic-bokeh" | "white-studio" | "black-studio" | "custom-color" | "upload-own";
 type CardStatus = "idle" | "generating" | "success" | "failed" | "rate-limited";
 type AspectRatio = "1:1" | "3:4" | "9:16";
 
@@ -37,93 +35,67 @@ interface AiSourcePhoto {
   uploadedAt: string;
 }
 
-const ASPECT_OPTIONS: AspectRatio[] = ["1:1", "3:4", "9:16"];
-
-const OUTFIT_OPTIONS: { value: OutfitType; label: string }[] = [
-  { value: "white-shirt-jeans", label: "White sharp shirt with jeans" },
-  { value: "black-tee-trousers", label: "Black long-sleeved tee with black trousers" },
-  { value: "floral-boho", label: "Floral boho dress with cardigan" },
-  { value: "scrubs", label: "Scrubs" },
-];
-
-const BACKGROUND_OPTIONS: { value: BackgroundType; label: string }[] = [
-  { value: "clinic-bokeh", label: "Clinic — bokeh, unrecognisable" },
-  { value: "white-studio", label: "White studio backdrop" },
-  { value: "black-studio", label: "Black studio backdrop" },
-  { value: "custom-color", label: "Custom colour backdrop" },
-  { value: "upload-own", label: "Upload your own studio/clinic" },
-];
-
-const SCRUB_COLORS = [
-  { label: "Navy Blue", value: "navy blue" },
-  { label: "Royal Blue", value: "royal blue" },
-  { label: "Ceil Blue", value: "ceil blue" },
-  { label: "Hunter Green", value: "hunter green" },
-  { label: "Sage Green", value: "sage green" },
-  { label: "Burgundy", value: "burgundy" },
-  { label: "Plum / Purple", value: "plum purple" },
-  { label: "Charcoal", value: "charcoal" },
-  { label: "Black", value: "black" },
-  { label: "White", value: "white" },
-  { label: "Dusty Pink", value: "dusty pink" },
-  { label: "Teal", value: "teal" },
-];
-
-function cardDisplayName(scenarioId: string): string {
-  if (scenarioId.startsWith("custom")) {
-    const parts = scenarioId.split("|");
-    if (parts.length >= 3) {
-      const outfitLabel = OUTFIT_OPTIONS.find((o) => o.value === parts[1])?.label ?? parts[1];
-      const bgLabel = BACKGROUND_OPTIONS.find((b) => b.value === parts[2])?.label ?? parts[2];
-      return `${outfitLabel} — ${bgLabel}`;
-    }
-    if (parts.length === 2) return OUTFIT_OPTIONS.find((o) => o.value === parts[1])?.label ?? parts[1];
-    return "Custom portrait";
-  }
-  return scenarioId;
+interface PhotoStudioPreset {
+  id: string;
+  name: string;
+  hasColour: boolean;
 }
 
+const PHOTO_STUDIO_PRESETS: PhotoStudioPreset[] = [
+  { id: "ps-01", name: "Clean Skin Realism Enhancer",          hasColour: false },
+  { id: "ps-02", name: "Textured Skin Realism Enhancer",       hasColour: false },
+  { id: "ps-03", name: "Creative Director Office",             hasColour: true  },
+  { id: "ps-04", name: "Black Blazer Director Editorial",      hasColour: false },
+  { id: "ps-05", name: "Bathroom Vanity Skincare",             hasColour: false },
+  { id: "ps-06", name: "Kitchen Island Lifestyle",             hasColour: true  },
+  { id: "ps-07", name: "Patient Reassurance Clinical",         hasColour: true  },
+  { id: "ps-08", name: "Luxury Clinic Injector",               hasColour: true  },
+  { id: "ps-09", name: "White Shirt Sofa Casual",              hasColour: false },
+  { id: "ps-10", name: "Black and White Studio Portrait",      hasColour: false },
+  { id: "ps-11", name: "Consultation Space Head and Shoulders",hasColour: true  },
+  { id: "ps-12", name: "Clinic Arms Crossed Confident",        hasColour: true  },
+  { id: "ps-13", name: "B&W Camera Editorial",                 hasColour: false },
+  { id: "ps-14", name: "Side-Lit Vintage Texture",             hasColour: false },
+  { id: "ps-15", name: "Intense Eyes Close Crop",              hasColour: true  },
+];
+
+const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
+  { value: "3:4",  label: "3:4 — Portrait" },
+  { value: "1:1",  label: "1:1 — Square"   },
+  { value: "9:16", label: "9:16 — Story"   },
+];
+
 export default function AiPortraitStudio() {
-  const [outfitType, setOutfitType] = useState<OutfitType>("white-shirt-jeans");
-  const [scrubColor, setScrubColor] = useState("navy blue");
-  const [backgroundType, setBackgroundType] = useState<BackgroundType>("clinic-bokeh");
-  const [backdropColor, setBackdropColor] = useState("#ffffff");
-  const [backgroundPreviewUrl, setBackgroundPreviewUrl] = useState<string | null>(null);
-  const [backgroundUploadedUrl, setBackgroundUploadedUrl] = useState<string | null>(null);
-  const [backgroundUploading, setBackgroundUploading] = useState(false);
-  const [aspectRatio, setAspectRatio] = useState<AspectRatio>("3:4");
-  const backgroundFileInputRef = useRef<HTMLInputElement>(null);
+  // ── Upload state ───────────────────────────────────────────────────────────
+  const [sourcePhoto, setSourcePhoto]       = useState<AiSourcePhoto | null>(null);
+  const [uploading, setUploading]           = useState(false);
+  const [photoPreview, setPhotoPreview]     = useState<string | null>(null);
+  const [clientName, setClientName]         = useState("");
+  const [isDragging, setIsDragging]         = useState(false);
+  const fileInputRef                        = useRef<HTMLInputElement>(null);
+  const [urlInput, setUrlInput]             = useState("");
+  const [urlLoading, setUrlLoading]         = useState(false);
+  const [showUrlInput, setShowUrlInput]     = useState(false);
 
-  const [sourcePhoto, setSourcePhoto] = useState<AiSourcePhoto | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [clientName, setClientName] = useState("");
-  const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // ── Preset selection ───────────────────────────────────────────────────────
+  const [selectedPresets, setSelectedPresets] = useState<Set<string>>(new Set());
+  const [presetColours, setPresetColours]     = useState<Record<string, string>>({});
+  const [aspectRatio, setAspectRatio]         = useState<AspectRatio>("3:4");
 
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [cards, setCards] = useState<CardState[]>([]);
+  // ── Generation state ───────────────────────────────────────────────────────
+  const [jobId, setJobId]         = useState<string | null>(null);
+  const [cards, setCards]         = useState<CardState[]>([]);
   const [generating, setGenerating] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollRef                   = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const [urlInput, setUrlInput] = useState("");
-  const [urlLoading, setUrlLoading] = useState(false);
-  const [showUrlInput, setShowUrlInput] = useState(false);
-
-  const [saveClientName, setSaveClientName] = useState("");
+  // ── Save state ─────────────────────────────────────────────────────────────
+  const [saveClientName, setSaveClientName]   = useState("");
   const [savePopoverOpen, setSavePopoverOpen] = useState<number | null>(null);
-  const [savingPortrait, setSavingPortrait] = useState<number | null>(null);
-  const [regenJobIds, setRegenJobIds] = useState<Map<number, string>>(new Map());
+  const [savingPortrait, setSavingPortrait]   = useState<number | null>(null);
+  const [savingAll, setSavingAll]             = useState(false);
+  const [downloadingAll, setDownloadingAll]   = useState(false);
 
-  const [animatePortraitId, setAnimatePortraitId] = useState<number | null>(null);
-  const [animateCameraMotion, setAnimateCameraMotion] = useState<string>("cinematic-drift");
-  const [animateJobId, setAnimateJobId] = useState<string | null>(null);
-  const [animateStatus, setAnimateStatus] = useState<string>("");
-  const [animateProgress, setAnimateProgress] = useState(0);
-  const [animateVideoUrl, setAnimateVideoUrl] = useState<string | null>(null);
-  const [animateFailed, setAnimateFailed] = useState(false);
-  const animatePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
+  // ── Polling ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!jobId) return;
     pollRef.current = setInterval(async () => {
@@ -137,41 +109,19 @@ export default function AiPortraitStudio() {
           clearInterval(pollRef.current!);
           setGenerating(false);
           const failed = data.cards.filter((c) => c.status === "failed").length;
-          const ok = data.cards.filter((c) => c.status === "success").length;
+          const ok     = data.cards.filter((c) => c.status === "success").length;
           if (failed === 0) toast.success(`All ${ok} portraits generated.`);
-          else toast.warning(`${ok} succeeded, ${failed} failed.`);
+          else              toast.warning(`${ok} generated, ${failed} failed.`);
         }
-      } catch {}
-    }, 500);
+      } catch { /* silent */ }
+    }, 800);
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [jobId]);
 
-  const handleUrlIngest = async () => {
-    if (!urlInput.trim()) return;
-    setUrlLoading(true);
-    try {
-      const r = await fetch(`${BASE}api/ai-portrait/source-from-url`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photoUrl: urlInput.trim(), clientName }),
-      });
-      const data = await r.json() as AiSourcePhoto & { error?: string };
-      if (!r.ok) throw new Error(data.error || "URL ingestion failed");
-      setSourcePhoto(data);
-      setPhotoPreview(data.photoUrl);
-      setShowUrlInput(false);
-      toast.success("Reference photo loaded from URL");
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Failed to load photo from URL");
-    } finally {
-      setUrlLoading(false);
-    }
-  };
-
+  // ── File upload ────────────────────────────────────────────────────────────
   const handleFileDrop = useCallback(async (file: File) => {
     if (!file.type.startsWith("image/")) { toast.error("Please upload an image file"); return; }
-    const preview = URL.createObjectURL(file);
-    setPhotoPreview(preview);
+    setPhotoPreview(URL.createObjectURL(file));
     setUploading(true);
     try {
       const fd = new FormData();
@@ -183,8 +133,7 @@ export default function AiPortraitStudio() {
       setSourcePhoto(data);
       toast.success("Reference photo uploaded");
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Upload failed";
-      toast.error(msg);
+      toast.error(e instanceof Error ? e.message : "Upload failed");
       setPhotoPreview(null);
     } finally {
       setUploading(false);
@@ -197,61 +146,75 @@ export default function AiPortraitStudio() {
     if (file) handleFileDrop(file);
   }, [handleFileDrop]);
 
-  const handleBackgroundFileSelect = async (file: File) => {
-    if (!file.type.startsWith("image/")) { toast.error("Please upload an image file"); return; }
-    setBackgroundPreviewUrl(URL.createObjectURL(file));
-    setBackgroundUploadedUrl(null);
-    setBackgroundUploading(true);
+  const handleUrlIngest = async () => {
+    if (!urlInput.trim()) return;
+    setUrlLoading(true);
     try {
-      const fd = new FormData();
-      fd.append("image", file);
-      const r = await fetch(`${BASE}api/ai-portrait/background-image`, { method: "POST", body: fd });
-      const data = await r.json() as { url?: string; error?: string };
-      if (!r.ok) throw new Error(data.error || "Upload failed");
-      setBackgroundUploadedUrl(data.url!);
+      const r = await fetch(`${BASE}api/ai-portrait/source-from-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photoUrl: urlInput.trim(), clientName }),
+      });
+      const data = await r.json() as AiSourcePhoto & { error?: string };
+      if (!r.ok) throw new Error(data.error || "Failed");
+      setSourcePhoto(data);
+      setPhotoPreview(data.photoUrl);
+      setShowUrlInput(false);
+      toast.success("Reference photo loaded from URL");
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Upload failed");
-      setBackgroundPreviewUrl(null);
+      toast.error(e instanceof Error ? e.message : "Failed to load from URL");
     } finally {
-      setBackgroundUploading(false);
+      setUrlLoading(false);
     }
   };
 
+  // ── Preset toggle ──────────────────────────────────────────────────────────
+  const togglePreset = (id: string) => {
+    setSelectedPresets((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else              next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll   = () => setSelectedPresets(new Set(PHOTO_STUDIO_PRESETS.map((p) => p.id)));
+  const selectNone  = () => setSelectedPresets(new Set());
+
+  // ── Generate ───────────────────────────────────────────────────────────────
   const handleGenerate = async () => {
-    if (!sourcePhoto) { toast.error("Upload a reference photo first"); return; }
-    if (backgroundType === "upload-own" && !backgroundUploadedUrl) { toast.error("Upload a background image first"); return; }
-    const scenarioId = `custom|${outfitType}|${backgroundType}`;
+    if (!sourcePhoto)          { toast.error("Upload a reference photo first"); return; }
+    if (selectedPresets.size === 0) { toast.error("Select at least one preset"); return; }
+
+    const scenarios = Array.from(selectedPresets).map((id) => {
+      const preset = PHOTO_STUDIO_PRESETS.find((p) => p.id === id)!;
+      return {
+        id,
+        scrubColor: preset.hasColour ? (presetColours[id]?.trim() || "navy blue") : undefined,
+        aspectRatio,
+      };
+    });
+
     setGenerating(true);
-    setCards([{ scenarioId, status: "idle" }]);
+    setCards(scenarios.map((s) => ({ scenarioId: s.id, status: "idle" })));
+
     try {
       const r = await fetch(`${BASE}api/ai-portrait/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sourcePhotoId: sourcePhoto.id,
-          clientName,
-          scenarios: [{
-            id: scenarioId,
-            outfitType,
-            backgroundType,
-            scrubColor: outfitType === "scrubs" ? scrubColor : undefined,
-            backdropColor: backgroundType === "custom-color" ? backdropColor : undefined,
-            backgroundImageUrl: backgroundType === "upload-own" ? backgroundUploadedUrl : undefined,
-            aspectRatio,
-          }],
-        }),
+        body: JSON.stringify({ sourcePhotoId: sourcePhoto.id, clientName, scenarios }),
       });
       const data = await r.json() as { jobId?: string; error?: string };
       if (!r.ok) throw new Error(data.error || "Failed to start generation");
       setJobId(data.jobId!);
-      toast.success("Generation started — your portrait will appear in around 15 seconds.");
+      toast.success(`Generating ${scenarios.length} portrait${scenarios.length > 1 ? "s" : ""}. Each takes around 15 seconds.`);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Failed";
-      toast.error(msg);
+      toast.error(e instanceof Error ? e.message : "Failed");
       setGenerating(false);
     }
   };
 
+  // ── Save ───────────────────────────────────────────────────────────────────
   const handleSave = async (card: CardState, applyWatermark: boolean) => {
     if (!card.portraitId) return;
     setSavingPortrait(card.portraitId);
@@ -272,139 +235,6 @@ export default function AiPortraitStudio() {
     }
   };
 
-  const handleRateLimitedRetry = async (card: CardState) => {
-    if (!sourcePhoto) { toast.error("Reference photo is no longer available — please re-upload and regenerate"); return; }
-    const cfg = {
-      id: card.scenarioId,
-      outfitType,
-      backgroundType,
-      scrubColor: outfitType === "scrubs" ? scrubColor : undefined,
-      backdropColor: backgroundType === "custom-color" ? backdropColor : undefined,
-      backgroundImageUrl: backgroundType === "upload-own" ? backgroundUploadedUrl ?? undefined : undefined,
-      aspectRatio,
-    };
-    try {
-      const r = await fetch(`${BASE}api/ai-portrait/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sourcePhotoId: sourcePhoto.id, clientName, scenarios: [cfg] }),
-      });
-      const data = await r.json() as { jobId?: string; error?: string };
-      if (!r.ok) throw new Error(data.error || "Retry failed");
-      const newJobId = data.jobId!;
-      setCards((prev) => prev.map((c) => c.scenarioId === card.scenarioId ? { ...c, status: "generating" } : c));
-      toast.success("Retrying portrait generation...");
-      const retryPoll = setInterval(async () => {
-        try {
-          const sr = await fetch(`${BASE}api/ai-portrait/jobs/${newJobId}/status`);
-          if (!sr.ok) { clearInterval(retryPoll); return; }
-          const sd = await sr.json() as { cards: CardState[] };
-          const updated = sd.cards.find((c) => c.scenarioId === card.scenarioId);
-          if (updated && (updated.status === "success" || updated.status === "failed")) {
-            clearInterval(retryPoll);
-            setCards((prev) => prev.map((c) => c.scenarioId === card.scenarioId ? { ...c, ...updated } : c));
-            if (updated.status === "success") toast.success("Portrait generated.");
-            else toast.error("Generation failed again.");
-          }
-        } catch {}
-      }, 500);
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Retry failed");
-    }
-  };
-
-  const CAMERA_MOTION_LABELS: Record<string, string> = {
-    "slow-pan-left": "Slow pan — left to right",
-    "slow-pan-right": "Slow pan — right to left",
-    "dolly-in": "Slow dolly in (zoom toward subject)",
-    "dolly-out": "Slow dolly out (pull back)",
-    "tilt-up": "Slow tilt up",
-    "cinematic-drift": "Cinematic drift (micro-pan and dolly)",
-  };
-
-  const openAnimateModal = (portraitId: number) => {
-    setAnimatePortraitId(portraitId);
-    setAnimateJobId(null);
-    setAnimateStatus("");
-    setAnimateProgress(0);
-    setAnimateVideoUrl(null);
-    setAnimateFailed(false);
-    if (animatePollRef.current) clearInterval(animatePollRef.current);
-  };
-
-  const closeAnimateModal = () => {
-    setAnimatePortraitId(null);
-    setAnimateJobId(null);
-    setAnimateStatus("");
-    setAnimateProgress(0);
-    setAnimateVideoUrl(null);
-    setAnimateFailed(false);
-    if (animatePollRef.current) { clearInterval(animatePollRef.current); animatePollRef.current = null; }
-  };
-
-  const resetAnimateForRetry = () => {
-    setAnimateJobId(null);
-    setAnimateStatus("");
-    setAnimateProgress(0);
-    setAnimateVideoUrl(null);
-    setAnimateFailed(false);
-    if (animatePollRef.current) { clearInterval(animatePollRef.current); animatePollRef.current = null; }
-  };
-
-  const handleAnimate = async () => {
-    if (!animatePortraitId) return;
-    setAnimateStatus("Submitting…");
-    setAnimateProgress(0.03);
-    setAnimateVideoUrl(null);
-    try {
-      const r = await fetch(`${BASE}api/ai-portrait/${animatePortraitId}/animate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cameraMotion: animateCameraMotion, clientName }),
-      });
-      const data = await r.json() as { jobId?: string; error?: string };
-      if (!r.ok) throw new Error(data.error || "Failed to start animation");
-      const jid = data.jobId!;
-      setAnimateJobId(jid);
-      setAnimateStatus("Queued…");
-      animatePollRef.current = setInterval(async () => {
-        try {
-          const sr = await fetch(`${BASE}api/ai-portrait/animate/${jid}/status`);
-          if (!sr.ok) return;
-          const sd = await sr.json() as { status: string; progress: number; message: string; videoUrl?: string; error?: string };
-          setAnimateStatus(sd.message);
-          setAnimateProgress(sd.progress);
-          if (sd.status === "done") {
-            clearInterval(animatePollRef.current!); animatePollRef.current = null;
-            setAnimateVideoUrl(`${BASE}${sd.videoUrl?.replace(/^\//, "")}`);
-            toast.success("Motion reel saved to library!");
-          } else if (sd.status === "failed") {
-            clearInterval(animatePollRef.current!); animatePollRef.current = null;
-            setAnimateFailed(true);
-            setAnimateStatus(sd.error || "Generation failed");
-            toast.error(sd.error || "Motion reel generation failed");
-          }
-        } catch {}
-      }, 2000);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Animation failed";
-      toast.error(msg);
-      setAnimateFailed(true);
-      setAnimateStatus(msg);
-      setAnimateProgress(0);
-    }
-  };
-
-  const handleDownload = (card: CardState, scenarioName: string) => {
-    if (!card.outputImageUrl) return;
-    const a = document.createElement("a");
-    a.href = card.outputImageUrl;
-    a.download = `portrait-${scenarioName.toLowerCase().replace(/\s+/g, "-")}.png`;
-    a.target = "_blank";
-    a.click();
-  };
-
-  const [savingAll, setSavingAll] = useState(false);
   const handleSaveAll = async (applyWatermark: boolean) => {
     const successful = cards.filter((c) => c.status === "success" && c.portraitId);
     if (!successful.length) return;
@@ -413,15 +243,11 @@ export default function AiPortraitStudio() {
       const r = await fetch(`${BASE}api/ai-portrait/save-batch-to-library`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          portraitIds: successful.map((c) => c.portraitId!),
-          applyWatermark,
-          clientName: clientName,
-        }),
+        body: JSON.stringify({ portraitIds: successful.map((c) => c.portraitId!), applyWatermark, clientName }),
       });
       const data = await r.json() as { success?: boolean; count?: number; error?: string };
       if (!r.ok) throw new Error(data.error || "Save failed");
-      toast.success(`${data.count} portrait${data.count !== 1 ? "s" : ""} saved to ${clientName ? `${clientName}'s` : "the"} Library`);
+      toast.success(`${data.count} portrait${data.count !== 1 ? "s" : ""} saved to Library`);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Save failed");
     } finally {
@@ -429,89 +255,103 @@ export default function AiPortraitStudio() {
     }
   };
 
-  const [downloadingAll, setDownloadingAll] = useState(false);
+  // ── Download ───────────────────────────────────────────────────────────────
+  const handleDownload = (card: CardState) => {
+    if (!card.outputImageUrl) return;
+    const preset = PHOTO_STUDIO_PRESETS.find((p) => p.id === card.scenarioId);
+    const name = (preset?.name ?? card.scenarioId).toLowerCase().replace(/\s+/g, "-");
+    const a = document.createElement("a");
+    a.href = card.outputImageUrl;
+    a.download = `portrait-${name}.png`;
+    a.target = "_blank";
+    a.click();
+  };
+
   const handleDownloadAll = async () => {
     const successful = cards.filter((c) => c.status === "success" && c.outputImageUrl);
     if (!successful.length) return;
     setDownloadingAll(true);
-    const toastId = toast.loading(`Packing ${successful.length} portrait${successful.length > 1 ? "s" : ""}…`);
+    const tid = toast.loading(`Packing ${successful.length} portrait${successful.length > 1 ? "s" : ""}…`);
     try {
       const zip = new JSZip();
       await Promise.all(successful.map(async (card) => {
-        const name = cardDisplayName(card.scenarioId).toLowerCase().replace(/\s+/g, "-");
+        const preset = PHOTO_STUDIO_PRESETS.find((p) => p.id === card.scenarioId);
+        const name = (preset?.name ?? card.scenarioId).toLowerCase().replace(/\s+/g, "-");
         const resp = await fetch(card.outputImageUrl!);
-        const blob = await resp.blob();
-        zip.file(`portrait-${name}.png`, blob);
+        zip.file(`portrait-${name}.png`, await resp.blob());
       }));
       const blob = await zip.generateAsync({ type: "blob" });
       const a = document.createElement("a");
       a.href = URL.createObjectURL(blob);
       a.download = `${clientName ? clientName.replace(/\s+/g, "-") + "-" : ""}portraits.zip`;
       a.click();
-      toast.dismiss(toastId);
+      toast.dismiss(tid);
       toast.success("All portraits downloaded");
     } catch {
-      toast.dismiss(toastId);
-      toast.error("Download failed — try individual downloads instead");
+      toast.dismiss(tid);
+      toast.error("Download failed — try individual downloads");
     } finally {
       setDownloadingAll(false);
     }
   };
 
-  const handleRegenerate = async (card: CardState) => {
-    if (!card.portraitId) return;
-    try {
-      const r = await fetch(`${BASE}api/ai-portrait/${card.portraitId}/regenerate`, { method: "POST" });
-      const data = await r.json() as { jobId?: string; error?: string };
-      if (!r.ok) throw new Error(data.error || "Regen failed");
-      setRegenJobIds((prev) => { const n = new Map(prev); n.set(card.portraitId!, data.jobId!); return n; });
-      setCards((prev) => prev.map((c) => c.portraitId === card.portraitId ? { ...c, status: "generating" } : c));
-      toast.success("Retrying portrait generation...");
-      const regenPoll = setInterval(async () => {
-        const sr = await fetch(`${BASE}api/ai-portrait/jobs/${data.jobId}/status`);
-        if (!sr.ok) { clearInterval(regenPoll); return; }
-        const sd = await sr.json() as { cards: CardState[] };
-        const updated = sd.cards.find((c) => c.scenarioId === card.scenarioId);
-        if (updated && (updated.status === "success" || updated.status === "failed")) {
-          clearInterval(regenPoll);
-          setCards((prev) => prev.map((c) => c.portraitId === card.portraitId ? { ...c, ...updated } : c));
-          if (updated.status === "success") toast.success("Portrait regenerated.");
-          else toast.error("Portrait generation failed again.");
-        }
-      }, 1500);
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Regen failed");
-    }
-  };
+  // ── Computed values ────────────────────────────────────────────────────────
+  const doneCount    = cards.filter((c) => c.status === "success" || c.status === "failed").length;
+  const successCount = cards.filter((c) => c.status === "success").length;
+  const failedCount  = cards.filter((c) => c.status === "failed").length;
+  const allDone      = cards.length > 0 && doneCount === cards.length;
 
-  const allDone = cards.length > 0 && cards.every((c) => c.status === "success" || c.status === "failed");
+  const progressLabel = generating
+    ? `Generating ${doneCount} of ${cards.length}…`
+    : allDone
+      ? `Done — ${successCount} generated${failedCount > 0 ? `, ${failedCount} failed` : ""}`
+      : null;
+
+  const presetName = (id: string) => PHOTO_STUDIO_PRESETS.find((p) => p.id === id)?.name ?? id;
 
   return (
-    <div className="min-h-[100dvh] w-full bg-background relative">
+    <div className="min-h-[100dvh] w-full bg-background">
+      {/* ── Header ── */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-4 px-6 md:px-10 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/hub"><img src="/sms-logo.png" alt="Social Media Sister" className="h-10 w-10 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity" /></Link>
-          <Link href="/hub"><Button variant="outline" size="sm" className="text-muted-foreground border-border/40 text-xs">← All Tools</Button></Link>
+          <Link href="/hub">
+            <img src="/sms-logo.png" alt="Social Media Sister" className="h-10 w-10 rounded-full object-cover cursor-pointer hover:opacity-80 transition-opacity" />
+          </Link>
+          <Link href="/hub">
+            <Button variant="outline" size="sm" className="text-muted-foreground border-border/40 text-xs">← All Tools</Button>
+          </Link>
         </div>
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-violet-400" />
-          <span className="font-semibold text-sm hidden sm:inline">AI Portrait Studio</span>
+          <span className="font-semibold text-sm hidden sm:inline">AI Photo Studio</span>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 
-        {/* LEFT: Upload + reference */}
+        {/* ── LEFT: Reference photo ── */}
         <div className="space-y-5">
           <div>
             <h2 className="font-semibold text-base mb-1">Reference Photo</h2>
-            <p className="text-sm text-muted-foreground mb-3">Upload one clear photo of the person. Gemini will use their likeness to generate portraits in each chosen scenario.</p>
+            <p className="text-xs text-muted-foreground mb-3">
+              One clear photo of the person. Gemini will use their likeness for every selected preset.
+            </p>
+
             <div className="space-y-2 mb-3">
               <Label htmlFor="clientName" className="text-xs">Client name (optional)</Label>
-              <Input id="clientName" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="e.g. Dr Sarah Smith" className="h-8 text-sm" />
+              <Input
+                id="clientName"
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
+                placeholder="e.g. Dr Sarah Smith"
+                className="h-8 text-sm"
+              />
             </div>
+
             <div
-              className={`relative rounded-xl border-2 border-dashed transition-colors cursor-pointer ${isDragging ? "border-violet-400 bg-violet-500/10" : "border-border/40 hover:border-border/70"} ${photoPreview ? "border-solid" : ""}`}
+              className={`relative rounded-xl border-2 border-dashed transition-colors cursor-pointer ${
+                isDragging ? "border-violet-400 bg-violet-500/10" : "border-border/40 hover:border-border/70"
+              } ${photoPreview ? "border-solid border-border/40" : ""}`}
               onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
               onDragLeave={() => setIsDragging(false)}
               onDrop={handleDrop}
@@ -527,453 +367,277 @@ export default function AiPortraitStudio() {
                   )}
                   {!uploading && (
                     <button
-                      className="absolute top-2 right-2 bg-black/60 rounded-full p-1 hover:bg-black/80"
+                      className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition-colors"
                       onClick={(e) => { e.stopPropagation(); setPhotoPreview(null); setSourcePhoto(null); }}
                     >
-                      <X className="w-4 h-4 text-white" />
+                      <X className="w-3.5 h-3.5" />
                     </button>
-                  )}
-                  {!uploading && sourcePhoto && (
-                    <div className="absolute bottom-2 left-2">
-                      <Badge className="bg-green-500/80 text-white text-xs border-0"><Check className="w-3 h-3 mr-1" />Uploaded</Badge>
-                    </div>
                   )}
                 </div>
               ) : (
-                <div className="flex flex-col items-center justify-center py-12 gap-2 text-muted-foreground">
-                  <Upload className="w-8 h-8 mb-1 opacity-50" />
-                  <p className="text-sm font-medium">Drag a photo here or click to browse</p>
-                  <p className="text-xs opacity-60">JPG, PNG, WEBP — max 20 MB</p>
+                <div className="flex flex-col items-center justify-center py-10 text-center px-4">
+                  <Upload className="w-8 h-8 text-muted-foreground/50 mb-2" />
+                  <p className="text-sm text-muted-foreground">Drop photo here or click to browse</p>
                 </div>
               )}
-              <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileDrop(f); }} />
             </div>
 
-            {!photoPreview && (
-              <div className="mt-2">
-                {!showUrlInput ? (
-                  <button
-                    type="button"
-                    className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
-                    onClick={() => setShowUrlInput(true)}
-                  >
-                    Or use a photo URL instead
-                  </button>
-                ) : (
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Photo URL</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        value={urlInput}
-                        onChange={(e) => setUrlInput(e.target.value)}
-                        placeholder="https://example.com/photo.jpg"
-                        className="h-8 text-xs flex-1"
-                        onKeyDown={(e) => { if (e.key === "Enter") handleUrlIngest(); }}
-                      />
-                      <Button size="sm" variant="outline" className="h-8 text-xs px-3" onClick={handleUrlIngest} disabled={urlLoading || !urlInput.trim()}>
-                        {urlLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <ChevronRight className="w-3 h-3" />}
-                      </Button>
-                    </div>
-                    <button
-                      type="button"
-                      className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
-                      onClick={() => setShowUrlInput(false)}
-                    >
-                      Upload a file instead
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileDrop(f); }} />
 
-          <Button
-            className="w-full bg-violet-600 hover:bg-violet-700 text-white"
-            disabled={!sourcePhoto || generating || (backgroundType === "upload-own" && !backgroundUploadedUrl)}
-            onClick={handleGenerate}
-          >
-            {generating ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating...</> : <><Sparkles className="w-4 h-4 mr-2" />Generate Portrait</>}
-          </Button>
-          {!sourcePhoto && <p className="text-xs text-muted-foreground text-center">Upload a photo to get started</p>}
-          {backgroundType === "upload-own" && !backgroundUploadedUrl && sourcePhoto && (
-            <p className="text-xs text-muted-foreground text-center">Upload a background image in the options panel</p>
-          )}
-        </div>
+            <button
+              className="mt-2 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+              onClick={() => setShowUrlInput(!showUrlInput)}
+            >
+              <Link2 className="w-3 h-3" />
+              {showUrlInput ? "Hide URL input" : "Or load from URL"}
+            </button>
 
-        {/* MIDDLE: Look configuration */}
-        <div className="space-y-6">
-          <div>
-            <h2 className="font-semibold text-base mb-1">Choose Your Look</h2>
-            <p className="text-sm text-muted-foreground">Pick an outfit and a background. One portrait per run — regenerate as many times as you like.</p>
-          </div>
-
-          {/* Outfit */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Outfit</Label>
-            <Select value={outfitType} onValueChange={(v) => setOutfitType(v as OutfitType)}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {OUTFIT_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            {outfitType === "scrubs" && (
-              <div className="flex items-center gap-2 pl-1">
-                <Label className="text-xs text-muted-foreground w-24 flex-shrink-0">Scrub colour</Label>
-                <select
-                  className="flex-1 rounded-md border border-border/40 bg-background text-xs px-2 py-1.5"
-                  value={scrubColor}
-                  onChange={(e) => setScrubColor(e.target.value)}
-                >
-                  {SCRUB_COLORS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                </select>
-              </div>
-            )}
-          </div>
-
-          {/* Background */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Background</Label>
-            <Select value={backgroundType} onValueChange={(v) => {
-              setBackgroundType(v as BackgroundType);
-              if (v !== "upload-own") {
-                setBackgroundPreviewUrl(null);
-                setBackgroundUploadedUrl(null);
-              }
-            }}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {BACKGROUND_OPTIONS.map((b) => <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-
-            {backgroundType === "custom-color" && (
-              <div className="flex items-center gap-3 pl-1">
-                <Label className="text-xs text-muted-foreground w-24 flex-shrink-0">Backdrop colour</Label>
-                <div className="flex items-center gap-2 flex-1">
-                  <input
-                    type="color"
-                    value={backdropColor}
-                    onChange={(e) => setBackdropColor(e.target.value)}
-                    className="w-8 h-7 rounded border border-border/40 cursor-pointer bg-transparent"
-                  />
-                  <Input
-                    value={backdropColor}
-                    onChange={(e) => setBackdropColor(e.target.value)}
-                    placeholder="#ffffff"
-                    className="h-7 text-xs font-mono flex-1"
-                    maxLength={7}
-                  />
-                </div>
-              </div>
-            )}
-
-            {backgroundType === "upload-own" && (
-              <div className="space-y-2 pl-1">
-                <p className="text-xs text-muted-foreground">Upload a photo of your actual studio or clinic. The AI will place the person naturally within it.</p>
-                {backgroundPreviewUrl ? (
-                  <div className="relative">
-                    <img src={backgroundPreviewUrl} alt="Background" className="w-full rounded-lg object-cover max-h-40 border border-border/30" />
-                    {backgroundUploading && (
-                      <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                        <Loader2 className="w-5 h-5 animate-spin text-white" />
-                      </div>
-                    )}
-                    {!backgroundUploading && (
-                      <button
-                        className="absolute top-2 right-2 bg-black/60 rounded-full p-1 hover:bg-black/80"
-                        onClick={() => { setBackgroundPreviewUrl(null); setBackgroundUploadedUrl(null); }}
-                      >
-                        <X className="w-3 h-3 text-white" />
-                      </button>
-                    )}
-                    {backgroundUploadedUrl && (
-                      <div className="absolute bottom-2 left-2">
-                        <Badge className="bg-green-500/80 text-white text-xs border-0"><Check className="w-3 h-3 mr-1" />Uploaded</Badge>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div
-                    className="rounded-lg border-2 border-dashed border-border/40 hover:border-border/70 cursor-pointer flex flex-col items-center justify-center py-8 gap-2 text-muted-foreground transition-colors"
-                    onClick={() => backgroundFileInputRef.current?.click()}
-                  >
-                    <Upload className="w-6 h-6 opacity-50" />
-                    <p className="text-xs">Click to upload background image</p>
-                  </div>
-                )}
-                <input
-                  ref={backgroundFileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBackgroundFileSelect(f); e.target.value = ""; }}
+            {showUrlInput && (
+              <div className="mt-2 flex gap-2">
+                <Input
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  placeholder="https://..."
+                  className="h-8 text-xs flex-1"
+                  onKeyDown={(e) => e.key === "Enter" && handleUrlIngest()}
                 />
+                <Button size="sm" onClick={handleUrlIngest} disabled={urlLoading} className="h-8 text-xs">
+                  {urlLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Load"}
+                </Button>
               </div>
             )}
           </div>
 
           {/* Aspect ratio */}
-          <div className="space-y-3">
-            <Label className="text-sm font-medium">Aspect ratio</Label>
-            <div className="flex gap-2">
-              {ASPECT_OPTIONS.map((ar) => (
-                <button
-                  key={ar}
-                  className={`px-3 py-1 rounded text-xs border transition-colors ${aspectRatio === ar ? "bg-violet-500 border-violet-500 text-white" : "border-border/40 text-muted-foreground hover:border-border"}`}
-                  onClick={() => setAspectRatio(ar)}
-                >{ar}</button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT: Results */}
-        <div className="space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="font-semibold text-base mb-1">Results</h2>
-              <p className="text-sm text-muted-foreground">
-                {cards.length === 0
-                  ? "Your generated portraits will appear here."
-                  : allDone
-                  ? "Generation complete."
-                  : "Generating portraits — each takes around 15 seconds."}
-              </p>
-            </div>
-            {cards.some((c) => c.status === "success" && c.outputImageUrl) && (
-              <div className="flex gap-2 shrink-0">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button size="sm" className="gap-1.5 bg-violet-600 hover:bg-violet-700 text-white" disabled={savingAll}>
-                      {savingAll ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BookImage className="w-3.5 h-3.5" />}
-                      Save All to Library
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-64 p-4 space-y-3">
-                    <p className="text-sm font-medium">Save all portraits</p>
-                    <p className="text-xs text-muted-foreground">Saves each portrait as a separate item in the Content Library, tagged with its scenario name.</p>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleSaveAll(false)} disabled={savingAll}>
-                        No watermark
-                      </Button>
-                      <Button size="sm" className="flex-1 text-xs bg-violet-600 hover:bg-violet-700 text-white" onClick={() => handleSaveAll(true)} disabled={savingAll}>
-                        <Palette className="w-3 h-3 mr-1" />With watermark
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleDownloadAll}
-                  disabled={downloadingAll}
-                  className="gap-1.5"
-                >
-                  {downloadingAll
-                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    : <Download className="w-3.5 h-3.5" />}
-                  Download All
-                </Button>
-              </div>
-            )}
+          <div className="space-y-2">
+            <Label className="text-xs">Output format</Label>
+            <Select value={aspectRatio} onValueChange={(v) => setAspectRatio(v as AspectRatio)}>
+              <SelectTrigger className="h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ASPECT_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          {cards.length === 0 && !generating && (
-            <div className="rounded-xl border border-dashed border-border/30 flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
-              <Sparkles className="w-8 h-8 opacity-30" />
-              <p className="text-sm">Nothing generated yet</p>
+          {/* Save client name override */}
+          {cards.some((c) => c.status === "success") && (
+            <div className="space-y-2 pt-2 border-t border-border/20">
+              <Label className="text-xs text-muted-foreground">Save-to-library client name override</Label>
+              <Input
+                value={saveClientName}
+                onChange={(e) => setSaveClientName(e.target.value)}
+                placeholder={clientName || "Client name"}
+                className="h-8 text-xs"
+              />
             </div>
           )}
+        </div>
 
-          <div className="space-y-4">
-            {cards.map((card) => {
-              const name = cardDisplayName(card.scenarioId);
-              return (
-                <div key={card.scenarioId} className="rounded-xl border border-border/30 bg-muted/20 overflow-hidden">
-                  <div className="px-4 py-3 flex items-center justify-between gap-2 border-b border-border/20">
-                    <span className="text-sm font-medium truncate">{name}</span>
-                    <StatusBadge status={card.status} retryAfter={card.retryAfter} />
+        {/* ── RIGHT: Presets + results ── */}
+        <div className="lg:col-span-2 space-y-6">
+
+          {/* Preset cards */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="font-semibold text-base">Choose Presets</h2>
+              <div className="flex gap-2">
+                <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={selectAll}>All</button>
+                <span className="text-muted-foreground/40 text-xs">·</span>
+                <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={selectNone}>None</button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+              {PHOTO_STUDIO_PRESETS.map((preset) => {
+                const isSelected = selectedPresets.has(preset.id);
+                return (
+                  <div
+                    key={preset.id}
+                    className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
+                      isSelected
+                        ? "border-violet-500/70 bg-violet-500/10"
+                        : "border-border/30 hover:border-border/60 hover:bg-muted/20"
+                    }`}
+                    onClick={() => togglePreset(preset.id)}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                        isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
+                      }`}>
+                        {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium leading-snug">{preset.name}</p>
+                        {preset.hasColour && (
+                          <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                            scrubs colour
+                          </Badge>
+                        )}
+                        {preset.hasColour && isSelected && (
+                          <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              value={presetColours[preset.id] ?? ""}
+                              onChange={(e) => setPresetColours((prev) => ({ ...prev, [preset.id]: e.target.value }))}
+                              placeholder="e.g. navy blue"
+                              className="w-full text-xs bg-background border border-border/50 rounded px-2 py-1 focus:outline-none focus:border-violet-500/50"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
+                );
+              })}
+            </div>
 
-                  {card.status === "success" && card.outputImageUrl && (
-                    <div>
-                      <img src={card.outputImageUrl} alt={name} className="w-full object-cover max-h-64" />
-                      <div className="p-3 flex gap-2">
-                        <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleDownload(card, name)}>
-                          <Download className="w-3.5 h-3.5 mr-1.5" />Download
-                        </Button>
-                        <Button size="sm" variant="outline" className="flex-1 text-xs border-violet-500/40 text-violet-300 hover:bg-violet-950/30" onClick={() => card.portraitId && openAnimateModal(card.portraitId)}>
-                          <Film className="w-3.5 h-3.5 mr-1.5" />Animate
-                        </Button>
-                        <Popover open={savePopoverOpen === card.portraitId} onOpenChange={(o) => setSavePopoverOpen(o ? card.portraitId! : null)}>
-                          <PopoverTrigger asChild>
-                            <Button size="sm" className="flex-1 text-xs bg-violet-600 hover:bg-violet-700 text-white">
-                              <BookImage className="w-3.5 h-3.5 mr-1.5" />Save to Library
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-72 p-4 space-y-3">
-                            <p className="text-sm font-medium">Save to Approval Library</p>
-                            <p className="text-xs text-muted-foreground">Adds the portrait to an approval batch with the ASA compliance note pre-filled.</p>
-                            <div className="space-y-1">
-                              <Label className="text-xs text-muted-foreground">Client name</Label>
-                              <Input
-                                value={saveClientName || clientName}
-                                onChange={(e) => setSaveClientName(e.target.value)}
-                                placeholder="e.g. Dr Sarah Smith"
-                                className="h-7 text-xs"
-                              />
-                            </div>
-                            <div className="flex gap-2">
-                              <Button size="sm" variant="outline" className="flex-1 text-xs" onClick={() => handleSave(card, false)} disabled={savingPortrait === card.portraitId}>
-                                {savingPortrait === card.portraitId ? <Loader2 className="w-3 h-3 animate-spin" /> : "No watermark"}
-                              </Button>
-                              <Button size="sm" className="flex-1 text-xs bg-violet-600 hover:bg-violet-700 text-white" onClick={() => handleSave(card, true)} disabled={savingPortrait === card.portraitId}>
-                                {savingPortrait === card.portraitId ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Palette className="w-3 h-3 mr-1" />With watermark</>}
-                              </Button>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
-                  )}
+            {/* Generate button */}
+            <div className="mt-4 flex items-center gap-3 flex-wrap">
+              <Button
+                onClick={handleGenerate}
+                disabled={generating || selectedPresets.size === 0 || !sourcePhoto}
+                className="bg-violet-600 hover:bg-violet-700 text-white"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {progressLabel}
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate {selectedPresets.size > 0 ? selectedPresets.size : ""} Selected
+                  </>
+                )}
+              </Button>
+              {!sourcePhoto && (
+                <p className="text-xs text-muted-foreground">Upload a reference photo to continue</p>
+              )}
+            </div>
+          </div>
 
-                  {card.status === "generating" && (
-                    <div className="flex flex-col items-center justify-center py-10 gap-2 text-muted-foreground">
-                      <Loader2 className="w-6 h-6 animate-spin text-violet-400" />
-                      <p className="text-xs">Generating portrait...</p>
-                    </div>
-                  )}
-
-                  {card.status === "idle" && (
-                    <div className="flex items-center justify-center py-8 text-muted-foreground">
-                      <p className="text-xs">Waiting...</p>
-                    </div>
-                  )}
-
-                  {card.status === "rate-limited" && (
-                    <div className="p-4 space-y-3">
-                      <div className="flex flex-col items-center gap-2 text-amber-400">
-                        <Clock className="w-5 h-5" />
-                        <p className="text-xs text-center">Rate limited. Retrying automatically in 30s.</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full text-xs border-amber-500/40 text-amber-300 hover:text-amber-100"
-                        onClick={() => card.portraitId ? handleRegenerate(card) : handleRateLimitedRetry(card)}
-                      >
-                        <RefreshCcw className="w-3.5 h-3.5 mr-1.5" />Retry now
-                      </Button>
-                    </div>
-                  )}
-
-                  {card.status === "failed" && (
-                    <div className="p-4 space-y-2">
-                      <div className="flex items-start gap-2 text-red-400">
-                        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                        <p className="text-xs">{card.failureReason || "Generation failed."}</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="w-full text-xs"
-                        onClick={() => card.portraitId ? handleRegenerate(card) : handleRateLimitedRetry(card)}
-                      >
-                        <RefreshCcw className="w-3.5 h-3.5 mr-1.5" />Retry
-                      </Button>
-                    </div>
+          {/* ── Results ── */}
+          {cards.length > 0 && (
+            <div className="border-t border-border/20 pt-6 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-semibold text-sm">Results</h3>
+                  {progressLabel && (
+                    <Badge variant="outline" className={`text-xs ${allDone && failedCount === 0 ? "border-green-500/40 text-green-400" : allDone && failedCount > 0 ? "border-amber-500/40 text-amber-400" : "border-violet-500/40 text-violet-400"}`}>
+                      {progressLabel}
+                    </Badge>
                   )}
                 </div>
-              );
-            })}
-          </div>
+                {allDone && successCount > 1 && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" className="text-xs h-7" onClick={handleDownloadAll} disabled={downloadingAll}>
+                      {downloadingAll ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Download className="w-3 h-3 mr-1" />}
+                      Download All
+                    </Button>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="text-xs h-7" disabled={savingAll}>
+                          {savingAll ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <BookImage className="w-3 h-3 mr-1" />}
+                          Save All
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-52 p-3 space-y-2">
+                        <p className="text-xs font-medium">Save all {successCount} portraits</p>
+                        <Button size="sm" className="w-full text-xs h-7" onClick={() => handleSaveAll(true)}>With watermark</Button>
+                        <Button size="sm" variant="outline" className="w-full text-xs h-7" onClick={() => handleSaveAll(false)}>Without watermark</Button>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+                {cards.map((card) => {
+                  const name = presetName(card.scenarioId);
+                  return (
+                    <div key={card.scenarioId} className="rounded-lg border border-border/30 overflow-hidden bg-muted/10 flex flex-col">
+                      {/* Image area */}
+                      <div className="aspect-square relative bg-muted/30 flex items-center justify-center">
+                        {card.status === "success" && card.outputImageUrl ? (
+                          <img src={card.outputImageUrl} alt={name} className="w-full h-full object-cover" />
+                        ) : card.status === "generating" || card.status === "idle" ? (
+                          <div className="flex flex-col items-center gap-2 text-muted-foreground/50">
+                            <Loader2 className="w-6 h-6 animate-spin" />
+                            <span className="text-[10px]">Generating…</span>
+                          </div>
+                        ) : card.status === "rate-limited" ? (
+                          <div className="flex flex-col items-center gap-2 text-amber-400/70">
+                            <Clock className="w-6 h-6" />
+                            <span className="text-[10px]">Rate limited — waiting</span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-2 text-red-400/70 px-3 text-center">
+                            <AlertCircle className="w-6 h-6" />
+                            <span className="text-[10px] leading-snug">{card.failureReason ?? "Generation failed"}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Card footer */}
+                      <div className="p-2 flex flex-col gap-1.5">
+                        <p className="text-xs font-medium leading-snug truncate" title={name}>{name}</p>
+                        {card.status === "success" && card.portraitId && (
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 text-[10px] h-6 px-1"
+                              onClick={() => handleDownload(card)}
+                            >
+                              <Download className="w-3 h-3 mr-1" />
+                              Download
+                            </Button>
+                            <Popover
+                              open={savePopoverOpen === card.portraitId}
+                              onOpenChange={(o) => setSavePopoverOpen(o ? card.portraitId! : null)}
+                            >
+                              <PopoverTrigger asChild>
+                                <Button size="sm" variant="outline" className="flex-1 text-[10px] h-6 px-1">
+                                  <BookImage className="w-3 h-3 mr-1" />
+                                  Save
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-48 p-3 space-y-2">
+                                <p className="text-xs font-medium">Save to Approvals</p>
+                                <Button
+                                  size="sm"
+                                  className="w-full text-xs h-7"
+                                  disabled={savingPortrait === card.portraitId}
+                                  onClick={() => handleSave(card, true)}
+                                >
+                                  {savingPortrait === card.portraitId ? <Loader2 className="w-3 h-3 animate-spin" /> : "With watermark"}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="w-full text-xs h-7"
+                                  disabled={savingPortrait === card.portraitId}
+                                  onClick={() => handleSave(card, false)}
+                                >
+                                  Without watermark
+                                </Button>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* ── Animate as Reel Modal ── */}
-      {animatePortraitId !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={(e) => { if (e.target === e.currentTarget) closeAnimateModal(); }}>
-          <div className="bg-zinc-900 border border-border/40 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Film className="w-5 h-5 text-violet-400" />
-                <h3 className="font-semibold text-base">Animate as Reel</h3>
-              </div>
-              <button onClick={closeAnimateModal} className="text-muted-foreground hover:text-white transition"><X className="w-4 h-4" /></button>
-            </div>
-
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Generates a 6-second seamless video clip from this still portrait using subtle camera motion. The person stays completely still — the camera does the work. Saved directly to your Reel Library on completion.
-            </p>
-
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Camera motion</Label>
-              <Select value={animateCameraMotion} onValueChange={setAnimateCameraMotion} disabled={!!animateJobId && !animateVideoUrl && !animateStatus.startsWith("Failed")}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(CAMERA_MOTION_LABELS).map(([k, label]) => (
-                    <SelectItem key={k} value={k}>{label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {animateJobId && !animateVideoUrl && !animateFailed && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" />{animateStatus}</span>
-                  <span>{Math.round(animateProgress * 100)}%</span>
-                </div>
-                <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                  <div className="h-full bg-violet-500 rounded-full transition-all duration-500" style={{ width: `${animateProgress * 100}%` }} />
-                </div>
-                <p className="text-xs text-zinc-600">AI video generation takes 30–90 seconds. You can close this modal — the reel will save automatically.</p>
-              </div>
-            )}
-
-            {animateFailed && (
-              <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4 space-y-3">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                  <p className="text-xs text-red-300 leading-relaxed">{animateStatus || "Generation failed — please try again."}</p>
-                </div>
-                <Button size="sm" variant="outline" onClick={resetAnimateForRetry} className="w-full border-red-500/30 text-red-300 hover:bg-red-500/10">
-                  Try again
-                </Button>
-              </div>
-            )}
-
-            {animateVideoUrl && (
-              <div className="space-y-3">
-                <video src={animateVideoUrl} autoPlay loop muted playsInline className="w-full rounded-xl border border-border/30 aspect-[9/16] object-cover max-h-64" />
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => { const a = document.createElement("a"); a.href = animateVideoUrl; a.download = "motion-reel.mp4"; a.click(); }}>
-                    <Download className="w-3.5 h-3.5" />Download MP4
-                  </Button>
-                  <Button size="sm" className="flex-1 gap-1.5 bg-violet-600 hover:bg-violet-700 text-white" onClick={closeAnimateModal}>
-                    <Check className="w-3.5 h-3.5" />Done
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {!animateJobId && !animateFailed && (
-              <Button onClick={handleAnimate} className="w-full gap-2 bg-violet-600 hover:bg-violet-700 text-white">
-                <Play className="w-4 h-4" />Generate Motion Reel
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
-}
-
-function StatusBadge({ status, retryAfter }: { status: CardStatus; retryAfter?: number }) {
-  if (status === "idle") return <Badge variant="outline" className="text-xs text-muted-foreground">Waiting</Badge>;
-  if (status === "generating") return <Badge className="text-xs bg-violet-500/20 text-violet-300 border-violet-500/30"><Loader2 className="w-3 h-3 mr-1 animate-spin" />Generating</Badge>;
-  if (status === "success") return <Badge className="text-xs bg-green-500/20 text-green-300 border-green-500/30"><Check className="w-3 h-3 mr-1" />Done</Badge>;
-  if (status === "rate-limited") return <Badge className="text-xs bg-amber-500/20 text-amber-300 border-amber-500/30"><Clock className="w-3 h-3 mr-1" />Rate limited</Badge>;
-  if (status === "failed") return <Badge className="text-xs bg-red-500/20 text-red-300 border-red-500/30"><AlertCircle className="w-3 h-3 mr-1" />Failed</Badge>;
-  return null;
 }

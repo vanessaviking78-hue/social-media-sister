@@ -1,0 +1,2 @@
+- [AI Photo Studio presets](ai-photo-studio-presets.md) — 15 ps-01..ps-15 presets replace old outfit/background picker; [COLOUR] variable pattern, universal negative prompt appended in buildPhotoStudioPrompt
+- [Content preview calendar fallback](content-preview-fallback.md) — preview API must query both scheduled_posts (by presetId) AND calendar_posts (by clientName text match); slug lookup falls back to calendar if no preset found

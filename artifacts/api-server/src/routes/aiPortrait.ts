@@ -13,7 +13,7 @@ import {
 import { eq } from "drizzle-orm";
 import { objectStorageClient } from "../lib/objectStorage";
 import { logger } from "../lib/logger";
-import { AI_PORTRAIT_SCENARIOS } from "../lib/aiPortraitScenarios";
+import { AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS } from "../lib/aiPortraitScenarios";
 import {
   createJob,
   getJob,
@@ -218,7 +218,7 @@ router.post("/ai-portrait/generate", async (req: Request, res: Response) => {
 
     if (!sourcePhotoId) { res.status(400).json({ error: "sourcePhotoId required" }); return; }
     if (!Array.isArray(scenarios) || scenarios.length === 0) { res.status(400).json({ error: "scenarios array required" }); return; }
-    if (scenarios.length > 6) { res.status(400).json({ error: "Maximum 6 scenarios per job" }); return; }
+    if (scenarios.length > 15) { res.status(400).json({ error: "Maximum 15 scenarios per job" }); return; }
 
     const [source] = await db.select().from(aiSourcePhotosTable).where(eq(aiSourcePhotosTable.id, sourcePhotoId));
     if (!source) { res.status(404).json({ error: "Source photo not found" }); return; }
@@ -315,7 +315,8 @@ router.post("/ai-portrait/save-batch-to-library", async (req: Request, res: Resp
         : (portrait.originalImageUrl ?? portrait.outputImageUrl);
       if (!imageUrl) continue;
 
-      const scenario = AI_PORTRAIT_SCENARIOS.find((s) => s.id === portrait.scenarioId);
+      const scenario = AI_PORTRAIT_SCENARIOS.find((s) => s.id === portrait.scenarioId)
+        ?? PHOTO_STUDIO_PRESETS.find((s) => s.id === portrait.scenarioId);
       const scenarioName = scenario?.name ?? portrait.scenarioId;
 
       toInsert.push({
