@@ -960,15 +960,19 @@ export default function BulkCarousel() {
   // ── Schedule ─────────────────────────────────────────────────────────────────
 
   const goToSchedule = () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().slice(0, 10);
-    setScheduleEntries(items.map(() => ({
-      date: tomorrowStr, time: "18:15",
-      platforms: ["instagram"],
-      presetId: selectedPresetId,
-      caption: "",
-    })));
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+    setScheduleEntries(items.map((item, i) => {
+      const d = new Date(base);
+      d.setDate(d.getDate() + i);
+      return {
+        date: d.toISOString().slice(0, 10),
+        time: "18:15",
+        platforms: ["instagram"] as ("instagram" | "facebook")[],
+        presetId: selectedPresetId,
+        caption: captionMap[item.id] ?? "",
+      };
+    }));
     setPhase("schedule");
   };
 
@@ -1071,7 +1075,7 @@ export default function BulkCarousel() {
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <p className="font-semibold text-sm">Row {item.rowNum}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1 max-w-xs">{item.hook}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1 max-w-xs">{stripPipes(item.hook)}</p>
                       </div>
                       <div className="flex gap-1 shrink-0">
                         {item.thumbs.map((du, si) => (
