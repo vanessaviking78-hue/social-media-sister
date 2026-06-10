@@ -484,7 +484,7 @@ function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave, onClos
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 overflow-y-auto">
-      <div className="bg-zinc-900 border border-border/40 rounded-2xl w-full max-w-[420px] overflow-hidden my-auto">
+      <div className="bg-zinc-900 rounded-2xl w-full max-w-[420px] overflow-hidden my-auto">
         <div className="flex items-center justify-between px-5 py-4 border-b border-border/30">
           <h3 className="font-semibold">Edit slides</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -995,7 +995,7 @@ export default function BulkCarousel() {
               const entry = scheduleEntries[i];
               if (!entry) return null;
               return (
-                <div key={item.id} className="border border-border/40 rounded-xl p-4 bg-card/40">
+                <div key={item.id} className="rounded-xl p-4 bg-card/40">
                   <div className="flex flex-col gap-3">
                     <div className="flex items-start justify-between gap-4">
                       <div>
