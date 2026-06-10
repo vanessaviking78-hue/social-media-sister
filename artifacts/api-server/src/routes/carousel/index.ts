@@ -226,4 +226,37 @@ router.get(
   }
 );
 
+router.post("/carousel/generate-caption", async (req, res) => {
+  try {
+    const { openai } = await import("@workspace/integrations-openai-ai-server");
+    const { hook = "", subtitle = "", body2 = "", body3 = "", cta = "" } = req.body as {
+      hook?: string; subtitle?: string; body2?: string; body3?: string; cta?: string;
+    };
+    const slideContext = [
+      hook     && `Hook: "${hook}"`,
+      subtitle && `Subtitle: "${subtitle}"`,
+      body2    && `Slide 2: "${body2}"`,
+      body3    && `Slide 3: "${body3}"`,
+      cta      && `CTA: "${cta}"`,
+    ].filter(Boolean).join("\n");
+
+    const systemPrompt = `Write an Instagram caption for an aesthetic clinic practitioner based on the carousel slide content provided. The caption must sound like a real human wrote it - warm, honest, direct and conversational. Write in first person. Never use emdashes. Never use americanisations (use British English). Never use AI-sounding phrases or marketing clichés. No bullet points. No hashtag blocks. Just 7-10 natural sentences that match the topic and tone of the slides, as if the practitioner is talking directly to their audience. Sound like a real person, not a brand.`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5.2",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Carousel slides:\n${slideContext}` },
+      ],
+      max_completion_tokens: 400,
+    });
+
+    const caption = completion.choices[0]?.message?.content?.trim() ?? "";
+    res.json({ caption });
+  } catch (e: unknown) {
+    req.log.error(e, "carousel generate-caption failed");
+    res.status(500).json({ error: "Caption generation failed" });
+  }
+});
+
 export default router;

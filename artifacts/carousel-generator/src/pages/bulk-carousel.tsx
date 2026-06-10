@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, Upload, FileText, Download, Loader2, CalendarClock,
-  CheckCircle2, X, Edit2, GripVertical,
+  CheckCircle2, X, Edit2, GripVertical, Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -718,6 +718,10 @@ export default function BulkCarousel() {
   useEffect(() => { lineSpacingRef.current = lineSpacing; }, [lineSpacing]);
   useEffect(() => { heroWordColorRef.current = heroWordColor; }, [heroWordColor]);
 
+  // Caption state
+  const [captionMap, setCaptionMap] = useState<Record<string, string>>({});
+  const [generatingCaptionId, setGeneratingCaptionId] = useState<string | null>(null);
+
   // Schedule state
   const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
   const [scheduling, setScheduling] = useState(false);
@@ -865,11 +869,17 @@ export default function BulkCarousel() {
   // ── Export ───────────────────────────────────────────────────────────────────
 
   const downloadSingle = async (item: CarouselItem) => {
-    const zip = new JSZip();
-    item.thumbs.forEach((du, i) => zip.file(`slide${i + 1}.png`, du.split(",")[1], { base64: true }));
-    const blob = await zip.generateAsync({ type: "blob" });
-    const label = item.hook.slice(0, 30).replace(/[^a-z0-9]/gi, "-") || `carousel-${item.rowNum}`;
-    saveAs(blob, `${label}.zip`);
+    const tid = toast.loading("Building ZIP…");
+    try {
+      const zip = new JSZip();
+      item.thumbs.forEach((du, i) => zip.file(`slide${i + 1}.png`, du.split(",")[1], { base64: true }));
+      const blob = await zip.generateAsync({ type: "blob" });
+      const label = item.hook.slice(0, 30).replace(/[^a-z0-9]/gi, "-") || `carousel-${item.rowNum}`;
+      saveAs(blob, `${label}.zip`);
+      toast.success("ZIP downloaded.", { id: tid });
+    } catch (e: any) {
+      toast.error(e.message || "ZIP failed", { id: tid });
+    }
   };
 
   const downloadAll = async () => {
@@ -885,6 +895,32 @@ export default function BulkCarousel() {
       toast.success("Download started.", { id: tid });
     } catch (e: any) {
       toast.error(e.message, { id: tid });
+    }
+  };
+
+  // ── Caption generation ────────────────────────────────────────────────────────
+
+  const generateCaption = async (item: CarouselItem) => {
+    setGeneratingCaptionId(item.id);
+    try {
+      const res = await fetch(`${BASE}/api/carousel/generate-caption`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          hook:     item.blocks.find(b => b.id === "hook")?.text     ?? "",
+          subtitle: item.blocks.find(b => b.id === "subtitle")?.text ?? "",
+          body2:    item.blocks.find(b => b.id === "body2")?.text    ?? "",
+          body3:    item.blocks.find(b => b.id === "body3")?.text    ?? "",
+          cta:      item.blocks.find(b => b.id === "cta")?.text      ?? "",
+        }),
+      });
+      if (!res.ok) throw new Error("Caption generation failed");
+      const { caption } = await res.json() as { caption: string };
+      setCaptionMap(prev => ({ ...prev, [item.id]: caption }));
+    } catch (e: any) {
+      toast.error(e.message || "Caption generation failed");
+    } finally {
+      setGeneratingCaptionId(null);
     }
   };
 
@@ -1135,15 +1171,43 @@ export default function BulkCarousel() {
                   <p className="font-semibold text-sm text-muted-foreground">Row {item.rowNum}</p>
                   <p className="text-xs truncate mt-0.5">{item.hook}</p>
                 </div>
-                <div className="flex gap-2 shrink-0">
+                <div className="flex gap-2 shrink-0 flex-wrap justify-end">
                   <Button variant="outline" size="sm" onClick={() => setEditingItemId(item.id)}>
                     <Edit2 className="w-3.5 h-3.5 mr-1.5" />Edit
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => downloadSingle(item)}>
                     <Download className="w-3.5 h-3.5 mr-1.5" />ZIP
                   </Button>
+                  <Button variant="outline" size="sm" onClick={goToSchedule}>
+                    <CalendarClock className="w-3.5 h-3.5 mr-1.5" />Schedule
+                  </Button>
+                  <Button
+                    variant="outline" size="sm"
+                    onClick={() => generateCaption(item)}
+                    disabled={generatingCaptionId === item.id}
+                  >
+                    {generatingCaptionId === item.id
+                      ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      : <Sparkles className="w-3.5 h-3.5 mr-1.5" />}
+                    Caption
+                  </Button>
                 </div>
               </div>
+              {captionMap[item.id] && (
+                <div className="px-4 pb-4">
+                  <textarea
+                    className="w-full rounded-lg bg-muted/30 border border-border/30 text-sm px-3 py-2 resize-y min-h-[100px] focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    value={captionMap[item.id]}
+                    onChange={e => setCaptionMap(prev => ({ ...prev, [item.id]: e.target.value }))}
+                  />
+                  <button
+                    className="mt-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => { navigator.clipboard.writeText(captionMap[item.id]); toast.success("Copied to clipboard"); }}
+                  >
+                    Copy
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -1326,7 +1390,7 @@ export default function BulkCarousel() {
         {csvRows.length > 0 && (
           <section className="space-y-3">
             <h2 className="font-semibold text-base">4. Review rows</h2>
-            <div className="border border-border/40 rounded-xl overflow-hidden">
+            <div className="rounded-xl overflow-hidden border border-border/20">
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead className="bg-muted/30 text-muted-foreground">
