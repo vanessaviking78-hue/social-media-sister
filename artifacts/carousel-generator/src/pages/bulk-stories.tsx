@@ -353,7 +353,7 @@ export default function BulkStories() {
           question,
           options: [],
           correctIndex: 0,
-          caption: "",
+          caption: question,
           fontSize: 64,
           imageFile: file,
           imageLocalUrl: localUrl,

@@ -58,7 +58,7 @@ router.post("/scheduler/posts", async (req, res) => {
     if (!presetId) { res.status(400).json({ error: "presetId required" }); return; }
     if (!postType) { res.status(400).json({ error: "postType required" }); return; }
     if (!scheduledAt) { res.status(400).json({ error: "scheduledAt required" }); return; }
-    if (!content?.caption) { res.status(400).json({ error: "content.caption required" }); return; }
+    if (content?.caption == null) { res.status(400).json({ error: "content.caption required" }); return; }
 
     const [preset] = await db.select().from(clientPresetsTable).where(eq(clientPresetsTable.id, presetId));
     if (!preset) { res.status(404).json({ error: "Preset not found" }); return; }
