@@ -695,8 +695,10 @@ export default function BulkCarousel() {
 
   // Upload state
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
-  const [csvState, setCsvState] = useState<{ file: File; error: string | null; rows: CsvRow[] } | null>(null);
-  const csvRows = csvState?.rows ?? [];
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvError, setCsvError] = useState<string | null>(null);
+  const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
+  const csvState = csvFile ? { file: csvFile, error: csvError, rows: csvRows } : null;
   const [coverFiles, setCoverFiles] = useState<File[]>([]);
   const [bodyFiles, setBodyFiles] = useState<File[]>([]);
   const [csvDrag, setCsvDrag] = useState(false);
@@ -730,8 +732,7 @@ export default function BulkCarousel() {
   // ── CSV ──────────────────────────────────────────────────────────────────────
 
   const parseCsv = (file: File) => {
-    const setCsvError = (err: string | null) => setCsvState({ file, error: err, rows: [] });
-    const setCsvRows = (rows: Record<string, string>[]) => setCsvState({ file, error: null, rows: rows as CsvRow[] });
+    setCsvFile(file);
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
@@ -753,7 +754,7 @@ export default function BulkCarousel() {
             return;
           }
           setCsvError(null);
-          const rows = results.data as Record<string, string>[];
+          const rows = results.data as CsvRow[];
           setCsvRows(rows);
         },
         error: (err: Error) => setCsvError(err.message),
@@ -963,7 +964,7 @@ export default function BulkCarousel() {
         </div>
         <div className="flex gap-3">
           <Button variant="outline" asChild><Link href="/scheduler">View queue</Link></Button>
-          <Button onClick={() => { setCsvState(null); setCoverFiles([]); setBodyFiles([]); setItems([]); setSelectedPresetId(null); setPhase("upload"); }}>
+          <Button onClick={() => { setCsvFile(null); setCsvError(null); setCsvRows([]); setCoverFiles([]); setBodyFiles([]); setItems([]); setSelectedPresetId(null); setPhase("upload"); }}>
             Start again
           </Button>
         </div>
