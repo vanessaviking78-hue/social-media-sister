@@ -77,8 +77,8 @@ type CanvasDraftState = {
 };
 
 type DoodleShape = { id: string; label: string; svg: string };
-type StickerLibraryItem = { id: string; name: string; dataUrl: string };
-type StickerInstance = { id: string; libraryId: string; left?: number; top?: number; scaleX?: number; scaleY?: number; angle?: number };
+type StickerLibraryItem = { id: number; name: string; url: string };
+type StickerInstance = { id: string; libraryId: number; left?: number; top?: number; scaleX?: number; scaleY?: number; angle?: number };
 
 // ── Doodle shapes ─────────────────────────────────────────────────────────────
 const DOODLES: DoodleShape[] = [
@@ -171,6 +171,7 @@ export default function AboutMePage() {
   // Stickers
   const [stickerLibrary, setStickerLibrary] = useState<StickerLibraryItem[]>([]);
   const [stickerInstances, setStickerInstances] = useState<StickerInstance[]>([]);
+  const [stickerUploading, setStickerUploading] = useState(false);
 
   // Selection
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -510,13 +511,21 @@ export default function AboutMePage() {
     } catch (e) { console.error("Doodle load failed", e); }
   }, [DISPLAY_H]);
 
+  // Load sticker catalogue from the server on mount
+  useEffect(() => {
+    fetch(`${BASE}/api/stickers`)
+      .then(r => r.json())
+      .then(data => setStickerLibrary(data.stickers ?? []))
+      .catch(() => {});
+  }, []);
+
   const addStickerToCanvas = useCallback(async (item: StickerLibraryItem) => {
     const canvas = fabricRef.current;
     if (!canvas) return;
     const id = uid();
     setStickerInstances(prev => [...prev, { id, libraryId: item.id }]);
     try {
-      const img = await FabricImage.fromURL(item.dataUrl);
+      const img = await FabricImage.fromURL(item.url);
       const scale = Math.min(0.25, 160 / Math.max(img.width ?? 1, img.height ?? 1));
       img.set({
         left: DISPLAY_W / 2 - (img.width ?? 100) * scale / 2,
@@ -551,15 +560,39 @@ export default function AboutMePage() {
     setSelectedId(id); setSelectedType("sticker");
   }, []);
 
-  const handleStickerUpload = useCallback((files: FileList | null) => {
-    if (!files) return;
-    const promises = Array.from(files).map(f => new Promise<StickerLibraryItem>((res, rej) => {
-      const reader = new FileReader();
-      reader.onload = () => res({ id: uid(), name: f.name.replace(/\.[^.]+$/, ""), dataUrl: reader.result as string });
-      reader.onerror = rej;
-      reader.readAsDataURL(f);
-    }));
-    Promise.all(promises).then(items => setStickerLibrary(prev => [...prev, ...items]));
+  const removeStickerFromLibrary = useCallback(async (id: number) => {
+    try {
+      await fetch(`${BASE}/api/stickers/${id}`, { method: "DELETE" });
+      setStickerLibrary(prev => prev.filter(s => s.id !== id));
+    } catch { toast.error("Failed to remove sticker"); }
+  }, []);
+
+  const handleStickerUpload = useCallback(async (files: FileList | null) => {
+    if (!files || !files.length) return;
+    setStickerUploading(true);
+    try {
+      for (const f of Array.from(files)) {
+        const base64 = await new Promise<string>((res, rej) => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result as string);
+          reader.onerror = rej;
+          reader.readAsDataURL(f);
+        });
+        const resp = await fetch(`${BASE}/api/stickers`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: f.name, base64 }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || "Upload failed");
+        setStickerLibrary(prev => [...prev, data.sticker]);
+      }
+      toast.success("Sticker" + (files.length > 1 ? "s" : "") + " saved to catalogue");
+    } catch (e: any) {
+      toast.error("Sticker upload failed: " + e.message);
+    } finally {
+      setStickerUploading(false);
+    }
   }, []);
 
   const removeDoodle = useCallback((id: string) => {
@@ -1128,19 +1161,25 @@ export default function AboutMePage() {
             <div className="space-y-2 border-t border-white/8 pt-4">
               <Label className="text-[10px] uppercase tracking-widest text-white/40">Stickers</Label>
               <p className="text-[10px] text-white/25">Upload PNG stickers from Canva. Click to add. Drag to reposition, resize with handles.</p>
-              <button onClick={() => stickerInputRef.current?.click()}
-                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-white/20 hover:border-pink-500/50 hover:bg-pink-500/5 active:scale-95 transition-all text-[10px] text-white/40 hover:text-white/70">
-                <Upload className="w-3 h-3" />
-                Upload Stickers
+              <button onClick={() => stickerInputRef.current?.click()} disabled={stickerUploading}
+                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-white/20 hover:border-pink-500/50 hover:bg-pink-500/5 active:scale-95 transition-all text-[10px] text-white/40 hover:text-white/70 disabled:opacity-50 disabled:cursor-wait">
+                {stickerUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
+                {stickerUploading ? "Saving…" : "Upload Stickers"}
               </button>
               {stickerLibrary.length > 0 && (
                 <div className="grid grid-cols-3 gap-1.5">
                   {stickerLibrary.map(item => (
-                    <button key={item.id} onClick={() => addStickerToCanvas(item)}
-                      className="aspect-square flex flex-col items-center justify-center gap-1 rounded-lg border border-white/10 hover:border-violet-500/50 hover:bg-violet-500/10 active:scale-95 transition-all p-1.5 overflow-hidden">
-                      <img src={item.dataUrl} alt={item.name} className="w-9 h-9 object-contain" />
-                      <span className="text-[9px] text-white/30 leading-none truncate w-full text-center">{item.name}</span>
-                    </button>
+                    <div key={item.id} className="relative group aspect-square">
+                      <button onClick={() => addStickerToCanvas(item)}
+                        className="w-full h-full flex flex-col items-center justify-center gap-1 rounded-lg border border-white/10 hover:border-violet-500/50 hover:bg-violet-500/10 active:scale-95 transition-all p-1.5 overflow-hidden">
+                        <img src={item.url} alt={item.name} className="w-9 h-9 object-contain" />
+                        <span className="text-[9px] text-white/30 leading-none truncate w-full text-center">{item.name}</span>
+                      </button>
+                      <button onClick={() => removeStickerFromLibrary(item.id)}
+                        className="absolute top-0.5 right-0.5 p-0.5 rounded bg-black/60 text-white/40 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -1152,7 +1191,7 @@ export default function AboutMePage() {
                     return (
                       <div key={s.id} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg transition-colors ${selectedId === s.id ? "bg-violet-500/20 border border-violet-500/40" : "bg-white/5 border border-transparent"}`}>
                         <button className="flex items-center gap-2 flex-1 min-w-0" onClick={() => selectSticker(s.id)}>
-                          {libItem && <img src={libItem.dataUrl} alt={libItem.name} className="w-5 h-5 object-contain shrink-0" />}
+                          {libItem && <img src={libItem.url} alt={libItem.name} className="w-5 h-5 object-contain shrink-0" />}
                           <span className="text-xs text-white/70 truncate">{libItem?.name ?? "Sticker"}</span>
                         </button>
                         <button onClick={() => removeSticker(s.id)} className="text-white/20 hover:text-red-400 transition-colors p-0.5 shrink-0">
@@ -1164,7 +1203,7 @@ export default function AboutMePage() {
                 </div>
               )}
               <input ref={stickerInputRef} type="file" accept="image/png,image/*" multiple className="hidden"
-                onChange={e => { handleStickerUpload(e.target.files); e.target.value = ""; }} />
+                onChange={e => { void handleStickerUpload(e.target.files); e.target.value = ""; }} />
             </div>
 
             {/* Format + Client */}

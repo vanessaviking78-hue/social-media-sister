@@ -29,6 +29,7 @@ import bundleRequestsRouter from "./bundle-requests";
 import strategyTopicsRouter from "./strategy-topics";
 import contentPreviewRouter from "./content-preview";
 import storiesRouter from "./stories";
+import stickersRouter from "./stickers";
 
 const router: IRouter = Router();
 
@@ -62,5 +63,6 @@ router.use(bundleRequestsRouter);
 router.use(strategyTopicsRouter);
 router.use(contentPreviewRouter);
 router.use(storiesRouter);
+router.use(stickersRouter);
 
 export default router;

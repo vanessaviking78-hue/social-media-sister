@@ -630,3 +630,12 @@ export const founderSignupsTable = pgTable("founder_signups", {
 });
 
 export type FounderSignup = typeof founderSignupsTable.$inferSelect;
+
+export const stickerLibraryTable = pgTable("sticker_library", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  url: text("url").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type StickerLibraryRow = typeof stickerLibraryTable.$inferSelect;
