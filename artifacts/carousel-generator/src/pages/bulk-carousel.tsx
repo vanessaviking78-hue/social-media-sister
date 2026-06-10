@@ -692,10 +692,8 @@ export default function BulkCarousel() {
 
   // Upload state
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
-  const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
-  const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [csvError, setCsvError] = useState<string | null>(null);
-  const [csvAttempted, setCsvAttempted] = useState(false);
+  const [csvState, setCsvState] = useState<{ file: File; error: string | null; rows: CsvRow[] } | null>(null);
+  const csvRows = csvState?.rows ?? [];
   const [coverFiles, setCoverFiles] = useState<File[]>([]);
   const [bodyFiles, setBodyFiles] = useState<File[]>([]);
   const [csvDrag, setCsvDrag] = useState(false);
@@ -739,24 +737,23 @@ export default function BulkCarousel() {
         skipEmptyLines: true,
         delimiter,
         complete: (result) => {
-          if (!result.data.length) { setCsvError("CSV is empty."); return; }
+          if (!result.data.length) { setCsvState({ file, error: "CSV is empty.", rows: [] }); return; }
           const parsedKeys = Object.keys(result.data[0] || {}).map(k => k.trim());
           const missing = CSV_COLS.filter(k => !parsedKeys.includes(k));
-          if (missing.length) { setCsvError(`Missing columns: ${missing.join(", ")}`); return; }
-          setCsvError(null);
-          setCsvRows(result.data as unknown as CsvRow[]);
+          if (missing.length) { setCsvState({ file, error: `Missing columns: ${missing.join(", ")}`, rows: [] }); return; }
+          setCsvState({ file, error: null, rows: result.data as unknown as CsvRow[] });
         },
-        error: (e: { message: string }) => setCsvError(e.message),
+        error: (e: { message: string }) => setCsvState({ file, error: e.message, rows: [] }),
       });
     };
-    reader.onerror = () => setCsvError("Could not read file.");
+    reader.onerror = () => setCsvState({ file, error: "Could not read file.", rows: [] });
     reader.readAsText(file);
   }, []);
 
   const handleCsvDrop = (e: React.DragEvent) => {
     e.preventDefault(); setCsvDrag(false);
     const file = Array.from(e.dataTransfer.files).find(f => f.name.endsWith(".csv"));
-    if (file) { setCsvFile(file); setCsvAttempted(true); parseCsv(file); } else toast.error("Drop a CSV file.");
+    if (file) parseCsv(file); else toast.error("Drop a CSV file.");
   };
 
   // ── Image sets ───────────────────────────────────────────────────────────────
@@ -954,7 +951,7 @@ export default function BulkCarousel() {
         </div>
         <div className="flex gap-3">
           <Button variant="outline" asChild><Link href="/scheduler">View queue</Link></Button>
-          <Button onClick={() => { setCsvRows([]); setCoverFiles([]); setBodyFiles([]); setItems([]); setSelectedPresetId(null); setCsvFile(null); setCsvError(null); setCsvAttempted(false); setPhase("upload"); }}>
+          <Button onClick={() => { setCsvState(null); setCoverFiles([]); setBodyFiles([]); setItems([]); setSelectedPresetId(null); setPhase("upload"); }}>
             Start again
           </Button>
         </div>
@@ -1221,8 +1218,8 @@ export default function BulkCarousel() {
               </>
             )}
           </div>
-          <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={e => { if (e.target.files?.[0]) { setCsvFile(e.target.files[0]); setCsvAttempted(true); parseCsv(e.target.files[0]); } e.target.value = ""; }} />
-          {csvFile !== null && csvAttempted && csvError && <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-2">{csvError}</p>}
+          <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={e => { if (e.target.files?.[0]) parseCsv(e.target.files[0]); e.target.value = ""; }} />
+          {csvState !== null && csvState.error !== null && <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-2">{csvState.error}</p>}
         </section>
 
         {/* Step 3: Images */}
