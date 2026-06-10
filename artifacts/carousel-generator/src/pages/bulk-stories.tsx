@@ -49,6 +49,7 @@ type StoryEntry = {
   options: string[];
   correctIndex: number;
   caption: string;
+  fontSize: number;
   imageFile: File | null;
   imageLocalUrl: string | null;
   status: "idle" | "scheduling" | "done" | "error";
@@ -116,12 +117,15 @@ function parseCsvRows(rows: Record<string, string>[]): StoryEntry[] {
         options,
         correctIndex,
         caption: (r["caption"] || "").trim(),
+        fontSize: 64,
         imageFile: null,
         imageLocalUrl: null,
         status: "idle" as const,
       };
     });
 }
+
+const MAX_IMAGES = 10;
 
 function buildStickerConfig(entry: StoryEntry): object | null {
   if (entry.stickerType === "none" || !entry.question) return null;
@@ -182,7 +186,16 @@ export default function BulkStories() {
   const handleImages = useCallback((files: File[]) => {
     const valid = files.filter((f) => f.type.startsWith("image/"));
     if (!valid.length) return;
-    setImages(valid.map((f) => ({ file: f, localUrl: URL.createObjectURL(f) })));
+    setImages((prev) => {
+      const slots = MAX_IMAGES - prev.length;
+      if (slots <= 0) { return prev; }
+      const toAdd = valid.slice(0, slots).map((f) => ({ file: f, localUrl: URL.createObjectURL(f) }));
+      return [...prev, ...toAdd];
+    });
+  }, []);
+
+  const updateEntryFontSize = useCallback((id: string, size: number) => {
+    setEntries((prev) => prev.map((e) => e.id === id ? { ...e, fontSize: Math.max(12, Math.min(200, size)) } : e));
   }, []);
 
   const handleCsv = useCallback((file: File) => {
@@ -258,6 +271,7 @@ export default function BulkStories() {
               imageUrls: [imageUrl],
               caption: entry.caption || "",
               title: `Story — ${selectedPreset.name} ${entry.date}`,
+              fontSize: entry.fontSize,
             },
             scheduledAt,
             stickerConfig: buildStickerConfig(entry),
@@ -325,7 +339,12 @@ export default function BulkStories() {
           {/* Images */}
           <div className="border border-white/8 rounded-xl p-5 flex flex-col gap-4">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">Story Images</p>
+              <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">
+                Story Images
+                <span className="ml-2 text-zinc-600 normal-case font-normal">
+                  {images.length} / {MAX_IMAGES}
+                </span>
+              </p>
               {images.length > 0 && (
                 <button onClick={() => setImages([])} className="text-xs text-zinc-500 hover:text-red-400 transition-colors">
                   Clear
@@ -333,40 +352,47 @@ export default function BulkStories() {
               )}
             </div>
 
-            <div
-              onDragOver={(e) => { e.preventDefault(); setImgDragOver(true); }}
-              onDragLeave={() => setImgDragOver(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setImgDragOver(false);
-                handleImages(Array.from(e.dataTransfer.files));
-              }}
-              onClick={() => imgInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-3 cursor-pointer transition-all ${
-                imgDragOver ? "border-pink-500/60 bg-pink-500/5" : "border-white/10 hover:border-white/20"
-              }`}
-            >
-              <Upload size={28} className="text-zinc-600" />
-              <div className="text-center">
-                <p className="text-sm font-medium text-zinc-300">Drop images here or click to browse</p>
-                <p className="text-xs text-zinc-600 mt-1">
-                  Images match CSV rows in order. One image repeated is fine — each story gets its own queue entry.
-                </p>
+            {images.length < MAX_IMAGES ? (
+              <div
+                onDragOver={(e) => { e.preventDefault(); setImgDragOver(true); }}
+                onDragLeave={() => setImgDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setImgDragOver(false);
+                  handleImages(Array.from(e.dataTransfer.files));
+                }}
+                onClick={() => imgInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-3 cursor-pointer transition-all ${
+                  imgDragOver ? "border-pink-500/60 bg-pink-500/5" : "border-white/10 hover:border-white/20"
+                }`}
+              >
+                <Upload size={28} className="text-zinc-600" />
+                <div className="text-center">
+                  <p className="text-sm font-medium text-zinc-300">Drop images here or click to browse</p>
+                  <p className="text-xs text-zinc-600 mt-1">
+                    Images are added to your selection (up to {MAX_IMAGES}). They match CSV rows in order.
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="border-2 border-dashed border-white/5 rounded-xl p-5 flex items-center justify-center gap-2 text-xs text-zinc-600">
+                <CheckCircle2 size={14} className="text-emerald-500" />
+                Maximum {MAX_IMAGES} images reached. Clear some to add more.
+              </div>
+            )}
             <input
               ref={imgInputRef}
               type="file"
               accept="image/*"
               multiple
               className="hidden"
-              onChange={(e) => handleImages(Array.from(e.target.files || []))}
+              onChange={(e) => { handleImages(Array.from(e.target.files || [])); e.target.value = ""; }}
             />
 
             {images.length > 0 && (
               <div className="flex flex-wrap gap-2 items-end">
-                {images.slice(0, 16).map((img, i) => (
-                  <div key={i} className="relative">
+                {images.map((img, i) => (
+                  <div key={i} className="relative group">
                     <img
                       src={img.localUrl}
                       alt=""
@@ -375,15 +401,16 @@ export default function BulkStories() {
                     <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-zinc-800 border border-white/20 flex items-center justify-center text-[9px] text-zinc-400 font-medium">
                       {i + 1}
                     </div>
+                    <button
+                      onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))}
+                      className="absolute inset-0 rounded-lg bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                    >
+                      <X size={14} className="text-white" />
+                    </button>
                   </div>
                 ))}
-                {images.length > 16 && (
-                  <div className="w-14 h-14 rounded-lg bg-zinc-800 border border-white/10 flex items-center justify-center text-xs text-zinc-500">
-                    +{images.length - 16}
-                  </div>
-                )}
                 <p className="w-full text-xs text-zinc-600 mt-1">
-                  {images.length} {images.length === 1 ? "image" : "images"} selected
+                  {images.length} {images.length === 1 ? "image" : "images"} loaded
                 </p>
               </div>
             )}
@@ -527,6 +554,7 @@ export default function BulkStories() {
                   <th className="text-left px-4 py-2.5 font-medium">Date &amp; Time</th>
                   <th className="text-left px-4 py-2.5 font-medium">Sticker</th>
                   <th className="text-left px-4 py-2.5 font-medium">Question / Caption</th>
+                  <th className="text-left px-4 py-2.5 font-medium w-20">Size</th>
                 </tr>
               </thead>
               <tbody>
@@ -556,7 +584,9 @@ export default function BulkStories() {
                     <td className="px-4 py-2.5 max-w-xs">
                       {entry.question ? (
                         <>
-                          <p className="text-sm text-zinc-200 truncate">{entry.question}</p>
+                          <p className="truncate text-zinc-200" style={{ fontFamily: "'Bebas Neue', cursive", fontSize: `${Math.round(entry.fontSize * 0.25)}px`, lineHeight: 1.2 }}>
+                            {entry.question}
+                          </p>
                           {entry.stickerType === "poll" && entry.options.length >= 2 && (
                             <p className="text-xs text-zinc-600 mt-0.5 truncate">{entry.options[0]} / {entry.options[1]}</p>
                           )}
@@ -567,10 +597,20 @@ export default function BulkStories() {
                           )}
                         </>
                       ) : entry.caption ? (
-                        <p className="text-sm text-zinc-500 italic truncate">{entry.caption}</p>
+                        <p className="text-sm text-zinc-500 truncate" style={{ fontFamily: "'Bebas Neue', cursive" }}>{entry.caption}</p>
                       ) : (
                         <p className="text-xs text-zinc-700">No sticker or caption</p>
                       )}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <input
+                        type="number"
+                        min={12}
+                        max={200}
+                        value={entry.fontSize}
+                        onChange={(e) => updateEntryFontSize(entry.id, parseInt(e.target.value, 10) || 64)}
+                        className="w-16 bg-zinc-900 border border-white/10 rounded px-2 py-1 text-xs text-zinc-300 text-center focus:outline-none focus:border-pink-500/50"
+                      />
                     </td>
                   </tr>
                 ))}
