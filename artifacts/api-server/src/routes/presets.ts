@@ -16,7 +16,7 @@ import {
   TEXT_ALIGNS,
   LOGO_POSITIONS,
 } from "@workspace/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 
 const VALID_TEXT_POSITIONS = new Set(TEXT_POSITIONS);
 const VALID_TEXT_ALIGNS = new Set(TEXT_ALIGNS);
@@ -26,7 +26,7 @@ const router: IRouter = Router();
 
 router.get("/presets", async (_req, res) => {
   try {
-    const presets = await db.select().from(clientPresetsTable).orderBy(clientPresetsTable.name);
+    const presets = await db.select().from(clientPresetsTable).orderBy(sql`LOWER(${clientPresetsTable.name})`);
     res.json({ presets });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to list presets" });

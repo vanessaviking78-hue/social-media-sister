@@ -36,7 +36,7 @@ export default function PreviewIndex() {
   useEffect(() => {
     fetch(`${BASE}/api/presets`)
       .then((r) => r.json())
-      .then((d) => setPresets(Array.isArray(d) ? d : d.presets ?? []))
+      .then((d) => { const list = Array.isArray(d) ? d : (d.presets ?? []); setPresets([...list].sort((a: {name: string}, b: {name: string}) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))); })
       .catch(() => setPresets([]))
       .finally(() => setLoading(false));
   }, []);

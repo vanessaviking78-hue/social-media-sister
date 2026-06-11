@@ -427,7 +427,7 @@ export default function Reels() {
           metaPageAccessToken: p.metaPageAccessToken,
           metaFacebookPageId: p.metaFacebookPageId,
           metaInstagramAccountId: p.metaInstagramAccountId,
-        })));
+        })).sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })));
       });
   };
 

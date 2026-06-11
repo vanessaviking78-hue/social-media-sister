@@ -203,7 +203,7 @@ export default function SeamlessCarouselPage() {
   useEffect(() => {
     fetch(`${BASE}/api/presets`).then((r) => r.json()).then((d) => {
       const list = Array.isArray(d?.presets) ? d.presets : Array.isArray(d) ? d : [];
-      setPresets(list.map((p: any) => ({ id: p.id, name: p.name })));
+      setPresets(list.map((p: any) => ({ id: p.id, name: p.name })).sort((a: {name: string}, b: {name: string}) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })));
       if (list.length === 1) setSelectedPresetId(list[0].id);
     }).catch(() => {});
   }, []);

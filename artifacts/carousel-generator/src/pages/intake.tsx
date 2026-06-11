@@ -59,7 +59,7 @@ export default function Intake() {
     fetch(`${BASE}api/presets`)
       .then((r) => r.json())
       .then((data) => {
-        if (Array.isArray(data)) setPresets(data);
+        if (Array.isArray(data)) setPresets([...data].sort((a: {name: string}, b: {name: string}) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })));
       })
       .catch(() => {});
 

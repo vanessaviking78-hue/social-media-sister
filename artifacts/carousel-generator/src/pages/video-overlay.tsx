@@ -79,7 +79,7 @@ export default function VideoOverlay() {
   useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}api/presets`)
       .then((r) => r.json())
-      .then((d) => { if (d?.presets && Array.isArray(d.presets)) setIgPresets(d.presets.map((p: { id: number; name: string }) => ({ id: p.id, name: p.name }))); })
+      .then((d) => { if (d?.presets && Array.isArray(d.presets)) setIgPresets(d.presets.map((p: { id: number; name: string }) => ({ id: p.id, name: p.name })).sort((a: {name: string}, b: {name: string}) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))); })
       .catch(() => {});
   }, []);
 

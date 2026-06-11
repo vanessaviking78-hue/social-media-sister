@@ -150,7 +150,7 @@ export default function Library() {
     try {
       const r = await fetch(`${BASE}api/presets`);
       const d = await r.json();
-      setPresets((d.presets || []).map((p: ClientPreset) => ({ id: p.id, name: p.name, defaultPostTime: p.defaultPostTime || "18:00" })));
+      setPresets((d.presets || []).map((p: ClientPreset) => ({ id: p.id, name: p.name, defaultPostTime: p.defaultPostTime || "18:00" })).sort((a: {name: string}, b: {name: string}) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })));
     } catch {
       /* ignore */
     }
