@@ -39,8 +39,11 @@ async function uploadImages(files: File[]): Promise<string[]> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ images }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ error: "Upload failed" }));
+      throw new Error(data.error || "Upload failed");
+    }
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Upload failed");
     urls.push(...(data.results ?? []).map((r: { url: string }) => r.url));
   }
   return urls;
