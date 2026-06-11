@@ -68,6 +68,10 @@ export default function MetaOAuthResult() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key, pageId }),
       });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({ error: "Failed to connect page" })) as { error?: string };
+        throw new Error(d.error || "Failed to connect page");
+      }
       const d = (await res.json()) as {
         success?: boolean;
         pageName?: string;
@@ -75,7 +79,6 @@ export default function MetaOAuthResult() {
         hasInstagram?: boolean;
         error?: string;
       };
-      if (!res.ok) throw new Error(d.error || "Failed to connect page");
       setDone(true);
       if (window.opener) {
         window.opener.postMessage(

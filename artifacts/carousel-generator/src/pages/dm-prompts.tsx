@@ -35,8 +35,11 @@ export default function DmPrompts() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ clientName, industry, scenario, extraContext }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Generation failed" }));
+        throw new Error(data.error || "Generation failed");
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Generation failed");
       setTemplates(data.templates);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");

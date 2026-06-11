@@ -57,7 +57,7 @@ export function useApprovalBatches() {
         body: JSON.stringify(data),
       });
       if (!res.ok) {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({ error: "Failed to create batch" }));
         throw new Error(err.error || "Failed to create batch");
       }
       return res.json();

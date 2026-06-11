@@ -51,6 +51,11 @@ export function MusicPickerModal({ open, onClose, selectedTrack, onSelect }: Pro
       if (query.trim()) params.set("q", query.trim());
       if (g && g !== "all") params.set("genre", g);
       const res = await fetch(`${import.meta.env.BASE_URL}api/music/search?${params}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Music search failed" }));
+        toast.error(data.error || "Music search failed");
+        return;
+      }
       const data = await res.json();
       if (data.error) { toast.error(data.error); return; }
       const list: MusicTrack[] = data.tracks || [];

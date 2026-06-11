@@ -48,8 +48,11 @@ export default function ReelScripts() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ clientName, industry, topic, tone, duration }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Generation failed" }));
+        throw new Error(data.error || "Generation failed");
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Generation failed");
       setScript(data);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Something went wrong");

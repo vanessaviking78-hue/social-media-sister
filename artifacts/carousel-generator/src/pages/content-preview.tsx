@@ -22,8 +22,11 @@ type PreviewData = {
 
 async function fetchPreview(clientSlug: string): Promise<PreviewData> {
   const res = await fetch(`${BASE}/api/content-preview/${clientSlug}`);
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: "Failed to load preview" }));
+    throw new Error(data.error || "Failed to load preview");
+  }
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || "Failed to load preview");
   return data as PreviewData;
 }
 

@@ -83,8 +83,11 @@ async function uploadBatch(files: File[]): Promise<string[]> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ images }),
     });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({ error: "Upload failed" }));
+      throw new Error(data.error || "Upload failed");
+    }
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Upload failed");
     urls.push(...(data.results ?? []).map((r: { url: string }) => r.url));
   }
   return urls;
@@ -315,8 +318,11 @@ export default function BulkStories() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ clientName: selectedPreset?.name }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Generation failed" }));
+        throw new Error(data.error || "Generation failed");
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Generation failed");
       setGeneratedQuestions(data.questions ?? []);
       setSelectedQs(new Set());
     } catch (err: any) {
@@ -436,8 +442,11 @@ export default function BulkStories() {
             stickerConfig: buildStickerConfig(entry),
           }),
         });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({ error: "Scheduling failed" }));
+          throw new Error(data.error || "Scheduling failed");
+        }
         const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Scheduling failed");
         done++;
         setDoneCount(done);
         setEntries((prev) => prev.map((e, j) => j === i ? { ...e, status: "done" } : e));

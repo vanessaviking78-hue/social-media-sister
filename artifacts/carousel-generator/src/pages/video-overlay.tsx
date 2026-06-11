@@ -378,8 +378,12 @@ export default function VideoOverlay() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic: topic.trim(), overlayTexts: segments.filter(Boolean) }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: `Server error (${res.status})` }));
+        throw new Error(data.error || `Server error (${res.status})`);
+      }
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || `Server error (${res.status})`);
+      if (data.error) throw new Error(data.error);
       setIgCaption(data.caption);
       toast.success("Caption generated!");
     } catch (e: unknown) {
@@ -401,8 +405,12 @@ export default function VideoOverlay() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ topic: topic.trim(), segmentCount }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: `Server error (${res.status})` }));
+        throw new Error(data.error || `Server error (${res.status})`);
+      }
       const data = await res.json();
-      if (!res.ok || data.error) throw new Error(data.error || `Server error (${res.status})`);
+      if (data.error) throw new Error(data.error);
       const newSegs: string[] = [...(data.segments ?? [])];
       while (newSegs.length < segmentCount) newSegs.push("");
       const trimmed = newSegs.slice(0, segmentCount);
