@@ -79,8 +79,11 @@ export default function Intake() {
     formData.append("file", file);
     try {
       const resp = await fetch(`${BASE}api/intake/parse-csv`, { method: "POST", body: formData });
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({ error: "Parse failed" }));
+        throw new Error(data.error || "Parse failed");
+      }
       const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || "Parse failed");
       setParsed({ headers: data.headers, rows: data.rows });
       setEditedRows(data.rows.map((r: Record<string, string>) => ({ ...r })));
       setStep("review");

@@ -47,8 +47,11 @@ export default function FounderSignup() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: name.trim(), email: email.trim(), clinicName: clinicName.trim(), phone: phone.trim(), bundleToken }),
       });
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({ error: "Sign-up failed" }));
+        throw new Error(data.error || "Sign-up failed");
+      }
       const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || "Sign-up failed");
       navigate(`/founder-welcome?name=${encodeURIComponent(name.trim())}&clinic=${encodeURIComponent(clinicName.trim())}`);
     } catch (err: any) {
       toast.error(err.message || "Something went wrong. Please try again.");

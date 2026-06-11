@@ -79,8 +79,11 @@ export default function BundleRequestsDashboard() {
         method: "POST",
         headers: authHeaders(),
       });
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({ error: "Generation failed" }));
+        throw new Error(data.error || "Generation failed");
+      }
       const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || "Generation failed");
 
       const bundleUrl = data.bundleUrl || `${window.location.origin}${BASE.replace(/\/$/, "")}/bundle/${data.token}`;
       patchAction(req.id, { generating: false, bundleUrl });

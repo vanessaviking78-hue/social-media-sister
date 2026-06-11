@@ -392,8 +392,11 @@ export default function PhotoCarousel() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ images: [{ name, base64 }] }),
     });
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({ error: "Upload failed" }));
+      throw new Error(data.error || "Upload failed");
+    }
     const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || "Upload failed");
     return data.results?.[0]?.url || "";
   };
 

@@ -131,8 +131,11 @@ async function ensureDurableUrl(url: string, base: string): Promise<string> {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ images: [{ name: `photo.${ext}`, base64 }] }),
     });
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({ error: "Upload failed" }));
+      throw new Error(data.error ?? "Upload failed");
+    }
     const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error ?? "Upload failed");
     return data.results?.[0]?.url ?? url;
   } catch { return url; }
 }
@@ -583,8 +586,11 @@ export default function AboutMePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: f.name, base64 }),
         });
+        if (!resp.ok) {
+          const data = await resp.json().catch(() => ({ error: "Upload failed" }));
+          throw new Error(data.error || "Upload failed");
+        }
         const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Upload failed");
         setStickerLibrary(prev => [...prev, data.sticker]);
       }
       toast.success("Sticker" + (files.length > 1 ? "s" : "") + " saved to catalogue");
@@ -653,8 +659,11 @@ export default function AboutMePage() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ images: [{ name: file.name, base64 }] }),
       });
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({ error: "Logo upload failed" }));
+        throw new Error(data.error || "Logo upload failed");
+      }
       const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error);
       setLogoUrl(data.results?.[0]?.url ?? "");
       toast.success("Logo uploaded");
     } catch (e: any) { toast.error("Logo upload failed: " + e.message); }
@@ -834,8 +843,11 @@ export default function AboutMePage() {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ images: [{ name, base64 }] }),
     });
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({ error: "Upload failed" }));
+      throw new Error(data.error ?? "Upload failed");
+    }
     const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error ?? "Upload failed");
     return data.results?.[0]?.url ?? "";
   }, []);
 

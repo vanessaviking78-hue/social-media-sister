@@ -737,8 +737,11 @@ export default function Stories() {
         headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify({ presetId: selectedPresetId, imageUrls: allUrls, clientName }),
       });
+      if (!pushRes.ok) {
+        const pushData = await pushRes.json().catch(() => ({ error: "Push failed" })) as { error?: string };
+        throw new Error(pushData.error || "Push failed");
+      }
       const pushData = await pushRes.json() as { summary?: { succeeded: number; failed: number }; error?: string };
-      if (!pushRes.ok) throw new Error(pushData.error || "Push failed");
       const { succeeded = 0, failed = 0 } = pushData.summary ?? {};
       if (succeeded > 0 && failed === 0) {
         toast.success(`${succeeded} stor${succeeded === 1 ? "y" : "ies"} posted to Instagram!`, { id: toastId });

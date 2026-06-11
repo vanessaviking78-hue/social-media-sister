@@ -510,8 +510,11 @@ export default function BundleBuilder() {
           }),
         });
       }
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({ error: "Generation failed" }));
+        throw new Error(data.error || "Generation failed");
+      }
       const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || "Generation failed");
       setResult(data);
       if (data.sources) setSources(data.sources);
       toast.success("Bundle ready.");
@@ -531,8 +534,11 @@ export default function BundleBuilder() {
         headers: authHeaders(),
         body: JSON.stringify({ piece, voiceStyle, presetId: selectedPreset?.id }),
       });
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({ error: "Re-roll failed" }));
+        throw new Error(data.error || "Re-roll failed");
+      }
       const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || "Re-roll failed");
       setResult((prev) => {
         if (!prev?.content) return prev;
         return { ...prev, content: { ...prev.content, [piece]: data.data } as BundleContent };

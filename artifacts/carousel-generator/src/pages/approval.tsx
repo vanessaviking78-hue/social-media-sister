@@ -45,8 +45,11 @@ export default function Approval() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ images: [{ name: file.name, base64 }] }),
         });
+        if (!resp.ok) {
+          const data = await resp.json().catch(() => ({ error: "Upload failed" }));
+          throw new Error(data.error || "Upload failed");
+        }
         const data = await resp.json();
-        if (!resp.ok) throw new Error(data.error || "Upload failed");
         if (data.results?.[0]?.url) newUrls.push(data.results[0].url);
       }
       setUploadedUrls((prev) => [...prev, ...newUrls]);

@@ -466,8 +466,11 @@ export default function SingleImage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ images: [{ name, base64 }] }),
     });
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({ error: "Upload failed" }));
+      throw new Error(data.error || "Upload failed");
+    }
     const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || "Upload failed");
     return data.results?.[0]?.url || "";
   };
 
@@ -546,8 +549,11 @@ export default function SingleImage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(pushBody),
       });
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({ error: "Push failed" }));
+        throw new Error(data.error || "Push failed");
+      }
       const data = await resp.json();
-      if (!resp.ok) throw new Error(data.error || "Push failed");
       toast.success(`Pushed ${data.summary.succeeded} post(s) to Cloud Campaign!`, { id });
       if (data.summary.failed > 0) {
         toast.error(`${data.summary.failed} post(s) failed.`);

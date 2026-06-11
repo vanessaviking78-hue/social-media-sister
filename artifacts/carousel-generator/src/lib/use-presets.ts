@@ -119,8 +119,11 @@ export function usePresets() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ images: [{ name: `logo-${Date.now()}.png`, base64 }] }),
     });
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({ error: "Logo upload failed" }));
+      throw new Error(data.error || "Logo upload failed");
+    }
     const data = await resp.json();
-    if (!resp.ok) throw new Error(data.error || "Logo upload failed");
     return data.results?.[0]?.url || "";
   }, []);
 
