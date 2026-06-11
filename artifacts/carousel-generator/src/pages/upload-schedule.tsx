@@ -288,8 +288,10 @@ export default function UploadSchedule() {
         }),
       });
 
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Scheduling failed");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Scheduling failed" }));
+        throw new Error(data.error || "Scheduling failed");
+      }
 
       toast.success("Post queued.", { id });
       setScheduled(true);
