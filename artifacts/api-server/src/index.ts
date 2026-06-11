@@ -1,7 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { runMigrations } from "./lib/runMigrations";
-import { seedClients } from "./lib/seedClients";
 import { startSchedulerCron } from "./lib/schedulerEngine";
 
 const rawPort = process.env["PORT"];
@@ -20,7 +19,6 @@ if (Number.isNaN(port) || port <= 0) {
 
 async function start(): Promise<void> {
   await runMigrations();
-  await seedClients();
 
   await new Promise<void>((resolve, reject) => {
     app.listen(port, (err?: Error) => {
