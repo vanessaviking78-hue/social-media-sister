@@ -46,7 +46,7 @@ export default function Approval() {
           body: JSON.stringify({ images: [{ name: file.name, base64 }] }),
         });
         if (!resp.ok) {
-          const data = await resp.json().catch(() => ({ error: "Upload failed" }));
+          const data = await resp.json().catch(() => ({ error: resp.status === 413 ? "Images too large — try smaller files" : `Upload failed (${resp.status})` }));
           throw new Error(data.error || "Upload failed");
         }
         const data = await resp.json();

@@ -244,7 +244,7 @@ async function uploadDataUrls(dataUrls: string[], names: string[]): Promise<stri
       body: JSON.stringify({ images }),
     });
     if (!res.ok) {
-      const data = await res.json().catch(() => ({ error: "Upload failed" }));
+      const data = await res.json().catch(() => ({ error: res.status === 413 ? "Images too large — try smaller files" : `Upload failed (${res.status})` }));
       throw new Error(data.error || "Upload failed");
     }
     const data = await res.json();
