@@ -13,6 +13,7 @@ import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { loadGoogleFonts } from "@/lib/slide-utils";
+
 import { usePresets, type ClientPreset } from "@/lib/use-presets";
 
 loadGoogleFonts();
@@ -360,11 +361,29 @@ function loadImg(src: string): Promise<HTMLImageElement> {
   });
 }
 
+async function compressDataUrl(dataUrl: string, maxPx = 1080, quality = 0.82): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 async function uploadDataUrls(dataUrls: string[], names: string[]): Promise<string[]> {
   const BATCH = 4;
   const urls: string[] = [];
   for (let i = 0; i < dataUrls.length; i += BATCH) {
-    const images = dataUrls.slice(i, i + BATCH).map((du, j) => ({ name: names[i + j], base64: du }));
+    const images = await Promise.all(
+      dataUrls.slice(i, i + BATCH).map(async (du, j) => ({ name: names[i + j], base64: await compressDataUrl(du) }))
+    );
     const res = await fetch(`${BASE}/api/content/upload-image`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
