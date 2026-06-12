@@ -64,6 +64,7 @@ router.get("/meta/auth/start", (req: Request, res: Response) => {
       "instagram_content_publish",
       "pages_read_engagement",
       "pages_show_list",
+      "pages_manage_posts",
     ].join(",");
     const url =
       `https://www.facebook.com/dialog/oauth` +
@@ -92,6 +93,7 @@ router.get("/meta/auth/bulk-start", (req: Request, res: Response) => {
       "instagram_content_publish",
       "pages_read_engagement",
       "pages_show_list",
+      "pages_manage_posts",
     ].join(",");
     const url =
       `https://www.facebook.com/dialog/oauth` +
