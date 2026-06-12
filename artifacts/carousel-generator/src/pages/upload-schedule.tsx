@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { usePresets } from "@/lib/use-presets";
+import { compressImage } from "@/lib/slide-utils";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const MAX_IMAGES = 12;
@@ -32,7 +33,10 @@ async function uploadImages(files: File[]): Promise<string[]> {
   for (let i = 0; i < files.length; i += BATCH) {
     const batch = files.slice(i, i + BATCH);
     const images = await Promise.all(
-      batch.map(async (f) => ({ name: f.name, base64: await toBase64(f) }))
+      batch.map(async (f) => {
+        const compressed = await compressImage(f);
+        return { name: compressed.name, base64: await toBase64(compressed) };
+      })
     );
     const res = await fetch(`${BASE}/api/content/upload-image`, {
       method: "POST",

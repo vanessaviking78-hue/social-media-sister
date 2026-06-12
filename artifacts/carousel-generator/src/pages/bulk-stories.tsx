@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import Papa from "papaparse";
 import { saveAs } from "file-saver";
 import { usePresets } from "@/lib/use-presets";
+import { compressImage } from "@/lib/slide-utils";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -76,7 +77,10 @@ async function uploadBatch(files: File[]): Promise<string[]> {
   for (let i = 0; i < files.length; i += BATCH) {
     const chunk = files.slice(i, i + BATCH);
     const images = await Promise.all(
-      chunk.map(async (f) => ({ name: f.name, base64: await toBase64(f) }))
+      chunk.map(async (f) => {
+        const compressed = await compressImage(f);
+        return { name: compressed.name, base64: await toBase64(compressed) };
+      })
     );
     const res = await fetch(`${BASE}/api/content/upload-image`, {
       method: "POST",
