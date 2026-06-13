@@ -308,9 +308,12 @@ export default function AiPortraitStudio() {
     setSelectedPresets((prev) => { const next = new Set(prev); ids.forEach((id) => next.delete(id)); return next; });
 
   // ── Generate ───────────────────────────────────────────────────────────────
+  const MAX_PER_JOB = 30;
+
   const handleGenerate = async () => {
     if (!sourcePhoto)          { toast.error("Upload a reference photo first"); return; }
     if (selectedPresets.size === 0) { toast.error("Select at least one preset"); return; }
+    if (selectedPresets.size > MAX_PER_JOB) { toast.error(`Select ${MAX_PER_JOB} or fewer presets per run (${selectedPresets.size} selected)`); return; }
 
     const scenarios = Array.from(selectedPresets).map((id) => {
       const preset = findPreset(id);
@@ -660,7 +663,7 @@ export default function AiPortraitStudio() {
                 <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium">Injector Collection</p>
                 <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={() => deselectCategory(INJECTOR_COLLECTION_PRESETS.map((p) => p.id))}>Clear all</button>
               </div>
-              <p className="text-xs text-muted-foreground mb-4">100 presets across 10 categories. Select up to 15 per generation run.</p>
+              <p className="text-xs text-muted-foreground mb-4">100 presets across 10 categories. Select up to 30 per generation run.</p>
 
               <div className="space-y-5">
                 {INJECTOR_COLLECTION_CATEGORIES.map((cat) => {
