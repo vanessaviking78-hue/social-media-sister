@@ -319,3 +319,645 @@ export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: strin
     "a square 1:1 format";
   return `${prompt}\n\nCompose the image in ${ratioDescription}.\n\n${PHOTO_STUDIO_NEGATIVE}`;
 }
+
+// ─── Injector Collection — 100 presets across 10 categories ────────────────
+
+export interface InjectorCollectionCategory {
+  label: string;
+  presetIds: string[];
+}
+
+export const INJECTOR_COLLECTION_PRESETS: PhotoStudioPreset[] = [
+  // ── Category 1: Scrubs ────────────────────────────────────────────────────
+  {
+    id: "ic-01",
+    name: "Scrubs — Clinic Corridor Stand",
+    hasColour: true,
+    promptTemplate: `A professional portrait of the person from the reference photo standing confidently in a modern clinic corridor wearing [COLOUR] scrubs, looking directly at camera with a warm professional expression. Soft overhead clinical lighting. Medium shot from waist up. Clean walls, subtle clinic interior visible but softly blurred behind. Ultra-realistic skin texture, natural fabric folds, editorial sharpness. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-02",
+    name: "Scrubs — Consultation Desk Seated",
+    hasColour: true,
+    promptTemplate: `A professional portrait of the person from the reference photo seated at a consultation desk wearing [COLOUR] scrubs, hands resting naturally on the desk, confident and approachable expression. Soft warm window light from the side. Eye-level medium portrait, shoulders to hands visible. Clean minimal desk surface, neutral clinic background softly blurred. Honest editorial realism, no airbrushing. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-03",
+    name: "Scrubs — Arms Crossed Treatment Room",
+    hasColour: true,
+    promptTemplate: `A professional portrait of the person from the reference photo standing with arms loosely crossed in a modern treatment room wearing [COLOUR] scrubs, direct eye contact, calm confident expression. Clean clinical background softly blurred. Soft balanced studio-quality lighting. Medium shot, waist up. Natural skin texture, fabric folds realistic. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-04",
+    name: "Scrubs — Walking Clinic Hallway",
+    hasColour: true,
+    promptTemplate: `A candid-style professional portrait of the person from the reference photo walking naturally through a bright modern clinic hallway wearing [COLOUR] scrubs, relaxed confident stride, warm natural expression. Warm overhead clinic lighting. Motion captured candidly, background hallway softly blurred. Lifestyle editorial quality, authentic and human. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-05",
+    name: "Scrubs — Window Natural Light",
+    hasColour: true,
+    promptTemplate: `A portrait of the person from the reference photo standing beside a large window in [COLOUR] scrubs, soft natural sidelight gently wrapping the face, calm composed expression with a slight warm smile. Neutral interior wall behind, softly lit room. Medium shot. Skin texture natural and honest, fabric falls realistically. Quiet editorial warmth. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-06",
+    name: "Scrubs — Clean Head and Shoulders",
+    hasColour: true,
+    promptTemplate: `A clean head-and-shoulders portrait of the person from the reference photo wearing [COLOUR] scrubs against a neutral studio or plain interior background, slight warm smile, direct camera gaze. Balanced frontal studio lighting, no harsh shadows. Sharp editorial focus on face. Natural skin texture, no retouching. Professional and approachable. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-07",
+    name: "Scrubs — Coffee Cup Reception",
+    hasColour: true,
+    promptTemplate: `A lifestyle portrait of the person from the reference photo holding a takeaway coffee cup in [COLOUR] scrubs, standing at or near a bright modern clinic reception area, relaxed and personable expression. Warm airy interior, soft natural and ambient light. Candid authentic energy. Medium shot. Realistic skin, natural hand positioning, no distorted fingers. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-08",
+    name: "Scrubs — Wall Lean Lifestyle",
+    hasColour: true,
+    promptTemplate: `A lifestyle editorial portrait of the person from the reference photo leaning lightly against a white clinic wall in [COLOUR] scrubs, one hand relaxed at side or lightly in pocket, authentic comfortable posture, warm direct gaze. Mixed warm clinical and natural light. Medium shot. Honest editorial realism, natural fabric, no artificial retouching. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-09",
+    name: "Scrubs — Outdoors Building",
+    hasColour: true,
+    promptTemplate: `A professional outdoor portrait of the person from the reference photo standing outside a modern clinic or healthcare building in [COLOUR] scrubs, soft natural overcast or morning daylight, approachable confident expression. Slightly blurred architectural background. Medium portrait shot. Natural skin texture, authentic outdoor lighting. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-10",
+    name: "Scrubs — Over-Shoulder Editorial",
+    hasColour: true,
+    promptTemplate: `An editorial portrait of the person from the reference photo looking over their shoulder toward the camera wearing [COLOUR] scrubs, three-quarter angle, confident direct gaze, clean minimal background. Directional side lighting creating soft depth. Sharp editorial focus. Authentic skin texture, natural hair placement. Confident and composed. Same facial features as reference photo.`,
+  },
+
+  // ── Category 2: White Shirt + Jeans ───────────────────────────────────────
+  {
+    id: "ic-11",
+    name: "White Shirt Jeans — Casual Seated",
+    hasColour: false,
+    promptTemplate: `A portrait of the person from the reference photo seated casually in a fitted white shirt and dark well-fitted jeans, forearms resting on knees, relaxed confident expression, looking directly at camera. Warm neutral interior background softly blurred. Soft natural and ambient light. Medium shot. Fabric creases naturally, honest editorial realism. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-12",
+    name: "White Shirt Jeans — Plain Background Stand",
+    hasColour: false,
+    promptTemplate: `A clean editorial portrait of the person from the reference photo standing against a plain cream or light grey wall in a crisp white shirt and well-fitted jeans, direct camera gaze, composed confident expression. Balanced soft studio lighting. Medium portrait shot from waist up. Sharp focus, natural skin texture, clean minimalist aesthetic. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-13",
+    name: "White Shirt Jeans — Coffee Shop",
+    hasColour: false,
+    promptTemplate: `A lifestyle portrait of the person from the reference photo in a bright warm coffee shop, wearing a white shirt slightly relaxed over dark jeans, hands wrapped naturally around a coffee cup, relaxed authentic expression. Warm bokeh interior background. Soft ambient café lighting. Candid editorial feel. Medium shot. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-14",
+    name: "White Shirt Jeans — Golden Hour Outdoors",
+    hasColour: false,
+    promptTemplate: `A warm outdoor portrait of the person from the reference photo in a fitted white shirt and jeans at golden hour, warm backlight glowing softly around the hair and shoulders, natural park or urban setting behind softly blurred. Relaxed confident expression, slight squint from natural light. Lifestyle editorial quality. Medium portrait shot. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-15",
+    name: "White Shirt Jeans — Arms Crossed Direct",
+    hasColour: false,
+    promptTemplate: `An editorial portrait of the person from the reference photo with arms loosely crossed, wearing a white shirt and jeans, direct eye contact, confident composed expression. Clean neutral interior or soft studio background. Balanced directional lighting. Waist-up medium shot. Natural skin and fabric texture, no airbrushing. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-16",
+    name: "White Shirt Jeans — Thoughtful Off-Camera",
+    hasColour: false,
+    promptTemplate: `A lifestyle editorial portrait of the person from the reference photo in a white shirt and jeans, looking slightly off-camera with a thoughtful introspective expression. Soft window sidelight. Warm neutral interior. Medium shot, relaxed posture. Authentic quiet mood. Natural skin texture and organic fabric. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-17",
+    name: "White Shirt Jeans — Desk Working",
+    hasColour: false,
+    promptTemplate: `A lifestyle portrait of the person from the reference photo seated at a clean modern desk or table in a white shirt and jeans, hand resting on a laptop or open notebook, focused professional expression. Bright modern interior, soft ambient light, clean minimal background. Editorial lifestyle quality. Medium shot. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-18",
+    name: "White Shirt Jeans — Architectural Lean",
+    hasColour: false,
+    promptTemplate: `An elevated editorial portrait of the person from the reference photo leaning against an architectural wall, column, or doorframe in a white shirt and jeans. Strong directional light creating clean shadow detail. Geometric or minimalist background. Fashion-adjacent professional editorial quality. Medium shot, confident posture. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-19",
+    name: "White Shirt Jeans — Side Profile",
+    hasColour: false,
+    promptTemplate: `A clean side-profile portrait of the person from the reference photo in a white shirt and jeans, calm composed expression, looking forward. Soft dramatic sidelight from in front. Plain neutral background. Editorial simplicity, strong jawline and profile lighting. Medium shot from shoulders up. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-20",
+    name: "White Shirt Jeans — Close Crop Editorial",
+    hasColour: false,
+    promptTemplate: `A close editorial portrait of the person from the reference photo cropped from shoulders up, white shirt collar visible, in a white shirt and jeans. Strong directional lighting, confident direct gaze, clean editorial quality. Background neutral and clean. Sharp focus on eyes and face. Same facial features as reference photo.`,
+  },
+
+  // ── Category 3: Black Jumper + Jeans ──────────────────────────────────────
+  {
+    id: "ic-21",
+    name: "Black Jumper Jeans — Seated Forearms",
+    hasColour: false,
+    promptTemplate: `A portrait of the person from the reference photo seated in a fitted black long-sleeve crew-neck jumper and dark jeans, elbows on knees, hands loosely clasped, honest editorial realism, looking directly at camera. Warm neutral interior background. Soft window light. Medium shot. Natural skin, fabric, and hand anatomy. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-22",
+    name: "Black Jumper Jeans — Studio Stand",
+    hasColour: false,
+    promptTemplate: `A clean studio portrait of the person from the reference photo standing in a fitted black crew-neck jumper and dark jeans against a neutral grey or warm cream background, arms relaxed at sides, calm confident expression, direct camera gaze. Soft balanced studio lighting. Medium waist-up portrait shot. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-23",
+    name: "Black Jumper Jeans — Window Sidelight",
+    hasColour: false,
+    promptTemplate: `A portrait of the person from the reference photo standing near a window in a fitted black jumper and dark jeans, soft natural sidelight creating gentle depth across the face, quiet confident energy, looking toward camera. Soft interior decor background blurred. Medium shot. Calm lifestyle editorial mood. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-24",
+    name: "Black Jumper Jeans — Urban Candid",
+    hasColour: false,
+    promptTemplate: `A candid lifestyle portrait of the person from the reference photo walking or moving naturally in a fitted black jumper and dark jeans in a modern urban or neutral setting. Bokeh architectural or street background. Natural movement, authentic energy. Medium shot. Editorial realism, natural skin and fabric. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-25",
+    name: "Black Jumper Jeans — Arms Crossed Stand",
+    hasColour: false,
+    promptTemplate: `An editorial portrait of the person from the reference photo with arms loosely crossed in a fitted black jumper and dark jeans, direct confident gaze, calm composed expression. Clean neutral interior or plain background. Directional studio-quality lighting. Waist-up. Strong editorial presence. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-26",
+    name: "Black Jumper Jeans — Chair Seated Relaxed",
+    hasColour: false,
+    promptTemplate: `A portrait of the person from the reference photo seated on a chair or stool in a fitted black jumper and dark jeans, one leg loosely crossed, relaxed yet authoritative posture, warm studio lighting. Medium shot. Neutral interior background. Comfortable confident editorial mood. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-27",
+    name: "Black Jumper Jeans — Close Dramatic",
+    hasColour: false,
+    promptTemplate: `A close-up editorial portrait of the person from the reference photo in a fitted black jumper visible from shoulders up. Strong single-source directional lighting, deep shadow on one side, face lit warmly. Dark or near-black neutral background. Emotional dramatic editorial presence without artifice. Sharp focus on eyes. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-28",
+    name: "Black Jumper Jeans — B&W Side Lit",
+    hasColour: false,
+    promptTemplate: `A black and white portrait of the person from the reference photo wearing a black crew-neck jumper. Strong sidelight from one direction, high-contrast tonal gradation across the face. Film-inspired texture and grain. Deep emotional editorial presence. Tight head-and-shoulders framing. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-29",
+    name: "Black Jumper Jeans — Wall Lean Hands Pockets",
+    hasColour: false,
+    promptTemplate: `A portrait of the person from the reference photo leaning against a white or concrete wall in a fitted black jumper and dark jeans, hands relaxed in pockets, direct confident look at camera. Clean minimalist composition. Soft even lighting. Medium shot. Authentic editorial lifestyle. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-30",
+    name: "Black Jumper Jeans — Outdoors Overcast",
+    hasColour: false,
+    promptTemplate: `An outdoor portrait of the person from the reference photo in a fitted black jumper and dark jeans under soft overcast natural light, calm confident expression, relaxed posture. Neutral urban or clean architectural background softly blurred. Medium shot. Natural skin texture, authentic outdoor editorial quality. Same facial features as reference photo.`,
+  },
+
+  // ── Category 4: Expressions ───────────────────────────────────────────────
+  {
+    id: "ic-31",
+    name: "Expression — Genuine Warm Smile",
+    hasColour: false,
+    promptTemplate: `A close portrait of the person from the reference photo with a genuine warm smile, natural laugh lines and facial muscle movement visible, soft flattering studio or window light. Head-and-shoulders framing, neutral background. Authentic joy, not performed. Sharp focus on eyes, natural skin texture. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-32",
+    name: "Expression — Contemplative Serious",
+    hasColour: false,
+    promptTemplate: `An editorial portrait of the person from the reference photo with a serious and contemplative expression, eyes gazing slightly off-camera with quiet intensity. Strong directional sidelight, deep facial shadows. Neutral or dark background. Editorial gravitas without coldness. Tight head-and-shoulders framing. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-33",
+    name: "Expression — Soft Warm Direct",
+    hasColour: false,
+    promptTemplate: `A portrait of the person from the reference photo with a soft warm expression, direct eye contact, eyes warm and approachable, slight natural smile at the corners of the mouth. Clean neutral background, balanced flattering portrait lighting. Head-and-shoulders frame. Natural skin texture, honest and human. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-34",
+    name: "Expression — Caught In Thought",
+    hasColour: false,
+    promptTemplate: `A candid editorial portrait of the person from the reference photo caught mid-thought, eyes glancing slightly downward then up to camera, authentic in-between expression of reflection. Soft natural window light. Lifestyle editorial quality. Medium shot. Spontaneous authentic human moment. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-35",
+    name: "Expression — Composed Neutral Power",
+    hasColour: false,
+    promptTemplate: `A strong editorial portrait of the person from the reference photo with a composed neutral expression, direct gaze to camera, square-on framing. Clean background, soft balanced studio or window light. Confident presence without aggression or coldness. Head-and-shoulders framing. Natural unretouched skin. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-36",
+    name: "Expression — Natural Laugh",
+    hasColour: false,
+    promptTemplate: `A candid lifestyle portrait of the person from the reference photo caught in a natural, genuine laugh, eyes crinkling, facial muscles moving authentically. Soft warm bokeh background. Warm ambient light. Human and warm, not performative. Medium candid shot. Authentic joy and personality. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-37",
+    name: "Expression — Introspective Film",
+    hasColour: false,
+    promptTemplate: `An editorial portrait of the person from the reference photo with an introspective expression, three-quarter angle, light catching the eyes at a thoughtful moment. Film-quality editorial mood, subtle grain or organic depth. Directional sidelight. Neutral background. Emotional and artistic. Head-and-shoulders tight framing. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-38",
+    name: "Expression — Quiet Charisma",
+    hasColour: false,
+    promptTemplate: `An editorial portrait of the person from the reference photo with a quietly charismatic expression, a subtle confident energy in the eyes and the set of the mouth, half-smiling or composed with warmth beneath. Fashion-adjacent editorial lighting. Neutral background. Head-and-shoulders tight frame. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-39",
+    name: "Expression — Serene Eyes Closed",
+    hasColour: false,
+    promptTemplate: `A serene editorial portrait of the person from the reference photo with eyes softly closed, chin slightly lifted, peaceful composed expression. Soft wrapping white studio light, even and flattering. Clean neutral background. Calm, introspective, beauty-editorial quality. Head-and-shoulders framing. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-40",
+    name: "Expression — Bold Open Gaze",
+    hasColour: false,
+    promptTemplate: `A strong portrait of the person from the reference photo with wide-open eyes looking directly and boldly into the camera, honest and unflinching direct gaze. Clean studio backdrop. Balanced bright editorial lighting. Head-and-shoulders tight crop. Natural skin, no retouching, expressive and alive. Same facial features as reference photo.`,
+  },
+
+  // ── Category 5: With Patients ─────────────────────────────────────────────
+  {
+    id: "ic-41",
+    name: "With Patient — Consultation Facing",
+    hasColour: true,
+    promptTemplate: `A clinical portrait of the person from the reference photo warmly and attentively facing a seated patient during a consultation in [COLOUR] scrubs. Both positioned at an angle to camera showing interaction. Authentic warm clinical moment. Soft clinical interior lighting. No medical equipment, no syringes. Patient is an older adult, warm lighting. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-42",
+    name: "With Patient — Beside Treatment Bed",
+    hasColour: true,
+    promptTemplate: `A clinical portrait of the person from the reference photo standing attentively beside a clinical treatment bed in [COLOUR] scrubs, caring and focused expression, looking at the patient with professional warmth. Soft clinical lighting, clean treatment room setting. No medical equipment or syringes in frame. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-43",
+    name: "With Patient — Clipboard Review",
+    hasColour: true,
+    promptTemplate: `A clinical portrait of the person from the reference photo in [COLOUR] scrubs reviewing notes on a clipboard alongside a patient in a consultation room, both looking at the clipboard in a natural collaborative moment. Warm clinical lighting. Clean consultation room, no medical equipment. Authentic professional interaction. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-44",
+    name: "With Patient — Tablet Explanation",
+    hasColour: true,
+    promptTemplate: `A clinical portrait of the person from the reference photo wearing [COLOUR] scrubs showing information on a tablet screen to a patient, both looking at the device, warm professional explanation moment. Clean clinical consultation setting. Soft warm interior lighting. No syringes or medical devices. Authentic interaction. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-45",
+    name: "With Patient — Reassuring Touch",
+    hasColour: true,
+    promptTemplate: `A warm clinical portrait of the person from the reference photo in [COLOUR] scrubs gently placing a reassuring hand on a seated patient's shoulder. Empathetic, warm, authentic clinical setting. Soft clinical lighting. No medical equipment or syringes. Clean neutral consultation room. Genuine care and professionalism. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-46",
+    name: "With Patient — Shared Laugh",
+    hasColour: true,
+    promptTemplate: `A candid clinical portrait of the person from the reference photo in [COLOUR] scrubs sharing a natural laugh with a patient in a consultation room, both genuinely warm and relaxed. Authentic human moment. Warm clinical interior lighting. No medical equipment. Clean consultation room. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-47",
+    name: "With Patient — Clinician to Camera",
+    hasColour: true,
+    promptTemplate: `A clinical portrait of the person from the reference photo in [COLOUR] scrubs looking confidently toward the camera while a patient is visible in a soft blurred background behind them. Professional clinical presence. Warm soft clinical lighting. Medium shot. Clean treatment room background. No medical equipment. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-48",
+    name: "With Patient — Desk Consultation",
+    hasColour: true,
+    promptTemplate: `A clinical portrait of the person from the reference photo in [COLOUR] scrubs seated across from a patient at a consultation desk, both leaning slightly forward in engaged professional conversation. Warm authentic clinical interaction. Soft interior lighting. Clean consultation room, no medical equipment. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-49",
+    name: "With Patient — Corridor Walk",
+    hasColour: true,
+    promptTemplate: `A candid clinical portrait of the person from the reference photo in [COLOUR] scrubs walking alongside a patient through a bright clinic corridor, caring professional stride, relaxed warm interaction. Corridor background softly blurred. Natural clinical lighting. Authentic movement and warmth. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-50",
+    name: "With Patient — Consultation Prep",
+    hasColour: true,
+    promptTemplate: `A clinical portrait of the person from the reference photo in [COLOUR] scrubs preparing for a patient consultation, focused professional moment, patient visible in soft blurred background. Clean clinical setting, no medical equipment in foreground. Warm soft clinical lighting. Professional composure. Same facial features as reference photo.`,
+  },
+
+  // ── Category 6: Editorial ─────────────────────────────────────────────────
+  {
+    id: "ic-51",
+    name: "Editorial — Hard Key Light B&W",
+    hasColour: false,
+    promptTemplate: `High-contrast black and white studio portrait of the person from the reference photo. Hard single key light from camera-left, deep shadow on right cheek, clean white seamless backdrop. Direct confrontational gaze. Film grain texture. Fashion editorial realism. Head-and-shoulders tight framing. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-52",
+    name: "Editorial — Snoot Overhead B&W",
+    hasColour: false,
+    promptTemplate: `Stark black and white editorial portrait of the person from the reference photo lit with a single overhead snoot or beauty dish. Deep under-eye and cheekbone shadows, sharp catchlight in eyes. White seamless backdrop. Contemporary fashion editorial standard. Head-and-shoulders frame. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-53",
+    name: "Editorial — Close Honest B&W",
+    hasColour: false,
+    promptTemplate: `A black and white editorial portrait of the person from the reference photo, wide aperture close-up, sharp catchlights in eyes, subtle skin imperfections and natural texture preserved. Unflinching honest editorial quality. Clean neutral background. Head-and-shoulders tight crop. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-54",
+    name: "Editorial — Moody Underexposed B&W",
+    hasColour: false,
+    promptTemplate: `A slightly underexposed moody black and white portrait of the person from the reference photo. 35mm film aesthetic, visible grain, organic dark tones. Honest skin texture, natural expression. Direct calm gaze. Atmospheric editorial quality. Neutral background. Head-and-shoulders framing. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-55",
+    name: "Editorial — Overhead Shadow B&W",
+    hasColour: false,
+    promptTemplate: `A dramatic black and white editorial portrait of the person from the reference photo lit with hard overhead lighting casting a deep shadow beneath the nose and chin. Clean studio backdrop. Vintage fashion photography aesthetic. Defined facial structure. Direct gaze. Head-and-shoulders frame. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-56",
+    name: "Editorial — Three-Quarter Motion B&W",
+    hasColour: false,
+    promptTemplate: `A three-quarter angle black and white editorial portrait of the person from the reference photo, strong jaw and profile caught in profile-to-camera lighting, slight natural hair movement. Film grain. Deep tonal range. Editorial fashion portrait standard. Shoulders to head visible. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-57",
+    name: "Editorial — High-Key White B&W",
+    hasColour: false,
+    promptTemplate: `A high-key black and white editorial portrait of the person from the reference photo against a bright overexposed white background, subject centre-frame wearing a black top or shirt, stark contrasting simplicity. Powerful fashion editorial standard. Head-and-shoulders or half-body framing. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-58",
+    name: "Editorial — Eyes and Mouth Close",
+    hasColour: false,
+    promptTemplate: `An extreme close-up editorial portrait of the person from the reference photo cropped to show just the eyes, nose, and mouth against a pure white surround. Black and white toning. Fashion magazine boldness, unflinching directness. Ultra-sharp focus. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-59",
+    name: "Editorial — Over-Shoulder Rim Light B&W",
+    hasColour: false,
+    promptTemplate: `A black and white editorial portrait of the person from the reference photo turned slightly away, then glancing back over the shoulder toward camera. Dramatic side rim light from behind. Dark background. Editorial tension and strength. Head-and-shoulders frame. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-60",
+    name: "Editorial — Full Body Authority B&W",
+    hasColour: false,
+    promptTemplate: `A full-body or half-body black and white editorial portrait of the person from the reference photo standing against a plain studio backdrop in tailored or professional clothing. Strong composed posture, direct gaze. Balanced studio lighting. Timeless editorial authority. Same facial features as reference photo.`,
+  },
+
+  // ── Category 7: Lifestyle Branding ────────────────────────────────────────
+  {
+    id: "ic-61",
+    name: "Lifestyle — Morning City Walk",
+    hasColour: false,
+    promptTemplate: `A cinematic lifestyle portrait of the person from the reference photo walking confidently through a bright modern city street, smart casual attire, morning golden light. Confident natural stride. Bokeh urban background. Editorial lifestyle brand quality. Medium shot. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-62",
+    name: "Lifestyle — Outdoor Café Table",
+    hasColour: false,
+    promptTemplate: `A lifestyle brand portrait of the person from the reference photo seated at a sunny outdoor café table, coffee and phone on table, relaxed professional expression. Dappled natural light. Bokeh street and café background. Smart casual attire. Aspirational and human. Medium shot. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-63",
+    name: "Lifestyle — Minimalist Home Interior",
+    hasColour: false,
+    promptTemplate: `A lifestyle brand portrait of the person from the reference photo standing in a modern minimalist home interior near large windows, natural light flooding in, warm and aspirational. Smart casual attire. Interior plants and clean décor softly blurred. Calm confident presence. Medium shot. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-64",
+    name: "Lifestyle — Rooftop Golden Hour",
+    hasColour: false,
+    promptTemplate: `A lifestyle portrait of the person from the reference photo on a rooftop terrace at golden hour, city skyline or rooftop plants softly blurred behind, confident relaxed posture. Warm golden light. Smart casual or professional attire. Aspirational brand quality. Medium shot. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-65",
+    name: "Lifestyle — Creative Studio Work",
+    hasColour: false,
+    promptTemplate: `A lifestyle portrait of the person from the reference photo working in a bright creative studio or home office, papers and mood boards artfully around, natural focused expression. Bright natural light. Smart casual attire. Professional lifestyle editorial. Medium shot. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-66",
+    name: "Lifestyle — Glass Lobby Entrance",
+    hasColour: false,
+    promptTemplate: `A lifestyle portrait of the person from the reference photo walking confidently into a modern glass building lobby, professional attire, purposeful natural movement. Corporate lifestyle editorial quality. Bright interior with architectural lines. Medium shot. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-67",
+    name: "Lifestyle — Linen Sofa Interior",
+    hasColour: false,
+    promptTemplate: `A lifestyle brand portrait of the person from the reference photo seated on a natural linen sofa in a warm styled apartment interior, afternoon light, relaxed and aspirational. Smart casual attire. Warm ambient light. Interior décor softly blurred. Approachable lifestyle warmth. Medium shot. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-68",
+    name: "Lifestyle — Wellness Active",
+    hasColour: false,
+    promptTemplate: `A lifestyle portrait of the person from the reference photo in a gym or wellness studio setting in quality athletic or activewear, energised natural expression, wide aperture background blur. Clean light-filled wellness environment. Brand health and vitality. Medium lifestyle shot. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-69",
+    name: "Lifestyle — Bookshop Library",
+    hasColour: false,
+    promptTemplate: `A lifestyle portrait of the person from the reference photo browsing in a warm bookshop or library, smart casual attire, warm ambient light. Rows of books softly blurred behind. Intellectual lifestyle branding. Genuine engaged expression. Medium shot. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-70",
+    name: "Lifestyle — Morning Balcony Garden",
+    hasColour: false,
+    promptTemplate: `A serene lifestyle portrait of the person from the reference photo on a sunlit outdoor balcony or garden, soft morning light, holding a cup of coffee or tea, calm aspirational expression. Nature and greenery softly blurred behind. Smart casual or relaxed attire. Aspirational morning lifestyle. Medium shot. Same facial features as reference photo.`,
+  },
+
+  // ── Category 8: Power & Authority ────────────────────────────────────────
+  {
+    id: "ic-71",
+    name: "Power — Open Stance Direct",
+    hasColour: false,
+    promptTemplate: `A strong editorial portrait of the person from the reference photo standing with feet shoulder-width apart, arms relaxed at sides or hands loosely clasped at front, direct powerful camera gaze, composed and confident. Clean neutral studio background. Balanced strong directional lighting. Medium half-body frame. Professional authority without aggression. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-72",
+    name: "Power — Executive Chair Seated",
+    hasColour: false,
+    promptTemplate: `An authoritative portrait of the person from the reference photo seated in a high-back executive office chair, leaning slightly back, arms resting naturally, composed confident gaze to camera. Professional interior background, clean and modern. Directional warm lighting. Medium shot. Quiet executive authority. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-73",
+    name: "Power — Arms Folded Forward Lean",
+    hasColour: false,
+    promptTemplate: `A strong editorial portrait of the person from the reference photo with arms firmly folded and a slight forward lean toward camera, direct powerful gaze. Dark or deep neutral background. Studio quality directional light. Medium shot, waist up. Confident authority, no aggression. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-74",
+    name: "Power — Desk Document Review",
+    hasColour: false,
+    promptTemplate: `An authoritative portrait of the person from the reference photo standing at a desk reviewing documents with a composed and focused expression, background suggesting an executive or clinical leadership environment. Professional interior lighting. Medium shot. Leadership presence. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-75",
+    name: "Power — Side-Lit Three-Quarter",
+    hasColour: false,
+    promptTemplate: `A strong editorial portrait of the person from the reference photo at a three-quarter angle with strong directional sidelight, squared shoulders, calm and powerful expression. Minimal neutral background. High-quality studio or window light. Head-and-shoulders frame. Quiet confident power. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-76",
+    name: "Power — Hands Clasped Gradient",
+    hasColour: false,
+    promptTemplate: `A composed authoritative portrait of the person from the reference photo looking directly into the lens, hands loosely clasped in front. Clean gradient neutral background, professional studio lighting. Medium head-to-waist frame. Authority and presence, warm and human. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-77",
+    name: "Power — Close Chin Up Confidence",
+    hasColour: false,
+    promptTemplate: `A strong close editorial portrait of the person from the reference photo with a slight upward chin angle, direct confident gaze, composed and still. Head-and-shoulders tight frame. Studio directional lighting, clean background. Subtle confidence and authority without coldness. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-78",
+    name: "Power — Full Length Professional",
+    hasColour: false,
+    promptTemplate: `A full-length or three-quarter length editorial portrait of the person from the reference photo in professional attire, strong open posture, clean neutral or studio background. Balanced professional studio lighting. Corporate editorial quality. Confident, grounded. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-79",
+    name: "Power — Look-Back Commanding",
+    hasColour: false,
+    promptTemplate: `An editorial portrait of the person from the reference photo turned slightly away from camera then looking back directly, commanding confident energy. Studio directional lighting with subtle rim light behind. Clean background. Head-to-shoulders frame. Quiet power and movement. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-80",
+    name: "Power — Steps Forward Lean",
+    hasColour: false,
+    promptTemplate: `An editorial portrait of the person from the reference photo seated on steps or a low surface, leaning forward slightly on elbows, hands loosely together, direct camera gaze. Accessible authority, approachable confidence. Clean architectural or neutral setting. Medium shot. Same facial features as reference photo.`,
+  },
+
+  // ── Category 9: Final Editorial Mix ──────────────────────────────────────
+  {
+    id: "ic-81",
+    name: "Editorial Mix — Cinematic Interior Walk",
+    hasColour: false,
+    promptTemplate: `A cinematic wide portrait of the person from the reference photo walking through a bright modern interior, motion captured naturally in professional attire. Editorial reportage quality, architectural lines framing the subject. Warm directional interior light. Medium-wide shot. Authentic movement. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-82",
+    name: "Editorial Mix — Half-Face Window Drama",
+    hasColour: false,
+    promptTemplate: `A dramatic editorial portrait of the person from the reference photo with one half of the face lit by hard window light, the other in deep shadow. Black and white or desaturated toning. Powerful emotional depth. Close head-and-shoulders frame. Quiet storytelling. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-83",
+    name: "Editorial Mix — Scrubs Candid Turn",
+    hasColour: true,
+    promptTemplate: `A candid documentary-style portrait of the person from the reference photo mid-motion, turning naturally toward camera in [COLOUR] scrubs in a clinical setting. Reportage editorial quality, honest natural light. No medical equipment. Medium shot. Authentic human energy. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-84",
+    name: "Editorial Mix — Architectural Late Light",
+    hasColour: false,
+    promptTemplate: `A warm editorial lifestyle portrait of the person from the reference photo against or within a modern architectural background, late afternoon warm light. Smart casual or professional attire. Narrative lifestyle quality. Medium shot. Directional warm light, deep colours. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-85",
+    name: "Editorial Mix — Hands Frame Portrait",
+    hasColour: false,
+    promptTemplate: `An editorial portrait of the person from the reference photo with both hands lightly framing or resting near the face, introspective intimate expression. Soft beauty-photographer lighting, clean neutral background. Head-and-shoulders close. Personal and artistic. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-86",
+    name: "Editorial Mix — Scrubs Window Silhouette",
+    hasColour: true,
+    promptTemplate: `A dramatic editorial portrait of the person from the reference photo in [COLOUR] scrubs standing at a large window overlooking a cityscape or green landscape, backlit by natural light softened by balanced fill light. Silhouette edge glow, face fully visible. Clinical and cinematic. Medium shot. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-87",
+    name: "Editorial Mix — Low Angle Dynamic",
+    hasColour: false,
+    promptTemplate: `An editorial portrait of the person from the reference photo shot from a slight low angle looking up, strong posture, building facade or sky visible behind in soft blur. Professional or smart casual attire. Editorial dynamism and scale. Medium shot. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-88",
+    name: "Editorial Mix — Outdoor Steps Authentic",
+    hasColour: false,
+    promptTemplate: `An editorial portrait of the person from the reference photo seated on concrete steps or an outdoor seat, casual authentic posture, relaxed arms. Overcast natural light, even and clean. Street editorial realism, smart casual attire. Medium shot. Genuine and grounded. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-89",
+    name: "Editorial Mix — Collar Fragment Abstract",
+    hasColour: false,
+    promptTemplate: `A fashion editorial portrait fragment of the person from the reference photo cropped tightly to show just the collar, lower jaw, and neck. Strong directional lighting on jawline and throat. Abstract editorial fashion composition. Black or deep neutral background. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-90",
+    name: "Editorial Mix — Scrubs Outdoor Full Body",
+    hasColour: true,
+    promptTemplate: `A full-body editorial portrait of the person from the reference photo in [COLOUR] scrubs in an outdoor setting, natural relaxed confidence, arms at sides or lightly clasped, direct gaze. Soft natural daylight. Clean architectural or garden background. Authentic and aspirational. Full-body frame. Same facial features as reference photo.`,
+  },
+
+  // ── Category 10: Extra High-End ───────────────────────────────────────────
+  {
+    id: "ic-91",
+    name: "High-End — Luxury Hotel Lobby",
+    hasColour: false,
+    promptTemplate: `A high-end lifestyle editorial portrait of the person from the reference photo in a luxury hotel lobby or grand hotel interior, soft warm ambient light, elegant professional attire. Marble, brass, or rich warm interior materials softly blurred. Aspirational and composed. Medium shot. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-92",
+    name: "High-End — Gel Accent Light",
+    hasColour: false,
+    promptTemplate: `A contemporary editorial portrait of the person from the reference photo in a studio setting with a subtle warm amber or deep rose colour-gel accent light behind or to the side, creating a premium editorial colour mood. Main light clean and flattering. Head-and-shoulders frame. Sophisticated and modern. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-93",
+    name: "High-End — Candlelight Film Noir",
+    hasColour: false,
+    promptTemplate: `A moody atmospheric portrait of the person from the reference photo lit by a single warm candle or table lamp source, dim surrounding environment. Film noir aesthetic, elegant and cinematic. Rich shadow tones, warm face light. Smart attire. Head-and-shoulders frame. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-94",
+    name: "High-End — Mediterranean Terrace",
+    hasColour: false,
+    promptTemplate: `A luxury lifestyle portrait of the person from the reference photo on a sun-drenched Mediterranean terrace, white-washed walls and blue sky or sea softly blurred behind. Elegant casual attire, warm natural light. Aspirational brand warmth. Medium shot. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-95",
+    name: "High-End — Marble Minimal Interior",
+    hasColour: false,
+    promptTemplate: `A high-end editorial portrait of the person from the reference photo in a luxury minimalist interior with marble surfaces and warm brass or gold accents, soft warm ambient light. Elegant professional attire. Clean composed medium shot. Editorial interiors brand quality. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-96",
+    name: "High-End — All White High Key",
+    hasColour: false,
+    promptTemplate: `A striking high-key editorial portrait of the person from the reference photo dressed entirely in white against a pure white background, overexposed edges, bold clean fashion editorial approach. Strong studio lighting, directional and clean. Head-to-waist frame. Graphic and powerful. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-97",
+    name: "High-End — Macro Skin Realism",
+    hasColour: false,
+    promptTemplate: `An ultra-close editorial beauty portrait of the person from the reference photo shot with macro-style studio lighting, individual skin texture, pores, fine hairs, and facial features rendered in hyper-realistic detail. Fashion editorial skin photography. Clean neutral background. Head-and-face close crop. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-98",
+    name: "High-End — Chiaroscuro Beam",
+    hasColour: false,
+    promptTemplate: `A cinematic chiaroscuro portrait of the person from the reference photo partially in deep shadow at the edge of a single shaft of natural or studio light. Rich dark tones and warm highlighted face. Atmospheric and cinematic. Clean background. Head-and-shoulders frame. Elegant and dramatic. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-99",
+    name: "High-End — Mirror Reflection",
+    hasColour: false,
+    promptTemplate: `An editorial portrait of the person from the reference photo and their reflection visible in a large mirror or glass surface, creating a layered double-portrait editorial composition. Fashion photographer style, warm studio or interior light. Both image and reflection sharp and well-composed. Same facial features as reference photo.`,
+  },
+  {
+    id: "ic-100",
+    name: "High-End — Grand Architectural Full Length",
+    hasColour: false,
+    promptTemplate: `A full-length luxury editorial portrait of the person from the reference photo in an impressive architectural setting — a grand marble staircase, high-ceilinged corridor, or landmark interior — elegant professional attire. Strong composed editorial framing. Rich warm interior lighting. High-end fashion photography quality. Same facial features as reference photo.`,
+  },
+];
+
+export const INJECTOR_COLLECTION_CATEGORIES: InjectorCollectionCategory[] = [
+  { label: "Scrubs",              presetIds: ["ic-01","ic-02","ic-03","ic-04","ic-05","ic-06","ic-07","ic-08","ic-09","ic-10"] },
+  { label: "White Shirt + Jeans", presetIds: ["ic-11","ic-12","ic-13","ic-14","ic-15","ic-16","ic-17","ic-18","ic-19","ic-20"] },
+  { label: "Black Jumper + Jeans",presetIds: ["ic-21","ic-22","ic-23","ic-24","ic-25","ic-26","ic-27","ic-28","ic-29","ic-30"] },
+  { label: "Expressions",         presetIds: ["ic-31","ic-32","ic-33","ic-34","ic-35","ic-36","ic-37","ic-38","ic-39","ic-40"] },
+  { label: "With Patients",       presetIds: ["ic-41","ic-42","ic-43","ic-44","ic-45","ic-46","ic-47","ic-48","ic-49","ic-50"] },
+  { label: "Editorial",           presetIds: ["ic-51","ic-52","ic-53","ic-54","ic-55","ic-56","ic-57","ic-58","ic-59","ic-60"] },
+  { label: "Lifestyle Branding",  presetIds: ["ic-61","ic-62","ic-63","ic-64","ic-65","ic-66","ic-67","ic-68","ic-69","ic-70"] },
+  { label: "Power & Authority",   presetIds: ["ic-71","ic-72","ic-73","ic-74","ic-75","ic-76","ic-77","ic-78","ic-79","ic-80"] },
+  { label: "Final Editorial Mix", presetIds: ["ic-81","ic-82","ic-83","ic-84","ic-85","ic-86","ic-87","ic-88","ic-89","ic-90"] },
+  { label: "Extra High-End",      presetIds: ["ic-91","ic-92","ic-93","ic-94","ic-95","ic-96","ic-97","ic-98","ic-99","ic-100"] },
+];

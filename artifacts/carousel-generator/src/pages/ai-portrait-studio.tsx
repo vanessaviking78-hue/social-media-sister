@@ -59,6 +59,127 @@ const PHOTO_STUDIO_PRESETS: PhotoStudioPreset[] = [
   { id: "ps-15", name: "Intense Eyes Close Crop",              hasColour: true  },
 ];
 
+const INJECTOR_COLLECTION_PRESETS: PhotoStudioPreset[] = [
+  { id: "ic-01",  name: "Scrubs — Clinic Corridor Stand",          hasColour: true  },
+  { id: "ic-02",  name: "Scrubs — Consultation Desk Seated",       hasColour: true  },
+  { id: "ic-03",  name: "Scrubs — Arms Crossed Treatment Room",    hasColour: true  },
+  { id: "ic-04",  name: "Scrubs — Walking Clinic Hallway",         hasColour: true  },
+  { id: "ic-05",  name: "Scrubs — Window Natural Light",           hasColour: true  },
+  { id: "ic-06",  name: "Scrubs — Clean Head and Shoulders",       hasColour: true  },
+  { id: "ic-07",  name: "Scrubs — Coffee Cup Reception",           hasColour: true  },
+  { id: "ic-08",  name: "Scrubs — Wall Lean Lifestyle",            hasColour: true  },
+  { id: "ic-09",  name: "Scrubs — Outdoors Building",              hasColour: true  },
+  { id: "ic-10",  name: "Scrubs — Over-Shoulder Editorial",        hasColour: true  },
+  { id: "ic-11",  name: "White Shirt Jeans — Casual Seated",       hasColour: false },
+  { id: "ic-12",  name: "White Shirt Jeans — Plain Background",    hasColour: false },
+  { id: "ic-13",  name: "White Shirt Jeans — Coffee Shop",         hasColour: false },
+  { id: "ic-14",  name: "White Shirt Jeans — Golden Hour",         hasColour: false },
+  { id: "ic-15",  name: "White Shirt Jeans — Arms Crossed",        hasColour: false },
+  { id: "ic-16",  name: "White Shirt Jeans — Thoughtful Off-Cam",  hasColour: false },
+  { id: "ic-17",  name: "White Shirt Jeans — Desk Working",        hasColour: false },
+  { id: "ic-18",  name: "White Shirt Jeans — Architectural Lean",  hasColour: false },
+  { id: "ic-19",  name: "White Shirt Jeans — Side Profile",        hasColour: false },
+  { id: "ic-20",  name: "White Shirt Jeans — Close Crop",          hasColour: false },
+  { id: "ic-21",  name: "Black Jumper Jeans — Seated Forearms",    hasColour: false },
+  { id: "ic-22",  name: "Black Jumper Jeans — Studio Stand",       hasColour: false },
+  { id: "ic-23",  name: "Black Jumper Jeans — Window Sidelight",   hasColour: false },
+  { id: "ic-24",  name: "Black Jumper Jeans — Urban Candid",       hasColour: false },
+  { id: "ic-25",  name: "Black Jumper Jeans — Arms Crossed",       hasColour: false },
+  { id: "ic-26",  name: "Black Jumper Jeans — Chair Seated",       hasColour: false },
+  { id: "ic-27",  name: "Black Jumper Jeans — Close Dramatic",     hasColour: false },
+  { id: "ic-28",  name: "Black Jumper Jeans — B&W Side Lit",       hasColour: false },
+  { id: "ic-29",  name: "Black Jumper Jeans — Wall Lean Pockets",  hasColour: false },
+  { id: "ic-30",  name: "Black Jumper Jeans — Outdoors Overcast",  hasColour: false },
+  { id: "ic-31",  name: "Expression — Genuine Warm Smile",         hasColour: false },
+  { id: "ic-32",  name: "Expression — Contemplative Serious",      hasColour: false },
+  { id: "ic-33",  name: "Expression — Soft Warm Direct",           hasColour: false },
+  { id: "ic-34",  name: "Expression — Caught In Thought",          hasColour: false },
+  { id: "ic-35",  name: "Expression — Composed Neutral Power",     hasColour: false },
+  { id: "ic-36",  name: "Expression — Natural Laugh",              hasColour: false },
+  { id: "ic-37",  name: "Expression — Introspective Film",         hasColour: false },
+  { id: "ic-38",  name: "Expression — Quiet Charisma",             hasColour: false },
+  { id: "ic-39",  name: "Expression — Serene Eyes Closed",         hasColour: false },
+  { id: "ic-40",  name: "Expression — Bold Open Gaze",             hasColour: false },
+  { id: "ic-41",  name: "With Patient — Consultation Facing",      hasColour: true  },
+  { id: "ic-42",  name: "With Patient — Beside Treatment Bed",     hasColour: true  },
+  { id: "ic-43",  name: "With Patient — Clipboard Review",         hasColour: true  },
+  { id: "ic-44",  name: "With Patient — Tablet Explanation",       hasColour: true  },
+  { id: "ic-45",  name: "With Patient — Reassuring Touch",         hasColour: true  },
+  { id: "ic-46",  name: "With Patient — Shared Laugh",             hasColour: true  },
+  { id: "ic-47",  name: "With Patient — Clinician to Camera",      hasColour: true  },
+  { id: "ic-48",  name: "With Patient — Desk Consultation",        hasColour: true  },
+  { id: "ic-49",  name: "With Patient — Corridor Walk",            hasColour: true  },
+  { id: "ic-50",  name: "With Patient — Consultation Prep",        hasColour: true  },
+  { id: "ic-51",  name: "Editorial — Hard Key Light B&W",          hasColour: false },
+  { id: "ic-52",  name: "Editorial — Snoot Overhead B&W",          hasColour: false },
+  { id: "ic-53",  name: "Editorial — Close Honest B&W",            hasColour: false },
+  { id: "ic-54",  name: "Editorial — Moody Underexposed B&W",      hasColour: false },
+  { id: "ic-55",  name: "Editorial — Overhead Shadow B&W",         hasColour: false },
+  { id: "ic-56",  name: "Editorial — Three-Quarter Motion B&W",    hasColour: false },
+  { id: "ic-57",  name: "Editorial — High-Key White B&W",          hasColour: false },
+  { id: "ic-58",  name: "Editorial — Eyes and Mouth Close",        hasColour: false },
+  { id: "ic-59",  name: "Editorial — Over-Shoulder Rim Light",     hasColour: false },
+  { id: "ic-60",  name: "Editorial — Full Body Authority B&W",     hasColour: false },
+  { id: "ic-61",  name: "Lifestyle — Morning City Walk",           hasColour: false },
+  { id: "ic-62",  name: "Lifestyle — Outdoor Café Table",          hasColour: false },
+  { id: "ic-63",  name: "Lifestyle — Minimalist Home Interior",    hasColour: false },
+  { id: "ic-64",  name: "Lifestyle — Rooftop Golden Hour",         hasColour: false },
+  { id: "ic-65",  name: "Lifestyle — Creative Studio Work",        hasColour: false },
+  { id: "ic-66",  name: "Lifestyle — Glass Lobby Entrance",        hasColour: false },
+  { id: "ic-67",  name: "Lifestyle — Linen Sofa Interior",         hasColour: false },
+  { id: "ic-68",  name: "Lifestyle — Wellness Active",             hasColour: false },
+  { id: "ic-69",  name: "Lifestyle — Bookshop Library",            hasColour: false },
+  { id: "ic-70",  name: "Lifestyle — Morning Balcony Garden",      hasColour: false },
+  { id: "ic-71",  name: "Power — Open Stance Direct",              hasColour: false },
+  { id: "ic-72",  name: "Power — Executive Chair Seated",          hasColour: false },
+  { id: "ic-73",  name: "Power — Arms Folded Forward Lean",        hasColour: false },
+  { id: "ic-74",  name: "Power — Desk Document Review",            hasColour: false },
+  { id: "ic-75",  name: "Power — Side-Lit Three-Quarter",          hasColour: false },
+  { id: "ic-76",  name: "Power — Hands Clasped Gradient",          hasColour: false },
+  { id: "ic-77",  name: "Power — Close Chin Up Confidence",        hasColour: false },
+  { id: "ic-78",  name: "Power — Full Length Professional",         hasColour: false },
+  { id: "ic-79",  name: "Power — Look-Back Commanding",            hasColour: false },
+  { id: "ic-80",  name: "Power — Steps Forward Lean",              hasColour: false },
+  { id: "ic-81",  name: "Editorial Mix — Cinematic Interior Walk", hasColour: false },
+  { id: "ic-82",  name: "Editorial Mix — Half-Face Window Drama",  hasColour: false },
+  { id: "ic-83",  name: "Editorial Mix — Scrubs Candid Turn",      hasColour: true  },
+  { id: "ic-84",  name: "Editorial Mix — Architectural Late Light", hasColour: false },
+  { id: "ic-85",  name: "Editorial Mix — Hands Frame Portrait",    hasColour: false },
+  { id: "ic-86",  name: "Editorial Mix — Scrubs Window Silhouette",hasColour: true  },
+  { id: "ic-87",  name: "Editorial Mix — Low Angle Dynamic",       hasColour: false },
+  { id: "ic-88",  name: "Editorial Mix — Outdoor Steps Authentic", hasColour: false },
+  { id: "ic-89",  name: "Editorial Mix — Collar Fragment Abstract",hasColour: false },
+  { id: "ic-90",  name: "Editorial Mix — Scrubs Outdoor Full Body",hasColour: true  },
+  { id: "ic-91",  name: "High-End — Luxury Hotel Lobby",           hasColour: false },
+  { id: "ic-92",  name: "High-End — Gel Accent Light",             hasColour: false },
+  { id: "ic-93",  name: "High-End — Candlelight Film Noir",        hasColour: false },
+  { id: "ic-94",  name: "High-End — Mediterranean Terrace",        hasColour: false },
+  { id: "ic-95",  name: "High-End — Marble Minimal Interior",      hasColour: false },
+  { id: "ic-96",  name: "High-End — All White High Key",           hasColour: false },
+  { id: "ic-97",  name: "High-End — Macro Skin Realism",           hasColour: false },
+  { id: "ic-98",  name: "High-End — Chiaroscuro Beam",             hasColour: false },
+  { id: "ic-99",  name: "High-End — Mirror Reflection",            hasColour: false },
+  { id: "ic-100", name: "High-End — Grand Architectural",          hasColour: false },
+];
+
+interface InjectorCollectionCategory { label: string; presetIds: string[] }
+
+const INJECTOR_COLLECTION_CATEGORIES: InjectorCollectionCategory[] = [
+  { label: "Scrubs",               presetIds: ["ic-01","ic-02","ic-03","ic-04","ic-05","ic-06","ic-07","ic-08","ic-09","ic-10"] },
+  { label: "White Shirt + Jeans",  presetIds: ["ic-11","ic-12","ic-13","ic-14","ic-15","ic-16","ic-17","ic-18","ic-19","ic-20"] },
+  { label: "Black Jumper + Jeans", presetIds: ["ic-21","ic-22","ic-23","ic-24","ic-25","ic-26","ic-27","ic-28","ic-29","ic-30"] },
+  { label: "Expressions",          presetIds: ["ic-31","ic-32","ic-33","ic-34","ic-35","ic-36","ic-37","ic-38","ic-39","ic-40"] },
+  { label: "With Patients",        presetIds: ["ic-41","ic-42","ic-43","ic-44","ic-45","ic-46","ic-47","ic-48","ic-49","ic-50"] },
+  { label: "Editorial",            presetIds: ["ic-51","ic-52","ic-53","ic-54","ic-55","ic-56","ic-57","ic-58","ic-59","ic-60"] },
+  { label: "Lifestyle Branding",   presetIds: ["ic-61","ic-62","ic-63","ic-64","ic-65","ic-66","ic-67","ic-68","ic-69","ic-70"] },
+  { label: "Power & Authority",    presetIds: ["ic-71","ic-72","ic-73","ic-74","ic-75","ic-76","ic-77","ic-78","ic-79","ic-80"] },
+  { label: "Final Editorial Mix",  presetIds: ["ic-81","ic-82","ic-83","ic-84","ic-85","ic-86","ic-87","ic-88","ic-89","ic-90"] },
+  { label: "Extra High-End",       presetIds: ["ic-91","ic-92","ic-93","ic-94","ic-95","ic-96","ic-97","ic-98","ic-99","ic-100"] },
+];
+
+const ALL_PRESETS = [...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS];
+const findPreset = (id: string) => ALL_PRESETS.find((p) => p.id === id);
+
 const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
   { value: "3:4",  label: "3:4 — Portrait" },
   { value: "1:1",  label: "1:1 — Square"   },
@@ -181,6 +302,10 @@ export default function AiPortraitStudio() {
 
   const selectAll   = () => setSelectedPresets(new Set(PHOTO_STUDIO_PRESETS.map((p) => p.id)));
   const selectNone  = () => setSelectedPresets(new Set());
+  const selectCategory = (ids: string[]) =>
+    setSelectedPresets((prev) => { const next = new Set(prev); ids.forEach((id) => next.add(id)); return next; });
+  const deselectCategory = (ids: string[]) =>
+    setSelectedPresets((prev) => { const next = new Set(prev); ids.forEach((id) => next.delete(id)); return next; });
 
   // ── Generate ───────────────────────────────────────────────────────────────
   const handleGenerate = async () => {
@@ -188,10 +313,10 @@ export default function AiPortraitStudio() {
     if (selectedPresets.size === 0) { toast.error("Select at least one preset"); return; }
 
     const scenarios = Array.from(selectedPresets).map((id) => {
-      const preset = PHOTO_STUDIO_PRESETS.find((p) => p.id === id)!;
+      const preset = findPreset(id);
       return {
         id,
-        scrubColor: preset.hasColour ? (presetColours[id]?.trim() || "navy blue") : undefined,
+        scrubColor: preset?.hasColour ? (presetColours[id]?.trim() || "navy blue") : undefined,
         aspectRatio,
       };
     });
@@ -288,7 +413,7 @@ export default function AiPortraitStudio() {
   // ── Download ───────────────────────────────────────────────────────────────
   const handleDownload = (card: CardState) => {
     if (!card.outputImageUrl) return;
-    const preset = PHOTO_STUDIO_PRESETS.find((p) => p.id === card.scenarioId);
+    const preset = findPreset(card.scenarioId);
     const name = (preset?.name ?? card.scenarioId).toLowerCase().replace(/\s+/g, "-");
     const a = document.createElement("a");
     a.href = card.outputImageUrl;
@@ -305,7 +430,7 @@ export default function AiPortraitStudio() {
     try {
       const zip = new JSZip();
       await Promise.all(successful.map(async (card) => {
-        const preset = PHOTO_STUDIO_PRESETS.find((p) => p.id === card.scenarioId);
+        const preset = findPreset(card.scenarioId);
         const name = (preset?.name ?? card.scenarioId).toLowerCase().replace(/\s+/g, "-");
         const resp = await fetch(card.outputImageUrl!);
         zip.file(`portrait-${name}.png`, await resp.blob());
@@ -339,7 +464,7 @@ export default function AiPortraitStudio() {
       ? `Done — ${successCount} generated${failedCount > 0 ? `, ${failedCount} failed` : ""}`
       : null;
 
-  const presetName = (id: string) => PHOTO_STUDIO_PRESETS.find((p) => p.id === id)?.name ?? id;
+  const presetName = (id: string) => findPreset(id)?.name ?? id;
 
   return (
     <div className="min-h-[100dvh] w-full bg-background">
@@ -474,7 +599,7 @@ export default function AiPortraitStudio() {
 
           {/* Preset cards */}
           <div>
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-2">
               <h2 className="font-semibold text-base">Choose Presets</h2>
               <div className="flex gap-2">
                 <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={selectAll}>All</button>
@@ -482,6 +607,8 @@ export default function AiPortraitStudio() {
                 <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={selectNone}>None</button>
               </div>
             </div>
+
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">Photo Studio</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
               {PHOTO_STUDIO_PRESETS.map((preset) => {
@@ -525,6 +652,81 @@ export default function AiPortraitStudio() {
                   </div>
                 );
               })}
+            </div>
+
+            {/* ── Injector Collection ── */}
+            <div className="mt-6 border-t border-border/20 pt-5">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium">Injector Collection</p>
+                <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={() => deselectCategory(INJECTOR_COLLECTION_PRESETS.map((p) => p.id))}>Clear all</button>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">100 presets across 10 categories. Select up to 15 per generation run.</p>
+
+              <div className="space-y-5">
+                {INJECTOR_COLLECTION_CATEGORIES.map((cat) => {
+                  const catPresets = INJECTOR_COLLECTION_PRESETS.filter((p) => cat.presetIds.includes(p.id));
+                  const allCatSelected = cat.presetIds.every((id) => selectedPresets.has(id));
+                  const noneCatSelected = cat.presetIds.every((id) => !selectedPresets.has(id));
+                  return (
+                    <div key={cat.label}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-medium text-foreground/70">{cat.label}</span>
+                        <div className="flex gap-2">
+                          <button
+                            className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                            onClick={() => allCatSelected ? deselectCategory(cat.presetIds) : selectCategory(cat.presetIds)}
+                          >
+                            {allCatSelected ? "None" : noneCatSelected ? "All" : "All"}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                        {catPresets.map((preset) => {
+                          const isSelected = selectedPresets.has(preset.id);
+                          return (
+                            <div
+                              key={preset.id}
+                              className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
+                                isSelected
+                                  ? "border-violet-500/70 bg-violet-500/10"
+                                  : "border-border/30 hover:border-border/60 hover:bg-muted/20"
+                              }`}
+                              onClick={() => togglePreset(preset.id)}
+                            >
+                              <div className="flex items-start gap-2">
+                                <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                                  isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
+                                }`}>
+                                  {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium leading-snug">{preset.name}</p>
+                                  {preset.hasColour && (
+                                    <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                                      scrubs colour
+                                    </Badge>
+                                  )}
+                                  {preset.hasColour && isSelected && (
+                                    <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                                      <input
+                                        type="text"
+                                        value={presetColours[preset.id] ?? ""}
+                                        onChange={(e) => setPresetColours((prev) => ({ ...prev, [preset.id]: e.target.value }))}
+                                        placeholder="e.g. navy blue"
+                                        className="w-full text-xs bg-background border border-border/50 rounded px-2 py-1 focus:outline-none focus:border-violet-500/50"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Generate button */}
