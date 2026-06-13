@@ -1,0 +1,120 @@
+100 Medical Aesthetics Injector Prompts
+Scrubs — Clinical, Confident, Modern
+1. Medical aesthetics injector in tailored sage-green scrubs, standing in a minimalist clinic, calm focused expression, soft daylight, editorial medical portrait, 85mm lens --ar 3:4 --v 6 --style raw
+2. Injector in charcoal scrubs leaning against a marble reception desk, arms folded, pensive gaze, clean luxury clinic, neutral tones, Vogue editorial feel --ar 3:4 --v 6 --style raw
+3. Happy medical injector in powder-blue scrubs consulting a patient, candid moment, natural smiles, bright clinic light, lifestyle realism --ar 3:4 --v 6 --style raw
+4. Injector in black scrubs adjusting gloves, intense focused expression, cinematic side lighting, dramatic shadows, editorial realism --ar 3:4 --v 6 --style raw
+5. Calm injector in beige scrubs holding syringe tray, serene confidence, soft 5600K lighting, clean background, high-end clinical aesthetic --ar 3:4 --v 6 --style raw
+6. Medical injector mid-treatment with patient, professional concentration, shallow depth of field, modern clinic environment --ar 3:4 --v 6 --style raw
+7. Injector in muted green scrubs seated at desk reviewing charts, nostalgic expression, warm light, cinematic realism --ar 3:4 --v 6 --style raw
+8. Smiling injector in scrubs walking through clinic hallway, motion blur, lifestyle branding feel --ar 3:4 --v 6 --style raw
+9. Injector in crisp white scrubs, arms crossed, triumphant expression, clean editorial portrait --ar 3:4 --v 6 --style raw
+10. Injector in scrubs photographed in black-and-white, David Bailey–inspired lighting, raw confidence --ar 3:4 --v 6 --style raw
+
+White Shirt + Jeans — Authority Meets Approachability
+11. Medical injector in white shirt and light-wash jeans, standing by clinic window, thoughtful expression, soft daylight --ar 3:4 --v 6 --style raw
+12. Injector seated on stool in white shirt and jeans, relaxed posture, confident smile, editorial clinic portrait --ar 3:4 --v 6 --style raw
+13. Injector consulting patient, white shirt sleeves rolled, candid documentary style --ar 3:4 --v 6 --style raw
+14. Injector leaning against concrete wall, white shirt and jeans, David Bailey–inspired black-and-white portrait --ar 3:4 --v 6 --style raw
+15. Injector with arms folded, white shirt crisp, jeans casual, triumphant expression, brand photography --ar 3:4 --v 6 --style raw
+16. Injector laughing with patient, warm lifestyle energy, natural clinic light --ar 3:4 --v 6 --style raw
+17. Injector holding aesthetic tools, white shirt and jeans, focused calm expression --ar 3:4 --v 6 --style raw
+18. Injector seated on clinic counter, nostalgic gaze, soft film grain, editorial realism --ar 3:4 --v 6 --style raw
+19. Injector walking through city street after work, white shirt and jeans, cinematic lifestyle branding --ar 3:4 --v 6 --style raw
+20. Injector portrait, white shirt open collar, neutral backdrop, Vogue editorial lighting --ar 3:4 --v 6 --style raw
+
+Black Jumper + Jeans — Power, Minimal, Editorial
+21. Medical injector in black jumper and jeans, arms crossed, serious expression, clean modern clinic --ar 3:4 --v 6 --style raw
+22. Injector leaning on chair, black jumper, direct eye contact, David Bailey–style contrast lighting --ar 3:4 --v 6 --style raw
+23. Injector seated at desk, black jumper sleeves pushed up, pensive mood, cinematic shadows --ar 3:4 --v 6 --style raw
+24. Injector smiling softly, black jumper and jeans, relaxed luxury aesthetic --ar 3:4 --v 6 --style raw
+25. Injector with patient mid-consultation, black jumper, natural candid moment --ar 3:4 --v 6 --style raw
+26. Injector standing against textured wall, minimalist editorial vibe, moody lighting --ar 3:4 --v 6 --style raw
+27. Injector holding coffee cup in clinic lounge, nostalgic expression, lifestyle branding --ar 3:4 --v 6 --style raw
+28. Injector portrait, black jumper, triumphant confidence, Vogue beauty editorial --ar 3:4 --v 6 --style raw
+29. Injector walking past camera, black jumper, subtle motion blur, cinematic realism --ar 3:4 --v 6 --style raw
+30. Injector black-and-white portrait, black jumper, raw David Bailey mood --ar 3:4 --v 6 --style raw
+
+Expressions Series — Emotion-Driven Branding
+31. Injector pensive, looking out clinic window, soft daylight, editorial storytelling --ar 3:4 --v 6 --style raw
+32. Injector fuming, intense stare, dramatic shadows, cinematic contrast --ar 3:4 --v 6 --style raw
+33. Injector happy, laughing candidly with patient, lifestyle realism --ar 3:4 --v 6 --style raw
+34. Injector triumphant, arms crossed, power stance, luxury clinic backdrop --ar 3:4 --v 6 --style raw
+35. Injector nostalgic, seated alone after hours, warm light, film grain --ar 3:4 --v 6 --style raw
+36. Injector calm and grounded, meditative expression, minimal clinic space --ar 3:4 --v 6 --style raw
+37. Injector confident smirk, editorial close-up, shallow depth of field --ar 3:4 --v 6 --style raw
+38. Injector serious and focused mid-procedure, documentary realism --ar 3:4 --v 6 --style raw
+39. Injector joyful, celebrating patient results, authentic emotion --ar 3:4 --v 6 --style raw
+40. Injector reflective, end-of-day portrait, cinematic low light --ar 3:4 --v 6 --style raw
+
+With Patients — Trust, Care, Lifestyle
+41. Injector consulting patient in modern clinic, natural interaction, editorial realism --ar 3:4 --v 6 --style raw
+42. Injector gently marking patient’s face, professional calm, clean medical aesthetic --ar 3:4 --v 6 --style raw
+43. Injector smiling reassuringly at patient, lifestyle branding --ar 3:4 --v 6 --style raw
+44. Injector mid-treatment, gloved hands in focus, cinematic shallow DOF --ar 3:4 --v 6 --style raw
+45. Injector and patient laughing post-treatment, warm light --ar 3:4 --v 6 --style raw
+46. Injector showing mirror to patient, triumphant shared moment --ar 3:4 --v 6 --style raw
+47. Injector consulting couple, inclusive modern clinic vibe --ar 3:4 --v 6 --style raw
+48. Injector listening attentively, empathetic expression --ar 3:4 --v 6 --style raw
+49. Injector and patient in black-and-white, documentary style --ar 3:4 --v 6 --style raw
+50. Injector guiding patient through aftercare, calm authority --ar 3:4 --v 6 --style raw
+
+Editorial / David Bailey Inspired — High Fashion Medical
+51. Injector portrait, stark white background, hard flash, David Bailey style --ar 3:4 --v 6 --style raw
+52. Injector seated on stool, black-and-white, raw editorial contrast --ar 3:4 --v 6 --style raw
+53. Injector standing confidently, minimalist backdrop, Vogue editorial lighting --ar 3:4 --v 6 --style raw
+54. Injector close-up portrait, texture-focused skin realism, fashion magazine style --ar 3:4 --v 6 --style raw
+55. Injector leaning forward, intense gaze, cinematic shadows --ar 3:4 --v 6 --style raw
+56. Injector in motion, blurred background, editorial energy --ar 3:4 --v 6 --style raw
+57. Injector with tools laid out artistically, fashion-meets-medicine --ar 3:4 --v 6 --style raw
+58. Injector black jumper, white backdrop, bold flash lighting --ar 3:4 --v 6 --style raw
+59. Injector in scrubs shot like high-fashion editorial --ar 3:4 --v 6 --style raw
+60. Injector profile portrait, dramatic side light, David Bailey mood --ar 3:4 --v 6 --style raw
+
+Lifestyle Branding & Social Content
+61. Injector walking into clinic, confident stride --ar 3:4 --v 6 --style raw
+62. Injector coffee in hand before work, lifestyle realism --ar 3:4 --v 6 --style raw
+63. Injector at desk posting on laptop, modern brand owner energy --ar 3:4 --v 6 --style raw
+64. Injector checking schedule on tablet, calm focus --ar 3:4 --v 6 --style raw
+65. Injector after-hours clinic portrait, moody cinematic light --ar 3:4 --v 6 --style raw
+66. Injector smiling to camera, Instagram-ready branding --ar 3:4 --v 6 --style raw
+67.  Injector David Bailey hard-flash portrait --ar 3:4 --v 6 --style raw
+68. Injector adjusting mirror light, behind-the-scenes feel --ar 3:4 --v 6 --style raw
+69. Injector holding skincare products, luxury branding --ar 3:4 --v 6 --style raw
+70. Injector minimalist portrait, clean clinic lines --ar 3:4 --v 6 --style raw
+
+Power, Success, Authority
+71. Injector arms crossed, clinic owner confidence --ar 3:4 --v 6 --style raw
+72. Injector seated in executive chair, leadership energy --ar 3:4 --v 6 --style raw
+73. Injector triumphant smile after full day, lifestyle realism --ar 3:4 --v 6 --style raw
+74. Injector standing beneath clinic signage, brand authority --ar 3:4 --v 6 --style raw
+75. Injector portrait with dramatic overhead lighting --ar 3:4 --v 6 --style raw
+76. Injector looking straight into lens, bold confidence --ar 3:4 --v 6 --style raw
+77. Injector celebrating milestone moment, candid joy --ar 3:4 --v 6 --style raw
+78. Injector calm but commanding presence, editorial portrait --ar 3:4 --v 6 --style raw
+79. Injector minimalist studio portrait, neutral tones --ar 3:4 --v 6 --style raw
+80. Injector relaxed but powerful stance, modern clinic --ar 3:4 --v 6 --style raw
+
+Final Editorial Mix
+81. Injector black jumper and jeans, cinematic moody light --ar 3:4 --v 6 --style raw
+82. Injector white shirt, sleeves rolled, soft editorial light --ar 3:4 --v 6 --style raw
+83. Injector scrubs shot like fashion editorial --ar 3:4 --v 6 --style raw
+84. Injector reflective moment alone in clinic --ar 3:4 --v 6 --style raw
+85. Injector laughing candidly, lifestyle branding --ar 3:4 --v 6 --style raw
+86. Injector intense gaze, close-up portrait --ar 3:4 --v 6 --style raw
+87. Injector mid-walk, motion blur, cinematic branding --ar 3:4 --v 6 --style raw
+88. Injector documentary-style with patient --ar 3:4 --v 6 --style raw
+89. Injector black-and-white editorial portrait --ar 3:4 --v 6 --style raw
+90. Injector final confident pose, brand-defining image --ar 3:4 --v 6 --style raw
+
+Extra High-End Variations
+91. Injector Vogue-style cover portrait --ar 3:4 --v 6 --style raw
+92. Injector David Bailey hard-flash portrait --ar 3:4 --v 6 --style raw
+93. Injector minimalist luxury clinic wide shot --ar 3:4 --v 6 --style raw
+94. Injector cinematic low-light portrait --ar 3:4 --v 6 --style raw
+95. Injector calm smile, skincare brand feel --ar 3:4 --v 6 --style raw
+96. Injector authority pose, neutral tones --ar 3:4 --v 6 --style raw
+97. Injector candid behind-the-scenes moment --ar 3:4 --v 6 --style raw
+98. Injector patient transformation reveal moment --ar 3:4 --v 6 --style raw
+99. Injector modern editorial brand portrait --ar 3:4 --v 6 --style raw
+100. Injector signature hero image, luxury medical aesthetic --ar 3:4 --v 6 --style raw
