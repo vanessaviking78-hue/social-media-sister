@@ -446,7 +446,7 @@ export default function SeamlessCarouselPage() {
 
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-4 px-6 md:px-10 flex items-center justify-between">
         <div className="flex items-center gap-3 flex-shrink-0">
-          <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
+          <img src="/sms-logo.png" alt="Social Media Sister" className="h-8 w-auto object-contain" />
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <Link href="/hub"><Button variant="ghost" size="sm" className="text-muted-foreground">← Home</Button></Link>

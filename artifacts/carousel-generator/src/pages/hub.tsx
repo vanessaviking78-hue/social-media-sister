@@ -252,7 +252,7 @@ export default function Hub() {
     <div className="min-h-[100dvh] w-full bg-background">
       {/* Header */}
       <header className="border-b border-border/30 py-5 px-8 flex items-center gap-4">
-        <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
+        <img src="/sms-logo.png" alt="Social Media Sister" className="h-8 w-auto object-contain" />
         <div>
           <h1 className="font-bold text-xl leading-none">The CyberSuite</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Social Media Sister</p>

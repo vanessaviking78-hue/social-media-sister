@@ -876,7 +876,7 @@ export default function Stories() {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-3 px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3 flex-shrink-0">
-          <img src="/sms-logo.png" alt="Social Media Sister" className="h-10 w-10 rounded-full object-cover" />
+          <img src="/sms-logo.png" alt="Social Media Sister" className="h-8 w-auto object-contain" />
           <Badge variant="secondary" className="bg-pink-500/15 text-pink-400 border border-pink-500/20 text-xs">Stories</Badge>
         </div>
         <div className="flex items-center gap-1 flex-wrap">

@@ -59,7 +59,7 @@ export default function OnboardChoosePage({ token }: { token: string }) {
         <img
           src="/sms-logo.png"
           alt="Social Media Sister"
-          style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover" }}
+          style={{ height: 40, width: "auto", objectFit: "contain" }}
         />
       </div>
 

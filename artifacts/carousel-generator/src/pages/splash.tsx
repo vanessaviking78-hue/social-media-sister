@@ -44,10 +44,9 @@ export default function Splash() {
         }
         .splash-logo {
           transition: transform 300ms ease;
-          width: min(58vw, 600px);
-          height: min(58vw, 600px);
-          border-radius: 50%;
-          object-fit: cover;
+          width: min(72vw, 520px);
+          height: auto;
+          object-fit: contain;
           display: block;
         }
         .splash-tap {
@@ -84,8 +83,8 @@ export default function Splash() {
         }
         @media (max-width: 600px) {
           .splash-logo {
-            width: min(80vw, 600px);
-            height: min(80vw, 600px);
+            width: min(88vw, 400px);
+            height: auto;
           }
           .splash-tap {
             font-size: 18px;

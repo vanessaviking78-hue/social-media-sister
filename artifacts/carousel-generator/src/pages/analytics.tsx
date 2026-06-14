@@ -56,7 +56,7 @@ export default function Analytics() {
         <div className="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/hub" className="flex items-center gap-2">
-              <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
+              <img src="/sms-logo.png" alt="Social Media Sister" className="h-8 w-auto object-contain" />
             </Link>
             <span className="bg-gray-700 text-gray-300 text-xs px-2 py-0.5 rounded">Analytics</span>
           </div>

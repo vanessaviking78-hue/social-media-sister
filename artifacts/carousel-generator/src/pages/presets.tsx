@@ -572,7 +572,7 @@ export default function PresetsPage() {
           <div className="flex items-center gap-4">
             <Link href="/hub" className="flex items-center gap-2">
               <ArrowLeft className="w-4 h-4 text-white/60" />
-              <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
+              <img src="/sms-logo.png" alt="Social Media Sister" className="h-8 w-auto object-contain" />
             </Link>
             <span className="bg-gray-700 text-gray-300 text-xs px-2 py-0.5 rounded">Client Presets</span>
           </div>

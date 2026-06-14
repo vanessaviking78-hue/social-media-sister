@@ -138,7 +138,7 @@ export default function CaptionLibrary() {
             <ChevronLeft className="w-5 h-5" />
           </Link>
           <Link href="/hub" className="flex items-center gap-2">
-            <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
+            <img src="/sms-logo.png" alt="Social Media Sister" className="h-8 w-auto object-contain" />
           </Link>
           <span className="text-xs font-semibold text-muted-foreground bg-accent/50 px-2 py-1 rounded-full">Caption Library</span>
           <div className="flex-1" />

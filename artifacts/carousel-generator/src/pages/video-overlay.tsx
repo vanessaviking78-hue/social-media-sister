@@ -428,7 +428,7 @@ export default function VideoOverlay() {
     <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col">
       <header className="border-b border-white/10 px-6 py-3 flex items-center gap-4 shrink-0">
         <div className="flex items-center gap-3 flex-shrink-0">
-          <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
+          <img src="/sms-logo.png" alt="Social Media Sister" className="h-8 w-auto object-contain" />
           <span className="text-white/50 font-normal text-sm">/ Video Overlay</span>
         </div>
         <button

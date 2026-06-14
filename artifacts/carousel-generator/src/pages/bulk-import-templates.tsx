@@ -58,7 +58,7 @@ export default function BulkImportTemplates() {
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 48 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <img src="/sms-logo.png" alt="Social Media Sister" style={{ height: 44, width: 44, borderRadius: "50%", objectFit: "cover" }} />
+            <img src="/sms-logo.png" alt="Social Media Sister" style={{ height: 32, width: "auto", objectFit: "contain" }} />
             <span style={{ fontFamily: "'League Spartan', sans-serif", fontSize: 22, color: "#E91976", letterSpacing: 1 }}>The CyberSuite</span>
           </div>
           <Link href="/hub" style={{ color: "#aaa", fontSize: 13, textDecoration: "none", borderBottom: "1px solid #333", paddingBottom: 1 }}>

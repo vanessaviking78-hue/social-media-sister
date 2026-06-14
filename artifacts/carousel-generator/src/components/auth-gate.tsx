@@ -60,7 +60,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <img src="/sms-logo.png" alt="Social Media Sister" className="h-20 w-20 rounded-full object-cover" />
+            <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-auto object-contain" />
           </div>
           <p className="text-muted-foreground text-sm">Enter your password to continue</p>
         </div>

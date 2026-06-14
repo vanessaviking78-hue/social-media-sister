@@ -1329,7 +1329,7 @@ export default function Reels() {
     <div className="h-[100dvh] bg-[#0a0a0f] text-white flex flex-col overflow-hidden">
       <header className="border-b border-white/10 px-6 py-3 flex items-center gap-4 shrink-0">
         <div className="flex items-center gap-3 flex-shrink-0">
-          <img src="/sms-logo.png" alt="Social Media Sister" className="h-12 w-12 rounded-full object-cover" />
+          <img src="/sms-logo.png" alt="Social Media Sister" className="h-8 w-auto object-contain" />
         </div>
         <div className="flex items-center gap-2 ml-4 flex-wrap">
           <Link href="/hub"><Button variant="ghost" size="sm" className="text-muted-foreground"><ImagePlus className="w-4 h-4 mr-2" />Carousel</Button></Link>
