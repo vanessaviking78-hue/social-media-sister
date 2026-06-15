@@ -31,6 +31,7 @@ import contentPreviewRouter from "./content-preview";
 import storiesRouter from "./stories";
 import stickersRouter from "./stickers";
 import canvaRouter from "./canva";
+import waitlistRouter from "./waitlist";
 
 const router: IRouter = Router();
 
@@ -66,5 +67,6 @@ router.use(contentPreviewRouter);
 router.use(storiesRouter);
 router.use(stickersRouter);
 router.use(canvaRouter);
+router.use(waitlistRouter);
 
 export default router;
