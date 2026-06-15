@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "XLNlqKpLULFz6NRwzSZev"
+uri = "file://cybersuite-ideas.pdf"
+type = "pdf"
+title = "CyberSuite Ideas Vault — All 8 Sections"
