@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
+import ExportToCanvaButton from "@/components/export-to-canva";
 import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, CloudUpload, ImagePlus, CalendarDays, BarChart3, ShieldCheck, BookOpen, Film, ChevronDown, Play, Square, Share2, Clock, CalendarClock, User, Grid, Music } from "lucide-react";
 import Papa from "papaparse";
 import JSZip from "jszip";
@@ -1511,6 +1512,12 @@ export default function Home() {
                 <button onClick={downloadZip} className="flex items-center gap-1.5 px-3 h-7 rounded-md bg-[#E91976] text-white text-xs font-bold hover:bg-pink-600 transition-colors">
                   <Download className="w-3 h-3" /> Download ZIP
                 </button>
+                {(result as any)?.slides?.[0]?.imageUrl && (
+                  <ExportToCanvaButton
+                    imageUrl={(result as any).slides[0].imageUrl}
+                    name="Carousel cover"
+                  />
+                )}
               </div>
             )}
           </div>

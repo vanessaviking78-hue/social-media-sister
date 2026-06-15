@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
+import ExportToCanvaButton from "@/components/export-to-canva";
 import {
   Layers, Loader2, Download, X, Sparkles, Wand2,
   BookOpen, ImagePlus, CalendarDays, BarChart3, ShieldCheck,
@@ -1446,6 +1447,12 @@ export default function Stories() {
                     {downloading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Download className="w-3 h-3" />}
                     Download ZIP
                   </button>
+                )}
+                {previews.length > 0 && (
+                  <ExportToCanvaButton
+                    getImage={() => Promise.resolve(previews[previewIdx] ?? previews[0]!)}
+                    name={`Story ${previewIdx + 1}`}
+                  />
                 )}
               </div>
             </div>

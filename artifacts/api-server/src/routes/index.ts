@@ -30,6 +30,7 @@ import strategyTopicsRouter from "./strategy-topics";
 import contentPreviewRouter from "./content-preview";
 import storiesRouter from "./stories";
 import stickersRouter from "./stickers";
+import canvaRouter from "./canva";
 
 const router: IRouter = Router();
 
@@ -64,5 +65,6 @@ router.use(strategyTopicsRouter);
 router.use(contentPreviewRouter);
 router.use(storiesRouter);
 router.use(stickersRouter);
+router.use(canvaRouter);
 
 export default router;

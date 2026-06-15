@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Link, useLocation } from "wouter";
+import ExportToCanvaButton from "@/components/export-to-canva";
 import {
   ArrowLeft, Layers, Image as ImageIcon, Film, BookOpen, Trash2, Calendar,
   Upload, X, CheckSquare, Square, CalendarDays, Clock, ChevronDown, Loader2,
@@ -733,10 +734,19 @@ export default function Library() {
                     {item.caption && (
                       <p className="text-xs text-gray-400 line-clamp-2 leading-relaxed">{item.caption}</p>
                     )}
-                    <div className="mt-2 flex justify-end">
+                    <div className="mt-2 flex items-center justify-between">
+                      {(item.mediaUrl || item.mediaUrls?.[0]) && !isVideo && (
+                        <ExportToCanvaButton
+                          imageUrl={(item.mediaUrl || item.mediaUrls?.[0]) ?? undefined}
+                          name={item.caption?.slice(0, 60) || "Library image"}
+                          size="sm"
+                          className="text-[10px] h-6 px-1.5"
+                          label="Canva"
+                        />
+                      )}
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
-                        className={`text-xs px-2 py-0.5 rounded transition-colors ${
+                        className={`ml-auto text-xs px-2 py-0.5 rounded transition-colors ${
                           isDeleteConfirm
                             ? "bg-red-600 text-white hover:bg-red-700"
                             : "text-gray-600 hover:text-red-400"

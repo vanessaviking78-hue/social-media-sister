@@ -14,6 +14,7 @@ export interface PageEntry {
   name: string;
   accessToken: string;
   instagramAccountId: string | null;
+  instagramUsername: string | null;
 }
 
 export interface PendingEntry {
@@ -250,11 +251,27 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
           `${GRAPH}/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`
         );
         const igData = (await igRes.json()) as { instagram_business_account?: { id: string } };
+        const igId = igData.instagram_business_account?.id ?? null;
+
+        let instagramUsername: string | null = null;
+        if (igId) {
+          try {
+            const igUserRes = await fetch(
+              `${GRAPH}/${igId}?fields=username&access_token=${page.access_token}`
+            );
+            if (igUserRes.ok) {
+              const igUserData = (await igUserRes.json()) as { username?: string };
+              instagramUsername = igUserData.username ?? null;
+            }
+          } catch { /* non-fatal */ }
+        }
+
         return {
           id: page.id,
           name: page.name,
           accessToken: page.access_token,
-          instagramAccountId: igData.instagram_business_account?.id ?? null,
+          instagramAccountId: igId,
+          instagramUsername,
         };
       })
     );
@@ -282,7 +299,9 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
           .set({
             metaPageAccessToken: page.accessToken,
             metaFacebookPageId: page.id,
+            metaFacebookPageName: page.name,
             metaInstagramAccountId: page.instagramAccountId,
+            metaInstagramUsername: page.instagramUsername,
             onboardingConnectedAt: new Date(),
           })
           .where(eq(clientPresetsTable.id, preset.id));
@@ -307,7 +326,9 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
         .set({
           metaPageAccessToken: page.accessToken,
           metaFacebookPageId: page.id,
+          metaFacebookPageName: page.name,
           metaInstagramAccountId: page.instagramAccountId,
+          metaInstagramUsername: page.instagramUsername,
         })
         .where(eq(clientPresetsTable.id, presetId));
       res.redirect(
@@ -372,7 +393,9 @@ router.post("/meta/auth/select-page", async (req: Request, res: Response) => {
     .set({
       metaPageAccessToken: page.accessToken,
       metaFacebookPageId: page.id,
+      metaFacebookPageName: page.name,
       metaInstagramAccountId: page.instagramAccountId,
+      metaInstagramUsername: page.instagramUsername,
     })
     .where(eq(clientPresetsTable.id, entry.presetId!));
   pendingPageSelections.delete(key);
@@ -475,7 +498,9 @@ router.post("/meta/auth/bulk-save", async (req: Request, res: Response) => {
         .set({
           metaPageAccessToken: page.accessToken,
           metaFacebookPageId: page.id,
+          metaFacebookPageName: page.name,
           metaInstagramAccountId: page.instagramAccountId,
+          metaInstagramUsername: page.instagramUsername,
         })
         .where(eq(clientPresetsTable.id, assignment.presetId));
       saved++;

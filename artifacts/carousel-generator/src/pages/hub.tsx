@@ -278,6 +278,7 @@ export default function Hub() {
         <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy</Link>
         <Link href="/terms" className="hover:text-foreground transition-colors">Terms</Link>
         <Link href="/data-deletion" className="hover:text-foreground transition-colors">Data Deletion</Link>
+        <Link href="/settings" className="hover:text-foreground transition-colors">Settings</Link>
       </footer>
     </div>
   );

@@ -156,7 +156,14 @@ function MetaConnectSection({ editingId, editData, setEditData, onConnected }: M
       window.removeEventListener("message", handler);
       popup?.close();
       if (e.data.success) {
-        void onConnected();
+        void (async () => {
+          void onConnected();
+          try {
+            const r = await fetch(`${BASE}api/presets/${editingId}`);
+            const d = (await r.json()) as { preset?: Partial<ClientPreset> };
+            if (r.ok && d.preset) setEditData((prev) => ({ ...prev, ...d.preset }));
+          } catch { /* ignore */ }
+        })();
         toast.success(`Connected: ${e.data.pageName || "Facebook Page"}${e.data.hasInstagram ? " + Instagram" : ""}`);
       } else {
         toast.error(`Connection failed: ${e.data.error || "Unknown error"}`);
@@ -178,7 +185,9 @@ function MetaConnectSection({ editingId, editData, setEditData, onConnected }: M
       ...d,
       metaPageAccessToken: null,
       metaFacebookPageId: null,
+      metaFacebookPageName: null,
       metaInstagramAccountId: null,
+      metaInstagramUsername: null,
     }));
   };
 
@@ -198,15 +207,24 @@ function MetaConnectSection({ editingId, editData, setEditData, onConnected }: M
       </div>
 
       {isConnected && (
-        <div className="flex items-center gap-2 text-xs text-gray-300 bg-gray-800/60 rounded-lg px-3 py-2">
-          <Facebook className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-          <span className="truncate">Page ID: <span className="text-white font-mono">{editData.metaFacebookPageId}</span></span>
-          {editData.metaInstagramAccountId && (
-            <>
-              <span className="text-gray-600">·</span>
+        <div className="bg-gray-800/60 rounded-lg px-3 py-2.5 space-y-1.5">
+          <div className="flex items-center gap-2 text-xs">
+            <Facebook className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            <span className="font-medium text-white">{editData.metaFacebookPageName || editData.metaFacebookPageId}</span>
+          </div>
+          {editData.metaInstagramAccountId ? (
+            <div className="flex items-center gap-2 text-xs text-purple-300">
               <Instagram className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-              <span className="truncate text-purple-300">IG: {editData.metaInstagramAccountId}</span>
-            </>
+              {editData.metaInstagramUsername
+                ? <span>@{editData.metaInstagramUsername}</span>
+                : <span className="font-mono text-gray-500">{editData.metaInstagramAccountId}</span>
+              }
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs text-amber-400/80">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>No Instagram Business account connected to this page</span>
+            </div>
           )}
         </div>
       )}
@@ -236,57 +254,6 @@ function MetaConnectSection({ editingId, editData, setEditData, onConnected }: M
         </p>
       )}
 
-      {/* Manual entry — always visible */}
-      <div className="space-y-3 pt-1 border-t border-white/10">
-        <div className="space-y-1">
-          <p className="text-xs font-semibold text-gray-300">Or enter credentials manually</p>
-          <p className="text-xs text-gray-500 leading-relaxed">
-            Get these from{" "}
-            <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener noreferrer"
-              className="text-blue-400 underline hover:text-blue-300">
-              Meta Graph API Explorer
-            </a>
-            {" "}— select your app, generate a Page token with{" "}
-            <span className="font-mono text-gray-400">instagram_basic</span>,{" "}
-            <span className="font-mono text-gray-400">instagram_content_publish</span>,{" "}
-            <span className="font-mono text-gray-400">pages_manage_posts</span> permissions, then get your Page ID and Instagram Account ID from the same tool.
-          </p>
-        </div>
-        <div>
-          <Label className="text-xs text-gray-400 mb-1 block">Page Access Token</Label>
-          <Input
-            type="password"
-            placeholder="Paste your long-lived Page Access Token"
-            value={editData.metaPageAccessToken || ""}
-            onChange={(e) => setEditData((d) => ({ ...d, metaPageAccessToken: e.target.value || null }))}
-            className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
-            autoComplete="off"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <Label className="text-xs text-gray-400 mb-1 block">Facebook Page ID</Label>
-            <Input
-              placeholder="e.g. 123456789"
-              value={editData.metaFacebookPageId || ""}
-              onChange={(e) => setEditData((d) => ({ ...d, metaFacebookPageId: e.target.value || null }))}
-              className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
-            />
-          </div>
-          <div>
-            <Label className="text-xs text-gray-400 mb-1 block">Instagram Account ID</Label>
-            <Input
-              placeholder="e.g. 987654321"
-              value={editData.metaInstagramAccountId || ""}
-              onChange={(e) => setEditData((d) => ({ ...d, metaInstagramAccountId: e.target.value || null }))}
-              className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
-            />
-          </div>
-        </div>
-        {editingId && editData.metaPageAccessToken && editData.metaPageAccessToken !== "••••••••" && (
-          <TestMetaConnection presetId={editingId} />
-        )}
-      </div>
     </div>
   );
 }
@@ -514,7 +481,9 @@ export default function PresetsPage() {
       await updatePreset(editingId, editData.name!.trim(), styles, editData.ccWorkspaceId || undefined, editData.logoUrl, editData.captionFootnote, {
         metaPageAccessToken: editData.metaPageAccessToken || null,
         metaFacebookPageId: editData.metaFacebookPageId || null,
+        metaFacebookPageName: editData.metaFacebookPageName || null,
         metaInstagramAccountId: editData.metaInstagramAccountId || null,
+        metaInstagramUsername: editData.metaInstagramUsername || null,
       }, {
         defaultPostTime: editData.defaultPostTime || "18:00",
         defaultFirstCommentCarousel: editData.defaultFirstCommentCarousel || null,

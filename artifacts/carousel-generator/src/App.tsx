@@ -54,6 +54,8 @@ import BulkStories from "@/pages/bulk-stories";
 import CsvSlideCarousel from "@/pages/csv-slide-carousel";
 import ContentPreview from "@/pages/content-preview";
 import PreviewIndex from "@/pages/preview-index";
+import Settings from "@/pages/settings";
+import CanvaOAuthResult from "@/pages/canva-oauth-result";
 
 const queryClient = new QueryClient();
 
@@ -92,6 +94,7 @@ function ProtectedRouter() {
       <Route path="/bulk-stories" component={BulkStories} />
       <Route path="/csv-slide-carousel" component={CsvSlideCarousel} />
       <Route path="/preview" component={PreviewIndex} />
+      <Route path="/settings" component={Settings} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -101,6 +104,7 @@ function AppContent() {
   const [isApprove, approveParams] = useRoute("/approve/:token");
   const [isPortal, portalParams] = useRoute("/portal/:token");
   const [isMetaOAuth] = useRoute("/oauth/meta/result");
+  const [isCanvaOAuth] = useRoute("/oauth/canva/result");
   const [isOnboardSuccess, onboardSuccessParams] = useRoute("/onboard/:token/success");
   const [isOnboardChoose, onboardChooseParams] = useRoute("/onboard/:token/choose-page");
   const [isOnboard, onboardParams] = useRoute("/onboard/:token");
@@ -120,6 +124,9 @@ function AppContent() {
 
   if (isMetaOAuth) {
     return <MetaOAuthResult />;
+  }
+  if (isCanvaOAuth) {
+    return <CanvaOAuthResult />;
   }
   if (isPortal && portalParams?.token) {
     return <ClientPortal token={portalParams.token} />;

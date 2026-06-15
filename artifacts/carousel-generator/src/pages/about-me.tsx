@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { Link } from "wouter";
+import ExportToCanvaButton from "@/components/export-to-canva";
 import {
   Canvas as FabricCanvas,
   Textbox,
@@ -890,6 +891,12 @@ export default function AboutMePage() {
             {exporting ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1" />}
             Download
           </Button>
+          <ExportToCanvaButton
+            getImage={() => Promise.resolve(fabricRef.current?.toDataURL({ format: "png", multiplier: 2 }) ?? "")}
+            name="About Me"
+            size="sm"
+            className="h-7"
+          />
           <Button onClick={handleSchedule} disabled={scheduleRendering} size="sm" variant="outline"
             className="text-xs h-7 px-3 border-white/20 text-white/70 hover:text-white">
             {scheduleRendering ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <CalendarClock className="w-3.5 h-3.5 mr-1" />}

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
+import ExportToCanvaButton from "@/components/export-to-canva";
 import JSZip from "jszip";
 import {
   Sparkles, Upload, X, Check, Download, RefreshCcw, Loader2, AlertCircle,
@@ -790,6 +791,14 @@ export default function AiPortraitStudio() {
                       {downloadingAll ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Download className="w-3.5 h-3.5 mr-1.5" />}
                       Download All
                     </Button>
+                    <ExportToCanvaButton
+                      imageUrl={cards.find((c) => c.status === "success" && c.outputImageUrl)?.outputImageUrl}
+                      name="AI Portrait"
+                      label="Export to Canva"
+                      variant="outline"
+                      size="default"
+                      className="h-9 border-violet-500/40"
+                    />
                     <Button
                       onClick={handleSaveAllToLibrary}
                       disabled={savingAllToLibrary}
@@ -834,7 +843,7 @@ export default function AiPortraitStudio() {
                       <div className="p-2 flex flex-col gap-1.5">
                         <p className="text-xs font-medium leading-snug truncate" title={name}>{name}</p>
                         {card.status === "success" && card.portraitId && (
-                          <div className="flex gap-1">
+                          <div className="flex gap-1 flex-wrap">
                             <Button
                               size="sm"
                               variant="outline"
@@ -844,6 +853,13 @@ export default function AiPortraitStudio() {
                               <Download className="w-3 h-3 mr-1" />
                               Download
                             </Button>
+                            <ExportToCanvaButton
+                              imageUrl={card.outputImageUrl}
+                              name={presetName(card.scenarioId)}
+                              size="sm"
+                              className="flex-1 text-[10px] h-6 px-1"
+                              label="Canva"
+                            />
                             <Popover
                               open={savePopoverOpen === card.portraitId}
                               onOpenChange={(o) => setSavePopoverOpen(o ? card.portraitId! : null)}

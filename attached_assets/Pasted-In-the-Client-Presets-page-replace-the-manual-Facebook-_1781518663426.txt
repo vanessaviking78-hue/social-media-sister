@@ -1,0 +1,17 @@
+In the Client Presets page, replace the manual Facebook Page ID and Instagram Account ID text fields with an automatic account picker. Here is exactly how it should work:
+
+1. ADD A "Connect Social Accounts" BUTTON to each client preset form. When clicked, it opens the Facebook OAuth login/permissions popup (using the existing Meta app credentials already in Secrets). Request these permissions: pages_read_engagement, pages_show_list, instagram_basic, instagram_content_publish, pages_manage_posts.
+
+2. AFTER AUTH, call the Facebook Graph API endpoint GET /me/accounts to fetch all Facebook pages the logged-in user manages. Store the list.
+
+3. SHOW A DROPDOWN in the preset form labelled "Facebook Page" — populated with the page names from step 2. When the user selects a page, automatically store the Page ID behind the scenes (they never have to see or type it).
+
+4. FOR INSTAGRAM: when a Facebook page is selected, call GET /{page-id}?fields=instagram_business_account to check if that page has a connected Instagram Business/Creator account. If it does, automatically populate and store the Instagram Account ID. Show the Instagram username as a confirmation label (e.g. "Instagram: @kellyrафique") so the user knows it connected.
+
+5. If no Instagram is connected to that page, show a clear message: "No Instagram Business account connected to this page. Make sure the Instagram account is a Business or Creator account and linked to this Facebook page."
+
+6. PERSIST the connection — once a client preset has connected social accounts, the page name and Instagram handle should display in the preset so the user can see at a glance which accounts are linked. Add a "Change accounts" link to re-trigger the picker if needed.
+
+7. KEEP the existing posting and scheduling logic working exactly as before — just replace the manual ID fields with the values fetched automatically via this flow.
+
+The goal is that the user never has to look up or type a Page ID or Instagram Account ID ever again. They just log in with Facebook, pick a page name from a list, and TCS handles the rest.

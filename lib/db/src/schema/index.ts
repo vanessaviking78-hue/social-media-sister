@@ -24,7 +24,9 @@ export const clientPresetsTable = pgTable("client_presets", {
   ccWorkspaceId: text("cc_workspace_id"),
   metaPageAccessToken: text("meta_page_access_token"),
   metaFacebookPageId: text("meta_facebook_page_id"),
+  metaFacebookPageName: text("meta_facebook_page_name"),
   metaInstagramAccountId: text("meta_instagram_account_id"),
+  metaInstagramUsername: text("meta_instagram_username"),
   textAlign: text("text_align").notNull().default("center"),
   textBoxOutline: boolean("text_box_outline").notNull().default(false),
   textBoxOutlineColor: text("text_box_outline_color").notNull().default("#ffffff"),
@@ -639,3 +641,14 @@ export const stickerLibraryTable = pgTable("sticker_library", {
 });
 
 export type StickerLibraryRow = typeof stickerLibraryTable.$inferSelect;
+
+export const canvaTokensTable = pgTable("canva_tokens", {
+  id: serial("id").primaryKey(),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  canvaUserId: text("canva_user_id"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type CanvaToken = typeof canvaTokensTable.$inferSelect;

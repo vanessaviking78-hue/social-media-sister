@@ -40,7 +40,9 @@ export interface ClientPreset {
   ccWorkspaceId: string | null;
   metaPageAccessToken: string | null;
   metaFacebookPageId: string | null;
+  metaFacebookPageName: string | null;
   metaInstagramAccountId: string | null;
+  metaInstagramUsername: string | null;
   textAlign: TextAlign;
   textBoxOutline: boolean;
   textBoxOutlineColor: string;
@@ -158,7 +160,7 @@ export function usePresets() {
     ccWorkspaceId?: string,
     logoUrl?: string | null,
     captionFootnote?: string,
-    metaFields?: { metaPageAccessToken?: string | null; metaFacebookPageId?: string | null; metaInstagramAccountId?: string | null },
+    metaFields?: { metaPageAccessToken?: string | null; metaFacebookPageId?: string | null; metaFacebookPageName?: string | null; metaInstagramAccountId?: string | null; metaInstagramUsername?: string | null },
     extra?: { defaultPostTime?: string; defaultFirstCommentCarousel?: string | null; defaultFirstCommentSingle?: string | null; defaultFirstCommentReel?: string | null; voiceStyle?: string; targetAudience?: string | null; contentPillars?: string | null; brandNotes?: string | null },
   ) => {
     const body = {
