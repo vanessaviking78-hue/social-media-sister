@@ -24,6 +24,7 @@ interface CardState {
   status: CardStatus;
   portraitId?: number;
   outputImageUrl?: string;
+  originalImageUrl?: string;
   failureReason?: string;
   retryAfter?: number;
 }
@@ -436,7 +437,8 @@ export default function AiPortraitStudio() {
       await Promise.all(successful.map(async (card) => {
         const preset = findPreset(card.scenarioId);
         const name = (preset?.name ?? card.scenarioId).toLowerCase().replace(/\s+/g, "-");
-        const resp = await fetch(card.outputImageUrl!);
+        const downloadUrl = card.originalImageUrl ?? card.outputImageUrl!;
+        const resp = await fetch(downloadUrl);
         zip.file(`portrait-${name}.png`, await resp.blob());
       }));
       const blob = await zip.generateAsync({ type: "blob" });

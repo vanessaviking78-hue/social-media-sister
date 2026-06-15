@@ -19,6 +19,7 @@ export interface CardState {
   scenarioId: string;
   status: CardStatus;
   outputImageUrl?: string;
+  originalImageUrl?: string;
   failureReason?: string;
   retryAfter?: number;
 }
@@ -274,7 +275,7 @@ export async function processPortraitJob(
           })
           .returning();
 
-        patchCard({ status: "success", outputImageUrl: outputUrl, portraitId: row.id });
+        patchCard({ status: "success", outputImageUrl: outputUrl, originalImageUrl: originalUrl, portraitId: row.id });
         succeeded = true;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
