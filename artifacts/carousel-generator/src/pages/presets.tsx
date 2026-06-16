@@ -990,7 +990,7 @@ export default function PresetsPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2.5 mb-2">
                         {preset.logoUrl && (
-                          <div className="w-9 h-9 rounded-lg bg-white/5 border border-gray-700 flex items-center justify-center overflow-hidden p-1 shrink-0">
+                          <div className="w-14 h-14 rounded-xl bg-white/5 border border-gray-700 flex items-center justify-center overflow-hidden p-1.5 shrink-0">
                             <img src={preset.logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
                           </div>
                         )}
