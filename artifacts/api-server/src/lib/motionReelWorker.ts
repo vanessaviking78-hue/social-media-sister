@@ -141,7 +141,7 @@ async function pollFalJob(requestId: string, jobId: string): Promise<string> {
   const statusUrl = `${FAL_BASE}/requests/${requestId}/status`;
   const resultUrl = `${FAL_BASE}/requests/${requestId}`;
   let attempts = 0;
-  const maxAttempts = 60;
+  const maxAttempts = 180;
   while (attempts < maxAttempts) {
     await new Promise((r) => setTimeout(r, 5000));
     attempts++;
@@ -166,7 +166,7 @@ async function pollFalJob(requestId: string, jobId: string): Promise<string> {
       throw new Error(`Fal.ai processing failed: ${sd?.error || "Unknown error"}`);
     }
   }
-  throw new Error("Timed out waiting for Fal.ai video generation (5 minutes)");
+  throw new Error("Timed out waiting for Fal.ai video generation (15 minutes)");
 }
 
 async function downloadVideo(url: string): Promise<Buffer> {
