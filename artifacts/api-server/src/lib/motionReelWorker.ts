@@ -150,9 +150,10 @@ async function submitFalJob(imageUrl: string, motion: CameraMotion): Promise<{ r
 async function pollFalJob(requestId: string, statusUrl: string, resultUrl: string, jobId: string): Promise<string> {
   const falKey = process.env.FAL_KEY!;
   let attempts = 0;
-  const maxAttempts = 180;
+  const maxAttempts = 240;
+  const pollIntervalMs = 8_000;
   while (attempts < maxAttempts) {
-    await new Promise((r) => setTimeout(r, 5000));
+    await new Promise((r) => setTimeout(r, pollIntervalMs));
     attempts++;
     const progress = Math.min(0.2 + (attempts / maxAttempts) * 0.65, 0.85);
     patch(jobId, { progress, message: `AI processing… (${Math.round(progress * 100)}%)` });
@@ -160,6 +161,7 @@ async function pollFalJob(requestId: string, statusUrl: string, resultUrl: strin
     try {
       const sr = await fetch(statusUrl, { headers: { "Authorization": `Key ${falKey}` } });
       sd = await safeJson<typeof sd>(sr, "Fal.ai status");
+      logger.info({ requestId, attempts, status: sd?.status, httpStatus: sr.status }, "Fal.ai status poll");
     } catch (err: unknown) {
       logger.warn({ err, requestId, attempts }, "Fal status poll error — retrying");
       continue;
@@ -175,7 +177,7 @@ async function pollFalJob(requestId: string, statusUrl: string, resultUrl: strin
       throw new Error(`Fal.ai processing failed: ${sd?.error || "Unknown error"}`);
     }
   }
-  throw new Error("Timed out waiting for Fal.ai video generation (15 minutes)");
+  throw new Error("Timed out waiting for Fal.ai video generation (32 minutes)");
 }
 
 async function downloadVideo(url: string): Promise<Buffer> {

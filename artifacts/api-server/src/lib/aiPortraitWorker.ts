@@ -78,25 +78,6 @@ async function fetchBufFromStorageLocal(urlOrPath: string): Promise<Buffer> {
   return buffer;
 }
 
-async function applyWatermark(imageBuffer: Buffer): Promise<Buffer> {
-  const meta = await sharp(imageBuffer).metadata();
-  const w = meta.width ?? 1024;
-  const h = meta.height ?? 1024;
-  const fontSize = Math.round(w * 0.022);
-  const padding = Math.round(w * 0.012);
-  const text = "AI portrait by The CyberSuite";
-  const svgWatermark = `
-    <svg width="${w}" height="${h}">
-      <style>
-        .wm { fill: rgba(255,255,255,0.55); font-family: sans-serif; font-size: ${fontSize}px; }
-      </style>
-      <text class="wm" x="${w - padding}" y="${h - padding}" text-anchor="end">${text}</text>
-    </svg>`.trim();
-  return sharp(imageBuffer)
-    .composite([{ input: Buffer.from(svgWatermark), blend: "over" }])
-    .png()
-    .toBuffer();
-}
 
 interface ScenarioConfig {
   id: string;
@@ -244,15 +225,8 @@ export async function processPortraitJob(
 
         const imgBuffer = Buffer.from(imagePart.inlineData.data, "base64");
 
-        const [originalUrl, watermarkedBuffer] = await Promise.all([
-          uploadBuf(imgBuffer, `portrait-${cfg.id}-original.png`, "ai-portraits/original"),
-          applyWatermark(imgBuffer),
-        ]);
-        const outputUrl = await uploadBuf(
-          watermarkedBuffer,
-          `portrait-${cfg.id}-wm.png`,
-          "ai-portraits/watermarked",
-        );
+        const originalUrl = await uploadBuf(imgBuffer, `portrait-${cfg.id}-original.png`, "ai-portraits/original");
+        const outputUrl = originalUrl;
 
         const storedOutfitStyle = cfg.outfitType
           ? JSON.stringify({ outfitType: cfg.outfitType, backgroundType: cfg.backgroundType, backdropColor: cfg.backdropColor, backgroundImageUrl })
@@ -270,7 +244,7 @@ export async function processPortraitJob(
             aspectRatio: cfg.aspectRatio,
             originalImageUrl: originalUrl,
             outputImageUrl: outputUrl,
-            hasWatermark: true,
+            hasWatermark: false,
             status: "success",
           })
           .returning();

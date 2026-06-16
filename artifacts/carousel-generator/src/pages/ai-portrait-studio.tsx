@@ -513,6 +513,13 @@ export default function AiPortraitStudio() {
       motionPollRefs.current[id] = setInterval(async () => {
         try {
           const sr = await fetch(`${BASE}api/ai-portrait/animate/${mjId}/status`);
+          if (sr.status === 404) {
+            clearInterval(motionPollRefs.current[id]);
+            delete motionPollRefs.current[id];
+            setMotionJobMap(prev => ({ ...prev, [id]: { ...prev[id], status: "failed", error: "Job not found — the server may have restarted. Please try again." } }));
+            toast.error("Motion reel job was lost. Please try again.");
+            return;
+          }
           if (!sr.ok) return;
           const job = await sr.json() as MotionJobState;
           setMotionJobMap(prev => ({ ...prev, [id]: { ...prev[id], ...job } }));
@@ -522,8 +529,8 @@ export default function AiPortraitStudio() {
             if (job.status === "done") toast.success("Motion reel saved to library");
             else toast.error(`Motion reel failed: ${job.error ?? "Unknown error"}`);
           }
-        } catch { /* ignore poll errors */ }
-      }, 3000);
+        } catch { /* ignore transient network errors */ }
+      }, 5000);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to start animation";
       setMotionJobMap(prev => ({ ...prev, [id]: { ...prev[id], status: "failed", error: msg } }));
