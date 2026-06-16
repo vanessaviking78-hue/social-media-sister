@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
-import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw, Facebook, Instagram, Unlink, ChevronDown, ChevronUp, Clock, BookOpen, Zap, UserCheck, Link2, Brain } from "lucide-react";
+import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw, Facebook, Instagram, Unlink, ChevronDown, ChevronUp, Clock, BookOpen, Zap, UserCheck, Link2, Brain, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -381,7 +381,7 @@ const DEFAULT_STYLES: PresetStyleFields = {
 };
 
 export default function PresetsPage() {
-  const { presets, loading, savePreset, updatePreset, deletePreset, fetchPresets } = usePresets();
+  const { presets, loading, savePreset, updatePreset, deletePreset, fetchPresets, uploadLogo } = usePresets();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editData, setEditData] = useState<Partial<ClientPreset>>({});
   const [editNameError, setEditNameError] = useState<string | null>(null);
@@ -399,6 +399,8 @@ export default function PresetsPage() {
   const [deleteTarget, setDeleteTarget] = useState<ClientPreset | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteDeleting, setDeleteDeleting] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (editingId === null) return;
@@ -725,6 +727,70 @@ export default function PresetsPage() {
                         <p className="text-xs text-gray-500 mt-1">Anything the AI should know about this client's tone, personality, or specific requirements.</p>
                       </div>
                     </div>
+                    <div>
+                      <Label className="text-xs text-gray-400">Client Logo</Label>
+                      <p className="text-xs text-gray-500 mt-0.5 mb-2">PNG or JPG with a transparent or white background works best. The logo auto-loads in the carousel builder when this preset is selected.</p>
+                      {editData.logoUrl ? (
+                        <div className="flex items-center gap-4 p-3 bg-gray-900/60 border border-gray-700 rounded-xl">
+                          <div className="w-16 h-16 rounded-lg bg-white/5 border border-gray-700 flex items-center justify-center overflow-hidden p-1.5 shrink-0">
+                            <img src={editData.logoUrl} alt="Client logo" className="max-w-full max-h-full object-contain" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-300 truncate">{editData.logoUrl.split("/").pop()}</p>
+                            <div className="flex gap-3 mt-1.5">
+                              <button
+                                onClick={() => logoInputRef.current?.click()}
+                                disabled={logoUploading}
+                                className="text-xs text-pink-400 hover:text-pink-300 transition-colors disabled:opacity-50"
+                              >
+                                {logoUploading ? "Uploading…" : "Replace"}
+                              </button>
+                              <button
+                                onClick={() => setEditData((d) => ({ ...d, logoUrl: null }))}
+                                className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => logoInputRef.current?.click()}
+                          disabled={logoUploading}
+                          className="w-full flex items-center gap-3 p-3 border border-dashed border-gray-700 rounded-xl hover:border-pink-500/50 transition-colors disabled:opacity-50"
+                        >
+                          {logoUploading ? (
+                            <Loader2 className="w-5 h-5 text-gray-500 animate-spin shrink-0" />
+                          ) : (
+                            <Upload className="w-5 h-5 text-gray-500 shrink-0" />
+                          )}
+                          <span className="text-xs text-gray-500">{logoUploading ? "Uploading…" : "Upload logo (PNG, JPG)"}</span>
+                        </button>
+                      )}
+                      <input
+                        ref={logoInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          e.target.value = "";
+                          setLogoUploading(true);
+                          try {
+                            const url = await uploadLogo(file);
+                            setEditData((d) => ({ ...d, logoUrl: url }));
+                            toast.success("Logo uploaded");
+                          } catch (err: any) {
+                            toast.error(err?.message || "Logo upload failed");
+                          } finally {
+                            setLogoUploading(false);
+                          }
+                        }}
+                      />
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label className="text-xs text-gray-400">Name</Label>
@@ -922,7 +988,14 @@ export default function PresetsPage() {
                 ) : (
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-white mb-2">{preset.name}</h3>
+                      <div className="flex items-center gap-2.5 mb-2">
+                        {preset.logoUrl && (
+                          <div className="w-9 h-9 rounded-lg bg-white/5 border border-gray-700 flex items-center justify-center overflow-hidden p-1 shrink-0">
+                            <img src={preset.logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
+                          </div>
+                        )}
+                        <h3 className="text-lg font-semibold text-white">{preset.name}</h3>
+                      </div>
                       <div className="flex flex-wrap gap-3 text-xs text-gray-400">
                         <span className="flex items-center gap-1.5">
                           <span className="w-4 h-4 rounded border border-gray-600 inline-block" style={{ backgroundColor: preset.pageColor }} />
@@ -941,7 +1014,6 @@ export default function PresetsPage() {
                         {preset.cornerStyle !== "none" && <span>Corner: {preset.cornerStyle}</span>}
                         {preset.ccWorkspaceId && <span className="text-blue-400">CC linked</span>}
                         {preset.metaInstagramAccountId && <span className="text-purple-400">Meta connected</span>}
-                        {preset.logoUrl && <span className="text-green-400">Has logo</span>}
                         {preset.onboardingConnectedAt && (
                           <span className="flex items-center gap-1 text-pink-400"><UserCheck className="w-3 h-3" /> Client connected</span>
                         )}
