@@ -67,7 +67,8 @@ export default function ExportToCanvaButton({
       let body: Record<string, string>;
 
       if (imageUrl) {
-        body = { imageUrl, name: name ?? "Social Media Sister Export" };
+        const absoluteUrl = imageUrl.startsWith("http") ? imageUrl : `${window.location.origin}${imageUrl}`;
+        body = { imageUrl: absoluteUrl, name: name ?? "Social Media Sister Export" };
       } else if (getImage) {
         const dataUrl = await getImage();
         body = { imageBase64: dataUrl, name: name ?? "Social Media Sister Export" };
