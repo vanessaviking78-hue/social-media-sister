@@ -652,3 +652,50 @@ export const canvaTokensTable = pgTable("canva_tokens", {
 });
 
 export type CanvaToken = typeof canvaTokensTable.$inferSelect;
+
+// === Client Approval Bundles ===
+export const APPROVAL_BUNDLE_STATUSES = ["pending", "partial", "completed", "expired"] as const;
+export type ApprovalBundleStatus = typeof APPROVAL_BUNDLE_STATUSES[number];
+
+export const approvalBundlesTable = pgTable("approval_bundles", {
+  id: serial("id").primaryKey(),
+  bundleName: text("bundle_name").notNull(),
+  clientName: text("client_name").notNull().default(""),
+  clientEmail: text("client_email").notNull().default(""),
+  token: text("token").notNull().unique(),
+  status: text("status").notNull().default("pending"),
+  queuedAt: timestamp("queued_at"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
+export const insertApprovalBundleSchema = createInsertSchema(approvalBundlesTable)
+  .omit({ id: true, createdAt: true });
+export type InsertApprovalBundle = z.infer<typeof insertApprovalBundleSchema>;
+export type ApprovalBundle = typeof approvalBundlesTable.$inferSelect;
+
+export const approvalBundleItemsTable = pgTable("approval_bundle_items", {
+  id: serial("id").primaryKey(),
+  bundleId: integer("bundle_id").notNull().references(() => approvalBundlesTable.id, { onDelete: "cascade" }),
+  libraryItemId: integer("library_item_id").notNull().references(() => contentLibraryTable.id, { onDelete: "cascade" }),
+  position: integer("position").notNull().default(0),
+});
+
+export type ApprovalBundleItem = typeof approvalBundleItemsTable.$inferSelect;
+
+export const APPROVAL_RESPONSE_STATUSES = ["pending", "approved", "rejected"] as const;
+export type ApprovalResponseStatus = typeof APPROVAL_RESPONSE_STATUSES[number];
+
+export const approvalResponsesTable = pgTable("approval_responses", {
+  id: serial("id").primaryKey(),
+  bundleId: integer("bundle_id").notNull().references(() => approvalBundlesTable.id, { onDelete: "cascade" }),
+  libraryItemId: integer("library_item_id").notNull().references(() => contentLibraryTable.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("pending"),
+  feedback: text("feedback").notNull().default(""),
+  bundleRating: integer("bundle_rating"),
+  overallComments: text("overall_comments").notNull().default(""),
+  submittedAt: timestamp("submitted_at"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type ApprovalResponse = typeof approvalResponsesTable.$inferSelect;

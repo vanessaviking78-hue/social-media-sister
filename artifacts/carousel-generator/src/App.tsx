@@ -56,6 +56,8 @@ import ContentPreview from "@/pages/content-preview";
 import PreviewIndex from "@/pages/preview-index";
 import Settings from "@/pages/settings";
 import CanvaOAuthResult from "@/pages/canva-oauth-result";
+import ApprovalBundles from "@/pages/approval-bundles";
+import ClientApproval from "@/pages/client-approval";
 
 const queryClient = new QueryClient();
 
@@ -95,12 +97,14 @@ function ProtectedRouter() {
       <Route path="/csv-slide-carousel" component={CsvSlideCarousel} />
       <Route path="/preview" component={PreviewIndex} />
       <Route path="/settings" component={Settings} />
+      <Route path="/approval-bundles" component={ApprovalBundles} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
 function AppContent() {
+  const [isClientApproval, clientApprovalParams] = useRoute("/client-approval/:token");
   const [isApprove, approveParams] = useRoute("/approve/:token");
   const [isPortal, portalParams] = useRoute("/portal/:token");
   const [isMetaOAuth] = useRoute("/oauth/meta/result");
@@ -130,6 +134,9 @@ function AppContent() {
   }
   if (isPortal && portalParams?.token) {
     return <ClientPortal token={portalParams.token} />;
+  }
+  if (isClientApproval && clientApprovalParams?.token) {
+    return <ClientApproval token={clientApprovalParams.token} />;
   }
   if (isApprove && approveParams?.token) {
     return <ApprovePublic token={approveParams.token} />;

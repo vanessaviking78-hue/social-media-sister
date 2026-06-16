@@ -32,6 +32,7 @@ import storiesRouter from "./stories";
 import stickersRouter from "./stickers";
 import canvaRouter from "./canva";
 import waitlistRouter from "./waitlist";
+import approvalBundlesRouter from "./approvalBundles";
 
 const router: IRouter = Router();
 
@@ -68,5 +69,6 @@ router.use(storiesRouter);
 router.use(stickersRouter);
 router.use(canvaRouter);
 router.use(waitlistRouter);
+router.use(approvalBundlesRouter);
 
 export default router;

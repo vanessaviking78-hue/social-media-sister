@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send } from "lucide-react";
 
 const TOOLS = [
   {
@@ -244,6 +244,15 @@ const TOOLS = [
     color: "from-emerald-500/20 to-emerald-500/5",
     border: "hover:border-emerald-500/50",
     iconColor: "text-emerald-400",
+  },
+  {
+    href: "/approval-bundles",
+    icon: Send,
+    name: "Client Approvals",
+    description: "Send carousels to clients for approval via a shareable link. They review, approve or reject each one, and approved posts queue automatically.",
+    color: "from-green-500/20 to-green-500/5",
+    border: "hover:border-green-500/50",
+    iconColor: "text-green-400",
   },
 ];
 
