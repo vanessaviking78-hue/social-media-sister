@@ -4,7 +4,7 @@ import ExportToCanvaButton from "@/components/export-to-canva";
 import JSZip from "jszip";
 import {
   Sparkles, Upload, X, Check, Download, RefreshCcw, Loader2, AlertCircle,
-  Clock, BookImage, ChevronDown, ChevronUp, Link2,
+  Clock, BookImage, ChevronDown, ChevronUp, Link2, Film, Play,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,24 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const BASE = import.meta.env.BASE_URL;
+
+const CAMERA_MOTION_OPTIONS = [
+  { value: "cinematic-drift", label: "Cinematic drift" },
+  { value: "slow-pan-left",   label: "Pan — left to right" },
+  { value: "slow-pan-right",  label: "Pan — right to left" },
+  { value: "dolly-in",        label: "Dolly in" },
+  { value: "dolly-out",       label: "Dolly out" },
+  { value: "tilt-up",         label: "Tilt up" },
+] as const;
+
+type MotionJobState = {
+  jobId: string;
+  status: string;
+  progress: number;
+  message: string;
+  videoUrl?: string;
+  error?: string;
+};
 
 type CardStatus = "idle" | "generating" | "success" | "failed" | "rate-limited";
 type AspectRatio = "1:1" | "3:4" | "9:16";
@@ -218,6 +236,18 @@ export default function AiPortraitStudio() {
   const [savingAll, setSavingAll]               = useState(false);
   const [savingAllToLibrary, setSavingAllToLibrary] = useState(false);
   const [downloadingAll, setDownloadingAll]     = useState(false);
+
+  // ── Motion reel state ──────────────────────────────────────────────────────
+  const [motionJobMap, setMotionJobMap]         = useState<Record<number, MotionJobState>>({});
+  const [motionPickerOpen, setMotionPickerOpen] = useState<number | null>(null);
+  const [motionSelection, setMotionSelection]   = useState<Record<number, string>>({});
+  const motionPollRefs = useRef<Record<number, ReturnType<typeof setInterval>>>({});
+
+  useEffect(() => {
+    return () => {
+      for (const id of Object.values(motionPollRefs.current)) clearInterval(id);
+    };
+  }, []);
 
   // ── Polling ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -457,6 +487,49 @@ export default function AiPortraitStudio() {
       setDownloadingAll(false);
     }
   };
+
+  // ── Motion reel handler ────────────────────────────────────────────────────
+  const handleAnimate = useCallback(async (card: CardState, motion: string) => {
+    if (!card.portraitId) return;
+    const id = card.portraitId;
+    setMotionPickerOpen(null);
+    setMotionJobMap(prev => ({ ...prev, [id]: { jobId: "", status: "queued", progress: 0, message: "Starting…" } }));
+    try {
+      const res = await fetch(`${BASE}api/ai-portrait/${id}/animate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cameraMotion: motion, clientName }),
+      });
+      if (!res.ok) {
+        const err = await res.json() as { error?: string };
+        const msg = err.error ?? "Failed to start";
+        setMotionJobMap(prev => ({ ...prev, [id]: { ...prev[id], status: "failed", error: msg } }));
+        toast.error(`Motion reel: ${msg}`);
+        return;
+      }
+      const { jobId: mjId } = await res.json() as { jobId: string };
+      setMotionJobMap(prev => ({ ...prev, [id]: { ...prev[id], jobId: mjId } }));
+      if (motionPollRefs.current[id]) clearInterval(motionPollRefs.current[id]);
+      motionPollRefs.current[id] = setInterval(async () => {
+        try {
+          const sr = await fetch(`${BASE}api/ai-portrait/animate/${mjId}/status`);
+          if (!sr.ok) return;
+          const job = await sr.json() as MotionJobState;
+          setMotionJobMap(prev => ({ ...prev, [id]: { ...prev[id], ...job } }));
+          if (job.status === "done" || job.status === "failed") {
+            clearInterval(motionPollRefs.current[id]);
+            delete motionPollRefs.current[id];
+            if (job.status === "done") toast.success("Motion reel saved to library");
+            else toast.error(`Motion reel failed: ${job.error ?? "Unknown error"}`);
+          }
+        } catch { /* ignore poll errors */ }
+      }, 3000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to start animation";
+      setMotionJobMap(prev => ({ ...prev, [id]: { ...prev[id], status: "failed", error: msg } }));
+      toast.error(msg);
+    }
+  }, [clientName]);
 
   // ── Computed values ────────────────────────────────────────────────────────
   const doneCount    = cards.filter((c) => c.status === "success" || c.status === "failed").length;
@@ -844,57 +917,148 @@ export default function AiPortraitStudio() {
                       {/* Card footer */}
                       <div className="p-2 flex flex-col gap-1.5">
                         <p className="text-xs font-medium leading-snug truncate" title={name}>{name}</p>
-                        {card.status === "success" && card.portraitId && (
-                          <div className="flex gap-1 flex-wrap">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="flex-1 text-[10px] h-6 px-1"
-                              onClick={() => handleDownload(card)}
-                            >
-                              <Download className="w-3 h-3 mr-1" />
-                              Download
-                            </Button>
-                            <ExportToCanvaButton
-                              imageUrl={card.outputImageUrl}
-                              name={presetName(card.scenarioId)}
-                              size="sm"
-                              className="flex-1 text-[10px] h-6 px-1"
-                              label="Canva"
-                            />
-                            <Popover
-                              open={savePopoverOpen === card.portraitId}
-                              onOpenChange={(o) => setSavePopoverOpen(o ? card.portraitId! : null)}
-                            >
-                              <PopoverTrigger asChild>
-                                <Button size="sm" variant="outline" className="flex-1 text-[10px] h-6 px-1">
-                                  <BookImage className="w-3 h-3 mr-1" />
-                                  Save
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-48 p-3 space-y-2">
-                                <p className="text-xs font-medium">Save to Approvals</p>
-                                <Button
-                                  size="sm"
-                                  className="w-full text-xs h-7"
-                                  disabled={savingPortrait === card.portraitId}
-                                  onClick={() => handleSave(card, true)}
-                                >
-                                  {savingPortrait === card.portraitId ? <Loader2 className="w-3 h-3 animate-spin" /> : "With watermark"}
-                                </Button>
+                        {card.status === "success" && card.portraitId && (() => {
+                          const pid = card.portraitId!;
+                          const mj = motionJobMap[pid];
+                          const isActive = mj && mj.status !== "done" && mj.status !== "failed";
+                          return (
+                            <>
+                              <div className="flex gap-1 flex-wrap">
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="w-full text-xs h-7"
-                                  disabled={savingPortrait === card.portraitId}
-                                  onClick={() => handleSave(card, false)}
+                                  className="flex-1 text-[10px] h-6 px-1"
+                                  onClick={() => handleDownload(card)}
                                 >
-                                  Without watermark
+                                  <Download className="w-3 h-3 mr-1" />
+                                  Download
                                 </Button>
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        )}
+                                <ExportToCanvaButton
+                                  imageUrl={card.outputImageUrl}
+                                  name={presetName(card.scenarioId)}
+                                  size="sm"
+                                  className="flex-1 text-[10px] h-6 px-1"
+                                  label="Canva"
+                                />
+                                <Popover
+                                  open={savePopoverOpen === pid}
+                                  onOpenChange={(o) => setSavePopoverOpen(o ? pid : null)}
+                                >
+                                  <PopoverTrigger asChild>
+                                    <Button size="sm" variant="outline" className="flex-1 text-[10px] h-6 px-1">
+                                      <BookImage className="w-3 h-3 mr-1" />
+                                      Save
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-48 p-3 space-y-2">
+                                    <p className="text-xs font-medium">Save to Approvals</p>
+                                    <Button
+                                      size="sm"
+                                      className="w-full text-xs h-7"
+                                      disabled={savingPortrait === pid}
+                                      onClick={() => handleSave(card, true)}
+                                    >
+                                      {savingPortrait === pid ? <Loader2 className="w-3 h-3 animate-spin" /> : "With watermark"}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="w-full text-xs h-7"
+                                      disabled={savingPortrait === pid}
+                                      onClick={() => handleSave(card, false)}
+                                    >
+                                      Without watermark
+                                    </Button>
+                                  </PopoverContent>
+                                </Popover>
+                              </div>
+
+                              {/* Motion reel section */}
+                              <div className="pt-1 border-t border-border/20">
+                                {mj?.status === "done" && mj.videoUrl ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <a
+                                      href={mj.videoUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="flex-1 flex items-center justify-center gap-1 text-[10px] h-6 rounded border border-border/40 text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                      <Play className="w-3 h-3" /> View Reel
+                                    </a>
+                                    <span className="text-[9px] text-green-500 flex items-center gap-0.5 shrink-0">
+                                      <Check className="w-3 h-3" /> Saved
+                                    </span>
+                                  </div>
+                                ) : isActive ? (
+                                  <div>
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-[10px] text-muted-foreground truncate">{mj.message}</span>
+                                      <span className="text-[10px] text-muted-foreground ml-1 shrink-0">{Math.round(mj.progress * 100)}%</span>
+                                    </div>
+                                    <div className="h-1 rounded-full bg-muted/30 overflow-hidden">
+                                      <div
+                                        className="h-full bg-primary/70 transition-all duration-500 rounded-full"
+                                        style={{ width: `${Math.round(mj.progress * 100)}%` }}
+                                      />
+                                    </div>
+                                  </div>
+                                ) : mj?.status === "failed" ? (
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] text-red-400 truncate flex-1">{mj.error ?? "Failed"}</span>
+                                    <button
+                                      className="text-[10px] text-muted-foreground hover:text-foreground shrink-0"
+                                      onClick={() => setMotionJobMap(prev => { const n = { ...prev }; delete n[pid]; return n; })}
+                                    >
+                                      Retry
+                                    </button>
+                                  </div>
+                                ) : motionPickerOpen === pid ? (
+                                  <div className="flex flex-col gap-1.5">
+                                    <Select
+                                      value={motionSelection[pid] ?? "cinematic-drift"}
+                                      onValueChange={(v) => setMotionSelection(prev => ({ ...prev, [pid]: v }))}
+                                    >
+                                      <SelectTrigger className="h-6 text-[10px]">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {CAMERA_MOTION_OPTIONS.map(o => (
+                                          <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <div className="flex gap-1">
+                                      <Button
+                                        size="sm"
+                                        className="flex-1 text-[10px] h-6 px-1"
+                                        onClick={() => handleAnimate(card, motionSelection[pid] ?? "cinematic-drift")}
+                                      >
+                                        Generate
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="text-[10px] h-6 px-1"
+                                        onClick={() => setMotionPickerOpen(null)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-full text-[10px] h-6 px-1"
+                                    onClick={() => setMotionPickerOpen(pid)}
+                                  >
+                                    <Film className="w-3 h-3 mr-1" /> Motion Reel
+                                  </Button>
+                                )}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                   );
