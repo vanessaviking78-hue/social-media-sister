@@ -63,9 +63,11 @@ router.get("/meta/auth/start", (req: Request, res: Response) => {
     const scopes = [
       "instagram_basic",
       "instagram_content_publish",
+      "instagram_manage_comments",
       "pages_read_engagement",
       "pages_show_list",
       "pages_manage_posts",
+      "pages_manage_metadata",
     ].join(",");
     const url =
       `https://www.facebook.com/dialog/oauth` +
@@ -92,9 +94,11 @@ router.get("/meta/auth/bulk-start", (req: Request, res: Response) => {
     const scopes = [
       "instagram_basic",
       "instagram_content_publish",
+      "instagram_manage_comments",
       "pages_read_engagement",
       "pages_show_list",
       "pages_manage_posts",
+      "pages_manage_metadata",
     ].join(",");
     const url =
       `https://www.facebook.com/dialog/oauth` +
@@ -247,24 +251,79 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
 
     const pages: PageEntry[] = await Promise.all(
       pagesData.data.map(async (page) => {
+        // Fetch both instagram_business_account (Business) and connected_instagram_account (Creator fallback)
         const igRes = await fetch(
-          `${GRAPH}/${page.id}?fields=instagram_business_account&access_token=${page.access_token}`
+          `${GRAPH}/${page.id}?fields=instagram_business_account,connected_instagram_account&access_token=${page.access_token}`
         );
-        const igData = (await igRes.json()) as { instagram_business_account?: { id: string } };
-        const igId = igData.instagram_business_account?.id ?? null;
+        const igRawBody = await igRes.text();
+
+        let igData: {
+          instagram_business_account?: { id: string };
+          connected_instagram_account?: { id: string };
+          error?: { message: string; type: string; code: number };
+        } = {};
+        try { igData = JSON.parse(igRawBody); } catch { /* ignore parse failure */ }
+
+        if (!igRes.ok) {
+          req.log.warn({
+            pageId: page.id,
+            pageName: page.name,
+            igFetchStatus: igRes.status,
+            igFetchBody: igRawBody.slice(0, 500),
+          }, "IG business account fetch returned non-OK status");
+        } else {
+          req.log.info({
+            pageId: page.id,
+            pageName: page.name,
+            hasBusinessAccount: !!igData.instagram_business_account,
+            businessAccountId: igData.instagram_business_account?.id ?? null,
+            hasConnectedAccount: !!igData.connected_instagram_account,
+            connectedAccountId: igData.connected_instagram_account?.id ?? null,
+            apiError: igData.error ?? null,
+          }, "IG business account fetch result");
+        }
+
+        // Business account takes priority; fall back to connected (Creator) account
+        const igId =
+          igData.instagram_business_account?.id ??
+          igData.connected_instagram_account?.id ??
+          null;
 
         let instagramUsername: string | null = null;
         if (igId) {
           try {
             const igUserRes = await fetch(
-              `${GRAPH}/${igId}?fields=username&access_token=${page.access_token}`
+              `${GRAPH}/${igId}?fields=username,name&access_token=${page.access_token}`
             );
-            if (igUserRes.ok) {
-              const igUserData = (await igUserRes.json()) as { username?: string };
+            const igUserRawBody = await igUserRes.text();
+            let igUserData: { username?: string; name?: string; error?: { message: string } } = {};
+            try { igUserData = JSON.parse(igUserRawBody); } catch { /* ignore */ }
+
+            if (!igUserRes.ok) {
+              req.log.warn({
+                igId, pageId: page.id,
+                igUserFetchStatus: igUserRes.status,
+                igUserFetchBody: igUserRawBody.slice(0, 300),
+              }, "IG username fetch returned non-OK status");
+            } else {
               instagramUsername = igUserData.username ?? null;
+              req.log.info({
+                igId, pageId: page.id,
+                instagramUsername,
+                apiError: igUserData.error ?? null,
+              }, "IG username fetch result");
             }
-          } catch { /* non-fatal */ }
+          } catch (err: unknown) {
+            req.log.warn({ igId, pageId: page.id, err }, "IG username fetch threw unexpectedly");
+          }
         }
+
+        req.log.info({
+          pageId: page.id,
+          pageName: page.name,
+          igId,
+          instagramUsername,
+        }, "Page IG resolution complete");
 
         return {
           id: page.id,
@@ -321,6 +380,13 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
 
     if (pages.length === 1) {
       const page = pages[0]!;
+      req.log.info({
+        presetId,
+        pageId: page.id,
+        pageName: page.name,
+        instagramAccountId: page.instagramAccountId,
+        instagramUsername: page.instagramUsername,
+      }, "Saving single-page Meta connection to preset");
       await db
         .update(clientPresetsTable)
         .set({
@@ -331,6 +397,7 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
           metaInstagramUsername: page.instagramUsername,
         })
         .where(eq(clientPresetsTable.id, presetId));
+      req.log.info({ presetId, instagramAccountId: page.instagramAccountId }, "Single-page Meta connection saved");
       res.redirect(
         `${front}?success=1&presetId=${presetId}` +
           `&pageName=${encodeURIComponent(page.name)}` +
@@ -388,6 +455,13 @@ router.post("/meta/auth/select-page", async (req: Request, res: Response) => {
     res.status(400).json({ error: "page not found" });
     return;
   }
+  req.log.info({
+    presetId: entry.presetId,
+    pageId: page.id,
+    pageName: page.name,
+    instagramAccountId: page.instagramAccountId,
+    instagramUsername: page.instagramUsername,
+  }, "Saving selected-page Meta connection to preset");
   await db
     .update(clientPresetsTable)
     .set({
@@ -398,6 +472,7 @@ router.post("/meta/auth/select-page", async (req: Request, res: Response) => {
       metaInstagramUsername: page.instagramUsername,
     })
     .where(eq(clientPresetsTable.id, entry.presetId!));
+  req.log.info({ presetId: entry.presetId, instagramAccountId: page.instagramAccountId }, "Selected-page Meta connection saved");
   pendingPageSelections.delete(key);
   res.json({
     success: true,
