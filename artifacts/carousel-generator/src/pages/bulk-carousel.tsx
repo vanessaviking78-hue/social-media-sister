@@ -90,8 +90,8 @@ const BLOCK_STYLE: Record<BlockId, BlockStyle> = {
 
 const defaultBlock = (id: BlockId, text = ""): Block => {
   const pos: Record<BlockId, { x: number; y: number }> = {
-    hook:     { x: 0.5, y: 0.53 },
-    subtitle: { x: 0.5, y: 0.66 },
+    hook:     { x: 0.5, y: 0.695 },
+    subtitle: { x: 0.5, y: 0.785 },
     body2:    { x: 0.5, y: 0.50 },
     body3:    { x: 0.5, y: 0.50 },
     cta:      { x: 0.5, y: 0.50 },
@@ -243,26 +243,24 @@ function renderSlideCanvas(
     ctx.shadowOffsetY = 3;
 
     if (slideNum === 1) {
-      // ── Slide 1 layout ───────────────────────────────────────────────────────
-      // Physical canvas is H*scale tall. User target: hook ~Y1400, sub ~Y1650
-      // on a 2160px physical canvas (scale=1.5). In logical coords (÷scale):
-      //   hook anchor ≈ 933, sub anchor ≈ 1100  →  H*0.65 and H*0.764
-      const hookRaw = blocks.find(b => b.id === "hook")?.text ?? "";
-      const subRaw  = blocks.find(b => b.id === "subtitle")?.text ?? "";
-
+      // ── Slide 1 layout — positions driven by block.x / block.y ──────────────
       const hookBlock   = blocks.find(b => b.id === "hook");
       const subBlock    = blocks.find(b => b.id === "subtitle");
+      const hookRaw     = hookBlock?.text ?? "";
+      const subRaw      = subBlock?.text  ?? "";
       const HOOK_SIZE   = hookBlock?.fontSize ?? 108;
       const HOOK_LINE_H = Math.round(HOOK_SIZE * 1.10);
       const SUB_SIZE    = subBlock?.fontSize  ?? 44;
       const SUB_LINE_H  = Math.round(SUB_SIZE  * 1.40);
       const PAD_X       = 90;
-      const GAP         = 40;
-      // Subtitle top-edge fixed anchor (≈ physical Y 1650 on 2160px canvas)
-      const SUB_TOP     = Math.round(H * 0.764); // ≈ 1100 logical
+
+      const hookCX = (hookBlock?.x ?? 0.5) * W;
+      const hookCY = (hookBlock?.y ?? 0.695) * H;
+      const subCX  = (subBlock?.x  ?? 0.5) * W;
+      const subCY  = (subBlock?.y  ?? 0.785) * H;
 
       ctx.textAlign    = "center";
-      ctx.textBaseline = "top";
+      ctx.textBaseline = "middle";
 
       // Extract hero word (text wrapped in |pipes|) for accent-colour rendering
       const heroMatch = hookRaw.match(/\|([^|]+)\|/);
@@ -279,25 +277,25 @@ function renderSlideCanvas(
         ? wrapCanvas(ctx, stripPipes(subRaw).trim(), W - PAD_X * 2)
         : [];
 
-      // Hook — grows upward from just above subtitle anchor
-      // Hero word rendered in accent colour; rest in white
+      // Hook — centred around hookCY; hero word in accent colour
       if (hookLines.length > 0) {
-        const hookStartY = SUB_TOP - GAP - hookLines.length * HOOK_LINE_H;
+        const totalH = hookLines.length * HOOK_LINE_H;
         ctx.font = `700 ${HOOK_SIZE}px 'Bebas Neue', sans-serif`;
-        let y = hookStartY;
+        let y = hookCY - totalH / 2 + HOOK_LINE_H / 2;
         for (const line of hookLines) {
-          renderHookLine(ctx, line, heroWord, W / 2, y, "#ffffff", accentColor);
+          renderHookLine(ctx, line, heroWord, hookCX, y, "#ffffff", accentColor);
           y += HOOK_LINE_H;
         }
       }
 
-      // Subtitle — fixed at SUB_TOP, accent colour, pipes stripped at draw time
+      // Subtitle — centred around subCY, accent colour
       if (subLines.length > 0) {
+        const totalH = subLines.length * SUB_LINE_H;
         ctx.font      = `normal 400 ${SUB_SIZE}px 'Prata', serif`;
         ctx.fillStyle = accentColor;
-        let y = SUB_TOP;
+        let y = subCY - totalH / 2 + SUB_LINE_H / 2;
         for (const line of subLines) {
-          ctx.fillText(stripPipes(line), W / 2, y);
+          ctx.fillText(stripPipes(line), subCX, y);
           y += SUB_LINE_H;
         }
       }
