@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Upload, X, GripVertical, Wand2, ChevronDown, ChevronUp, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowLeft, Upload, X, GripVertical, Wand2, ChevronDown, ChevronUp, CheckCircle2, Sparkles, Send } from "lucide-react";
+import { SendForApprovalModal } from "@/components/send-for-approval-modal";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -126,6 +127,7 @@ export default function UploadSchedule() {
   const [stickerOpen, setStickerOpen] = useState(false);
   const [scheduling, setScheduling] = useState(false);
   const [scheduled, setScheduled] = useState(false);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
 
   const showSticker = postType === "story" && platforms.has("instagram");
 
@@ -311,6 +313,13 @@ export default function UploadSchedule() {
       setScheduling(false);
     }
   };
+
+  const selectedPresetForApproval = presets.find((p) => String(p.id) === presetId);
+
+  const handleGetApprovalGroups = useCallback(async () => {
+    const imageUrls = await uploadImages(images.map((i) => i.file));
+    return [{ imageUrls, caption: caption.trim() }];
+  }, [images, caption]);
 
   if (scheduled) {
     return (
@@ -698,6 +707,22 @@ export default function UploadSchedule() {
             )}
 
             <Button
+              onClick={() => setShowApprovalModal(true)}
+              disabled={!images.length}
+              variant="outline"
+              className="w-full border-green-500/40 text-green-400 hover:bg-green-500/10 hover:border-green-500/60 font-semibold"
+              size="lg"
+            >
+              <Send className="w-4 h-4 mr-2" />Send for Client Approval
+            </Button>
+
+            <div className="relative flex items-center gap-3">
+              <div className="flex-1 border-t border-zinc-800" />
+              <span className="text-xs text-zinc-600 shrink-0">or schedule directly</span>
+              <div className="flex-1 border-t border-zinc-800" />
+            </div>
+
+            <Button
               onClick={handleSchedule}
               disabled={scheduling || !images.length || !caption.trim() || !presetId || !date}
               className="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold"
@@ -715,6 +740,19 @@ export default function UploadSchedule() {
         </div>
       </div>
       </div>
+
+      {showApprovalModal && (
+        <SendForApprovalModal
+          defaultClientName={selectedPresetForApproval?.name ?? ""}
+          defaultBundleName={
+            selectedPresetForApproval
+              ? `${selectedPresetForApproval.name} — ${new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" })}`
+              : ""
+          }
+          onGetImageGroups={handleGetApprovalGroups}
+          onClose={() => setShowApprovalModal(false)}
+        />
+      )}
     </div>
   );
 }

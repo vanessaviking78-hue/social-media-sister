@@ -2,8 +2,9 @@ import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, Upload, FileText, Download, Loader2, CalendarClock,
-  CheckCircle2, X, Edit2, GripVertical, Sparkles,
+  CheckCircle2, X, Edit2, GripVertical, Sparkles, Send,
 } from "lucide-react";
+import { SendForApprovalModal } from "@/components/send-for-approval-modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -749,6 +750,7 @@ export default function BulkCarousel() {
   // Schedule state
   const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
   const [scheduling, setScheduling] = useState(false);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
 
   const csvInputRef  = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -998,6 +1000,14 @@ export default function BulkCarousel() {
     setPhase("schedule");
   };
 
+  const handleGetApprovalGroups = useCallback(async () => {
+    return Promise.all(items.map(async (item, i) => {
+      const names = item.thumbs.map((_, j) => `carousel-${i + 1}-slide${j + 1}.png`);
+      const imageUrls = await uploadDataUrls(item.thumbs, names);
+      return { imageUrls, caption: captionMap[item.id] ?? "" };
+    }));
+  }, [items, captionMap]);
+
   const updateEntry = <K extends keyof ScheduleEntry>(i: number, k: K, v: ScheduleEntry[K]) =>
     setScheduleEntries(prev => prev.map((e, idx) => idx === i ? { ...e, [k]: v } : e));
 
@@ -1189,6 +1199,19 @@ export default function BulkCarousel() {
           />
         )}
 
+        {showApprovalModal && (
+          <SendForApprovalModal
+            defaultClientName={selectedPreset?.name ?? ""}
+            defaultBundleName={
+              selectedPreset
+                ? `${selectedPreset.name} — ${new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" })}`
+                : ""
+            }
+            onGetImageGroups={handleGetApprovalGroups}
+            onClose={() => setShowApprovalModal(false)}
+          />
+        )}
+
         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border/30">
           <header className="px-6 py-4 flex items-center gap-3">
             <button onClick={() => setPhase("upload")} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -1213,6 +1236,14 @@ export default function BulkCarousel() {
             <div className="ml-auto flex gap-2">
               <Button variant="outline" size="sm" onClick={downloadAll}>
                 <Download className="w-4 h-4 mr-2" />Download All
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowApprovalModal(true)}
+                className="border-green-500/40 text-green-400 hover:bg-green-500/10 hover:border-green-500/60"
+              >
+                <Send className="w-4 h-4 mr-2" />Send for Approval
               </Button>
               <Button size="sm" onClick={goToSchedule}>
                 <CalendarClock className="w-4 h-4 mr-2" />Send to Scheduler

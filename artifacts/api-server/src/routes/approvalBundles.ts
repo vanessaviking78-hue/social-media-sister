@@ -182,6 +182,57 @@ router.post("/approval-bundles", async (req: Request, res: Response) => {
   }
 });
 
+// ── from-images: create library items + bundle in one shot ───────────────────
+
+router.post("/approval-bundles/from-images", async (req: Request, res: Response) => {
+  try {
+    const { bundleName, clientName, clientEmail, carousels } = req.body as {
+      bundleName: string;
+      clientName?: string;
+      clientEmail?: string;
+      carousels: Array<{ imageUrls: string[]; caption: string }>;
+    };
+
+    if (!bundleName?.trim()) { res.status(400).json({ error: "bundleName required" }); return; }
+    if (!Array.isArray(carousels) || carousels.length === 0) {
+      res.status(400).json({ error: "At least one carousel is required" }); return;
+    }
+    if (carousels.length > 50) { res.status(400).json({ error: "Maximum 50 carousels per bundle" }); return; }
+
+    const libraryItems = await db.insert(contentLibraryTable).values(
+      carousels.map((c) => ({
+        clientName: clientName?.trim() ?? "",
+        postType: c.imageUrls.length === 1 ? "single" : "carousel",
+        caption: c.caption ?? "",
+        mediaUrl: c.imageUrls.length === 1 ? (c.imageUrls[0] ?? null) : null,
+        mediaUrls: c.imageUrls.length > 1 ? c.imageUrls : null,
+        thumbnailUrl: c.imageUrls[0] ?? null,
+      }))
+    ).returning();
+
+    const token = uuid();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const [bundle] = await db.insert(approvalBundlesTable).values({
+      bundleName: bundleName.trim(),
+      clientName: clientName?.trim() ?? "",
+      clientEmail: clientEmail?.trim() ?? "",
+      token,
+      status: "pending",
+      expiresAt,
+    }).returning();
+
+    await db.insert(approvalBundleItemsTable).values(
+      libraryItems.map((item, idx) => ({ bundleId: bundle.id, libraryItemId: item.id, position: idx }))
+    );
+
+    req.log.info({ bundleId: bundle.id, itemCount: libraryItems.length }, "approval bundle created from images");
+    res.status(201).json({ bundle, token });
+  } catch (err: unknown) {
+    req.log.error({ err }, "approval-bundles from-images failed");
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed" });
+  }
+});
+
 router.get("/approval-bundles/:id", async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
