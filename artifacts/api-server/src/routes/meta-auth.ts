@@ -228,17 +228,51 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
     const longData = (await longRes.json()) as { access_token?: string };
     const longToken = longData.access_token ?? tokenData.access_token;
 
-    const pagesRes = await fetch(
-      `${GRAPH}/me/accounts?access_token=${longToken}&fields=id,name,access_token`
-    );
-    const pagesData = (await pagesRes.json()) as {
-      data?: Array<{ id: string; name: string; access_token: string }>;
-      error?: { message: string };
+    // Fetch ALL pages with pagination — Facebook defaults to 25 per page
+    type RawPage = { id: string; name: string; access_token: string };
+    type PagesResponse = {
+      data?: RawPage[];
+      error?: { message: string; code?: number; type?: string };
+      paging?: { cursors?: { before?: string; after?: string }; next?: string };
     };
-    if (!pagesRes.ok || !pagesData.data) {
-      throw new Error(pagesData.error?.message ?? "Failed to fetch pages");
+
+    const allRawPages: RawPage[] = [];
+    let nextUrl: string | null =
+      `${GRAPH}/me/accounts?access_token=${longToken}&fields=id,name,access_token&limit=100`;
+    let pagesFetchPage = 0;
+
+    while (nextUrl) {
+      pagesFetchPage += 1;
+      const pagesRes = await fetch(nextUrl);
+      const pagesData = (await pagesRes.json()) as PagesResponse;
+
+      req.log.info({
+        fetchPage: pagesFetchPage,
+        status: pagesRes.status,
+        dataCount: pagesData.data?.length ?? 0,
+        hasPagingNext: !!pagesData.paging?.next,
+        afterCursor: pagesData.paging?.cursors?.after ?? null,
+        apiError: pagesData.error ?? null,
+        pageNames: pagesData.data?.map((p) => p.name) ?? [],
+      }, "Raw /me/accounts page fetch");
+
+      if (!pagesRes.ok || !pagesData.data) {
+        throw new Error(pagesData.error?.message ?? "Failed to fetch pages");
+      }
+
+      allRawPages.push(...pagesData.data);
+
+      // Follow cursor-based next page if present
+      nextUrl = pagesData.paging?.next ?? null;
     }
-    if (pagesData.data.length === 0) {
+
+    req.log.info({
+      totalPagesFromFacebook: allRawPages.length,
+      fetchBatches: pagesFetchPage,
+      allPageNames: allRawPages.map((p) => p.name),
+    }, "All Facebook pages fetched (full paginated list)");
+
+    if (allRawPages.length === 0) {
       if (isBulk) {
         res.redirect(`${baseUrl}/presets/bulk-connect/review?error=no_pages`);
       } else if (isOnboarding) {
@@ -250,7 +284,7 @@ router.get("/meta/auth/callback", async (req: Request, res: Response) => {
     }
 
     const pages: PageEntry[] = await Promise.all(
-      pagesData.data.map(async (page) => {
+      allRawPages.map(async (page) => {
         // Fetch both instagram_business_account (Business) and connected_instagram_account (Creator fallback)
         const igRes = await fetch(
           `${GRAPH}/${page.id}?fields=instagram_business_account,connected_instagram_account&access_token=${page.access_token}`
