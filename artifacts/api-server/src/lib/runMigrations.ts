@@ -17,6 +17,7 @@ export async function runMigrations(): Promise<void> {
     await addPersonalityProfileColumns();
     await addStickerConfigColumn();
     await addRenderedImageUrlsColumn();
+    await backfillFirstCommentDefaults();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -207,6 +208,24 @@ async function addRenderedImageUrlsColumn(): Promise<void> {
     ALTER TABLE trial_bundles
     ADD COLUMN IF NOT EXISTS rendered_image_urls jsonb
   `);
+}
+
+async function backfillFirstCommentDefaults(): Promise<void> {
+  const result = await db.execute(sql`
+    UPDATE client_presets
+    SET
+      default_first_comment_carousel = COALESCE(NULLIF(TRIM(default_first_comment_carousel), ''), 'Share this with a friend'),
+      default_first_comment_single   = COALESCE(NULLIF(TRIM(default_first_comment_single),   ''), 'Save this for later'),
+      default_first_comment_reel     = COALESCE(NULLIF(TRIM(default_first_comment_reel),     ''), 'Save this and share to someone who needs to know')
+    WHERE
+      default_first_comment_carousel IS NULL OR TRIM(default_first_comment_carousel) = ''
+      OR default_first_comment_single IS NULL OR TRIM(default_first_comment_single) = ''
+      OR default_first_comment_reel   IS NULL OR TRIM(default_first_comment_reel)   = ''
+  `);
+  const updated = (result as { rowCount?: number }).rowCount ?? 0;
+  if (updated > 0) {
+    logger.info({ updated }, "Backfilled default first-comment CTAs on existing client presets");
+  }
 }
 
 async function normalizeTextPositionValues(): Promise<void> {

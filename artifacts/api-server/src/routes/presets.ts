@@ -45,6 +45,10 @@ router.get("/presets/:id", async (req, res) => {
   }
 });
 
+const DEFAULT_FIRST_COMMENT_CAROUSEL = "Share this with a friend";
+const DEFAULT_FIRST_COMMENT_SINGLE   = "Save this for later";
+const DEFAULT_FIRST_COMMENT_REEL     = "Save this and share to someone who needs to know";
+
 router.post("/presets", async (req, res) => {
   try {
     const { name, ...settings } = req.body;
@@ -63,6 +67,9 @@ router.post("/presets", async (req, res) => {
     }
     const [preset] = await db.insert(clientPresetsTable).values({
       name: name.trim(),
+      defaultFirstCommentCarousel: DEFAULT_FIRST_COMMENT_CAROUSEL,
+      defaultFirstCommentSingle:   DEFAULT_FIRST_COMMENT_SINGLE,
+      defaultFirstCommentReel:     DEFAULT_FIRST_COMMENT_REEL,
       ...settings,
     }).returning();
     res.json({ preset });
