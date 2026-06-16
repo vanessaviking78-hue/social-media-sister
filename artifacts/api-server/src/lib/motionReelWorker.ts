@@ -150,18 +150,24 @@ async function submitFalJob(imageUrl: string, motion: CameraMotion): Promise<{ r
 async function pollFalJob(requestId: string, statusUrl: string, resultUrl: string, jobId: string): Promise<string> {
   const falKey = process.env.FAL_KEY!;
   let attempts = 0;
-  const maxAttempts = 240;
-  const pollIntervalMs = 8_000;
-  while (attempts < maxAttempts) {
+  const pollIntervalMs = 10_000;
+  // No fixed time limit — poll until Fal.ai reports COMPLETED or FAILED.
+  // Safety valve at 2 hours (720 polls) to prevent truly infinite loops.
+  const maxAttempts = 720;
+  while (true) {
     await new Promise((r) => setTimeout(r, pollIntervalMs));
     attempts++;
-    const progress = Math.min(0.2 + (attempts / maxAttempts) * 0.65, 0.85);
-    patch(jobId, { progress, message: `AI processing… (${Math.round(progress * 100)}%)` });
+    const elapsedMin = Math.round((attempts * pollIntervalMs) / 60_000);
+    const progress = Math.min(0.2 + (attempts / 120) * 0.6, 0.80);
+    patch(jobId, {
+      progress,
+      message: `Generating your motion reel… this can take up to 15 minutes (${elapsedMin}m elapsed)`,
+    });
     let sd: { status?: string; error?: string } = {};
     try {
       const sr = await fetch(statusUrl, { headers: { "Authorization": `Key ${falKey}` } });
       sd = await safeJson<typeof sd>(sr, "Fal.ai status");
-      logger.info({ requestId, attempts, status: sd?.status, httpStatus: sr.status }, "Fal.ai status poll");
+      logger.info({ requestId, attempts, elapsedMin, status: sd?.status, httpStatus: sr.status }, "Fal.ai status poll");
     } catch (err: unknown) {
       logger.warn({ err, requestId, attempts }, "Fal status poll error — retrying");
       continue;
@@ -174,10 +180,12 @@ async function pollFalJob(requestId: string, statusUrl: string, resultUrl: strin
       return url as string;
     }
     if (sd?.status === "FAILED") {
-      throw new Error(`Fal.ai processing failed: ${sd?.error || "Unknown error"}`);
+      throw new Error(`Fal.ai video generation failed: ${sd?.error || "Fal.ai returned a FAILED status with no further detail"}`);
+    }
+    if (attempts >= maxAttempts) {
+      throw new Error("Fal.ai video generation did not complete within 2 hours. The job may still be processing on Fal.ai — please try again.");
     }
   }
-  throw new Error("Timed out waiting for Fal.ai video generation (32 minutes)");
 }
 
 async function downloadVideo(url: string): Promise<Buffer> {
@@ -212,7 +220,7 @@ export async function processMotionJob(
     patch(jobId, { status: "submitting", progress: 0.12, message: "Submitting to AI model…" });
     const { requestId, statusUrl, resultUrl } = await submitFalJob(publicImageUrl, cameraMotion);
 
-    patch(jobId, { status: "processing", progress: 0.2, message: "AI generating video…" });
+    patch(jobId, { status: "processing", progress: 0.2, message: "Generating your motion reel… this can take up to 15 minutes" });
     const videoUrl = await pollFalJob(requestId, statusUrl, resultUrl, jobId);
 
     patch(jobId, { status: "saving", progress: 0.88, message: "Saving video…" });
