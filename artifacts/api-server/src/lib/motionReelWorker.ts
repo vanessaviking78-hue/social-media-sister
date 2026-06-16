@@ -112,7 +112,14 @@ async function uploadToImgBB(imageBuffer: Buffer, mimeType: string): Promise<str
   return data.data.url as string;
 }
 
-async function submitFalJob(imageUrl: string, motion: CameraMotion): Promise<string> {
+interface FalSubmitResponse {
+  request_id?: string;
+  status_url?: string;
+  response_url?: string;
+  error?: string;
+}
+
+async function submitFalJob(imageUrl: string, motion: CameraMotion): Promise<{ requestId: string; statusUrl: string; resultUrl: string }> {
   const falKey = process.env.FAL_KEY;
   if (!falKey) throw new Error("FAL_KEY not set — add it in Settings to enable motion reel generation");
   const body = {
@@ -129,17 +136,19 @@ async function submitFalJob(imageUrl: string, motion: CameraMotion): Promise<str
     headers: { "Authorization": `Key ${falKey}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const data = await safeJson<{ request_id?: string; error?: string }>(res, "Fal.ai submission");
+  const data = await safeJson<FalSubmitResponse>(res, "Fal.ai submission");
+  logger.info({ requestId: data?.request_id, statusUrl: data?.status_url, responseUrl: data?.response_url }, "Fal.ai submit response");
   if (!res.ok || !data?.request_id) {
     throw new Error(`Fal.ai submission failed (${res.status}): ${data?.error ?? JSON.stringify(data)}`);
   }
-  return data.request_id as string;
+  const requestId = data.request_id;
+  const statusUrl = data.status_url ?? `${FAL_BASE}/requests/${requestId}/status`;
+  const resultUrl = data.response_url ?? `${FAL_BASE}/requests/${requestId}`;
+  return { requestId, statusUrl, resultUrl };
 }
 
-async function pollFalJob(requestId: string, jobId: string): Promise<string> {
+async function pollFalJob(requestId: string, statusUrl: string, resultUrl: string, jobId: string): Promise<string> {
   const falKey = process.env.FAL_KEY!;
-  const statusUrl = `${FAL_BASE}/requests/${requestId}/status`;
-  const resultUrl = `${FAL_BASE}/requests/${requestId}`;
   let attempts = 0;
   const maxAttempts = 180;
   while (attempts < maxAttempts) {
@@ -199,10 +208,10 @@ export async function processMotionJob(
     const publicImageUrl = await uploadToImgBB(imageBuffer, imageMime);
 
     patch(jobId, { status: "submitting", progress: 0.12, message: "Submitting to AI model…" });
-    const requestId = await submitFalJob(publicImageUrl, cameraMotion);
+    const { requestId, statusUrl, resultUrl } = await submitFalJob(publicImageUrl, cameraMotion);
 
     patch(jobId, { status: "processing", progress: 0.2, message: "AI generating video…" });
-    const videoUrl = await pollFalJob(requestId, jobId);
+    const videoUrl = await pollFalJob(requestId, statusUrl, resultUrl, jobId);
 
     patch(jobId, { status: "saving", progress: 0.88, message: "Saving video…" });
     const videoBuf = await downloadVideo(videoUrl);
