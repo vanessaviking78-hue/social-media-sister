@@ -1,4 +1,5 @@
 import { Switch, Route, Router as WouterRouter, useRoute, useLocation } from "wouter";
+import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -60,6 +61,14 @@ import ApprovalBundles from "@/pages/approval-bundles";
 import ClientApproval from "@/pages/client-approval";
 
 const queryClient = new QueryClient();
+
+function ScrollToTop() {
+  const [location] = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [location]);
+  return null;
+}
 
 function ProtectedRouter() {
   return (
@@ -189,6 +198,7 @@ function AppContent() {
 
   return (
     <>
+      <ScrollToTop />
       <ProtectedRouter />
     </>
   );

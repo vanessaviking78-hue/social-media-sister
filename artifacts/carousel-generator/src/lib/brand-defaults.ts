@@ -13,7 +13,7 @@ const FACTORY: BrandDefaults = {
   primaryColor: "#000000",
   secondaryColor: "#ffffff",
   fontFamily: "'Bebas Neue', sans-serif",
-  subheadingFont: "'Bebas Neue', sans-serif",
+  subheadingFont: "'Poppins', sans-serif",
 };
 
 export function getBrandDefaults(): BrandDefaults {

@@ -364,7 +364,7 @@ const DEFAULT_STYLES: PresetStyleFields = {
   pageColor: "#000000",
   overlayColor: "rgba(0,0,0,0.5)",
   fontFamily: "Inter, sans-serif",
-  subheadingFont: "Inter, sans-serif",
+  subheadingFont: "'Poppins', sans-serif",
   fontSize: 52,
   textColor: "#ffffff",
   lineSpacing: 0.9,
