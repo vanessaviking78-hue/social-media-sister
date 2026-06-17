@@ -2,6 +2,10 @@
 
 # compiled output
 dist
+# Un-ignore the carousel-generator's pre-built static assets so the
+# deployment can serve them directly without a build step.
+!artifacts/carousel-generator/dist/
+!artifacts/carousel-generator/dist/**
 tmp
 out-tsc
 *.tsbuildinfo
