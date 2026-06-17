@@ -320,6 +320,71 @@ export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: strin
   return `${prompt}\n\nCompose the image in ${ratioDescription}.\n\n${PHOTO_STUDIO_NEGATIVE}`;
 }
 
+// ─── Men's Studio — 10 presets ─────────────────────────────────────────────
+
+export const MEN_STUDIO_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "ms-01",
+    name: "Luxury Medical Executive Portrait",
+    hasColour: false,
+    promptTemplate: `Ultra-realistic medium-format editorial portrait of a distinguished male medical professional. Same facial features, skin tone, and likeness as the reference photo. He wears a perfectly tailored crisp white button-down shirt with dark premium denim jeans, standing confidently in a minimalist high-end studio environment. Waist-up centered composition with subtle negative space, luxury magazine cover framing. Visible pores and realistic skin texture, subtle peach fuzz, natural tonal variation, hydrated complexion with dimensional realism, RAW unedited skin detail. Clean professional grooming, natural strand separation, subtle texture, realistic volume, soft flyaways visible under studio light. Structured cotton shirt with realistic stitching, fabric tension around shoulders, subtle wrinkles, premium denim texture with authentic weave detail. Relaxed shoulders, one hand in pocket, direct confident gaze, approachable leadership presence, natural asymmetry. Seamless warm gray luxury studio backdrop with subtle gradient. Large octabox key light, controlled rim lighting, soft bounce fill, dimensional facial sculpting, realistic shadow transitions, subtle catchlights. Premium editorial color grading, luxury neutral tones, refined contrast, realistic skin rendering, medium-format tonality. 85mm lens, f/4, ultra-high resolution RAW capture, tack-sharp facial detail with smooth depth falloff. Must look physically believable and naturally photographed, not CGI. Preserve realistic skin texture, authentic lighting behavior, believable material rendering, grounded anatomy, natural imperfections, realistic depth, tactile textures, subtle sensor grain, true-to-life reflections.`,
+  },
+  {
+    id: "ms-02",
+    name: "Forbes-Style Healthcare Leader",
+    hasColour: false,
+    promptTemplate: `Premium studio editorial portrait of a respected male medical specialist, same facial features and likeness as the reference photo. He wears a crisp white shirt tucked into fitted blue jeans, conveying expertise and trustworthiness. Three-quarter portrait with slight angle toward camera, executive magazine style. Hasselblad X2D aesthetic, 90mm lens, f/5.6. Visible pores and realistic skin texture, subtle under-eye texture, natural skin luminosity, realistic facial contours. Hair professionally styled with realistic texture and natural shine, individual strands visible. Luxurious cotton poplin shirt with clean collar structure, premium denim with visible stitching and realistic folds. Arms folded naturally, confident yet approachable expression, leadership energy without appearing corporate. Dark charcoal seamless studio backdrop. Dramatic editorial key light, subtle edge lighting, controlled contrast, sculpted cheekbone highlights, realistic falloff. High-end business publication aesthetic, rich tonal depth, luxury contrast curve. Must look physically believable and naturally photographed, not CGI.`,
+  },
+  {
+    id: "ms-03",
+    name: "GQ Healthcare Innovator Portrait",
+    hasColour: false,
+    promptTemplate: `Cinematic chest-up portrait of a modern male physician, same facial features and likeness as the reference photo. He wears an open-collar white shirt and tailored jeans, photographed for a luxury magazine feature. Tight cinematic crop with full-frame DSLR aesthetic, 105mm portrait lens, f/2.8. RAW skin texture, visible pores, realistic gloss on skin, natural complexion variation. Slightly relaxed hair styling, natural volume, subtle texture illuminated by edge light. Crisp shirt collar, realistic cotton weave, authentic denim structure, dimensional fabric folds. Calm confidence, subtle smile, strong eye contact, relaxed posture. Deep matte black luxury studio environment. Single large soft source with dramatic negative fill, cinematic facial modeling, realistic catchlights. Luxury fashion editorial grade, rich blacks, clean whites, realistic skin tones. Must look physically believable and naturally photographed, not CGI.`,
+  },
+  {
+    id: "ms-04",
+    name: "Modern Medical Icon",
+    hasColour: false,
+    promptTemplate: `Full-body studio portrait of a highly accomplished male medical professional with architectural symmetry, same facial features and likeness as the reference photo. He wears a fitted white shirt with sleeves slightly rolled and premium blue jeans. Medium-format portrait capture, 110mm lens, f/4.5. Visible pores and realistic skin texture, natural skin depth, subtle facial texture retention. Natural hair styling with realistic volume and strand definition. Crisp cotton shirt with rolled cuffs, realistic fabric tension, premium denim texture. Standing naturally with one hand adjusting cuff, confident editorial posture. Bright luxury studio with soft off-white seamless backdrop. Large overhead softbox combined with side fill, luxury fashion campaign lighting, subtle highlights on fabric. High-key luxury editorial grading, clean whites, refined contrast. Must look physically believable and naturally photographed, not CGI.`,
+  },
+  {
+    id: "ms-05",
+    name: "Healthcare Visionary Cover Shoot",
+    hasColour: false,
+    promptTemplate: `Magazine cover upper-body portrait of an influential male medical professional, same facial features and likeness as the reference photo. He wears a tailored white dress shirt and dark denim jeans. 85mm lens, f/3.2, ultra-realistic studio editorial photography. Visible pores, realistic skin depth, subtle peach fuzz, natural facial texture. Professional grooming with natural movement and strand separation. Structured white shirt with visible cotton fibers, realistic folds and seams, luxury denim texture. Direct eye contact, hands relaxed, composed confidence. Elegant stone-gray studio backdrop. Beauty dish key light combined with large fill source, sculpted shadows, editorial contrast. Prestige magazine color grading, realistic highlights and tonal separation. Must look physically believable and naturally photographed, not CGI.`,
+  },
+  {
+    id: "ms-06",
+    name: "Minimalist Luxury Portrait",
+    hasColour: false,
+    promptTemplate: `Symmetrical seated portrait of an experienced male doctor on a simple designer chair, same facial features and likeness as the reference photo. He wears a crisp white shirt and jeans. Medium-format camera, 100mm lens, f/5. RAW skin texture, visible pores, realistic tonal variation, dimensional facial rendering. Natural hair texture with realistic shine and volume. Premium cotton shirt with authentic fabric creases, realistic denim construction. Hands lightly clasped, calm confidence, approachable demeanor. Monochromatic luxury studio set. Soft directional key light with subtle rim separation and realistic shadow gradients. Luxury monochromatic editorial palette. Must look physically believable and naturally photographed, not CGI.`,
+  },
+  {
+    id: "ms-07",
+    name: "Contemporary Healthcare Authority",
+    hasColour: false,
+    promptTemplate: `Standing three-quarter portrait of a modern male physician with generous negative space, same facial features and likeness as the reference photo. He wears a white shirt and fitted jeans, photographed for a healthcare leadership campaign. 135mm lens, f/4, ultra-sharp studio portraiture. Visible pores, natural skin texture, realistic facial detail and dimensionality. Soft hair texture, realistic grooming, subtle strand definition. Crisp shirt structure, visible stitching, luxury denim texture. Relaxed confidence, natural hand placement, thoughtful expression. Neutral taupe gradient backdrop. Large side softbox, subtle reflector fill, realistic studio contrast. Sophisticated editorial toning with premium skin rendering. Must look physically believable and naturally photographed, not CGI.`,
+  },
+  {
+    id: "ms-08",
+    name: "Prestige Medical Campaign",
+    hasColour: false,
+    promptTemplate: `Full-length luxury campaign portrait of an accomplished male medical professional, same facial features and likeness as the reference photo. He wears a pristine white shirt and designer jeans. Hasselblad editorial portrait aesthetic, 80mm lens, f/4. Visible pores and realistic skin texture, subtle skin sheen, realistic depth. Controlled hair styling with natural movement and texture. Premium shirt construction, realistic draping, authentic denim fabric detail. Walking slightly toward camera, confident natural stride. Seamless luxury studio cyclorama. Fashion campaign lighting with controlled highlights and dimensional shadows. Luxury advertising aesthetic, refined whites and balanced contrast. Must look physically believable and naturally photographed, not CGI.`,
+  },
+  {
+    id: "ms-09",
+    name: "Black & White Editorial Doctor Portrait",
+    hasColour: false,
+    promptTemplate: `Tight black-and-white magazine feature portrait of a distinguished male physician, same facial features and likeness as the reference photo. He wears a white shirt and denim, captured in timeless monochrome. Leica-inspired portrait photography aesthetic, 90mm lens, f/2.8. Extremely detailed skin texture, visible pores, subtle skin variations preserved in monochrome tonal range. Natural hair texture and realistic strand separation. Crisp shirt contrast, textured denim detail translated into monochrome tonality. Quiet confidence, thoughtful gaze, understated authority. Deep textured charcoal studio backdrop. Classic Rembrandt-inspired studio lighting, dimensional shadow sculpting. Rich black-and-white editorial treatment with medium-format tonal depth. Must look physically believable and naturally photographed, not CGI.`,
+  },
+  {
+    id: "ms-10",
+    name: "International Medical Thought Leader",
+    hasColour: false,
+    promptTemplate: `Premium healthcare campaign portrait of an elite male medical professional, slightly off-center composition, same facial features and likeness as the reference photo. He wears a tailored white shirt and luxury denim, projecting intelligence, warmth, and credibility. Ultra-high-end commercial portrait photography, 85mm lens, f/4.5. Visible pores and realistic skin texture, subtle facial details, realistic gloss reflections, dimensional skin rendering. Natural hair texture, controlled volume, realistic strand detail under studio lighting. Crisp cotton shirt with premium tailoring, realistic seams, authentic denim weave and folds. Relaxed posture, genuine confidence, approachable executive presence. Soft gradient studio backdrop transitioning from warm gray to charcoal. Large cinematic key light, elegant rim light separation, realistic reflections, luxury portrait sculpting. Global luxury campaign aesthetic, refined tonal balance, premium magazine finish. Must look physically believable and naturally photographed, not CGI.`,
+  },
+];
+
 // ─── Injector Collection — 100 presets across 10 categories ────────────────
 
 export interface InjectorCollectionCategory {

@@ -6,7 +6,7 @@ import { aiGeneratedPortraitsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { objectStorageClient } from "./objectStorage";
 import { logger } from "./logger";
-import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS } from "./aiPortraitScenarios";
+import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS } from "./aiPortraitScenarios";
 
 const GEMINI_MODEL = "gemini-2.5-flash-image";
 const REQUEST_GAP_MS = 4_000;
@@ -133,7 +133,7 @@ export async function processPortraitJob(
     let prompt: string;
     let backgroundImageUrl = cfg.backgroundImageUrl;
 
-    const photoStudioPreset = PHOTO_STUDIO_PRESETS.find((p) => p.id === cfg.id) ?? INJECTOR_COLLECTION_PRESETS.find((p) => p.id === cfg.id);
+    const photoStudioPreset = PHOTO_STUDIO_PRESETS.find((p) => p.id === cfg.id) ?? INJECTOR_COLLECTION_PRESETS.find((p) => p.id === cfg.id) ?? MEN_STUDIO_PRESETS.find((p) => p.id === cfg.id);
 
     if (photoStudioPreset) {
       prompt = buildPhotoStudioPrompt(photoStudioPreset, cfg.scrubColor, cfg.aspectRatio);

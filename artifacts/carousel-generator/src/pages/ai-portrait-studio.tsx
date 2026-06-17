@@ -197,7 +197,20 @@ const INJECTOR_COLLECTION_CATEGORIES: InjectorCollectionCategory[] = [
   { label: "Extra High-End",       presetIds: ["ic-91","ic-92","ic-93","ic-94","ic-95","ic-96","ic-97","ic-98","ic-99","ic-100"] },
 ];
 
-const ALL_PRESETS = [...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS];
+const MEN_STUDIO_PRESETS: PhotoStudioPreset[] = [
+  { id: "ms-01", name: "Luxury Medical Executive Portrait", hasColour: false },
+  { id: "ms-02", name: "Forbes-Style Healthcare Leader",    hasColour: false },
+  { id: "ms-03", name: "GQ Healthcare Innovator Portrait", hasColour: false },
+  { id: "ms-04", name: "Modern Medical Icon",              hasColour: false },
+  { id: "ms-05", name: "Healthcare Visionary Cover Shoot", hasColour: false },
+  { id: "ms-06", name: "Minimalist Luxury Portrait",       hasColour: false },
+  { id: "ms-07", name: "Contemporary Healthcare Authority",hasColour: false },
+  { id: "ms-08", name: "Prestige Medical Campaign",        hasColour: false },
+  { id: "ms-09", name: "Black & White Editorial Doctor Portrait", hasColour: false },
+  { id: "ms-10", name: "International Medical Thought Leader",    hasColour: false },
+];
+
+const ALL_PRESETS = [...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
 const findPreset = (id: string) => ALL_PRESETS.find((p) => p.id === id);
 
 const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
@@ -332,7 +345,15 @@ export default function AiPortraitStudio() {
     });
   };
 
-  const selectAll   = () => setSelectedPresets(new Set(PHOTO_STUDIO_PRESETS.map((p) => p.id)));
+  const [activeGender, setActiveGender] = useState<"women" | "men">("women");
+
+  const selectAll = () => {
+    if (activeGender === "men") {
+      setSelectedPresets(new Set(MEN_STUDIO_PRESETS.map((p) => p.id)));
+    } else {
+      setSelectedPresets(new Set(PHOTO_STUDIO_PRESETS.map((p) => p.id)));
+    }
+  };
   const selectNone  = () => setSelectedPresets(new Set());
   const selectCategory = (ids: string[]) =>
     setSelectedPresets((prev) => { const next = new Set(prev); ids.forEach((id) => next.add(id)); return next; });
@@ -685,8 +706,17 @@ export default function AiPortraitStudio() {
 
           {/* Preset cards */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="font-semibold text-base">Choose Presets</h2>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-0.5 rounded-lg border border-border/30 p-0.5 bg-muted/20">
+                <button
+                  onClick={() => setActiveGender("women")}
+                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeGender === "women" ? "bg-violet-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                >Women</button>
+                <button
+                  onClick={() => setActiveGender("men")}
+                  className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${activeGender === "men" ? "bg-violet-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                >Men</button>
+              </div>
               <div className="flex gap-2">
                 <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={selectAll}>All</button>
                 <span className="text-muted-foreground/40 text-xs">·</span>
@@ -694,7 +724,8 @@ export default function AiPortraitStudio() {
               </div>
             </div>
 
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">Photo Studio</p>
+            {activeGender === "women" && (<>
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">Women — Photo Studio</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
               {PHOTO_STUDIO_PRESETS.map((preset) => {
@@ -814,6 +845,37 @@ export default function AiPortraitStudio() {
                 })}
               </div>
             </div>
+            </>)}
+
+            {activeGender === "men" && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                {MEN_STUDIO_PRESETS.map((preset) => {
+                  const isSelected = selectedPresets.has(preset.id);
+                  return (
+                    <div
+                      key={preset.id}
+                      className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
+                        isSelected
+                          ? "border-violet-500/70 bg-violet-500/10"
+                          : "border-border/30 hover:border-border/60 hover:bg-muted/20"
+                      }`}
+                      onClick={() => togglePreset(preset.id)}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                          isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
+                        }`}>
+                          {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium leading-snug">{preset.name}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* Generate button */}
             <div className="mt-4 flex items-center gap-3 flex-wrap">
