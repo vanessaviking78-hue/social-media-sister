@@ -18,7 +18,6 @@ localPort = 22012
 run = "pnpm --filter @workspace/carousel-generator run dev"
 
 [services.production]
-build = "pnpm --filter @workspace/carousel-generator run build"
 publicDir = "artifacts/carousel-generator/dist/public"
 serve = "static"
 
