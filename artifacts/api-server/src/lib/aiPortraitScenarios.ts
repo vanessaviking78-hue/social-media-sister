@@ -383,6 +383,67 @@ export const MEN_STUDIO_PRESETS: PhotoStudioPreset[] = [
     hasColour: false,
     promptTemplate: `Premium healthcare campaign portrait of an elite male medical professional, slightly off-center composition, same facial features and likeness as the reference photo. He wears a tailored white shirt and luxury denim, projecting intelligence, warmth, and credibility. Ultra-high-end commercial portrait photography, 85mm lens, f/4.5. Visible pores and realistic skin texture, subtle facial details, realistic gloss reflections, dimensional skin rendering. Natural hair texture, controlled volume, realistic strand detail under studio lighting. Crisp cotton shirt with premium tailoring, realistic seams, authentic denim weave and folds. Relaxed posture, genuine confidence, approachable executive presence. Soft gradient studio backdrop transitioning from warm gray to charcoal. Large cinematic key light, elegant rim light separation, realistic reflections, luxury portrait sculpting. Global luxury campaign aesthetic, refined tonal balance, premium magazine finish. Must look physically believable and naturally photographed, not CGI.`,
   },
+  // ── David Bailey Editorial — Black & White ───────────────────────────────
+  {
+    id: "db-01",
+    name: "Studio Portrait — White Infinity",
+    hasColour: false,
+    promptTemplate: `Black and white Hasselblad medium-format studio portrait of a male medical professional, same facial features and likeness as the reference photo. He wears a crisp white shirt with sleeves casually rolled and dark jeans, standing against a seamless white infinity backdrop. Waist-up centered composition, direct eye contact, iconic 1960s British fashion editorial framing. Visible pores and realistic skin texture, subtle facial lines, natural skin depth, RAW monochrome texture retention, realistic tonal transitions. Cleanly styled hair with natural texture, soft strand separation, realistic volume. Crisp cotton shirt rendered with rich monochrome contrast, visible stitching, realistic wrinkles, authentic denim texture. Hands casually in pockets, direct unapologetic gaze, understated confidence, effortless masculinity. Large overhead soft source combined with frontal fill, classic high-key Bailey lighting, clean shadows, luminous skin separation. 80mm lens, f/8, ultra-sharp focus, classic fashion portrait perspective, subtle film grain, deep tonal range. Rich monochrome tonal scale, deep blacks, luminous whites, Ilford HP5-inspired grain structure. Must look like an authentic David Bailey editorial photograph from a luxury fashion archive, physically believable, naturally photographed, realistic skin texture, authentic film grain, genuine studio lighting, grounded anatomy, true monochrome tonal realism.`,
+  },
+  {
+    id: "db-02",
+    name: "Soho Street Editorial Lifestyle",
+    hasColour: false,
+    promptTemplate: `Black and white documentary fashion portrait of a male medical professional, same facial features and likeness as the reference photo. He wears a crisp white shirt and jeans, walking confidently through a quiet urban street as if captured for a Sunday Times Magazine feature. Full-body environmental portrait. Visible pores, realistic skin texture, natural monochrome rendering. Hair with slight movement from walking, realistic strand separation. Crisp shirt catching natural daylight with realistic folds and tension, textured denim. Mid-stride, hands relaxed, focused gaze ahead. Historic city architecture softly falling out of focus behind. Leica M6 aesthetic, 50mm lens, f/4, documentary fashion photography, natural film grain. Overcast London-style daylight, soft contrast, realistic environmental bounce light. Classic documentary black and white with rich gray tonal separation. Must resemble a genuine David Bailey lifestyle editorial, naturally photographed with authentic documentary realism and tactile monochrome detail.`,
+  },
+  {
+    id: "db-03",
+    name: "Bare Studio Wall Portrait",
+    hasColour: false,
+    promptTemplate: `Black and white medium-format film portrait of a male doctor leaning casually against a plain studio wall, same facial features and likeness as the reference photo. He wears a white shirt and jeans. Tight chest-up portrait. Visible pores, realistic skin depth, subtle skin imperfections preserved. Natural hair texture and realistic volume. Crisp cotton shirt with visible weave and dimensional folds. Relaxed shoulders, subtle half-smile, direct engagement with camera. Single large soft light positioned slightly above eye level, classic Bailey simplicity. 100mm lens, f/11. Clean monochrome palette with rich tonal gradation. Must feel like a genuine archive fashion portrait rather than AI-generated imagery.`,
+  },
+  {
+    id: "db-04",
+    name: "Studio Chair Editorial",
+    hasColour: false,
+    promptTemplate: `Black and white Hasselblad studio portrait of a male medical professional seated backwards on a simple wooden chair in a minimalist studio, same facial features and likeness as the reference photo. He wears a white shirt with sleeves rolled and detailed denim. Full-body seated portrait. Visible pores and realistic skin texture, subtle tonal variation. Natural hair styling with realistic strand definition. White shirt sleeves rolled, denim texture highly detailed. Arms resting naturally on chair back, thoughtful expression. Soft directional light creating sculptural facial modeling. 85mm lens, f/5.6. Fine-art monochrome fashion editorial treatment. Must look physically believable and naturally photographed with authentic studio craftsmanship.`,
+  },
+  {
+    id: "db-05",
+    name: "Window Light Apartment Portrait",
+    hasColour: false,
+    promptTemplate: `Black and white documentary portrait of a male medical professional standing beside a large apartment window overlooking a city skyline, same facial features and likeness as the reference photo. He wears a crisp white shirt with realistic drape and textured denim. Environmental portrait. RAW skin texture, visible pores, realistic skin depth. Soft natural hair texture illuminated by window light. Looking out window, reflective and contemplative. Leica documentary photography aesthetic, 35mm lens, f/2.8. Natural side window light creating elegant monochrome contrast. Timeless black and white documentary grading. Must resemble a candid Bailey editorial portrait shot on location.`,
+  },
+  {
+    id: "db-06",
+    name: "White Cyclorama Fashion Editorial",
+    hasColour: false,
+    promptTemplate: `Black and white medium-format commercial fashion portrait of a male physician styled like a luxury magazine cover subject, same facial features and likeness as the reference photo. He wears only a white shirt and jeans. Full-body standing portrait with generous negative space. Visible pores, realistic skin texture, dimensional facial rendering. Natural hair texture and subtle movement. Architectural shirt folds, premium denim structure. Hands loosely crossed, confident stance. 90mm lens, f/8. Clean studio lighting with minimal shadows. High-key monochrome fashion treatment. Must look like a luxury editorial campaign photographed by a master portrait photographer.`,
+  },
+  {
+    id: "db-07",
+    name: "Cafe Lifestyle Editorial",
+    hasColour: false,
+    promptTemplate: `Black and white Leica rangefinder documentary portrait of a male medical professional seated alone in a quiet cafe, same facial features and likeness as the reference photo. He wears a white shirt with sleeves rolled and jeans, a coffee cup nearby on the table. Natural environmental portrait. Visible pores, realistic skin texture, natural facial detail. Soft natural hair styling. Realistic cotton texture, subtle wrinkles, worn denim character. Looking away from camera, candid moment. 50mm lens, f/2. Natural daylight entering through cafe windows. Elegant documentary black and white. Must feel like an authentic magazine feature portrait captured in a real environment.`,
+  },
+  {
+    id: "db-08",
+    name: "Bailey Fashion Archive Portrait",
+    hasColour: false,
+    promptTemplate: `Black and white Hasselblad 500CM-aesthetic tight face portrait of a male medical professional photographed as if for Vogue UK in the late 1960s, same facial features and likeness as the reference photo. He wears a white shirt with collar sharply defined against deep monochrome contrast. Minimal background distraction. Extremely detailed skin texture, visible pores, realistic tonal transitions. Natural hair texture with authentic strand detail. Intense eye contact, minimal expression. 150mm lens, f/11. Classic soft frontal light with subtle shadow definition. Rich silver-gelatin print tonality. Must resemble a genuine vintage Bailey portrait preserved in museum-quality condition.`,
+  },
+  {
+    id: "db-09",
+    name: "Industrial Loft Lifestyle Portrait",
+    hasColour: false,
+    promptTemplate: `Black and white documentary fashion portrait of a male medical professional standing inside an industrial loft studio, same facial features and likeness as the reference photo. He wears a white shirt untucked and premium jeans. Wide environmental composition. Visible pores, natural facial texture, realistic monochrome depth. Slightly relaxed hair styling with realistic volume. Cotton texture, authentic denim wear patterns. Relaxed confidence, leaning lightly against a concrete column. 35mm lens, f/4. Large warehouse windows creating natural directional light. Deep black-and-white editorial contrast with rich gray transitions. Must feel authentic, tactile, and naturally photographed rather than staged AI imagery.`,
+  },
+  {
+    id: "db-10",
+    name: "Iconic Close-Up Portrait",
+    hasColour: false,
+    promptTemplate: `Black and white Hasselblad medium-format ultra-high-resolution close-up portrait of a distinguished male medical professional in a white shirt, filling the entire frame, same facial features and likeness as the reference photo. Tight close-up composition. Visible pores and realistic skin texture, subtle facial asymmetry preserved, dimensional monochrome rendering. Natural hair texture, realistic strand separation. Direct gaze into lens, calm authority, quiet confidence. One large soft source directly above the camera axis, iconic Bailey portrait lighting. 120mm lens, f/8. Museum-quality monochrome tonality, deep blacks, luminous highlights, classic film grain. Must look physically believable and naturally photographed, not CGI. Authentic monochrome film character, realistic skin texture, genuine studio lighting behavior, tactile detail, subtle grain, and timeless editorial realism.`,
+  },
 ];
 
 // ─── Injector Collection — 100 presets across 10 categories ────────────────

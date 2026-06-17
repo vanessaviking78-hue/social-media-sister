@@ -208,7 +208,21 @@ const MEN_STUDIO_PRESETS: PhotoStudioPreset[] = [
   { id: "ms-08", name: "Prestige Medical Campaign",        hasColour: false },
   { id: "ms-09", name: "Black & White Editorial Doctor Portrait", hasColour: false },
   { id: "ms-10", name: "International Medical Thought Leader",    hasColour: false },
+  // David Bailey Editorial — Black & White
+  { id: "db-01", name: "Studio Portrait — White Infinity",       hasColour: false },
+  { id: "db-02", name: "Soho Street Editorial Lifestyle",         hasColour: false },
+  { id: "db-03", name: "Bare Studio Wall Portrait",               hasColour: false },
+  { id: "db-04", name: "Studio Chair Editorial",                  hasColour: false },
+  { id: "db-05", name: "Window Light Apartment Portrait",         hasColour: false },
+  { id: "db-06", name: "White Cyclorama Fashion Editorial",       hasColour: false },
+  { id: "db-07", name: "Cafe Lifestyle Editorial",                hasColour: false },
+  { id: "db-08", name: "Bailey Fashion Archive Portrait",         hasColour: false },
+  { id: "db-09", name: "Industrial Loft Lifestyle Portrait",      hasColour: false },
+  { id: "db-10", name: "Iconic Close-Up Portrait",                hasColour: false },
 ];
+
+const MEN_COLOUR_IDS  = ["ms-01","ms-02","ms-03","ms-04","ms-05","ms-06","ms-07","ms-08","ms-09","ms-10"];
+const MEN_BAILEY_IDS  = ["db-01","db-02","db-03","db-04","db-05","db-06","db-07","db-08","db-09","db-10"];
 
 const ALL_PRESETS = [...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
 const findPreset = (id: string) => ALL_PRESETS.find((p) => p.id === id);
@@ -847,35 +861,61 @@ export default function AiPortraitStudio() {
             </div>
             </>)}
 
-            {activeGender === "men" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
-                {MEN_STUDIO_PRESETS.map((preset) => {
-                  const isSelected = selectedPresets.has(preset.id);
-                  return (
-                    <div
-                      key={preset.id}
-                      className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
-                        isSelected
-                          ? "border-violet-500/70 bg-violet-500/10"
-                          : "border-border/30 hover:border-border/60 hover:bg-muted/20"
-                      }`}
-                      onClick={() => togglePreset(preset.id)}
-                    >
-                      <div className="flex items-start gap-2.5">
-                        <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
-                          isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
-                        }`}>
-                          {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+            {activeGender === "men" && (() => {
+              const menCategories = [
+                { label: "Colour Portraits", ids: MEN_COLOUR_IDS },
+                { label: "David Bailey Editorial — Black & White", ids: MEN_BAILEY_IDS },
+              ];
+              return (
+                <div className="space-y-5">
+                  {menCategories.map((cat) => {
+                    const catPresets = MEN_STUDIO_PRESETS.filter((p) => cat.ids.includes(p.id));
+                    return (
+                      <div key={cat.label}>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-medium text-foreground/70">{cat.label}</span>
+                          <div className="flex gap-2">
+                            <button
+                              className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                              onClick={() => cat.ids.every((id) => selectedPresets.has(id)) ? deselectCategory(cat.ids) : selectCategory(cat.ids)}
+                            >
+                              {cat.ids.every((id) => selectedPresets.has(id)) ? "None" : "All"}
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium leading-snug">{preset.name}</p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                          {catPresets.map((preset) => {
+                            const isSelected = selectedPresets.has(preset.id);
+                            return (
+                              <div
+                                key={preset.id}
+                                className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
+                                  isSelected
+                                    ? "border-violet-500/70 bg-violet-500/10"
+                                    : "border-border/30 hover:border-border/60 hover:bg-muted/20"
+                                }`}
+                                onClick={() => togglePreset(preset.id)}
+                              >
+                                <div className="flex items-start gap-2.5">
+                                  <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                                    isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
+                                  }`}>
+                                    {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium leading-snug">{preset.name}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {/* Generate button */}
             <div className="mt-4 flex items-center gap-3 flex-wrap">
