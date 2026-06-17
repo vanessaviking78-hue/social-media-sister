@@ -49,6 +49,10 @@ const DEFAULT_FIRST_COMMENT_CAROUSEL = "Share this with a friend";
 const DEFAULT_FIRST_COMMENT_SINGLE   = "Save this for later";
 const DEFAULT_FIRST_COMMENT_REEL     = "Save this and share to someone who needs to know";
 
+const DEFAULT_TARGET_AUDIENCE = "Women over 35, perimenopause, women in the local area, who want to feel good in themselves";
+const DEFAULT_CONTENT_PILLARS = "Set by Vanessa's spreadsheets";
+const DEFAULT_BRAND_NOTES     = "Warm, affable, friendly, personality over professionalism. Affable.";
+
 router.post("/presets", async (req, res) => {
   try {
     const { name, ...settings } = req.body;
@@ -70,6 +74,9 @@ router.post("/presets", async (req, res) => {
       defaultFirstCommentCarousel: DEFAULT_FIRST_COMMENT_CAROUSEL,
       defaultFirstCommentSingle:   DEFAULT_FIRST_COMMENT_SINGLE,
       defaultFirstCommentReel:     DEFAULT_FIRST_COMMENT_REEL,
+      targetAudience: DEFAULT_TARGET_AUDIENCE,
+      contentPillars: DEFAULT_CONTENT_PILLARS,
+      brandNotes:     DEFAULT_BRAND_NOTES,
       ...settings,
     }).returning();
     res.json({ preset });

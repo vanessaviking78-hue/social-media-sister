@@ -18,6 +18,7 @@ export async function runMigrations(): Promise<void> {
     await addStickerConfigColumn();
     await addRenderedImageUrlsColumn();
     await backfillFirstCommentDefaults();
+    await backfillPersonalityProfileDefaults();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -226,6 +227,26 @@ async function backfillFirstCommentDefaults(): Promise<void> {
   if (updated > 0) {
     logger.info({ updated }, "Backfilled default first-comment CTAs on existing client presets");
   }
+}
+
+async function backfillPersonalityProfileDefaults(): Promise<void> {
+  const DEFAULT_TARGET_AUDIENCE = "Women over 35, perimenopause, women in the local area, who want to feel good in themselves";
+  const DEFAULT_CONTENT_PILLARS = "Set by Vanessa's spreadsheets";
+  const DEFAULT_BRAND_NOTES     = "Warm, affable, friendly, personality over professionalism. Affable.";
+
+  const result = await db.execute(sql`
+    UPDATE client_presets
+    SET
+      target_audience  = COALESCE(NULLIF(TRIM(target_audience),  ''), ${DEFAULT_TARGET_AUDIENCE}),
+      content_pillars  = COALESCE(NULLIF(TRIM(content_pillars),  ''), ${DEFAULT_CONTENT_PILLARS}),
+      brand_notes      = COALESCE(NULLIF(TRIM(brand_notes),      ''), ${DEFAULT_BRAND_NOTES})
+    WHERE
+      target_audience IS NULL OR TRIM(target_audience) = ''
+      OR content_pillars IS NULL OR TRIM(content_pillars) = ''
+      OR brand_notes IS NULL OR TRIM(brand_notes) = ''
+  `);
+  const updated = (result as { rowCount?: number }).rowCount ?? 0;
+  logger.info({ updated }, "Backfilled default personality profile fields on existing client presets");
 }
 
 async function normalizeTextPositionValues(): Promise<void> {
