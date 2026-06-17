@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
-import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw, Facebook, Instagram, Unlink, ChevronDown, ChevronUp, Clock, BookOpen, Zap, UserCheck, Link2, Brain, Upload } from "lucide-react";
+import { Trash2, Pencil, Save, X, Layers, ArrowLeft, MessageSquareText, CalendarDays, BarChart3, ShieldCheck, Plus, CheckCircle2, AlertCircle, Loader2, Globe, Copy, RefreshCw, Facebook, Instagram, Unlink, ChevronDown, ChevronUp, Clock, BookOpen, Zap, UserCheck, Link2, Brain, Upload, ImageOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -989,9 +989,14 @@ export default function PresetsPage() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2.5 mb-2">
-                        {preset.logoUrl && (
+                        {preset.logoUrl ? (
                           <div className="w-14 h-14 rounded-xl bg-white/5 border border-gray-700 flex items-center justify-center overflow-hidden p-1.5 shrink-0">
                             <img src={preset.logoUrl} alt="Logo" className="max-w-full max-h-full object-contain" />
+                          </div>
+                        ) : (
+                          <div className="w-14 h-14 rounded-xl bg-amber-950/40 border border-amber-500/40 flex flex-col items-center justify-center shrink-0 gap-0.5" title="No logo uploaded yet">
+                            <ImageOff className="w-5 h-5 text-amber-400" />
+                            <span className="text-amber-400 text-[9px] font-semibold uppercase tracking-wide leading-none">No logo</span>
                           </div>
                         )}
                         <h3 className="text-lg font-semibold text-white">{preset.name}</h3>
