@@ -219,10 +219,22 @@ const MEN_STUDIO_PRESETS: PhotoStudioPreset[] = [
   { id: "db-08", name: "Bailey Fashion Archive Portrait",         hasColour: false },
   { id: "db-09", name: "Industrial Loft Lifestyle Portrait",      hasColour: false },
   { id: "db-10", name: "Iconic Close-Up Portrait",                hasColour: false },
+  // Clinical Scrubs
+  { id: "cs-01", name: "Clinical Consultation Portrait",              hasColour: true  },
+  { id: "cs-02", name: "Luxury Studio Healthcare Headshot",           hasColour: true  },
+  { id: "cs-03", name: "Arranging Skincare Products — Clinic Shelves",hasColour: true  },
+  { id: "cs-04", name: "Reviewing Patient Results",                   hasColour: true  },
+  { id: "cs-05", name: "Walking Through Luxury Clinic",               hasColour: true  },
+  { id: "cs-06", name: "Skincare Shelf Curation Close-Up",            hasColour: true  },
+  { id: "cs-07", name: "Luxury Aesthetic Medicine Portrait",          hasColour: true  },
+  { id: "cs-08", name: "Patient Care Interaction",                    hasColour: true  },
+  { id: "cs-09", name: "Studio Healthcare Brand Portrait",            hasColour: true  },
+  { id: "cs-10", name: "Luxury Skincare Consultation Environment",    hasColour: true  },
 ];
 
 const MEN_COLOUR_IDS  = ["ms-01","ms-02","ms-03","ms-04","ms-05","ms-06","ms-07","ms-08","ms-09","ms-10"];
 const MEN_BAILEY_IDS  = ["db-01","db-02","db-03","db-04","db-05","db-06","db-07","db-08","db-09","db-10"];
+const MEN_SCRUBS_IDS  = ["cs-01","cs-02","cs-03","cs-04","cs-05","cs-06","cs-07","cs-08","cs-09","cs-10"];
 
 const ALL_PRESETS = [...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
 const findPreset = (id: string) => ALL_PRESETS.find((p) => p.id === id);
@@ -359,7 +371,8 @@ export default function AiPortraitStudio() {
     });
   };
 
-  const [activeGender, setActiveGender] = useState<"women" | "men">("women");
+  const [activeGender, setActiveGender]   = useState<"women" | "men">("women");
+  const [menScrubColor, setMenScrubColor] = useState("#453761");
 
   const selectAll = () => {
     if (activeGender === "men") {
@@ -386,7 +399,9 @@ export default function AiPortraitStudio() {
       const preset = findPreset(id);
       return {
         id,
-        scrubColor: preset?.hasColour ? (presetColours[id]?.trim() || "navy blue") : undefined,
+        scrubColor: preset?.hasColour
+          ? (MEN_SCRUBS_IDS.includes(id) ? menScrubColor : (presetColours[id]?.trim() || "navy blue"))
+          : undefined,
         aspectRatio,
       };
     });
@@ -863,8 +878,9 @@ export default function AiPortraitStudio() {
 
             {activeGender === "men" && (() => {
               const menCategories = [
-                { label: "Colour Portraits", ids: MEN_COLOUR_IDS },
-                { label: "David Bailey Editorial — Black & White", ids: MEN_BAILEY_IDS },
+                { label: "Colour Portraits", ids: MEN_COLOUR_IDS, scrubPicker: false },
+                { label: "David Bailey Editorial — Black & White", ids: MEN_BAILEY_IDS, scrubPicker: false },
+                { label: "Clinical Scrubs", ids: MEN_SCRUBS_IDS, scrubPicker: true },
               ];
               return (
                 <div className="space-y-5">
@@ -883,6 +899,32 @@ export default function AiPortraitStudio() {
                             </button>
                           </div>
                         </div>
+                        {cat.scrubPicker && (
+                          <div className="flex items-center gap-3 mb-3 p-3 rounded-lg border border-border/30 bg-muted/10" onClick={(e) => e.stopPropagation()}>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">Scrub colour</span>
+                            <div className="relative flex-shrink-0">
+                              <input
+                                type="color"
+                                value={menScrubColor}
+                                onChange={(e) => setMenScrubColor(e.target.value)}
+                                className="w-8 h-8 rounded cursor-pointer border border-border/40 bg-transparent p-0.5"
+                                title="Pick scrub colour"
+                              />
+                            </div>
+                            <input
+                              type="text"
+                              value={menScrubColor}
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setMenScrubColor(v);
+                              }}
+                              maxLength={7}
+                              className="w-24 text-xs font-mono bg-background border border-border/50 rounded px-2 py-1 focus:outline-none focus:border-violet-500/50 uppercase"
+                              placeholder="#453761"
+                            />
+                            <div className="w-6 h-6 rounded-md border border-border/40 flex-shrink-0" style={{ backgroundColor: menScrubColor }} />
+                          </div>
+                        )}
                         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
                           {catPresets.map((preset) => {
                             const isSelected = selectedPresets.has(preset.id);

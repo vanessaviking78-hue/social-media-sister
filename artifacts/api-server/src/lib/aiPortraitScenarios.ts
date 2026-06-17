@@ -383,6 +383,67 @@ export const MEN_STUDIO_PRESETS: PhotoStudioPreset[] = [
     hasColour: false,
     promptTemplate: `Premium healthcare campaign portrait of an elite male medical professional, slightly off-center composition, same facial features and likeness as the reference photo. He wears a tailored white shirt and luxury denim, projecting intelligence, warmth, and credibility. Ultra-high-end commercial portrait photography, 85mm lens, f/4.5. Visible pores and realistic skin texture, subtle facial details, realistic gloss reflections, dimensional skin rendering. Natural hair texture, controlled volume, realistic strand detail under studio lighting. Crisp cotton shirt with premium tailoring, realistic seams, authentic denim weave and folds. Relaxed posture, genuine confidence, approachable executive presence. Soft gradient studio backdrop transitioning from warm gray to charcoal. Large cinematic key light, elegant rim light separation, realistic reflections, luxury portrait sculpting. Global luxury campaign aesthetic, refined tonal balance, premium magazine finish. Must look physically believable and naturally photographed, not CGI.`,
   },
+  // ── Clinical Scrubs ──────────────────────────────────────────────────────
+  {
+    id: "cs-01",
+    name: "Clinical Consultation Portrait",
+    hasColour: true,
+    promptTemplate: `Medium-format commercial healthcare photography, 85mm lens, f/2.8, ultra-high-resolution RAW capture, shallow depth of field. Three-quarter environmental portrait. Professional male medical practitioner wearing premium scrubs in [COLOUR], standing beside a patient during a consultation, patient softly out of focus. Visible pores and realistic skin texture, subtle peach fuzz, natural tonal variation. Professional grooming, natural strand separation. Premium medical scrubs with visible stitching, realistic fabric folds, colour [COLOUR] rendered accurately. Warm attentive expression, engaged with patient, natural hand gestures. Luxury bokeh environment from blurred clinic lighting, intentionally unrecognizable healthcare setting. Large softbox key light, subtle rim lighting, natural skin reflections. Premium healthcare campaign aesthetic, clean skin tones. Must look physically believable and naturally photographed, not CGI or overly AI-generated. Same facial features as reference photo.`,
+  },
+  {
+    id: "cs-02",
+    name: "Luxury Studio Healthcare Headshot",
+    hasColour: true,
+    promptTemplate: `Hasselblad X2D portrait photography, 100mm lens, f/5.6. Tight chest-up portrait. Male medical professional wearing tailored scrubs in [COLOUR], photographed for a luxury aesthetic medicine campaign. Visible pores and realistic skin texture, natural under-eye detail. Neatly styled with realistic texture. Structured scrub top with premium fabric texture in [COLOUR], realistic folds and seams. Direct eye contact, calm confidence. Soft gradient fading into creamy bokeh highlights. Beauty key light with subtle edge illumination. Luxury healthcare editorial colour grading. Must look physically believable and naturally photographed. Same facial features as reference photo.`,
+  },
+  {
+    id: "cs-03",
+    name: "Arranging Skincare Products — Clinic Shelves",
+    hasColour: true,
+    promptTemplate: `Editorial commercial photography, 50mm lens, f/2. Mid-action environmental portrait. Male medical professional in scrubs [COLOUR] carefully arranging premium skincare products on illuminated clinic shelving. Focused expression while organizing skincare displays. Premium skincare bottles, glass packaging, luxury medical-grade skincare branding blurred and elegant. Soft-focus bokeh clinic environment with glowing shelf illumination. Warm shelf lighting mixed with studio fill light. High-end skincare campaign aesthetic. Scrub fabric in [COLOUR] rendered with realistic dimensionality. Must look physically believable and naturally photographed. Same facial features as reference photo.`,
+  },
+  {
+    id: "cs-04",
+    name: "Reviewing Patient Results",
+    hasColour: true,
+    promptTemplate: `Full-frame DSLR, 85mm lens, f/2.2. Over-the-shoulder consultation portrait. Medical professional in scrubs [COLOUR] reviewing treatment images with a patient. Visible pores and realistic skin texture. Engaged, reassuring expression, collaborative body language. Bokeh lighting and softly blurred clinic environment. Bright luxury clinical lighting softened for editorial appeal. Modern aesthetic medicine campaign look. Premium scrub fabric in [COLOUR] with realistic folds. Must look physically believable and naturally photographed. Same facial features as reference photo.`,
+  },
+  {
+    id: "cs-05",
+    name: "Walking Through Luxury Clinic",
+    hasColour: true,
+    promptTemplate: `Commercial healthcare campaign photography, 35mm lens, f/2.8. Full-body walking portrait. Male practitioner in scrubs [COLOUR] confidently walking through a luxury clinic corridor. Visible pores, realistic skin depth. Premium scrub fabric in [COLOUR] showing realistic drape and motion. Relaxed confidence, approachable leadership presence. Abstract luxury clinic shapes in background bokeh. Natural overhead clinic lighting with cinematic side fill. Luxury healthcare advertising aesthetic. Must look physically believable and naturally photographed. Same facial features as reference photo.`,
+  },
+  {
+    id: "cs-06",
+    name: "Skincare Shelf Curation Close-Up",
+    hasColour: true,
+    promptTemplate: `70mm lens, f/2. Waist-up portrait during product arrangement. Male clinician in scrubs [COLOUR] selecting premium skincare products from a shelf display. RAW skin texture, visible pores. Matte scrub fabric in [COLOUR] with subtle highlights. Focused concentration with natural hand placement. Elegant bokeh from illuminated shelving units. Product-focused lighting with realistic reflections on glass containers. Luxury skincare campaign grading. Must look physically believable and naturally photographed. Same facial features as reference photo.`,
+  },
+  {
+    id: "cs-07",
+    name: "Luxury Aesthetic Medicine Portrait",
+    hasColour: true,
+    promptTemplate: `Medium-format portrait photography, 90mm lens, f/4. Standing portrait with slight angle. Medical professional in premium scrubs [COLOUR] posing between consultations. Visible pores and realistic skin texture. Controlled styling with natural texture. Premium medical fabric in [COLOUR] with realistic stitching. Calm confidence, hands loosely clasped. Rich bokeh backdrop inspired by luxury clinic lighting. Soft octabox key light with subtle rim lighting. Premium healthcare editorial tones. Must look physically believable and naturally photographed. Same facial features as reference photo.`,
+  },
+  {
+    id: "cs-08",
+    name: "Patient Care Interaction",
+    hasColour: true,
+    promptTemplate: `Documentary editorial photography, 50mm lens, f/2. Candid consultation moment. Male clinician in scrubs [COLOUR] interacting warmly with a patient. Visible pores, natural skin detail. Natural professional styling. Realistic scrub folds and premium fabric texture in [COLOUR]. Genuine smile, compassionate communication. Soft clinical bokeh with no identifiable clinic features. Bright healthcare lighting balanced with editorial softness. Must look physically believable and naturally photographed. Same facial features as reference photo.`,
+  },
+  {
+    id: "cs-09",
+    name: "Studio Healthcare Brand Portrait",
+    hasColour: true,
+    promptTemplate: `Hasselblad commercial portrait, 120mm lens, f/5.6. Luxury campaign portrait. Male doctor in scrubs [COLOUR] photographed against a seamless bokeh-inspired studio backdrop. Visible pores, realistic skin texture. Professional styling with realistic strand detail. Premium scrub fabric in [COLOUR] rendered with realistic dimensionality. Confident healthcare leader, direct eye contact. Large beauty key light, subtle edge separation, realistic catchlights. Sophisticated healthcare branding aesthetic. Must look physically believable and naturally photographed. Same facial features as reference photo.`,
+  },
+  {
+    id: "cs-10",
+    name: "Luxury Skincare Consultation Environment",
+    hasColour: true,
+    promptTemplate: `Editorial advertising photography, 85mm lens, f/2.5. Environmental portrait with product displays visible. Male medical professional in scrubs [COLOUR], standing beside beautifully merchandised skincare shelves, discussing treatment options with a patient. Visible pores and realistic skin texture, subtle peach fuzz. Premium scrub fabric in [COLOUR] with visible stitching and realistic draping. Professional, welcoming, trustworthy. Elegant skincare packaging, glass bottles, luxury clinic displays. Bokeh lighting obscuring all clinic identifiers while maintaining premium healthcare atmosphere. Balanced clinical and commercial lighting, dimensional highlights, realistic reflections on products. Ultra-premium aesthetic clinic campaign. Must look physically believable and naturally photographed, not CGI or overly AI-generated. Same facial features as reference photo.`,
+  },
   // ── David Bailey Editorial — Black & White ───────────────────────────────
   {
     id: "db-01",
