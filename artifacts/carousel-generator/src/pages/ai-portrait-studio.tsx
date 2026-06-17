@@ -220,16 +220,16 @@ const MEN_STUDIO_PRESETS: PhotoStudioPreset[] = [
   { id: "db-09", name: "Industrial Loft Lifestyle Portrait",      hasColour: false },
   { id: "db-10", name: "Iconic Close-Up Portrait",                hasColour: false },
   // Clinical Scrubs
-  { id: "cs-01", name: "Clinical Consultation Portrait",              hasColour: true  },
-  { id: "cs-02", name: "Luxury Studio Healthcare Headshot",           hasColour: true  },
-  { id: "cs-03", name: "Arranging Skincare Products — Clinic Shelves",hasColour: true  },
-  { id: "cs-04", name: "Reviewing Patient Results",                   hasColour: true  },
-  { id: "cs-05", name: "Walking Through Luxury Clinic",               hasColour: true  },
-  { id: "cs-06", name: "Skincare Shelf Curation Close-Up",            hasColour: true  },
-  { id: "cs-07", name: "Luxury Aesthetic Medicine Portrait",          hasColour: true  },
-  { id: "cs-08", name: "Patient Care Interaction",                    hasColour: true  },
-  { id: "cs-09", name: "Studio Healthcare Brand Portrait",            hasColour: true  },
-  { id: "cs-10", name: "Luxury Skincare Consultation Environment",    hasColour: true  },
+  { id: "cs-01", name: "Scrubs — Corridor Confidence Walk",    hasColour: true },
+  { id: "cs-02", name: "Scrubs — Consultation Desk Authority", hasColour: true },
+  { id: "cs-03", name: "Scrubs — Arms Crossed Clinical",       hasColour: true },
+  { id: "cs-04", name: "Scrubs — Window Lean Natural Light",   hasColour: true },
+  { id: "cs-05", name: "Scrubs — Reception Stand Lifestyle",   hasColour: true },
+  { id: "cs-06", name: "Scrubs — Head and Shoulders Clean",    hasColour: true },
+  { id: "cs-07", name: "Scrubs — Coffee Cup Casual Clinical",  hasColour: true },
+  { id: "cs-08", name: "Scrubs — Outdoor Clinic Entrance",     hasColour: true },
+  { id: "cs-09", name: "Scrubs — Stethoscope Detail Portrait", hasColour: true },
+  { id: "cs-10", name: "Scrubs — Treatment Room Seated",       hasColour: true },
 ];
 
 const MEN_COLOUR_IDS  = ["ms-01","ms-02","ms-03","ms-04","ms-05","ms-06","ms-07","ms-08","ms-09","ms-10"];
@@ -946,6 +946,14 @@ export default function AiPortraitStudio() {
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium leading-snug">{preset.name}</p>
+                                    {preset.hasColour && (
+                                      <div className="flex items-center gap-1.5 mt-1">
+                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                                          scrubs colour
+                                        </Badge>
+                                        <div className="w-3 h-3 rounded-sm border border-border/40 flex-shrink-0" style={{ backgroundColor: menScrubColor }} />
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </div>
