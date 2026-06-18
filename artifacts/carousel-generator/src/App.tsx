@@ -59,6 +59,7 @@ import Settings from "@/pages/settings";
 import CanvaOAuthResult from "@/pages/canva-oauth-result";
 import ApprovalBundles from "@/pages/approval-bundles";
 import ClientApproval from "@/pages/client-approval";
+import ContentGenerator from "@/pages/content-generator";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +108,7 @@ function ProtectedRouter() {
       <Route path="/preview" component={PreviewIndex} />
       <Route path="/settings" component={Settings} />
       <Route path="/approval-bundles" component={ApprovalBundles} />
+      <Route path="/content-generator" component={ContentGenerator} />
       <Route component={NotFound} />
     </Switch>
   );
