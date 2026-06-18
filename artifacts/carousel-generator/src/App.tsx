@@ -134,6 +134,7 @@ function AppContent() {
   const [isFounderWelcome] = useRoute("/founder-welcome");
   const [isTrialBundle] = useRoute("/trialbundle");
   const [isContentPreview, contentPreviewParams] = useRoute("/preview/:clientSlug");
+  const [isContentGenerator] = useRoute("/content-generator");
   const [location] = useLocation();
   const isSplash = location === "/";
 
@@ -196,6 +197,9 @@ function AppContent() {
   }
   if (isContentPreview && contentPreviewParams?.clientSlug) {
     return <ContentPreview clientSlug={contentPreviewParams.clientSlug} />;
+  }
+  if (isContentGenerator) {
+    return <ContentGenerator />;
   }
 
   return (
