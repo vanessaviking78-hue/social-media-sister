@@ -256,9 +256,9 @@ const TOOLS = [
   },
   {
     href: "/content-generator",
-    icon: FileText,
+    icon: Wand2,
     name: "Content Generator",
-    description: "Fill in clinician details, paste post titles from the tick form, and get carousel-ready copy for every slide. Downloads as a CSV.",
+    description: "Enter clinician details, pick a tone, and generate carousel CSVs ready for the builder.",
     color: "from-pink-500/20 to-pink-500/5",
     border: "hover:border-pink-500/50",
     iconColor: "text-pink-400",
