@@ -7,18 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { normalizeTextPosition, type ClientPreset, type PresetStyleFields } from "@/lib/use-presets";
 
-interface CcWorkspace {
-  id: string;
-  name: string;
-}
-
 interface PresetSelectorProps {
   presets: ClientPreset[];
   loading: boolean;
   selectedPresetId: number | null;
   onSelectPreset: (preset: ClientPreset) => void;
-  onSavePreset: (name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null, captionFootnote?: string) => Promise<void>;
-  onUpdatePreset: (id: number, name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null, captionFootnote?: string) => Promise<void>;
+  onSavePreset: (name: string, styles: PresetStyleFields, _ccWorkspaceId?: string, logoUrl?: string | null, captionFootnote?: string) => Promise<void>;
+  onUpdatePreset: (id: number, name: string, styles: PresetStyleFields, _ccWorkspaceId?: string, logoUrl?: string | null, captionFootnote?: string) => Promise<void>;
   onDeletePreset: (id: number) => Promise<void>;
   getCurrentStyles: () => PresetStyleFields;
   logoFile?: File | null;
@@ -41,7 +36,6 @@ export default function PresetSelector({
 }: PresetSelectorProps) {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [saveName, setSaveName] = useState("");
-  const [saveCcWorkspaceId, setSaveCcWorkspaceId] = useState("");
   const [saveCaptionFootnote, setSaveCaptionFootnote] = useState("");
   const [saving, setSaving] = useState(false);
   const [showManage, setShowManage] = useState(false);
@@ -49,7 +43,6 @@ export default function PresetSelector({
   const [editName, setEditName] = useState("");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [renameError, setRenameError] = useState<string | null>(null);
-  const [ccWorkspaces, setCcWorkspaces] = useState<CcWorkspace[]>([]);
   const managePanelRef = useRef<HTMLDivElement>(null);
   const saveDialogRef = useRef<HTMLDivElement>(null);
 
@@ -62,7 +55,6 @@ export default function PresetSelector({
       if (saveDialogRef.current && !saveDialogRef.current.contains(target)) {
         setShowSaveDialog(false);
         setSaveName("");
-        setSaveCcWorkspaceId("");
         setSaveCaptionFootnote("");
         setSaveError(null);
       }
@@ -71,7 +63,6 @@ export default function PresetSelector({
       if (e.key === "Escape") {
         setShowSaveDialog(false);
         setSaveName("");
-        setSaveCcWorkspaceId("");
         setSaveCaptionFootnote("");
         setSaveError(null);
       }
@@ -123,13 +114,6 @@ export default function PresetSelector({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [editingId]);
 
-  useEffect(() => {
-    fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/workspaces`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d?.workspaces) setCcWorkspaces(d.workspaces); })
-      .catch(() => {});
-  }, []);
-
   const handleLoad = (value: string) => {
     if (value === "__none__") return;
     const preset = presets.find((p) => String(p.id) === value);
@@ -152,10 +136,9 @@ export default function PresetSelector({
       } else if (currentLogoUrl) {
         logoUrl = currentLogoUrl;
       }
-      await onSavePreset(saveName.trim(), styles, saveCcWorkspaceId || undefined, logoUrl, saveCaptionFootnote);
+      await onSavePreset(saveName.trim(), styles, undefined, logoUrl, saveCaptionFootnote);
       toast.success(`Preset "${saveName.trim()}" saved`);
       setSaveName("");
-      setSaveCcWorkspaceId("");
       setSaveCaptionFootnote("");
       setSaveError(null);
       setShowSaveDialog(false);
@@ -188,7 +171,7 @@ export default function PresetSelector({
       } else if (currentLogoUrl) {
         logoUrl = currentLogoUrl;
       }
-      await onUpdatePreset(selectedPresetId, preset.name, styles, preset.ccWorkspaceId || undefined, logoUrl, preset.captionFootnote);
+      await onUpdatePreset(selectedPresetId, preset.name, styles, undefined, logoUrl, preset.captionFootnote);
       toast.success(`Preset "${preset.name}" updated`);
     } catch (err: any) {
       toast.error(err?.message || "Failed to update preset");
@@ -238,7 +221,7 @@ export default function PresetSelector({
         accentColor: preset.accentColor,
         coverSubheading: preset.coverSubheading || "",
         contentFontSize: preset.contentFontSize ?? 44,
-      }, preset.ccWorkspaceId || undefined, preset.logoUrl, preset.captionFootnote);
+      }, undefined, preset.logoUrl, preset.captionFootnote);
       toast.success("Preset renamed");
       setEditingId(null);
       setEditName("");
@@ -251,12 +234,6 @@ export default function PresetSelector({
         toast.error(msg);
       }
     }
-  };
-
-  const getWorkspaceName = (wsId: string | null) => {
-    if (!wsId) return null;
-    const ws = ccWorkspaces.find((w) => w.id === wsId);
-    return ws?.name || wsId;
   };
 
   return (
@@ -298,7 +275,7 @@ export default function PresetSelector({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => { setShowSaveDialog(true); setSaveName(""); setSaveCcWorkspaceId(""); setSaveCaptionFootnote(""); setSaveError(null); }}
+          onClick={() => { setShowSaveDialog(true); setSaveName(""); setSaveCaptionFootnote(""); setSaveError(null); }}
           className="mt-5 border-pink-600 text-pink-400 hover:text-white hover:bg-pink-600"
         >
           <Save className="w-3.5 h-3.5 mr-1" />
@@ -339,22 +316,6 @@ export default function PresetSelector({
               <p className="text-xs text-red-400 mt-1.5">{saveError}</p>
             )}
           </div>
-          {ccWorkspaces.length > 0 && (
-            <div>
-              <Label className="text-xs text-gray-400 mb-1 block">Cloud Campaign Workspace (optional)</Label>
-              <Select value={saveCcWorkspaceId || "__none__"} onValueChange={(v) => setSaveCcWorkspaceId(v === "__none__" ? "" : v)}>
-                <SelectTrigger className="bg-gray-900 border-gray-600 text-white">
-                  <SelectValue placeholder="Link to workspace" />
-                </SelectTrigger>
-                <SelectContent className="bg-gray-800 border-gray-700">
-                  <SelectItem value="__none__" className="text-gray-400">No workspace</SelectItem>
-                  {ccWorkspaces.map((ws) => (
-                    <SelectItem key={ws.id} value={ws.id} className="text-white">{ws.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
           <div>
             <Label className="text-xs text-gray-400 mb-1 block">Caption Footnote (appended to AI captions)</Label>
             <textarea
@@ -411,9 +372,6 @@ export default function PresetSelector({
                 <>
                   <div className="flex-1">
                     <span className="text-sm text-gray-200">{p.name}</span>
-                    {p.ccWorkspaceId && (
-                      <span className="text-[10px] text-gray-500 ml-2">CC: {getWorkspaceName(p.ccWorkspaceId)}</span>
-                    )}
                     {p.logoUrl && (
                       <span className="text-[10px] text-gray-500 ml-2">has logo</span>
                     )}

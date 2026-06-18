@@ -760,7 +760,7 @@ export default function BulkStories() {
                   ["option_a / option_b", "Poll options (exactly 2) or quiz options"],
                   ["option_c / option_d", "Extra quiz options (optional)"],
                   ["correct_option", "Quiz only: 0 for option_a, 1 for option_b…"],
-                  ["caption", "Internal note or Cloud Campaign caption"],
+                  ["caption", "Internal note or caption for this story"],
                 ].map(([col, desc]) => (
                   <div key={col} className="flex gap-1.5">
                     <span className="text-[11px] text-zinc-500 font-medium flex-shrink-0">{col}</span>

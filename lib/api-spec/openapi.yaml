@@ -582,7 +582,7 @@ components:
             required: [title, caption]
         platform:
           type: string
-          enum: [meta, cloud_campaign, both]
+          enum: [meta]
         isTrial:
           type: boolean
         stickerConfig:

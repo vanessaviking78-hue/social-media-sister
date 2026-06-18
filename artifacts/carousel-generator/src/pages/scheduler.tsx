@@ -22,17 +22,14 @@ type ScheduledPost = {
   metaStatus: "pending" | "success" | "failed" | "skipped";
   metaResult: { igPostId?: string; fbPostId?: string; error?: string } | null;
   metaPostedAt: string | null;
-  ccStatus: "pending" | "success" | "failed" | "skipped";
-  ccResult: { postId?: string; error?: string } | null;
-  ccPostedAt: string | null;
   isTrial: boolean;
   notes: string;
   createdAt: string;
 };
 
 type Stats = {
-  totals: { total: number; metaSuccess: number; metaFail: number; ccSuccess: number; ccFail: number };
-  byClient: Record<string, { total: number; metaSuccess: number; metaFail: number; ccSuccess: number; ccFail: number }>;
+  totals: { total: number; metaSuccess: number; metaFail: number };
+  byClient: Record<string, { total: number; metaSuccess: number; metaFail: number }>;
   pendingCount: number;
 };
 
@@ -147,7 +144,7 @@ function ScheduleDialog({ presets, onClose, onSaved, editing }: ScheduleDialogPr
       <div className="bg-zinc-900 border border-zinc-700 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="p-6 border-b border-zinc-800">
           <h2 className="text-lg font-semibold text-white">{editing ? "Edit Scheduled Post" : "Schedule a Post"}</h2>
-          <p className="text-sm text-zinc-400 mt-1">Posts will go to both Meta direct and Cloud Campaign simultaneously.</p>
+          <p className="text-sm text-zinc-400 mt-1">Schedule posts to go live via Meta.</p>
         </div>
         <div className="p-6 space-y-4">
           {!editing && (
@@ -313,7 +310,6 @@ export default function Scheduler() {
   const failed = posts.filter((p) => p.status === "failed").length;
 
   const metaPct = stats ? pct(stats.totals.metaSuccess, stats.totals.metaSuccess + stats.totals.metaFail) : "—";
-  const ccPct = stats ? pct(stats.totals.ccSuccess, stats.totals.ccSuccess + stats.totals.ccFail) : "—";
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -335,7 +331,7 @@ export default function Scheduler() {
           </Link>
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-white">Posting Scheduler</h1>
-            <p className="text-zinc-400 text-sm mt-0.5">Dual-rail posting — Meta Direct + Cloud Campaign in parallel</p>
+            <p className="text-zinc-400 text-sm mt-0.5">Schedule and post directly via Meta</p>
           </div>
           <Button onClick={() => setShowDialog(true)} className="bg-pink-600 hover:bg-pink-700 text-white gap-2">
             <Plus size={16} /> Schedule Post
@@ -354,10 +350,6 @@ export default function Scheduler() {
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
             <div className="text-2xl font-bold text-white">{metaPct}</div>
             <div className="text-xs text-zinc-400 mt-1">Meta success rate</div>
-          </div>
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4">
-            <div className="text-2xl font-bold text-white">{ccPct}</div>
-            <div className="text-xs text-zinc-400 mt-1">CC success rate</div>
           </div>
         </div>
 
@@ -414,47 +406,21 @@ export default function Scheduler() {
         {tab === "dashboard" ? (
           <div className="space-y-4">
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-              <h2 className="text-base font-semibold mb-1">Meta Direct vs Cloud Campaign — Reliability Trial</h2>
-              <p className="text-sm text-zinc-400 mb-4">Both rails fire simultaneously for every post. Use this data to decide whether to cancel CC.</p>
+              <h2 className="text-base font-semibold mb-1">Meta Direct — Posting Stats</h2>
 
               {stats && stats.totals.total > 0 ? (
                 <>
-                  <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="bg-zinc-800/60 rounded-lg p-4">
-                      <div className="text-xs text-zinc-400 mb-1">Meta Direct</div>
-                      <div className="text-3xl font-bold text-white mb-1">{metaPct}</div>
-                      <div className="text-xs text-zinc-400">{stats.totals.metaSuccess} ok / {stats.totals.metaFail} failed</div>
-                      <div className="mt-2 h-2 bg-zinc-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-emerald-500 rounded-full"
-                          style={{ width: `${stats.totals.metaSuccess + stats.totals.metaFail > 0 ? (stats.totals.metaSuccess / (stats.totals.metaSuccess + stats.totals.metaFail)) * 100 : 0}%` }}
-                        />
-                      </div>
-                    </div>
-                    <div className="bg-zinc-800/60 rounded-lg p-4">
-                      <div className="text-xs text-zinc-400 mb-1">Cloud Campaign</div>
-                      <div className="text-3xl font-bold text-white mb-1">{ccPct}</div>
-                      <div className="text-xs text-zinc-400">{stats.totals.ccSuccess} ok / {stats.totals.ccFail} failed</div>
-                      <div className="mt-2 h-2 bg-zinc-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-blue-500 rounded-full"
-                          style={{ width: `${stats.totals.ccSuccess + stats.totals.ccFail > 0 ? (stats.totals.ccSuccess / (stats.totals.ccSuccess + stats.totals.ccFail)) * 100 : 0}%` }}
-                        />
-                      </div>
+                  <div className="bg-zinc-800/60 rounded-lg p-4 mb-6 max-w-xs">
+                    <div className="text-xs text-zinc-400 mb-1">Meta Direct</div>
+                    <div className="text-3xl font-bold text-white mb-1">{metaPct}</div>
+                    <div className="text-xs text-zinc-400">{stats.totals.metaSuccess} ok / {stats.totals.metaFail} failed</div>
+                    <div className="mt-2 h-2 bg-zinc-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 rounded-full"
+                        style={{ width: `${stats.totals.metaSuccess + stats.totals.metaFail > 0 ? (stats.totals.metaSuccess / (stats.totals.metaSuccess + stats.totals.metaFail)) * 100 : 0}%` }}
+                      />
                     </div>
                   </div>
-
-                  {stats.totals.metaSuccess + stats.totals.metaFail >= 10 && (
-                    <div className={`rounded-lg p-4 text-sm mb-4 ${
-                      stats.totals.metaSuccess / Math.max(1, stats.totals.metaSuccess + stats.totals.metaFail) >= 0.95
-                        ? "bg-emerald-900/30 border border-emerald-700 text-emerald-300"
-                        : "bg-yellow-900/30 border border-yellow-700 text-yellow-300"
-                    }`}>
-                      {stats.totals.metaSuccess / Math.max(1, stats.totals.metaSuccess + stats.totals.metaFail) >= 0.95
-                        ? "✓ Meta Direct is performing at 95%+. You have the data to confidently cancel Cloud Campaign."
-                        : "Meta Direct is below 95%. Keep running the trial before making a decision on CC."}
-                    </div>
-                  )}
 
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -463,9 +429,7 @@ export default function Scheduler() {
                           <th className="pb-2 pr-4 font-medium">Client</th>
                           <th className="pb-2 pr-4 font-medium text-right">Posts</th>
                           <th className="pb-2 pr-4 font-medium text-right">Meta ✓</th>
-                          <th className="pb-2 pr-4 font-medium text-right">Meta %</th>
-                          <th className="pb-2 pr-4 font-medium text-right">CC ✓</th>
-                          <th className="pb-2 font-medium text-right">CC %</th>
+                          <th className="pb-2 font-medium text-right">Meta %</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -474,9 +438,7 @@ export default function Scheduler() {
                             <td className="py-2 pr-4 text-white">{name}</td>
                             <td className="py-2 pr-4 text-right text-zinc-300">{s.total}</td>
                             <td className="py-2 pr-4 text-right text-emerald-400">{s.metaSuccess}</td>
-                            <td className="py-2 pr-4 text-right text-zinc-300">{pct(s.metaSuccess, s.metaSuccess + s.metaFail)}</td>
-                            <td className="py-2 pr-4 text-right text-blue-400">{s.ccSuccess}</td>
-                            <td className="py-2 text-right text-zinc-300">{pct(s.ccSuccess, s.ccSuccess + s.ccFail)}</td>
+                            <td className="py-2 text-right text-zinc-300">{pct(s.metaSuccess, s.metaSuccess + s.metaFail)}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -529,7 +491,6 @@ export default function Scheduler() {
                     {post.status === "published" && (
                       <div className="flex items-center gap-3 mt-1 justify-end">
                         <span className="text-xs text-zinc-500">Meta: {railBadge(post.metaStatus)}</span>
-                        <span className="text-xs text-zinc-500">CC: {railBadge(post.ccStatus)}</span>
                       </div>
                     )}
                   </div>
@@ -543,7 +504,7 @@ export default function Scheduler() {
 
                 {expandedId === post.id && (
                   <div className="border-t border-zinc-800 p-4 space-y-3">
-                    <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div className="text-xs">
                       <div>
                         <div className="text-zinc-400 mb-1 font-medium">Meta Direct</div>
                         <div className="flex items-center gap-1 mb-1">{railBadge(post.metaStatus)}</div>
@@ -551,13 +512,6 @@ export default function Scheduler() {
                         {post.metaResult?.fbPostId && <div className="text-zinc-400">FB: {post.metaResult.fbPostId}</div>}
                         {post.metaResult?.error && <div className="text-red-400">{post.metaResult.error}</div>}
                         {post.metaPostedAt && <div className="text-zinc-500 mt-1">Posted {fmtDate(post.metaPostedAt)}</div>}
-                      </div>
-                      <div>
-                        <div className="text-zinc-400 mb-1 font-medium">Cloud Campaign</div>
-                        <div className="flex items-center gap-1 mb-1">{railBadge(post.ccStatus)}</div>
-                        {post.ccResult?.postId && <div className="text-zinc-400">ID: {post.ccResult.postId}</div>}
-                        {post.ccResult?.error && <div className="text-red-400">{post.ccResult.error}</div>}
-                        {post.ccPostedAt && <div className="text-zinc-500 mt-1">Posted {fmtDate(post.ccPostedAt)}</div>}
                       </div>
                     </div>
                     {post.notes && <div className="text-xs text-zinc-400 bg-zinc-800/50 rounded px-3 py-2">{post.notes}</div>}

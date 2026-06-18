@@ -11,6 +11,4 @@ export type SchedulePostBodyPlatform =
 
 export const SchedulePostBodyPlatform = {
   meta: "meta",
-  cloud_campaign: "cloud_campaign",
-  both: "both",
 } as const;

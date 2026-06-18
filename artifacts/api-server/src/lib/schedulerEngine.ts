@@ -4,51 +4,6 @@ import { eq, lte, and } from "drizzle-orm";
 import { logger } from "./logger";
 
 const GRAPH = "https://graph.facebook.com/v19.0";
-const CC_BASE = "https://app.cloudcampaign.com/api/v1";
-
-let ccToken: string | null = null;
-let ccTokenExpiry = 0;
-
-async function getCCToken(): Promise<string> {
-  if (ccToken && Date.now() < ccTokenExpiry) return ccToken;
-  const apiKey = process.env.CLOUD_CAMPAIGN_API_KEY;
-  const apiSecret = process.env.CLOUD_CAMPAIGN_API_SECRET;
-  if (!apiKey || !apiSecret) throw new Error("CC API key/secret not configured");
-  const res = await fetch(`${CC_BASE}/auth/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ key: apiKey, secret: apiSecret }),
-  });
-  if (!res.ok) throw new Error(`CC auth failed: ${res.status}`);
-  const token = res.headers.get("x-api-token");
-  if (!token) throw new Error("No x-api-token in CC auth response");
-  ccToken = token;
-  ccTokenExpiry = Date.now() + 11 * 60 * 60 * 1000;
-  return token;
-}
-
-async function ccFetch(path: string, opts: RequestInit = {}): Promise<any> {
-  const agencyId = process.env.CLOUD_CAMPAIGN_AGENCY_ID;
-  if (!agencyId) throw new Error("CC agency ID not configured");
-  const token = await getCCToken();
-  const res = await fetch(`${CC_BASE}${path}`, {
-    ...opts,
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-      "x-agency-id": agencyId,
-      ...(opts.headers || {}),
-    },
-  });
-  const text = await res.text();
-  let data: any;
-  try { data = JSON.parse(text); } catch { data = { raw: text }; }
-  if (!res.ok) {
-    if (res.status === 401 || res.status === 403) { ccToken = null; ccTokenExpiry = 0; }
-    throw new Error(data?.message || data?.errorReason || `CC API error ${res.status}`);
-  }
-  return data;
-}
 
 async function igUpload(igId: string, token: string, imageUrl: string, isCarouselItem: boolean, caption?: string, audioName?: string): Promise<string> {
   const params: Record<string, string> = { image_url: imageUrl, access_token: token };
@@ -298,33 +253,6 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
   return result;
 }
 
-async function fireCCRail(post: typeof scheduledPostsTable.$inferSelect, preset: typeof clientPresetsTable.$inferSelect): Promise<{ postId?: string }> {
-  const wsId = preset.ccWorkspaceId;
-  if (!wsId) throw new Error("No CC workspace ID configured for this client");
-  const content = post.content as PostContent;
-  const media = content.videoUrl
-    ? [{ type: "VIDEO", sourceUrl: content.videoUrl }]
-    : (content.imageUrls || []).map((url) => ({ type: "IMAGE", sourceUrl: url }));
-
-  const data = await ccFetch(`/workspace/${wsId}/content`, {
-    method: "POST",
-    body: JSON.stringify({
-      title: content.title,
-      postNow: false,
-      approved: true,
-      captions: [
-        { text: content.caption, platform: "INSTAGRAM", index: 0 },
-        { text: content.caption, platform: "FACEBOOK", index: 0 },
-      ],
-      publishingSettings: {},
-      platformList: ["INSTAGRAM", "FACEBOOK"],
-      accountIds: [],
-      ...(media.length > 0 ? { media } : {}),
-    }),
-  });
-  return { postId: data.id };
-}
-
 async function processScheduledPosts(): Promise<void> {
   const now = new Date();
   const due = await db
@@ -350,41 +278,33 @@ async function processScheduledPosts(): Promise<void> {
     if (!preset) {
       const err = { error: "Preset not found" };
       await db.update(scheduledPostsTable).set({
-        status: "failed", metaStatus: "failed", metaResult: err,
-        ccStatus: "failed", ccResult: err, updatedAt: new Date(),
+        status: "failed", metaStatus: "failed", metaResult: err, updatedAt: new Date(),
       }).where(eq(scheduledPostsTable.id, post.id));
       continue;
     }
 
     const hasMetaConfig = !!(preset.metaPageAccessToken && (preset.metaInstagramAccountId || preset.metaFacebookPageId));
-    const hasCCConfig = !!preset.ccWorkspaceId;
 
-    const [metaSettled, ccSettled] = await Promise.allSettled([
+    const metaSettled = await Promise.allSettled([
       hasMetaConfig ? fireMetaRail(post, preset) : Promise.reject(new Error("Meta not configured for this client")),
-      hasCCConfig ? fireCCRail(post, preset) : Promise.reject(new Error("CC not configured for this client")),
     ]);
 
     const postedAt = new Date();
-    const metaOk = metaSettled.status === "fulfilled";
-    const ccOk = ccSettled.status === "fulfilled";
-    const metaResult = metaOk ? metaSettled.value : { error: (metaSettled.reason as Error)?.message || "Unknown error" };
-    const ccResult = ccOk ? ccSettled.value : { error: (ccSettled.reason as Error)?.message || "Unknown error" };
+    const metaOk = metaSettled[0].status === "fulfilled";
+    const metaResult = metaOk ? (metaSettled[0] as PromiseFulfilledResult<any>).value : { error: (metaSettled[0] as PromiseRejectedResult).reason?.message || "Unknown error" };
 
-    const overallStatus = (metaOk || ccOk) ? "published" : "failed";
+    const overallStatus = metaOk ? "published" : "failed";
 
     await db.update(scheduledPostsTable).set({
       status: overallStatus,
       metaStatus: hasMetaConfig ? (metaOk ? "success" : "failed") : "skipped",
       metaResult,
       metaPostedAt: metaOk ? postedAt : null,
-      ccStatus: hasCCConfig ? (ccOk ? "success" : "failed") : "skipped",
-      ccResult,
-      ccPostedAt: ccOk ? postedAt : null,
       updatedAt: postedAt,
     }).where(eq(scheduledPostsTable.id, post.id));
 
     logger.info(
-      { postId: post.id, client: post.clientName, type: post.postType, metaOk, ccOk },
+      { postId: post.id, client: post.clientName, type: post.postType, metaOk },
       "Scheduled post processed",
     );
   }

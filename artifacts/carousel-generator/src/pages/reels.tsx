@@ -178,16 +178,6 @@ export default function Reels() {
   const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null);
   const [musicPickerOpen, setMusicPickerOpen] = useState(false);
 
-  const [ccWorkspaces, setCcWorkspaces] = useState<Array<{ id: string; name: string }>>([]);
-  const [ccWorkspaceId, setCcWorkspaceId] = useState("");
-  const [ccCaption, setCcCaption] = useState("");
-  const [ccPushing, setCcPushing] = useState(false);
-  const [ccPushProgress, setCcPushProgress] = useState("");
-  const [ccLoading, setCcLoading] = useState(true);
-  const [wsNamesOpen, setWsNamesOpen] = useState(false);
-  const [wsLabelsDraft, setWsLabelsDraft] = useState<Record<string, string>>({});
-  const [wsLabelsSaving, setWsLabelsSaving] = useState(false);
-
   const [igPresets, setIgPresets] = useState<Array<{ id: number; name: string; metaPageAccessToken?: string | null; metaFacebookPageId?: string | null; metaInstagramAccountId?: string | null }>>([]);
   const [igPresetId, setIgPresetId] = useState("");
   const [igCaption, setIgCaption] = useState("");
@@ -233,11 +223,6 @@ export default function Reels() {
   const [bulkReelBlobs, setBulkReelBlobs] = useState<Blob[]>([]);
   const [bulkMediaThumbs, setBulkMediaThumbs] = useState<string[]>([]);
   const [bulkMediaLoadedCount, setBulkMediaLoadedCount] = useState(0);
-  const [bulkCcWorkspaceId, setBulkCcWorkspaceId] = useState("");
-  const [bulkCcCaption, setBulkCcCaption] = useState("");
-  const [bulkCcPushing, setBulkCcPushing] = useState(false);
-  const [bulkCcPushProgress, setBulkCcPushProgress] = useState({ current: 0, total: 0, label: "" });
-
   const [aiOpen, setAiOpen] = useState(false);
   const [aiIndustry, setAiIndustry] = useState("");
   const [aiTopics, setAiTopics] = useState("");
@@ -380,41 +365,6 @@ export default function Reels() {
     animFrameRef.current = requestAnimationFrame(tick);
     return () => { if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); };
   }, [isPlaying, slides.length, slideDurationSec]);
-
-  useEffect(() => {
-    Promise.all([
-      fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/workspaces`).then((r) => r.json()),
-      fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/workspace-labels`).then((r) => r.json()),
-    ]).then(([wsData, labelsData]) => {
-      if (Array.isArray(wsData.workspaces)) setCcWorkspaces(wsData.workspaces);
-      if (Array.isArray(labelsData)) {
-        const draft: Record<string, string> = {};
-        labelsData.forEach((l: { workspaceId: string; label: string }) => { draft[l.workspaceId] = l.label; });
-        setWsLabelsDraft(draft);
-      }
-    }).catch(() => {}).finally(() => setCcLoading(false));
-  }, []);
-
-  const handleSaveWsLabels = async () => {
-    setWsLabelsSaving(true);
-    try {
-      const entries = Object.entries(wsLabelsDraft).map(([workspaceId, label]) => ({ workspaceId, label }));
-      const r = await fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/workspace-labels`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(entries),
-      });
-      if (!r.ok) throw new Error("Save failed");
-      const wsData = await fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/workspaces`).then((r2) => r2.json());
-      if (Array.isArray(wsData.workspaces)) setCcWorkspaces(wsData.workspaces);
-      setWsNamesOpen(false);
-      toast.success("Workspace names saved!");
-    } catch {
-      toast.error("Failed to save workspace names");
-    } finally {
-      setWsLabelsSaving(false);
-    }
-  };
 
   const reloadIgPresets = () => {
     return fetch(`${import.meta.env.BASE_URL}api/presets`)
@@ -805,53 +755,6 @@ export default function Reels() {
     }
   };
 
-  const handleBulkCcPush = async () => {
-    if (!bulkCcWorkspaceId) { toast.error("Select a Cloud Campaign workspace first"); return; }
-    if (bulkReelBlobs.length === 0) { toast.error("Generate reels first"); return; }
-    setBulkCcPushing(true);
-    setBulkCcPushProgress({ current: 0, total: bulkReelBlobs.length, label: "Starting…" });
-    let successCount = 0;
-    try {
-      for (let i = 0; i < bulkReelBlobs.length; i++) {
-        const blob = bulkReelBlobs[i];
-        const reelNum = `${i + 1}/${bulkReelBlobs.length}`;
-        setBulkCcPushProgress({ current: i + 1, total: bulkReelBlobs.length, label: `Reel ${reelNum}: Uploading…` });
-        const form = new FormData();
-        const ext = blob.type.includes("mp4") ? "mp4" : "webm";
-        form.append("video", blob, `reel-${String(i + 1).padStart(2, "0")}.${ext}`);
-        const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, { method: "POST", body: form });
-        if (!uploadRes.ok) throw new Error(`Reel ${i + 1}: video upload failed`);
-        const { url } = await uploadRes.json();
-        setBulkCcPushProgress({ current: i + 1, total: bulkReelBlobs.length, label: `Reel ${reelNum}: Pushing to CC…` });
-        const pushRes = await fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/push`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            posts: [{ title: `Reel ${i + 1} – ${new Date().toLocaleDateString()}`, caption: bulkCcCaption, videoUrl: url }],
-            workspaceIds: [bulkCcWorkspaceId],
-            postType: "reel",
-          }),
-        });
-        const pushData = await pushRes.json().catch(() => ({}));
-        if (!pushRes.ok) {
-          throw new Error(`Reel ${i + 1}: ${(pushData as any)?.error || "CC push failed"}`);
-        }
-        if ((pushData as any)?.summary?.failed > 0 && (pushData as any)?.summary?.succeeded === 0) {
-          const firstErr = (pushData as any).results?.find((r: any) => r.status === "error")?.error;
-          throw new Error(`Reel ${i + 1}: ${firstErr || "CC push failed"}`);
-        }
-        successCount++;
-      }
-      toast.success(`${successCount} reel${successCount !== 1 ? "s" : ""} pushed to Cloud Campaign!`);
-      setBulkCcCaption("");
-    } catch (e: any) {
-      toast.error(e?.message || "Bulk CC push failed");
-    } finally {
-      setBulkCcPushing(false);
-      setBulkCcPushProgress({ current: 0, total: 0, label: "" });
-    }
-  };
-
   const addSlide = () => {
     if (slides.length >= 10) return;
     const newSlide = { id: crypto.randomUUID(), mode: "typewriter" as const, text: "", imageFile: null, imageElement: null, videoFile: null, videoElement: null, imageOffsetY: 0 };
@@ -940,7 +843,6 @@ export default function Reels() {
       const result = await generateCaptionFromBrief(captionBrief, clientName, captionVoiceStyle);
       if (!result) { toast.error("Nothing came back — try again."); return; }
       setCaptionOutput(result);
-      setCcCaption(result);
       setIgCaption(result);
       toast.success("Caption generated and pre-filled below.");
     } catch (e: unknown) {
@@ -1019,111 +921,6 @@ export default function Reels() {
     }
   };
 
-
-  const handlePushToCC = async () => {
-    if (!ccWorkspaceId) { toast.error("Select a Cloud Campaign workspace first"); return; }
-    const hasContent = slides.some((s) => s.text.trim() || s.imageElement || s.videoElement);
-    if (!hasContent) { toast.error("Add some content to your slides first"); return; }
-    setCcPushing(true);
-    setCcPushProgress("Setting up…");
-    try {
-      const canvas = exportCanvasRef.current!;
-      canvas.width = VIDEO_WIDTH;
-      canvas.height = VIDEO_HEIGHT;
-      const ctx = canvas.getContext("2d")!;
-      const animateFn = (slideIndex: number, slideProgress: number = 1) => {
-        const slide = slides[slideIndex];
-        const mediaBg = (slide.videoElement ?? slide.imageElement) as HTMLImageElement | null;
-        if (slide.mode === "typewriter") {
-          drawTypewriterSlide(ctx, slide.text, slideProgress, typewriterBgColor, textColor, fontFamily, fontSize, lineSpacing, logoImg, logoPosition, logoSize, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
-        } else if (slide.mode === "image-typewriter") {
-          drawSlide(
-            ctx, mediaBg, "",
-            fontFamily, fontSize, true,
-            textColor, lineSpacing, overlayColor,
-            logoImg, logoPosition, logoSize,
-            pageColor, "none", "#ffffff",
-            1, 1, textPosition, false, fontFamily, textAlign,
-            false, "#ffffff", "", letterSpacing, false,
-            false, "'Great Vibes', cursive",
-            coverSplit, coverEyebrowFont, coverEyebrowColor,
-            coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
-            coverEyebrowWeight, coverEyebrowLetterSpacing,
-            coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch,
-          );
-          drawTypewriterOnVideo(ctx, slide.text, slideProgress, textColor, fontFamily, fontSize, lineSpacing, textPosition, typewriterFill, VIDEO_WIDTH, VIDEO_HEIGHT);
-        } else {
-          drawSlide(
-            ctx, mediaBg, slide.text,
-            fontFamily, fontSize, true,
-            textColor, lineSpacing, overlayColor,
-            logoImg, logoPosition, logoSize,
-            pageColor, "none", "#ffffff",
-            1, 1, textPosition, true, fontFamily, textAlign,
-            false, "#ffffff", "", letterSpacing, false,
-            false, "'Great Vibes', cursive",
-            coverSplit, coverEyebrowFont, coverEyebrowColor,
-            coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase,
-            coverEyebrowWeight, coverEyebrowLetterSpacing,
-            coverHeadlineItalic, coverSplit ? coverHeadlineWeight : mainFontWeight, coverEyebrowArch,
-          );
-        }
-      };
-      let audioArrayBuffer: ArrayBuffer | undefined;
-      if (selectedTrack?.url) {
-        setCcPushProgress("Fetching audio…");
-        try {
-          const r = await fetch(selectedTrack.url);
-          audioArrayBuffer = await r.arrayBuffer();
-        } catch { /* skip audio on error */ }
-      }
-      setCcPushProgress("Encoding MP4…");
-      let videoBlob: Blob;
-      try {
-        videoBlob = await recordReelVideoMp4(
-          canvas, slideDurationSec * 1000, fadeDurationMs, slides.length, animateFn, 30,
-          (pct) => setCcPushProgress(`Encoding ${Math.round(pct * 100)}%…`),
-          audioArrayBuffer,
-        );
-      } catch {
-        setCcPushProgress("Encoding WebM…");
-        videoBlob = await recordReelVideo(
-          canvas, slideDurationSec * 1000, fadeDurationMs, slides.length, animateFn, 30,
-          selectedTrack?.url,
-        );
-      }
-      setCcPushProgress("Uploading video…");
-      const form = new FormData();
-      const ext = videoBlob.type.includes("mp4") ? "mp4" : "webm";
-      form.append("video", videoBlob, `reel-${Date.now()}.${ext}`);
-      const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, { method: "POST", body: form });
-      if (!uploadRes.ok) throw new Error("Video upload failed");
-      const { url } = await uploadRes.json();
-      setCcPushProgress("Pushing to Cloud Campaign…");
-      const pushRes = await fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/push`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          posts: [{ title: `Reel – ${new Date().toLocaleDateString()}`, caption: ccCaption, videoUrl: url }],
-          workspaceIds: [ccWorkspaceId],
-          postType: "reel",
-        }),
-      });
-      if (!pushRes.ok) throw new Error("Cloud Campaign push failed");
-      const pushData = await pushRes.json();
-      if (pushData?.summary?.failed > 0 && pushData?.summary?.succeeded === 0) {
-        const firstErr = pushData.results?.find((r: any) => r.status === "error")?.error;
-        throw new Error(firstErr || "Cloud Campaign push failed");
-      }
-      toast.success("Reel pushed to Cloud Campaign!");
-      setCcCaption("");
-    } catch (e: any) {
-      toast.error(e?.message || "Push failed");
-    } finally {
-      setCcPushing(false);
-      setCcPushProgress("");
-    }
-  };
 
   const handlePushToIG = async (trial: boolean) => {
     if (!igPresetId) { toast.error("Select a client preset first"); return; }
@@ -1921,55 +1718,6 @@ export default function Reels() {
                     </Button>
                   )}
 
-                  {/* Cloud Campaign bulk push */}
-                  {bulkReelBlobs.length > 0 && (
-                    <div className="border-t border-white/10 pt-4 space-y-3">
-                      <p className="text-sm font-semibold text-white/60 flex items-center gap-2">
-                        <Send className="w-4 h-4" />Push to Cloud Campaign
-                      </p>
-                      {ccLoading ? (
-                        <p className="text-sm text-white/30">Loading workspaces…</p>
-                      ) : ccWorkspaces.length === 0 ? (
-                        <p className="text-sm text-white/30">No Cloud Campaign workspaces configured.</p>
-                      ) : (
-                        <>
-                          <Select value={bulkCcWorkspaceId} onValueChange={setBulkCcWorkspaceId}>
-                            <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-10 text-sm">
-                              <SelectValue placeholder="Select workspace…" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {ccWorkspaces.map((ws) => <SelectItem key={ws.id} value={ws.id}>{ws.name}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                          <textarea
-                            value={bulkCcCaption}
-                            onChange={(e) => setBulkCcCaption(e.target.value)}
-                            placeholder="Caption for all reels (optional)…"
-                            rows={2}
-                            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/30 outline-none focus:border-pink-500/50 resize-none"
-                          />
-                          <Button
-                            onClick={handleBulkCcPush}
-                            disabled={bulkCcPushing || !bulkCcWorkspaceId}
-                            className="w-full bg-purple-700 hover:bg-purple-600 text-white py-5 text-sm"
-                          >
-                            {bulkCcPushing
-                              ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{bulkCcPushProgress.label}</>
-                              : <><Send className="w-4 h-4 mr-2" />Push {bulkReelBlobs.length} Reel{bulkReelBlobs.length !== 1 ? "s" : ""} to CC</>}
-                          </Button>
-                          {bulkCcPushing && bulkCcPushProgress.total > 0 && (
-                            <div className="space-y-1.5">
-                              <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                                <div className="h-full bg-purple-500 rounded-full transition-all duration-500"
-                                  style={{ width: `${(bulkCcPushProgress.current / bulkCcPushProgress.total) * 100}%` }} />
-                              </div>
-                              <p className="text-sm text-white/40 text-center">{bulkCcPushProgress.current} / {bulkCcPushProgress.total}</p>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
 
                   {/* Instagram bulk push */}
                   {igPresets.length > 0 && (
@@ -2392,7 +2140,6 @@ export default function Reels() {
                             value={captionOutput}
                             onChange={(e) => {
                               setCaptionOutput(e.target.value);
-                              setCcCaption(e.target.value);
                               setIgCaption(e.target.value);
                             }}
                             rows={6}
@@ -2408,7 +2155,7 @@ export default function Reels() {
                               : <><Copy className="w-3 h-3" />Copy</>}
                           </button>
                         </div>
-                        <p className="text-xs text-white/25 italic">Caption pre-filled in Cloud Campaign and Instagram fields below. Edit freely.</p>
+                        <p className="text-xs text-white/25 italic">Caption pre-filled in the Instagram field below. Edit freely.</p>
                       </div>
                     )}
                   </div>
@@ -2426,74 +2173,6 @@ export default function Reels() {
                       : <><Download className="w-4 h-4 mr-2" />Export Reel</>}
                   </Button>
                 </div>
-              </div>
-
-              {/* Cloud Campaign */}
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-base font-semibold text-white/70 flex items-center gap-2">
-                    <Send className="w-4 h-4" />Push to Cloud Campaign
-                  </h3>
-                  <button onClick={() => setWsNamesOpen((o) => !o)} title="Name workspaces"
-                    className="text-white/30 hover:text-white/60 transition-colors">
-                    <Settings className="w-4 h-4" />
-                  </button>
-                </div>
-                {wsNamesOpen && (
-                  <div className="rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-4 space-y-3">
-                    <p className="text-xs text-white/40 uppercase tracking-wide font-semibold">Name your workspaces</p>
-                    <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
-                      {ccWorkspaces.map((ws) => (
-                        <div key={ws.id} className="flex items-center gap-2">
-                          <span className="text-xs text-white/20 font-mono shrink-0 w-20 truncate" title={ws.id}>{ws.id.slice(0, 8)}…</span>
-                          <input
-                            type="text"
-                            value={wsLabelsDraft[ws.id] ?? ""}
-                            onChange={(e) => setWsLabelsDraft((d) => ({ ...d, [ws.id]: e.target.value }))}
-                            placeholder="Enter name…"
-                            className="flex-1 bg-black/30 border border-white/10 rounded-lg px-2.5 py-1.5 text-sm text-white placeholder:text-white/20 outline-none focus:border-indigo-400/50"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => setWsNamesOpen(false)}
-                        className="flex-1 border-white/20 text-white/50 bg-transparent hover:bg-white/5">Cancel</Button>
-                      <Button size="sm" onClick={handleSaveWsLabels} disabled={wsLabelsSaving}
-                        className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white">
-                        {wsLabelsSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Save Names"}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-                {ccLoading ? (
-                  <div className="flex items-center gap-2 text-sm text-white/30 py-2">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Loading workspaces…
-                  </div>
-                ) : ccWorkspaces.length === 0 ? (
-                  <p className="text-sm text-white/30 italic">No Cloud Campaign workspaces configured.</p>
-                ) : (
-                  <>
-                    <Select value={ccWorkspaceId} onValueChange={setCcWorkspaceId}>
-                      <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-10 text-sm"><SelectValue placeholder="Select workspace…" /></SelectTrigger>
-                      <SelectContent>{ccWorkspaces.map((ws) => <SelectItem key={ws.id} value={ws.id}>{ws.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                    <textarea
-                      value={ccCaption}
-                      onChange={(e) => setCcCaption(e.target.value)}
-                      placeholder="Caption (optional)…"
-                      rows={3}
-                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder:text-white/30 outline-none focus:border-indigo-500/50 resize-none"
-                    />
-                    <Button onClick={handlePushToCC} disabled={ccPushing || !ccWorkspaceId}
-                      className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-5 text-sm">
-                      {ccPushing
-                        ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{ccPushProgress}</>
-                        : <><Send className="w-4 h-4 mr-2" />Push Reel as MP4</>}
-                    </Button>
-                    <p className="text-sm text-white/20 text-center">Encodes MP4 → uploads → posts as video</p>
-                  </>
-                )}
               </div>
 
               {/* Instagram */}

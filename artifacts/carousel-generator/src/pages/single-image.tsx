@@ -105,7 +105,6 @@ export default function SingleImage() {
   const [isDraggingPhotos, setIsDraggingPhotos] = useState(false);
   const [isDraggingCsv, setIsDraggingCsv] = useState(false);
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
-  const [ccStatus, setCcStatus] = useState<{ configured: boolean } | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
   const [musicPickerOpen, setMusicPickerOpen] = useState(false);
@@ -202,8 +201,6 @@ export default function SingleImage() {
     }
     setFirstComment(preset.defaultFirstCommentSingle || "");
   };
-  const [ccPushing, setCcPushing] = useState(false);
-
   const photoInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -223,13 +220,6 @@ export default function SingleImage() {
     img.onerror = () => URL.revokeObjectURL(url);
     img.src = url;
   }, [logoFile]);
-
-  useEffect(() => {
-    fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/status`)
-      .then((r) => r.json())
-      .then(setCcStatus)
-      .catch(() => {});
-  }, []);
 
   const renderDesignPreview = useCallback(async () => {
     try {
@@ -509,60 +499,6 @@ export default function SingleImage() {
     } catch (e: any) {
       console.error(e);
       toast.error("Failed: " + (e?.message || "Unknown error"), { id });
-    }
-  };
-
-  const pushToCloudCampaign = async () => {
-    if (!result?.posts.length) return;
-    setCcPushing(true);
-    const id = toast.loading("Pushing to Cloud Campaign...");
-    try {
-      const rendered: { name: string; base64: string }[] = result.posts.map((post) => ({
-        name: `post-${String(post.index).padStart(2, "0")}.png`,
-        base64: post.imageUrl,
-      }));
-
-      const urlMap = new Map<string, string>();
-      const PARALLEL = 3;
-      for (let i = 0; i < rendered.length; i += PARALLEL) {
-        toast.loading(`Uploading images... ${i}/${rendered.length}`, { id });
-        const batch = rendered.slice(i, i + PARALLEL);
-        const urls = await Promise.all(batch.map((r) => uploadOneImage(r.name, r.base64)));
-        batch.forEach((r, bi) => urlMap.set(r.name, urls[bi]));
-      }
-
-      const ccPosts = result.posts.map((post) => {
-        const fn = `post-${String(post.index).padStart(2, "0")}.png`;
-        return {
-          title: `Post ${post.index}`,
-          caption: captions[post.index - 1] || "",
-          imageUrls: [urlMap.get(fn) || ""],
-        };
-      });
-
-      toast.loading("Pushing to Cloud Campaign...", { id });
-      const selectedPreset = presets.find((p) => p.id === selectedPresetId);
-      const pushBody: { posts: typeof ccPosts; workspaceIds?: string[]; postType: string } = { posts: ccPosts, postType: "single-image" };
-      if (selectedPreset?.ccWorkspaceId) pushBody.workspaceIds = [selectedPreset.ccWorkspaceId];
-      const resp = await fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/push`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(pushBody),
-      });
-      if (!resp.ok) {
-        const data = await resp.json().catch(() => ({ error: "Push failed" }));
-        throw new Error(data.error || "Push failed");
-      }
-      const data = await resp.json();
-      toast.success(`Pushed ${data.summary.succeeded} post(s) to Cloud Campaign!`, { id });
-      if (data.summary.failed > 0) {
-        toast.error(`${data.summary.failed} post(s) failed.`);
-      }
-    } catch (e: any) {
-      console.error(e);
-      toast.error("Cloud Campaign push failed: " + (e?.message || "Unknown error"), { id });
-    } finally {
-      setCcPushing(false);
     }
   };
 
@@ -1037,12 +973,6 @@ export default function SingleImage() {
                 <Download className="w-4 h-4 mr-2" />
                 Download ZIP
               </Button>
-              {ccStatus?.configured && (
-                <Button size="sm" onClick={pushToCloudCampaign} disabled={ccPushing} className="bg-blue-600 hover:bg-blue-700 text-white">
-                  {ccPushing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CloudUpload className="w-4 h-4 mr-2" />}
-                  {ccPushing ? "Pushing..." : "Push to CC"}
-                </Button>
-              )}
               {selectedPresetId && (
                 <Button size="sm" onClick={scheduleImages} disabled={scheduleRendering} variant="outline" className="border-pink-500/40 text-pink-300 hover:bg-pink-950/30">
                   {scheduleRendering ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-2" />}
@@ -2160,12 +2090,6 @@ export default function SingleImage() {
                       <button className="btn-shimmer px-10 py-6 rounded-2xl text-lg font-bold flex items-center gap-3" onClick={downloadZip}>
                         <Download className="w-5 h-5" />Download ZIP
                       </button>
-                      {ccStatus?.configured && (
-                        <Button size="lg" onClick={pushToCloudCampaign} disabled={ccPushing} className="px-10 py-6 text-lg font-bold bg-blue-600 hover:bg-blue-700 text-white">
-                          {ccPushing ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <CloudUpload className="w-5 h-5 mr-2" />}
-                          {ccPushing ? "Pushing..." : "Push to Cloud Campaign"}
-                        </Button>
-                      )}
                       {selectedPresetId && (
                         <Button size="lg" onClick={scheduleImages} disabled={scheduleRendering} variant="outline" className="px-10 py-6 text-lg font-bold border-pink-500/40 text-pink-300 hover:bg-pink-950/30">
                           {scheduleRendering ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <CalendarClock className="w-5 h-5 mr-2" />}

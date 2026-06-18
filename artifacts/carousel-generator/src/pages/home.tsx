@@ -131,8 +131,6 @@ export default function Home() {
   const [captionGenerating, setCaptionGenerating] = useState(false);
   const [captionProgress, setCaptionProgress] = useState("");
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const [ccPushing, setCcPushing] = useState(false);
-  const [ccStatus, setCcStatus] = useState<{ configured: boolean; hasWorkspaces: boolean } | null>(null);
   const [metaPushing, setMetaPushing] = useState(false);
   const [metaPlatforms, setMetaPlatforms] = useState<string[]>(["instagram", "facebook"]);
   const toggleMetaPlatform = (p: string) =>
@@ -233,13 +231,6 @@ export default function Home() {
     return () => URL.revokeObjectURL(url);
   }, [photos]);
 
-  useEffect(() => {
-    fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/status`)
-      .then((r) => r.json())
-      .then((d) => setCcStatus(d))
-      .catch(() => setCcStatus(null));
-  }, []);
-
   // Render live preview canvas whenever style settings change
   useEffect(() => {
     const canvas = livePreviewCanvasRef.current;
@@ -267,90 +258,6 @@ export default function Home() {
     })();
     return () => { cancelled = true; };
   }, [livePreviewImg, fontFamily, fontSize, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, contentLetterSpacing, pageColorEnd, overlayGradient, textShadow, allCsvRows, coverStyle, heroLeadIn, heroWord, heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase]);
-
-  const pushToCloudCampaign = async () => {
-    if (!result?.slides.length) return;
-    setCcPushing(true);
-    const id = toast.loading("Rendering slides for Cloud Campaign...");
-    try {
-      await document.fonts.ready;
-      if (coverDropCap) await document.fonts.load(`400 80px ${coverDropCapFont}`).catch(() => {});
-      if (coverSplit && coverEyebrowFont) await document.fonts.load(`${coverEyebrowItalic ? 'italic' : 'normal'} ${coverEyebrowWeight} 80px ${coverEyebrowFont}`).catch(() => {});
-      const rendered: { name: string; base64: string; groupIndex: number; groupPosition: number }[] = [];
-      for (const slide of result.slides) {
-        const isCover = slide.groupPosition === 1;
-        const res = await fetch(slide.imageUrl);
-        const blob = await res.blob();
-        const img = new Image();
-        await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
-        const canvas = document.createElement("canvas");
-        canvas.width = CANVAS_WIDTH * RENDER_SCALE; canvas.height = CANVAS_HEIGHT * RENDER_SCALE;
-        const ctx = canvas.getContext("2d")!;
-        ctx.scale(RENDER_SCALE, RENDER_SCALE);
-        if (isCover && coverStyle === "hero") {
-          drawHeroSlide(ctx, img, (slide.heroLeadIn || heroLeadIn) || "LEAD-IN", (slide.heroWord || heroWord) || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
-        } else {
-          drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, isCover ? textPosition : "bottom", showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide, noOverlay: isCover });
-        }
-        URL.revokeObjectURL(img.src);
-        const dataUrl = canvas.toDataURL("image/png");
-        const fileName = `carousel-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
-        rendered.push({ name: fileName, base64: dataUrl, groupIndex: slide.groupIndex, groupPosition: slide.groupPosition });
-      }
-
-      const urlMap = new Map<string, string>();
-      const PARALLEL = 3;
-      for (let i = 0; i < rendered.length; i += PARALLEL) {
-        toast.loading(`Uploading images... ${i}/${rendered.length}`, { id });
-        const batch = rendered.slice(i, i + PARALLEL);
-        const urls = await Promise.all(batch.map((r) => uploadOneImage(r.name, r.base64)));
-        batch.forEach((r, bi) => urlMap.set(r.name, urls[bi]));
-      }
-
-      toast.loading("Pushing to Cloud Campaign...", { id });
-      const posts = [];
-      for (let gi = 0; gi < result.totalCarousels; gi++) {
-        const groupSlides = result.slides.filter((s: any) => s.groupIndex === gi + 1).sort((a: any, b: any) => a.groupPosition - b.groupPosition);
-        const imageUrls = groupSlides.map((s: any) => {
-          const fn = `carousel-${String(s.groupIndex).padStart(2, "0")}-slide-${String(s.groupPosition).padStart(2, "0")}.png`;
-          return urlMap.get(fn) || "";
-        }).filter(Boolean);
-        posts.push({
-          title: `Carousel ${gi + 1}`,
-          caption: captions[gi] || "",
-          imageUrls,
-        });
-      }
-
-      const selectedPreset = presets.find((p) => p.id === selectedPresetId);
-      if (!selectedPreset?.ccWorkspaceId) {
-        toast.error("Please select a client preset with a linked Cloud Campaign workspace first.", { id });
-        setCcPushing(false);
-        return;
-      }
-      const pushBody: { posts: typeof posts; workspaceIds: string[]; postType: string } = { posts, workspaceIds: [selectedPreset.ccWorkspaceId], postType: "carousel" };
-      const resp = await fetch(`${import.meta.env.BASE_URL}api/cloud-campaign/push`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(pushBody),
-      });
-      if (!resp.ok) {
-        const data = await resp.json().catch(() => ({ error: "Push failed" }));
-        throw new Error(data.error || "Push failed");
-      }
-      const data = await resp.json();
-      toast.success(`Pushed ${data.summary.succeeded} carousel(s) to Cloud Campaign!`, { id });
-      if (data.summary.failed > 0) {
-        toast.error(`${data.summary.failed} post(s) failed. Check the console for details.`);
-        console.error("Cloud Campaign push failures:", data.results.filter((r: any) => r.status === "error"));
-      }
-    } catch (e: any) {
-      console.error(e);
-      toast.error("Cloud Campaign push failed: " + (e?.message || "Unknown error"), { id });
-    } finally {
-      setCcPushing(false);
-    }
-  };
 
   const pushToMeta = async () => {
     if (!result?.slides.length) return;
@@ -2671,12 +2578,6 @@ export default function Home() {
                         <Button variant="outline" size="lg" onClick={downloadCsv} className="px-8 py-4 text-lg font-bold" data-testid="button-download-csv-bar">
                           <FileText className="w-5 h-5 mr-2" />Download CSV
                         </Button>
-                        {ccStatus?.configured && (
-                          <Button size="lg" onClick={pushToCloudCampaign} disabled={ccPushing} className="px-8 py-4 text-lg font-bold bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-push-cc-bar">
-                            {ccPushing ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <CloudUpload className="w-5 h-5 mr-2" />}
-                            {ccPushing ? "Pushing..." : "Push to Cloud Campaign"}
-                          </Button>
-                        )}
                         {presets.find((p) => p.id === selectedPresetId)?.metaInstagramAccountId || presets.find((p) => p.id === selectedPresetId)?.metaFacebookPageId ? (
                           <div className="flex flex-col gap-1.5 items-end">
                             <div className="flex gap-1.5">
@@ -2957,12 +2858,6 @@ export default function Home() {
                         <button className="btn-shimmer px-10 py-6 rounded-2xl text-lg font-bold flex items-center gap-3" onClick={downloadZip} data-testid="button-download-zip">
                           <Download className="w-5 h-5" />Download ZIP
                         </button>
-                        {ccStatus?.configured && (
-                          <Button size="lg" onClick={pushToCloudCampaign} disabled={ccPushing} className="px-10 py-6 text-lg font-bold bg-blue-600 hover:bg-blue-700 text-white" data-testid="button-push-cc">
-                            {ccPushing ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : <CloudUpload className="w-5 h-5 mr-2" />}
-                            {ccPushing ? "Pushing..." : "Push to Cloud Campaign"}
-                          </Button>
-                        )}
                         {presets.find((p) => p.id === selectedPresetId)?.metaInstagramAccountId || presets.find((p) => p.id === selectedPresetId)?.metaFacebookPageId ? (
                           <div className="flex flex-col gap-1.5 items-end">
                             <div className="flex gap-1.5">

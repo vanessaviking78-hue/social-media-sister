@@ -393,31 +393,11 @@ export default function PresetsPage() {
   const [quickAddTargetAudience, setQuickAddTargetAudience] = useState("");
   const [quickAddContentPillars, setQuickAddContentPillars] = useState("");
   const [quickAddBrandNotes, setQuickAddBrandNotes] = useState("");
-  const [ccWorkspaces, setCcWorkspaces] = useState<{ id: string; name: string }[]>([]);
-  const [ccWorkspacesLoading, setCcWorkspacesLoading] = useState(false);
-  const [ccWorkspacesError, setCcWorkspacesError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ClientPreset | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteDeleting, setDeleteDeleting] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (editingId === null) return;
-    setCcWorkspacesLoading(true);
-    setCcWorkspacesError(null);
-    fetch(`${BASE}api/cloud-campaign/workspaces`)
-      .then(async (r) => {
-        const data = await r.json();
-        if (!r.ok) throw new Error(data?.error || "Failed to load workspaces");
-        setCcWorkspaces(data.workspaces || []);
-      })
-      .catch((err: Error) => {
-        setCcWorkspacesError(err.message || "Could not load Cloud Campaign workspaces");
-        setCcWorkspaces([]);
-      })
-      .finally(() => setCcWorkspacesLoading(false));
-  }, [editingId]);
 
   const handleDelete = (id: number) => {
     const preset = presets.find((p) => p.id === id);
@@ -480,7 +460,7 @@ export default function PresetsPage() {
         accentColor: editData.accentColor || "#d4af37",
         contentFontSize: editData.contentFontSize ?? 44,
       };
-      await updatePreset(editingId, editData.name!.trim(), styles, editData.ccWorkspaceId || undefined, editData.logoUrl, editData.captionFootnote, {
+      await updatePreset(editingId, editData.name!.trim(), styles, undefined, editData.logoUrl, editData.captionFootnote, {
         metaPageAccessToken: editData.metaPageAccessToken || null,
         metaFacebookPageId: editData.metaFacebookPageId || null,
         metaFacebookPageName: editData.metaFacebookPageName || null,
@@ -869,37 +849,6 @@ export default function PresetsPage() {
                         </div>
                       )}
                     </div>
-                    <div>
-                      <Label className="text-xs text-gray-400">Cloud Campaign Workspace</Label>
-                      {ccWorkspacesLoading ? (
-                        <p className="text-xs text-gray-500 mt-1">Loading workspaces…</p>
-                      ) : ccWorkspacesError ? (
-                        <div>
-                          <p className="text-xs text-red-400 mt-1 mb-1">{ccWorkspacesError}</p>
-                          <Input
-                            placeholder="Paste workspace UUID manually"
-                            value={editData.ccWorkspaceId || ""}
-                            onChange={(e) => setEditData((d) => ({ ...d, ccWorkspaceId: e.target.value || null }))}
-                            className="bg-gray-900 border-gray-700 text-white font-mono text-xs"
-                          />
-                        </div>
-                      ) : (
-                        <Select
-                          value={editData.ccWorkspaceId || "__none__"}
-                          onValueChange={(v) => setEditData((d) => ({ ...d, ccWorkspaceId: v === "__none__" ? null : v }))}
-                        >
-                          <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
-                            <SelectValue placeholder="Select a workspace…" />
-                          </SelectTrigger>
-                          <SelectContent position="popper" className="bg-gray-800 border-gray-700 max-h-72 overflow-y-auto">
-                            <SelectItem value="__none__" className="text-gray-400">None (unlink)</SelectItem>
-                            {ccWorkspaces.map((ws) => (
-                              <SelectItem key={ws.id} value={ws.id} className="text-white">{ws.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    </div>
                     <MetaConnectSection
                       editingId={editingId}
                       editData={editData}
@@ -1017,7 +966,6 @@ export default function PresetsPage() {
                         <span style={{ fontFamily: preset.fontFamily }}>{getFontLabel(preset.fontFamily)}</span>
                         <span>{preset.fontSize}px</span>
                         {preset.cornerStyle !== "none" && <span>Corner: {preset.cornerStyle}</span>}
-                        {preset.ccWorkspaceId && <span className="text-blue-400">CC linked</span>}
                         {preset.metaInstagramAccountId && <span className="text-purple-400">Meta connected</span>}
                         {preset.onboardingConnectedAt && (
                           <span className="flex items-center gap-1 text-pink-400"><UserCheck className="w-3 h-3" /> Client connected</span>

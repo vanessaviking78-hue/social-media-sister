@@ -51,9 +51,7 @@ async function deduplicateClientPresets(): Promise<void> {
         SELECT id,
                ROW_NUMBER() OVER (
                  PARTITION BY LOWER(name)
-                 ORDER BY
-                   CASE WHEN cc_workspace_id IS NOT NULL THEN 0 ELSE 1 END ASC,
-                   id ASC
+                 ORDER BY id ASC
                ) AS rn
         FROM client_presets
       ) ranked
@@ -100,9 +98,6 @@ async function createScheduledPostsTable(): Promise<void> {
       meta_status TEXT NOT NULL DEFAULT 'pending',
       meta_result JSONB,
       meta_posted_at TIMESTAMPTZ,
-      cc_status TEXT NOT NULL DEFAULT 'pending',
-      cc_result JSONB,
-      cc_posted_at TIMESTAMPTZ,
       is_trial BOOLEAN NOT NULL DEFAULT FALSE,
       notes TEXT NOT NULL DEFAULT '',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

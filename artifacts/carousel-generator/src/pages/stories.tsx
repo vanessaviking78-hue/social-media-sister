@@ -277,8 +277,6 @@ export default function Stories() {
 
   const [selectedPresetId, setSelectedPresetId] = useState<number | null>(null);
   const [currentLogoUrl, setCurrentLogoUrl] = useState<string | null>(null);
-  const [ccWorkspaces, setCcWorkspaces] = useState<{ id: string; name: string }[]>([]);
-  const [selectedCcWorkspace, setSelectedCcWorkspace] = useState<string>("");
 
   type ToolId = "templates" | "photos" | "text" | "shapes" | "stickers" | "interactive" | "layers";
   const [activeTool, setActiveTool] = useState<ToolId | null>(null);
@@ -301,13 +299,6 @@ export default function Stories() {
   const { presets, loading: presetsLoading, savePreset, updatePreset, deletePreset, uploadLogo } = usePresets();
 
   useEffect(() => { loadGoogleFonts(); }, []);
-
-  useEffect(() => {
-    fetch(api("/cloud-campaign/workspaces"), { headers: authHeaders() })
-      .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d?.workspaces) setCcWorkspaces(d.workspaces); })
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     if (logoFile) {
@@ -356,9 +347,6 @@ export default function Stories() {
       setCurrentLogoUrl(null);
       setLogoUrl("");
       logoImgRef.current = null;
-    }
-    if (preset.ccWorkspaceId) {
-      setSelectedCcWorkspace(preset.ccWorkspaceId);
     }
     setTextAlign(preset.textAlign || "left");
     setTextBoxOutline(preset.textBoxOutline ?? false);
@@ -665,50 +653,6 @@ export default function Stories() {
       setDownloading(false);
     }
   }, [previews, clientName]);
-
-  const pushToCC = useCallback(async () => {
-    if (previews.length === 0) { toast.error("No stories to push"); return; }
-    if (!selectedCcWorkspace) { toast.error("Please select a Cloud Campaign workspace first"); return; }
-    setPushing(true);
-    try {
-      const allUploadResults: { name: string; url: string }[] = [];
-      const batchSize = 5;
-      const compressedPreviews = await Promise.all(previews.map(compressForUpload));
-      for (let i = 0; i < compressedPreviews.length; i += batchSize) {
-        const batch = compressedPreviews.slice(i, i + batchSize);
-        const uploadRes = await fetch(api("/content/upload-image"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...authHeaders() },
-          body: JSON.stringify({
-            images: batch.map((p, j) => ({ name: `story-${i + j + 1}.jpg`, base64: p })),
-          }),
-        });
-        if (!uploadRes.ok) throw new Error("Image upload failed");
-        const { results } = await uploadRes.json();
-        allUploadResults.push(...results);
-      }
-
-      const posts = previews.map((_, i) => ({
-        title: `Story: ${questions[i]?.slice(0, 50) || `Story ${i + 1}`}`,
-        caption: questions[i] || "",
-        imageUrls: [allUploadResults[i]?.url].filter(Boolean),
-      }));
-
-      const pushRes = await fetch(api("/cloud-campaign/push"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...authHeaders() },
-        body: JSON.stringify({ posts, workspaceIds: [selectedCcWorkspace], postType: "story" }),
-      });
-      if (!pushRes.ok) throw new Error("Push failed");
-      const pushData = await pushRes.json();
-      const wsName = ccWorkspaces.find((w) => w.id === selectedCcWorkspace)?.name || "selected workspace";
-      toast.success(`Pushed ${pushData.summary?.succeeded || 0} stories to ${wsName}`);
-    } catch (err: any) {
-      toast.error(err.message || "Push failed");
-    } finally {
-      setPushing(false);
-    }
-  }, [previews, questions, selectedCcWorkspace, ccWorkspaces]);
 
   const pushToIG = useCallback(async () => {
     if (previews.length === 0) { toast.error("No stories to push"); return; }
@@ -1733,19 +1677,6 @@ export default function Stories() {
                       </Select>
                       <Button size="sm" onClick={saveStoryAsReel} disabled={animRendering || previews.length === 0} variant="outline" className="border-pink-500/40 text-pink-300 hover:bg-pink-950/30">
                         {animRendering ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />{Math.round(animProgress * 100)}%</> : <><Film className="w-3.5 h-3.5 mr-1.5" />Animate as Reel</>}
-                      </Button>
-                      {ccWorkspaces.length > 0 && (
-                        <Select value={selectedCcWorkspace || "__none__"} onValueChange={(v) => setSelectedCcWorkspace(v === "__none__" ? "" : v)}>
-                          <SelectTrigger className="w-[180px] h-8 text-xs"><SelectValue placeholder="Select workspace" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__" className="text-muted-foreground">Select workspace</SelectItem>
-                            {ccWorkspaces.map((ws) => <SelectItem key={ws.id} value={ws.id}>{ws.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      )}
-                      <Button size="sm" onClick={pushToCC} disabled={pushing || previews.length === 0 || !selectedCcWorkspace} variant="secondary">
-                        {pushing ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <CloudUpload className="w-3.5 h-3.5 mr-1.5" />}
-                        Push to CC
                       </Button>
                       {selectedPresetId && (
                         <Button size="sm" onClick={pushToIG} disabled={pushing || previews.length === 0} variant="outline" className="border-pink-500/40 text-pink-300 hover:bg-pink-950/30">

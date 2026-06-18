@@ -37,7 +37,6 @@ export interface ClientPreset {
   logoSize: number;
   logoUrl: string | null;
   accentColor: string;
-  ccWorkspaceId: string | null;
   metaPageAccessToken: string | null;
   metaFacebookPageId: string | null;
   metaFacebookPageName: string | null;
@@ -129,12 +128,11 @@ export function usePresets() {
     return data.results?.[0]?.url || "";
   }, []);
 
-  const savePreset = useCallback(async (name: string, styles: PresetStyleFields, ccWorkspaceId?: string, logoUrl?: string | null, captionFootnote?: string, personalityFields?: { voiceStyle?: string; targetAudience?: string | null; contentPillars?: string | null; brandNotes?: string | null }) => {
+  const savePreset = useCallback(async (name: string, styles: PresetStyleFields, _ccWorkspaceId?: string, logoUrl?: string | null, captionFootnote?: string, personalityFields?: { voiceStyle?: string; targetAudience?: string | null; contentPillars?: string | null; brandNotes?: string | null }) => {
     const body = {
       name,
       ...styles,
       lineSpacing: String(styles.lineSpacing),
-      ccWorkspaceId: ccWorkspaceId || null,
       logoUrl: logoUrl || null,
       captionFootnote: captionFootnote || "",
       ...(personalityFields || {}),
@@ -157,7 +155,7 @@ export function usePresets() {
     id: number,
     name: string,
     styles: PresetStyleFields,
-    ccWorkspaceId?: string,
+    _ccWorkspaceId?: string,
     logoUrl?: string | null,
     captionFootnote?: string,
     metaFields?: { metaPageAccessToken?: string | null; metaFacebookPageId?: string | null; metaFacebookPageName?: string | null; metaInstagramAccountId?: string | null; metaInstagramUsername?: string | null },
@@ -167,7 +165,6 @@ export function usePresets() {
       name,
       ...styles,
       lineSpacing: String(styles.lineSpacing),
-      ccWorkspaceId: ccWorkspaceId || null,
       logoUrl: logoUrl || null,
       captionFootnote: captionFootnote ?? "",
       ...(metaFields || {}),

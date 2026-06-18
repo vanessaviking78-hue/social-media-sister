@@ -16,7 +16,6 @@ const POST_TYPE_LABELS: Record<string, string> = {
 const ACTION_LABELS: Record<string, string> = {
   generated: "Generated",
   downloaded: "Downloaded",
-  pushed: "Pushed to CC",
 };
 
 const PIE_COLORS = ["#ec4899", "#8b5cf6", "#06b6d4", "#f59e0b", "#10b981"];
@@ -245,29 +244,6 @@ export default function Analytics() {
             </div>
 
             <PostTimePredictor data={postTimeHeatmap} />
-
-            <div className="bg-card border border-border/40 rounded-xl p-6 mb-8">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
-                  <Send className="w-5 h-5 text-purple-400" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold">Social Media Performance</h2>
-                  <p className="text-sm text-muted-foreground">Engagement metrics from Cloud Campaign</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-4 rounded-lg bg-purple-500/5 border border-purple-500/20">
-                <AlertCircle className="w-5 h-5 text-purple-400 flex-shrink-0" />
-                <div>
-                  <p className="text-sm text-foreground/80">
-                    Social media engagement metrics (likes, comments, reach, impressions) will be available here once Cloud Campaign API workspace access is enabled.
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    This section will show post performance, engagement rates, best performing content, and optimal posting times once connected.
-                  </p>
-                </div>
-              </div>
-            </div>
           </>
         )}
       </main>

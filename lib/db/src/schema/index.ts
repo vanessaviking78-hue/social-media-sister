@@ -21,7 +21,6 @@ export const clientPresetsTable = pgTable("client_presets", {
   logoSize: integer("logo_size").notNull().default(140),
   logoUrl: text("logo_url"),
   accentColor: text("accent_color").notNull().default("#d4af37"),
-  ccWorkspaceId: text("cc_workspace_id"),
   metaPageAccessToken: text("meta_page_access_token"),
   metaFacebookPageId: text("meta_facebook_page_id"),
   metaFacebookPageName: text("meta_facebook_page_name"),
@@ -243,9 +242,6 @@ export const scheduledPostsTable = pgTable("scheduled_posts", {
   metaStatus: text("meta_status").notNull().default("pending"),
   metaResult: json("meta_result").$type<{ igPostId?: string; fbPostId?: string; error?: string } | null>(),
   metaPostedAt: timestamp("meta_posted_at", { withTimezone: true }),
-  ccStatus: text("cc_status").notNull().default("pending"),
-  ccResult: json("cc_result").$type<{ postId?: string; error?: string } | null>(),
-  ccPostedAt: timestamp("cc_posted_at", { withTimezone: true }),
   stickerConfig: json("sticker_config").$type<StickerConfig | null>(),
   isTrial: boolean("is_trial").notNull().default(false),
   notes: text("notes").notNull().default(""),
@@ -254,7 +250,7 @@ export const scheduledPostsTable = pgTable("scheduled_posts", {
 });
 
 export const insertScheduledPostSchema = createInsertSchema(scheduledPostsTable)
-  .omit({ id: true, createdAt: true, updatedAt: true, status: true, metaStatus: true, metaResult: true, metaPostedAt: true, ccStatus: true, ccResult: true, ccPostedAt: true })
+  .omit({ id: true, createdAt: true, updatedAt: true, status: true, metaStatus: true, metaResult: true, metaPostedAt: true })
   .extend({
     postType: z.enum(SCHEDULED_POST_TYPES),
   });

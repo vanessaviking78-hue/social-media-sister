@@ -136,9 +136,6 @@ router.post("/scheduler/posts/:id/retry", async (req, res) => {
         metaStatus: "pending",
         metaResult: null,
         metaPostedAt: null,
-        ccStatus: "pending",
-        ccResult: null,
-        ccPostedAt: null,
         scheduledAt: new Date(),
         updatedAt: new Date(),
       })
@@ -159,29 +156,24 @@ router.get("/scheduler/stats", async (req, res) => {
         postType: scheduledPostsTable.postType,
         status: scheduledPostsTable.status,
         metaStatus: scheduledPostsTable.metaStatus,
-        ccStatus: scheduledPostsTable.ccStatus,
       })
       .from(scheduledPostsTable)
       .where(inArray(scheduledPostsTable.status, ["published", "failed"]));
 
-    const totals = { total: 0, metaSuccess: 0, metaFail: 0, ccSuccess: 0, ccFail: 0 };
+    const totals = { total: 0, metaSuccess: 0, metaFail: 0 };
     const byClient: Record<string, typeof totals> = {};
 
     for (const row of rows) {
       totals.total++;
       if (row.metaStatus === "success") totals.metaSuccess++;
       if (row.metaStatus === "failed") totals.metaFail++;
-      if (row.ccStatus === "success") totals.ccSuccess++;
-      if (row.ccStatus === "failed") totals.ccFail++;
 
       if (!byClient[row.clientName]) {
-        byClient[row.clientName] = { total: 0, metaSuccess: 0, metaFail: 0, ccSuccess: 0, ccFail: 0 };
+        byClient[row.clientName] = { total: 0, metaSuccess: 0, metaFail: 0 };
       }
       byClient[row.clientName].total++;
       if (row.metaStatus === "success") byClient[row.clientName].metaSuccess++;
       if (row.metaStatus === "failed") byClient[row.clientName].metaFail++;
-      if (row.ccStatus === "success") byClient[row.clientName].ccSuccess++;
-      if (row.ccStatus === "failed") byClient[row.clientName].ccFail++;
     }
 
     const pendingCount = await db
