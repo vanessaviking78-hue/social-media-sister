@@ -10,6 +10,9 @@ id = "artifacts/mockup-sandbox"
 router = "application"
 deploymentTarget = "autoscale"
 
+[deployment.build]
+args = ["echo", "using pre-built dist files"]
+
 [deployment.postBuild]
 args = ["pnpm", "store", "prune"]
 env = { "CI" = "true" }
