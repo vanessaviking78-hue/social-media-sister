@@ -1,6 +1,10 @@
 [build]
-  command = "unset NODE_ENV && pnpm install --no-frozen-lockfile && pnpm --filter @workspace/carousel-generator run build"
+  command = "pnpm --filter @workspace/carousel-generator run build"
   publish = "artifacts/carousel-generator/dist/public"
+
+[build.environment]
+  NODE_VERSION = "20"
+  NODE_ENV = "development"
 
 [[redirects]]
   from = "/api/*"
