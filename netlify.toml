@@ -5,6 +5,7 @@
 [build.environment]
   NODE_VERSION = "20"
   NODE_ENV = "development"
+  npm_config_user_agent = "pnpm/9.15.9 npm/? node/v20.18.1 linux x64"
 
 [[redirects]]
   from = "/api/*"
