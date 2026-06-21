@@ -18,6 +18,7 @@ const MAX_VIDEO_MB = 300;
 type MediaItem = { file: File; localUrl: string; isVideo: boolean };
 type Platform = "instagram" | "facebook";
 type PostTypeOption = "carousel" | "story" | "reel";
+type DimensionOption = "1080x1440" | "1080x1920";
 type StickerType = "none" | "poll" | "quiz" | "question";
 
 function toBase64(file: File): Promise<string> {
@@ -68,6 +69,89 @@ async function uploadVideo(file: File): Promise<string> {
   }
   const data = await res.json();
   return (data.url ?? data.proxyUrl) as string;
+}
+
+async function stitchImagesToVideo(items: MediaItem[], dim: DimensionOption): Promise<File> {
+  const [w, h] = dim === "1080x1440" ? [1080, 1440] : [1080, 1920];
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
+
+  const mimeType =
+    ["video/webm;codecs=vp9", "video/webm"].find((m) => MediaRecorder.isTypeSupported(m)) ?? "video/webm";
+
+  const stream = canvas.captureStream(25);
+  const chunks: Blob[] = [];
+  const recorder = new MediaRecorder(stream, { mimeType });
+  recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+
+  // Load all images
+  const imgEls = await Promise.all(
+    items.map(
+      (item) =>
+        new Promise<HTMLImageElement>((res, rek) => {
+          const img = new Image();
+          img.onload = () => res(img);
+          img.onerror = rej;
+          img.src = item.localUrl;
+        })
+    )
+  );
+
+  recorder.start(250);
+
+  const SLIDE_MS = 3000;
+  const FADE_MS = 400;
+  const FRAME_MS = 40; // ~25fps
+
+  const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+  const drawImg = (img: HTMLImageElement, alpha = 1) => {
+    // cover-fit: fill canvas without distortion
+    const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight);
+    const sw = img.naturalWidth * scale;
+    const sh = img.naturalHeight * scale;
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(img, (w - sw) / 2, (h - sh) / 2, sw, sh);
+    ctx.globalAlpha = 1;
+  };
+
+  for (let i = 0; i < imgEls.length; i++) {
+    const cur = imgEls[i];
+    const nxt = imgEls[i + 1] ?? null;
+
+    // Hold slide
+    for (let t = 0; t < SLIDE_MS; t += FRAME_MS) {
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, w, h);
+      drawImg(cur);
+      await sleep(FRAME_MS);
+    }
+
+    // Crossfade to next
+    if (nxt) {
+      for (let t = 0; t <= FADE_MS; t += FRAME_MS) {
+        const a = t / FADE_MS;
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, w, h);
+        drawImg(cur, 1 - a);
+        drawImg(nxt, a);
+        await sleep(FRAME_MS);
+      }
+    }
+  }
+
+  return new Promise((res, rei) => {
+    recorder.onstop = () => {
+      if (!chunks.length) {
+        rej(new Error("No video captured — please use Chrome or Firefox"));
+        return;
+      }
+      res(new File([new Blob(chunks, { type: mimeType })], "animated-slides.webm", { type: mimeType }));
+    };
+    recorder.stop();
+  });
 }
 
 async function generateCaptionFromBrief(
@@ -136,6 +220,8 @@ export default function UploadSchedule() {
     new Set(["instagram", "facebook"])
   );
   const [postType, setPostType] = useState<PostTypeOption>("carousel");
+  const [dimension, setDimension] = useState<DimensionOption>("1080x1440");
+  const [animateSlides, setAnimateSlides] = useState(false);
   const [stickerType, setStickerType] = useState<StickerType>("none");
   const [stickerQuestion, setStickerQuestion] = useState("");
   const [stickerOptions, setStickerOptions] = useState(["", "", "", ""]);
@@ -145,15 +231,21 @@ export default function UploadSchedule() {
   const [scheduled, setScheduled] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
 
-  // Auto-switch to Reel when a video is added
+  // Auto-switch to Reel when a video is added or animate mode is on
   useEffect(() => {
-    if (images.some(i => i.isVideo) && postType === "carousel") {
+    if ((images.some((i) => i.isVideo) || animateSlides) && postType !== "reel") {
       setPostType("reel");
     }
-  }, [images]);
+  }, [images, animateSlides]);
+
+  // Reset animate mode if images drop below 2
+  useEffect(() => {
+    if (images.length < 2) setAnimateSlides(false);
+  }, [images.length]);
 
   const showSticker = postType === "story" && platforms.has("instagram");
-  const hasVideo = images.some(i => i.isVideo);
+  const hasVideo = images.some((i) => i.isVideo);
+  const showDimensionPicker = hasVideo || animateSlides;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragFromIdx = useRef<number | null>(null);
@@ -162,15 +254,15 @@ export default function UploadSchedule() {
 
   const addFiles = useCallback((files: FileList | File[]) => {
     const incoming = Array.from(files);
-    const videos = incoming.filter(f => f.type.startsWith("video/"));
-    const imgs = incoming.filter(f => f.type.startsWith("image/"));
+    const videos = incoming.filter((f) => f.type.startsWith("video/"));
+    const imgs = incoming.filter((f) => f.type.startsWith("image/"));
     if (!videos.length && !imgs.length) {
       toast.error("Only image or video files are supported.");
       return;
     }
     setImages((prev) => {
-      const hasExistingVideo = prev.some(i => i.isVideo);
-      const hasExistingImages = prev.some(i => !i.isVideo);
+      const hasExistingVideo = prev.some((i) => i.isVideo);
+      const hasExistingImages = prev.some((i) => !i.isVideo);
       if (videos.length) {
         if (hasExistingImages) { toast.error("Remove your images before adding a video."); return prev; }
         if (prev.length > 0) { toast.error("Only one video at a time."); return prev; }
@@ -187,7 +279,7 @@ export default function UploadSchedule() {
       if (available <= 0) { toast.error("You have 12 images already — remove one to add more."); return prev; }
       const toAdd = imgs.slice(0, available);
       if (imgs.length > available) toast.info(`Added ${toAdd.length} of ${imgs.length} images — limit is 12.`);
-      return [...prev, ...toAdd.map(f => ({ file: f, localUrl: URL.createObjectURL(f), isVideo: false }))];
+      return [...prev, ...toAdd.map((f) => ({ file: f, localUrl: URL.createObjectURL(f), isVideo: false }))];
     });
   }, []);
 
@@ -295,18 +387,46 @@ export default function UploadSchedule() {
     if (!date) { toast.error("Pick a date."); return; }
 
     const selectedPreset = presets.find((p) => String(p.id) === presetId);
-    const isVideoPost = images.some(i => i.isVideo);
+    const isVideoPost = images.some((i) => i.isVideo);
+    const isAnimated = animateSlides && !isVideoPost && images.length >= 2;
 
     setScheduling(true);
-    const id = toast.loading(isVideoPost ? "Uploading video..." : "Uploading images...");
+    const id = toast.loading(
+      isAnimated
+        ? `Stitching ${images.length} slides into animated reel...`
+        : isVideoPost
+        ? "Uploading video..."
+        : "Uploading images..."
+    );
+
     try {
-      let mediaUrls: string[];
-      if (isVideoPost) {
-        const url = await uploadVideo(images[0].file);
-        mediaUrls = [url];
+      let postContent: Record<string, unknown>;
+
+      if (isVideoPost || isAnimated) {
+        let videoFile: File;
+        if (isAnimated) {
+          videoFile = await stitchImagesToVideo(images, dimension);
+          toast.loading("Uploading animated reel...", { id });
+        } else {
+          videoFile = images[0].file;
+        }
+        const url = await uploadVideo(videoFile);
+        postContent = {
+          videoUrl: url,
+          caption: caption.trim(),
+          title: `Upload & Schedule — ${selectedPreset?.name ?? "Client"} ${date}`,
+          platforms: Array.from(platforms),
+        };
       } else {
-        mediaUrls = await uploadImages(images.map((i) => i.file));
+        const mediaUrls = await uploadImages(images.map((i) => i.file));
+        postContent = {
+          imageUrls: mediaUrls,
+          caption: caption.trim(),
+          title: `Upload & Schedule — ${selectedPreset?.name ?? "Client"} ${date}`,
+          platforms: Array.from(platforms),
+        };
       }
+
       toast.loading("Queuing post...", { id });
 
       const scheduledAt = new Date(`${date}T${time}:00`).toISOString();
@@ -316,7 +436,7 @@ export default function UploadSchedule() {
         if (stickerType === "poll" && stickerOptions[0].trim() && stickerOptions[1].trim()) {
           stickerConfig = { type: "poll", question: stickerQuestion.trim(), options: [stickerOptions[0].trim(), stickerOptions[1].trim()] };
         } else if (stickerType === "quiz") {
-          const validOpts = stickerOptions.map(o => o.trim()).filter(Boolean);
+          const validOpts = stickerOptions.map((o) => o.trim()).filter(Boolean);
           if (validOpts.length >= 2) {
             stickerConfig = { type: "quiz", question: stickerQuestion.trim(), options: validOpts, correctIndex: Math.min(stickerCorrectIndex, validOpts.length - 1) };
           }
@@ -331,12 +451,7 @@ export default function UploadSchedule() {
         body: JSON.stringify({
           presetId: Number(presetId),
           postType,
-          content: {
-            imageUrls: mediaUrls,
-            caption: caption.trim(),
-            title: `Upload & Schedule — ${selectedPreset?.name ?? "Client"} ${date}`,
-            platforms: Array.from(platforms),
-          },
+          content: postContent,
           scheduledAt,
           stickerConfig,
         }),
@@ -352,6 +467,7 @@ export default function UploadSchedule() {
       setImages([]);
       setCaption("");
       setBrief("");
+      setAnimateSlides(false);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Something went wrong", { id });
     } finally {
@@ -363,7 +479,7 @@ export default function UploadSchedule() {
 
   const handleGetApprovalGroups = useCallback(async () => {
     let mediaUrls: string[];
-    if (images.some(i => i.isVideo)) {
+    if (images.some((i) => i.isVideo)) {
       const url = await uploadVideo(images[0].file);
       mediaUrls = [url];
     } else {
@@ -421,7 +537,7 @@ export default function UploadSchedule() {
           <div>
             <div className="flex items-baseline justify-between mb-3">
               <Label className="text-xs font-semibold tracking-widest uppercase text-zinc-400">
-                {hasVideo ? "Video" : "Images"}
+                {hasVideo ? "Video" : animateSlides ? "Slides (animating as reel)" : "Images"}
               </Label>
               {!hasVideo && <span className="text-xs text-zinc-500">{images.length} / {MAX_IMAGES}</span>}
             </div>
@@ -436,7 +552,9 @@ export default function UploadSchedule() {
               >
                 <Upload size={22} className="text-zinc-500" />
                 <p className="text-sm text-zinc-400">Drop images or a video here</p>
-                <p className="text-xs text-zinc-600">Images: PNG, JPG, WebP up to 12 · Video: MP4 / MOV up to 300 MB</p>
+                <p className="text-xs text-zinc-600">
+                  Images: PNG, JPG, WebP up to 12 &nbsp;·&nbsp; Video: MP4 / MOV up to 300 MB
+                </p>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -504,7 +622,7 @@ export default function UploadSchedule() {
                     onDragEnd={handleThumbDragEnd}
                     style={{ touchAction: "pan-y" }}
                     className={`relative rounded-lg overflow-hidden aspect-square bg-zinc-900 cursor-grab active:cursor-grabbing border-2 transition-all ${
-                      dragOverIdx === idx ? "border-pink-500 scale-105" : "border-transparent"
+                      dragOverIdx === idx ? "border-pink-500 scale-105" : animateSlides ? "border-pink-500/20" : "border-transparent"
                     }`}
                   >
                     <img
@@ -528,6 +646,28 @@ export default function UploadSchedule() {
                   </div>
                 ))}
               </div>
+            )}
+
+            {/* Animate as Reel button */}
+            {!hasVideo && images.length >= 2 && (
+              <button
+                onClick={() => setAnimateSlides((v) => !v)}
+                className={`w-full py-2.5 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2 mb-2 ${
+                  animateSlides
+                    ? "bg-pink-600/20 border-pink-500/50 text-pink-300"
+                    : "bg-zinc-900 border-white/10 text-zinc-400 hover:border-pink-500/30 hover:text-pink-300"
+                }`}
+              >
+                <Film size={15} />
+                {animateSlides ? "Animated Reel: On — slides will crossfade" : "Animate slides into a Reel"}
+              </button>
+            )}
+
+            {animateSlides && (
+              <p className="text-[11px] text-zinc-500 mb-2">
+                Slides will crossfade at 3s each and be stitched into a single video reel.
+                Drag thumbnails to reorder.
+              </p>
             )}
 
             {images.length === 0 && (
@@ -587,6 +727,7 @@ export default function UploadSchedule() {
                 Schedule
               </p>
 
+              {/* Post type */}
               <div>
                 <Label className="text-xs text-zinc-500 mb-1.5 block">Post type</Label>
                 <div className="flex gap-2">
@@ -609,6 +750,35 @@ export default function UploadSchedule() {
                 )}
               </div>
 
+              {/* Dimension picker — shown when video or animate mode */}
+              {showDimensionPicker && (
+                <div>
+                  <Label className="text-xs text-zinc-500 mb-1.5 block">Dimensions</Label>
+                  <div className="flex gap-2">
+                    {(["1080x1440", "1080x1920"] as DimensionOption[]).map((d) => (
+                      <button
+                        key={d}
+                        onClick={() => setDimension(d)}
+                        className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
+                          dimension === d
+                            ? "bg-pink-600/20 border-pink-500/50 text-pink-300"
+                            : "bg-zinc-900 border-white/10 text-zinc-500 hover:border-white/20"
+                        }`}
+                      >
+                        {d === "1080x1440" ? "1080 × 1440" : "1080 × 1920"}
+                        <span className="block text-[10px] font-normal mt-0.5 opacity-70">
+                          {d === "1080x1440" ? "Portrait Feed" : "Story / Reel"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-zinc-600 mt-1.5">
+                    Export your Canva design at this size before uploading.
+                  </p>
+                </div>
+              )}
+
+              {/* Client */}
               <div>
                 <Label className="text-xs text-zinc-500 mb-1.5 block">Client</Label>
                 <Select
@@ -629,6 +799,7 @@ export default function UploadSchedule() {
                 </Select>
               </div>
 
+              {/* Date + Time */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs text-zinc-500 mb-1.5 block">Date</Label>
@@ -651,6 +822,7 @@ export default function UploadSchedule() {
                 </div>
               </div>
 
+              {/* Platforms */}
               <div>
                 <Label className="text-xs text-zinc-500 mb-1.5 block">Platforms</Label>
                 <div className="flex gap-2">
@@ -665,7 +837,7 @@ export default function UploadSchedule() {
                             ? "bg-pink-600/20 border-pink-500/50 text-pink-300"
                             : "bg-zinc-900 border-white/10 text-zinc-500 hover:border-white/20"
                         }`}
-                      >
+                                        >
                         {p.charAt(0).toUpperCase() + p.slice(1)}
                       </button>
                     );
@@ -676,6 +848,7 @@ export default function UploadSchedule() {
                 </p>
               </div>
 
+              {/* Sticker (stories only) */}
               {showSticker && (
                 <div className="border border-white/8 rounded-xl overflow-hidden">
                   <button
@@ -817,7 +990,13 @@ export default function UploadSchedule() {
                 className="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold"
                 size="lg"
               >
-                {scheduling ? (hasVideo ? "Uploading video..." : "Scheduling...") : "Schedule Post"}
+                {scheduling
+                  ? animateSlides
+                    ? "Creating animated reel..."
+                    : hasVideo
+                    ? "Uploading video..."
+                    : "Scheduling..."
+                  : "Schedule Post"}
               </Button>
 
               <Link href="/scheduler">
