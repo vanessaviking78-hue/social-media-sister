@@ -38,7 +38,7 @@ type CsvRow = {
   slide4_cta: string;
 };
 
-type BlockId = "hook" | "subtitle" | "body2" | "body3" | "cta";
+type BlockId = "hook" | "subtitle" | "body2" | "body3" | "cta" | "logo" | "line";
 
 type Block = {
   id: BlockId;
@@ -47,6 +47,7 @@ type Block = {
   y: number;       // 0-1 vertical centre fraction
   w?: number;      // width as fraction of W (defaults to BLOCK_STYLE[id].maxW / W)
   fontSize?: number; // canvas-pixel font size override (defaults to BLOCK_STYLE[id].size)
+  thickness?: number; // line thickness in canvas px (line block only)
 };
 
 type CarouselItem = {
@@ -81,22 +82,29 @@ const SLIDE_BLOCK_IDS: Record<number, BlockId[]> = {
 type BlockStyle = { font: string; size: number; lineH: number; maxW: number; label: string };
 
 const BLOCK_STYLE: Record<BlockId, BlockStyle> = {
-  hook:     { font: '"Bebas Neue"',       size: 108, lineH: 1.10, maxW: W - 120, label: "Hook"     },
-  subtitle: { font: '"Prata"',             size:  44, lineH: 1.40, maxW: W - 180, label: "Subtitle" },
-  body2:    { font: '"Prata"',             size:  50, lineH: 1.50, maxW: W - 160, label: "Body"     },
-  body3:    { font: '"Prata"',             size:  50, lineH: 1.50, maxW: W - 160, label: "Body"     },
-  cta:      { font: '"DM Serif Display"',  size:  76, lineH: 1.35, maxW: W - 140, label: "CTA"      },
+  hook:     { font: '"Bebas Neue"',  size: 108, lineH: 1.10, maxW: W - 120, label: "Hook"     },
+  subtitle: { font: '"Poppins"',     size:  44, lineH: 1.40, maxW: W - 180, label: "Subtitle" },
+  body2:    { font: '"Poppins"',     size:  50, lineH: 1.50, maxW: W - 160, label: "Body"     },
+  body3:    { font: '"Poppins"',     size:  50, lineH: 1.50, maxW: W - 160, label: "Body"     },
+  cta:      { font: '"Poppins"',     size:  76, lineH: 1.35, maxW: W - 140, label: "CTA"      },
+  logo:     { font: '"Poppins"',     size:  44, lineH: 1.00, maxW: W,       label: "Logo"     },
+  line:     { font: '"Poppins"',     size:  44, lineH: 1.00, maxW: W,       label: "Line"     },
 };
 
 const defaultBlock = (id: BlockId, text = ""): Block => {
   const pos: Record<BlockId, { x: number; y: number }> = {
-    hook:     { x: 0.5, y: 0.695 },
-    subtitle: { x: 0.5, y: 0.785 },
-    body2:    { x: 0.5, y: 0.50 },
-    body3:    { x: 0.5, y: 0.50 },
-    cta:      { x: 0.5, y: 0.50 },
+    hook:     { x: 0.5,  y: 0.695 },
+    subtitle: { x: 0.5,  y: 0.785 },
+    body2:    { x: 0.5,  y: 0.80  },
+    body3:    { x: 0.5,  y: 0.80  },
+    cta:      { x: 0.5,  y: 0.80  },
+    logo:     { x: 0.09, y: 0.07  },
+    line:     { x: 0.5,  y: 0.90  },
   };
-  return { id, text, ...pos[id] };
+  const extra: Partial<Block> =
+    id === "logo" ? { w: 0.10 } :
+    id === "line" ? { w: 0.40, thickness: 3 } : {};
+  return { id, text, ...pos[id], ...extra };
 };
 
 function makeBlocks(row: CsvRow): Block[] {
@@ -106,6 +114,8 @@ function makeBlocks(row: CsvRow): Block[] {
     defaultBlock("body2",    row.slide2_body),
     defaultBlock("body3",    row.slide3_body),
     defaultBlock("cta",      row.slide4_cta),
+    defaultBlock("logo"),
+    defaultBlock("line"),
   ];
 }
 
@@ -272,7 +282,7 @@ function renderSlideCanvas(
         ? wrapCanvas(ctx, stripPipes(hookRaw).trim().toUpperCase(), W - PAD_X * 2)
         : [];
 
-      ctx.font = `normal 400 ${SUB_SIZE}px 'Prata', serif`;
+      ctx.font = `normal 400 ${SUB_SIZE}px 'Poppins', sans-serif`;
       const subLines = subRaw.trim()
         ? wrapCanvas(ctx, stripPipes(subRaw).trim(), W - PAD_X * 2)
         : [];
@@ -291,7 +301,7 @@ function renderSlideCanvas(
       // Subtitle — centred around subCY, accent colour
       if (subLines.length > 0) {
         const totalH = subLines.length * SUB_LINE_H;
-        ctx.font      = `normal 400 ${SUB_SIZE}px 'Prata', serif`;
+        ctx.font      = `normal 400 ${SUB_SIZE}px 'Poppins', sans-serif`;
         ctx.fillStyle = accentColor;
         let y = subCY - totalH / 2 + SUB_LINE_H / 2;
         for (const line of subLines) {
@@ -320,17 +330,34 @@ function renderSlideCanvas(
     }
   }
 
-  // Logo — top-left
+  // Decorative line + logo — positions/sizes driven by their blocks (movable & resizable).
+  // Skipped in bgOnly mode so the editor overlay is the only draggable copy.
   ctx.shadowColor = "transparent";
   ctx.shadowBlur  = 0;
-  if (logoImg) {
-    const MAX = 110, PAD = 44;
-    const asp = logoImg.width / logoImg.height;
-    const lw = asp >= 1 ? MAX : MAX * asp;
-    const lh = asp >= 1 ? MAX / asp : MAX;
-    ctx.globalAlpha = 0.92;
-    ctx.drawImage(logoImg, PAD, PAD, lw, lh);
-    ctx.globalAlpha = 1;
+
+  if (!bgOnly) {
+    const lineBlock = blocks.find(b => b.id === "line");
+    if (lineBlock) {
+      const lineLen = (lineBlock.w ?? 0.4) * W;
+      const thick   = Math.max(1, lineBlock.thickness ?? 3);
+      const lcx = (lineBlock.x ?? 0.5) * W;
+      const lcy = (lineBlock.y ?? 0.9) * H;
+      ctx.fillStyle = accentColor;
+      ctx.fillRect(lcx - lineLen / 2, lcy - thick / 2, lineLen, thick);
+    }
+
+    if (logoImg) {
+      const logoBlock = blocks.find(b => b.id === "logo");
+      const targetW = (logoBlock?.w ?? 0.10) * W;
+      const asp = (logoImg.width / logoImg.height) || 1;
+      const lw = targetW;
+      const lh = targetW / asp;
+      const lcx = (logoBlock?.x ?? 0.09) * W;
+      const lcy = (logoBlock?.y ?? 0.07) * H;
+      ctx.globalAlpha = 0.95;
+      ctx.drawImage(logoImg, lcx - lw / 2, lcy - lh / 2, lw, lh);
+      ctx.globalAlpha = 1;
+    }
   }
 
   return canvas.toDataURL("image/png");
@@ -424,7 +451,8 @@ function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave, onClos
     id: BlockId; startPx: number; startPy: number; startBx: number; startBy: number;
   } | null>(null);
   const [resizing, setResizing] = useState<{
-    id: BlockId; startDist: number; startW: number; startFontSize: number;
+    id: BlockId; mode: "corner" | "x" | "y"; startDist: number;
+    startW: number; startFontSize: number; startThickness: number;
   } | null>(null);
   const [editingId, setEditingId] = useState<BlockId | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -438,7 +466,7 @@ function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave, onClos
   );
 
   const activeBlockIds = SLIDE_BLOCK_IDS[activeSlide];
-  const activeBlocks = blocks.filter(b => activeBlockIds.includes(b.id));
+  const activeBlocks = blocks.filter(b => activeBlockIds.includes(b.id) || b.id === "logo" || b.id === "line");
 
   const handleContainerPointerMove = (e: React.PointerEvent) => {
     if (!containerRef.current) return;
@@ -459,16 +487,35 @@ function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave, onClos
       if (!block) return;
       const bx = block.x * rect.width + rect.left;
       const by = block.y * rect.height + rect.top;
-      const dist = Math.sqrt((e.clientX - bx) ** 2 + (e.clientY - by) ** 2) || 1;
-      const scale = dist / resizing.startDist;
-      setBlocks(prev => prev.map(b =>
-        b.id === resizing.id
-          ? { ...b,
-              w: Math.max(0.1, Math.min(0.95, resizing.startW * scale)),
-              fontSize: Math.round(Math.max(8, Math.min(400, resizing.startFontSize * scale))),
-            }
-          : b
-      ));
+      const ddx = Math.abs(e.clientX - bx);
+      const ddy = Math.abs(e.clientY - by);
+      const dist =
+        resizing.mode === "x" ? ddx :
+        resizing.mode === "y" ? ddy :
+        Math.sqrt(ddx * ddx + ddy * ddy);
+      const scale = (dist || 1) / resizing.startDist;
+      setBlocks(prev => prev.map(b => {
+        if (b.id !== resizing.id) return b;
+        if (b.id === "line") {
+          if (resizing.mode === "y") {
+            return { ...b, thickness: Math.round(Math.max(1, Math.min(40, resizing.startThickness * scale))) };
+          }
+          return { ...b, w: Math.max(0.05, Math.min(0.95, resizing.startW * scale)) };
+        }
+        if (b.id === "logo") {
+          return { ...b, w: Math.max(0.04, Math.min(0.6, resizing.startW * scale)) };
+        }
+        if (resizing.mode === "x") {
+          return { ...b, w: Math.max(0.1, Math.min(0.95, resizing.startW * scale)) };
+        }
+        if (resizing.mode === "y") {
+          return { ...b, fontSize: Math.round(Math.max(8, Math.min(400, resizing.startFontSize * scale))) };
+        }
+        return { ...b,
+          w: Math.max(0.1, Math.min(0.95, resizing.startW * scale)),
+          fontSize: Math.round(Math.max(8, Math.min(400, resizing.startFontSize * scale))),
+        };
+      }));
     }
   };
 
@@ -480,19 +527,26 @@ function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave, onClos
     setDragging({ id: block.id, startPx: e.clientX, startPy: e.clientY, startBx: block.x, startBy: block.y });
   };
 
-  const handleCornerDown = (e: React.PointerEvent, block: Block) => {
+  const handleResizeDown = (e: React.PointerEvent, block: Block, mode: "corner" | "x" | "y") => {
     e.preventDefault();
     e.stopPropagation();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     const rect = containerRef.current!.getBoundingClientRect();
     const bx = block.x * rect.width + rect.left;
     const by = block.y * rect.height + rect.top;
-    const dist = Math.sqrt((e.clientX - bx) ** 2 + (e.clientY - by) ** 2) || 50;
+    const ddx = Math.abs(e.clientX - bx);
+    const ddy = Math.abs(e.clientY - by);
+    const startDist =
+      mode === "x" ? (ddx || 30) :
+      mode === "y" ? (ddy || 30) :
+      (Math.sqrt(ddx * ddx + ddy * ddy) || 50);
     setResizing({
       id: block.id,
-      startDist: dist,
+      mode,
+      startDist,
       startW: block.w ?? (BLOCK_STYLE[block.id].maxW / W),
       startFontSize: block.fontSize ?? BLOCK_STYLE[block.id].size,
+      startThickness: block.thickness ?? 3,
     });
   };
 
@@ -529,7 +583,7 @@ function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave, onClos
         <div className="p-4">
           <p className="text-xs text-muted-foreground mb-3">
             <GripVertical className="w-3 h-3 inline mr-1 opacity-60" />
-            Drag to reposition. Drag corners to resize. Double-click to edit content.
+            Drag to move. Drag corners or sides to resize. Double-click text to edit. Logo and line are draggable too.
           </p>
 
           {/* Slide canvas area */}
@@ -548,20 +602,31 @@ function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave, onClos
 
             {activeBlocks.map(block => {
               const st = BLOCK_STYLE[block.id];
+              const isText = block.id === "hook" || block.id === "subtitle" || block.id === "body2" || block.id === "body3" || block.id === "cta";
+              const isLogo = block.id === "logo";
+              const isLine = block.id === "line";
+              const logoSrc = logoImg?.src ?? "";
+              if (isLogo && !logoSrc) return null;
+              const accent = preset.cornerColor || "#d4af37";
               const dispFontSize = Math.max(8, Math.round((block.fontSize ?? st.size) * EDITOR_SCALE));
               const blockW = block.w ?? (st.maxW / W);
               const blockDisplayW = Math.round(blockW * displayW);
+              const lineThickPx = Math.max(1, Math.round((block.thickness ?? 3) * EDITOR_SCALE));
               const isEditing = editingId === block.id;
               const isDraggingThis = dragging?.id === block.id;
               const isResizingThis = resizing?.id === block.id;
               const isActive = isDraggingThis || isResizingThis;
-              const CORNER_SIZE = 8;
-              const corners = [
-                { top: -CORNER_SIZE / 2, left: -CORNER_SIZE / 2, cursor: "nw-resize" },
-                { top: -CORNER_SIZE / 2, right: -CORNER_SIZE / 2, cursor: "ne-resize" },
-                { bottom: -CORNER_SIZE / 2, left: -CORNER_SIZE / 2, cursor: "sw-resize" },
-                { bottom: -CORNER_SIZE / 2, right: -CORNER_SIZE / 2, cursor: "se-resize" },
-              ] as const;
+              const HSIZE = 9;
+              const handles = [
+                { top: -HSIZE/2, left: -HSIZE/2, cursor: "nwse-resize", mode: "corner" as const },
+                { top: -HSIZE/2, right: -HSIZE/2, cursor: "nesw-resize", mode: "corner" as const },
+                { bottom: -HSIZE/2, left: -HSIZE/2, cursor: "nesw-resize", mode: "corner" as const },
+                { bottom: -HSIZE/2, right: -HSIZE/2, cursor: "nwse-resize", mode: "corner" as const },
+                { top: -HSIZE/2, left: "50%", marginLeft: -HSIZE/2, cursor: "ns-resize", mode: "y" as const },
+                { bottom: -HSIZE/2, left: "50%", marginLeft: -HSIZE/2, cursor: "ns-resize", mode: "y" as const },
+                { left: -HSIZE/2, top: "50%", marginTop: -HSIZE/2, cursor: "ew-resize", mode: "x" as const },
+                { right: -HSIZE/2, top: "50%", marginTop: -HSIZE/2, cursor: "ew-resize", mode: "x" as const },
+              ] as any[];
               return (
                 <div
                   key={block.id}
@@ -570,7 +635,7 @@ function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave, onClos
                     left: `${block.x * 100}%`,
                     top: `${block.y * 100}%`,
                     transform: "translate(-50%, -50%)",
-                    zIndex: 10,
+                    zIndex: isLogo ? 14 : isLine ? 12 : 10,
                     width: blockDisplayW,
                     textAlign: "center",
                     cursor: isDraggingThis ? "grabbing" : isEditing ? "text" : "grab",
@@ -578,33 +643,41 @@ function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave, onClos
                   }}
                   onPointerDown={e => !isEditing && handleBlockDown(e, block)}
                   onPointerUp={() => { setDragging(null); setResizing(null); }}
-                  onDoubleClick={() => { setDragging(null); setResizing(null); setEditingId(block.id); }}
+                  onDoubleClick={() => { if (isText) { setDragging(null); setResizing(null); setEditingId(block.id); } }}
                 >
-                  {/* Drag handle ring */}
                   {!isEditing && (
                     <div className={`absolute -inset-1.5 rounded-md border transition-colors ${isActive ? "border-primary/80 bg-primary/10" : "border-white/20 hover:border-white/50"}`} />
                   )}
 
-                  {/* Corner resize handles */}
-                  {!isEditing && corners.map((c, i) => (
+                  {!isEditing && handles.map((h, i) => (
                     <div
                       key={i}
                       style={{
                         position: "absolute",
-                        width: CORNER_SIZE,
-                        height: CORNER_SIZE,
+                        width: HSIZE,
+                        height: HSIZE,
                         borderRadius: 2,
                         background: "#ffffff",
                         border: "1.5px solid rgba(0,0,0,0.5)",
                         boxShadow: "0 1px 3px rgba(0,0,0,0.4)",
                         zIndex: 20,
-                        ...c,
+                        cursor: h.cursor,
+                        top: h.top,
+                        bottom: h.bottom,
+                        left: h.left,
+                        right: h.right,
+                        marginLeft: h.marginLeft,
+                        marginTop: h.marginTop,
                       }}
-                      onPointerDown={e => { e.preventDefault(); e.stopPropagation(); handleCornerDown(e, block); }}
+                      onPointerDown={e => { e.preventDefault(); e.stopPropagation(); handleResizeDown(e, block, h.mode); }}
                     />
                   ))}
 
-                  {isEditing ? (
+                  {isLogo ? (
+                    <img src={logoSrc} draggable={false} style={{ width: "100%", height: "auto", display: "block", pointerEvents: "none" }} />
+                  ) : isLine ? (
+                    <div style={{ width: "100%", height: lineThickPx, background: accent, borderRadius: 1 }} />
+                  ) : isEditing ? (
                     <input
                       autoFocus
                       value={block.text}
@@ -648,7 +721,6 @@ function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave, onClos
                     </span>
                   )}
 
-                  {/* Label badge */}
                   {!isEditing && (
                     <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] uppercase tracking-widest text-white/40 whitespace-nowrap pointer-events-none">
                       {st.label}
