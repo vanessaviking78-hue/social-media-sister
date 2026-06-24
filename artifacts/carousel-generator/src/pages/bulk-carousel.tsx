@@ -115,7 +115,7 @@ function makeBlocks(row: CsvRow): Block[] {
     defaultBlock("body3",    row.slide3_body),
     defaultBlock("cta",      row.slide4_cta),
     defaultBlock("logo"),
-    defaultBlock("line"),
+    
   ];
 }
 
