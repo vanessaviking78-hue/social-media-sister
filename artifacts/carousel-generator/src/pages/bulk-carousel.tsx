@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, Upload, FileText, Download, Loader2, CalendarClock,
-  CheckCircle2, X, Edit2, GripVertical, Sparkles, Send,
+  CheckCircle2, X, Edit2, GripVertical, Sparkles, Send, Music,
 } from "lucide-react";
 import { SendForApprovalModal } from "@/components/send-for-approval-modal";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import { saveAs } from "file-saver";
 import { loadGoogleFonts } from "@/lib/slide-utils";
 
 import { usePresets, type ClientPreset } from "@/lib/use-presets";
+import { MusicPickerModal, type MusicTrack } from "@/components/music-picker-modal";
+import ApprovedImagesPicker from "@/components/approved-images-picker";
 
 loadGoogleFonts();
 
@@ -821,6 +823,8 @@ export default function BulkCarousel() {
   const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
   const [scheduling, setScheduling] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
+  const [musicPickerOpen, setMusicPickerOpen] = useState(false);
 
   const csvInputRef  = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -1111,6 +1115,7 @@ export default function BulkCarousel() {
               imageUrls, caption: entry.caption || "",
               title: item.hook.slice(0, 80) || `Carousel ${item.rowNum}`,
               platforms: entry.platforms,
+              musicTrack: musicTrack || undefined,
             },
             scheduledAt: new Date(`${entry.date}T${entry.time}`).toISOString(),
           }),
@@ -1524,6 +1529,11 @@ export default function BulkCarousel() {
               />
               <input ref={coverInputRef} type="file" accept="image/*" multiple className="hidden"
                 onChange={e => { if (e.target.files) appendImages(setCoverFiles, Array.from(e.target.files)); e.target.value = ""; }} />
+              <ApprovedImagesPicker
+                clientName={selectedPreset?.name}
+                label="Use approved photos (covers)"
+                onAddImages={files => appendImages(setCoverFiles, files)}
+              />
               {coverFiles.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {coverFiles.map((f, i) => (
@@ -1550,6 +1560,11 @@ export default function BulkCarousel() {
               />
               <input ref={bodyInputRef} type="file" accept="image/*" multiple className="hidden"
                 onChange={e => { if (e.target.files) appendImages(setBodyFiles, Array.from(e.target.files)); e.target.value = ""; }} />
+              <ApprovedImagesPicker
+                clientName={selectedPreset?.name}
+                label="Use approved photos (body)"
+                onAddImages={files => appendImages(setBodyFiles, files)}
+              />
               {bodyFiles.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {bodyFiles.map((f, i) => (
@@ -1579,6 +1594,38 @@ export default function BulkCarousel() {
               )}
             </div>
           )}
+        </section>
+
+        {/* Step 3.5: Music (optional) */}
+        <section className="space-y-2">
+          <h2 className="font-semibold text-base">Add music (optional)</h2>
+          <p className="text-sm text-muted-foreground">
+            One track is attached to every carousel in this batch when it posts to Instagram.
+          </p>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setMusicPickerOpen(true)}
+              className={musicTrack ? "border-green-500/40 text-green-300 hover:bg-green-950/30" : ""}
+            >
+              <Music className="w-4 h-4 mr-2" />
+              {musicTrack ? musicTrack.name.slice(0, 30) : "Browse music"}
+            </Button>
+            {musicTrack && (
+              <button
+                onClick={() => setMusicTrack(null)}
+                className="text-xs text-muted-foreground hover:text-foreground"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+          <MusicPickerModal
+            open={musicPickerOpen}
+            onClose={() => setMusicPickerOpen(false)}
+            selectedTrack={musicTrack}
+            onSelect={t => setMusicTrack(t)}
+          />
         </section>
 
         {/* Step 4: Preview table */}
