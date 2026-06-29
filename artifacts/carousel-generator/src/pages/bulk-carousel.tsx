@@ -97,9 +97,9 @@ const defaultBlock = (id: BlockId, text = ""): Block => {
   const pos: Record<BlockId, { x: number; y: number }> = {
     hook:     { x: 0.5,  y: 0.695 },
     subtitle: { x: 0.5,  y: 0.785 },
-    body2:    { x: 0.5,  y: 0.80  },
-    body3:    { x: 0.5,  y: 0.80  },
-    cta:      { x: 0.5,  y: 0.88  },
+    body2:    { x: 0.5,  y: 0.93  },
+    body3:    { x: 0.5,  y: 0.93  },
+    cta:      { x: 0.5,  y: 0.95  },
     logo:     { x: 0.09, y: 0.07  },
     line:     { x: 0.5,  y: 0.90  },
   };
@@ -336,7 +336,7 @@ function renderSlideCanvas(
         const lines = wrapCanvas(ctx, stripPipes(block.text), maxW);
         const totalH = lines.length * fontSize * st.lineH;
         const cx = block.x * W;
-        let y = block.y * H - totalH / 2 + (fontSize * st.lineH) / 2;
+        let y = block.y * H - totalH + (fontSize * st.lineH) / 2;
         for (const line of lines) { ctx.fillText(stripPipes(line), cx, y); y += fontSize * st.lineH; }
       }
     }
@@ -652,7 +652,7 @@ function SlideEditorModal({ item, preset, logoImg, heroWordColor, subtitleColor,
                     position: "absolute",
                     left: `${block.x * 100}%`,
                     top: `${block.y * 100}%`,
-                    transform: "translate(-50%, -50%)",
+                    transform: (block.id === "body2" || block.id === "body3" || block.id === "cta") ? "translate(-50%, -100%)" : "translate(-50%, -50%)",
                     zIndex: isLogo ? 14 : isLine ? 12 : 10,
                     width: blockDisplayW,
                     textAlign: "center",
