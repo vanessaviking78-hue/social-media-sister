@@ -99,7 +99,7 @@ const defaultBlock = (id: BlockId, text = ""): Block => {
     subtitle: { x: 0.5,  y: 0.785 },
     body2:    { x: 0.5,  y: 0.80  },
     body3:    { x: 0.5,  y: 0.80  },
-    cta:      { x: 0.5,  y: 0.80  },
+    cta:      { x: 0.5,  y: 0.88  },
     logo:     { x: 0.09, y: 0.07  },
     line:     { x: 0.5,  y: 0.90  },
   };
@@ -208,7 +208,10 @@ function renderSlideCanvas(
   scale = SCALE,
   bgOnly = false,
   lineSpacing = 1.2,
-  accentOverride?: string
+  accentOverride?: string,
+  subtitleOverride?: string,
+  overlayOverride?: string,
+  overlayAlpha?: number
 ): string {
   const canvas = document.createElement("canvas");
   canvas.width = W * scale;
@@ -243,6 +246,13 @@ function renderSlideCanvas(
     grad.addColorStop(0, "rgba(0,0,0,0)");
     grad.addColorStop(1, "rgba(0,0,0,0.6)");
     ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  // Optional user overlay tint, applied to every slide
+  if (overlayAlpha && overlayAlpha > 0) {
+    const [orr, ogg, obb] = hexToRgb(overlayOverride ?? "#000000");
+    ctx.fillStyle = `rgba(${orr}, ${ogg}, ${obb}, ${overlayAlpha})`;
     ctx.fillRect(0, 0, W, H);
   }
 
@@ -304,7 +314,7 @@ function renderSlideCanvas(
       if (subLines.length > 0) {
         const totalH = subLines.length * SUB_LINE_H;
         ctx.font      = `normal 400 ${SUB_SIZE}px 'Poppins', sans-serif`;
-        ctx.fillStyle = accentColor;
+        ctx.fillStyle = subtitleOverride ?? accentColor;
         let y = subCY - totalH / 2 + SUB_LINE_H / 2;
         for (const line of subLines) {
           ctx.fillText(stripPipes(line), subCX, y);
@@ -370,10 +380,13 @@ function renderAllThumbs(
   logoImg: HTMLImageElement | null,
   preset: ClientPreset,
   lineSpacing = 1.2,
-  accentOverride?: string
+  accentOverride?: string,
+  subtitleOverride?: string,
+  overlayOverride?: string,
+  overlayAlpha?: number
 ): string[] {
   return ([1,2,3,4] as const).map(n =>
-    renderSlideCanvas(n, item.blocks, item.coverImg, item.bodyImg, logoImg, preset, SCALE, false, lineSpacing, accentOverride)
+    renderSlideCanvas(n, item.blocks, item.coverImg, item.bodyImg, logoImg, preset, SCALE, false, lineSpacing, accentOverride, subtitleOverride, overlayOverride, overlayAlpha)
   );
 }
 
@@ -442,11 +455,14 @@ type EditorProps = {
   preset: ClientPreset;
   logoImg: HTMLImageElement | null;
   heroWordColor: string;
+  subtitleColor: string;
+  overlayColor: string;
+  overlayAlpha: number;
   onSave: (blocks: Block[]) => void;
   onClose: () => void;
 };
 
-function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave, onClose }: EditorProps) {
+function SlideEditorModal({ item, preset, logoImg, heroWordColor, subtitleColor, overlayColor, overlayAlpha, onSave, onClose }: EditorProps) {
   const [activeSlide, setActiveSlide] = useState<1|2|3|4>(1);
   const [blocks, setBlocks] = useState<Block[]>(() => item.blocks.map(b => ({ ...b })));
   const [dragging, setDragging] = useState<{
@@ -461,10 +477,10 @@ function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave, onClos
 
   const bgUrls = useMemo(() =>
     ([1,2,3,4] as const).map(n =>
-      renderSlideCanvas(n, blocks, item.coverImg, item.bodyImg, logoImg, preset, 1, true)
+      renderSlideCanvas(n, blocks, item.coverImg, item.bodyImg, logoImg, preset, 1, true, 1.2, undefined, undefined, overlayColor, overlayAlpha)
     ),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [item.coverImg, item.bodyImg, logoImg, preset.pageColor, preset.overlayColor]
+  [item.coverImg, item.bodyImg, logoImg, preset.pageColor, preset.overlayColor, overlayColor, overlayAlpha]
   );
 
   const activeBlockIds = SLIDE_BLOCK_IDS[activeSlide];
@@ -700,7 +716,7 @@ function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave, onClos
                         fontFamily: st.font.replace(/"/g, "'"),
                         fontSize: dispFontSize,
                         lineHeight: st.lineH,
-                        color: tc,
+                        color: block.id === "subtitle" ? subtitleColor : tc,
                         textShadow: "0 2px 12px rgba(0,0,0,0.95)",
                         whiteSpace: "pre-wrap",
                         wordBreak: "break-word",
@@ -810,8 +826,17 @@ export default function BulkCarousel() {
   const lineSpacingRef = useRef(1.2);
   const [heroWordColor, setHeroWordColor] = useState("#C4879A");
   const heroWordColorRef = useRef("#C4879A");
+  const [subtitleColor, setSubtitleColor] = useState("#C4879A");
+  const subtitleColorRef = useRef("#C4879A");
+  const [overlayColor, setOverlayColor] = useState("#000000");
+  const overlayColorRef = useRef("#000000");
+  const [overlayAlpha, setOverlayAlpha] = useState(0);
+  const overlayAlphaRef = useRef(0);
   useEffect(() => { lineSpacingRef.current = lineSpacing; }, [lineSpacing]);
   useEffect(() => { heroWordColorRef.current = heroWordColor; }, [heroWordColor]);
+  useEffect(() => { subtitleColorRef.current = subtitleColor; }, [subtitleColor]);
+  useEffect(() => { overlayColorRef.current = overlayColor; }, [overlayColor]);
+  useEffect(() => { overlayAlphaRef.current = overlayAlpha; }, [overlayAlpha]);
 
   // Caption state
   const [captionMap, setCaptionMap] = useState<Record<string, string>>({});
@@ -923,7 +948,7 @@ export default function BulkCarousel() {
         if (bodyFiles[i])  try { bodyImg  = await loadImg(URL.createObjectURL(bodyFiles[i]));  } catch {}
 
         const blocks = makeBlocks(row);
-        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, lineSpacing, heroWordColor);
+        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, lineSpacing, heroWordColor, subtitleColor, overlayColor, overlayAlpha);
         rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.slide1_hook, blocks, coverImg, bodyImg, thumbs });
         setRenderProgress(Math.round(((i + 1) / csvRows.length) * 100));
       }
@@ -943,7 +968,7 @@ export default function BulkCarousel() {
     if (!selectedPreset) return;
     setItems(prev => prev.map(item => {
       if (item.id !== id) return item;
-      const thumbs = renderAllThumbs({ blocks: newBlocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, logoImgRef.current, selectedPreset, lineSpacingRef.current, heroWordColorRef.current);
+      const thumbs = renderAllThumbs({ blocks: newBlocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, logoImgRef.current, selectedPreset, lineSpacingRef.current, heroWordColorRef.current, subtitleColorRef.current, overlayColorRef.current, overlayAlphaRef.current);
       return { ...item, blocks: newBlocks, thumbs };
     }));
   };
@@ -954,7 +979,7 @@ export default function BulkCarousel() {
     const id = setTimeout(() => {
       const ls = lineSpacingRef.current;
       setItems(prev => prev.map(item => {
-        const thumb1 = renderSlideCanvas(1, item.blocks, item.coverImg, item.bodyImg, logoImgRef.current, selectedPreset!, SCALE, false, ls, heroWordColorRef.current);
+        const thumb1 = renderSlideCanvas(1, item.blocks, item.coverImg, item.bodyImg, logoImgRef.current, selectedPreset!, SCALE, false, ls, heroWordColorRef.current, subtitleColorRef.current, overlayColorRef.current, overlayAlphaRef.current);
         return { ...item, thumbs: [thumb1, ...item.thumbs.slice(1)] };
       }));
     }, 180);
@@ -970,7 +995,7 @@ export default function BulkCarousel() {
       const ls = lineSpacingRef.current;
       setItems(prev => prev.map(item => ({
         ...item,
-        thumbs: renderAllThumbs(item, logoImgRef.current, selectedPreset!, ls, heroWordColorRef.current),
+        thumbs: renderAllThumbs(item, logoImgRef.current, selectedPreset!, ls, heroWordColorRef.current, subtitleColorRef.current, overlayColorRef.current, overlayAlphaRef.current),
       })));
     };
     import.meta.hot.on("vite:afterUpdate", handler);
@@ -1288,6 +1313,9 @@ export default function BulkCarousel() {
             preset={selectedPreset}
             logoImg={logoImgRef.current}
             heroWordColor={heroWordColor}
+            subtitleColor={subtitleColor}
+            overlayColor={overlayColor}
+            overlayAlpha={overlayAlpha}
             onSave={blocks => handleSaveEdit(editingItem.id, blocks)}
             onClose={() => setEditingItemId(null)}
           />
@@ -1498,14 +1526,21 @@ export default function BulkCarousel() {
           </div>
           <p className="text-sm text-muted-foreground">Required columns: {CSV_COLS.join(", ")}. Each row becomes one carousel.</p>
 
-          <div className="flex items-center gap-3">
-            <label className="text-sm text-muted-foreground whitespace-nowrap">Hero Word Colour</label>
-            <input
-              type="color"
-              value={heroWordColor}
-              onChange={e => setHeroWordColor(e.target.value)}
-              className="h-8 w-14 rounded cursor-pointer border border-border/40 bg-transparent p-0.5"
-            />
+          <div className="flex items-center gap-6 flex-wrap">
+            <div className="flex items-center gap-3">
+              <label className="text-sm text-muted-foreground whitespace-nowrap">Hero Word Colour</label>
+              <input type="color" value={heroWordColor} onChange={e => setHeroWordColor(e.target.value)} className="h-8 w-14 rounded cursor-pointer border border-border/40 bg-transparent p-0.5" />
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="text-sm text-muted-foreground whitespace-nowrap">Subtitle Colour</label>
+              <input type="color" value={subtitleColor} onChange={e => setSubtitleColor(e.target.value)} className="h-8 w-14 rounded cursor-pointer border border-border/40 bg-transparent p-0.5" />
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="text-sm text-muted-foreground whitespace-nowrap">Overlay (all slides)</label>
+              <input type="color" value={overlayColor} onChange={e => setOverlayColor(e.target.value)} className="h-8 w-14 rounded cursor-pointer border border-border/40 bg-transparent p-0.5" />
+              <input type="range" min={0} max={0.8} step={0.05} value={overlayAlpha} onChange={e => setOverlayAlpha(parseFloat(e.target.value))} className="w-28 cursor-pointer" />
+              <span className="text-xs text-muted-foreground w-10">{Math.round(overlayAlpha * 100)}%</span>
+            </div>
           </div>
 
           <div
