@@ -86,9 +86,9 @@ type BlockStyle = { font: string; size: number; lineH: number; maxW: number; lab
 const BLOCK_STYLE: Record<BlockId, BlockStyle> = {
   hook:     { font: '"Bebas Neue"',  size: 108, lineH: 1.10, maxW: W - 120, label: "Hook"     },
   subtitle: { font: '"Poppins"',     size:  44, lineH: 1.40, maxW: W - 180, label: "Subtitle" },
-  body2:    { font: '"Poppins"',     size:  50, lineH: 1.50, maxW: W - 160, label: "Body"     },
-  body3:    { font: '"Poppins"',     size:  50, lineH: 1.50, maxW: W - 160, label: "Body"     },
-  cta:      { font: '"Poppins"',     size:  76, lineH: 1.35, maxW: W - 140, label: "CTA"      },
+  body2:    { font: '"Poppins"',     size:  40, lineH: 1.45, maxW: W - 160, label: "Body"     },
+  body3:    { font: '"Poppins"',     size:  40, lineH: 1.45, maxW: W - 160, label: "Body"     },
+  cta:      { font: '"Poppins"',     size:  58, lineH: 1.35, maxW: W - 140, label: "CTA"      },
   logo:     { font: '"Poppins"',     size:  44, lineH: 1.00, maxW: W,       label: "Logo"     },
   line:     { font: '"Poppins"',     size:  44, lineH: 1.00, maxW: W,       label: "Line"     },
 };
@@ -97,8 +97,8 @@ const defaultBlock = (id: BlockId, text = ""): Block => {
   const pos: Record<BlockId, { x: number; y: number }> = {
     hook:     { x: 0.5,  y: 0.695 },
     subtitle: { x: 0.5,  y: 0.785 },
-    body2:    { x: 0.5,  y: 0.93  },
-    body3:    { x: 0.5,  y: 0.93  },
+    body2:    { x: 0.5,  y: 0.94  },
+    body3:    { x: 0.5,  y: 0.94  },
     cta:      { x: 0.5,  y: 0.95  },
     logo:     { x: 0.09, y: 0.07  },
     line:     { x: 0.5,  y: 0.90  },
