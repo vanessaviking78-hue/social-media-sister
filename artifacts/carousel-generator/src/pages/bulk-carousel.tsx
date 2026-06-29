@@ -825,6 +825,7 @@ export default function BulkCarousel() {
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
   const [musicPickerOpen, setMusicPickerOpen] = useState(false);
+  const [dragCtx, setDragCtx] = useState<{ list: "cover" | "body"; index: number } | null>(null);
 
   const csvInputRef  = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -877,6 +878,17 @@ export default function BulkCarousel() {
 
   const appendImages = (setter: React.Dispatch<React.SetStateAction<File[]>>, files: File[]) =>
     setter(prev => [...prev, ...files.filter(f => f.type.startsWith("image/"))]);
+
+  const reorderFiles = (list: "cover" | "body", from: number, to: number) => {
+    const setter = list === "cover" ? setCoverFiles : setBodyFiles;
+    setter(prev => {
+      if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  };
 
   const handleCoverDrop = (e: React.DragEvent) => {
     e.preventDefault(); setCoverDrag(false);
@@ -1549,9 +1561,18 @@ export default function BulkCarousel() {
                 onAddImages={files => appendImages(setCoverFiles, files)}
               />
               {coverFiles.length > 0 && (
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1 items-center">
+                  <p className="w-full text-xs text-muted-foreground">Drag the chips to reorder. Image 1 goes with CSV row 1, image 2 with row 2, and so on.</p>
                   {coverFiles.map((f, i) => (
-                    <div key={i} className="flex items-center gap-1 text-xs bg-muted/40 rounded-full px-2.5 py-1">
+                    <div
+                      key={i}
+                      draggable
+                      onDragStart={() => setDragCtx({ list: "cover", index: i })}
+                      onDragOver={e => e.preventDefault()}
+                      onDrop={e => { e.preventDefault(); if (dragCtx?.list === "cover") reorderFiles("cover", dragCtx.index, i); setDragCtx(null); }}
+                      className="flex items-center gap-1 text-xs bg-muted/40 rounded-full px-2.5 py-1 cursor-grab active:cursor-grabbing"
+                    >
+                      <GripVertical className="w-3 h-3 text-muted-foreground shrink-0" />
                       <span className="text-muted-foreground w-4 shrink-0">{i + 1}.</span>
                       <span className="truncate max-w-28">{f.name}</span>
                       <button onClick={() => setCoverFiles(prev => prev.filter((_, j) => j !== i))} className="ml-0.5 text-muted-foreground hover:text-foreground">
@@ -1580,9 +1601,18 @@ export default function BulkCarousel() {
                 onAddImages={files => appendImages(setBodyFiles, files)}
               />
               {bodyFiles.length > 0 && (
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1 items-center">
+                  <p className="w-full text-xs text-muted-foreground">Drag the chips to reorder. Image 1 goes with CSV row 1, image 2 with row 2, and so on.</p>
                   {bodyFiles.map((f, i) => (
-                    <div key={i} className="flex items-center gap-1 text-xs bg-muted/40 rounded-full px-2.5 py-1">
+                    <div
+                      key={i}
+                      draggable
+                      onDragStart={() => setDragCtx({ list: "body", index: i })}
+                      onDragOver={e => e.preventDefault()}
+                      onDrop={e => { e.preventDefault(); if (dragCtx?.list === "body") reorderFiles("body", dragCtx.index, i); setDragCtx(null); }}
+                      className="flex items-center gap-1 text-xs bg-muted/40 rounded-full px-2.5 py-1 cursor-grab active:cursor-grabbing"
+                    >
+                      <GripVertical className="w-3 h-3 text-muted-foreground shrink-0" />
                       <span className="text-muted-foreground w-4 shrink-0">{i + 1}.</span>
                       <span className="truncate max-w-28">{f.name}</span>
                       <button onClick={() => setBodyFiles(prev => prev.filter((_, j) => j !== i))} className="ml-0.5 text-muted-foreground hover:text-foreground">
