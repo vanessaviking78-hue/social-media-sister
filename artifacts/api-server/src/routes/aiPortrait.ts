@@ -24,6 +24,7 @@ import {
   createMotionJob,
   getMotionJob,
   processMotionJob,
+  saveMotionReelToLibrary,
   type CameraMotion,
 } from "../lib/motionReelWorker";
 
@@ -427,6 +428,17 @@ router.get("/ai-portrait/animate/:jobId/status", (req: Request, res: Response) =
   const job = getMotionJob(req.params.jobId);
   if (!job) { res.status(404).json({ error: "Job not found" }); return; }
   res.json(job);
+});
+
+router.post("/ai-portrait/animate/:jobId/save-to-library", async (req: Request, res: Response) => {
+  try {
+    const { clientName } = req.body as { clientName?: string };
+    if (!clientName?.trim()) { res.status(400).json({ error: "clientName required" }); return; }
+    const libraryId = await saveMotionReelToLibrary(req.params.jobId, clientName.trim());
+    res.json({ ok: true, libraryId });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Failed to save reel to library" });
+  }
 });
 
 router.post("/ai-portrait/:portraitId/regenerate", async (req: Request, res: Response) => {
