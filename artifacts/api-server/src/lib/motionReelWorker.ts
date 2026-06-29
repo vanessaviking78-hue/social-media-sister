@@ -4,7 +4,7 @@ import { contentLibraryTable } from "@workspace/db/schema";
 import { objectStorageClient } from "./objectStorage";
 import { logger } from "./logger";
 
-const FAL_BASE = "https://queue.fal.run/fal-ai/wan/v2.5/image-to-video";
+const FAL_BASE = "https://queue.fal.run/fal-ai/wan-25-preview/image-to-video";
 const IMGBB_BASE = "https://api.imgbb.com/1/upload";
 
 const NEGATIVE_PROMPT =
@@ -126,10 +126,9 @@ const body = {
 image_url: imageUrl,
 prompt: buildPrompt(motion),
 negative_prompt: NEGATIVE_PROMPT,
-num_frames: 81,
-frames_per_second: 16,
 resolution: "720p",
-aspect_ratio: "9:16",
+duration: "5",
+enable_prompt_expansion: false,
 };
 const res = await fetch(FAL_BASE, {
 method: "POST",
