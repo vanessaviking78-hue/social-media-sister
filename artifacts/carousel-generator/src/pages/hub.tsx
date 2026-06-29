@@ -3,6 +3,15 @@ import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageS
 
 const TOOLS = [
   {
+    href: "/meme",
+    icon: Sparkles,
+    name: "Meme Maker",
+    description: "Kind, funny memes for women over 40. Your photo, your voice, never a wrinkle in sight.",
+    color: "from-fuchsia-500/20 to-fuchsia-500/5",
+    border: "hover:border-fuchsia-500/50",
+    iconColor: "text-fuchsia-400",
+  },
+  {
     href: "/carousel",
     icon: ImageIcon,
     name: "Carousel",
