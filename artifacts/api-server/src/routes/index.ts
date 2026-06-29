@@ -34,6 +34,7 @@ import canvaRouter from "./canva";
 import waitlistRouter from "./waitlist";
 import approvalBundlesRouter from "./approvalBundles";
 import contentGeneratorRouter from "./content-generator";
+import memeRouter from "./meme";
 
 const router: IRouter = Router();
 
@@ -56,6 +57,7 @@ router.use(onboardingRouter);
 router.use(aboutMeRouter);
 router.use(seamlessCarouselRouter);
 router.use(aiPortraitRouter);
+router.use(memeRouter);
 router.use(dmAutomationsRouter);
 router.use(webhooksRouter);
 router.use(intakeRouter);
