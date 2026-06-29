@@ -57,6 +57,9 @@ videoUrl?: string;
 libraryId?: number;
 error?: string;
 startedAt: number;
+scenarioName?: string;
+cameraMotion?: CameraMotion;
+clientName?: string;
 }
 
 const motionJobs = new Map<string, MotionJob>();
@@ -235,24 +238,29 @@ patch(jobId, { status: "saving", progress: 0.88, message: "Saving video…" });
 const videoBuf = await downloadVideo(videoUrl);
 const storedUrl = await uploadVideoToStorage(videoBuf);
 
-const motionLabel = CAMERA_MOTION_LABELS[cameraMotion] || cameraMotion;
-const [libraryRow] = await db.insert(contentLibraryTable).values({
-clientName,
-postType: "reel",
-caption: `Motion Portrait — ${scenarioName} (${motionLabel})`,
-mediaUrl: storedUrl,
-metadata: {
-source: "motion-reel",
-scenarioName,
-cameraMotion,
-tag: "Motion Portrait",
-} as Record<string, unknown>,
-}).returning();
-
-patch(jobId, { status: "done", progress: 1, message: "Done", videoUrl: storedUrl, libraryId: libraryRow?.id });
+// Do NOT auto-save to the library. Keep the details on the job so the user can
+// preview, download, and choose to save it via the save-to-library endpoint.
+patch(jobId, { status: "done", progress: 1, message: "Ready to review", videoUrl: storedUrl, scenarioName, cameraMotion, clientName });
 } catch (err: any) {
 const msg = err?.message || "Motion reel generation failed";
 logger.error({ err, jobId }, "processMotionJob failed");
 patch(jobId, { status: "failed", progress: 0, message: msg, error: msg });
 }
+}
+
+
+// Save a finished motion reel to the content library on demand.
+export async function saveMotionReelToLibrary(jobId: string, clientName: string): Promise<number | undefined> {
+  const job = motionJobs.get(jobId);
+  if (!job?.videoUrl) throw new Error("Motion reel is not ready yet, or the job has expired \u2014 please regenerate.");
+  const motionLabel = job.cameraMotion ? (CAMERA_MOTION_LABELS[job.cameraMotion] || job.cameraMotion) : "";
+  const [row] = await db.insert(contentLibraryTable).values({
+    clientName,
+    postType: "reel",
+    caption: `Motion Portrait \u2014 ${job.scenarioName ?? "Portrait"}${motionLabel ? ` (${motionLabel})` : ""}`,
+    mediaUrl: job.videoUrl,
+    metadata: { source: "motion-reel", scenarioName: job.scenarioName, cameraMotion: job.cameraMotion, tag: "Motion Portrait" } as Record<string, unknown>,
+  }).returning();
+  patch(jobId, { libraryId: row?.id });
+  return row?.id;
 }
