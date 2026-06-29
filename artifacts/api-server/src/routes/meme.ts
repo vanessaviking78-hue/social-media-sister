@@ -13,7 +13,7 @@ Hard rules, never broken:
 - No em dashes. No hashtags. No emojis. No quotation marks around the caption.
 - British spelling and rhythm. Each caption is one short, punchy, standalone line. Relatable and a little unexpected.
 
-Return exactly 6 captions, one per line, numbered 1 to 6, and nothing else.`;
+Return as many distinct captions as you can, aiming for 100, one per line, each numbered. Do not repeat yourself. Vary the set-up, the rhythm and the angle so they never sound the same. Output the captions and nothing else.`;
 
 router.post("/meme/lines", async (req: Request, res: Response) => {
   try {
@@ -29,14 +29,14 @@ router.post("/meme/lines", async (req: Request, res: Response) => {
         { role: "user", content: `Topic: ${topic.trim()}` },
       ],
       temperature: 0.95,
-      max_tokens: 400,
+      max_tokens: 3500,
     });
     const raw = completion.choices[0]?.message?.content ?? "";
     const lines = raw
       .split("\n")
       .map((l) => l.replace(/^\s*\d+[\).\s-]*/, "").replace(/^["']|["']$/g, "").trim())
       .filter((l) => l.length > 0)
-      .slice(0, 6);
+      .slice(0, 100);
     res.json({ lines });
   } catch (err: any) {
     res.status(500).json({ error: err?.message || "Failed to generate meme lines" });

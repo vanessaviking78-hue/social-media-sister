@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Upload, Sparkles, Loader2, Download, ShieldCheck, RefreshCcw } from "lucide-react";
+import { ArrowLeft, Upload, Sparkles, Loader2, Download, ShieldCheck, RefreshCcw, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,9 +12,20 @@ import { loadGoogleFonts } from "@/lib/slide-utils";
 
 loadGoogleFonts();
 
+function ensureCinzelDecorative() {
+  if (typeof document === "undefined") return;
+  if (document.querySelector("link[data-cinzel-decorative]")) return;
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.setAttribute("data-cinzel-decorative", "true");
+  link.href = "https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&display=swap";
+  document.head.appendChild(link);
+}
+ensureCinzelDecorative();
+
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const W = 1080;
-const H = 1080;
+const H = 1440;
 
 const SUGGESTED = [
   "brain fog", "lost reading glasses", "the 9pm sofa coma",
@@ -32,6 +43,9 @@ export default function MemeGenerator() {
   const [position, setPosition] = useState<"top" | "bottom">("bottom");
   const [fontSize, setFontSize] = useState(60);
   const [saving, setSaving] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); });
+  const [scheduleTime, setScheduleTime] = useState("18:00");
+  const [scheduling, setScheduling] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -43,7 +57,7 @@ export default function MemeGenerator() {
     img.src = URL.createObjectURL(file);
   };
 
-  const genLines = async () => {
+  const genLines = async (append = false) => {
     if (!topic.trim()) { toast.error("Type a topic first"); return; }
     setGenerating(true);
     try {
@@ -54,8 +68,8 @@ export default function MemeGenerator() {
       });
       if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error((d as { error?: string }).error || "Failed"); }
       const { lines: out } = await r.json() as { lines: string[] };
-      setLines(out);
-      if (out[0]) setSelected(out[0]);
+      setLines((prev) => append ? Array.from(new Set([...prev, ...out])) : out);
+      if (!append && out[0]) setSelected(out[0]);
     } catch (e: any) {
       toast.error(e?.message || "Could not write lines");
     } finally {
@@ -79,10 +93,16 @@ export default function MemeGenerator() {
       else { dw = W; dh = W / ar; dy = (H - dh) / 2; }
       ctx.drawImage(photo, dx, dy, dw, dh);
     }
+    // Gradient over the bottom half for readability
+    const bg = ctx.createLinearGradient(0, H * 0.5, 0, H);
+    bg.addColorStop(0, "rgba(0,0,0,0)");
+    bg.addColorStop(1, "rgba(0,0,0,0.65)");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, H * 0.5, W, H * 0.5);
     const text = selected.trim();
     if (text) {
       ctx.textAlign = "center";
-      ctx.font = `700 ${fontSize}px "Poppins", "Arial Black", sans-serif`;
+      ctx.font = `700 ${fontSize}px "Cinzel Decorative", "Playfair Display", serif`;
       const maxW = W - 120;
       const words = text.split(/\s+/);
       const wrapped: string[] = [];
@@ -116,6 +136,8 @@ export default function MemeGenerator() {
   useEffect(() => {
     render();
     const t = setTimeout(render, 250);
+    const f = (document as { fonts?: { load?: (s: string) => Promise<unknown> } }).fonts;
+    if (f?.load) f.load('700 64px "Cinzel Decorative"').then(() => render()).catch(() => {});
     return () => clearTimeout(t);
   }, [render]);
 
@@ -156,6 +178,44 @@ export default function MemeGenerator() {
       toast.error(e?.message || "Save failed");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const scheduleMeme = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    if (!clientName.trim()) { toast.error("Pick a client first"); return; }
+    if (!photo) { toast.error("Add a photo first"); return; }
+    const preset = presets.find((p) => p.name === clientName);
+    if (!preset) { toast.error("That client has no preset to post from"); return; }
+    setScheduling(true);
+    try {
+      const dataUrl = canvas.toDataURL("image/png");
+      const up = await fetch(`${BASE}/api/content/upload-image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: [{ name: `meme-${Date.now()}.png`, base64: dataUrl }] }),
+      });
+      if (!up.ok) throw new Error("Image upload failed");
+      const { results } = await up.json() as { results: { url: string }[] };
+      const url = results[0]?.url;
+      if (!url) throw new Error("No image URL returned");
+      const r = await fetch(`${BASE}/api/scheduler/posts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          presetId: preset.id,
+          postType: "single-image",
+          content: { imageUrls: [url], caption: selected, title: "Meme", platforms: ["instagram"] },
+          scheduledAt: new Date(`${scheduleDate}T${scheduleTime}`).toISOString(),
+        }),
+      });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error((d as { error?: string }).error || "Schedule failed"); }
+      toast.success(`Scheduled for ${scheduleDate} at ${scheduleTime}`);
+    } catch (e: any) {
+      toast.error(e?.message || "Schedule failed");
+    } finally {
+      setScheduling(false);
     }
   };
 
@@ -210,10 +270,10 @@ export default function MemeGenerator() {
             <h2 className="font-semibold text-base">3. Write the funny bit</h2>
             <div className="flex gap-2">
               <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="A topic, e.g. brain fog, school run, lost glasses"
-                onKeyDown={(e) => { if (e.key === "Enter") genLines(); }} />
-              <Button onClick={genLines} disabled={generating} className="shrink-0">
+                onKeyDown={(e) => { if (e.key === "Enter") genLines(false); }} />
+              <Button onClick={() => genLines(false)} disabled={generating} className="shrink-0">
                 {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                <span className="ml-1.5">Write lines</span>
+                <span className="ml-1.5">Write me 100</span>
               </Button>
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -222,14 +282,14 @@ export default function MemeGenerator() {
               ))}
             </div>
             {lines.length > 0 && (
-              <div className="space-y-1.5 pt-1">
+              <div className="space-y-1.5 pt-1 max-h-80 overflow-y-auto pr-1">
                 {lines.map((l, i) => (
                   <button key={i} onClick={() => setSelected(l)}
                     className={`w-full text-left text-sm rounded-lg px-3 py-2 border transition-colors ${selected === l ? "border-primary/50 bg-primary/5 text-foreground" : "border-border/30 text-muted-foreground hover:text-foreground"}`}>
                     {l}
                   </button>
                 ))}
-                <button onClick={genLines} disabled={generating} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 pt-1">
+                <button onClick={() => genLines(true)} disabled={generating} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 pt-1">
                   <RefreshCcw className="w-3 h-3" /> Write me some more
                 </button>
               </div>
@@ -258,7 +318,7 @@ export default function MemeGenerator() {
         {/* Preview */}
         <div className="space-y-3">
           <div className="rounded-xl overflow-hidden border border-border/30 bg-black/20">
-            <canvas ref={canvasRef} className="w-full block" style={{ aspectRatio: "1 / 1" }} />
+            <canvas ref={canvasRef} className="w-full block" style={{ aspectRatio: "3 / 4" }} />
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={download} disabled={!photo} className="flex-1">
@@ -268,7 +328,18 @@ export default function MemeGenerator() {
               {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <ShieldCheck className="w-4 h-4 mr-1.5" />} Save to library
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground text-center">Square format, ready for the grid.</p>
+          <div className="rounded-xl border border-border/30 p-3 space-y-2">
+            <p className="text-xs font-medium">Schedule to post</p>
+            <div className="flex gap-2">
+              <Input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} className="flex-1" />
+              <Input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} className="w-28" />
+            </div>
+            <Button onClick={scheduleMeme} disabled={scheduling || !photo} className="w-full">
+              {scheduling ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-1.5" />} Schedule to post
+            </Button>
+            <p className="text-[11px] text-muted-foreground">Posts itself to Instagram for this client at the chosen time.</p>
+          </div>
+          <p className="text-xs text-muted-foreground text-center">Portrait 1080 x 1440, ready for the grid.</p>
         </div>
       </div>
     </div>
