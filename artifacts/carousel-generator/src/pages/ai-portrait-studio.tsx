@@ -31,6 +31,7 @@ type MotionJobState = {
   progress: number;
   message: string;
   videoUrl?: string;
+  libraryId?: number;
   error?: string;
 };
 
@@ -278,6 +279,7 @@ export default function AiPortraitStudio() {
 
   // ── Motion reel state ──────────────────────────────────────────────────────
   const [motionJobMap, setMotionJobMap]         = useState<Record<number, MotionJobState>>({});
+  const [savingReel, setSavingReel]             = useState<number | null>(null);
   const [motionPickerOpen, setMotionPickerOpen] = useState<number | null>(null);
   const [motionSelection, setMotionSelection]   = useState<Record<number, string>>({});
   const motionPollRefs = useRef<Record<number, ReturnType<typeof setInterval>>>({});
@@ -539,6 +541,44 @@ export default function AiPortraitStudio() {
   };
 
   // ── Motion reel handler ────────────────────────────────────────────────────
+  const downloadReel = async (url: string) => {
+    try {
+      const resp = await fetch(url);
+      const blob = await resp.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `motion-reel-${Date.now()}.mp4`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch {
+      toast.error("Download failed");
+    }
+  };
+
+  const saveReelToLibrary = async (pid: number) => {
+    const mj = motionJobMap[pid];
+    if (!mj?.jobId) return;
+    setSavingReel(pid);
+    try {
+      const r = await fetch(`${BASE}api/ai-portrait/animate/${mj.jobId}/save-to-library`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientName: saveClientName || clientName }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        throw new Error((d as { error?: string }).error || "Save failed");
+      }
+      const { libraryId } = await r.json() as { libraryId?: number };
+      setMotionJobMap(prev => ({ ...prev, [pid]: { ...prev[pid], libraryId } }));
+      toast.success("Saved to library");
+    } catch (e: any) {
+      toast.error(e?.message || "Save failed");
+    } finally {
+      setSavingReel(null);
+    }
+  };
+
   const handleAnimate = useCallback(async (card: CardState, motion: string) => {
     if (!card.portraitId) return;
     const id = card.portraitId;
@@ -576,7 +616,7 @@ export default function AiPortraitStudio() {
           if (job.status === "done" || job.status === "failed") {
             clearInterval(motionPollRefs.current[id]);
             delete motionPollRefs.current[id];
-            if (job.status === "done") toast.success("Motion reel saved to library");
+            if (job.status === "done") toast.success("Motion reel ready \u2014 preview and save below");
             else toast.error(`Motion reel failed: ${job.error ?? "Unknown error"}`);
           }
         } catch { /* ignore transient network errors */ }
@@ -1135,18 +1175,36 @@ export default function AiPortraitStudio() {
                               {/* Motion reel section */}
                               <div className="pt-1 border-t border-border/20">
                                 {mj?.status === "done" && mj.videoUrl ? (
-                                  <div className="flex items-center gap-1.5">
-                                    <a
-                                      href={mj.videoUrl}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="flex-1 flex items-center justify-center gap-1 text-[10px] h-6 rounded border border-border/40 text-muted-foreground hover:text-foreground transition-colors"
-                                    >
-                                      <Play className="w-3 h-3" /> View Reel
-                                    </a>
-                                    <span className="text-[9px] text-green-500 flex items-center gap-0.5 shrink-0">
-                                      <Check className="w-3 h-3" /> Saved
-                                    </span>
+                                  <div className="flex flex-col gap-1.5">
+                                    <video
+                                      src={mj.videoUrl}
+                                      controls
+                                      loop
+                                      muted
+                                      playsInline
+                                      className="w-full rounded border border-border/30 bg-black"
+                                    />
+                                    <div className="flex items-center gap-1.5">
+                                      <button
+                                        onClick={() => downloadReel(mj.videoUrl!)}
+                                        className="flex-1 flex items-center justify-center gap-1 text-[10px] h-6 rounded border border-border/40 text-muted-foreground hover:text-foreground transition-colors"
+                                      >
+                                        <Download className="w-3 h-3" /> Download
+                                      </button>
+                                      {mj.libraryId ? (
+                                        <span className="flex-1 text-[9px] text-green-500 flex items-center justify-center gap-0.5 shrink-0">
+                                          <Check className="w-3 h-3" /> Saved
+                                        </span>
+                                      ) : (
+                                        <button
+                                          onClick={() => saveReelToLibrary(pid)}
+                                          disabled={savingReel === pid}
+                                          className="flex-1 flex items-center justify-center gap-1 text-[10px] h-6 rounded border border-green-500/40 text-green-400 hover:bg-green-950/30 transition-colors disabled:opacity-50"
+                                        >
+                                          {savingReel === pid ? <Loader2 className="w-3 h-3 animate-spin" /> : <BookImage className="w-3 h-3" />} Save to library
+                                        </button>
+                                      )}
+                                    </div>
                                   </div>
                                 ) : isActive ? (
                                   <div>
