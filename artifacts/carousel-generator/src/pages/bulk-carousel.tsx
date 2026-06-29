@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, Upload, FileText, Download, Loader2, CalendarClock,
-  CheckCircle2, X, Edit2, GripVertical, Sparkles, Send, Music,
+  CheckCircle2, X, Edit2, GripVertical, Sparkles, Send, Music, Trash2,
 } from "lucide-react";
 import { SendForApprovalModal } from "@/components/send-for-approval-modal";
 import { Button } from "@/components/ui/button";
@@ -1074,6 +1074,13 @@ export default function BulkCarousel() {
     setPhase("schedule");
   };
 
+  const removeItem = (id: string) => {
+    setItems(prev => prev.filter(it => it.id !== id));
+    setCaptionMap(prev => { const next = { ...prev }; delete next[id]; return next; });
+    if (editingItemId === id) setEditingItemId(null);
+    toast.success("Carousel removed");
+  };
+
   const handleGetApprovalGroups = useCallback(async () => {
     return Promise.all(items.map(async (item, i) => {
       const names = item.thumbs.map((_, j) => `carousel-${i + 1}-slide${j + 1}.png`);
@@ -1377,6 +1384,13 @@ export default function BulkCarousel() {
                       ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                       : <Sparkles className="w-3.5 h-3.5 mr-1.5" />}
                     Caption
+                  </Button>
+                  <Button
+                    variant="outline" size="sm"
+                    onClick={() => { if (window.confirm("Delete this carousel from the batch? You can regenerate it from your CSV.")) removeItem(item.id); }}
+                    className="text-red-300 border-red-500/40 hover:bg-red-950/30 hover:text-red-200"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />Delete
                   </Button>
                 </div>
               </div>
