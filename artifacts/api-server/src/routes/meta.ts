@@ -4,6 +4,7 @@ import { clientPresetsTable, type StickerConfig } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logActivity } from "../lib/activityLog";
 import { logger } from "../lib/logger";
+import { notifyPostResult } from "../lib/notify";
 
 const router: IRouter = Router();
 
@@ -310,6 +311,15 @@ router.post("/meta/push", async (req: Request, res: Response) => {
       logActivity({ action: "pushed", postType: (postType as any) || "carousel", postCount: Math.ceil(succeeded / Math.max(platformCount, 1)) });
     }
 
+    void notifyPostResult({
+      ok: failed === 0 && succeeded > 0,
+      clientName: preset.name,
+      postType: (postType as string) || "carousel",
+      detail: failed > 0
+        ? results.filter((r) => r.status === "error").map((r) => `${r.platform}: ${r.error}`).join("; ")
+        : `${succeeded} posted`,
+    });
+
     res.json({ results, summary: { total: results.length, succeeded, failed } });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Meta push failed" });
@@ -454,6 +464,7 @@ async function processReelJob(
     igId: string;
     trial: boolean;
     graduationStrategy: string;
+    clientName?: string;
   }
 ): Promise<void> {
   const { videoUrl, caption, token, igId, trial, graduationStrategy } = params;
@@ -527,9 +538,11 @@ async function processReelJob(
 
     logActivity({ action: "pushed", postType: "reel", postCount: 1 });
     patch({ status: "finished", igPostId: publishData.id, trial });
+    void notifyPostResult({ ok: true, clientName: params.clientName || "client", postType: "reel" });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Reel push failed";
     patch({ status: "error", error: msg });
+    void notifyPostResult({ ok: false, clientName: params.clientName || "client", postType: "reel", detail: msg });
   }
 }
 
@@ -576,6 +589,7 @@ router.post("/meta/push-reel", async (req: Request, res: Response) => {
         igId,
         trial: trial ?? false,
         graduationStrategy: graduationStrategy || "MANUAL",
+        clientName: preset.name,
       }).catch(() => {});
     });
 
