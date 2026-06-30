@@ -1,3 +1,4 @@
+// deploy: igPublish retry fix (carousel publish timing) 2026-06-30T18:11:55.260170Z
 import { db } from "@workspace/db";
 import { clientPresetsTable, scheduledPostsTable, type StickerConfig } from "@workspace/db/schema";
 import { eq, lte, and } from "drizzle-orm";
@@ -25,14 +26,25 @@ async function igUpload(igId: string, token: string, imageUrl: string, isCarouse
 }
 
 async function igPublish(igId: string, token: string, creationId: string): Promise<string> {
-  const res = await fetch(`${GRAPH}/${igId}/media_publish`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ creation_id: creationId, access_token: token }),
-  });
-  const data = await res.json() as { id?: string; error?: { message?: string } };
-  if (!res.ok || !data.id) throw new Error(`IG publish failed: ${data?.error?.message || JSON.stringify(data)}`);
-  return data.id;
+  // Instagram needs time to finish processing the (carousel) container before it can be published.
+  // Publishing too soon returns "Media ID is not available". Retry on not-ready errors with backoff.
+  const NOT_READY = ["not available", "not ready", "not yet", "processing", "in_progress"];
+  let lastErr = "";
+  for (let attempt = 0; attempt < 8; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, attempt === 1 ? 5000 : 8000));
+    const res = await fetch(`${GRAPH}/${igId}/media_publish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ creation_id: creationId, access_token: token }),
+    });
+    const data = await res.json() as { id?: string; error?: { message?: string } };
+    if (res.ok && data.id) return data.id;
+    lastErr = data?.error?.message || JSON.stringify(data);
+    if (!NOT_READY.some((ph) => lastErr.toLowerCase().includes(ph))) {
+      throw new Error(`IG publish failed: ${lastErr}`);
+    }
+  }
+  throw new Error(`IG publish failed after retries: ${lastErr}`);
 }
 
 async function postCarouselToIG(igId: string, token: string, imageUrls: string[], caption: string, audioName?: string): Promise<string> {
