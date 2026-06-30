@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { clientPresetsTable, scheduledPostsTable, type StickerConfig } from "@workspace/db/schema";
 import { eq, lte, and } from "drizzle-orm";
 import { logger } from "./logger";
+import { notifyPostResult } from "./notify";
 
 const GRAPH = "https://graph.facebook.com/v19.0";
 
@@ -307,6 +308,13 @@ async function processScheduledPosts(): Promise<void> {
       { postId: post.id, client: post.clientName, type: post.postType, metaOk },
       "Scheduled post processed",
     );
+
+    await notifyPostResult({
+      ok: metaOk,
+      clientName: preset.name || post.clientName || "client",
+      postType: post.postType,
+      detail: metaOk ? undefined : (metaResult?.error || undefined),
+    });
   }
 }
 
