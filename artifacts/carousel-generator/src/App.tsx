@@ -52,6 +52,7 @@ import Brand from "@/pages/brand";
 import UploadSchedule from "@/pages/upload-schedule";
 import BulkCarousel from "@/pages/bulk-carousel";
 import MemeGenerator from "@/pages/meme-generator";
+import QuoteGenerator from "@/pages/quote-generator";
 import BulkStories from "@/pages/bulk-stories";
 import CsvSlideCarousel from "@/pages/csv-slide-carousel";
 import ContentPreview from "@/pages/content-preview";
@@ -105,6 +106,7 @@ function ProtectedRouter() {
       <Route path="/upload-schedule" component={UploadSchedule} />
       <Route path="/bulk-carousel" component={BulkCarousel} />
       <Route path="/meme" component={MemeGenerator} />
+      <Route path="/quotes" component={QuoteGenerator} />
       <Route path="/bulk-stories" component={BulkStories} />
       <Route path="/csv-slide-carousel" component={CsvSlideCarousel} />
       <Route path="/preview" component={PreviewIndex} />
