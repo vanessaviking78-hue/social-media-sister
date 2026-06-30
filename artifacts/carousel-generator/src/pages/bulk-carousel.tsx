@@ -1186,6 +1186,23 @@ export default function BulkCarousel() {
     }
   };
 
+  const copyClientLink = async () => {
+    if (!selectedPreset) { toast.error("No client selected"); return; }
+    try {
+      let token = (selectedPreset as any).clientPortalToken as string | null;
+      if (!token) {
+        const r = await fetch(`${BASE}/api/presets/${selectedPreset.id}/generate-portal-token`, { method: "POST" });
+        if (!r.ok) throw new Error("Could not create the client link");
+        token = (await r.json()).token;
+      }
+      const url = `${window.location.origin}${BASE}/portal/${token}`;
+      await navigator.clipboard.writeText(url);
+      toast.success("Client preview link copied");
+    } catch (e: any) {
+      toast.error(e?.message || "Could not copy the link");
+    }
+  };
+
   // ── Done ──────────────────────────────────────────────────────────────────────
 
   if (phase === "done") {
@@ -1198,6 +1215,7 @@ export default function BulkCarousel() {
         </div>
         <div className="flex gap-3">
           <Button variant="outline" asChild><Link href="/scheduler">View queue</Link></Button>
+          <Button variant="outline" onClick={copyClientLink}>Copy client link</Button>
           <Button onClick={() => { setCsvFile(null); setCsvError(null); setCsvRows([]); setCoverFiles([]); setBodyFiles([]); setItems([]); setSelectedPresetId(null); setPhase("upload"); }}>
             Start again
           </Button>

@@ -126,39 +126,6 @@ export default function ClientPortal({ token }: { token: string }) {
 
       <main className="max-w-3xl mx-auto px-4 py-8 space-y-10">
 
-        {/* Pending approvals callout */}
-        {pendingBatches.length > 0 && (
-          <div className="rounded-2xl border border-yellow-500/30 bg-yellow-500/5 p-5">
-            <div className="flex items-start gap-3">
-              <ShieldCheck className="w-5 h-5 text-yellow-400 mt-0.5 shrink-0" />
-              <div className="flex-1">
-                <p className="font-semibold text-yellow-300 mb-1">
-                  {pendingBatches.length === 1
-                    ? "You have 1 batch awaiting your review"
-                    : `You have ${pendingBatches.length} batches awaiting your review`}
-                </p>
-                <p className="text-sm text-zinc-400 mb-3">Please review and approve or reject the images below.</p>
-                <div className="space-y-2">
-                  {pendingBatches.map((b) => (
-                    <a
-                      key={b.id}
-                      href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/approve/${b.token}`}
-                      className="flex items-center justify-between bg-zinc-900 border border-yellow-500/20 hover:border-yellow-400/40 rounded-xl px-4 py-3 transition group"
-                    >
-                      <div>
-                        <p className="font-medium text-white group-hover:text-yellow-300 transition">{b.name}</p>
-                        <p className="text-xs text-zinc-500 mt-0.5">
-                          {b.pendingImages} pending · {b.approvedImages} approved · {b.rejectedImages} rejected
-                        </p>
-                      </div>
-                      <span className="text-xs bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 px-2.5 py-1 rounded-full">Review →</span>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Upcoming content */}
         <section>
@@ -219,35 +186,6 @@ export default function ClientPortal({ token }: { token: string }) {
           )}
         </section>
 
-        {/* Reviewed batches */}
-        {reviewedBatches.length > 0 && (
-          <section>
-            <div className="flex items-center gap-2 mb-5">
-              <ShieldCheck className="w-5 h-5 text-zinc-500" />
-              <h2 className="text-lg font-semibold text-zinc-400">Past Approvals</h2>
-            </div>
-            <div className="space-y-2">
-              {reviewedBatches.map((b) => (
-                <a
-                  key={b.id}
-                  href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/approve/${b.token}`}
-                  className="flex items-center justify-between bg-zinc-900/40 border border-zinc-800 hover:border-zinc-700 rounded-xl px-4 py-3 transition"
-                >
-                  <div>
-                    <p className="font-medium text-zinc-300">{b.name}</p>
-                    <p className="text-xs text-zinc-600 mt-0.5">
-                      {b.approvedImages} approved · {b.rejectedImages} rejected
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs">
-                    {b.approvedImages > 0 && <span className="flex items-center gap-1 text-green-500"><CheckCircle2 className="w-3.5 h-3.5" />{b.approvedImages}</span>}
-                    {b.rejectedImages > 0 && <span className="flex items-center gap-1 text-red-500"><XCircle className="w-3.5 h-3.5" />{b.rejectedImages}</span>}
-                  </div>
-                </a>
-              ))}
-            </div>
-          </section>
-        )}
 
       </main>
 
