@@ -16,6 +16,21 @@ const H = 1350;
 
 const BG_SWATCHES = ["#E91976", "#111111", "#0F4C5C", "#F4A259", "#5B8E7D", "#8367C7", "#1B998B", "#2E2E2E"];
 
+const FONTS = [
+  { label: "Poppins (bold sans)", value: '"Poppins", sans-serif' },
+  { label: "Montserrat", value: '"Montserrat", sans-serif' },
+  { label: "Oswald (condensed)", value: '"Oswald", sans-serif' },
+  { label: "Bebas Neue (tall caps)", value: '"Bebas Neue", sans-serif' },
+  { label: "Playfair Display (serif)", value: '"Playfair Display", serif' },
+  { label: "Cormorant Garamond (elegant)", value: '"Cormorant Garamond", serif' },
+  { label: "DM Serif Display", value: '"DM Serif Display", serif' },
+  { label: "Abril Fatface (bold serif)", value: '"Abril Fatface", serif' },
+  { label: "Yeseva One", value: '"Yeseva One", serif' },
+  { label: "Cinzel (classic caps)", value: '"Cinzel", serif' },
+  { label: "Dancing Script (script)", value: '"Dancing Script", cursive' },
+  { label: "Great Vibes (script)", value: '"Great Vibes", cursive' },
+];
+
 export default function QuoteGenerator() {
   const [quotes, setQuotes] = useState<string[]>([]);
   const [idx, setIdx] = useState(0);
@@ -24,6 +39,8 @@ export default function QuoteGenerator() {
   const [accentColor, setAccentColor] = useState("#ffffff");
   const [showAccent, setShowAccent] = useState(true);
   const [fontSize, setFontSize] = useState(78);
+  const [font, setFont] = useState('"Poppins", sans-serif');
+  const [subtitle, setSubtitle] = useState("");
   const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
   const [rendering, setRendering] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -78,7 +95,7 @@ export default function QuoteGenerator() {
     }
 
     ctx.fillStyle = textColor;
-    ctx.font = `800 ${fontSize}px "Poppins", "Arial Black", sans-serif`;
+    ctx.font = `700 ${fontSize}px ${font}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     const maxW = W - 180;
@@ -92,9 +109,19 @@ export default function QuoteGenerator() {
     if (cur) lines.push(cur);
     const lineH = fontSize * 1.25;
     const totalH = lines.length * lineH;
-    let y = H / 2 - totalH / 2 + lineH / 2 + (showAccent ? H * 0.04 : 0);
+    const centerOffset = showAccent ? H * 0.04 : 0;
+    let y = H / 2 - totalH / 2 + lineH / 2 + centerOffset;
     for (const ln of lines) { ctx.fillText(ln, W / 2, y); y += lineH; }
-  }, [bgColor, textColor, accentColor, showAccent, fontSize, bgImage]);
+
+    if (subtitle.trim()) {
+      ctx.fillStyle = textColor;
+      ctx.globalAlpha = 0.85;
+      ctx.font = `600 ${Math.round(fontSize * 0.42)}px ${font}`;
+      const blockBottom = H / 2 + totalH / 2 + centerOffset;
+      ctx.fillText(subtitle.trim(), W / 2, blockBottom + fontSize * 0.7);
+      ctx.globalAlpha = 1;
+    }
+  }, [bgColor, textColor, accentColor, showAccent, fontSize, bgImage, font, subtitle]);
 
   useEffect(() => {
     const c = canvasRef.current;
@@ -208,6 +235,16 @@ export default function QuoteGenerator() {
               <Label className="text-sm text-muted-foreground whitespace-nowrap">Text size</Label>
               <input type="range" min={44} max={120} step={2} value={fontSize} onChange={(e) => setFontSize(parseInt(e.target.value))} className="flex-1 cursor-pointer" />
               <span className="text-xs text-muted-foreground w-8">{fontSize}</span>
+            </div>
+            <div className="flex items-center gap-3 pt-1">
+              <Label className="text-sm text-muted-foreground whitespace-nowrap">Font</Label>
+              <select value={font} onChange={(e) => setFont(e.target.value)} className="flex-1 rounded-lg bg-muted/30 border border-border/30 text-sm px-2 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50">
+                {FONTS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1 pt-1">
+              <Label className="text-sm text-muted-foreground">Subtitle (optional, shown on every card)</Label>
+              <input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="e.g. your handle or a little tagline" className="w-full rounded-lg bg-muted/30 border border-border/30 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50" />
             </div>
           </section>
         </div>
