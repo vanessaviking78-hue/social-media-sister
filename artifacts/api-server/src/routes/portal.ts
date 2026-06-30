@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { clientPresetsTable, calendarPostsTable, approvalBatchesTable, approvalImagesTable } from "@workspace/db/schema";
+import { clientPresetsTable, calendarPostsTable, approvalBatchesTable, approvalImagesTable, scheduledPostsTable } from "@workspace/db/schema";
 import { eq, and, gte, or } from "drizzle-orm";
 import crypto from "crypto";
 
@@ -43,6 +43,29 @@ router.get("/portal/:token", async (req, res) => {
       ));
     upcomingPosts.sort((a, b) => a.date.localeCompare(b.date));
 
+    // Fold in upcoming posts queued through the scheduler (Bulk Carousel etc.)
+    const nowTs = new Date();
+    const scheduledRaw = await db.select().from(scheduledPostsTable)
+      .where(and(
+        eq(scheduledPostsTable.presetId, preset.id),
+        eq(scheduledPostsTable.status, "pending"),
+        gte(scheduledPostsTable.scheduledAt, nowTs),
+      ));
+    const scheduledMapped = scheduledRaw.map((sp) => {
+      const c = (sp.content || {}) as { imageUrls?: string[]; caption?: string; title?: string };
+      return {
+        id: 900000000 + sp.id,
+        date: new Date(sp.scheduledAt).toISOString().slice(0, 10),
+        title: c.title || "",
+        caption: c.caption || "",
+        postType: sp.postType,
+        status: "scheduled",
+        color: "#ec4899",
+        imageUrl: (c.imageUrls && c.imageUrls[0]) || null,
+      };
+    });
+    const mergedUpcoming = [...upcomingPosts, ...scheduledMapped].sort((a, b) => a.date.localeCompare(b.date));
+
     const batches = await db.select().from(approvalBatchesTable)
       .where(eq(approvalBatchesTable.clientName, clientName));
 
@@ -62,7 +85,7 @@ router.get("/portal/:token", async (req, res) => {
     res.json({
       clientName,
       logoUrl: preset.logoUrl || null,
-      upcomingPosts,
+      upcomingPosts: mergedUpcoming,
       approvalBatches: batchesWithCounts,
     });
   } catch (err: any) {
