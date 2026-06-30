@@ -35,6 +35,7 @@ import waitlistRouter from "./waitlist";
 import approvalBundlesRouter from "./approvalBundles";
 import contentGeneratorRouter from "./content-generator";
 import memeRouter from "./meme";
+import hookImageRouter from "./hook-image";
 
 const router: IRouter = Router();
 
@@ -58,6 +59,7 @@ router.use(aboutMeRouter);
 router.use(seamlessCarouselRouter);
 router.use(aiPortraitRouter);
 router.use(memeRouter);
+router.use(hookImageRouter);
 router.use(dmAutomationsRouter);
 router.use(webhooksRouter);
 router.use(intakeRouter);
