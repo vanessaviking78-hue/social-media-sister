@@ -186,8 +186,10 @@ router.get("/approval/approved-images", requireAuth, async (req, res) => {
   try {
     const clientName = req.query.clientName as string || "";
     const batches = await db.select().from(approvalBatchesTable);
+    const norm = (v: string | null | undefined) => (v || "").trim().toLowerCase();
+    const target = norm(clientName);
     const relevantBatches = clientName
-      ? batches.filter((b) => b.clientName === clientName)
+      ? batches.filter((b) => norm(b.clientName) === target)
       : batches;
 
     const allApproved: { id: number; imageUrl: string; batchName: string; clientName: string }[] = [];

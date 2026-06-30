@@ -36,6 +36,7 @@ import approvalBundlesRouter from "./approvalBundles";
 import contentGeneratorRouter from "./content-generator";
 import memeRouter from "./meme";
 import hookImageRouter from "./hook-image";
+import notifyRouter from "./notify";
 
 const router: IRouter = Router();
 
@@ -60,6 +61,7 @@ router.use(seamlessCarouselRouter);
 router.use(aiPortraitRouter);
 router.use(memeRouter);
 router.use(hookImageRouter);
+router.use(notifyRouter);
 router.use(dmAutomationsRouter);
 router.use(webhooksRouter);
 router.use(intakeRouter);
