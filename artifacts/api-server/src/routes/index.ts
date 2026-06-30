@@ -37,6 +37,7 @@ import contentGeneratorRouter from "./content-generator";
 import memeRouter from "./meme";
 import hookImageRouter from "./hook-image";
 import notifyRouter from "./notify";
+import submissionsRouter from "./submissions";
 
 const router: IRouter = Router();
 
@@ -62,6 +63,7 @@ router.use(aiPortraitRouter);
 router.use(memeRouter);
 router.use(hookImageRouter);
 router.use(notifyRouter);
+router.use(submissionsRouter);
 router.use(dmAutomationsRouter);
 router.use(webhooksRouter);
 router.use(intakeRouter);
