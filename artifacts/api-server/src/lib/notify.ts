@@ -47,3 +47,33 @@ export async function notifyPostResult(opts: {
     logger.warn({ err }, "Post-result notification email failed");
   }
 }
+
+/**
+ * Sends a one-off test email to NOTIFY_EMAIL so the user can confirm
+ * the notification pipeline works without waiting for a real post.
+ */
+export async function sendTestEmail(): Promise<{ ok: boolean; error?: string; to?: string }> {
+  const to = process.env.NOTIFY_EMAIL;
+  if (!to) return { ok: false, error: "NOTIFY_EMAIL is not set in the environment." };
+  const transporter = getTransporter();
+  if (!transporter) return { ok: false, error: "SMTP is not configured (SMTP_HOST, SMTP_USER or SMTP_PASS missing)." };
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  try {
+    await transporter.sendMail({
+      from,
+      to,
+      subject: "Test: Social Media Sister notifications are working",
+      text: [
+        "This is a test from your CyberSuite.",
+        "",
+        "If you can read this, your post success and failure notifications are set up correctly.",
+        "",
+        "Social Media Sister",
+      ].join("\n"),
+    });
+    return { ok: true, to };
+  } catch (err) {
+    logger.warn({ err }, "Test notification email failed");
+    return { ok: false, error: err instanceof Error ? err.message : "Unknown error sending email." };
+  }
+}
