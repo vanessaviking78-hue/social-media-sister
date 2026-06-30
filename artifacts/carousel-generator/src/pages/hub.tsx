@@ -3,6 +3,15 @@ import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageS
 
 const TOOLS = [
   {
+    href: "/submissions",
+    icon: Inbox,
+    name: "Before & After Inbox",
+    description: "Clinics upload their before and after photos and a short story straight to you.",
+    color: "from-teal-500/20 to-teal-500/5",
+    border: "hover:border-teal-500/50",
+    iconColor: "text-teal-400",
+  },
+  {
     href: "/quotes",
     icon: MessageSquareText,
     name: "Quote Maker",
