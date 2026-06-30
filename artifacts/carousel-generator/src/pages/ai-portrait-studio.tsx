@@ -181,6 +181,26 @@ const INJECTOR_COLLECTION_PRESETS: PhotoStudioPreset[] = [
   { id: "ic-98",  name: "High-End — Chiaroscuro Beam",             hasColour: false },
   { id: "ic-99",  name: "High-End — Mirror Reflection",            hasColour: false },
   { id: "ic-100", name: "High-End — Grand Architectural",          hasColour: false },
+  { id: "ic-101", name: "Art Deco - Bold Colour Suit", hasColour: true },
+  { id: "ic-102", name: "Art Deco - Polka Dot Glamour", hasColour: false },
+  { id: "ic-103", name: "Art Deco - Striped Tailoring", hasColour: false },
+  { id: "ic-104", name: "Art Deco - Gold Sequin Gown", hasColour: false },
+  { id: "ic-105", name: "Art Deco - Velvet Chair Seated", hasColour: true },
+  { id: "ic-106", name: "Art Deco - Feathered Headpiece", hasColour: false },
+  { id: "ic-107", name: "Art Deco - Power Stance", hasColour: true },
+  { id: "ic-108", name: "Art Deco - Profile Elegance", hasColour: false },
+  { id: "ic-109", name: "Art Deco - Cocktail Glamour", hasColour: false },
+  { id: "ic-110", name: "Art Deco - Full Length Statement", hasColour: true },
+  { id: "ic-111", name: "Leopard - Clinic Corridor Stand", hasColour: false },
+  { id: "ic-112", name: "Leopard - Consultation Desk Seated", hasColour: false },
+  { id: "ic-113", name: "Leopard - Arms Crossed Treatment Room", hasColour: false },
+  { id: "ic-114", name: "Leopard - Walking Clinic Hallway", hasColour: false },
+  { id: "ic-115", name: "Leopard - Window Natural Light", hasColour: false },
+  { id: "ic-116", name: "Leopard - Clean Head and Shoulders", hasColour: false },
+  { id: "ic-117", name: "Leopard - Coffee Cup Reception", hasColour: false },
+  { id: "ic-118", name: "Leopard - Wall Lean Lifestyle", hasColour: false },
+  { id: "ic-119", name: "Leopard - Outdoors Building", hasColour: false },
+  { id: "ic-120", name: "Leopard - Bold Editorial Stance", hasColour: false },
 ];
 
 interface InjectorCollectionCategory { label: string; presetIds: string[] }
@@ -196,6 +216,8 @@ const INJECTOR_COLLECTION_CATEGORIES: InjectorCollectionCategory[] = [
   { label: "Power & Authority",    presetIds: ["ic-71","ic-72","ic-73","ic-74","ic-75","ic-76","ic-77","ic-78","ic-79","ic-80"] },
   { label: "Final Editorial Mix",  presetIds: ["ic-81","ic-82","ic-83","ic-84","ic-85","ic-86","ic-87","ic-88","ic-89","ic-90"] },
   { label: "Extra High-End",       presetIds: ["ic-91","ic-92","ic-93","ic-94","ic-95","ic-96","ic-97","ic-98","ic-99","ic-100"] },
+  { label: "Art Deco", presetIds: ["ic-101","ic-102","ic-103","ic-104","ic-105","ic-106","ic-107","ic-108","ic-109","ic-110"] },
+  { label: "Leopard",  presetIds: ["ic-111","ic-112","ic-113","ic-114","ic-115","ic-116","ic-117","ic-118","ic-119","ic-120"] },
 ];
 
 const MEN_STUDIO_PRESETS: PhotoStudioPreset[] = [
