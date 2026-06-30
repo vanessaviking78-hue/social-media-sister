@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Settings as SettingsIcon, CheckCircle2, Unlink, ExternalLink, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Settings as SettingsIcon, CheckCircle2, Unlink, ExternalLink, Loader2, AlertCircle, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { invalidateCanvaStatusCache } from "@/components/export-to-canva";
@@ -16,6 +16,25 @@ export default function Settings() {
   const [canva, setCanva] = useState<CanvaStatus | null>(null);
   const [canvaLoading, setCanvaLoading] = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
+
+  const sendTestEmail = useCallback(async () => {
+    setTestingEmail(true);
+    try {
+      const pw = localStorage.getItem("cybersuite-pw") || "";
+      const r = await fetch(`${BASE}api/notify/test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-app-password": pw, "Authorization": `Bearer ${pw}` },
+      });
+      const data = await r.json().catch(() => ({}));
+      if (r.ok) toast.success(`Test email sent to ${data.to || "your notification address"}. Check your inbox.`);
+      else toast.error(data.error || "Could not send test email.");
+    } catch (e) {
+      toast.error("Could not reach the server to send the test email.");
+    } finally {
+      setTestingEmail(false);
+    }
+  }, []);
 
   const fetchCanvaStatus = useCallback(async () => {
     setCanvaLoading(true);
@@ -160,6 +179,38 @@ export default function Settings() {
             <p className="text-xs text-gray-600">
               Canva Connect API — your token is stored securely on the server and never shared.
             </p>
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-base font-semibold text-white">Notifications</h2>
+            <p className="text-sm text-gray-500 mt-0.5">Email alerts when a post publishes or fails.</p>
+          </div>
+
+          <div className="border border-violet-500/20 rounded-xl p-5 bg-violet-950/10 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center">
+                <Mail className="w-4 h-4 text-violet-300" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm text-white">Post notifications</p>
+                <p className="text-xs text-gray-500">You get an email the moment a post publishes or fails.</p>
+              </div>
+            </div>
+
+            <div className="text-xs text-gray-500 leading-relaxed">
+              Send yourself a test to confirm everything is wired up, without waiting for a real post.
+            </div>
+
+            <Button
+              onClick={sendTestEmail}
+              disabled={testingEmail}
+              className="w-full bg-violet-600 hover:bg-violet-700 text-white font-medium text-sm h-9"
+            >
+              {testingEmail ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Mail className="w-4 h-4 mr-2" />}
+              Send test email
+            </Button>
           </div>
         </section>
       </div>
