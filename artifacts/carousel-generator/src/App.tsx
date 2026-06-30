@@ -27,6 +27,8 @@ import AboutMe from "@/pages/about-me";
 import SeamlessCarousel from "@/pages/seamless-carousel";
 import AiPortraitStudio from "@/pages/ai-portrait-studio";
 import Onboard from "@/pages/onboard";
+import SubmitBeforeAfter from "@/pages/submit";
+import Submissions from "@/pages/submissions";
 import OnboardChoosePage from "@/pages/onboard-choose-page";
 import OnboardSuccess from "@/pages/onboard-success";
 import DmAutomations from "@/pages/dm-automations";
@@ -85,6 +87,7 @@ function ProtectedRouter() {
       <Route path="/calendar" component={Calendar} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/approval" component={Approval} />
+      <Route path="/submissions" component={Submissions} />
       <Route path="/reels" component={Reels} />
       <Route path="/video-overlay" component={VideoOverlay} />
       <Route path="/scheduler" component={Scheduler} />
@@ -122,6 +125,7 @@ function AppContent() {
   const [isClientApproval, clientApprovalParams] = useRoute("/client-approval/:token");
   const [isApprove, approveParams] = useRoute("/approve/:token");
   const [isPortal, portalParams] = useRoute("/portal/:token");
+  const [isSubmit, submitParams] = useRoute("/submit/:token");
   const [isMetaOAuth] = useRoute("/oauth/meta/result");
   const [isCanvaOAuth] = useRoute("/oauth/canva/result");
   const [isOnboardSuccess, onboardSuccessParams] = useRoute("/onboard/:token/success");
@@ -150,6 +154,9 @@ function AppContent() {
   }
   if (isPortal && portalParams?.token) {
     return <ClientPortal token={portalParams.token} />;
+  }
+  if (isSubmit && submitParams?.token) {
+    return <SubmitBeforeAfter token={submitParams.token} />;
   }
   if (isClientApproval && clientApprovalParams?.token) {
     return <ClientApproval token={clientApprovalParams.token} />;
