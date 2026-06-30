@@ -209,4 +209,22 @@ router.get("/approval/approved-images", requireAuth, async (req, res) => {
   }
 });
 
+router.patch("/approval/batches/:id", requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid batch id" });
+    const { clientName, presetId } = req.body as { clientName?: string; presetId?: number | null };
+    const updates: Record<string, unknown> = {};
+    if (clientName !== undefined) updates.clientName = clientName;
+    if (presetId !== undefined) updates.presetId = presetId;
+    if (Object.keys(updates).length === 0) return res.status(400).json({ error: "Nothing to update" });
+    const [updated] = await db.update(approvalBatchesTable).set(updates).where(eq(approvalBatchesTable.id, id)).returning();
+    if (!updated) return res.status(404).json({ error: "Batch not found" });
+    res.json(updated);
+  } catch (err: any) {
+    console.error("Update approval batch error:", err);
+    res.status(500).json({ error: err.message || "Failed to update batch" });
+  }
+});
+
 export default router;
