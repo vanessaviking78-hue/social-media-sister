@@ -41,6 +41,8 @@ export default function Home() {
   const [isDraggingLogo, setIsDraggingLogo] = useState(false);
   const [useCoverImages, setUseCoverImages] = useState(false);
   const [coverPhotos, setCoverPhotos] = useState<File[]>([]);
+  const [genCoverPrompt, setGenCoverPrompt] = useState("");
+  const [genCover, setGenCover] = useState(false);
   const [isDraggingCoverPhotos, setIsDraggingCoverPhotos] = useState(false);
 
   const [fontSize, setFontSize] = useState(52);
@@ -428,6 +430,29 @@ export default function Home() {
     if (e.target.files?.length) addCoverPhotos(Array.from(e.target.files));
   }, []);
   const removeCoverPhoto = (i: number) => setCoverPhotos(prev => prev.filter((_, idx) => idx !== i));
+
+  const generateCoverFromHook = async () => {
+    const text = genCoverPrompt.trim() || coverSubheading.trim();
+    if (!text) { toast.error("Type a headline to base the image on"); return; }
+    setGenCover(true);
+    try {
+      const r = await fetch(`${import.meta.env.BASE_URL}api/carousel/hook-image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error((d as { error?: string }).error || "Generation failed"); }
+      const { dataUrl } = await r.json() as { dataUrl: string };
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `ai-cover-${Date.now()}.png`, { type: blob.type || "image/png" });
+      await addCoverPhotos([file]);
+      toast.success("Cover image generated and added to Slide 1");
+    } catch (e: any) {
+      toast.error(e?.message || "Generation failed");
+    } finally {
+      setGenCover(false);
+    }
+  };
 
   const processCsv = (file: File) => {
     setCsvFile(file);
@@ -1507,6 +1532,26 @@ export default function Home() {
                           <p className="text-sm text-muted-foreground mt-1">
                             {coverPhotos.length > 0 ? `${coverPhotos.length} cover image${coverPhotos.length !== 1 ? "s" : ""} — click to add more` : "Upload your pre-made cover images"}
                           </p>
+                        </div>
+                      </div>
+                      <div className="mt-2 rounded-xl border border-pink-500/20 bg-pink-500/5 p-3 space-y-2">
+                        <p className="text-xs font-medium flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-pink-400" /> Generate a cover from your headline</p>
+                        <p className="text-[11px] text-muted-foreground">A clean, on-brand background with no people. Type the headline and it makes a matching image.</p>
+                        <div className="flex gap-2">
+                          <input
+                            value={genCoverPrompt}
+                            onChange={(e) => setGenCoverPrompt(e.target.value)}
+                            placeholder="Your headline for this carousel"
+                            className="flex-1 rounded-lg bg-muted/30 border border-border/30 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50"
+                            onKeyDown={(e) => { if (e.key === "Enter") generateCoverFromHook(); }}
+                          />
+                          <button
+                            onClick={generateCoverFromHook}
+                            disabled={genCover}
+                            className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-pink-500/90 hover:bg-pink-500 text-white text-sm font-semibold px-3 py-2 disabled:opacity-50"
+                          >
+                            {genCover ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />} Generate
+                          </button>
                         </div>
                       </div>
                       {coverPhotos.length > 0 && (
