@@ -49,16 +49,25 @@ async function igUploadContainer(
 }
 
 async function igPublish(igAccountId: string, token: string, creationId: string): Promise<string> {
-  const res = await metaFetch(`${GRAPH}/${igAccountId}/media_publish`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ creation_id: creationId, access_token: token }),
-  });
-  const data = await res.json() as any;
-  if (!res.ok || !data.id) {
-    throw new Error(`IG publish failed (${res.status}): ${data?.error?.message || JSON.stringify(data)}`);
+  // Instagram needs time to finish processing the (carousel) container before publishing.
+  // Publishing too soon returns "Media ID is not available". Retry on not-ready errors with backoff.
+  const NOT_READY = ["not available", "not ready", "not yet", "processing", "in_progress"];
+  let lastErr = "";
+  for (let attempt = 0; attempt < 8; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, attempt === 1 ? 5000 : 8000));
+    const res = await metaFetch(`${GRAPH}/${igAccountId}/media_publish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ creation_id: creationId, access_token: token }),
+    });
+    const data = await res.json() as any;
+    if (res.ok && data.id) return data.id as string;
+    lastErr = data?.error?.message || JSON.stringify(data);
+    if (!NOT_READY.some((ph) => lastErr.toLowerCase().includes(ph))) {
+      throw new Error(`IG publish failed (${res.status}): ${lastErr}`);
+    }
   }
-  return data.id as string;
+  throw new Error(`IG publish failed after retries: ${lastErr}`);
 }
 
 async function postToInstagram(
