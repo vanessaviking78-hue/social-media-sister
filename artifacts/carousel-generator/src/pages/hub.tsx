@@ -3,6 +3,15 @@ import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageS
 
 const TOOLS = [
   {
+    href: "/quotes",
+    icon: MessageSquareText,
+    name: "Quote Maker",
+    description: "Drop in a CSV of quotes and get bold, bright quote cards in your colours.",
+    color: "from-amber-500/20 to-amber-500/5",
+    border: "hover:border-amber-500/50",
+    iconColor: "text-amber-400",
+  },
+  {
     href: "/meme",
     icon: Sparkles,
     name: "Meme Maker",
