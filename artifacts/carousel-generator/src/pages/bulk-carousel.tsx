@@ -1095,15 +1095,23 @@ export default function BulkCarousel() {
   // ── Schedule ─────────────────────────────────────────────────────────────────
 
   const goToSchedule = () => {
-    const base = new Date();
-    base.setHours(0, 0, 0, 0);
-    setScheduleEntries(items.map((item, i) => {
-      const d = new Date(base);
-      d.setDate(d.getDate() + i);
+    // Default posting cadence for all clients: Sunday, Monday, Wednesday, Friday.
+    const POST_DAYS = [0, 1, 3, 5];
+    const cursor = new Date();
+    cursor.setHours(0, 0, 0, 0);
+    cursor.setDate(cursor.getDate() + 1); // start from tomorrow
+    const nextPostingDate = () => {
+      while (!POST_DAYS.includes(cursor.getDay())) cursor.setDate(cursor.getDate() + 1);
+      const out = new Date(cursor);
+      cursor.setDate(cursor.getDate() + 1); // advance past this slot for the next item
+      return out;
+    };
+    setScheduleEntries(items.map((item) => {
+      const d = nextPostingDate();
       return {
         date: d.toISOString().slice(0, 10),
         time: "18:15",
-        platforms: ["instagram"] as ("instagram" | "facebook")[],
+        platforms: ["instagram", "facebook"] as ("instagram" | "facebook")[],
         presetId: selectedPresetId,
         caption: captionMap[item.id] ?? "",
       };

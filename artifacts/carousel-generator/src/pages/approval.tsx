@@ -63,6 +63,7 @@ export default function Approval() {
 
   const handleCreate = async () => {
     if (!batchName.trim()) { toast.error("Please enter a batch name"); return; }
+    if (!selectedClient.trim()) { toast.error("Please select a client for this batch"); return; }
     if (uploadedUrls.length === 0) { toast.error("Please upload at least one image"); return; }
     try {
       await createBatch.mutateAsync({
