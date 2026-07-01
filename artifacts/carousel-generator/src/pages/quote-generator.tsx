@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Upload, Download, Loader2, ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Upload, Download, Loader2, ChevronLeft, ChevronRight, Image as ImageIcon, CalendarClock, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -9,6 +9,9 @@ import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { loadGoogleFonts } from "@/lib/slide-utils";
 import { usePresets } from "@/lib/use-presets";
+import { MusicPickerModal, type MusicTrack } from "@/components/music-picker-modal";
+
+const BASE = import.meta.env.BASE_URL || "/";
 
 loadGoogleFonts();
 
@@ -52,6 +55,11 @@ export default function QuoteGenerator() {
   const [quoteOpenPos, setQuoteOpenPos] = useState({ x: W / 2, y: Math.round(H * 0.26) });
   const [quoteClosePos, setQuoteClosePos] = useState({ x: W / 2, y: Math.round(H * 0.8) });
   const draggingRef = useRef<null | "logo" | "qopen" | "qclose">(null);
+  const [scheduleDate, setScheduleDate] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); });
+  const [scheduleTime, setScheduleTime] = useState("18:00");
+  const [scheduling, setScheduling] = useState(false);
+  const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
+  const [musicOpen, setMusicOpen] = useState(false);
   const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
   const [rendering, setRendering] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -223,6 +231,45 @@ export default function QuoteGenerator() {
     }
   };
 
+  const uploadCanvas = async (canvas: HTMLCanvasElement): Promise<string> => {
+    const dataUrl = canvas.toDataURL("image/png");
+    const up = await fetch(`${BASE}api/content/upload-image`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ images: [{ name: `quote-${Date.now()}.png`, base64: dataUrl }] }) });
+    if (!up.ok) throw new Error("Image upload failed");
+    const { results } = await up.json() as { results: { url: string }[] };
+    const url = results[0]?.url; if (!url) throw new Error("No image URL returned"); return url;
+  };
+  const capFor = (i: number) => { const sub = (subs[i] || subtitle || "").trim(); return quotes[i] + (sub ? `\n\n- ${sub}` : ""); };
+  const scheduleOne = async () => {
+    const c = canvasRef.current; if (!c || !quotes.length) { toast.error("Load a CSV first"); return; }
+    const preset = presets.find((p) => p.name === clientName); if (!preset) { toast.error("Pick a client first"); return; }
+    setScheduling(true);
+    try {
+      const url = await uploadCanvas(c);
+      const r = await fetch(`${BASE}api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: preset.id, postType: "single-image", content: { imageUrls: [url], caption: capFor(idx), title: "Quote", platforms: ["instagram", "facebook"], musicTrack: musicTrack || undefined }, scheduledAt: new Date(`${scheduleDate}T${scheduleTime}`).toISOString() }) });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error((d as { error?: string }).error || "Schedule failed"); }
+      toast.success(`Scheduled for ${scheduleDate} at ${scheduleTime}`);
+    } catch (e: any) { toast.error(e?.message || "Schedule failed"); } finally { setScheduling(false); }
+  };
+  const scheduleAll = async () => {
+    if (!quotes.length) { toast.error("Load a CSV first"); return; }
+    const preset = presets.find((p) => p.name === clientName); if (!preset) { toast.error("Pick a client first"); return; }
+    setScheduling(true);
+    try {
+      const off = document.createElement("canvas"); off.width = W; off.height = H; const ctx = off.getContext("2d")!;
+      const POST_DAYS = [0, 1, 3, 5];
+      const [hh, mm] = scheduleTime.split(":").map((n) => parseInt(n, 10));
+      const cursor = new Date(); cursor.setHours(hh || 18, mm || 0, 0, 0); cursor.setDate(cursor.getDate() + 1);
+      const nextDate = () => { while (!POST_DAYS.includes(cursor.getDay())) cursor.setDate(cursor.getDate() + 1); const out = new Date(cursor); cursor.setDate(cursor.getDate() + 1); return out; };
+      for (let i = 0; i < quotes.length; i++) {
+        drawQuote(ctx, quotes[i], subs[i] || "");
+        const url = await uploadCanvas(off);
+        const r = await fetch(`${BASE}api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: preset.id, postType: "single-image", content: { imageUrls: [url], caption: capFor(i), title: "Quote", platforms: ["instagram", "facebook"], musicTrack: musicTrack || undefined }, scheduledAt: nextDate().toISOString() }) });
+        if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(`Quote ${i + 1}: ${(d as { error?: string }).error || "failed"}`); }
+      }
+      toast.success(`${quotes.length} quote${quotes.length !== 1 ? "s" : ""} scheduled across Mon/Wed/Fri/Sun`);
+    } catch (e: any) { toast.error(e?.message || "Schedule failed"); } finally { setScheduling(false); }
+  };
+
   const ColourRow = ({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) => (
     <div className="flex items-center justify-between gap-3">
       <Label className="text-sm text-muted-foreground">{label}</Label>
@@ -346,9 +393,24 @@ export default function QuoteGenerator() {
               {rendering ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Download className="w-4 h-4 mr-1.5" />} Download all
             </Button>
           </div>
+          <div className="border-t border-border/30 pt-3 space-y-2">
+            <p className="text-xs text-muted-foreground">Schedules to the client selected above ({clientName || "none"}).</p>
+            <div className="flex gap-2">
+              <input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} className="flex-1 rounded-lg bg-muted/30 border border-border/30 text-sm px-2 py-2" />
+              <input type="time" value={scheduleTime} onChange={(e) => setScheduleTime(e.target.value)} className="flex-1 rounded-lg bg-muted/30 border border-border/30 text-sm px-2 py-2" />
+            </div>
+            <Button variant="outline" onClick={() => setMusicOpen(true)} className={`w-full ${musicTrack ? "border-green-500/40 text-green-300" : ""}`}>
+              <Music className="w-4 h-4 mr-1.5" />{musicTrack ? musicTrack.name.slice(0, 28) : "Add music"}
+            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={scheduleOne} disabled={scheduling || !quotes.length} className="flex-1">{scheduling ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-1.5" />} Schedule this</Button>
+              <Button onClick={scheduleAll} disabled={scheduling || !quotes.length} className="flex-1 bg-pink-600 hover:bg-pink-700">{scheduling ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-1.5" />} Schedule all M/W/F/Su</Button>
+            </div>
+          </div>
           <p className="text-xs text-muted-foreground text-center">Portrait 1080 x 1350.</p>
         </div>
       </div>
+      <MusicPickerModal open={musicOpen} onClose={() => setMusicOpen(false)} selectedTrack={musicTrack} onSelect={(t) => setMusicTrack(t)} />
     </div>
   );
 }
