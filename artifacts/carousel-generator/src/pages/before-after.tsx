@@ -107,6 +107,10 @@ export default function BeforeAfterMaker() {
   const [fontFamily, setFontFamily] = useState("Poppins");
   const [caption, setCaption] = useState("");
   const [genCap, setGenCap] = useState(false);
+  const [fbBefore, setFbBefore] = useState({ x: 90, y: 235 });
+  const [fbAfter, setFbAfter] = useState({ x: W - 340, y: H - 320 });
+  const [fbDetails, setFbDetails] = useState({ x: W / 2, y: H - 90 });
+  const fdragRef = useRef<null | "before" | "after" | "details">(null);
 
   useEffect(() => {
     const pw = localStorage.getItem("cybersuite-pw") || "";
@@ -266,16 +270,16 @@ const generateCaption = async () => {
       drawFramed(before, 560, 500, -1.5);
       drawFramed(after, 560, 1010, 1.5);
       const tab = (label: string, x: number, y: number) => {
-        ctx.save(); ctx.fillStyle = accent; ctx.font = `800 italic ${44 * HS}px "${fontFamily}", sans-serif`;
-        const tw = ctx.measureText(label).width + 60;
-        ctx.fillRect(x, y, tw, 74);
-        ctx.fillStyle = "#ffffff"; ctx.textAlign = "left"; ctx.fillText(label, x + 30, y + 52);
+        ctx.save(); ctx.fillStyle = accent; const fs = 44 * HS; ctx.font = `800 ${fs}px "${fontFamily}", sans-serif`;
+        const tw = ctx.measureText(label).width + 60; const th = fs * 1.6;
+        ctx.fillRect(x, y, tw, th);
+        ctx.fillStyle = "#ffffff"; ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.fillText(label, x + 30, y + th / 2);
         ctx.restore();
       };
-      tab("BEFORE", 90, 235);
-      tab("AFTER", W - 340, H - 320);
-      ctx.fillStyle = text; ctx.font = `800 italic ${46 * BS}px "${fontFamily}", sans-serif`; ctx.textAlign = "center";
-      ctx.fillText((details || "DETAILS HERE").toUpperCase(), W / 2, H - 90);
+      tab("BEFORE", fbBefore.x, fbBefore.y);
+      tab("AFTER", fbAfter.x, fbAfter.y);
+      ctx.fillStyle = text; ctx.font = `800 ${46 * BS}px "${fontFamily}", sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      ctx.fillText((details || "DETAILS HERE").toUpperCase(), fbDetails.x, fbDetails.y);
     }
     if (logoImg && logoPos !== "none") {
       const lh = 120 * logoScale;
@@ -285,7 +289,7 @@ const generateCaption = async () => {
       const y = logoPos.indexOf("b") >= 0 ? H - lh - pad : pad;
       ctx.drawImage(logoImg, x, y, lw, lh);
     }
-  }, [tpl, before, after, title, cap1, cap2, treatment, backStory, writeUp, details, bg, text, accent, logoImg, logoPos, logoScale, headingScale, bodyScale, fontFamily]);
+  }, [tpl, before, after, title, cap1, cap2, treatment, backStory, writeUp, details, bg, text, accent, logoImg, logoPos, logoScale, headingScale, bodyScale, fontFamily, fbBefore, fbAfter, fbDetails]);
 
   useEffect(() => {
     render();
@@ -330,6 +334,30 @@ const generateCaption = async () => {
       toast.success(`Scheduled for ${scheduleDate} at ${scheduleTime}`);
     } catch (e: any) { toast.error(e?.message || "Schedule failed"); } finally { setScheduling(false); }
   };
+
+  const fCanvasXY = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const c = canvasRef.current!; const r = c.getBoundingClientRect();
+    return { x: (e.clientX - r.left) * (W / r.width), y: (e.clientY - r.top) * (H / r.height) };
+  };
+  const onFramedDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (tpl !== "framed") return;
+    const c = canvasRef.current; const ctx = c?.getContext("2d"); if (!c || !ctx) return;
+    const { x, y } = fCanvasXY(e);
+    const fs = 44 * headingScale; const th = fs * 1.6;
+    ctx.font = `800 ${fs}px "${fontFamily}", sans-serif`;
+    const twB = ctx.measureText("BEFORE").width + 60, twA = ctx.measureText("AFTER").width + 60;
+    ctx.font = `800 ${46 * bodyScale}px "${fontFamily}", sans-serif`;
+    const dw = ctx.measureText((details || "DETAILS HERE").toUpperCase()).width, dh = 46 * bodyScale;
+    if (x >= fbBefore.x && x <= fbBefore.x + twB && y >= fbBefore.y && y <= fbBefore.y + th) fdragRef.current = "before";
+    else if (x >= fbAfter.x && x <= fbAfter.x + twA && y >= fbAfter.y && y <= fbAfter.y + th) fdragRef.current = "after";
+    else if (x >= fbDetails.x - dw / 2 && x <= fbDetails.x + dw / 2 && y >= fbDetails.y - dh && y <= fbDetails.y + dh * 0.3) fdragRef.current = "details";
+    if (fdragRef.current) c.setPointerCapture(e.pointerId);
+  };
+  const onFramedMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!fdragRef.current) return; const p = fCanvasXY(e);
+    if (fdragRef.current === "before") setFbBefore(p); else if (fdragRef.current === "after") setFbAfter(p); else setFbDetails(p);
+  };
+  const onFramedUp = () => { fdragRef.current = null; };
 
   const field = "w-full rounded-lg bg-zinc-900 border border-zinc-800 px-3 py-2 text-sm outline-none focus:border-pink-500/50";
   const showTitle = tpl === "polaroid";
@@ -455,7 +483,7 @@ const generateCaption = async () => {
           </div>
 
           <div className="rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900 h-fit sticky top-6">
-            <canvas ref={canvasRef} className="w-full block" style={{ aspectRatio: "3 / 4" }} />
+            <canvas ref={canvasRef} onPointerDown={onFramedDown} onPointerMove={onFramedMove} onPointerUp={onFramedUp} className="w-full block" style={{ aspectRatio: "3 / 4", touchAction: "none", cursor: tpl === "framed" ? "move" : "default" }} />
           </div>
         </div>
       </div>
