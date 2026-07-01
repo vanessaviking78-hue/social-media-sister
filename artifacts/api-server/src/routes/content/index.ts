@@ -832,4 +832,24 @@ router.get("/music/search", async (req, res) => {
   }
 });
 
+router.post("/content/ba-caption", async (req, res) => {
+  try {
+    const { treatment, backStory, clientName, voiceStyle } = req.body as { treatment?: string; backStory?: string; clientName?: string; voiceStyle?: string };
+    if (!(backStory || "").trim() && !(treatment || "").trim()) { res.status(400).json({ error: "Add a back story or treatment first" }); return; }
+    const voicePrompt = getVoiceSystemPrompt(voiceStyle || "northern-grit");
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5.2",
+      max_completion_tokens: 800,
+      messages: [
+        { role: "system", content: `${voicePrompt}\n\nYou write warm, story-led Instagram captions for an aesthetics clinic${clientName ? ` (${clientName})` : ""} to sit alongside a before-and-after photo. Tell it as a short story: set the scene, how the client felt beforehand, what they had done, and how they felt after. Keep it human and specific, roughly 80 to 140 words. Be MHRA and ASA compliant: no medical claims, no guaranteed results, no pressure tactics. Use hyphens, never em dashes. Weave in one or two emojis naturally. Put 3 to 5 relevant hashtags on the final line. Output only the caption text, nothing else.` },
+        { role: "user", content: `Treatment: ${treatment || "(not given)"}\nBack story from the clinic: ${backStory || "(not given)"}` },
+      ],
+    });
+    const caption = (completion.choices[0]?.message?.content || "").trim();
+    res.json({ caption });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Could not write a caption" });
+  }
+});
+
 export default router;
