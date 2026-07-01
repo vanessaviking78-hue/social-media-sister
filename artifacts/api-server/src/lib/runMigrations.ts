@@ -1,3 +1,4 @@
+// deploy: ensure before_after_submissions table 134246
 import { sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { logger } from "./logger";
@@ -19,6 +20,7 @@ export async function runMigrations(): Promise<void> {
     await addRenderedImageUrlsColumn();
     await backfillFirstCommentDefaults();
     await backfillPersonalityProfileDefaults();
+    await createBeforeAfterSubmissionsTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -259,4 +261,21 @@ async function normalizeTextPositionValues(): Promise<void> {
   if (updated > 0) {
     logger.info({ updated }, "Normalised legacy compound text_position values in client_presets");
   }
+}
+
+async function createBeforeAfterSubmissionsTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS before_after_submissions (
+      id SERIAL PRIMARY KEY,
+      preset_id INTEGER,
+      client_name TEXT NOT NULL DEFAULT '',
+      before_url TEXT NOT NULL DEFAULT '',
+      after_url TEXT NOT NULL DEFAULT '',
+      treatment TEXT NOT NULL DEFAULT '',
+      story TEXT NOT NULL DEFAULT '',
+      submitter_name TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'new',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
 }
