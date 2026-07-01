@@ -95,8 +95,33 @@ export default function BeforeAfterMaker() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const beforeRef = useRef<HTMLInputElement>(null);
   const afterRef = useRef<HTMLInputElement>(null);
+  const [subs, setSubs] = useState<any[]>([]);
+  const [subId, setSubId] = useState("");
 
-  const chooseTpl = (id: Tpl) => { setTpl(id); const d = DEFAULTS[id]; setBg(d.bg); setText(d.text); setAccent(d.accent); };
+  useEffect(() => {
+    const pw = localStorage.getItem("cybersuite-pw") || "";
+    fetch(`${BASE}/api/submissions`, { headers: { "x-app-password": pw, "Authorization": "Bearer " + pw } })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setSubs(Array.isArray(d) ? d : []))
+      .catch(() => {});
+  }, []);
+  const sameOrigin = (u: string) => { try { const p = new URL(u); return window.location.origin + p.pathname; } catch { return u; } };
+  const loadUrl = (url: string) => new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => res(i); i.onerror = rej; i.src = sameOrigin(url); });
+  const pullSub = async (id: string) => {
+    setSubId(id);
+    const sb = subs.find((x) => String(x.id) === id);
+    if (!sb) return;
+    try {
+      const [b, a] = await Promise.all([loadUrl(sb.beforeUrl), loadUrl(sb.afterUrl)]);
+      setBefore(b); setAfter(a);
+      if (sb.clientName) setClientName(sb.clientName);
+      if (sb.treatment) setTreatment(sb.treatment);
+      if (sb.story) { setBackStory(sb.story); setWriteUp(sb.story); setDetails(sb.story); }
+      toast.success("Loaded from submission");
+    } catch { toast.error("Could not load those images"); }
+  };
+
+    const chooseTpl = (id: Tpl) => { setTpl(id); const d = DEFAULTS[id]; setBg(d.bg); setText(d.text); setAccent(d.accent); };
 
   const loadFile = (which: "b" | "a") => (file: File) => {
     if (!file.type.startsWith("image/")) { toast.error("Please choose an image"); return; }
@@ -290,6 +315,16 @@ export default function BeforeAfterMaker() {
                   className={`px-3 py-1.5 rounded-full text-sm border ${tpl === t.id ? "bg-pink-600 border-pink-600" : "bg-zinc-900 border-zinc-800 hover:border-zinc-600"}`}>{t.name}</button>
               ))}
             </div>
+
+            {subs.length > 0 && (
+              <div>
+                <label className="text-xs uppercase tracking-wide text-zinc-500">Pull from a submission</label>
+                <select className={field} value={subId} onChange={(e) => pullSub(e.target.value)}>
+                  <option value="">Choose a submitted before &amp; after</option>
+                  {subs.map((sb) => <option key={sb.id} value={sb.id}>{sb.clientName}{sb.treatment ? " \u00b7 " + sb.treatment : ""} \u00b7 {new Date(sb.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</option>)}
+                </select>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               {([["Before", beforeRef, before, loadFile("b")], ["After", afterRef, after, loadFile("a")]] as const).map(([lab, ref, img, onFile]) => (
