@@ -46,7 +46,7 @@ export default function QuoteGenerator() {
   const { presets } = usePresets();
   const [clientName, setClientName] = useState("");
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
-  const [logoScale, setLogoScale] = useState(1);
+  const [logoScale, setLogoScale] = useState(1.4);
   const [logoPos, setLogoPos] = useState({ x: W / 2, y: H - 150 });
   const [quoteScale, setQuoteScale] = useState(1);
   const [quoteOpenPos, setQuoteOpenPos] = useState({ x: W / 2, y: Math.round(H * 0.26) });
@@ -99,7 +99,7 @@ export default function QuoteGenerator() {
   const onLogoDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const { x, y } = canvasXY(e);
     if (logoImg) {
-      const lh = 120 * logoScale, lw = lh * (logoImg.width / logoImg.height);
+      const lh = 320 * logoScale, lw = lh * (logoImg.width / logoImg.height);
       if (x >= logoPos.x - lw / 2 && x <= logoPos.x + lw / 2 && y >= logoPos.y - lh / 2 && y <= logoPos.y + lh / 2) {
         draggingRef.current = "logo"; canvasRef.current?.setPointerCapture(e.pointerId); return;
       }
@@ -172,7 +172,7 @@ export default function QuoteGenerator() {
     }
 
     if (logoImg) {
-      const lh = 120 * logoScale;
+      const lh = 320 * logoScale;
       const lw = lh * (logoImg.width / logoImg.height);
       ctx.globalAlpha = 1;
       ctx.drawImage(logoImg, logoPos.x - lw / 2, logoPos.y - lh / 2, lw, lh);
@@ -319,7 +319,7 @@ export default function QuoteGenerator() {
               {logoImg && (
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground w-20">Logo size</span>
-                  <input type="range" min={0.4} max={2.5} step={0.05} value={logoScale} onChange={(e) => setLogoScale(parseFloat(e.target.value))} className="flex-1 cursor-pointer" />
+                  <input type="range" min={0.3} max={6} step={0.1} value={logoScale} onChange={(e) => setLogoScale(parseFloat(e.target.value))} className="flex-1 cursor-pointer" />
                   <span className="text-xs text-muted-foreground">Drag it on the preview</span>
                 </div>
               )}
