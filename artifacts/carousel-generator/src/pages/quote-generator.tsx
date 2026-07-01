@@ -48,7 +48,10 @@ export default function QuoteGenerator() {
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
   const [logoScale, setLogoScale] = useState(1);
   const [logoPos, setLogoPos] = useState({ x: W / 2, y: H - 150 });
-  const draggingRef = useRef(false);
+  const [quoteScale, setQuoteScale] = useState(1);
+  const [quoteOpenPos, setQuoteOpenPos] = useState({ x: W / 2, y: Math.round(H * 0.26) });
+  const [quoteClosePos, setQuoteClosePos] = useState({ x: W / 2, y: Math.round(H * 0.8) });
+  const draggingRef = useRef<null | "logo" | "qopen" | "qclose">(null);
   const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
   const [rendering, setRendering] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -89,16 +92,29 @@ export default function QuoteGenerator() {
     const c = canvasRef.current!; const rect = c.getBoundingClientRect();
     return { x: (e.clientX - rect.left) * (W / rect.width), y: (e.clientY - rect.top) * (H / rect.height) };
   };
+  const hitQuote = (x: number, y: number, pos: { x: number; y: number }) => {
+    const qf = Math.round(fontSize * 2.6 * quoteScale); const qw = qf * 0.75, qh = qf * 0.9;
+    return x >= pos.x - qw / 2 && x <= pos.x + qw / 2 && y >= pos.y - qh && y <= pos.y + qh * 0.25;
+  };
   const onLogoDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!logoImg) return;
     const { x, y } = canvasXY(e);
-    const lh = 120 * logoScale, lw = lh * (logoImg.width / logoImg.height);
-    if (x >= logoPos.x - lw / 2 && x <= logoPos.x + lw / 2 && y >= logoPos.y - lh / 2 && y <= logoPos.y + lh / 2) {
-      draggingRef.current = true; canvasRef.current?.setPointerCapture(e.pointerId);
+    if (logoImg) {
+      const lh = 120 * logoScale, lw = lh * (logoImg.width / logoImg.height);
+      if (x >= logoPos.x - lw / 2 && x <= logoPos.x + lw / 2 && y >= logoPos.y - lh / 2 && y <= logoPos.y + lh / 2) {
+        draggingRef.current = "logo"; canvasRef.current?.setPointerCapture(e.pointerId); return;
+      }
+    }
+    if (showAccent) {
+      if (hitQuote(x, y, quoteOpenPos)) { draggingRef.current = "qopen"; canvasRef.current?.setPointerCapture(e.pointerId); return; }
+      if (hitQuote(x, y, quoteClosePos)) { draggingRef.current = "qclose"; canvasRef.current?.setPointerCapture(e.pointerId); return; }
     }
   };
-  const onLogoMove = (e: React.PointerEvent<HTMLCanvasElement>) => { if (draggingRef.current) setLogoPos(canvasXY(e)); };
-  const onLogoUp = () => { draggingRef.current = false; };
+  const onLogoMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const d = draggingRef.current; if (!d) return;
+    const pos = canvasXY(e);
+    if (d === "logo") setLogoPos(pos); else if (d === "qopen") setQuoteOpenPos(pos); else if (d === "qclose") setQuoteClosePos(pos);
+  };
+  const onLogoUp = () => { draggingRef.current = null; };
 
   const drawQuote = useCallback((ctx: CanvasRenderingContext2D, text: string, subArg = "") => {
     ctx.clearRect(0, 0, W, H);
@@ -115,12 +131,14 @@ export default function QuoteGenerator() {
     }
 
     if (showAccent) {
+      const qf = Math.round(fontSize * 2.6 * quoteScale);
       ctx.fillStyle = accentColor;
       ctx.globalAlpha = 0.9;
       ctx.textAlign = "center";
       ctx.textBaseline = "alphabetic";
-      ctx.font = `900 ${Math.round(fontSize * 2.6)}px "Playfair Display", Georgia, serif`;
-      ctx.fillText("“", W / 2, H * 0.26);
+      ctx.font = `900 ${qf}px "Playfair Display", Georgia, serif`;
+      ctx.fillText("\u201C", quoteOpenPos.x, quoteOpenPos.y);
+      ctx.fillText("\u201D", quoteClosePos.x, quoteClosePos.y);
       ctx.globalAlpha = 1;
     }
 
@@ -159,7 +177,7 @@ export default function QuoteGenerator() {
       ctx.globalAlpha = 1;
       ctx.drawImage(logoImg, logoPos.x - lw / 2, logoPos.y - lh / 2, lw, lh);
     }
-  }, [bgColor, textColor, accentColor, showAccent, fontSize, bgImage, font, subtitle, logoImg, logoScale, logoPos]);
+  }, [bgColor, textColor, accentColor, showAccent, fontSize, bgImage, font, subtitle, logoImg, logoScale, logoPos, quoteScale, quoteOpenPos, quoteClosePos]);
 
   useEffect(() => {
     const c = canvasRef.current;
@@ -274,6 +292,13 @@ export default function QuoteGenerator() {
               <input type="range" min={44} max={120} step={2} value={fontSize} onChange={(e) => setFontSize(parseInt(e.target.value))} className="flex-1 cursor-pointer" />
               <span className="text-xs text-muted-foreground w-8">{fontSize}</span>
             </div>
+            {showAccent && (
+              <div className="flex items-center gap-3 pt-1">
+                <Label className="text-sm text-muted-foreground whitespace-nowrap">Quote mark size</Label>
+                <input type="range" min={0.4} max={2.5} step={0.05} value={quoteScale} onChange={(e) => setQuoteScale(parseFloat(e.target.value))} className="flex-1 cursor-pointer" />
+                <span className="text-xs text-muted-foreground">drag on preview</span>
+              </div>
+            )}
             <div className="flex items-center gap-3 pt-1">
               <Label className="text-sm text-muted-foreground whitespace-nowrap">Font</Label>
               <select value={font} onChange={(e) => setFont(e.target.value)} className="flex-1 rounded-lg bg-muted/30 border border-border/30 text-sm px-2 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50">
@@ -304,7 +329,7 @@ export default function QuoteGenerator() {
 
         <div className="space-y-3">
           <div className="rounded-xl overflow-hidden border border-border/30 bg-black/20">
-            <canvas ref={canvasRef} onPointerDown={onLogoDown} onPointerMove={onLogoMove} onPointerUp={onLogoUp} className="w-full block" style={{ aspectRatio: "1080 / 1350", touchAction: "none", cursor: logoImg ? "move" : "default" }} />
+            <canvas ref={canvasRef} onPointerDown={onLogoDown} onPointerMove={onLogoMove} onPointerUp={onLogoUp} className="w-full block" style={{ aspectRatio: "1080 / 1350", touchAction: "none", cursor: (logoImg || showAccent) ? "move" : "default" }} />
           </div>
           {quotes.length > 1 && (
             <div className="flex items-center justify-center gap-3">
