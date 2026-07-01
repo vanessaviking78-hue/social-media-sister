@@ -3,6 +3,15 @@ import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageS
 
 const TOOLS = [
   {
+    href: "/before-after",
+    icon: ImagePlus,
+    name: "Before & After Maker",
+    description: "Upload a before and after, pick a template, add the story and post it.",
+    color: "from-rose-500/20 to-rose-500/5",
+    border: "hover:border-rose-500/50",
+    iconColor: "text-rose-400",
+  },
+  {
     href: "/submissions",
     icon: Inbox,
     name: "Before & After Inbox",
