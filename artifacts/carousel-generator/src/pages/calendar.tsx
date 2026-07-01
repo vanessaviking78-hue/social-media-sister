@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Link } from "wouter";
 import {
   Layers, ChevronLeft, ChevronRight, Plus, X, Trash2, Pencil, CalendarDays, MessageSquareText,
@@ -117,6 +117,9 @@ export default function Calendar() {
   // post type doesn't support native audio attachment via the Meta API.
   const [musicIssues, setMusicIssues] = useState<{ id: number; clientName: string; postType: string; scheduledAt: string; musicTrack: { name: string; artist: string } }[]>([]);
   const [musicIssuesDismissed, setMusicIssuesDismissed] = useState(false);
+  // Real scheduler queue (bulk / quote / before-after tools write here, not /api/calendar).
+  const SCHED_OFFSET = 900000000;
+  const [scheduledPosts, setScheduledPosts] = useState<CalendarPost[]>([]);
 
   useEffect(() => {
     const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -137,6 +140,21 @@ export default function Calendar() {
           musicTrack: p.content.musicTrack!,
         }));
         setMusicIssues(issues);
+        const sched: CalendarPost[] = (data.posts || []).map((p) => ({
+          id: SCHED_OFFSET + p.id,
+          date: (p.scheduledAt || "").slice(0, 10),
+          clientName: p.clientName || "",
+          postType: p.postType,
+          title: "",
+          caption: "",
+          notes: "",
+          status: "scheduled",
+          color: "#22d3ee",
+          imageUrl: p.content?.imageUrls?.[0] || null,
+          createdAt: "",
+          updatedAt: "",
+        })).filter((p) => p.date);
+        setScheduledPosts(sched);
       })
       .catch(() => { /* silent — non-critical audit */ });
   }, []);
@@ -162,6 +180,17 @@ export default function Calendar() {
   useEffect(() => {
     if (showLibrary) fetchLibraryItems(filterClient || undefined);
   }, [showLibrary, filterClient, fetchLibraryItems]);
+
+  const norm = (v: string) => (v || "").trim().toLowerCase();
+  const scheduledForClient = useMemo(
+    () => scheduledPosts.filter((p) => !filterClient || norm(p.clientName) === norm(filterClient)),
+    [scheduledPosts, filterClient]
+  );
+  const clientOptions = useMemo(() => {
+    const set = new Set<string>(allClients);
+    scheduledPosts.forEach((p) => { if (p.clientName) set.add(p.clientName); });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [allClients, scheduledPosts]);
 
   const days = getMonthDays(year, month);
   const fromDate = days[0].date;
@@ -190,7 +219,7 @@ export default function Calendar() {
   const openCreate = (date: string) => {
     setEditingPost(null);
     setFormDate(date);
-    setFormClient("");
+    setFormClient(filterClient || "");
     setFormPostType("carousel");
     setFormTitle("");
     setFormCaption("");
@@ -425,7 +454,7 @@ export default function Calendar() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Clients</SelectItem>
-                {allClients.map((name) => (
+                {clientOptions.map((name) => (
                   <SelectItem key={name} value={name}>{name}</SelectItem>
                 ))}
               </SelectContent>
@@ -455,7 +484,7 @@ export default function Calendar() {
 
           <div className="grid grid-cols-7">
             {days.map((day, i) => {
-              const dayPosts = posts.filter((p) => p.date === day.date);
+              const dayPosts = [...posts, ...scheduledForClient].filter((p) => p.date === day.date);
               const isToday = day.date === todayStr;
               const isDragTarget = dragOverDate === day.date;
               return (
@@ -478,17 +507,20 @@ export default function Calendar() {
                     )}
                   </div>
                   <div className="space-y-1">
-                    {(expandedDay === day.date ? dayPosts : dayPosts.slice(0, 3)).map((post) => (
+                    {(expandedDay === day.date ? dayPosts : dayPosts.slice(0, 3)).map((post) => {
+                      const isSched = post.id >= SCHED_OFFSET;
+                      return (
                       <div
                         key={post.id}
-                        draggable
-                        onDragStart={(e) => { e.stopPropagation(); handleDragStart(e, post.id); }}
-                        onClick={(e) => { e.stopPropagation(); openEdit(post); }}
-                        className="group rounded px-1.5 py-1 text-[11px] leading-tight cursor-pointer hover:ring-1 hover:ring-white/20 transition-all"
+                        draggable={!isSched}
+                        onDragStart={(e) => { if (isSched) return; e.stopPropagation(); handleDragStart(e, post.id); }}
+                        onClick={(e) => { e.stopPropagation(); if (!isSched) openEdit(post); }}
+                        title={isSched ? "Already scheduled to go out" : undefined}
+                        className={`group rounded px-1.5 py-1 text-[11px] leading-tight transition-all ${isSched ? "cursor-default opacity-95" : "cursor-pointer hover:ring-1 hover:ring-white/20"}`}
                         style={{ backgroundColor: post.color + "22", borderLeft: `3px solid ${post.color}` }}
                       >
                         <div className="flex items-center gap-1">
-                          <GripVertical className="w-3 h-3 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-grab" />
+                          {!isSched && <GripVertical className="w-3 h-3 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-grab" />}
                           {post.imageUrl && (
                             <img src={post.imageUrl} alt="" className="w-4 h-4 rounded-sm object-cover flex-shrink-0" />
                           )}
@@ -496,10 +528,12 @@ export default function Calendar() {
                         </div>
                         <div className="flex items-center gap-1 ml-4 mt-0.5">
                           <span className="text-[9px] px-1 py-px rounded bg-white/10 text-muted-foreground">{getPostTypeBadge(post.postType)}</span>
+                          {isSched && <span className="text-[9px] px-1 py-px rounded bg-cyan-400/20 text-cyan-300">Scheduled</span>}
                           {post.clientName && <span className="text-[10px] text-muted-foreground truncate">{post.clientName}</span>}
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                     {dayPosts.length > 3 && (
                       expandedDay === day.date ? (
                         <button
