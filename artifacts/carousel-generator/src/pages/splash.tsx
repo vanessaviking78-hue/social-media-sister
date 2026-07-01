@@ -374,7 +374,8 @@ export default function Splash() {
       <section style={{ position:"relative",minHeight:"100vh",display:"flex",alignItems:"center",paddingTop:"64px" }}>
         <div style={{ position:"absolute",top:"20%",left:"50%",transform:"translateX(-50%)",width:"800px",height:"400px",background:"radial-gradient(ellipse at center,rgba(196,147,127,0.08) 0%,transparent 70%)",pointerEvents:"none" }} />
         <div className="hero-inner" style={{ maxWidth:"1100px",margin:"0 auto",padding:"0 40px",width:"100%",textAlign:"center" }}>
-          <h1 className="hero-h1" style={{ fontSize:"clamp(56px,11vw,150px)",fontWeight:800,lineHeight:1.02,color:"#ff1493",letterSpacing:"-0.02em",maxWidth:"1000px",margin:"0 auto" }}>Fight til the last gasp - Never ever stop trying</h1>
+          <h1 className="hero-h1" style={{ fontSize:"clamp(56px,11vw,150px)",fontWeight:800,lineHeight:1.02,color:"#ff1493",letterSpacing:"-0.02em",maxWidth:"1000px",margin:"0 auto" }}>“Fight til the last gasp - Never ever stop trying”</h1>
+          <p style={{ fontSize:"clamp(20px,3vw,36px)",fontWeight:600,color:"#ff1493",letterSpacing:"0.01em",margin:"28px auto 0" }}>William Shakespeare - Richard III</p>
         </div>
       </section>
 
