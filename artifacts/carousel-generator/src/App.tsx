@@ -28,6 +28,7 @@ import SeamlessCarousel from "@/pages/seamless-carousel";
 import AiPortraitStudio from "@/pages/ai-portrait-studio";
 import Onboard from "@/pages/onboard";
 import SubmitBeforeAfter from "@/pages/submit";
+import BeforeAfterMaker from "@/pages/before-after";
 import Submissions from "@/pages/submissions";
 import OnboardChoosePage from "@/pages/onboard-choose-page";
 import OnboardSuccess from "@/pages/onboard-success";
@@ -88,6 +89,7 @@ function ProtectedRouter() {
       <Route path="/analytics" component={Analytics} />
       <Route path="/approval" component={Approval} />
       <Route path="/submissions" component={Submissions} />
+      <Route path="/before-after" component={BeforeAfterMaker} />
       <Route path="/reels" component={Reels} />
       <Route path="/video-overlay" component={VideoOverlay} />
       <Route path="/scheduler" component={Scheduler} />
