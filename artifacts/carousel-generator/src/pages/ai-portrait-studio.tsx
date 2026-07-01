@@ -241,6 +241,26 @@ const INJECTOR_COLLECTION_PRESETS: PhotoStudioPreset[] = [
   { id: "ic-418", name: "Leopard - Outdoors Pink Florals", hasColour: false },
   { id: "ic-419", name: "Leopard - Reception Counter Lean", hasColour: false },
   { id: "ic-420", name: "Leopard - Full Length Statement", hasColour: false },
+  { id: "ic-421", name: "Leopard - Pink Studio Backdrop", hasColour: false },
+  { id: "ic-422", name: "Leopard - Studio Beauty Light", hasColour: false },
+  { id: "ic-423", name: "Leopard - Seated Treatment Chair", hasColour: false },
+  { id: "ic-424", name: "Leopard - Reception Desk Lean", hasColour: false },
+  { id: "ic-425", name: "Leopard - Hot Pink Gradient Wall", hasColour: false },
+  { id: "ic-426", name: "Leopard - Holding Skincare Product", hasColour: false },
+  { id: "ic-427", name: "Leopard - Arms Crossed Studio", hasColour: false },
+  { id: "ic-428", name: "Leopard - Soft Pink Curtain", hasColour: false },
+  { id: "ic-429", name: "Leopard - Three Quarter Editorial", hasColour: false },
+  { id: "ic-430", name: "Leopard - Gentle Smile Close Up", hasColour: false },
+  { id: "ic-431", name: "Leopard - Hands on Hips Clinic", hasColour: false },
+  { id: "ic-432", name: "Leopard - Pink Ring Light Glow", hasColour: false },
+  { id: "ic-433", name: "Leopard - Beside Treatment Bed", hasColour: false },
+  { id: "ic-434", name: "Leopard - Relaxed Lounge Seated", hasColour: false },
+  { id: "ic-435", name: "Leopard - Confident Studio Stance", hasColour: false },
+  { id: "ic-436", name: "Leopard - Pink Floral Feature Wall", hasColour: false },
+  { id: "ic-437", name: "Leopard - Over Shoulder Studio", hasColour: false },
+  { id: "ic-438", name: "Leopard - Clean Clinical Backdrop", hasColour: false },
+  { id: "ic-439", name: "Leopard - Bold Pink Spotlight", hasColour: false },
+  { id: "ic-440", name: "Leopard - Full Length Pink Studio", hasColour: false },
 ];
 
 interface InjectorCollectionCategory { label: string; presetIds: string[] }
@@ -257,7 +277,7 @@ const INJECTOR_COLLECTION_CATEGORIES: InjectorCollectionCategory[] = [
   { label: "Final Editorial Mix",  presetIds: ["ic-81","ic-82","ic-83","ic-84","ic-85","ic-86","ic-87","ic-88","ic-89","ic-90"] },
   { label: "Extra High-End",       presetIds: ["ic-91","ic-92","ic-93","ic-94","ic-95","ic-96","ic-97","ic-98","ic-99","ic-100"] },
   { label: "Art Deco", presetIds: ["ic-101","ic-102","ic-103","ic-104","ic-105","ic-107","ic-108","ic-109","ic-110","ic-301","ic-302","ic-303","ic-304","ic-305","ic-306","ic-307","ic-308","ic-309","ic-310","ic-311","ic-312","ic-313","ic-314","ic-315","ic-316","ic-317","ic-318","ic-319","ic-320","ic-321"] },
-  { label: "Leopard",  presetIds: ["ic-111","ic-112","ic-113","ic-114","ic-115","ic-116","ic-117","ic-118","ic-119","ic-120","ic-401","ic-402","ic-403","ic-404","ic-405","ic-406","ic-407","ic-408","ic-409","ic-410","ic-411","ic-412","ic-413","ic-414","ic-415","ic-416","ic-417","ic-418","ic-419","ic-420"] },
+  { label: "Leopard",  presetIds: ["ic-111","ic-112","ic-113","ic-114","ic-115","ic-116","ic-117","ic-118","ic-119","ic-120","ic-401","ic-402","ic-403","ic-404","ic-405","ic-406","ic-407","ic-408","ic-409","ic-410","ic-411","ic-412","ic-413","ic-414","ic-415","ic-416","ic-417","ic-418","ic-419","ic-420","ic-421","ic-422","ic-423","ic-424","ic-425","ic-426","ic-427","ic-428","ic-429","ic-430","ic-431","ic-432","ic-433","ic-434","ic-435","ic-436","ic-437","ic-438","ic-439","ic-440"] },
 ];
 
 const MEN_STUDIO_PRESETS: PhotoStudioPreset[] = [
