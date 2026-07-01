@@ -8,6 +8,7 @@ import Papa from "papaparse";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { loadGoogleFonts } from "@/lib/slide-utils";
+import { usePresets } from "@/lib/use-presets";
 
 loadGoogleFonts();
 
@@ -41,6 +42,13 @@ export default function QuoteGenerator() {
   const [fontSize, setFontSize] = useState(78);
   const [font, setFont] = useState('"Poppins", sans-serif');
   const [subtitle, setSubtitle] = useState("");
+  const [subs, setSubs] = useState<string[]>([]);
+  const { presets } = usePresets();
+  const [clientName, setClientName] = useState("");
+  const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
+  const [logoScale, setLogoScale] = useState(1);
+  const [logoPos, setLogoPos] = useState({ x: W / 2, y: H - 150 });
+  const draggingRef = useRef(false);
   const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
   const [rendering, setRendering] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -51,11 +59,11 @@ export default function QuoteGenerator() {
     Papa.parse(file, {
       complete: (res) => {
         const rows = (res.data as string[][])
-          .map((r) => (r[0] || "").trim())
-          .filter((q) => q.length > 0 && q.toLowerCase() !== "quote" && q.toLowerCase() !== "quotes");
-        setQuotes(rows);
+          .filter((r) => (r[0] || "").trim().length > 0 && (r[0] || "").trim().toLowerCase() !== "quote");
+        setQuotes(rows.map((r) => (r[0] || "").trim()));
+        setSubs(rows.map((r) => (r[1] || "").trim()));
         setIdx(0);
-        if (!rows.length) toast.error("No quotes found in that CSV (put one quote per row)");
+        if (!rows.length) toast.error("No quotes found (put the quote in column 1, who it's from in column 2)");
         else toast.success(`${rows.length} quote${rows.length !== 1 ? "s" : ""} loaded`);
       },
       error: () => toast.error("Could not read that CSV"),
@@ -70,7 +78,29 @@ export default function QuoteGenerator() {
     img.src = URL.createObjectURL(file);
   };
 
-  const drawQuote = useCallback((ctx: CanvasRenderingContext2D, text: string) => {
+  const sameOrigin = (u: string) => { try { return window.location.origin + new URL(u).pathname; } catch { return u; } };
+  useEffect(() => {
+    const pp = presets.find((x) => x.name === clientName) as any;
+    if (pp && pp.logoUrl) { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => setLogoImg(i); i.onerror = () => setLogoImg(null); i.src = sameOrigin(pp.logoUrl); }
+    else setLogoImg(null);
+  }, [clientName, presets]);
+
+  const canvasXY = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const c = canvasRef.current!; const rect = c.getBoundingClientRect();
+    return { x: (e.clientX - rect.left) * (W / rect.width), y: (e.clientY - rect.top) * (H / rect.height) };
+  };
+  const onLogoDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!logoImg) return;
+    const { x, y } = canvasXY(e);
+    const lh = 120 * logoScale, lw = lh * (logoImg.width / logoImg.height);
+    if (x >= logoPos.x - lw / 2 && x <= logoPos.x + lw / 2 && y >= logoPos.y - lh / 2 && y <= logoPos.y + lh / 2) {
+      draggingRef.current = true; canvasRef.current?.setPointerCapture(e.pointerId);
+    }
+  };
+  const onLogoMove = (e: React.PointerEvent<HTMLCanvasElement>) => { if (draggingRef.current) setLogoPos(canvasXY(e)); };
+  const onLogoUp = () => { draggingRef.current = false; };
+
+  const drawQuote = useCallback((ctx: CanvasRenderingContext2D, text: string, subArg = "") => {
     ctx.clearRect(0, 0, W, H);
     if (bgImage) {
       const ar = bgImage.width / bgImage.height;
@@ -113,15 +143,23 @@ export default function QuoteGenerator() {
     let y = H / 2 - totalH / 2 + lineH / 2 + centerOffset;
     for (const ln of lines) { ctx.fillText(ln, W / 2, y); y += lineH; }
 
-    if (subtitle.trim()) {
+    const sub = (subArg && subArg.trim()) || subtitle.trim();
+    if (sub) {
       ctx.fillStyle = textColor;
       ctx.globalAlpha = 0.85;
       ctx.font = `600 ${Math.round(fontSize * 0.42)}px ${font}`;
       const blockBottom = H / 2 + totalH / 2 + centerOffset;
-      ctx.fillText(subtitle.trim(), W / 2, blockBottom + fontSize * 0.7);
+      ctx.fillText(sub, W / 2, blockBottom + fontSize * 0.7);
       ctx.globalAlpha = 1;
     }
-  }, [bgColor, textColor, accentColor, showAccent, fontSize, bgImage, font, subtitle]);
+
+    if (logoImg) {
+      const lh = 120 * logoScale;
+      const lw = lh * (logoImg.width / logoImg.height);
+      ctx.globalAlpha = 1;
+      ctx.drawImage(logoImg, logoPos.x - lw / 2, logoPos.y - lh / 2, lw, lh);
+    }
+  }, [bgColor, textColor, accentColor, showAccent, fontSize, bgImage, font, subtitle, logoImg, logoScale, logoPos]);
 
   useEffect(() => {
     const c = canvasRef.current;
@@ -129,11 +167,11 @@ export default function QuoteGenerator() {
     c.width = W; c.height = H;
     const ctx = c.getContext("2d");
     if (!ctx) return;
-    const text = quotes[idx] || "Your quotes will appear here. Drop in a CSV with one quote per row to begin.";
-    drawQuote(ctx, text);
-    const t = setTimeout(() => drawQuote(ctx, text), 250);
+    const text = quotes[idx] || "Your quotes will appear here. Drop in a CSV: column 1 the quote, column 2 who it is from.";
+    drawQuote(ctx, text, subs[idx] || "");
+    const t = setTimeout(() => drawQuote(ctx, text, subs[idx] || ""), 250);
     return () => clearTimeout(t);
-  }, [quotes, idx, drawQuote]);
+  }, [quotes, subs, idx, drawQuote]);
 
   const downloadOne = () => {
     const c = canvasRef.current;
@@ -153,7 +191,7 @@ export default function QuoteGenerator() {
       off.width = W; off.height = H;
       const ctx = off.getContext("2d")!;
       for (let i = 0; i < quotes.length; i++) {
-        drawQuote(ctx, quotes[i]);
+        drawQuote(ctx, quotes[i], subs[i] || "");
         const blob = await new Promise<Blob | null>((r) => off.toBlob(r, "image/png"));
         if (blob) zip.file(`quote-${i + 1}.png`, blob);
       }
@@ -190,7 +228,7 @@ export default function QuoteGenerator() {
         <div className="space-y-6">
           <section className="space-y-2">
             <h2 className="font-semibold text-base">1. Your quotes</h2>
-            <p className="text-xs text-muted-foreground">A CSV with one quote per row. The first column is used.</p>
+            <p className="text-xs text-muted-foreground">A CSV with two columns: the quote, then who it is from.</p>
             <div
               onClick={() => csvRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
@@ -244,14 +282,29 @@ export default function QuoteGenerator() {
             </div>
             <div className="space-y-1 pt-1">
               <Label className="text-sm text-muted-foreground">Subtitle (optional, shown on every card)</Label>
-              <input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="e.g. your handle or a little tagline" className="w-full rounded-lg bg-muted/30 border border-border/30 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50" />
+              <input value={subtitle} onChange={(e) => setSubtitle(e.target.value)} placeholder="fallback if a row has no name in column 2" className="w-full rounded-lg bg-muted/30 border border-border/30 text-sm px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50" />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm">Client logo</Label>
+              <select value={clientName} onChange={(e) => setClientName(e.target.value)} className="w-full rounded-lg bg-muted/30 border border-border/30 text-sm px-2 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50">
+                <option value="">No logo</option>
+                {presets.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
+              </select>
+              {logoImg && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground w-20">Logo size</span>
+                  <input type="range" min={0.4} max={2.5} step={0.05} value={logoScale} onChange={(e) => setLogoScale(parseFloat(e.target.value))} className="flex-1 cursor-pointer" />
+                  <span className="text-xs text-muted-foreground">Drag it on the preview</span>
+                </div>
+              )}
             </div>
           </section>
         </div>
 
         <div className="space-y-3">
           <div className="rounded-xl overflow-hidden border border-border/30 bg-black/20">
-            <canvas ref={canvasRef} className="w-full block" style={{ aspectRatio: "1080 / 1350" }} />
+            <canvas ref={canvasRef} onPointerDown={onLogoDown} onPointerMove={onLogoMove} onPointerUp={onLogoUp} className="w-full block" style={{ aspectRatio: "1080 / 1350", touchAction: "none", cursor: logoImg ? "move" : "default" }} />
           </div>
           {quotes.length > 1 && (
             <div className="flex items-center justify-center gap-3">
