@@ -14,7 +14,7 @@ const W = 1080, H = 1440;
   if (document.getElementById("ba-fonts")) return;
   const l = document.createElement("link");
   l.id = "ba-fonts"; l.rel = "stylesheet";
-  l.href = "https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Playfair+Display:wght@500;700;900&family=Poppins:wght@400;600;800&family=Space+Mono:wght@400;700&display=swap";
+  l.href = "https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Playfair+Display:wght@500;700;900&family=Poppins:wght@400;600;800&family=Space+Mono:wght@400;700&family=Montserrat:wght@400;600;800&family=Oswald:wght@400;600;700&family=Bebas+Neue&family=Anton&family=DM+Serif+Display&display=swap";
   document.head.appendChild(l);
 })();
 
@@ -33,6 +33,8 @@ const DEFAULTS: Record<Tpl, { bg: string; text: string; accent: string }> = {
   minimal:   { bg: "#f0ede6", text: "#16324a", accent: "#16324a" },
   framed:    { bg: "#c9cfc9", text: "#f5f5f5", accent: "#242424" },
 };
+
+const FONTS = ["Poppins", "Montserrat", "Oswald", "Bebas Neue", "Anton", "Playfair Display", "DM Serif Display", "Dancing Script"];
 
 function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
@@ -97,6 +99,14 @@ export default function BeforeAfterMaker() {
   const afterRef = useRef<HTMLInputElement>(null);
   const [subs, setSubs] = useState<any[]>([]);
   const [subId, setSubId] = useState("");
+  const [headingScale, setHeadingScale] = useState(1);
+  const [bodyScale, setBodyScale] = useState(1);
+  const [logoScale, setLogoScale] = useState(1);
+  const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
+  const [logoPos, setLogoPos] = useState("br");
+  const [fontFamily, setFontFamily] = useState("Poppins");
+  const [caption, setCaption] = useState("");
+  const [genCap, setGenCap] = useState(false);
 
   useEffect(() => {
     const pw = localStorage.getItem("cybersuite-pw") || "";
@@ -121,7 +131,28 @@ export default function BeforeAfterMaker() {
     } catch { toast.error("Could not load those images"); }
   };
 
-    const chooseTpl = (id: Tpl) => { setTpl(id); const d = DEFAULTS[id]; setBg(d.bg); setText(d.text); setAccent(d.accent); };
+  useEffect(() => {
+    const pp = presets.find((x) => x.name === clientName) as any;
+    if (pp && pp.logoUrl) { loadUrl(pp.logoUrl).then(setLogoImg).catch(() => setLogoImg(null)); }
+    else setLogoImg(null);
+  }, [clientName, presets]);
+
+const generateCaption = async () => {
+    if (!backStory.trim() && !treatment.trim() && !writeUp.trim()) { toast.error("Add a back story first"); return; }
+    setGenCap(true);
+    try {
+      const r = await fetch(`${BASE}/api/content/ba-caption`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ treatment, backStory: backStory || writeUp || details, clientName }),
+      });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error((d as { error?: string }).error || "Failed"); }
+      const { caption: cap } = await r.json() as { caption: string };
+      setCaption(cap);
+      toast.success("Caption written");
+    } catch (e: any) { toast.error(e?.message || "Could not write a caption"); } finally { setGenCap(false); }
+  };
+
+  const chooseTpl = (id: Tpl) => { setTpl(id); const d = DEFAULTS[id]; setBg(d.bg); setText(d.text); setAccent(d.accent); };
 
   const loadFile = (which: "b" | "a") => (file: File) => {
     if (!file.type.startsWith("image/")) { toast.error("Please choose an image"); return; }
@@ -137,6 +168,7 @@ export default function BeforeAfterMaker() {
     canvas.width = W; canvas.height = H;
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
     ctx.textBaseline = "alphabetic";
+    const HS = headingScale, BS = bodyScale;
     const ph = (img: HTMLImageElement | null, x: number, y: number, w: number, h: number, r = 0) => {
       if (img) cover(ctx, img, x, y, w, h, r);
       else { ctx.save(); ctx.fillStyle = "rgba(0,0,0,0.08)"; if (r) rr(ctx, x, y, w, h, r); else ctx.rect(x, y, w, h); ctx.fill(); ctx.restore(); }
@@ -145,7 +177,7 @@ export default function BeforeAfterMaker() {
     if (tpl === "polaroid") {
       ctx.textAlign = "center";
       ctx.fillStyle = text;
-      ctx.font = `700 150px "Dancing Script", cursive`;
+      ctx.font = `700 ${150 * HS}px "Dancing Script", cursive`;
       ctx.fillText(title || "before & after", W / 2, 320);
       // two polaroids
       const drawPola = (img: HTMLImageElement | null, cx: number, cy: number, rot: number, cap: string) => {
@@ -155,7 +187,7 @@ export default function BeforeAfterMaker() {
         ctx.fillRect(-pw / 2, -phh / 2, pw, phh);
         ctx.shadowColor = "transparent";
         ph(img, -pw / 2 + 26, -phh / 2 + 26, pw - 52, phh - 150);
-        ctx.fillStyle = accent; ctx.font = `700 30px "Space Mono", monospace`; ctx.textAlign = "center";
+        ctx.fillStyle = accent; ctx.font = `700 ${30 * BS}px "Space Mono", monospace`; ctx.textAlign = "center";
         ctx.fillText((cap || "").toUpperCase(), 0, phh / 2 - 40);
         ctx.restore();
       };
@@ -165,7 +197,7 @@ export default function BeforeAfterMaker() {
       // write up tape
       ctx.save(); ctx.fillStyle = "rgba(255,255,255,0.7)"; ctx.translate(W / 2, 1250); ctx.rotate(-1.5 * Math.PI / 180);
       ctx.fillRect(-330, -55, 660, 110); ctx.restore();
-      ctx.fillStyle = accent; ctx.font = `400 40px "Space Mono", monospace`; ctx.textAlign = "center";
+      ctx.fillStyle = accent; ctx.font = `400 ${40 * BS}px "Space Mono", monospace`; ctx.textAlign = "center";
       ctx.fillText(writeUp || "write up goes here", W / 2, 1263);
     }
 
@@ -176,22 +208,22 @@ export default function BeforeAfterMaker() {
       // bottom panel
       ctx.fillStyle = bg; ctx.fillRect(0, H * 0.72, W, H * 0.28);
       ctx.fillStyle = text; ctx.textAlign = "left";
-      ctx.font = `800 100px "Poppins", sans-serif`;
+      ctx.font = `800 ${100 * HS}px "${fontFamily}", sans-serif`;
       ctx.fillText("BEFORE", 60, H * 0.72 + 150);
       ctx.fillText("AFTER", W / 2 + 60, H * 0.72 + 150);
-      ctx.font = `400 34px "Poppins", sans-serif`;
+      ctx.font = `400 ${34 * BS}px "${fontFamily}", sans-serif`;
       wrap(ctx, backStory || "back story goes here", W / 2 - 120).slice(0, 3).forEach((ln, i) => ctx.fillText(ln, 60, H * 0.72 + 240 + i * 44));
       wrap(ctx, writeUp || "write up goes here", W / 2 - 120).slice(0, 3).forEach((ln, i) => ctx.fillText(ln, W / 2 + 60, H * 0.72 + 240 + i * 44));
     }
 
     else if (tpl === "editorial") {
       ctx.fillStyle = text; ctx.textAlign = "left";
-      ctx.font = `700 170px "Playfair Display", serif`;
+      ctx.font = `700 ${170 * HS}px "Playfair Display", serif`;
       ctx.fillText("BEFORE", 40, 250);
       // diagonal banner
       ctx.save(); ctx.translate(W / 2, 420); ctx.rotate(-4 * Math.PI / 180);
       ctx.fillStyle = accent; ctx.fillRect(-W, -45, W * 2, 90);
-      ctx.fillStyle = "#2b3a30"; ctx.font = `800 40px "Poppins", sans-serif`; ctx.textAlign = "center";
+      ctx.fillStyle = "#2b3a30"; ctx.font = `800 ${40 * BS}px "${fontFamily}", sans-serif`; ctx.textAlign = "center";
       ctx.fillText(treatment || "treatment name and clinician name", 0, 14);
       ctx.restore();
       // two photos
@@ -199,25 +231,25 @@ export default function BeforeAfterMaker() {
       ph(before, 90, y0, pw, phh); ph(after, W - 90 - pw, y0, pw, phh);
       const capBar = (cx: number, cap: string) => {
         ctx.fillStyle = accent; ctx.fillRect(cx, y0 + phh - 90, pw, 90);
-        ctx.fillStyle = "#2b3a30"; ctx.font = `700 38px "Poppins", sans-serif`; ctx.textAlign = "center";
+        ctx.fillStyle = "#2b3a30"; ctx.font = `700 ${38 * BS}px "${fontFamily}", sans-serif`; ctx.textAlign = "center";
         ctx.fillText(cap || "", cx + pw / 2, y0 + phh - 34);
       };
       capBar(90, cap1); capBar(W - 90 - pw, cap2);
-      ctx.fillStyle = text; ctx.font = `700 170px "Playfair Display", serif`; ctx.textAlign = "right";
+      ctx.fillStyle = text; ctx.font = `700 ${170 * HS}px "Playfair Display", serif`; ctx.textAlign = "right";
       ctx.fillText("AFTER", W - 40, H - 60);
     }
 
     else if (tpl === "minimal") {
       ctx.fillStyle = text; ctx.textAlign = "center";
-      ctx.font = `800 46px "Poppins", sans-serif`;
+      ctx.font = `800 ${46 * BS}px "${fontFamily}", sans-serif`;
       ctx.fillText((treatment || "treatment name"), W / 2, 90);
       ph(before, 560, 300, 440, 440, 46);
       ph(after, 560, 840, 440, 440, 46);
       ctx.textAlign = "left";
-      ctx.font = `800 120px "Poppins", sans-serif`; ctx.fillStyle = text;
+      ctx.font = `800 ${120 * HS}px "${fontFamily}", sans-serif`; ctx.fillStyle = text;
       ctx.fillText("before.", 100, 420);
       ctx.fillText("after.", 100, 960);
-      ctx.font = `400 40px "Poppins", sans-serif`;
+      ctx.font = `400 ${40 * BS}px "${fontFamily}", sans-serif`;
       wrap(ctx, backStory || "back story", 420).slice(0, 3).forEach((ln, i) => ctx.fillText(ln, 110, 500 + i * 50));
       wrap(ctx, details || "details", 420).slice(0, 3).forEach((ln, i) => ctx.fillText(ln, 110, 1040 + i * 50));
     }
@@ -234,7 +266,7 @@ export default function BeforeAfterMaker() {
       drawFramed(before, 560, 500, -1.5);
       drawFramed(after, 560, 1010, 1.5);
       const tab = (label: string, x: number, y: number) => {
-        ctx.save(); ctx.fillStyle = accent; ctx.font = `800 italic 44px "Poppins", sans-serif`;
+        ctx.save(); ctx.fillStyle = accent; ctx.font = `800 italic ${44 * HS}px "${fontFamily}", sans-serif`;
         const tw = ctx.measureText(label).width + 60;
         ctx.fillRect(x, y, tw, 74);
         ctx.fillStyle = "#ffffff"; ctx.textAlign = "left"; ctx.fillText(label, x + 30, y + 52);
@@ -242,10 +274,18 @@ export default function BeforeAfterMaker() {
       };
       tab("BEFORE", 90, 235);
       tab("AFTER", W - 340, H - 320);
-      ctx.fillStyle = text; ctx.font = `800 italic 46px "Poppins", sans-serif`; ctx.textAlign = "center";
+      ctx.fillStyle = text; ctx.font = `800 italic ${46 * BS}px "${fontFamily}", sans-serif`; ctx.textAlign = "center";
       ctx.fillText((details || "DETAILS HERE").toUpperCase(), W / 2, H - 90);
     }
-  }, [tpl, before, after, title, cap1, cap2, treatment, backStory, writeUp, details, bg, text, accent]);
+    if (logoImg && logoPos !== "none") {
+      const lh = 120 * logoScale;
+      const lw = lh * (logoImg.width / logoImg.height);
+      const pad = 48;
+      const x = logoPos.indexOf("r") >= 0 ? W - lw - pad : pad;
+      const y = logoPos.indexOf("b") >= 0 ? H - lh - pad : pad;
+      ctx.drawImage(logoImg, x, y, lw, lh);
+    }
+  }, [tpl, before, after, title, cap1, cap2, treatment, backStory, writeUp, details, bg, text, accent, logoImg, logoPos, logoScale, headingScale, bodyScale, fontFamily]);
 
   useEffect(() => {
     render();
@@ -272,7 +312,7 @@ export default function BeforeAfterMaker() {
     setSaving(true);
     try {
       const url = await upload();
-      const lib = await fetch(`${BASE}/api/library`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientName, postType: "single", caption: writeUp || backStory || treatment, mediaUrl: url, metadata: { source: "before-after", template: tpl } }) });
+      const lib = await fetch(`${BASE}/api/library`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientName, postType: "single", caption: caption || writeUp || backStory || treatment, mediaUrl: url, metadata: { source: "before-after", template: tpl } }) });
       if (!lib.ok) throw new Error("Save failed");
       toast.success(`Saved to ${clientName}'s library`);
     } catch (e: any) { toast.error(e?.message || "Save failed"); } finally { setSaving(false); }
@@ -285,7 +325,7 @@ export default function BeforeAfterMaker() {
     setScheduling(true);
     try {
       const url = await upload();
-      const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: preset.id, postType: "single-image", content: { imageUrls: [url], caption: writeUp || backStory || treatment || "", title: "Before & After", platforms: ["instagram", "facebook"] }, scheduledAt: new Date(`${scheduleDate}T${scheduleTime}`).toISOString() }) });
+      const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: preset.id, postType: "single-image", content: { imageUrls: [url], caption: caption || writeUp || backStory || treatment || "", title: "Before & After", platforms: ["instagram", "facebook"] }, scheduledAt: new Date(`${scheduleDate}T${scheduleTime}`).toISOString() }) });
       if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error((d as { error?: string }).error || "Schedule failed"); }
       toast.success(`Scheduled for ${scheduleDate} at ${scheduleTime}`);
     } catch (e: any) { toast.error(e?.message || "Schedule failed"); } finally { setScheduling(false); }
@@ -357,6 +397,41 @@ export default function BeforeAfterMaker() {
                   <input type="color" value={val} onChange={(e) => set(e.target.value)} className="h-8 w-12 rounded cursor-pointer border border-zinc-700 bg-transparent p-0.5" />
                 </div>
               ))}
+            </div>
+
+            <div className="space-y-2">
+              {([["Heading size", headingScale, setHeadingScale], ["Text size", bodyScale, setBodyScale], ["Logo size", logoScale, setLogoScale]] as const).map(([lab, val, set]) => (
+                <div key={lab} className="flex items-center gap-3">
+                  <label className="text-xs text-zinc-400 w-24">{lab}</label>
+                  <input type="range" min={0.5} max={2} step={0.05} value={val} onChange={(e) => set(parseFloat(e.target.value))} className="flex-1" />
+                  <span className="text-xs text-zinc-500 w-10">{Math.round(val * 100)}%</span>
+                </div>
+              ))}
+              <div className="flex items-center gap-3">
+                <label className="text-xs text-zinc-400 w-24">Logo position</label>
+                <select value={logoPos} onChange={(e) => setLogoPos(e.target.value)} className="flex-1 rounded-lg bg-zinc-900 border border-zinc-800 px-2 py-1.5 text-sm outline-none">
+                  <option value="none">Hidden</option>
+                  <option value="tl">Top left</option>
+                  <option value="tr">Top right</option>
+                  <option value="bl">Bottom left</option>
+                  <option value="br">Bottom right</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <label className="text-xs text-zinc-400 w-24">Font</label>
+              <select value={fontFamily} onChange={(e) => setFontFamily(e.target.value)} className="flex-1 rounded-lg bg-zinc-900 border border-zinc-800 px-2 py-1.5 text-sm outline-none">
+                {FONTS.map((f) => <option key={f} value={f}>{f}</option>)}
+              </select>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs uppercase tracking-wide text-zinc-500">Caption (for the post)</label>
+                <button onClick={generateCaption} disabled={genCap} className="text-xs text-pink-400 hover:text-pink-300 disabled:opacity-50">{genCap ? "Writing..." : "Generate from back story"}</button>
+              </div>
+              <textarea rows={4} className={field} value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Write a storytelling caption, or generate one from the back story." />
             </div>
 
             <div className="border-t border-zinc-800 pt-4 space-y-3">
