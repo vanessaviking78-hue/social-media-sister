@@ -24,6 +24,7 @@ import Library from "@/pages/library";
 import BulkConnectReview from "@/pages/bulk-connect-review";
 import About from "@/pages/about";
 import AboutMe from "@/pages/about-me";
+import AboutPublic from "@/pages/about-public";
 import SeamlessCarousel from "@/pages/seamless-carousel";
 import AiPortraitStudio from "@/pages/ai-portrait-studio";
 import Onboard from "@/pages/onboard";
@@ -139,6 +140,7 @@ function AppContent() {
   const [isBulkTemplates] = useRoute("/bulk-import-templates");
   const [isPodcast] = useRoute("/podcast");
   const [isCompetition] = useRoute("/competition");
+  const [isAboutPage] = useRoute("/about");
   const [isBundle, bundleParams] = useRoute("/bundle/:token");
   const [isFounderSignup] = useRoute("/founder-signup");
   const [isFounderWelcome] = useRoute("/founder-welcome");
@@ -174,6 +176,9 @@ function AppContent() {
   }
   if (isOnboard && onboardParams?.token) {
     return <Onboard token={onboardParams.token} />;
+  }
+  if (isAboutPage) {
+    return <AboutPublic />;
   }
   if (isSplash) {
     return <Splash />;
