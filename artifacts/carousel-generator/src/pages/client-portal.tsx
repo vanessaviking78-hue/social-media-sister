@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Loader2, AlertTriangle, CalendarDays, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle } from "lucide-react";
+import { Loader2, AlertTriangle, CalendarDays, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL || "/";
 const SEND_LABEL = "Send to Vanessa, Aesthetic Angel / Digital Darling";
@@ -18,110 +18,137 @@ function formatDate(dateStr: string) { const [y, m, d] = dateStr.split("-").map(
 function getDayOfWeek(dateStr: string) { const d = new Date(dateStr + "T12:00:00"); return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()]; }
 function fileToBase64(file: File): Promise<string> { return new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result as string); r.onerror = reject; r.readAsDataURL(file); }); }
 
-const REEL_IDEAS: string[] = [
-  "What actually happens in a consultation",
-  "3 things to know before your first treatment",
-  "Myth vs fact: anti-wrinkle treatments",
-  "How long does filler really last?",
-  "What is skin boosting and who is it for?",
-  "The difference between filler and anti-wrinkle treatment",
-  "What to expect the day after a treatment",
-  "How to prep your skin before your appointment",
-  "Aftercare dos and don'ts",
-  "Signs you might be ready for a skin consultation",
-  "What is microneedling and what it does",
-  "Polynucleotides explained in plain English",
-  "Why we always start with a consultation",
-  "What 'less is more' really means in aesthetics",
-  "How we keep results looking natural",
-  "A day in the life at the clinic",
-  "Setting up the treatment room",
-  "Meet the person behind the clinic",
-  "Meet the team",
-  "What's in my treatment kit",
-  "How we keep everything clean and safe",
-  "The bit clients never see before an appointment",
-  "Morning prep and restock routine",
-  "Our favourite products and why",
-  "A client's first visit, start to finish",
-  "What our follow-up appointments look like",
-  "Why we say no sometimes",
-  "How we tailor treatments to each face",
-  "Real talk: managing expectations",
-  "What good aftercare support looks like",
-  "'Filler migrates everywhere': the truth",
-  "'Anti-wrinkle treatment is addictive': myth",
-  "'You'll look done': not with us",
-  "'It's only for older women': nope",
-  "'Once you start you can't stop': busted",
-  "'Cheaper is just as good': why it isn't",
-  "'It's really painful': what it actually feels like",
-  "Things I'd tell my younger self about skin",
-  "Why I got into aesthetics",
-  "My own skincare non-negotiables",
-  "The compliment that made my week",
-  "What I wish clients knew",
-  "My biggest pet peeve in the industry",
-  "A treatment I'll never regret having",
-  "Get ready with me before clinic",
-  "Things clients say that I love",
-  "Answering your most-asked question",
-  "'How much does it cost?': how we price",
-  "'How do I book?': a quick walkthrough",
-  "'Will it hurt?': an honest answer",
-  "'How often should I come?': it depends",
-  "'Can I have it before an event?': timing",
-  "'Is it safe?': how we keep you safe",
-  "Prepping your skin for summer",
-  "Winter skin survival tips",
-  "Getting party-ready the right way",
-  "New year, new skin goals",
-  "Valentine's self-love, not just treatments",
-  "Wedding season skin timeline",
-  "Back to routine after the holidays",
-  "Introducing a new treatment",
-  "What's new at the clinic this month",
-  "A little thank you to our clients",
-  "We've hit a milestone",
-  "Meet our newest bit of kit",
-  "Building a simple skincare routine",
-  "SPF: the one step you shouldn't skip",
-  "Why hydration matters for your skin",
-  "Retinol: how to start without the drama",
-  "The order to apply your skincare",
-  "Ingredients that actually work",
-  "What causes those under-eye shadows",
-  "Menopause and your skin",
-  "Skin in your 30s vs 40s vs 50s",
-  "Skin boosters, explained",
-  "Injectable skin hydration, explained",
-  "Gentle chemical peels 101",
-  "Microneedling for texture",
-  "LED light therapy basics",
-  "Lip treatments for a natural finish",
-  "Under-eye options explained",
-  "Jawline and profile balancing",
-  "Hand rejuvenation, the forgotten area",
-  "Skin consultations and why they matter",
-  "It's not about looking different, it's feeling like you",
-  "A confidence story from the chair",
-  "Ageing is a privilege, my take",
-  "Self-care that isn't a treatment",
-  "Why we celebrate every client",
-  "Little wins that make a big difference",
-  "A trending audio with a clinic twist",
-  "Reacting to aesthetics myths online",
-  "Green flags in a good clinic",
-  "Red flags to watch out for",
-  "Rating common skincare myths",
-  "This or that: skincare edition",
-  "Expectation vs reality of a treatment day",
-  "A week of skin in the life",
-  "Answering 'would you do it again?'",
-  "The one tip I give every single client",
+const REEL_GROUPS: { heading: string; items: string[] }[] = [
+  { heading: "The basics & consultations", items: [
+    "What actually happens in a consultation",
+    "3 things to know before your first treatment",
+    "Why we always start with a consultation",
+    "Skin consultations and why they matter",
+    "What 'less is more' really means in aesthetics",
+    "How we keep results looking natural",
+    "Signs you might be ready for a skin consultation",
+  ]},
+  { heading: "Treatment explainers", items: [
+    "How long does filler really last?",
+    "What is skin boosting and who is it for?",
+    "The difference between filler and anti-wrinkle treatment",
+    "What is microneedling and what it does",
+    "Polynucleotides explained in plain English",
+    "Skin boosters, explained",
+    "Injectable skin hydration, explained",
+    "Gentle chemical peels 101",
+    "Lip treatments for a natural finish",
+    "Under-eye options explained",
+    "Jawline and profile balancing",
+    "Hand rejuvenation, the forgotten area",
+    "LED light therapy basics",
+    "Microneedling for texture",
+  ]},
+  { heading: "Prep & aftercare", items: [
+    "What to expect the day after a treatment",
+    "How to prep your skin before your appointment",
+    "Aftercare dos and don'ts",
+  ]},
+  { heading: "Behind the scenes", items: [
+    "A day in the life at the clinic",
+    "Setting up the treatment room",
+    "Meet the person behind the clinic",
+    "Meet the team",
+    "What's in my treatment kit",
+    "How we keep everything clean and safe",
+    "The bit clients never see before an appointment",
+    "Morning prep and restock routine",
+    "Our favourite products and why",
+  ]},
+  { heading: "The client journey", items: [
+    "A client's first visit, start to finish",
+    "What our follow-up appointments look like",
+    "Why we say no sometimes",
+    "How we tailor treatments to each face",
+    "Real talk: managing expectations",
+    "What good aftercare support looks like",
+  ]},
+  { heading: "Myth busting", items: [
+    "'Filler migrates everywhere': the truth",
+    "'Anti-wrinkle treatment is addictive': myth",
+    "'You'll look done': not with us",
+    "'It's only for older women': nope",
+    "'Once you start you can't stop': busted",
+    "'Cheaper is just as good': why it isn't",
+    "'It's really painful': what it actually feels like",
+    "Reacting to aesthetics myths online",
+    "Rating common skincare myths",
+  ]},
+  { heading: "You & your personality", items: [
+    "Things I'd tell my younger self about skin",
+    "Why I got into aesthetics",
+    "My own skincare non-negotiables",
+    "The compliment that made my week",
+    "What I wish clients knew",
+    "My biggest pet peeve in the industry",
+    "A treatment I'll never regret having",
+    "Get ready with me before clinic",
+    "Things clients say that I love",
+  ]},
+  { heading: "Answering their questions", items: [
+    "Answering your most-asked question",
+    "'How much does it cost?': how we price",
+    "'How do I book?': a quick walkthrough",
+    "'Will it hurt?': an honest answer",
+    "'How often should I come?': it depends",
+    "'Can I have it before an event?': timing",
+    "'Is it safe?': how we keep you safe",
+  ]},
+  { heading: "Seasonal & timely", items: [
+    "Prepping your skin for summer",
+    "Winter skin survival tips",
+    "Getting party-ready the right way",
+    "New year, new skin goals",
+    "Valentine's self-love, not just treatments",
+    "Wedding season skin timeline",
+    "Back to routine after the holidays",
+  ]},
+  { heading: "Clinic news & offers", items: [
+    "Introducing a new treatment",
+    "What's new at the clinic this month",
+    "A little thank you to our clients",
+    "We've hit a milestone",
+    "Meet our newest bit of kit",
+  ]},
+  { heading: "Skincare education", items: [
+    "Building a simple skincare routine",
+    "SPF: the one step you shouldn't skip",
+    "Why hydration matters for your skin",
+    "Retinol: how to start without the drama",
+    "The order to apply your skincare",
+    "Ingredients that actually work",
+    "What causes those under-eye shadows",
+    "Menopause and your skin",
+    "Skin in your 30s vs 40s vs 50s",
+    "The skincare mistake I see most",
+  ]},
+  { heading: "Confidence & connection", items: [
+    "It's not about looking different, it's feeling like you",
+    "A confidence story from the chair",
+    "Ageing is a privilege, my take",
+    "Self-care that isn't a treatment",
+    "Why we celebrate every client",
+    "Little wins that make a big difference",
+  ]},
+  { heading: "Trends & fun", items: [
+    "A trending audio with a clinic twist",
+    "Green flags in a good clinic",
+    "Red flags to watch out for",
+    "This or that: skincare edition",
+    "Expectation vs reality of a treatment day",
+    "A week of skin in the life",
+    "Answering 'would you do it again?'",
+    "The one tip I give every single client",
+  ]},
 ];
+const REEL_TOTAL = REEL_GROUPS.reduce((n, g) => n + g.items.length, 0);
 
-type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels";
+type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews";
 
 export default function ClientPortal({ token }: { token: string }) {
   const [data, setData] = useState<PortalData | null>(null);
@@ -158,7 +185,6 @@ export default function ClientPortal({ token }: { token: string }) {
   const [reqDone, setReqDone] = useState(false);
   const [reqErr, setReqErr] = useState("");
 
-  // onboarding
   const [obTreatments, setObTreatments] = useState("");
   const [obAbout, setObAbout] = useState("");
   const [obLogo, setObLogo] = useState<File | null>(null);
@@ -168,8 +194,16 @@ export default function ClientPortal({ token }: { token: string }) {
   const [obDone, setObDone] = useState(false);
   const [obErr, setObErr] = useState("");
   const obLogoRef = useRef<HTMLInputElement>(null);
+  const [rvText, setRvText] = useState("");
+  const [rvFrom, setRvFrom] = useState("");
+  const [rvShot, setRvShot] = useState<File | null>(null);
+  const [rvShotPrev, setRvShotPrev] = useState("");
+  const [rvName, setRvName] = useState("");
+  const [rvBusy, setRvBusy] = useState(false);
+  const [rvDone, setRvDone] = useState(false);
+  const [rvErr, setRvErr] = useState("");
+  const rvShotRef = useRef<HTMLInputElement>(null);
 
-  // reels tick-off (saved on device)
   const reelsKey = `tcs_reels_${token}`;
   const [ticked, setTicked] = useState<Record<number, boolean>>({});
   useEffect(() => { try { setTicked(JSON.parse(localStorage.getItem(reelsKey) || "{}")); } catch { /* ignore */ } }, [reelsKey]);
@@ -213,6 +247,19 @@ export default function ClientPortal({ token }: { token: string }) {
       setObDone(true);
     } catch (e: any) { setObErr(e?.message || "Something went wrong."); } finally { setObBusy(false); }
   };
+  const pickReviewShot = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (!f) return; setRvShot(f); setRvShotPrev(URL.createObjectURL(f)); };
+  const submitReview = async () => {
+    setRvErr("");
+    if (!rvText.trim() && !rvShot) { setRvErr("Paste a review or add a screenshot."); return; }
+    setRvBusy(true);
+    try {
+      let shotUrl = "";
+      if (rvShot) shotUrl = await uploadOne(rvShot);
+      const storyText = `REVIEW FROM: ${rvFrom || "(not given)"}\n\n${rvText || "(screenshot attached)"}`;
+      await send({ beforeUrl: shotUrl, afterUrl: "", treatment: "REVIEW", story: storyText, submitterName: rvName });
+      setRvDone(true);
+    } catch (e: any) { setRvErr(e?.message || "Something went wrong."); } finally { setRvBusy(false); }
+  };
 
   if (loading) return <div className="min-h-screen bg-zinc-950 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-pink-500" /></div>;
   if (error === "not_found" || !data) {
@@ -236,6 +283,8 @@ export default function ClientPortal({ token }: { token: string }) {
     <div className="rounded-2xl border border-green-800/40 bg-green-950/20 p-8 text-center"><CheckCircle2 className="w-10 h-10 mx-auto text-green-500 mb-3" /><h3 className="text-white font-semibold mb-1">Sent, thank you.</h3><p className="text-zinc-400 text-sm mb-4">It's landed with Vanessa. {label}</p><button onClick={onAgain} className="text-pink-400 text-sm font-semibold">Send another</button></div>
   );
 
+  let reelIdx = -1;
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-50">
@@ -251,6 +300,7 @@ export default function ClientPortal({ token }: { token: string }) {
           <TabBtn id="ba" label="Before & After" />
           <TabBtn id="selfies" label="Selfies" />
           <TabBtn id="request" label="Request a post" />
+          <TabBtn id="reviews" label="Reviews" />
           <TabBtn id="onboarding" label="Get set up" />
           <TabBtn id="reels" label="100 Reels" />
         </div>
@@ -335,6 +385,23 @@ export default function ClientPortal({ token }: { token: string }) {
           </section>
         )}
 
+        {tab === "reviews" && (
+          <section>
+            <div className="flex items-center gap-2 mb-2"><Star className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Add a Review</h2></div>
+            <p className="text-sm text-zinc-400 mb-6">Had a lovely review? Paste it here or add a screenshot, and I'll turn it into content for you.</p>
+            {rvDone ? (<DoneCard label="Lovely review saved, thank you. Got another? Send it over." onAgain={() => { setRvDone(false); setRvText(""); setRvFrom(""); setRvShot(null); setRvShotPrev(""); setRvName(""); }} />) : (
+              <div className="space-y-5">
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Paste the review</label><textarea value={rvText} onChange={(e) => setRvText(e.target.value)} rows={5} placeholder="Copy and paste what they said..." className={inputCls + " resize-none"} /></div>
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Who's it from?</label><input value={rvFrom} onChange={(e) => setRvFrom(e.target.value)} placeholder="First name is fine, e.g. Sarah" className={inputCls} /></div>
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Screenshot of the review (optional)</label><button type="button" onClick={() => rvShotRef.current?.click()} className="w-full h-32 rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 overflow-hidden flex items-center justify-center">{rvShotPrev ? <img src={rvShotPrev} alt="review" className="max-h-full max-w-full object-contain p-2" /> : (<div className="text-center text-zinc-600"><ImageIcon className="w-6 h-6 mx-auto mb-1" /><span className="text-xs">Tap to add a screenshot</span></div>)}</button><input ref={rvShotRef} type="file" accept="image/*" className="hidden" onChange={pickReviewShot} /></div>
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Your name</label><input value={rvName} onChange={(e) => setRvName(e.target.value)} placeholder="So we know who sent it" className={inputCls} /></div>
+                {rvErr && <p className="text-sm text-red-400">{rvErr}</p>}
+                <button onClick={submitReview} disabled={rvBusy} className={sendBtn}>{rvBusy ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : SEND_LABEL}</button>
+              </div>
+            )}
+          </section>
+        )}
+
         {tab === "onboarding" && (
           <section>
             <div className="flex items-center gap-2 mb-2"><ClipboardList className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Let's Get You Set Up</h2></div>
@@ -354,15 +421,22 @@ export default function ClientPortal({ token }: { token: string }) {
 
         {tab === "reels" && (
           <section>
-            <div className="flex items-center gap-2 mb-2"><Clapperboard className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">100 Reel Ideas</h2><span className="ml-auto text-xs text-zinc-500">{doneCount}/100 done</span></div>
+            <div className="flex items-center gap-2 mb-2"><Clapperboard className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">{REEL_TOTAL} Reel Ideas</h2><span className="ml-auto text-xs text-zinc-500">{doneCount}/{REEL_TOTAL} done</span></div>
             <p className="text-sm text-zinc-400 mb-5">Work your way through these. Tap one when you've filmed it and it ticks off, saved on this device.</p>
-            <div className="w-full h-1.5 bg-zinc-800 rounded-full mb-5 overflow-hidden"><div className="h-full bg-pink-500 transition-all" style={{ width: `${doneCount}%` }} /></div>
-            <div className="space-y-2">
-              {REEL_IDEAS.map((idea, i) => (
-                <button key={i} onClick={() => toggleReel(i)} className={`w-full text-left flex items-start gap-3 rounded-xl border px-4 py-3 transition-colors ${ticked[i] ? "border-green-800/40 bg-green-950/10" : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-700"}`}>
-                  {ticked[i] ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-0.5" /> : <Circle className="w-5 h-5 text-zinc-600 shrink-0 mt-0.5" />}
-                  <span className={`text-sm ${ticked[i] ? "text-zinc-500 line-through" : "text-white"}`}><span className="text-zinc-600 mr-1">{i + 1}.</span>{idea}</span>
-                </button>
+            <div className="w-full h-1.5 bg-zinc-800 rounded-full mb-6 overflow-hidden"><div className="h-full bg-pink-500 transition-all" style={{ width: `${Math.round((doneCount / REEL_TOTAL) * 100)}%` }} /></div>
+            <div className="space-y-7">
+              {REEL_GROUPS.map((g) => (
+                <div key={g.heading}>
+                  <h3 className="text-pink-400 text-sm font-semibold uppercase tracking-wide border-b border-zinc-800 pb-2 mb-3">{g.heading}</h3>
+                  <div className="space-y-2">
+                    {g.items.map((idea) => { reelIdx += 1; const i = reelIdx; return (
+                      <button key={i} onClick={() => toggleReel(i)} className={`w-full text-left flex items-start gap-3 rounded-xl border px-4 py-3 transition-colors ${ticked[i] ? "border-green-800/40 bg-green-950/10" : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-700"}`}>
+                        {ticked[i] ? <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0 mt-0.5" /> : <Circle className="w-5 h-5 text-zinc-600 shrink-0 mt-0.5" />}
+                        <span className={`text-sm ${ticked[i] ? "text-zinc-500 line-through" : "text-white"}`}><span className="text-zinc-600 mr-1">{i + 1}.</span>{idea}</span>
+                      </button>
+                    ); })}
+                  </div>
+                </div>
               ))}
             </div>
           </section>
