@@ -37,7 +37,9 @@ router.post("/submit/:token", async (req: Request, res: Response) => {
     const { beforeUrl, afterUrl, story, treatment, submitterName } = req.body as {
       beforeUrl?: string; afterUrl?: string; story?: string; treatment?: string; submitterName?: string;
     };
-    if (!beforeUrl || !afterUrl) {
+    const kind = (treatment || "").trim().toUpperCase();
+    const isSpecial = ["SELFIE", "REVIEW", "POST REQUEST", "ONBOARDING"].includes(kind);
+    if (!isSpecial && (!beforeUrl || !afterUrl)) {
       res.status(400).json({ error: "Both a before and an after photo are required." });
       return;
     }
