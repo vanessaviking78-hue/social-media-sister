@@ -266,24 +266,32 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
   return result;
 }
 
+let schedulerRunning = false;
+
 async function processScheduledPosts(): Promise<void> {
-  const now = new Date();
-  const due = await db
-    .select()
-    .from(scheduledPostsTable)
-    .where(and(eq(scheduledPostsTable.status, "pending"), lte(scheduledPostsTable.scheduledAt, now)));
-
-  if (due.length > 0) {
-    logger.info({ count: due.length }, "Processing scheduled posts");
+  // Re-entrancy guard: never let two overlapping timer ticks run at once.
+  if (schedulerRunning) {
+    logger.info("Scheduler tick skipped — previous run still in progress");
+    return;
   }
-
-  for (const post of due) {
-    await db
+  schedulerRunning = true;
+  try {
+    const now = new Date();
+    // Atomically claim all due posts in a single UPDATE so overlapping runs
+    // (or multiple instances) can never grab the same post twice. Only the
+    // rows this statement actually flips from pending -> processing are returned.
+    const due = await db
       .update(scheduledPostsTable)
       .set({ status: "processing", updatedAt: new Date() })
-      .where(eq(scheduledPostsTable.id, post.id));
+      .where(and(eq(scheduledPostsTable.status, "pending"), lte(scheduledPostsTable.scheduledAt, now)))
+      .returning();
 
-    const [preset] = await db
+    if (due.length > 0) {
+      logger.info({ count: due.length }, "Processing scheduled posts");
+    }
+
+    for (const post of due) {
+      const [preset] = await db
       .select()
       .from(clientPresetsTable)
       .where(eq(clientPresetsTable.id, post.presetId));
@@ -327,6 +335,9 @@ async function processScheduledPosts(): Promise<void> {
       postType: post.postType,
       detail: metaOk ? undefined : (metaResult?.error || undefined),
     });
+  }
+  } finally {
+    schedulerRunning = false;
   }
 }
 
