@@ -49,6 +49,42 @@ export async function notifyPostResult(opts: {
 }
 
 /**
+ * Sends a notification to NOTIFY_EMAIL whenever a client submits something
+ * through their portal (before/after, selfie, review, post request, onboarding).
+ * Fire-and-forget: never throws, never blocks the submit flow.
+ */
+export async function notifySubmission(opts: {
+  clientName: string;
+  kind: string;
+  submitterName?: string;
+  story?: string;
+}): Promise<void> {
+  const to = process.env.NOTIFY_EMAIL;
+  if (!to) return;
+  const transporter = getTransporter();
+  if (!transporter) return;
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  const client = opts.clientName || "A client";
+  const kind = (opts.kind || "something").trim() || "something";
+  const who = opts.submitterName ? ` (from ${opts.submitterName})` : "";
+  const subject = `New ${kind} from ${client}`;
+  const lines = [
+    `${client} just sent you a ${kind} through their portal${who}.`,
+    "",
+    opts.story ? `They said: ${opts.story}` : "",
+    "",
+    "Open your Before & After Inbox to see it.",
+    "",
+    "The CyberSuite",
+  ].filter(Boolean);
+  try {
+    await transporter.sendMail({ from, to, subject, text: lines.join("\n") });
+  } catch (err) {
+    logger.warn({ err }, "Submission notification email failed");
+  }
+}
+
+/**
  * Sends a one-off test email to NOTIFY_EMAIL so the user can confirm
  * the notification pipeline works without waiting for a real post.
  */
