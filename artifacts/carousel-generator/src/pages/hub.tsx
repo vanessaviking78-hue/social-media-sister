@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import { useEffect, useState } from "react";
 import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText } from "lucide-react";
 
 const TOOLS = [
@@ -301,7 +302,26 @@ const TOOLS = [
   },
 ];
 
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
 export default function Hub() {
+  const [newCount, setNewCount] = useState(0);
+  useEffect(() => {
+    const pw = localStorage.getItem("cybersuite-pw") || "";
+    if (!pw) return;
+    const load = () => {
+      fetch(`${BASE}/api/submissions`, { headers: { "x-app-password": pw, "Authorization": "Bearer " + pw } })
+        .then((r) => (r.ok ? r.json() : []))
+        .then((d) => {
+          const arr = Array.isArray(d) ? d : [];
+          setNewCount(arr.filter((x: any) => (x.status || "new") === "new").length);
+        })
+        .catch(() => {});
+    };
+    load();
+    const id = setInterval(load, 60000);
+    return () => clearInterval(id);
+  }, []);
   return (
     <div className="min-h-[100dvh] w-full bg-background">
       {/* Header */}
@@ -319,12 +339,12 @@ export default function Hub() {
 
         {/* 3 rows of 4 */}
         <div className="grid grid-cols-4 gap-4 mb-4">
-          {TOOLS.slice(0, 12).map((tool) => <ToolCard key={tool.href} tool={tool} />)}
+          {TOOLS.slice(0, 12).map((tool) => <ToolCard key={tool.href} tool={tool} badge={tool.href === "/submissions" ? newCount : 0} />)}
         </div>
 
         {/* Last rows */}
         <div className="grid grid-cols-4 gap-4">
-          {TOOLS.slice(12).map((tool) => <ToolCard key={tool.href} tool={tool} />)}
+          {TOOLS.slice(12).map((tool) => <ToolCard key={tool.href} tool={tool} badge={tool.href === "/submissions" ? newCount : 0} />)}
         </div>
       </main>
 
@@ -340,11 +360,16 @@ export default function Hub() {
 
 type Tool = typeof TOOLS[number];
 
-function ToolCard({ tool }: { tool: Tool }) {
+function ToolCard({ tool, badge = 0 }: { tool: Tool; badge?: number }) {
   const Icon = tool.icon;
   return (
     <Link href={tool.href}>
       <div className={`group relative rounded-2xl border border-border/30 bg-gradient-to-br ${tool.color} p-5 cursor-pointer transition-all duration-200 ${tool.border} hover:shadow-lg hover:-translate-y-0.5 h-full`}>
+        {badge > 0 && (
+          <span className="absolute -top-2 -right-2 z-10 min-w-[22px] h-[22px] px-1.5 flex items-center justify-center rounded-full bg-pink-500 text-white text-xs font-bold shadow-lg ring-2 ring-background animate-pulse">
+            {badge > 99 ? "99+" : badge}
+          </span>
+        )}
         <div className={`mb-3 ${tool.iconColor}`}>
           <Icon className="w-7 h-7" />
         </div>
