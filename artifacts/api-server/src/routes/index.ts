@@ -38,6 +38,7 @@ import memeRouter from "./meme";
 import hookImageRouter from "./hook-image";
 import notifyRouter from "./notify";
 import submissionsRouter from "./submissions";
+import toolsRouter from "./tools";
 
 const router: IRouter = Router();
 
@@ -64,6 +65,7 @@ router.use(memeRouter);
 router.use(hookImageRouter);
 router.use(notifyRouter);
 router.use(submissionsRouter);
+router.use(toolsRouter);
 router.use(dmAutomationsRouter);
 router.use(webhooksRouter);
 router.use(intakeRouter);
