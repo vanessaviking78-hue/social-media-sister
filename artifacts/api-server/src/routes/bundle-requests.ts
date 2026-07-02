@@ -119,8 +119,8 @@ router.post("/bundle-requests/:id/generate", async (req, res) => {
       .set({ status: "generated", bundleToken: token })
       .where(eq(bundleRequestsTable.id, id));
 
-    const domains = process.env.REPLIT_DOMAINS?.split(",")[0];
-    const base = domains ? `https://${domains}` : `${req.protocol}://${req.get("host")}`;
+    const explicit = process.env.PUBLIC_BASE_URL;
+    const base = explicit ? explicit.replace(/\/+$/, "") : `${req.protocol}://${req.get("host")}`;
     const bundleUrl = `${base}/bundle/${token}`;
 
     const emailed = await sendBundleEmail(request.email, request.clinicName, bundleUrl).catch(() => false);

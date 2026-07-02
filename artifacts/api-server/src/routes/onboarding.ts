@@ -8,10 +8,8 @@ import { pendingPageSelections } from "./meta-auth.js";
 const router: IRouter = Router();
 
 function getBaseUrl(req: Request): string {
-  const domains = process.env["REPLIT_DOMAINS"];
-  if (domains) return `https://${domains.split(",")[0].trim()}`;
-  const devDomain = process.env["REPLIT_DEV_DOMAIN"];
-  if (devDomain) return `https://${devDomain}`;
+  const explicit = process.env["PUBLIC_BASE_URL"];
+  if (explicit) return explicit.replace(/\/+$/, "");
   return `${req.protocol}://${req.get("host")}`;
 }
 
