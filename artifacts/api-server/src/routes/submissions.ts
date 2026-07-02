@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response, type NextFunction } 
 import { db } from "@workspace/db";
 import { clientPresetsTable } from "@workspace/db/schema";
 import { eq, sql } from "drizzle-orm";
+import { notifySubmission } from "../lib/notify";
 
 const router: IRouter = Router();
 
@@ -52,6 +53,12 @@ router.post("/submit/:token", async (req: Request, res: Response) => {
       RETURNING id
     `);
     const id = (result as { rows?: { id?: number }[] }).rows?.[0]?.id ?? null;
+    void notifySubmission({
+      clientName: preset.name,
+      kind: (treatment || "before and after").toLowerCase(),
+      submitterName,
+      story,
+    });
     res.json({ ok: true, id });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to save submission" });
