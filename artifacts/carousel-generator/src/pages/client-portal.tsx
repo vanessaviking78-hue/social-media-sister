@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Loader2, AlertTriangle, CalendarDays, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share } from "lucide-react";
+import { Loader2, AlertTriangle, CalendarDays, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL || "/";
+const SEND_LABEL = "Send to Vanessa, Aesthetic Angel / Digital Darling";
 
 type CalendarPost = {
   id: number;
@@ -59,7 +60,7 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-type Tab = "upcoming" | "approvals" | "ba";
+type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request";
 
 export default function ClientPortal({ token }: { token: string }) {
   const [data, setData] = useState<PortalData | null>(null);
@@ -68,18 +69,36 @@ export default function ClientPortal({ token }: { token: string }) {
   const [tab, setTab] = useState<Tab>("upcoming");
   const [showTip, setShowTip] = useState(true);
 
+  // before & after
   const [before, setBefore] = useState<File | null>(null);
   const [after, setAfter] = useState<File | null>(null);
   const [beforePrev, setBeforePrev] = useState("");
   const [afterPrev, setAfterPrev] = useState("");
   const [treatment, setTreatment] = useState("");
   const [story, setStory] = useState("");
-  const [name, setName] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState(false);
+  const [baName, setBaName] = useState("");
+  const [baBusy, setBaBusy] = useState(false);
+  const [baDone, setBaDone] = useState(false);
   const [baErr, setBaErr] = useState("");
   const beforeRef = useRef<HTMLInputElement>(null);
   const afterRef = useRef<HTMLInputElement>(null);
+
+  // selfies
+  const [selfie, setSelfie] = useState<File | null>(null);
+  const [selfiePrev, setSelfiePrev] = useState("");
+  const [selfieNote, setSelfieNote] = useState("");
+  const [selfieName, setSelfieName] = useState("");
+  const [selfieBusy, setSelfieBusy] = useState(false);
+  const [selfieDone, setSelfieDone] = useState(false);
+  const [selfieErr, setSelfieErr] = useState("");
+  const selfieRef = useRef<HTMLInputElement>(null);
+
+  // post request
+  const [reqText, setReqText] = useState("");
+  const [reqName, setReqName] = useState("");
+  const [reqBusy, setReqBusy] = useState(false);
+  const [reqDone, setReqDone] = useState(false);
+  const [reqErr, setReqErr] = useState("");
 
   useEffect(() => {
     fetch(`${BASE}api/portal/${token}`)
@@ -91,14 +110,6 @@ export default function ClientPortal({ token }: { token: string }) {
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, [token]);
-
-  const pick = (which: "before" | "after") => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    const prev = URL.createObjectURL(f);
-    if (which === "before") { setBefore(f); setBeforePrev(prev); }
-    else { setAfter(f); setAfterPrev(prev); }
-  };
 
   const uploadOne = async (f: File): Promise<string> => {
     const base64 = await fileToBase64(f);
@@ -114,30 +125,65 @@ export default function ClientPortal({ token }: { token: string }) {
     return url;
   };
 
+  const send = async (body: Record<string, unknown>) => {
+    const r = await fetch(`${BASE}api/submit/${token}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || "Could not send, please try again."); }
+  };
+
+  const pick = (which: "before" | "after") => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    const prev = URL.createObjectURL(f);
+    if (which === "before") { setBefore(f); setBeforePrev(prev); }
+    else { setAfter(f); setAfterPrev(prev); }
+  };
+  const pickSelfie = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    setSelfie(f); setSelfiePrev(URL.createObjectURL(f));
+  };
+
   const submitBA = async () => {
     setBaErr("");
     if (!before || !after) { setBaErr("Please add both a before and an after photo."); return; }
-    setSubmitting(true);
+    setBaBusy(true);
     try {
       const beforeUrl = await uploadOne(before);
       const afterUrl = await uploadOne(after);
-      const r = await fetch(`${BASE}api/submit/${token}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ beforeUrl, afterUrl, treatment, story, submitterName: name }),
-      });
-      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || "Could not save, please try again."); }
-      setDone(true);
-    } catch (e: any) {
-      setBaErr(e?.message || "Something went wrong, please try again.");
-    } finally {
-      setSubmitting(false);
-    }
+      await send({ beforeUrl, afterUrl, treatment, story, submitterName: baName });
+      setBaDone(true);
+    } catch (e: any) { setBaErr(e?.message || "Something went wrong."); }
+    finally { setBaBusy(false); }
   };
 
-  if (loading) {
-    return <div className="min-h-screen bg-zinc-950 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-pink-500" /></div>;
-  }
+  const submitSelfie = async () => {
+    setSelfieErr("");
+    if (!selfie) { setSelfieErr("Please add a selfie first."); return; }
+    setSelfieBusy(true);
+    try {
+      const url = await uploadOne(selfie);
+      await send({ beforeUrl: url, afterUrl: url, treatment: "SELFIE", story: selfieNote, submitterName: selfieName });
+      setSelfieDone(true);
+    } catch (e: any) { setSelfieErr(e?.message || "Something went wrong."); }
+    finally { setSelfieBusy(false); }
+  };
+
+  const submitRequest = async () => {
+    setReqErr("");
+    if (!reqText.trim()) { setReqErr("Tell us what you'd like a post about."); return; }
+    setReqBusy(true);
+    try {
+      await send({ beforeUrl: "", afterUrl: "", treatment: "POST REQUEST", story: reqText, submitterName: reqName });
+      setReqDone(true);
+    } catch (e: any) { setReqErr(e?.message || "Something went wrong."); }
+    finally { setReqBusy(false); }
+  };
+
+  if (loading) return <div className="min-h-screen bg-zinc-950 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-pink-500" /></div>;
   if (error === "not_found" || !data) {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
@@ -165,14 +211,23 @@ export default function ClientPortal({ token }: { token: string }) {
   const reviewedBatches = data.approvalBatches.filter((b) => b.pendingImages === 0);
   const pendingCount = pendingBatches.reduce((n, b) => n + b.pendingImages, 0);
 
+  const inputCls = "w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-pink-600";
+  const sendBtn = "w-full rounded-full bg-pink-600 hover:bg-pink-500 disabled:opacity-60 text-white font-semibold py-3.5 flex items-center justify-center gap-2";
+
   const TabBtn = ({ id, label, badge }: { id: Tab; label: string; badge?: number }) => (
-    <button
-      onClick={() => setTab(id)}
-      className={`flex-1 py-3 text-sm font-semibold border-b-2 transition-colors ${tab === id ? "border-pink-500 text-white" : "border-transparent text-zinc-500 hover:text-zinc-300"}`}
-    >
-      {label}
-      {badge ? <span className="ml-1.5 text-[11px] px-1.5 py-0.5 rounded-full bg-pink-600 text-white align-middle">{badge}</span> : null}
+    <button onClick={() => setTab(id)}
+      className={`whitespace-nowrap px-3.5 py-3 text-sm font-semibold border-b-2 transition-colors ${tab === id ? "border-pink-500 text-white" : "border-transparent text-zinc-500 hover:text-zinc-300"}`}>
+      {label}{badge ? <span className="ml-1.5 text-[11px] px-1.5 py-0.5 rounded-full bg-pink-600 text-white align-middle">{badge}</span> : null}
     </button>
+  );
+
+  const DoneCard = ({ onAgain, label }: { onAgain: () => void; label: string }) => (
+    <div className="rounded-2xl border border-green-800/40 bg-green-950/20 p-8 text-center">
+      <CheckCircle2 className="w-10 h-10 mx-auto text-green-500 mb-3" />
+      <h3 className="text-white font-semibold mb-1">Sent, thank you.</h3>
+      <p className="text-zinc-400 text-sm mb-4">It's landed with Vanessa. {label}</p>
+      <button onClick={onAgain} className="text-pink-400 text-sm font-semibold">Send another</button>
+    </div>
   );
 
   return (
@@ -194,10 +249,12 @@ export default function ClientPortal({ token }: { token: string }) {
             <p className="text-xs text-zinc-500">Your Portal</p>
           </div>
         </div>
-        <div className="max-w-3xl mx-auto px-2 flex">
+        <div className="max-w-3xl mx-auto px-2 flex overflow-x-auto">
           <TabBtn id="upcoming" label="Posts" />
           <TabBtn id="approvals" label="Approvals" badge={pendingCount || undefined} />
           <TabBtn id="ba" label="Before & After" />
+          <TabBtn id="selfies" label="Selfies" />
+          <TabBtn id="request" label="Request a post" />
         </div>
       </header>
 
@@ -258,10 +315,7 @@ export default function ClientPortal({ token }: { token: string }) {
 
         {tab === "approvals" && (
           <section>
-            <div className="flex items-center gap-2 mb-5">
-              <ShieldCheck className="w-5 h-5 text-pink-400" />
-              <h2 className="text-lg font-semibold">Approvals</h2>
-            </div>
+            <div className="flex items-center gap-2 mb-5"><ShieldCheck className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Approvals</h2></div>
             {pendingBatches.length === 0 && reviewedBatches.length === 0 && (
               <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-8 text-center">
                 <CheckCircle2 className="w-8 h-8 mx-auto text-zinc-700 mb-3" />
@@ -272,8 +326,7 @@ export default function ClientPortal({ token }: { token: string }) {
               <div className="space-y-3 mb-8">
                 <p className="text-xs uppercase tracking-wide text-pink-400/80">Waiting for you</p>
                 {pendingBatches.map((b) => (
-                  <a key={b.id} href={`${BASE}approve/${b.token}`}
-                     className="flex items-center gap-3 rounded-2xl border border-pink-800/40 bg-pink-950/10 hover:bg-pink-950/20 transition-colors px-4 py-4">
+                  <a key={b.id} href={`${BASE}approve/${b.token}`} className="flex items-center gap-3 rounded-2xl border border-pink-800/40 bg-pink-950/10 hover:bg-pink-950/20 transition-colors px-4 py-4">
                     <Clock className="w-5 h-5 text-pink-400 shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-white text-sm truncate">{b.name}</p>
@@ -303,20 +356,10 @@ export default function ClientPortal({ token }: { token: string }) {
 
         {tab === "ba" && (
           <section>
-            <div className="flex items-center gap-2 mb-2">
-              <Camera className="w-5 h-5 text-pink-400" />
-              <h2 className="text-lg font-semibold">Send a Before &amp; After</h2>
-            </div>
-            <p className="text-sm text-zinc-400 mb-6">Add a before photo, an after photo and a few words about the treatment. That's it, it comes straight to your social media manager.</p>
-
-            {done ? (
-              <div className="rounded-2xl border border-green-800/40 bg-green-950/20 p-8 text-center">
-                <CheckCircle2 className="w-10 h-10 mx-auto text-green-500 mb-3" />
-                <h3 className="text-white font-semibold mb-1">Sent, thank you.</h3>
-                <p className="text-zinc-400 text-sm mb-4">We've got your before and after. Want to send another?</p>
-                <button onClick={() => { setDone(false); setBefore(null); setAfter(null); setBeforePrev(""); setAfterPrev(""); setTreatment(""); setStory(""); setName(""); }}
-                        className="text-pink-400 text-sm font-semibold">Send another</button>
-              </div>
+            <div className="flex items-center gap-2 mb-2"><Camera className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Send a Before &amp; After</h2></div>
+            <p className="text-sm text-zinc-400 mb-6">Add a before photo, an after photo and a few words about the treatment.</p>
+            {baDone ? (
+              <DoneCard label="Want to send another before and after?" onAgain={() => { setBaDone(false); setBefore(null); setAfter(null); setBeforePrev(""); setAfterPrev(""); setTreatment(""); setStory(""); setBaName(""); }} />
             ) : (
               <div className="space-y-5">
                 <div className="grid grid-cols-2 gap-3">
@@ -326,37 +369,60 @@ export default function ClientPortal({ token }: { token: string }) {
                     return (
                       <div key={which}>
                         <label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">{which}</label>
-                        <button type="button" onClick={() => ref.current?.click()}
-                                className="w-full aspect-square rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 overflow-hidden flex items-center justify-center">
-                          {prev ? <img src={prev} alt={which} className="w-full h-full object-cover" /> : (
-                            <div className="text-center text-zinc-600"><Camera className="w-6 h-6 mx-auto mb-1" /><span className="text-xs">Tap to add</span></div>
-                          )}
+                        <button type="button" onClick={() => ref.current?.click()} className="w-full aspect-square rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 overflow-hidden flex items-center justify-center">
+                          {prev ? <img src={prev} alt={which} className="w-full h-full object-cover" /> : (<div className="text-center text-zinc-600"><Camera className="w-6 h-6 mx-auto mb-1" /><span className="text-xs">Tap to add</span></div>)}
                         </button>
                         <input ref={ref} type="file" accept="image/*" className="hidden" onChange={pick(which)} />
                       </div>
                     );
                   })}
                 </div>
-                <div>
-                  <label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Treatment</label>
-                  <input value={treatment} onChange={(e) => setTreatment(e.target.value)} placeholder="e.g. Lip filler, skin boosters"
-                         className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-pink-600" />
-                </div>
-                <div>
-                  <label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">A little back story</label>
-                  <textarea value={story} onChange={(e) => setStory(e.target.value)} rows={4} placeholder="What were they hoping for, how did it go, anything nice they said..."
-                            className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-pink-600 resize-none" />
-                </div>
-                <div>
-                  <label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Your name</label>
-                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="So we know who sent it"
-                         className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-pink-600" />
-                </div>
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Treatment</label><input value={treatment} onChange={(e) => setTreatment(e.target.value)} placeholder="e.g. Lip filler, skin boosters" className={inputCls} /></div>
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">A little back story</label><textarea value={story} onChange={(e) => setStory(e.target.value)} rows={4} placeholder="What were they hoping for, how did it go, anything nice they said..." className={inputCls + " resize-none"} /></div>
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Your name</label><input value={baName} onChange={(e) => setBaName(e.target.value)} placeholder="So we know who sent it" className={inputCls} /></div>
                 {baErr && <p className="text-sm text-red-400">{baErr}</p>}
-                <button onClick={submitBA} disabled={submitting}
-                        className="w-full rounded-full bg-pink-600 hover:bg-pink-500 disabled:opacity-60 text-white font-semibold py-3.5 flex items-center justify-center gap-2">
-                  {submitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : "Send to my manager"}
-                </button>
+                <button onClick={submitBA} disabled={baBusy} className={sendBtn}>{baBusy ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : SEND_LABEL}</button>
+              </div>
+            )}
+          </section>
+        )}
+
+        {tab === "selfies" && (
+          <section>
+            <div className="flex items-center gap-2 mb-2"><Smile className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Upload a Selfie</h2></div>
+            <p className="text-sm text-zinc-400 mb-6">Send us a lovely selfie for your content, with anything you'd like us to know.</p>
+            {selfieDone ? (
+              <DoneCard label="Want to send another selfie?" onAgain={() => { setSelfieDone(false); setSelfie(null); setSelfiePrev(""); setSelfieNote(""); setSelfieName(""); }} />
+            ) : (
+              <div className="space-y-5">
+                <div>
+                  <label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Your selfie</label>
+                  <button type="button" onClick={() => selfieRef.current?.click()} className="w-full aspect-[4/5] max-w-xs mx-auto rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 overflow-hidden flex items-center justify-center">
+                    {selfiePrev ? <img src={selfiePrev} alt="selfie" className="w-full h-full object-cover" /> : (<div className="text-center text-zinc-600"><Smile className="w-7 h-7 mx-auto mb-1" /><span className="text-xs">Tap to add a selfie</span></div>)}
+                  </button>
+                  <input ref={selfieRef} type="file" accept="image/*" className="hidden" onChange={pickSelfie} />
+                </div>
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Anything to add?</label><textarea value={selfieNote} onChange={(e) => setSelfieNote(e.target.value)} rows={3} placeholder="Optional, e.g. after my treatment today, feeling great..." className={inputCls + " resize-none"} /></div>
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Your name</label><input value={selfieName} onChange={(e) => setSelfieName(e.target.value)} placeholder="So we know who sent it" className={inputCls} /></div>
+                {selfieErr && <p className="text-sm text-red-400">{selfieErr}</p>}
+                <button onClick={submitSelfie} disabled={selfieBusy} className={sendBtn}>{selfieBusy ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : SEND_LABEL}</button>
+              </div>
+            )}
+          </section>
+        )}
+
+        {tab === "request" && (
+          <section>
+            <div className="flex items-center gap-2 mb-2"><MessageSquarePlus className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Request a Post</h2></div>
+            <p className="text-sm text-zinc-400 mb-6">Got something you'd like posted? An offer, an update, a treatment to shout about? Tell us here and we'll sort it.</p>
+            {reqDone ? (
+              <DoneCard label="Want to send another request?" onAgain={() => { setReqDone(false); setReqText(""); setReqName(""); }} />
+            ) : (
+              <div className="space-y-5">
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">What would you like a post about?</label><textarea value={reqText} onChange={(e) => setReqText(e.target.value)} rows={5} placeholder="e.g. A post about our summer skin package, or that we now offer polynucleotides..." className={inputCls + " resize-none"} /></div>
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Your name</label><input value={reqName} onChange={(e) => setReqName(e.target.value)} placeholder="So we know who sent it" className={inputCls} /></div>
+                {reqErr && <p className="text-sm text-red-400">{reqErr}</p>}
+                <button onClick={submitRequest} disabled={reqBusy} className={sendBtn}>{reqBusy ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : SEND_LABEL}</button>
               </div>
             )}
           </section>
