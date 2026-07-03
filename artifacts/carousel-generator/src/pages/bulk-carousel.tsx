@@ -128,6 +128,30 @@ function hexToRgb(hex: string): [number, number, number] {
   return [parseInt(h.slice(0,2),16)||0, parseInt(h.slice(2,4),16)||0, parseInt(h.slice(4,6),16)||0];
 }
 
+function computeTuckedSubtitleY(hookRaw: string, subRaw: string, hookBlock?: Block, subBlock?: Block): number {
+  const DEFAULT_Y = 0.785;
+  if (!subRaw || !subRaw.trim()) return subBlock?.y ?? DEFAULT_Y;
+  const c = document.createElement("canvas");
+  const ctx = c.getContext("2d");
+  if (!ctx) return subBlock?.y ?? DEFAULT_Y;
+  const PAD_X = 90;
+  const HOOK_SIZE = hookBlock?.fontSize ?? 108;
+  const HOOK_LINE_H = Math.round(HOOK_SIZE * 1.10);
+  const SUB_SIZE = subBlock?.fontSize ?? 44;
+  const SUB_LINE_H = Math.round(SUB_SIZE * 1.40);
+  const hookCY = (hookBlock?.y ?? 0.695) * H;
+  ctx.font = `700 ${HOOK_SIZE}px 'Bebas Neue', sans-serif`;
+  const hookLines = hookRaw && hookRaw.trim()
+    ? wrapCanvas(ctx, stripPipes(hookRaw).trim().toUpperCase(), W - PAD_X * 2)
+    : [];
+  ctx.font = `normal 400 ${SUB_SIZE}px 'Poppins', sans-serif`;
+  const subLines = wrapCanvas(ctx, stripPipes(subRaw).trim(), W - PAD_X * 2);
+  const hookH = hookLines.length * HOOK_LINE_H;
+  const subTotalH = subLines.length * SUB_LINE_H;
+  const subCY = (hookCY + hookH / 2) + 0.015 * H + subTotalH / 2;
+  return Math.max(0.04, Math.min(0.96, subCY / H));
+}
+
 function stripPipes(t: string): string {
   return t.replace(/\|([^|]+)\|/g, "$1");
 }
@@ -310,15 +334,10 @@ function renderSlideCanvas(
         }
       }
 
-      // Subtitle — tucked a consistent gap beneath the hook (unless manually moved)
+      // Subtitle — centred around its block position (baked at generation to tuck under the hook)
       if (subLines.length > 0) {
         const totalH = subLines.length * SUB_LINE_H;
-        const SUB_DEFAULT_Y = 0.785;
-        const subMovedY = Math.abs((subBlock?.y ?? SUB_DEFAULT_Y) - SUB_DEFAULT_Y) > 0.001;
-        const hookH = hookLines.length * HOOK_LINE_H;
-        const subCY = subMovedY
-          ? (subBlock?.y ?? SUB_DEFAULT_Y) * H
-          : (hookCY + hookH / 2) + 0.015 * H + totalH / 2;
+        const subCY = (subBlock?.y ?? 0.785) * H;
         ctx.font      = `normal 400 ${SUB_SIZE}px 'Poppins', sans-serif`;
         ctx.fillStyle = subtitleOverride ?? accentColor;
         let y = subCY - totalH / 2 + SUB_LINE_H / 2;
@@ -868,6 +887,13 @@ export default function BulkCarousel() {
 
   const { presets } = usePresets();
   const selectedPreset = useMemo(() => presets.find(p => p.id === selectedPresetId) ?? null, [presets, selectedPresetId]);
+  // Auto-load the client's brand accent colour into the hook colour when a client is picked.
+  useEffect(() => {
+    if (selectedPreset && (selectedPreset as any).accentColor) {
+      setHeroWordColor((selectedPreset as any).accentColor);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPresetId]);
 
   // ── CSV ──────────────────────────────────────────────────────────────────────
 
@@ -961,6 +987,8 @@ export default function BulkCarousel() {
         if (bodyFiles[i])  try { bodyImg  = await loadImg(URL.createObjectURL(bodyFiles[i]));  } catch {}
 
         const blocks = makeBlocks(row);
+        const subB0 = blocks.find(b => b.id === "subtitle");
+        if (subB0) subB0.y = computeTuckedSubtitleY(row.slide1_hook, row.slide1_subtitle, blocks.find(b => b.id === "hook"), subB0);
         const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, lineSpacing, heroWordColor, subtitleColor, overlayColor, overlayAlpha);
         rendered.push({ id: `item-${i}`, rowNum: c + 1, hook: row.slide1_hook, blocks, coverImg, bodyImg, thumbs });
         setRenderProgress(Math.round(((c + 1) / chosen.length) * 100));
