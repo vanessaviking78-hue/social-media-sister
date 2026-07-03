@@ -4,6 +4,15 @@ import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageS
 
 const TOOLS = [
   {
+    href: "/showcase-builder",
+    icon: Play,
+    name: "Sample Showcase",
+    description: "Build a 6-carousel showcase for a prospect. Auto-plays, ends on their grid, one link to send.",
+    color: "from-pink-500/20 to-pink-500/5",
+    border: "hover:border-pink-500/50",
+    iconColor: "text-pink-400",
+  },
+  {
     href: "/before-after",
     icon: ImagePlus,
     name: "Before & After Maker",
