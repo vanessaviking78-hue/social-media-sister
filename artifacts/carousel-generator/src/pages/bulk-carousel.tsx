@@ -24,7 +24,7 @@ loadGoogleFonts();
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const W = 1080;
 const H = 1440;
-const SCALE = 2;
+export const SCALE = 2;
 const EDITOR_W = 360;
 const EDITOR_SCALE = EDITOR_W / W;
 
@@ -32,7 +32,7 @@ const CSV_COLS = ["slide1_hook", "slide1_subtitle", "slide2_body", "slide3_body"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type CsvRow = {
+export type CsvRow = {
   slide1_hook: string;
   slide1_subtitle: string;
   slide2_body: string;
@@ -42,7 +42,7 @@ type CsvRow = {
 
 type BlockId = "hook" | "subtitle" | "body2" | "body3" | "cta" | "logo" | "line";
 
-type Block = {
+export type Block = {
   id: BlockId;
   text: string;
   x: number;       // 0-1 horizontal centre fraction
@@ -109,7 +109,7 @@ const defaultBlock = (id: BlockId, text = ""): Block => {
   return { id, text, ...pos[id], ...extra };
 };
 
-function makeBlocks(row: CsvRow): Block[] {
+export function makeBlocks(row: CsvRow): Block[] {
   return [
     defaultBlock("hook",     row.slide1_hook),
     defaultBlock("subtitle", row.slide1_subtitle),
@@ -128,7 +128,7 @@ function hexToRgb(hex: string): [number, number, number] {
   return [parseInt(h.slice(0,2),16)||0, parseInt(h.slice(2,4),16)||0, parseInt(h.slice(4,6),16)||0];
 }
 
-function computeTuckedSubtitleY(hookRaw: string, subRaw: string, hookBlock?: Block, subBlock?: Block): number {
+export function computeTuckedSubtitleY(hookRaw: string, subRaw: string, hookBlock?: Block, subBlock?: Block): number {
   const DEFAULT_Y = 0.785;
   if (!subRaw || !subRaw.trim()) return subBlock?.y ?? DEFAULT_Y;
   const c = document.createElement("canvas");
@@ -223,7 +223,7 @@ function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, alpha: 
   ctx.globalAlpha = 1;
 }
 
-function renderSlideCanvas(
+export function renderSlideCanvas(
   slideNum: 1|2|3|4,
   blocks: Block[],
   coverImg: HTMLImageElement | null,
@@ -400,7 +400,7 @@ function renderSlideCanvas(
   return canvas.toDataURL("image/png");
 }
 
-function renderAllThumbs(
+export function renderAllThumbs(
   item: Pick<CarouselItem, "blocks" | "coverImg" | "bodyImg">,
   logoImg: HTMLImageElement | null,
   preset: ClientPreset,

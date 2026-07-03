@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { usePresets } from "@/lib/use-presets";
+import { usePresets, type ClientPreset } from "@/lib/use-presets";
 import { MusicPickerModal, type MusicTrack } from "@/components/music-picker-modal";
+import { renderSlideCanvas, makeBlocks, computeTuckedSubtitleY, SCALE, type CsvRow } from "@/pages/bulk-carousel";
 import JSZip from "jszip";
 import Papa from "papaparse";
 import { toast } from "sonner";
@@ -8,12 +9,15 @@ import { toast } from "sonner";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const SLIDE_W = 1080;
 const SLIDE_H = 1440;
+const EMPTY_ROW: CsvRow = { slide1_hook: "", slide1_subtitle: "", slide2_body: "", slide3_body: "", slide4_cta: "" };
 
 type Strip = { id: string; file: File; url: string; width: number; height: number; slides: number };
 type Carousel = {
   id: string;
   name: string;
-  slideUrls: string[];
+  raw: string[];        // clean cut slices
+  slideUrls: string[];  // rendered (text on top if a row is set)
+  row: CsvRow;
   presetId: number | null;
   caption: string;
   date: string;
@@ -21,65 +25,69 @@ type Carousel = {
   track: MusicTrack | null;
 };
 
-function fileToImage(file: File): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = url;
-  });
+function loadImg(src: string): Promise<HTMLImageElement> {
+  return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; });
 }
-
+function fileToImage(file: File): Promise<HTMLImageElement> {
+  return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = URL.createObjectURL(file); });
+}
 function cutStrip(img: HTMLImageElement, n: number): string[] {
-  const W = img.naturalWidth, H = img.naturalHeight;
-  const sliceW = W / n;
-  const out: string[] = [];
+  const W = img.naturalWidth, H = img.naturalHeight, sliceW = W / n; const out: string[] = [];
   for (let i = 0; i < n; i++) {
-    const c = document.createElement("canvas");
-    c.width = SLIDE_W; c.height = SLIDE_H;
-    const ctx = c.getContext("2d")!;
-    // draw the i-th slice, scaled to fill a 1080x1440 slide
-    ctx.drawImage(img, i * sliceW, 0, sliceW, H, 0, 0, SLIDE_W, SLIDE_H);
+    const c = document.createElement("canvas"); c.width = SLIDE_W; c.height = SLIDE_H;
+    c.getContext("2d")!.drawImage(img, i * sliceW, 0, sliceW, H, 0, 0, SLIDE_W, SLIDE_H);
     out.push(c.toDataURL("image/png"));
   }
   return out;
 }
-
-async function compressDataUrl(dataUrl: string, maxPx = 1080, quality = 0.85): Promise<string> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
-      const c = document.createElement("canvas");
-      c.width = Math.round(img.width * scale);
-      c.height = Math.round(img.height * scale);
-      c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
-      resolve(c.toDataURL("image/jpeg", quality));
-    };
-    img.onerror = () => resolve(dataUrl);
-    img.src = dataUrl;
-  });
+function rowHasText(r: CsvRow): boolean {
+  return !!(r.slide1_hook || r.slide1_subtitle || r.slide2_body || r.slide3_body || r.slide4_cta);
+}
+function accentOf(p: ClientPreset | null): string {
+  return (p as any)?.accentColor || (p as any)?.cornerColor || "#ffffff";
 }
 
+async function buildSlides(raw: string[], row: CsvRow, preset: ClientPreset | null): Promise<string[]> {
+  if (!preset || !rowHasText(row)) return raw;
+  await document.fonts.ready;
+  const blocks = makeBlocks(row);
+  const sub = blocks.find((b) => b.id === "subtitle");
+  const hook = blocks.find((b) => b.id === "hook");
+  if (sub) sub.y = computeTuckedSubtitleY(row.slide1_hook, row.slide1_subtitle, hook, sub);
+  const accent = accentOf(preset);
+  const overlay = (preset as any).overlayColor || "rgba(0,0,0,0.35)";
+  const out: string[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    if (i + 1 > 4) { out.push(raw[i]); continue; } // slides beyond 4 stay clean
+    const img = await loadImg(raw[i]);
+    const n = (i + 1) as 1 | 2 | 3 | 4;
+    const cover = n === 1 ? img : null;
+    const body = n === 1 ? null : img;
+    out.push(renderSlideCanvas(n, blocks, cover, body, null, preset, SCALE, false, 1.2, accent, "#ffffff", overlay, 0));
+  }
+  return out;
+}
+
+async function compress(dataUrl: string, q = 0.85): Promise<string> {
+  return new Promise((res) => {
+    const i = new Image();
+    i.onload = () => { const s = Math.min(1, 1080 / Math.max(i.width, i.height)); const c = document.createElement("canvas"); c.width = Math.round(i.width * s); c.height = Math.round(i.height * s); c.getContext("2d")!.drawImage(i, 0, 0, c.width, c.height); res(c.toDataURL("image/jpeg", q)); };
+    i.onerror = () => res(dataUrl); i.src = dataUrl;
+  });
+}
 async function uploadDataUrls(dataUrls: string[], names: string[]): Promise<string[]> {
-  const BATCH = 4;
   const urls: string[] = [];
-  for (let i = 0; i < dataUrls.length; i += BATCH) {
-    const images = await Promise.all(
-      dataUrls.slice(i, i + BATCH).map(async (du, j) => ({ name: names[i + j], base64: await compressDataUrl(du) }))
-    );
-    const res = await fetch(`${BASE}/api/content/upload-image`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ images }),
-    });
-    if (!res.ok) throw new Error("Image upload failed");
-    const d = await res.json();
-    (d.results || []).forEach((r: { url: string }) => urls.push(r.url));
+  for (let i = 0; i < dataUrls.length; i += 4) {
+    const images = await Promise.all(dataUrls.slice(i, i + 4).map(async (du, j) => ({ name: names[i + j], base64: await compress(du) })));
+    const r = await fetch(`${BASE}/api/content/upload-image`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ images }) });
+    if (!r.ok) throw new Error("Image upload failed");
+    const d = await r.json();
+    (d.results || []).forEach((x: { url: string }) => urls.push(x.url));
   }
   return urls;
 }
+function normDate(v: string) { const x = (v || "").trim(); if (/^\d{4}-\d{2}-\d{2}$/.test(x)) return x; const m = x.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/); if (m) { let y = m[3]; if (y.length === 2) y = "20" + y; return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`; } return x; }
+function normTime(v: string) { const x = (v || "").trim(); const m = x.match(/^(\d{1,2}):(\d{2})/); return m ? `${m[1].padStart(2, "0")}:${m[2]}` : x; }
 
 export default function SeamlessBulk() {
   const { presets } = usePresets();
@@ -87,7 +95,7 @@ export default function SeamlessBulk() {
   const [carousels, setCarousels] = useState<Carousel[]>([]);
   const [phase, setPhase] = useState<"upload" | "preview">("upload");
   const [busy, setBusy] = useState(false);
-  const [musicCarouselId, setMusicCarouselId] = useState<string | null>(null);
+  const [musicId, setMusicId] = useState<string | null>(null);
 
   async function onFiles(list: FileList | null) {
     if (!list) return;
@@ -96,16 +104,9 @@ export default function SeamlessBulk() {
       if (!file.type.startsWith("image/")) continue;
       const img = await fileToImage(file);
       const guess = Math.max(2, Math.min(5, Math.round(img.naturalWidth / SLIDE_W)));
-      added.push({ id: `s-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, file, url: img.src, width: img.naturalWidth, height: img.naturalHeight, slides: guess });
+      added.push({ id: `s-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, file, url: img.src, width: img.naturalWidth, height: img.naturalHeight, slides: guess });
     }
-    setStrips((prev) => [...prev, ...added]);
-  }
-
-  function setStripSlides(id: string, n: number) {
-    setStrips((prev) => prev.map((s) => (s.id === id ? { ...s, slides: n } : s)));
-  }
-  function removeStrip(id: string) {
-    setStrips((prev) => prev.filter((s) => s.id !== id));
+    setStrips((p) => [...p, ...added]);
   }
 
   async function cutAll() {
@@ -113,56 +114,64 @@ export default function SeamlessBulk() {
     setBusy(true);
     try {
       const out: Carousel[] = [];
-      for (let i = 0; i < strips.length; i++) {
-        const s = strips[i];
+      for (const s of strips) {
         const img = await fileToImage(s.file);
-        const slideUrls = cutStrip(img, s.slides);
-        out.push({
-          id: `c-${i}-${Math.random().toString(36).slice(2, 7)}`,
-          name: s.file.name.replace(/\.[^.]+$/, ""),
-          slideUrls,
-          presetId: null,
-          caption: "",
-          date: "",
-          time: "",
-          track: null,
-        });
+        const raw = cutStrip(img, s.slides);
+        out.push({ id: `c-${Math.random().toString(36).slice(2, 7)}`, name: s.file.name.replace(/\.[^.]+$/, ""), raw, slideUrls: raw, row: { ...EMPTY_ROW }, presetId: null, caption: "", date: "", time: "", track: null });
       }
       setCarousels(out);
       setPhase("preview");
-    } catch (e: any) {
-      toast.error(e?.message || "Cutting failed");
-    } finally {
-      setBusy(false);
-    }
+    } catch (e: any) { toast.error(e?.message || "Cutting failed"); } finally { setBusy(false); }
   }
 
-  function updateCarousel(id: string, patch: Partial<Carousel>) {
-    setCarousels((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
+  async function importCsv(file: File) {
+    Papa.parse(file, {
+      header: true, skipEmptyLines: true,
+      complete: async (res: any) => {
+        const rows = (res.data || []) as any[];
+        const key = (r: any, ...n: string[]) => { for (const k of Object.keys(r)) if (n.includes(k.trim().toLowerCase())) return r[k]; return ""; };
+        setBusy(true);
+        try {
+          const updated = await Promise.all(carousels.map(async (c, i) => {
+            const r = rows[i];
+            if (!r) return c;
+            const row: CsvRow = {
+              slide1_hook: String(key(r, "slide1_hook") ?? ""),
+              slide1_subtitle: String(key(r, "slide1_subtitle") ?? ""),
+              slide2_body: String(key(r, "slide2_body") ?? ""),
+              slide3_body: String(key(r, "slide3_body") ?? ""),
+              slide4_cta: String(key(r, "slide4_cta") ?? ""),
+            };
+            const clientName = String(key(r, "client", "clinic", "account") || "").trim();
+            const preset = presets.find((p) => p.name.trim().toLowerCase() === clientName.toLowerCase()) || null;
+            const slideUrls = await buildSlides(c.raw, row, preset);
+            return { ...c, row, presetId: preset ? preset.id : c.presetId, caption: key(r, "caption") || c.caption, date: key(r, "date") ? normDate(key(r, "date")) : c.date, time: key(r, "time") ? normTime(key(r, "time")) : c.time, slideUrls };
+          }));
+          setCarousels(updated);
+          toast.success(`Imported ${Math.min(rows.length, carousels.length)} row(s).`);
+        } catch (e: any) { toast.error(e?.message || "Import failed"); } finally { setBusy(false); }
+      },
+      error: () => toast.error("Could not read that CSV."),
+    });
   }
-  function removeCarousel(id: string) {
-    setCarousels((prev) => prev.filter((c) => c.id !== id));
+
+  function downloadTemplate() {
+    const csv = "client,caption,date,time,slide1_hook,slide1_subtitle,slide2_body,slide3_body,slide4_cta\nTweaked By Helen,\"Your caption here\",2026-07-10,10:00,YOUR HOOK,A supporting line,Body for slide two,Body for slide three,DM me to book\n";
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "seamless-template.csv"; a.click();
   }
+
+  function update(id: string, patch: Partial<Carousel>) { setCarousels((p) => p.map((c) => (c.id === id ? { ...c, ...patch } : c))); }
+  function removeCarousel(id: string) { setCarousels((p) => p.filter((c) => c.id !== id)); }
 
   async function downloadZip() {
     const tid = toast.loading("Building ZIP…");
     try {
       const zip = new JSZip();
-      carousels.forEach((c, ci) => {
-        const folder = zip.folder(`${ci + 1}-${c.name}`.slice(0, 40))!;
-        c.slideUrls.forEach((du, si) => {
-          folder.file(`slide-${si + 1}.png`, du.split(",")[1], { base64: true });
-        });
-      });
+      carousels.forEach((c, ci) => { const f = zip.folder(`${ci + 1}-${c.name}`.slice(0, 40))!; c.slideUrls.forEach((du, si) => f.file(`slide-${si + 1}.png`, du.split(",")[1], { base64: true })); });
       const blob = await zip.generateAsync({ type: "blob" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "seamless-carousels.zip";
-      a.click();
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "seamless-carousels.zip"; a.click();
       toast.success("ZIP downloaded.", { id: tid });
-    } catch (e: any) {
-      toast.error(e?.message || "ZIP failed", { id: tid });
-    }
+    } catch (e: any) { toast.error(e?.message || "ZIP failed", { id: tid }); }
   }
 
   async function scheduleAll() {
@@ -176,94 +185,21 @@ export default function SeamlessBulk() {
         toast.loading(`Scheduling ${i + 1} / ${ready.length}…`, { id: tid });
         const names = c.slideUrls.map((_, j) => `seamless-${i + 1}-slide${j + 1}.png`);
         const imageUrls = await uploadDataUrls(c.slideUrls, names);
-        const res = await fetch(`${BASE}/api/scheduler/posts`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            presetId: c.presetId,
-            postType: "carousel",
-            content: {
-              imageUrls,
-              caption: c.caption || "",
-              title: c.name.slice(0, 80) || `Seamless ${i + 1}`,
-              platforms: ["instagram", "facebook"],
-              musicTrack: c.track || undefined,
-            },
-            scheduledAt: new Date(`${c.date}T${c.time}`).toISOString(),
-          }),
+        const r = await fetch(`${BASE}/api/scheduler/posts`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ presetId: c.presetId, postType: "carousel", content: { imageUrls, caption: c.caption || "", title: (c.row.slide1_hook || c.name).slice(0, 80), platforms: ["instagram", "facebook"], musicTrack: c.track || undefined }, scheduledAt: new Date(`${c.date}T${c.time}`).toISOString() }),
         });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: "Failed" }));
-          throw new Error(`${c.name}: ${err.error}`);
-        }
+        if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(`${c.name}: ${err.error}`); }
       }
       toast.success(`${ready.length} seamless carousel${ready.length !== 1 ? "s" : ""} queued.`, { id: tid });
-    } catch (e: any) {
-      toast.error(e?.message || "Scheduling failed", { id: tid });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function normDate(v: string): string {
-    const x = (v || "").trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(x)) return x;
-    const m = x.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
-    if (m) { let y = m[3]; if (y.length === 2) y = "20" + y; return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`; }
-    return x;
-  }
-  function normTime(v: string): string {
-    const x = (v || "").trim();
-    const m = x.match(/^(\d{1,2}):(\d{2})/);
-    return m ? `${m[1].padStart(2, "0")}:${m[2]}` : x;
-  }
-  function importCsv(file: File) {
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (res: any) => {
-        const rows = (res.data || []) as any[];
-        const key = (r: any, ...names: string[]) => {
-          for (const k of Object.keys(r)) { if (names.includes(k.trim().toLowerCase())) return r[k]; }
-          return "";
-        };
-        setCarousels((prev) => prev.map((c, i) => {
-          const r = rows[i];
-          if (!r) return c;
-          const clientName = String(key(r, "client", "clinic", "account") || "").trim();
-          const preset = presets.find((p) => p.name.trim().toLowerCase() === clientName.toLowerCase());
-          const cap = key(r, "caption");
-          const dt = key(r, "date");
-          const tm = key(r, "time");
-          return {
-            ...c,
-            caption: cap !== "" ? cap : c.caption,
-            date: dt ? normDate(dt) : c.date,
-            time: tm ? normTime(tm) : c.time,
-            presetId: preset ? preset.id : c.presetId,
-          };
-        }));
-        toast.success(`Imported ${Math.min(rows.length, prev_len())} row(s).`);
-      },
-      error: () => toast.error("Could not read that CSV."),
-    });
-  }
-  const prev_len = () => carousels.length;
-  function downloadTemplate() {
-    const csv = "client,caption,date,time\nTweaked By Helen,\"Your caption here\",2026-07-10,10:00\nNova Aesthetics,\"Another caption\",2026-07-11,18:00\n";
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    a.download = "seamless-schedule-template.csv";
-    a.click();
+    } catch (e: any) { toast.error(e?.message || "Scheduling failed", { id: tid }); } finally { setBusy(false); }
   }
 
   return (
     <div className="min-h-[100dvh] w-full bg-background text-foreground">
       <header className="border-b border-border/40 px-6 py-5">
         <h1 className="text-2xl font-bold">Seamless Carousels</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Drop your wide strips, choose 2 to 5 slides each, and it cuts them into perfect seamless slides ready to schedule.
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">Drop wide strips, cut into 2 to 5 slides, then drop your usual CSV to lay text over the top and schedule the lot. Same as the bulk carousel, just with seamless backgrounds.</p>
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8">
@@ -272,30 +208,23 @@ export default function SeamlessBulk() {
             <label className="block border-2 border-dashed border-border/50 rounded-2xl p-10 text-center cursor-pointer hover:border-pink-500/60 transition-colors">
               <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { onFiles(e.target.files); e.currentTarget.value = ""; }} />
               <p className="text-lg font-medium">Drop your wide strips here</p>
-              <p className="text-sm text-muted-foreground mt-1">Each strip is one carousel. e.g. 4320 x 1440 for 4 slides.</p>
+              <p className="text-sm text-muted-foreground mt-1">One strip per carousel. e.g. 4320 x 1440 for 4 slides.</p>
             </label>
-
             {strips.length > 0 && (
               <div className="space-y-3">
                 {strips.map((s) => (
                   <div key={s.id} className="flex items-center gap-4 rounded-xl border border-border/40 p-3">
                     <img src={s.url} alt="" className="h-16 w-40 object-cover rounded-md bg-black/30" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{s.file.name}</p>
-                      <p className="text-xs text-muted-foreground">{s.width} x {s.height} px</p>
-                    </div>
-                    <label className="text-sm flex items-center gap-2">
-                      Slides
-                      <select value={s.slides} onChange={(e) => setStripSlides(s.id, Number(e.target.value))} className="bg-white/5 border border-border/50 rounded-md px-2 py-1">
+                    <div className="flex-1 min-w-0"><p className="text-sm font-medium truncate">{s.file.name}</p><p className="text-xs text-muted-foreground">{s.width} x {s.height} px</p></div>
+                    <label className="text-sm flex items-center gap-2">Slides
+                      <select value={s.slides} onChange={(e) => setStrips((p) => p.map((x) => x.id === s.id ? { ...x, slides: Number(e.target.value) } : x))} className="bg-white/5 border border-border/50 rounded-md px-2 py-1">
                         {[2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
                       </select>
                     </label>
-                    <button onClick={() => removeStrip(s.id)} className="text-muted-foreground hover:text-foreground px-2">✕</button>
+                    <button onClick={() => setStrips((p) => p.filter((x) => x.id !== s.id))} className="text-muted-foreground hover:text-foreground px-2">✕</button>
                   </div>
                 ))}
-                <button onClick={cutAll} disabled={busy} className="px-6 py-3 rounded-full bg-pink-500 text-white font-semibold disabled:opacity-40 hover:bg-pink-400 transition-colors">
-                  {busy ? "Cutting…" : `Cut ${strips.length} strip${strips.length !== 1 ? "s" : ""} into slides`}
-                </button>
+                <button onClick={cutAll} disabled={busy} className="px-6 py-3 rounded-full bg-pink-500 text-white font-semibold disabled:opacity-40 hover:bg-pink-400 transition-colors">{busy ? "Cutting…" : `Cut ${strips.length} strip${strips.length !== 1 ? "s" : ""} into slides`}</button>
               </div>
             )}
           </div>
@@ -307,51 +236,30 @@ export default function SeamlessBulk() {
               <button onClick={() => setPhase("upload")} className="text-sm text-muted-foreground hover:text-foreground">← Back to strips</button>
               <div className="flex gap-3 flex-wrap">
                 <button onClick={downloadTemplate} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">CSV template</button>
-                <label className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm cursor-pointer">
-                  Import captions + schedule
-                  <input type="file" accept=".csv" className="hidden" onChange={(e) => { if (e.target.files?.[0]) importCsv(e.target.files[0]); e.currentTarget.value = ""; }} />
-                </label>
+                <label className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm cursor-pointer">Import text + schedule<input type="file" accept=".csv" className="hidden" onChange={(e) => { if (e.target.files?.[0]) importCsv(e.target.files[0]); e.currentTarget.value = ""; }} /></label>
                 <button onClick={downloadZip} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Download all (ZIP)</button>
-                <button onClick={scheduleAll} disabled={busy} className="px-5 py-2 rounded-lg bg-pink-500 text-white font-semibold text-sm disabled:opacity-40 hover:bg-pink-400">
-                  {busy ? "Working…" : "Send to scheduler"}
-                </button>
+                <button onClick={scheduleAll} disabled={busy} className="px-5 py-2 rounded-lg bg-pink-500 text-white font-semibold text-sm disabled:opacity-40 hover:bg-pink-400">{busy ? "Working…" : "Send to scheduler"}</button>
               </div>
             </div>
-
             {carousels.map((c) => (
               <div key={c.id} className="rounded-2xl border border-border/40 p-4 space-y-3">
                 <div className="flex gap-1 overflow-x-auto">
-                  {c.slideUrls.map((du, si) => (
-                    <img key={si} src={du} alt={`slide ${si + 1}`} className="h-40 rounded object-cover shrink-0" style={{ aspectRatio: "3/4" }} />
-                  ))}
+                  {c.slideUrls.map((du, si) => <img key={si} src={du} alt={`slide ${si + 1}`} className="h-40 rounded object-cover shrink-0" style={{ aspectRatio: "3/4" }} />)}
                 </div>
                 <div className="grid sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">Client</label>
-                    <select value={c.presetId ?? ""} onChange={(e) => updateCarousel(c.id, { presetId: e.target.value ? Number(e.target.value) : null })} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2">
-                      <option value="">Select a client…</option>
-                      {presets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  <div><label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">Client</label>
+                    <select value={c.presetId ?? ""} onChange={(e) => update(c.id, { presetId: e.target.value ? Number(e.target.value) : null })} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2">
+                      <option value="">Select a client…</option>{presets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">Date</label>
-                      <input type="date" value={c.date} onChange={(e) => updateCarousel(c.id, { date: e.target.value })} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2" />
-                    </div>
-                    <div>
-                      <label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">Time</label>
-                      <input type="time" value={c.time} onChange={(e) => updateCarousel(c.id, { time: e.target.value })} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2" />
-                    </div>
+                    <div><label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">Date</label><input type="date" value={c.date} onChange={(e) => update(c.id, { date: e.target.value })} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2" /></div>
+                    <div><label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">Time</label><input type="time" value={c.time} onChange={(e) => update(c.id, { time: e.target.value })} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2" /></div>
                   </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">Caption</label>
-                    <textarea value={c.caption} onChange={(e) => updateCarousel(c.id, { caption: e.target.value })} rows={2} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2" placeholder="Write the caption…" />
-                  </div>
+                  <div className="sm:col-span-2"><label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">Caption</label><textarea value={c.caption} onChange={(e) => update(c.id, { caption: e.target.value })} rows={2} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2" placeholder="Caption…" /></div>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <button onClick={() => setMusicCarouselId(c.id)} className={`px-3 py-1.5 rounded-lg border text-sm ${c.track ? "border-green-500/50 text-green-300" : "border-border/50 hover:border-pink-500/60"}`}>
-                    🎵 {c.track ? c.track.name.slice(0, 24) : "Add music"}
-                  </button>
+                  <button onClick={() => setMusicId(c.id)} className={`px-3 py-1.5 rounded-lg border text-sm ${c.track ? "border-green-500/50 text-green-300" : "border-border/50 hover:border-pink-500/60"}`}>🎵 {c.track ? c.track.name.slice(0, 24) : "Add music"}</button>
                   <button onClick={() => removeCarousel(c.id)} className="text-sm text-red-300 hover:text-red-200 ml-auto">Delete this carousel</button>
                 </div>
               </div>
@@ -360,12 +268,7 @@ export default function SeamlessBulk() {
         )}
       </main>
 
-      <MusicPickerModal
-        open={musicCarouselId !== null}
-        onClose={() => setMusicCarouselId(null)}
-        selectedTrack={musicCarouselId ? (carousels.find((c) => c.id === musicCarouselId)?.track ?? null) : null}
-        onSelect={(t) => { if (musicCarouselId) updateCarousel(musicCarouselId, { track: t }); setMusicCarouselId(null); }}
-      />
+      <MusicPickerModal open={musicId !== null} onClose={() => setMusicId(null)} selectedTrack={musicId ? (carousels.find((c) => c.id === musicId)?.track ?? null) : null} onSelect={(t) => { if (musicId) update(musicId, { track: t }); setMusicId(null); }} />
     </div>
   );
 }
