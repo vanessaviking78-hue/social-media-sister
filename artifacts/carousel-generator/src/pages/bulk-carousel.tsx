@@ -145,7 +145,8 @@ function renderHookLine(
   heroColor: string,
 ) {
   if (!heroWord) {
-    ctx.fillStyle = normalColor;
+    // No single word starred with |pipes| -> paint the whole hook in the Hero Word Colour.
+    ctx.fillStyle = heroColor;
     ctx.fillText(line, cx, y);
     return;
   }
@@ -826,7 +827,7 @@ export default function BulkCarousel() {
   const logoImgRef = useRef<HTMLImageElement | null>(null);
   const [lineSpacing, setLineSpacing] = useState(1.2);
   const lineSpacingRef = useRef(1.2);
-  const [heroWordColor, setHeroWordColor] = useState("#C4879A");
+  const [heroWordColor, setHeroWordColor] = useState("#ffffff");
   const heroWordColorRef = useRef("#C4879A");
   const [subtitleColor, setSubtitleColor] = useState("#C4879A");
   const subtitleColorRef = useRef("#C4879A");
