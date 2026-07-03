@@ -2,6 +2,7 @@ import { useState } from "react";
 import { usePresets } from "@/lib/use-presets";
 import { MusicPickerModal, type MusicTrack } from "@/components/music-picker-modal";
 import JSZip from "jszip";
+import Papa from "papaparse";
 import { toast } from "sonner";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -204,6 +205,58 @@ export default function SeamlessBulk() {
     }
   }
 
+  function normDate(v: string): string {
+    const x = (v || "").trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(x)) return x;
+    const m = x.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+    if (m) { let y = m[3]; if (y.length === 2) y = "20" + y; return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`; }
+    return x;
+  }
+  function normTime(v: string): string {
+    const x = (v || "").trim();
+    const m = x.match(/^(\d{1,2}):(\d{2})/);
+    return m ? `${m[1].padStart(2, "0")}:${m[2]}` : x;
+  }
+  function importCsv(file: File) {
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (res: any) => {
+        const rows = (res.data || []) as any[];
+        const key = (r: any, ...names: string[]) => {
+          for (const k of Object.keys(r)) { if (names.includes(k.trim().toLowerCase())) return r[k]; }
+          return "";
+        };
+        setCarousels((prev) => prev.map((c, i) => {
+          const r = rows[i];
+          if (!r) return c;
+          const clientName = String(key(r, "client", "clinic", "account") || "").trim();
+          const preset = presets.find((p) => p.name.trim().toLowerCase() === clientName.toLowerCase());
+          const cap = key(r, "caption");
+          const dt = key(r, "date");
+          const tm = key(r, "time");
+          return {
+            ...c,
+            caption: cap !== "" ? cap : c.caption,
+            date: dt ? normDate(dt) : c.date,
+            time: tm ? normTime(tm) : c.time,
+            presetId: preset ? preset.id : c.presetId,
+          };
+        }));
+        toast.success(`Imported ${Math.min(rows.length, prev_len())} row(s).`);
+      },
+      error: () => toast.error("Could not read that CSV."),
+    });
+  }
+  const prev_len = () => carousels.length;
+  function downloadTemplate() {
+    const csv = "client,caption,date,time\nTweaked By Helen,\"Your caption here\",2026-07-10,10:00\nNova Aesthetics,\"Another caption\",2026-07-11,18:00\n";
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = "seamless-schedule-template.csv";
+    a.click();
+  }
+
   return (
     <div className="min-h-[100dvh] w-full bg-background text-foreground">
       <header className="border-b border-border/40 px-6 py-5">
@@ -252,7 +305,12 @@ export default function SeamlessBulk() {
           <div className="space-y-6">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <button onClick={() => setPhase("upload")} className="text-sm text-muted-foreground hover:text-foreground">← Back to strips</button>
-              <div className="flex gap-3">
+              <div className="flex gap-3 flex-wrap">
+                <button onClick={downloadTemplate} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">CSV template</button>
+                <label className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm cursor-pointer">
+                  Import captions + schedule
+                  <input type="file" accept=".csv" className="hidden" onChange={(e) => { if (e.target.files?.[0]) importCsv(e.target.files[0]); e.currentTarget.value = ""; }} />
+                </label>
                 <button onClick={downloadZip} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Download all (ZIP)</button>
                 <button onClick={scheduleAll} disabled={busy} className="px-5 py-2 rounded-lg bg-pink-500 text-white font-semibold text-sm disabled:opacity-40 hover:bg-pink-400">
                   {busy ? "Working…" : "Send to scheduler"}
