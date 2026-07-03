@@ -4,6 +4,15 @@ import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageS
 
 const TOOLS = [
   {
+    href: "/about-me-studio",
+    icon: User,
+    name: "About Me Studio",
+    description: "Upload a photo, it removes the background over a blurred version and lays your title, phrases and teaser on top.",
+    color: "from-rose-500/20 to-rose-500/5",
+    border: "hover:border-rose-500/50",
+    iconColor: "text-rose-400",
+  },
+  {
     href: "/seamless-bulk",
     icon: Layers,
     name: "Seamless Carousels",
