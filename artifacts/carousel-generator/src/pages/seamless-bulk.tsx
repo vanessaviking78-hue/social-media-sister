@@ -10,6 +10,7 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const SLIDE_W = 1080;
 const SLIDE_H = 1440;
 const EMPTY_ROW: CsvRow = { slide1_hook: "", slide1_subtitle: "", slide2_body: "", slide3_body: "", slide4_cta: "" };
+const DEFAULT_PRESET = { pageColor: "#000000", overlayColor: "rgba(0,0,0,0)", textColor: "#ffffff", cornerColor: "#ffffff", accentColor: "#ffffff" } as unknown as ClientPreset;
 
 type Strip = { id: string; file: File; url: string; width: number; height: number; slides: number };
 type Carousel = {
@@ -48,14 +49,15 @@ function accentOf(p: ClientPreset | null): string {
 }
 
 async function buildSlides(raw: string[], row: CsvRow, preset: ClientPreset | null): Promise<string[]> {
-  if (!preset || !rowHasText(row)) return raw;
+  if (!rowHasText(row)) return raw;
+  const p = preset || DEFAULT_PRESET;
   await document.fonts.ready;
   const blocks = makeBlocks(row);
   const sub = blocks.find((b) => b.id === "subtitle");
   const hook = blocks.find((b) => b.id === "hook");
   if (sub) sub.y = computeTuckedSubtitleY(row.slide1_hook, row.slide1_subtitle, hook, sub);
   const accent = accentOf(preset);
-  const overlay = (preset as any).overlayColor || "rgba(0,0,0,0.35)";
+  const overlay = (p as any).overlayColor || "rgba(0,0,0,0)";
   const out: string[] = [];
   for (let i = 0; i < raw.length; i++) {
     if (i + 1 > 4) { out.push(raw[i]); continue; } // slides beyond 4 stay clean
@@ -63,7 +65,7 @@ async function buildSlides(raw: string[], row: CsvRow, preset: ClientPreset | nu
     const n = (i + 1) as 1 | 2 | 3 | 4;
     const cover = n === 1 ? img : null;
     const body = n === 1 ? null : img;
-    out.push(renderSlideCanvas(n, blocks, cover, body, null, preset, SCALE, false, 1.2, accent, "#ffffff", overlay, 0));
+    out.push(renderSlideCanvas(n, blocks, cover, body, null, p, SCALE, false, 1.2, accent, "#ffffff", overlay, 0));
   }
   return out;
 }
@@ -161,6 +163,12 @@ export default function SeamlessBulk() {
   }
 
   function update(id: string, patch: Partial<Carousel>) { setCarousels((p) => p.map((c) => (c.id === id ? { ...c, ...patch } : c))); }
+  async function changeClient(id: string, presetId: number | null) {
+    const preset = presets.find((p) => p.id === presetId) || null;
+    const c = carousels.find((x) => x.id === id);
+    update(id, { presetId });
+    if (c) { const slideUrls = await buildSlides(c.raw, c.row, preset); update(id, { presetId, slideUrls }); }
+  }
   function removeCarousel(id: string) { setCarousels((p) => p.filter((c) => c.id !== id)); }
 
   async function downloadZip() {
@@ -248,7 +256,7 @@ export default function SeamlessBulk() {
                 </div>
                 <div className="grid sm:grid-cols-2 gap-3">
                   <div><label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">Client</label>
-                    <select value={c.presetId ?? ""} onChange={(e) => update(c.id, { presetId: e.target.value ? Number(e.target.value) : null })} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2">
+                    <select value={c.presetId ?? ""} onChange={(e) => changeClient(c.id, e.target.value ? Number(e.target.value) : null)} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2">
                       <option value="">Select a client…</option>{presets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                     </select>
                   </div>
