@@ -38,6 +38,7 @@ import memeRouter from "./meme";
 import hookImageRouter from "./hook-image";
 import notifyRouter from "./notify";
 import submissionsRouter from "./submissions";
+import showcaseRouter from "./showcase";
 import toolsRouter from "./tools";
 
 const router: IRouter = Router();
@@ -82,5 +83,6 @@ router.use(canvaRouter);
 router.use(waitlistRouter);
 router.use(approvalBundlesRouter);
 router.use(contentGeneratorRouter);
+router.use(showcaseRouter);
 
 export default router;
