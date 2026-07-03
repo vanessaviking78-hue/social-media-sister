@@ -852,4 +852,25 @@ router.post("/about-me/generate-caption", async (req, res) => {
   }
 });
 
+router.post("/about-me/remove-bg", async (req, res) => {
+  try {
+    const { imageUrl } = req.body as { imageUrl?: string };
+    const falKey = process.env.FAL_KEY;
+    if (!falKey) { res.status(500).json({ error: "FAL_KEY not set — add it in Settings to enable background removal." }); return; }
+    if (!imageUrl) { res.status(400).json({ error: "imageUrl required" }); return; }
+    const r = await fetch("https://fal.run/fal-ai/imageutils/rembg", {
+      method: "POST",
+      headers: { Authorization: `Key ${falKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ image_url: imageUrl }),
+    });
+    const d = (await r.json()) as any;
+    if (!r.ok) { res.status(500).json({ error: d?.detail || d?.error || `Background removal failed (${r.status})` }); return; }
+    const url = d?.image?.url || d?.images?.[0]?.url;
+    if (!url) { res.status(500).json({ error: "No cut-out image returned." }); return; }
+    res.json({ url });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || "Background removal error" });
+  }
+});
+
 export default router;
