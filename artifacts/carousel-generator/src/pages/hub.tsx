@@ -94,15 +94,6 @@ const TOOLS = [
     iconColor: "text-violet-400",
   },
   {
-    href: "/about-me",
-    icon: User,
-    name: "About Me",
-    description: "Upload your photo, remove the background and build a doodle-style About Me post.",
-    color: "from-rose-500/20 to-rose-500/5",
-    border: "hover:border-rose-500/50",
-    iconColor: "text-rose-400",
-  },
-  {
     href: "/seamless-carousel",
     icon: Grid,
     name: "Seamless Carousel",
