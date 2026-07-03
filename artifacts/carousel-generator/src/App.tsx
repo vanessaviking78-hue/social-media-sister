@@ -17,6 +17,7 @@ import Approval from "@/pages/approval";
 import ApprovePublic from "@/pages/approve-public";
 import ClientPortal from "@/pages/client-portal";
 import ShowcaseBuilder from "@/pages/showcase-builder";
+import SeamlessBulk from "@/pages/seamless-bulk";
 import ShowcasePlayer from "@/pages/showcase-player";
 import MetaOAuthResult from "@/pages/meta-oauth-result";
 import Reels from "@/pages/reels";
@@ -122,6 +123,7 @@ function ProtectedRouter() {
       <Route path="/approval-bundles" component={ApprovalBundles} />
       <Route path="/content-generator" component={ContentGenerator} />
       <Route path="/showcase-builder" component={ShowcaseBuilder} />
+      <Route path="/seamless-bulk" component={SeamlessBulk} />
       <Route component={NotFound} />
     </Switch>
   );
