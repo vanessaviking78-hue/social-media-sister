@@ -485,9 +485,10 @@ type EditorProps = {
   overlayAlpha: number;
   onSave: (blocks: Block[]) => void;
   onClose: () => void;
+  slideBackgrounds?: (HTMLImageElement | null)[];
 };
 
-function SlideEditorModal({ item, preset, logoImg, heroWordColor, subtitleColor, overlayColor, overlayAlpha, onSave, onClose }: EditorProps) {
+export function SlideEditorModal({ item, preset, logoImg, heroWordColor, subtitleColor, overlayColor, overlayAlpha, onSave, onClose, slideBackgrounds }: EditorProps) {
   const [activeSlide, setActiveSlide] = useState<1|2|3|4>(1);
   const [blocks, setBlocks] = useState<Block[]>(() => item.blocks.map(b => ({ ...b })));
   const [dragging, setDragging] = useState<{
@@ -501,11 +502,12 @@ function SlideEditorModal({ item, preset, logoImg, heroWordColor, subtitleColor,
   const containerRef = useRef<HTMLDivElement>(null);
 
   const bgUrls = useMemo(() =>
-    ([1,2,3,4] as const).map(n =>
-      renderSlideCanvas(n, blocks, item.coverImg, item.bodyImg, logoImg, preset, 1, true, 1.2, undefined, undefined, overlayColor, overlayAlpha)
-    ),
+    ([1,2,3,4] as const).map(n => {
+      const bg = slideBackgrounds ? (slideBackgrounds[n - 1] ?? null) : (n === 1 ? item.coverImg : item.bodyImg);
+      return renderSlideCanvas(n, blocks, n === 1 ? bg : null, n === 1 ? null : bg, logoImg, preset, 1, true, 1.2, undefined, undefined, overlayColor, overlayAlpha);
+    }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [item.coverImg, item.bodyImg, logoImg, preset.pageColor, preset.overlayColor, overlayColor, overlayAlpha]
+  [item.coverImg, item.bodyImg, logoImg, preset.pageColor, preset.overlayColor, overlayColor, overlayAlpha, slideBackgrounds]
   );
 
   const activeBlockIds = SLIDE_BLOCK_IDS[activeSlide];
