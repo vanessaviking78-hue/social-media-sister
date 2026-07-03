@@ -31,15 +31,17 @@ type ShowcaseData = {
   carousels: string[][];
   closingLine?: string;
   clientName?: string;
+  ctaUrl?: string;
 };
 
 router.post("/showcase", async (req: Request, res: Response) => {
   try {
     await ensureTable();
-    const { title, clientName, carousels } = req.body as {
+    const { title, clientName, carousels, ctaUrl } = req.body as {
       title?: string;
       clientName?: string;
       carousels?: string[][];
+      ctaUrl?: string;
     };
     if (!Array.isArray(carousels) || carousels.length === 0) {
       res.status(400).json({ error: "At least one carousel is required." });
@@ -57,6 +59,10 @@ router.post("/showcase", async (req: Request, res: Response) => {
       carousels: clean,
       closingLine: "This is how your work would look if I was looking after you",
       clientName: (clientName || "").slice(0, 120) || undefined,
+      ctaUrl: (() => {
+        const u = (ctaUrl || "").trim();
+        return /^(https?:\/\/|mailto:)/i.test(u) ? u.slice(0, 400) : undefined;
+      })(),
     };
     const token = randomBytes(9).toString("hex");
     await db.execute(sql`
