@@ -18,6 +18,7 @@ function fileToDataUrl(file: File): Promise<string> {
 export default function ShowcaseBuilder() {
   const [title, setTitle] = useState("");
   const [clientName, setClientName] = useState("");
+  const [cta, setCta] = useState("");
   const [grid, setGrid] = useState<Slot[][]>(
     Array.from({ length: CAROUSELS }, () => Array.from({ length: SLIDES }, () => ({})))
   );
@@ -92,7 +93,7 @@ export default function ShowcaseBuilder() {
       const resp = await fetch(`${BASE}/api/showcase`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, clientName, carousels }),
+        body: JSON.stringify({ title, clientName, carousels, ctaUrl: cta }),
       });
       const d = await resp.json();
       if (!resp.ok || !d.token) throw new Error(d.error || "Could not create showcase");
@@ -144,8 +145,16 @@ export default function ShowcaseBuilder() {
               className="w-full bg-white/5 border border-white/15 rounded-lg px-3 py-2 outline-none focus:border-pink-500"
             />
           </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs uppercase tracking-widest text-white/40 mb-1">"Work with me" button link (optional)</label>
+            <input
+              value={cta}
+              onChange={(e) => setCta(e.target.value)}
+              placeholder="Your Instagram or booking page. Leave blank and it defaults to emailing you."
+              className="w-full bg-white/5 border border-white/15 rounded-lg px-3 py-2 outline-none focus:border-pink-500"
+            />
+          </div>
         </div>
-
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {grid.map((row, ci) => (
             <div key={ci} className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">

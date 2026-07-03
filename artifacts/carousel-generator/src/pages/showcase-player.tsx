@@ -9,6 +9,7 @@ type Showcase = {
   carousels: string[][];
   closingLine?: string;
   clientName?: string;
+  ctaUrl?: string;
 };
 
 type Frame = { url: string; carousel: number; slide: number; isCover: boolean };
@@ -134,10 +135,18 @@ export default function ShowcasePlayer({ token }: { token: string }) {
             </p>
             {data.clientName && <p className="text-white/40 mt-2">{data.clientName}</p>}
           </div>
-          <div className="flex items-center justify-center gap-5 mt-8">
+          <div className="flex flex-col items-center gap-3 mt-8">
+            <a
+              href={data.ctaUrl || "mailto:vanessa@thecybersuite.com"}
+              target="_blank"
+              rel="noreferrer"
+              className="px-8 py-4 rounded-full bg-pink-500 text-white text-lg font-semibold hover:bg-pink-400 transition-colors"
+            >
+              Work with me →
+            </a>
             <button
               onClick={start}
-              className="px-6 py-3 rounded-full border border-white/25 text-white/80 hover:border-pink-500 hover:text-white transition-colors"
+              className="px-6 py-2.5 rounded-full border border-white/25 text-white/70 hover:border-pink-500 hover:text-white transition-colors text-sm"
             >
               ↺ Replay
             </button>
