@@ -4,6 +4,15 @@ import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageS
 
 const TOOLS = [
   {
+    href: "/seamless-bulk",
+    icon: Layers,
+    name: "Seamless Carousels",
+    description: "Drop wide strips, pick 2 to 5 slides, and it cuts them into seamless slides ready to schedule.",
+    color: "from-fuchsia-500/20 to-fuchsia-500/5",
+    border: "hover:border-fuchsia-500/50",
+    iconColor: "text-fuchsia-400",
+  },
+  {
     href: "/showcase-builder",
     icon: Play,
     name: "Sample Showcase",
