@@ -169,6 +169,17 @@ export default function SeamlessBulk() {
     update(id, { presetId });
     if (c) { const slideUrls = await buildSlides(c.raw, c.row, preset); update(id, { presetId, slideUrls }); }
   }
+  function updateRow(id: string, field: keyof CsvRow, value: string) {
+    setCarousels((p) => p.map((c) => (c.id === id ? { ...c, row: { ...c.row, [field]: value } } : c)));
+  }
+  async function rerender(id: string) {
+    const c = carousels.find((x) => x.id === id);
+    if (!c) return;
+    const preset = presets.find((p) => p.id === c.presetId) || null;
+    setBusy(true);
+    try { const slideUrls = await buildSlides(c.raw, c.row, preset); update(id, { slideUrls }); }
+    finally { setBusy(false); }
+  }
   function removeCarousel(id: string) { setCarousels((p) => p.filter((c) => c.id !== id)); }
 
   async function downloadZip() {
@@ -251,8 +262,24 @@ export default function SeamlessBulk() {
             </div>
             {carousels.map((c) => (
               <div key={c.id} className="rounded-2xl border border-border/40 p-4 space-y-3">
-                <div className="flex gap-1 overflow-x-auto">
-                  {c.slideUrls.map((du, si) => <img key={si} src={du} alt={`slide ${si + 1}`} className="h-40 rounded object-cover shrink-0" style={{ aspectRatio: "3/4" }} />)}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                  {c.slideUrls.map((du, si) => (
+                    <div key={si} className="relative">
+                      <img src={du} alt={`slide ${si + 1}`} className="w-full rounded-lg object-cover border border-white/10" style={{ aspectRatio: "3/4" }} />
+                      <span className="absolute top-1.5 left-1.5 text-[10px] bg-black/60 text-white/80 rounded px-1.5 py-0.5">Slide {si + 1}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="rounded-xl bg-white/[0.03] border border-border/40 p-3 space-y-2">
+                  <p className="text-xs uppercase tracking-widest text-muted-foreground">Text on the slides</p>
+                  <div className="grid sm:grid-cols-2 gap-2">
+                    <input value={c.row.slide1_hook} onChange={(e) => updateRow(c.id, "slide1_hook", e.target.value)} placeholder="Slide 1 hook" className="bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm" />
+                    <input value={c.row.slide1_subtitle} onChange={(e) => updateRow(c.id, "slide1_subtitle", e.target.value)} placeholder="Slide 1 subtitle" className="bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm" />
+                    <input value={c.row.slide2_body} onChange={(e) => updateRow(c.id, "slide2_body", e.target.value)} placeholder="Slide 2 text" className="bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm" />
+                    <input value={c.row.slide3_body} onChange={(e) => updateRow(c.id, "slide3_body", e.target.value)} placeholder="Slide 3 text" className="bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm" />
+                    <input value={c.row.slide4_cta} onChange={(e) => updateRow(c.id, "slide4_cta", e.target.value)} placeholder="Slide 4 text / CTA" className="bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm sm:col-span-2" />
+                  </div>
+                  <button onClick={() => rerender(c.id)} disabled={busy} className="px-4 py-2 rounded-lg bg-white text-black text-sm font-semibold disabled:opacity-40">Update slides</button>
                 </div>
                 <div className="grid sm:grid-cols-2 gap-3">
                   <div><label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">Client</label>
