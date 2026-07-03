@@ -857,6 +857,8 @@ export default function BulkCarousel() {
   const [scheduling, setScheduling] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
+  const [itemTracks, setItemTracks] = useState<Record<string, MusicTrack>>({});
+  const [musicItemId, setMusicItemId] = useState<string | null>(null);
   const [musicPickerOpen, setMusicPickerOpen] = useState(false);
   const [dragCtx, setDragCtx] = useState<{ list: "cover" | "body"; index: number } | null>(null);
 
@@ -1178,7 +1180,7 @@ export default function BulkCarousel() {
               imageUrls, caption: entry.caption || "",
               title: item.hook.slice(0, 80) || `Carousel ${item.rowNum}`,
               platforms: entry.platforms,
-              musicTrack: musicTrack || undefined,
+              musicTrack: itemTracks[item.id] || musicTrack || undefined,
             },
             scheduledAt: new Date(`${entry.date}T${entry.time}`).toISOString(),
           }),
@@ -1451,6 +1453,15 @@ export default function BulkCarousel() {
                   </Button>
                   <Button variant="outline" size="sm" onClick={goToSchedule}>
                     <CalendarClock className="w-3.5 h-3.5 mr-1.5" />Schedule
+                  </Button>
+                  <Button
+                    variant="outline" size="sm"
+                    onClick={() => setMusicItemId(item.id)}
+                    className={itemTracks[item.id] ? "border-green-500/40 text-green-300 hover:bg-green-950/30" : ""}
+                    title={itemTracks[item.id] ? itemTracks[item.id].name : "Choose a track for this carousel"}
+                  >
+                    <Music className="w-3.5 h-3.5 mr-1.5" />
+                    {itemTracks[item.id] ? itemTracks[item.id].name.slice(0, 14) : "Track"}
                   </Button>
                   <Button
                     variant="outline" size="sm"
@@ -1768,6 +1779,12 @@ export default function BulkCarousel() {
             selectedTrack={musicTrack}
             onSelect={t => setMusicTrack(t)}
           />
+      <MusicPickerModal
+        open={musicItemId !== null}
+        onClose={() => setMusicItemId(null)}
+        selectedTrack={musicItemId ? (itemTracks[musicItemId] || null) : null}
+        onSelect={(t) => { if (musicItemId) { if (t) setItemTracks(prev => ({ ...prev, [musicItemId]: t })); else setItemTracks(prev => { const n = { ...prev }; delete n[musicItemId]; return n; }); } setMusicItemId(null); }}
+      />
         </section>
 
         {/* Step 4: Preview table */}
