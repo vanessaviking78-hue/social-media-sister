@@ -136,7 +136,7 @@ function computeTuckedSubtitleY(hookRaw: string, subRaw: string, hookBlock?: Blo
   if (!ctx) return subBlock?.y ?? DEFAULT_Y;
   const PAD_X = 90;
   const HOOK_SIZE = hookBlock?.fontSize ?? 108;
-  const HOOK_LINE_H = Math.round(HOOK_SIZE * 1.10);
+  const HOOK_LINE_H = Math.round(HOOK_SIZE * 0.9);
   const SUB_SIZE = subBlock?.fontSize ?? 44;
   const SUB_LINE_H = Math.round(SUB_SIZE * 1.40);
   const hookCY = (hookBlock?.y ?? 0.695) * H;
@@ -296,7 +296,7 @@ function renderSlideCanvas(
       const hookRaw     = hookBlock?.text ?? "";
       const subRaw      = subBlock?.text  ?? "";
       const HOOK_SIZE   = hookBlock?.fontSize ?? 108;
-      const HOOK_LINE_H = Math.round(HOOK_SIZE * 1.10);
+      const HOOK_LINE_H = Math.round(HOOK_SIZE * 0.9);
       const SUB_SIZE    = subBlock?.fontSize  ?? 44;
       const SUB_LINE_H  = Math.round(SUB_SIZE  * 1.40);
       const PAD_X       = 90;
@@ -1388,6 +1388,13 @@ export default function BulkCarousel() {
           />
         )}
 
+      <MusicPickerModal
+        open={musicItemId !== null}
+        onClose={() => setMusicItemId(null)}
+        selectedTrack={musicItemId ? (itemTracks[musicItemId] || null) : null}
+        onSelect={(t) => { if (musicItemId) { if (t) setItemTracks(prev => ({ ...prev, [musicItemId]: t })); else setItemTracks(prev => { const n = { ...prev }; delete n[musicItemId]; return n; }); } setMusicItemId(null); }}
+      />
+
         {showApprovalModal && (
           <SendForApprovalModal
             defaultClientName={selectedPreset?.name ?? ""}
@@ -1807,12 +1814,6 @@ export default function BulkCarousel() {
             selectedTrack={musicTrack}
             onSelect={t => setMusicTrack(t)}
           />
-      <MusicPickerModal
-        open={musicItemId !== null}
-        onClose={() => setMusicItemId(null)}
-        selectedTrack={musicItemId ? (itemTracks[musicItemId] || null) : null}
-        onSelect={(t) => { if (musicItemId) { if (t) setItemTracks(prev => ({ ...prev, [musicItemId]: t })); else setItemTracks(prev => { const n = { ...prev }; delete n[musicItemId]; return n; }); } setMusicItemId(null); }}
-      />
         </section>
 
         {/* Step 4: Preview table */}
