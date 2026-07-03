@@ -16,6 +16,8 @@ import Analytics from "@/pages/analytics";
 import Approval from "@/pages/approval";
 import ApprovePublic from "@/pages/approve-public";
 import ClientPortal from "@/pages/client-portal";
+import ShowcaseBuilder from "@/pages/showcase-builder";
+import ShowcasePlayer from "@/pages/showcase-player";
 import MetaOAuthResult from "@/pages/meta-oauth-result";
 import Reels from "@/pages/reels";
 import VideoOverlay from "@/pages/video-overlay";
@@ -119,6 +121,7 @@ function ProtectedRouter() {
       <Route path="/settings" component={Settings} />
       <Route path="/approval-bundles" component={ApprovalBundles} />
       <Route path="/content-generator" component={ContentGenerator} />
+      <Route path="/showcase-builder" component={ShowcaseBuilder} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -129,6 +132,7 @@ function AppContent() {
   const [isApprove, approveParams] = useRoute("/approve/:token");
   const [isPortal, portalParams] = useRoute("/portal/:token");
   const [isSubmit, submitParams] = useRoute("/submit/:token");
+  const [isShowcase, showcaseParams] = useRoute("/showcase/:token");
   const [isMetaOAuth] = useRoute("/oauth/meta/result");
   const [isCanvaOAuth] = useRoute("/oauth/canva/result");
   const [isOnboardSuccess, onboardSuccessParams] = useRoute("/onboard/:token/success");
@@ -161,6 +165,9 @@ function AppContent() {
   }
   if (isSubmit && submitParams?.token) {
     return <SubmitBeforeAfter token={submitParams.token} />;
+  }
+  if (isShowcase && showcaseParams?.token) {
+    return <ShowcasePlayer token={showcaseParams.token} />;
   }
   if (isClientApproval && clientApprovalParams?.token) {
     return <ClientApproval token={clientApprovalParams.token} />;
