@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePresets } from "@/lib/use-presets";
 import { toast } from "sonner";
 
@@ -38,10 +38,20 @@ export default function AboutMeStudio() {
   const [font, setFont] = useState("Bebas Neue");
   const [result, setResult] = useState("");
   const [busy, setBusy] = useState(false);
+  const [logoUrl, setLogoUrl] = useState("");
+
+  useEffect(() => {
+    const id = "aboutme-fonts";
+    if (!document.getElementById(id)) {
+      const l = document.createElement("link"); l.id = id; l.rel = "stylesheet";
+      l.href = "https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Poppins:wght@400;600;700&family=Prata&family=Playfair+Display:wght@400;700&display=swap";
+      document.head.appendChild(l);
+    }
+  }, []);
 
   const preset = presets.find((p) => p.id === presetId) || null;
+  useEffect(() => { const p = presets.find((x) => x.id === presetId) || null; setLogoUrl((p as any)?.logoUrl || ""); /* eslint-disable-next-line */ }, [presetId]);
   const accent = (preset as any)?.accentColor || "#ec4899";
-  const logoUrl = (preset as any)?.logoUrl || "";
 
   async function onPhoto(file: File | null) {
     if (!file) return;
@@ -61,11 +71,25 @@ export default function AboutMeStudio() {
     } catch (e: any) { toast.error(e?.message || "Something went wrong", { id: tid }); } finally { setBusy(false); }
   }
 
+  async function onLogo(file: File | null) {
+    if (!file) return;
+    setBusy(true);
+    const tid = toast.loading("Uploading logo...");
+    try {
+      const base64 = await fileToDataUrl(file);
+      const up = await fetch(BASE + "/api/content/upload-image", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ images: [{ name: "logo.png", base64 }] }) });
+      const ud = await up.json(); const url = ud?.results?.[0]?.url;
+      if (!url) throw new Error("Logo upload failed");
+      setLogoUrl(url); toast.success("Logo added.", { id: tid });
+    } catch (e: any) { toast.error(e?.message || "Logo failed", { id: tid }); } finally { setBusy(false); }
+  }
+
   async function generate() {
     if (!origUrl || !cutoutUrl) { toast.error("Add a photo first."); return; }
     setBusy(true);
     const tid = toast.loading("Building your About Me…");
     try {
+      try { await (document as any).fonts.load("700 60px '" + font + "'"); await (document as any).fonts.load("40px 'Prata'"); } catch {}
       await (document as any).fonts.ready;
       const c = document.createElement("canvas"); c.width = W; c.height = H; const ctx = c.getContext("2d")!;
       const orig = await loadImg(origUrl);
@@ -94,8 +118,18 @@ export default function AboutMeStudio() {
       ctx.textAlign = "center"; ctx.font = `${Math.round(H * 0.028)}px 'Prata', serif`;
       const tLines = wrapLines(ctx, teaser, W * 0.8); let ty = H * 0.92 - ((tLines.length - 1) * H * 0.032) / 2;
       for (const ln of tLines) { glowText(ctx, ln, W / 2, ty, accent, 14); ty += H * 0.032; }
-      // logo top-left
-      if (logoUrl) { try { const lg = await loadImg(logoUrl); const lw = W * 0.16, lh = lg.height * (lw / lg.width); ctx.drawImage(lg, W * 0.05, H * 0.035, lw, lh); } catch {} }
+      // logo, positioned per the client preset
+      if (logoUrl) {
+        try {
+          const lg = await loadImg(logoUrl);
+          const lw = W * 0.18, lh = lg.height * (lw / lg.width);
+          const posn = (preset as any)?.logoPosition || "top-right";
+          let lx = W * 0.05, ly = H * 0.04;
+          if (posn.indexOf("right") >= 0) lx = W - lw - W * 0.05;
+          if (posn.indexOf("bottom") >= 0) ly = H - lh - H * 0.05;
+          if (posn !== "none") ctx.drawImage(lg, lx, ly, lw, lh);
+        } catch {}
+      }
       setResult(c.toDataURL("image/png"));
       toast.success("Done.", { id: tid });
     } catch (e: any) { toast.error(e?.message || "Render failed — the photo host may block editing", { id: tid }); } finally { setBusy(false); }
@@ -126,6 +160,13 @@ export default function AboutMeStudio() {
               <input type="file" accept="image/*" className="hidden" onChange={(e) => { onPhoto(e.target.files?.[0] || null); e.currentTarget.value = ""; }} />
               <p className="text-sm">{cutoutUrl ? "Photo ready — change it" : "Drop a photo of you"}</p>
             </label>
+          </div>
+          <div>
+            <label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">Logo</label>
+            <div className="flex items-center gap-3">
+              <label className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm cursor-pointer">{logoUrl ? "Change logo" : "Add / upload logo"}<input type="file" accept="image/*" className="hidden" onChange={(e) => { onLogo(e.target.files?.[0] || null); e.currentTarget.value = ""; }} /></label>
+              {logoUrl && <img src={logoUrl} alt="logo" className="h-8 object-contain" />}
+            </div>
           </div>
           <div>
             <label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">Font</label>
