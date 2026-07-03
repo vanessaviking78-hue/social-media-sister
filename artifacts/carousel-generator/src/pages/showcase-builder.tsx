@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { MusicPickerModal, type MusicTrack } from "@/components/music-picker-modal";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const CAROUSELS = 6;
@@ -19,6 +20,8 @@ export default function ShowcaseBuilder() {
   const [title, setTitle] = useState("");
   const [clientName, setClientName] = useState("");
   const [cta, setCta] = useState("");
+  const [track, setTrack] = useState<MusicTrack | null>(null);
+  const [musicOpen, setMusicOpen] = useState(false);
   const [grid, setGrid] = useState<Slot[][]>(
     Array.from({ length: CAROUSELS }, () => Array.from({ length: SLIDES }, () => ({})))
   );
@@ -93,7 +96,7 @@ export default function ShowcaseBuilder() {
       const resp = await fetch(`${BASE}/api/showcase`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, clientName, carousels, ctaUrl: cta }),
+        body: JSON.stringify({ title, clientName, carousels, ctaUrl: cta, musicUrl: track?.url, musicName: track ? `${track.name} — ${track.artist}` : undefined }),
       });
       const d = await resp.json();
       if (!resp.ok || !d.token) throw new Error(d.error || "Could not create showcase");
@@ -153,6 +156,25 @@ export default function ShowcaseBuilder() {
               placeholder="Your Instagram or booking page. Leave blank and it defaults to emailing you."
               className="w-full bg-white/5 border border-white/15 rounded-lg px-3 py-2 outline-none focus:border-pink-500"
             />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="block text-xs uppercase tracking-widest text-white/40 mb-1">Background music (optional)</label>
+            <div className="flex items-center gap-3 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setMusicOpen(true)}
+                className="px-4 py-2 rounded-lg border border-white/20 hover:border-pink-500 transition-colors text-sm"
+              >
+                {track ? "Change track" : "Choose a track"}
+              </button>
+              {track && (
+                <span className="text-sm text-white/70 flex items-center gap-2">
+                  🎵 {track.name} <span className="text-white/40">· {track.artist}</span>
+                  <button type="button" onClick={() => setTrack(null)} className="text-white/40 hover:text-white">×</button>
+                </span>
+              )}
+              {!track && <span className="text-sm text-white/30">No music. Plays from your library when a track is picked.</span>}
+            </div>
           </div>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -229,6 +251,12 @@ export default function ShowcaseBuilder() {
           </div>
         )}
       </main>
+      <MusicPickerModal
+        open={musicOpen}
+        onClose={() => setMusicOpen(false)}
+        selectedTrack={track}
+        onSelect={(t) => { setTrack(t); setMusicOpen(false); }}
+      />
     </div>
   );
 }

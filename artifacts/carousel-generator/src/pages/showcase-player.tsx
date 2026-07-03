@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-const MUSIC_URL = `${BASE}/showcase-music.mp3`;
 const COVER_MS = 2200;
 const SLIDE_MS = 1500;
 
@@ -11,6 +10,8 @@ type Showcase = {
   closingLine?: string;
   clientName?: string;
   ctaUrl?: string;
+  musicUrl?: string;
+  musicName?: string;
 };
 
 type Frame = { url: string; carousel: number; slide: number; isCover: boolean };
@@ -24,14 +25,15 @@ export default function ShowcasePlayer({ token }: { token: string }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [muted, setMuted] = useState(false);
 
-  // Create a persistent audio element once (survives phase re-renders).
+  // Create a persistent audio element from the showcase's chosen track.
   useEffect(() => {
-    const a = new Audio(MUSIC_URL);
+    if (!data?.musicUrl) return;
+    const a = new Audio(data.musicUrl);
     a.loop = true;
     a.preload = "auto";
     audioRef.current = a;
     return () => { a.pause(); audioRef.current = null; };
-  }, []);
+  }, [data?.musicUrl]);
 
   function toggleMute() {
     setMuted((m) => {
@@ -143,13 +145,15 @@ export default function ShowcasePlayer({ token }: { token: string }) {
   if (phase === "grid") {
     return (
       <div className="min-h-[100dvh] w-full bg-black text-white flex flex-col items-center justify-center px-4 py-8 relative">
-        <button
-          onClick={toggleMute}
-          className="absolute top-4 left-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-lg"
-          aria-label={muted ? "Unmute" : "Mute"}
-        >
-          {muted ? "🔇" : "🔊"}
-        </button>
+        {data.musicUrl && (
+          <button
+            onClick={toggleMute}
+            className="absolute top-4 left-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-lg"
+            aria-label={muted ? "Unmute" : "Mute"}
+          >
+            {muted ? "🔇" : "🔊"}
+          </button>
+        )}
         <div className="w-full max-w-md">
           <div className="grid grid-cols-3 gap-1">
             {covers.map((url, i) => (
@@ -207,13 +211,15 @@ export default function ShowcasePlayer({ token }: { token: string }) {
           />
         ))}
       </div>
-      <button
-        onClick={toggleMute}
-        className="absolute top-4 left-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-lg"
-        aria-label={muted ? "Unmute" : "Mute"}
-      >
-        {muted ? "🔇" : "🔊"}
-      </button>
+      {data.musicUrl && (
+        <button
+          onClick={toggleMute}
+          className="absolute top-4 left-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-lg"
+          aria-label={muted ? "Unmute" : "Mute"}
+        >
+          {muted ? "🔇" : "🔊"}
+        </button>
+      )}
       <button
         onClick={() => setPhase("grid")}
         className="absolute top-4 right-4 text-white/40 text-xs hover:text-white"
