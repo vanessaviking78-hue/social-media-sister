@@ -280,7 +280,6 @@ function renderSlideCanvas(
       const hookCX = (hookBlock?.x ?? 0.5) * W;
       const hookCY = (hookBlock?.y ?? 0.695) * H;
       const subCX  = (subBlock?.x  ?? 0.5) * W;
-      const subCY  = (subBlock?.y  ?? 0.785) * H;
 
       ctx.textAlign    = "center";
       ctx.textBaseline = "middle";
@@ -311,9 +310,15 @@ function renderSlideCanvas(
         }
       }
 
-      // Subtitle — centred around subCY, accent colour
+      // Subtitle — tucked a consistent gap beneath the hook (unless manually moved)
       if (subLines.length > 0) {
         const totalH = subLines.length * SUB_LINE_H;
+        const SUB_DEFAULT_Y = 0.785;
+        const subMovedY = Math.abs((subBlock?.y ?? SUB_DEFAULT_Y) - SUB_DEFAULT_Y) > 0.001;
+        const hookH = hookLines.length * HOOK_LINE_H;
+        const subCY = subMovedY
+          ? (subBlock?.y ?? SUB_DEFAULT_Y) * H
+          : (hookCY + hookH / 2) + 0.015 * H + totalH / 2;
         ctx.font      = `normal 400 ${SUB_SIZE}px 'Poppins', sans-serif`;
         ctx.fillStyle = subtitleOverride ?? accentColor;
         let y = subCY - totalH / 2 + SUB_LINE_H / 2;
