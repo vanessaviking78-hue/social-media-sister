@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const MUSIC_URL = `${BASE}/showcase-music.mp3`;
 const COVER_MS = 2200;
 const SLIDE_MS = 1500;
 
@@ -20,6 +21,25 @@ export default function ShowcasePlayer({ token }: { token: string }) {
   const [phase, setPhase] = useState<"loading" | "ready" | "playing" | "grid">("loading");
   const [frameIdx, setFrameIdx] = useState(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [muted, setMuted] = useState(false);
+
+  // Create a persistent audio element once (survives phase re-renders).
+  useEffect(() => {
+    const a = new Audio(MUSIC_URL);
+    a.loop = true;
+    a.preload = "auto";
+    audioRef.current = a;
+    return () => { a.pause(); audioRef.current = null; };
+  }, []);
+
+  function toggleMute() {
+    setMuted((m) => {
+      const nm = !m;
+      if (audioRef.current) audioRef.current.muted = nm;
+      return nm;
+    });
+  }
 
   useEffect(() => {
     let alive = true;
@@ -75,6 +95,8 @@ export default function ShowcasePlayer({ token }: { token: string }) {
   function start() {
     setFrameIdx(0);
     setPhase("playing");
+    const a = audioRef.current;
+    if (a) { a.muted = muted; a.play().catch(() => {}); }
   }
 
   if (error) {
@@ -120,7 +142,14 @@ export default function ShowcasePlayer({ token }: { token: string }) {
   // Grid finale
   if (phase === "grid") {
     return (
-      <div className="min-h-[100dvh] w-full bg-black text-white flex flex-col items-center justify-center px-4 py-8">
+      <div className="min-h-[100dvh] w-full bg-black text-white flex flex-col items-center justify-center px-4 py-8 relative">
+        <button
+          onClick={toggleMute}
+          className="absolute top-4 left-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-lg"
+          aria-label={muted ? "Unmute" : "Mute"}
+        >
+          {muted ? "🔇" : "🔊"}
+        </button>
         <div className="w-full max-w-md">
           <div className="grid grid-cols-3 gap-1">
             {covers.map((url, i) => (
@@ -178,6 +207,13 @@ export default function ShowcasePlayer({ token }: { token: string }) {
           />
         ))}
       </div>
+      <button
+        onClick={toggleMute}
+        className="absolute top-4 left-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-lg"
+        aria-label={muted ? "Unmute" : "Mute"}
+      >
+        {muted ? "🔇" : "🔊"}
+      </button>
       <button
         onClick={() => setPhase("grid")}
         className="absolute top-4 right-4 text-white/40 text-xs hover:text-white"
