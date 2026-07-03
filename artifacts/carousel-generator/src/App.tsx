@@ -18,6 +18,7 @@ import ApprovePublic from "@/pages/approve-public";
 import ClientPortal from "@/pages/client-portal";
 import ShowcaseBuilder from "@/pages/showcase-builder";
 import SeamlessBulk from "@/pages/seamless-bulk";
+import AboutMeStudio from "@/pages/about-me-studio";
 import ShowcasePlayer from "@/pages/showcase-player";
 import MetaOAuthResult from "@/pages/meta-oauth-result";
 import Reels from "@/pages/reels";
@@ -124,6 +125,7 @@ function ProtectedRouter() {
       <Route path="/content-generator" component={ContentGenerator} />
       <Route path="/showcase-builder" component={ShowcaseBuilder} />
       <Route path="/seamless-bulk" component={SeamlessBulk} />
+      <Route path="/about-me-studio" component={AboutMeStudio} />
       <Route component={NotFound} />
     </Switch>
   );
