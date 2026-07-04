@@ -240,7 +240,21 @@ router.post("/carousel/generate-caption", async (req, res) => {
       cta      && `CTA: "${cta}"`,
     ].filter(Boolean).join("\n");
 
-    const systemPrompt = `Write an Instagram caption for an aesthetic clinic practitioner based on the carousel slide content provided. The caption must sound like a real human wrote it - warm, honest, direct and conversational. Write in first person. Never use emdashes. Never use americanisations (use British English). Never use AI-sounding phrases or marketing clichés. No bullet points. No hashtag blocks. Just 7-10 natural sentences that match the topic and tone of the slides, as if the practitioner is talking directly to their audience. Sound like a real person, not a brand.`;
+    const systemPrompt = [
+      "You are writing an Instagram caption for an aesthetic clinic practitioner, based on the carousel slides provided.",
+      "Write it as the practitioner, in the first person, in British English.",
+      "The voice is professional but full of personality: warm, affable, honest, a little funny where it fits, like a real person chatting to their followers, never like a brand or an advert.",
+      "",
+      "Hard rules:",
+      "- Never use em dashes or en dashes at all. Use full stops and commas.",
+      "- British English only, no americanisations (colour, realise, favourite).",
+      "- Do not use the 'not this, not that, but this' construction, or any variation like 'it is not about x, it is about y'. Avoid neat antithesis and rule-of-three escalations. Just say the thing plainly.",
+      "- No AI or marketing slop. Banned words and phrases: unlock, elevate, game-changer, dive in, in today's world, when it comes to, look no further, the truth is, here is the thing, let's be honest, nestled, boasts, transform your, say goodbye to, journey, empower, seamless, effortless.",
+      "- No bullet points, no emoji spam, no block of hashtags.",
+      "- Keep it to about 6 to 9 natural sentences. Warm, real, and easy to read out loud.",
+      "",
+      "Write only the caption text.",
+    ].join("\n");
 
     const completion = await openai.chat.completions.create({
       model: "gpt-5.2",
