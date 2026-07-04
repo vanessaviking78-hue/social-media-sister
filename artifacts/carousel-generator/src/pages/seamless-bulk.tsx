@@ -39,17 +39,18 @@ function blocksFromRow(row: CsvRow): Block[] {
 }
 async function renderFromBlocks(raw: string[], imgs: HTMLImageElement[], blocks: Block[], preset: ClientPreset | null): Promise<string[]> {
   const hasText = blocks.some((b) => ((b as any).text || "").trim());
-  if (!hasText) return raw;
-  await document.fonts.ready;
   const p = preset || DEFAULT_PRESET; const accent = "#ffffff"; const overlay = (p as any).overlayColor || "rgba(0,0,0,0)";
   let logoImg: HTMLImageElement | null = null;
   const logoUrl = (p as any)?.logoUrl;
   if (logoUrl) { try { logoImg = await loadImgCors(logoUrl); } catch {} }
+  if (!hasText && !logoImg) return raw;
+  await document.fonts.ready;
   const out: string[] = [];
   for (let i = 0; i < raw.length; i++) {
     if (i + 1 > 4) { out.push(raw[i]); continue; }
     const n = (i + 1) as 1 | 2 | 3 | 4; const img = imgs[i] || null;
-    out.push(renderSlideCanvas(n, blocks, n === 1 ? img : null, n === 1 ? null : img, logoImg, p, SCALE, false, 1.2, accent, "#ffffff", overlay, 0));
+    const blocksForRender = blocks.map((b) => (b.id === "logo" ? { ...b, x: 0.17, y: 0.12, w: 0.26 } : b));
+    out.push(renderSlideCanvas(n, blocksForRender, n === 1 ? img : null, n === 1 ? null : img, logoImg, p, SCALE, false, 1.2, accent, "#ffffff", overlay, 0));
   }
   return out;
 }
@@ -68,6 +69,7 @@ async function uploadDataUrls(dus: string[], names: string[]): Promise<string[]>
 }
 function normDate(v: string) { const x = (v || "").trim(); if (/^\d{4}-\d{2}-\d{2}$/.test(x)) return x; const m = x.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/); if (m) { let y = m[3]; if (y.length === 2) y = "20" + y; return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`; } return x; }
 function normTime(v: string) { const x = (v || "").trim(); const m = x.match(/^(\d{1,2}):(\d{2})/); return m ? `${m[1].padStart(2, "0")}:${m[2]}` : x; }
+function seamlessDate(i: number): string { const first = new Date(`${nextWeekday(WEEKDAY.WED, POST_TIME)}T${POST_TIME}`); const d = new Date(first); d.setDate(d.getDate() + i * 7); const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day = String(d.getDate()).padStart(2, "0"); return `${y}-${m}-${day}`; }
 
 export default function SeamlessBulk() {
   const { presets } = usePresets();
@@ -79,6 +81,7 @@ export default function SeamlessBulk() {
   const [editId, setEditId] = useState<string | null>(null);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [csvParsed, setCsvParsed] = useState<PRow[]>([]);
+  const [batchPresetId, setBatchPresetId] = useState<number | null>(null);
   const [genning, setGenning] = useState(false);
   const [genId, setGenId] = useState<string | null>(null);
   const [editLogo, setEditLogo] = useState<HTMLImageElement | null>(null);
@@ -96,9 +99,14 @@ export default function SeamlessBulk() {
     setBusy(true);
     try {
       const out: Carousel[] = [];
+      const preset = presetFor(batchPresetId);
+      let idx = 0;
       for (const s of strips) {
         const img = await fileToImage(s.file); const raw = cutStrip(img, s.slides); const slideImgs = await Promise.all(raw.map(loadImg));
-        out.push({ id: `c-${Math.random().toString(36).slice(2, 7)}`, name: s.file.name.replace(/\.[^.]+$/, ""), raw, slideImgs, slideUrls: raw, row: { ...EMPTY_ROW }, blocks: blocksFromRow(EMPTY_ROW), presetId: null, caption: "", date: nextWeekday(WEEKDAY.WED, POST_TIME), time: POST_TIME, track: null });
+        const blocks = blocksFromRow(EMPTY_ROW);
+        const slideUrls = await renderFromBlocks(raw, slideImgs, blocks, preset);
+        out.push({ id: `c-${Math.random().toString(36).slice(2, 7)}`, name: s.file.name.replace(/\.[^.]+$/, ""), raw, slideImgs, slideUrls, row: { ...EMPTY_ROW }, blocks, presetId: batchPresetId, caption: "", date: seamlessDate(idx), time: POST_TIME, track: null });
+        idx++;
       }
       setCarousels(out); setPhase("preview");
     } catch (e: any) { toast.error(e?.message || "Cutting failed"); } finally { setBusy(false); }
@@ -121,6 +129,20 @@ export default function SeamlessBulk() {
       setCsvParsed(parsed);
       toast.success(`Loaded ${parsed.length} row(s). Pick a row for each carousel to marry them up.`);
     }, error: () => toast.error("Could not read that CSV.") });
+  }
+
+  async function applyClientToAll(pid: number | null) {
+    setBatchPresetId(pid);
+    const preset = presetFor(pid);
+    setBusy(true);
+    try {
+      const updated = await Promise.all(carousels.map(async (c, i) => {
+        const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, c.blocks, preset);
+        return { ...c, presetId: pid, date: c.date || seamlessDate(i), slideUrls };
+      }));
+      setCarousels(updated);
+      if (pid) toast.success("Client applied to the whole batch, logo and all.");
+    } finally { setBusy(false); }
   }
 
   async function assignRow(id: string, idx: number) {
@@ -250,6 +272,10 @@ export default function SeamlessBulk() {
                     <button onClick={() => setStrips((p) => p.filter((x) => x.id !== s.id))} className="text-muted-foreground hover:text-foreground px-2">✕</button>
                   </div>
                 ))}
+                <div className="w-full flex items-center gap-2">
+                  <label className="text-sm text-muted-foreground shrink-0">Client for this whole upload</label>
+                  <select value={batchPresetId ?? ""} onChange={(e) => setBatchPresetId(e.target.value ? Number(e.target.value) : null)} className="flex-1 bg-white/5 border border-pink-500/40 rounded-md px-3 py-2 text-sm"><option value="">Select a client…</option>{presets.map((pp) => <option key={pp.id} value={pp.id}>{pp.name}</option>)}</select>
+                </div>
                 <button onClick={cutAll} disabled={busy} className="px-6 py-3 rounded-full bg-pink-500 text-white font-semibold disabled:opacity-40 hover:bg-pink-400 transition-colors">{busy ? "Cutting…" : `Cut ${strips.length} strip${strips.length !== 1 ? "s" : ""} into slides`}</button>
               </div>
             )}
@@ -260,7 +286,8 @@ export default function SeamlessBulk() {
           <div className="space-y-6">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <button onClick={() => setPhase("upload")} className="text-sm text-muted-foreground hover:text-foreground">← Back to strips</button>
-              <div className="flex gap-3 flex-wrap">
+              <div className="flex gap-3 flex-wrap items-center">
+                <select value={batchPresetId ?? ""} onChange={(e) => applyClientToAll(e.target.value ? Number(e.target.value) : null)} className="bg-white/5 border border-pink-500/40 rounded-lg px-3 py-2 text-sm"><option value="">Client for all…</option>{presets.map((pp) => <option key={pp.id} value={pp.id}>{pp.name}</option>)}</select>
                 <button onClick={downloadTemplate} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">CSV template</button>
                 <label className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm cursor-pointer">Load CSV rows<input type="file" accept=".csv" className="hidden" onChange={(e) => { if (e.target.files?.[0]) importCsv(e.target.files[0]); e.currentTarget.value = ""; }} /></label>
                 {csvParsed.length > 0 && <button onClick={fillInOrder} disabled={busy} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Match in order</button>}
