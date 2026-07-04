@@ -1566,7 +1566,7 @@ export default function BulkCarousel() {
         </Link>
         <div>
           <h1 className="font-bold text-lg leading-none">Bulk Carousel Creator</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">One CSV, two image sets, one master ZIP or direct to the scheduler.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">One CSV, one image per carousel, straight to a master ZIP or the scheduler.</p>
         </div>
       </header>
 
@@ -1788,8 +1788,7 @@ export default function BulkCarousel() {
                       <th className="text-left px-3 py-2 font-medium">Hook</th>
                       <th className="text-left px-3 py-2 font-medium">Subtitle</th>
                       <th className="text-left px-3 py-2 font-medium">CTA</th>
-                      <th className="text-center px-3 py-2 font-medium">Cover</th>
-                      <th className="text-center px-3 py-2 font-medium">Body</th>
+                      <th className="text-center px-3 py-2 font-medium">Photo</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
@@ -1801,11 +1800,6 @@ export default function BulkCarousel() {
                         <td className="px-3 py-2 text-muted-foreground max-w-[120px] truncate">{row.slide4_cta}</td>
                         <td className="px-3 py-2 text-center">
                           {coverFiles[i]
-                            ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" />
-                            : <X className="w-3.5 h-3.5 text-amber-400/60 mx-auto" />}
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          {bodyFiles[i]
                             ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" />
                             : <X className="w-3.5 h-3.5 text-amber-400/60 mx-auto" />}
                         </td>
