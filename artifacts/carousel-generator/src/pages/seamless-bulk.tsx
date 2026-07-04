@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePresets, type ClientPreset } from "@/lib/use-presets";
 import { MusicPickerModal, type MusicTrack } from "@/components/music-picker-modal";
 import { renderSlideCanvas, makeBlocks, computeTuckedSubtitleY, SlideEditorModal, SCALE, type CsvRow, type Block } from "@/pages/bulk-carousel";
@@ -23,6 +23,7 @@ type Carousel = {
 type PRow = { slide1_hook: string; slide1_subtitle: string; slide2_body: string; slide3_body: string; slide4_cta: string; client: string; caption: string; date: string; time: string; };
 
 function loadImg(src: string): Promise<HTMLImageElement> { return new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = src; }); }
+function loadImgCors(src: string): Promise<HTMLImageElement> { return new Promise((r, j) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => r(i); i.onerror = j; i.src = src; }); }
 function fileToImage(f: File): Promise<HTMLImageElement> { return new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = URL.createObjectURL(f); }); }
 function cutStrip(img: HTMLImageElement, n: number): string[] {
   const W = img.naturalWidth, H = img.naturalHeight, sw = W / n; const out: string[] = [];
@@ -41,11 +42,14 @@ async function renderFromBlocks(raw: string[], imgs: HTMLImageElement[], blocks:
   if (!hasText) return raw;
   await document.fonts.ready;
   const p = preset || DEFAULT_PRESET; const accent = "#ffffff"; const overlay = (p as any).overlayColor || "rgba(0,0,0,0)";
+  let logoImg: HTMLImageElement | null = null;
+  const logoUrl = (p as any)?.logoUrl;
+  if (logoUrl) { try { logoImg = await loadImgCors(logoUrl); } catch {} }
   const out: string[] = [];
   for (let i = 0; i < raw.length; i++) {
     if (i + 1 > 4) { out.push(raw[i]); continue; }
     const n = (i + 1) as 1 | 2 | 3 | 4; const img = imgs[i] || null;
-    out.push(renderSlideCanvas(n, blocks, n === 1 ? img : null, n === 1 ? null : img, null, p, SCALE, false, 1.2, accent, "#ffffff", overlay, 0));
+    out.push(renderSlideCanvas(n, blocks, n === 1 ? img : null, n === 1 ? null : img, logoImg, p, SCALE, false, 1.2, accent, "#ffffff", overlay, 0));
   }
   return out;
 }
@@ -75,6 +79,9 @@ export default function SeamlessBulk() {
   const [editId, setEditId] = useState<string | null>(null);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const [csvParsed, setCsvParsed] = useState<PRow[]>([]);
+  const [genning, setGenning] = useState(false);
+  const [genId, setGenId] = useState<string | null>(null);
+  const [editLogo, setEditLogo] = useState<HTMLImageElement | null>(null);
   const isIn = (id: string) => !excluded.has(id);
   const toggleIn = (id: string) => setExcluded((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
@@ -135,6 +142,24 @@ export default function SeamlessBulk() {
     toast.success("Rows matched to carousels in order.");
   }
 
+  async function genCaptionFor(c: Carousel): Promise<string | undefined> {
+    const res = await fetch(`${BASE}/api/carousel/generate-caption`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ hook: c.row.slide1_hook, subtitle: c.row.slide1_subtitle, body2: c.row.slide2_body, body3: c.row.slide3_body, cta: c.row.slide4_cta }) });
+    if (!res.ok) return undefined;
+    const d = await res.json(); return d.caption as string;
+  }
+  async function generateOne(id: string) {
+    const c = carousels.find((x) => x.id === id); if (!c) return;
+    setGenId(id);
+    try { const cap = await genCaptionFor(c); if (cap) update(id, { caption: cap }); else toast.error("Caption failed"); } catch (e: any) { toast.error(e?.message || "Caption failed"); } finally { setGenId(null); }
+  }
+  async function generateCaptions() {
+    const list = carousels.filter((c) => isIn(c.id));
+    if (!list.length) { toast.error("No carousels selected."); return; }
+    setGenning(true); const tid = toast.loading("Writing captions…"); let ok = 0;
+    for (let i = 0; i < list.length; i++) { toast.loading(`Caption ${i + 1} / ${list.length}…`, { id: tid }); try { const cap = await genCaptionFor(list[i]); if (cap) { update(list[i].id, { caption: cap }); ok++; } } catch {} }
+    setGenning(false); toast.success(`Wrote ${ok} caption${ok !== 1 ? "s" : ""}.`, { id: tid });
+  }
+
   function updateRow(id: string, field: keyof CsvRow, value: string) { setCarousels((p) => p.map((c) => (c.id === id ? { ...c, row: { ...c.row, [field]: value } } : c))); }
   async function applyText(id: string) {
     const c = carousels.find((x) => x.id === id); if (!c) return;
@@ -176,6 +201,12 @@ export default function SeamlessBulk() {
   }
 
   const editing = carousels.find((c) => c.id === editId) || null;
+  useEffect(() => {
+    let alive = true; setEditLogo(null);
+    const url = editing ? (presetFor(editing.presetId) as any)?.logoUrl : null;
+    if (url) loadImgCors(url).then((im) => { if (alive) setEditLogo(im); }).catch(() => {});
+    return () => { alive = false; };
+  }, [editId]);
 
   return (
     <div className="min-h-[100dvh] w-full bg-background text-foreground">
@@ -188,7 +219,7 @@ export default function SeamlessBulk() {
         <SlideEditorModal
           item={{ blocks: editing.blocks, coverImg: null, bodyImg: null }}
           preset={presetFor(editing.presetId) || DEFAULT_PRESET}
-          logoImg={null}
+          logoImg={editLogo}
           heroWordColor="#ffffff"
           subtitleColor="#ffffff"
           overlayColor={(presetFor(editing.presetId) as any)?.overlayColor || "rgba(0,0,0,0)"}
@@ -235,6 +266,7 @@ export default function SeamlessBulk() {
                 {csvParsed.length > 0 && <button onClick={fillInOrder} disabled={busy} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Match in order</button>}
                 <button onClick={() => setExcluded(new Set())} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Select all</button>
                 <button onClick={() => setExcluded(new Set(carousels.map((c) => c.id)))} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Clear</button>
+                <button onClick={generateCaptions} disabled={genning} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm disabled:opacity-40">{genning ? "Writing…" : "Generate captions"}</button>
                 <button onClick={downloadZip} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Download selected (ZIP)</button>
                 <button onClick={scheduleAll} disabled={busy} className="px-5 py-2 rounded-lg bg-pink-500 text-white font-semibold text-sm disabled:opacity-40 hover:bg-pink-400">{busy ? "Working…" : `Schedule selected (${carousels.filter((c) => isIn(c.id)).length})`}</button>
               </div>
@@ -285,7 +317,7 @@ export default function SeamlessBulk() {
                     <div><label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">Date</label><input type="date" value={c.date} onChange={(e) => update(c.id, { date: e.target.value })} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2" /></div>
                     <div><label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">Time</label><input type="time" value={c.time} onChange={(e) => update(c.id, { time: e.target.value })} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2" /></div>
                   </div>
-                  <div className="sm:col-span-2"><label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">Caption</label><textarea value={c.caption} onChange={(e) => update(c.id, { caption: e.target.value })} rows={2} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2" placeholder="Caption…" /></div>
+                  <div className="sm:col-span-2"><div className="flex items-center justify-between mb-1"><label className="block text-xs uppercase tracking-widest text-muted-foreground">Caption</label><button onClick={() => generateOne(c.id)} disabled={genId === c.id} className="text-xs text-pink-300 hover:text-pink-200 disabled:opacity-40">{genId === c.id ? "Writing…" : "✨ Generate"}</button></div><textarea value={c.caption} onChange={(e) => update(c.id, { caption: e.target.value })} rows={2} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2" placeholder="Caption…" /></div>
                 </div>
                 <div className="flex items-center gap-3 flex-wrap">
                   <button onClick={() => setMusicId(c.id)} className={`px-3 py-1.5 rounded-lg border text-sm ${c.track ? "border-green-500/50 text-green-300" : "border-border/50 hover:border-pink-500/60"}`}>🎵 {c.track ? c.track.name.slice(0, 24) : "Add music"}</button>
