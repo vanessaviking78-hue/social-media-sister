@@ -71,6 +71,9 @@ export default function SeamlessBulk() {
   const [busy, setBusy] = useState(false);
   const [musicId, setMusicId] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
+  const [excluded, setExcluded] = useState<Set<string>>(new Set());
+  const isIn = (id: string) => !excluded.has(id);
+  const toggleIn = (id: string) => setExcluded((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   async function onFiles(list: FileList | null) {
     if (!list) return; const added: Strip[] = [];
@@ -136,11 +139,11 @@ export default function SeamlessBulk() {
   }
   async function downloadZip() {
     const tid = toast.loading("Building ZIP…");
-    try { const zip = new JSZip(); carousels.forEach((c, ci) => { const fo = zip.folder(`${ci + 1}-${c.name}`.slice(0, 40))!; c.slideUrls.forEach((du, si) => fo.file(`slide-${si + 1}.png`, du.split(",")[1], { base64: true })); }); const blob = await zip.generateAsync({ type: "blob" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "seamless-carousels.zip"; a.click(); toast.success("ZIP downloaded.", { id: tid }); }
+    try { const zip = new JSZip(); carousels.filter((c) => isIn(c.id)).forEach((c, ci) => { const fo = zip.folder(`${ci + 1}-${c.name}`.slice(0, 40))!; c.slideUrls.forEach((du, si) => fo.file(`slide-${si + 1}.png`, du.split(",")[1], { base64: true })); }); const blob = await zip.generateAsync({ type: "blob" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "seamless-carousels.zip"; a.click(); toast.success("ZIP downloaded.", { id: tid }); }
     catch (e: any) { toast.error(e?.message || "ZIP failed", { id: tid }); }
   }
   async function scheduleAll() {
-    const ready = carousels.filter((c) => c.presetId && c.date && c.time);
+    const ready = carousels.filter((c) => isIn(c.id) && c.presetId && c.date && c.time);
     if (!ready.length) { toast.error("Give at least one carousel a client, date and time."); return; }
     setBusy(true); const tid = toast.loading("Uploading and scheduling…");
     try {
@@ -212,12 +215,19 @@ export default function SeamlessBulk() {
               <div className="flex gap-3 flex-wrap">
                 <button onClick={downloadTemplate} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">CSV template</button>
                 <label className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm cursor-pointer">Import text + schedule<input type="file" accept=".csv" className="hidden" onChange={(e) => { if (e.target.files?.[0]) importCsv(e.target.files[0]); e.currentTarget.value = ""; }} /></label>
-                <button onClick={downloadZip} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Download all (ZIP)</button>
-                <button onClick={scheduleAll} disabled={busy} className="px-5 py-2 rounded-lg bg-pink-500 text-white font-semibold text-sm disabled:opacity-40 hover:bg-pink-400">{busy ? "Working…" : "Send to scheduler"}</button>
+                <button onClick={() => setExcluded(new Set())} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Select all</button>
+                <button onClick={() => setExcluded(new Set(carousels.map((c) => c.id)))} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Clear</button>
+                <button onClick={downloadZip} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Download selected (ZIP)</button>
+                <button onClick={scheduleAll} disabled={busy} className="px-5 py-2 rounded-lg bg-pink-500 text-white font-semibold text-sm disabled:opacity-40 hover:bg-pink-400">{busy ? "Working…" : `Schedule selected (${carousels.filter((c) => isIn(c.id)).length})`}</button>
               </div>
             </div>
             {carousels.map((c) => (
-              <div key={c.id} className="rounded-2xl border border-border/40 p-4 space-y-4">
+              <div key={c.id} className={`rounded-2xl border p-4 space-y-4 transition-opacity ${isIn(c.id) ? "border-pink-500/40" : "border-border/40 opacity-50"}`}>
+                <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                  <input type="checkbox" checked={isIn(c.id)} onChange={() => toggleIn(c.id)} className="w-4 h-4 accent-pink-500" />
+                  <span className="font-semibold">{c.name}</span>
+                  <span className="text-xs text-muted-foreground">{isIn(c.id) ? "included" : "excluded"}</span>
+                </label>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
                   {c.slideUrls.map((du, si) => (
                     <div key={si} className="relative">
