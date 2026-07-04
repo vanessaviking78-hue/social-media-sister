@@ -18,7 +18,9 @@ type Carousel = {
   raw: string[]; slideImgs: HTMLImageElement[]; slideUrls: string[];
   row: CsvRow; blocks: Block[];
   presetId: number | null; caption: string; date: string; time: string; track: MusicTrack | null;
+  assignedRow?: number;
 };
+type PRow = { slide1_hook: string; slide1_subtitle: string; slide2_body: string; slide3_body: string; slide4_cta: string; client: string; caption: string; date: string; time: string; };
 
 function loadImg(src: string): Promise<HTMLImageElement> { return new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = src; }); }
 function fileToImage(f: File): Promise<HTMLImageElement> { return new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = URL.createObjectURL(f); }); }
@@ -72,6 +74,7 @@ export default function SeamlessBulk() {
   const [musicId, setMusicId] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
+  const [csvParsed, setCsvParsed] = useState<PRow[]>([]);
   const isIn = (id: string) => !excluded.has(id);
   const toggleIn = (id: string) => setExcluded((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
@@ -98,24 +101,38 @@ export default function SeamlessBulk() {
   function removeCarousel(id: string) { setCarousels((p) => p.filter((c) => c.id !== id)); }
   function presetFor(id: number | null) { return presets.find((p) => p.id === id) || null; }
 
-  async function importCsv(file: File) {
-    Papa.parse(file, { header: true, skipEmptyLines: true, complete: async (res: any) => {
+  function importCsv(file: File) {
+    Papa.parse(file, { header: true, skipEmptyLines: true, complete: (res: any) => {
       const rows = (res.data || []) as any[];
       const key = (r: any, ...n: string[]) => { for (const k of Object.keys(r)) if (n.includes(k.trim().toLowerCase())) return r[k]; return ""; };
-      setBusy(true);
-      try {
-        const updated = await Promise.all(carousels.map(async (c, i) => {
-          const r = rows[i]; if (!r) return c;
-          const row: CsvRow = { slide1_hook: String(key(r, "slide1_hook") ?? ""), slide1_subtitle: String(key(r, "slide1_subtitle") ?? ""), slide2_body: String(key(r, "slide2_body") ?? ""), slide3_body: String(key(r, "slide3_body") ?? ""), slide4_cta: String(key(r, "slide4_cta") ?? "") };
-          const clientName = String(key(r, "client", "clinic", "account") || "").trim();
-          const preset = presets.find((p) => p.name.trim().toLowerCase() === clientName.toLowerCase()) || null;
-          const blocks = blocksFromRow(row);
-          const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, preset);
-          return { ...c, row, blocks, presetId: preset ? preset.id : c.presetId, caption: key(r, "caption") || c.caption, date: key(r, "date") ? normDate(key(r, "date")) : c.date, time: key(r, "time") ? normTime(key(r, "time")) : c.time, slideUrls };
-        }));
-        setCarousels(updated); toast.success(`Imported ${Math.min(rows.length, carousels.length)} row(s).`);
-      } catch (e: any) { toast.error(e?.message || "Import failed"); } finally { setBusy(false); }
+      const parsed: PRow[] = rows.map((r) => ({
+        slide1_hook: String(key(r, "slide1_hook") ?? ""), slide1_subtitle: String(key(r, "slide1_subtitle") ?? ""),
+        slide2_body: String(key(r, "slide2_body") ?? ""), slide3_body: String(key(r, "slide3_body") ?? ""), slide4_cta: String(key(r, "slide4_cta") ?? ""),
+        client: String(key(r, "client", "clinic", "account") || "").trim(),
+        caption: String(key(r, "caption") || ""), date: key(r, "date") ? normDate(key(r, "date")) : "", time: key(r, "time") ? normTime(key(r, "time")) : "",
+      }));
+      setCsvParsed(parsed);
+      toast.success(`Loaded ${parsed.length} row(s). Pick a row for each carousel to marry them up.`);
     }, error: () => toast.error("Could not read that CSV.") });
+  }
+
+  async function assignRow(id: string, idx: number) {
+    const c = carousels.find((x) => x.id === id); if (!c) return;
+    if (idx < 0) { update(id, { assignedRow: -1 }); return; }
+    const pr = csvParsed[idx]; if (!pr) return;
+    setBusy(true);
+    try {
+      const row: CsvRow = { slide1_hook: pr.slide1_hook, slide1_subtitle: pr.slide1_subtitle, slide2_body: pr.slide2_body, slide3_body: pr.slide3_body, slide4_cta: pr.slide4_cta };
+      const preset = pr.client ? (presets.find((p) => p.name.trim().toLowerCase() === pr.client.toLowerCase()) || null) : presetFor(c.presetId);
+      const blocks = blocksFromRow(row);
+      const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, preset);
+      update(id, { row, blocks, presetId: preset ? preset.id : c.presetId, caption: pr.caption || c.caption, date: pr.date || c.date, time: pr.time || c.time, slideUrls, assignedRow: idx });
+    } catch (e: any) { toast.error(e?.message || "Could not apply that row"); } finally { setBusy(false); }
+  }
+
+  async function fillInOrder() {
+    for (let i = 0; i < carousels.length && i < csvParsed.length; i++) { await assignRow(carousels[i].id, i); }
+    toast.success("Rows matched to carousels in order.");
   }
 
   function updateRow(id: string, field: keyof CsvRow, value: string) { setCarousels((p) => p.map((c) => (c.id === id ? { ...c, row: { ...c.row, [field]: value } } : c))); }
@@ -214,7 +231,8 @@ export default function SeamlessBulk() {
               <button onClick={() => setPhase("upload")} className="text-sm text-muted-foreground hover:text-foreground">← Back to strips</button>
               <div className="flex gap-3 flex-wrap">
                 <button onClick={downloadTemplate} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">CSV template</button>
-                <label className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm cursor-pointer">Import text + schedule<input type="file" accept=".csv" className="hidden" onChange={(e) => { if (e.target.files?.[0]) importCsv(e.target.files[0]); e.currentTarget.value = ""; }} /></label>
+                <label className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm cursor-pointer">Load CSV rows<input type="file" accept=".csv" className="hidden" onChange={(e) => { if (e.target.files?.[0]) importCsv(e.target.files[0]); e.currentTarget.value = ""; }} /></label>
+                {csvParsed.length > 0 && <button onClick={fillInOrder} disabled={busy} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Match in order</button>}
                 <button onClick={() => setExcluded(new Set())} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Select all</button>
                 <button onClick={() => setExcluded(new Set(carousels.map((c) => c.id)))} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Clear</button>
                 <button onClick={downloadZip} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Download selected (ZIP)</button>
@@ -228,6 +246,15 @@ export default function SeamlessBulk() {
                   <span className="font-semibold">{c.name}</span>
                   <span className="text-xs text-muted-foreground">{isIn(c.id) ? "included" : "excluded"}</span>
                 </label>
+                {csvParsed.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs uppercase tracking-widest text-muted-foreground shrink-0">CSV row</label>
+                    <select value={c.assignedRow ?? -1} onChange={(e) => assignRow(c.id, Number(e.target.value))} className="flex-1 bg-white/5 border border-pink-500/40 rounded-md px-3 py-2 text-sm">
+                      <option value={-1}>None (type it in manually)</option>
+                      {csvParsed.map((pr, idx) => <option key={idx} value={idx}>{idx + 1}. {(pr.slide1_hook || "(no hook)").slice(0, 44)}{pr.client ? ` — ${pr.client}` : ""}</option>)}
+                    </select>
+                  </div>
+                )}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
                   {c.slideUrls.map((du, si) => (
                     <div key={si} className="relative">
