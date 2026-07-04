@@ -274,6 +274,15 @@ const TOOLS = [
     iconColor: "text-cyan-400",
   },
   {
+    href: "/animated-carousels",
+    icon: Film,
+    name: "Animated Carousels",
+    description: "Upload your finished MP4 animated carousels, add captions, and schedule them in bulk. They post to Instagram as Reels.",
+    color: "from-fuchsia-500/20 to-fuchsia-500/5",
+    border: "hover:border-fuchsia-500/50",
+    iconColor: "text-fuchsia-400",
+  },
+  {
     href: "/csv-slide-carousel",
     icon: TableProperties,
     name: "CSV Slide Carousel",
