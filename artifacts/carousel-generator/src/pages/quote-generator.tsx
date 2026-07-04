@@ -11,6 +11,7 @@ import { loadGoogleFonts } from "@/lib/slide-utils";
 import { usePresets } from "@/lib/use-presets";
 import { MusicPickerModal, type MusicTrack } from "@/components/music-picker-modal";
 
+import { nextWeekday, WEEKDAY, POST_TIME } from "@/lib/schedule";
 const BASE = import.meta.env.BASE_URL || "/";
 
 loadGoogleFonts();
@@ -55,8 +56,8 @@ export default function QuoteGenerator() {
   const [quoteOpenPos, setQuoteOpenPos] = useState({ x: W / 2, y: Math.round(H * 0.26) });
   const [quoteClosePos, setQuoteClosePos] = useState({ x: W / 2, y: Math.round(H * 0.8) });
   const draggingRef = useRef<null | "logo" | "qopen" | "qclose">(null);
-  const [scheduleDate, setScheduleDate] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); });
-  const [scheduleTime, setScheduleTime] = useState("18:00");
+  const [scheduleDate, setScheduleDate] = useState(() => nextWeekday(WEEKDAY.SUN, POST_TIME));
+  const [scheduleTime, setScheduleTime] = useState(POST_TIME);
   const [scheduling, setScheduling] = useState(false);
   const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
   const [musicOpen, setMusicOpen] = useState(false);
@@ -256,17 +257,16 @@ export default function QuoteGenerator() {
     setScheduling(true);
     try {
       const off = document.createElement("canvas"); off.width = W; off.height = H; const ctx = off.getContext("2d")!;
-      const POST_DAYS = [0, 1, 3, 5];
-      const [hh, mm] = scheduleTime.split(":").map((n) => parseInt(n, 10));
-      const cursor = new Date(); cursor.setHours(hh || 18, mm || 0, 0, 0); cursor.setDate(cursor.getDate() + 1);
-      const nextDate = () => { while (!POST_DAYS.includes(cursor.getDay())) cursor.setDate(cursor.getDate() + 1); const out = new Date(cursor); cursor.setDate(cursor.getDate() + 1); return out; };
+      // Sundays are the quote/about-me slot. Give each quote its own successive Sunday.
+      const first = new Date(`${nextWeekday(WEEKDAY.SUN, POST_TIME)}T${POST_TIME}`);
+      const nextDate = (i: number) => { const d = new Date(first); d.setDate(d.getDate() + i * 7); return d; };
       for (let i = 0; i < quotes.length; i++) {
         drawQuote(ctx, quotes[i], subs[i] || "");
         const url = await uploadCanvas(off);
-        const r = await fetch(`${BASE}api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: preset.id, postType: "single-image", content: { imageUrls: [url], caption: capFor(i), title: "Quote", platforms: ["instagram", "facebook"], musicTrack: musicTrack || undefined }, scheduledAt: nextDate().toISOString() }) });
+        const r = await fetch(`${BASE}api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: preset.id, postType: "single-image", content: { imageUrls: [url], caption: capFor(i), title: "Quote", platforms: ["instagram", "facebook"], musicTrack: musicTrack || undefined }, scheduledAt: nextDate(i).toISOString() }) });
         if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(`Quote ${i + 1}: ${(d as { error?: string }).error || "failed"}`); }
       }
-      toast.success(`${quotes.length} quote${quotes.length !== 1 ? "s" : ""} scheduled across Mon/Wed/Fri/Sun`);
+      toast.success(`${quotes.length} quote${quotes.length !== 1 ? "s" : ""} scheduled across upcoming Sundays`);
     } catch (e: any) { toast.error(e?.message || "Schedule failed"); } finally { setScheduling(false); }
   };
 
@@ -404,7 +404,7 @@ export default function QuoteGenerator() {
             </Button>
             <div className="flex gap-2">
               <Button variant="outline" onClick={scheduleOne} disabled={scheduling || !quotes.length} className="flex-1">{scheduling ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-1.5" />} Schedule this</Button>
-              <Button onClick={scheduleAll} disabled={scheduling || !quotes.length} className="flex-1 bg-pink-600 hover:bg-pink-700">{scheduling ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-1.5" />} Schedule all M/W/F/Su</Button>
+              <Button onClick={scheduleAll} disabled={scheduling || !quotes.length} className="flex-1 bg-pink-600 hover:bg-pink-700">{scheduling ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-1.5" />} Schedule all — Sundays</Button>
             </div>
           </div>
           <p className="text-xs text-muted-foreground text-center">Portrait 1080 x 1350.</p>

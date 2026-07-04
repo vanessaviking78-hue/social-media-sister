@@ -6,6 +6,7 @@ import JSZip from "jszip";
 import Papa from "papaparse";
 import { toast } from "sonner";
 
+import { nextWeekday, WEEKDAY, POST_TIME } from "@/lib/schedule";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const SLIDE_W = 1080, SLIDE_H = 1440;
 const EMPTY_ROW: CsvRow = { slide1_hook: "", slide1_subtitle: "", slide2_body: "", slide3_body: "", slide4_cta: "" };
@@ -84,7 +85,7 @@ export default function SeamlessBulk() {
       const out: Carousel[] = [];
       for (const s of strips) {
         const img = await fileToImage(s.file); const raw = cutStrip(img, s.slides); const slideImgs = await Promise.all(raw.map(loadImg));
-        out.push({ id: `c-${Math.random().toString(36).slice(2, 7)}`, name: s.file.name.replace(/\.[^.]+$/, ""), raw, slideImgs, slideUrls: raw, row: { ...EMPTY_ROW }, blocks: blocksFromRow(EMPTY_ROW), presetId: null, caption: "", date: "", time: "", track: null });
+        out.push({ id: `c-${Math.random().toString(36).slice(2, 7)}`, name: s.file.name.replace(/\.[^.]+$/, ""), raw, slideImgs, slideUrls: raw, row: { ...EMPTY_ROW }, blocks: blocksFromRow(EMPTY_ROW), presetId: null, caption: "", date: nextWeekday(WEEKDAY.WED, POST_TIME), time: POST_TIME, track: null });
       }
       setCarousels(out); setPhase("preview");
     } catch (e: any) { toast.error(e?.message || "Cutting failed"); } finally { setBusy(false); }

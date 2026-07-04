@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { usePresets } from "@/lib/use-presets";
 import { toast } from "sonner";
 
+import { nextWeekdayISO, WEEKDAY, POST_TIME, nextWeekday } from "@/lib/schedule";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const W = 1080, H = 1350;
 const FONTS = ["Bebas Neue", "Poppins", "Prata", "Playfair Display"];
@@ -38,6 +39,8 @@ export default function AboutMeStudio() {
   const [font, setFont] = useState("Bebas Neue");
   const [result, setResult] = useState("");
   const [busy, setBusy] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
+  const [caption, setCaption] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
 
   useEffect(() => {
@@ -135,6 +138,21 @@ export default function AboutMeStudio() {
     } catch (e: any) { toast.error(e?.message || "Render failed — the photo host may block editing", { id: tid }); } finally { setBusy(false); }
   }
 
+  async function scheduleSunday() {
+    if (!result) { toast.error("Build your About Me first."); return; }
+    if (!preset) { toast.error("Pick a client first."); return; }
+    setScheduling(true);
+    const tid = toast.loading("Scheduling for Sunday…");
+    try {
+      const up = await fetch(`${BASE}/api/content/upload-image`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ images: [{ name: "about-me.png", base64: result }] }) });
+      const ud = await up.json(); const url = ud?.results?.[0]?.url;
+      if (!url) throw new Error("Upload failed");
+      const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: preset.id, postType: "single-image", content: { imageUrls: [url], caption, title: "About Me", platforms: ["instagram", "facebook"] }, scheduledAt: nextWeekdayISO(WEEKDAY.SUN, POST_TIME) }) });
+      if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error((d as any).error || "Schedule failed"); }
+      toast.success(`Scheduled for Sunday ${nextWeekday(WEEKDAY.SUN, POST_TIME)} at ${POST_TIME}.`, { id: tid });
+    } catch (e: any) { toast.error(e?.message || "Schedule failed", { id: tid }); } finally { setScheduling(false); }
+  }
+
   function download() {
     if (!result) return;
     const a = document.createElement("a"); a.href = result; a.download = "about-me.png"; a.click();
@@ -190,7 +208,9 @@ export default function AboutMeStudio() {
           </div>
           <div className="flex gap-3">
             <button onClick={generate} disabled={busy || !cutoutUrl} className="px-6 py-3 rounded-full bg-pink-500 text-white font-semibold disabled:opacity-40 hover:bg-pink-400">{busy ? "Working…" : "Generate"}</button>
+            {result && <textarea value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Caption (optional)…" className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm mb-2" rows={2} />}
             {result && <button onClick={download} className="px-5 py-3 rounded-full border border-border/50 hover:border-pink-500/60">Download</button>}
+            {result && <button onClick={scheduleSunday} disabled={scheduling} className="px-5 py-3 rounded-full bg-pink-600 hover:bg-pink-700 text-white disabled:opacity-60">{scheduling ? "Scheduling…" : "Schedule for Sunday"}</button>}
           </div>
         </div>
         <div className="flex items-start justify-center">

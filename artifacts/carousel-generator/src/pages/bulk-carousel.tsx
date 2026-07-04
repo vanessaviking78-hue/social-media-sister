@@ -21,6 +21,7 @@ import ApprovedImagesPicker from "@/components/approved-images-picker";
 
 loadGoogleFonts();
 
+import { nextWeekday, WEEKDAY, POST_TIME } from "@/lib/schedule";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const W = 1080;
 const H = 1440;
@@ -875,6 +876,7 @@ export default function BulkCarousel() {
 
   // Schedule state
   const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
+  const [scheduleDay, setScheduleDay] = useState<0|1|3|5>(WEEKDAY.MON);
   const [scheduling, setScheduling] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
@@ -1137,29 +1139,22 @@ export default function BulkCarousel() {
 
   // ── Schedule ─────────────────────────────────────────────────────────────────
 
-  const goToSchedule = () => {
-    // Default posting cadence for all clients: Sunday, Monday, Wednesday, Friday.
-    const POST_DAYS = [0, 1, 3, 5];
-    const cursor = new Date();
-    cursor.setHours(0, 0, 0, 0);
-    cursor.setDate(cursor.getDate() + 1); // start from tomorrow
-    const nextPostingDate = () => {
-      while (!POST_DAYS.includes(cursor.getDay())) cursor.setDate(cursor.getDate() + 1);
-      const out = new Date(cursor);
-      cursor.setDate(cursor.getDate() + 1); // advance past this slot for the next item
-      return out;
-    };
-    setScheduleEntries(items.map((item) => {
-      const d = nextPostingDate();
-      return {
-        date: d.toISOString().slice(0, 10),
-        time: "18:15",
-        platforms: ["instagram", "facebook"] as ("instagram" | "facebook")[],
-        presetId: selectedPresetId,
-        caption: captionMap[item.id] ?? "",
-      };
-    }));
+  const goToSchedule = (day: 0|1|3|5 = scheduleDay) => {
+    const date = nextWeekday(day, POST_TIME);
+    setScheduleEntries(items.map((item) => ({
+      date,
+      time: POST_TIME,
+      platforms: ["instagram", "facebook"] as ("instagram" | "facebook")[],
+      presetId: selectedPresetId,
+      caption: captionMap[item.id] ?? "",
+    })));
     setPhase("schedule");
+  };
+
+  const applyScheduleDay = (day: 0|1|3|5) => {
+    setScheduleDay(day);
+    const date = nextWeekday(day, POST_TIME);
+    setScheduleEntries((prev) => prev.map((e) => ({ ...e, date, time: POST_TIME })));
   };
 
   const removeItem = (id: string) => {
@@ -1281,9 +1276,14 @@ export default function BulkCarousel() {
         </header>
 
         <div className="max-w-4xl mx-auto px-6 py-8">
-          <p className="text-sm text-muted-foreground mb-6">
-            Set a date, time and platform for each carousel. Client account defaults to your selected preset.
-          </p>
+          <div className="mb-6">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Posting day for this batch</p>
+            <div className="inline-flex rounded-full border border-border/50 overflow-hidden">
+              <button type="button" onClick={() => applyScheduleDay(WEEKDAY.MON)} className={`px-5 py-2 text-sm font-semibold transition-colors ${scheduleDay === WEEKDAY.MON ? "bg-pink-600 text-white" : "hover:bg-white/5"}`}>Monday · Bulk</button>
+              <button type="button" onClick={() => applyScheduleDay(WEEKDAY.FRI)} className={`px-5 py-2 text-sm font-semibold transition-colors ${scheduleDay === WEEKDAY.FRI ? "bg-pink-600 text-white" : "hover:bg-white/5"}`}>Friday · Treatment</button>
+            </div>
+            <p className="text-sm text-muted-foreground mt-3">Every carousel below is auto-set to the next {scheduleDay === WEEKDAY.MON ? "Monday" : "Friday"} at {POST_TIME}. Tweak any one by hand if you need to.</p>
+          </div>
 
           <div className="space-y-3">
             {items.map((item, i) => {
