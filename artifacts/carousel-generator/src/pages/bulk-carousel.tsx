@@ -988,7 +988,7 @@ export default function BulkCarousel() {
         let coverImg: HTMLImageElement | null = null;
         let bodyImg: HTMLImageElement | null = null;
         if (coverFiles[i]) try { coverImg = await loadImg(URL.createObjectURL(coverFiles[i])); } catch {}
-        if (bodyFiles[i])  try { bodyImg  = await loadImg(URL.createObjectURL(bodyFiles[i]));  } catch {}
+        bodyImg = coverImg; // same photo used across every slide
 
         const blocks = makeBlocks(row);
         const subB0 = blocks.find(b => b.id === "subtitle");
@@ -1689,10 +1689,10 @@ export default function BulkCarousel() {
             Images are matched to CSV rows by order. Upload {csvRows.length > 0 ? csvRows.length : "N"} of each to match your {csvRows.length > 0 ? csvRows.length : ""} row{csvRows.length !== 1 ? "s" : ""}.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Cover / hero image (Slide 1)</Label>
-              <p className="text-xs text-muted-foreground">The main photo shown on the hook slide.</p>
+              <Label className="text-sm font-medium">Photo for the carousel</Label>
+              <p className="text-xs text-muted-foreground">One photo per row. It is used behind every slide of that carousel.</p>
               <DropZone
                 label="Drop cover images" hint="One per row, in order"
                 files={coverFiles} accept="image/*" active={coverDrag} color="violet"
@@ -1729,57 +1729,14 @@ export default function BulkCarousel() {
                 </div>
               )}
             </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Body image (Slides 2, 3, 4)</Label>
-              <p className="text-xs text-muted-foreground">Used behind the body and CTA slides.</p>
-              <DropZone
-                label="Drop body images" hint="One per row, in order"
-                files={bodyFiles} accept="image/*" active={bodyDrag} color="indigo"
-                onDragOver={() => setBodyDrag(true)} onDragLeave={() => setBodyDrag(false)}
-                onDrop={handleBodyDrop} onClick={() => bodyInputRef.current?.click()}
-              />
-              <input ref={bodyInputRef} type="file" accept="image/*" multiple className="hidden"
-                onChange={e => { if (e.target.files) appendImages(setBodyFiles, Array.from(e.target.files)); e.target.value = ""; }} />
-              <ApprovedImagesPicker
-                clientName={selectedPreset?.name}
-                label="Use approved photos (body)"
-                onAddImages={files => appendImages(setBodyFiles, files)}
-              />
-              {bodyFiles.length > 0 && (
-                <div className="flex flex-wrap gap-1 items-center">
-                  <p className="w-full text-xs text-muted-foreground">Drag the chips to reorder. Image 1 goes with CSV row 1, image 2 with row 2, and so on.</p>
-                  {bodyFiles.map((f, i) => (
-                    <div
-                      key={i}
-                      draggable
-                      onDragStart={() => setDragCtx({ list: "body", index: i })}
-                      onDragOver={e => e.preventDefault()}
-                      onDrop={e => { e.preventDefault(); if (dragCtx?.list === "body") reorderFiles("body", dragCtx.index, i); setDragCtx(null); }}
-                      className="flex items-center gap-1 text-xs bg-muted/40 rounded-full px-2.5 py-1 cursor-grab active:cursor-grabbing"
-                    >
-                      <GripVertical className="w-3 h-3 text-muted-foreground shrink-0" />
-                      <span className="text-muted-foreground w-4 shrink-0">{i + 1}.</span>
-                      <span className="truncate max-w-28">{f.name}</span>
-                      <button onClick={() => setBodyFiles(prev => prev.filter((_, j) => j !== i))} className="ml-0.5 text-muted-foreground hover:text-foreground">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
 
           {csvRows.length > 0 && (
             <div className="flex gap-4 text-xs text-muted-foreground">
               <span className={coverFiles.length >= csvRows.length ? "text-emerald-400" : "text-amber-400"}>
-                Cover: {coverFiles.length}/{csvRows.length}
+                Photos: {coverFiles.length}/{csvRows.length}
               </span>
-              <span className={bodyFiles.length >= csvRows.length ? "text-emerald-400" : "text-amber-400"}>
-                Body: {bodyFiles.length}/{csvRows.length}
-              </span>
-              {(coverFiles.length < csvRows.length || bodyFiles.length < csvRows.length) && (
+              {coverFiles.length < csvRows.length && (
                 <span>Missing rows will render with a solid brand colour background.</span>
               )}
             </div>
