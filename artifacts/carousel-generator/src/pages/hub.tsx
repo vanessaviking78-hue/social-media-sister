@@ -283,6 +283,15 @@ const TOOLS = [
     iconColor: "text-fuchsia-400",
   },
   {
+    href: "/personal-page",
+    icon: User,
+    name: "Personal Page",
+    description: "Build a stand-alone about-me post: a photo up top, hand-picked sections like values and treatments, signed off with love from the client.",
+    color: "from-rose-500/20 to-rose-500/5",
+    border: "hover:border-rose-500/50",
+    iconColor: "text-rose-400",
+  },
+  {
     href: "/csv-slide-carousel",
     icon: TableProperties,
     name: "CSV Slide Carousel",
