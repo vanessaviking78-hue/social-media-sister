@@ -45,6 +45,7 @@ export default function PersonalPage() {
   const [font, setFont] = useState("Bebas Neue");
   const [active, setActive] = useState<string[]>([...DEFAULT_ON]);
   const [bodies, setBodies] = useState<Record<string, string>>({});
+  const [headings, setHeadings] = useState<Record<string, string>>({});
   const [result, setResult] = useState("");
   const [busy, setBusy] = useState(false);
   const [logoUrl, setLogoUrl] = useState("");
@@ -83,7 +84,7 @@ export default function PersonalPage() {
       const sections = active.map((s) => {
         measure.font = "30px 'Poppins'";
         const lines = wrapLines(measure, bodies[s] || "", colW);
-        return { heading: s, lines };
+        return { heading: (headings[s] ?? s), lines };
       });
       let y = heroH + 70;
       for (const sec of sections) { y += 62 + sec.lines.length * 42 + 46; }
@@ -164,7 +165,10 @@ export default function PersonalPage() {
                     <span className="font-semibold">{s}</span>
                   </label>
                   {active.includes(s) && (
-                    <textarea value={bodies[s] || ""} onChange={(e) => setBodies((p) => ({ ...p, [s]: e.target.value }))} rows={3} placeholder={`Write your "${s}"…`} className="mt-2 w-full bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm" />
+                    <div className="mt-2 space-y-2">
+                      <input value={headings[s] ?? s} onChange={(e) => setHeadings((p) => ({ ...p, [s]: e.target.value }))} placeholder="Heading" className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm font-semibold" />
+                      <textarea value={bodies[s] || ""} onChange={(e) => setBodies((p) => ({ ...p, [s]: e.target.value }))} rows={3} placeholder={`Write your "${s}"…`} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm" />
+                    </div>
                   )}
                 </div>
               ))}
