@@ -88,7 +88,7 @@ async function postToInstagram(
   }
   const carouselBody: Record<string, unknown> = {
     media_type: "CAROUSEL",
-    children: childIds.join(","),
+    children: childIds,
     caption,
     access_token: token,
   };
