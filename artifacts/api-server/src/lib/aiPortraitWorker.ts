@@ -88,6 +88,7 @@ interface ScenarioConfig {
   backdropColor?: string;
   backgroundImageUrl?: string;
   aspectRatio: string;
+  promptVars?: { colour?: string; name?: string; skills?: string; knownAs?: string };
 }
 
 export async function processPortraitJob(
@@ -136,7 +137,7 @@ export async function processPortraitJob(
     const photoStudioPreset = PHOTO_STUDIO_PRESETS.find((p) => p.id === cfg.id) ?? INJECTOR_COLLECTION_PRESETS.find((p) => p.id === cfg.id) ?? MEN_STUDIO_PRESETS.find((p) => p.id === cfg.id);
 
     if (photoStudioPreset) {
-      prompt = buildPhotoStudioPrompt(photoStudioPreset, cfg.scrubColor, cfg.aspectRatio);
+      prompt = buildPhotoStudioPrompt(photoStudioPreset, cfg.scrubColor, cfg.aspectRatio, cfg.promptVars);
     } else if (cfg.outfitType) {
       prompt = buildCustomPrompt({
         outfitType: cfg.outfitType as Parameters<typeof buildCustomPrompt>[0]["outfitType"],

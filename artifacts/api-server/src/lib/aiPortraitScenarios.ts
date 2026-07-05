@@ -306,12 +306,25 @@ export const PHOTO_STUDIO_PRESETS: PhotoStudioPreset[] = [
     hasColour: true,
     promptTemplate: `Close crop, just eyes and mouth, intense stare, pure white background, overexposed edges for fashion-magazine boldness. DO NOT CHANGE FACE. Flattering lighting on face. Wearing [COLOUR] scrubs, waist-up shot. All studio setting. Same facial features as reference photo.`,
   },
+  {
+    id: "ps-fightnight",
+    name: "Fight Night Entrance",
+    hasColour: false,
+    promptTemplate: `A dramatic wrestling and fight night entrance stage scene, with a muscular athletic person standing confidently at the centre, wearing a fitted one piece gladiator style unitard in [COLOUR] with contrasting side stripes and a bold emblem on the chest, white wristbands, gladiator sandals with ankle wrapping. They are holding a large red and white checkered pugil stick diagonally across their body, gripped firmly with a determined smile, full body heroic pose. Above them, a metallic chrome and steel textured 3D logo reads '[NAME]' in bold blockbuster wrestling font, positioned inside a chrome triangular emblem frame. Two tall illuminated stage towers stand either side of the scene with spotlights, blue lighting on the left tower and red lighting on the right, each topped with a diamond plate cylindrical pillar bearing a chrome shield emblem. Smoky atmospheric background, dark arena setting, glossy black tiled floor reflecting the lights, high contrast dramatic lighting, hyper realistic 3D render style. In the bottom corner, include a futuristic sci-fi stat card overlay with a dark charcoal background, glowing red neon border lines and corner brackets, angular hexagon accents top and bottom. Bold white heading text '[NAME]', a thin red divider line beneath it, stat rows reading '[SKILL LABEL]: [SKILL VALUE]', and a bottom statement in clean white text reading '[NAME] is [KNOWN AS DESCRIPTION]'. Maintain the person's exact facial features, skin tone, and likeness from the reference photo.`,
+  },
 ];
 
-export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: string, aspectRatio = "3:4"): string {
+export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: string, aspectRatio = "3:4", vars?: { colour?: string; name?: string; skills?: string; knownAs?: string }): string {
   let prompt = preset.promptTemplate;
   if (preset.hasColour) {
     prompt = prompt.replace(/\[COLOUR\]/g, colour?.trim() || "navy blue");
+  }
+  if (vars) {
+    if (vars.colour?.trim()) prompt = prompt.replace(/\[COLOUR\]/g, vars.colour.trim());
+    if (vars.name?.trim()) prompt = prompt.replace(/\[NAME\]/g, vars.name.trim());
+    if (vars.knownAs?.trim()) prompt = prompt.replace(/\[KNOWN AS DESCRIPTION\]/g, vars.knownAs.trim());
+    const rows = (vars.skills || "").split(/\n/).map((x) => x.trim()).filter(Boolean).join(", ");
+    if (rows) prompt = prompt.replace(/\[SKILL LABEL\]: \[SKILL VALUE\]/g, rows);
   }
   const ratioDescription =
     aspectRatio === "9:16" ? "a vertical 9:16 portrait orientation (tall and narrow)" :
