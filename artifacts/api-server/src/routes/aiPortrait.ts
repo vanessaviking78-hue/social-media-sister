@@ -214,6 +214,7 @@ router.post("/ai-portrait/generate", async (req: Request, res: Response) => {
         backdropColor?: string;
         backgroundImageUrl?: string;
         aspectRatio: string;
+        promptVars?: { colour?: string; name?: string; skills?: string; knownAs?: string };
       }>;
     };
 
