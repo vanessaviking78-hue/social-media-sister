@@ -78,6 +78,7 @@ const PHOTO_STUDIO_PRESETS: PhotoStudioPreset[] = [
   { id: "ps-13", name: "B&W Camera Editorial",                 hasColour: false },
   { id: "ps-14", name: "Side-Lit Vintage Texture",             hasColour: false },
   { id: "ps-15", name: "Intense Eyes Close Crop",              hasColour: true  },
+  { id: "ps-fightnight", name: "Fight Night Entrance",          hasColour: false },
 ];
 
 const INJECTOR_COLLECTION_PRESETS: PhotoStudioPreset[] = [
@@ -344,6 +345,7 @@ export default function AiPortraitStudio() {
   const [selectedPresets, setSelectedPresets] = useState<Set<string>>(new Set());
   const [presetColours, setPresetColours]     = useState<Record<string, string>>({});
   const [aspectRatio, setAspectRatio]         = useState<AspectRatio>("3:4");
+  const [fnVars, setFnVars] = useState({ colour: "", name: "", skills: "", knownAs: "" });
 
   // ── Generation state ───────────────────────────────────────────────────────
   const [jobId, setJobId]         = useState<string | null>(null);
@@ -487,6 +489,7 @@ export default function AiPortraitStudio() {
           ? (MEN_SCRUBS_IDS.includes(id) ? menScrubColor : (presetColours[id]?.trim() || "navy blue"))
           : undefined,
         aspectRatio,
+        ...(id === "ps-fightnight" ? { promptVars: fnVars } : {}),
       };
     });
 
@@ -837,6 +840,16 @@ export default function AiPortraitStudio() {
               </SelectContent>
             </Select>
           </div>
+
+          {selectedPresets.has("ps-fightnight") && (
+            <div className="space-y-2 pt-2 border-t border-border/20">
+              <Label className="text-xs text-pink-300">Fight Night Entrance details</Label>
+              <Input value={fnVars.colour} onChange={(e) => setFnVars((v) => ({ ...v, colour: e.target.value }))} placeholder="Unitard colour (e.g. royal blue)" className="h-8 text-xs" />
+              <Input value={fnVars.name} onChange={(e) => setFnVars((v) => ({ ...v, name: e.target.value }))} placeholder="Name on the logo (e.g. THE VIKING)" className="h-8 text-xs" />
+              <textarea value={fnVars.skills} onChange={(e) => setFnVars((v) => ({ ...v, skills: e.target.value }))} placeholder={"Stat rows, one per line\nSTRENGTH: 99\nSPEED: 88"} rows={3} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2 text-xs" />
+              <Input value={fnVars.knownAs} onChange={(e) => setFnVars((v) => ({ ...v, knownAs: e.target.value }))} placeholder="Known as... (e.g. unstoppable in the ring)" className="h-8 text-xs" />
+            </div>
+          )}
 
           {/* Save client name override */}
           {cards.some((c) => c.status === "success") && (
