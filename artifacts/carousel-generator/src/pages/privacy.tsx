@@ -58,7 +58,7 @@ export default function Privacy() {
         </Section>
 
         <Section title="5. Who we share your data with">
-          <p>We share your data only with the following third parties, and only as needed to deliver the service: Meta Platforms Inc. (Facebook, Instagram), Google LLC, TikTok Ltd, OpenAI, Google Cloud (via Gemini API), Cloudflare, Railway, Resend, Stripe. We have data processing agreements with each of these vendors confirming GDPR compliance.</p>        </Section>>
+          <p>We share your data only with the following third parties, and only as needed to deliver the service: Meta Platforms Inc. (Facebook, Instagram), Google LLC, TikTok Ltd, OpenAI, Google Cloud (via Gemini API), Cloudflare, Railway, Resend, Stripe. We have data processing agreements with each of these vendors confirming GDPR compliance.</p>        </Section>
         <Section title="6. How long we keep your data">
           <p>Account data: while your account is active, plus 7 years after closure for tax and accounting purposes. Content data: while your account is active, deleted within 30 days of account closure unless you request earlier deletion. Tokens: revoked immediately on account closure or disconnect request. Usage logs: 12 months. Support communications: 3 years.</p>
         </Section>
