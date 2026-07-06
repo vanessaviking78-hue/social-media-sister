@@ -47,23 +47,39 @@ async function igPublish(igId: string, token: string, creationId: string): Promi
   throw new Error(`IG publish failed after retries: ${lastErr}`);
 }
 
+async function createCarouselContainer(
+    igId: string,
+    token: string,
+    childIds: string[],
+    caption: string,
+    audioName?: string,
+  ): Promise<{ ok: boolean; id?: string; message?: string }> {
+    const carouselBody: Record<string, unknown> = { media_type: "CAROUSEL", children: childIds.join(","), caption, access_token: token };
+    if (audioName) carouselBody.audio_name = audioName;
+    const res = await fetch(`${GRAPH}/${igId}/media`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(carouselBody),
+    });
+    const data = await res.json() as { id?: string; error?: { message?: string } };
+    return { ok: res.ok && !!data.id, id: data.id, message: data?.error?.message };
+}
+
 async function postCarouselToIG(igId: string, token: string, imageUrls: string[], caption: string, audioName?: string): Promise<string> {
-  if (imageUrls.length === 1) {
-    const id = await igUpload(igId, token, imageUrls[0], false, caption, audioName);
-    return igPublish(igId, token, id);
-  }
-  const childIds: string[] = [];
-  for (const url of imageUrls) childIds.push(await igUpload(igId, token, url, true));
-  const carouselBody: Record<string, unknown> = { media_type: "CAROUSEL", children: childIds.join(","), caption, access_token: token };
-  if (audioName) carouselBody.audio_name = audioName;
-  const res = await fetch(`${GRAPH}/${igId}/media`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(carouselBody),
-  });
-  const data = await res.json() as { id?: string; error?: { message?: string } };
-  if (!res.ok || !data.id) throw new Error(`IG carousel container failed: ${data?.error?.message}`);
-  return igPublish(igId, token, data.id);
+    if (imageUrls.length === 1) {
+          const id = await igUpload(igId, token, imageUrls[0], false, caption, audioName);
+          return igPublish(igId, token, id);
+    }
+    const childIds: string[] = [];
+    for (const url of imageUrls) childIds.push(await igUpload(igId, token, url, true));
+
+    let data = await createCarouselContainer(igId, token, childIds, caption, audioName);
+    if (!data.ok && audioName && (data.message || "").toLowerCase().includes("invalid parameter")) {
+          logger.warn({ igId, audioName }, "IG carousel rejected audio_name - retrying without music tag");
+          data = await createCarouselContainer(igId, token, childIds, caption, undefined);
+    }
+    if (!data.ok || !data.id) throw new Error(`IG carousel container failed: ${data.message}`);
+    return igPublish(igId, token, data.id);
 }
 
 async function postCarouselToFB(pageId: string, token: string, imageUrls: string[], caption: string): Promise<string> {
