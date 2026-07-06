@@ -1316,7 +1316,7 @@ export default function BulkCarousel() {
                                                         >
                                                         <Trash2 className="w-3.5 h-3.5 mr-1.5" />Delete
                                       </Button>
-                    </div
+                    </div>
 
                                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                                                     <div className="space-y-1">
