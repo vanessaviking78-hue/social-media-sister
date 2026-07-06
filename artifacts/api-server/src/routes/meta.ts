@@ -139,7 +139,7 @@ async function postToFacebook(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       message: caption,
-      media: mediaFbids,
+      attached_media: mediaFbids,
       access_token: token,
     }),
   });
