@@ -1158,10 +1158,17 @@ export default function BulkCarousel() {
   };
 
   const removeItem = (id: string) => {
-    setItems(prev => prev.filter(it => it.id !== id));
-    setCaptionMap(prev => { const next = { ...prev }; delete next[id]; return next; });
-    if (editingItemId === id) setEditingItemId(null);
-    toast.success("Carousel removed");
+      setItems(prev => {
+              const idx = prev.findIndex(it => it.id === id);
+              if (idx !== -1) {
+                        setScheduleEntries(entries => entries.filter((_, i) => i !== idx));
+              }
+              return prev.filter(it => it.id !== id);
+      });
+        setCaptionMap(prev => { const next = { ...prev }; delete next[id]; return next; });
+        setItemTracks(prev => { const next = { ...prev }; delete next[id]; return next; });
+        if (editingItemId === id) setEditingItemId(null);
+        toast.success("Carousel removed");
   };
 
   const handleGetApprovalGroups = useCallback(async () => {
@@ -1302,11 +1309,18 @@ export default function BulkCarousel() {
                           <img key={si} src={du} alt="" className="w-10 rounded" style={{ aspectRatio: "4/5", objectFit: "cover" }} />
                         ))}
                       </div>
-                    </div>
+                                      <Button
+                                                          variant="outline" size="sm"
+                                                          onClick={() => { if (window.confirm("Delete this carousel from the batch? You can regenerate it from your CSV.")) removeItem(item.id); }}
+                                                          className="text-red-300 border-red-500/40 hover:bg-red-950/30 hover:text-red-200 mt-2"
+                                                        >
+                                                        <Trash2 className="w-3.5 h-3.5 mr-1.5" />Delete
+                                      </Button>
+                    </div
 
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Client</Label>
+                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                                    <div className="space-y-1">
+                                                                      <Label className="text-xs text-muted-foreground">Client</Label>
                         <Select value={entry.presetId?.toString() ?? ""} onValueChange={v => updateEntry(i, "presetId", v ? parseInt(v) : null)}>
                           <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick client" /></SelectTrigger>
                           <SelectContent>
