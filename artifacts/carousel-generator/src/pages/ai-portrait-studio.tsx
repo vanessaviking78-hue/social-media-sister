@@ -320,7 +320,75 @@ const MEN_COLOUR_IDS  = ["ms-01","ms-02","ms-03","ms-04","ms-05","ms-06","ms-07"
 const MEN_BAILEY_IDS  = ["db-01","db-02","db-03","db-04","db-05","db-06","db-07","db-08","db-09","db-10"];
 const MEN_SCRUBS_IDS  = ["cs-01","cs-02","cs-03","cs-04","cs-05","cs-06","cs-07","cs-08","cs-09","cs-10"];
 
-const ALL_PRESETS = [...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
+const RANDOM_PROMPT_PRESETS: PhotoStudioPreset[] = [
+  { id: "rp-01", name: "Street Sign Lean", hasColour: false },
+  { id: "rp-02", name: "Sunbeam Eyes", hasColour: false },
+  { id: "rp-03", name: "Crimson Block Profile", hasColour: false },
+  { id: "rp-04", name: "Ink Silhouette Poster", hasColour: false },
+  { id: "rp-05", name: "Contact Sheet Campaign", hasColour: false },
+  { id: "rp-06", name: "Purple Ottoman Editorial", hasColour: false },
+  { id: "rp-07", name: "Autumn Wall Lean", hasColour: false },
+  { id: "rp-08", name: "Age Progression Slices", hasColour: false },
+  { id: "rp-09", name: "Luxury Bar Portrait", hasColour: false },
+  { id: "rp-10", name: "Freckled Contact Sheet", hasColour: false },
+  { id: "rp-11", name: "Birthday Number Poster", hasColour: false },
+  { id: "rp-12", name: "Silhouette Rim Light", hasColour: false },
+  { id: "rp-13", name: "Orange Acetate Sunglasses", hasColour: false },
+  { id: "rp-14", name: "Armchair Monochrome", hasColour: false },
+  { id: "rp-15", name: "Floating App Icons", hasColour: false },
+  { id: "rp-16", name: "Water Droplets Close-Up", hasColour: false },
+  { id: "rp-17", name: "Motion Blur City Calm", hasColour: false },
+  { id: "rp-18", name: "Newspaper Roses", hasColour: false },
+  { id: "rp-19", name: "Power Portrait — Seated Lean", hasColour: false },
+  { id: "rp-20", name: "Power Portrait — Side Profile", hasColour: false },
+  { id: "rp-21", name: "Power Portrait — Reclining Arms Crossed", hasColour: false },
+  { id: "rp-22", name: "Power Portrait — Hand to Jaw", hasColour: false },
+  { id: "rp-23", name: "Power Portrait — Hand in Pocket", hasColour: false },
+  { id: "rp-24", name: "Power Portrait — Hands Clasped, Head Bowed", hasColour: false },
+  { id: "rp-25", name: "Power Portrait — Over-the-Shoulder", hasColour: false },
+  { id: "rp-26", name: "Power Portrait — Arm Draped Over Chair", hasColour: false },
+  { id: "rp-27", name: "Power Portrait — Close Crop, Hand Raised", hasColour: false },
+  { id: "rp-28", name: "Doodle Art Portrait", hasColour: false },
+  { id: "rp-29", name: "Editorial Magazine Power Stance", hasColour: false },
+  { id: "rp-30", name: "Five Expressions Poster", hasColour: false },
+  { id: "rp-31", name: "Fine Art Beauty Close-Up", hasColour: false },
+  { id: "rp-32", name: "Cherry Lips Portrait", hasColour: false },
+  { id: "rp-33", name: "Golden Hour Couture", hasColour: false },
+  { id: "rp-34", name: "Keychain Miniature", hasColour: false },
+  { id: "rp-35", name: "Honest Realism Portrait", hasColour: false },
+  { id: "rp-36", name: "Staircase Silhouette", hasColour: false },
+  { id: "rp-37", name: "Coffee Shop Candid", hasColour: false },
+  { id: "rp-38", name: "Fireside Knit Elegance", hasColour: false },
+  { id: "rp-39", name: "Blown Kiss Beauty", hasColour: false },
+  { id: "rp-40", name: "Silent Confidence Beauty", hasColour: false },
+  { id: "rp-41", name: "Leaf Shadow Profile", hasColour: false },
+  { id: "rp-42", name: "Peach Rose Elegance", hasColour: false },
+  { id: "rp-43", name: "Vanity Morning Light", hasColour: false },
+  { id: "rp-44", name: "Golden Hour Car Selfie", hasColour: false },
+  { id: "rp-45", name: "Scrubs Mirror Selfie", hasColour: false },
+  { id: "rp-46", name: "Yacht Deck Linen", hasColour: false },
+  { id: "rp-47", name: "Venice Sunset Gown", hasColour: false },
+  { id: "rp-48", name: "Angelic Muse", hasColour: false },
+  { id: "rp-49", name: "Pastel Cyber Gamer", hasColour: false },
+  { id: "rp-50", name: "Split Personality Portrait", hasColour: false },
+  { id: "rp-51", name: "Coastal Equestrian Power", hasColour: false },
+  { id: "rp-52", name: "Latte Art Portrait", hasColour: false },
+  { id: "rp-53", name: "Rain Macro Profile", hasColour: false },
+  { id: "rp-54", name: "Rugby Player Transformation", hasColour: false },
+  { id: "rp-55", name: "Baddie Glam Selfie", hasColour: false },
+  { id: "rp-56", name: "Bedside Beauty Gaze", hasColour: false },
+  { id: "rp-57", name: "Kintsugi Sculpture Portrait", hasColour: false },
+  { id: "rp-58", name: "Scrubs Editorial Authority", hasColour: false },
+  { id: "rp-59", name: "Chessboard Queen", hasColour: false },
+  { id: "rp-60", name: "Neon Tunnel Athlete", hasColour: false },
+  { id: "rp-61", name: "Friendly Glam B&W", hasColour: false },
+  { id: "rp-62", name: "Seventies Freckle Portrait", hasColour: false },
+  { id: "rp-63", name: "Neon Milkshake Couture", hasColour: false },
+  { id: "rp-64", name: "Cracked Porcelain Tears", hasColour: false },
+  { id: "rp-65", name: "Behind The Scenes Glam", hasColour: false },
+];
+
+const ALL_PRESETS = [...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS, ...RANDOM_PROMPT_PRESETS];
 const findPreset = (id: string) => ALL_PRESETS.find((p) => p.id === id);
 
 const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
@@ -933,6 +1001,42 @@ export default function AiPortraitStudio() {
                   </div>
                 );
               })}
+            </div>
+
+{/* ── Random Prompts ── */}
+            <div className="mt-6 border-t border-border/20 pt-5">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium">Random Prompts</p>
+                <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={() => deselectCategory(RANDOM_PROMPT_PRESETS.map((p) => p.id))}>Clear all</button>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">A grab-bag of extra styles, added from your own prompt list.</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+                {RANDOM_PROMPT_PRESETS.map((preset) => {
+                  const isSelected = selectedPresets.has(preset.id);
+                  return (
+                    <div
+                      key={preset.id}
+                      className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
+                        isSelected
+                          ? "border-violet-500/70 bg-violet-500/10"
+                          : "border-border/30 hover:border-border/60 hover:bg-muted/20"
+                      }`}
+                      onClick={() => togglePreset(preset.id)}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                          isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
+                        }`}>
+                          {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium leading-snug">{preset.name}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* ── Injector Collection ── */}
