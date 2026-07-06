@@ -70,39 +70,60 @@ async function igPublish(igAccountId: string, token: string, creationId: string)
   throw new Error(`IG publish failed after retries: ${lastErr}`);
 }
 
+async function createIgCarouselContainer(
+    igAccountId: string,
+    token: string,
+    childIds: string[],
+    caption: string,
+    audioName?: string,
+  ): Promise<{ ok: boolean; status: number; id?: string; message?: string; raw?: any }> {
+    const carouselBody: Record<string, unknown> = {
+          media_type: "CAROUSEL",
+          children: childIds.join(","),
+          caption,
+          access_token: token,
+    };
+    if (audioName) carouselBody.audio_name = audioName;
+    const carouselRes = await metaFetch(`${GRAPH}/${igAccountId}/media`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(carouselBody),
+    });
+    const carouselData = await carouselRes.json() as any;
+    return {
+          ok: carouselRes.ok && !!carouselData.id,
+          status: carouselRes.status,
+          id: carouselData.id,
+          message: carouselData?.error?.message,
+          raw: carouselData,
+    };
+}
+
 async function postToInstagram(
-  igAccountId: string,
-  token: string,
-  imageUrls: string[],
-  caption: string,
-  audioName?: string
-): Promise<string> {
-  if (imageUrls.length === 1) {
-    const containerId = await igUploadContainer(igAccountId, token, imageUrls[0], false, caption, audioName);
-    return igPublish(igAccountId, token, containerId);
-  }
-  const childIds: string[] = [];
-  for (const url of imageUrls) {
-    const id = await igUploadContainer(igAccountId, token, url, true);
-    childIds.push(id);
-  }
-  const carouselBody: Record<string, unknown> = {
-    media_type: "CAROUSEL",
-    children: childIds.join(","),
-    caption,
-    access_token: token,
-  };
-  if (audioName) carouselBody.audio_name = audioName;
-  const carouselRes = await metaFetch(`${GRAPH}/${igAccountId}/media`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(carouselBody),
-  });
-  const carouselData = await carouselRes.json() as any;
-  if (!carouselRes.ok || !carouselData.id) {
-    throw new Error(`IG carousel container failed (${carouselRes.status}): ${carouselData?.error?.message || JSON.stringify(carouselData)}`);
-  }
-  return igPublish(igAccountId, token, carouselData.id);
+    igAccountId: string,
+    token: string,
+    imageUrls: string[],
+    caption: string,
+    audioName?: string
+  ): Promise<string> {
+    if (imageUrls.length === 1) {
+          const containerId = await igUploadContainer(igAccountId, token, imageUrls[0], false, caption, audioName);
+          return igPublish(igAccountId, token, containerId);
+    }
+    const childIds: string[] = [];
+    for (const url of imageUrls) {
+          const id = await igUploadContainer(igAccountId, token, url, true);
+          childIds.push(id);
+    }
+
+    let carouselData = await createIgCarouselContainer(igAccountId, token, childIds, caption, audioName);
+    if (!carouselData.ok && audioName && (carouselData.message || "").toLowerCase().includes("invalid parameter")) {
+          carouselData = await createIgCarouselContainer(igAccountId, token, childIds, caption, undefined);
+    }
+    if (!carouselData.ok || !carouselData.id) {
+          throw new Error(`IG carousel container failed (${carouselData.status}): ${carouselData.message || JSON.stringify(carouselData.raw)}`);
+    }
+    return igPublish(igAccountId, token, carouselData.id);
 }
 
 async function postToFacebook(
