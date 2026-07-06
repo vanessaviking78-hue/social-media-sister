@@ -10,7 +10,7 @@ const router: IRouter = Router();
 
 const GRAPH = "https://graph.facebook.com/v22.0";
 
-function metaFetch(url: string, opts: RequestInit = {}, timeoutMs = 30_000): Promise<globalThis.Response> {
+                   function metaFetch(url: string, opts: RequestInit = {}, timeoutMs = 30_000): Promise<globalThis.Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   return fetch(url, { ...opts, signal: controller.signal }).finally(() =>
