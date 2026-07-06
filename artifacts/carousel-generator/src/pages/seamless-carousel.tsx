@@ -696,7 +696,7 @@ export default function SeamlessCarouselPage() {
             })}
             {renderedUrls.length > 0 && (
               <div className="ml-auto flex items-center gap-2">
-                <button onClick={() => { setStep("upload"); setFiles([]); setPreviewUrls([]); setUploadedUrls([]); setCollageElements([]); setRenderedUrls([]); }} className="flex items-center gap-1 px-2 h-7 rounded text-xs text-muted-foreground hover:text-foreground transition-colors">
+                <button onClick={() => { setStep("upload"); setFiles([]); setPreviewUrls([]); setUploadedUrls([]); setCollageElements([]); setRenderedUrls([]); }} className="flex items-center gap-1.5 px-3 h-7 rounded-md text-muted-foreground hover:bg-accent text-xs font-semibold transition-colors">
                   <RefreshCcw className="w-3 h-3" /> Start over
                 </button>
                 <button onClick={downloadZip} className="flex items-center gap-1.5 px-3 h-7 rounded-md bg-[#E91976] text-white text-xs font-bold hover:bg-pink-600 transition-colors">
@@ -729,7 +729,8 @@ export default function SeamlessCarouselPage() {
                   <div className="grid grid-cols-3 gap-3">
                     {[3, 4, 5].map((n) => (
                       <button key={n} onClick={() => handleSlideCountChange(n)}
-                        className={`py-4 rounded-xl text-sm font-semibold border transition-all ${slideCount === n ? "bg-primary text-primary-foreground border-primary" : "bg-accent/40 text-muted-foreground border-border/30 hover:border-pink-500/40"}`}>
+                        className={`py-4 rounded-xl text-sm font-semibold border transition-all ${slideCount === n ? "bg-primary text-primary-foreground border-primary" : "bg-accent/40 text-muted-foreground border-border/30 hover:border-border/80"}`}
+                      >
                         {n} slides
                         <span className="block text-xs font-normal opacity-70 mt-0.5">{n * 1080}×1080px total</span>
                       </button>
@@ -772,7 +773,8 @@ export default function SeamlessCarouselPage() {
                             <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs text-center py-0.5 rounded-b-lg">BG</div>
                           )}
                           <button onClick={(e) => { e.stopPropagation(); removeFile(i); }}
-                            className="absolute top-1 right-1 w-5 h-5 bg-black/70 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            className="absolute top-1 right-1 w-5 h-5 bg-black/70 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
                             <X className="w-3 h-3" />
                           </button>
                         </div>
@@ -799,7 +801,8 @@ export default function SeamlessCarouselPage() {
                   <div className="space-y-3">
                     {LAYOUTS.map((l) => (
                       <button key={l.value} onClick={() => setLayout(l.value)}
-                        className={`w-full text-left p-4 rounded-xl border transition-all ${layout === l.value ? "border-pink-500 bg-pink-500/10" : "border-border/30 bg-accent/20 hover:border-pink-500/40"}`}>
+                        className={`w-full text-left p-4 rounded-xl border transition-all ${layout === l.value ? "border-pink-500 bg-pink-500/10" : "border-border/30 bg-accent/20 hover:border-pink-500/20"}`}
+                      >
                         <div className="flex items-center gap-3">
                           <span className="text-2xl">{l.emoji}</span>
                           <div>
@@ -881,23 +884,23 @@ export default function SeamlessCarouselPage() {
                                 <div className="space-y-1.5">
                                   <Label className="text-xs font-medium text-muted-foreground/80">Lead-in</Label>
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <input type="color" value={slide.leadInColor ?? textColor} onChange={(e) => setSlideField(i, "leadInColor", e.target.value)} className="w-8 h-6 p-0.5 cursor-pointer rounded border border-border/40 bg-transparent shrink-0" />
+                                    <input type="color" value={slide.leadInColor ?? textColor} onChange={(e) => setSlideField(i, "leadInColor", e.target.value)} className="w-8 h-6 p-0.5 cursor-pointer rounded" />
                                     {["#ffffff","#000000","#F5EEE3","#E91976","#ffd700"].map(c => (
-                                      <button key={c} onClick={() => setSlideField(i, "leadInColor", c)} style={{ background: c }} className="w-5 h-5 rounded-full border border-white/30 shrink-0 hover:scale-110 transition-transform" title={c} />
+                                      <button key={c} onClick={() => setSlideField(i, "leadInColor", c)} style={{ background: c }} className="w-5 h-5 rounded-full border border-white/30 shrink-0 hover:scale-110 transition-transform" />
                                     ))}
                                   </div>
                                   <div className="grid grid-cols-3 gap-2">
                                     <div className="space-y-0.5">
-                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Size</Label><span className="text-xs font-mono text-muted-foreground">{slide.leadInFontSize ?? 44}</span></div>
-                                      <input type="range" min={20} max={80} step={2} value={slide.leadInFontSize ?? 44} onChange={(e) => setSlideField(i, "leadInFontSize", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Size</Label><span className="text-xs font-mono text-muted-foreground/70">{slide.leadInFontSize ?? 44}px</span></div>
+                                      <input type="range" min={20} max={80} step={2} value={slide.leadInFontSize ?? 44} onChange={(e) => setSlideField(i, "leadInFontSize", Number(e.target.value))} className="w-full" />
                                     </div>
                                     <div className="space-y-0.5">
-                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Spacing</Label><span className="text-xs font-mono text-muted-foreground">{slide.leadInLetterSpacing ?? 0}</span></div>
-                                      <input type="range" min={0} max={10} step={0.5} value={slide.leadInLetterSpacing ?? 0} onChange={(e) => setSlideField(i, "leadInLetterSpacing", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Spacing</Label><span className="text-xs font-mono text-muted-foreground/70">{(slide.leadInLetterSpacing ?? 0).toFixed(1)}</span></div>
+                                      <input type="range" min={0} max={10} step={0.5} value={slide.leadInLetterSpacing ?? 0} onChange={(e) => setSlideField(i, "leadInLetterSpacing", Number(e.target.value))} className="w-full" />
                                     </div>
                                     <div className="space-y-0.5">
-                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Line height</Label><span className="text-xs font-mono text-muted-foreground">{(slide.leadInLineHeight ?? 1.2).toFixed(1)}</span></div>
-                                      <input type="range" min={0.8} max={2.5} step={0.1} value={slide.leadInLineHeight ?? 1.2} onChange={(e) => setSlideField(i, "leadInLineHeight", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Line height</Label><span className="text-xs font-mono text-muted-foreground/70">{(slide.leadInLineHeight ?? 1.2).toFixed(2)}</span></div>
+                                      <input type="range" min={0.8} max={2.5} step={0.1} value={slide.leadInLineHeight ?? 1.2} onChange={(e) => setSlideField(i, "leadInLineHeight", Number(e.target.value))} className="w-full" />
                                     </div>
                                   </div>
                                 </div>
@@ -906,23 +909,23 @@ export default function SeamlessCarouselPage() {
                                 <div className="space-y-1.5">
                                   <Label className="text-xs font-medium text-muted-foreground/80">Title</Label>
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <input type="color" value={slide.titleColor ?? textColor} onChange={(e) => setSlideField(i, "titleColor", e.target.value)} className="w-8 h-6 p-0.5 cursor-pointer rounded border border-border/40 bg-transparent shrink-0" />
+                                    <input type="color" value={slide.titleColor ?? textColor} onChange={(e) => setSlideField(i, "titleColor", e.target.value)} className="w-8 h-6 p-0.5 cursor-pointer rounded" />
                                     {["#ffffff","#000000","#F5EEE3","#E91976","#ffd700"].map(c => (
-                                      <button key={c} onClick={() => setSlideField(i, "titleColor", c)} style={{ background: c }} className="w-5 h-5 rounded-full border border-white/30 shrink-0 hover:scale-110 transition-transform" title={c} />
+                                      <button key={c} onClick={() => setSlideField(i, "titleColor", c)} style={{ background: c }} className="w-5 h-5 rounded-full border border-white/30 shrink-0 hover:scale-110 transition-transform" />
                                     ))}
                                   </div>
                                   <div className="grid grid-cols-3 gap-2">
                                     <div className="space-y-0.5">
-                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Size</Label><span className="text-xs font-mono text-muted-foreground">{slide.titleFontSize ?? 76}</span></div>
-                                      <input type="range" min={32} max={120} step={2} value={slide.titleFontSize ?? 76} onChange={(e) => setSlideField(i, "titleFontSize", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Size</Label><span className="text-xs font-mono text-muted-foreground/70">{slide.titleFontSize ?? 76}px</span></div>
+                                      <input type="range" min={32} max={120} step={2} value={slide.titleFontSize ?? 76} onChange={(e) => setSlideField(i, "titleFontSize", Number(e.target.value))} className="w-full" />
                                     </div>
                                     <div className="space-y-0.5">
-                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Spacing</Label><span className="text-xs font-mono text-muted-foreground">{slide.titleLetterSpacing ?? 0}</span></div>
-                                      <input type="range" min={0} max={10} step={0.5} value={slide.titleLetterSpacing ?? 0} onChange={(e) => setSlideField(i, "titleLetterSpacing", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Spacing</Label><span className="text-xs font-mono text-muted-foreground/70">{(slide.titleLetterSpacing ?? 0).toFixed(1)}</span></div>
+                                      <input type="range" min={0} max={10} step={0.5} value={slide.titleLetterSpacing ?? 0} onChange={(e) => setSlideField(i, "titleLetterSpacing", Number(e.target.value))} className="w-full" />
                                     </div>
                                     <div className="space-y-0.5">
-                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Line height</Label><span className="text-xs font-mono text-muted-foreground">{(slide.titleLineHeight ?? 0.88).toFixed(2)}</span></div>
-                                      <input type="range" min={0.6} max={2.0} step={0.05} value={slide.titleLineHeight ?? 0.88} onChange={(e) => setSlideField(i, "titleLineHeight", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Line height</Label><span className="text-xs font-mono text-muted-foreground/70">{(slide.titleLineHeight ?? 0.88).toFixed(2)}</span></div>
+                                      <input type="range" min={0.6} max={2.0} step={0.05} value={slide.titleLineHeight ?? 0.88} onChange={(e) => setSlideField(i, "titleLineHeight", Number(e.target.value))} className="w-full" />
                                     </div>
                                   </div>
                                 </div>
@@ -931,23 +934,23 @@ export default function SeamlessCarouselPage() {
                                 <div className="space-y-1.5">
                                   <Label className="text-xs font-medium text-muted-foreground/80">Tagline</Label>
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <input type="color" value={slide.tagLineColor ?? textColor} onChange={(e) => setSlideField(i, "tagLineColor", e.target.value)} className="w-8 h-6 p-0.5 cursor-pointer rounded border border-border/40 bg-transparent shrink-0" />
+                                    <input type="color" value={slide.tagLineColor ?? textColor} onChange={(e) => setSlideField(i, "tagLineColor", e.target.value)} className="w-8 h-6 p-0.5 cursor-pointer rounded" />
                                     {["#ffffff","#000000","#F5EEE3","#E91976","#ffd700"].map(c => (
-                                      <button key={c} onClick={() => setSlideField(i, "tagLineColor", c)} style={{ background: c }} className="w-5 h-5 rounded-full border border-white/30 shrink-0 hover:scale-110 transition-transform" title={c} />
+                                      <button key={c} onClick={() => setSlideField(i, "tagLineColor", c)} style={{ background: c }} className="w-5 h-5 rounded-full border border-white/30 shrink-0 hover:scale-110 transition-transform" />
                                     ))}
                                   </div>
                                   <div className="grid grid-cols-3 gap-2">
                                     <div className="space-y-0.5">
-                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Size</Label><span className="text-xs font-mono text-muted-foreground">{slide.tagLineFontSize ?? 40}</span></div>
-                                      <input type="range" min={20} max={80} step={2} value={slide.tagLineFontSize ?? 40} onChange={(e) => setSlideField(i, "tagLineFontSize", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Size</Label><span className="text-xs font-mono text-muted-foreground/70">{slide.tagLineFontSize ?? 40}px</span></div>
+                                      <input type="range" min={20} max={80} step={2} value={slide.tagLineFontSize ?? 40} onChange={(e) => setSlideField(i, "tagLineFontSize", Number(e.target.value))} className="w-full" />
                                     </div>
                                     <div className="space-y-0.5">
-                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Spacing</Label><span className="text-xs font-mono text-muted-foreground">{slide.tagLineLetterSpacing ?? 0}</span></div>
-                                      <input type="range" min={0} max={10} step={0.5} value={slide.tagLineLetterSpacing ?? 0} onChange={(e) => setSlideField(i, "tagLineLetterSpacing", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Spacing</Label><span className="text-xs font-mono text-muted-foreground/70">{(slide.tagLineLetterSpacing ?? 0).toFixed(1)}</span></div>
+                                      <input type="range" min={0} max={10} step={0.5} value={slide.tagLineLetterSpacing ?? 0} onChange={(e) => setSlideField(i, "tagLineLetterSpacing", Number(e.target.value))} className="w-full" />
                                     </div>
                                     <div className="space-y-0.5">
-                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Line height</Label><span className="text-xs font-mono text-muted-foreground">{(slide.tagLineLineHeight ?? 1.1).toFixed(1)}</span></div>
-                                      <input type="range" min={0.8} max={2.5} step={0.1} value={slide.tagLineLineHeight ?? 1.1} onChange={(e) => setSlideField(i, "tagLineLineHeight", Number(e.target.value))} className="w-full accent-pink-500 h-1.5" />
+                                      <div className="flex items-center justify-between"><Label className="text-xs text-muted-foreground/70">Line height</Label><span className="text-xs font-mono text-muted-foreground/70">{(slide.tagLineLineHeight ?? 1.1).toFixed(2)}</span></div>
+                                      <input type="range" min={0.8} max={2.5} step={0.1} value={slide.tagLineLineHeight ?? 1.1} onChange={(e) => setSlideField(i, "tagLineLineHeight", Number(e.target.value))} className="w-full" />
                                     </div>
                                   </div>
                                 </div>
@@ -1007,17 +1010,18 @@ export default function SeamlessCarouselPage() {
                             <Label className="text-xs text-muted-foreground">Size</Label>
                             <span className="text-xs font-mono text-muted-foreground">{Math.round(logo.scale * 100)}%</span>
                           </div>
-                          <input type="range" min={0.3} max={3} step={0.05} value={logo.scale} onChange={(e) => setLogo((l) => l ? { ...l, scale: Number(e.target.value) } : l)} className="w-full accent-pink-500 h-1.5" />
+                          <input type="range" min={0.3} max={3} step={0.05} value={logo.scale} onChange={(e) => setLogo((l) => l ? { ...l, scale: Number(e.target.value) } : l)} className="w-full" />
                           <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                            <label>X <input type="range" min={0} max={1} step={0.01} value={logo.x} onChange={(e) => setLogo((l) => l ? { ...l, x: Number(e.target.value) } : l)} className="w-full accent-pink-500 h-1.5 mt-0.5" /></label>
-                            <label>Y <input type="range" min={0} max={1} step={0.01} value={logo.y} onChange={(e) => setLogo((l) => l ? { ...l, y: Number(e.target.value) } : l)} className="w-full accent-pink-500 h-1.5 mt-0.5" /></label>
+                            <label>X <input type="range" min={0} max={1} step={0.01} value={logo.x} onChange={(e) => setLogo((l) => l ? { ...l, x: Number(e.target.value) } : l)} className="w-full mt-1" /></label>
+                            <label>Y <input type="range" min={0} max={1} step={0.01} value={logo.y} onChange={(e) => setLogo((l) => l ? { ...l, y: Number(e.target.value) } : l)} className="w-full mt-1" /></label>
                           </div>
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => setLogo(null)} className="text-muted-foreground shrink-0"><X className="w-4 h-4" /></Button>
                       </div>
                     ) : (
                       <button onClick={() => logoFileRef.current?.click()}
-                        className="w-full border border-dashed border-border/40 rounded-xl py-3 text-sm text-muted-foreground hover:border-pink-500/40 transition-colors flex items-center justify-center gap-2">
+                        className="w-full border border-dashed border-border/40 rounded-xl py-3 text-sm text-muted-foreground hover:border-pink-500/40 transition-colors flex items-center justify-center gap-2"
+                      >
                         <Upload className="w-4 h-4" /> Upload logo (PNG with transparency)
                       </button>
                     )}
@@ -1103,7 +1107,7 @@ export default function SeamlessCarouselPage() {
                     onChange={(e) => setFirstComment(e.target.value)}
                     placeholder="Which slide surprised you most? Comment the number below 👇"
                     rows={2}
-                    className="w-full bg-zinc-800/60 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 resize-none focus:outline-none focus:ring-1 focus:ring-zinc-500"
+                    className="w-full bg-zinc-800/60 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder:text-zinc-600 resize-none focus:outline-none focus:ring-1 focus:ring-pink-500/50"
                   />
                   <p className="text-xs text-zinc-600 mt-1">Posted 35 seconds after publishing to Instagram.</p>
                 </div>
@@ -1131,7 +1135,7 @@ export default function SeamlessCarouselPage() {
                         const r = await fetch(`${BASE}/api/meta/push`, {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ posts, presetId: selectedPresetId, postType: "carousel" }),
+                          body: JSON.stringify({ posts, presetId: selectedPresetId, postType: "seamless" }),
                         });
                         if (!r.ok) { const e = await r.json().catch(() => ({})); throw new Error((e as any).error || "Post failed"); }
                         toast.success("Posted to Instagram");
@@ -1240,17 +1244,17 @@ export default function SeamlessCarouselPage() {
                         pointerEvents: "none",
                       }}>
                         {slide.leadIn && (
-                          <div style={{ fontFamily: `'${scriptFont}', cursive`, fontSize: leadFs, color: slide.leadInColor ?? textColor, textShadow: "0 1px 3px rgba(0,0,0,0.6)", lineHeight: slide.leadInLineHeight ?? 1.2, letterSpacing: slide.leadInLetterSpacing ?? 0, whiteSpace: "nowrap" }}>
+                          <div style={{ fontFamily: `'${scriptFont}', cursive`, fontSize: leadFs, color: slide.leadInColor ?? textColor, textShadow: "0 1px 3px rgba(0,0,0,0.6)", lineHeight: slide.leadInLineHeight ?? 1.2 }}>
                             {slide.leadIn}
                           </div>
                         )}
                         {slide.title && (
-                          <div style={{ fontFamily: `'${scriptFont}', cursive`, fontSize: titleFs, color: slide.titleColor ?? textColor, textShadow: "0 1px 4px rgba(0,0,0,0.7)", lineHeight: slide.titleLineHeight ?? 1.1, letterSpacing: slide.titleLetterSpacing ?? 0, whiteSpace: "nowrap" }}>
+                          <div style={{ fontFamily: `'${scriptFont}', cursive`, fontSize: titleFs, color: slide.titleColor ?? textColor, textShadow: "0 1px 4px rgba(0,0,0,0.7)", lineHeight: slide.titleLineHeight ?? 0.88 }}>
                             {slide.title}
                           </div>
                         )}
                         {slide.tagLine && (
-                          <div style={{ fontFamily: `'${scriptFont}', cursive`, fontSize: tagFs, color: slide.tagLineColor ?? textColor, textShadow: "0 1px 3px rgba(0,0,0,0.6)", lineHeight: slide.tagLineLineHeight ?? 1.2, letterSpacing: slide.tagLineLetterSpacing ?? 0, whiteSpace: "nowrap", opacity: 0.85 }}>
+                          <div style={{ fontFamily: `'${scriptFont}', cursive`, fontSize: tagFs, color: slide.tagLineColor ?? textColor, textShadow: "0 1px 3px rgba(0,0,0,0.6)", lineHeight: slide.tagLineLineHeight ?? 1.1 }}>
                             {slide.tagLine}
                           </div>
                         )}
