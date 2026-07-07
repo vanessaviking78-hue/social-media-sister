@@ -377,12 +377,18 @@ async function processScheduledPosts(): Promise<void> {
       "Scheduled post processed",
     );
 
-    await notifyPostResult({
-      ok: metaOk,
-      clientName: preset.name || post.clientName || "client",
-      postType: post.postType,
-      detail: metaOk ? undefined : (metaResult?.error || undefined),
-    });
+const igConfigured = !!preset.metaInstagramAccountId;
+      const fbConfigured = !!preset.metaFacebookPageId;
+      const igOk = igConfigured ? (metaOk ? !!metaResult.igPostId : false) : undefined;
+      const fbOk = fbConfigured ? (metaOk ? !!metaResult.fbPostId : false) : undefined;
+      await notifyPostResult({
+        ok: metaOk,
+        clientName: preset.name || post.clientName || "client",
+        postType: post.postType,
+        detail: metaOk ? undefined : (metaResult?.error || undefined),
+        igOk,
+        fbOk,
+      });
   }
   } finally {
     schedulerRunning = false;
