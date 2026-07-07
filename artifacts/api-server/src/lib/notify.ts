@@ -21,6 +21,8 @@ export async function notifyPostResult(opts: {
   clientName: string;
   postType: string;
   detail?: string;
+  igOk?: boolean;
+  fbOk?: boolean;
 }): Promise<void> {
   const to = process.env.NOTIFY_EMAIL;
   if (!to) return;
@@ -29,13 +31,23 @@ export async function notifyPostResult(opts: {
   const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
   const client = opts.clientName || "client";
   const type = opts.postType || "post";
-  const subject = opts.ok
-    ? `Posted: ${client} (${type})`
-    : `Post FAILED: ${client} (${type})`;
+  const hasPlatformDetail = opts.igOk !== undefined || opts.fbOk !== undefined;
+  const platformParts = [
+    opts.fbOk !== undefined ? `Facebook: ${opts.fbOk ? "posted" : "failed"}` : null,
+    opts.igOk !== undefined ? `Instagram: ${opts.igOk ? "posted" : "failed"}` : null,
+  ].filter(Boolean);
+  const platformSummary = platformParts.join(", ");
+  const subject = hasPlatformDetail
+    ? `${opts.ok ? "Posted" : "Post FAILED"}: ${client} (${type}) — ${platformSummary}`
+    : opts.ok
+      ? `Posted: ${client} (${type})`
+      : `Post FAILED: ${client} (${type})`;
   const lines = [
-    opts.ok
-      ? `A ${type} just posted for ${client}.`
-      : `A ${type} failed to post for ${client}.`,
+    hasPlatformDetail
+      ? `${type} for ${client} — ${platformSummary}.`
+      : opts.ok
+        ? `A ${type} just posted for ${client}.`
+        : `A ${type} failed to post for ${client}.`,
     "",
     opts.detail ? `Details: ${opts.detail}` : "",
     "",
