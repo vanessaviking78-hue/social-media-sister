@@ -782,6 +782,11 @@ export const RANDOM_PROMPT_PRESETS: PhotoStudioPreset[] = [
     promptTemplate: `Cinematic editorial portrait seated in a director's chair marked with "[NAME]" on the canvas back, wearing a plush [COLOUR] bathrobe, legs crossed, glossy skin, soft studio lighting. Hair set in large rollers, makeup partially finished. Stylists' hands entering the frame adjusting hair and offering a glass of red wine, another hand holding a film clapperboard. Direct calm-authority gaze at the camera. Luxury behind-the-scenes aesthetic, modern Hollywood dressing room, dark neutral backdrop, shallow depth of field, high-fashion editorial photography, ultra-realistic, sharp focus, cinematic mood, 85mm lens look, premium branding feel.`,
   },
 ];
+
+export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: string, aspectRatio = "3:4", vars?: { colour?: string; name?: string; skills?: string; knownAs?: string; hairColour?: string }): string {
+    let prompt = preset.promptTemplate;
+    if (preset.hasColour) {
+          prompt = prompt.replace(/\[COLOUR\]/g, colour?.trim() || "navy blue");
   }
   if (vars) {
     if (vars.colour?.trim()) prompt = prompt.replace(/\[COLOUR\]/g, vars.colour.trim());
