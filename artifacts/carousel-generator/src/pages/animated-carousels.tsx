@@ -110,7 +110,7 @@ export default function AnimatedCarousels() {
               videoUrl,
               caption: it.caption || "",
               title: it.file.name.replace(/\.[^.]+$/, "").slice(0, 60),
-              platforms: ["instagram"],
+              platforms: ["instagram", "facebook"],
             },
             scheduledAt: new Date(`${it.date}T${it.time}`).toISOString(),
           }),
