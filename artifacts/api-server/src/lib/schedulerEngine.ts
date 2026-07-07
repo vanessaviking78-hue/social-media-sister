@@ -147,6 +147,65 @@ async function postVideoToFB(pageId: string, token: string, videoUrl: string, ca
   if (!res.ok || !data.id) throw new Error(`FB video upload failed: ${data?.error?.message || JSON.stringify(data)}`);
   return data.id;
 }
+async function igUploadVideoForCarousel(igId: string, token: string, videoUrl: string): Promise<string> {
+  const res = await fetch(`${GRAPH}/${igId}/media`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ media_type: "VIDEO", video_url: videoUrl, is_carousel_item: "true", access_token: token }),
+  });
+  const data = await res.json() as { id?: string; error?: { message?: string } };
+  if (!res.ok || !data.id) throw new Error(`IG video upload failed: ${data?.error?.message || JSON.stringify(data)}`);
+  return data.id;
+}
+
+async function waitForIgContainerReady(containerId: string, token: string): Promise<void> {
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const res = await fetch(`${GRAPH}/${containerId}?fields=status_code&access_token=${token}`);
+    const data = await res.json() as { status_code?: string; error?: { message?: string } };
+    if (data.status_code === "FINISHED") return;
+    if (data.status_code === "ERROR") throw new Error(`IG video processing failed for container ${containerId}`);
+    await new Promise((r) => setTimeout(r, 4000));
+  }
+  throw new Error(`IG video container ${containerId} did not finish processing in time`);
+}
+
+async function postVideoCarouselToIG(igId: string, token: string, videoUrls: string[], caption: string, audioName?: string): Promise<string> {
+  const childIds: string[] = [];
+  for (const url of videoUrls) {
+    const id = await igUploadVideoForCarousel(igId, token, url);
+    await waitForIgContainerReady(id, token);
+    childIds.push(id);
+  }
+  let data = await createCarouselContainer(igId, token, childIds, caption, audioName);
+  if (!data.ok && audioName && (data.message || "").toLowerCase().includes("invalid parameter")) {
+    data = await createCarouselContainer(igId, token, childIds, caption, undefined);
+  }
+  if (!data.ok || !data.id) throw new Error(`IG video carousel container failed: ${data.message}`);
+  return igPublish(igId, token, data.id);
+}
+
+async function postVideoCarouselToFB(pageId: string, token: string, videoUrls: string[], caption: string): Promise<string> {
+  const fbids: { media_fbid: string }[] = [];
+  for (const url of videoUrls) {
+    const res = await fetch(`${GRAPH}/${pageId}/videos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file_url: url, published: false, access_token: token }),
+    });
+    const data = await res.json() as { id?: string; error?: { message?: string } };
+    if (!res.ok || !data.id) throw new Error(`FB video upload failed: ${data?.error?.message || JSON.stringify(data)}`);
+    fbids.push({ media_fbid: data.id });
+  }
+  const res = await fetch(`${GRAPH}/${pageId}/feed`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: caption, attached_media: fbids, access_token: token }),
+  });
+  const data = await res.json() as { id?: string; error?: { message?: string } };
+  if (!res.ok || !data.id) throw new Error(`FB video carousel post failed: ${data?.error?.message || JSON.stringify(data)}`);
+  return data.id;
+}
+
 
 async function postStoryToIG(
   igId: string,
@@ -205,7 +264,7 @@ async function igPostComment(igMediaId: string, token: string, commentText: stri
   }
 }
 
-type PostContent = { imageUrls?: string[]; videoUrl?: string; caption: string; title: string; firstComment?: string; musicTrack?: { name: string; artist: string } | null; platforms?: string[] };
+type PostContent = { imageUrls?: string[]; videoUrl?: string; videoUrls?: string[]; caption: string; title: string; firstComment?: string; musicTrack?: { name: string; artist: string } | null; platforms?: string[] };
 
 async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, preset: typeof clientPresetsTable.$inferSelect): Promise<{ igPostId?: string; fbPostId?: string }> {
   const token = preset.metaPageAccessToken;
@@ -252,6 +311,46 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
       }
       return reelResult;
     }
+
+    if (post.postType === "video_carousel") {
+      if (!content.videoUrls?.length) throw new Error("No video URLs for video carousel");
+      const wantIG = !content.platforms || content.platforms.includes("instagram");
+      const wantFB = !content.platforms || content.platforms.includes("facebook");
+      const vcResult: { igPostId?: string; fbPostId?: string } = {};
+      const vcErrors: string[] = [];
+      if (wantIG && !igId) vcErrors.push("IG: No Instagram Account ID configured for this client preset");
+      if (wantFB && !pageId) vcErrors.push("FB: No Facebook Page ID configured for this client preset");
+      const vcAudioName = content.musicTrack?.name
+        ? `${content.musicTrack.name} by ${content.musicTrack.artist}`
+        : undefined;
+      if (igId && wantIG) {
+        try {
+          vcResult.igPostId = await postVideoCarouselToIG(igId, token, content.videoUrls, content.caption, vcAudioName);
+          const vcFirstComment = content.firstComment?.trim();
+          if (vcFirstComment && vcResult.igPostId) {
+            setTimeout(() => {
+              igPostComment(vcResult.igPostId!, token, vcFirstComment).catch((err) =>
+                logger.warn({ err }, "Video carousel first comment failed")
+              );
+            }, 35_000);
+          }
+        } catch (e: any) { vcErrors.push(`IG: ${e.message}`); }
+      }
+      if (pageId && wantFB) {
+        try {
+          vcResult.fbPostId = await postVideoCarouselToFB(pageId, token, content.videoUrls, content.caption);
+        } catch (e: any) { vcErrors.push(`FB: ${e.message}`); }
+      }
+      if (vcErrors.length > 0) {
+        logger.warn(
+          { errors: vcErrors, igPosted: !!vcResult.igPostId, fbPosted: !!vcResult.fbPostId, postId: post.id },
+          "Meta rail posting error(s) — one or more platforms failed",
+        );
+        if (!vcResult.igPostId && !vcResult.fbPostId) throw new Error(vcErrors.join("; "));
+      }
+      return vcResult;
+    }
+
 
   if (!content.imageUrls?.length) throw new Error("No image URLs");
   const result: { igPostId?: string; fbPostId?: string } = {};
