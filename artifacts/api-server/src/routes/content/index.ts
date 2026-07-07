@@ -4,6 +4,11 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 import { objectStorageClient, signObjectURL } from "../../lib/objectStorage";
 import { logActivity } from "../../lib/activityLog";
 import { db } from "@workspace/db";
+import { spawn } from "child_process";
+import { writeFile, unlink, readFile } from "fs/promises";
+import { randomUUID } from "crypto";
+import { tmpdir } from "os";
+import { join } from "path";
 const videoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 300 * 1024 * 1024 } });
 
 function getVoiceSystemPrompt(voiceStyle: string): string {
@@ -742,6 +747,102 @@ router.post("/content/upload-video", videoUpload.single("video"), async (req, re
     res.json({ url: signedUrl, proxyUrl });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Video upload failed" });
+  }
+});
+
+async function probeDimensions(inputPath: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const probe = spawn("ffprobe", [
+      "-v", "error",
+      "-select_streams", "v:0",
+      "-show_entries", "stream=width,height",
+      "-of", "csv=p=0",
+      inputPath,
+    ]);
+    let out = "";
+    probe.stdout.on("data", (d) => { out += d.toString(); });
+    probe.on("close", (code) => {
+      if (code !== 0) { reject(new Error(`ffprobe exited with code ${code}`)); return; }
+      const [w, h] = out.trim().split(",").map((n) => parseInt(n, 10));
+      if (!w || !h) { reject(new Error("Could not read video dimensions")); return; }
+      resolve({ width: w, height: h });
+    });
+    probe.on("error", reject);
+  });
+}
+
+async function cropSlide(inputPath: string, outputPath: string, x: number, y: number, w: number, h: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const ffmpeg = spawn("ffmpeg", [
+      "-i", inputPath,
+      "-filter:v", `crop=${w}:${h}:${x}:${y}`,
+      "-c:a", "copy",
+      "-y",
+      outputPath,
+    ]);
+    ffmpeg.stderr.on("data", () => {});
+    ffmpeg.on("close", (code) => {
+      if (code === 0) resolve();
+      else reject(new Error(`ffmpeg exited with code ${code}`));
+    });
+    ffmpeg.on("error", reject);
+  });
+}
+
+// POST /content/split-video: takes one wide video and crops it into N equal-width
+// clips (same height as the source), for uploading as a video carousel.
+router.post("/content/split-video", videoUpload.single("video"), async (req, res) => {
+  const inputPath = join(tmpdir(), `split-in-${randomUUID()}.mp4`);
+  const outputPaths: string[] = [];
+  try {
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    if (!bucketId) { res.status(500).json({ error: "Object storage not configured" }); return; }
+    if (!req.file) { res.status(400).json({ error: "No video file provided" }); return; }
+
+    const slices = Math.max(2, Math.min(5, parseInt(req.body?.slices, 10) || 4));
+    await writeFile(inputPath, req.file.buffer);
+
+    const { width, height } = await probeDimensions(inputPath);
+    const sliceWidth = Math.floor(width / slices);
+    if (sliceWidth < 100) { res.status(400).json({ error: "Video too narrow to split into that many slides" }); return; }
+
+    const timestamp = Date.now();
+    const safeName = req.file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const bucket = objectStorageClient.bucket(bucketId);
+    const clips: { url: string; proxyUrl: string }[] = [];
+
+    for (let i = 0; i < slices; i++) {
+      const outputPath = join(tmpdir(), `split-out-${randomUUID()}.mp4`);
+      outputPaths.push(outputPath);
+      await cropSlide(inputPath, outputPath, i * sliceWidth, 0, sliceWidth, height);
+      const clipBuffer = await readFile(outputPath);
+
+      const objectPath = `reel-videos/${timestamp}-slide${i + 1}-${safeName}`;
+      const file = bucket.file(objectPath);
+      await file.save(clipBuffer, {
+        contentType: "video/mp4",
+        metadata: { cacheControl: "public, max-age=31536000" },
+      });
+
+      const signedUrl = await signObjectURL({
+        bucketName: bucketId,
+        objectName: objectPath,
+        method: "GET",
+        ttlSec: 7200,
+      });
+      const proto = (req.headers["x-forwarded-proto"] as string) || "https";
+      const host = (req.headers["x-forwarded-host"] as string) || req.headers.host || "localhost";
+      const proxyUrl = `${proto}://${host}/api/content/videos/${objectPath}`;
+      clips.push({ url: signedUrl, proxyUrl });
+    }
+
+    res.json({ clips });
+  } catch (err: any) {
+    console.error("Video split error:", err);
+    res.status(500).json({ error: err.message || "Video split failed" });
+  } finally {
+    await unlink(inputPath).catch(() => {});
+    await Promise.all(outputPaths.map((p) => unlink(p).catch(() => {})));
   }
 });
 
