@@ -137,6 +137,17 @@ async function postReelToIG(igId: string, token: string, videoUrl: string, capti
   return igPublish(igId, token, containerId);
 }
 
+async function postVideoToFB(pageId: string, token: string, videoUrl: string, caption?: string): Promise<string> {
+  const res = await fetch(`${GRAPH}/${pageId}/videos`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ file_url: videoUrl, description: caption || "", access_token: token }),
+  });
+  const data = await res.json() as { id?: string; error?: { message?: string } };
+  if (!res.ok || !data.id) throw new Error(`FB video upload failed: ${data?.error?.message || JSON.stringify(data)}`);
+  return data.id;
+}
+
 async function postStoryToIG(
   igId: string,
   token: string,
@@ -204,22 +215,43 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
   const content = post.content as PostContent;
 
   if (post.postType === "reel") {
-    if (!igId) throw new Error("No Instagram account ID for reel");
-    if (!content.videoUrl) throw new Error("No video URL for reel");
-    const reelAudioName = content.musicTrack?.name
-      ? `${content.musicTrack.name} by ${content.musicTrack.artist}`
-      : undefined;
-    const igPostId = await postReelToIG(igId, token, content.videoUrl, content.caption, post.isTrial, reelAudioName);
-    const reelFirstComment = content.firstComment?.trim();
-    if (reelFirstComment && igPostId) {
-      setTimeout(() => {
-        igPostComment(igPostId, token, reelFirstComment).catch((err) =>
-          logger.warn({ err }, "Reel first comment failed")
+      if (!content.videoUrl) throw new Error("No video URL for reel");
+      const wantIG = !content.platforms || content.platforms.includes("instagram");
+      const wantFB = !content.platforms || content.platforms.includes("facebook");
+      const reelResult: { igPostId?: string; fbPostId?: string } = {};
+      const reelErrors: string[] = [];
+      if (wantIG && !igId) reelErrors.push("IG: No Instagram Account ID configured for this client preset");
+      if (wantFB && !pageId) reelErrors.push("FB: No Facebook Page ID configured for this client preset");
+      const reelAudioName = content.musicTrack?.name
+        ? `${content.musicTrack.name} by ${content.musicTrack.artist}`
+        : undefined;
+      if (igId && wantIG) {
+        try {
+          reelResult.igPostId = await postReelToIG(igId, token, content.videoUrl, content.caption, post.isTrial, reelAudioName);
+          const reelFirstComment = content.firstComment?.trim();
+          if (reelFirstComment && reelResult.igPostId) {
+            setTimeout(() => {
+              igPostComment(reelResult.igPostId!, token, reelFirstComment).catch((err) =>
+                logger.warn({ err }, "Reel first comment failed")
+              );
+            }, 35_000);
+          }
+        } catch (e: any) { reelErrors.push(`IG: ${e.message}`); }
+      }
+      if (pageId && wantFB) {
+        try {
+          reelResult.fbPostId = await postVideoToFB(pageId, token, content.videoUrl, content.caption);
+        } catch (e: any) { reelErrors.push(`FB: ${e.message}`); }
+      }
+      if (reelErrors.length > 0) {
+        logger.warn(
+          { errors: reelErrors, igPosted: !!reelResult.igPostId, fbPosted: !!reelResult.fbPostId, postId: post.id },
+          "Meta rail posting error(s) — one or more platforms failed",
         );
-      }, 35_000);
+        if (!reelResult.igPostId && !reelResult.fbPostId) throw new Error(reelErrors.join("; "));
+      }
+      return reelResult;
     }
-    return { igPostId };
-  }
 
   if (!content.imageUrls?.length) throw new Error("No image URLs");
   const result: { igPostId?: string; fbPostId?: string } = {};
