@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, ListChecks } from "lucide-react";
 
 const TOOLS = [
   {
@@ -335,6 +335,15 @@ const TOOLS = [
     color: "from-pink-500/20 to-pink-500/5",
     border: "hover:border-pink-500/50",
     iconColor: "text-pink-400",
+  },
+  {
+    href: "/checklist",
+    icon: ListChecks,
+    name: "Client Checklist",
+    description: "One ongoing row per client. Hex colours, images, carousels, quotes, before and afters, footnote and logo, connected accounts. Always a live snapshot before your next 90-day batch.",
+    color: "from-emerald-500/20 to-emerald-500/5",
+    border: "hover:border-emerald-500/50",
+    iconColor: "text-emerald-400",
   },
 ];
 
