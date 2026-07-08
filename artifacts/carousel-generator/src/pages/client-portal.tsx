@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Loader2, AlertTriangle, CalendarDays, ChevronLeft, X, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star } from "lucide-react";
+import { Loader2, AlertTriangle, CalendarDays, ChevronLeft, X, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star, FileText, Download } from "lucide-react";
 import { toast } from "sonner";
 
 const BASE = import.meta.env.BASE_URL || "/";
@@ -8,6 +8,7 @@ const SEND_LABEL = "Send to Vanessa, Aesthetic Angel / Digital Darling";
 type CalendarPost = { id: number; date: string; title: string; caption: string; postType: string; status: string; color: string; imageUrl: string | null; imageUrls: string[]; source: "calendar" | "scheduler"; scheduledPostId: number | null; };
 type ApprovalBatch = { id: number; name: string; token: string; status: string; totalImages: number; pendingImages: number; approvedImages: number; rejectedImages: number; createdAt: string; expiresAt: string | null; };
 type PortalData = { clientName: string; logoUrl: string | null; upcomingPosts: CalendarPost[]; approvalBatches: ApprovalBatch[]; };
+type Resource = { id: number; title: string; description: string; fileKey: string; fileName: string; createdAt: string; };
 
 const POST_TYPE_ICON: Record<string, React.ReactNode> = {
   carousel: <Layers className="w-3.5 h-3.5" />,
@@ -176,7 +177,7 @@ const REEL_GROUPS: { heading: string; items: string[] }[] = [
 ];
 const REEL_TOTAL = REEL_GROUPS.reduce((n, g) => n + g.items.length, 0);
 
-type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews";
+type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources";
 
 export default function ClientPortal({ token }: { token: string }) {
   const [data, setData] = useState<PortalData | null>(null);
@@ -188,6 +189,9 @@ export default function ClientPortal({ token }: { token: string }) {
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [rejectBusy, setRejectBusy] = useState(false);
+
+  const [resources, setResources] = useState<Resource[]>([]);
+  const [resourcesLoading, setResourcesLoading] = useState(true);
 
   const [before, setBefore] = useState<File | null>(null);
   const [after, setAfter] = useState<File | null>(null);
@@ -248,6 +252,14 @@ export default function ClientPortal({ token }: { token: string }) {
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, [token]);
+
+  useEffect(() => {
+    fetch(`${BASE}api/portal-resources`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d) => setResources(Array.isArray(d) ? d : []))
+      .catch(() => {})
+      .finally(() => setResourcesLoading(false));
+  }, []);
 
   const submitReject = async (post: CalendarPost) => {
     if (!rejectReason.trim()) { toast.error("Please add a reason."); return; }
@@ -358,6 +370,7 @@ export default function ClientPortal({ token }: { token: string }) {
           <TabBtn id="reviews" label="Reviews" />
           <TabBtn id="onboarding" label="Get set up" />
           <TabBtn id="reels" label="100 Reels" />
+          <TabBtn id="resources" label="Resources" />
         </div>
       </header>
 
@@ -537,6 +550,31 @@ export default function ClientPortal({ token }: { token: string }) {
                 </div>
               ))}
             </div>
+          </section>
+        )}
+
+        {tab === "resources" && (
+          <section>
+            <div className="flex items-center gap-2 mb-5"><FileText className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Resources</h2>{resources.length > 0 && (<span className="ml-auto text-xs text-zinc-500">{resources.length} document{resources.length !== 1 ? "s" : ""}</span>)}</div>
+            <p className="text-sm text-zinc-400 mb-6">Cheat sheets, guides and useful bits from Vanessa. Tap to download.</p>
+            {resourcesLoading ? (
+              <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-pink-500" /></div>
+            ) : resources.length === 0 ? (
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-8 text-center"><FileText className="w-8 h-8 mx-auto text-zinc-700 mb-3" /><p className="text-zinc-500">Nothing here yet, check back soon.</p></div>
+            ) : (
+              <div className="space-y-3">
+                {resources.map((r) => (
+                  <a key={r.id} href={`${BASE}api/media/${r.fileKey}`} target="_blank" rel="noreferrer" className="flex items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/60 hover:bg-zinc-900 transition-colors px-4 py-4">
+                    <FileText className="w-5 h-5 text-pink-400 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-white text-sm truncate">{r.title}</p>
+                      {r.description && <p className="text-xs text-zinc-400 mt-0.5">{r.description}</p>}
+                    </div>
+                    <Download className="w-4 h-4 text-zinc-500 shrink-0" />
+                  </a>
+                ))}
+              </div>
+            )}
           </section>
         )}
       </main>
