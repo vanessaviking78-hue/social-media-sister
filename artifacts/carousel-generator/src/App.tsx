@@ -35,6 +35,7 @@ import Onboard from "@/pages/onboard";
 import SubmitBeforeAfter from "@/pages/submit";
 import BeforeAfterMaker from "@/pages/before-after";
 import Submissions from "@/pages/submissions";
+import Checklist from "@/pages/checklist";
 import OnboardChoosePage from "@/pages/onboard-choose-page";
 import OnboardSuccess from "@/pages/onboard-success";
 import DmAutomations from "@/pages/dm-automations";
@@ -96,6 +97,7 @@ function ProtectedRouter() {
       <Route path="/analytics" component={Analytics} />
       <Route path="/approval" component={Approval} />
       <Route path="/submissions" component={Submissions} />
+      <Route path="/checklist" component={Checklist} />
       <Route path="/before-after" component={BeforeAfterMaker} />
       <Route path="/reels" component={Reels} />
       <Route path="/video-overlay" component={VideoOverlay} />
