@@ -21,6 +21,7 @@ export async function runMigrations(): Promise<void> {
     await backfillFirstCommentDefaults();
     await backfillPersonalityProfileDefaults();
     await createBeforeAfterSubmissionsTable();
+    await createClientChecklistTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -40,7 +41,7 @@ async function hasClientPresetsNameLowerUnique(): Promise<boolean> {
   const result = await db.execute(sql`
     SELECT 1 FROM pg_indexes
     WHERE tablename = 'client_presets'
-      AND indexname = 'client_presets_name_lower_unique'
+    AND indexname = 'client_presets_name_lower_unique'
   `);
   return ((result as { rows?: unknown[] }).rows?.length ?? 0) > 0;
 }
@@ -51,10 +52,10 @@ async function deduplicateClientPresets(): Promise<void> {
     WHERE id IN (
       SELECT id FROM (
         SELECT id,
-               ROW_NUMBER() OVER (
-                 PARTITION BY LOWER(name)
-                 ORDER BY id ASC
-               ) AS rn
+          ROW_NUMBER() OVER (
+            PARTITION BY LOWER(name)
+            ORDER BY id ASC
+          ) AS rn
         FROM client_presets
       ) ranked
       WHERE rn > 1
@@ -213,12 +214,12 @@ async function backfillFirstCommentDefaults(): Promise<void> {
     UPDATE client_presets
     SET
       default_first_comment_carousel = COALESCE(NULLIF(TRIM(default_first_comment_carousel), ''), 'Share this with a friend'),
-      default_first_comment_single   = COALESCE(NULLIF(TRIM(default_first_comment_single),   ''), 'Save this for later'),
-      default_first_comment_reel     = COALESCE(NULLIF(TRIM(default_first_comment_reel),     ''), 'Save this and share to someone who needs to know')
+      default_first_comment_single = COALESCE(NULLIF(TRIM(default_first_comment_single), ''), 'Save this for later'),
+      default_first_comment_reel = COALESCE(NULLIF(TRIM(default_first_comment_reel), ''), 'Save this and share to someone who needs to know')
     WHERE
       default_first_comment_carousel IS NULL OR TRIM(default_first_comment_carousel) = ''
       OR default_first_comment_single IS NULL OR TRIM(default_first_comment_single) = ''
-      OR default_first_comment_reel   IS NULL OR TRIM(default_first_comment_reel)   = ''
+      OR default_first_comment_reel IS NULL OR TRIM(default_first_comment_reel) = ''
   `);
   const updated = (result as { rowCount?: number }).rowCount ?? 0;
   if (updated > 0) {
@@ -229,14 +230,14 @@ async function backfillFirstCommentDefaults(): Promise<void> {
 async function backfillPersonalityProfileDefaults(): Promise<void> {
   const DEFAULT_TARGET_AUDIENCE = "Women over 35, perimenopause, women in the local area, who want to feel good in themselves";
   const DEFAULT_CONTENT_PILLARS = "Set by Vanessa's spreadsheets";
-  const DEFAULT_BRAND_NOTES     = "Warm, affable, friendly, personality over professionalism. Affable.";
+  const DEFAULT_BRAND_NOTES = "Warm, affable, friendly, personality over professionalism. Affable.";
 
   const result = await db.execute(sql`
     UPDATE client_presets
     SET
-      target_audience  = COALESCE(NULLIF(TRIM(target_audience),  ''), ${DEFAULT_TARGET_AUDIENCE}),
-      content_pillars  = COALESCE(NULLIF(TRIM(content_pillars),  ''), ${DEFAULT_CONTENT_PILLARS}),
-      brand_notes      = COALESCE(NULLIF(TRIM(brand_notes),      ''), ${DEFAULT_BRAND_NOTES})
+      target_audience = COALESCE(NULLIF(TRIM(target_audience), ''), ${DEFAULT_TARGET_AUDIENCE}),
+      content_pillars = COALESCE(NULLIF(TRIM(content_pillars), ''), ${DEFAULT_CONTENT_PILLARS}),
+      brand_notes = COALESCE(NULLIF(TRIM(brand_notes), ''), ${DEFAULT_BRAND_NOTES})
     WHERE
       target_audience IS NULL OR TRIM(target_audience) = ''
       OR content_pillars IS NULL OR TRIM(content_pillars) = ''
@@ -250,7 +251,7 @@ async function normalizeTextPositionValues(): Promise<void> {
   const result = await db.execute(sql`
     UPDATE client_presets
     SET text_position = CASE
-      WHEN text_position LIKE 'top-%'    THEN 'top'
+      WHEN text_position LIKE 'top-%' THEN 'top'
       WHEN text_position LIKE 'center-%' THEN 'center'
       WHEN text_position LIKE 'bottom-%' THEN 'bottom'
       ELSE text_position
@@ -276,6 +277,25 @@ async function createBeforeAfterSubmissionsTable(): Promise<void> {
       submitter_name TEXT NOT NULL DEFAULT '',
       status TEXT NOT NULL DEFAULT 'new',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
+async function createClientChecklistTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS client_checklist (
+      id SERIAL PRIMARY KEY,
+      preset_id INTEGER NOT NULL UNIQUE REFERENCES client_presets(id) ON DELETE CASCADE,
+      hex_colours BOOLEAN NOT NULL DEFAULT FALSE,
+      images BOOLEAN NOT NULL DEFAULT FALSE,
+      bulk_carousels BOOLEAN NOT NULL DEFAULT FALSE,
+      seamless_carousels BOOLEAN NOT NULL DEFAULT FALSE,
+      quotes BOOLEAN NOT NULL DEFAULT FALSE,
+      before_afters BOOLEAN NOT NULL DEFAULT FALSE,
+      footnote_logo BOOLEAN NOT NULL DEFAULT FALSE,
+      connected_accounts BOOLEAN NOT NULL DEFAULT FALSE,
+      notes TEXT NOT NULL DEFAULT '',
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
 }
