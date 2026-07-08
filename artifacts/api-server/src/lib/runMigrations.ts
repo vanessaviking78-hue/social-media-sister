@@ -22,6 +22,7 @@ export async function runMigrations(): Promise<void> {
     await backfillPersonalityProfileDefaults();
     await createBeforeAfterSubmissionsTable();
     await createClientChecklistTable();
+    await createResourceLibraryTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -296,6 +297,19 @@ async function createClientChecklistTable(): Promise<void> {
       connected_accounts BOOLEAN NOT NULL DEFAULT FALSE,
       notes TEXT NOT NULL DEFAULT '',
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
+async function createResourceLibraryTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS resource_library (
+      id SERIAL PRIMARY KEY,
+      title TEXT NOT NULL DEFAULT '',
+      description TEXT NOT NULL DEFAULT '',
+      file_key TEXT NOT NULL,
+      file_name TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
 }
