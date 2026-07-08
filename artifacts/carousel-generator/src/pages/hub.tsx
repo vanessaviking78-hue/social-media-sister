@@ -1,8 +1,17 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, ListChecks } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, ListChecks, Sun } from "lucide-react";
 
 const TOOLS = [
+  {
+    href: "/today",
+    icon: Sun,
+    name: "Today",
+    description: "What's going out today, for every client, with live posting status pulled straight from the scheduler.",
+    color: "from-yellow-500/20 to-yellow-500/5",
+    border: "hover:border-yellow-500/50",
+    iconColor: "text-yellow-400",
+  },
   {
     href: "/about-me-studio",
     icon: User,
@@ -93,6 +102,9 @@ const TOOLS = [
     border: "hover:border-violet-500/50",
     iconColor: "text-violet-400",
   },
+];
+
+const TOOLS_REST = [
   {
     href: "/seamless-carousel",
     icon: Grid,
@@ -347,6 +359,8 @@ const TOOLS = [
   },
 ];
 
+const ALL_TOOLS = [...TOOLS, ...TOOLS_REST];
+
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export default function Hub() {
@@ -384,12 +398,12 @@ export default function Hub() {
 
         {/* 3 rows of 4 */}
         <div className="grid grid-cols-4 gap-4 mb-4">
-          {TOOLS.slice(0, 12).map((tool) => <ToolCard key={tool.href} tool={tool} badge={tool.href === "/submissions" ? newCount : 0} />)}
+          {ALL_TOOLS.slice(0, 12).map((tool) => <ToolCard key={tool.href} tool={tool} badge={tool.href === "/submissions" ? newCount : 0} />)}
         </div>
 
         {/* Last rows */}
         <div className="grid grid-cols-4 gap-4">
-          {TOOLS.slice(12).map((tool) => <ToolCard key={tool.href} tool={tool} badge={tool.href === "/submissions" ? newCount : 0} />)}
+          {ALL_TOOLS.slice(12).map((tool) => <ToolCard key={tool.href} tool={tool} badge={tool.href === "/submissions" ? newCount : 0} />)}
         </div>
       </main>
 
@@ -403,7 +417,7 @@ export default function Hub() {
   );
 }
 
-type Tool = typeof TOOLS[number];
+type Tool = typeof ALL_TOOLS[number];
 
 function ToolCard({ tool, badge = 0 }: { tool: Tool; badge?: number }) {
   const Icon = tool.icon;
