@@ -357,6 +357,15 @@ const TOOLS_REST = [
     border: "hover:border-emerald-500/50",
     iconColor: "text-emerald-400",
   },
+  {
+    href: "/resources",
+    icon: FileText,
+    name: "Resource Library",
+    description: "Upload PDFs, cheat sheets and guides once. Every client sees them straight in their portal.",
+    color: "from-blue-500/20 to-blue-500/5",
+    border: "hover:border-blue-500/50",
+    iconColor: "text-blue-400",
+  },
 ];
 
 const ALL_TOOLS = [...TOOLS, ...TOOLS_REST];
