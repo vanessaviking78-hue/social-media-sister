@@ -41,6 +41,7 @@ import submissionsRouter from "./submissions";
 import showcaseRouter from "./showcase";
 import toolsRouter from "./tools";
 import checklistRouter from "./checklist";
+import resourcesRouter from "./resources";
 
 const router: IRouter = Router();
 
@@ -69,6 +70,7 @@ router.use(notifyRouter);
 router.use(submissionsRouter);
 router.use(toolsRouter);
 router.use(checklistRouter);
+router.use(resourcesRouter);
 router.use(dmAutomationsRouter);
 router.use(webhooksRouter);
 router.use(intakeRouter);
