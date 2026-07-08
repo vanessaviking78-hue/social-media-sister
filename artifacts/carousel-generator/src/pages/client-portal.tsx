@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Loader2, AlertTriangle, CalendarDays, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star } from "lucide-react";
+import { Loader2, AlertTriangle, CalendarDays, ChevronLeft, X, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star } from "lucide-react";
+import { toast } from "sonner";
 
 const BASE = import.meta.env.BASE_URL || "/";
 const SEND_LABEL = "Send to Vanessa, Aesthetic Angel / Digital Darling";
 
-type CalendarPost = { id: number; date: string; title: string; caption: string; postType: string; status: string; color: string; imageUrl: string | null; };
+type CalendarPost = { id: number; date: string; title: string; caption: string; postType: string; status: string; color: string; imageUrl: string | null; imageUrls: string[]; source: "calendar" | "scheduler"; scheduledPostId: number | null; };
 type ApprovalBatch = { id: number; name: string; token: string; status: string; totalImages: number; pendingImages: number; approvedImages: number; rejectedImages: number; createdAt: string; expiresAt: string | null; };
 type PortalData = { clientName: string; logoUrl: string | null; upcomingPosts: CalendarPost[]; approvalBatches: ApprovalBatch[]; };
 
@@ -17,6 +18,33 @@ const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Se
 function formatDate(dateStr: string) { const [y, m, d] = dateStr.split("-").map(Number); return `${d} ${MONTH_NAMES[m - 1]} ${y}`; }
 function getDayOfWeek(dateStr: string) { const d = new Date(dateStr + "T12:00:00"); return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()]; }
 function fileToBase64(file: File): Promise<string> { return new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result as string); r.onerror = reject; r.readAsDataURL(file); }); }
+
+function SlideShow({ urls }: { urls: string[] }) {
+  const [idx, setIdx] = useState(0);
+  if (urls.length === 0) return null;
+  return (
+    <div className="relative select-none">
+      <div className="aspect-[4/5] bg-zinc-900 rounded-xl overflow-hidden">
+        <img src={urls[idx]} alt={`Slide ${idx + 1}`} className="w-full h-full object-cover" loading="lazy" />
+      </div>
+      {urls.length > 1 && (
+        <>
+          <button onClick={() => setIdx((i) => Math.max(0, i - 1))} disabled={idx === 0} className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white disabled:opacity-30 transition">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button onClick={() => setIdx((i) => Math.min(urls.length - 1, i + 1))} disabled={idx === urls.length - 1} className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white disabled:opacity-30 transition">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <div className="flex justify-center gap-1.5 mt-2">
+            {urls.map((_, i) => (
+              <button key={i} onClick={() => setIdx(i)} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === idx ? "bg-white" : "bg-white/30"}`} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 const REEL_GROUPS: { heading: string; items: string[] }[] = [
   { heading: "The basics & consultations", items: [
@@ -157,6 +185,10 @@ export default function ClientPortal({ token }: { token: string }) {
   const [tab, setTab] = useState<Tab>("upcoming");
   const [showTip, setShowTip] = useState(true);
 
+  const [rejectingId, setRejectingId] = useState<number | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [rejectBusy, setRejectBusy] = useState(false);
+
   const [before, setBefore] = useState<File | null>(null);
   const [after, setAfter] = useState<File | null>(null);
   const [beforePrev, setBeforePrev] = useState("");
@@ -216,6 +248,29 @@ export default function ClientPortal({ token }: { token: string }) {
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, [token]);
+
+  const submitReject = async (post: CalendarPost) => {
+    if (!rejectReason.trim()) { toast.error("Please add a reason."); return; }
+    if (!post.scheduledPostId) return;
+    setRejectBusy(true);
+    try {
+      const r = await fetch(`${BASE}api/portal/${token}/posts/${post.scheduledPostId}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: rejectReason.trim() }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "Could not reject, please try again.");
+      setData((prev) => (prev ? { ...prev, upcomingPosts: prev.upcomingPosts.filter((p) => p.id !== post.id) } : prev));
+      setRejectingId(null);
+      setRejectReason("");
+      toast.success("Rejected, it's been pulled from the schedule.");
+    } catch (e: any) {
+      toast.error(e?.message || "Something went wrong.");
+    } finally {
+      setRejectBusy(false);
+    }
+  };
 
   const uploadOne = async (f: File): Promise<string> => {
     const base64 = await fileToBase64(f);
@@ -315,14 +370,57 @@ export default function ClientPortal({ token }: { token: string }) {
           <section>
             <div className="flex items-center gap-2 mb-5"><CalendarDays className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Upcoming Content</h2>{data.upcomingPosts.length > 0 && (<span className="ml-auto text-xs text-zinc-500">{data.upcomingPosts.length} post{data.upcomingPosts.length !== 1 ? "s" : ""} scheduled</span>)}</div>
             {data.upcomingPosts.length === 0 ? (<div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-8 text-center"><CalendarDays className="w-8 h-8 mx-auto text-zinc-700 mb-3" /><p className="text-zinc-500">No upcoming content scheduled yet.</p></div>) : (
-              <div className="space-y-3">{data.upcomingPosts.map((post) => (
-                <div key={post.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 overflow-hidden flex">
-                  {post.imageUrl ? (<div className="w-20 shrink-0 bg-zinc-800"><img src={post.imageUrl} alt="" className="w-full h-full object-cover" style={{ minHeight: 80 }} /></div>) : (<div className="w-20 shrink-0 flex items-center justify-center" style={{ backgroundColor: post.color + "22", borderRight: `2px solid ${post.color}44` }}><FileImage className="w-5 h-5 text-zinc-600" /></div>)}
-                  <div className="flex-1 px-4 py-3 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1"><div className="flex items-center gap-1.5 text-xs text-zinc-400"><span className="font-semibold text-white">{getDayOfWeek(post.date)}</span><span>{formatDate(post.date)}</span></div><div className="flex items-center gap-1.5 shrink-0"><span className="flex items-center gap-1 text-xs text-zinc-500 capitalize">{POST_TYPE_ICON[post.postType] || <FileImage className="w-3.5 h-3.5" />}{post.postType.replace("-", " ")}</span><span className={`text-xs px-2 py-0.5 rounded-full border ${post.status === "scheduled" ? "bg-green-900/30 text-green-400 border-green-700/40" : "bg-zinc-800 text-zinc-400 border-zinc-700"}`}>{post.status}</span></div></div>
-                    {post.title && <p className="font-medium text-white text-sm truncate">{post.title}</p>}{post.caption && <p className="text-xs text-zinc-500 mt-0.5 line-clamp-2">{post.caption}</p>}
-                  </div>
-                </div>))}
+              <div className="space-y-4">
+                {data.upcomingPosts.map((post) => {
+                  const urls = post.imageUrls && post.imageUrls.length > 0 ? post.imageUrls : (post.imageUrl ? [post.imageUrl] : []);
+                  const isRejecting = rejectingId === post.id;
+                  return (
+                    <div key={post.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 overflow-hidden">
+                      <div className="p-4">
+                        {urls.length > 0 ? <SlideShow urls={urls} /> : (
+                          <div className="aspect-square rounded-xl flex items-center justify-center" style={{ backgroundColor: post.color + "22" }}>
+                            <FileImage className="w-6 h-6 text-zinc-600" />
+                          </div>
+                        )}
+                        <div className="flex items-start justify-between gap-2 mt-3 mb-1">
+                          <div className="flex items-center gap-1.5 text-xs text-zinc-400"><span className="font-semibold text-white">{getDayOfWeek(post.date)}</span><span>{formatDate(post.date)}</span></div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="flex items-center gap-1 text-xs text-zinc-500 capitalize">{POST_TYPE_ICON[post.postType] || <FileImage className="w-3.5 h-3.5" />}{post.postType.replace("-", " ")}</span>
+                            <span className={`text-xs px-2 py-0.5 rounded-full border ${post.status === "scheduled" ? "bg-green-900/30 text-green-400 border-green-700/40" : "bg-zinc-800 text-zinc-400 border-zinc-700"}`}>{post.status}</span>
+                          </div>
+                        </div>
+                        {post.title && <p className="font-medium text-white text-sm">{post.title}</p>}
+                        {post.caption && <p className="text-sm text-zinc-400 mt-1 whitespace-pre-wrap">{post.caption}</p>}
+
+                        {post.source === "scheduler" && (
+                          <div className="mt-4 pt-3 border-t border-zinc-800">
+                            {!isRejecting ? (
+                              <button onClick={() => { setRejectingId(post.id); setRejectReason(""); }} className="text-xs font-semibold text-red-400 hover:text-red-300 flex items-center gap-1">
+                                <X className="w-3.5 h-3.5" /> Not happy with this one?
+                              </button>
+                            ) : (
+                              <div className="space-y-2">
+                                <textarea
+                                  value={rejectReason}
+                                  onChange={(e) => setRejectReason(e.target.value)}
+                                  placeholder="Tell us why, so we can put it right..."
+                                  rows={3}
+                                  className="w-full rounded-xl bg-zinc-800 border border-zinc-700 text-sm text-zinc-200 placeholder:text-zinc-600 px-3 py-2.5 resize-none focus:outline-none focus:ring-1 focus:ring-red-500/50"
+                                />
+                                <div className="flex gap-2">
+                                  <button onClick={() => submitReject(post)} disabled={rejectBusy} className="flex-1 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-60 text-white text-sm font-semibold py-2.5 flex items-center justify-center gap-1.5">
+                                    {rejectBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />} Reject this post
+                                  </button>
+                                  <button onClick={() => { setRejectingId(null); setRejectReason(""); }} className="rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-semibold py-2.5 px-4">Cancel</button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </section>
