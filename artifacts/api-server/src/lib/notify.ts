@@ -97,6 +97,39 @@ export async function notifySubmission(opts: {
 }
 
 /**
+ * Sends a notification to NOTIFY_EMAIL whenever a client rejects an
+  * already-scheduled upcoming post from their portal, with their reason.
+   * Fire-and-forget: never throws, never blocks the reject flow.
+    */
+export async function notifyReject(opts: {
+    clientName: string;
+    title: string;
+    reason: string;
+}): Promise<void> {
+    const to = process.env.NOTIFY_EMAIL;
+    if (!to) return;
+    const transporter = getTransporter();
+    if (!transporter) return;
+    const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
+    const client = opts.clientName || "A client";
+    const subject = `${client} rejected a scheduled post`;
+    const lines = [
+          `${client} just rejected "${opts.title}" from their upcoming content.`,
+          "",
+          `Their reason: ${opts.reason}`,
+          "",
+          "It's been pulled from the schedule and won't go out.",
+          "",
+          "The CyberSuite",
+        ].filter(Boolean);
+    try {
+          await transporter.sendMail({ from, to, subject, text: lines.join("\n") });
+    } catch (err) {
+          logger.warn({ err }, "Reject notification email failed");
+    }
+}
+
+/**
  * Sends a one-off test email to NOTIFY_EMAIL so the user can confirm
  * the notification pipeline works without waiting for a real post.
  */
