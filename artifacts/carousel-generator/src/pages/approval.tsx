@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useApprovalBatches, useApprovalBatchDetail, type ApprovalBatch } from "@/lib/use-approval";
 import { usePresets } from "@/lib/use-presets";
+import ExportToCanvaButton from "@/components/export-to-canva";
 
 export default function Approval() {
   const { batches, isLoading, createBatch, deleteBatch } = useApprovalBatches();
@@ -305,6 +306,16 @@ function BatchDetail({ id, onClose }: { id: number; onClose: () => void }) {
                 {img.status}
               </div>
               {img.clientNote && <p className="text-muted-foreground italic">"{img.clientNote}"</p>}
+              {img.status === "approved" && (
+                <ExportToCanvaButton
+                  imageUrl={img.imageUrl}
+                  name={`${data.name} - approved photo`}
+                  size="sm"
+                  variant="outline"
+                  className="w-full mt-2 justify-center"
+                  label="Send to Canva"
+                />
+              )}
             </div>
           </div>
         ))}
