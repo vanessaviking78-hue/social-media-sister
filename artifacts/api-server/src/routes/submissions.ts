@@ -86,4 +86,22 @@ router.get("/submissions", requireAuth, async (req: Request, res: Response) => {
   }
 });
 
+// Admin: mark a submission complete (or reopen it).
+router.patch("/submissions/:id", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { status } = req.body as { status?: string };
+    const allowed = ["new", "complete"];
+    if (!status || !allowed.includes(status)) {
+      res.status(400).json({ error: "status must be 'new' or 'complete'" });
+      return;
+    }
+    await db.execute(sql`
+      UPDATE before_after_submissions SET status = ${status} WHERE id = ${Number(req.params.id)}
+    `);
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to update submission" });
+  }
+});
+
 export default router;
