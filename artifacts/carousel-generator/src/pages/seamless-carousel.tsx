@@ -15,8 +15,17 @@ import { saveAs } from "file-saver";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { MusicPickerModal, MusicTrackBadge, type MusicTrack } from "@/components/music-picker-modal";
 import { ALL_FONTS } from "@/lib/slide-utils";
+import { nextWeekday, WEEKDAY, POST_TIME } from "@/lib/schedule";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+// Seamless Carousel defaults to whichever comes sooner of the next Monday or Friday.
+function nextSeamlessScheduledAt(): string {
+    const mon = nextWeekday(WEEKDAY.MON, POST_TIME);
+    const fri = nextWeekday(WEEKDAY.FRI, POST_TIME);
+    const day = new Date(`${mon}T${POST_TIME}`) <= new Date(`${fri}T${POST_TIME}`) ? mon : fri;
+    return `${day}T${POST_TIME}`;
+}
 
 const DOODLES = [
   { label: "None", value: "none" },
@@ -417,6 +426,7 @@ export default function SeamlessCarouselPage() {
           presetId={selectedPresetId}
           presetName={presets.find((p) => p.id === selectedPresetId)?.name ?? ""}
           postType="seamless"
+                    initialScheduledAt={nextSeamlessScheduledAt()}
           posts={schedulePosts}
           onClose={() => setScheduleOpen(false)}
           onSaved={() => { setScheduleOpen(false); toast.success("Scheduled"); }}
