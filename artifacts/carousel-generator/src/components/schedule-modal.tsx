@@ -36,6 +36,7 @@ type Props = {
   onClose: () => void;
   onSaved?: () => void;
   presets?: Preset[];
+  initialScheduledAt?: string;
 };
 
 function defaultScheduledAt() {
@@ -46,8 +47,15 @@ function defaultScheduledAt() {
   return d.toISOString().slice(0, 16);
 }
 
-export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets }: Props) {
-  const [scheduledAt, setScheduledAt] = useState(defaultScheduledAt);
+function dateKey(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt }: Props) {
+  const [scheduledAt, setScheduledAt] = useState(() => initialScheduledAt || defaultScheduledAt());
   const [notes, setNotes] = useState("");
   const [caption, setCaption] = useState(() => posts[0]?.caption || "");
   const [saving, setSaving] = useState(false);
@@ -57,6 +65,7 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
   const [platforms, setPlatforms] = useState<Set<Platform>>(new Set(["instagram"]));
   const [accountInfo, setAccountInfo] = useState<AccountInfo | null>(null);
   const [accountLoading, setAccountLoading] = useState(false);
+  const [bookedDates, setBookedDates] = useState<Set<string>>(new Set());
   const accountCache = useRef<Record<number, AccountInfo>>({});
 
   const isBulk = posts.length > 1;
@@ -71,6 +80,18 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
     postType === "seamless" ||
     (postType === "carousel" && posts.some((p) => (p.imageUrls?.length ?? 0) > 1));
   const showMusicWarning = hasMusicSelected && !musicSupportedByApi;
+
+  const nextDays = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+
+  function pickDay(d: Date) {
+    const timePart = scheduledAt.split("T")[1] || "18:45";
+    setScheduledAt(`${dateKey(d)}T${timePart}`);
+  }
 
   useEffect(() => {
     if (activePresetId === null) {
@@ -93,6 +114,25 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
         setAccountInfo({ igError: "Could not reach server", fbError: "Could not reach server" });
       })
       .finally(() => setAccountLoading(false));
+  }, [activePresetId]);
+
+  // Which of the next 14 days already have something scheduled, so gaps are obvious at a glance.
+  useEffect(() => {
+    if (activePresetId === null) {
+      setBookedDates(new Set());
+      return;
+    }
+    const from = new Date();
+    from.setHours(0, 0, 0, 0);
+    const to = new Date(from);
+    to.setDate(to.getDate() + 21);
+    fetch(`${BASE}/api/scheduler/posts?presetId=${activePresetId}&status=scheduled&from=${from.toISOString()}&to=${to.toISOString()}`)
+      .then((r) => (r.ok ? r.json() : { posts: [] }))
+      .then((data: { posts?: { scheduledAt: string }[] }) => {
+        const set = new Set((data.posts ?? []).map((p) => String(p.scheduledAt).slice(0, 10)));
+        setBookedDates(set);
+      })
+      .catch(() => setBookedDates(new Set()));
   }, [activePresetId]);
 
   function togglePlatform(p: Platform) {
@@ -196,6 +236,38 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
               className="bg-zinc-800 border-zinc-700 text-white [color-scheme:dark]"
             />
           </div>
+
+          {activePresetId !== null && (
+            <div>
+              <Label className="text-zinc-300 text-sm mb-1.5 block">Posting gaps (next 14 days)</Label>
+              <div className="flex gap-1.5 overflow-x-auto pb-1">
+                {nextDays.map((d) => {
+                  const key = dateKey(d);
+                  const booked = bookedDates.has(key);
+                  const isSelectedDay = scheduledAt.slice(0, 10) === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => pickDay(d)}
+                      title={booked ? "Already has a post scheduled" : "Free — nothing scheduled yet"}
+                      className={`flex flex-col items-center justify-center shrink-0 w-11 h-12 rounded-md border text-[11px] font-medium transition-all ${
+                        isSelectedDay
+                          ? "bg-pink-600/30 border-pink-500 text-pink-200"
+                          : booked
+                          ? "bg-zinc-800 border-zinc-700 text-zinc-600"
+                          : "bg-zinc-800/60 border-emerald-600/40 text-emerald-300 hover:border-emerald-500"
+                      }`}
+                    >
+                      <span>{d.toLocaleDateString("en-GB", { weekday: "short" })}</span>
+                      <span>{d.getDate()}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-zinc-500 mt-1.5">Green means free, grey already has something booked in. Tap a day to use it.</p>
+            </div>
+          )}
 
           {isBulk && (
             <div>
