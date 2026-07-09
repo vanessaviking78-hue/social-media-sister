@@ -21,7 +21,55 @@ import ApprovedImagesPicker from "@/components/approved-images-picker";
 
 loadGoogleFonts();
 
-import { nextWeekday, WEEKDAY, POST_TIME } from "@/lib/schedule";
+import { nextWeekday, WEEKDAY, POST_TIME, shortTagForBookedPost } from "@/lib/schedule";
+import { useBookedDays } from "@/lib/use-booked-days";
+
+// Small reusable strip showing what's already booked in for a client over the next
+// 14 days, so you can see the picture (including other tools) while you schedule
+// this batch. Read-only display alongside the Mon/Wed/Fri day picker above.
+function BookedDaysStrip({ presetId }: { presetId: number | null }) {
+  const { byDate } = useBookedDays(presetId, 14);
+  if (presetId === null) return null;
+  const nextDays = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+  const dateKey = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+  return (
+    <div className="mb-6">
+      <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">What's already booked (next 14 days)</p>
+      <div className="flex gap-1.5 overflow-x-auto pb-1">
+        {nextDays.map((d) => {
+          const key = dateKey(d);
+          const bookings = byDate[key] ?? [];
+          const booked = bookings.length > 0;
+          const tagText = bookings.map((b) => shortTagForBookedPost({ postType: "", content: { sourceTool: b.label } })).join("+");
+          return (
+            <div
+              key={key}
+              title={booked ? `Already booked: ${bookings.map((b) => `${b.label}${b.count > 1 ? ` x${b.count}` : ""}`).join(", ")}` : "Free — nothing scheduled yet"}
+              className={`flex flex-col items-center justify-center shrink-0 w-11 h-13 py-1 rounded-md border text-[11px] font-medium ${
+                booked ? "bg-card/60 border-border/50 text-muted-foreground" : "bg-card/30 border-emerald-600/40 text-emerald-400"
+              }`}
+            >
+              <span>{d.toLocaleDateString("en-GB", { weekday: "short" })}</span>
+              <span>{d.getDate()}</span>
+              {booked && <span className="text-[8px] leading-none mt-0.5">{tagText}</span>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const W = 1080;
 const H = 1440;
@@ -1213,6 +1261,7 @@ export default function BulkCarousel() {
               title: item.hook.slice(0, 80) || `Carousel ${item.rowNum}`,
               platforms: entry.platforms,
               musicTrack: itemTracks[item.id] || musicTrack || undefined,
+              sourceTool: "Bulk Carousel",
             },
             scheduledAt: new Date(`${entry.date}T${entry.time}`).toISOString(),
           }),
@@ -1291,6 +1340,8 @@ export default function BulkCarousel() {
             </div>
             <p className="text-sm text-muted-foreground mt-3">Every carousel below is auto-set to the next {scheduleDay === WEEKDAY.MON ? "Monday" : "Friday"} at {POST_TIME}. Tweak any one by hand if you need to.</p>
           </div>
+
+          <BookedDaysStrip presetId={selectedPresetId} />
 
           <div className="space-y-3">
             {items.map((item, i) => {
