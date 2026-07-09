@@ -34,6 +34,7 @@ import canvaRouter from "./canva";
 import waitlistRouter from "./waitlist";
 import approvalBundlesRouter from "./approvalBundles";
 import contentGeneratorRouter from "./content-generator";
+import captionGeneratorRouter from "./caption-generator";
 import memeRouter from "./meme";
 import hookImageRouter from "./hook-image";
 import notifyRouter from "./notify";
@@ -87,6 +88,7 @@ router.use(canvaRouter);
 router.use(waitlistRouter);
 router.use(approvalBundlesRouter);
 router.use(contentGeneratorRouter);
+router.use(captionGeneratorRouter);
 router.use(showcaseRouter);
 
 export default router;
