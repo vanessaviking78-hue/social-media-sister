@@ -1132,12 +1132,6 @@ export default function Home() {
               About Me
             </Button>
           </Link>
-          <Link href="/seamless-carousel">
-            <Button variant="ghost" size="sm" className="text-muted-foreground">
-              <Grid className="w-4 h-4 mr-2" />
-              Seamless
-            </Button>
-          </Link>
           <Link href="/stories">
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <BookOpen className="w-4 h-4 mr-2" />
