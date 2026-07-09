@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Upload, Loader2, CalendarClock, X, Film } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, CalendarClock, X, Film, Scissors } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePresets } from "@/lib/use-presets";
 import { nextWeekday, WEEKDAY, POST_TIME } from "@/lib/schedule";
@@ -15,7 +15,8 @@ type Item = {
   caption: string;
   date: string;
   time: string;
-  status: "" | "uploading" | "scheduling" | "done" | "error";
+  slices: number;
+  status: "" | "splitting" | "uploading" | "scheduling" | "done" | "error";
   note?: string;
 };
 
@@ -48,6 +49,7 @@ export default function AnimatedCarousels() {
         caption: "",
         date: defaultDate(start + k),
         time: POST_TIME,
+        slices: 4,
         status: "" as const,
       }));
       return [...prev, ...next];
@@ -86,18 +88,19 @@ export default function AnimatedCarousels() {
 
   async function scheduleAll() {
     if (!preset) { toast.error("Pick a client first."); return; }
-    if (!items.length) { toast.error("Add some animated carousels first."); return; }
+    if (!items.length) { toast.error("Add some wide videos first."); return; }
     setBusy(true);
     let ok = 0;
     for (const it of items) {
       try {
-        update(it.id, { status: "uploading", note: "" });
+        update(it.id, { status: "splitting", note: "" });
         const fd = new FormData();
         fd.append("video", it.file);
-        const up = await fetch(`${BASE}api/content/upload-video`, { method: "POST", body: fd });
-        const ud = await up.json();
-        const videoUrl = ud.proxyUrl || ud.url;
-        if (!up.ok || !videoUrl) throw new Error(ud.error || "Video upload failed");
+        fd.append("slices", String(it.slices));
+        const split = await fetch(`${BASE}api/content/split-video`, { method: "POST", body: fd });
+        const splitData = await split.json();
+        if (!split.ok || !splitData.clips?.length) throw new Error(splitData.error || "Video split failed");
+        const videoUrls: string[] = splitData.clips.map((c: { url: string }) => c.url);
 
         update(it.id, { status: "scheduling" });
         const r = await fetch(`${BASE}api/scheduler/posts`, {
@@ -105,9 +108,9 @@ export default function AnimatedCarousels() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             presetId: preset.id,
-            postType: "reel",
+            postType: "video_carousel",
             content: {
-              videoUrl,
+              videoUrls,
               caption: it.caption || "",
               title: it.file.name.replace(/\.[^.]+$/, "").slice(0, 60),
               platforms: ["instagram", "facebook"],
@@ -123,7 +126,7 @@ export default function AnimatedCarousels() {
       }
     }
     setBusy(false);
-    toast[ok === items.length ? "success" : "message"](`${ok} of ${items.length} animated carousels scheduled as reels.`);
+    toast[ok === items.length ? "success" : "message"](`${ok} of ${items.length} animated carousels split and scheduled.`);
   }
 
   return (
@@ -132,7 +135,7 @@ export default function AnimatedCarousels() {
         <Link href="/hub"><ArrowLeft className="w-5 h-5 text-muted-foreground hover:text-foreground" /></Link>
         <div>
           <h1 className="font-semibold text-lg">Animated Carousels</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Upload your 1080x1440 MP4 animated carousels. They schedule and post as Reels.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Upload one wide MP4 (e.g. 4320x1440). We cut it into slides, keep them as MP4, and post as a proper video carousel, same idea as the Seamless Carousel tool but for video.</p>
         </div>
       </div>
 
@@ -146,10 +149,10 @@ export default function AnimatedCarousels() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="font-semibold text-base">2. Upload animated carousels (MP4)</h2>
+          <h2 className="font-semibold text-base">2. Upload wide animated video (MP4)</h2>
           <label className="block border-2 border-dashed border-border/50 rounded-2xl p-10 text-center cursor-pointer hover:border-pink-500/60 transition-colors">
             <Upload className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Drop MP4 files or click to browse. Add as many as you like.</span>
+            <span className="text-sm text-muted-foreground">Drop one wide MP4 per carousel, or click to browse. Add as many as you like, each becomes its own carousel.</span>
             <input type="file" accept="video/mp4,video/*" multiple className="hidden" onChange={(e) => { addFiles(e.target.files); e.currentTarget.value = ""; }} />
           </label>
           <div className="flex items-center gap-3">
@@ -163,15 +166,26 @@ export default function AnimatedCarousels() {
 
         {items.length > 0 && (
           <section className="space-y-4">
-            <h2 className="font-semibold text-base">3. Captions and schedule</h2>
+            <h2 className="font-semibold text-base">3. Slides, captions and schedule</h2>
             {items.map((it, i) => (
               <div key={it.id} className="rounded-xl p-4 bg-card/40 border border-border/30">
                 <div className="flex gap-4">
-                  <video src={it.url} className="w-28 rounded-lg border border-white/10 shrink-0" style={{ aspectRatio: "3/4", objectFit: "cover" }} muted controls />
+                  <video src={it.url} className="w-40 rounded-lg border border-white/10 shrink-0" style={{ aspectRatio: "3/1", objectFit: "cover" }} muted controls />
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs text-muted-foreground truncate flex items-center gap-1"><Film className="w-3.5 h-3.5" /> {it.file.name}</span>
                       <button onClick={() => remove(it.id)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Scissors className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      <label className="text-xs text-muted-foreground">Cut into</label>
+                      <select
+                        value={it.slices}
+                        onChange={(e) => update(it.id, { slices: Number(e.target.value) })}
+                        className="bg-white/5 border border-border/50 rounded-md px-2 py-1 text-xs"
+                      >
+                        {[2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} slides</option>)}
+                      </select>
                     </div>
                     <textarea value={it.caption} onChange={(e) => update(it.id, { caption: e.target.value })} placeholder="Caption..." rows={2} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm" />
                     <div className="flex gap-2">
@@ -180,7 +194,7 @@ export default function AnimatedCarousels() {
                     </div>
                     {it.status && (
                       <p className={`text-xs ${it.status === "done" ? "text-emerald-400" : it.status === "error" ? "text-red-400" : "text-muted-foreground"}`}>
-                        {it.status === "uploading" ? "Uploading video..." : it.status === "scheduling" ? "Scheduling..." : it.status === "done" ? `Scheduled for ${it.date} at ${it.time}` : it.note}
+                        {it.status === "splitting" ? "Cutting into slides..." : it.status === "uploading" ? "Uploading..." : it.status === "scheduling" ? "Scheduling..." : it.status === "done" ? `Scheduled for ${it.date} at ${it.time}` : it.note}
                       </p>
                     )}
                   </div>
@@ -188,10 +202,10 @@ export default function AnimatedCarousels() {
               </div>
             ))}
             <div className="flex justify-between items-center">
-              <p className="text-xs text-muted-foreground">Reels post to Instagram. A 1080x1440 carousel shows as an animated reel.</p>
+              <p className="text-xs text-muted-foreground">Each wide video is cut into equal MP4 slides and posted as a video carousel to Instagram and Facebook.</p>
               <Button onClick={scheduleAll} disabled={busy || !preset} className="bg-pink-600 hover:bg-pink-700">
                 {busy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-1.5" />}
-                Schedule {items.length} reel{items.length !== 1 ? "s" : ""}
+                Cut and schedule {items.length} carousel{items.length !== 1 ? "s" : ""}
               </Button>
             </div>
           </section>
