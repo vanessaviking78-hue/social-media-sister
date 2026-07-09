@@ -876,7 +876,7 @@ export default function BulkCarousel() {
 
   // Schedule state
   const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
-  const [scheduleDay, setScheduleDay] = useState<0|1|3|5>(WEEKDAY.MON);
+  const [scheduleDay, setScheduleDay] = useState<0|1|3|5>(WEEKDAY.WED);
   const [scheduling, setScheduling] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
