@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { CalendarClock, Music, AlertTriangle, CheckCircle2, Loader2, Instagram, Facebook } from "lucide-react";
+import { nextOpenMWFSlots, shortTagForBookedPost } from "@/lib/schedule";
+import { useBookedDays } from "@/lib/use-booked-days";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -16,6 +18,7 @@ export type SchedulePostPayload = {
   musicTrack?: { trackId: number; name: string; artist: string; durationMs: number; url: string } | null;
   firstComment?: string;
   platforms?: string[];
+  sourceTool?: string;
 };
 
 type Preset = { id: number; name: string };
@@ -37,6 +40,7 @@ type Props = {
   onSaved?: () => void;
   presets?: Preset[];
   initialScheduledAt?: string;
+  sourceTool?: string;
 };
 
 function defaultScheduledAt() {
@@ -54,7 +58,7 @@ function dateKey(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt }: Props) {
+export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt, sourceTool }: Props) {
   const [scheduledAt, setScheduledAt] = useState(() => initialScheduledAt || defaultScheduledAt());
   const [notes, setNotes] = useState("");
   const [caption, setCaption] = useState(() => posts[0]?.caption || "");
@@ -65,8 +69,11 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
   const [platforms, setPlatforms] = useState<Set<Platform>>(new Set(["instagram"]));
   const [accountInfo, setAccountInfo] = useState<AccountInfo | null>(null);
   const [accountLoading, setAccountLoading] = useState(false);
-  const [bookedDates, setBookedDates] = useState<Set<string>>(new Set());
   const accountCache = useRef<Record<number, AccountInfo>>({});
+  // Tracks whether the person has picked a date themselves — once they have, we stop
+  // auto-moving their date around when new booking info comes in.
+  const userEditedDate = useRef(!!initialScheduledAt);
+  const { byDate, bookedDates } = useBookedDays(activePresetId, 14);
 
   const isBulk = posts.length > 1;
   const isReel = postType === "reel";
@@ -89,6 +96,7 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
   });
 
   function pickDay(d: Date) {
+    userEditedDate.current = true;
     const timePart = scheduledAt.split("T")[1] || "18:45";
     setScheduledAt(`${dateKey(d)}T${timePart}`);
   }
@@ -116,24 +124,16 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
       .finally(() => setAccountLoading(false));
   }, [activePresetId]);
 
-  // Which of the next 14 days already have something scheduled, so gaps are obvious at a glance.
+  // Auto-fill to the next open Monday/Wednesday/Friday slot — never Tue/Thu — as soon
+  // as we know what's booked, unless the person has already chosen a date themselves.
   useEffect(() => {
-    if (activePresetId === null) {
-      setBookedDates(new Set());
-      return;
+    if (activePresetId === null) return;
+    if (userEditedDate.current) return;
+    const [nextSlotDay] = nextOpenMWFSlots(bookedDates, 1);
+    if (nextSlotDay) {
+      setScheduledAt((prev) => `${nextSlotDay}T${prev.split("T")[1] || "18:45"}`);
     }
-    const from = new Date();
-    from.setHours(0, 0, 0, 0);
-    const to = new Date(from);
-    to.setDate(to.getDate() + 21);
-    fetch(`${BASE}/api/scheduler/posts?presetId=${activePresetId}&status=scheduled&from=${from.toISOString()}&to=${to.toISOString()}`)
-      .then((r) => (r.ok ? r.json() : { posts: [] }))
-      .then((data: { posts?: { scheduledAt: string }[] }) => {
-        const set = new Set((data.posts ?? []).map((p) => String(p.scheduledAt).slice(0, 10)));
-        setBookedDates(set);
-      })
-      .catch(() => setBookedDates(new Set()));
-  }, [activePresetId]);
+  }, [bookedDates, activePresetId]);
 
   function togglePlatform(p: Platform) {
     setPlatforms((prev) => {
@@ -164,6 +164,7 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
         if (!isReel && post.imageUrls) content.imageUrls = post.imageUrls;
         if (post.musicTrack) content.musicTrack = post.musicTrack;
         if (post.firstComment) content.firstComment = post.firstComment;
+        if (sourceTool || post.sourceTool) content.sourceTool = sourceTool || post.sourceTool;
         const body: Record<string, unknown> = { postType, content, scheduledAt: staggeredAt, isTrial, notes, presetId: effectivePresetId };
         const r = await fetch(`${BASE}/api/scheduler/posts`, {
           method: "POST",
@@ -232,7 +233,7 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
             <Input
               type="datetime-local"
               value={scheduledAt}
-              onChange={(e) => setScheduledAt(e.target.value)}
+              onChange={(e) => { userEditedDate.current = true; setScheduledAt(e.target.value); }}
               className="bg-zinc-800 border-zinc-700 text-white [color-scheme:dark]"
             />
           </div>
@@ -243,29 +244,32 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
               <div className="flex gap-1.5 overflow-x-auto pb-1">
                 {nextDays.map((d) => {
                   const key = dateKey(d);
-                  const booked = bookedDates.has(key);
+                  const bookings = byDate[key] ?? [];
+                  const booked = bookings.length > 0;
                   const isSelectedDay = scheduledAt.slice(0, 10) === key;
+                  const tagText = bookings.map((b) => shortTagForBookedPost({ postType: "", content: { sourceTool: b.label } })).join("+");
                   return (
                     <button
                       key={key}
                       type="button"
                       onClick={() => pickDay(d)}
-                      title={booked ? "Already has a post scheduled" : "Free — nothing scheduled yet"}
-                      className={`flex flex-col items-center justify-center shrink-0 w-11 h-12 rounded-md border text-[11px] font-medium transition-all ${
+                      title={booked ? `Already booked: ${bookings.map((b) => `${b.label}${b.count > 1 ? ` x${b.count}` : ""}`).join(", ")}` : "Free — nothing scheduled yet"}
+                      className={`flex flex-col items-center justify-center shrink-0 w-11 h-13 py-1 rounded-md border text-[11px] font-medium transition-all ${
                         isSelectedDay
                           ? "bg-pink-600/30 border-pink-500 text-pink-200"
                           : booked
-                          ? "bg-zinc-800 border-zinc-700 text-zinc-600"
+                          ? "bg-zinc-800 border-zinc-700 text-zinc-500"
                           : "bg-zinc-800/60 border-emerald-600/40 text-emerald-300 hover:border-emerald-500"
                       }`}
                     >
                       <span>{d.toLocaleDateString("en-GB", { weekday: "short" })}</span>
                       <span>{d.getDate()}</span>
+                      {booked && <span className="text-[8px] leading-none mt-0.5 text-zinc-400">{tagText}</span>}
                     </button>
                   );
                 })}
               </div>
-              <p className="text-[11px] text-zinc-500 mt-1.5">Green means free, grey already has something booked in. Tap a day to use it.</p>
+              <p className="text-[11px] text-zinc-500 mt-1.5">Green means free. Booked days show what's already going out that day, tap to use it anyway.</p>
             </div>
           )}
 
