@@ -29,7 +29,6 @@ import BulkConnectReview from "@/pages/bulk-connect-review";
 import About from "@/pages/about";
 import AboutMe from "@/pages/about-me";
 import AboutPublic from "@/pages/about-public";
-import SeamlessCarousel from "@/pages/seamless-carousel";
 import AiPortraitStudio from "@/pages/ai-portrait-studio";
 import Onboard from "@/pages/onboard";
 import SubmitBeforeAfter from "@/pages/submit";
@@ -110,7 +109,6 @@ function ProtectedRouter() {
       <Route path="/presets/bulk-connect/review" component={BulkConnectReview} />
       <Route path="/about" component={About} />
       <Route path="/about-me" component={AboutMe} />
-      <Route path="/seamless-carousel" component={SeamlessCarousel} />
       <Route path="/ai-portrait-studio" component={AiPortraitStudio} />
       <Route path="/dm-automations" component={DmAutomations} />
       <Route path="/intake" component={Intake} />
