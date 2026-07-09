@@ -106,15 +106,6 @@ const TOOLS = [
 
 const TOOLS_REST = [
   {
-    href: "/seamless-carousel",
-    icon: Grid,
-    name: "Seamless Carousel",
-    description: "Slice one wide image into perfectly connected carousel slides.",
-    color: "from-amber-500/20 to-amber-500/5",
-    border: "hover:border-amber-500/50",
-    iconColor: "text-amber-400",
-  },
-  {
     href: "/stories",
     icon: BookOpen,
     name: "Stories",
