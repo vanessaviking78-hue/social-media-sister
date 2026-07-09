@@ -6,8 +6,55 @@ import JSZip from "jszip";
 import Papa from "papaparse";
 import { toast } from "sonner";
 
-import { nextWeekday, WEEKDAY, POST_TIME } from "@/lib/schedule";
+import { nextWeekday, WEEKDAY, POST_TIME, shortTagForBookedPost } from "@/lib/schedule";
+import { useBookedDays } from "@/lib/use-booked-days";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+// Small reusable strip showing what's already booked in for a client over the next
+// 14 days, so you can see the picture (including other tools) while you schedule
+// this batch. Read-only display alongside the per-carousel date/time fields below.
+function BookedDaysStrip({ presetId }: { presetId: number | null }) {
+  const { byDate } = useBookedDays(presetId, 14);
+  if (presetId === null) return null;
+  const nextDays = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + i);
+    return d;
+  });
+  const dateKey = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+  return (
+    <div className="mb-6">
+      <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">What's already booked (next 14 days)</p>
+      <div className="flex gap-1.5 overflow-x-auto pb-1">
+        {nextDays.map((d) => {
+          const key = dateKey(d);
+          const bookings = byDate[key] ?? [];
+          const booked = bookings.length > 0;
+          const tagText = bookings.map((b) => shortTagForBookedPost({ postType: "", content: { sourceTool: b.label } })).join("+");
+          return (
+            <div
+              key={key}
+              title={booked ? `Already booked: ${bookings.map((b) => `${b.label}${b.count > 1 ? ` x${b.count}` : ""}`).join(", ")}` : "Free — nothing scheduled yet"}
+              className={`flex flex-col items-center justify-center shrink-0 w-11 h-13 py-1 rounded-md border text-[11px] font-medium ${
+                booked ? "bg-card/60 border-border/50 text-muted-foreground" : "bg-card/30 border-emerald-600/40 text-emerald-400"
+              }`}
+            >
+              <span>{d.toLocaleDateString("en-GB", { weekday: "short" })}</span>
+              <span>{d.getDate()}</span>
+              {booked && <span className="text-[8px] leading-none mt-0.5">{tagText}</span>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 const SLIDE_W = 1080, SLIDE_H = 1440;
 const EMPTY_ROW: CsvRow = { slide1_hook: "", slide1_subtitle: "", slide2_body: "", slide3_body: "", slide4_cta: "" };
 const DEFAULT_PRESET = { pageColor: "#000000", overlayColor: "rgba(0,0,0,0)", textColor: "#ffffff", cornerColor: "#ffffff", accentColor: "#ffffff" } as unknown as ClientPreset;
@@ -215,7 +262,7 @@ export default function SeamlessBulk() {
         const c = ready[i]; toast.loading(`Scheduling ${i + 1} / ${ready.length}…`, { id: tid });
         const names = c.slideUrls.map((_, j) => `seamless-${i + 1}-slide${j + 1}.png`);
         const imageUrls = await uploadDataUrls(c.slideUrls, names);
-        const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: c.presetId, postType: "carousel", content: { imageUrls, caption: c.caption || "", title: (c.row.slide1_hook || c.name).slice(0, 80), platforms: ["instagram", "facebook"], musicTrack: c.track || undefined }, scheduledAt: new Date(`${c.date}T${c.time}`).toISOString() }) });
+        const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: c.presetId, postType: "carousel", content: { imageUrls, caption: c.caption || "", title: (c.row.slide1_hook || c.name).slice(0, 80), platforms: ["instagram", "facebook"], musicTrack: c.track || undefined, sourceTool: "Seamless Carousels" }, scheduledAt: new Date(`${c.date}T${c.time}`).toISOString() }) });
         if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(`${c.name}: ${err.error}`); }
       }
       toast.success(`${ready.length} seamless carousel${ready.length !== 1 ? "s" : ""} queued.`, { id: tid });
@@ -298,6 +345,7 @@ export default function SeamlessBulk() {
                 <button onClick={scheduleAll} disabled={busy} className="px-5 py-2 rounded-lg bg-pink-500 text-white font-semibold text-sm disabled:opacity-40 hover:bg-pink-400">{busy ? "Working…" : `Schedule selected (${carousels.filter((c) => isIn(c.id)).length})`}</button>
               </div>
             </div>
+        <BookedDaysStrip presetId={batchPresetId} />
             {carousels.map((c) => (
               <div key={c.id} className={`rounded-2xl border p-4 space-y-4 transition-opacity ${isIn(c.id) ? "border-pink-500/40" : "border-border/40 opacity-50"}`}>
                 <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
