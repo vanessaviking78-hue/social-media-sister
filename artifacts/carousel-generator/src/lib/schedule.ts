@@ -69,3 +69,48 @@ export function nextOpenMWFSlotISO(bookedDates: Set<string>, time: string = POST
   const [day] = nextOpenMWFSlots(bookedDates, 1, time);
   return new Date(`${day}T${time}`).toISOString();
 }
+
+
+// ---- Labelling booked posts, so scheduling screens can show *what* is booked, not just *that* something is booked ----
+
+export type BookedPostSummary = {
+  postType: string;
+  content?: { sourceTool?: string } | null;
+};
+
+// Friendly label for a scheduled post when it doesn't carry an explicit sourceTool
+// (older posts, or tools that haven't been tagged yet) — falls back to postType.
+const POST_TYPE_LABELS: Record<string, string> = {
+  carousel: "Carousel",
+  reel: "Reel",
+  story: "Story",
+  stories: "Story",
+  "single-image": "Single Image",
+  "about-me": "About Me",
+  seamless: "Seamless",
+};
+
+export function labelForBookedPost(post: BookedPostSummary): string {
+  const sourceTool = post.content?.sourceTool;
+  if (sourceTool) return sourceTool;
+  return POST_TYPE_LABELS[post.postType] || post.postType;
+}
+
+// Compact one-or-two-letter tag for tiny chip UI (e.g. the 14-day gap strip).
+const SHORT_TAGS: Record<string, string> = {
+  "Bulk Carousel": "B",
+  "Seamless Carousels": "S",
+  "Carousel": "C",
+  "Reel": "R",
+  "Story": "St",
+  "Single Image": "SI",
+  "About Me": "AM",
+  "Seamless": "Se",
+};
+
+export function shortTagForBookedPost(post: BookedPostSummary): string {
+  const label = labelForBookedPost(post);
+  if (SHORT_TAGS[label]) return SHORT_TAGS[label];
+  const initials = label.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  return initials || "?";
+}
