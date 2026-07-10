@@ -116,7 +116,7 @@ async function uploadDataUrls(dus: string[], names: string[]): Promise<string[]>
 }
 function normDate(v: string) { const x = (v || "").trim(); if (/^\d{4}-\d{2}-\d{2}$/.test(x)) return x; const m = x.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/); if (m) { let y = m[3]; if (y.length === 2) y = "20" + y; return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`; } return x; }
 function normTime(v: string) { const x = (v || "").trim(); const m = x.match(/^(\d{1,2}):(\d{2})/); return m ? `${m[1].padStart(2, "0")}:${m[2]}` : x; }
-function seamlessDate(i: number): string { const first = new Date(`${nextWeekday(WEEKDAY.WED, POST_TIME)}T${POST_TIME}`); const d = new Date(first); d.setDate(d.getDate() + i * 7); const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day = String(d.getDate()).padStart(2, "0"); return `${y}-${m}-${day}`; }
+function seamlessDate(i: number): string { const day = i % 2 === 0 ? WEEKDAY.MON : WEEKDAY.FRI; const week = Math.floor(i / 2); const first = new Date(`${nextWeekday(day, POST_TIME)}T${POST_TIME}`); const d = new Date(first); d.setDate(d.getDate() + week * 7); const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day2 = String(d.getDate()).padStart(2, "0"); return `${y}-${m}-${day2}`; }
 
 export default function SeamlessBulk() {
   const { presets } = usePresets();
