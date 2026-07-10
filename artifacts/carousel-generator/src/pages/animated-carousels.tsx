@@ -176,16 +176,10 @@ export default function AnimatedCarousels() {
                       <span className="text-xs text-muted-foreground truncate flex items-center gap-1"><Film className="w-3.5 h-3.5" /> {it.file.name}</span>
                       <button onClick={() => remove(it.id)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Scissors className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                      <label className="text-xs text-muted-foreground">Cut into</label>
-                      <select
-                        value={it.slices}
-                        onChange={(e) => update(it.id, { slices: Number(e.target.value) })}
-                        className="bg-white/5 border border-border/50 rounded-md px-2 py-1 text-xs"
-                      >
-                        {[2, 3, 4, 5].map((n) => <option key={n} value={n}>{n} slides</option>)}
-                      </select>
+              <div className="flex items-center gap-2">
+                <Scissors className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <span className="text-xs text-muted-foreground">Cut into 4 slides (4320x1440 source)</span>
+              </div>
                     </div>
                     <textarea value={it.caption} onChange={(e) => update(it.id, { caption: e.target.value })} placeholder="Caption..." rows={2} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm" />
                     <div className="flex gap-2">
