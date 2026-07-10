@@ -35,6 +35,7 @@ import SubmitBeforeAfter from "@/pages/submit";
 import BeforeAfterMaker from "@/pages/before-after";
 import Submissions from "@/pages/submissions";
 import Checklist from "@/pages/checklist";
+import CatchUpPlan from "@/pages/catch-up";
 import Today from "@/pages/today";
 import Resources from "@/pages/resources";
 import OnboardChoosePage from "@/pages/onboard-choose-page";
@@ -99,6 +100,7 @@ function ProtectedRouter() {
       <Route path="/approval" component={Approval} />
       <Route path="/submissions" component={Submissions} />
       <Route path="/checklist" component={Checklist} />
+          <Route path="/catch-up" component={CatchUpPlan} />
       <Route path="/today" component={Today} />
       <Route path="/resources" component={Resources} />
       <Route path="/before-after" component={BeforeAfterMaker} />
