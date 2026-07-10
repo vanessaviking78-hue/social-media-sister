@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, ListChecks, Sun } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, ListChecks, Sun, AlertTriangle } from "lucide-react";
 
 const TOOLS = [
   {
@@ -347,6 +347,15 @@ const TOOLS_REST = [
     color: "from-emerald-500/20 to-emerald-500/5",
     border: "hover:border-emerald-500/50",
     iconColor: "text-emerald-400",
+  },
+{
+    href: "/catch-up",
+    icon: AlertTriangle,
+    name: "Catch-Up Plan",
+    description: "The running list from the last audit. Fires to sort today, clients with no post ever, and accounts that still aren't connected. Tick each one off as you clear it.",
+    color: "from-red-500/20 to-red-500/5",
+    border: "hover:border-red-500/50",
+    iconColor: "text-red-400",
   },
   {
     href: "/resources",
