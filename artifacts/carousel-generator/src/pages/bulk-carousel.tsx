@@ -303,25 +303,13 @@ export function renderSlideCanvas(
   ctx.fillRect(0, 0, W, H);
 
   // Image layer
-  const img = slideNum === 1 ? coverImg : bodyImg;
-  if (img) {
-    if (slideNum === 1) {
+    const img = slideNum === 1 ? coverImg : bodyImg;
+    if (img) {
       drawCover(ctx, img, 1.0);
-    } else {
-      drawCover(ctx, img, 1.0);
-      ctx.fillStyle = overlayColor;
-      ctx.fillRect(0, 0, W, H);
     }
-  }
 
-  // Slide 1 gets a bottom gradient; slides 2-4 get nothing extra (overlay already applied above)
-  if (slideNum === 1) {
-    const grad = ctx.createLinearGradient(0, H * 0.5, 0, H);
-    grad.addColorStop(0, "rgba(0,0,0,0)");
-    grad.addColorStop(1, "rgba(0,0,0,0.6)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, W, H);
-  }
+    // Shading removed on request — every slide renders the image at full 100% opacity, no dark overlay.
+
 
   // Optional user overlay tint, applied to every slide
   if (overlayAlpha && overlayAlpha > 0) {
