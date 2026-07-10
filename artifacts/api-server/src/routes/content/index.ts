@@ -799,7 +799,7 @@ router.post("/content/split-video", videoUpload.single("video"), async (req, res
     if (!bucketId) { res.status(500).json({ error: "Object storage not configured" }); return; }
     if (!req.file) { res.status(400).json({ error: "No video file provided" }); return; }
 
-    const slices = Math.max(2, Math.min(5, parseInt(req.body?.slices, 10) || 4));
+        const slices = 4; // fixed: source is always 4320x1440, always cut into 4
     await writeFile(inputPath, req.file.buffer);
 
     const { width, height } = await probeDimensions(inputPath);
