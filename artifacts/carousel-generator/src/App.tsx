@@ -65,6 +65,7 @@ import BulkCarousel from "@/pages/bulk-carousel";
 import AnimatedCarousels from "@/pages/animated-carousels";
 import PersonalPage from "@/pages/personal-page";
 import MemeGenerator from "@/pages/meme-generator";
+import TweetMaker from "@/pages/tweet-maker";
 import QuoteGenerator from "@/pages/quote-generator";
 import BulkStories from "@/pages/bulk-stories";
 import CsvSlideCarousel from "@/pages/csv-slide-carousel";
@@ -127,6 +128,7 @@ function ProtectedRouter() {
       <Route path="/animated-carousels" component={AnimatedCarousels} />
       <Route path="/personal-page" component={PersonalPage} />
       <Route path="/meme" component={MemeGenerator} />
+      <Route path="/tweet-maker" component={TweetMaker} />
       <Route path="/quotes" component={QuoteGenerator} />
       <Route path="/bulk-stories" component={BulkStories} />
       <Route path="/csv-slide-carousel" component={CsvSlideCarousel} />
