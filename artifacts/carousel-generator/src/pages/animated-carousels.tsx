@@ -180,8 +180,7 @@ export default function AnimatedCarousels() {
                 <Scissors className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                 <span className="text-xs text-muted-foreground">Cut into 4 slides (4320x1440 source)</span>
               </div>
-                    </div>
-                    <textarea value={it.caption} onChange={(e) => update(it.id, { caption: e.target.value })} placeholder="Caption..." rows={2} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm" />
+                                        <textarea value={it.caption} onChange={(e) => update(it.id, { caption: e.target.value })} placeholder="Caption..." rows={2} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm" />
                     <div className="flex gap-2">
                       <input type="date" value={it.date} onChange={(e) => update(it.id, { date: e.target.value })} className="flex-1 bg-white/5 border border-border/50 rounded-md px-2 py-1.5 text-sm" />
                       <input type="time" value={it.time} onChange={(e) => update(it.id, { time: e.target.value })} className="flex-1 bg-white/5 border border-border/50 rounded-md px-2 py-1.5 text-sm" />
