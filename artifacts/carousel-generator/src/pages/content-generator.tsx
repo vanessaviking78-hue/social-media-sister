@@ -106,10 +106,6 @@ export default function ContentGenerator() {
     setPosts([]);
     setExpanded(null);
 
-    const timer = setInterval(() => {
-      setProgress((p) => Math.min(p + Math.random() * 8, 88));
-    }, 600);
-
     try {
       const res = await fetch("/api/content-generator/generate", {
         method: "POST",
@@ -125,18 +121,55 @@ export default function ContentGenerator() {
         }),
       });
 
-      if (!res.ok) {
+      if (!res.ok || !res.body) {
         const data = await res.json().catch(() => ({ error: "Generation failed" }));
         throw new Error((data as { error?: string }).error ?? "Generation failed");
       }
 
-      const data = await res.json() as { posts: GeneratedPost[] };
-      clearInterval(timer);
+      // Backend streams results as Server-Sent Events, one "batch" event per
+      // handful of posts, so a long title list never has to wait on a single
+      // request that could time out before it's done.
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let finalPosts: GeneratedPost[] = [];
+      let streamError: string | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.type === "progress" || data.type === "batch") {
+              if (data.type === "batch" && Array.isArray(data.posts)) {
+                setPosts((prev) => [...prev, ...data.posts]);
+              }
+              if (typeof data.total === "number" && data.total > 0) {
+                setProgress(Math.min(100, Math.round(((data.generated ?? 0) / data.total) * 100)));
+              }
+            } else if (data.type === "complete") {
+              finalPosts = Array.isArray(data.posts) ? data.posts : [];
+            } else if (data.type === "error") {
+              streamError = data.message || "Generation failed";
+            }
+          } catch {
+            /* ignore malformed line */
+          }
+        }
+      }
+
+      if (streamError) throw new Error(streamError);
+
       setProgress(100);
-      setPosts(data.posts);
-      toast.success(`${data.posts.length} post${data.posts.length === 1 ? "" : "s"} generated.`);
+      if (finalPosts.length > 0) setPosts(finalPosts);
+      const count = finalPosts.length || titles.length;
+      toast.success(`${count} post${count === 1 ? "" : "s"} generated.`);
     } catch (err: unknown) {
-      clearInterval(timer);
       toast.error(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
@@ -345,7 +378,7 @@ export default function ContentGenerator() {
             {posts.length > 0 && (
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">{posts.length} post{posts.length === 1 ? "" : "s"} generated</p>
+                  <p className="text-sm font-medium">{posts.length} post{posts.length === 1 ? "" : "s"} generated{loading ? ", still writing..." : ""}</p>
                   <Button
                     variant="outline"
                     size="sm"
