@@ -22,6 +22,9 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
   const [open, setOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<string>(clientName || "");
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  // Tracks the order photos were tapped in, since Bulk Carousel maps each photo
+  // to a row by position. A Set alone doesn't guarantee click order survives.
+  const [selectedOrder, setSelectedOrder] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
 
   const { data: allImages = [] } = useApprovedImages("");
@@ -48,17 +51,41 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
       }
       return next;
     });
+    setSelectedOrder((prev) => {
+      if (mode === "single") {
+        return prev.includes(id) ? [] : [id];
+      }
+      if (prev.includes(id)) return prev.filter((existingId) => existingId !== id);
+      return [...prev, id];
+    });
   };
 
   const handleAdd = async () => {
     if (!selected.size) return;
     setLoading(true);
     try {
-      const selectedImages = allImages.filter((img) => selected.has(img.id));
-      const files = await Promise.all(selectedImages.map((img, i) => urlToFile(img.imageUrl, i)));
+      // Build the list in the exact order photos were tapped, not the order
+      // the server happens to return them in, so each photo lands on the
+      // row the person meant it for.
+      const byId = new Map(allImages.map((img) => [img.id, img]));
+      const selectedImages = selectedOrder.map((id) => byId.get(id)).filter((img): img is NonNullable<typeof img> => Boolean(img));
+
+      const results = await Promise.allSettled(selectedImages.map((img, i) => urlToFile(img.imageUrl, i)));
+      const files = results
+        .filter((r): r is PromiseFulfilledResult<File> => r.status === "fulfilled")
+        .map((r) => r.value);
+      const failedCount = results.length - files.length;
+
       onAddImages(files);
-      toast.success(`Added ${files.length} approved image${files.length > 1 ? "s" : ""}`);
+
+      if (failedCount > 0) {
+        toast.error(`${failedCount} photo${failedCount > 1 ? "s" : ""} couldn't be loaded and ${failedCount > 1 ? "were" : "was"} skipped, the rest came through fine.`);
+      }
+      if (files.length > 0) {
+        toast.success(`Added ${files.length} approved image${files.length > 1 ? "s" : ""}`);
+      }
       setSelected(new Set());
+      setSelectedOrder([]);
       setOpen(false);
     } catch {
       toast.error("Failed to load approved images");
@@ -94,7 +121,7 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
           <ShieldCheck className="w-5 h-5 text-green-400" />
           <h3 className="font-semibold text-lg">Approved Photos</h3>
         </div>
-        <button onClick={() => { setOpen(false); setSelected(new Set()); }} className="p-1 hover:bg-accent rounded-full">
+        <button onClick={() => { setOpen(false); setSelected(new Set()); setSelectedOrder([]); }} className="p-1 hover:bg-accent rounded-full">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -111,7 +138,7 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
             }}
           >
             <button
-              onClick={() => { setSelectedClient(""); setSelected(new Set()); }}
+              onClick={() => { setSelectedClient(""); setSelected(new Set()); setSelectedOrder([]); }}
               className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${selectedClient === "" ? "bg-green-600 text-white" : "bg-accent text-muted-foreground hover:text-foreground"}`}
             >
               All
@@ -119,7 +146,7 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
             {clients.map((name) => (
               <button
                 key={name}
-                onClick={() => { setSelectedClient(name); setSelected(new Set()); }}
+                onClick={() => { setSelectedClient(name); setSelected(new Set()); setSelectedOrder([]); }}
                 className={`flex-shrink-0 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedClient === name ? "bg-green-600 text-white" : "bg-accent text-muted-foreground hover:text-foreground"}`}
               >
                 {name}
@@ -137,33 +164,42 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
       ) : (
         <>
           <div className="grid grid-cols-4 md:grid-cols-6 gap-2 max-h-[300px] overflow-y-auto">
-            {images.map((img) => (
-              <div
-                key={img.id}
-                onClick={() => toggle(img.id)}
-                className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer transition-all ${
-                  selected.has(img.id)
-                    ? "ring-2 ring-green-500 ring-offset-2 ring-offset-background"
-                    : "hover:ring-1 hover:ring-green-500/50"
-                }`}
-              >
-                <img src={img.imageUrl} alt={`Approved ${img.id}`} className="w-full h-full object-cover" />
-                {selected.has(img.id) && (
-                  <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
-                    <CheckCircle2 className="w-8 h-8 text-green-400 drop-shadow-lg" />
+            {images.map((img) => {
+              const orderIndex = selectedOrder.indexOf(img.id);
+              return (
+                <div
+                  key={img.id}
+                  onClick={() => toggle(img.id)}
+                  className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer transition-all ${
+                    selected.has(img.id)
+                      ? "ring-2 ring-green-500 ring-offset-2 ring-offset-background"
+                      : "hover:ring-1 hover:ring-green-500/50"
+                  }`}
+                >
+                  <img src={img.imageUrl} alt={`Approved ${img.id}`} className="w-full h-full object-cover" />
+                  {selected.has(img.id) && (
+                    <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
+                      {mode === "multi" && orderIndex >= 0 ? (
+                        <span className="w-7 h-7 rounded-full bg-green-500 text-white text-sm font-bold flex items-center justify-center drop-shadow-lg">
+                          {orderIndex + 1}
+                        </span>
+                      ) : (
+                        <CheckCircle2 className="w-8 h-8 text-green-400 drop-shadow-lg" />
+                      )}
+                    </div>
+                  )}
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-0.5">
+                    <p className="text-[10px] text-white truncate">{img.clientName} · {img.batchName}</p>
                   </div>
-                )}
-                <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-0.5">
-                  <p className="text-[10px] text-white truncate">{img.clientName} · {img.batchName}</p>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="flex items-center justify-between pt-2">
-            <p className="text-sm text-muted-foreground">{selected.size} selected</p>
+            <p className="text-sm text-muted-foreground">{selected.size} selected{selected.size > 1 ? ", in tap order" : ""}</p>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => { setOpen(false); setSelected(new Set()); }}>
+              <Button variant="outline" size="sm" onClick={() => { setOpen(false); setSelected(new Set()); setSelectedOrder([]); }}>
                 Cancel
               </Button>
               <Button size="sm" onClick={handleAdd} disabled={!selected.size || loading} className="bg-green-600 hover:bg-green-700">
