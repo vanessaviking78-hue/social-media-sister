@@ -15,6 +15,14 @@ import { useApprovalBatches, useApprovalBatchDetail, type ApprovalBatch } from "
 import { usePresets } from "@/lib/use-presets";
 import ExportToCanvaButton from "@/components/export-to-canva";
 
+// Builds the Canva asset name as clientname+topic, no spaces (e.g. "HarwoodAestheticsbathroom"),
+// so exports are easy to find and tell apart inside Canva.
+function canvaAssetName(clientName: string, topic: string): string {
+  const client = (clientName || "Client").replace(/\s+/g, "");
+  const cleanTopic = (topic || "photo").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 40);
+  return `${client}${cleanTopic}`;
+}
+
 export default function Approval() {
   const { batches, isLoading, createBatch, deleteBatch } = useApprovalBatches();
   const { presets } = usePresets();
@@ -309,7 +317,7 @@ function BatchDetail({ id, onClose }: { id: number; onClose: () => void }) {
               {img.status === "approved" && (
                 <ExportToCanvaButton
                   imageUrl={img.imageUrl}
-                  name={`${data.name} - approved photo`}
+                  name={canvaAssetName(data.clientName, data.name)}
                   size="sm"
                   variant="outline"
                   className="w-full mt-2 justify-center"
