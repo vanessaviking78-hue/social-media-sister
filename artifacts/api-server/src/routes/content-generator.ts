@@ -39,44 +39,43 @@ type GeneratedPost = {
 };
 
 router.post("/content-generator/generate", async (req: Request, res: Response) => {
-  try {
-    const {
-      clinicianName,
-      clinicName,
-      location,
-      treatments,
-      tone,
-      brandVoice,
-      postTitles,
-    } = req.body as {
-      clinicianName?: string;
-      clinicName?: string;
-      location?: string;
-      treatments?: string;
-      tone?: string;
-      brandVoice?: string;
-      postTitles: string[];
-    };
+  const {
+    clinicianName,
+    clinicName,
+    location,
+    treatments,
+    tone,
+    brandVoice,
+    postTitles,
+  } = req.body as {
+    clinicianName?: string;
+    clinicName?: string;
+    location?: string;
+    treatments?: string;
+    tone?: string;
+    brandVoice?: string;
+    postTitles: string[];
+  };
 
-    if (!postTitles || !Array.isArray(postTitles) || postTitles.length === 0) {
-      res.status(400).json({ error: "Post titles are required" });
-      return;
-    }
+  if (!postTitles || !Array.isArray(postTitles) || postTitles.length === 0) {
+    res.status(400).json({ error: "Post titles are required" });
+    return;
+  }
 
-    const toneKey = String(tone ?? "1");
-    const tonePrompt = TONE_PROMPTS[toneKey] ?? TONE_PROMPTS["1"];
-    const voiceInstruction = brandVoice?.trim()
-      ? `BRAND VOICE (overrides tone — follow this exactly, this is the client's own brand guidelines):\n${brandVoice.trim()}`
-      : `TONE: ${tonePrompt}`;
+  const toneKey = String(tone ?? "1");
+  const tonePrompt = TONE_PROMPTS[toneKey] ?? TONE_PROMPTS["1"];
+  const voiceInstruction = brandVoice?.trim()
+    ? `BRAND VOICE (overrides tone — follow this exactly, this is the client's own brand guidelines):\n${brandVoice.trim()}`
+    : `TONE: ${tonePrompt}`;
 
-    const clinicLines: string[] = [];
-    if (clinicianName) clinicLines.push(`Clinician name: ${clinicianName}`);
-    if (clinicName) clinicLines.push(`Clinic name: ${clinicName}`);
-    if (location) clinicLines.push(`Location: ${location}`);
-    if (treatments) clinicLines.push(`Treatments offered: ${treatments}`);
-    const clinicContext = clinicLines.join("\n");
+  const clinicLines: string[] = [];
+  if (clinicianName) clinicLines.push(`Clinician name: ${clinicianName}`);
+  if (clinicName) clinicLines.push(`Clinic name: ${clinicName}`);
+  if (location) clinicLines.push(`Location: ${location}`);
+  if (treatments) clinicLines.push(`Treatments offered: ${treatments}`);
+  const clinicContext = clinicLines.join("\n");
 
-    const systemPrompt = `You generate carousel post content for aesthetic clinics, skin clinics, and wellness practices.
+  const systemPrompt = `You generate carousel post content for aesthetic clinics, skin clinics, and wellness practices.
 
 ${voiceInstruction}
 
@@ -102,12 +101,23 @@ slide4_cta
 A DM-keyword call to action. Use this format: "DM me the word [KEYWORD] and I'll [what they receive]". The keyword should be a single, memorable word related to the post topic. No urgency. No "NOW". Sounds like a person quietly extending an invitation, not a campaign.
 ${BASE_RULES}`;
 
-    const titles = postTitles.slice(0, 60);
-    const batchSize = 5;
-    const allPosts: GeneratedPost[] = [];
+  // Streamed as Server-Sent Events so the client gets posts as each batch finishes,
+  // rather than waiting on one long request that can get aborted by an upstream
+  // timeout (~28s) before a big title list finishes generating.
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders?.();
 
+  const titles = postTitles.slice(0, 60);
+  const batchSize = 5;
+  const allPosts: GeneratedPost[] = [];
+
+  try {
     for (let i = 0; i < titles.length; i += batchSize) {
       const batch = titles.slice(i, i + batchSize);
+
+      res.write(`data: ${JSON.stringify({ type: "progress", generated: allPosts.length, total: titles.length })}\n\n`);
 
       const userMessage = `Generate carousel content for these post titles:\n${batch.map((t, idx) => `${idx + 1}. ${t}`).join("\n")}\n\nReturn a JSON object with a "posts" array containing ${batch.length} objects, one per title, in order.`;
 
@@ -131,24 +141,37 @@ ${BASE_RULES}`;
       }
 
       const posts = Array.isArray(parsed.posts) ? parsed.posts : [];
+      const batchPosts: GeneratedPost[] = [];
       for (let j = 0; j < batch.length; j++) {
         const p = (posts[j] ?? {}) as Record<string, string>;
-        allPosts.push({
+        const post: GeneratedPost = {
           title: batch[j],
           slide1_hook: p.slide1_hook ?? "",
           slide1_subtitle: p.slide1_subtitle ?? "",
           slide2_body: p.slide2_body ?? "",
           slide3_body: p.slide3_body ?? "",
           slide4_cta: p.slide4_cta ?? "",
-        });
+        };
+        batchPosts.push(post);
+        allPosts.push(post);
       }
+
+      // Send this batch's posts through immediately so the client can render
+      // progress instead of a single all-or-nothing wait.
+      res.write(`data: ${JSON.stringify({ type: "batch", posts: batchPosts, generated: allPosts.length, total: titles.length })}\n\n`);
     }
 
-    res.json({ posts: allPosts });
+    res.write(`data: ${JSON.stringify({ type: "complete", posts: allPosts })}\n\n`);
+    res.end();
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Generation failed";
     req.log?.error({ err }, "content-generator: generate error");
-    res.status(500).json({ error: message });
+    if (!res.headersSent) {
+      res.status(500).json({ error: message });
+    } else {
+      res.write(`data: ${JSON.stringify({ type: "error", message })}\n\n`);
+      res.end();
+    }
   }
 });
 
