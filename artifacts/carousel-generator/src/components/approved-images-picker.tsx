@@ -3,6 +3,7 @@ import { ShieldCheck, Loader2, X, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useApprovedImages } from "@/lib/use-approval";
 import { toast } from "sonner";
+import ExportToCanvaButton from "@/components/export-to-canva";
 
 interface ApprovedImagesPickerProps {
   clientName?: string;
@@ -16,6 +17,14 @@ async function urlToFile(url: string, index: number): Promise<File> {
   const blob = await res.blob();
   const ext = blob.type.includes("png") ? "png" : "jpg";
   return new File([blob], `approved-${index + 1}.${ext}`, { type: blob.type });
+}
+
+// Builds the Canva asset name as clientname+topic, no spaces (e.g. "HarwoodAestheticsbathroom"),
+// so exports are easy to find and tell apart inside Canva.
+function canvaAssetName(clientName: string, topic: string): string {
+  const client = (clientName || "Client").replace(/\s+/g, "");
+  const cleanTopic = (topic || "photo").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 40);
+  return `${client}${cleanTopic}`;
 }
 
 export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "multi", label }: ApprovedImagesPickerProps) {
@@ -188,6 +197,19 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
                       )}
                     </div>
                   )}
+                  <div
+                    className="absolute top-1 right-1 z-10"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExportToCanvaButton
+                      imageUrl={img.imageUrl}
+                      name={canvaAssetName(img.clientName, img.batchName)}
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 bg-black/60 hover:bg-black/80 rounded-full p-0"
+                      label=""
+                    />
+                  </div>
                   <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-0.5">
                     <p className="text-[10px] text-white truncate">{img.clientName} · {img.batchName}</p>
                   </div>
