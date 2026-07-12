@@ -579,7 +579,7 @@ export default function ClientPortal({ token }: { token: string }) {
             )}
           </section>
         )}
-        {tab === "news" && (<section><div className="flex items-center gap-2 mb-5"><Layers className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Aesthetic News</h2>h2></div>div><p className="text-sm text-zinc-400 mb-6">What's happening across aesthetics and skincare, refreshed every Monday.</p>p><NewsList /></section>section>)}
+        {tab === "news" && (<section><div className="flex items-center gap-2 mb-5"><Layers className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Aesthetic News</h2></div><p className="text-sm text-zinc-400 mb-6">What's happening across aesthetics and skincare, refreshed every Monday.</p><NewsList /></section>)}
       </main>
 
       <footer className="border-t border-zinc-900 py-6 mt-4"><p className="text-center text-xs text-zinc-700">Powered by <span className="text-zinc-600">The CyberSuite&trade;</span></p></footer>
