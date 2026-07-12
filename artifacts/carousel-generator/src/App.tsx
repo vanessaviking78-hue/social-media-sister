@@ -75,6 +75,7 @@ import CanvaOAuthResult from "@/pages/canva-oauth-result";
 import ApprovalBundles from "@/pages/approval-bundles";
 import ClientApproval from "@/pages/client-approval";
 import ContentGenerator from "@/pages/content-generator";
+import AestheticNews from "@/pages/aesthetic-news";
 
 const queryClient = new QueryClient();
 
@@ -159,6 +160,7 @@ function AppContent() {
   const [isPodcast] = useRoute("/podcast");
   const [isCompetition] = useRoute("/competition");
   const [isAboutPage] = useRoute("/about");
+  const [isNews] = useRoute("/news");
   const [isBundle, bundleParams] = useRoute("/bundle/:token");
   const [isFounderSignup] = useRoute("/founder-signup");
   const [isFounderWelcome] = useRoute("/founder-welcome");
@@ -200,6 +202,9 @@ function AppContent() {
   }
   if (isAboutPage) {
     return <AboutPublic />;
+  }
+  if (isNews) {
+    return <AestheticNews />;
   }
   if (isSplash) {
     return <Splash />;
