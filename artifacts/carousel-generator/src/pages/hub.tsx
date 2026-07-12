@@ -76,6 +76,15 @@ const TOOLS = [
     iconColor: "text-fuchsia-400",
   },
   {
+    href: "/tweet-maker",
+    icon: MessageSquare,
+    name: "Tweet Maker",
+    description: "Turn a CSV of quotes into authentic-looking tweet graphics, batched by clinic.",
+    color: "from-sky-500/20 to-sky-500/5",
+    border: "hover:border-sky-500/50",
+    iconColor: "text-sky-400",
+  },
+  {
     href: "/carousel",
     icon: ImageIcon,
     name: "Carousel",
