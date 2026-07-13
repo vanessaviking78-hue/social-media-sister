@@ -384,6 +384,15 @@ const TOOLS_REST = [
     border: "hover:border-emerald-500/50",
     iconColor: "text-emerald-400",
   },
+  {
+    href: "/seamless-caro-builder",
+    icon: Wand2,
+    name: "Seamless Caro Builder",
+    description: "Preload a client's backgrounds, pick their approved photo, and it strips the background and drops them in, same spot on every slide, ready for Seamless Carousels.",
+    color: "from-teal-500/20 to-teal-500/5",
+    border: "hover:border-teal-500/50",
+    iconColor: "text-teal-400",
+  },
 ];
 
 const ALL_TOOLS = [...TOOLS, ...TOOLS_REST];
