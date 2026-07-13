@@ -42,33 +42,34 @@ type BatchResult = {
   error?: string;
 };
 
-const MAX_PHOTOS = 20;
-const MIN_GROUP = 3;
-const MAX_GROUP = 5;
+const MAX_PHOTOS = 100;
+const PIECE_SIZE = 3;
 const DEFAULT_PLACEMENT: Placement = { anchorX: 0.5, anchorY: 0.94, anchorW: 0.34 };
 
-// Splits a total photo count into groups of MIN_GROUP-MAX_GROUP photos each,
-// spread as evenly as possible so every selected photo ends up on a piece of
-// content and (as long as the total allows it) no group falls outside 3-5.
-function evenGroupSizes(total: number): number[] {
-  if (total <= 0) return [];
-  if (total <= MAX_GROUP) return [total];
-  for (let groups = Math.ceil(total / MAX_GROUP); groups <= total; groups++) {
-    const base = Math.floor(total / groups);
-    const rem = total % groups;
-    if (base >= MIN_GROUP && base + (rem > 0 ? 1 : 0) <= MAX_GROUP) {
-      return Array.from({ length: groups }, (_, i) => base + (i < rem ? 1 : 0));
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Shuffle-bag photo picker: draws from a freshly shuffled copy of the whole
+// approved-photo pool and only reshuffles once that copy runs out. So every
+// photo gets used once before anything repeats, and when a photo does repeat
+// across carousels it lands in a different spot each time rather than the
+// same order over and over.
+function makePhotoDrawer(pool: ApprovedPhoto[]) {
+  let deck: ApprovedPhoto[] = [];
+  return function draw(count: number): ApprovedPhoto[] {
+    const out: ApprovedPhoto[] = [];
+    while (out.length < count && pool.length > 0) {
+      if (deck.length === 0) deck = shuffle(pool);
+      out.push(deck.shift()!);
     }
-  }
-  // Fallback so nothing gets dropped even in an odd edge case.
-  const sizes: number[] = [];
-  let remaining = total;
-  while (remaining > 0) {
-    const take = Math.min(MAX_GROUP, remaining);
-    sizes.push(take);
-    remaining -= take;
-  }
-  return sizes;
+    return out;
+  };
 }
 
 async function compress(du: string, q = 0.9): Promise<string> {
@@ -207,8 +208,7 @@ export default function SeamlessCaroBuilder() {
   const [running, setRunning] = useState(false);
 
   const client = presets.find((p) => p.id === presetId) || null;
-  const groupSizes = evenGroupSizes(photos.length);
-  const pairCount = Math.min(selectedBgIds.length, groupSizes.length);
+  const pairCount = selectedBgIds.length;
 
   useEffect(() => {
     if (!presetId) { setBackgrounds([]); setSelectedBgIds([]); return; }
@@ -297,21 +297,16 @@ export default function SeamlessCaroBuilder() {
     setPhotos((prev) => prev.filter((p) => p.url !== url));
   }
 
-  // Builds one "piece" per background/group pairing, splitting the selected
-  // photos into groups of 3-5 in the order they were added, and seeds a
-  // sensible default position for every photo on its guideline before
-  // Vanessa drags anything.
+  // Builds one "piece" per selected background — every background gets its
+  // own carousel of exactly PIECE_SIZE photos. Photos are pulled from a
+  // shuffle-bag over the whole approved pool, so if there aren't enough
+  // unique photos to give every background a fresh set, photos repeat to
+  // fill the quota but never in the same order twice.
   function buildPieces() {
-    if (pairCount === 0) { toast.error("Pick at least one background and at least three approved photos."); return; }
-    const groups: ApprovedPhoto[][] = [];
-    let cursor = 0;
-    for (const size of groupSizes) {
-      groups.push(photos.slice(cursor, cursor + size));
-      cursor += size;
-    }
-    const nextPieces: Piece[] = Array.from({ length: pairCount }, (_, i) => {
-      const bgId = selectedBgIds[i];
-      const group = groups[i];
+    if (selectedBgIds.length === 0 || photos.length === 0) { toast.error("Pick at least one background and at least one approved photo."); return; }
+    const draw = makePhotoDrawer(photos);
+    const nextPieces: Piece[] = selectedBgIds.map((bgId, i) => {
+      const group = draw(PIECE_SIZE);
       return {
         key: `${bgId}-${i}`,
         bgId,
@@ -392,7 +387,7 @@ export default function SeamlessCaroBuilder() {
     <div className="min-h-[100dvh] w-full bg-background text-foreground">
       <header className="border-b border-border/40 px-6 py-5">
         <h1 className="text-2xl font-bold flex items-center gap-2"><TrendingUp className="w-6 h-6 text-emerald-400" />Seamless Caro Builder</h1>
-        <p className="text-sm text-muted-foreground mt-1">Pick as many backgrounds as you like, add up to twenty approved photos, and they'll spread across the batch three to five per piece — drag each one onto its guideline before you composite.</p>
+        <p className="text-sm text-muted-foreground mt-1">Pick as many backgrounds as you like and add as many approved photos as you like — every background gets its own carousel of three photos, repeating where needed but never in the same order twice. Drag each one onto its guideline before you composite.</p>
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
@@ -449,7 +444,7 @@ export default function SeamlessCaroBuilder() {
 
             <div className="rounded-2xl border border-green-500/30 bg-card/60 p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-xs uppercase tracking-widest text-muted-foreground">Approved photos for this batch — up to twenty</p>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Approved photos for this batch — add as many as you like</p>
                 {photos.length > 0 && <p className="text-xs text-muted-foreground">{photos.length}/{MAX_PHOTOS}</p>}
               </div>
               {photos.length > 0 && (
@@ -477,16 +472,11 @@ export default function SeamlessCaroBuilder() {
 
             <div className="rounded-2xl border border-emerald-500/30 bg-card/60 p-5 space-y-3">
               <p className="text-sm">
-                {pairCount > 0
-                  ? `${photos.length} photo${photos.length !== 1 ? "s" : ""} will spread across ${groupSizes.length} piece${groupSizes.length !== 1 ? "s" : ""} of content (${groupSizes.join(", ")} photos each), matched to your first ${pairCount} selected background${pairCount > 1 ? "s" : ""}.`
-                  : "Select backgrounds and at least three approved photos to line up a batch."}
+                {pairCount > 0 && photos.length > 0
+                  ? `Every one of your ${pairCount} selected background${pairCount > 1 ? "s" : ""} gets its own carousel of 3 photos, drawn from your ${photos.length} approved photo${photos.length !== 1 ? "s" : ""}. If there aren't enough to go round, photos repeat to fill the quota — just in a different order on each carousel.`
+                  : "Select as many backgrounds and approved photos as you like to line up a batch."}
               </p>
-              {selectedBgIds.length !== groupSizes.length && selectedBgIds.length > 0 && groupSizes.length > 0 && (
-                <p className="text-xs text-amber-400">
-                  {selectedBgIds.length} background{selectedBgIds.length > 1 ? "s" : ""} vs {groupSizes.length} piece{groupSizes.length > 1 ? "s" : ""} of grouped photos — only the first {pairCount} pairing{pairCount > 1 ? "s" : ""} will run.
-                </p>
-              )}
-              <button onClick={buildPieces} disabled={pairCount === 0} className="px-6 py-3 rounded-full bg-emerald-500 text-white font-semibold disabled:opacity-40 hover:bg-emerald-400 transition-colors">
+              <button onClick={buildPieces} disabled={pairCount === 0 || photos.length === 0} className="px-6 py-3 rounded-full bg-emerald-500 text-white font-semibold disabled:opacity-40 hover:bg-emerald-400 transition-colors">
                 Arrange placements ({pairCount || 0})
               </button>
             </div>
