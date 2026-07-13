@@ -43,7 +43,7 @@ type BatchResult = {
 };
 
 const MAX_PHOTOS = 100;
-const PIECE_SIZE = 3;
+const PIECE_SIZE = 4;
 const DEFAULT_PLACEMENT: Placement = { anchorX: 0.5, anchorY: 0.94, anchorW: 0.34 };
 
 function shuffle<T>(arr: T[]): T[] {
@@ -241,10 +241,10 @@ export default function SeamlessCaroBuilder() {
         if (!imageUrl) continue;
         const reg = await fetch(`${BASE}/api/seamless-caro/backgrounds`, {
           method: "POST", headers: authHeaders(),
-          body: JSON.stringify({ presetId, imageUrl, slideCount: 3 }),
+          body: JSON.stringify({ presetId, imageUrl, slideCount: 4 }),
         });
         const regData = await reg.json();
-        const newBg: Background = { id: regData.id, presetId, imageUrl, slideCount: 3, anchorX: 0.32, anchorY: 0.95, anchorW: 0.34 };
+        const newBg: Background = { id: regData.id, presetId, imageUrl, slideCount: 4, anchorX: 0.32, anchorY: 0.95, anchorW: 0.34 };
         setBackgrounds((prev) => [newBg, ...prev]);
       }
       toast.success("Background(s) added");
@@ -375,7 +375,7 @@ export default function SeamlessCaroBuilder() {
     if (!done.length) { toast.error("Nothing finished yet to send."); return; }
     sessionStorage.setItem(
       "seamless-caro-handoff",
-      JSON.stringify(done.map((r) => ({ imageUrl: r.resultUrl, slideCount: r.slideCount || 3 })))
+      JSON.stringify(done.map((r) => ({ imageUrl: r.resultUrl, slideCount: r.slideCount || 4 })))
     );
     window.location.href = `${BASE}/seamless-bulk`;
   }
@@ -387,7 +387,7 @@ export default function SeamlessCaroBuilder() {
     <div className="min-h-[100dvh] w-full bg-background text-foreground">
       <header className="border-b border-border/40 px-6 py-5">
         <h1 className="text-2xl font-bold flex items-center gap-2"><TrendingUp className="w-6 h-6 text-emerald-400" />Seamless Caro Builder</h1>
-        <p className="text-sm text-muted-foreground mt-1">Pick as many backgrounds as you like and add as many approved photos as you like — every background gets its own carousel of three photos, repeating where needed but never in the same order twice. Drag each one onto its guideline before you composite.</p>
+        <p className="text-sm text-muted-foreground mt-1">Pick as many backgrounds as you like and add as many approved photos as you like — every background gets its own carousel of four photos, repeating where needed but never in the same order twice. Drag each one onto its guideline before you composite.</p>
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
@@ -473,7 +473,7 @@ export default function SeamlessCaroBuilder() {
             <div className="rounded-2xl border border-emerald-500/30 bg-card/60 p-5 space-y-3">
               <p className="text-sm">
                 {pairCount > 0 && photos.length > 0
-                  ? `Every one of your ${pairCount} selected background${pairCount > 1 ? "s" : ""} gets its own carousel of 3 photos, drawn from your ${photos.length} approved photo${photos.length !== 1 ? "s" : ""}. If there aren't enough to go round, photos repeat to fill the quota — just in a different order on each carousel.`
+                  ? `Every one of your ${pairCount} selected background${pairCount > 1 ? "s" : ""} gets its own carousel of 4 photos, drawn from your ${photos.length} approved photo${photos.length !== 1 ? "s" : ""}. If there aren't enough to go round, photos repeat to fill the quota — just in a different order on each carousel.`
                   : "Select as many backgrounds and approved photos as you like to line up a batch."}
               </p>
               <button onClick={buildPieces} disabled={pairCount === 0 || photos.length === 0} className="px-6 py-3 rounded-full bg-emerald-500 text-white font-semibold disabled:opacity-40 hover:bg-emerald-400 transition-colors">
