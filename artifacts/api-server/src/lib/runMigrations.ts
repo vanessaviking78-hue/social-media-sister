@@ -25,6 +25,7 @@ export async function runMigrations(): Promise<void> {
     await createResourceLibraryTable();
     await createRevenueIdeasTable();
     await createClientBackgroundsTable();
+    await createPortalPushSubscriptionsTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -356,5 +357,25 @@ async function createClientBackgroundsTable(): Promise<void> {
       anchor_w DOUBLE PRECISION NOT NULL DEFAULT 0.34,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `);
+}
+
+// One row per device a client has subscribed to push notifications on, tied to
+// their existing portal token rather than any new login. A client can have
+// several rows (phone + desktop etc.) — each is a separate push endpoint.
+async function createPortalPushSubscriptionsTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS portal_push_subscriptions (
+      id SERIAL PRIMARY KEY,
+      client_portal_token TEXT NOT NULL,
+      endpoint TEXT NOT NULL UNIQUE,
+      p256dh TEXT NOT NULL,
+      auth TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`
+    CREATE INDEX IF NOT EXISTS portal_push_subscriptions_token_idx
+    ON portal_push_subscriptions (client_portal_token)
   `);
 }
