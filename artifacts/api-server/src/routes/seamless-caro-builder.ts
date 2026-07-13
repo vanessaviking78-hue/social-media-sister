@@ -184,4 +184,70 @@ router.post("/seamless-caro/composite", async (req: Request, res: Response) => {
   }
 });
 
+type PhotoPlacement = { photoUrl: string; anchorX: number; anchorY: number; anchorW: number };
+
+// Composites a DIFFERENT photo into each panel guideline instead of repeating
+// one photo identically across every panel. Powers the "up to twenty photos,
+// three to five per piece, drag each onto its own guideline" bulk flow —
+// each entry in `photos` carries its own dragged position and size, already
+// expressed as the same anchorX/anchorY/anchorW fractions the single-photo
+// /composite route uses, just one set per panel instead of one shared set.
+router.post("/seamless-caro/composite-multi", async (req: Request, res: Response) => {
+  try {
+    const { backgroundId, photos } = req.body as { backgroundId?: number; photos?: PhotoPlacement[] };
+    if (!backgroundId || !photos || !photos.length) { res.status(400).json({ error: "backgroundId and at least one photo are required" }); return; }
+
+    const bgResult = await db.execute(sql`
+      SELECT id, preset_id AS "presetId", image_url AS "imageUrl", slide_count AS "slideCount"
+      FROM client_backgrounds WHERE id = ${backgroundId}
+    `);
+    const bg = (bgResult as { rows?: { imageUrl: string }[] }).rows?.[0];
+    if (!bg) { res.status(404).json({ error: "Background not found" }); return; }
+
+    const n = Math.max(2, Math.min(5, photos.length));
+    const backgroundBuffer = await fetchBuffer(bg.imageUrl);
+    const bgMeta = await sharp(backgroundBuffer).metadata();
+    const totalW = bgMeta.width || 0;
+    const totalH = bgMeta.height || 0;
+    const panelW = totalW / n;
+
+    const composites = await Promise.all(photos.slice(0, n).map(async (p, i) => {
+      const photoBuffer = await fetchBuffer(p.photoUrl);
+      const cutoutBuffer = await removeBackground(photoBuffer);
+      const cutoutMeta = await sharp(cutoutBuffer).metadata();
+      const cw = cutoutMeta.width || 1;
+      const ch = cutoutMeta.height || 1;
+      const anchorW = Math.max(0.05, Math.min(1, Number(p.anchorW) || 0.34));
+      const anchorX = Math.max(0, Math.min(1, Number(p.anchorX ?? 0.5)));
+      const anchorY = Math.max(0, Math.min(1, Number(p.anchorY ?? 0.94)));
+      const targetW = Math.round(panelW * anchorW);
+      const targetH = Math.round(targetW * (ch / cw));
+      const resizedCutout = await sharp(cutoutBuffer).resize(targetW, targetH).toBuffer();
+      const panelLeft = i * panelW;
+      const centerX = panelLeft + anchorX * panelW;
+      const bottomY = anchorY * totalH;
+      const left = Math.round(centerX - targetW / 2);
+      const top = Math.round(bottomY - targetH);
+      return { input: resizedCutout, left, top };
+    }));
+
+    const outBuffer = await sharp(backgroundBuffer).composite(composites).png().toBuffer();
+
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    if (!bucketId) { res.status(500).json({ error: "Object storage not configured" }); return; }
+    const objectPath = `carousel-images/${Date.now()}-seamless-caro-composite.png`;
+    const bucket = objectStorageClient.bucket(bucketId);
+    await bucket.file(objectPath).save(outBuffer, { contentType: "image/png", metadata: { cacheControl: "public, max-age=31536000" } });
+
+    const proto = (req.headers["x-forwarded-proto"] as string) || "https";
+    const host = (req.headers["x-forwarded-host"] as string) || req.headers.host || "localhost";
+    const imageUrl = `${proto}://${host}/api/content/images/${objectPath}`;
+
+    res.json({ imageUrl, width: totalW, height: totalH, slideCount: n });
+  } catch (err: any) {
+    logger.error({ err }, "Seamless Caro multi-composite failed");
+    res.status(500).json({ error: err.message || "Composite failed" });
+  }
+});
+
 export default router;
