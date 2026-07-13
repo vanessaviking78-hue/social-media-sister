@@ -67,11 +67,11 @@ function statusPill(post: ScheduledPost) {
   );
 }
 
-// Red at 0% done, green once everything for that client is finished for today.
-// Failed posts hold a client back from going green even if everything else published,
-// since a failure still needs sorting out.
+// Red until every post for that client has actually gone out today — no
+// halfway green for "mostly done" or "queued but not posted yet". Only a
+// clean 100% published (with nothing failed) flips a card to green.
 function progressStyle(percent: number): React.CSSProperties {
-  const hue = Math.round(percent * 130); // 0 = red, 130 = green
+  const hue = percent >= 1 ? 140 : 0;
   return {
     background: `linear-gradient(135deg, hsla(${hue}, 55%, 20%, 0.95), hsla(${hue}, 55%, 12%, 0.95))`,
     borderColor: `hsla(${hue}, 60%, 42%, 0.55)`,
