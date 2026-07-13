@@ -23,6 +23,7 @@ export async function runMigrations(): Promise<void> {
     await createBeforeAfterSubmissionsTable();
     await createClientChecklistTable();
     await createResourceLibraryTable();
+    await createRevenueIdeasTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -311,5 +312,28 @@ async function createResourceLibraryTable(): Promise<void> {
       file_name TEXT NOT NULL DEFAULT '',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `);
+}
+
+// Weekly revenue-idea drafts, one per client per week. Vanessa reviews and
+// edits each draft before it's approved and shown on that client's portal.
+async function createRevenueIdeasTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS revenue_ideas (
+      id SERIAL PRIMARY KEY,
+      preset_id INTEGER NOT NULL REFERENCES client_presets(id) ON DELETE CASCADE,
+      client_name TEXT NOT NULL DEFAULT '',
+      week_of DATE NOT NULL,
+      title TEXT NOT NULL DEFAULT '',
+      instructions TEXT NOT NULL DEFAULT '',
+      draft_content TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'draft',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS revenue_ideas_preset_week_unique
+    ON revenue_ideas (preset_id, week_of)
   `);
 }
