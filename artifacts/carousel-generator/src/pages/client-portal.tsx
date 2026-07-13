@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Loader2, AlertTriangle, CalendarDays, ChevronLeft, X, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star, FileText, Download, Newspaper } from "lucide-react";
+import { Loader2, AlertTriangle, CalendarDays, ChevronLeft, X, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star, FileText, Download, Newspaper, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { NewsList } from "@/pages/aesthetic-news";
 
@@ -8,7 +8,8 @@ const SEND_LABEL = "Send to Vanessa, Aesthetic Angel / Digital Darling";
 
 type CalendarPost = { id: number; date: string; title: string; caption: string; postType: string; status: string; color: string; imageUrl: string | null; imageUrls: string[]; source: "calendar" | "scheduler"; scheduledPostId: number | null; };
 type ApprovalBatch = { id: number; name: string; token: string; status: string; totalImages: number; pendingImages: number; approvedImages: number; rejectedImages: number; createdAt: string; expiresAt: string | null; };
-type PortalData = { clientName: string; logoUrl: string | null; upcomingPosts: CalendarPost[]; approvalBatches: ApprovalBatch[]; };
+type RevenueIdea = { title: string; instructions: string; draftContent: string; weekOf: string };
+type PortalData = { clientName: string; logoUrl: string | null; upcomingPosts: CalendarPost[]; approvalBatches: ApprovalBatch[]; revenueIdea: RevenueIdea | null; };
 type Resource = { id: number; title: string; description: string; fileKey: string; fileName: string; createdAt: string; };
 
 const POST_TYPE_ICON: Record<string, React.ReactNode> = {
@@ -178,7 +179,7 @@ const REEL_GROUPS: { heading: string; items: string[] }[] = [
 ];
 const REEL_TOTAL = REEL_GROUPS.reduce((n, g) => n + g.items.length, 0);
 
-type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news";
+type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue";
 
 const TAB_ICON: Record<Tab, React.ReactNode> = {
   upcoming: <CalendarDays className="w-4 h-4" />,
@@ -191,6 +192,7 @@ const TAB_ICON: Record<Tab, React.ReactNode> = {
   reels: <Clapperboard className="w-4 h-4" />,
   resources: <FileText className="w-4 h-4" />,
   news: <Newspaper className="w-4 h-4" />,
+  revenue: <TrendingUp className="w-4 h-4" />,
 };
 
 export default function ClientPortal({ token }: { token: string }) {
@@ -388,6 +390,7 @@ export default function ClientPortal({ token }: { token: string }) {
         </div>
         <div className="max-w-3xl mx-auto px-4 pb-3 flex flex-wrap gap-2">
           <TabBtn id="upcoming" label="Posts" />
+          {data.revenueIdea && <TabBtn id="revenue" label="This Week's Idea" />}
           <TabBtn id="approvals" label="Approvals" badge={pendingCount || undefined} />
           <TabBtn id="ba" label="Before & After" />
           <TabBtn id="selfies" label="Selfies" />
@@ -462,6 +465,23 @@ export default function ClientPortal({ token }: { token: string }) {
                 })}
               </div>
             )}
+          </section>
+        )}
+
+        {tab === "revenue" && data.revenueIdea && (
+          <section>
+            <div className="flex items-center gap-2 mb-5"><TrendingUp className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">This Week's Revenue Idea</h2></div>
+            <div className="rounded-2xl border border-pink-800/40 bg-pink-950/10 p-6 space-y-4">
+              <h3 className="text-xl font-bold text-white">{data.revenueIdea.title}</h3>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-pink-400/80 mb-1.5">What to run and why</p>
+                <p className="text-sm text-zinc-300 whitespace-pre-line leading-relaxed">{data.revenueIdea.instructions}</p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-pink-400/80 mb-1.5">Ready-to-use copy</p>
+                <div className="rounded-xl bg-zinc-950/60 border border-zinc-800 p-4"><p className="text-sm text-zinc-300 whitespace-pre-line leading-relaxed">{data.revenueIdea.draftContent}</p></div>
+              </div>
+            </div>
           </section>
         )}
 
