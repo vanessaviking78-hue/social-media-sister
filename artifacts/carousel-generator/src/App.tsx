@@ -72,6 +72,7 @@ import ApprovalBundles from "@/pages/approval-bundles";
 import ClientApproval from "@/pages/client-approval";
 import ContentGenerator from "@/pages/content-generator";
 import RevenueIdeas from "@/pages/revenue-ideas";
+import SeamlessCaroBuilder from "@/pages/seamless-caro-builder";
 
 const queryClient = new QueryClient();
 
@@ -127,6 +128,7 @@ function ProtectedRouter() {
       <Route path="/approval-bundles" component={ApprovalBundles} />
       <Route path="/content-generator" component={ContentGenerator} />
       <Route path="/revenue-ideas" component={RevenueIdeas} />
+      <Route path="/seamless-caro-builder" component={SeamlessCaroBuilder} />
       <Route path="/showcase-builder" component={ShowcaseBuilder} />
       <Route path="/seamless-bulk" component={SeamlessBulk} />
       <Route path="/about-me-studio" component={AboutMeStudio} />
