@@ -38,6 +38,7 @@ import hookImageRouter from "./hook-image";
 import notifyRouter from "./notify";
 import submissionsRouter from "./submissions";
 import revenueIdeasRouter from "./revenue-ideas";
+import seamlessCaroBuilderRouter from "./seamless-caro-builder";
 
 const router: IRouter = Router();
 
@@ -80,5 +81,6 @@ router.use(waitlistRouter);
 router.use(approvalBundlesRouter);
 router.use(contentGeneratorRouter);
 router.use(revenueIdeasRouter);
+router.use(seamlessCaroBuilderRouter);
 
 export default router;
