@@ -19,18 +19,28 @@ type ScheduledPost = {
   metaResult: { igPostId?: string; fbPostId?: string; error?: string } | null;
 };
 
+// red = nothing scheduled yet, or something's failed / only half-posted and needs sorting.
+// amber = it's booked in and queued, just hasn't gone out yet.
+// green = confirmed live on both Instagram and Facebook.
+type ClientState = "red" | "amber" | "green";
+
 type ClientProgress = {
   presetId: number;
   name: string;
   posts: ScheduledPost[];
   total: number;
-  done: number;
-  failed: number;
-  percent: number; // 0-1, how much of today's work for this client is finished
+  fullyPosted: number;
+  waiting: number;
+  problems: number;
+  state: ClientState;
 };
 
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+}
+
+function postedBothPlatforms(post: ScheduledPost) {
+  return post.status === "published" && !!post.metaResult?.igPostId && !!post.metaResult?.fbPostId;
 }
 
 function statusPill(post: ScheduledPost) {
@@ -40,8 +50,9 @@ function statusPill(post: ScheduledPost) {
     const parts: string[] = [];
     if (igOk) parts.push("IG posted");
     if (fbOk) parts.push("FB posted");
+    const bothOk = igOk && fbOk;
     return (
-      <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border bg-emerald-900/40 text-emerald-300 border-emerald-700">
+      <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${bothOk ? "bg-emerald-900/40 text-emerald-300 border-emerald-700" : "bg-amber-900/40 text-amber-300 border-amber-700"}`}>
         <CheckCircle2 className="w-3 h-3" /> {parts.length > 0 ? parts.join(" · ") : "Posted"}
       </span>
     );
@@ -67,21 +78,29 @@ function statusPill(post: ScheduledPost) {
   );
 }
 
-// Red until every post for that client has actually gone out today — no
-// halfway green for "mostly done" or "queued but not posted yet". Only a
-// clean 100% published (with nothing failed) flips a card to green.
-function progressStyle(percent: number): React.CSSProperties {
-  const hue = percent >= 1 ? 140 : 0;
+const STATE_HUE: Record<ClientState, number> = { red: 0, amber: 40, green: 140 };
+
+function cardStyle(state: ClientState): React.CSSProperties {
+  const hue = STATE_HUE[state];
   return {
     background: `linear-gradient(135deg, hsla(${hue}, 55%, 20%, 0.95), hsla(${hue}, 55%, 12%, 0.95))`,
     borderColor: `hsla(${hue}, 60%, 42%, 0.55)`,
   };
 }
 
-function progressBarStyle(percent: number): React.CSSProperties {
-  const hue = Math.round(percent * 130);
-  return { width: `${Math.round(percent * 100)}%`, background: `hsl(${hue}, 70%, 50%)` };
+function barStyle(state: ClientState, fraction: number): React.CSSProperties {
+  const hue = STATE_HUE[state];
+  return { width: `${Math.round(fraction * 100)}%`, background: `hsl(${hue}, 70%, 50%)` };
 }
+
+function stateLabel(client: ClientProgress) {
+  if (client.total === 0) return "Nothing scheduled today";
+  if (client.state === "red") return `${client.problems} need${client.problems === 1 ? "s" : ""} sorting`;
+  if (client.state === "amber") return `${client.waiting} waiting to go live`;
+  return "All posted";
+}
+
+const STATE_RANK: Record<ClientState, number> = { red: 0, amber: 1, green: 2 };
 
 export default function Today() {
   const { presets } = usePresets();
@@ -129,21 +148,28 @@ export default function Today() {
       .slice()
       .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
     const total = clientPosts.length;
-    const done = clientPosts.filter((p) => p.status === "published").length;
-    const failed = clientPosts.filter((p) => p.status === "failed").length;
-    const percent = total === 0 ? 0 : done / total;
-    return { presetId: preset.id, name: preset.name, posts: clientPosts, total, done, failed, percent };
+    const fullyPosted = clientPosts.filter(postedBothPlatforms).length;
+    // A post that's "published" but only made it to one platform still counts as a
+    // problem — half a post going out isn't a job done, it's a job half-sorted.
+    const problems = clientPosts.filter((p) => p.status === "failed" || (p.status === "published" && !postedBothPlatforms(p))).length;
+    const waiting = total - fullyPosted - problems;
+
+    let state: ClientState;
+    if (total === 0 || problems > 0) state = "red";
+    else if (fullyPosted === total) state = "green";
+    else state = "amber";
+
+    return { presetId: preset.id, name: preset.name, posts: clientPosts, total, fullyPosted, waiting, problems, state };
   });
 
-  // Reddest — least done, or nothing scheduled at all — sits at the top.
-  // Fully green, finished clients drop to the bottom out of the way.
+  // Reddest and least-sorted at the top, amber "queued and waiting" in the middle,
+  // fully green and finished drops to the bottom out of the way.
   clientProgress.sort((a, b) => {
-    if (a.percent !== b.percent) return a.percent - b.percent;
-    if (a.total !== b.total) return b.total - a.total;
+    if (STATE_RANK[a.state] !== STATE_RANK[b.state]) return STATE_RANK[a.state] - STATE_RANK[b.state];
     return a.name.localeCompare(b.name);
   });
 
-  const needsAttention = clientProgress.filter((c) => c.percent < 1).length;
+  const needsAttention = clientProgress.filter((c) => c.state !== "green").length;
   const todayLabel = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 
   return (
@@ -165,8 +191,8 @@ export default function Today() {
           <div className="flex items-center gap-2 text-xs text-zinc-400">
             <AlertCircle className="w-3.5 h-3.5 text-red-400" />
             {needsAttention === 0
-              ? "Every client is sorted for today."
-              : `${needsAttention} client${needsAttention !== 1 ? "s" : ""} still need${needsAttention === 1 ? "s" : ""} attention today.`}
+              ? "Every client is posted for today."
+              : `${needsAttention} client${needsAttention !== 1 ? "s" : ""} still red or amber today.`}
           </div>
         )}
 
@@ -180,17 +206,13 @@ export default function Today() {
         ) : (
           <div className="space-y-4">
             {clientProgress.map((client) => (
-              <div key={client.presetId} className="rounded-2xl border overflow-hidden transition-colors" style={progressStyle(client.percent)}>
+              <div key={client.presetId} className="rounded-2xl border overflow-hidden transition-colors" style={cardStyle(client.state)}>
                 <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/10">
                   <span className="font-semibold text-sm">{client.name}</span>
-                  <span className="text-xs text-zinc-300">
-                    {client.total === 0
-                      ? "Nothing scheduled today"
-                      : `${client.done}/${client.total} done${client.failed ? ` · ${client.failed} failed` : ""}`}
-                  </span>
+                  <span className="text-xs text-zinc-300">{stateLabel(client)}</span>
                 </div>
                 <div className="h-1 bg-black/30">
-                  <div className="h-full transition-all" style={progressBarStyle(client.percent)} />
+                  <div className="h-full transition-all" style={barStyle(client.state, client.total === 0 ? 1 : client.fullyPosted / client.total)} />
                 </div>
                 {client.total === 0 ? (
                   <div className="px-4 py-4 text-sm text-zinc-300">Nothing booked in for {client.name} today — worth getting something on the calendar.</div>
