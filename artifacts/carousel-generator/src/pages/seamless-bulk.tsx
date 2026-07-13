@@ -151,22 +151,41 @@ const [editLogo, setEditLogo] = useState<HTMLImageElement | null>(null);
 const isIn = (id: string) => !excluded.has(id);
 const toggleIn = (id: string) => setExcluded((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
-// Picks up a composite handed off from Seamless Caro Builder — the wide
-// background+photo image is already sitting at a URL, so this just fetches
-// it once as a strip instead of making Vanessa download and re-upload it.
+// Picks up composites handed off from Seamless Caro Builder — the wide
+// background+photo images are already sitting at URLs, so this just fetches
+// them once as strips instead of making Vanessa download and re-upload them.
+// Backward-compatible with the old single-object handoff shape as well as
+// the newer array shape from the bulk Seamless Caro Builder.
 useEffect(() => {
   const raw = sessionStorage.getItem("seamless-caro-handoff");
   if (!raw) return;
   sessionStorage.removeItem("seamless-caro-handoff");
   (async () => {
     try {
-      const { imageUrl, slideCount } = JSON.parse(raw) as { imageUrl: string; slideCount: number };
-      const res = await fetch(imageUrl);
-      const blob = await res.blob();
-      const file = new File([blob], "seamless-caro.png", { type: blob.type || "image/png" });
-      const img = await fileToImage(file);
-      setStrips((p) => [...p, { id: `s-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, file, url: img.src, width: img.naturalWidth, height: img.naturalHeight, slides: Math.max(2, Math.min(5, slideCount || 3)) }]);
-      toast.success("Brought in from Seamless Caro Builder — ready to cut.");
+      const parsed = JSON.parse(raw);
+      const items: { imageUrl: string; slideCount: number }[] = Array.isArray(parsed) ? parsed : [parsed];
+      let failed = 0;
+      const newStrips: Strip[] = [];
+      for (const item of items) {
+        try {
+          const { imageUrl, slideCount } = item;
+          const res = await fetch(imageUrl);
+          const blob = await res.blob();
+          const file = new File([blob], "seamless-caro.png", { type: blob.type || "image/png" });
+          const img = await fileToImage(file);
+          newStrips.push({ id: `s-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, file, url: img.src, width: img.naturalWidth, height: img.naturalHeight, slides: Math.max(2, Math.min(5, slideCount || 3)) });
+        } catch {
+          failed++;
+        }
+      }
+      if (newStrips.length) setStrips((p) => [...p, ...newStrips]);
+      if (newStrips.length && !failed) {
+        toast.success(newStrips.length > 1 ? `Brought in ${newStrips.length} from Seamless Caro Builder — ready to cut.` : "Brought in from Seamless Caro Builder — ready to cut.");
+      } else if (newStrips.length && failed) {
+        toast.success(`Brought in ${newStrips.length}, ${failed} couldn't load — ready to cut the rest.`);
+      } else {
+        toast.error("Couldn't bring in the images from Seamless Caro Builder.");
+      }
     } catch {
       toast.error("Couldn't bring in the image from Seamless Caro Builder.");
     }
