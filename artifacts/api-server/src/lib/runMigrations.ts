@@ -24,6 +24,7 @@ export async function runMigrations(): Promise<void> {
     await createClientChecklistTable();
     await createResourceLibraryTable();
     await createRevenueIdeasTable();
+    await createClientBackgroundsTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -335,5 +336,25 @@ async function createRevenueIdeasTable(): Promise<void> {
   await db.execute(sql`
     CREATE UNIQUE INDEX IF NOT EXISTS revenue_ideas_preset_week_unique
     ON revenue_ideas (preset_id, week_of)
+  `);
+}
+
+// Preloaded background images per client for the Seamless Caro Builder.
+// anchor_x/anchor_y/anchor_w are stored as fractions (0-1) of a single panel,
+// marking where the cut-out person is placed, bottom-anchored, so the same
+// registration point repeats identically across every slide once the wide
+// composite is sliced.
+async function createClientBackgroundsTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS client_backgrounds (
+      id SERIAL PRIMARY KEY,
+      preset_id INTEGER NOT NULL REFERENCES client_presets(id) ON DELETE CASCADE,
+      image_url TEXT NOT NULL,
+      slide_count INTEGER NOT NULL DEFAULT 3,
+      anchor_x DOUBLE PRECISION NOT NULL DEFAULT 0.32,
+      anchor_y DOUBLE PRECISION NOT NULL DEFAULT 0.95,
+      anchor_w DOUBLE PRECISION NOT NULL DEFAULT 0.34,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
   `);
 }
