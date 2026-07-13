@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Loader2, AlertTriangle, CalendarDays, ChevronLeft, X, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star, FileText, Download, Newspaper, TrendingUp } from "lucide-react";
+import { Loader2, AlertTriangle, CalendarDays, ChevronLeft, X, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star, FileText, Download, Newspaper, TrendingUp, Bell, BellOff } from "lucide-react";
 import { toast } from "sonner";
 import { NewsList } from "@/pages/aesthetic-news";
 
@@ -21,6 +21,17 @@ const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Se
 function formatDate(dateStr: string) { const [y, m, d] = dateStr.split("-").map(Number); return `${d} ${MONTH_NAMES[m - 1]} ${y}`; }
 function getDayOfWeek(dateStr: string) { const d = new Date(dateStr + "T12:00:00"); return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()]; }
 function fileToBase64(file: File): Promise<string> { return new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result as string); r.onerror = reject; r.readAsDataURL(file); }); }
+
+// Converts the VAPID public key (base64url) into the Uint8Array format the
+// Push API's applicationServerKey option expects.
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
 
 function SlideShow({ urls }: { urls: string[] }) {
   const [idx, setIdx] = useState(0);
@@ -202,6 +213,10 @@ export default function ClientPortal({ token }: { token: string }) {
   const [tab, setTab] = useState<Tab>("upcoming");
   const [showTip, setShowTip] = useState(true);
 
+  // "unknown" = hasn't decided yet, so we show the banner offering to turn them on.
+  const [notifState, setNotifState] = useState<"unknown" | "on" | "off" | "unsupported">("unknown");
+  const [notifBusy, setNotifBusy] = useState(false);
+
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [rejectBusy, setRejectBusy] = useState(false);
@@ -276,6 +291,58 @@ export default function ClientPortal({ token }: { token: string }) {
       .catch(() => {})
       .finally(() => setResourcesLoading(false));
   }, []);
+
+  // Register the service worker once on load, and work out whether this
+  // device already has an active push subscription so we know whether to
+  // show the "turn on notifications" banner or not.
+  useEffect(() => {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      setNotifState("unsupported");
+      return;
+    }
+    navigator.serviceWorker.register(`${BASE}sw.js`).then(async (reg) => {
+      const existing = await reg.pushManager.getSubscription();
+      if (existing && Notification.permission === "granted") {
+        setNotifState("on");
+      } else if (Notification.permission === "denied") {
+        setNotifState("off");
+      } else {
+        setNotifState("unknown");
+      }
+    }).catch(() => setNotifState("unsupported"));
+  }, []);
+
+  const enableNotifications = async () => {
+    setNotifBusy(true);
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") { setNotifState("off"); return; }
+
+      const keyRes = await fetch(`${BASE}api/portal-push/vapid-public-key`);
+      const keyData = await keyRes.json().catch(() => ({}));
+      if (!keyRes.ok || !keyData.publicKey) throw new Error("Notifications aren't ready yet, please try again shortly.");
+
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(keyData.publicKey),
+      });
+      const subJson = sub.toJSON();
+
+      const r = await fetch(`${BASE}api/portal/${token}/push-subscribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: subJson.endpoint, keys: subJson.keys }),
+      });
+      if (!r.ok) throw new Error("Couldn't save that, please try again.");
+      setNotifState("on");
+      toast.success("Notifications are on, we'll ping you when there's news, ideas or posted work.");
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't turn on notifications, please try again.");
+    } finally {
+      setNotifBusy(false);
+    }
+  };
 
   const submitReject = async (post: CalendarPost) => {
     if (!rejectReason.trim()) { toast.error("Please add a reason."); return; }
@@ -405,6 +472,26 @@ export default function ClientPortal({ token }: { token: string }) {
 
       {showTip && (
         <div className="max-w-3xl mx-auto px-4 pt-4"><div className="rounded-xl border border-pink-800/40 bg-pink-950/20 px-4 py-2.5 flex items-center gap-2 text-xs text-pink-200"><Share className="w-4 h-4 shrink-0" /><span>Tip: tap your browser's Share button, then <b>Add to Home Screen</b>, to keep your portal one tap away.</span><button onClick={() => setShowTip(false)} className="ml-auto text-pink-400/70 hover:text-pink-300">Got it</button></div></div>
+      )}
+
+      {notifState === "unknown" && (
+        <div className="max-w-3xl mx-auto px-4 pt-3">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-2.5 flex items-center gap-2 text-xs text-zinc-300">
+            <Bell className="w-4 h-4 shrink-0 text-pink-400" />
+            <span>Want a nudge when there's news, a new idea, or your work goes live?</span>
+            <button onClick={enableNotifications} disabled={notifBusy} className="ml-auto rounded-full bg-pink-600 hover:bg-pink-500 disabled:opacity-60 text-white text-xs font-semibold px-3 py-1.5 flex items-center gap-1.5">
+              {notifBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bell className="w-3.5 h-3.5" />} Turn on
+            </button>
+          </div>
+        </div>
+      )}
+      {notifState === "off" && (
+        <div className="max-w-3xl mx-auto px-4 pt-3">
+          <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-4 py-2.5 flex items-center gap-2 text-xs text-zinc-500">
+            <BellOff className="w-4 h-4 shrink-0" />
+            <span>Notifications are off. You can turn them on any time from your browser's site settings.</span>
+          </div>
+        </div>
       )}
 
       <main className="max-w-3xl mx-auto px-4 py-8">
