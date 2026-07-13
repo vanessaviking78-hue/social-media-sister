@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
-import { Loader2, TrendingUp, Plus, X, Download, Send, GripVertical } from "lucide-react";
+import { Loader2, TrendingUp, Plus, X, Download, Send, GripVertical, Check } from "lucide-react";
 import { usePresets } from "@/lib/use-presets";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 
@@ -19,6 +19,19 @@ type Background = {
   anchorX: number;
   anchorY: number;
   anchorW: number;
+};
+
+type ApprovedPhoto = { file: File; url: string };
+
+type BatchResult = {
+  id: string;
+  backgroundId: number;
+  backgroundThumb: string;
+  photoUrl: string;
+  status: "pending" | "working" | "done" | "error";
+  resultUrl?: string;
+  slideCount?: number;
+  error?: string;
 };
 
 async function compress(du: string, q = 0.9): Promise<string> {
@@ -104,25 +117,33 @@ export default function SeamlessCaroBuilder() {
   const { presets } = usePresets();
   const [presetId, setPresetId] = useState<number | null>(null);
   const [backgrounds, setBackgrounds] = useState<Background[]>([]);
-  const [selectedBgId, setSelectedBgId] = useState<number | null>(null);
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  // Bulk mode: as many backgrounds and as many approved photos (1-5) as she likes,
+  // paired up by position to build a batch of composites in one pass.
+  const [selectedBgIds, setSelectedBgIds] = useState<number[]>([]);
+  const [editingBgId, setEditingBgId] = useState<number | null>(null);
+  const [photos, setPhotos] = useState<ApprovedPhoto[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [compositing, setCompositing] = useState(false);
-  const [resultUrl, setResultUrl] = useState<string | null>(null);
-  const [resultSlideCount, setResultSlideCount] = useState(3);
+  const [batch, setBatch] = useState<BatchResult[]>([]);
+  const [running, setRunning] = useState(false);
 
   const client = presets.find((p) => p.id === presetId) || null;
-  const selectedBg = backgrounds.find((b) => b.id === selectedBgId) || null;
+  const editingBg = backgrounds.find((b) => b.id === editingBgId) || null;
+  const pairCount = Math.min(selectedBgIds.length, photos.length);
 
   useEffect(() => {
-    if (!presetId) { setBackgrounds([]); setSelectedBgId(null); return; }
+    if (!presetId) { setBackgrounds([]); setSelectedBgIds([]); setEditingBgId(null); return; }
     fetch(`${BASE}/api/seamless-caro/backgrounds?presetId=${presetId}`, { headers: authHeaders() })
       .then((r) => (r.ok ? r.json() : []))
-      .then((rows: Background[]) => { setBackgrounds(rows); setSelectedBgId(rows[0]?.id ?? null); })
+      .then((rows: Background[]) => { setBackgrounds(rows); setSelectedBgIds([]); setEditingBgId(rows[0]?.id ?? null); })
       .catch(() => toast.error("Couldn't load backgrounds for this client"));
   }, [presetId]);
 
-  useEffect(() => { setPhotoUrl(null); setResultUrl(null); }, [selectedBgId]);
+  useEffect(() => { setBatch([]); }, [presetId]);
+
+  function toggleBg(id: number) {
+    setSelectedBgIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setEditingBgId(id);
+  }
 
   async function onUploadBackgrounds(files: FileList | null) {
     if (!files || !presetId) return;
@@ -144,7 +165,9 @@ export default function SeamlessCaroBuilder() {
           body: JSON.stringify({ presetId, imageUrl, slideCount: 3 }),
         });
         const regData = await reg.json();
-        setBackgrounds((prev) => [{ id: regData.id, presetId, imageUrl, slideCount: 3, anchorX: 0.32, anchorY: 0.95, anchorW: 0.34 }, ...prev]);
+        const newBg: Background = { id: regData.id, presetId, imageUrl, slideCount: 3, anchorX: 0.32, anchorY: 0.95, anchorW: 0.34 };
+        setBackgrounds((prev) => [newBg, ...prev]);
+        setEditingBgId(newBg.id);
       }
       toast.success("Background(s) added");
     } catch (e: any) {
@@ -174,7 +197,8 @@ export default function SeamlessCaroBuilder() {
     if (!confirm("Remove this background?")) return;
     await fetch(`${BASE}/api/seamless-caro/backgrounds/${id}`, { method: "DELETE", headers: authHeaders() });
     setBackgrounds((prev) => prev.filter((b) => b.id !== id));
-    if (selectedBgId === id) setSelectedBgId(null);
+    setSelectedBgIds((prev) => prev.filter((x) => x !== id));
+    if (editingBgId === id) setEditingBgId(null);
   }
 
   function changeSlideCount(bg: Background, n: number) {
@@ -186,31 +210,72 @@ export default function SeamlessCaroBuilder() {
     }).catch(() => {});
   }
 
-  async function generate() {
-    if (!selectedBg || !photoUrl) { toast.error("Pick a background and an approved photo first."); return; }
-    setCompositing(true);
-    const tid = toast.loading("Removing background and compositing…");
+  async function addApprovedPhotos(files: File[]) {
+    if (!files.length) return;
+    const room = 5 - photos.length;
+    if (room <= 0) { toast.error("Five approved photos is the most one batch can take."); return; }
+    const toAdd = files.slice(0, room);
+    if (toAdd.length < files.length) toast.error(`Only added ${toAdd.length} — five is the most one batch can take.`);
+    setUploading(true);
     try {
-      const r = await fetch(`${BASE}/api/seamless-caro/composite`, {
-        method: "POST", headers: authHeaders(),
-        body: JSON.stringify({ backgroundId: selectedBg.id, photoUrl }),
-      });
-      if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(err.error); }
-      const d = await r.json();
-      setResultUrl(d.imageUrl);
-      setResultSlideCount(d.slideCount || selectedBg.slideCount);
-      toast.success("Done", { id: tid });
-    } catch (e: any) {
-      toast.error(e?.message || "Composite failed", { id: tid });
+      const added: ApprovedPhoto[] = [];
+      for (const file of toAdd) {
+        const du = await fileToDataUrl(file);
+        const compressed = await compress(du);
+        const r = await fetch(`${BASE}/api/content/upload-image`, {
+          method: "POST", headers: authHeaders(),
+          body: JSON.stringify({ images: [{ name: file.name, base64: compressed }] }),
+        });
+        const d = await r.json();
+        const url = d.results?.[0]?.url;
+        if (url) added.push({ file, url });
+      }
+      setPhotos((prev) => [...prev, ...added]);
+    } catch {
+      toast.error("Couldn't load one of those photos");
     } finally {
-      setCompositing(false);
+      setUploading(false);
     }
   }
 
-  function downloadResult() {
-    if (!resultUrl) return;
+  function removePhoto(url: string) {
+    setPhotos((prev) => prev.filter((p) => p.url !== url));
+  }
+
+  async function generateBatch() {
+    if (pairCount === 0) { toast.error("Pick at least one background and one approved photo."); return; }
+    const pairs = Array.from({ length: pairCount }, (_, i) => ({ bgId: selectedBgIds[i], photo: photos[i] }));
+    const rows: BatchResult[] = pairs.map(({ bgId, photo }) => {
+      const bg = backgrounds.find((b) => b.id === bgId)!;
+      return { id: `${bgId}-${photo.url}`, backgroundId: bgId, backgroundThumb: bg.imageUrl, photoUrl: photo.url, status: "pending" };
+    });
+    setBatch(rows);
+    setRunning(true);
+    try {
+      for (const row of rows) {
+        setBatch((prev) => prev.map((r) => (r.id === row.id ? { ...r, status: "working" } : r)));
+        try {
+          const r = await fetch(`${BASE}/api/seamless-caro/composite`, {
+            method: "POST", headers: authHeaders(),
+            body: JSON.stringify({ backgroundId: row.backgroundId, photoUrl: row.photoUrl }),
+          });
+          if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(err.error); }
+          const d = await r.json();
+          setBatch((prev) => prev.map((x) => (x.id === row.id ? { ...x, status: "done", resultUrl: d.imageUrl, slideCount: d.slideCount } : x)));
+        } catch (e: any) {
+          setBatch((prev) => prev.map((x) => (x.id === row.id ? { ...x, status: "error", error: e?.message || "Composite failed" } : x)));
+        }
+      }
+      toast.success("Batch finished");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  function downloadOne(row: BatchResult) {
+    if (!row.resultUrl) return;
     const a = document.createElement("a");
-    a.href = resultUrl;
+    a.href = row.resultUrl;
     a.download = "seamless-caro.png";
     a.target = "_blank";
     document.body.appendChild(a);
@@ -218,19 +283,27 @@ export default function SeamlessCaroBuilder() {
     document.body.removeChild(a);
   }
 
-  // Hands the wide composite straight to Seamless Carousels, which already
-  // does the slicing + CSV flow, via sessionStorage so no re-upload is needed.
-  function sendToSeamlessCarousels() {
-    if (!resultUrl) return;
-    sessionStorage.setItem("seamless-caro-handoff", JSON.stringify({ imageUrl: resultUrl, slideCount: resultSlideCount }));
+  // Hands the whole batch of composites straight to Seamless Carousels, which
+  // already does the slicing + CSV flow, via sessionStorage so nothing needs
+  // downloading and re-uploading.
+  function sendBatchToSeamlessCarousels() {
+    const done = batch.filter((r) => r.status === "done" && r.resultUrl);
+    if (!done.length) { toast.error("Nothing finished yet to send."); return; }
+    sessionStorage.setItem(
+      "seamless-caro-handoff",
+      JSON.stringify(done.map((r) => ({ imageUrl: r.resultUrl, slideCount: r.slideCount || 3 })))
+    );
     window.location.href = `${BASE}/seamless-bulk`;
   }
+
+  const doneCount = batch.filter((r) => r.status === "done").length;
+  const erroredCount = batch.filter((r) => r.status === "error").length;
 
   return (
     <div className="min-h-[100dvh] w-full bg-background text-foreground">
       <header className="border-b border-border/40 px-6 py-5">
         <h1 className="text-2xl font-bold flex items-center gap-2"><TrendingUp className="w-6 h-6 text-emerald-400" />Seamless Caro Builder</h1>
-        <p className="text-sm text-muted-foreground mt-1">Preload a client's backgrounds, pick an approved photo, and it strips the background and drops them in, same spot on every slide.</p>
+        <p className="text-sm text-muted-foreground mt-1">Pick as many of a client's backgrounds as you like, add up to five approved photos, and it batches through every pairing — same registration point repeated on every slide.</p>
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-8 space-y-6">
@@ -246,7 +319,7 @@ export default function SeamlessCaroBuilder() {
           <>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-xs uppercase tracking-widest text-muted-foreground">{client?.name}'s backgrounds</p>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">{client?.name}'s backgrounds — tap to select as many as you like</p>
                 <label className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-emerald-500/40 hover:bg-emerald-500/10 cursor-pointer">
                   {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                   Add background(s)
@@ -257,62 +330,128 @@ export default function SeamlessCaroBuilder() {
                 <p className="text-muted-foreground text-sm py-4">No backgrounds loaded for this client yet.</p>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                  {backgrounds.map((b) => (
-                    <div key={b.id} onClick={() => setSelectedBgId(b.id)} className={`relative aspect-video rounded-lg overflow-hidden cursor-pointer border-2 transition-colors ${selectedBgId === b.id ? "border-emerald-500" : "border-transparent hover:border-emerald-500/40"}`}>
-                      <img src={b.imageUrl} alt="" className="w-full h-full object-cover" />
-                      <button onClick={(e) => { e.stopPropagation(); deleteBackground(b.id); }} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80">
+                  {backgrounds.map((b) => {
+                    const selected = selectedBgIds.includes(b.id);
+                    const order = selectedBgIds.indexOf(b.id);
+                    return (
+                      <div
+                        key={b.id}
+                        onClick={() => toggleBg(b.id)}
+                        className={`relative aspect-video rounded-lg overflow-hidden cursor-pointer border-2 transition-colors ${selected ? "border-emerald-500" : editingBgId === b.id ? "border-emerald-500/50" : "border-transparent hover:border-emerald-500/40"}`}
+                      >
+                        <img src={b.imageUrl} alt="" className="w-full h-full object-cover" />
+                        {selected && (
+                          <div className="absolute inset-0 bg-emerald-500/20 flex items-center justify-center">
+                            <span className="w-7 h-7 rounded-full bg-emerald-500 text-white text-sm font-bold flex items-center justify-center drop-shadow-lg">{order + 1}</span>
+                          </div>
+                        )}
+                        <button onClick={(e) => { e.stopPropagation(); deleteBackground(b.id); }} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/60 flex items-center justify-center hover:bg-black/80">
+                          <X className="w-3 h-3 text-white" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {selectedBgIds.length > 0 && (
+                <p className="text-xs text-muted-foreground">{selectedBgIds.length} background{selectedBgIds.length > 1 ? "s" : ""} selected, in tap order.</p>
+              )}
+            </div>
+
+            {editingBg && (
+              <div className="rounded-2xl border border-emerald-500/30 bg-card/60 p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs uppercase tracking-widest text-muted-foreground">Registration point — set once per background, reused every time it's picked</p>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-muted-foreground shrink-0">Slides</label>
+                    <select value={editingBg.slideCount} onChange={(e) => changeSlideCount(editingBg, Number(e.target.value))} className="bg-white/5 border border-border/50 rounded-md px-2 py-1 text-sm">
+                      {[2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <AnchorEditor bg={editingBg} onChange={(patch) => { const updated = { ...editingBg, ...patch }; patchAnchor(editingBg, patch); saveAnchorDebounced(updated); }} />
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-green-500/30 bg-card/60 p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Approved photos for this batch — up to five</p>
+                {photos.length > 0 && <p className="text-xs text-muted-foreground">{photos.length}/5</p>}
+              </div>
+              {photos.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {photos.map((p, i) => (
+                    <div key={p.url} className="relative">
+                      <img src={p.url} alt="" className="h-20 w-20 object-cover rounded-lg border border-emerald-500/40" />
+                      <span className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center">{i + 1}</span>
+                      <button onClick={() => removePhoto(p.url)} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-black/70 flex items-center justify-center hover:bg-black/90">
                         <X className="w-3 h-3 text-white" />
                       </button>
                     </div>
                   ))}
                 </div>
               )}
+              {photos.length < 5 && (
+                <ApprovedImagesPicker
+                  clientName={client?.name}
+                  mode="multi"
+                  label="Choose approved photos"
+                  onAddImages={addApprovedPhotos}
+                />
+              )}
             </div>
 
-            {selectedBg && (
-              <div className="rounded-2xl border border-emerald-500/30 bg-card/60 p-5 space-y-4">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs uppercase tracking-widest text-muted-foreground">Slides in this carousel</label>
-                  <select value={selectedBg.slideCount} onChange={(e) => changeSlideCount(selectedBg, Number(e.target.value))} className="bg-white/5 border border-border/50 rounded-md px-2 py-1 text-sm">
-                    {[2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}</option>)}
-                  </select>
-                </div>
-                <AnchorEditor bg={selectedBg} onChange={(patch) => { const updated = { ...selectedBg, ...patch }; patchAnchor(selectedBg, patch); saveAnchorDebounced(updated); }} />
+            <div className="rounded-2xl border border-emerald-500/30 bg-card/60 p-5 space-y-3">
+              <p className="text-sm">
+                {pairCount > 0
+                  ? `Ready to batch ${pairCount} composite${pairCount > 1 ? "s" : ""} — background 1 pairs with photo 1, background 2 with photo 2, and so on.`
+                  : "Select backgrounds and approved photos above to line up a batch."}
+              </p>
+              {selectedBgIds.length !== photos.length && selectedBgIds.length > 0 && photos.length > 0 && (
+                <p className="text-xs text-amber-400">
+                  {selectedBgIds.length} background{selectedBgIds.length > 1 ? "s" : ""} vs {photos.length} photo{photos.length > 1 ? "s" : ""} selected — only the first {pairCount} pairing{pairCount > 1 ? "s" : ""} will run.
+                </p>
+              )}
+              <button onClick={generateBatch} disabled={running || pairCount === 0} className="px-6 py-3 rounded-full bg-emerald-500 text-white font-semibold disabled:opacity-40 hover:bg-emerald-400 transition-colors">
+                {running ? "Working through the batch…" : `Remove backgrounds & composite (${pairCount || 0})`}
+              </button>
+            </div>
 
-                <div className="pt-2 border-t border-border/40">
-                  <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Pick her approved photo</p>
-                  <ApprovedImagesPicker
-                    clientName={client?.name}
-                    mode="single"
-                    label="Choose approved photo"
-                    onAddImages={async (files) => {
-                      if (!files.length) return;
-                      const du = await fileToDataUrl(files[0]);
-                      const compressed = await compress(du);
-                      const r = await fetch(`${BASE}/api/content/upload-image`, {
-                        method: "POST", headers: authHeaders(),
-                        body: JSON.stringify({ images: [{ name: "photo.jpg", base64: compressed }] }),
-                      });
-                      const d = await r.json();
-                      setPhotoUrl(d.results?.[0]?.url || null);
-                    }}
-                  />
-                  {photoUrl && <img src={photoUrl} alt="selected" className="mt-3 h-24 rounded-lg border border-emerald-500/40" />}
-                </div>
-
-                <button onClick={generate} disabled={compositing || !photoUrl} className="px-6 py-3 rounded-full bg-emerald-500 text-white font-semibold disabled:opacity-40 hover:bg-emerald-400 transition-colors">
-                  {compositing ? "Working…" : "Remove background & composite"}
-                </button>
-              </div>
-            )}
-
-            {resultUrl && (
+            {batch.length > 0 && (
               <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/5 p-5 space-y-4">
-                <p className="text-sm font-semibold text-emerald-300">Ready</p>
-                <img src={resultUrl} alt="result" className="w-full rounded-lg border border-white/10" />
-                <div className="flex flex-wrap gap-2">
-                  <button onClick={downloadResult} className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-border/50 hover:border-emerald-500/60 text-sm"><Download className="w-4 h-4" />Download</button>
-                  <button onClick={sendToSeamlessCarousels} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-400"><Send className="w-4 h-4" />Send to Seamless Carousels</button>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-semibold text-emerald-300">
+                    {running ? `Working — ${doneCount}/${batch.length} done` : `${doneCount} of ${batch.length} ready${erroredCount ? `, ${erroredCount} failed` : ""}`}
+                  </p>
+                  {doneCount > 0 && !running && (
+                    <button onClick={sendBatchToSeamlessCarousels} className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-500 text-white font-semibold text-sm hover:bg-emerald-400"><Send className="w-4 h-4" />Send all to Seamless Carousels</button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {batch.map((row) => (
+                    <div key={row.id} className="rounded-lg border border-border/40 overflow-hidden bg-card/40">
+                      <div className="aspect-video bg-black/20 flex items-center justify-center relative">
+                        {row.status === "done" && row.resultUrl ? (
+                          <img src={row.resultUrl} alt="" className="w-full h-full object-cover" />
+                        ) : row.status === "working" ? (
+                          <Loader2 className="w-5 h-5 animate-spin text-emerald-400" />
+                        ) : row.status === "error" ? (
+                          <X className="w-5 h-5 text-red-400" />
+                        ) : (
+                          <img src={row.backgroundThumb} alt="" className="w-full h-full object-cover opacity-40" />
+                        )}
+                        {row.status === "done" && (
+                          <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center"><Check className="w-3 h-3 text-white" /></span>
+                        )}
+                      </div>
+                      <div className="p-2 flex items-center justify-between">
+                        <span className="text-[11px] text-muted-foreground truncate">{row.status === "error" ? (row.error || "Failed") : row.status}</span>
+                        {row.status === "done" && (
+                          <button onClick={() => downloadOne(row)} className="p-1 hover:bg-white/10 rounded"><Download className="w-3.5 h-3.5" /></button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
