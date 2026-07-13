@@ -49,7 +49,7 @@ router.get("/seamless-caro/backgrounds", async (req: Request, res: Response) => 
 });
 
 // Register a newly-uploaded background image against a client. The actual
-// upload happens through the existing /api/content/upload-image endpoint —
+// upload happens through the existing /api/content/upload-image endpoint -
 // this just records the URL plus a starting registration point.
 router.post("/seamless-caro/backgrounds", async (req: Request, res: Response) => {
   try {
@@ -166,7 +166,10 @@ router.post("/seamless-caro/composite", async (req: Request, res: Response) => {
 
     const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
     if (!bucketId) { res.status(500).json({ error: "Object storage not configured" }); return; }
-    const objectPath = `seamless-caro/${Date.now()}-composite.png`;
+    // Saved under carousel-images/ (not a seamless-caro/ prefix) so it is served
+    // back by the existing GET /content/images/carousel-images/:filename route.
+    // There is no separate serving route for other prefixes.
+    const objectPath = `carousel-images/${Date.now()}-seamless-caro-composite.png`;
     const bucket = objectStorageClient.bucket(bucketId);
     await bucket.file(objectPath).save(outBuffer, { contentType: "image/png", metadata: { cacheControl: "public, max-age=31536000" } });
 
