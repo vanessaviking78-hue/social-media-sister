@@ -2,6 +2,7 @@ import app from "./app";
 import { logger } from "./lib/logger";
 import { runMigrations } from "./lib/runMigrations";
 import { startSchedulerCron } from "./lib/schedulerEngine";
+import { startRevenueIdeasCron } from "./lib/revenueIdeasCron";
 
 const rawPort = process.env["PORT"];
 
@@ -32,6 +33,7 @@ async function start(): Promise<void> {
   });
 
   startSchedulerCron();
+  startRevenueIdeasCron();
 }
 
 start().catch((err) => {
