@@ -1,9 +1,10 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { clientPresetsTable, calendarPostsTable, approvalBatchesTable, approvalImagesTable, scheduledPostsTable } from "@workspace/db/schema";
-import { eq, and, gte, or } from "drizzle-orm";
+import { eq, and, gte, or, sql } from "drizzle-orm";
 import crypto from "crypto";
 import { getApprovedIdeaForClient } from "./revenue-ideas";
+import { getVapidPublicKey } from "../lib/push";
 
 const router: IRouter = Router();
 
@@ -94,6 +95,51 @@ router.get("/portal/:token", async (req, res) => {
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to load portal" });
+  }
+});
+
+// Public key the client portal needs to call pushManager.subscribe(). Safe to
+// expose — it's the public half of the VAPID keypair, not a secret.
+router.get("/portal-push/vapid-public-key", (_req, res) => {
+  const key = getVapidPublicKey();
+  if (!key) { res.status(503).json({ error: "Push notifications aren't set up yet" }); return; }
+  res.json({ publicKey: key });
+});
+
+// Stores (or refreshes) a browser's push subscription against a client's
+// existing portal token. No login involved, the token itself is the identity.
+router.post("/portal/:token/push-subscribe", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { endpoint, keys } = req.body || {};
+    if (!endpoint || !keys?.p256dh || !keys?.auth) {
+      res.status(400).json({ error: "Invalid subscription" });
+      return;
+    }
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+
+    await db.execute(sql`
+      INSERT INTO portal_push_subscriptions (client_portal_token, endpoint, p256dh, auth)
+      VALUES (${token}, ${endpoint}, ${keys.p256dh}, ${keys.auth})
+      ON CONFLICT (endpoint) DO UPDATE SET client_portal_token = EXCLUDED.client_portal_token
+    `);
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to save subscription" });
+  }
+});
+
+// Called when a client turns notifications back off on a device.
+router.post("/portal/:token/push-unsubscribe", async (req, res) => {
+  try {
+    const { endpoint } = req.body || {};
+    if (!endpoint) { res.status(400).json({ error: "Missing endpoint" }); return; }
+    await db.execute(sql`DELETE FROM portal_push_subscriptions WHERE endpoint = ${endpoint}`);
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to remove subscription" });
   }
 });
 
