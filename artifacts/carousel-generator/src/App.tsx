@@ -34,10 +34,6 @@ import Onboard from "@/pages/onboard";
 import SubmitBeforeAfter from "@/pages/submit";
 import BeforeAfterMaker from "@/pages/before-after";
 import Submissions from "@/pages/submissions";
-import Checklist from "@/pages/checklist";
-import CatchUpPlan from "@/pages/catch-up";
-import Today from "@/pages/today";
-import Resources from "@/pages/resources";
 import OnboardChoosePage from "@/pages/onboard-choose-page";
 import OnboardSuccess from "@/pages/onboard-success";
 import DmAutomations from "@/pages/dm-automations";
@@ -65,7 +61,6 @@ import BulkCarousel from "@/pages/bulk-carousel";
 import AnimatedCarousels from "@/pages/animated-carousels";
 import PersonalPage from "@/pages/personal-page";
 import MemeGenerator from "@/pages/meme-generator";
-import TweetMaker from "@/pages/tweet-maker";
 import QuoteGenerator from "@/pages/quote-generator";
 import BulkStories from "@/pages/bulk-stories";
 import CsvSlideCarousel from "@/pages/csv-slide-carousel";
@@ -76,7 +71,7 @@ import CanvaOAuthResult from "@/pages/canva-oauth-result";
 import ApprovalBundles from "@/pages/approval-bundles";
 import ClientApproval from "@/pages/client-approval";
 import ContentGenerator from "@/pages/content-generator";
-import AestheticNews from "@/pages/aesthetic-news";
+import RevenueIdeas from "@/pages/revenue-ideas";
 
 const queryClient = new QueryClient();
 
@@ -101,10 +96,6 @@ function ProtectedRouter() {
       <Route path="/analytics" component={Analytics} />
       <Route path="/approval" component={Approval} />
       <Route path="/submissions" component={Submissions} />
-      <Route path="/checklist" component={Checklist} />
-          <Route path="/catch-up" component={CatchUpPlan} />
-      <Route path="/today" component={Today} />
-      <Route path="/resources" component={Resources} />
       <Route path="/before-after" component={BeforeAfterMaker} />
       <Route path="/reels" component={Reels} />
       <Route path="/video-overlay" component={VideoOverlay} />
@@ -128,7 +119,6 @@ function ProtectedRouter() {
       <Route path="/animated-carousels" component={AnimatedCarousels} />
       <Route path="/personal-page" component={PersonalPage} />
       <Route path="/meme" component={MemeGenerator} />
-      <Route path="/tweet-maker" component={TweetMaker} />
       <Route path="/quotes" component={QuoteGenerator} />
       <Route path="/bulk-stories" component={BulkStories} />
       <Route path="/csv-slide-carousel" component={CsvSlideCarousel} />
@@ -136,6 +126,7 @@ function ProtectedRouter() {
       <Route path="/settings" component={Settings} />
       <Route path="/approval-bundles" component={ApprovalBundles} />
       <Route path="/content-generator" component={ContentGenerator} />
+      <Route path="/revenue-ideas" component={RevenueIdeas} />
       <Route path="/showcase-builder" component={ShowcaseBuilder} />
       <Route path="/seamless-bulk" component={SeamlessBulk} />
       <Route path="/about-me-studio" component={AboutMeStudio} />
@@ -162,7 +153,6 @@ function AppContent() {
   const [isPodcast] = useRoute("/podcast");
   const [isCompetition] = useRoute("/competition");
   const [isAboutPage] = useRoute("/about");
-  const [isNews] = useRoute("/news");
   const [isBundle, bundleParams] = useRoute("/bundle/:token");
   const [isFounderSignup] = useRoute("/founder-signup");
   const [isFounderWelcome] = useRoute("/founder-welcome");
@@ -204,9 +194,6 @@ function AppContent() {
   }
   if (isAboutPage) {
     return <AboutPublic />;
-  }
-  if (isNews) {
-    return <AestheticNews />;
   }
   if (isSplash) {
     return <Splash />;
