@@ -151,6 +151,28 @@ const [editLogo, setEditLogo] = useState<HTMLImageElement | null>(null);
 const isIn = (id: string) => !excluded.has(id);
 const toggleIn = (id: string) => setExcluded((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
+// Picks up a composite handed off from Seamless Caro Builder — the wide
+// background+photo image is already sitting at a URL, so this just fetches
+// it once as a strip instead of making Vanessa download and re-upload it.
+useEffect(() => {
+  const raw = sessionStorage.getItem("seamless-caro-handoff");
+  if (!raw) return;
+  sessionStorage.removeItem("seamless-caro-handoff");
+  (async () => {
+    try {
+      const { imageUrl, slideCount } = JSON.parse(raw) as { imageUrl: string; slideCount: number };
+      const res = await fetch(imageUrl);
+      const blob = await res.blob();
+      const file = new File([blob], "seamless-caro.png", { type: blob.type || "image/png" });
+      const img = await fileToImage(file);
+      setStrips((p) => [...p, { id: `s-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, file, url: img.src, width: img.naturalWidth, height: img.naturalHeight, slides: Math.max(2, Math.min(5, slideCount || 3)) }]);
+      toast.success("Brought in from Seamless Caro Builder — ready to cut.");
+    } catch {
+      toast.error("Couldn't bring in the image from Seamless Caro Builder.");
+    }
+  })();
+}, []);
+
 async function onFiles(list: FileList | null) {
 if (!list) return; const added: Strip[] = [];
 for (const file of Array.from(list)) { if (!file.type.startsWith("image/")) continue; const img = await fileToImage(file); const g = Math.max(2, Math.min(5, Math.round(img.naturalWidth / SLIDE_W))); added.push({ id: `s-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, file, url: img.src, width: img.naturalWidth, height: img.naturalHeight, slides: g }); }
