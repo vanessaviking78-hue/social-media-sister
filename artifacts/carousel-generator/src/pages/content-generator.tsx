@@ -34,6 +34,15 @@ const BATCH_OPTIONS = [
   { value: "all", label: "All posts" },
 ];
 
+// Titles are sent to the backend in small chunks rather than all at once. A
+// single request covering 30+ titles has to stay open for a minute or more,
+// and that long a connection is an easy target for a proxy timeout or a
+// backgrounded browser tab to kill silently, which is what was causing
+// "36 posts generated" to show up with an empty results panel. Short,
+// separate requests finish in a few seconds each and any posts already
+// collected stay on screen even if a later chunk fails.
+const CHUNK_SIZE = 5;
+
 function csvEscape(value: string): string {
   const str = String(value ?? "");
   if (str.includes(",") || str.includes('"') || str.includes("\n")) {
@@ -94,6 +103,62 @@ export default function ContentGenerator() {
     return all.slice(0, n);
   }
 
+  // Reads one chunk's SSE response and returns its finished posts. Each
+  // chunk is at most CHUNK_SIZE titles, which the backend turns into a
+  // single OpenAI call, so this resolves in a few seconds rather than
+  // needing to survive a long-lived connection.
+  async function fetchChunk(chunk: string[]): Promise<GeneratedPost[]> {
+    const res = await fetch("/api/content-generator/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        clinicianName,
+        clinicName,
+        location,
+        treatments,
+        tone,
+        brandVoice: brandVoice.trim() || undefined,
+        postTitles: chunk,
+      }),
+    });
+
+    if (!res.ok || !res.body) {
+      const data = await res.json().catch(() => ({ error: "Generation failed" }));
+      throw new Error((data as { error?: string }).error ?? "Generation failed");
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let chunkPosts: GeneratedPost[] | null = null;
+    let streamError: string | null = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        try {
+          const data = JSON.parse(line.slice(6));
+          if (data.type === "complete" && Array.isArray(data.posts)) {
+            chunkPosts = data.posts;
+          } else if (data.type === "error") {
+            streamError = data.message || "Generation failed";
+          }
+        } catch {
+          /* ignore malformed line */
+        }
+      }
+    }
+
+    if (streamError) throw new Error(streamError);
+    if (!chunkPosts) throw new Error("That batch didn't finish, try again.");
+    return chunkPosts;
+  }
+
   async function handleGenerate() {
     const titles = titlesToGenerate();
     if (titles.length === 0) {
@@ -106,71 +171,27 @@ export default function ContentGenerator() {
     setPosts([]);
     setExpanded(null);
 
+    const chunks: string[][] = [];
+    for (let i = 0; i < titles.length; i += CHUNK_SIZE) {
+      chunks.push(titles.slice(i, i + CHUNK_SIZE));
+    }
+
+    let collected: GeneratedPost[] = [];
     try {
-      const res = await fetch("/api/content-generator/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          clinicianName,
-          clinicName,
-          location,
-          treatments,
-          tone,
-          brandVoice: brandVoice.trim() || undefined,
-          postTitles: titles,
-        }),
-      });
-
-      if (!res.ok || !res.body) {
-        const data = await res.json().catch(() => ({ error: "Generation failed" }));
-        throw new Error((data as { error?: string }).error ?? "Generation failed");
+      for (const chunk of chunks) {
+        const chunkPosts = await fetchChunk(chunk);
+        collected = [...collected, ...chunkPosts];
+        setPosts(collected);
+        setProgress(Math.min(100, Math.round((collected.length / titles.length) * 100)));
       }
-
-      // Backend streams results as Server-Sent Events, one "batch" event per
-      // handful of posts, so a long title list never has to wait on a single
-      // request that could time out before it's done.
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let finalPosts: GeneratedPost[] = [];
-      let streamError: string | null = null;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-        for (const line of lines) {
-          if (!line.startsWith("data: ")) continue;
-          try {
-            const data = JSON.parse(line.slice(6));
-            if (data.type === "progress" || data.type === "batch") {
-              if (data.type === "batch" && Array.isArray(data.posts)) {
-                setPosts((prev) => [...prev, ...data.posts]);
-              }
-              if (typeof data.total === "number" && data.total > 0) {
-                setProgress(Math.min(100, Math.round(((data.generated ?? 0) / data.total) * 100)));
-              }
-            } else if (data.type === "complete") {
-              finalPosts = Array.isArray(data.posts) ? data.posts : [];
-            } else if (data.type === "error") {
-              streamError = data.message || "Generation failed";
-            }
-          } catch {
-            /* ignore malformed line */
-          }
-        }
-      }
-
-      if (streamError) throw new Error(streamError);
-
-      setProgress(100);
-      if (finalPosts.length > 0) setPosts(finalPosts);
-      const count = finalPosts.length || titles.length;
-      toast.success(`${count} post${count === 1 ? "" : "s"} generated.`);
+      toast.success(`${collected.length} post${collected.length === 1 ? "" : "s"} generated.`);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Something went wrong");
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      if (collected.length > 0) {
+        toast.error(`Stopped after ${collected.length} of ${titles.length} posts: ${message}. What's here is safe to download.`);
+      } else {
+        toast.error(message);
+      }
     } finally {
       setLoading(false);
       setTimeout(() => setProgress(0), 800);
