@@ -29,7 +29,7 @@ import BulkConnectReview from "@/pages/bulk-connect-review";
 import About from "@/pages/about";
 import AboutMe from "@/pages/about-me";
 import AboutPublic from "@/pages/about-public";
-import SeamlessCarousel from "@/pages/seamless-carousel";
+import SeamlessCarousel from "@/pages/seamless-caro-builder";
 import AiPortraitStudio from "@/pages/ai-portrait-studio";
 import Onboard from "@/pages/onboard";
 import SubmitBeforeAfter from "@/pages/submit";
