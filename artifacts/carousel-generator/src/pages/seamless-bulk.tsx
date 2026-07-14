@@ -4,6 +4,7 @@ import { MusicPickerModal, type MusicTrack } from "@/components/music-picker-mod
 import { renderSlideCanvas, makeBlocks, computeTuckedSubtitleY, SlideEditorModal, SCALE, type CsvRow, type Block } from "@/pages/bulk-carousel";
 import JSZip from "jszip";
 import Papa from "papaparse";
+import { normalizeSlideCsvForHeaders, readFileAsText } from "@/lib/csv-format";
 import { toast } from "sonner";
 
 import { nextWeekday, WEEKDAY, POST_TIME, shortTagForBookedPost } from "@/lib/schedule";
@@ -221,7 +222,9 @@ function removeCarousel(id: string) { setCarousels((p) => p.filter((c) => c.id !
 function presetFor(id: number | null) { return presets.find((p) => p.id === id) || null; }
 
 function importCsv(file: File) {
-Papa.parse(file, { header: true, skipEmptyLines: true, complete: (res: any) => {
+readFileAsText(file).then((raw) => {
+const normalized = normalizeSlideCsvForHeaders(raw, ["slide1_hook", "slide1_subtitle", "slide2_body", "slide3_body", "slide4_cta"]);
+Papa.parse(normalized, { header: true, skipEmptyLines: true, complete: (res: any) => {
 const rows = (res.data || []) as any[];
 const key = (r: any, ...n: string[]) => { for (const k of Object.keys(r)) if (n.includes(k.trim().toLowerCase())) return r[k]; return ""; };
 const parsed: PRow[] = rows.map((r) => ({
@@ -233,6 +236,7 @@ caption: String(key(r, "caption") || ""), date: key(r, "date") ? normDate(key(r,
 setCsvParsed(parsed);
 toast.success(`Loaded ${parsed.length} row(s). Pick a row for each carousel to marry them up.`);
 }, error: () => toast.error("Could not read that CSV.") });
+});
 }
 
 async function applyClientToAll(pid: number | null) {

@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import ExportToCanvaButton from "@/components/export-to-canva";
 import { Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Wand2, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, CloudUpload, ImagePlus, CalendarDays, BarChart3, ShieldCheck, BookOpen, Film, ChevronDown, Play, Square, Share2, Clock, CalendarClock, User, Grid, Music } from "lucide-react";
 import Papa from "papaparse";
+import { readFileAsText, stripSlideCsvTitleRow } from "@/lib/csv-format";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 
@@ -456,7 +457,9 @@ export default function Home() {
 
   const processCsv = (file: File) => {
     setCsvFile(file);
-    Papa.parse<string[]>(file, {
+    readFileAsText(file).then((raw) => {
+    const normalized = stripSlideCsvTitleRow(raw, false);
+    Papa.parse<string[]>(normalized, {
       header: false, skipEmptyLines: true,
       complete: (res) => {
         const rows = res.data as string[][];
@@ -469,6 +472,7 @@ export default function Home() {
         setAllCsvRows(dataRows);
       },
       error: (err: { message: string }) => toast.error("CSV parse error: " + err.message),
+    });
     });
   };
 
@@ -501,7 +505,7 @@ export default function Home() {
     const toastId = toast.loading("Generating slides…");
 
     try {
-      const csvText = await csvFile.text();
+      const csvText = stripSlideCsvTitleRow(await csvFile.text(), false);
       const parsed = Papa.parse<string[]>(csvText, { header: false, skipEmptyLines: true });
       let rows = parsed.data as string[][];
       if (rows.length === 0) throw new Error("CSV has no data rows");

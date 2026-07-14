@@ -20,6 +20,7 @@ import {
   drawSlide, recordReelVideo, recordReelVideoMp4, drawTypewriterSlide, drawTypewriterOnVideo,
 } from "@/lib/slide-utils";
 import Papa from "papaparse";
+import { readFileAsText, stripSlideCsvTitleRow } from "@/lib/csv-format";
 import JSZip from "jszip";
 import type { LogoPosition } from "@workspace/db/schema";
 import { saveAs } from "file-saver";
@@ -395,7 +396,9 @@ export default function Reels() {
   };
 
   const handleCsvImport = (file: File) => {
-    Papa.parse<string[]>(file, {
+    readFileAsText(file).then((raw) => {
+    const normalized = stripSlideCsvTitleRow(raw, false);
+    Papa.parse<string[]>(normalized, {
       header: false,
       skipEmptyLines: true,
       complete: (res) => {
@@ -426,6 +429,7 @@ export default function Reels() {
         }
       },
       error: (err: { message: string }) => toast.error("CSV parse error: " + err.message),
+    });
     });
   };
 
@@ -503,7 +507,9 @@ export default function Reels() {
   };
 
   const handleBulkCsvImport = (file: File) => {
-    Papa.parse<string[]>(file, {
+    readFileAsText(file).then((raw) => {
+    const normalized = stripSlideCsvTitleRow(raw, false);
+    Papa.parse<string[]>(normalized, {
       header: false,
       skipEmptyLines: true,
       complete: (res) => {
@@ -525,6 +531,7 @@ export default function Reels() {
         }
       },
       error: (err: { message: string }) => toast.error("CSV parse error: " + err.message),
+    });
     });
   };
 

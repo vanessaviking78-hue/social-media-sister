@@ -6,6 +6,7 @@ import { usePresets } from "@/lib/use-presets";
 import { nextWeekday, WEEKDAY, POST_TIME } from "@/lib/schedule";
 import { toast } from "sonner";
 import Papa from "papaparse";
+import { normalizeSlideCsvForHeaders, readFileAsText } from "@/lib/csv-format";
 import { saveAs } from "file-saver";
 import { MusicPickerModal, MusicTrackBadge, type MusicTrack } from "@/components/music-picker-modal";
 
@@ -321,7 +322,9 @@ export default function AnimatedCarousels() {
   // point rows are still assigned to videos in order, but you can change any
   // of them afterwards.
   function importSlideTextCsv(file: File) {
-    Papa.parse<Record<string, string>>(file, {
+    readFileAsText(file).then((raw) => {
+    const normalized = normalizeSlideCsvForHeaders(raw, [...CSV_COLS]);
+    Papa.parse<Record<string, string>>(normalized, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
@@ -344,6 +347,7 @@ export default function AnimatedCarousels() {
         toast.success(`${rows.length} title${rows.length !== 1 ? "s" : ""} loaded. Pick which one goes on each video below.`);
       },
       error: (err) => toast.error(err.message),
+    });
     });
   }
 

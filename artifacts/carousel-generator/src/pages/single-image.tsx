@@ -4,6 +4,7 @@ import {
   Image as ImageIcon, FileText, Loader2, Download, RefreshCcw, Layers, X, Palette, Sparkles, Copy, Check, MessageSquareText, Plus, ChevronLeft, ChevronRight, Type, PenTool, ArrowLeftRight, CloudUpload, ImagePlus, CalendarDays, CalendarClock, BarChart3, ShieldCheck, BookOpen, Film, ChevronDown, Play, Square, Music,
 } from "lucide-react";
 import Papa from "papaparse";
+import { readFileAsText, stripSlideCsvTitleRow } from "@/lib/csv-format";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { toast } from "sonner";
@@ -335,7 +336,9 @@ export default function SingleImage() {
 
   const processCsv = (file: File) => {
     setCsvFile(file);
-    Papa.parse<string[]>(file, {
+    readFileAsText(file).then((raw) => {
+    const normalized = stripSlideCsvTitleRow(raw, false);
+    Papa.parse<string[]>(normalized, {
       header: false, skipEmptyLines: true,
       complete: (res) => {
         const rows = res.data as string[][];
@@ -348,6 +351,7 @@ export default function SingleImage() {
         setAllCsvRows(texts);
       },
       error: (err: { message: string }) => toast.error("CSV parse error: " + err.message),
+    });
     });
   };
 

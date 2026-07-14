@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import Papa from "papaparse";
+import { readFileAsText, stripSlideCsvTitleRow } from "@/lib/csv-format";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { toast } from "sonner";
@@ -288,7 +289,9 @@ export default function PhotoCarousel() {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      Papa.parse<string[]>(file, {
+      readFileAsText(file).then((raw) => {
+      const normalized = stripSlideCsvTitleRow(raw, true);
+      Papa.parse<string[]>(normalized, {
         skipEmptyLines: true,
         complete: (result) => {
           const rows = result.data;
@@ -322,6 +325,7 @@ export default function PhotoCarousel() {
           toast.success(`${newBatches.length} carousel${newBatches.length !== 1 ? "s" : ""} created from CSV.`);
         },
         error: () => toast.error("Could not read that CSV."),
+      });
       });
       e.target.value = "";
     },

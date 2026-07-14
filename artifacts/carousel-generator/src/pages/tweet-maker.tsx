@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { usePresets } from "@/lib/use-presets";
 import Papa from "papaparse";
+import { readFileAsText, stripSlideCsvTitleRow } from "@/lib/csv-format";
 import JSZip from "jszip";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -147,7 +148,9 @@ export default function TweetMaker() {
   };
 
   const parseCsv = (file: File) => {
-    Papa.parse<string[]>(file, {
+    readFileAsText(file).then((raw) => {
+    const normalized = stripSlideCsvTitleRow(raw, true);
+    Papa.parse<string[]>(normalized, {
       skipEmptyLines: true,
       complete: (result) => {
         const dataRows = result.data.slice(1); // first row is the header
@@ -170,6 +173,7 @@ export default function TweetMaker() {
         toast.success(`Loaded ${parsed.length} row${parsed.length !== 1 ? "s" : ""} from the CSV`);
       },
       error: (err: Error) => toast.error(err.message),
+    });
     });
   };
 

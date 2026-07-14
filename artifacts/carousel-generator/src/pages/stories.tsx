@@ -8,6 +8,7 @@ import {
   CloudUpload, FileText, Plus, Palette, Check, Copy, Film, Play, Clock, CalendarClock, Music, Link2,
 } from "lucide-react";
 import Papa from "papaparse";
+import { readFileAsText, stripSlideCsvTitleRow } from "@/lib/csv-format";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { toast } from "sonner";
@@ -496,19 +497,22 @@ export default function Stories() {
   const handleCsvUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    Papa.parse(file, {
+    readFileAsText(file).then((raw) => {
+    const normalized = stripSlideCsvTitleRow(raw, true);
+    Papa.parse(normalized, {
       complete: (results) => {
         const parsed = results.data.flat().filter((v: any) => typeof v === "string" && v.trim());
         setQuestions((prev) => [...prev, ...parsed as string[]]);
         toast.success(`${parsed.length} questions imported from CSV`);
       },
     });
+    });
     e.target.value = "";
   }, []);
 
   const handleCsvPaste = useCallback(() => {
     if (!csvText.trim()) return;
-    const results = Papa.parse(csvText);
+    const results = Papa.parse(stripSlideCsvTitleRow(csvText, true));
     const parsed = results.data.flat().filter((v: any) => typeof v === "string" && v.trim());
     setQuestions((prev) => [...prev, ...parsed as string[]]);
     toast.success(`${parsed.length} questions added`);

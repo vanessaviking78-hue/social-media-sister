@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import Papa from "papaparse";
+import { readFileAsText, stripSlideCsvTitleRow } from "@/lib/csv-format";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { loadGoogleFonts } from "@/lib/slide-utils";
@@ -78,7 +79,9 @@ const csvRef = useRef<HTMLInputElement>(null);
 const bgRef = useRef<HTMLInputElement>(null);
 
 const onCsv = (file: File) => {
-Papa.parse(file, {
+readFileAsText(file).then((raw) => {
+const normalized = stripSlideCsvTitleRow(raw, true);
+Papa.parse(normalized, {
 complete: (res) => {
 const rows = (res.data as string[][])
 .filter((r) => (r[0] || "").trim().length > 0 && (r[0] || "").trim().toLowerCase() !== "quote");
@@ -90,6 +93,7 @@ if (!rows.length) toast.error("No quotes found (put the quote in column 1, who i
 else toast.success(`${rows.length} quote${rows.length !== 1 ? "s" : ""} loaded`);
 },
 error: () => toast.error("Could not read that CSV"),
+});
 });
 };
 

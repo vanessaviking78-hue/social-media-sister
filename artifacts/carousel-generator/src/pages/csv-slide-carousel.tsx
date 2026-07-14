@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import Papa from "papaparse";
+import { readFileAsText, stripSlideCsvTitleRow } from "@/lib/csv-format";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { loadGoogleFonts } from "@/lib/slide-utils";
@@ -355,7 +356,9 @@ export default function CsvSlideCarousel() {
 
   const parseCsv = useCallback((file: File) => {
     setCsvError(null);
-    Papa.parse<string[]>(file, {
+    readFileAsText(file).then((raw) => {
+    const normalized = stripSlideCsvTitleRow(raw, true);
+    Papa.parse<string[]>(normalized, {
       skipEmptyLines: true,
       complete: (result) => {
         const rows = result.data;
@@ -388,6 +391,7 @@ export default function CsvSlideCarousel() {
         setCsvFile(file);
       },
       error: (err: Error) => setCsvError(err.message),
+    });
     });
   }, []);
 
