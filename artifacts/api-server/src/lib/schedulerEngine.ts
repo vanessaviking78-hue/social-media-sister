@@ -1,4 +1,5 @@
 // deploy: igPublish retry fix (carousel publish timing) 2026-06-30T18:11:55.260170Z
+// deploy: fetch timeouts + stuck-processing guard 2026-07-14
 import { db } from "@workspace/db";
 import { clientPresetsTable, scheduledPostsTable, type StickerConfig } from "@workspace/db/schema";
 import { eq, lte, and } from "drizzle-orm";
@@ -6,6 +7,20 @@ import { logger } from "./logger";
 import { notifyPostResult } from "./notify";
 
 const GRAPH = "https://graph.facebook.com/v19.0";
+
+// Every Graph API call gets a hard timeout. Without this, a slow or hung
+// response can block the scheduler indefinitely — the post it's working on
+// gets stuck at "processing" forever with no error and no retry, since the
+// cron only ever picks up posts still marked "pending".
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 20000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 async function igUpload(igId: string, token: string, imageUrl: string, isCarouselItem: boolean, caption?: string, audioName?: string): Promise<string> {
   const params: Record<string, string> = { image_url: imageUrl, access_token: token };
@@ -15,7 +30,7 @@ async function igUpload(igId: string, token: string, imageUrl: string, isCarouse
     if (caption) params.caption = caption;
     if (audioName) params.audio_name = audioName;
   }
-  const res = await fetch(`${GRAPH}/${igId}/media`, {
+  const res = await fetchWithTimeout(`${GRAPH}/${igId}/media`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(params),
@@ -32,7 +47,7 @@ async function igPublish(igId: string, token: string, creationId: string): Promi
   let lastErr = "";
   for (let attempt = 0; attempt < 8; attempt++) {
     if (attempt > 0) await new Promise((r) => setTimeout(r, attempt === 1 ? 5000 : 8000));
-    const res = await fetch(`${GRAPH}/${igId}/media_publish`, {
+    const res = await fetchWithTimeout(`${GRAPH}/${igId}/media_publish`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ creation_id: creationId, access_token: token }),
@@ -56,7 +71,7 @@ async function createCarouselContainer(
   ): Promise<{ ok: boolean; id?: string; message?: string }> {
     const carouselBody: Record<string, unknown> = { media_type: "CAROUSEL", children: childIds.join(","), caption, access_token: token };
     if (audioName) carouselBody.audio_name = audioName;
-    const res = await fetch(`${GRAPH}/${igId}/media`, {
+    const res = await fetchWithTimeout(`${GRAPH}/${igId}/media`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(carouselBody),
@@ -85,7 +100,7 @@ async function postCarouselToIG(igId: string, token: string, imageUrls: string[]
 async function postCarouselToFB(pageId: string, token: string, imageUrls: string[], caption: string): Promise<string> {
   const fbids: { media_fbid: string }[] = [];
   for (const url of imageUrls) {
-    const res = await fetch(`${GRAPH}/${pageId}/photos`, {
+    const res = await fetchWithTimeout(`${GRAPH}/${pageId}/photos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url, published: false, access_token: token }),
@@ -94,7 +109,7 @@ async function postCarouselToFB(pageId: string, token: string, imageUrls: string
     if (!res.ok || !data.id) throw new Error(`FB photo upload failed: ${data?.error?.message}`);
     fbids.push({ media_fbid: data.id });
   }
-  const res = await fetch(`${GRAPH}/${pageId}/feed`, {
+  const res = await fetchWithTimeout(`${GRAPH}/${pageId}/feed`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message: caption, attached_media: fbids, access_token: token }),
@@ -114,7 +129,7 @@ async function postReelToIG(igId: string, token: string, videoUrl: string, capti
   if (isTrial) body.trial_params = JSON.stringify({ graduation_strategy: "MANUAL" });
   if (audioName) body.audio_name = audioName;
 
-  const containerRes = await fetch(`${GRAPH}/${igId}/media`, {
+  const containerRes = await fetchWithTimeout(`${GRAPH}/${igId}/media`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -126,7 +141,7 @@ async function postReelToIG(igId: string, token: string, videoUrl: string, capti
   let statusCode = "IN_PROGRESS";
   for (let i = 0; i < 24; i++) {
     await new Promise((r) => setTimeout(r, 5000));
-    const statusRes = await fetch(`${GRAPH}/${containerId}?fields=status_code,status&access_token=${token}`);
+    const statusRes = await fetchWithTimeout(`${GRAPH}/${containerId}?fields=status_code,status&access_token=${token}`, {}, 15000);
     const statusData = await statusRes.json() as { status_code?: string; status?: string };
     statusCode = statusData.status_code || "UNKNOWN";
     if (statusCode === "FINISHED") break;
@@ -138,7 +153,7 @@ async function postReelToIG(igId: string, token: string, videoUrl: string, capti
 }
 
 async function postVideoToFB(pageId: string, token: string, videoUrl: string, caption?: string): Promise<string> {
-  const res = await fetch(`${GRAPH}/${pageId}/videos`, {
+  const res = await fetchWithTimeout(`${GRAPH}/${pageId}/videos`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ file_url: videoUrl, description: caption || "", access_token: token }),
@@ -148,7 +163,7 @@ async function postVideoToFB(pageId: string, token: string, videoUrl: string, ca
   return data.id;
 }
 async function igUploadVideoForCarousel(igId: string, token: string, videoUrl: string): Promise<string> {
-  const res = await fetch(`${GRAPH}/${igId}/media`, {
+  const res = await fetchWithTimeout(`${GRAPH}/${igId}/media`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ media_type: "VIDEO", video_url: videoUrl, is_carousel_item: "true", access_token: token }),
@@ -159,12 +174,16 @@ async function igUploadVideoForCarousel(igId: string, token: string, videoUrl: s
 }
 
 async function waitForIgContainerReady(containerId: string, token: string): Promise<void> {
-  for (let attempt = 0; attempt < 10; attempt++) {
-    const res = await fetch(`${GRAPH}/${containerId}?fields=status_code&access_token=${token}`);
+  // 30 attempts x 5s sleep = up to ~2.5 minutes of normal polling, each poll
+  // itself capped at 15s so a hung response can't stall the whole scheduler.
+  for (let attempt = 0; attempt < 30; attempt++) {
+    const res = await fetchWithTimeout(`${GRAPH}/${containerId}?fields=status_code&access_token=${token}`, {}, 15000);
     const data = await res.json() as { status_code?: string; error?: { message?: string } };
     if (data.status_code === "FINISHED") return;
-    if (data.status_code === "ERROR") throw new Error(`IG video processing failed for container ${containerId}`);
-    await new Promise((r) => setTimeout(r, 4000));
+    if (data.status_code === "ERROR" || data.status_code === "EXPIRED") {
+      throw new Error(`IG video processing failed for container ${containerId} (${data.status_code})`);
+    }
+    await new Promise((r) => setTimeout(r, 5000));
   }
   throw new Error(`IG video container ${containerId} did not finish processing in time`);
 }
@@ -187,7 +206,7 @@ async function postVideoCarouselToIG(igId: string, token: string, videoUrls: str
 async function postVideoCarouselToFB(pageId: string, token: string, videoUrls: string[], caption: string): Promise<string> {
   const fbids: { media_fbid: string }[] = [];
   for (const url of videoUrls) {
-    const res = await fetch(`${GRAPH}/${pageId}/videos`, {
+    const res = await fetchWithTimeout(`${GRAPH}/${pageId}/videos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ file_url: url, published: false, access_token: token }),
@@ -196,7 +215,7 @@ async function postVideoCarouselToFB(pageId: string, token: string, videoUrls: s
     if (!res.ok || !data.id) throw new Error(`FB video upload failed: ${data?.error?.message || JSON.stringify(data)}`);
     fbids.push({ media_fbid: data.id });
   }
-  const res = await fetch(`${GRAPH}/${pageId}/feed`, {
+  const res = await fetchWithTimeout(`${GRAPH}/${pageId}/feed`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message: caption, attached_media: fbids, access_token: token }),
@@ -238,7 +257,7 @@ async function postStoryToIG(
         });
       }
     }
-    const containerRes = await fetch(`${GRAPH}/${igId}/media`, {
+    const containerRes = await fetchWithTimeout(`${GRAPH}/${igId}/media`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -253,7 +272,7 @@ async function postStoryToIG(
 }
 
 async function igPostComment(igMediaId: string, token: string, commentText: string): Promise<void> {
-  const res = await fetch(`${GRAPH}/${igMediaId}/comments`, {
+  const res = await fetchWithTimeout(`${GRAPH}/${igMediaId}/comments`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message: commentText, access_token: token }),
@@ -415,6 +434,22 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
 
 let schedulerRunning = false;
 
+// Marks a post as failed. Used both for the expected "no preset" case and as
+// a catch-all so a post can never sit at status "processing" forever with no
+// resolution — the cron only ever re-claims posts still marked "pending".
+async function markPostFailed(postId: string, message: string): Promise<void> {
+  try {
+    await db.update(scheduledPostsTable).set({
+      status: "failed",
+      metaStatus: "failed",
+      metaResult: { error: message },
+      updatedAt: new Date(),
+    }).where(eq(scheduledPostsTable.id, postId));
+  } catch (dbErr) {
+    logger.error({ dbErr, postId }, "Failed to mark post as failed after an error — post may be stuck");
+  }
+}
+
 async function processScheduledPosts(): Promise<void> {
   // Re-entrancy guard: never let two overlapping timer ticks run at once.
   if (schedulerRunning) {
@@ -438,57 +473,62 @@ async function processScheduledPosts(): Promise<void> {
     }
 
     for (const post of due) {
-      const [preset] = await db
-      .select()
-      .from(clientPresetsTable)
-      .where(eq(clientPresetsTable.id, post.presetId));
+      // Every post gets its own try/catch. Anything unexpected here (DB error,
+      // programming error, etc.) now force-fails the post instead of leaving
+      // it claimed as "processing" with no way to ever pick it up again.
+      try {
+        const [preset] = await db
+        .select()
+        .from(clientPresetsTable)
+        .where(eq(clientPresetsTable.id, post.presetId));
 
-    if (!preset) {
-      const err = { error: "Preset not found" };
+      if (!preset) {
+        await markPostFailed(post.id, "Preset not found");
+        continue;
+      }
+
+      const hasMetaConfig = !!(preset.metaPageAccessToken && (preset.metaInstagramAccountId || preset.metaFacebookPageId));
+
+      const metaSettled = await Promise.allSettled([
+        hasMetaConfig ? fireMetaRail(post, preset) : Promise.reject(new Error("Meta not configured for this client")),
+      ]);
+
+      const postedAt = new Date();
+      const metaOk = metaSettled[0].status === "fulfilled";
+      const metaResult = metaOk ? (metaSettled[0] as PromiseFulfilledResult<any>).value : { error: (metaSettled[0] as PromiseRejectedResult).reason?.message || "Unknown error" };
+
+      const overallStatus = metaOk ? "published" : "failed";
+
       await db.update(scheduledPostsTable).set({
-        status: "failed", metaStatus: "failed", metaResult: err, updatedAt: new Date(),
+        status: overallStatus,
+        metaStatus: hasMetaConfig ? (metaOk ? "success" : "failed") : "skipped",
+        metaResult,
+        metaPostedAt: metaOk ? postedAt : null,
+        updatedAt: postedAt,
       }).where(eq(scheduledPostsTable.id, post.id));
-      continue;
+
+      logger.info(
+        { postId: post.id, client: post.clientName, type: post.postType, metaOk },
+        "Scheduled post processed",
+      );
+
+  const igConfigured = !!preset.metaInstagramAccountId;
+        const fbConfigured = !!preset.metaFacebookPageId;
+        const igOk = igConfigured ? (metaOk ? !!metaResult.igPostId : false) : undefined;
+        const fbOk = fbConfigured ? (metaOk ? !!metaResult.fbPostId : false) : undefined;
+        await notifyPostResult({
+          ok: metaOk,
+          clientName: preset.name || post.clientName || "client",
+          postType: post.postType,
+          detail: metaOk ? undefined : (metaResult?.error || undefined),
+          igOk,
+          fbOk,
+        });
+      } catch (err: any) {
+        logger.error({ err, postId: post.id }, "Unhandled error processing scheduled post — marking failed so it doesn't get stuck");
+        await markPostFailed(post.id, err?.message || "Unknown error processing post");
+      }
     }
-
-    const hasMetaConfig = !!(preset.metaPageAccessToken && (preset.metaInstagramAccountId || preset.metaFacebookPageId));
-
-    const metaSettled = await Promise.allSettled([
-      hasMetaConfig ? fireMetaRail(post, preset) : Promise.reject(new Error("Meta not configured for this client")),
-    ]);
-
-    const postedAt = new Date();
-    const metaOk = metaSettled[0].status === "fulfilled";
-    const metaResult = metaOk ? (metaSettled[0] as PromiseFulfilledResult<any>).value : { error: (metaSettled[0] as PromiseRejectedResult).reason?.message || "Unknown error" };
-
-    const overallStatus = metaOk ? "published" : "failed";
-
-    await db.update(scheduledPostsTable).set({
-      status: overallStatus,
-      metaStatus: hasMetaConfig ? (metaOk ? "success" : "failed") : "skipped",
-      metaResult,
-      metaPostedAt: metaOk ? postedAt : null,
-      updatedAt: postedAt,
-    }).where(eq(scheduledPostsTable.id, post.id));
-
-    logger.info(
-      { postId: post.id, client: post.clientName, type: post.postType, metaOk },
-      "Scheduled post processed",
-    );
-
-const igConfigured = !!preset.metaInstagramAccountId;
-      const fbConfigured = !!preset.metaFacebookPageId;
-      const igOk = igConfigured ? (metaOk ? !!metaResult.igPostId : false) : undefined;
-      const fbOk = fbConfigured ? (metaOk ? !!metaResult.fbPostId : false) : undefined;
-      await notifyPostResult({
-        ok: metaOk,
-        clientName: preset.name || post.clientName || "client",
-        postType: post.postType,
-        detail: metaOk ? undefined : (metaResult?.error || undefined),
-        igOk,
-        fbOk,
-      });
-  }
   } finally {
     schedulerRunning = false;
   }
