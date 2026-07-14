@@ -9,7 +9,7 @@ const SEND_LABEL = "Send to Vanessa, Aesthetic Angel / Digital Darling";
 type CalendarPost = { id: number; date: string; title: string; caption: string; postType: string; status: string; color: string; imageUrl: string | null; imageUrls: string[]; source: "calendar" | "scheduler"; scheduledPostId: number | null; };
 type ApprovalBatch = { id: number; name: string; token: string; status: string; totalImages: number; pendingImages: number; approvedImages: number; rejectedImages: number; createdAt: string; expiresAt: string | null; };
 type RevenueIdea = { title: string; instructions: string; draftContent: string; weekOf: string };
-type PortalData = { clientName: string; logoUrl: string | null; upcomingPosts: CalendarPost[]; approvalBatches: ApprovalBatch[]; revenueIdea: RevenueIdea | null; };
+type PortalData = { clientName: string; logoUrl: string | null; upcomingPosts: CalendarPost[]; approvalBatches: ApprovalBatch[]; revenueIdeas: RevenueIdea[]; };
 type Resource = { id: number; title: string; description: string; fileKey: string; fileName: string; createdAt: string; };
 
 const POST_TYPE_ICON: Record<string, React.ReactNode> = {
@@ -31,6 +31,34 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const outputArray = new Uint8Array(rawData.length);
   for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
   return outputArray;
+}
+
+// Downloads an image URL to the device rather than opening it in a new tab.
+// Falls back to a plain link open if the fetch/blob approach is blocked.
+async function downloadImage(url: string, filename: string) {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(objectUrl);
+  } catch {
+    window.open(url, "_blank");
+  }
+}
+
+async function copyCaption(caption: string) {
+  try {
+    await navigator.clipboard.writeText(caption);
+    toast.success("Caption copied.");
+  } catch {
+    toast.error("Could not copy, please select and copy the text manually.");
+  }
 }
 
 function SlideShow({ urls }: { urls: string[] }) {
@@ -422,6 +450,7 @@ export default function ClientPortal({ token }: { token: string }) {
   const pendingBatches = data.approvalBatches.filter((b) => b.pendingImages > 0);
   const reviewedBatches = data.approvalBatches.filter((b) => b.pendingImages === 0);
   const pendingCount = pendingBatches.reduce((n, b) => n + b.pendingImages, 0);
+  const revenueIdeas = data.revenueIdeas || [];
 
   const inputCls = "w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-pink-600";
   const sendBtn = "w-full rounded-full bg-pink-600 hover:bg-pink-500 disabled:opacity-60 text-white font-semibold py-3.5 flex items-center justify-center gap-2";
@@ -457,7 +486,7 @@ export default function ClientPortal({ token }: { token: string }) {
         </div>
         <div className="max-w-3xl mx-auto px-4 pb-3 flex flex-wrap gap-2">
           <TabBtn id="upcoming" label="Posts" />
-          {data.revenueIdea && <TabBtn id="revenue" label="This Week's Idea" />}
+          {revenueIdeas.length > 0 && <TabBtn id="revenue" label="Ideas For You" />}
           <TabBtn id="approvals" label="Approvals" badge={pendingCount || undefined} />
           <TabBtn id="ba" label="Before & After" />
           <TabBtn id="selfies" label="Selfies" />
@@ -521,6 +550,19 @@ export default function ClientPortal({ token }: { token: string }) {
                         {post.title && <p className="font-medium text-white text-sm">{post.title}</p>}
                         {post.caption && <p className="text-sm text-zinc-400 mt-1 whitespace-pre-wrap">{post.caption}</p>}
 
+                        {urls.length > 0 && (
+                          <div className="mt-4 pt-3 border-t border-zinc-800 flex flex-wrap gap-2">
+                            <button onClick={() => urls.forEach((u, i) => downloadImage(u, `${data.clientName.replace(/\s+/g, "-").toLowerCase()}-${post.date}-${i + 1}.jpg`))} className="text-xs font-semibold text-pink-400 hover:text-pink-300 flex items-center gap-1.5 rounded-full border border-pink-800/40 bg-pink-950/10 px-3 py-1.5">
+                              <Download className="w-3.5 h-3.5" /> Download image{urls.length > 1 ? "s" : ""}
+                            </button>
+                            {post.caption && (
+                              <button onClick={() => copyCaption(post.caption)} className="text-xs font-semibold text-zinc-300 hover:text-white flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5">
+                                <ClipboardList className="w-3.5 h-3.5" /> Copy caption
+                              </button>
+                            )}
+                          </div>
+                        )}
+
                         {post.source === "scheduler" && (
                           <div className="mt-4 pt-3 border-t border-zinc-800">
                             {!isRejecting ? (
@@ -555,19 +597,26 @@ export default function ClientPortal({ token }: { token: string }) {
           </section>
         )}
 
-        {tab === "revenue" && data.revenueIdea && (
+        {tab === "revenue" && revenueIdeas.length > 0 && (
           <section>
-            <div className="flex items-center gap-2 mb-5"><TrendingUp className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">This Week's Revenue Idea</h2></div>
-            <div className="rounded-2xl border border-pink-800/40 bg-pink-950/10 p-6 space-y-4">
-              <h3 className="text-xl font-bold text-white">{data.revenueIdea.title}</h3>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-pink-400/80 mb-1.5">What to run and why</p>
-                <p className="text-sm text-zinc-300 whitespace-pre-line leading-relaxed">{data.revenueIdea.instructions}</p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-pink-400/80 mb-1.5">Ready-to-use copy</p>
-                <div className="rounded-xl bg-zinc-950/60 border border-zinc-800 p-4"><p className="text-sm text-zinc-300 whitespace-pre-line leading-relaxed">{data.revenueIdea.draftContent}</p></div>
-              </div>
+            <div className="flex items-center gap-2 mb-5"><TrendingUp className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Ideas For You</h2></div>
+            <div className="space-y-5">
+              {revenueIdeas.map((idea, i) => (
+                <div key={i} className="rounded-2xl border border-pink-800/40 bg-pink-950/10 p-6 space-y-4">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <h3 className="text-xl font-bold text-white">{idea.title}</h3>
+                    <span className="text-xs text-zinc-500 shrink-0">Week of {formatDate(idea.weekOf)}</span>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-pink-400/80 mb-1.5">What to run and why</p>
+                    <p className="text-sm text-zinc-300 whitespace-pre-line leading-relaxed">{idea.instructions}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-pink-400/80 mb-1.5">Ready-to-use copy</p>
+                    <div className="rounded-xl bg-zinc-950/60 border border-zinc-800 p-4"><p className="text-sm text-zinc-300 whitespace-pre-line leading-relaxed">{idea.draftContent}</p></div>
+                  </div>
+                </div>
+              ))}
             </div>
           </section>
         )}
