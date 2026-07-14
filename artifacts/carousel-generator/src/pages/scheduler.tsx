@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Trash2, Plus, BarChart3, Calendar, Film, Layers, ChevronDown, ChevronUp, Edit2, ExternalLink } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Trash2, Plus, BarChart3, Calendar, Film, Layers, ChevronDown, ChevronUp, Edit2, ExternalLink, ChevronLeft, ChevronRight, Image as ImageIcon, GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,13 +9,13 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { usePresets } from "@/lib/use-presets";
 
-type PostContent = { imageUrls?: string[]; videoUrl?: string; caption: string; title: string };
+type PostContent = { imageUrls?: string[]; videoUrl?: string; videoUrls?: string[]; caption: string; title: string };
 
 type ScheduledPost = {
   id: number;
   presetId: number;
   clientName: string;
-  postType: "carousel" | "reel";
+  postType: "carousel" | "reel" | string;
   content: PostContent;
   scheduledAt: string;
   status: "pending" | "processing" | "published" | "failed" | "cancelled";
@@ -71,6 +71,83 @@ function pct(n: number, d: number) {
   return `${Math.round((n / d) * 100)}%`;
 }
 
+// ── Preview Feed month grid helpers ─────────────────────────────────────────
+function fmtISO(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function getMonthDays(year: number, month: number) {
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  let startDow = firstDay.getDay();
+  startDow = startDow === 0 ? 6 : startDow - 1;
+
+  const days: { date: string; day: number; isCurrentMonth: boolean }[] = [];
+  for (let i = startDow - 1; i >= 0; i--) {
+    const d = new Date(year, month, -i);
+    days.push({ date: fmtISO(d), day: d.getDate(), isCurrentMonth: false });
+  }
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    days.push({ date: fmtISO(new Date(year, month, d)), day: d, isCurrentMonth: true });
+  }
+  while (days.length < 42) {
+    const d = new Date(year, month + 1, days.length - startDow - lastDay.getDate() + 1);
+    days.push({ date: fmtISO(d), day: d.getDate(), isCurrentMonth: false });
+  }
+  return days;
+}
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function postThumb(post: ScheduledPost): string | null {
+  if (post.content?.imageUrls?.length) return post.content.imageUrls[0];
+  return null;
+}
+
+// A single draggable/droppable card in the Preview Feed grid.
+function FeedCard({ post, draggable, onDragStart }: { post: ScheduledPost; draggable: boolean; onDragStart: (e: React.DragEvent) => void }) {
+  const thumb = postThumb(post);
+  const isVideo = post.postType === "reel" || post.postType === "video_carousel";
+  return (
+    <div
+      draggable={draggable}
+      onDragStart={draggable ? onDragStart : undefined}
+      title={`${post.clientName} — ${post.content.title || "Untitled"}${draggable ? "" : " (already posted or in progress)"}`}
+      className={`group relative rounded-md overflow-hidden border border-zinc-700/60 aspect-square ${draggable ? "cursor-grab active:cursor-grabbing" : "cursor-default opacity-80"}`}
+    >
+      {thumb ? (
+        <img src={thumb} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+      ) : (
+        <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
+          {isVideo ? <Film size={14} className="text-zinc-500" /> : <ImageIcon size={14} className="text-zinc-500" />}
+        </div>
+      )}
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-1 py-0.5">
+        <p className="text-[9px] text-white/90 truncate leading-tight">{post.clientName}</p>
+      </div>
+      {post.status === "published" && (
+        <span className="absolute top-0.5 right-0.5 bg-emerald-500/90 rounded-full p-0.5">
+          <CheckCircle2 size={9} className="text-white" />
+        </span>
+      )}
+      {post.status === "failed" && (
+        <span className="absolute top-0.5 right-0.5 bg-red-500/90 rounded-full p-0.5">
+          <XCircle size={9} className="text-white" />
+        </span>
+      )}
+      {draggable && (
+        <span className="absolute top-0.5 left-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <GripVertical size={11} className="text-white/70" />
+        </span>
+      )}
+    </div>
+  );
+}
+
 type ScheduleDialogProps = {
   presets: { id: number; name: string }[];
   onClose: () => void;
@@ -80,7 +157,7 @@ type ScheduleDialogProps = {
 
 function ScheduleDialog({ presets, onClose, onSaved, editing }: ScheduleDialogProps) {
   const [presetId, setPresetId] = useState<string>(editing ? String(editing.presetId) : "");
-  const [postType, setPostType] = useState<"carousel" | "reel">(editing?.postType ?? "carousel");
+  const [postType, setPostType] = useState<"carousel" | "reel">(editing?.postType === "reel" ? "reel" : "carousel");
   const [title, setTitle] = useState(editing?.content.title ?? "");
   const [caption, setCaption] = useState(editing?.content.caption ?? "");
   const [imageUrls, setImageUrls] = useState(editing?.content.imageUrls?.join("\n") ?? "");
@@ -244,7 +321,7 @@ function ScheduleDialog({ presets, onClose, onSaved, editing }: ScheduleDialogPr
 
 export default function Scheduler() {
   const { presets } = usePresets();
-  const [tab, setTab] = useState<"upcoming" | "published" | "failed" | "dashboard">("upcoming");
+  const [tab, setTab] = useState<"upcoming" | "published" | "failed" | "dashboard" | "feed">("upcoming");
   const [posts, setPosts] = useState<ScheduledPost[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -252,6 +329,14 @@ export default function Scheduler() {
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState<ScheduledPost | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+
+  // Preview Feed month grid state
+  const today = new Date();
+  const [feedYear, setFeedYear] = useState(today.getFullYear());
+  const [feedMonth, setFeedMonth] = useState(today.getMonth());
+  const dragPostRef = React.useRef<ScheduledPost | null>(null);
+  const [dragOverDate, setDragOverDate] = useState<string | null>(null);
+  const [rescheduling, setRescheduling] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -295,6 +380,47 @@ export default function Scheduler() {
     } catch (e: any) { toast.error(e.message); }
   }
 
+  // Reschedule a post to a new calendar date, keeping its original time of day.
+  async function handleReschedule(post: ScheduledPost, newDate: string) {
+    const [y, m, d] = newDate.split("-").map(Number);
+    const updated = new Date(post.scheduledAt);
+    updated.setFullYear(y, m - 1, d);
+    if (fmtISO(updated) === fmtISO(new Date(post.scheduledAt))) return; // dropped on its own day
+    setRescheduling(true);
+    try {
+      await apiFetch(`/api/scheduler/posts/${post.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ scheduledAt: updated.toISOString() }),
+      });
+      toast.success(`Moved to ${updated.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`);
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Could not reschedule");
+    } finally {
+      setRescheduling(false);
+    }
+  }
+
+  const handleFeedDragStart = (e: React.DragEvent, post: ScheduledPost) => {
+    dragPostRef.current = post;
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(post.id));
+  };
+  const handleFeedDragOver = (e: React.DragEvent, date: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverDate(date);
+  };
+  const handleFeedDragLeave = () => setDragOverDate(null);
+  const handleFeedDrop = (e: React.DragEvent, date: string) => {
+    e.preventDefault();
+    setDragOverDate(null);
+    const post = dragPostRef.current;
+    dragPostRef.current = null;
+    if (!post) return;
+    handleReschedule(post, date);
+  };
+
   const clientNames = Array.from(new Set(posts.map((p) => p.clientName))).sort();
 
   const filtered = posts.filter((p) => {
@@ -310,6 +436,18 @@ export default function Scheduler() {
   const failed = posts.filter((p) => p.status === "failed").length;
 
   const metaPct = stats ? pct(stats.totals.metaSuccess, stats.totals.metaSuccess + stats.totals.metaFail) : "—";
+
+  // Posts shown on the Preview Feed grid: anything not cancelled, filtered by client.
+  const feedPosts = posts.filter((p) => {
+    if (p.status === "cancelled") return false;
+    if (filterClient !== "all" && p.clientName !== filterClient) return false;
+    return true;
+  });
+  const feedDays = getMonthDays(feedYear, feedMonth);
+  const prevFeedMonth = () => { if (feedMonth === 0) { setFeedMonth(11); setFeedYear(feedYear - 1); } else setFeedMonth(feedMonth - 1); };
+  const nextFeedMonth = () => { if (feedMonth === 11) { setFeedMonth(0); setFeedYear(feedYear + 1); } else setFeedMonth(feedMonth + 1); };
+  const feedToday = () => { setFeedYear(today.getFullYear()); setFeedMonth(today.getMonth()); };
+  const todayISO = fmtISO(today);
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
@@ -355,7 +493,7 @@ export default function Scheduler() {
 
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <div className="flex bg-zinc-900 border border-zinc-800 rounded-lg p-1 gap-1">
-            {(["upcoming", "published", "failed", "dashboard"] as const).map((t) => (
+            {(["upcoming", "published", "failed", "feed", "dashboard"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -366,6 +504,7 @@ export default function Scheduler() {
                 {t === "upcoming" && `Upcoming ${upcoming > 0 ? `(${upcoming})` : ""}`}
                 {t === "published" && `Published ${published > 0 ? `(${published})` : ""}`}
                 {t === "failed" && `Failed ${failed > 0 ? `(${failed})` : ""}`}
+                {t === "feed" && "Preview Feed"}
                 {t === "dashboard" && "Comparison"}
               </button>
             ))}
@@ -385,16 +524,16 @@ export default function Scheduler() {
             </Select>
           )}
 
-          {filterClient !== "all" && tab !== "dashboard" && (
+          {filterClient !== "all" && tab !== "dashboard" && tab !== "feed" && (
             <a
               href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/preview/${filterClient.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-pink-400 transition-colors px-3 py-1.5 rounded-lg border border-zinc-700 hover:border-pink-500/40 whitespace-nowrap"
-              title="Open client content preview"
+              title="Open the public client-facing preview"
             >
               <ExternalLink size={12} />
-              Preview Feed
+              Client Preview
             </a>
           )}
 
@@ -403,7 +542,77 @@ export default function Scheduler() {
           </button>
         </div>
 
-        {tab === "dashboard" ? (
+        {tab === "feed" ? (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Button variant="outline" size="icon" onClick={prevFeedMonth} className="h-9 w-9 border-zinc-700 text-zinc-300 hover:text-white">
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <h2 className="text-base font-semibold min-w-[170px] text-center">{MONTH_NAMES[feedMonth]} {feedYear}</h2>
+                <Button variant="outline" size="icon" onClick={nextFeedMonth} className="h-9 w-9 border-zinc-700 text-zinc-300 hover:text-white">
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={feedToday} className="text-zinc-400 hover:text-white">Today</Button>
+              </div>
+              <p className="text-xs text-zinc-500">Drag a post onto another day to reschedule it. Days with nothing queued show blank.</p>
+            </div>
+
+            <div className="rounded-xl border border-zinc-800 overflow-hidden">
+              <div className="grid grid-cols-7 bg-zinc-900">
+                {WEEKDAY_LABELS.map((d) => (
+                  <div key={d} className="px-2 py-2 text-center text-[11px] font-medium text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
+                    {d}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7">
+                {feedDays.map((day, i) => {
+                  const dayPosts = feedPosts.filter((p) => p.scheduledAt.slice(0, 10) === day.date);
+                  const isToday = day.date === todayISO;
+                  const isDragTarget = dragOverDate === day.date;
+                  return (
+                    <div
+                      key={i}
+                      onDragOver={(e) => handleFeedDragOver(e, day.date)}
+                      onDragLeave={handleFeedDragLeave}
+                      onDrop={(e) => handleFeedDrop(e, day.date)}
+                      className={`min-h-[104px] border-b border-r border-zinc-800/70 p-1.5 transition-colors ${
+                        !day.isCurrentMonth ? "bg-zinc-950/60 opacity-40" : "bg-zinc-950"
+                      } ${isDragTarget ? "bg-pink-500/10 ring-1 ring-pink-500/40 ring-inset" : ""}`}
+                    >
+                      <div className="flex items-center justify-between mb-1 px-0.5">
+                        <span className={`text-[11px] font-medium ${isToday ? "bg-pink-600 text-white w-5 h-5 rounded-full flex items-center justify-center" : "text-zinc-500"}`}>
+                          {day.day}
+                        </span>
+                        {dayPosts.length > 0 && <span className="text-[9px] text-zinc-500">{dayPosts.length}</span>}
+                      </div>
+                      {/* Blank when nothing is queued for this day — that's the point, so gaps are obvious at a glance. */}
+                      {dayPosts.length > 0 && (
+                        <div className="grid grid-cols-3 gap-1">
+                          {dayPosts.slice(0, 6).map((post) => (
+                            <FeedCard
+                              key={post.id}
+                              post={post}
+                              draggable={post.status === "pending"}
+                              onDragStart={(e) => handleFeedDragStart(e, post)}
+                            />
+                          ))}
+                        </div>
+                      )}
+                      {dayPosts.length > 6 && (
+                        <p className="text-[9px] text-zinc-500 mt-1">+{dayPosts.length - 6} more</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            {rescheduling && (
+              <p className="text-xs text-zinc-500 flex items-center gap-1.5"><RefreshCw size={11} className="animate-spin" /> Saving new date…</p>
+            )}
+          </div>
+        ) : tab === "dashboard" ? (
           <div className="space-y-4">
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
               <h2 className="text-base font-semibold mb-1">Meta Direct — Posting Stats</h2>
