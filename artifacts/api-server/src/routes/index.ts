@@ -16,7 +16,7 @@ import schedulerRouter from "./scheduler";
 import libraryRouter from "./library";
 import onboardingRouter from "./onboarding";
 import aboutMeRouter from "./about-me";
-import seamlessCarouselRouter from "./seamless-carousel";
+import seamlessCarouselRouter from "./seamless-caro-builder";
 import aiPortraitRouter from "./aiPortrait";
 import dmAutomationsRouter from "./dm-automations";
 import webhooksRouter from "./webhooks";
