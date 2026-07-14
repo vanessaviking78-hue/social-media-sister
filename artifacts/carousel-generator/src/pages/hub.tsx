@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper } from "lucide-react";
 
 const TOOLS = [
   {
@@ -362,6 +362,15 @@ const TOOLS = [
     color: "from-emerald-500/20 to-emerald-500/5",
     border: "hover:border-emerald-500/50",
     iconColor: "text-emerald-400",
+  },
+  {
+    href: "/news",
+    icon: Newspaper,
+    name: "News & Updates",
+    description: "Post news and updates on a client's behalf. Shows straight away on their content preview page.",
+    color: "from-indigo-500/20 to-indigo-500/5",
+    border: "hover:border-indigo-500/50",
+    iconColor: "text-indigo-400",
   },
 ];
 

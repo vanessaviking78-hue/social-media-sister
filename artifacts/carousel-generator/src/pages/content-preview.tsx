@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronLeft, ChevronRight, LayoutGrid, CalendarDays } from "lucide-react";
+import { ChevronLeft, ChevronRight, LayoutGrid, CalendarDays, Newspaper } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -12,10 +12,18 @@ type PreviewPost = {
   status: string;
 };
 
+type PreviewNewsItem = {
+  id: number;
+  title: string;
+  body: string;
+  createdAt: string;
+};
+
 type PreviewData = {
   clientName: string;
   logoUrl: string | null;
   posts: PreviewPost[];
+  news: PreviewNewsItem[];
 };
 
 // ── API ───────────────────────────────────────────────────────────────────────
@@ -27,7 +35,7 @@ async function fetchPreview(clientSlug: string): Promise<PreviewData> {
     throw new Error(data.error || "Failed to load preview");
   }
   const data = await res.json();
-  return data as PreviewData;
+  return { news: [], ...data } as PreviewData;
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
@@ -36,7 +44,7 @@ export default function ContentPreview({ clientSlug }: { clientSlug: string }) {
   const [data, setData] = useState<PreviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<"grid" | "calendar">("grid");
+  const [view, setView] = useState<"grid" | "calendar" | "news">("grid");
   const [calMonth, setCalMonth] = useState(() => {
     const n = new Date();
     return { year: n.getFullYear(), month: n.getMonth() };
@@ -72,6 +80,8 @@ export default function ContentPreview({ clientSlug }: { clientSlug: string }) {
       </div>
     );
   }
+
+  const news = data.news ?? [];
 
   return (
     <div className="min-h-screen bg-white text-zinc-900">
@@ -120,26 +130,81 @@ export default function ContentPreview({ clientSlug }: { clientSlug: string }) {
             >
               <CalendarDays size={15} />
             </button>
+            <button
+              onClick={() => setView("news")}
+              title="News & updates"
+              className={`relative p-2 rounded-md transition-colors ${
+                view === "news"
+                  ? "bg-white shadow-sm text-zinc-900"
+                  : "text-zinc-400 hover:text-zinc-600"
+              }`}
+            >
+              <Newspaper size={15} />
+              {news.length > 0 && view !== "news" && (
+                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-pink-500" />
+              )}
+            </button>
           </div>
         </div>
       </header>
 
       {/* Content */}
       <main className="max-w-2xl mx-auto px-6 py-8">
-        {view === "grid" ? (
-          <GridView posts={data.posts} />
-        ) : (
+        {view === "grid" && <GridView posts={data.posts} />}
+        {view === "calendar" && (
           <CalendarView
             posts={data.posts}
             calMonth={calMonth}
             setCalMonth={setCalMonth}
           />
         )}
+        {view === "news" && <NewsView news={news} />}
       </main>
 
       <footer className="text-center py-8 text-xs text-zinc-300">
         Social Media Sister · The CyberSuite
       </footer>
+    </div>
+  );
+}
+
+// ── News view ─────────────────────────────────────────────────────────────────
+
+function NewsView({ news }: { news: PreviewNewsItem[] }) {
+  if (!news.length) {
+    return (
+      <div className="text-center py-24 text-zinc-400">
+        <p>No news or updates yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {news.map((item) => {
+        const d = new Date(item.createdAt);
+        const dateStr = d.toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        });
+        return (
+          <div
+            key={item.id}
+            className="border border-zinc-100 rounded-lg p-5 bg-white"
+          >
+            <p className="text-[11px] text-zinc-400 mb-1.5">{dateStr}</p>
+            <h3 className="font-semibold text-zinc-900 text-base leading-snug">
+              {item.title}
+            </h3>
+            {item.body && (
+              <p className="text-sm text-zinc-600 mt-2 leading-relaxed whitespace-pre-wrap">
+                {item.body}
+              </p>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
