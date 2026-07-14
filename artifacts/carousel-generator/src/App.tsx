@@ -74,6 +74,7 @@ import ClientApproval from "@/pages/client-approval";
 import ContentGenerator from "@/pages/content-generator";
 import TweetMaker from "@/pages/tweet-maker";
 import RevenueIdeas from "@/pages/revenue-ideas";
+import News from "@/pages/news";
 
 const queryClient = new QueryClient();
 
@@ -134,6 +135,7 @@ function ProtectedRouter() {
       <Route path="/about-me-studio" component={AboutMeStudio} />
       <Route path="/tweet-maker" component={TweetMaker} />
       <Route path="/revenue-ideas" component={RevenueIdeas} />
+      <Route path="/news" component={News} />
       <Route component={NotFound} />
     </Switch>
   );
