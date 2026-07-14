@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { scheduledPostsTable, clientPresetsTable, calendarPostsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logger } from "../lib/logger";
+import { getNewsForClient } from "./client-news";
 
 const router: IRouter = Router();
 
@@ -18,6 +19,13 @@ type PreviewPost = {
   title: string;
   status: string;
   source: "scheduler" | "calendar";
+};
+
+type PreviewNewsItem = {
+  id: number;
+  title: string;
+  body: string;
+  createdAt: string;
 };
 
 router.get("/content-preview/:clientSlug", async (req, res) => {
@@ -107,7 +115,19 @@ router.get("/content-preview/:clientSlug", async (req, res) => {
       (a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime()
     );
 
-    res.json({ clientName, logoUrl, posts: all });
+    // ── News (only when preset exists, since news is created by preset id) ─
+    let news: PreviewNewsItem[] = [];
+    if (preset) {
+      const newsRows = await getNewsForClient(clientName);
+      news = newsRows.map((n) => ({
+        id: n.id,
+        title: n.title,
+        body: n.body,
+        createdAt: n.created_at,
+      }));
+    }
+
+    res.json({ clientName, logoUrl, posts: all, news });
   } catch (err: unknown) {
     logger.error({ err }, "content-preview fetch failed");
     res.status(500).json({ error: "Failed to load preview" });

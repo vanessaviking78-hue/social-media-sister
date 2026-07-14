@@ -16,6 +16,7 @@ import schedulerRouter from "./scheduler";
 import libraryRouter from "./library";
 import onboardingRouter from "./onboarding";
 import aboutMeRouter from "./about-me";
+import seamlessCarouselRouter from "./seamless-carousel";
 import aiPortraitRouter from "./aiPortrait";
 import dmAutomationsRouter from "./dm-automations";
 import webhooksRouter from "./webhooks";
@@ -38,8 +39,7 @@ import hookImageRouter from "./hook-image";
 import notifyRouter from "./notify";
 import submissionsRouter from "./submissions";
 import revenueIdeasRouter from "./revenue-ideas";
-import seamlessCaroBuilderRouter from "./seamless-caro-builder";
-import resourcesRouter from "./resources";
+import clientNewsRouter from "./client-news";
 
 const router: IRouter = Router();
 
@@ -60,6 +60,7 @@ router.use(schedulerRouter);
 router.use(libraryRouter);
 router.use(onboardingRouter);
 router.use(aboutMeRouter);
+router.use(seamlessCarouselRouter);
 router.use(aiPortraitRouter);
 router.use(memeRouter);
 router.use(hookImageRouter);
@@ -82,7 +83,6 @@ router.use(waitlistRouter);
 router.use(approvalBundlesRouter);
 router.use(contentGeneratorRouter);
 router.use(revenueIdeasRouter);
-router.use(seamlessCaroBuilderRouter);
-router.use(resourcesRouter);
+router.use(clientNewsRouter);
 
 export default router;
