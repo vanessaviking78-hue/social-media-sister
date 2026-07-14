@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, Upload, FileText, Download, Loader2, CalendarClock,
-  CheckCircle2, X, Edit2, GripVertical, Sparkles, Send, Music, Trash2,
+  CheckCircle2, X, Edit2, GripVertical, Sparkles, Send,
 } from "lucide-react";
 import { SendForApprovalModal } from "@/components/send-for-approval-modal";
 import { Button } from "@/components/ui/button";
@@ -16,64 +16,13 @@ import { saveAs } from "file-saver";
 import { loadGoogleFonts } from "@/lib/slide-utils";
 
 import { usePresets, type ClientPreset } from "@/lib/use-presets";
-import { MusicPickerModal, type MusicTrack } from "@/components/music-picker-modal";
-import ApprovedImagesPicker from "@/components/approved-images-picker";
 
 loadGoogleFonts();
-
-import { nextWeekday, WEEKDAY, POST_TIME, shortTagForBookedPost } from "@/lib/schedule";
-import { useBookedDays } from "@/lib/use-booked-days";
-
-// Small reusable strip showing what's already booked in for a client over the next
-// 14 days, so you can see the picture (including other tools) while you schedule
-// this batch. Read-only display alongside the Mon/Wed/Fri day picker above.
-function BookedDaysStrip({ presetId }: { presetId: number | null }) {
-  const { byDate } = useBookedDays(presetId, 14);
-  if (presetId === null) return null;
-  const nextDays = Array.from({ length: 14 }, (_, i) => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + i);
-    return d;
-  });
-  const dateKey = (d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
-  };
-  return (
-    <div className="mb-6">
-      <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">What's already booked (next 14 days)</p>
-      <div className="flex gap-1.5 overflow-x-auto pb-1">
-        {nextDays.map((d) => {
-          const key = dateKey(d);
-          const bookings = byDate[key] ?? [];
-          const booked = bookings.length > 0;
-          const tagText = bookings.map((b) => shortTagForBookedPost({ postType: "", content: { sourceTool: b.label } })).join("+");
-          return (
-            <div
-              key={key}
-              title={booked ? `Already booked: ${bookings.map((b) => `${b.label}${b.count > 1 ? ` x${b.count}` : ""}`).join(", ")}` : "Free — nothing scheduled yet"}
-              className={`flex flex-col items-center justify-center shrink-0 w-11 h-13 py-1 rounded-md border text-[11px] font-medium ${
-                booked ? "bg-card/60 border-border/50 text-muted-foreground" : "bg-card/30 border-emerald-600/40 text-emerald-400"
-              }`}
-            >
-              <span>{d.toLocaleDateString("en-GB", { weekday: "short" })}</span>
-              <span>{d.getDate()}</span>
-              {booked && <span className="text-[8px] leading-none mt-0.5">{tagText}</span>}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const W = 1080;
 const H = 1440;
-export const SCALE = 2;
+const SCALE = 2;
 const EDITOR_W = 360;
 const EDITOR_SCALE = EDITOR_W / W;
 
@@ -81,7 +30,7 @@ const CSV_COLS = ["slide1_hook", "slide1_subtitle", "slide2_body", "slide3_body"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type CsvRow = {
+type CsvRow = {
   slide1_hook: string;
   slide1_subtitle: string;
   slide2_body: string;
@@ -91,7 +40,7 @@ export type CsvRow = {
 
 type BlockId = "hook" | "subtitle" | "body2" | "body3" | "cta" | "logo" | "line";
 
-export type Block = {
+type Block = {
   id: BlockId;
   text: string;
   x: number;       // 0-1 horizontal centre fraction
@@ -135,9 +84,9 @@ type BlockStyle = { font: string; size: number; lineH: number; maxW: number; lab
 const BLOCK_STYLE: Record<BlockId, BlockStyle> = {
   hook:     { font: '"Bebas Neue"',  size: 108, lineH: 1.10, maxW: W - 120, label: "Hook"     },
   subtitle: { font: '"Poppins"',     size:  44, lineH: 1.40, maxW: W - 180, label: "Subtitle" },
-  body2:    { font: '"Poppins"',     size:  40, lineH: 1.45, maxW: W - 160, label: "Body"     },
-  body3:    { font: '"Poppins"',     size:  40, lineH: 1.45, maxW: W - 160, label: "Body"     },
-  cta:      { font: '"Poppins"',     size:  58, lineH: 1.35, maxW: W - 140, label: "CTA"      },
+  body2:    { font: '"Poppins"',     size:  50, lineH: 1.50, maxW: W - 160, label: "Body"     },
+  body3:    { font: '"Poppins"',     size:  50, lineH: 1.50, maxW: W - 160, label: "Body"     },
+  cta:      { font: '"Poppins"',     size:  76, lineH: 1.35, maxW: W - 140, label: "CTA"      },
   logo:     { font: '"Poppins"',     size:  44, lineH: 1.00, maxW: W,       label: "Logo"     },
   line:     { font: '"Poppins"',     size:  44, lineH: 1.00, maxW: W,       label: "Line"     },
 };
@@ -146,9 +95,9 @@ const defaultBlock = (id: BlockId, text = ""): Block => {
   const pos: Record<BlockId, { x: number; y: number }> = {
     hook:     { x: 0.5,  y: 0.695 },
     subtitle: { x: 0.5,  y: 0.785 },
-    body2:    { x: 0.5,  y: 0.94  },
-    body3:    { x: 0.5,  y: 0.94  },
-    cta:      { x: 0.5,  y: 0.95  },
+    body2:    { x: 0.5,  y: 0.80  },
+    body3:    { x: 0.5,  y: 0.80  },
+    cta:      { x: 0.5,  y: 0.80  },
     logo:     { x: 0.09, y: 0.07  },
     line:     { x: 0.5,  y: 0.90  },
   };
@@ -158,7 +107,7 @@ const defaultBlock = (id: BlockId, text = ""): Block => {
   return { id, text, ...pos[id], ...extra };
 };
 
-export function makeBlocks(row: CsvRow): Block[] {
+function makeBlocks(row: CsvRow): Block[] {
   return [
     defaultBlock("hook",     row.slide1_hook),
     defaultBlock("subtitle", row.slide1_subtitle),
@@ -166,7 +115,7 @@ export function makeBlocks(row: CsvRow): Block[] {
     defaultBlock("body3",    row.slide3_body),
     defaultBlock("cta",      row.slide4_cta),
     defaultBlock("logo"),
-    
+    defaultBlock("line"),
   ];
 }
 
@@ -175,30 +124,6 @@ export function makeBlocks(row: CsvRow): Block[] {
 function hexToRgb(hex: string): [number, number, number] {
   const h = (hex.startsWith("#") ? hex.slice(1) : hex).padEnd(6, "0");
   return [parseInt(h.slice(0,2),16)||0, parseInt(h.slice(2,4),16)||0, parseInt(h.slice(4,6),16)||0];
-}
-
-export function computeTuckedSubtitleY(hookRaw: string, subRaw: string, hookBlock?: Block, subBlock?: Block): number {
-  const DEFAULT_Y = 0.785;
-  if (!subRaw || !subRaw.trim()) return subBlock?.y ?? DEFAULT_Y;
-  const c = document.createElement("canvas");
-  const ctx = c.getContext("2d");
-  if (!ctx) return subBlock?.y ?? DEFAULT_Y;
-  const PAD_X = 90;
-  const HOOK_SIZE = hookBlock?.fontSize ?? 108;
-  const HOOK_LINE_H = Math.round(HOOK_SIZE * 0.9);
-  const SUB_SIZE = subBlock?.fontSize ?? 44;
-  const SUB_LINE_H = Math.round(SUB_SIZE * 1.40);
-  const hookCY = (hookBlock?.y ?? 0.695) * H;
-  ctx.font = `700 ${HOOK_SIZE}px 'Bebas Neue', sans-serif`;
-  const hookLines = hookRaw && hookRaw.trim()
-    ? wrapCanvas(ctx, stripPipes(hookRaw).trim().toUpperCase(), W - PAD_X * 2)
-    : [];
-  ctx.font = `normal 400 ${SUB_SIZE}px 'Poppins', sans-serif`;
-  const subLines = wrapCanvas(ctx, stripPipes(subRaw).trim(), W - PAD_X * 2);
-  const hookH = hookLines.length * HOOK_LINE_H;
-  const subTotalH = subLines.length * SUB_LINE_H;
-  const subCY = (hookCY + hookH / 2) + 0.015 * H + subTotalH / 2;
-  return Math.max(0.04, Math.min(0.96, subCY / H));
 }
 
 function stripPipes(t: string): string {
@@ -218,8 +143,7 @@ function renderHookLine(
   heroColor: string,
 ) {
   if (!heroWord) {
-    // No single word starred with |pipes| -> paint the whole hook in the Hero Word Colour.
-    ctx.fillStyle = heroColor;
+    ctx.fillStyle = normalColor;
     ctx.fillText(line, cx, y);
     return;
   }
@@ -272,7 +196,7 @@ function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, alpha: 
   ctx.globalAlpha = 1;
 }
 
-export function renderSlideCanvas(
+function renderSlideCanvas(
   slideNum: 1|2|3|4,
   blocks: Block[],
   coverImg: HTMLImageElement | null,
@@ -282,10 +206,7 @@ export function renderSlideCanvas(
   scale = SCALE,
   bgOnly = false,
   lineSpacing = 1.2,
-  accentOverride?: string,
-  subtitleOverride?: string,
-  overlayOverride?: string,
-  overlayAlpha?: number
+  accentOverride?: string
 ): string {
   const canvas = document.createElement("canvas");
   canvas.width = W * scale;
@@ -303,18 +224,23 @@ export function renderSlideCanvas(
   ctx.fillRect(0, 0, W, H);
 
   // Image layer
-    const img = slideNum === 1 ? coverImg : bodyImg;
-    if (img) {
+  const img = slideNum === 1 ? coverImg : bodyImg;
+  if (img) {
+    if (slideNum === 1) {
       drawCover(ctx, img, 1.0);
+    } else {
+      drawCover(ctx, img, 1.0);
+      ctx.fillStyle = overlayColor;
+      ctx.fillRect(0, 0, W, H);
     }
+  }
 
-    // Shading removed on request — every slide renders the image at full 100% opacity, no dark overlay.
-
-
-  // Optional user overlay tint, applied to every slide
-  if (overlayAlpha && overlayAlpha > 0) {
-    const [orr, ogg, obb] = hexToRgb(overlayOverride ?? "#000000");
-    ctx.fillStyle = `rgba(${orr}, ${ogg}, ${obb}, ${overlayAlpha})`;
+  // Slide 1 gets a bottom gradient; slides 2-4 get nothing extra (overlay already applied above)
+  if (slideNum === 1) {
+    const grad = ctx.createLinearGradient(0, H * 0.5, 0, H);
+    grad.addColorStop(0, "rgba(0,0,0,0)");
+    grad.addColorStop(1, "rgba(0,0,0,0.6)");
+    ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
   }
 
@@ -333,7 +259,7 @@ export function renderSlideCanvas(
       const hookRaw     = hookBlock?.text ?? "";
       const subRaw      = subBlock?.text  ?? "";
       const HOOK_SIZE   = hookBlock?.fontSize ?? 108;
-      const HOOK_LINE_H = Math.round(HOOK_SIZE * 0.9);
+      const HOOK_LINE_H = Math.round(HOOK_SIZE * 1.10);
       const SUB_SIZE    = subBlock?.fontSize  ?? 44;
       const SUB_LINE_H  = Math.round(SUB_SIZE  * 1.40);
       const PAD_X       = 90;
@@ -341,6 +267,7 @@ export function renderSlideCanvas(
       const hookCX = (hookBlock?.x ?? 0.5) * W;
       const hookCY = (hookBlock?.y ?? 0.695) * H;
       const subCX  = (subBlock?.x  ?? 0.5) * W;
+      const subCY  = (subBlock?.y  ?? 0.785) * H;
 
       ctx.textAlign    = "center";
       ctx.textBaseline = "middle";
@@ -371,12 +298,11 @@ export function renderSlideCanvas(
         }
       }
 
-      // Subtitle — centred around its block position (baked at generation to tuck under the hook)
+      // Subtitle — centred around subCY, accent colour
       if (subLines.length > 0) {
         const totalH = subLines.length * SUB_LINE_H;
-        const subCY = (subBlock?.y ?? 0.785) * H;
         ctx.font      = `normal 400 ${SUB_SIZE}px 'Poppins', sans-serif`;
-        ctx.fillStyle = subtitleOverride ?? accentColor;
+        ctx.fillStyle = accentColor;
         let y = subCY - totalH / 2 + SUB_LINE_H / 2;
         for (const line of subLines) {
           ctx.fillText(stripPipes(line), subCX, y);
@@ -398,7 +324,7 @@ export function renderSlideCanvas(
         const lines = wrapCanvas(ctx, stripPipes(block.text), maxW);
         const totalH = lines.length * fontSize * st.lineH;
         const cx = block.x * W;
-        let y = block.y * H - totalH + (fontSize * st.lineH) / 2;
+        let y = block.y * H - totalH / 2 + (fontSize * st.lineH) / 2;
         for (const line of lines) { ctx.fillText(stripPipes(line), cx, y); y += fontSize * st.lineH; }
       }
     }
@@ -437,18 +363,15 @@ export function renderSlideCanvas(
   return canvas.toDataURL("image/png");
 }
 
-export function renderAllThumbs(
+function renderAllThumbs(
   item: Pick<CarouselItem, "blocks" | "coverImg" | "bodyImg">,
   logoImg: HTMLImageElement | null,
   preset: ClientPreset,
   lineSpacing = 1.2,
-  accentOverride?: string,
-  subtitleOverride?: string,
-  overlayOverride?: string,
-  overlayAlpha?: number
+  accentOverride?: string
 ): string[] {
   return ([1,2,3,4] as const).map(n =>
-    renderSlideCanvas(n, item.blocks, item.coverImg, item.bodyImg, logoImg, preset, SCALE, false, lineSpacing, accentOverride, subtitleOverride, overlayOverride, overlayAlpha)
+    renderSlideCanvas(n, item.blocks, item.coverImg, item.bodyImg, logoImg, preset, SCALE, false, lineSpacing, accentOverride)
   );
 }
 
@@ -517,15 +440,11 @@ type EditorProps = {
   preset: ClientPreset;
   logoImg: HTMLImageElement | null;
   heroWordColor: string;
-  subtitleColor: string;
-  overlayColor: string;
-  overlayAlpha: number;
   onSave: (blocks: Block[]) => void;
   onClose: () => void;
-  slideBackgrounds?: (HTMLImageElement | null)[];
 };
 
-export function SlideEditorModal({ item, preset, logoImg, heroWordColor, subtitleColor, overlayColor, overlayAlpha, onSave, onClose, slideBackgrounds }: EditorProps) {
+function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave, onClose }: EditorProps) {
   const [activeSlide, setActiveSlide] = useState<1|2|3|4>(1);
   const [blocks, setBlocks] = useState<Block[]>(() => item.blocks.map(b => ({ ...b })));
   const [dragging, setDragging] = useState<{
@@ -539,12 +458,11 @@ export function SlideEditorModal({ item, preset, logoImg, heroWordColor, subtitl
   const containerRef = useRef<HTMLDivElement>(null);
 
   const bgUrls = useMemo(() =>
-    ([1,2,3,4] as const).map(n => {
-      const bg = slideBackgrounds ? (slideBackgrounds[n - 1] ?? null) : (n === 1 ? item.coverImg : item.bodyImg);
-      return renderSlideCanvas(n, blocks, n === 1 ? bg : null, n === 1 ? null : bg, logoImg, preset, 1, true, 1.2, undefined, undefined, overlayColor, overlayAlpha);
-    }),
+    ([1,2,3,4] as const).map(n =>
+      renderSlideCanvas(n, blocks, item.coverImg, item.bodyImg, logoImg, preset, 1, true)
+    ),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [item.coverImg, item.bodyImg, logoImg, preset.pageColor, preset.overlayColor, overlayColor, overlayAlpha, slideBackgrounds]
+  [item.coverImg, item.bodyImg, logoImg, preset.pageColor, preset.overlayColor]
   );
 
   const activeBlockIds = SLIDE_BLOCK_IDS[activeSlide];
@@ -716,7 +634,7 @@ export function SlideEditorModal({ item, preset, logoImg, heroWordColor, subtitl
                     position: "absolute",
                     left: `${block.x * 100}%`,
                     top: `${block.y * 100}%`,
-                    transform: (block.id === "body2" || block.id === "body3" || block.id === "cta") ? "translate(-50%, -100%)" : "translate(-50%, -50%)",
+                    transform: "translate(-50%, -50%)",
                     zIndex: isLogo ? 14 : isLine ? 12 : 10,
                     width: blockDisplayW,
                     textAlign: "center",
@@ -780,7 +698,7 @@ export function SlideEditorModal({ item, preset, logoImg, heroWordColor, subtitl
                         fontFamily: st.font.replace(/"/g, "'"),
                         fontSize: dispFontSize,
                         lineHeight: st.lineH,
-                        color: block.id === "subtitle" ? subtitleColor : tc,
+                        color: tc,
                         textShadow: "0 2px 12px rgba(0,0,0,0.95)",
                         whiteSpace: "pre-wrap",
                         wordBreak: "break-word",
@@ -865,6 +783,18 @@ function DropZone({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
+// Accept anything that looks like an image by extension, even when the browser
+// hands back an empty or non-standard file.type (common with HEIC/HEIF photos
+// from iPhone, and with some folder-picker / drag-drop flows on Windows).
+const IMAGE_EXT_RE = /\.(jpe?g|png|webp|gif|heic|heif|bmp|tiff?|avif)$/i;
+
+// Natural, case-insensitive filename sort (so "image2.jpg" sorts before
+// "image10.jpg") — used to make image-to-CSV-row order predictable instead of
+// relying on the OS/browser's arbitrary folder-select or drag-drop order.
+function naturalFileCompare(a: string, b: string): number {
+  return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
+}
+
 export default function BulkCarousel() {
   const [phase, setPhase] = useState<Phase>("upload");
 
@@ -873,8 +803,6 @@ export default function BulkCarousel() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvError, setCsvError] = useState<string | null>(null);
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
-  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
-  useEffect(() => { setSelectedRows(new Set(csvRows.map((_, i) => i))); }, [csvRows]);
   const csvState = csvFile ? { file: csvFile, error: csvError, rows: csvRows } : null;
   const [coverFiles, setCoverFiles] = useState<File[]>([]);
   const [bodyFiles, setBodyFiles] = useState<File[]>([]);
@@ -890,19 +818,10 @@ export default function BulkCarousel() {
   const logoImgRef = useRef<HTMLImageElement | null>(null);
   const [lineSpacing, setLineSpacing] = useState(1.2);
   const lineSpacingRef = useRef(1.2);
-  const [heroWordColor, setHeroWordColor] = useState("#ffffff");
+  const [heroWordColor, setHeroWordColor] = useState("#C4879A");
   const heroWordColorRef = useRef("#C4879A");
-  const [subtitleColor, setSubtitleColor] = useState("#C4879A");
-  const subtitleColorRef = useRef("#C4879A");
-  const [overlayColor, setOverlayColor] = useState("#000000");
-  const overlayColorRef = useRef("#000000");
-  const [overlayAlpha, setOverlayAlpha] = useState(0);
-  const overlayAlphaRef = useRef(0);
   useEffect(() => { lineSpacingRef.current = lineSpacing; }, [lineSpacing]);
   useEffect(() => { heroWordColorRef.current = heroWordColor; }, [heroWordColor]);
-  useEffect(() => { subtitleColorRef.current = subtitleColor; }, [subtitleColor]);
-  useEffect(() => { overlayColorRef.current = overlayColor; }, [overlayColor]);
-  useEffect(() => { overlayAlphaRef.current = overlayAlpha; }, [overlayAlpha]);
 
   // Caption state
   const [captionMap, setCaptionMap] = useState<Record<string, string>>({});
@@ -912,14 +831,8 @@ export default function BulkCarousel() {
 
   // Schedule state
   const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
-  const [scheduleDay, setScheduleDay] = useState<0|1|3|5>(WEEKDAY.WED);
   const [scheduling, setScheduling] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
-  const [musicTrack, setMusicTrack] = useState<MusicTrack | null>(null);
-  const [itemTracks, setItemTracks] = useState<Record<string, MusicTrack>>({});
-  const [musicItemId, setMusicItemId] = useState<string | null>(null);
-  const [musicPickerOpen, setMusicPickerOpen] = useState(false);
-  const [dragCtx, setDragCtx] = useState<{ list: "cover" | "body"; index: number } | null>(null);
 
   const csvInputRef  = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -927,13 +840,6 @@ export default function BulkCarousel() {
 
   const { presets } = usePresets();
   const selectedPreset = useMemo(() => presets.find(p => p.id === selectedPresetId) ?? null, [presets, selectedPresetId]);
-  // Auto-load the client's brand accent colour into the hook colour when a client is picked.
-  useEffect(() => {
-    if (selectedPreset && (selectedPreset as any).accentColor) {
-      setHeroWordColor((selectedPreset as any).accentColor);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPresetId]);
 
   // ── CSV ──────────────────────────────────────────────────────────────────────
 
@@ -977,18 +883,28 @@ export default function BulkCarousel() {
 
   // ── Image sets ───────────────────────────────────────────────────────────────
 
-  const appendImages = (setter: React.Dispatch<React.SetStateAction<File[]>>, files: File[]) =>
-    setter(prev => [...prev, ...files.filter(f => f.type.startsWith("image/"))]);
-
-  const reorderFiles = (list: "cover" | "body", from: number, to: number) => {
-    const setter = list === "cover" ? setCoverFiles : setBodyFiles;
-    setter(prev => {
-      if (from === to || from < 0 || to < 0 || from >= prev.length || to >= prev.length) return prev;
-      const next = [...prev];
-      const [moved] = next.splice(from, 1);
-      next.splice(to, 0, moved);
-      return next;
-    });
+  // Accepts any file that looks like an image (by MIME type OR filename
+  // extension, so HEIC/HEIF and any file the browser reports a blank type for
+  // don't get silently dropped), then re-sorts the whole set by filename so
+  // the order used to match images to CSV rows is deterministic regardless of
+  // what order the OS handed the files back in (folder-select and drag-drop
+  // order is not guaranteed to be alphabetical, and previously any mismatch
+  // here silently shifted every image after it out of sync with the CSV).
+  const appendImages = (setter: React.Dispatch<React.SetStateAction<File[]>>, files: File[]) => {
+    const accepted: File[] = [];
+    let skipped = 0;
+    for (const f of files) {
+      if (f.type.startsWith("image/") || IMAGE_EXT_RE.test(f.name)) {
+        accepted.push(f);
+      } else {
+        skipped += 1;
+      }
+    }
+    if (skipped > 0) {
+      toast.error(`Skipped ${skipped} file${skipped !== 1 ? "s" : ""} that didn't look like an image.`);
+    }
+    if (accepted.length === 0) return;
+    setter(prev => [...prev, ...accepted].sort((a, b) => naturalFileCompare(a.name, b.name)));
   };
 
   const handleCoverDrop = (e: React.DragEvent) => {
@@ -1016,22 +932,17 @@ export default function BulkCarousel() {
       logoImgRef.current = logoImg;
 
       const rendered: CarouselItem[] = [];
-      const chosen: number[] = [];
-      for (let i = 0; i < csvRows.length; i++) if (selectedRows.has(i)) chosen.push(i);
-      for (let c = 0; c < chosen.length; c++) {
-        const i = chosen[c];
+      for (let i = 0; i < csvRows.length; i++) {
         const row = csvRows[i];
         let coverImg: HTMLImageElement | null = null;
         let bodyImg: HTMLImageElement | null = null;
         if (coverFiles[i]) try { coverImg = await loadImg(URL.createObjectURL(coverFiles[i])); } catch {}
-        bodyImg = coverImg; // same photo used across every slide
+        if (bodyFiles[i])  try { bodyImg  = await loadImg(URL.createObjectURL(bodyFiles[i]));  } catch {}
 
         const blocks = makeBlocks(row);
-        const subB0 = blocks.find(b => b.id === "subtitle");
-        if (subB0) subB0.y = computeTuckedSubtitleY(row.slide1_hook, row.slide1_subtitle, blocks.find(b => b.id === "hook"), subB0);
-        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, lineSpacing, heroWordColor, subtitleColor, overlayColor, overlayAlpha);
-        rendered.push({ id: `item-${i}`, rowNum: c + 1, hook: row.slide1_hook, blocks, coverImg, bodyImg, thumbs });
-        setRenderProgress(Math.round(((c + 1) / chosen.length) * 100));
+        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, lineSpacing, heroWordColor);
+        rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.slide1_hook, blocks, coverImg, bodyImg, thumbs });
+        setRenderProgress(Math.round(((i + 1) / csvRows.length) * 100));
       }
 
       setItems(rendered);
@@ -1049,7 +960,7 @@ export default function BulkCarousel() {
     if (!selectedPreset) return;
     setItems(prev => prev.map(item => {
       if (item.id !== id) return item;
-      const thumbs = renderAllThumbs({ blocks: newBlocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, logoImgRef.current, selectedPreset, lineSpacingRef.current, heroWordColorRef.current, subtitleColorRef.current, overlayColorRef.current, overlayAlphaRef.current);
+      const thumbs = renderAllThumbs({ blocks: newBlocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, logoImgRef.current, selectedPreset, lineSpacingRef.current, heroWordColorRef.current);
       return { ...item, blocks: newBlocks, thumbs };
     }));
   };
@@ -1060,7 +971,7 @@ export default function BulkCarousel() {
     const id = setTimeout(() => {
       const ls = lineSpacingRef.current;
       setItems(prev => prev.map(item => {
-        const thumb1 = renderSlideCanvas(1, item.blocks, item.coverImg, item.bodyImg, logoImgRef.current, selectedPreset!, SCALE, false, ls, heroWordColorRef.current, subtitleColorRef.current, overlayColorRef.current, overlayAlphaRef.current);
+        const thumb1 = renderSlideCanvas(1, item.blocks, item.coverImg, item.bodyImg, logoImgRef.current, selectedPreset!, SCALE, false, ls, heroWordColorRef.current);
         return { ...item, thumbs: [thumb1, ...item.thumbs.slice(1)] };
       }));
     }, 180);
@@ -1076,7 +987,7 @@ export default function BulkCarousel() {
       const ls = lineSpacingRef.current;
       setItems(prev => prev.map(item => ({
         ...item,
-        thumbs: renderAllThumbs(item, logoImgRef.current, selectedPreset!, ls, heroWordColorRef.current, subtitleColorRef.current, overlayColorRef.current, overlayAlphaRef.current),
+        thumbs: renderAllThumbs(item, logoImgRef.current, selectedPreset!, ls, heroWordColorRef.current),
       })));
     };
     import.meta.hot.on("vite:afterUpdate", handler);
@@ -1175,36 +1086,21 @@ export default function BulkCarousel() {
 
   // ── Schedule ─────────────────────────────────────────────────────────────────
 
-  const goToSchedule = (day: 0|1|3|5 = scheduleDay) => {
-    const date = nextWeekday(day, POST_TIME);
-    setScheduleEntries(items.map((item) => ({
-      date,
-      time: POST_TIME,
-      platforms: ["instagram", "facebook"] as ("instagram" | "facebook")[],
-      presetId: selectedPresetId,
-      caption: captionMap[item.id] ?? "",
-    })));
+  const goToSchedule = () => {
+    const base = new Date();
+    base.setHours(0, 0, 0, 0);
+    setScheduleEntries(items.map((item, i) => {
+      const d = new Date(base);
+      d.setDate(d.getDate() + i);
+      return {
+        date: d.toISOString().slice(0, 10),
+        time: "18:15",
+        platforms: ["instagram"] as ("instagram" | "facebook")[],
+        presetId: selectedPresetId,
+        caption: captionMap[item.id] ?? "",
+      };
+    }));
     setPhase("schedule");
-  };
-
-  const applyScheduleDay = (day: 0|1|3|5) => {
-    setScheduleDay(day);
-    const date = nextWeekday(day, POST_TIME);
-    setScheduleEntries((prev) => prev.map((e) => ({ ...e, date, time: POST_TIME })));
-  };
-
-  const removeItem = (id: string) => {
-      setItems(prev => {
-              const idx = prev.findIndex(it => it.id === id);
-              if (idx !== -1) {
-                        setScheduleEntries(entries => entries.filter((_, i) => i !== idx));
-              }
-              return prev.filter(it => it.id !== id);
-      });
-        setCaptionMap(prev => { const next = { ...prev }; delete next[id]; return next; });
-        setItemTracks(prev => { const next = { ...prev }; delete next[id]; return next; });
-        if (editingItemId === id) setEditingItemId(null);
-        toast.success("Carousel removed");
   };
 
   const handleGetApprovalGroups = useCallback(async () => {
@@ -1248,8 +1144,6 @@ export default function BulkCarousel() {
               imageUrls, caption: entry.caption || "",
               title: item.hook.slice(0, 80) || `Carousel ${item.rowNum}`,
               platforms: entry.platforms,
-              musicTrack: itemTracks[item.id] || musicTrack || undefined,
-              sourceTool: "Bulk Carousel",
             },
             scheduledAt: new Date(`${entry.date}T${entry.time}`).toISOString(),
           }),
@@ -1268,23 +1162,6 @@ export default function BulkCarousel() {
     }
   };
 
-  const copyClientLink = async () => {
-    if (!selectedPreset) { toast.error("No client selected"); return; }
-    try {
-      let token = (selectedPreset as any).clientPortalToken as string | null;
-      if (!token) {
-        const r = await fetch(`${BASE}/api/presets/${selectedPreset.id}/generate-portal-token`, { method: "POST" });
-        if (!r.ok) throw new Error("Could not create the client link");
-        token = (await r.json()).token;
-      }
-      const url = `${window.location.origin}${BASE}/portal/${token}`;
-      await navigator.clipboard.writeText(url);
-      toast.success("Client preview link copied");
-    } catch (e: any) {
-      toast.error(e?.message || "Could not copy the link");
-    }
-  };
-
   // ── Done ──────────────────────────────────────────────────────────────────────
 
   if (phase === "done") {
@@ -1297,7 +1174,6 @@ export default function BulkCarousel() {
         </div>
         <div className="flex gap-3">
           <Button variant="outline" asChild><Link href="/scheduler">View queue</Link></Button>
-          <Button variant="outline" onClick={copyClientLink}>Copy client link</Button>
           <Button onClick={() => { setCsvFile(null); setCsvError(null); setCsvRows([]); setCoverFiles([]); setBodyFiles([]); setItems([]); setSelectedPresetId(null); setPhase("upload"); }}>
             Start again
           </Button>
@@ -1320,16 +1196,9 @@ export default function BulkCarousel() {
         </header>
 
         <div className="max-w-4xl mx-auto px-6 py-8">
-          <div className="mb-6">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-2">Posting day for this batch</p>
-            <div className="inline-flex rounded-full border border-border/50 overflow-hidden">
-              <button type="button" onClick={() => applyScheduleDay(WEEKDAY.MON)} className={`px-5 py-2 text-sm font-semibold transition-colors ${scheduleDay === WEEKDAY.MON ? "bg-pink-600 text-white" : "hover:bg-white/5"}`}>Monday · Bulk</button>
-              <button type="button" onClick={() => applyScheduleDay(WEEKDAY.FRI)} className={`px-5 py-2 text-sm font-semibold transition-colors ${scheduleDay === WEEKDAY.FRI ? "bg-pink-600 text-white" : "hover:bg-white/5"}`}>Friday · Treatment</button>
-            </div>
-            <p className="text-sm text-muted-foreground mt-3">Every carousel below is auto-set to the next {scheduleDay === WEEKDAY.MON ? "Monday" : "Friday"} at {POST_TIME}. Tweak any one by hand if you need to.</p>
-          </div>
-
-          <BookedDaysStrip presetId={selectedPresetId} />
+          <p className="text-sm text-muted-foreground mb-6">
+            Set a date, time and platform for each carousel. Client account defaults to your selected preset.
+          </p>
 
           <div className="space-y-3">
             {items.map((item, i) => {
@@ -1348,18 +1217,11 @@ export default function BulkCarousel() {
                           <img key={si} src={du} alt="" className="w-10 rounded" style={{ aspectRatio: "4/5", objectFit: "cover" }} />
                         ))}
                       </div>
-                                      <Button
-                                                          variant="outline" size="sm"
-                                                          onClick={() => { if (window.confirm("Delete this carousel from the batch? You can regenerate it from your CSV.")) removeItem(item.id); }}
-                                                          className="text-red-300 border-red-500/40 hover:bg-red-950/30 hover:text-red-200 mt-2"
-                                                        >
-                                                        <Trash2 className="w-3.5 h-3.5 mr-1.5" />Delete
-                                      </Button>
                     </div>
 
-                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                                                    <div className="space-y-1">
-                                                                      <Label className="text-xs text-muted-foreground">Client</Label>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Client</Label>
                         <Select value={entry.presetId?.toString() ?? ""} onValueChange={v => updateEntry(i, "presetId", v ? parseInt(v) : null)}>
                           <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick client" /></SelectTrigger>
                           <SelectContent>
@@ -1435,20 +1297,10 @@ export default function BulkCarousel() {
             preset={selectedPreset}
             logoImg={logoImgRef.current}
             heroWordColor={heroWordColor}
-            subtitleColor={subtitleColor}
-            overlayColor={overlayColor}
-            overlayAlpha={overlayAlpha}
             onSave={blocks => handleSaveEdit(editingItem.id, blocks)}
             onClose={() => setEditingItemId(null)}
           />
         )}
-
-      <MusicPickerModal
-        open={musicItemId !== null}
-        onClose={() => setMusicItemId(null)}
-        selectedTrack={musicItemId ? (itemTracks[musicItemId] || null) : null}
-        onSelect={(t) => { if (musicItemId) { if (t) setItemTracks(prev => ({ ...prev, [musicItemId]: t })); else setItemTracks(prev => { const n = { ...prev }; delete n[musicItemId]; return n; }); } setMusicItemId(null); }}
-      />
 
         {showApprovalModal && (
           <SendForApprovalModal
@@ -1546,15 +1398,6 @@ export default function BulkCarousel() {
                   </Button>
                   <Button
                     variant="outline" size="sm"
-                    onClick={() => setMusicItemId(item.id)}
-                    className={itemTracks[item.id] ? "border-green-500/40 text-green-300 hover:bg-green-950/30" : ""}
-                    title={itemTracks[item.id] ? itemTracks[item.id].name : "Choose a track for this carousel"}
-                  >
-                    <Music className="w-3.5 h-3.5 mr-1.5" />
-                    {itemTracks[item.id] ? itemTracks[item.id].name.slice(0, 14) : "Track"}
-                  </Button>
-                  <Button
-                    variant="outline" size="sm"
                     onClick={() => generateCaption(item)}
                     disabled={generatingCaptionId === item.id}
                   >
@@ -1562,13 +1405,6 @@ export default function BulkCarousel() {
                       ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                       : <Sparkles className="w-3.5 h-3.5 mr-1.5" />}
                     Caption
-                  </Button>
-                  <Button
-                    variant="outline" size="sm"
-                    onClick={() => { if (window.confirm("Delete this carousel from the batch? You can regenerate it from your CSV.")) removeItem(item.id); }}
-                    className="text-red-300 border-red-500/40 hover:bg-red-950/30 hover:text-red-200"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />Delete
                   </Button>
                 </div>
               </div>
@@ -1609,7 +1445,7 @@ export default function BulkCarousel() {
 
   // ── Upload phase ──────────────────────────────────────────────────────────────
 
-  const canGenerate = selectedRows.size > 0 && selectedPresetId !== null;
+  const canGenerate = csvRows.length > 0 && selectedPresetId !== null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -1619,7 +1455,7 @@ export default function BulkCarousel() {
         </Link>
         <div>
           <h1 className="font-bold text-lg leading-none">Bulk Carousel Creator</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">One CSV, one image per carousel, straight to a master ZIP or the scheduler.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">One CSV, two image sets, one master ZIP or direct to the scheduler.</p>
         </div>
       </header>
 
@@ -1664,21 +1500,14 @@ export default function BulkCarousel() {
           </div>
           <p className="text-sm text-muted-foreground">Required columns: {CSV_COLS.join(", ")}. Each row becomes one carousel.</p>
 
-          <div className="flex items-center gap-6 flex-wrap">
-            <div className="flex items-center gap-3">
-              <label className="text-sm text-muted-foreground whitespace-nowrap">Hero Word Colour</label>
-              <input type="color" value={heroWordColor} onChange={e => setHeroWordColor(e.target.value)} className="h-8 w-14 rounded cursor-pointer border border-border/40 bg-transparent p-0.5" />
-            </div>
-            <div className="flex items-center gap-3">
-              <label className="text-sm text-muted-foreground whitespace-nowrap">Subtitle Colour</label>
-              <input type="color" value={subtitleColor} onChange={e => setSubtitleColor(e.target.value)} className="h-8 w-14 rounded cursor-pointer border border-border/40 bg-transparent p-0.5" />
-            </div>
-            <div className="flex items-center gap-3">
-              <label className="text-sm text-muted-foreground whitespace-nowrap">Overlay (all slides)</label>
-              <input type="color" value={overlayColor} onChange={e => setOverlayColor(e.target.value)} className="h-8 w-14 rounded cursor-pointer border border-border/40 bg-transparent p-0.5" />
-              <input type="range" min={0} max={0.8} step={0.05} value={overlayAlpha} onChange={e => setOverlayAlpha(parseFloat(e.target.value))} className="w-28 cursor-pointer" />
-              <span className="text-xs text-muted-foreground w-10">{Math.round(overlayAlpha * 100)}%</span>
-            </div>
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-muted-foreground whitespace-nowrap">Hero Word Colour</label>
+            <input
+              type="color"
+              value={heroWordColor}
+              onChange={e => setHeroWordColor(e.target.value)}
+              className="h-8 w-14 rounded cursor-pointer border border-border/40 bg-transparent p-0.5"
+            />
           </div>
 
           <div
@@ -1707,74 +1536,60 @@ export default function BulkCarousel() {
           </div>
           <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={e => { if (e.target.files?.[0]) parseCsv(e.target.files[0]); e.target.value = ""; }} />
           {csvState !== null && csvState.error !== null && <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-2">{csvState.error}</p>}
-          {csvRows.length > 0 && (
-            <div className="rounded-xl border border-border/40 p-4 space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <p className="text-sm font-medium">Pick which carousels to use <span className="text-muted-foreground font-normal">({selectedRows.size} of {csvRows.length} selected)</span></p>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setSelectedRows(new Set(csvRows.map((_, i) => i)))}>Select all</Button>
-                  <Button variant="outline" size="sm" onClick={() => setSelectedRows(new Set())}>Clear</Button>
-                </div>
-              </div>
-              <div className="max-h-72 overflow-y-auto space-y-1 pr-1">
-                {csvRows.map((row, i) => {
-                  const on = selectedRows.has(i);
-                  return (
-                    <label key={i} className={`flex items-start gap-3 rounded-lg px-3 py-2 cursor-pointer transition-colors ${on ? "bg-primary/5 border border-primary/30" : "bg-muted/20 border border-transparent hover:bg-muted/40"}`}>
-                      <input type="checkbox" checked={on} onChange={() => setSelectedRows(prev => { const n = new Set(prev); if (n.has(i)) n.delete(i); else n.add(i); return n; })} className="mt-0.5 w-4 h-4 shrink-0 accent-pink-500" />
-                      <span className="min-w-0">
-                        <span className="text-sm font-medium block truncate">{i + 1}. {row.slide1_hook || "(no hook)"}</span>
-                        {row.slide1_subtitle && <span className="text-xs text-muted-foreground block truncate">{row.slide1_subtitle}</span>}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-              <p className="text-xs text-muted-foreground">Only the ticked carousels get made. Images still match by row order.</p>
-            </div>
-          )}
         </section>
 
         {/* Step 3: Images */}
         <section className="space-y-4">
           <h2 className="font-semibold text-base">3. Upload images</h2>
           <p className="text-sm text-muted-foreground">
-            Images are matched to CSV rows by order. Upload {csvRows.length > 0 ? csvRows.length : "N"} of each to match your {csvRows.length > 0 ? csvRows.length : ""} row{csvRows.length !== 1 ? "s" : ""}.
+            Images are matched to CSV rows in filename order (so name them 1, 2, 3... or however you want them sorted). Upload {csvRows.length > 0 ? csvRows.length : "N"} of each to match your {csvRows.length > 0 ? csvRows.length : ""} row{csvRows.length !== 1 ? "s" : ""}.
           </p>
 
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Photo for the carousel</Label>
-              <p className="text-xs text-muted-foreground">One photo per row. It is used behind every slide of that carousel.</p>
+              <Label className="text-sm font-medium">Cover / hero image (Slide 1)</Label>
+              <p className="text-xs text-muted-foreground">The main photo shown on the hook slide.</p>
               <DropZone
-                label="Drop cover images" hint="One per row, in order"
+                label="Drop cover images" hint="One per row, sorted by filename"
                 files={coverFiles} accept="image/*" active={coverDrag} color="violet"
                 onDragOver={() => setCoverDrag(true)} onDragLeave={() => setCoverDrag(false)}
                 onDrop={handleCoverDrop} onClick={() => coverInputRef.current?.click()}
               />
               <input ref={coverInputRef} type="file" accept="image/*" multiple className="hidden"
                 onChange={e => { if (e.target.files) appendImages(setCoverFiles, Array.from(e.target.files)); e.target.value = ""; }} />
-              <ApprovedImagesPicker
-                clientName={selectedPreset?.name}
-                label="Use approved photos (covers)"
-                onAddImages={files => appendImages(setCoverFiles, files)}
-              />
               {coverFiles.length > 0 && (
-                <div className="flex flex-wrap gap-1 items-center">
-                  <p className="w-full text-xs text-muted-foreground">Drag the chips to reorder. Image 1 goes with CSV row 1, image 2 with row 2, and so on.</p>
+                <div className="flex flex-wrap gap-1">
                   {coverFiles.map((f, i) => (
-                    <div
-                      key={i}
-                      draggable
-                      onDragStart={() => setDragCtx({ list: "cover", index: i })}
-                      onDragOver={e => e.preventDefault()}
-                      onDrop={e => { e.preventDefault(); if (dragCtx?.list === "cover") reorderFiles("cover", dragCtx.index, i); setDragCtx(null); }}
-                      className="flex items-center gap-1 text-xs bg-muted/40 rounded-full px-2.5 py-1 cursor-grab active:cursor-grabbing"
-                    >
-                      <GripVertical className="w-3 h-3 text-muted-foreground shrink-0" />
+                    <div key={i} className="flex items-center gap-1 text-xs bg-muted/40 rounded-full px-2.5 py-1">
                       <span className="text-muted-foreground w-4 shrink-0">{i + 1}.</span>
                       <span className="truncate max-w-28">{f.name}</span>
                       <button onClick={() => setCoverFiles(prev => prev.filter((_, j) => j !== i))} className="ml-0.5 text-muted-foreground hover:text-foreground">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Body image (Slides 2, 3, 4)</Label>
+              <p className="text-xs text-muted-foreground">Used behind the body and CTA slides.</p>
+              <DropZone
+                label="Drop body images" hint="One per row, sorted by filename"
+                files={bodyFiles} accept="image/*" active={bodyDrag} color="indigo"
+                onDragOver={() => setBodyDrag(true)} onDragLeave={() => setBodyDrag(false)}
+                onDrop={handleBodyDrop} onClick={() => bodyInputRef.current?.click()}
+              />
+              <input ref={bodyInputRef} type="file" accept="image/*" multiple className="hidden"
+                onChange={e => { if (e.target.files) appendImages(setBodyFiles, Array.from(e.target.files)); e.target.value = ""; }} />
+              {bodyFiles.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {bodyFiles.map((f, i) => (
+                    <div key={i} className="flex items-center gap-1 text-xs bg-muted/40 rounded-full px-2.5 py-1">
+                      <span className="text-muted-foreground w-4 shrink-0">{i + 1}.</span>
+                      <span className="truncate max-w-28">{f.name}</span>
+                      <button onClick={() => setBodyFiles(prev => prev.filter((_, j) => j !== i))} className="ml-0.5 text-muted-foreground hover:text-foreground">
                         <X className="w-3 h-3" />
                       </button>
                     </div>
@@ -1787,45 +1602,16 @@ export default function BulkCarousel() {
           {csvRows.length > 0 && (
             <div className="flex gap-4 text-xs text-muted-foreground">
               <span className={coverFiles.length >= csvRows.length ? "text-emerald-400" : "text-amber-400"}>
-                Photos: {coverFiles.length}/{csvRows.length}
+                Cover: {coverFiles.length}/{csvRows.length}
               </span>
-              {coverFiles.length < csvRows.length && (
+              <span className={bodyFiles.length >= csvRows.length ? "text-emerald-400" : "text-amber-400"}>
+                Body: {bodyFiles.length}/{csvRows.length}
+              </span>
+              {(coverFiles.length < csvRows.length || bodyFiles.length < csvRows.length) && (
                 <span>Missing rows will render with a solid brand colour background.</span>
               )}
             </div>
           )}
-        </section>
-
-        {/* Step 3.5: Music (optional) */}
-        <section className="space-y-2">
-          <h2 className="font-semibold text-base">Add music (optional)</h2>
-          <p className="text-sm text-muted-foreground">
-            One track is attached to every carousel in this batch when it posts to Instagram.
-          </p>
-          <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setMusicPickerOpen(true)}
-              className={musicTrack ? "border-green-500/40 text-green-300 hover:bg-green-950/30" : ""}
-            >
-              <Music className="w-4 h-4 mr-2" />
-              {musicTrack ? musicTrack.name.slice(0, 30) : "Browse music"}
-            </Button>
-            {musicTrack && (
-              <button
-                onClick={() => setMusicTrack(null)}
-                className="text-xs text-muted-foreground hover:text-foreground"
-              >
-                Remove
-              </button>
-            )}
-          </div>
-          <MusicPickerModal
-            open={musicPickerOpen}
-            onClose={() => setMusicPickerOpen(false)}
-            selectedTrack={musicTrack}
-            onSelect={t => setMusicTrack(t)}
-          />
         </section>
 
         {/* Step 4: Preview table */}
@@ -1841,7 +1627,8 @@ export default function BulkCarousel() {
                       <th className="text-left px-3 py-2 font-medium">Hook</th>
                       <th className="text-left px-3 py-2 font-medium">Subtitle</th>
                       <th className="text-left px-3 py-2 font-medium">CTA</th>
-                      <th className="text-center px-3 py-2 font-medium">Photo</th>
+                      <th className="text-center px-3 py-2 font-medium">Cover</th>
+                      <th className="text-center px-3 py-2 font-medium">Body</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
@@ -1853,6 +1640,11 @@ export default function BulkCarousel() {
                         <td className="px-3 py-2 text-muted-foreground max-w-[120px] truncate">{row.slide4_cta}</td>
                         <td className="px-3 py-2 text-center">
                           {coverFiles[i]
+                            ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" />
+                            : <X className="w-3.5 h-3.5 text-amber-400/60 mx-auto" />}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          {bodyFiles[i]
                             ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" />
                             : <X className="w-3.5 h-3.5 text-amber-400/60 mx-auto" />}
                         </td>
@@ -1871,7 +1663,7 @@ export default function BulkCarousel() {
             <Button onClick={handleGenerate} disabled={rendering} size="lg" className="min-w-52">
               {rendering
                 ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Rendering... {renderProgress}%</>
-                : `Generate ${selectedRows.size} carousel${selectedRows.size !== 1 ? "s" : ""}`}
+                : `Generate ${csvRows.length} carousel${csvRows.length !== 1 ? "s" : ""}`}
             </Button>
           </div>
         )}
