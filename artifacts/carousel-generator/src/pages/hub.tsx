@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp } from "lucide-react";
 
 const TOOLS = [
   {
@@ -344,6 +344,24 @@ const TOOLS = [
     color: "from-pink-500/20 to-pink-500/5",
     border: "hover:border-pink-500/50",
     iconColor: "text-pink-400",
+  },
+  {
+    href: "/tweet-maker",
+    icon: Twitter,
+    name: "Tweet Maker",
+    description: "Draft and format posts for X/Twitter, in the client's voice, ready to copy or schedule.",
+    color: "from-sky-500/20 to-sky-500/5",
+    border: "hover:border-sky-500/50",
+    iconColor: "text-sky-400",
+  },
+  {
+    href: "/revenue-ideas",
+    icon: TrendingUp,
+    name: "Revenue Ideas",
+    description: "Generate, review and approve fresh revenue ideas per client, with a history of everything approved.",
+    color: "from-emerald-500/20 to-emerald-500/5",
+    border: "hover:border-emerald-500/50",
+    iconColor: "text-emerald-400",
   },
 ];
 
