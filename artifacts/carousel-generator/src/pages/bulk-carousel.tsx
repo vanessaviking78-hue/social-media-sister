@@ -22,7 +22,7 @@ loadGoogleFonts();
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const W = 1080;
 const H = 1440;
-const SCALE = 2;
+export const SCALE = 2;
 const EDITOR_W = 360;
 const EDITOR_SCALE = EDITOR_W / W;
 
@@ -30,7 +30,7 @@ const CSV_COLS = ["slide1_hook", "slide1_subtitle", "slide2_body", "slide3_body"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type CsvRow = {
+export type CsvRow = {
   slide1_hook: string;
   slide1_subtitle: string;
   slide2_body: string;
@@ -40,7 +40,7 @@ type CsvRow = {
 
 type BlockId = "hook" | "subtitle" | "body2" | "body3" | "cta" | "logo" | "line";
 
-type Block = {
+export type Block = {
   id: BlockId;
   text: string;
   x: number;       // 0-1 horizontal centre fraction
@@ -107,7 +107,7 @@ const defaultBlock = (id: BlockId, text = ""): Block => {
   return { id, text, ...pos[id], ...extra };
 };
 
-function makeBlocks(row: CsvRow): Block[] {
+export function makeBlocks(row: CsvRow): Block[] {
   return [
     defaultBlock("hook",     row.slide1_hook),
     defaultBlock("subtitle", row.slide1_subtitle),
@@ -188,6 +188,30 @@ function wrapCanvas(ctx: CanvasRenderingContext2D, text: string, maxW: number): 
   return lines;
 }
 
+export function computeTuckedSubtitleY(hookRaw: string, subRaw: string, hookBlock?: Block, subBlock?: Block): number {
+  const DEFAULT_Y = 0.785;
+  if (!subRaw || !subRaw.trim()) return subBlock?.y ?? DEFAULT_Y;
+  const c = document.createElement("canvas");
+  const ctx = c.getContext("2d");
+  if (!ctx) return subBlock?.y ?? DEFAULT_Y;
+  const PAD_X = 90;
+  const HOOK_SIZE = hookBlock?.fontSize ?? 108;
+  const HOOK_LINE_H = Math.round(HOOK_SIZE * 0.9);
+  const SUB_SIZE = subBlock?.fontSize ?? 44;
+  const SUB_LINE_H = Math.round(SUB_SIZE * 1.40);
+  const hookCY = (hookBlock?.y ?? 0.695) * H;
+  ctx.font = `700 ${HOOK_SIZE}px 'Bebas Neue', sans-serif`;
+  const hookLines = hookRaw && hookRaw.trim()
+    ? wrapCanvas(ctx, stripPipes(hookRaw).trim().toUpperCase(), W - PAD_X * 2)
+    : [];
+  ctx.font = `normal 400 ${SUB_SIZE}px 'Poppins', sans-serif`;
+  const subLines = wrapCanvas(ctx, stripPipes(subRaw).trim(), W - PAD_X * 2);
+  const hookH = hookLines.length * HOOK_LINE_H;
+  const subTotalH = subLines.length * SUB_LINE_H;
+  const subCY = (hookCY + hookH / 2) + 0.015 * H + subTotalH / 2;
+  return Math.max(0.04, Math.min(0.96, subCY / H));
+}
+
 function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, alpha: number) {
   const s = Math.max(W / img.width, H / img.height);
   const iw = img.width * s, ih = img.height * s;
@@ -196,7 +220,7 @@ function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, alpha: 
   ctx.globalAlpha = 1;
 }
 
-function renderSlideCanvas(
+export function renderSlideCanvas(
   slideNum: 1|2|3|4,
   blocks: Block[],
   coverImg: HTMLImageElement | null,
@@ -444,7 +468,7 @@ type EditorProps = {
   onClose: () => void;
 };
 
-function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave, onClose }: EditorProps) {
+export function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave, onClose }: EditorProps) {
   const [activeSlide, setActiveSlide] = useState<1|2|3|4>(1);
   const [blocks, setBlocks] = useState<Block[]>(() => item.blocks.map(b => ({ ...b })));
   const [dragging, setDragging] = useState<{
