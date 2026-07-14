@@ -321,7 +321,7 @@ function ScheduleDialog({ presets, onClose, onSaved, editing }: ScheduleDialogPr
 
 export default function Scheduler() {
   const { presets } = usePresets();
-  const [tab, setTab] = useState<"upcoming" | "published" | "failed" | "dashboard" | "feed">("upcoming");
+  const [tab, setTab] = useState<"upcoming" | "published" | "failed" | "dashboard" | "feed" | "grid">("upcoming");
   const [posts, setPosts] = useState<ScheduledPost[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -421,6 +421,50 @@ export default function Scheduler() {
     handleReschedule(post, date);
   };
 
+  // Client Grid: dragging one tile onto another swaps their scheduled
+  // date/time, so the two posts trade places in the grid. This is the same
+  // mental model as Instagram grid planner apps — you're not renumbering
+  // the whole queue, just moving a tile to where another one was.
+  const gridDragPostRef = useRef<ScheduledPost | null>(null);
+  const [gridDragOverId, setGridDragOverId] = useState<number | null>(null);
+  const handleGridDragStart = (e: React.DragEvent, post: ScheduledPost) => {
+    gridDragPostRef.current = post;
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(post.id));
+  };
+  const handleGridDragOver = (e: React.DragEvent, post: ScheduledPost) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setGridDragOverId(post.id);
+  };
+  const handleGridDragLeave = () => setGridDragOverId(null);
+  const handleGridDrop = async (e: React.DragEvent, target: ScheduledPost) => {
+    e.preventDefault();
+    setGridDragOverId(null);
+    const dragged = gridDragPostRef.current;
+    gridDragPostRef.current = null;
+    if (!dragged || dragged.id === target.id) return;
+    setRescheduling(true);
+    try {
+      await Promise.all([
+        apiFetch(`/api/scheduler/posts/${dragged.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ scheduledAt: target.scheduledAt }),
+        }),
+        apiFetch(`/api/scheduler/posts/${target.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ scheduledAt: dragged.scheduledAt }),
+        }),
+      ]);
+      toast.success("Swapped");
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Could not reorder");
+    } finally {
+      setRescheduling(false);
+    }
+  };
+
   const clientNames = Array.from(new Set(posts.map((p) => p.clientName))).sort();
 
   const filtered = posts.filter((p) => {
@@ -493,7 +537,7 @@ export default function Scheduler() {
 
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <div className="flex bg-zinc-900 border border-zinc-800 rounded-lg p-1 gap-1">
-            {(["upcoming", "published", "failed", "feed", "dashboard"] as const).map((t) => (
+            {(["upcoming", "published", "failed", "feed", "grid", "dashboard"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -505,6 +549,7 @@ export default function Scheduler() {
                 {t === "published" && `Published ${published > 0 ? `(${published})` : ""}`}
                 {t === "failed" && `Failed ${failed > 0 ? `(${failed})` : ""}`}
                 {t === "feed" && "Preview Feed"}
+                {t === "grid" && "Client Grid"}
                 {t === "dashboard" && "Comparison"}
               </button>
             ))}
@@ -524,7 +569,7 @@ export default function Scheduler() {
             </Select>
           )}
 
-          {filterClient !== "all" && tab !== "dashboard" && tab !== "feed" && (
+          {filterClient !== "all" && tab !== "dashboard" && tab !== "feed" && tab !== "grid" && (
             <a
               href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/preview/${filterClient.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`}
               target="_blank"
@@ -611,6 +656,54 @@ export default function Scheduler() {
             {rescheduling && (
               <p className="text-xs text-zinc-500 flex items-center gap-1.5"><RefreshCw size={11} className="animate-spin" /> Saving new date…</p>
             )}
+          </div>
+        ) : tab === "grid" ? (
+          <div className="space-y-4">
+            {filterClient === "all" ? (
+              <div className="text-center py-16 text-zinc-500">
+                <ImageIcon size={40} className="mx-auto mb-3 opacity-30" />
+                <p>Pick a client above to see their grid and drag posts into place.</p>
+              </div>
+            ) : (() => {
+              const gridPosts = posts
+                .filter((p) => p.clientName === filterClient && p.status !== "cancelled" && p.status !== "failed")
+                .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+              if (!gridPosts.length) {
+                return (
+                  <div className="text-center py-16 text-zinc-500">
+                    <ImageIcon size={40} className="mx-auto mb-3 opacity-30" />
+                    <p>No posts queued for {filterClient} yet.</p>
+                  </div>
+                );
+              }
+              return (
+                <>
+                  <p className="text-xs text-zinc-500">
+                    Drag a tile onto another to swap their dates and rearrange the grid. Already-published posts are shown but can't be moved.
+                  </p>
+                  <div className="grid grid-cols-3 gap-1 max-w-xl border border-zinc-800 rounded-xl overflow-hidden p-1 bg-zinc-950">
+                    {gridPosts.map((post) => (
+                      <div
+                        key={post.id}
+                        onDragOver={post.status === "pending" ? (e) => handleGridDragOver(e, post) : undefined}
+                        onDragLeave={handleGridDragLeave}
+                        onDrop={post.status === "pending" ? (e) => handleGridDrop(e, post) : undefined}
+                        className={gridDragOverId === post.id ? "ring-1 ring-pink-500/60 rounded-md" : ""}
+                      >
+                        <FeedCard
+                          post={post}
+                          draggable={post.status === "pending"}
+                          onDragStart={(e) => handleGridDragStart(e, post)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  {rescheduling && (
+                    <p className="text-xs text-zinc-500 flex items-center gap-1.5"><RefreshCw size={11} className="animate-spin" /> Saving…</p>
+                  )}
+                </>
+              );
+            })()}
           </div>
         ) : tab === "dashboard" ? (
           <div className="space-y-4">
