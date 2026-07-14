@@ -117,6 +117,103 @@ const SLIDE_LABELS = ["Slide 1 · Hook", "Slide 2 · Body", "Slide 3 · Body", "
 // ffmpeg will burn in server-side, at the same relative size and position.
 // Also doubles as the editor — the text fields underneath write straight
 // back into the video's slideBlocks.
+// Draws the matching horizontal 1/4 strip of `video` onto `canvas`, then
+// overlays the text layers ffmpeg will burn in server-side, at the same
+// relative size and position. Shared by the inline row thumbnails and the
+// full-size preview/edit modal so both stay pixel-consistent with each other.
+function drawSlideSlice(
+  video: HTMLVideoElement,
+  canvas: HTMLCanvasElement,
+  sliceIndex: number,
+  layers: Array<Array<{ text: string; fontSize: number; yFrac: number }>>,
+) {
+  if (!video.videoWidth) return;
+  const vw = video.videoWidth, vh = video.videoHeight;
+  const sliceW = vw / 4;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const cw = canvas.width, ch = canvas.height;
+  ctx.clearRect(0, 0, cw, ch);
+  try {
+    ctx.drawImage(video, sliceIndex * sliceW, 0, sliceW, vh, 0, 0, cw, ch);
+  } catch {
+    // frame not ready yet, skip
+  }
+  const scale = cw / sliceW;
+  for (const line of layers[sliceIndex] || []) {
+    if (!line.text.trim()) continue;
+    const fontSize = Math.max(8, line.fontSize * scale);
+    ctx.font = `700 ${fontSize}px sans-serif`;
+    ctx.textAlign = "center";
+    const maxWidth = cw * 0.86;
+    const words = line.text.trim().split(/\s+/);
+    const wrapped: string[] = [];
+    let cur = "";
+    for (const w of words) {
+      const t = cur ? `${cur} ${w}` : w;
+      if (ctx.measureText(t).width > maxWidth && cur) { wrapped.push(cur); cur = w; } else cur = t;
+    }
+    if (cur) wrapped.push(cur);
+    const lineH = fontSize * 1.15;
+    const totalH = wrapped.length * lineH;
+    const topY = ch * line.yFrac - totalH / 2;
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(0, topY - 6, cw, totalH + 12);
+    ctx.fillStyle = "#fff";
+    let y = topY + fontSize * 0.8;
+    for (const l of wrapped) {
+      ctx.fillText(l, cw / 2, y);
+      y += lineH;
+    }
+  }
+}
+
+// Small 4-up slide thumbnail strip shown right in each video's row card, the
+// same idea as the per-slide thumbnails Bulk Carousel and the other carousel
+// tools already show next to each row, so every slide is visible at a glance
+// without opening the preview modal.
+function InlineSlideThumbs({ item }: { item: Item }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRefs = [useRef<HTMLCanvasElement>(null), useRef<HTMLCanvasElement>(null), useRef<HTMLCanvasElement>(null), useRef<HTMLCanvasElement>(null)];
+
+  const draw = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth) return;
+    const layers = buildTextLayers(item.slideBlocks);
+    canvasRefs.forEach((ref, i) => {
+      if (!ref.current) return;
+      drawSlideSlice(video, ref.current, i, layers);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.slideBlocks]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const onLoaded = () => { video.currentTime = video.duration * 0.5; };
+    const onSeeked = () => draw();
+    video.addEventListener("loadedmetadata", onLoaded);
+    video.addEventListener("seeked", onSeeked);
+    if (video.readyState >= 1 && video.duration) video.currentTime = video.duration * 0.5;
+    return () => {
+      video.removeEventListener("loadedmetadata", onLoaded);
+      video.removeEventListener("seeked", onSeeked);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => { draw(); }, [item.slideBlocks, draw]);
+
+  return (
+    <div className="flex gap-1 shrink-0">
+      <video ref={videoRef} src={item.url} muted playsInline className="hidden" />
+      {[0, 1, 2, 3].map((i) => (
+        <canvas key={i} ref={canvasRefs[i]} width={54} height={72} className="rounded border border-white/10 bg-black" />
+      ))}
+    </div>
+  );
+}
+
 function SlidePreviewModal({ item, onClose, onUpdateBlocks }: { item: Item; onClose: () => void; onUpdateBlocks: (blocks: SlideBlocks) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRefs = [useRef<HTMLCanvasElement>(null), useRef<HTMLCanvasElement>(null), useRef<HTMLCanvasElement>(null), useRef<HTMLCanvasElement>(null)];
@@ -126,48 +223,10 @@ function SlidePreviewModal({ item, onClose, onUpdateBlocks }: { item: Item; onCl
   const draw = useCallback(() => {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
-    const vw = video.videoWidth, vh = video.videoHeight;
-    const sliceW = vw / 4;
     const layers = buildTextLayers(item.slideBlocks);
     canvasRefs.forEach((ref, i) => {
-      const canvas = ref.current;
-      if (!canvas) return;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      const cw = canvas.width, ch = canvas.height;
-      ctx.clearRect(0, 0, cw, ch);
-      try {
-        ctx.drawImage(video, i * sliceW, 0, sliceW, vh, 0, 0, cw, ch);
-      } catch {
-        // frame not ready yet, skip
-      }
-      const scale = cw / sliceW;
-      for (const line of layers[i] || []) {
-        if (!line.text.trim()) continue;
-        const fontSize = Math.max(8, line.fontSize * scale);
-        ctx.font = `700 ${fontSize}px sans-serif`;
-        ctx.textAlign = "center";
-        const maxWidth = cw * 0.86;
-        const words = line.text.trim().split(/\s+/);
-        const wrapped: string[] = [];
-        let cur = "";
-        for (const w of words) {
-          const t = cur ? `${cur} ${w}` : w;
-          if (ctx.measureText(t).width > maxWidth && cur) { wrapped.push(cur); cur = w; } else cur = t;
-        }
-        if (cur) wrapped.push(cur);
-        const lineH = fontSize * 1.15;
-        const totalH = wrapped.length * lineH;
-        const topY = ch * line.yFrac - totalH / 2;
-        ctx.fillStyle = "rgba(0,0,0,0.5)";
-        ctx.fillRect(0, topY - 6, cw, totalH + 12);
-        ctx.fillStyle = "#fff";
-        let y = topY + fontSize * 0.8;
-        for (const l of wrapped) {
-          ctx.fillText(l, cw / 2, y);
-          y += lineH;
-        }
-      }
+      if (!ref.current) return;
+      drawSlideSlice(video, ref.current, i, layers);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [item.slideBlocks]);
@@ -548,7 +607,7 @@ export default function AnimatedCarousels() {
             {items.map((it, i) => (
               <div key={it.id} className="rounded-xl p-4 bg-card/40 border border-border/30">
                 <div className="flex gap-4">
-                  <video src={it.url} className="w-40 rounded-lg border border-white/10 shrink-0" style={{ aspectRatio: "3/1", objectFit: "cover" }} muted controls />
+                  <InlineSlideThumbs item={it} />
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-xs text-muted-foreground truncate flex items-center gap-1"><Film className="w-3.5 h-3.5" /> {it.file.name}</span>
