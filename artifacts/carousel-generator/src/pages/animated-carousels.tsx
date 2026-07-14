@@ -96,11 +96,20 @@ async function fetchCaptions(payload: Record<string, unknown>): Promise<string[]
   return captions;
 }
 
+// Short label for a CSV row, used in the per-video title picker.
+function rowLabel(sb: SlideBlocks, i: number): string {
+  const hook = sb.hook.trim();
+  return hook ? `${i + 1}. ${hook.slice(0, 60)}${hook.length > 60 ? "…" : ""}` : `Row ${i + 1} (no hook)`;
+}
+
 export default function AnimatedCarousels() {
   const { presets } = usePresets();
   const [presetId, setPresetId] = useState<number | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [busy, setBusy] = useState(false);
+  // Every row parsed from the last slide-text CSV, kept around so each video
+  // can pick which title/row to use from a dropdown, same as the other tools.
+  const [csvRows, setCsvRows] = useState<SlideBlocks[]>([]);
   const preset = useMemo(() => presets.find((p) => p.id === presetId) || null, [presets, presetId]);
 
   function addFiles(files: FileList | null) {
@@ -155,9 +164,11 @@ export default function AnimatedCarousels() {
     rd.readAsText(file);
   }
 
-  // Slide-text CSV: same 5-column shape as the bulk carousel tool. Text is
-  // matched to items by row order and gets burned onto each of the 4 slices
-  // when you cut and schedule.
+  // Slide-text CSV: same 5-column shape as the bulk carousel tool. Every row
+  // is kept in csvRows so you can pick which title/row goes on which video
+  // from a dropdown — it isn't silently matched by order. As a starting
+  // point rows are still assigned to videos in order, but you can change any
+  // of them afterwards.
   function importSlideTextCsv(file: File) {
     Papa.parse<Record<string, string>>(file, {
       header: true,
@@ -169,24 +180,26 @@ export default function AnimatedCarousels() {
           toast.error(`Missing columns: ${missing.join(", ")}`);
           return;
         }
-        const rows = results.data;
-        setItems((prev) => prev.map((it, k) => {
-          const r = rows[k]; if (!r) return it;
-          return {
-            ...it,
-            slideBlocks: {
-              hook: (r.slide1_hook || "").trim(),
-              subtitle: (r.slide1_subtitle || "").trim(),
-              body2: (r.slide2_body || "").trim(),
-              body3: (r.slide3_body || "").trim(),
-              cta: (r.slide4_cta || "").trim(),
-            },
-          };
+        const rows: SlideBlocks[] = results.data.map((r) => ({
+          hook: (r.slide1_hook || "").trim(),
+          subtitle: (r.slide1_subtitle || "").trim(),
+          body2: (r.slide2_body || "").trim(),
+          body3: (r.slide3_body || "").trim(),
+          cta: (r.slide4_cta || "").trim(),
         }));
-        toast.success("Slide text loaded. It'll be burned onto each of the 4 slides when you cut and schedule.");
+        if (!rows.length) { toast.error("No rows found in that CSV."); return; }
+        setCsvRows(rows);
+        setItems((prev) => prev.map((it, k) => (rows[k] ? { ...it, slideBlocks: rows[k] } : it)));
+        toast.success(`${rows.length} title${rows.length !== 1 ? "s" : ""} loaded. Pick which one goes on each video below.`);
       },
       error: (err) => toast.error(err.message),
     });
+  }
+
+  // Assign a specific CSV row (by index into csvRows) to a video, or clear it.
+  function assignSlideText(id: string, rowIndex: number) {
+    const sb = rowIndex >= 0 ? csvRows[rowIndex] : null;
+    update(id, { slideBlocks: sb });
   }
 
   async function generateCaption(id: string) {
@@ -345,7 +358,7 @@ export default function AnimatedCarousels() {
             >
               <Download className="w-3.5 h-3.5" /> Download template
             </button>
-            <span className="text-xs text-muted-foreground w-full sm:w-auto">Columns: {CSV_COLS.join(", ")}. Burned onto the 4 slides, matched by order.</span>
+            <span className="text-xs text-muted-foreground w-full sm:w-auto">Columns: {CSV_COLS.join(", ")}. Loads as a list of titles, pick which one goes on each video below.</span>
           </div>
         </section>
 
@@ -373,10 +386,25 @@ export default function AnimatedCarousels() {
                       <Scissors className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                       <span className="text-xs text-muted-foreground">Cut into 4 slides (4320x1440 source)</span>
                     </div>
-                    {it.slideBlocks && (
-                      <p className="text-xs text-emerald-400 flex items-center gap-1">
-                        <FileText className="w-3.5 h-3.5" /> Slide text loaded from CSV, will be burned onto the 4 slides
-                      </p>
+                    {csvRows.length > 0 && (
+                      <div className="space-y-1">
+                        <label className="text-xs text-muted-foreground flex items-center gap-1">
+                          <FileText className="w-3.5 h-3.5" /> Slide text title
+                        </label>
+                        <select
+                          value={it.slideBlocks ? csvRows.indexOf(it.slideBlocks) : -1}
+                          onChange={(e) => assignSlideText(it.id, Number(e.target.value))}
+                          className="w-full bg-white/5 border border-border/50 rounded-md px-2 py-1.5 text-sm"
+                        >
+                          <option value={-1}>No slide text (video posts plain)</option>
+                          {csvRows.map((row, ri) => (
+                            <option key={ri} value={ri}>{rowLabel(row, ri)}</option>
+                          ))}
+                        </select>
+                        {it.slideBlocks && (
+                          <p className="text-xs text-emerald-400">Will be burned onto the 4 slides when you cut and schedule.</p>
+                        )}
+                      </div>
                     )}
                     <div className="flex items-start gap-2">
                       <textarea value={it.caption} onChange={(e) => update(it.id, { caption: e.target.value })} placeholder="Caption..." rows={2} className="flex-1 bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm" />
