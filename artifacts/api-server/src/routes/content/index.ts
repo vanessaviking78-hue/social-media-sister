@@ -771,11 +771,110 @@ async function probeDimensions(inputPath: string): Promise<{ width: number; heig
   });
 }
 
+// Fonts to try for burning slide text onto video, in order of preference.
+const FONT_CANDIDATES = [
+  "/usr/share/fonts/truetype/dejavu/DejaVu-Bold.ttf",
+  "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+  "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+  "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf",
+  "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
+];
+
+async function resolveFontPath(): Promise<string | null> {
+  for (const candidate of FONT_CANDIDATES) {
+    try {
+      await access(candidate);
+      return candidate;
+    } catch {
+      // try next
+    }
+  }
+  return null;
+}
+
+function wrapTextLines(text: string, maxCharsPerLine: number): string[] {
+  const words = text.trim().split(/\s+/);
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length > maxCharsPerLine && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = next;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+function escapeDrawtextPath(p: string): string {
+  return p.replace(/\\/g, "\\\\").replace(/:/g, "\\:");
+}
+
+type OverlayLine = { text: string; fontSize: number; yFrac: number };
+
+async function overlayTextOnVideo(inputPath: string, outputPath: string, lines: OverlayLine[], fontPath: string): Promise<void> {
+  const usable = lines.filter((l) => l.text && l.text.trim());
+  if (!usable.length) {
+    return new Promise((resolve, reject) => {
+      const ffmpeg = spawn("ffmpeg", ["-i", inputPath, "-c", "copy", "-y", outputPath]);
+      ffmpeg.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg exited with code ${code}`))));
+      ffmpeg.on("error", reject);
+    });
+  }
+
+  const tmpFiles: string[] = [];
+  try {
+    const filters: string[] = [];
+    for (const line of usable) {
+      const wrapped = wrapTextLines(line.text, 24).join("\n");
+      const txtPath = join(tmpdir(), `drawtext-${randomUUID()}.txt`);
+      await writeFile(txtPath, wrapped, "utf8");
+      tmpFiles.push(txtPath);
+      const safePath = escapeDrawtextPath(txtPath);
+      const safeFont = escapeDrawtextPath(fontPath);
+      filters.push(
+        `drawtext=fontfile='${safeFont}':textfile='${safePath}':fontsize=${line.fontSize}:fontcolor=white:box=1:boxcolor=black@0.55:boxborderw=22:line_spacing=8:x=(w-text_w)/2:y=(h*${line.yFrac})-(text_h/2)`
+      );
+    }
+    await new Promise<void>((resolve, reject) => {
+      const ffmpeg = spawn("ffmpeg", [
+        "-i", inputPath,
+        "-vf", filters.join(","),
+        "-c:a", "copy",
+        "-y",
+        outputPath,
+      ]);
+      ffmpeg.stderr.on("data", () => {});
+      ffmpeg.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg exited with code ${code}`))));
+      ffmpeg.on("error", reject);
+    });
+  } finally {
+    await Promise.all(tmpFiles.map((f) => unlink(f).catch(() => {})));
+  }
+}
+
+// Instagram rejects (or gets stuck indefinitely "processing") video content
+// narrower than a 4:5 (0.8) aspect ratio. A slice cropped straight out of a
+// wide source video is almost always narrower than that, so pad it back up
+// to the minimum width with black bars either side rather than leaving it
+// too tall and skinny for IG to handle.
 async function cropSlide(inputPath: string, outputPath: string, x: number, y: number, w: number, h: number): Promise<void> {
+  const MIN_ASPECT = 0.8; // Instagram's minimum width/height for feed + carousel video
+  let padWidth = Math.ceil(h * MIN_ASPECT);
+  if (padWidth % 2 !== 0) padWidth += 1; // even width required for h264
+  const targetWidth = Math.max(w, padWidth);
+  const filters = [`crop=${w}:${h}:${x}:${y}`];
+  if (targetWidth > w) {
+    const padX = Math.floor((targetWidth - w) / 2);
+    filters.push(`pad=${targetWidth}:${h}:${padX}:0:color=black`);
+  }
   return new Promise((resolve, reject) => {
     const ffmpeg = spawn("ffmpeg", [
       "-i", inputPath,
-      "-filter:v", `crop=${w}:${h}:${x}:${y}`,
+      "-filter:v", filters.join(","),
       "-c:a", "copy",
       "-y",
       outputPath,
@@ -789,116 +888,14 @@ async function cropSlide(inputPath: string, outputPath: string, x: number, y: nu
   });
 }
 
-// ── Text-on-video overlay (for the Animated Carousels "burn CSV text onto slides" flow) ──
-// Candidate system font paths — Railway's Debian-based build image typically ships
-// at least one of these alongside ffmpeg. We pick the first one that exists rather
-// than hardcoding a single path, since the exact font package varies by base image.
-const FONT_CANDIDATES = [
-  "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-  "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-  "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
-  "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf",
-  "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
-];
-
-async function resolveFontPath(): Promise<string | null> {
-  for (const p of FONT_CANDIDATES) {
-    try {
-      await access(p);
-      return p;
-    } catch {
-      // try next candidate
-    }
-  }
-  return null;
-}
-
-function wrapTextLines(text: string, maxCharsPerLine: number): string[] {
-  const words = text.trim().split(/\s+/).filter(Boolean);
-  const lines: string[] = [];
-  let cur = "";
-  for (const w of words) {
-    const t = cur ? `${cur} ${w}` : w;
-    if (t.length > maxCharsPerLine && cur) {
-      lines.push(cur);
-      cur = w;
-    } else {
-      cur = t;
-    }
-  }
-  if (cur) lines.push(cur);
-  return lines;
-}
-
-// ffmpeg filtergraph arguments need backslashes and colons escaped, since colons
-// separate filter options and backslashes are the escape character.
-function escapeDrawtextPath(p: string): string {
-  return p.replace(/\\/g, "\\\\").replace(/:/g, "\\:");
-}
-
-type OverlayLine = { text: string; fontSize: number; yFrac: number };
-
-// Burns one or more text blocks onto a video using ffmpeg's drawtext filter.
-// Each entry in `lines` becomes its own drawtext layer (so a slide can carry a
-// large "hook" line plus a smaller "subtitle" line stacked beneath it).
-async function overlayTextOnVideo(
-  inputPath: string,
-  outputPath: string,
-  lines: OverlayLine[],
-  fontPath: string,
-): Promise<void> {
-  const tmpFiles: string[] = [];
-  try {
-    const filters: string[] = [];
-    for (const line of lines) {
-      if (!line.text || !line.text.trim()) continue;
-      const wrapped = wrapTextLines(line.text, 22);
-      if (!wrapped.length) continue;
-      const textFilePath = join(tmpdir(), `overlay-${randomUUID()}.txt`);
-      await writeFile(textFilePath, wrapped.join("\n"), "utf-8");
-      tmpFiles.push(textFilePath);
-      const safeTextFile = escapeDrawtextPath(textFilePath);
-      const safeFontFile = escapeDrawtextPath(fontPath);
-      filters.push(
-        `drawtext=fontfile='${safeFontFile}':textfile='${safeTextFile}':fontcolor=white:fontsize=${line.fontSize}:line_spacing=10:box=1:boxcolor=black@0.55:boxborderw=22:x=(w-text_w)/2:y=(h*${line.yFrac})-(text_h/2)`
-      );
-    }
-
-    if (!filters.length) {
-      await new Promise<void>((resolve, reject) => {
-        const ff = spawn("ffmpeg", ["-i", inputPath, "-c", "copy", "-y", outputPath]);
-        ff.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg copy exited with code ${code}`))));
-        ff.on("error", reject);
-      });
-      return;
-    }
-
-    await new Promise<void>((resolve, reject) => {
-      const ffmpeg = spawn("ffmpeg", [
-        "-i", inputPath,
-        "-vf", filters.join(","),
-        "-c:a", "copy",
-        "-y",
-        outputPath,
-      ]);
-      ffmpeg.stderr.on("data", () => {});
-      ffmpeg.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg drawtext exited with code ${code}`))));
-      ffmpeg.on("error", reject);
-    });
-  } finally {
-    await Promise.all(tmpFiles.map((f) => unlink(f).catch(() => {})));
-  }
-}
-
 // POST /content/split-video: takes one wide video and crops it into N equal-width
-// clips (same height as the source), for uploading as a video carousel. Optionally
-// accepts a `textLayers` JSON field — an array (one entry per slice) of arrays of
-// {text, fontSize, yFrac} — which gets burned onto each slice with ffmpeg drawtext
-// before upload. This is how CSV-driven slide text lands on the animated carousels.
+// clips (padded up to Instagram's minimum aspect ratio, same height as the source),
+// for uploading as a video carousel. Optionally burns per-slice text (textLayers)
+// onto each clip before uploading.
 router.post("/content/split-video", videoUpload.single("video"), async (req, res) => {
   const inputPath = join(tmpdir(), `split-in-${randomUUID()}.mp4`);
   const outputPaths: string[] = [];
-  const overlayOutputPaths: string[] = [];
+  const overlaidPaths: string[] = [];
   try {
     const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
     if (!bucketId) { res.status(500).json({ error: "Object storage not configured" }); return; }
@@ -911,19 +908,19 @@ router.post("/content/split-video", videoUpload.single("video"), async (req, res
     const sliceWidth = Math.floor(width / slices);
     if (sliceWidth < 100) { res.status(400).json({ error: "Video too narrow to split into that many slides" }); return; }
 
-    let textLayers: Array<Array<{ text: string; fontSize?: number; yFrac?: number }>> = [];
-    if (req.body?.textLayers) {
+    let textLayers: OverlayLine[][] | null = null;
+    if (typeof req.body?.textLayers === "string" && req.body.textLayers.trim()) {
       try {
         const parsed = JSON.parse(req.body.textLayers);
         if (Array.isArray(parsed)) textLayers = parsed;
       } catch {
-        textLayers = [];
+        // ignore malformed textLayers, just skip burn-in
       }
     }
-    const needsFont = textLayers.some((l) => Array.isArray(l) && l.some((x) => x?.text?.trim()));
-    const fontPath = needsFont ? await resolveFontPath() : null;
-    if (needsFont && !fontPath) {
-      console.warn("split-video: text layers requested but no system font found, skipping text burn-in");
+    const hasAnyText = !!textLayers?.some((layer) => Array.isArray(layer) && layer.some((l) => l?.text?.trim()));
+    const fontPath = hasAnyText ? await resolveFontPath() : null;
+    if (hasAnyText && !fontPath) {
+      console.warn("Slide text requested for split-video but no system font was found — skipping text burn-in");
     }
 
     const timestamp = Date.now();
@@ -937,17 +934,12 @@ router.post("/content/split-video", videoUpload.single("video"), async (req, res
       await cropSlide(inputPath, croppedPath, i * sliceWidth, 0, sliceWidth, height);
 
       let finalPath = croppedPath;
-      const lines = textLayers[i];
-      if (fontPath && Array.isArray(lines) && lines.some((l) => l?.text?.trim())) {
-        const withTextPath = join(tmpdir(), `split-text-${randomUUID()}.mp4`);
-        overlayOutputPaths.push(withTextPath);
-        await overlayTextOnVideo(
-          croppedPath,
-          withTextPath,
-          lines.map((l) => ({ text: l.text || "", fontSize: l.fontSize || 56, yFrac: l.yFrac ?? 0.85 })),
-          fontPath,
-        );
-        finalPath = withTextPath;
+      const lines = textLayers?.[i];
+      if (fontPath && lines && lines.some((l) => l?.text?.trim())) {
+        const overlaidPath = join(tmpdir(), `split-text-${randomUUID()}.mp4`);
+        overlaidPaths.push(overlaidPath);
+        await overlayTextOnVideo(croppedPath, overlaidPath, lines, fontPath);
+        finalPath = overlaidPath;
       }
 
       const clipBuffer = await readFile(finalPath);
@@ -978,7 +970,7 @@ router.post("/content/split-video", videoUpload.single("video"), async (req, res
   } finally {
     await unlink(inputPath).catch(() => {});
     await Promise.all(outputPaths.map((p) => unlink(p).catch(() => {})));
-    await Promise.all(overlayOutputPaths.map((p) => unlink(p).catch(() => {})));
+    await Promise.all(overlaidPaths.map((p) => unlink(p).catch(() => {})));
   }
 });
 
