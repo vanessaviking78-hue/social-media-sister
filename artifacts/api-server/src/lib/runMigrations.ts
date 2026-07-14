@@ -26,6 +26,7 @@ export async function runMigrations(): Promise<void> {
     await createRevenueIdeasTable();
     await createClientBackgroundsTable();
     await createPortalPushSubscriptionsTable();
+    await addRevenueIdeasIdeaIndexColumn();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -317,8 +318,8 @@ async function createResourceLibraryTable(): Promise<void> {
   `);
 }
 
-// Weekly revenue-idea drafts, one per client per week. Vanessa reviews and
-// edits each draft before it's approved and shown on that client's portal.
+// Weekly revenue-idea drafts. Vanessa reviews and edits each draft before it's
+// approved and shown on that client's portal.
 async function createRevenueIdeasTable(): Promise<void> {
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS revenue_ideas (
@@ -377,5 +378,22 @@ async function createPortalPushSubscriptionsTable(): Promise<void> {
   await db.execute(sql`
     CREATE INDEX IF NOT EXISTS portal_push_subscriptions_token_idx
     ON portal_push_subscriptions (client_portal_token)
+  `);
+}
+
+// Moves revenue_ideas from one-idea-per-client-per-week to three, by adding
+// an idea_index (1-3) and widening the unique index to include it. Existing
+// rows default to idea_index 1, which keeps them intact under the new index.
+async function addRevenueIdeasIdeaIndexColumn(): Promise<void> {
+  await db.execute(sql`
+    ALTER TABLE revenue_ideas
+    ADD COLUMN IF NOT EXISTS idea_index INTEGER NOT NULL DEFAULT 1
+  `);
+  await db.execute(sql`
+    DROP INDEX IF EXISTS revenue_ideas_preset_week_unique
+  `);
+  await db.execute(sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS revenue_ideas_preset_week_index_unique
+    ON revenue_ideas (preset_id, week_of, idea_index)
   `);
 }
