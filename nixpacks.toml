@@ -2,7 +2,7 @@
 aptPkgs = ["...", "ffmpeg"]
 
 [phases.install]
-cmds = ["pnpm install --no-frozen-lockfile"]
+cmds = ["unset NODE_ENV && pnpm install --no-frozen-lockfile"]
 
 [phases.build]
 cmds = ["pnpm --filter @workspace/api-server run build"]
