@@ -32,6 +32,7 @@ COMPLIANCE (non-negotiable, every single word)
 - No pressure tactics. No urgency language.
 - No superlatives: best, number one, guaranteed.
 - Frame everything as consultation and possibility. Use "may help", "can improve" — not "will fix", "cures", "guaranteed".
+- These are medical aesthetics clinics, not beauty or nail salons. Ideas should fit injectable, skin and clinical treatments, not generic "buy 3 get 1 free" salon-style loyalty gimmicks.
 
 WRITING RULES (non-negotiable)
 - NEVER use em dashes or en dashes. Not once. Use a comma, a full stop, or a plain hyphen in compound adjectives only.
@@ -53,7 +54,10 @@ function currentWeekOf(): string {
   return sunday.toISOString().slice(0, 10);
 }
 
-async function generateIdeaForPreset(preset: PresetRow): Promise<GeneratedIdea> {
+// Generates three distinct ideas in a single completion (one offer/promo
+// angle, one content/awareness angle, one referral or loyalty mechanic),
+// rather than three separate API calls.
+async function generateIdeasForPreset(preset: PresetRow): Promise<GeneratedIdea[]> {
   const context = [
     `Clinic name: ${preset.name}`,
     preset.targetAudience ? `Target audience: ${preset.targetAudience}` : "",
@@ -61,7 +65,7 @@ async function generateIdeaForPreset(preset: PresetRow): Promise<GeneratedIdea> 
     preset.brandNotes ? `Brand notes: ${preset.brandNotes}` : "",
   ].filter(Boolean).join("\n");
 
-  const systemPrompt = `You are a social media and revenue strategist for aesthetic and wellness clinics, writing a one-off weekly "revenue idea" for a specific clinic client.
+  const systemPrompt = `You are a social media and revenue strategist for aesthetic and wellness clinics, writing this week's set of revenue ideas for a specific clinic client.
 
 ${NORTHERN_GRIT_VOICE}
 
@@ -69,9 +73,11 @@ CLINIC CONTEXT
 ${context}
 
 TASK
-Come up with ONE fresh, specific revenue idea this clinic could run this week (a seasonal push, a bundle, a loyalty nudge, a referral idea, a quiet-period filler, a treatment they under-promote, etc). Avoid generic "book now" offers, make it feel tailored to this clinic and the time of year. Don't repeat the same idea format every week, mix it up between offers, content angles, in-clinic experiences and referral mechanics.
+Come up with THREE fresh, specific revenue ideas this clinic could run this week. Make sure the three are genuinely different in nature from each other, for example one built around an offer or bundle, one built around a content or awareness angle, and one built around a referral or loyalty mechanic. Avoid generic "book now" offers and avoid anything that reads like a nail bar or beauty salon deal, these are medical aesthetics clinics. Make each idea feel tailored to this clinic and the time of year.
 
-Return a JSON object with exactly these three fields:
+Return a JSON object with exactly this shape:
+
+{ "ideas": [ { "title": "...", "instructions": "...", "draftContent": "..." }, { "title": "...", "instructions": "...", "draftContent": "..." }, { "title": "...", "instructions": "...", "draftContent": "..." } ] }
 
 title
 A short, punchy name for the idea. Max 8 words.
@@ -87,25 +93,29 @@ ${COMPLIANCE_RULES}`;
     model: "gpt-4o",
     messages: [
       { role: "system", content: systemPrompt },
-      { role: "user", content: "Generate this week's revenue idea now." },
+      { role: "user", content: "Generate this week's three revenue ideas now." },
     ],
     response_format: { type: "json_object" },
     temperature: 0.9,
-    max_tokens: 900,
+    max_tokens: 1800,
   });
 
   const raw = completion.choices[0]?.message?.content ?? "{}";
-  let parsed: Partial<GeneratedIdea> = {};
+  let parsed: { ideas?: Partial<GeneratedIdea>[] } = {};
   try {
-    parsed = JSON.parse(raw) as Partial<GeneratedIdea>;
+    parsed = JSON.parse(raw) as { ideas?: Partial<GeneratedIdea>[] };
   } catch {
     logger.warn({ raw, preset: preset.name }, "revenue-ideas: failed to parse AI JSON");
   }
-  return {
-    title: parsed.title || "This week's revenue idea",
-    instructions: parsed.instructions || "",
-    draftContent: parsed.draftContent || "",
-  };
+  const ideas = (parsed.ideas || []).slice(0, 3).map((idea) => ({
+    title: idea.title || "This week's revenue idea",
+    instructions: idea.instructions || "",
+    draftContent: idea.draftContent || "",
+  }));
+  while (ideas.length < 3) {
+    ideas.push({ title: "This week's revenue idea", instructions: "", draftContent: "" });
+  }
+  return ideas;
 }
 
 export async function generateWeeklyRevenueIdeas(weekOf?: string): Promise<{ weekOf: string; created: number; skipped: number; failed: number }> {
@@ -116,22 +126,26 @@ export async function generateWeeklyRevenueIdeas(weekOf?: string): Promise<{ wee
   for (const preset of presets) {
     try {
       const existing = await db.execute(sql`
-        SELECT id FROM revenue_ideas WHERE preset_id = ${preset.id} AND week_of = ${week}
+        SELECT COUNT(*)::int AS count FROM revenue_ideas WHERE preset_id = ${preset.id} AND week_of = ${week}
       `);
-      if (((existing as { rows?: unknown[] }).rows?.length ?? 0) > 0) {
+      const existingCount = Number((existing as { rows?: Array<{ count: number }> }).rows?.[0]?.count ?? 0);
+      if (existingCount >= 3) {
         skipped++;
         continue;
       }
-      const idea = await generateIdeaForPreset(preset);
-      await db.execute(sql`
-        INSERT INTO revenue_ideas (preset_id, client_name, week_of, title, instructions, draft_content, status)
-        VALUES (${preset.id}, ${preset.name}, ${week}, ${idea.title}, ${idea.instructions}, ${idea.draftContent}, 'draft')
-        ON CONFLICT (preset_id, week_of) DO NOTHING
-      `);
+      const ideas = await generateIdeasForPreset(preset);
+      for (let i = 0; i < 3; i++) {
+        const idea = ideas[i];
+        await db.execute(sql`
+          INSERT INTO revenue_ideas (preset_id, client_name, week_of, idea_index, title, instructions, draft_content, status)
+          VALUES (${preset.id}, ${preset.name}, ${week}, ${i + 1}, ${idea.title}, ${idea.instructions}, ${idea.draftContent}, 'draft')
+          ON CONFLICT (preset_id, week_of, idea_index) DO NOTHING
+        `);
+      }
       created++;
     } catch (err) {
       failed++;
-      logger.error({ err, preset: preset.name }, "revenue-ideas: failed to generate idea for client");
+      logger.error({ err, preset: preset.name }, "revenue-ideas: failed to generate ideas for client");
     }
   }
 
@@ -139,19 +153,17 @@ export async function generateWeeklyRevenueIdeas(weekOf?: string): Promise<{ wee
   return { weekOf: week, created, skipped, failed };
 }
 
-// Used by the client portal route to show the client their approved idea
-// for the current week, if there is one.
-export async function getApprovedIdeaForClient(clientName: string): Promise<{ title: string; instructions: string; draftContent: string; weekOf: string } | null> {
-  const week = currentWeekOf();
+// Used by the client portal route to show the client every idea approved for
+// them so far, newest week first, so ideas build up over time rather than
+// disappearing once the week ends.
+export async function getApprovedIdeasForClient(clientName: string): Promise<Array<{ title: string; instructions: string; draftContent: string; weekOf: string }>> {
   const result = await db.execute(sql`
     SELECT title, instructions, draft_content, week_of FROM revenue_ideas
-    WHERE client_name = ${clientName} AND week_of = ${week} AND status = 'approved'
-    LIMIT 1
+    WHERE client_name = ${clientName} AND status = 'approved'
+    ORDER BY week_of DESC, idea_index ASC
   `);
   const rows = (result as { rows?: any[] }).rows ?? [];
-  if (!rows.length) return null;
-  const row = rows[0];
-  return { title: row.title, instructions: row.instructions, draftContent: row.draft_content, weekOf: row.week_of };
+  return rows.map((row) => ({ title: row.title, instructions: row.instructions, draftContent: row.draft_content, weekOf: row.week_of }));
 }
 
 router.post("/revenue-ideas/generate", requireAuth, async (req, res) => {
@@ -169,7 +181,7 @@ router.get("/revenue-ideas", requireAuth, async (req, res) => {
   try {
     const weekOf = (req.query.weekOf as string) || currentWeekOf();
     const result = await db.execute(sql`
-      SELECT * FROM revenue_ideas WHERE week_of = ${weekOf} ORDER BY client_name ASC
+      SELECT * FROM revenue_ideas WHERE week_of = ${weekOf} ORDER BY client_name ASC, idea_index ASC
     `);
     res.json({ weekOf, ideas: (result as { rows?: any[] }).rows ?? [] });
   } catch (err: any) {

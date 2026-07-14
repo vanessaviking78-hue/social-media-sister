@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { clientPresetsTable, calendarPostsTable, approvalBatchesTable, approvalImagesTable, scheduledPostsTable } from "@workspace/db/schema";
 import { eq, and, gte, or, sql } from "drizzle-orm";
 import crypto from "crypto";
-import { getApprovedIdeaForClient } from "./revenue-ideas";
+import { getApprovedIdeasForClient } from "./revenue-ideas";
 import { getVapidPublicKey } from "../lib/push";
 
 const router: IRouter = Router();
@@ -64,6 +64,7 @@ router.get("/portal/:token", async (req, res) => {
         status: "scheduled",
         color: "#ec4899",
         imageUrl: (c.imageUrls && c.imageUrls[0]) || null,
+        imageUrls: c.imageUrls || [],
       };
     });
     const mergedUpcoming = [...upcomingPosts, ...scheduledMapped].sort((a, b) => a.date.localeCompare(b.date));
@@ -84,14 +85,14 @@ router.get("/portal/:token", async (req, res) => {
     }));
     batchesWithCounts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-    const revenueIdea = await getApprovedIdeaForClient(clientName).catch(() => null);
+    const revenueIdeas = await getApprovedIdeasForClient(clientName).catch(() => []);
 
     res.json({
       clientName,
       logoUrl: preset.logoUrl || null,
       upcomingPosts: mergedUpcoming,
       approvalBatches: batchesWithCounts,
-      revenueIdea,
+      revenueIdeas,
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to load portal" });
