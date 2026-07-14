@@ -29,6 +29,7 @@ import BulkConnectReview from "@/pages/bulk-connect-review";
 import About from "@/pages/about";
 import AboutMe from "@/pages/about-me";
 import AboutPublic from "@/pages/about-public";
+import SeamlessCarousel from "@/pages/seamless-carousel";
 import AiPortraitStudio from "@/pages/ai-portrait-studio";
 import Onboard from "@/pages/onboard";
 import SubmitBeforeAfter from "@/pages/submit";
@@ -71,13 +72,8 @@ import CanvaOAuthResult from "@/pages/canva-oauth-result";
 import ApprovalBundles from "@/pages/approval-bundles";
 import ClientApproval from "@/pages/client-approval";
 import ContentGenerator from "@/pages/content-generator";
-import RevenueIdeas from "@/pages/revenue-ideas";
-import Today from "@/pages/today";
-import CatchUpPlan from "@/pages/catch-up";
-import Checklist from "@/pages/checklist";
-import ResourceLibrary from "@/pages/resources";
 import TweetMaker from "@/pages/tweet-maker";
-import SeamlessCaroBuilder from "@/pages/seamless-caro-builder";
+import RevenueIdeas from "@/pages/revenue-ideas";
 
 const queryClient = new QueryClient();
 
@@ -110,6 +106,7 @@ function ProtectedRouter() {
       <Route path="/presets/bulk-connect/review" component={BulkConnectReview} />
       <Route path="/about" component={About} />
       <Route path="/about-me" component={AboutMe} />
+      <Route path="/seamless-carousel" component={SeamlessCarousel} />
       <Route path="/ai-portrait-studio" component={AiPortraitStudio} />
       <Route path="/dm-automations" component={DmAutomations} />
       <Route path="/intake" component={Intake} />
@@ -132,16 +129,11 @@ function ProtectedRouter() {
       <Route path="/settings" component={Settings} />
       <Route path="/approval-bundles" component={ApprovalBundles} />
       <Route path="/content-generator" component={ContentGenerator} />
-      <Route path="/revenue-ideas" component={RevenueIdeas} />
-      <Route path="/today" component={Today} />
-      <Route path="/catch-up" component={CatchUpPlan} />
-      <Route path="/checklist" component={Checklist} />
-      <Route path="/resources" component={ResourceLibrary} />
-      <Route path="/tweet-maker" component={TweetMaker} />
-      <Route path="/seamless-caro-builder" component={SeamlessCaroBuilder} />
       <Route path="/showcase-builder" component={ShowcaseBuilder} />
       <Route path="/seamless-bulk" component={SeamlessBulk} />
       <Route path="/about-me-studio" component={AboutMeStudio} />
+      <Route path="/tweet-maker" component={TweetMaker} />
+      <Route path="/revenue-ideas" component={RevenueIdeas} />
       <Route component={NotFound} />
     </Switch>
   );
