@@ -1,12 +1,27 @@
 import { useState, useMemo } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Upload, Loader2, CalendarClock, X, Film, Scissors } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, CalendarClock, X, Film, Scissors, Sparkles, FileText, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePresets } from "@/lib/use-presets";
 import { nextWeekday, WEEKDAY, POST_TIME } from "@/lib/schedule";
 import { toast } from "sonner";
+import Papa from "papaparse";
+import { saveAs } from "file-saver";
 
 const BASE = import.meta.env.BASE_URL || "/";
+
+// Same column shape as the other bulk carousel tools, so the CSVs you already
+// know how to build work here too. Slide 1 gets the hook + subtitle, slides 2
+// and 3 get their body line, slide 4 gets the CTA — always 4 slides.
+const CSV_COLS = ["slide1_hook", "slide1_subtitle", "slide2_body", "slide3_body", "slide4_cta"] as const;
+
+type SlideBlocks = {
+  hook: string;
+  subtitle: string;
+  body2: string;
+  body3: string;
+  cta: string;
+};
 
 type Item = {
   id: string;
@@ -16,7 +31,8 @@ type Item = {
   date: string;
   time: string;
   slices: number;
-  status: "" | "splitting" | "uploading" | "scheduling" | "done" | "error";
+  slideBlocks: SlideBlocks | null;
+  status: "" | "splitting" | "captioning" | "uploading" | "scheduling" | "done" | "error";
   note?: string;
 };
 
@@ -27,6 +43,57 @@ function defaultDate(i: number): string {
   d.setDate(d.getDate() + i * 7);
   const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+function makeSampleCsv(): string {
+  return [
+    CSV_COLS.join(","),
+    "Your headline hook here,A short supporting subtitle,Body copy for slide two goes here.,Body copy for slide three goes here.,Book your consultation today",
+  ].join("\n");
+}
+
+// Builds the four per-slice text layers ffmpeg will burn onto the split clips.
+// Slide 1 carries two lines (hook, bigger; subtitle, smaller) stacked together.
+function buildTextLayers(sb: SlideBlocks | null): Array<Array<{ text: string; fontSize: number; yFrac: number }>> {
+  if (!sb) return [[], [], [], []];
+  const slide1 = [
+    { text: sb.hook, fontSize: 64, yFrac: 0.64 },
+    { text: sb.subtitle, fontSize: 34, yFrac: 0.75 },
+  ].filter((l) => l.text.trim());
+  const slide2 = sb.body2.trim() ? [{ text: sb.body2, fontSize: 42, yFrac: 0.85 }] : [];
+  const slide3 = sb.body3.trim() ? [{ text: sb.body3, fontSize: 42, yFrac: 0.85 }] : [];
+  const slide4 = sb.cta.trim() ? [{ text: sb.cta, fontSize: 46, yFrac: 0.85 }] : [];
+  return [slide1, slide2, slide3, slide4];
+}
+
+// Consumes the /api/content/captions SSE stream and returns the finished array
+// of captions once the "complete" event lands.
+async function fetchCaptions(payload: Record<string, unknown>): Promise<string[]> {
+  const resp = await fetch(`${BASE}api/content/captions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!resp.ok || !resp.body) throw new Error("Caption generation failed");
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let captions: string[] = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    const parts = buf.split("\n\n");
+    buf = parts.pop() || "";
+    for (const part of parts) {
+      const line = part.replace(/^data:\s*/, "").trim();
+      if (!line) continue;
+      const evt = JSON.parse(line);
+      if (evt.type === "complete" && Array.isArray(evt.captions)) captions = evt.captions;
+      if (evt.type === "error") throw new Error(evt.message || "Caption generation failed");
+    }
+  }
+  return captions;
 }
 
 export default function AnimatedCarousels() {
@@ -50,10 +117,12 @@ export default function AnimatedCarousels() {
         date: defaultDate(start + k),
         time: POST_TIME,
         slices: 4,
+        slideBlocks: null,
         status: "" as const,
       }));
       return [...prev, ...next];
     });
+    toast.success(`${vids.length} video${vids.length !== 1 ? "s" : ""} added.`);
   }
 
   function update(id: string, patch: Partial<Item>) {
@@ -86,6 +155,102 @@ export default function AnimatedCarousels() {
     rd.readAsText(file);
   }
 
+  // Slide-text CSV: same 5-column shape as the bulk carousel tool. Text is
+  // matched to items by row order and gets burned onto each of the 4 slices
+  // when you cut and schedule.
+  function importSlideTextCsv(file: File) {
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const fields = results.meta.fields || [];
+        const missing = CSV_COLS.filter((c) => !fields.includes(c));
+        if (missing.length) {
+          toast.error(`Missing columns: ${missing.join(", ")}`);
+          return;
+        }
+        const rows = results.data;
+        setItems((prev) => prev.map((it, k) => {
+          const r = rows[k]; if (!r) return it;
+          return {
+            ...it,
+            slideBlocks: {
+              hook: (r.slide1_hook || "").trim(),
+              subtitle: (r.slide1_subtitle || "").trim(),
+              body2: (r.slide2_body || "").trim(),
+              body3: (r.slide3_body || "").trim(),
+              cta: (r.slide4_cta || "").trim(),
+            },
+          };
+        }));
+        toast.success("Slide text loaded. It'll be burned onto each of the 4 slides when you cut and schedule.");
+      },
+      error: (err) => toast.error(err.message),
+    });
+  }
+
+  async function generateCaption(id: string) {
+    const it = items.find((x) => x.id === id);
+    if (!it) return;
+    if (!preset) { toast.error("Pick a client first."); return; }
+    update(id, { status: "captioning" });
+    try {
+      const context = it.slideBlocks
+        ? [it.slideBlocks.hook, it.slideBlocks.subtitle, it.slideBlocks.body2, it.slideBlocks.body3, it.slideBlocks.cta].filter((s) => s.trim())
+        : [it.file.name.replace(/\.[^.]+$/, "")];
+      const captions = await fetchCaptions({
+        posts: [context.length ? context : ["Animated video carousel"]],
+        clientName: preset.name,
+        industry: "aesthetics",
+        postType: "carousel",
+        voiceStyle: preset.voiceStyle,
+        targetAudience: preset.targetAudience,
+        contentPillars: preset.contentPillars,
+        brandNotes: preset.brandNotes,
+      });
+      if (captions[0]) {
+        update(id, { caption: captions[0], status: "" });
+        toast.success("Caption generated.");
+      } else {
+        update(id, { status: "" });
+        toast.error("No caption came back, try again.");
+      }
+    } catch (e: any) {
+      update(id, { status: "" });
+      toast.error(e?.message || "Caption generation failed.");
+    }
+  }
+
+  async function generateAllCaptions() {
+    if (!preset) { toast.error("Pick a client first."); return; }
+    if (!items.length) return;
+    setBusy(true);
+    try {
+      const posts = items.map((it) => {
+        const context = it.slideBlocks
+          ? [it.slideBlocks.hook, it.slideBlocks.subtitle, it.slideBlocks.body2, it.slideBlocks.body3, it.slideBlocks.cta].filter((s) => s.trim())
+          : [it.file.name.replace(/\.[^.]+$/, "")];
+        return context.length ? context : ["Animated video carousel"];
+      });
+      const captions = await fetchCaptions({
+        posts,
+        clientName: preset.name,
+        industry: "aesthetics",
+        postType: "carousel",
+        voiceStyle: preset.voiceStyle,
+        targetAudience: preset.targetAudience,
+        contentPillars: preset.contentPillars,
+        brandNotes: preset.brandNotes,
+      });
+      setItems((prev) => prev.map((it, i) => (captions[i] ? { ...it, caption: captions[i] } : it)));
+      toast.success(`${captions.length} caption${captions.length !== 1 ? "s" : ""} generated.`);
+    } catch (e: any) {
+      toast.error(e?.message || "Caption generation failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function scheduleAll() {
     if (!preset) { toast.error("Pick a client first."); return; }
     if (!items.length) { toast.error("Add some wide videos first."); return; }
@@ -97,6 +262,9 @@ export default function AnimatedCarousels() {
         const fd = new FormData();
         fd.append("video", it.file);
         fd.append("slices", String(it.slices));
+        if (it.slideBlocks) {
+          fd.append("textLayers", JSON.stringify(buildTextLayers(it.slideBlocks)));
+        }
         const split = await fetch(`${BASE}api/content/split-video`, { method: "POST", body: fd });
         const splitData = await split.json();
         if (!split.ok || !splitData.clips?.length) throw new Error(splitData.error || "Video split failed");
@@ -135,7 +303,7 @@ export default function AnimatedCarousels() {
         <Link href="/hub"><ArrowLeft className="w-5 h-5 text-muted-foreground hover:text-foreground" /></Link>
         <div>
           <h1 className="font-semibold text-lg">Animated Carousels</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Upload one wide MP4 (e.g. 4320x1440). We cut it into slides, keep them as MP4, and post as a proper video carousel, same idea as the Seamless Carousel tool but for video.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Upload as many wide MP4s as you like at once (e.g. 4320x1440). Each one is cut into 4 slides, kept as MP4, and posted as a proper video carousel, same idea as the Seamless Carousel tool but for video.</p>
         </div>
       </div>
 
@@ -149,24 +317,49 @@ export default function AnimatedCarousels() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="font-semibold text-base">2. Upload wide animated video (MP4)</h2>
+          <h2 className="font-semibold text-base">2. Upload wide animated videos (MP4) in bulk</h2>
           <label className="block border-2 border-dashed border-border/50 rounded-2xl p-10 text-center cursor-pointer hover:border-pink-500/60 transition-colors">
             <Upload className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Drop one wide MP4 per carousel, or click to browse. Add as many as you like, each becomes its own carousel.</span>
+            <span className="text-sm text-muted-foreground">Drop as many wide MP4s (4320x1440) as you like in one go, or click to browse. Each one becomes its own 4-slide carousel.</span>
             <input type="file" accept="video/mp4,video/*" multiple className="hidden" onChange={(e) => { addFiles(e.target.files); e.currentTarget.value = ""; }} />
           </label>
-          <div className="flex items-center gap-3">
+
+          <div className="flex flex-wrap items-center gap-3">
             <label className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm cursor-pointer">
               Import captions + dates (CSV)
               <input type="file" accept=".csv" className="hidden" onChange={(e) => { if (e.target.files?.[0]) importCsv(e.target.files[0]); e.currentTarget.value = ""; }} />
             </label>
             <span className="text-xs text-muted-foreground">Columns: caption, date, time. Matched by order.</span>
           </div>
+
+          <div className="flex flex-wrap items-center gap-3 pt-1 border-t border-border/20 mt-1">
+            <label className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm cursor-pointer flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5" />
+              Import slide text (CSV)
+              <input type="file" accept=".csv" className="hidden" onChange={(e) => { if (e.target.files?.[0]) importSlideTextCsv(e.target.files[0]); e.currentTarget.value = ""; }} />
+            </label>
+            <button
+              type="button"
+              onClick={() => saveAs(new Blob([makeSampleCsv()], { type: "text/csv" }), "animated-carousel-slide-text-template.csv")}
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+            >
+              <Download className="w-3.5 h-3.5" /> Download template
+            </button>
+            <span className="text-xs text-muted-foreground w-full sm:w-auto">Columns: {CSV_COLS.join(", ")}. Burned onto the 4 slides, matched by order.</span>
+          </div>
         </section>
 
         {items.length > 0 && (
           <section className="space-y-4">
-            <h2 className="font-semibold text-base">3. Slides, captions and schedule</h2>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-semibold text-base">3. Slides, captions and schedule</h2>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{items.length} video{items.length !== 1 ? "s" : ""} queued</span>
+                <Button variant="outline" size="sm" onClick={generateAllCaptions} disabled={busy || !preset}>
+                  <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Generate all captions
+                </Button>
+              </div>
+            </div>
             {items.map((it, i) => (
               <div key={it.id} className="rounded-xl p-4 bg-card/40 border border-border/30">
                 <div className="flex gap-4">
@@ -176,18 +369,34 @@ export default function AnimatedCarousels() {
                       <span className="text-xs text-muted-foreground truncate flex items-center gap-1"><Film className="w-3.5 h-3.5" /> {it.file.name}</span>
                       <button onClick={() => remove(it.id)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
                     </div>
-              <div className="flex items-center gap-2">
-                <Scissors className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                <span className="text-xs text-muted-foreground">Cut into 4 slides (4320x1440 source)</span>
-              </div>
-                                        <textarea value={it.caption} onChange={(e) => update(it.id, { caption: e.target.value })} placeholder="Caption..." rows={2} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm" />
+                    <div className="flex items-center gap-2">
+                      <Scissors className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      <span className="text-xs text-muted-foreground">Cut into 4 slides (4320x1440 source)</span>
+                    </div>
+                    {it.slideBlocks && (
+                      <p className="text-xs text-emerald-400 flex items-center gap-1">
+                        <FileText className="w-3.5 h-3.5" /> Slide text loaded from CSV, will be burned onto the 4 slides
+                      </p>
+                    )}
+                    <div className="flex items-start gap-2">
+                      <textarea value={it.caption} onChange={(e) => update(it.id, { caption: e.target.value })} placeholder="Caption..." rows={2} className="flex-1 bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm" />
+                      <button
+                        type="button"
+                        onClick={() => generateCaption(it.id)}
+                        disabled={busy || it.status === "captioning" || !preset}
+                        title="Generate caption"
+                        className="shrink-0 mt-0.5 p-2 rounded-md border border-border/50 hover:border-pink-500/60 text-pink-400 disabled:opacity-40"
+                      >
+                        {it.status === "captioning" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                      </button>
+                    </div>
                     <div className="flex gap-2">
                       <input type="date" value={it.date} onChange={(e) => update(it.id, { date: e.target.value })} className="flex-1 bg-white/5 border border-border/50 rounded-md px-2 py-1.5 text-sm" />
                       <input type="time" value={it.time} onChange={(e) => update(it.id, { time: e.target.value })} className="flex-1 bg-white/5 border border-border/50 rounded-md px-2 py-1.5 text-sm" />
                     </div>
                     {it.status && (
                       <p className={`text-xs ${it.status === "done" ? "text-emerald-400" : it.status === "error" ? "text-red-400" : "text-muted-foreground"}`}>
-                        {it.status === "splitting" ? "Cutting into slides..." : it.status === "uploading" ? "Uploading..." : it.status === "scheduling" ? "Scheduling..." : it.status === "done" ? `Scheduled for ${it.date} at ${it.time}` : it.note}
+                        {it.status === "splitting" ? "Cutting into slides..." : it.status === "captioning" ? "Writing caption..." : it.status === "uploading" ? "Uploading..." : it.status === "scheduling" ? "Scheduling..." : it.status === "done" ? `Scheduled for ${it.date} at ${it.time}` : it.note}
                       </p>
                     )}
                   </div>
@@ -195,7 +404,7 @@ export default function AnimatedCarousels() {
               </div>
             ))}
             <div className="flex justify-between items-center">
-              <p className="text-xs text-muted-foreground">Each wide video is cut into equal MP4 slides and posted as a video carousel to Instagram and Facebook.</p>
+              <p className="text-xs text-muted-foreground">Each wide video is cut into 4 equal MP4 slides (with any slide text burned in) and posted as a video carousel to Instagram and Facebook.</p>
               <Button onClick={scheduleAll} disabled={busy || !preset} className="bg-pink-600 hover:bg-pink-700">
                 {busy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-1.5" />}
                 Cut and schedule {items.length} carousel{items.length !== 1 ? "s" : ""}
