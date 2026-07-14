@@ -1,12 +1,13 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Upload, Loader2, CalendarClock, X, Film, Scissors, Sparkles, FileText, Download } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, CalendarClock, X, Film, Scissors, Sparkles, FileText, Download, Music, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePresets } from "@/lib/use-presets";
 import { nextWeekday, WEEKDAY, POST_TIME } from "@/lib/schedule";
 import { toast } from "sonner";
 import Papa from "papaparse";
 import { saveAs } from "file-saver";
+import { MusicPickerModal, MusicTrackBadge, type MusicTrack } from "@/components/music-picker-modal";
 
 const BASE = import.meta.env.BASE_URL || "/";
 
@@ -23,6 +24,10 @@ type SlideBlocks = {
   cta: string;
 };
 
+function emptyBlocks(): SlideBlocks {
+  return { hook: "", subtitle: "", body2: "", body3: "", cta: "" };
+}
+
 type Item = {
   id: string;
   file: File;
@@ -32,6 +37,7 @@ type Item = {
   time: string;
   slices: number;
   slideBlocks: SlideBlocks | null;
+  musicTrack: MusicTrack | null;
   status: "" | "splitting" | "captioning" | "uploading" | "scheduling" | "done" | "error";
   note?: string;
 };
@@ -54,6 +60,7 @@ function makeSampleCsv(): string {
 
 // Builds the four per-slice text layers ffmpeg will burn onto the split clips.
 // Slide 1 carries two lines (hook, bigger; subtitle, smaller) stacked together.
+// Also used to drive the live canvas preview, so what you see matches what gets burned in.
 function buildTextLayers(sb: SlideBlocks | null): Array<Array<{ text: string; fontSize: number; yFrac: number }>> {
   if (!sb) return [[], [], [], []];
   const slide1 = [
@@ -102,6 +109,146 @@ function rowLabel(sb: SlideBlocks, i: number): string {
   return hook ? `${i + 1}. ${hook.slice(0, 60)}${hook.length > 60 ? "…" : ""}` : `Row ${i + 1} (no hook)`;
 }
 
+const SLIDE_LABELS = ["Slide 1 · Hook", "Slide 2 · Body", "Slide 3 · Body", "Slide 4 · CTA"];
+
+// Live preview of the 4 slides: draws the matching horizontal strip of the
+// source video onto a canvas per slide, then overlays the same text layers
+// ffmpeg will burn in server-side, at the same relative size and position.
+// Also doubles as the editor — the text fields underneath write straight
+// back into the video's slideBlocks.
+function SlidePreviewModal({ item, onClose, onUpdateBlocks }: { item: Item; onClose: () => void; onUpdateBlocks: (blocks: SlideBlocks) => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRefs = [useRef<HTMLCanvasElement>(null), useRef<HTMLCanvasElement>(null), useRef<HTMLCanvasElement>(null), useRef<HTMLCanvasElement>(null)];
+  const [scrub, setScrub] = useState(0.5);
+  const blocks = item.slideBlocks || emptyBlocks();
+
+  const draw = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth) return;
+    const vw = video.videoWidth, vh = video.videoHeight;
+    const sliceW = vw / 4;
+    const layers = buildTextLayers(item.slideBlocks);
+    canvasRefs.forEach((ref, i) => {
+      const canvas = ref.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
+      const cw = canvas.width, ch = canvas.height;
+      ctx.clearRect(0, 0, cw, ch);
+      try {
+        ctx.drawImage(video, i * sliceW, 0, sliceW, vh, 0, 0, cw, ch);
+      } catch {
+        // frame not ready yet, skip
+      }
+      const scale = cw / sliceW;
+      for (const line of layers[i] || []) {
+        if (!line.text.trim()) continue;
+        const fontSize = Math.max(8, line.fontSize * scale);
+        ctx.font = `700 ${fontSize}px sans-serif`;
+        ctx.textAlign = "center";
+        const maxWidth = cw * 0.86;
+        const words = line.text.trim().split(/\s+/);
+        const wrapped: string[] = [];
+        let cur = "";
+        for (const w of words) {
+          const t = cur ? `${cur} ${w}` : w;
+          if (ctx.measureText(t).width > maxWidth && cur) { wrapped.push(cur); cur = w; } else cur = t;
+        }
+        if (cur) wrapped.push(cur);
+        const lineH = fontSize * 1.15;
+        const totalH = wrapped.length * lineH;
+        const topY = ch * line.yFrac - totalH / 2;
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.fillRect(0, topY - 6, cw, totalH + 12);
+        ctx.fillStyle = "#fff";
+        let y = topY + fontSize * 0.8;
+        for (const l of wrapped) {
+          ctx.fillText(l, cw / 2, y);
+          y += lineH;
+        }
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.slideBlocks]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const onLoaded = () => { video.currentTime = video.duration * scrub; };
+    const onSeeked = () => draw();
+    video.addEventListener("loadedmetadata", onLoaded);
+    video.addEventListener("seeked", onSeeked);
+    if (video.readyState >= 1 && video.duration) video.currentTime = video.duration * scrub;
+    return () => {
+      video.removeEventListener("loadedmetadata", onLoaded);
+      video.removeEventListener("seeked", onSeeked);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => { draw(); }, [item.slideBlocks, draw]);
+
+  function handleScrub(v: number) {
+    setScrub(v);
+    const video = videoRef.current;
+    if (video && video.duration) video.currentTime = video.duration * v;
+  }
+
+  function setField(field: keyof SlideBlocks, value: string) {
+    onUpdateBlocks({ ...blocks, [field]: value });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-card border border-border/40 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-lg flex items-center gap-2"><Eye className="w-5 h-5 text-pink-400" /> Preview &amp; edit slides</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
+        </div>
+        <video ref={videoRef} src={item.url} muted playsInline className="hidden" />
+        <div>
+          <label className="text-xs text-muted-foreground">Preview frame (scrub through the video)</label>
+          <input type="range" min={0} max={1} step={0.01} value={scrub} onChange={(e) => handleScrub(Number(e.target.value))} className="w-full accent-pink-500" />
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="space-y-2">
+              <canvas ref={canvasRefs[i]} width={162} height={216} className="w-full rounded-lg border border-white/10 bg-black" />
+              <p className="text-[11px] text-muted-foreground text-center">{SLIDE_LABELS[i]}</p>
+            </div>
+          ))}
+        </div>
+        <div className="grid sm:grid-cols-2 gap-3 pt-2 border-t border-border/20">
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Hook (slide 1, big)</label>
+            <input value={blocks.hook} onChange={(e) => setField("hook", e.target.value)} className="w-full bg-white/5 border border-border/50 rounded-md px-2 py-1.5 text-sm" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Subtitle (slide 1, small)</label>
+            <input value={blocks.subtitle} onChange={(e) => setField("subtitle", e.target.value)} className="w-full bg-white/5 border border-border/50 rounded-md px-2 py-1.5 text-sm" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Slide 2 body</label>
+            <input value={blocks.body2} onChange={(e) => setField("body2", e.target.value)} className="w-full bg-white/5 border border-border/50 rounded-md px-2 py-1.5 text-sm" />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Slide 3 body</label>
+            <input value={blocks.body3} onChange={(e) => setField("body3", e.target.value)} className="w-full bg-white/5 border border-border/50 rounded-md px-2 py-1.5 text-sm" />
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <label className="text-xs text-muted-foreground">Slide 4 CTA</label>
+            <input value={blocks.cta} onChange={(e) => setField("cta", e.target.value)} className="w-full bg-white/5 border border-border/50 rounded-md px-2 py-1.5 text-sm" />
+          </div>
+        </div>
+        <p className="text-[11px] text-muted-foreground">This is a close preview, not pixel-perfect — actual burn-in happens when you cut and schedule.</p>
+        <div className="flex justify-end pt-2">
+          <Button onClick={onClose}>Done</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AnimatedCarousels() {
   const { presets } = usePresets();
   const [presetId, setPresetId] = useState<number | null>(null);
@@ -110,7 +257,10 @@ export default function AnimatedCarousels() {
   // Every row parsed from the last slide-text CSV, kept around so each video
   // can pick which title/row to use from a dropdown, same as the other tools.
   const [csvRows, setCsvRows] = useState<SlideBlocks[]>([]);
+  const [musicPickerId, setMusicPickerId] = useState<string | null>(null);
+  const [previewId, setPreviewId] = useState<string | null>(null);
   const preset = useMemo(() => presets.find((p) => p.id === presetId) || null, [presets, presetId]);
+  const previewItem = items.find((it) => it.id === previewId) || null;
 
   function addFiles(files: FileList | null) {
     if (!files) return;
@@ -127,6 +277,7 @@ export default function AnimatedCarousels() {
         time: POST_TIME,
         slices: 4,
         slideBlocks: null,
+        musicTrack: null,
         status: "" as const,
       }));
       return [...prev, ...next];
@@ -295,6 +446,7 @@ export default function AnimatedCarousels() {
               caption: it.caption || "",
               title: it.file.name.replace(/\.[^.]+$/, "").slice(0, 60),
               platforms: ["instagram", "facebook"],
+              ...(it.musicTrack ? { musicTrack: { name: it.musicTrack.name, artist: it.musicTrack.artist } } : {}),
             },
             scheduledAt: new Date(`${it.date}T${it.time}`).toISOString(),
           }),
@@ -312,6 +464,22 @@ export default function AnimatedCarousels() {
 
   return (
     <div className="min-h-screen">
+      {previewItem && (
+        <SlidePreviewModal
+          item={previewItem}
+          onClose={() => setPreviewId(null)}
+          onUpdateBlocks={(blocks) => update(previewItem.id, { slideBlocks: blocks })}
+        />
+      )}
+      {musicPickerId && (
+        <MusicPickerModal
+          open={!!musicPickerId}
+          onClose={() => setMusicPickerId(null)}
+          selectedTrack={items.find((it) => it.id === musicPickerId)?.musicTrack ?? null}
+          onSelect={(track) => { if (musicPickerId) update(musicPickerId, { musicTrack: track }); }}
+        />
+      )}
+
       <div className="border-b border-border/40 px-6 py-4 flex items-center gap-3">
         <Link href="/hub"><ArrowLeft className="w-5 h-5 text-muted-foreground hover:text-foreground" /></Link>
         <div>
@@ -382,9 +550,16 @@ export default function AnimatedCarousels() {
                       <span className="text-xs text-muted-foreground truncate flex items-center gap-1"><Film className="w-3.5 h-3.5" /> {it.file.name}</span>
                       <button onClick={() => remove(it.id)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <Scissors className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                       <span className="text-xs text-muted-foreground">Cut into 4 slides (4320x1440 source)</span>
+                      <button
+                        type="button"
+                        onClick={() => setPreviewId(it.id)}
+                        className="ml-auto text-xs font-medium text-pink-400 hover:text-pink-300 flex items-center gap-1"
+                      >
+                        <Eye className="w-3.5 h-3.5" /> Preview &amp; edit slides
+                      </button>
                     </div>
                     {csvRows.length > 0 && (
                       <div className="space-y-1">
@@ -418,6 +593,17 @@ export default function AnimatedCarousels() {
                         {it.status === "captioning" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                       </button>
                     </div>
+                    {it.musicTrack ? (
+                      <MusicTrackBadge track={it.musicTrack} onRemove={() => update(it.id, { musicTrack: null })} />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setMusicPickerId(it.id)}
+                        className="text-xs font-medium text-muted-foreground hover:text-pink-400 flex items-center gap-1.5 rounded-lg border border-border/50 hover:border-pink-500/40 px-3 py-1.5 w-fit"
+                      >
+                        <Music className="w-3.5 h-3.5" /> Add music
+                      </button>
+                    )}
                     <div className="flex gap-2">
                       <input type="date" value={it.date} onChange={(e) => update(it.id, { date: e.target.value })} className="flex-1 bg-white/5 border border-border/50 rounded-md px-2 py-1.5 text-sm" />
                       <input type="time" value={it.time} onChange={(e) => update(it.id, { time: e.target.value })} className="flex-1 bg-white/5 border border-border/50 rounded-md px-2 py-1.5 text-sm" />
@@ -432,7 +618,7 @@ export default function AnimatedCarousels() {
               </div>
             ))}
             <div className="flex justify-between items-center">
-              <p className="text-xs text-muted-foreground">Each wide video is cut into 4 equal MP4 slides (with any slide text burned in) and posted as a video carousel to Instagram and Facebook.</p>
+              <p className="text-xs text-muted-foreground">Each wide video is cut into 4 equal MP4 slides (with any slide text burned in) and posted as a video carousel to Instagram and Facebook. Music is saved as a note, Instagram doesn't support auto-attaching a track to a video carousel, add it manually in-app if you want it to actually play.</p>
               <Button onClick={scheduleAll} disabled={busy || !preset} className="bg-pink-600 hover:bg-pink-700">
                 {busy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-1.5" />}
                 Cut and schedule {items.length} carousel{items.length !== 1 ? "s" : ""}
