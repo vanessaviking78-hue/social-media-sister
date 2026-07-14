@@ -39,6 +39,7 @@ import notifyRouter from "./notify";
 import submissionsRouter from "./submissions";
 import revenueIdeasRouter from "./revenue-ideas";
 import seamlessCaroBuilderRouter from "./seamless-caro-builder";
+import resourcesRouter from "./resources";
 
 const router: IRouter = Router();
 
@@ -82,5 +83,6 @@ router.use(approvalBundlesRouter);
 router.use(contentGeneratorRouter);
 router.use(revenueIdeasRouter);
 router.use(seamlessCaroBuilderRouter);
+router.use(resourcesRouter);
 
 export default router;
