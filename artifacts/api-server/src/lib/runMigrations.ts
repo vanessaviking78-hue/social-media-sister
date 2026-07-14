@@ -24,9 +24,7 @@ export async function runMigrations(): Promise<void> {
     await createClientChecklistTable();
     await createResourceLibraryTable();
     await createRevenueIdeasTable();
-    await createClientBackgroundsTable();
-    await createPortalPushSubscriptionsTable();
-    await addRevenueIdeasIdeaIndexColumn();
+    await createClientNewsTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -318,82 +316,33 @@ async function createResourceLibraryTable(): Promise<void> {
   `);
 }
 
-// Weekly revenue-idea drafts. Vanessa reviews and edits each draft before it's
-// approved and shown on that client's portal.
 async function createRevenueIdeasTable(): Promise<void> {
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS revenue_ideas (
       id SERIAL PRIMARY KEY,
-      preset_id INTEGER NOT NULL REFERENCES client_presets(id) ON DELETE CASCADE,
+      preset_id INTEGER NOT NULL,
       client_name TEXT NOT NULL DEFAULT '',
-      week_of DATE NOT NULL,
+      week_of TEXT NOT NULL,
       title TEXT NOT NULL DEFAULT '',
       instructions TEXT NOT NULL DEFAULT '',
       draft_content TEXT NOT NULL DEFAULT '',
       status TEXT NOT NULL DEFAULT 'draft',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (preset_id, week_of)
     )
-  `);
-  await db.execute(sql`
-    CREATE UNIQUE INDEX IF NOT EXISTS revenue_ideas_preset_week_unique
-    ON revenue_ideas (preset_id, week_of)
   `);
 }
 
-// Preloaded background images per client for the Seamless Caro Builder.
-// anchor_x/anchor_y/anchor_w are stored as fractions (0-1) of a single panel,
-// marking where the cut-out person is placed, bottom-anchored, so the same
-// registration point repeats identically across every slide once the wide
-// composite is sliced.
-async function createClientBackgroundsTable(): Promise<void> {
+async function createClientNewsTable(): Promise<void> {
   await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS client_backgrounds (
+    CREATE TABLE IF NOT EXISTS client_news (
       id SERIAL PRIMARY KEY,
       preset_id INTEGER NOT NULL REFERENCES client_presets(id) ON DELETE CASCADE,
-      image_url TEXT NOT NULL,
-      slide_count INTEGER NOT NULL DEFAULT 3,
-      anchor_x DOUBLE PRECISION NOT NULL DEFAULT 0.32,
-      anchor_y DOUBLE PRECISION NOT NULL DEFAULT 0.95,
-      anchor_w DOUBLE PRECISION NOT NULL DEFAULT 0.34,
+      client_name TEXT NOT NULL DEFAULT '',
+      title TEXT NOT NULL DEFAULT '',
+      body TEXT NOT NULL DEFAULT '',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
-  `);
-}
-
-// One row per device a client has subscribed to push notifications on, tied to
-// their existing portal token rather than any new login. A client can have
-// several rows (phone + desktop etc.) — each is a separate push endpoint.
-async function createPortalPushSubscriptionsTable(): Promise<void> {
-  await db.execute(sql`
-    CREATE TABLE IF NOT EXISTS portal_push_subscriptions (
-      id SERIAL PRIMARY KEY,
-      client_portal_token TEXT NOT NULL,
-      endpoint TEXT NOT NULL UNIQUE,
-      p256dh TEXT NOT NULL,
-      auth TEXT NOT NULL,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `);
-  await db.execute(sql`
-    CREATE INDEX IF NOT EXISTS portal_push_subscriptions_token_idx
-    ON portal_push_subscriptions (client_portal_token)
-  `);
-}
-
-// Moves revenue_ideas from one-idea-per-client-per-week to three, by adding
-// an idea_index (1-3) and widening the unique index to include it. Existing
-// rows default to idea_index 1, which keeps them intact under the new index.
-async function addRevenueIdeasIdeaIndexColumn(): Promise<void> {
-  await db.execute(sql`
-    ALTER TABLE revenue_ideas
-    ADD COLUMN IF NOT EXISTS idea_index INTEGER NOT NULL DEFAULT 1
-  `);
-  await db.execute(sql`
-    DROP INDEX IF EXISTS revenue_ideas_preset_week_unique
-  `);
-  await db.execute(sql`
-    CREATE UNIQUE INDEX IF NOT EXISTS revenue_ideas_preset_week_index_unique
-    ON revenue_ideas (preset_id, week_of, idea_index)
   `);
 }
