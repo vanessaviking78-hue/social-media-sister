@@ -70,10 +70,13 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
   const [accountInfo, setAccountInfo] = useState<AccountInfo | null>(null);
   const [accountLoading, setAccountLoading] = useState(false);
   const accountCache = useRef<Record<number, AccountInfo>>({});
+  // Broadcast mode — send the same post(s) to several clients at once instead of picking one.
+  const [broadcastMode, setBroadcastMode] = useState(false);
+  const [selectedPresetIds, setSelectedPresetIds] = useState<Set<number>>(new Set());
   // Tracks whether the person has picked a date themselves — once they have, we stop
   // auto-moving their date around when new booking info comes in.
   const userEditedDate = useRef(!!initialScheduledAt);
-  const { byDate, bookedDates } = useBookedDays(activePresetId, 14);
+  const { byDate, bookedDates } = useBookedDays(broadcastMode ? null : activePresetId, 14);
 
   const isBulk = posts.length > 1;
   const isReel = postType === "reel";
@@ -101,8 +104,29 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
     setScheduledAt(`${dateKey(d)}T${timePart}`);
   }
 
+  function togglePresetSelection(id: number) {
+    setSelectedPresetIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) { next.delete(id); } else { next.add(id); }
+      return next;
+    });
+  }
+
+  function selectAllPresets() {
+    setSelectedPresetIds(new Set((presets ?? []).map((p) => p.id)));
+  }
+
+  function selectNonePresets() {
+    setSelectedPresetIds(new Set());
+  }
+
+  function toggleBroadcastMode() {
+    setBroadcastMode((v) => !v);
+    setSelectedPresetIds(new Set());
+  }
+
   useEffect(() => {
-    if (activePresetId === null) {
+    if (broadcastMode || activePresetId === null) {
       setAccountInfo(null);
       return;
     }
@@ -122,18 +146,18 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
         setAccountInfo({ igError: "Could not reach server", fbError: "Could not reach server" });
       })
       .finally(() => setAccountLoading(false));
-  }, [activePresetId]);
+  }, [activePresetId, broadcastMode]);
 
   // Auto-fill to the next open Monday/Wednesday/Friday slot — never Tue/Thu — as soon
   // as we know what's booked, unless the person has already chosen a date themselves.
   useEffect(() => {
-    if (activePresetId === null) return;
+    if (broadcastMode || activePresetId === null) return;
     if (userEditedDate.current) return;
     const [nextSlotDay] = nextOpenMWFSlots(bookedDates, 1);
     if (nextSlotDay) {
       setScheduledAt((prev) => `${nextSlotDay}T${prev.split("T")[1] || "18:45"}`);
     }
-  }, [bookedDates, activePresetId]);
+  }, [bookedDates, activePresetId, broadcastMode]);
 
   function togglePlatform(p: Platform) {
     setPlatforms((prev) => {
@@ -150,33 +174,47 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
   async function handleSave() {
     if (!scheduledAt) { toast.error("Pick a date and time"); return; }
     if (!caption.trim()) { toast.error("Add a caption before scheduling"); return; }
-    if (effectivePresetId === null) { toast.error("Select a client before scheduling"); return; }
+    if (broadcastMode) {
+      if (selectedPresetIds.size === 0) { toast.error("Select at least one client"); return; }
+    } else if (effectivePresetId === null) {
+      toast.error("Select a client before scheduling"); return;
+    }
     if (platforms.size === 0) { toast.error("Select at least one platform"); return; }
     setSaving(true);
     const gap = Math.max(0, Number(gapMinutes) || 60);
     const platformList = Array.from(platforms);
+    const targetPresetIds = broadcastMode ? Array.from(selectedPresetIds) : [effectivePresetId as number];
+    let scheduledCount = 0;
     try {
-      for (let i = 0; i < posts.length; i++) {
-        const post = posts[i];
-        const staggeredAt = new Date(new Date(scheduledAt).getTime() + i * gap * 60000).toISOString();
-        const content: SchedulePostPayload = { caption: caption.trim(), title: post.title, platforms: platformList };
-        if (isReel && post.videoUrl) content.videoUrl = post.videoUrl;
-        if (!isReel && post.imageUrls) content.imageUrls = post.imageUrls;
-        if (post.musicTrack) content.musicTrack = post.musicTrack;
-        if (post.firstComment) content.firstComment = post.firstComment;
-        if (sourceTool || post.sourceTool) content.sourceTool = sourceTool || post.sourceTool;
-        const body: Record<string, unknown> = { postType, content, scheduledAt: staggeredAt, isTrial, notes, presetId: effectivePresetId };
-        const r = await fetch(`${BASE}/api/scheduler/posts`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!r.ok) {
-          const err = await r.json().catch(() => ({ error: "Failed" }));
-          throw new Error(err.error || "Failed to schedule post");
+      for (const targetPresetId of targetPresetIds) {
+        for (let i = 0; i < posts.length; i++) {
+          const post = posts[i];
+          const staggeredAt = new Date(new Date(scheduledAt).getTime() + i * gap * 60000).toISOString();
+          const content: SchedulePostPayload = { caption: caption.trim(), title: post.title, platforms: platformList };
+          if (isReel && post.videoUrl) content.videoUrl = post.videoUrl;
+          if (!isReel && post.imageUrls) content.imageUrls = post.imageUrls;
+          if (post.musicTrack) content.musicTrack = post.musicTrack;
+          if (post.firstComment) content.firstComment = post.firstComment;
+          if (sourceTool || post.sourceTool) content.sourceTool = sourceTool || post.sourceTool;
+          const body: Record<string, unknown> = { postType, content, scheduledAt: staggeredAt, isTrial, notes, presetId: targetPresetId };
+          const r = await fetch(`${BASE}/api/scheduler/posts`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!r.ok) {
+            const err = await r.json().catch(() => ({ error: "Failed" }));
+            throw new Error(err.error || "Failed to schedule post");
+          }
+          scheduledCount++;
         }
       }
-      toast.success(posts.length === 1 ? "Post scheduled" : `${posts.length} posts scheduled`);
+      const clientCount = targetPresetIds.length;
+      toast.success(
+        broadcastMode
+          ? `${scheduledCount} post${scheduledCount === 1 ? "" : "s"} scheduled across ${clientCount} client${clientCount === 1 ? "" : "s"}`
+          : (scheduledCount === 1 ? "Post scheduled" : `${scheduledCount} posts scheduled`)
+      );
       onSaved?.();
       onClose();
     } catch (e: any) {
@@ -186,7 +224,9 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
     }
   }
 
-  const label = effectivePresetName ? `${effectivePresetName} · ` : "";
+  const label = broadcastMode
+    ? (selectedPresetIds.size > 0 ? `${selectedPresetIds.size} clients · ` : "")
+    : (effectivePresetName ? `${effectivePresetName} · ` : "");
   const countLabel = posts.length === 1 ? "1 post" : `${posts.length} posts`;
 
   const wantIg = platforms.has("instagram");
@@ -209,20 +249,59 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
 
           {showPresetSelector && (
             <div>
-              <Label className="text-zinc-300 text-sm mb-1.5 block">Client</Label>
-              <Select
-                value={activePresetId !== null ? String(activePresetId) : ""}
-                onValueChange={(v) => setActivePresetId(Number(v))}
-              >
-                <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
-                  <SelectValue placeholder="Pick a client" />
-                </SelectTrigger>
-                <SelectContent>
-                  {presets!.map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center justify-between mb-1.5">
+                <Label className="text-zinc-300 text-sm">Client</Label>
+                <button
+                  type="button"
+                  onClick={toggleBroadcastMode}
+                  className="text-[11px] text-pink-400 hover:text-pink-300 font-medium"
+                >
+                  {broadcastMode ? "Switch to single client" : "Send to multiple clients"}
+                </button>
+              </div>
+              {!broadcastMode ? (
+                <Select
+                  value={activePresetId !== null ? String(activePresetId) : ""}
+                  onValueChange={(v) => setActivePresetId(Number(v))}
+                >
+                  <SelectTrigger className="bg-zinc-800 border-zinc-700 text-white">
+                    <SelectValue placeholder="Pick a client" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {presets!.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="border border-zinc-700 rounded-md bg-zinc-800">
+                  <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-700/60">
+                    <span className="text-xs text-zinc-400">{selectedPresetIds.size} of {presets!.length} selected</span>
+                    <div className="flex gap-2">
+                      <button type="button" onClick={selectAllPresets} className="text-[11px] text-pink-400 hover:text-pink-300">Select all</button>
+                      <button type="button" onClick={selectNonePresets} className="text-[11px] text-zinc-500 hover:text-zinc-300">Clear</button>
+                    </div>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto divide-y divide-zinc-700/30">
+                    {presets!.map((p) => (
+                      <label key={p.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-zinc-700/30">
+                        <input
+                          type="checkbox"
+                          checked={selectedPresetIds.has(p.id)}
+                          onChange={() => togglePresetSelection(p.id)}
+                          className="w-3.5 h-3.5 accent-pink-500"
+                        />
+                        <span className="text-sm text-zinc-200">{p.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {broadcastMode && (
+                <p className="text-[11px] text-zinc-500 mt-1.5">
+                  Same content, same date, sent to every client ticked above — each lands in their own queue in the Scheduler, where you can drag it to a different date individually afterwards.
+                </p>
+              )}
             </div>
           )}
 
@@ -238,7 +317,7 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
             />
           </div>
 
-          {activePresetId !== null && (
+          {!broadcastMode && activePresetId !== null && (
             <div>
               <Label className="text-zinc-300 text-sm mb-1.5 block">Posting gaps (next 14 days)</Label>
               <div className="flex gap-1.5 overflow-x-auto pb-1">
@@ -285,7 +364,7 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
                 className="bg-zinc-800 border-zinc-700 text-white"
               />
               <p className="text-xs text-zinc-500 mt-1.5">
-                Posts will be staggered — post 1 at the chosen time, post 2 {gapMinutes} min later, and so on.
+                Posts will be staggered — post 1 at the chosen time, post 2 {gapMinutes} min later, and so on{broadcastMode ? " (per client)" : ""}.
               </p>
             </div>
           )}
@@ -314,7 +393,7 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
           </div>
 
           {/* Account confirmation — shows which account each platform will post to */}
-          {activePresetId !== null && (
+          {!broadcastMode && activePresetId !== null && (
             <div className="rounded-lg border border-zinc-700/60 bg-zinc-800/50 overflow-hidden">
               <div className="px-3 py-2 border-b border-zinc-700/40 flex items-center justify-between">
                 <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Posting to</span>
@@ -362,6 +441,14 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
                 )}
 
               </div>
+            </div>
+          )}
+
+          {broadcastMode && (
+            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3">
+              <p className="text-xs text-amber-300/90 leading-relaxed">
+                Account connection isn't double checked per client in broadcast mode. If a client's Meta connection has dropped, that one post will fail quietly and show up under Failed in the Scheduler — worth a glance after sending.
+              </p>
             </div>
           )}
 
