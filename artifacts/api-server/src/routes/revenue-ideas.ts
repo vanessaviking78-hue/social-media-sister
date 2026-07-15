@@ -73,7 +73,12 @@ CLINIC CONTEXT
 ${context}
 
 TASK
-Come up with THREE fresh, specific revenue ideas this clinic could run this week. Make sure the three are genuinely different in nature from each other, for example one built around an offer or bundle, one built around a content or awareness angle, and one built around a referral or loyalty mechanic. Avoid generic "book now" offers and avoid anything that reads like a nail bar or beauty salon deal, these are medical aesthetics clinics. Make each idea feel tailored to this clinic and the time of year.
+Come up with THREE fresh, specific revenue ideas for this clinic. These are not weekly social media promos, they are genuine ways for the clinic to make more money, the kind of thing a clinic owner would actually build and run for months, not a one-off post. Think in terms of real revenue mechanics, for example:
+- A recurring revenue model: a skin subscription, a monthly membership, a pre-paid package or plan that turns one-off clients into regular income.
+- Winning back lapsed clients: a specific way to get old clients who haven't been in for a while back through the door, not a vague "we miss you" post but an actual mechanic (what's the trigger, what's the offer, how does it get sent).
+- A third idea of your choosing in the same spirit, for example an upsell/bundle across treatments, a VIP or loyalty tier, or a referral system with real structure behind it, not just "refer a friend".
+
+Make sure the three are genuinely different revenue mechanics from each other. Avoid generic "book now" offers and avoid anything that reads like a nail bar or beauty salon deal, these are medical aesthetics clinics. Make each idea feel tailored to this clinic.
 
 Return a JSON object with exactly this shape:
 
@@ -83,10 +88,10 @@ title
 A short, punchy name for the idea. Max 8 words.
 
 instructions
-A brief written directly to the clinic owner explaining what to run this week and why, in the voice above. 3-5 sentences. Practical, specific, no fluff.
+A brief written directly to the clinic owner explaining the idea and how to actually set it up and run it, in the voice above. 4-6 sentences. Practical and specific: what it is, roughly how it would work operationally (pricing structure, who it targets, how it gets communicated), and why it makes sense for this clinic. No fluff.
 
 draftContent
-A ready-to-use piece of copy (a social caption or short post) putting the idea into words the clinic could post as-is or lightly tweak. 4-6 sentences.
+A ready-to-use piece of copy (a social caption, email, or short post) announcing or promoting the idea, that the clinic could post or send as-is or lightly tweak. 4-6 sentences.
 ${COMPLIANCE_RULES}`;
 
   const completion = await openai.chat.completions.create({
