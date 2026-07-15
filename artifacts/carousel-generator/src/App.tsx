@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter, useRoute, useLocation } from "wouter";
+—import { Switch, Route, Router as WouterRouter, useRoute, useLocation } from "wouter";
 import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
@@ -57,7 +57,6 @@ import BundleRequestsDashboard from "@/pages/bundle-requests-dashboard";
 import FounderSignup from "@/pages/founder-signup";
 import FounderWelcome from "@/pages/founder-welcome";
 import StrategyLibrary from "@/pages/strategy-library";
-import PhotoCarousel from "@/pages/photo-carousel";
 import Brand from "@/pages/brand";
 import UploadSchedule from "@/pages/upload-schedule";
 import BulkCarousel from "@/pages/bulk-carousel";
@@ -124,7 +123,6 @@ function ProtectedRouter() {
       <Route path="/bundle-builder" component={BundleBuilder} />
       <Route path="/bundle-requests" component={BundleRequestsDashboard} />
       <Route path="/strategy-library" component={StrategyLibrary} />
-      <Route path="/photo-carousel" component={PhotoCarousel} />
       <Route path="/brand" component={Brand} />
       <Route path="/upload-schedule" component={UploadSchedule} />
       <Route path="/bulk-carousel" component={BulkCarousel} />
