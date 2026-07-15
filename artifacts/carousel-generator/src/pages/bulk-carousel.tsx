@@ -362,15 +362,7 @@ export function renderSlideCanvas(
 
   if (!bgOnly) {
     if (slideNum === 1) {
-    const lineBlock = blocks.find(b => b.id === "line");
-    if (lineBlock) {
-      const lineLen = (lineBlock.w ?? 0.4) * W;
-      const thick   = Math.max(1, lineBlock.thickness ?? 3);
-      const lcx = (lineBlock.x ?? 0.5) * W;
-      const lcy = (lineBlock.y ?? 0.9) * H;
-      ctx.fillStyle = accentColor;
-      ctx.fillRect(lcx - lineLen / 2, lcy - thick / 2, lineLen, thick);
-    }
+    // Decorative line permanently removed per client request — do not re-add.
     }
 
     if (logoImg) {
