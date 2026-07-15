@@ -286,7 +286,7 @@ const TOOLS = [
     href: "/catch-up",
     icon: AlertTriangle,
     name: "Catch-Up Plan",
-    description: "The running list from the last audit. Fires to sort today, clients with no post ever, and accounts that still aren't connected. Tick each one off as you clear it.",
+    description: "Live, not a snapshot: pulls straight from the scheduler and Meta connections every time you open it. Fires to sort today, clients with no post ever, and accounts that still aren't connected. Tick each one off as you clear it.",
     color: "from-red-500/20 to-red-500/5",
     border: "hover:border-red-500/50",
     iconColor: "text-red-400",
