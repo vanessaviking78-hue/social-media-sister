@@ -153,6 +153,8 @@ const [editId, setEditId] = useState<string | null>(null);
 const [excluded, setExcluded] = useState<Set<string>>(new Set());
 const [csvParsed, setCsvParsed] = useState<PRow[]>([]);
 const [batchPresetId, setBatchPresetId] = useState<number | null>(null);
+const [broadcastMode, setBroadcastMode] = useState(false);
+const [broadcastPresetIds, setBroadcastPresetIds] = useState<Set<number>>(new Set());
 const [genning, setGenning] = useState(false);
 const [genId, setGenId] = useState<string | null>(null);
 const [editLogo, setEditLogo] = useState<HTMLImageElement | null>(null);
@@ -332,19 +334,41 @@ toast.success("ZIP downloaded.", { id: tid });
 } catch (e: any) { toast.error(e?.message || "ZIP failed", { id: tid }); }
 }
 async function scheduleAll() {
-const ready = carousels.filter((c) => isIn(c.id) && c.presetId && c.date && c.time);
-if (!ready.length) { toast.error("Give at least one carousel a client, date and time."); return; }
-setBusy(true); const tid = toast.loading("Uploading and scheduling…");
+if (broadcastMode) {
+const targetIds = Array.from(broadcastPresetIds);
+if (!targetIds.length) { toast.error("Tick at least one client to broadcast to."); return; }
+const ready = carousels.filter((c) => isIn(c.id) && c.date && c.time);
+if (!ready.length) { toast.error("Give at least one carousel a date and time."); return; }
+setBusy(true); const tid = toast.loading("Uploading and scheduling...");
+let sent = 0;
 try {
 for (let i = 0; i < ready.length; i++) {
-const c = ready[i]; toast.loading(`Scheduling ${i + 1} / ${ready.length}…`, { id: tid });
+const c = ready[i]; toast.loading(`Scheduling ${i + 1} / ${ready.length}...`, { id: tid });
+const names = c.slideUrls.map((_, j) => `seamless-${i + 1}-slide${j + 1}.png`);
+const imageUrls = await uploadDataUrls(c.slideUrls, names);
+for (const targetId of targetIds) {
+const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: targetId, postType: "carousel", content: { imageUrls, caption: c.caption || "", title: (c.row.slide1_hook || c.name).slice(0, 80), platforms: ["instagram", "facebook"], musicTrack: c.track || undefined, sourceTool: "Seamless Carousels" }, scheduledAt: new Date(`${c.date}T${c.time}`).toISOString() }) });
+if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(`${c.name}: ${err.error}`); }
+sent++;
+}
+}
+toast.success(`${sent} post${sent !== 1 ? "s" : ""} queued across ${targetIds.length} client${targetIds.length !== 1 ? "s" : ""}.`, { id: tid });
+} catch (e: any) { toast.error(e.message || "Scheduling failed", { id: tid }); } finally { setBusy(false); }
+return;
+}
+const ready = carousels.filter((c) => isIn(c.id) && c.presetId && c.date && c.time);
+if (!ready.length) { toast.error("Give at least one carousel a client, date and time."); return; }
+setBusy(true); const tid = toast.loading("Uploading and scheduling...");
+try {
+for (let i = 0; i < ready.length; i++) {
+const c = ready[i]; toast.loading(`Scheduling ${i + 1} / ${ready.length}...`, { id: tid });
 const names = c.slideUrls.map((_, j) => `seamless-${i + 1}-slide${j + 1}.png`);
 const imageUrls = await uploadDataUrls(c.slideUrls, names);
 const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: c.presetId, postType: "carousel", content: { imageUrls, caption: c.caption || "", title: (c.row.slide1_hook || c.name).slice(0, 80), platforms: ["instagram", "facebook"], musicTrack: c.track || undefined, sourceTool: "Seamless Carousels" }, scheduledAt: new Date(`${c.date}T${c.time}`).toISOString() }) });
 if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(`${c.name}: ${err.error}`); }
 }
 toast.success(`${ready.length} seamless carousel${ready.length !== 1 ? "s" : ""} queued.`, { id: tid });
-} catch (e: any) { toast.error(e?.message || "Scheduling failed", { id: tid }); } finally { setBusy(false); }
+} catch (e: any) { toast.error(e.message || "Scheduling failed", { id: tid }); } finally { setBusy(false); }
 }
 
 const editing = carousels.find((c) => c.id === editId) || null;
@@ -413,6 +437,7 @@ onClose={() => setEditId(null)}
 <button onClick={() => setPhase("upload")} className="text-sm text-muted-foreground hover:text-foreground">← Back to strips</button>
 <div className="flex gap-3 flex-wrap items-center">
 <select value={batchPresetId ?? ""} onChange={(e) => applyClientToAll(e.target.value ? Number(e.target.value) : null)} className="bg-white/5 border border-pink-500/40 rounded-lg px-3 py-2 text-sm"><option value="">Client for all…</option>{presets.map((pp) => <option key={pp.id} value={pp.id}>{pp.name}</option>)}</select>
+<button onClick={() => { setBroadcastMode((v) => !v); setBroadcastPresetIds(new Set()); }} className={`px-4 py-2 rounded-lg border text-sm font-medium ${broadcastMode ? "bg-pink-600/20 border-pink-500/60 text-pink-300" : "border-border/50 hover:border-pink-500/60"}`}>{broadcastMode ? "Broadcast: On" : "Broadcast to multiple clients"}</button>
 <button onClick={downloadTemplate} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">CSV template</button>
 <label className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm cursor-pointer">Load CSV rows<input type="file" accept=".csv" className="hidden" onChange={(e) => { if (e.target.files?.[0]) importCsv(e.target.files[0]); e.currentTarget.value = ""; }} /></label>
 {csvParsed.length > 0 && <button onClick={fillInOrder} disabled={busy} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Match in order</button>}
@@ -420,9 +445,29 @@ onClose={() => setEditId(null)}
 <button onClick={() => setExcluded(new Set(carousels.map((c) => c.id)))} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Clear</button>
 <button onClick={generateCaptions} disabled={genning} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm disabled:opacity-40">{genning ? "Writing…" : "Generate captions"}</button>
 <button onClick={downloadZip} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm">Download selected (ZIP)</button>
-<button onClick={scheduleAll} disabled={busy} className="px-5 py-2 rounded-lg bg-pink-500 text-white font-semibold text-sm disabled:opacity-40 hover:bg-pink-400">{busy ? "Working…" : `Schedule selected (${carousels.filter((c) => isIn(c.id)).length})`}</button>
+<button onClick={scheduleAll} disabled={busy} className="px-5 py-2 rounded-lg bg-pink-500 text-white font-semibold text-sm disabled:opacity-40 hover:bg-pink-400">{busy ? "Working..." : broadcastMode ? `Broadcast to ${broadcastPresetIds.size} client${broadcastPresetIds.size !== 1 ? "s" : ""}` : `Schedule selected (${carousels.filter((c) => isIn(c.id)).length})`}</button>
 </div>
 </div>
+{broadcastMode && (
+<div className="border border-pink-500/40 rounded-xl bg-white/[0.03] p-4 space-y-2 mb-4">
+<div className="flex items-center justify-between">
+<p className="text-sm font-semibold">Broadcast to multiple clients</p>
+<div className="flex gap-3">
+<button onClick={() => setBroadcastPresetIds(new Set(presets.map((p) => p.id)))} className="text-xs text-pink-400 hover:text-pink-300">Select all</button>
+<button onClick={() => setBroadcastPresetIds(new Set())} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+</div>
+</div>
+<p className="text-xs text-muted-foreground">{broadcastPresetIds.size} of {presets.length} selected. Every included carousel below is sent to each ticked client, on its own date.</p>
+<div className="max-h-48 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+{presets.map((p) => (
+<label key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-white/5 cursor-pointer">
+<input type="checkbox" checked={broadcastPresetIds.has(p.id)} onChange={() => setBroadcastPresetIds((prev) => { const next = new Set(prev); next.has(p.id) ? next.delete(p.id) : next.add(p.id); return next; })} className="w-3.5 h-3.5 accent-pink-500" />
+<span className="text-xs truncate">{p.name}</span>
+</label>
+))}
+</div>
+</div>
+)}
 <BookedDaysStrip presetId={batchPresetId} />
 {carousels.map((c) => (
 <div key={c.id} className={`rounded-2xl border p-4 space-y-4 transition-opacity ${isIn(c.id) ? "border-pink-500/40" : "border-border/40 opacity-50"}`}>
