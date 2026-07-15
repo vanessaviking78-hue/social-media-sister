@@ -106,6 +106,7 @@ export default function Calendar() {
   const [formColor, setFormColor] = useState("#ec4899");
   const [formImageUrl, setFormImageUrl] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
+  const [deleteSchedConfirmId, setDeleteSchedConfirmId] = useState<number | null>(null);
 
   const [showLibrary, setShowLibrary] = useState(false);
   const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([]);
@@ -278,6 +279,20 @@ export default function Calendar() {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to delete";
       toast.error(message);
+    }
+  };
+
+  const handleDeleteScheduled = async (schedPostId: number) => {
+    const realId = schedPostId - SCHED_OFFSET;
+    const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+    try {
+      const res = await fetch(`${BASE}/api/scheduler/posts/${realId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      setScheduledPosts((prev) => prev.filter((p) => p.id !== schedPostId));
+      setDeleteSchedConfirmId(null);
+      toast.success("Removed from scheduler");
+    } catch {
+      toast.error("Failed to delete scheduled post");
     }
   };
 
@@ -509,6 +524,7 @@ export default function Calendar() {
                   <div className="space-y-1">
                     {(expandedDay === day.date ? dayPosts : dayPosts.slice(0, 3)).map((post) => {
                       const isSched = post.id >= SCHED_OFFSET;
+                      const confirmingDelete = deleteSchedConfirmId === post.id;
                       return (
                       <div
                         key={post.id}
@@ -519,18 +535,39 @@ export default function Calendar() {
                         className={`group rounded px-1.5 py-1 text-[11px] leading-tight transition-all ${isSched ? "cursor-default opacity-95" : "cursor-pointer hover:ring-1 hover:ring-white/20"}`}
                         style={{ backgroundColor: post.color + "22", borderLeft: `3px solid ${post.color}` }}
                       >
+                        {confirmingDelete ? (
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-[10px] text-foreground/80">Delete?</span>
+                            <div className="flex items-center gap-1">
+                              <button onClick={(e) => { e.stopPropagation(); handleDeleteScheduled(post.id); }} className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/80 text-white hover:bg-red-500">Yes</button>
+                              <button onClick={(e) => { e.stopPropagation(); setDeleteSchedConfirmId(null); }} className="text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-muted-foreground hover:bg-white/20">No</button>
+                            </div>
+                          </div>
+                        ) : (
+                        <>
                         <div className="flex items-center gap-1">
                           {!isSched && <GripVertical className="w-3 h-3 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 cursor-grab" />}
                           {post.imageUrl && (
                             <img src={post.imageUrl} alt="" className="w-4 h-4 rounded-sm object-cover flex-shrink-0" />
                           )}
-                          <span className="truncate font-medium text-foreground/90">{post.title || post.clientName || getPostTypeBadge(post.postType)}</span>
+                          <span className="truncate font-medium text-foreground/90 flex-1">{post.title || post.clientName || getPostTypeBadge(post.postType)}</span>
+                          {isSched && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setDeleteSchedConfirmId(post.id); }}
+                              title="Delete this scheduled post"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/60 hover:text-red-400 flex-shrink-0"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
                         </div>
                         <div className="flex items-center gap-1 ml-4 mt-0.5">
                           <span className="text-[9px] px-1 py-px rounded bg-white/10 text-muted-foreground">{getPostTypeBadge(post.postType)}</span>
                           {isSched && <span className="text-[9px] px-1 py-px rounded bg-cyan-400/20 text-cyan-300">Scheduled</span>}
                           {post.clientName && <span className="text-[10px] text-muted-foreground truncate">{post.clientName}</span>}
                         </div>
+                        </>
+                        )}
                       </div>
                       );
                     })}
