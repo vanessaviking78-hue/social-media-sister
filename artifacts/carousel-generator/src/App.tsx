@@ -96,8 +96,8 @@ function ProtectedRouter() {
   return (
     <Switch>
       <Route path="/hub" component={Hub} />
-      <R<Route path="/daily-focus" component={DailyFocus} />
-      oute path="/carousel" component={Home} />
+      <Route path="/daily-focus" component={DailyFocus} />
+      <Route path="/carousel" component={Home} />
       <Route path="/single-image" component={SingleImage} />
       <Route path="/stories" component={Stories} />
       <Route path="/presets" component={Presets} />
