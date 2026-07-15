@@ -361,6 +361,7 @@ export function renderSlideCanvas(
   ctx.shadowBlur  = 0;
 
   if (!bgOnly) {
+    if (slideNum === 1) {
     const lineBlock = blocks.find(b => b.id === "line");
     if (lineBlock) {
       const lineLen = (lineBlock.w ?? 0.4) * W;
@@ -369,6 +370,7 @@ export function renderSlideCanvas(
       const lcy = (lineBlock.y ?? 0.9) * H;
       ctx.fillStyle = accentColor;
       ctx.fillRect(lcx - lineLen / 2, lcy - thick / 2, lineLen, thick);
+    }
     }
 
     if (logoImg) {
