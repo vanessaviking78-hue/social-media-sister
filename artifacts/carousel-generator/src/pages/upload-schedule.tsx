@@ -214,6 +214,8 @@ export default function UploadSchedule() {
   const [briefOpen, setBriefOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [presetId, setPresetId] = useState<string>("");
+  const [broadcastMode, setBroadcastMode] = useState(false);
+  const [selectedPresetIds, setSelectedPresetIds] = useState<Set<number>>(new Set());
   const [date, setDate] = useState(todayStr);
   const [time, setTime] = useState("18:00");
   const [platforms, setPlatforms] = useState<Set<Platform>>(
@@ -383,7 +385,11 @@ export default function UploadSchedule() {
   const handleSchedule = async () => {
     if (!images.length) { toast.error("Upload at least one image or video."); return; }
     if (!caption.trim()) { toast.error("Write a caption first."); return; }
-    if (!presetId) { toast.error("Pick a client."); return; }
+    if (broadcastMode) {
+      if (selectedPresetIds.size === 0) { toast.error("Select at least one client."); return; }
+    } else if (!presetId) {
+      toast.error("Pick a client."); return;
+    }
     if (!date) { toast.error("Pick a date."); return; }
 
     const selectedPreset = presets.find((p) => String(p.id) === presetId);
@@ -400,6 +406,9 @@ export default function UploadSchedule() {
     );
 
     try {
+      const targetPresetIds = broadcastMode ? Array.from(selectedPresetIds) : [Number(presetId)];
+      const titleBase = broadcastMode ? `Upload & Schedule — ${targetPresetIds.length} clients ${date}` : `Upload & Schedule — ${selectedPreset?.name ?? "Client"} ${date}`;
+
       let postContent: Record<string, unknown>;
 
       if (isVideoPost || isAnimated) {
@@ -414,7 +423,7 @@ export default function UploadSchedule() {
         postContent = {
           videoUrl: url,
           caption: caption.trim(),
-          title: `Upload & Schedule — ${selectedPreset?.name ?? "Client"} ${date}`,
+          title: titleBase,
           platforms: Array.from(platforms),
         };
       } else {
@@ -422,12 +431,12 @@ export default function UploadSchedule() {
         postContent = {
           imageUrls: mediaUrls,
           caption: caption.trim(),
-          title: `Upload & Schedule — ${selectedPreset?.name ?? "Client"} ${date}`,
+          title: titleBase,
           platforms: Array.from(platforms),
         };
       }
 
-      toast.loading("Queuing post...", { id });
+      toast.loading(broadcastMode ? `Queuing post for ${targetPresetIds.length} clients...` : "Queuing post...", { id });
 
       const scheduledAt = new Date(`${date}T${time}:00`).toISOString();
 
@@ -445,24 +454,26 @@ export default function UploadSchedule() {
         }
       }
 
-      const res = await fetch(`${BASE}/api/scheduler/posts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          presetId: Number(presetId),
-          postType,
-          content: postContent,
-          scheduledAt,
-          stickerConfig,
-        }),
-      });
+      for (const targetPresetId of targetPresetIds) {
+        const res = await fetch(`${BASE}/api/scheduler/posts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            presetId: targetPresetId,
+            postType,
+            content: postContent,
+            scheduledAt,
+            stickerConfig,
+          }),
+        });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: "Scheduling failed" }));
-        throw new Error(data.error || "Scheduling failed");
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({ error: "Scheduling failed" }));
+          throw new Error(data.error || "Scheduling failed");
+        }
       }
 
-      toast.success("Post queued.", { id });
+      toast.success(broadcastMode ? `Post queued for ${targetPresetIds.length} clients.` : "Post queued.", { id });
       setScheduled(true);
       setImages([]);
       setCaption("");
@@ -780,23 +791,62 @@ export default function UploadSchedule() {
 
               {/* Client */}
               <div>
-                <Label className="text-xs text-zinc-500 mb-1.5 block">Client</Label>
-                <Select
-                  value={presetId}
-                  onValueChange={setPresetId}
-                  disabled={presetsLoading}
-                >
-                  <SelectTrigger className="bg-zinc-900 border-white/10 text-sm">
-                    <SelectValue placeholder={presetsLoading ? "Loading..." : "Pick a client"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {presets.map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center justify-between mb-1.5">
+                  <Label className="text-xs text-zinc-500">Client</Label>
+                  <button
+                    type="button"
+                    onClick={() => { setBroadcastMode((v) => !v); setSelectedPresetIds(new Set()); }}
+                    className="text-[11px] text-pink-400 hover:text-pink-300 font-medium"
+                  >
+                    {broadcastMode ? "Switch to single client" : "Send to multiple clients"}
+                  </button>
+                </div>
+                {!broadcastMode ? (
+                  <Select
+                    value={presetId}
+                    onValueChange={setPresetId}
+                    disabled={presetsLoading}
+                  >
+                    <SelectTrigger className="bg-zinc-900 border-white/10 text-sm">
+                      <SelectValue placeholder={presetsLoading ? "Loading..." : "Pick a client"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {presets.map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>
+                          {p.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="border border-white/10 rounded-md bg-zinc-900">
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
+                      <span className="text-xs text-zinc-500">{selectedPresetIds.size} of {presets.length} selected</span>
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => setSelectedPresetIds(new Set(presets.map((p) => p.id)))} className="text-[11px] text-pink-400 hover:text-pink-300">Select all</button>
+                        <button type="button" onClick={() => setSelectedPresetIds(new Set())} className="text-[11px] text-zinc-500 hover:text-zinc-300">Clear</button>
+                      </div>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto divide-y divide-white/5">
+                      {presets.map((p) => (
+                        <label key={p.id} className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-white/5">
+                          <input
+                            type="checkbox"
+                            checked={selectedPresetIds.has(p.id)}
+                            onChange={() => setSelectedPresetIds((prev) => { const next = new Set(prev); next.has(p.id) ? next.delete(p.id) : next.add(p.id); return next; })}
+                            className="w-3.5 h-3.5 accent-pink-500"
+                          />
+                          <span className="text-sm text-zinc-200">{p.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {broadcastMode && (
+                  <p className="text-[11px] text-zinc-500 mt-1.5">
+                    Same content, same date, sent to every client ticked above — each lands in their own queue in the Scheduler.
+                  </p>
+                )}
               </div>
 
               {/* Date + Time */}
@@ -986,7 +1036,7 @@ export default function UploadSchedule() {
 
               <Button
                 onClick={handleSchedule}
-                disabled={scheduling || !images.length || !caption.trim() || !presetId || !date}
+                disabled={scheduling || !images.length || !caption.trim() || (broadcastMode ? selectedPresetIds.size === 0 : !presetId) || !date}
                 className="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold"
                 size="lg"
               >
