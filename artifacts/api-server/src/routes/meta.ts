@@ -4,7 +4,7 @@ import { clientPresetsTable, type StickerConfig } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logActivity } from "../lib/activityLog";
 import { logger } from "../lib/logger";
-import { notifyPostResult } from "../lib/notify";
+import { notifyPostResult, notifyReconnectionNeeded, isMetaTokenError } from "../lib/notify";
 
 const router: IRouter = Router();
 
@@ -322,6 +322,9 @@ router.post("/meta/push", async (req: Request, res: Response) => {
           }
         } catch (err: any) {
           results.push({ post: post.title, platform: "instagram", status: "error", error: err.message });
+          if (isMetaTokenError(err.message)) {
+            void notifyReconnectionNeeded({ clientName: preset.name, presetId, detail: err.message });
+          }
         }
       }
       if (pageId && wantFb) {
@@ -330,6 +333,9 @@ router.post("/meta/push", async (req: Request, res: Response) => {
           results.push({ post: post.title, platform: "facebook", status: "success", id });
         } catch (err: any) {
           results.push({ post: post.title, platform: "facebook", status: "error", error: err.message });
+          if (isMetaTokenError(err.message)) {
+            void notifyReconnectionNeeded({ clientName: preset.name, presetId, detail: err.message });
+          }
         }
       }
     }
@@ -443,6 +449,9 @@ router.post("/meta/push-story", async (req: Request, res: Response) => {
         results.push({ imageIndex: i, status: "success", id: postId });
       } catch (err: any) {
         results.push({ imageIndex: i, status: "error", error: err.message });
+        if (isMetaTokenError(err.message)) {
+          void notifyReconnectionNeeded({ clientName: preset.name, presetId, detail: err.message });
+        }
       }
     }
 
@@ -495,6 +504,7 @@ async function processReelJob(
     trial: boolean;
     graduationStrategy: string;
     clientName?: string;
+    presetId?: number;
   }
 ): Promise<void> {
   const { videoUrl, caption, token, igId, trial, graduationStrategy } = params;
@@ -573,6 +583,9 @@ async function processReelJob(
     const msg = err instanceof Error ? err.message : "Reel push failed";
     patch({ status: "error", error: msg });
     void notifyPostResult({ ok: false, clientName: params.clientName || "client", postType: "reel", detail: msg });
+    if (isMetaTokenError(msg) && params.presetId) {
+      void notifyReconnectionNeeded({ clientName: params.clientName || "client", presetId: params.presetId, detail: msg });
+    }
   }
 }
 
@@ -620,6 +633,7 @@ router.post("/meta/push-reel", async (req: Request, res: Response) => {
         trial: trial ?? false,
         graduationStrategy: graduationStrategy || "MANUAL",
         clientName: preset.name,
+        presetId: preset.id,
       }).catch(() => {});
     });
 
