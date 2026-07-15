@@ -1,10 +1,19 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target } from "lucide-react";
 
 const TOOLS = [
   {
-    href: "/today",
+      {
+    href: "/daily-focus",
+    icon: Target,
+    name: "Daily Focus",
+    description: "Your 12 for today: 2 personal, 10 client, picked live by who has gone quiet. Plus a reminders panel for renewals, invoicing and one-off flags.",
+    color: "from-pink-500/20 to-pink-500/5",
+    border: "hover:border-pink-500/50",
+    iconColor: "text-pink-400",
+  },
+href: "/today",
     icon: Sun,
     name: "Today",
     description: "What's going out today, for every client, with live posting status pulled straight from the scheduler.",
