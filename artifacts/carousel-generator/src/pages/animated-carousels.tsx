@@ -312,6 +312,8 @@ function SlidePreviewModal({ item, onClose, onUpdateBlocks }: { item: Item; onCl
 export default function AnimatedCarousels() {
   const { presets } = usePresets();
   const [presetId, setPresetId] = useState<number | null>(null);
+  const [broadcastMode, setBroadcastMode] = useState(false);
+  const [broadcastPresetIds, setBroadcastPresetIds] = useState<Set<number>>(new Set());
   const [items, setItems] = useState<Item[]>([]);
   const [busy, setBusy] = useState(false);
   // Every row parsed from the last slide-text CSV, kept around so each video
@@ -479,6 +481,57 @@ export default function AnimatedCarousels() {
   }
 
   async function scheduleAll() {
+    if (broadcastMode) {
+      const targetIds = Array.from(broadcastPresetIds);
+      if (!targetIds.length) { toast.error("Tick at least one client to broadcast to."); return; }
+      if (!items.length) { toast.error("Add some wide videos first."); return; }
+      setBusy(true);
+      let ok = 0;
+      const total = items.length * targetIds.length;
+      for (const it of items) {
+        try {
+          update(it.id, { status: "splitting", note: "" });
+          const fd = new FormData();
+          fd.append("video", it.file);
+          fd.append("slices", String(it.slices));
+          if (it.slideBlocks) {
+            fd.append("textLayers", JSON.stringify(buildTextLayers(it.slideBlocks)));
+          }
+          const split = await fetch(`${BASE}api/content/split-video`, { method: "POST", body: fd });
+          const splitData = await split.json();
+          if (!split.ok || !splitData.clips?.length) throw new Error(splitData.error || "Video split failed");
+          const videoUrls: string[] = splitData.clips.map((c: { url: string }) => c.url);
+
+          update(it.id, { status: "scheduling" });
+          for (const targetId of targetIds) {
+            const r = await fetch(`${BASE}api/scheduler/posts`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                presetId: targetId,
+                postType: "video_carousel",
+                content: {
+                  videoUrls,
+                  caption: it.caption || "",
+                  title: it.file.name.replace(/\.[^.]+$/, "").slice(0, 60),
+                  platforms: ["instagram", "facebook"],
+                  ...(it.musicTrack ? { musicTrack: { name: it.musicTrack.name, artist: it.musicTrack.artist } } : {}),
+                },
+                scheduledAt: new Date(`${it.date}T${it.time}`).toISOString(),
+              }),
+            });
+            if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error((d as { error?: string }).error || "Schedule failed"); }
+            ok++;
+          }
+          update(it.id, { status: "done" });
+        } catch (e: any) {
+          update(it.id, { status: "error", note: e?.message || "Failed" });
+        }
+      }
+      setBusy(false);
+      toast[ok === total ? "success" : "message"](`${ok} of ${total} broadcasts (across ${targetIds.length} client${targetIds.length !== 1 ? "s" : ""}) split and scheduled.`);
+      return;
+    }
     if (!preset) { toast.error("Pick a client first."); return; }
     if (!items.length) { toast.error("Add some wide videos first."); return; }
     setBusy(true);
@@ -558,6 +611,39 @@ export default function AnimatedCarousels() {
             <option value="">Select a client...</option>
             {presets.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
+          <p className="text-xs text-muted-foreground">This client is used for caption generation. To send the same videos to more than one client, use broadcast mode below.</p>
+          <button
+            type="button"
+            onClick={() => { setBroadcastMode((v) => !v); setBroadcastPresetIds(new Set()); }}
+            className={`px-4 py-2 rounded-lg border text-sm font-medium ${broadcastMode ? "bg-pink-600/20 border-pink-500/60 text-pink-300" : "border-border/50 hover:border-pink-500/60"}`}
+          >
+            {broadcastMode ? "Broadcast: On" : "Broadcast to multiple clients"}
+          </button>
+          {broadcastMode && (
+            <div className="border border-pink-500/40 rounded-xl bg-white/[0.03] p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">Broadcast to multiple clients</p>
+                <div className="flex gap-3">
+                  <button onClick={() => setBroadcastPresetIds(new Set(presets.map((p) => p.id)))} className="text-xs text-pink-400 hover:text-pink-300">Select all</button>
+                  <button onClick={() => setBroadcastPresetIds(new Set())} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">{broadcastPresetIds.size} of {presets.length} selected. Every video below is sent to each ticked client, on the same date and time.</p>
+              <div className="max-h-48 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                {presets.map((p) => (
+                  <label key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-white/5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={broadcastPresetIds.has(p.id)}
+                      onChange={() => setBroadcastPresetIds((prev) => { const next = new Set(prev); next.has(p.id) ? next.delete(p.id) : next.add(p.id); return next; })}
+                      className="w-3.5 h-3.5 accent-pink-500"
+                    />
+                    <span className="text-xs truncate">{p.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
         <section className="space-y-3">
@@ -682,9 +768,9 @@ export default function AnimatedCarousels() {
             ))}
             <div className="flex justify-between items-center">
               <p className="text-xs text-muted-foreground">Each wide video is cut into 4 equal MP4 slides (with any slide text burned in) and posted as a video carousel to Instagram and Facebook. Music is saved as a note, Instagram doesn't support auto-attaching a track to a video carousel, add it manually in-app if you want it to actually play.</p>
-              <Button onClick={scheduleAll} disabled={busy || !preset} className="bg-pink-600 hover:bg-pink-700">
+              <Button onClick={scheduleAll} disabled={busy || (broadcastMode ? broadcastPresetIds.size === 0 : !preset)} className="bg-pink-600 hover:bg-pink-700">
                 {busy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-1.5" />}
-                Cut and schedule {items.length} carousel{items.length !== 1 ? "s" : ""}
+                {broadcastMode ? `Cut and broadcast to ${broadcastPresetIds.size} client${broadcastPresetIds.size !== 1 ? "s" : ""}` : `Cut and schedule ${items.length} carousel${items.length !== 1 ? "s" : ""}`}
               </Button>
             </div>
           </section>
