@@ -52,6 +52,9 @@ type CardState = { scenarioId: string; status: CardStatus; outputImageUrl?: stri
 
 type Background = { id: number; imageUrl: string; slideCount: number };
 
+type Placement = { anchorX: number; anchorY: number; anchorW: number };
+const DEFAULT_PLACEMENT: Placement = { anchorX: 0.5, anchorY: 0.94, anchorW: 0.34 };
+
 type CompositeRow = {
   scenarioId: string;
   portraitUrl: string;
@@ -62,6 +65,76 @@ type CompositeRow = {
   slideCount?: number;
   error?: string;
 };
+
+// One draggable, resizable portrait sitting over its background's first
+// panel guideline — drag to move, drag the corner handle to resize. Since
+// the same photo repeats identically in every panel of its background, only
+// the first panel needs a handle; the position is stored as anchorX/anchorY
+// (fractions of that one panel) and anchorW (fraction of panel width), the
+// exact same maths the /seamless-caro/composite-multi endpoint already uses
+// for Seamless Caro Builder, just applied to every panel identically here
+// instead of once per panel.
+function PortraitPositioner({
+  photoUrl, background, placement, onChange,
+}: {
+  photoUrl: string; background: Background; placement: Placement; onChange: (p: Placement) => void;
+}) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState<"move" | "resize" | null>(null);
+  const startRef = useRef<{ mouseX: number; mouseY: number; placement: Placement } | null>(null);
+  const n = Math.max(2, Math.min(5, background.slideCount || 3));
+
+  useEffect(() => {
+    if (!dragging) return;
+    function onMove(e: MouseEvent) {
+      const el = wrapRef.current;
+      const start = startRef.current;
+      if (!el || !start) return;
+      const rect = el.getBoundingClientRect();
+      const panelW = rect.width / n;
+      const dxFracPanel = (e.clientX - start.mouseX) / panelW;
+      const dyFracFull = (e.clientY - start.mouseY) / rect.height;
+      if (dragging === "move") {
+        onChange({
+          ...start.placement,
+          anchorX: Math.max(0, Math.min(1, start.placement.anchorX + dxFracPanel)),
+          anchorY: Math.max(0.08, Math.min(1, start.placement.anchorY + dyFracFull)),
+        });
+      } else {
+        onChange({ ...start.placement, anchorW: Math.max(0.12, Math.min(0.95, start.placement.anchorW + dxFracPanel)) });
+      }
+    }
+    function onUp() { setDragging(null); }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+  }, [dragging, n]);
+
+  const panelPct = 100 / n;
+  const leftPct = placement.anchorX * panelPct;
+  const widthPct = placement.anchorW * panelPct;
+  const topPct = placement.anchorY * 100;
+
+  return (
+    <div ref={wrapRef} className="relative rounded-lg overflow-hidden border border-violet-500/30 select-none">
+      <img src={background.imageUrl} alt="" className="w-full block" draggable={false} />
+      {Array.from({ length: n }).map((_, i) => (
+        <div key={i} className="absolute top-0 bottom-0 border-l border-white/20 pointer-events-none" style={{ left: `${(i / n) * 100}%` }} />
+      ))}
+      <div
+        onMouseDown={(e) => { e.preventDefault(); startRef.current = { mouseX: e.clientX, mouseY: e.clientY, placement }; setDragging("move"); }}
+        className="absolute cursor-move"
+        style={{ left: `${leftPct}%`, top: `${topPct}%`, width: `${widthPct}%`, aspectRatio: "3 / 4", transform: "translate(-50%, -100%)" }}
+      >
+        <img src={photoUrl} alt="" draggable={false} className="w-full h-full object-cover rounded-md border-2 border-violet-400 shadow-lg select-none" />
+        <div
+          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); startRef.current = { mouseX: e.clientX, mouseY: e.clientY, placement }; setDragging("resize"); }}
+          className="absolute -right-1.5 -bottom-1.5 w-4 h-4 rounded-full bg-violet-500 border-2 border-white cursor-nwse-resize"
+        />
+      </div>
+    </div>
+  );
+}
 
 export default function SelfieCarousels() {
   const { presets } = usePresets();
@@ -77,6 +150,7 @@ export default function SelfieCarousels() {
   const [generating, setGenerating] = useState(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const [placements, setPlacements] = useState<Record<string, Placement>>({});
   const [compositing, setCompositing] = useState(false);
   const [rows, setRows] = useState<CompositeRow[]>([]);
 
@@ -88,6 +162,7 @@ export default function SelfieCarousels() {
     setSourcePhotoId(null);
     setJobId(null);
     setCards([]);
+    setPlacements({});
     setRows([]);
     if (!presetId) return;
     fetch(`${BASE}/api/seamless-caro/backgrounds?presetId=${presetId}`, { headers: authHeaders() })
@@ -147,6 +222,7 @@ export default function SelfieCarousels() {
     if (!sourcePhotoId) { toast.error("Upload a selfie first"); return; }
     setGenerating(true);
     setRows([]);
+    setPlacements({});
     const scenarios = OUTFIT_GROUPS.flatMap((g) =>
       g.scenarioIds.map((id) => ({
         id,
@@ -172,24 +248,45 @@ export default function SelfieCarousels() {
     }
   }
 
-  // ── Composite each finished portrait onto one of this client's Seamless
-  // Caro backgrounds (repeating backgrounds if there are fewer than 12), one
-  // composite per portrait so each becomes its own carousel. Reuses the
-  // exact /seamless-caro/composite endpoint the Seamless Caro Builder tool
-  // already uses for a single photo. ──────────────────────────────────────
+  // AI Portrait Studio hands back relative paths like /api/media/<key>. The
+  // compositor fetches photoUrl server-side, which needs an absolute URL —
+  // a bare relative path fails there with "Failed to parse URL". Resolve
+  // against this page's own origin before sending it anywhere.
+  function toAbsolute(url: string) {
+    return url.startsWith("/") ? `${window.location.origin}${url}` : url;
+  }
+
+  const readyCards = cards.filter((c) => c.status === "success" && c.outputImageUrl);
+  // Assigns each ready portrait one of this client's backgrounds (repeating
+  // if there are fewer backgrounds than portraits) — used both for the
+  // positioning step and for the actual build.
+  const assignedBackgrounds: Record<string, Background> = {};
+  readyCards.forEach((c, i) => {
+    if (backgrounds.length) assignedBackgrounds[c.scenarioId] = backgrounds[i % backgrounds.length];
+  });
+
+  function placementFor(scenarioId: string): Placement {
+    return placements[scenarioId] || DEFAULT_PLACEMENT;
+  }
+  function setPlacementFor(scenarioId: string, p: Placement) {
+    setPlacements((prev) => ({ ...prev, [scenarioId]: p }));
+  }
+
+  // ── Composite each finished, positioned portrait onto its assigned
+  // background, one composite per portrait so each becomes its own
+  // carousel. Repeats the same photo + placement into every panel of its
+  // background via /seamless-caro/composite-multi (the same endpoint
+  // Seamless Caro Builder uses for several different photos, here fed the
+  // same photo N times so the movable/resizable placement above is
+  // actually honoured — the single-photo /composite endpoint always uses
+  // whatever position the background was registered with, ignoring any
+  // per-request placement). ────────────────────────────────────────────
   async function compositeAll() {
-    const ready = cards.filter((c) => c.status === "success" && c.outputImageUrl);
-    if (!ready.length) { toast.error("Nothing generated yet."); return; }
+    if (!readyCards.length) { toast.error("Nothing generated yet."); return; }
     if (!backgrounds.length) { toast.error("This client has no Seamless Caro backgrounds yet. Add at least one in Seamless Caro Builder first."); return; }
 
-    // AI Portrait Studio hands back relative paths like /api/media/<key>.
-    // The compositor fetches photoUrl server-side, which needs an absolute
-    // URL — a bare relative path fails there with "Failed to parse URL".
-    // Resolve against this page's own origin before sending it over.
-    const toAbsolute = (url: string) => (url.startsWith("/") ? `${window.location.origin}${url}` : url);
-
-    const initialRows: CompositeRow[] = ready.map((c, i) => {
-      const bg = backgrounds[i % backgrounds.length];
+    const initialRows: CompositeRow[] = readyCards.map((c) => {
+      const bg = assignedBackgrounds[c.scenarioId];
       return {
         scenarioId: c.scenarioId,
         portraitUrl: toAbsolute(c.outputImageUrl!),
@@ -204,10 +301,16 @@ export default function SelfieCarousels() {
       for (const row of initialRows) {
         setRows((prev) => prev.map((r) => (r.scenarioId === row.scenarioId ? { ...r, status: "working" } : r)));
         try {
-          const r = await fetch(`${BASE}/api/seamless-caro/composite`, {
+          const bg = assignedBackgrounds[row.scenarioId];
+          const n = Math.max(2, Math.min(5, bg.slideCount || 3));
+          const placement = placementFor(row.scenarioId);
+          const r = await fetch(`${BASE}/api/seamless-caro/composite-multi`, {
             method: "POST",
             headers: authHeaders(),
-            body: JSON.stringify({ backgroundId: row.backgroundId, photoUrl: row.portraitUrl }),
+            body: JSON.stringify({
+              backgroundId: row.backgroundId,
+              photos: Array.from({ length: n }, () => ({ photoUrl: row.portraitUrl, ...placement })),
+            }),
           });
           if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(err.error); }
           const d = await r.json();
@@ -238,7 +341,7 @@ export default function SelfieCarousels() {
 
   const doneCount = rows.filter((r) => r.status === "done").length;
   const erroredCount = rows.filter((r) => r.status === "error").length;
-  const readyCount = cards.filter((c) => c.status === "success").length;
+  const readyCount = readyCards.length;
   const allCardsSettled = cards.length > 0 && cards.every((c) => c.status === "success" || c.status === "failed");
 
   return (
@@ -306,11 +409,28 @@ export default function SelfieCarousels() {
               </div>
             )}
 
-            {allCardsSettled && readyCount > 0 && rows.length === 0 && (
-              <div className="rounded-2xl border border-violet-500/30 bg-card/60 p-5 space-y-3">
-                <p className="text-xs uppercase tracking-widest text-muted-foreground">Step 3 — build the carousels</p>
-                <p className="text-sm text-muted-foreground">Each of the {readyCount} photoshoot images gets composited onto one of {client?.name}'s Seamless Caro backgrounds{backgrounds.length > 0 && backgrounds.length < readyCount ? ` (${backgrounds.length} background${backgrounds.length > 1 ? "s" : ""}, repeating to cover all ${readyCount})` : ""}.</p>
-                <button onClick={compositeAll} disabled={compositing || !backgrounds.length} className="px-6 py-3 rounded-full bg-violet-500 text-white font-semibold disabled:opacity-40 hover:bg-violet-400 transition-colors">
+            {allCardsSettled && readyCount > 0 && backgrounds.length > 0 && rows.length === 0 && (
+              <div className="rounded-2xl border border-violet-500/30 bg-card/60 p-5 space-y-4">
+                <div>
+                  <p className="text-xs uppercase tracking-widest text-muted-foreground">Step 3 — position each shot</p>
+                  <p className="text-sm text-muted-foreground mt-1">Drag a photo to move it, drag its corner handle to resize it. It repeats at the same spot on every slide of its carousel.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {readyCards.map((c) => {
+                    const bg = assignedBackgrounds[c.scenarioId];
+                    if (!bg) return null;
+                    return (
+                      <PortraitPositioner
+                        key={c.scenarioId}
+                        photoUrl={c.outputImageUrl!}
+                        background={bg}
+                        placement={placementFor(c.scenarioId)}
+                        onChange={(p) => setPlacementFor(c.scenarioId, p)}
+                      />
+                    );
+                  })}
+                </div>
+                <button onClick={compositeAll} disabled={compositing} className="px-6 py-3 rounded-full bg-violet-500 text-white font-semibold disabled:opacity-40 hover:bg-violet-400 transition-colors">
                   {compositing ? "Building…" : `Build ${readyCount} carousels`}
                 </button>
               </div>

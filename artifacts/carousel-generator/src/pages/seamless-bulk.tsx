@@ -97,8 +97,15 @@ const out: string[] = [];
 for (let i = 0; i < raw.length; i++) {
 if (i + 1 > 4) { out.push(raw[i]); continue; }
 const n = (i + 1) as 1 | 2 | 3 | 4; const img = imgs[i] || null;
-const blocksForRender = blocks.map((b) => (b.id === "logo" ? { ...b, x: 0.17, y: 0.12, w: 0.26 } : b));
-out.push(renderSlideCanvas(n, blocksForRender, n === 1 ? img : null, n === 1 ? null : img, logoImg, p, SCALE, false, 1.2, accent, "#ffffff", overlay, 0));
+// Drop the decorative underline when there's no caption text at all (e.g.
+// composites straight from Selfie to Carousels / Seamless Caro Builder before
+// captions are written) — it was showing as a stray white line with nothing
+// above it to underline. Logo only goes on slide 1, not repeated on every slide.
+const blocksForRender = blocks
+  .filter((b) => hasText || b.id !== "line")
+  .map((b) => (b.id === "logo" ? { ...b, x: 0.17, y: 0.12, w: 0.26 } : b));
+const logoForSlide = i === 0 ? logoImg : null;
+out.push(renderSlideCanvas(n, blocksForRender, n === 1 ? img : null, n === 1 ? null : img, logoForSlide, p, SCALE, false, 1.2, accent, "#ffffff", overlay, 0));
 }
 return out;
 }
