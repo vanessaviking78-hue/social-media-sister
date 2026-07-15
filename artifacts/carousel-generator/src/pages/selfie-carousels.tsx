@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { Loader2, Sparkles, Upload, Send, Check, X, Camera } from "lucide-react";
 import { usePresets } from "@/lib/use-presets";
+import ExportToCanvaButton from "@/components/export-to-canva";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -10,27 +11,41 @@ function authHeaders(): Record<string, string> {
   return { "x-app-password": pw, "Authorization": "Bearer " + pw, "Content-Type": "application/json" };
 }
 
-// Twelve scenario ids from the AI Portrait Studio's built-in library — a
-// deliberately varied set (clinical / lifestyle / brand-headshot) so the
-// twelve carousels this tool produces don't all look the same. These are the
-// same scenario ids the AI Portrait Studio page already knows how to
-// generate; no new AI logic lives here, this just calls the same endpoints
-// it does with a fixed, sensible selection instead of asking Vanessa (or the
-// client) to pick from 300+ options.
-const DEFAULT_SCENARIO_IDS = [
-  "clinical-white-coat",
-  "clinical-blue-scrubs",
-  "clinical-treatment-room",
-  "clinical-reception",
-  "lifestyle-coffee",
-  "lifestyle-outdoors",
-  "lifestyle-coworking",
-  "lifestyle-home-office",
-  "brand-headshot-plain",
-  "brand-headshot-branded",
-  "brand-speaking",
-  "brand-arms-crossed",
+// Twelve portraits in four outfit groups of three, each group using three
+// different AI Portrait Studio scenario templates (different pose/setting)
+// so the three shots in a group aren't identical, just the same outfit.
+// Scrubs carries whatever colour is chosen on this page; the other three
+// groups pass their outfit description straight into the scenario's
+// {outfitStyle} slot. No new AI logic — this just calls the same
+// /ai-portrait/generate endpoint AI Portrait Studio already uses, with a
+// fixed, sensible selection instead of asking Vanessa (or the client) to
+// pick from 300+ options.
+type OutfitGroup = { label: string; scenarioIds: string[]; outfitStyle?: string; useScrubColor?: boolean };
+
+const OUTFIT_GROUPS: OutfitGroup[] = [
+  {
+    label: "Scrubs",
+    scenarioIds: ["clinical-white-coat", "clinical-blue-scrubs", "clinical-treatment-room"],
+    useScrubColor: true,
+  },
+  {
+    label: "White shirt & jeans",
+    scenarioIds: ["brand-headshot-plain", "lifestyle-coffee", "lifestyle-coworking"],
+    outfitStyle: "a crisp white fitted shirt tucked into well-fitted dark jeans",
+  },
+  {
+    label: "Black jumper & jeans",
+    scenarioIds: ["brand-headshot-branded", "lifestyle-outdoors", "lifestyle-home-office"],
+    outfitStyle: "a fitted black jumper with well-fitted dark jeans",
+  },
+  {
+    label: "Black blazer, vest & jeans",
+    scenarioIds: ["brand-speaking", "brand-arms-crossed", "brand-reading"],
+    outfitStyle: "a black tailored blazer over a black vest top, with well-fitted dark jeans",
+  },
 ];
+
+const DEFAULT_SCENARIO_IDS = OUTFIT_GROUPS.flatMap((g) => g.scenarioIds);
 
 type CardStatus = "idle" | "generating" | "success" | "failed" | "rate-limited";
 type CardState = { scenarioId: string; status: CardStatus; outputImageUrl?: string; failureReason?: string };
@@ -55,6 +70,7 @@ export default function SelfieCarousels() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [sourcePhotoId, setSourcePhotoId] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [scrubColor, setScrubColor] = useState("navy blue");
 
   const [jobId, setJobId] = useState<string | null>(null);
   const [cards, setCards] = useState<CardState[]>([]);
@@ -131,7 +147,14 @@ export default function SelfieCarousels() {
     if (!sourcePhotoId) { toast.error("Upload a selfie first"); return; }
     setGenerating(true);
     setRows([]);
-    const scenarios = DEFAULT_SCENARIO_IDS.map((id) => ({ id, aspectRatio: "3:4" }));
+    const scenarios = OUTFIT_GROUPS.flatMap((g) =>
+      g.scenarioIds.map((id) => ({
+        id,
+        aspectRatio: "3:4",
+        ...(g.useScrubColor ? { scrubColor } : {}),
+        ...(g.outfitStyle ? { outfitStyle: g.outfitStyle } : {}),
+      }))
+    );
     setCards(scenarios.map((s) => ({ scenarioId: s.id, status: "idle" as CardStatus })));
     try {
       const r = await fetch(`${BASE}/api/ai-portrait/generate`, {
@@ -159,11 +182,17 @@ export default function SelfieCarousels() {
     if (!ready.length) { toast.error("Nothing generated yet."); return; }
     if (!backgrounds.length) { toast.error("This client has no Seamless Caro backgrounds yet. Add at least one in Seamless Caro Builder first."); return; }
 
+    // AI Portrait Studio hands back relative paths like /api/media/<key>.
+    // The compositor fetches photoUrl server-side, which needs an absolute
+    // URL — a bare relative path fails there with "Failed to parse URL".
+    // Resolve against this page's own origin before sending it over.
+    const toAbsolute = (url: string) => (url.startsWith("/") ? `${window.location.origin}${url}` : url);
+
     const initialRows: CompositeRow[] = ready.map((c, i) => {
       const bg = backgrounds[i % backgrounds.length];
       return {
         scenarioId: c.scenarioId,
-        portraitUrl: c.outputImageUrl!,
+        portraitUrl: toAbsolute(c.outputImageUrl!),
         backgroundId: bg.id,
         backgroundThumb: bg.imageUrl,
         status: "pending",
@@ -246,6 +275,10 @@ export default function SelfieCarousels() {
                 <span className="text-sm text-muted-foreground">{photoPreview ? "Selfie uploaded — tap to replace" : "Upload one make-up-free, filterless selfie"}</span>
                 <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSelfieUpload(f); e.currentTarget.value = ""; }} />
               </label>
+              <div>
+                <label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">Scrubs colour (used for the 3 scrubs shots)</label>
+                <input type="text" value={scrubColor} onChange={(e) => setScrubColor(e.target.value)} placeholder="e.g. navy blue, burgundy, black" className="w-full sm:w-64 bg-white/5 border border-violet-500/40 rounded-md px-3 py-2 text-sm" />
+              </div>
             </div>
 
             {sourcePhotoId && (
@@ -312,8 +345,11 @@ export default function SelfieCarousels() {
                           <span className="absolute top-1 right-1 w-5 h-5 rounded-full bg-violet-500 flex items-center justify-center"><Check className="w-3 h-3 text-white" /></span>
                         )}
                       </div>
-                      <div className="p-2">
+                      <div className="p-2 flex items-center justify-between gap-1">
                         <span className="text-[11px] text-muted-foreground truncate">{row.status === "error" ? (row.error || "Failed") : row.status}</span>
+                        {row.status === "done" && row.resultUrl && (
+                          <ExportToCanvaButton imageUrl={row.resultUrl} name={`${client?.name || "carousel"}-selfie-carousel`} size="sm" variant="ghost" className="shrink-0 px-1.5 h-6 text-[11px]" label="Canva" />
+                        )}
                       </div>
                     </div>
                   ))}
