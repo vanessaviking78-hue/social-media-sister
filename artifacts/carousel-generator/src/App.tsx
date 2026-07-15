@@ -5,6 +5,7 @@ import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthGate } from "@/components/auth-gate";
 import NotFound from "@/pages/not-found";
+import DailyFocus from "@/pages/daily-focus";
 import Hub from "@/pages/hub";
 import Home from "@/pages/home";
 import SingleImage from "@/pages/single-image";
@@ -95,7 +96,8 @@ function ProtectedRouter() {
   return (
     <Switch>
       <Route path="/hub" component={Hub} />
-      <Route path="/carousel" component={Home} />
+      <R<Route path="/daily-focus" component={DailyFocus} />
+      oute path="/carousel" component={Home} />
       <Route path="/single-image" component={SingleImage} />
       <Route path="/stories" component={Stories} />
       <Route path="/presets" component={Presets} />
