@@ -851,6 +851,8 @@ export default function BulkCarousel() {
   // Schedule state
   const [scheduleEntries, setScheduleEntries] = useState<ScheduleEntry[]>([]);
   const [scheduling, setScheduling] = useState(false);
+  const [broadcastMode, setBroadcastMode] = useState(false);
+  const [broadcastPresetIds, setBroadcastPresetIds] = useState<Set<number>>(new Set());
   const [showApprovalModal, setShowApprovalModal] = useState(false);
 
   const csvInputRef  = useRef<HTMLInputElement>(null);
@@ -1145,6 +1147,48 @@ export default function BulkCarousel() {
     }));
 
   const handleScheduleAll = async () => {
+    if (broadcastMode) {
+      const targetIds = Array.from(broadcastPresetIds);
+      if (!targetIds.length) { toast.error("Tick at least one client to broadcast to."); return; }
+      setScheduling(true);
+      const tid = toast.loading("Uploading and queueing...");
+      try {
+        for (let i = 0; i < items.length; i++) {
+          const item = items[i];
+          const entry = scheduleEntries[i];
+          toast.loading(`Scheduling ${i + 1} / ${items.length}...`, { id: tid });
+          const names = item.thumbs.map((_, j) => `carousel-${i + 1}-slide${j + 1}.png`);
+          const imageUrls = await uploadDataUrls(item.thumbs, names);
+          for (const targetId of targetIds) {
+            const res = await fetch(`${BASE}/api/scheduler/posts`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                presetId: targetId,
+                postType: "carousel",
+                content: {
+                  imageUrls, caption: entry.caption || "",
+                  title: item.hook.slice(0, 80) || `Carousel ${item.rowNum}`,
+                  platforms: entry.platforms,
+                },
+                scheduledAt: new Date(`${entry.date}T${entry.time}`).toISOString(),
+              }),
+            });
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({ error: "Failed" }));
+              throw new Error(`Row ${i + 1}: ${err.error}`);
+            }
+          }
+        }
+        toast.success(`${items.length} carousels queued across ${targetIds.length} client${targetIds.length !== 1 ? "s" : ""}.`, { id: tid });
+        setPhase("done");
+      } catch (e: any) {
+        toast.error(e.message, { id: tid });
+      } finally {
+        setScheduling(false);
+      }
+      return;
+    }
     const bad = scheduleEntries.findIndex(e => !e.presetId);
     if (bad !== -1) { toast.error(`Row ${bad + 1}: select a client account.`); return; }
     setScheduling(true);
@@ -1182,7 +1226,7 @@ export default function BulkCarousel() {
     } finally {
       setScheduling(false);
     }
-  };
+  };;
 
   // ── Done ──────────────────────────────────────────────────────────────────────
 
@@ -1221,6 +1265,39 @@ export default function BulkCarousel() {
           <p className="text-sm text-muted-foreground mb-6">
             Set a date, time and platform for each carousel. Client account defaults to your selected preset.
           </p>
+
+          <button
+            type="button"
+            onClick={() => { setBroadcastMode((v) => !v); setBroadcastPresetIds(new Set()); }}
+            className={`mb-4 px-4 py-2 rounded-lg border text-sm font-medium ${broadcastMode ? "bg-pink-600/20 border-pink-500/60 text-pink-300" : "border-border/40 hover:border-pink-500/60"}`}
+          >
+            {broadcastMode ? "Broadcast: On" : "Broadcast to multiple clients"}
+          </button>
+          {broadcastMode && (
+            <div className="border border-pink-500/40 rounded-xl bg-white/[0.03] p-4 space-y-2 mb-6">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">Broadcast to multiple clients</p>
+                <div className="flex gap-3">
+                  <button onClick={() => setBroadcastPresetIds(new Set(presets.map((p) => p.id)))} className="text-xs text-pink-400 hover:text-pink-300">Select all</button>
+                  <button onClick={() => setBroadcastPresetIds(new Set())} className="text-xs text-muted-foreground hover:text-foreground">Clear</button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">{broadcastPresetIds.size} of {presets.length} selected. Every carousel below is sent to each ticked client, on its own row date and time. The per-row Client picker is ignored while broadcast mode is on.</p>
+              <div className="max-h-48 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                {presets.map((p) => (
+                  <label key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-white/5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={broadcastPresetIds.has(p.id)}
+                      onChange={() => setBroadcastPresetIds((prev) => { const next = new Set(prev); next.has(p.id) ? next.delete(p.id) : next.add(p.id); return next; })}
+                      className="w-3.5 h-3.5 accent-pink-500"
+                    />
+                    <span className="text-xs truncate">{p.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="space-y-3">
             {items.map((item, i) => {
