@@ -76,6 +76,10 @@ import ContentGenerator from "@/pages/content-generator";
 import TweetMaker from "@/pages/tweet-maker";
 import RevenueIdeas from "@/pages/revenue-ideas";
 import News from "@/pages/news";
+import Today from "@/pages/today";
+import Checklist from "@/pages/checklist";
+import CatchUpPlan from "@/pages/catch-up";
+import ResourceLibrary from "@/pages/resources";
 
 const queryClient = new QueryClient();
 
@@ -138,6 +142,10 @@ function ProtectedRouter() {
       <Route path="/tweet-maker" component={TweetMaker} />
       <Route path="/revenue-ideas" component={RevenueIdeas} />
       <Route path="/news" component={News} />
+      <Route path="/today" component={Today} />
+      <Route path="/checklist" component={Checklist} />
+      <Route path="/catch-up" component={CatchUpPlan} />
+      <Route path="/resources" component={ResourceLibrary} />
       <Route component={NotFound} />
     </Switch>
   );
