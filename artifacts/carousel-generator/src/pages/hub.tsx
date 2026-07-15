@@ -1,8 +1,17 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle } from "lucide-react";
 
 const TOOLS = [
+  {
+    href: "/today",
+    icon: Sun,
+    name: "Today",
+    description: "What's going out today, for every client, with live posting status pulled straight from the scheduler.",
+    color: "from-yellow-500/20 to-yellow-500/5",
+    border: "hover:border-yellow-500/50",
+    iconColor: "text-yellow-400",
+  },
   {
     href: "/about-me-studio",
     icon: User,
@@ -381,6 +390,34 @@ const TOOLS = [
     border: "hover:border-indigo-500/50",
     iconColor: "text-indigo-400",
   },
+  {
+    href: "/checklist",
+    icon: ListChecks,
+    name: "Client Checklist",
+    description: "One ongoing row per client. Hex colours, images, carousels, quotes, before and afters, footnote and logo, connected accounts. Always a live snapshot before your next 90-day batch.",
+    color: "from-emerald-500/20 to-emerald-500/5",
+    border: "hover:border-emerald-500/50",
+    iconColor: "text-emerald-400",
+  },
+  {
+    href: "/catch-up",
+    icon: AlertTriangle,
+    name: "Catch-Up Plan",
+    description: "The running list from the last audit. Fires to sort today, clients with no post ever, and accounts that still aren't connected. Tick each one off as you clear it.",
+    color: "from-red-500/20 to-red-500/5",
+    border: "hover:border-red-500/50",
+    iconColor: "text-red-400",
+  },
+  {
+    href: "/resources",
+    icon: FileText,
+    name: "Resource Library",
+    description: "Upload PDFs, cheat sheets and guides once. Every client sees them straight in their portal.",
+    color: "from-blue-500/20 to-blue-500/5",
+    border: "hover:border-blue-500/50",
+    iconColor: "text-blue-400",
+  },
+
 ];
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
