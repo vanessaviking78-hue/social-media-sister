@@ -158,3 +158,77 @@ export async function sendTestEmail(): Promise<{ ok: boolean; error?: string; to
     return { ok: false, error: err instanceof Error ? err.message : "Unknown error sending email." };
   }
 }
+
+
+/**
+ * Cheap heuristic for spotting Meta/Facebook "your token or connection is
+ * broken" errors inside an API error message, as opposed to a one-off post
+ * failure (bad image URL, rate limit, etc.). This matters because a broken
+ * token means EVERY future post for that client will keep failing silently
+ * until someone reconnects it — that's the case that deserves a loud,
+ * distinct alert rather than blending into the normal failure emails.
+ */
+export function isMetaTokenError(message: string): boolean {
+  const m = (message || "").toLowerCase();
+  return (
+    m.includes("error validating access token") ||
+    m.includes("session has expired") ||
+    (m.includes("access token") && m.includes("expired")) ||
+    m.includes("invalid oauth") ||
+    m.includes("oauthexception") ||
+    m.includes("has not authorized application") ||
+    m.includes("token is invalid") ||
+    m.includes("malformed access token") ||
+    m.includes("cannot parse access token") ||
+    m.includes("application does not have permission") ||
+    m.includes("user is enrolled in a blocking") ||
+    m.includes("permissions error")
+  );
+}
+
+// In-memory per-client cooldown so a burst of failed posts (e.g. a whole
+// broadcast batch hitting a dead token) sends one clear alert, not one email
+// per failed post. Resets on deploy — acceptable, since a still-broken
+// connection will simply alert again next time something tries to post.
+const reconnectAlertedAt = new Map<string, number>();
+const RECONNECT_ALERT_COOLDOWN_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+/**
+ * Sends a distinct, unmissable "this client's Meta connection is broken and
+ * needs reconnecting" email — separate from the routine post success/fail
+ * notifications — so it doesn't get lost in the noise of everyday activity.
+ * Rate-limited per client via reconnectAlertedAt. Fire-and-forget: never
+ * throws, never blocks the posting flow.
+ */
+export async function notifyReconnectionNeeded(opts: {
+  clientName: string;
+  presetId: number;
+  detail: string;
+}): Promise<void> {
+  const to = process.env.NOTIFY_EMAIL;
+  if (!to) return;
+  const key = String(opts.presetId);
+  const now = Date.now();
+  const last = reconnectAlertedAt.get(key);
+  if (last && now - last < RECONNECT_ALERT_COOLDOWN_MS) return;
+  reconnectAlertedAt.set(key, now);
+  const transporter = getTransporter();
+  if (!transporter) return;
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  const client = opts.clientName || "A client";
+  const subject = `RECONNECT NEEDED: ${client}'s Meta connection has broken`;
+  const lines = [
+    `${client}'s Facebook/Instagram connection looks broken. Posts for this client will keep failing until it's reconnected.`,
+    "",
+    `Error from Meta: ${opts.detail}`,
+    "",
+    "Go to Client Presets and reconnect this client's account.",
+    "",
+    "The CyberSuite",
+  ].filter(Boolean);
+  try {
+    await transporter.sendMail({ from, to, subject, text: lines.join("\n") });
+  } catch (err) {
+    logger.warn({ err }, "Reconnection alert email failed");
+  }
+}
