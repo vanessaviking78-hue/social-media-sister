@@ -425,7 +425,7 @@ export default function Scheduler() {
   // date/time, so the two posts trade places in the grid. This is the same
   // mental model as Instagram grid planner apps — you're not renumbering
   // the whole queue, just moving a tile to where another one was.
-  const gridDragPostRef = useRef<ScheduledPost | null>(null);
+  const gridDragPostRef = React.useRef<ScheduledPost | null>(null);
   const [gridDragOverId, setGridDragOverId] = useState<number | null>(null);
   const handleGridDragStart = (e: React.DragEvent, post: ScheduledPost) => {
     gridDragPostRef.current = post;
