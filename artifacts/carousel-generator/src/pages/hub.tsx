@@ -4,7 +4,6 @@ import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageS
 
 const TOOLS = [
   {
-      {
     href: "/daily-focus",
     icon: Target,
     name: "Daily Focus",
@@ -13,7 +12,8 @@ const TOOLS = [
     border: "hover:border-pink-500/50",
     iconColor: "text-pink-400",
   },
-href: "/today",
+  {
+    href: "/today",
     icon: Sun,
     name: "Today",
     description: "What's going out today, for every client, with live posting status pulled straight from the scheduler.",
