@@ -230,7 +230,7 @@ export function renderSlideCanvas(
   preset: ClientPreset,
   scale = SCALE,
   bgOnly = false,
-  lineSpacing = 1.2,
+  lineSpacing = 0.9,
   accentOverride?: string
 ): string {
   const canvas = document.createElement("canvas");
@@ -347,10 +347,10 @@ export function renderSlideCanvas(
         const maxW = block.w ? block.w * W : st.maxW;
         ctx.font = `${fontSize}px ${st.font}`;
         const lines = wrapCanvas(ctx, stripPipes(block.text), maxW);
-        const totalH = lines.length * fontSize * st.lineH;
+        const totalH = lines.length * fontSize * st.lineH * lineSpacing;
         const cx = block.x * W;
-        let y = block.y * H - totalH / 2 + (fontSize * st.lineH) / 2;
-        for (const line of lines) { ctx.fillText(stripPipes(line), cx, y); y += fontSize * st.lineH; }
+        let y = block.y * H - totalH / 2 + (fontSize * st.lineH * lineSpacing) / 2;
+        for (const line of lines) { ctx.fillText(stripPipes(line), cx, y); y += fontSize * st.lineH * lineSpacing; }
       }
     }
   }
@@ -386,7 +386,7 @@ function renderAllThumbs(
   item: Pick<CarouselItem, "blocks" | "coverImg" | "bodyImg">,
   logoImg: HTMLImageElement | null,
   preset: ClientPreset,
-  lineSpacing = 1.2,
+  lineSpacing = 0.9,
   accentOverride?: string
 ): string[] {
   return ([1,2,3,4] as const).map(n =>
@@ -835,8 +835,8 @@ export default function BulkCarousel() {
   const [renderProgress, setRenderProgress] = useState(0);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const logoImgRef = useRef<HTMLImageElement | null>(null);
-  const [lineSpacing, setLineSpacing] = useState(1.2);
-  const lineSpacingRef = useRef(1.2);
+  const [lineSpacing, setLineSpacing] = useState(0.9);
+  const lineSpacingRef = useRef(0.9);
   const [heroWordColor, setHeroWordColor] = useState("#C4879A");
   const heroWordColorRef = useRef("#C4879A");
   useEffect(() => { lineSpacingRef.current = lineSpacing; }, [lineSpacing]);
@@ -1119,7 +1119,7 @@ export default function BulkCarousel() {
       return {
         date: d.toISOString().slice(0, 10),
         time: "18:15",
-        platforms: ["instagram"] as ("instagram" | "facebook")[],
+        platforms: ["instagram", "facebook"] as ("instagram" | "facebook")[],
         presetId: selectedPresetId,
         caption: captionMap[item.id] ?? "",
       };
@@ -1319,7 +1319,7 @@ export default function BulkCarousel() {
                       </div>
                       <div className="flex gap-1 shrink-0">
                         {item.thumbs.map((du, si) => (
-                          <img key={si} src={du} alt="" className="w-10 rounded" style={{ aspectRatio: "4/5", objectFit: "cover" }} />
+                          <img key={si} src={du} alt="" className="w-10 rounded" style={{ aspectRatio: "3/4", objectFit: "cover" }} />
                         ))}
                       </div>
                     </div>
@@ -1483,7 +1483,7 @@ export default function BulkCarousel() {
             <div key={item.id} className="rounded-xl overflow-hidden bg-card/40">
               <div className="flex gap-1 p-3 bg-black/20">
                 {item.thumbs.map((du, si) => (
-                  <img key={si} src={du} alt={`slide ${si + 1}`} className="flex-1 rounded object-cover" style={{ aspectRatio: "4/5" }} />
+                  <img key={si} src={du} alt={`slide ${si + 1}`} className="flex-1 rounded object-cover" style={{ aspectRatio: "3/4" }} />
                 ))}
               </div>
               <div className="px-4 py-3 flex items-center justify-between gap-3">
