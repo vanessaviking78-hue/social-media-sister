@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Loader2, Search, Send, Upload, Trash2, Megaphone } from "lucide-react";
+import { ArrowLeft, Loader2, Search, Send, Upload, Trash2, Image as ImageIcon, X } from "lucide-react";
 import { toast } from "sonner";
 import Papa from "papaparse";
 import { usePresets, type ClientPreset } from "@/lib/use-presets";
@@ -17,6 +17,7 @@ type Topic = {
   slide3Body: string;
   slide4Cta: string;
   category: string;
+  imageUrl: string;
   createdAt: string;
 };
 
@@ -30,8 +31,13 @@ function topicToCsvRow(t: Topic): CsvRow {
   };
 }
 
-function dataUrlToBase64Payload(dataUrl: string): string {
-  return dataUrl;
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 export default function Broadcasts() {
@@ -41,6 +47,7 @@ export default function Broadcasts() {
   const [search, setSearch] = useState("");
   const [importing, setImporting] = useState(false);
   const [broadcastingId, setBroadcastingId] = useState<number | null>(null);
+  const [uploadingId, setUploadingId] = useState<number | null>(null);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
 
   const load = useCallback(async () => {
@@ -114,6 +121,48 @@ export default function Broadcasts() {
     load();
   };
 
+  const onUploadTopicImage = async (topic: Topic, file: File) => {
+    setUploadingId(topic.id);
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      const uploadRes = await fetch(`${BASE}/api/content/upload-image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: [{ name: file.name, base64: dataUrl }] }),
+      });
+      if (!uploadRes.ok) throw new Error("Image upload failed");
+      const uploadData = await uploadRes.json();
+      const url = uploadData?.results?.[0]?.url;
+      if (!url) throw new Error("No image URL returned");
+      const patchRes = await fetch(`${BASE}/api/broadcast-topics/${topic.id}/image`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: url }),
+      });
+      if (!patchRes.ok) throw new Error("Could not save image to topic");
+      setTopics((prev) => prev.map((t) => (t.id === topic.id ? { ...t, imageUrl: url } : t)));
+      toast.success("Image saved to this topic.");
+    } catch (e: any) {
+      toast.error(e?.message || "Image upload failed");
+    } finally {
+      setUploadingId(null);
+    }
+  };
+
+  const clearTopicImage = async (topic: Topic) => {
+    try {
+      const patchRes = await fetch(`${BASE}/api/broadcast-topics/${topic.id}/image`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: "" }),
+      });
+      if (!patchRes.ok) throw new Error("Could not clear image");
+      setTopics((prev) => prev.map((t) => (t.id === topic.id ? { ...t, imageUrl: "" } : t)));
+    } catch (e: any) {
+      toast.error(e?.message || "Could not clear image");
+    }
+  };
+
   const broadcast = async (topic: Topic) => {
     if (connectedClients.length === 0) {
       toast.error("No connected clients to broadcast to.");
@@ -123,6 +172,10 @@ export default function Broadcasts() {
     setProgress({ done: 0, total: connectedClients.length });
     const row = topicToCsvRow(topic);
     const blocks = makeBlocks(row);
+    let topicImg: HTMLImageElement | null = null;
+    if (topic.imageUrl) {
+      try { topicImg = await loadImg(topic.imageUrl); } catch {}
+    }
     let successCount = 0;
     let failCount = 0;
     for (const preset of connectedClients as ClientPreset[]) {
@@ -131,8 +184,8 @@ export default function Broadcasts() {
         if ((preset as any).logoUrl) {
           try { logoImg = await loadImg((preset as any).logoUrl); } catch {}
         }
-        const slideUrls = renderAllThumbs({ blocks, coverImg: null, bodyImg: null } as any, logoImg, preset, 0.9);
-        const images = slideUrls.map((url, i) => ({ name: `slide-${i + 1}.png`, base64: dataUrlToBase64Payload(url) }));
+        const slideUrls = renderAllThumbs({ blocks, coverImg: topicImg, bodyImg: topicImg } as any, logoImg, preset, 0.9);
+        const images = slideUrls.map((url, i) => ({ name: `slide-${i + 1}.png`, base64: url }));
         const uploadRes = await fetch(`${BASE}/api/content/upload-image`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -206,7 +259,7 @@ export default function Broadcasts() {
           </label>
         </div>
 
-        <p className="text-xs text-muted-foreground">{connectedClients.length} connected client{connectedClients.length === 1 ? "" : "s"} will receive each broadcast.</p>
+        <p className="text-xs text-muted-foreground">{connectedClients.length} connected client{connectedClients.length === 1 ? "" : "s"} will receive each broadcast. Add your own photo to a topic before sending, otherwise it goes out as text only.</p>
 
         {loading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Loading library...</div>}
         {!loading && filteredTopics.length === 0 && <p className="text-sm text-muted-foreground">No topics found.</p>}
@@ -214,7 +267,26 @@ export default function Broadcasts() {
         <div className="space-y-3">
           {filteredTopics.map((t) => (
             <div key={t.id} className="rounded-2xl border border-border/50 p-4">
-              <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                {t.imageUrl ? (
+                  <div className="relative shrink-0">
+                    <img src={t.imageUrl} alt="" className="w-16 h-16 rounded-lg object-cover" />
+                    <button onClick={() => clearTopicImage(t)} className="absolute -top-1.5 -right-1.5 bg-zinc-900 border border-zinc-700 rounded-full p-0.5 text-zinc-400 hover:text-red-400">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="shrink-0 w-16 h-16 rounded-lg border border-dashed border-zinc-700 flex items-center justify-center cursor-pointer text-zinc-500 hover:border-pink-600 hover:text-pink-500">
+                    {uploadingId === t.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-5 h-5" />}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={uploadingId === t.id}
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) onUploadTopicImage(t, f); e.target.value = ""; }}
+                    />
+                  </label>
+                )}
                 <div className="flex-1">
                   <p className="font-semibold text-sm mb-1">{t.slide1Hook}</p>
                   <p className="text-sm text-muted-foreground mb-1">{t.slide1Subtitle}</p>
