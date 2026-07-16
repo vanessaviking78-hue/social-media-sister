@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity } from "lucide-react";
 
 const TOOLS = [
   {
@@ -38,6 +38,15 @@ const TOOLS = [
     color: "from-red-500/20 to-red-500/5",
     border: "hover:border-red-500/50",
     iconColor: "text-red-400",
+  },
+  {
+    href: "/health-check",
+    icon: Activity,
+    name: "Health Check",
+    description: "Live check of every client\u2019s Instagram and Facebook connection, plus their last successful and failed post, so you can catch a dropped connection before a client does.",
+    color: "from-teal-500/20 to-teal-500/5",
+    border: "hover:border-teal-500/50",
+    iconColor: "text-teal-400",
   },
   {
     href: "/checklist",
