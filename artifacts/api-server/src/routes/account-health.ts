@@ -18,7 +18,7 @@ router.get("/account-health", async (_req: Request, res: Response) => {
   try {
     const presets = await db.select().from(clientPresetsTable);
 
-    const accounts = await Promise.all(presets.map(async (preset) => {
+    const checkOne = async (preset: (typeof presets)[number]) => {
       const token = preset.metaPageAccessToken;
       const igId = preset.metaInstagramAccountId;
       const pageId = preset.metaFacebookPageId;
@@ -85,7 +85,16 @@ router.get("/account-health", async (_req: Request, res: Response) => {
         lastFailedError: lastFailedResult?.error ?? null,
         pendingCount: pendingRows.length,
       };
-    }));
+    };
+
+    const accounts: Awaited<ReturnType<typeof checkOne>>[] = [];
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < presets.length; i += BATCH_SIZE) {
+      const batch = presets.slice(i, i + BATCH_SIZE);
+      const results = await Promise.all(batch.map(checkOne));
+      accounts.push(...results);
+      if (i + BATCH_SIZE < presets.length) await new Promise((r) => setTimeout(r, 600));
+    }
 
     accounts.sort((a, b) => a.clientName.localeCompare(b.clientName));
 
