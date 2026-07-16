@@ -218,7 +218,7 @@ const REEL_GROUPS: { heading: string; items: string[] }[] = [
 ];
 const REEL_TOTAL = REEL_GROUPS.reduce((n, g) => n + g.items.length, 0);
 
-type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue";
+type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework";
 
 const TAB_ICON: Record<Tab, React.ReactNode> = {
   upcoming: <CalendarDays className="w-4 h-4" />,
@@ -232,6 +232,7 @@ const TAB_ICON: Record<Tab, React.ReactNode> = {
   resources: <FileText className="w-4 h-4" />,
   news: <Newspaper className="w-4 h-4" />,
   revenue: <TrendingUp className="w-4 h-4" />,
+  homework: <MessageSquarePlus className="w-4 h-4" />,
 };
 
 export default function ClientPortal({ token }: { token: string }) {
@@ -280,6 +281,14 @@ export default function ClientPortal({ token }: { token: string }) {
   const [reqDone, setReqDone] = useState(false);
   const [reqErr, setReqErr] = useState("");
 
+  const [hwSet, setHwSet] = useState<{ id: number; question1: string; question2: string; question3: string } | null>(null);
+  const [hwA1, setHwA1] = useState("");
+  const [hwA2, setHwA2] = useState("");
+  const [hwA3, setHwA3] = useState("");
+  const [hwBusy, setHwBusy] = useState(false);
+  const [hwDone, setHwDone] = useState(false);
+  const [hwErr, setHwErr] = useState("");
+
   const [obTreatments, setObTreatments] = useState("");
   const [obAbout, setObAbout] = useState("");
   const [obLogo, setObLogo] = useState<File | null>(null);
@@ -310,6 +319,21 @@ export default function ClientPortal({ token }: { token: string }) {
       .then(async (r) => { const json = await r.json(); if (!r.ok) throw new Error(json.error || "failed"); setData(json); })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
+  }, [token]);
+
+  useEffect(() => {
+    fetch(`${BASE}api/portal/${token}/homework`)
+      .then((r) => r.json())
+      .then((d) => {
+        setHwSet(d.set || null);
+        if (d.existingReply) {
+          setHwA1(d.existingReply.answer1 || "");
+          setHwA2(d.existingReply.answer2 || "");
+          setHwA3(d.existingReply.answer3 || "");
+          setHwDone(true);
+        }
+      })
+      .catch(() => {});
   }, [token]);
 
   useEffect(() => {
@@ -412,6 +436,24 @@ export default function ClientPortal({ token }: { token: string }) {
 
   const submitBA = async () => { setBaErr(""); if (!before || !after) { setBaErr("Please add both a before and an after photo."); return; } setBaBusy(true); try { const beforeUrl = await uploadOne(before); const afterUrl = await uploadOne(after); await send({ beforeUrl, afterUrl, treatment, story, submitterName: baName }); setBaDone(true); } catch (e: any) { setBaErr(e?.message || "Something went wrong."); } finally { setBaBusy(false); } };
   const submitSelfie = async () => { setSelfieErr(""); if (!selfie) { setSelfieErr("Please add a selfie first."); return; } setSelfieBusy(true); try { const url = await uploadOne(selfie); await send({ beforeUrl: url, afterUrl: url, treatment: "SELFIE", story: selfieNote, submitterName: selfieName }); setSelfieDone(true); } catch (e: any) { setSelfieErr(e?.message || "Something went wrong."); } finally { setSelfieBusy(false); } };
+  const submitHomework = async () => {
+    setHwErr("");
+    if (!hwSet) { setHwErr("No questions to answer right now."); return; }
+    setHwBusy(true);
+    try {
+      const r = await fetch(`${BASE}api/portal/${token}/homework/reply`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ setId: hwSet.id, answer1: hwA1, answer2: hwA2, answer3: hwA3 }),
+      });
+      if (!r.ok) throw new Error("Failed to save");
+      setHwDone(true);
+    } catch (e: any) {
+      setHwErr(e?.message || "Something went wrong.");
+    } finally {
+      setHwBusy(false);
+    }
+  };
   const submitRequest = async () => { setReqErr(""); if (!reqText.trim()) { setReqErr("Tell us what you'd like a post about."); return; } setReqBusy(true); try { await send({ beforeUrl: "", afterUrl: "", treatment: "POST REQUEST", story: reqText, submitterName: reqName }); setReqDone(true); } catch (e: any) { setReqErr(e?.message || "Something went wrong."); } finally { setReqBusy(false); } };
   const submitOnboarding = async () => {
     setObErr("");
@@ -486,6 +528,7 @@ export default function ClientPortal({ token }: { token: string }) {
         </div>
         <div className="max-w-3xl mx-auto px-4 pb-3 flex flex-wrap gap-2">
           <TabBtn id="upcoming" label="Posts" />
+          <TabBtn id="homework" label="Homework" />
           {revenueIdeas.length > 0 && <TabBtn id="revenue" label="Ideas For You" />}
           <TabBtn id="approvals" label="Approvals" badge={pendingCount || undefined} />
           <TabBtn id="ba" label="Before & After" />
@@ -658,6 +701,33 @@ export default function ClientPortal({ token }: { token: string }) {
                 <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Your name</label><input value={selfieName} onChange={(e) => setSelfieName(e.target.value)} placeholder="So we know who sent it" className={inputCls} /></div>
                 {selfieErr && <p className="text-sm text-red-400">{selfieErr}</p>}
                 <button onClick={submitSelfie} disabled={selfieBusy} className={sendBtn}>{selfieBusy ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : SEND_LABEL}</button>
+              </div>
+            )}
+          </section>
+        )}
+
+        {tab === "homework" && (
+          <section>
+            <div className="flex items-center gap-2 mb-2"><MessageSquarePlus className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">This Weeks Homework</h2></div>
+            {!hwSet ? (
+              <p className="text-sm text-zinc-400">No homework set at the moment, check back soon.</p>
+            ) : hwDone ? (
+              <div className="space-y-5">
+                <p className="text-sm text-emerald-400">Thanks, your answers are saved. Come back if you want to change anything.</p>
+                <div className="space-y-4 text-sm">
+                  <div><p className="text-zinc-400 mb-1">{hwSet.question1}</p><p>{hwA1}</p></div>
+                  <div><p className="text-zinc-400 mb-1">{hwSet.question2}</p><p>{hwA2}</p></div>
+                  <div><p className="text-zinc-400 mb-1">{hwSet.question3}</p><p>{hwA3}</p></div>
+                </div>
+                <button onClick={() => setHwDone(false)} className="text-xs text-pink-400 underline">Edit my answers</button>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">{hwSet.question1}</label><textarea value={hwA1} onChange={(e) => setHwA1(e.target.value)} rows={3} className={inputCls + " resize-none"} /></div>
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">{hwSet.question2}</label><textarea value={hwA2} onChange={(e) => setHwA2(e.target.value)} rows={3} className={inputCls + " resize-none"} /></div>
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">{hwSet.question3}</label><textarea value={hwA3} onChange={(e) => setHwA3(e.target.value)} rows={3} className={inputCls + " resize-none"} /></div>
+                {hwErr && <p className="text-sm text-red-400">{hwErr}</p>}
+                <button onClick={submitHomework} disabled={hwBusy} className={sendBtn}>{hwBusy ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : SEND_LABEL}</button>
               </div>
             )}
           </section>
