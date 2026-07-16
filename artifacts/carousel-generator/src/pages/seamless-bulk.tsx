@@ -344,9 +344,11 @@ let sent = 0;
 try {
 for (let i = 0; i < ready.length; i++) {
 const c = ready[i]; toast.loading(`Scheduling ${i + 1} / ${ready.length}...`, { id: tid });
-const names = c.slideUrls.map((_, j) => `seamless-${i + 1}-slide${j + 1}.png`);
-const imageUrls = await uploadDataUrls(c.slideUrls, names);
 for (const targetId of targetIds) {
+const targetPreset = presetFor(targetId);
+const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, c.blocks, targetPreset);
+const names = slideUrls.map((_, j) => `seamless-${i + 1}-slide${j + 1}.png`);
+const imageUrls = await uploadDataUrls(slideUrls, names);
 const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: targetId, postType: "carousel", content: { imageUrls, caption: c.caption || "", title: (c.row.slide1_hook || c.name).slice(0, 80), platforms: ["instagram", "facebook"], musicTrack: c.track || undefined, sourceTool: "Seamless Carousels" }, scheduledAt: new Date(`${c.date}T${c.time}`).toISOString() }) });
 if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(`${c.name}: ${err.error}`); }
 sent++;
