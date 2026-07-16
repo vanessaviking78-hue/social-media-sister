@@ -73,6 +73,7 @@ import CanvaOAuthResult from "@/pages/canva-oauth-result";
 import ApprovalBundles from "@/pages/approval-bundles";
 import ClientApproval from "@/pages/client-approval";
 import ContentGenerator from "@/pages/content-generator";
+import ClientPortalView from "@/pages/client-portal-view";
 import TweetMaker from "@/pages/tweet-maker";
 import RevenueIdeas from "@/pages/revenue-ideas";
 import News from "@/pages/news";
@@ -139,6 +140,7 @@ function ProtectedRouter() {
       <Route path="/settings" component={Settings} />
       <Route path="/approval-bundles" component={ApprovalBundles} />
       <Route path="/content-generator" component={ContentGenerator} />
+      <Route path="/client-portal-view" component={ClientPortalView} />
       <Route path="/showcase-builder" component={ShowcaseBuilder} />
       <Route path="/seamless-bulk" component={SeamlessBulk} />
       <Route path="/about-me-studio" component={AboutMeStudio} />
