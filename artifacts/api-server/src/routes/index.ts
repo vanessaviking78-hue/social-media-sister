@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
+import accountHealthRouter from "./account-health";
 import authRouter from "./auth";
 import carouselRouter from "./carousel";
 import contentRouter from "./content";
@@ -44,6 +45,7 @@ import clientNewsRouter from "./client-news";
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(accountHealthRouter);
 router.use(authRouter);
 router.use(carouselRouter);
 router.use(contentRouter);
