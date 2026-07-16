@@ -41,6 +41,7 @@ import notifyRouter from "./notify";
 import submissionsRouter from "./submissions";
 import revenueIdeasRouter from "./revenue-ideas";
 import clientNewsRouter from "./client-news";
+import homeworkRouter from "./homework";
 
 const router: IRouter = Router();
 
@@ -86,5 +87,6 @@ router.use(approvalBundlesRouter);
 router.use(contentGeneratorRouter);
 router.use(revenueIdeasRouter);
 router.use(clientNewsRouter);
+router.use(homeworkRouter);
 
 export default router;
