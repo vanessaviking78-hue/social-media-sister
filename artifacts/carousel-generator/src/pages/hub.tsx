@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone } from "lucide-react";
 
 const TOOLS = [
   {
@@ -65,6 +65,15 @@ const TOOLS = [
     color: "from-amber-500/20 to-amber-500/5",
     border: "hover:border-amber-500/50",
     iconColor: "text-amber-400",
+  },
+  {
+    href: "/client-portal-view",
+    icon: Smartphone,
+    name: "Client Portal",
+    description: "Pick a client and see their portal exactly as they see it, posts, homework and bonus content included.",
+    color: "from-violet-500/20 to-violet-500/5",
+    border: "hover:border-violet-500/50",
+    iconColor: "text-violet-400",
   },
   {
     href: "/checklist",
