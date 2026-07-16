@@ -747,3 +747,16 @@ export const blogPostsTable = pgTable("blog_posts", {
 });
 
 export type BlogPost = typeof blogPostsTable.$inferSelect;
+
+export const broadcastTopicsTable = pgTable("broadcast_topics", {
+  id: serial("id").primaryKey(),
+  slide1Hook: text("slide1_hook").notNull().default(""),
+  slide1Subtitle: text("slide1_subtitle").notNull().default(""),
+  slide2Body: text("slide2_body").notNull().default(""),
+  slide3Body: text("slide3_body").notNull().default(""),
+  slide4Cta: text("slide4_cta").notNull().default(""),
+  category: text("category").notNull().default(""),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type BroadcastTopic = typeof broadcastTopicsTable.$inferSelect;
