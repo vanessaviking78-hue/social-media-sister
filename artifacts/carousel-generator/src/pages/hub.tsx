@@ -49,6 +49,15 @@ const TOOLS = [
     iconColor: "text-teal-400",
   },
   {
+    href: "/homework",
+    icon: MessageSquareText,
+    name: "Homework",
+    description: "Set a weekly set of three questions for every client to answer in their portal. Their replies land here, ready to be turned straight into content.",
+    color: "from-fuchsia-500/20 to-fuchsia-500/5",
+    border: "hover:border-fuchsia-500/50",
+    iconColor: "text-fuchsia-400",
+  },
+  {
     href: "/checklist",
     icon: ListChecks,
     name: "Client Checklist",
