@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift } from "lucide-react";
 
 const TOOLS = [
   {
@@ -56,6 +56,15 @@ const TOOLS = [
     color: "from-fuchsia-500/20 to-fuchsia-500/5",
     border: "hover:border-fuchsia-500/50",
     iconColor: "text-fuchsia-400",
+  },
+  {
+    href: "/bonus-content",
+    icon: Gift,
+    name: "Bonus Content",
+    description: "Drop images, videos and notes into a specific client's own space, ready for them to see and use whenever they check their portal.",
+    color: "from-amber-500/20 to-amber-500/5",
+    border: "hover:border-amber-500/50",
+    iconColor: "text-amber-400",
   },
   {
     href: "/checklist",
