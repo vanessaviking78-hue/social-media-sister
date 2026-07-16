@@ -767,7 +767,7 @@ export const broadcastDraftsTable = pgTable("broadcast_drafts", {
   presetId: integer("preset_id").notNull(),
   clientName: text("client_name").notNull().default(""),
   topicId: integer("topic_id"),
-  imageUrls: jsonb("image_urls").notNull().default([]),
+  imageUrls: json("image_urls").$type<string[]>().notNull().default([]),
   caption: text("caption").notNull().default(""),
   title: text("title").notNull().default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
