@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { usePresets } from "@/lib/use-presets";
 import { compressImage } from "@/lib/slide-utils";
+import { nameBucketOffsetMinutes } from "@/lib/broadcast-stagger";
+import { nameBucketOffsetMinutes } from "@/lib/broadcast-stagger";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const MAX_IMAGES = 12;
@@ -455,6 +457,8 @@ export default function UploadSchedule() {
       }
 
       for (const targetPresetId of targetPresetIds) {
+        const nameOffsetMin = broadcastMode ? nameBucketOffsetMinutes(presets.find((p) => p.id === targetPresetId)?.name ?? "") : 0;
+        const finalScheduledAt = new Date(new Date(scheduledAt).getTime() + nameOffsetMin * 60000).toISOString();
         const res = await fetch(`${BASE}/api/scheduler/posts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -462,7 +466,7 @@ export default function UploadSchedule() {
             presetId: targetPresetId,
             postType,
             content: postContent,
-            scheduledAt,
+            scheduledAt: finalScheduledAt,
             stickerConfig,
           }),
         });
@@ -844,8 +848,7 @@ export default function UploadSchedule() {
                 )}
                 {broadcastMode && (
                   <p className="text-[11px] text-zinc-500 mt-1.5">
-                    Same content, same date, sent to every client ticked above — each lands in their own queue in the Scheduler.
-                  </p>
+                    Same content, same date, sent to every client ticked above, each lands in its own queue in the Scheduler. Posts are staggered a few minutes apart by client name (A-F, G-M, N-S, T-Z) so they do not all hit Facebook at once.</p>
                 )}
               </div>
 
