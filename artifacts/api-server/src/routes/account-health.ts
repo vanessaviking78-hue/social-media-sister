@@ -4,60 +4,24 @@ import { clientPresetsTable, scheduledPostsTable } from "@workspace/db/schema";
 import { eq, and, inArray, desc } from "drizzle-orm";
 
 const router: IRouter = Router();
-const GRAPH = "https://graph.facebook.com/v22.0";
-
-function metaFetch(url: string, timeoutMs = 10_000): Promise<globalThis.Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  return fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timer));
-}
 
 // GET /api/account-health — connection status for every client, used by the
 // Health Check dashboard. Lives separately from /healthz (infra uptime check).
+//
+// Note: this deliberately does NOT ping Facebook\u2019s Graph API live to "test" a
+// connection. A read-only profile fetch (GET /{pageId}?fields=id,name) needs
+// permission scopes our page tokens were never granted, even on accounts that
+// post successfully every day \u2014 so that check produced false "not connected"
+// alarms across almost every client. Real posting outcomes recorded in the
+// scheduler are the trustworthy signal, so status is derived from those.
 router.get("/account-health", async (_req: Request, res: Response) => {
   try {
     const presets = await db.select().from(clientPresetsTable);
 
-    const checkOne = async (preset: (typeof presets)[number]) => {
-      const token = preset.metaPageAccessToken;
-      const igId = preset.metaInstagramAccountId;
-      const pageId = preset.metaFacebookPageId;
-
-      let ig: { connected: boolean; username?: string; error?: string } = { connected: false };
-      let fb: { connected: boolean; name?: string; error?: string } = { connected: false };
-
-      if (!token) {
-        ig = { connected: false, error: "No Meta token configured" };
-        fb = { connected: false, error: "No Meta token configured" };
-      } else {
-        if (igId) {
-          try {
-            const r = await metaFetch(`${GRAPH}/${igId}?fields=id,username&access_token=${token}`);
-            const data = await r.json() as any;
-            ig = r.ok && data.username
-              ? { connected: true, username: data.username }
-              : { connected: false, error: data?.error?.message || "Could not verify" };
-          } catch (e: any) {
-            ig = { connected: false, error: e.message || "Request failed or timed out" };
-          }
-        } else {
-          ig = { connected: false, error: "No Instagram Account ID configured" };
-        }
-
-        if (pageId) {
-          try {
-            const r = await metaFetch(`${GRAPH}/${pageId}?fields=id,name&access_token=${token}`);
-            const data = await r.json() as any;
-            fb = r.ok && data.name
-              ? { connected: true, name: data.name }
-              : { connected: false, error: data?.error?.message || "Could not verify" };
-          } catch (e: any) {
-            fb = { connected: false, error: e.message || "Request failed or timed out" };
-          }
-        } else {
-          fb = { connected: false, error: "No Facebook Page ID configured" };
-        }
-      }
+    const accounts = await Promise.all(presets.map(async (preset) => {
+      const hasToken = !!preset.metaPageAccessToken;
+      const igConfigured = hasToken && !!preset.metaInstagramAccountId;
+      const fbConfigured = hasToken && !!preset.metaFacebookPageId;
 
       const [lastPublished] = await db.select().from(scheduledPostsTable)
         .where(and(eq(scheduledPostsTable.presetId, preset.id), eq(scheduledPostsTable.status, "published")))
@@ -73,30 +37,40 @@ router.get("/account-health", async (_req: Request, res: Response) => {
         .where(and(eq(scheduledPostsTable.presetId, preset.id), inArray(scheduledPostsTable.status, ["pending", "processing"])));
 
       const lastFailedResult = lastFailed?.metaResult as { error?: string } | null;
+      const lastPublishedAt = lastPublished?.metaPostedAt ? lastPublished.metaPostedAt.toISOString() : null;
+      const lastFailedAt = lastFailed?.updatedAt ? lastFailed.updatedAt.toISOString() : null;
+
+      let status: "not_connected" | "no_posts_yet" | "needs_attention" | "healthy";
+      if (!hasToken || (!igConfigured && !fbConfigured)) {
+        status = "not_connected";
+      } else if (!lastPublishedAt && !lastFailedAt) {
+        status = "no_posts_yet";
+      } else if (lastFailedAt && (!lastPublishedAt || new Date(lastFailedAt) > new Date(lastPublishedAt))) {
+        status = "needs_attention";
+      } else {
+        status = "healthy";
+      }
 
       return {
         presetId: preset.id,
         clientName: preset.name,
-        hasToken: !!token,
-        ig,
-        fb,
-        lastPublishedAt: lastPublished?.metaPostedAt ? lastPublished.metaPostedAt.toISOString() : null,
-        lastFailedAt: lastFailed?.updatedAt ? lastFailed.updatedAt.toISOString() : null,
+        hasToken,
+        igConfigured,
+        fbConfigured,
+        status,
+        lastPublishedAt,
+        lastFailedAt,
         lastFailedError: lastFailedResult?.error ?? null,
         pendingCount: pendingRows.length,
       };
-    };
+    }));
 
-    const accounts: Awaited<ReturnType<typeof checkOne>>[] = [];
-    const BATCH_SIZE = 5;
-    for (let i = 0; i < presets.length; i += BATCH_SIZE) {
-      const batch = presets.slice(i, i + BATCH_SIZE);
-      const results = await Promise.all(batch.map(checkOne));
-      accounts.push(...results);
-      if (i + BATCH_SIZE < presets.length) await new Promise((r) => setTimeout(r, 600));
-    }
-
-    accounts.sort((a, b) => a.clientName.localeCompare(b.clientName));
+    const statusOrder: Record<string, number> = { not_connected: 0, needs_attention: 1, no_posts_yet: 2, healthy: 3 };
+    accounts.sort((a, b) => {
+      const diff = statusOrder[a.status] - statusOrder[b.status];
+      if (diff !== 0) return diff;
+      return a.clientName.localeCompare(b.clientName);
+    });
 
     res.json({ accounts, checkedAt: new Date().toISOString() });
   } catch (err: any) {
