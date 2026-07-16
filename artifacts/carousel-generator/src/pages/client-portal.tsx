@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Loader2, AlertTriangle, CalendarDays, ChevronLeft, X, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star, FileText, Download, Newspaper, TrendingUp, Bell, BellOff } from "lucide-react";
+import { Loader2, AlertTriangle, CalendarDays, ChevronLeft, X, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star, FileText, Download, Newspaper, TrendingUp, Bell, BellOff, Gift } from "lucide-react";
 import { toast } from "sonner";
 import { NewsList } from "@/pages/aesthetic-news";
 
@@ -218,7 +218,7 @@ const REEL_GROUPS: { heading: string; items: string[] }[] = [
 ];
 const REEL_TOTAL = REEL_GROUPS.reduce((n, g) => n + g.items.length, 0);
 
-type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework";
+type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus";
 
 const TAB_ICON: Record<Tab, React.ReactNode> = {
   upcoming: <CalendarDays className="w-4 h-4" />,
@@ -233,6 +233,7 @@ const TAB_ICON: Record<Tab, React.ReactNode> = {
   news: <Newspaper className="w-4 h-4" />,
   revenue: <TrendingUp className="w-4 h-4" />,
   homework: <MessageSquarePlus className="w-4 h-4" />,
+  bonus: <Gift className="w-4 h-4" />,
 };
 
 export default function ClientPortal({ token }: { token: string }) {
@@ -289,6 +290,9 @@ export default function ClientPortal({ token }: { token: string }) {
   const [hwDone, setHwDone] = useState(false);
   const [hwErr, setHwErr] = useState("");
 
+  const [bcItems, setBcItems] = useState<{ id: number; title: string; note: string; mediaUrl: string | null; mediaType: string; createdAt: string }[]>([]);
+  const [bcLoading, setBcLoading] = useState(true);
+
   const [obTreatments, setObTreatments] = useState("");
   const [obAbout, setObAbout] = useState("");
   const [obLogo, setObLogo] = useState<File | null>(null);
@@ -334,6 +338,15 @@ export default function ClientPortal({ token }: { token: string }) {
         }
       })
       .catch(() => {});
+  }, [token]);
+
+  useEffect(() => {
+    setBcLoading(true);
+    fetch(`${BASE}api/portal/${token}/bonus-content`)
+      .then((r) => r.json())
+      .then((d) => setBcItems(Array.isArray(d.items) ? d.items : []))
+      .catch(() => setBcItems([]))
+      .finally(() => setBcLoading(false));
   }, [token]);
 
   useEffect(() => {
@@ -529,6 +542,7 @@ export default function ClientPortal({ token }: { token: string }) {
         <div className="max-w-3xl mx-auto px-4 pb-3 flex flex-wrap gap-2">
           <TabBtn id="upcoming" label="Posts" />
           <TabBtn id="homework" label="Homework" />
+          <TabBtn id="bonus" label="Bonus Content" />
           {revenueIdeas.length > 0 && <TabBtn id="revenue" label="Ideas For You" />}
           <TabBtn id="approvals" label="Approvals" badge={pendingCount || undefined} />
           <TabBtn id="ba" label="Before & After" />
@@ -730,6 +744,25 @@ export default function ClientPortal({ token }: { token: string }) {
                 <button onClick={submitHomework} disabled={hwBusy} className={sendBtn}>{hwBusy ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : SEND_LABEL}</button>
               </div>
             )}
+          </section>
+        )}
+
+        {tab === "bonus" && (
+          <section>
+            <div className="flex items-center gap-2 mb-2"><Gift className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Bonus Content</h2></div>
+            <p className="text-sm text-zinc-400 mb-6">Things saved specially for you.</p>
+            {bcLoading && <p className="text-sm text-zinc-500">Loading...</p>}
+            {!bcLoading && bcItems.length === 0 && <p className="text-sm text-zinc-500">Nothing here yet, check back soon.</p>}
+            <div className="space-y-4">
+              {bcItems.map((it) => (
+                <div key={it.id} className="rounded-2xl border border-zinc-800 p-4">
+                  {it.title && <p className="font-semibold text-sm mb-1">{it.title}</p>}
+                  {it.note && <p className="text-sm text-zinc-400 mb-2 whitespace-pre-wrap">{it.note}</p>}
+                  {it.mediaUrl && it.mediaType === "image" && <img src={it.mediaUrl} alt="" className="rounded-lg max-w-full" />}
+                  {it.mediaUrl && it.mediaType === "video" && <video src={it.mediaUrl} controls className="rounded-lg max-w-full" />}
+                </div>
+              ))}
+            </div>
           </section>
         )}
 
