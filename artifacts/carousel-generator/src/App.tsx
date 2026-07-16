@@ -81,6 +81,7 @@ import Checklist from "@/pages/checklist";
 import CatchUpPlan from "@/pages/catch-up";
 import ResourceLibrary from "@/pages/resources";
 import HealthCheck from "@/pages/health-check";
+import Homework from "@/pages/homework";
 
 const queryClient = new QueryClient();
 
@@ -148,6 +149,7 @@ function ProtectedRouter() {
       <Route path="/catch-up" component={CatchUpPlan} />
       <Route path="/resources" component={ResourceLibrary} />
 <Route path="/health-check" component={HealthCheck} />
+      <Route path="/homework" component={Homework} />
       <Route component={NotFound} />
     </Switch>
   );
