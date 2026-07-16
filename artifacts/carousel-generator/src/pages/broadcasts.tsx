@@ -9,6 +9,13 @@ import { nameBucketOffsetMinutes } from "@/lib/broadcast-stagger";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
+const CAPTION_TONES: { value: string; label: string }[] = [
+  { value: "1", label: "Northern grit" },
+  { value: "2", label: "Storyteller" },
+  { value: "3", label: "Funny and blunt" },
+  { value: "4", label: "Professional warmth" },
+];
+
 type Topic = {
   id: number;
   slide1Hook: string;
@@ -73,6 +80,12 @@ export default function Broadcasts() {
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [schedulingId, setSchedulingId] = useState<number | null>(null);
   const [draftTimes, setDraftTimes] = useState<Record<number, string>>({});
+
+  const [singleImgFile, setSingleImgFile] = useState<File | null>(null);
+  const [singleImgPreview, setSingleImgPreview] = useState("");
+  const [singleImgContext, setSingleImgContext] = useState("");
+  const [singleImgTone, setSingleImgTone] = useState("1");
+  const [singleImgBusy, setSingleImgBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -278,6 +291,117 @@ export default function Broadcasts() {
     }
   };
 
+  const onPickSingleImage = async (file: File) => {
+    setSingleImgFile(file);
+    try {
+      const dataUrl = await fileToDataUrl(file);
+      setSingleImgPreview(dataUrl);
+    } catch {
+      setSingleImgPreview("");
+    }
+  };
+
+  const clearSingleImage = () => {
+    setSingleImgFile(null);
+    setSingleImgPreview("");
+    setSingleImgContext("");
+  };
+
+  const broadcastSingleImage = async () => {
+    if (!singleImgFile) {
+      toast.error("Choose a photo first.");
+      return;
+    }
+    if (!singleImgContext.trim()) {
+      toast.error("Add a line about what is in the photo, it helps the caption.");
+      return;
+    }
+    if (connectedClients.length === 0) {
+      toast.error("No connected clients to broadcast to.");
+      return;
+    }
+    setSingleImgBusy(true);
+    try {
+      const dataUrl = singleImgPreview || (await fileToDataUrl(singleImgFile));
+      const uploadRes = await fetch(`${BASE}/api/content/upload-image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: [{ name: singleImgFile.name, base64: dataUrl }] }),
+      });
+      if (!uploadRes.ok) throw new Error("Photo upload failed");
+      const uploadData = await uploadRes.json();
+      const imageUrl = uploadData?.results?.[0]?.url;
+      if (!imageUrl) throw new Error("No image URL returned");
+
+      const captionRes = await fetch(`${BASE}/api/caption-generator/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tone: singleImgTone, context: singleImgContext.trim() }),
+      });
+      let caption = singleImgContext.trim();
+      if (captionRes.ok) {
+        const captionData = await captionRes.json();
+        caption = captionData.caption || caption;
+      }
+
+      const baseImg = await loadImg(imageUrl);
+      const blankRow: CsvRow = { slide1_hook: "", slide1_subtitle: "", slide2_body: "", slide3_body: "", slide4_cta: "" };
+      const blocks = makeBlocks(blankRow);
+
+      const draftRows: any[] = [];
+      let failCount = 0;
+      for (const preset of connectedClients as ClientPreset[]) {
+        try {
+          let logoImg: HTMLImageElement | null = null;
+          if ((preset as any).logoUrl) {
+            try { logoImg = await loadImg((preset as any).logoUrl); } catch {}
+          }
+          const slideUrls = renderAllThumbs({ blocks, coverImg: baseImg, bodyImg: baseImg } as any, logoImg, preset, 0.9);
+          const brandedDataUrl = slideUrls[0];
+          const brandedUploadRes = await fetch(`${BASE}/api/content/upload-image`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ images: [{ name: `single-${Date.now()}.png`, base64: brandedDataUrl }] }),
+          });
+          if (!brandedUploadRes.ok) throw new Error("Branded image upload failed");
+          const brandedUploadData = await brandedUploadRes.json();
+          const brandedUrl = brandedUploadData?.results?.[0]?.url;
+          if (!brandedUrl) throw new Error("No branded URL returned");
+          draftRows.push({
+            presetId: (preset as any).id,
+            clientName: (preset as any).name || "",
+            topicId: null,
+            imageUrls: [brandedUrl],
+            caption,
+            title: caption.slice(0, 60),
+          });
+        } catch {
+          failCount++;
+        }
+      }
+
+      if (draftRows.length > 0) {
+        const r = await fetch(`${BASE}/api/broadcast-drafts/bulk`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rows: draftRows }),
+        });
+        if (!r.ok) throw new Error("Could not save to pending queue");
+        loadDrafts();
+      }
+      if (failCount === 0) {
+        toast.success(`Added to Pending Queue for ${draftRows.length} clients, logo included.`);
+      } else {
+        toast.error(`${draftRows.length} added, ${failCount} failed. Check the pending queue.`);
+      }
+      clearSingleImage();
+    } catch (e: any) {
+      toast.error(e?.message || "Could not broadcast this photo.");
+    } finally {
+      setSingleImgBusy(false);
+    }
+  };
+
   const scheduleDraft = async (draft: Draft) => {
     const localValue = draftTimes[draft.id];
     if (!localValue) {
@@ -313,8 +437,7 @@ export default function Broadcasts() {
     }
   };
 
-  const scheduleAllForTopic = async (topicId: number) => {
-    const group = drafts.filter((d) => d.topicId === topicId);
+  const scheduleAllForGroup = async (group: Draft[]) => {
     for (const draft of group) {
       const preset = (presets || []).find((p: any) => p.id === draft.presetId);
       const offsetMinutes = nameBucketOffsetMinutes((preset as any)?.name || "");
@@ -323,7 +446,7 @@ export default function Broadcasts() {
       const pad = (n: number) => String(n).padStart(2, "0");
       const staggered = `${base.getFullYear()}-${pad(base.getMonth() + 1)}-${pad(base.getDate())}T${pad(base.getHours())}:${pad(base.getMinutes())}`;
       setDraftTimes((prev) => ({ ...prev, [draft.id]: staggered }));
-      await scheduleDraft({ ...draft, id: draft.id });
+      await scheduleDraft({ ...draft });
     }
   };
 
@@ -333,9 +456,9 @@ export default function Broadcasts() {
   };
 
   const draftGroups = useMemo(() => {
-    const map = new Map<number | string, Draft[]>();
+    const map = new Map<string, Draft[]>();
     for (const d of drafts) {
-      const key = d.topicId ?? "other";
+      const key = d.topicId != null ? `topic-${d.topicId}` : `single-${d.title}`;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(d);
     }
@@ -353,7 +476,7 @@ export default function Broadcasts() {
         <div className="flex-1">
           <h1 className="font-bold text-lg">Broadcasts</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Generic content library. Broadcast a topic to build branded posts for every client, they wait in the queue until you set a time.
+            Generic content library. Broadcast a topic or a photo to build branded posts for every client, they wait in the queue until you set a time.
           </p>
         </div>
       </header>
@@ -368,14 +491,20 @@ export default function Broadcasts() {
             <p className="text-xs text-muted-foreground -mt-2">Nothing here is scheduled yet. Set a date and time on each one, or a whole batch, to send it to the scheduler.</p>
             {draftsLoading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Loading queue...</div>}
             <div className="space-y-6">
-              {draftGroups.map(([topicKey, group]) => {
-                const topic = topics.find((t) => t.id === topicKey);
+              {draftGroups.map(([groupKey, group]) => {
+                const first = group[0];
+                const topic = first.topicId != null ? topics.find((t) => t.id === first.topicId) : null;
+                const label = topic ? topic.slide1Hook : (first.title || "Broadcast batch");
+                const thumb = first.imageUrls?.[0];
                 return (
-                  <div key={String(topicKey)} className="rounded-2xl border border-border/50 p-4 space-y-3">
+                  <div key={groupKey} className="rounded-2xl border border-border/50 p-4 space-y-3">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-semibold text-sm">{topic ? topic.slide1Hook : "Broadcast batch"}</p>
+                      <div className="flex items-center gap-2 min-w-0">
+                        {thumb && <img src={thumb} alt="" className="w-8 h-8 rounded object-cover shrink-0" />}
+                        <p className="font-semibold text-sm truncate">{label}</p>
+                      </div>
                       <button
-                        onClick={() => scheduleAllForTopic(topicKey as number)}
+                        onClick={() => scheduleAllForGroup(group)}
                         className="text-xs px-3 py-1.5 rounded-full bg-pink-600 hover:bg-pink-500 text-white font-semibold flex items-center gap-1.5 shrink-0"
                       >
                         <CalendarClock className="w-3.5 h-3.5" /> Schedule all with stagger
@@ -411,6 +540,67 @@ export default function Broadcasts() {
             </div>
           </div>
         )}
+
+        <div className="rounded-2xl border border-border/50 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <ImageIcon className="w-4 h-4 text-pink-500" />
+            <h2 className="font-semibold text-sm">Upload a single photo</h2>
+          </div>
+          <p className="text-xs text-muted-foreground -mt-2">
+            Drop in one finished photo, add a line about what it is, and it writes a caption, adds every connected client logo, and drops it in the Pending Queue above. Nothing is scheduled until you set a time.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <label className="shrink-0 w-24 h-24 rounded-lg border border-dashed border-zinc-700 flex items-center justify-center cursor-pointer text-zinc-500 hover:border-pink-600 hover:text-pink-500 overflow-hidden">
+              {singleImgPreview ? (
+                <img src={singleImgPreview} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <ImageIcon className="w-6 h-6" />
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={singleImgBusy}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) onPickSingleImage(f); e.target.value = ""; }}
+              />
+            </label>
+            <div className="flex-1 space-y-2">
+              <input
+                value={singleImgContext}
+                onChange={(e) => setSingleImgContext(e.target.value)}
+                placeholder="What is in the photo? e.g. before and after lip filler, patient thrilled"
+                className={inputCls}
+                disabled={singleImgBusy}
+              />
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select
+                  value={singleImgTone}
+                  onChange={(e) => setSingleImgTone(e.target.value)}
+                  disabled={singleImgBusy}
+                  className="rounded-xl bg-zinc-900 border border-zinc-800 px-3 py-2.5 text-sm text-white outline-none focus:border-pink-600"
+                >
+                  {CAPTION_TONES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={broadcastSingleImage}
+                  disabled={singleImgBusy || !singleImgFile}
+                  className="flex-1 rounded-full bg-pink-600 hover:bg-pink-500 disabled:opacity-60 text-white font-semibold py-2.5 flex items-center justify-center gap-2 text-sm"
+                >
+                  {singleImgBusy ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Adding...</>
+                  ) : (
+                    <><Send className="w-4 h-4" /> Broadcast this photo</>
+                  )}
+                </button>
+                {singleImgFile && !singleImgBusy && (
+                  <button onClick={clearSingleImage} className="text-zinc-500 hover:text-red-400 px-2 shrink-0"><X className="w-4 h-4" /></button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row gap-3">
