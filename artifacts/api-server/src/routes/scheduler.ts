@@ -147,7 +147,7 @@ router.post("/scheduler/posts/:id/retry", async (req, res) => {
     const id = Number(req.params.id);
     const [post] = await db.select().from(scheduledPostsTable).where(eq(scheduledPostsTable.id, id));
     if (!post) { res.status(404).json({ error: "Post not found" }); return; }
-    if (post.status !== "failed") { res.status(400).json({ error: "Only failed posts can be retried" }); return; }
+    if (post.status !== "failed" && post.status !== "processing") { res.status(400).json({ error: "Only failed or stuck posts can be retried" }); return; }
 
     const [updated] = await db
       .update(scheduledPostsTable)
