@@ -1157,9 +1157,15 @@ export default function BulkCarousel() {
           const item = items[i];
           const entry = scheduleEntries[i];
           toast.loading(`Scheduling ${i + 1} / ${items.length}...`, { id: tid });
-          const names = item.thumbs.map((_, j) => `carousel-${i + 1}-slide${j + 1}.png`);
-          const imageUrls = await uploadDataUrls(item.thumbs, names);
           for (const targetId of targetIds) {
+            const targetPreset = presets.find((p) => p.id === targetId);
+            let targetLogo: HTMLImageElement | null = null;
+            if (targetPreset?.logoUrl) { try { targetLogo = await loadImg(targetPreset.logoUrl); } catch {} }
+            const thumbs = targetPreset
+              ? renderAllThumbs({ blocks: item.blocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, targetLogo, targetPreset, lineSpacingRef.current, heroWordColorRef.current)
+              : item.thumbs;
+            const names = thumbs.map((_, j) => `carousel-${i + 1}-slide${j + 1}.png`);
+            const imageUrls = await uploadDataUrls(thumbs, names);
             const res = await fetch(`${BASE}/api/scheduler/posts`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
