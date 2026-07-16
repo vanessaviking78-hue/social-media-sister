@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { clientPresetsTable, calendarPostsTable, approvalBatchesTable, approvalImagesTable, scheduledPostsTable, homeworkQuestionSetsTable, homeworkRepliesTable } from "@workspace/db/schema";
+import { clientPresetsTable, calendarPostsTable, approvalBatchesTable, approvalImagesTable, scheduledPostsTable, homeworkQuestionSetsTable, homeworkRepliesTable, bonusContentTable } from "@workspace/db/schema";
 import { eq, and, gte, or, sql, desc } from "drizzle-orm";
 import crypto from "crypto";
 import { getApprovedIdeasForClient } from "./revenue-ideas";
@@ -219,6 +219,23 @@ router.post("/portal/:token/homework/reply", async (req, res) => {
     res.status(201).json({ reply });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to save homework reply" });
+  }
+});
+
+// Client: bonus content dropped in for this client, newest first.
+router.get("/portal/:token/bonus-content", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+
+    const items = await db.select().from(bonusContentTable)
+      .where(eq(bonusContentTable.presetId, preset.id))
+      .orderBy(desc(bonusContentTable.createdAt));
+    res.json({ items });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to load bonus content" });
   }
 });
 
