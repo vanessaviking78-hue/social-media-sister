@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone } from "lucide-react";
 
 const TOOLS = [
   {
@@ -83,6 +83,15 @@ const TOOLS = [
     color: "from-cyan-500/20 to-cyan-500/5",
     border: "hover:border-cyan-500/50",
     iconColor: "text-cyan-400",
+  },
+  {
+    href: "/broadcasts",
+    icon: Megaphone,
+    name: "Broadcasts",
+    description: "Send a ready-made post from the content library to every connected client, branded automatically.",
+    color: "from-orange-500/20 to-orange-500/5",
+    border: "hover:border-orange-500/50",
+    iconColor: "text-orange-400",
   },
   {
     href: "/checklist",
