@@ -44,6 +44,7 @@ import clientNewsRouter from "./client-news";
 import homeworkRouter from "./homework";
 import bonusContentRouter from "./bonus-content";
 import blogRouter from "./blog";
+import broadcastTopicsRouter from "./broadcast-topics";
 
 const router: IRouter = Router();
 
@@ -92,5 +93,6 @@ router.use(clientNewsRouter);
 router.use(homeworkRouter);
 router.use(bonusContentRouter);
 router.use(blogRouter);
+router.use(broadcastTopicsRouter);
 
 export default router;
