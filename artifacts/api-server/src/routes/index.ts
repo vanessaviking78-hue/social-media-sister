@@ -42,6 +42,7 @@ import submissionsRouter from "./submissions";
 import revenueIdeasRouter from "./revenue-ideas";
 import clientNewsRouter from "./client-news";
 import homeworkRouter from "./homework";
+import bonusContentRouter from "./bonus-content";
 
 const router: IRouter = Router();
 
@@ -88,5 +89,6 @@ router.use(contentGeneratorRouter);
 router.use(revenueIdeasRouter);
 router.use(clientNewsRouter);
 router.use(homeworkRouter);
+router.use(bonusContentRouter);
 
 export default router;
