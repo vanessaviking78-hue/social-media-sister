@@ -126,18 +126,50 @@ async function postToInstagram(
     return igPublish(igAccountId, token, carouselData.id);
 }
 
+// Guards against duplicate live posts. If an earlier attempt actually succeeded on
+// Facebook servers but our request timed out or errored before we read the response,
+// a naive retry would create a second copy of the same post. Before posting, check
+// the recent posts for a matching caption within the last few hours and reuse
+// that post id instead of creating a new one.
+async function findRecentDuplicateFbPost(pageId: string, token: string, caption: string): Promise<string | null> {
+  try {
+    const prefix = caption.slice(0, 60);
+    const res = await metaFetch(
+      `${GRAPH}/${pageId}/posts?fields=id,message,created_time&limit=5&access_token=${token}`,
+      {},
+      15_000,
+    );
+    const data = await res.json() as any;
+    if (!res.ok || !Array.isArray(data.data)) return null;
+    const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1000;
+    for (const post of data.data) {
+      const created = new Date(post.created_time).getTime();
+      if (created < sixHoursAgo) continue;
+      if ((post.message || "").slice(0, 60) === prefix) {
+        return post.id as string;
+      }
+    }
+  } catch {
+    // If the duplicate check itself fails, fall through and post normally.
+  }
+  return null;
+}
+
 async function postToFacebook(
   pageId: string,
   token: string,
   imageUrls: string[],
   caption: string
 ): Promise<string> {
+  const existing = await findRecentDuplicateFbPost(pageId, token, caption);
+  if (existing) return existing;
+
   if (imageUrls.length === 1) {
     const res = await metaFetch(`${GRAPH}/${pageId}/photos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url: imageUrls[0], caption, access_token: token }),
-    });
+    }, 60_000);
     const data = await res.json() as any;
     if (!res.ok) throw new Error(`FB photo post failed (${res.status}): ${data?.error?.message || JSON.stringify(data)}`);
     return data.post_id || data.id;
@@ -149,7 +181,7 @@ async function postToFacebook(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url, published: false, access_token: token }),
-    });
+    }, 60_000);
     const data = await res.json() as any;
     if (!res.ok) throw new Error(`FB photo upload failed (${res.status}): ${data?.error?.message || JSON.stringify(data)}`);
     mediaFbids.push({ media_fbid: data.id });
@@ -163,7 +195,7 @@ async function postToFacebook(
       attached_media: mediaFbids,
       access_token: token,
     }),
-  });
+  }, 60_000);
   const feedData = await feedRes.json() as any;
   if (!feedRes.ok) throw new Error(`FB feed post failed (${feedRes.status}): ${feedData?.error?.message || JSON.stringify(feedData)}`);
   return feedData.id;
