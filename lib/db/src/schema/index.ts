@@ -737,3 +737,13 @@ export const bonusContentTable = pgTable("bonus_content", {
 });
 
 export type BonusContentItem = typeof bonusContentTable.$inferSelect;
+
+export const blogPostsTable = pgTable("blog_posts", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull().default(""),
+  body: text("body").notNull().default(""),
+  imageUrls: json("image_urls").$type<string[]>().notNull().default([]),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type BlogPost = typeof blogPostsTable.$inferSelect;
