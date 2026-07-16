@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { clientPresetsTable, calendarPostsTable, approvalBatchesTable, approvalImagesTable, scheduledPostsTable } from "@workspace/db/schema";
-import { eq, and, gte, or, sql } from "drizzle-orm";
+import { clientPresetsTable, calendarPostsTable, approvalBatchesTable, approvalImagesTable, scheduledPostsTable, homeworkQuestionSetsTable, homeworkRepliesTable } from "@workspace/db/schema";
+import { eq, and, gte, or, sql, desc } from "drizzle-orm";
 import crypto from "crypto";
 import { getApprovedIdeasForClient } from "./revenue-ideas";
 import { getVapidPublicKey } from "../lib/push";
@@ -141,6 +141,84 @@ router.post("/portal/:token/push-unsubscribe", async (req, res) => {
     res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to remove subscription" });
+  }
+});
+
+// Client: current active weekly homework questions, plus this clients existing reply if any.
+router.get("/portal/:token/homework", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+
+    const [set] = await db.select().from(homeworkQuestionSetsTable)
+      .where(eq(homeworkQuestionSetsTable.status, "active"))
+      .orderBy(desc(homeworkQuestionSetsTable.createdAt))
+      .limit(1);
+
+    let existingReply = null;
+    if (set) {
+      const [reply] = await db.select().from(homeworkRepliesTable)
+        .where(and(
+          eq(homeworkRepliesTable.setId, set.id),
+          eq(homeworkRepliesTable.presetId, preset.id),
+        ));
+      existingReply = reply || null;
+    }
+
+    res.json({ set: set || null, existingReply });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to load homework" });
+  }
+});
+
+// Client: submit or update the current weeks homework reply.
+router.post("/portal/:token/homework/reply", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { setId, answer1, answer2, answer3 } = req.body as {
+      setId?: number; answer1?: string; answer2?: string; answer3?: string;
+    };
+    if (!setId) { res.status(400).json({ error: "setId required" }); return; }
+
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+
+    const [existing] = await db.select().from(homeworkRepliesTable)
+      .where(and(
+        eq(homeworkRepliesTable.setId, setId),
+        eq(homeworkRepliesTable.presetId, preset.id),
+      ));
+
+    if (existing) {
+      const [updated] = await db.update(homeworkRepliesTable)
+        .set({
+          answer1: answer1 || "",
+          answer2: answer2 || "",
+          answer3: answer3 || "",
+          updatedAt: new Date(),
+        })
+        .where(eq(homeworkRepliesTable.id, existing.id))
+        .returning();
+      res.json({ reply: updated });
+      return;
+    }
+
+    const [reply] = await db.insert(homeworkRepliesTable)
+      .values({
+        setId,
+        presetId: preset.id,
+        clientName: preset.name,
+        answer1: answer1 || "",
+        answer2: answer2 || "",
+        answer3: answer3 || "",
+      })
+      .returning();
+    res.status(201).json({ reply });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to save homework reply" });
   }
 });
 
