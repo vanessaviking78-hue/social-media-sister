@@ -761,3 +761,15 @@ export const broadcastTopicsTable = pgTable("broadcast_topics", {
 });
 
 export type BroadcastTopic = typeof broadcastTopicsTable.$inferSelect;
+
+export const broadcastDraftsTable = pgTable("broadcast_drafts", {
+  id: serial("id").primaryKey(),
+  presetId: integer("preset_id").notNull(),
+  clientName: text("client_name").notNull().default(""),
+  topicId: integer("topic_id"),
+  imageUrls: jsonb("image_urls").notNull().default([]),
+  caption: text("caption").notNull().default(""),
+  title: text("title").notNull().default(""),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type BroadcastDraft = typeof broadcastDraftsTable.$inferSelect;
