@@ -46,6 +46,7 @@ import bonusContentRouter from "./bonus-content";
 import blogRouter from "./blog";
 import broadcastTopicsRouter from "./broadcast-topics";
 import broadcastDraftsRouter from "./broadcast-drafts";
+import reportsRouter from "./reports";
 import captionGeneratorRouter from "./caption-generator";
 
 const router: IRouter = Router();
@@ -97,6 +98,7 @@ router.use(bonusContentRouter);
 router.use(blogRouter);
 router.use(broadcastTopicsRouter);
 router.use(broadcastDraftsRouter);
+router.use(reportsRouter);
 router.use(captionGeneratorRouter);
 
 export default router;
