@@ -74,6 +74,8 @@ import ApprovalBundles from "@/pages/approval-bundles";
 import ClientApproval from "@/pages/client-approval";
 import ContentGenerator from "@/pages/content-generator";
 import ClientPortalView from "@/pages/client-portal-view";
+import Blog from "@/pages/blog";
+import BlogPublic from "@/pages/blog-public";
 import TweetMaker from "@/pages/tweet-maker";
 import RevenueIdeas from "@/pages/revenue-ideas";
 import News from "@/pages/news";
@@ -141,6 +143,7 @@ function ProtectedRouter() {
       <Route path="/approval-bundles" component={ApprovalBundles} />
       <Route path="/content-generator" component={ContentGenerator} />
       <Route path="/client-portal-view" component={ClientPortalView} />
+      <Route path="/blog" component={Blog} />
       <Route path="/showcase-builder" component={ShowcaseBuilder} />
       <Route path="/seamless-bulk" component={SeamlessBulk} />
       <Route path="/about-me-studio" component={AboutMeStudio} />
@@ -177,6 +180,7 @@ function AppContent() {
   const [isPodcast] = useRoute("/podcast");
   const [isCompetition] = useRoute("/competition");
   const [isAboutPage] = useRoute("/about");
+  const [isBlogPublic] = useRoute("/socialmediasister");
   const [isBundle, bundleParams] = useRoute("/bundle/:token");
   const [isFounderSignup] = useRoute("/founder-signup");
   const [isFounderWelcome] = useRoute("/founder-welcome");
@@ -218,6 +222,9 @@ function AppContent() {
   }
   if (isAboutPage) {
     return <AboutPublic />;
+  }
+  if (isBlogPublic) {
+    return <BlogPublic />;
   }
   if (isSplash) {
     return <Splash />;
