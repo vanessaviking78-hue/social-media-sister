@@ -218,7 +218,7 @@ const REEL_GROUPS: { heading: string; items: string[] }[] = [
 ];
 const REEL_TOTAL = REEL_GROUPS.reduce((n, g) => n + g.items.length, 0);
 
-type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus";
+type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus" | "rants";
 
 const TAB_ICON: Record<Tab, React.ReactNode> = {
   upcoming: <CalendarDays className="w-4 h-4" />,
@@ -234,6 +234,7 @@ const TAB_ICON: Record<Tab, React.ReactNode> = {
   revenue: <TrendingUp className="w-4 h-4" />,
   homework: <MessageSquarePlus className="w-4 h-4" />,
   bonus: <Gift className="w-4 h-4" />,
+  rants: <Newspaper className="w-4 h-4" />,
 };
 
 export default function ClientPortal({ token }: { token: string }) {
@@ -292,6 +293,8 @@ export default function ClientPortal({ token }: { token: string }) {
 
   const [bcItems, setBcItems] = useState<{ id: number; title: string; note: string; mediaUrl: string | null; mediaType: string; createdAt: string }[]>([]);
   const [bcLoading, setBcLoading] = useState(true);
+  const [blogPosts, setBlogPosts] = useState<any[]>([]);
+  const [blogLoading, setBlogLoading] = useState(false);
 
   const [obTreatments, setObTreatments] = useState("");
   const [obAbout, setObAbout] = useState("");
@@ -348,6 +351,15 @@ export default function ClientPortal({ token }: { token: string }) {
       .catch(() => setBcItems([]))
       .finally(() => setBcLoading(false));
   }, [token]);
+
+  useEffect(() => {
+    setBlogLoading(true);
+    fetch(`${BASE}api/blog-posts`)
+      .then((r) => r.json())
+      .then((d) => setBlogPosts(Array.isArray(d.posts) ? d.posts : []))
+      .catch(() => setBlogPosts([]))
+      .finally(() => setBlogLoading(false));
+  }, []);
 
   useEffect(() => {
     fetch(`${BASE}api/portal-resources`)
@@ -543,6 +555,7 @@ export default function ClientPortal({ token }: { token: string }) {
           <TabBtn id="upcoming" label="Posts" />
           <TabBtn id="homework" label="Homework" />
           <TabBtn id="bonus" label="Bonus Content" />
+              <TabBtn id="rants" label="Vanessa Rants" />
           {revenueIdeas.length > 0 && <TabBtn id="revenue" label="Ideas For You" />}
           <TabBtn id="approvals" label="Approvals" badge={pendingCount || undefined} />
           <TabBtn id="ba" label="Before & After" />
@@ -766,7 +779,24 @@ export default function ClientPortal({ token }: { token: string }) {
           </section>
         )}
 
-        {tab === "request" && (
+        {tab === "rants" && (
+              <section className="space-y-4">
+                {blogLoading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Loading...</div>}
+                {!blogLoading && blogPosts.length === 0 && <p className="text-sm text-muted-foreground">Nothing here yet, check back soon.</p>}
+                {blogPosts.map((p: any) => (
+                  <div key={p.id} className="rounded-2xl border border-border/50 p-4">
+                    {p.title && <p className="font-semibold text-sm mb-1">{p.title}</p>}
+                    {p.body && <p className="text-sm text-muted-foreground mb-2 whitespace-pre-wrap">{p.body}</p>}
+                    {p.imageUrls?.length > 0 && (
+                      <div className={`grid gap-2 ${p.imageUrls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                        {p.imageUrls.map((url: string, i: number) => <img key={i} src={url} alt="" className="rounded-lg w-full object-cover" />)}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </section>
+            )}
+            {tab === "request" && (
           <section>
             <div className="flex items-center gap-2 mb-2"><MessageSquarePlus className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Request a Post</h2></div>
             <p className="text-sm text-zinc-400 mb-6">Got something you'd like posted? An offer, an update, a treatment to shout about? Tell us here and we'll sort it.</p>
