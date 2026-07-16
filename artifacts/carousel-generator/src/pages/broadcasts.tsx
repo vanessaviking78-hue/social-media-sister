@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Loader2, Search, Send, Upload, Trash2, Image as ImageIcon, X, Clock, CalendarClock, Film } from "lucide-react";
+import { ArrowLeft, Loader2, Search, Send, Upload, Trash2, Image as ImageIcon, X, Clock, CalendarClock, Film, Music } from "lucide-react";
+import { MusicPickerModal, MusicTrackBadge, type MusicTrack } from "@/components/music-picker-modal";
 import { toast } from "sonner";
 import Papa from "papaparse";
 import { usePresets, type ClientPreset } from "@/lib/use-presets";
@@ -107,6 +108,8 @@ export default function Broadcasts() {
   const [singleVidContext, setSingleVidContext] = useState("");
   const [singleVidTone, setSingleVidTone] = useState("1");
   const [singleVidBusy, setSingleVidBusy] = useState(false);
+  const [singleVidMusicTrack, setSingleVidMusicTrack] = useState<MusicTrack | null>(null);
+  const [musicPickerOpen, setMusicPickerOpen] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -432,6 +435,7 @@ export default function Broadcasts() {
     setSingleVidFile(null);
     setSingleVidPreview("");
     setSingleVidContext("");
+    setSingleVidMusicTrack(null);
   };
 
   const broadcastSingleVideo = async () => {
@@ -460,6 +464,9 @@ export default function Broadcasts() {
       if (captionRes.ok) {
         const captionData = await captionRes.json();
         caption = captionData.caption || caption;
+      }
+      if (singleVidMusicTrack) {
+        caption = `${caption}\n\n🎵 Suggested track: ${singleVidMusicTrack.name} - ${singleVidMusicTrack.artist} (add manually in Instagram, it does not attach automatically)`;
       }
 
       const draftRows = (connectedClients as ClientPreset[]).map((preset) => ({
@@ -730,6 +737,17 @@ export default function Broadcasts() {
                 className={inputCls}
                 disabled={singleVidBusy}
               />
+              {singleVidMusicTrack ? (
+                <MusicTrackBadge track={singleVidMusicTrack} onRemove={() => setSingleVidMusicTrack(null)} />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setMusicPickerOpen(true)}
+                  className="text-xs font-medium text-muted-foreground hover:text-pink-400 flex items-center gap-1.5 rounded-lg border border-border/50 hover:border-pink-500/40 px-3 py-1.5 w-fit"
+                >
+                  <Music className="w-3.5 h-3.5" /> Add music
+                </button>
+              )}
               <div className="flex flex-col sm:flex-row gap-2">
                 <select
                   value={singleVidTone}
@@ -823,6 +841,14 @@ export default function Broadcasts() {
           </div>
         </div>
       </div>
+      {musicPickerOpen && (
+        <MusicPickerModal
+          open={musicPickerOpen}
+          onClose={() => setMusicPickerOpen(false)}
+          selectedTrack={singleVidMusicTrack}
+          onSelect={(track) => setSingleVidMusicTrack(track)}
+        />
+      )}
     </div>
   );
 }
