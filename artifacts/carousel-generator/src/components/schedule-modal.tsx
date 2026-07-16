@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { CalendarClock, Music, AlertTriangle, CheckCircle2, Loader2, Instagram, Facebook } from "lucide-react";
 import { nextOpenMWFSlots, shortTagForBookedPost } from "@/lib/schedule";
 import { useBookedDays } from "@/lib/use-booked-days";
+import { nameBucketOffsetMinutes } from "@/lib/broadcast-stagger";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -189,7 +190,8 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
       for (const targetPresetId of targetPresetIds) {
         for (let i = 0; i < posts.length; i++) {
           const post = posts[i];
-          const staggeredAt = new Date(new Date(scheduledAt).getTime() + i * gap * 60000).toISOString();
+          const nameOffsetMin = broadcastMode ? nameBucketOffsetMinutes(presets?.find((p) => p.id === targetPresetId)?.name ?? "") : 0;
+const staggeredAt = new Date(new Date(scheduledAt).getTime() + i * gap * 60000 + nameOffsetMin * 60000).toISOString();
           const content: SchedulePostPayload = { caption: caption.trim(), title: post.title, platforms: platformList };
           if (isReel && post.videoUrl) content.videoUrl = post.videoUrl;
           if (!isReel && post.imageUrls) content.imageUrls = post.imageUrls;
@@ -299,7 +301,7 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
               )}
               {broadcastMode && (
                 <p className="text-[11px] text-zinc-500 mt-1.5">
-                  Same content, same date, sent to every client ticked above — each lands in their own queue in the Scheduler, where you can drag it to a different date individually afterwards.
+                  Same content, same date, sent to every client ticked above, each lands in its own queue in the Scheduler. Posts are staggered a few minutes apart by client name (A-F, G-M, N-S, T-Z) so they do not all hit Facebook at once, you can still drag any of them to a different date individually afterwards.
                 </p>
               )}
             </div>
