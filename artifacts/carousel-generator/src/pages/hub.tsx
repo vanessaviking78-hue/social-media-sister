@@ -94,6 +94,15 @@ const TOOLS = [
     iconColor: "text-orange-400",
   },
   {
+    href: "/reports",
+    icon: FileText,
+    name: "Monthly Report",
+    description: "Top posts, Instagram enquiries, followers and engagement rate for a client, month by month.",
+    color: "from-emerald-500/20 to-emerald-500/5",
+    border: "hover:border-emerald-500/50",
+    iconColor: "text-emerald-400",
+  },
+  {
     href: "/checklist",
     icon: ListChecks,
     name: "Client Checklist",
