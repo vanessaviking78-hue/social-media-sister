@@ -76,6 +76,7 @@ import ContentGenerator from "@/pages/content-generator";
 import ClientPortalView from "@/pages/client-portal-view";
 import Blog from "@/pages/blog";
 import Broadcasts from "@/pages/broadcasts";
+import Reports from "@/pages/reports";
 import BlogPublic from "@/pages/blog-public";
 import TweetMaker from "@/pages/tweet-maker";
 import RevenueIdeas from "@/pages/revenue-ideas";
@@ -146,6 +147,7 @@ function ProtectedRouter() {
       <Route path="/client-portal-view" component={ClientPortalView} />
       <Route path="/blog" component={Blog} />
       <Route path="/broadcasts" component={Broadcasts} />
+      <Route path="/reports" component={Reports} />
       <Route path="/showcase-builder" component={ShowcaseBuilder} />
       <Route path="/seamless-bulk" component={SeamlessBulk} />
       <Route path="/about-me-studio" component={AboutMeStudio} />
