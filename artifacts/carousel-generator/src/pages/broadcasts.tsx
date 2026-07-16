@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Loader2, Search, Send, Upload, Trash2, Image as ImageIcon, X, Clock, CalendarClock } from "lucide-react";
+import { ArrowLeft, Loader2, Search, Send, Upload, Trash2, Image as ImageIcon, X, Clock, CalendarClock, Film } from "lucide-react";
 import { toast } from "sonner";
 import Papa from "papaparse";
 import { usePresets, type ClientPreset } from "@/lib/use-presets";
@@ -58,6 +58,22 @@ function fileToDataUrl(file: File): Promise<string> {
   });
 }
 
+function isVideoUrl(url: string): boolean {
+  return /\.(mp4|mov|webm|m4v)(\?|$)/i.test(url);
+}
+
+async function uploadVideoFile(file: File): Promise<string> {
+  const fd = new FormData();
+  fd.append("video", file);
+  const res = await fetch(`${BASE}/api/content/upload-video`, { method: "POST", body: fd });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: `Video upload failed (${res.status})` }));
+    throw new Error(data.error || "Video upload failed");
+  }
+  const data = await res.json();
+  return (data.url ?? data.proxyUrl) as string;
+}
+
 function defaultLocalDateTime(defaultPostTime?: string): string {
   const base = new Date();
   base.setDate(base.getDate() + 1);
@@ -86,6 +102,11 @@ export default function Broadcasts() {
   const [singleImgContext, setSingleImgContext] = useState("");
   const [singleImgTone, setSingleImgTone] = useState("1");
   const [singleImgBusy, setSingleImgBusy] = useState(false);
+  const [singleVidFile, setSingleVidFile] = useState<File | null>(null);
+  const [singleVidPreview, setSingleVidPreview] = useState("");
+  const [singleVidContext, setSingleVidContext] = useState("");
+  const [singleVidTone, setSingleVidTone] = useState("1");
+  const [singleVidBusy, setSingleVidBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -402,6 +423,70 @@ export default function Broadcasts() {
     }
   };
 
+  const onPickSingleVideo = (file: File) => {
+    setSingleVidFile(file);
+    setSingleVidPreview(URL.createObjectURL(file));
+  };
+
+  const clearSingleVideo = () => {
+    setSingleVidFile(null);
+    setSingleVidPreview("");
+    setSingleVidContext("");
+  };
+
+  const broadcastSingleVideo = async () => {
+    if (!singleVidFile) {
+      toast.error("Choose a video first.");
+      return;
+    }
+    if (!singleVidContext.trim()) {
+      toast.error("Add a line about what is in the video, it helps the caption.");
+      return;
+    }
+    if (connectedClients.length === 0) {
+      toast.error("No connected clients to broadcast to.");
+      return;
+    }
+    setSingleVidBusy(true);
+    try {
+      const videoUrl = await uploadVideoFile(singleVidFile);
+
+      const captionRes = await fetch(`${BASE}/api/caption-generator/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tone: singleVidTone, context: singleVidContext.trim() }),
+      });
+      let caption = singleVidContext.trim();
+      if (captionRes.ok) {
+        const captionData = await captionRes.json();
+        caption = captionData.caption || caption;
+      }
+
+      const draftRows = (connectedClients as ClientPreset[]).map((preset) => ({
+        presetId: (preset as any).id,
+        clientName: (preset as any).name || "",
+        topicId: null,
+        imageUrls: [videoUrl],
+        caption,
+        title: caption.slice(0, 60),
+      }));
+
+      const r = await fetch(`${BASE}/api/broadcast-drafts/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rows: draftRows }),
+      });
+      if (!r.ok) throw new Error("Could not save to pending queue");
+      loadDrafts();
+      toast.success(`Added to Pending Queue for ${draftRows.length} clients as reels.`);
+      clearSingleVideo();
+    } catch (e: any) {
+      toast.error(e?.message || "Could not broadcast this video.");
+    } finally {
+      setSingleVidBusy(false);
+    }
+  };
+
   const scheduleDraft = async (draft: Draft) => {
     const localValue = draftTimes[draft.id];
     if (!localValue) {
@@ -411,18 +496,26 @@ export default function Broadcasts() {
     setSchedulingId(draft.id);
     try {
       const scheduledAt = new Date(localValue).toISOString();
+      const isVideo = isVideoUrl(draft.imageUrls?.[0] || "");
       const scheduleRes = await fetch(`${BASE}/api/scheduler/posts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           presetId: draft.presetId,
-          postType: "carousel",
-          content: {
-            imageUrls: draft.imageUrls,
-            caption: draft.caption,
-            title: draft.title,
-            platforms: ["instagram", "facebook"],
-          },
+          postType: isVideo ? "reel" : "carousel",
+          content: isVideo
+            ? {
+                videoUrl: draft.imageUrls[0],
+                caption: draft.caption,
+                title: draft.title,
+                platforms: ["instagram", "facebook"],
+              }
+            : {
+                imageUrls: draft.imageUrls,
+                caption: draft.caption,
+                title: draft.title,
+                platforms: ["instagram", "facebook"],
+              },
           scheduledAt,
         }),
       });
@@ -500,7 +593,11 @@ export default function Broadcasts() {
                   <div key={groupKey} className="rounded-2xl border border-border/50 p-4 space-y-3">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        {thumb && <img src={thumb} alt="" className="w-8 h-8 rounded object-cover shrink-0" />}
+                        {thumb && (isVideoUrl(thumb) ? (
+                          <video src={thumb} muted className="w-8 h-8 rounded object-cover shrink-0" />
+                        ) : (
+                          <img src={thumb} alt="" className="w-8 h-8 rounded object-cover shrink-0" />
+                        ))}
                         <p className="font-semibold text-sm truncate">{label}</p>
                       </div>
                       <button
@@ -602,6 +699,66 @@ export default function Broadcasts() {
           </div>
         </div>
 
+        <div className="rounded-2xl border border-border/50 p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Film className="w-4 h-4 text-pink-500" />
+            <h2 className="font-semibold text-sm">Upload a single video</h2>
+          </div>
+          <p className="text-xs text-muted-foreground -mt-2">
+            Drop in one finished video, already branded and ready to go, add a line about what it is, and it writes a caption and drops it in the Pending Queue above as a reel for every client. Nothing is scheduled until you set a time.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <label className="shrink-0 w-24 h-24 rounded-lg border border-dashed border-zinc-700 flex items-center justify-center cursor-pointer text-zinc-500 hover:border-pink-600 hover:text-pink-500 overflow-hidden">
+              {singleVidPreview ? (
+                <video src={singleVidPreview} muted className="w-full h-full object-cover" />
+              ) : (
+                <Film className="w-6 h-6" />
+              )}
+              <input
+                type="file"
+                accept="video/*"
+                className="hidden"
+                disabled={singleVidBusy}
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) onPickSingleVideo(f); e.target.value = ""; }}
+              />
+            </label>
+            <div className="flex-1 space-y-2">
+              <input
+                value={singleVidContext}
+                onChange={(e) => setSingleVidContext(e.target.value)}
+                placeholder="What is in the video? e.g. quick before and after walkthrough"
+                className={inputCls}
+                disabled={singleVidBusy}
+              />
+              <div className="flex flex-col sm:flex-row gap-2">
+                <select
+                  value={singleVidTone}
+                  onChange={(e) => setSingleVidTone(e.target.value)}
+                  disabled={singleVidBusy}
+                  className="rounded-xl bg-zinc-900 border border-zinc-800 px-3 py-2.5 text-sm text-white outline-none focus:border-pink-600"
+                >
+                  {CAPTION_TONES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={broadcastSingleVideo}
+                  disabled={singleVidBusy || !singleVidFile}
+                  className="flex-1 rounded-full bg-pink-600 hover:bg-pink-500 disabled:opacity-60 text-white font-semibold py-2.5 flex items-center justify-center gap-2 text-sm"
+                >
+                  {singleVidBusy ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Uploading...</>
+                  ) : (
+                    <><Send className="w-4 h-4" /> Broadcast this video</>
+                  )}
+                </button>
+                {singleVidFile && !singleVidBusy && (
+                  <button onClick={clearSingleVideo} className="text-zinc-500 hover:text-red-400 px-2 shrink-0"><X className="w-4 h-4" /></button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
