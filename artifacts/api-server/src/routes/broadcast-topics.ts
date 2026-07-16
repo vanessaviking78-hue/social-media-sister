@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { eq } from "drizzle-orm";
-import { db, broadcastTopicsTable } from "@workspace/db";
+import { db } from "@workspace/db";
+import { broadcastTopicsTable } from "@workspace/db/schema";
 
 const router = Router();
 
