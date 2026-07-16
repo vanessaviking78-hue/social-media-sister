@@ -724,3 +724,16 @@ export const homeworkRepliesTable = pgTable("homework_replies", {
 });
 
 export type HomeworkReply = typeof homeworkRepliesTable.$inferSelect;
+
+export const bonusContentTable = pgTable("bonus_content", {
+  id: serial("id").primaryKey(),
+  presetId: integer("preset_id").notNull().references(() => clientPresetsTable.id, { onDelete: "cascade" }),
+  clientName: text("client_name").notNull().default(""),
+  title: text("title").notNull().default(""),
+  note: text("note").notNull().default(""),
+  mediaUrl: text("media_url"),
+  mediaType: text("media_type").notNull().default("none"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type BonusContentItem = typeof bonusContentTable.$inferSelect;
