@@ -418,4 +418,5 @@ async function createBroadcastTopicsTable(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+  await pool.query(`ALTER TABLE broadcast_topics ADD COLUMN IF NOT EXISTS image_url TEXT NOT NULL DEFAULT ''`);
 }
