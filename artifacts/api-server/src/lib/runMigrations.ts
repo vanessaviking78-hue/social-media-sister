@@ -25,6 +25,7 @@ export async function runMigrations(): Promise<void> {
     await createResourceLibraryTable();
     await createRevenueIdeasTable();
     await createClientNewsTable();
+    await createHomeworkTables();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -343,6 +344,33 @@ async function createClientNewsTable(): Promise<void> {
       title TEXT NOT NULL DEFAULT '',
       body TEXT NOT NULL DEFAULT '',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
+async function createHomeworkTables(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS homework_question_sets (
+      id SERIAL PRIMARY KEY,
+      week_label TEXT NOT NULL DEFAULT '',
+      question1 TEXT NOT NULL,
+      question2 TEXT NOT NULL,
+      question3 TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS homework_replies (
+      id SERIAL PRIMARY KEY,
+      set_id INTEGER NOT NULL REFERENCES homework_question_sets(id) ON DELETE CASCADE,
+      preset_id INTEGER NOT NULL REFERENCES client_presets(id) ON DELETE CASCADE,
+      client_name TEXT NOT NULL DEFAULT '',
+      answer1 TEXT NOT NULL DEFAULT '',
+      answer2 TEXT NOT NULL DEFAULT '',
+      answer3 TEXT NOT NULL DEFAULT '',
+      submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
 }
