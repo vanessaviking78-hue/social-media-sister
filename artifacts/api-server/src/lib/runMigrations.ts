@@ -29,6 +29,7 @@ export async function runMigrations(): Promise<void> {
     await createBonusContentTable();
     await createBlogPostsTable();
     await createBroadcastTopicsTable();
+await createBroadcastDraftsTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -419,4 +420,19 @@ async function createBroadcastTopicsTable(): Promise<void> {
     )
   `);
   await db.execute(sql`ALTER TABLE broadcast_topics ADD COLUMN IF NOT EXISTS image_url TEXT NOT NULL DEFAULT ''`);
+}
+
+async function createBroadcastDraftsTable(): Promise<void> {
+await db.execute(sql`
+CREATE TABLE IF NOT EXISTS broadcast_drafts (
+id SERIAL PRIMARY KEY,
+preset_id INTEGER NOT NULL,
+client_name TEXT NOT NULL DEFAULT '',
+topic_id INTEGER,
+image_urls JSONB NOT NULL DEFAULT '[]',
+caption TEXT NOT NULL DEFAULT '',
+title TEXT NOT NULL DEFAULT '',
+created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+)
+`);
 }
