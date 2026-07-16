@@ -695,3 +695,32 @@ export const approvalResponsesTable = pgTable("approval_responses", {
 });
 
 export type ApprovalResponse = typeof approvalResponsesTable.$inferSelect;
+
+export const HOMEWORK_STATUS = ["active", "closed"] as const;
+export type HomeworkStatus = typeof HOMEWORK_STATUS[number];
+
+export const homeworkQuestionSetsTable = pgTable("homework_question_sets", {
+  id: serial("id").primaryKey(),
+  weekLabel: text("week_label").notNull().default(""),
+  question1: text("question1").notNull(),
+  question2: text("question2").notNull(),
+  question3: text("question3").notNull(),
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type HomeworkQuestionSet = typeof homeworkQuestionSetsTable.$inferSelect;
+
+export const homeworkRepliesTable = pgTable("homework_replies", {
+  id: serial("id").primaryKey(),
+  setId: integer("set_id").notNull().references(() => homeworkQuestionSetsTable.id, { onDelete: "cascade" }),
+  presetId: integer("preset_id").notNull().references(() => clientPresetsTable.id, { onDelete: "cascade" }),
+  clientName: text("client_name").notNull().default(""),
+  answer1: text("answer1").notNull().default(""),
+  answer2: text("answer2").notNull().default(""),
+  answer3: text("answer3").notNull().default(""),
+  submittedAt: timestamp("submitted_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export type HomeworkReply = typeof homeworkRepliesTable.$inferSelect;
