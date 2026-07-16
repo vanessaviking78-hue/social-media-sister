@@ -21,8 +21,8 @@ import { usePresets, type ClientPreset } from "@/lib/use-presets";
 loadGoogleFonts();
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-const W = 1080;
-const H = 1440;
+export const W = 1080;
+export const H = 1440;
 export const SCALE = 2;
 const EDITOR_W = 360;
 const EDITOR_SCALE = EDITOR_W / W;
@@ -39,7 +39,7 @@ export type CsvRow = {
   slide4_cta: string;
 };
 
-type BlockId = "hook" | "subtitle" | "body2" | "body3" | "cta" | "logo" | "line";
+export type BlockId = "hook" | "subtitle" | "body2" | "body3" | "cta" | "logo" | "line";
 
 export type Block = {
   id: BlockId;
@@ -73,7 +73,7 @@ type Phase = "upload" | "preview" | "schedule" | "done";
 
 // ── Block config ──────────────────────────────────────────────────────────────
 
-const SLIDE_BLOCK_IDS: Record<number, BlockId[]> = {
+export const SLIDE_BLOCK_IDS: Record<number, BlockId[]> = {
   1: ["hook", "subtitle"],
   2: ["body2"],
   3: ["body3"],
@@ -82,7 +82,7 @@ const SLIDE_BLOCK_IDS: Record<number, BlockId[]> = {
 
 type BlockStyle = { font: string; size: number; lineH: number; maxW: number; label: string };
 
-const BLOCK_STYLE: Record<BlockId, BlockStyle> = {
+export const BLOCK_STYLE: Record<BlockId, BlockStyle> = {
   hook:     { font: '"Bebas Neue"',  size: 108, lineH: 1.10, maxW: W - 120, label: "Hook"     },
   subtitle: { font: '"Poppins"',     size:  44, lineH: 1.40, maxW: W - 180, label: "Subtitle" },
   body2:    { font: '"Poppins"',     size:  50, lineH: 1.50, maxW: W - 160, label: "Body"     },
@@ -382,7 +382,7 @@ export function renderSlideCanvas(
   return canvas.toDataURL("image/png");
 }
 
-function renderAllThumbs(
+export function renderAllThumbs(
   item: Pick<CarouselItem, "blocks" | "coverImg" | "bodyImg">,
   logoImg: HTMLImageElement | null,
   preset: ClientPreset,
@@ -396,7 +396,7 @@ function renderAllThumbs(
 
 // ── Upload helper ─────────────────────────────────────────────────────────────
 
-function loadImg(src: string): Promise<HTMLImageElement> {
+export function loadImg(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = "anonymous";
