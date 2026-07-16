@@ -28,6 +28,7 @@ export async function runMigrations(): Promise<void> {
     await createHomeworkTables();
     await createBonusContentTable();
     await createBlogPostsTable();
+    await createBroadcastTopicsTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -399,6 +400,21 @@ async function createBlogPostsTable(): Promise<void> {
       title TEXT NOT NULL DEFAULT '',
       body TEXT NOT NULL DEFAULT '',
       image_urls JSONB NOT NULL DEFAULT '[]',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
+async function createBroadcastTopicsTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS broadcast_topics (
+      id SERIAL PRIMARY KEY,
+      slide1_hook TEXT NOT NULL DEFAULT '',
+      slide1_subtitle TEXT NOT NULL DEFAULT '',
+      slide2_body TEXT NOT NULL DEFAULT '',
+      slide3_body TEXT NOT NULL DEFAULT '',
+      slide4_cta TEXT NOT NULL DEFAULT '',
+      category TEXT NOT NULL DEFAULT '',
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
