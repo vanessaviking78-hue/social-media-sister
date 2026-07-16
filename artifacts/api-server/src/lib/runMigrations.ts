@@ -26,6 +26,7 @@ export async function runMigrations(): Promise<void> {
     await createRevenueIdeasTable();
     await createClientNewsTable();
     await createHomeworkTables();
+    await createBonusContentTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -371,6 +372,21 @@ async function createHomeworkTables(): Promise<void> {
       answer3 TEXT NOT NULL DEFAULT '',
       submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
+async function createBonusContentTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS bonus_content (
+      id SERIAL PRIMARY KEY,
+      preset_id INTEGER NOT NULL REFERENCES client_presets(id) ON DELETE CASCADE,
+      client_name TEXT NOT NULL DEFAULT '',
+      title TEXT NOT NULL DEFAULT '',
+      note TEXT NOT NULL DEFAULT '',
+      media_url TEXT,
+      media_type TEXT NOT NULL DEFAULT 'none',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
 }
