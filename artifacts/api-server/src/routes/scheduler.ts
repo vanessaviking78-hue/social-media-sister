@@ -5,6 +5,26 @@ import { eq, desc, and, gte, lte, sql, inArray } from "drizzle-orm";
 
 const router = Router();
 
+async function nextFreeMinute(desired: Date): Promise<Date> {
+  const candidate = new Date(desired);
+  candidate.setSeconds(0, 0);
+  for (let i = 0; i < 1440; i++) {
+    const windowEnd = new Date(candidate.getTime() + 59999);
+    const conflict = await db
+      .select({ id: scheduledPostsTable.id })
+      .from(scheduledPostsTable)
+      .where(and(
+        inArray(scheduledPostsTable.status, ["pending", "processing"]),
+        gte(scheduledPostsTable.scheduledAt, candidate),
+        lte(scheduledPostsTable.scheduledAt, windowEnd),
+      ))
+      .limit(1);
+    if (conflict.length === 0) return candidate;
+    candidate.setTime(candidate.getTime() + 60000);
+  }
+  return candidate;
+}
+
 router.get("/scheduler/posts", async (req, res) => {
   try {
     const { status, presetId, from, to } = req.query as Record<string, string>;
@@ -70,7 +90,7 @@ router.post("/scheduler/posts", async (req, res) => {
         clientName: clientName || preset.name,
         postType,
         content,
-        scheduledAt: new Date(scheduledAt),
+        scheduledAt: await nextFreeMinute(new Date(scheduledAt)),
         isTrial: isTrial ?? false,
         notes: notes ?? "",
         stickerConfig: stickerConfig ?? null,
