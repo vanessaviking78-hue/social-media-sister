@@ -755,6 +755,7 @@ export const broadcastTopicsTable = pgTable("broadcast_topics", {
   slide2Body: text("slide2_body").notNull().default(""),
   slide3Body: text("slide3_body").notNull().default(""),
   slide4Cta: text("slide4_cta").notNull().default(""),
+  imageUrl: text("image_url").notNull().default(""),
   category: text("category").notNull().default(""),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
