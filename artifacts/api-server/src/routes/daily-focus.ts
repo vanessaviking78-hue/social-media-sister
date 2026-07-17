@@ -5,7 +5,7 @@ import { eq, and, gte } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-const TARGET_DAYS = 28;
+const TARGET_DAYS = 14;
 const TASK_TYPES = ["seamless carousel", "bulk carousel", "animated carousel", "single broadcast post"];
 
 router.get("/daily-focus", async (_req, res) => {
