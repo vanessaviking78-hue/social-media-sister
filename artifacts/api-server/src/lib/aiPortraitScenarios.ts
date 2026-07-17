@@ -340,6 +340,129 @@ export const NEW_PORTRAITS_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
+export const JULY_2ND_SHOOT_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "js-01",
+    name: "Head to Waist, Studio Neutral",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo, head-to-waist portrait against a warm neutral studio backdrop, relaxed stance, soft directional light from one side. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-02",
+    name: "Head to Waist, Window Light",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo, head-to-waist portrait beside a large window, soft daylight falling across the face and shoulders, calm expression. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-03",
+    name: "Head to Waist, Concrete Wall",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo, head-to-waist portrait against a textured concrete wall, arms loosely crossed, confident but approachable. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-04",
+    name: "Head to Waist, Seated Stool",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo, head-to-waist portrait seated on a plain stool, hands resting in lap, direct eye contact with camera. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-05",
+    name: "Head to Waist, Three Quarter Turn",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo, head-to-waist portrait in soft studio light, three-quarter turn towards camera, slight smile. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-06",
+    name: "Close Up, Direct Gaze",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo, extreme close crop of the face, direct gaze into camera, soft even lighting. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-07",
+    name: "Close Up, Side Profile",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo, close crop side profile, natural window light, calm neutral expression. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-08",
+    name: "Close Up, Candid Laugh",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo, close crop, caught mid-laugh, candid and unposed. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-09",
+    name: "Close Up, Three Quarter Angle",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo, close crop, three-quarter angle, soft shadow across one side of the face. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-10",
+    name: "Close Up, Golden Hour",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo, close crop, warm golden hour light through a window, gentle expression. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-11",
+    name: "Scrubs, Clinic Corridor",
+    hasColour: true,
+    promptTemplate: `A woman from the reference photo, standing confidently in [COLOUR] scrubs in a modern clinic corridor, natural light from the side. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-12",
+    name: "Scrubs, Reception Desk",
+    hasColour: true,
+    promptTemplate: `A woman from the reference photo, behind a clinic reception desk in [COLOUR] scrubs, relaxed professional stance, soft indoor lighting. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-13",
+    name: "Scrubs, Clinic Entrance",
+    hasColour: true,
+    promptTemplate: `A woman from the reference photo, standing at a clinic entrance in [COLOUR] scrubs, natural daylight, approachable expression. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-14",
+    name: "Scrubs, Seated with Tablet",
+    hasColour: true,
+    promptTemplate: `A woman from the reference photo, seated with a tablet in hand, wearing [COLOUR] scrubs, soft clinic lighting, focused expression. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-15",
+    name: "Scrubs, Close Mid Shot",
+    hasColour: true,
+    promptTemplate: `A woman from the reference photo, close mid-shot in [COLOUR] scrubs holding a clipboard, warm approachable smile. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-16",
+    name: "Lifestyle, City Street",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo, walking along a city street, natural candid movement, soft overcast daylight. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-17",
+    name: "Lifestyle, Coffee Shop",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo, seated by the window in a coffee shop, cup in hand, relaxed candid moment. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-18",
+    name: "Lifestyle, Park Bench",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo, sitting on a park bench, soft natural light, calm unposed expression. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-19",
+    name: "Lifestyle, Home Kitchen",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo, leaning against a kitchen counter at home, morning light, relaxed candid pose. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+  {
+    id: "js-20",
+    name: "Lifestyle, Car Interior",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo, in the driver's seat of a car, natural candid glance towards camera, soft window light. Shot on a medium format professional camera, natural true-to-life colour. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
+  },
+];
+
 export const PHOTO_STUDIO_PRESETS: PhotoStudioPreset[] = [
   {
     id: "ps-01",
