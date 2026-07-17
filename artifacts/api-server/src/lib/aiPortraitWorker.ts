@@ -134,7 +134,7 @@ export async function processPortraitJob(
     let prompt: string;
     let backgroundImageUrl = cfg.backgroundImageUrl;
 
-    const photoStudioPreset = NEW_PORTRAITS_PRESETS.find((p) => p.id === cfg.id) ?? PHOTO_STUDIO_PRESETS.find((p) => p.id === cfg.id) ?? INJECTOR_COLLECTION_PRESETS.find((p) => p.id === cfg.id) ?? MEN_STUDIO_PRESETS.find((p) => p.id === cfg.id) ?? RANDOM_PROMPT_PRESETS.find((p) => p.id === cfg.id);
+    const photoStudioPreset = NEW_PORTRAITS_PRESETS.find((p) => p.id === cfg.id) ?? JULY_2ND_SHOOT_PRESETS.find((p) => p.id === cfg.id) ?? PHOTO_STUDIO_PRESETS.find((p) => p.id === cfg.id) ?? INJECTOR_COLLECTION_PRESETS.find((p) => p.id === cfg.id) ?? MEN_STUDIO_PRESETS.find((p) => p.id === cfg.id) ?? RANDOM_PROMPT_PRESETS.find((p) => p.id === cfg.id);
 
     if (photoStudioPreset) {
       prompt = buildPhotoStudioPrompt(photoStudioPreset, cfg.scrubColor, cfg.aspectRatio, cfg.promptVars);
