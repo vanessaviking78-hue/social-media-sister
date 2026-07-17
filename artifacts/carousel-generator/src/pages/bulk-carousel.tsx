@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, Upload, FileText, Download, Loader2, CalendarClock,
-  CheckCircle2, X, Edit2, GripVertical, Sparkles, Send,
+  CheckCircle2, X, Edit2, GripVertical, Sparkles, Send, Trash2,
 } from "lucide-react";
 import { SendForApprovalModal } from "@/components/send-for-approval-modal";
 import { Button } from "@/components/ui/button";
@@ -822,6 +822,7 @@ export default function BulkCarousel() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [csvError, setCsvError] = useState<string | null>(null);
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
+  const [rowSelected, setRowSelected] = useState<boolean[]>([]);
   const csvState = csvFile ? { file: csvFile, error: csvError, rows: csvRows } : null;
   const [coverFiles, setCoverFiles] = useState<File[]>([]);
   const [bodyFiles, setBodyFiles] = useState<File[]>([]);
@@ -892,6 +893,7 @@ export default function BulkCarousel() {
           setCsvError(null);
           const rows = results.data as CsvRow[];
           setCsvRows(rows);
+          setRowSelected(rows.map(() => true));
         },
         error: (err: Error) => setCsvError(err.message),
       });
@@ -956,17 +958,20 @@ export default function BulkCarousel() {
       logoImgRef.current = logoImg;
 
       const rendered: CarouselItem[] = [];
-      for (let i = 0; i < csvRows.length; i++) {
+      const activeIndexes = csvRows.map((_, i) => i).filter((i) => rowSelected[i] !== false);
+      for (let idx = 0; idx < activeIndexes.length; idx++) {
+        const i = activeIndexes[idx];
         const row = csvRows[i];
         let coverImg: HTMLImageElement | null = null;
         let bodyImg: HTMLImageElement | null = null;
         if (coverFiles[i]) try { coverImg = await loadImg(URL.createObjectURL(coverFiles[i])); } catch {}
         if (bodyFiles[i])  try { bodyImg  = await loadImg(URL.createObjectURL(bodyFiles[i]));  } catch {}
+        if (!bodyImg) bodyImg = coverImg;
 
         const blocks = makeBlocks(row);
         const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, lineSpacing, heroWordColor);
         rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.slide1_hook, blocks, coverImg, bodyImg, thumbs });
-        setRenderProgress(Math.round(((i + 1) / csvRows.length) * 100));
+        setRenderProgress(Math.round(((idx + 1) / activeIndexes.length) * 100));
       }
 
       setItems(rendered);
@@ -1246,7 +1251,7 @@ export default function BulkCarousel() {
         </div>
         <div className="flex gap-3">
           <Button variant="outline" asChild><Link href="/scheduler">View queue</Link></Button>
-          <Button onClick={() => { setCsvFile(null); setCsvError(null); setCsvRows([]); setCoverFiles([]); setBodyFiles([]); setItems([]); setSelectedPresetId(null); setPhase("upload"); }}>
+          <Button onClick={() => { setCsvFile(null); setCsvError(null); setCsvRows([]); setRowSelected([]); setCoverFiles([]); setBodyFiles([]); setItems([]); setSelectedPresetId(null); setPhase("upload"); }}>
             Start again
           </Button>
         </div>
@@ -1550,7 +1555,7 @@ export default function BulkCarousel() {
 
   // ── Upload phase ──────────────────────────────────────────────────────────────
 
-  const canGenerate = csvRows.length > 0 && selectedPresetId !== null;
+  const canGenerate = csvRows.length > 0 && selectedPresetId !== null && rowSelected.some((s) => s !== false);
 
   return (
     <div className="min-h-screen bg-background">
@@ -1678,8 +1683,8 @@ export default function BulkCarousel() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Body image (Slides 2, 3, 4)</Label>
-              <p className="text-xs text-muted-foreground">Used behind the body and CTA slides.</p>
+              <Label className="text-sm font-medium">Body image (Slides 2, 3, 4) — optional</Label>
+              <p className="text-xs text-muted-foreground">Used behind the body and CTA slides. Leave empty to reuse the cover image automatically.</p>
               <DropZone
                 label="Drop body images" hint="One per row, sorted by filename"
                 files={bodyFiles} accept="image/*" active={bodyDrag} color="indigo"
@@ -1728,17 +1733,26 @@ export default function BulkCarousel() {
                 <table className="w-full text-xs">
                   <thead className="bg-muted/30 text-muted-foreground">
                     <tr>
+                      <th className="text-center px-3 py-2 font-medium w-8">Use</th>
                       <th className="text-left px-3 py-2 font-medium w-8">#</th>
                       <th className="text-left px-3 py-2 font-medium">Hook</th>
                       <th className="text-left px-3 py-2 font-medium">Subtitle</th>
                       <th className="text-left px-3 py-2 font-medium">CTA</th>
                       <th className="text-center px-3 py-2 font-medium">Cover</th>
                       <th className="text-center px-3 py-2 font-medium">Body</th>
+                      <th className="text-center px-3 py-2 font-medium w-8"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
                     {csvRows.map((row, i) => (
                       <tr key={i} className="hover:bg-muted/10">
+                        <td className="px-3 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={rowSelected[i] !== false}
+                            onChange={(e) => setRowSelected((prev) => { const next = [...prev]; next[i] = e.target.checked; return next; })}
+                          />
+                        </td>
                         <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
                         <td className="px-3 py-2 font-medium max-w-[160px] truncate">{stripPipes(row.slide1_hook)}</td>
                         <td className="px-3 py-2 text-muted-foreground max-w-[140px] truncate">{row.slide1_subtitle}</td>
@@ -1752,6 +1766,20 @@ export default function BulkCarousel() {
                           {bodyFiles[i]
                             ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" />
                             : <X className="w-3.5 h-3.5 text-amber-400/60 mx-auto" />}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCsvRows((prev) => prev.filter((_, idx) => idx !== i));
+                              setRowSelected((prev) => prev.filter((_, idx) => idx !== i));
+                              setCoverFiles((prev) => prev.filter((_, idx) => idx !== i));
+                              setBodyFiles((prev) => prev.filter((_, idx) => idx !== i));
+                            }}
+                            className="text-muted-foreground hover:text-red-400"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -1768,7 +1796,7 @@ export default function BulkCarousel() {
             <Button onClick={handleGenerate} disabled={rendering} size="lg" className="min-w-52">
               {rendering
                 ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Rendering... {renderProgress}%</>
-                : `Generate ${csvRows.length} carousel${csvRows.length !== 1 ? "s" : ""}`}
+                : `Generate ${rowSelected.filter((s) => s !== false).length} carousel${rowSelected.filter((s) => s !== false).length !== 1 ? "s" : ""}`}
             </Button>
           </div>
         )}
