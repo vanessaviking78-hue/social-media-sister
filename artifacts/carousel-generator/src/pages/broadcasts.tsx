@@ -619,6 +619,9 @@ export default function Broadcasts() {
                         <div key={draft.id} className="flex flex-col sm:flex-row sm:items-center gap-2 rounded-xl bg-zinc-900/60 border border-zinc-800 p-3">
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{draft.clientName}</p>
+                            {draft.caption && (
+                              <p className="text-xs text-muted-foreground mt-1 whitespace-pre-wrap">{draft.caption}</p>
+                            )}
                           </div>
                           <input
                             type="datetime-local"
