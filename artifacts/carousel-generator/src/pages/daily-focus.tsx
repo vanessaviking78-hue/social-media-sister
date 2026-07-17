@@ -16,12 +16,22 @@ type UrgentClient = {
   urgent: boolean;
 };
 
+type NextClient = {
+  presetId: number;
+  clientName: string;
+  daysCovered: number;
+  daysNeeded: number;
+};
+
 type DailyFocusData = {
   generatedAt: string;
   targetDays: number;
   totalClients: number;
   onTrackCount: number;
   urgentClients: UrgentClient[];
+  monthlyTargetDays: number;
+  monthlyPercent: number;
+  nextClient: NextClient | null;
 };
 
 function todayKey(): string {
@@ -175,6 +185,35 @@ export default function DailyFocus() {
             <div>
               <p className="text-sm font-semibold">{data.onTrackCount} of {data.totalClients} clients have {data.targetDays}+ days scheduled</p>
               <p className="text-xs text-muted-foreground mt-0.5">{clients.length} still need a sprint today, {doneCount} sorted so far</p>
+            </div>
+          </div>
+        )}
+
+        {data && (
+          <div className="rounded-2xl border border-border/50 p-4 flex items-center gap-4">
+            <div className="relative w-20 h-20 shrink-0">
+              <svg viewBox="0 0 100 100" className="w-20 h-20 -rotate-90">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="12" className="text-muted/20" />
+                <circle
+                  cx="50" cy="50" r="42" fill="none" stroke="#ec4899" strokeWidth="12" strokeLinecap="round"
+                  strokeDasharray={pieCircumference}
+                  strokeDashoffset={pieCircumference * (1 - data.monthlyPercent / 100)}
+                  style={{ transition: "stroke-dashoffset 0.6s ease" }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-sm font-bold" style={{ color: "#ec4899" }}>{data.monthlyPercent}%</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Month view: everyone at {data.monthlyTargetDays} days scheduled</p>
+              {data.nextClient ? (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Work on next: <span style={{ color: "#ec4899" }} className="font-semibold">{data.nextClient.clientName}</span> — {data.nextClient.daysNeeded} more day{data.nextClient.daysNeeded === 1 ? "" : "s"} of content gets them fully covered
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground mt-0.5">Every client is fully covered for the month.</p>
+              )}
             </div>
           </div>
         )}
