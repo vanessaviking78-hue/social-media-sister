@@ -26,6 +26,7 @@ export async function runMigrations(): Promise<void> {
     await createRevenueIdeasTable();
     await createClientNewsTable();
     await createHomeworkTables();
+    await addHomeworkExtraQuestionColumns();
     await createBonusContentTable();
     await createBlogPostsTable();
     await createBroadcastTopicsTable();
@@ -377,6 +378,23 @@ async function createHomeworkTables(): Promise<void> {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+}
+
+async function addHomeworkExtraQuestionColumns(): Promise<void> {
+  await db.execute(sql`ALTER TABLE homework_question_sets ADD COLUMN IF NOT EXISTS question4 text NOT NULL DEFAULT ''`);
+  await db.execute(sql`ALTER TABLE homework_question_sets ADD COLUMN IF NOT EXISTS question5 text NOT NULL DEFAULT ''`);
+  await db.execute(sql`ALTER TABLE homework_question_sets ADD COLUMN IF NOT EXISTS question6 text NOT NULL DEFAULT ''`);
+  await db.execute(sql`ALTER TABLE homework_question_sets ADD COLUMN IF NOT EXISTS question7 text NOT NULL DEFAULT ''`);
+  await db.execute(sql`ALTER TABLE homework_question_sets ADD COLUMN IF NOT EXISTS question8 text NOT NULL DEFAULT ''`);
+  await db.execute(sql`ALTER TABLE homework_question_sets ADD COLUMN IF NOT EXISTS question9 text NOT NULL DEFAULT ''`);
+  await db.execute(sql`ALTER TABLE homework_question_sets ADD COLUMN IF NOT EXISTS question10 text NOT NULL DEFAULT ''`);
+  await db.execute(sql`ALTER TABLE homework_replies ADD COLUMN IF NOT EXISTS answer4 text NOT NULL DEFAULT ''`);
+  await db.execute(sql`ALTER TABLE homework_replies ADD COLUMN IF NOT EXISTS answer5 text NOT NULL DEFAULT ''`);
+  await db.execute(sql`ALTER TABLE homework_replies ADD COLUMN IF NOT EXISTS answer6 text NOT NULL DEFAULT ''`);
+  await db.execute(sql`ALTER TABLE homework_replies ADD COLUMN IF NOT EXISTS answer7 text NOT NULL DEFAULT ''`);
+  await db.execute(sql`ALTER TABLE homework_replies ADD COLUMN IF NOT EXISTS answer8 text NOT NULL DEFAULT ''`);
+  await db.execute(sql`ALTER TABLE homework_replies ADD COLUMN IF NOT EXISTS answer9 text NOT NULL DEFAULT ''`);
+  await db.execute(sql`ALTER TABLE homework_replies ADD COLUMN IF NOT EXISTS answer10 text NOT NULL DEFAULT ''`);
 }
 
 async function createBonusContentTable(): Promise<void> {
