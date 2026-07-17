@@ -84,6 +84,7 @@ router.get("/daily-focus", async (_req, res) => {
       monthlyTargetDays: MONTHLY_TARGET_DAYS,
       monthlyPercent,
       nextClient,
+      monthlyClients: monthlyClients.sort((a, b) => (MONTHLY_TARGET_DAYS - a.daysCovered) - (MONTHLY_TARGET_DAYS - b.daysCovered)),
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to build daily focus" });
