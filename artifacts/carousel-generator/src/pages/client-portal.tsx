@@ -218,7 +218,7 @@ const REEL_GROUPS: { heading: string; items: string[] }[] = [
 ];
 const REEL_TOTAL = REEL_GROUPS.reduce((n, g) => n + g.items.length, 0);
 
-type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus" | "rants";
+type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus" | "rants" | "connect";
 
 const TAB_ICON: Record<Tab, React.ReactNode> = {
   upcoming: <CalendarDays className="w-4 h-4" />,
@@ -556,6 +556,7 @@ export default function ClientPortal({ token }: { token: string }) {
           <TabBtn id="homework" label="Homework" />
           <TabBtn id="bonus" label="Bonus Content" />
               <TabBtn id="rants" label="Vanessa Rants" />
+              <TabBtn id="connect" label="Connect" />
           {revenueIdeas.length > 0 && <TabBtn id="revenue" label="Ideas For You" />}
           <TabBtn id="approvals" label="Approvals" badge={pendingCount || undefined} />
           <TabBtn id="ba" label="Before & After" />
@@ -794,6 +795,36 @@ export default function ClientPortal({ token }: { token: string }) {
                     )}
                   </div>
                 ))}
+              </section>
+            )}
+            {tab === "connect" && (
+              <section className="space-y-4">
+                <p className="font-semibold text-base mb-1">Connect Your Facebook Page</p>
+                <div className="rounded-2xl border border-border/50 p-4 space-y-4">
+                  <p className="text-sm text-muted-foreground">Right, before we crack on I need you to give me proper access to your Facebook Page so I can actually get in there and work. Here's exactly how to do it, step by step, with no buggering  about.</p>
+                  <p className="text-sm font-semibold">First check where your Page lives. If you manage it straight on Facebook (most common), do this:</p>
+                  <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1.5">
+                    <li>Log into Facebook and switch into your Page. Click your profile photo, top right, then "See all profiles" and pick the Page</li>
+                    <li>Go to Settings &amp; privacy → Settings → Page setup → Page access</li>
+                    <li>Under "People with Facebook access," click "Add new"</li>
+                    <li>Pop in my email: VANESSAVIKING78@GMAIL.COM</li>
+                    <li>Turn the "Full control" toggle on</li>
+                    <li>Click "Give access"</li>
+                    <li>You'll need to type your Facebook password to confirm, that's just Facebook checking it's really you</li>
+                  </ol>
+                  <p className="text-sm font-semibold">If your Page sits inside Meta Business Suite (this is likely if you've ever run ads), it's slightly different:</p>
+                  <ol className="text-sm text-muted-foreground list-decimal list-inside space-y-1.5">
+                    <li>Go to Meta Business Suite → Settings → People</li>
+                    <li>Click "+ Invite people" and enter my email VANESSAVIKING78@ME.COM</li>
+                    <li>Choose "Full control" as the permission level</li>
+                    <li>Select your Page</li>
+                    <li>Confirm and send</li>
+                  </ol>
+                  <p className="text-sm text-muted-foreground">I'll get a notification to accept and then I'm in.</p>
+                  <p className="text-sm text-muted-foreground">Quick honest bit, and this matters. Facebook's renamed "Admin" to "Full Control," so don't panic if you don't see the word Admin anywhere, it's the same thing. Full control means I can do everything you can on the Page, including managing settings and other people's access. That's not me being nosy, it's what I actually need to do the job properly, schedule content, reply to messages, run things behind the scenes without pinging you every five minutes.</p>
+                  <p className="text-sm text-muted-foreground">Any bother with any of this, screenshot it and send it over, I'll talk you through it.</p>
+                  <p className="text-sm text-muted-foreground">Speak soon,</p>
+                </div>
               </section>
             )}
             {tab === "request" && (
