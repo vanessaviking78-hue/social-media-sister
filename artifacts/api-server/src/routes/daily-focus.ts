@@ -7,10 +7,12 @@ const router: IRouter = Router();
 
 const TARGET_DAYS = 14;
 const TASK_TYPES = ["seamless carousel", "bulk carousel", "animated carousel", "single broadcast post"];
+const FLOATER_NAMES = ["kahlo", "cantik", "craig hobson", "lotus room"];
 
 router.get("/daily-focus", async (_req, res) => {
   try {
-    const presets = await db.select().from(clientPresetsTable);
+    const allPresets = await db.select().from(clientPresetsTable);
+    const presets = allPresets.filter((p) => !FLOATER_NAMES.some((name) => (p.name || "").toLowerCase().includes(name)));
     const now = new Date();
 
     const pending = await db
