@@ -85,6 +85,29 @@ const NEW_PORTRAITS_PRESETS: PhotoStudioPreset[] = [
   { id: "np-20", name: "Sofa Colour Editorial Wide", hasColour: false },
 ];
 
+const JULY_2ND_SHOOT_PRESETS: PhotoStudioPreset[] = [
+  { id: "js-01", name: "Head to Waist, Studio Neutral", hasColour: false },
+  { id: "js-02", name: "Head to Waist, Window Light", hasColour: false },
+  { id: "js-03", name: "Head to Waist, Concrete Wall", hasColour: false },
+  { id: "js-04", name: "Head to Waist, Seated Stool", hasColour: false },
+  { id: "js-05", name: "Head to Waist, Three Quarter Turn", hasColour: false },
+  { id: "js-06", name: "Close Up, Direct Gaze", hasColour: false },
+  { id: "js-07", name: "Close Up, Side Profile", hasColour: false },
+  { id: "js-08", name: "Close Up, Candid Laugh", hasColour: false },
+  { id: "js-09", name: "Close Up, Three Quarter Angle", hasColour: false },
+  { id: "js-10", name: "Close Up, Golden Hour", hasColour: false },
+  { id: "js-11", name: "Scrubs, Clinic Corridor", hasColour: true },
+  { id: "js-12", name: "Scrubs, Reception Desk", hasColour: true },
+  { id: "js-13", name: "Scrubs, Clinic Entrance", hasColour: true },
+  { id: "js-14", name: "Scrubs, Seated with Tablet", hasColour: true },
+  { id: "js-15", name: "Scrubs, Close Mid Shot", hasColour: true },
+  { id: "js-16", name: "Lifestyle, City Street", hasColour: false },
+  { id: "js-17", name: "Lifestyle, Coffee Shop", hasColour: false },
+  { id: "js-18", name: "Lifestyle, Park Bench", hasColour: false },
+  { id: "js-19", name: "Lifestyle, Home Kitchen", hasColour: false },
+  { id: "js-20", name: "Lifestyle, Car Interior", hasColour: false },
+];
+
 const PHOTO_STUDIO_PRESETS: PhotoStudioPreset[] = [
   { id: "ps-01", name: "Clean Skin Realism Enhancer",          hasColour: false },
   { id: "ps-02", name: "Textured Skin Realism Enhancer",       hasColour: false },
@@ -345,7 +368,7 @@ const MEN_SCRUBS_IDS  = ["cs-01","cs-02","cs-03","cs-04","cs-05","cs-06","cs-07"
 
 
 
-const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
+const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
 const findPreset = (id: string) => ALL_PRESETS.find((p) => p.id === id);
 
 const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
@@ -513,7 +536,7 @@ export default function AiPortraitStudio() {
       return {
         id,
         scrubColor: preset?.hasColour
-          ? (MEN_SCRUBS_IDS.includes(id) ? menScrubColor : (presetColours[id]?.trim() || (id.startsWith("np-") ? "black" : "navy blue")))
+          ? (MEN_SCRUBS_IDS.includes(id) ? menScrubColor : (presetColours[id]?.trim() || (id.startsWith("np-") || id.startsWith("js-") ? "black" : "navy blue")))
           : undefined,
         aspectRatio,
         ...(id === "ps-fightnight" ? { promptVars: fnVars } : {}),
@@ -921,6 +944,52 @@ export default function AiPortraitStudio() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
               {NEW_PORTRAITS_PRESETS.map((preset) => {
+                const isSelected = selectedPresets.has(preset.id);
+                return (
+                  <div
+                    key={preset.id}
+                    className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
+                      isSelected
+                        ? "border-violet-500/70 bg-violet-500/10"
+                        : "border-border/30 hover:border-border/60 hover:bg-muted/20"
+                    }`}
+                    onClick={() => togglePreset(preset.id)}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                        isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
+                      }`}>
+                        {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium leading-snug">{preset.name}</p>
+                        {preset.hasColour && (
+                          <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                            scrubs colour
+                          </Badge>
+                        )}
+                        {preset.hasColour && isSelected && (
+                          <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              value={presetColours[preset.id] ?? ""}
+                              onChange={(e) => setPresetColours((prev) => ({ ...prev, [preset.id]: e.target.value }))}
+                              placeholder="e.g. navy blue"
+                              className="w-full text-xs bg-background border border-border/50 rounded px-2 py-1 focus:outline-none focus:border-violet-500/50"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">July 2nd Shoot</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+              {JULY_2ND_SHOOT_PRESETS.map((preset) => {
                 const isSelected = selectedPresets.has(preset.id);
                 return (
                   <div
