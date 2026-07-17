@@ -13,7 +13,7 @@ import {
 import { eq } from "drizzle-orm";
 import { objectStorageClient } from "../lib/objectStorage";
 import { logger } from "../lib/logger";
-import { AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS } from "../lib/aiPortraitScenarios";
+import { AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS } from "../lib/aiPortraitScenarios";
 import {
   createJob,
   getJob,
@@ -318,7 +318,7 @@ router.post("/ai-portrait/save-batch-to-library", async (req: Request, res: Resp
       if (!imageUrl) continue;
 
       const scenario = AI_PORTRAIT_SCENARIOS.find((s) => s.id === portrait.scenarioId)
-        ?? NEW_PORTRAITS_PRESETS.find((s) => s.id === portrait.scenarioId)
+        ?? NEW_PORTRAITS_PRESETS.find((s) => s.id === portrait.scenarioId) ?? JULY_2ND_SHOOT_PRESETS.find((s) => s.id === portrait.scenarioId)
         ?? PHOTO_STUDIO_PRESETS.find((s) => s.id === portrait.scenarioId)
         ?? INJECTOR_COLLECTION_PRESETS.find((s) => s.id === portrait.scenarioId)
         ?? MEN_STUDIO_PRESETS.find((s) => s.id === portrait.scenarioId)
