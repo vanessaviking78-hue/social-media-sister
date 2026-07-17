@@ -709,10 +709,10 @@ export default function Broadcasts() {
         <div className="rounded-2xl border border-border/50 p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Film className="w-4 h-4 text-pink-500" />
-            <h2 className="font-semibold text-sm">Upload a single video</h2>
+            <h2 className="font-semibold text-sm">Upload a single video or animated post</h2>
           </div>
           <p className="text-xs text-muted-foreground -mt-2">
-            Drop in one finished video, already branded and ready to go, add a line about what it is, and it writes a caption and drops it in the Pending Queue above as a reel for every client. Nothing is scheduled until you set a time.
+            Drop in one finished video or animated post, already branded and ready to go, add a line about what it is, and it writes a caption and drops it in the Pending Queue above as a reel for every client. Nothing is scheduled until you set a time.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <label className="shrink-0 w-24 h-24 rounded-lg border border-dashed border-zinc-700 flex items-center justify-center cursor-pointer text-zinc-500 hover:border-pink-600 hover:text-pink-500 overflow-hidden">
@@ -723,7 +723,7 @@ export default function Broadcasts() {
               )}
               <input
                 type="file"
-                accept="video/*"
+                accept="video/*,image/gif"
                 className="hidden"
                 disabled={singleVidBusy}
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) onPickSingleVideo(f); e.target.value = ""; }}
