@@ -177,8 +177,10 @@ router.get("/portal/:token/homework", async (req, res) => {
 router.post("/portal/:token/homework/reply", async (req, res) => {
   try {
     const { token } = req.params;
-    const { setId, answer1, answer2, answer3 } = req.body as {
+    const { setId, answer1, answer2, answer3, answer4, answer5, answer6, answer7, answer8, answer9, answer10 } = req.body as {
       setId?: number; answer1?: string; answer2?: string; answer3?: string;
+      answer4?: string; answer5?: string; answer6?: string; answer7?: string;
+      answer8?: string; answer9?: string; answer10?: string;
     };
     if (!setId) { res.status(400).json({ error: "setId required" }); return; }
 
@@ -198,6 +200,13 @@ router.post("/portal/:token/homework/reply", async (req, res) => {
           answer1: answer1 || "",
           answer2: answer2 || "",
           answer3: answer3 || "",
+          answer4: answer4 || "",
+          answer5: answer5 || "",
+          answer6: answer6 || "",
+          answer7: answer7 || "",
+          answer8: answer8 || "",
+          answer9: answer9 || "",
+          answer10: answer10 || "",
           updatedAt: new Date(),
         })
         .where(eq(homeworkRepliesTable.id, existing.id))
@@ -214,6 +223,13 @@ router.post("/portal/:token/homework/reply", async (req, res) => {
         answer1: answer1 || "",
         answer2: answer2 || "",
         answer3: answer3 || "",
+        answer4: answer4 || "",
+        answer5: answer5 || "",
+        answer6: answer6 || "",
+        answer7: answer7 || "",
+        answer8: answer8 || "",
+        answer9: answer9 || "",
+        answer10: answer10 || "",
       })
       .returning();
     res.status(201).json({ reply });
