@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Flame, Loader2, Play, Pause, RotateCcw, CheckCircle2, PartyPopper } from "lucide-react";
+import { ArrowLeft, Flame, Loader2, Play, Pause, RotateCcw, CheckCircle2, PartyPopper, Circle } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL ?? "/";
 
@@ -23,6 +23,13 @@ type NextClient = {
   daysNeeded: number;
 };
 
+type MonthlyClient = {
+  presetId: number;
+  clientName: string;
+  daysCovered: number;
+  pct: number;
+};
+
 type DailyFocusData = {
   generatedAt: string;
   targetDays: number;
@@ -32,6 +39,7 @@ type DailyFocusData = {
   monthlyTargetDays: number;
   monthlyPercent: number;
   nextClient: NextClient | null;
+  monthlyClients: MonthlyClient[];
 };
 
 function todayKey(): string {
@@ -53,10 +61,30 @@ function saveDoneSet(set: Set<number>) {
   localStorage.setItem("dailyFocusDone-" + todayKey(), JSON.stringify([...set]));
 }
 
+function monthKey(): string {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+}
+
+function loadMonthlyDoneSet(): Set<number> {
+  try {
+    const raw = localStorage.getItem("dailyFocusMonthlyDone-" + monthKey());
+    if (!raw) return new Set();
+    return new Set(JSON.parse(raw));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveMonthlyDoneSet(set: Set<number>) {
+  localStorage.setItem("dailyFocusMonthlyDone-" + monthKey(), JSON.stringify([...set]));
+}
+
 export default function DailyFocus() {
   const [data, setData] = useState<DailyFocusData | null>(null);
   const [loading, setLoading] = useState(true);
   const [done, setDone] = useState<Set<number>>(() => loadDoneSet());
+  const [monthlyDone, setMonthlyDone] = useState<Set<number>>(() => loadMonthlyDoneSet());
   const [activeId, setActiveId] = useState<number | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
   const [totalSeconds, setTotalSeconds] = useState(0);
@@ -125,6 +153,14 @@ export default function DailyFocus() {
     setJustFinished(null);
   };
 
+  const toggleMonthlyDone = (presetId: number) => {
+    const next = new Set(monthlyDone);
+    if (next.has(presetId)) next.delete(presetId);
+    else next.add(presetId);
+    setMonthlyDone(next);
+    saveMonthlyDoneSet(next);
+  };
+
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
     const sec = s % 60;
@@ -136,6 +172,14 @@ export default function DailyFocus() {
   const totalToday = (data?.urgentClients || []).length;
   const pctDone = totalToday > 0 ? doneCount / totalToday : 1;
   const pieCircumference = 2 * Math.PI * 42;
+
+  const monthlyList = data?.monthlyClients || [];
+  const monthlyEffectivePct = monthlyList.map((c) => (monthlyDone.has(c.presetId) ? 100 : c.pct));
+  const displayedMonthlyPercent = monthlyList.length > 0
+    ? Math.round(monthlyEffectivePct.reduce((sum, p) => sum + p, 0) / monthlyList.length)
+    : 100;
+  const remainingMonthly = monthlyList.filter((c) => !monthlyDone.has(c.presetId) && c.pct < 100);
+  const nextMonthlyClient = remainingMonthly.length > 0 ? remainingMonthly[0] : null;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -190,31 +234,61 @@ export default function DailyFocus() {
         )}
 
         {data && (
-          <div className="rounded-2xl border border-border/50 p-4 flex items-center gap-4">
-            <div className="relative w-20 h-20 shrink-0">
-              <svg viewBox="0 0 100 100" className="w-20 h-20 -rotate-90">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="12" className="text-muted/20" />
-                <circle
-                  cx="50" cy="50" r="42" fill="none" stroke="#ec4899" strokeWidth="12" strokeLinecap="round"
-                  strokeDasharray={pieCircumference}
-                  strokeDashoffset={pieCircumference * (1 - data.monthlyPercent / 100)}
-                  style={{ transition: "stroke-dashoffset 0.6s ease" }}
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-sm font-bold" style={{ color: "#ec4899" }}>{data.monthlyPercent}%</span>
+          <div className="rounded-2xl border border-border/50 p-4 space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="relative w-20 h-20 shrink-0">
+                <svg viewBox="0 0 100 100" className="w-20 h-20 -rotate-90">
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="12" className="text-muted/20" />
+                  <circle
+                    cx="50" cy="50" r="42" fill="none" stroke="#ec4899" strokeWidth="12" strokeLinecap="round"
+                    strokeDasharray={pieCircumference}
+                    strokeDashoffset={pieCircumference * (1 - displayedMonthlyPercent / 100)}
+                    style={{ transition: "stroke-dashoffset 0.6s ease" }}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-sm font-bold" style={{ color: "#ec4899" }}>{displayedMonthlyPercent}%</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-semibold">Month view: everyone at {data.monthlyTargetDays} days scheduled</p>
+                {nextMonthlyClient ? (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Work on next: <span style={{ color: "#ec4899" }} className="font-semibold">{nextMonthlyClient.clientName}</span> — {data.monthlyTargetDays - nextMonthlyClient.daysCovered} more day{(data.monthlyTargetDays - nextMonthlyClient.daysCovered) === 1 ? "" : "s"} of content gets them fully covered
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-0.5">Every client is fully covered for the month.</p>
+                )}
               </div>
             </div>
-            <div>
-              <p className="text-sm font-semibold">Month view: everyone at {data.monthlyTargetDays} days scheduled</p>
-              {data.nextClient ? (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Work on next: <span style={{ color: "#ec4899" }} className="font-semibold">{data.nextClient.clientName}</span> — {data.nextClient.daysNeeded} more day{data.nextClient.daysNeeded === 1 ? "" : "s"} of content gets them fully covered
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground mt-0.5">Every client is fully covered for the month.</p>
-              )}
-            </div>
+
+            {monthlyList.length > 0 && (
+              <div className="space-y-1.5 pt-1 border-t border-border/30">
+                {monthlyList.map((c) => {
+                  const isDone = monthlyDone.has(c.presetId);
+                  const isComplete = c.pct >= 100;
+                  return (
+                    <button
+                      key={c.presetId}
+                      type="button"
+                      onClick={() => toggleMonthlyDone(c.presetId)}
+                      disabled={isComplete}
+                      className="w-full flex items-center justify-between gap-2 px-1 py-1 rounded-lg hover:bg-muted/20 disabled:hover:bg-transparent text-left"
+                    >
+                      <span className="flex items-center gap-2 text-xs">
+                        {isDone || isComplete ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 shrink-0" style={{ color: "#ec4899" }} />
+                        ) : (
+                          <Circle className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                        )}
+                        <span className={isDone || isComplete ? "line-through text-muted-foreground" : ""}>{c.clientName}</span>
+                      </span>
+                      <span className="text-xs text-muted-foreground shrink-0">{c.daysCovered}/{data.monthlyTargetDays} days</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
