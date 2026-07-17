@@ -320,75 +320,9 @@ const MEN_COLOUR_IDS  = ["ms-01","ms-02","ms-03","ms-04","ms-05","ms-06","ms-07"
 const MEN_BAILEY_IDS  = ["db-01","db-02","db-03","db-04","db-05","db-06","db-07","db-08","db-09","db-10"];
 const MEN_SCRUBS_IDS  = ["cs-01","cs-02","cs-03","cs-04","cs-05","cs-06","cs-07","cs-08","cs-09","cs-10"];
 
-const RANDOM_PROMPT_PRESETS: PhotoStudioPreset[] = [
-  { id: "rp-01", name: "Street Sign Lean", hasColour: true, hasName: true },
-  { id: "rp-02", name: "Sunbeam Eyes", hasColour: true, hasName: true },
-  { id: "rp-03", name: "Crimson Block Profile", hasColour: true, hasName: true },
-  { id: "rp-04", name: "Ink Silhouette Poster", hasColour: true, hasName: true },
-  { id: "rp-05", name: "Contact Sheet Campaign", hasColour: true, hasName: true },
-  { id: "rp-06", name: "Purple Ottoman Editorial", hasColour: true, hasName: true },
-  { id: "rp-07", name: "Autumn Wall Lean", hasColour: true, hasName: true },
-  { id: "rp-08", name: "Age Progression Slices", hasColour: false, hasName: true },
-  { id: "rp-09", name: "Luxury Bar Portrait", hasColour: true, hasName: true },
-  { id: "rp-10", name: "Freckled Contact Sheet", hasColour: true, hasName: true },
-  { id: "rp-11", name: "Birthday Number Poster", hasColour: true, hasName: true },
-  { id: "rp-12", name: "Silhouette Rim Light", hasColour: true, hasName: true },
-  { id: "rp-13", name: "Orange Acetate Sunglasses", hasColour: false, hasName: true },
-  { id: "rp-14", name: "Armchair Monochrome", hasColour: true, hasName: true },
-  { id: "rp-15", name: "Floating App Icons", hasColour: true, hasName: true },
-  { id: "rp-16", name: "Water Droplets Close-Up", hasColour: false, hasName: true },
-  { id: "rp-17", name: "Motion Blur City Calm", hasColour: true, hasName: true },
-  { id: "rp-18", name: "Newspaper Roses", hasColour: true, hasName: true },
-  { id: "rp-19", name: "Power Portrait — Seated Lean", hasColour: false, hasName: true },
-  { id: "rp-20", name: "Power Portrait — Side Profile", hasColour: false, hasName: true },
-  { id: "rp-21", name: "Power Portrait — Reclining Arms Crossed", hasColour: false, hasName: true },
-  { id: "rp-22", name: "Power Portrait — Hand to Jaw", hasColour: false, hasName: true },
-  { id: "rp-23", name: "Power Portrait — Hand in Pocket", hasColour: false, hasName: true },
-  { id: "rp-24", name: "Power Portrait — Hands Clasped, Head Bowed", hasColour: false, hasName: true },
-  { id: "rp-25", name: "Power Portrait — Over-the-Shoulder", hasColour: false, hasName: true },
-  { id: "rp-26", name: "Power Portrait — Arm Draped Over Chair", hasColour: false, hasName: true },
-  { id: "rp-27", name: "Power Portrait — Close Crop, Hand Raised", hasColour: false, hasName: true },
-  { id: "rp-28", name: "Doodle Art Portrait", hasColour: false, hasName: true },
-  { id: "rp-29", name: "Editorial Magazine Power Stance", hasColour: false, hasName: true },
-  { id: "rp-30", name: "Five Expressions Poster", hasColour: false, hasName: true },
-  { id: "rp-31", name: "Fine Art Beauty Close-Up", hasColour: false, hasHairColour: true, hasName: true },
-  { id: "rp-32", name: "Cherry Lips Portrait", hasColour: false, hasName: true },
-  { id: "rp-33", name: "Golden Hour Couture", hasColour: true, hasHairColour: true, hasName: true },
-  { id: "rp-34", name: "Keychain Miniature", hasColour: true, hasName: true },
-  { id: "rp-35", name: "Honest Realism Portrait", hasColour: false, hasHairColour: true, hasName: true },
-  { id: "rp-36", name: "Staircase Silhouette", hasColour: true, hasName: true },
-  { id: "rp-37", name: "Coffee Shop Candid", hasColour: true, hasName: true },
-  { id: "rp-38", name: "Fireside Knit Elegance", hasColour: true, hasName: true },
-  { id: "rp-39", name: "Blown Kiss Beauty", hasColour: true, hasName: true },
-  { id: "rp-40", name: "Silent Confidence Beauty", hasColour: false, hasName: true },
-  { id: "rp-41", name: "Leaf Shadow Profile", hasColour: false, hasName: true },
-  { id: "rp-42", name: "Peach Rose Elegance", hasColour: true, hasName: true },
-  { id: "rp-43", name: "Vanity Morning Light", hasColour: true, hasName: true },
-  { id: "rp-44", name: "Golden Hour Car Selfie", hasColour: true, hasName: true },
-  { id: "rp-45", name: "Scrubs Mirror Selfie", hasColour: true, hasName: true },
-  { id: "rp-46", name: "Yacht Deck Linen", hasColour: true, hasName: true },
-  { id: "rp-47", name: "Venice Sunset Gown", hasColour: true, hasName: true },
-  { id: "rp-48", name: "Angelic Muse", hasColour: false, hasHairColour: true, hasName: true },
-  { id: "rp-49", name: "Pastel Cyber Gamer", hasColour: true, hasName: true },
-  { id: "rp-50", name: "Split Personality Portrait", hasColour: false, hasHairColour: true, hasName: true },
-  { id: "rp-51", name: "Coastal Equestrian Power", hasColour: true, hasName: true },
-  { id: "rp-52", name: "Latte Art Portrait", hasColour: false, hasName: true },
-  { id: "rp-53", name: "Rain Macro Profile", hasColour: false, hasHairColour: true, hasName: true },
-  { id: "rp-54", name: "Rugby Player Transformation", hasColour: true, hasName: true },
-  { id: "rp-55", name: "Baddie Glam Selfie", hasColour: false, hasHairColour: true, hasName: true },
-  { id: "rp-56", name: "Bedside Beauty Gaze", hasColour: false, hasName: true },
-  { id: "rp-57", name: "Kintsugi Sculpture Portrait", hasColour: false, hasHairColour: true, hasName: true },
-  { id: "rp-58", name: "Scrubs Editorial Authority", hasColour: true, hasName: true },
-  { id: "rp-59", name: "Chessboard Queen", hasColour: false, hasName: true },
-  { id: "rp-60", name: "Neon Tunnel Athlete", hasColour: true, hasName: true },
-  { id: "rp-61", name: "Friendly Glam B&W", hasColour: false, hasName: true },
-  { id: "rp-62", name: "Seventies Freckle Portrait", hasColour: true, hasHairColour: true, hasName: true },
-  { id: "rp-63", name: "Neon Milkshake Couture", hasColour: false, hasName: true },
-  { id: "rp-64", name: "Cracked Porcelain Tears", hasColour: false, hasName: true },
-  { id: "rp-65", name: "Behind The Scenes Glam", hasColour: true, hasName: true },
-];
 
-const ALL_PRESETS = [...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS, ...RANDOM_PROMPT_PRESETS];
+
+const ALL_PRESETS = [...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
 const findPreset = (id: string) => ALL_PRESETS.find((p) => p.id === id);
 
 const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
@@ -1006,76 +940,7 @@ export default function AiPortraitStudio() {
               })}
             </div>
 
-{/* ── Random Prompts ── */}
-            <div className="mt-6 border-t border-border/20 pt-5">
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium">Random Prompts</p>
-                <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={() => deselectCategory(RANDOM_PROMPT_PRESETS.map((p) => p.id))}>Clear all</button>
-              </div>
-              <p className="text-xs text-muted-foreground mb-4">A grab-bag of extra styles, added from your own prompt list.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
-                {RANDOM_PROMPT_PRESETS.map((preset) => {
-                  const isSelected = selectedPresets.has(preset.id);
-                  return (
-                    <div
-                      key={preset.id}
-                      className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
-                        isSelected
-                          ? "border-violet-500/70 bg-violet-500/10"
-                          : "border-border/30 hover:border-border/60 hover:bg-muted/20"
-                      }`}
-                      onClick={() => togglePreset(preset.id)}
-                    >
-                      <div className="flex items-start gap-2.5">
-                        <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
-                          isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
-                        }`}>
-                          {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium leading-snug">{preset.name}</p>
-                {preset.hasColour && isSelected && (
-                  <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="text"
-                      value={presetColours[preset.id] ?? ""}
-                      onChange={(e) => setPresetColours((prev) => ({ ...prev, [preset.id]: e.target.value }))}
-                      placeholder="e.g. navy blue"
-                      className="w-full text-xs bg-background border border-border/50 rounded px-2 py-1 focus:outline-none focus:border-violet-500/50"
-                    />
-                  </div>
-                )}
-                {preset.hasName && isSelected && (
-                  <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="text"
-                      value={presetNames[preset.id] ?? ""}
-                      onChange={(e) => setPresetNames((prev) => ({ ...prev, [preset.id]: e.target.value }))}
-                      placeholder="Name to include"
-                      className="w-full text-xs bg-background border border-border/50 rounded px-2 py-1 focus:outline-none focus:border-violet-500/50"
-                    />
-                  </div>
-                )}
-                {preset.hasHairColour && isSelected && (
-                  <div className="mt-2" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="text"
-                      value={presetHairColours[preset.id] ?? ""}
-                      onChange={(e) => setPresetHairColours((prev) => ({ ...prev, [preset.id]: e.target.value }))}
-                      placeholder="e.g. auburn"
-                      className="w-full text-xs bg-background border border-border/50 rounded px-2 py-1 focus:outline-none focus:border-violet-500/50"
-                    />
-                  </div>
-                )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* ── Injector Collection ── */}
+{/* ── Injector Collection ── */}
             <div className="mt-6 border-t border-border/20 pt-5">
               <div className="flex items-center justify-between mb-1">
                 <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium">Injector Collection</p>
