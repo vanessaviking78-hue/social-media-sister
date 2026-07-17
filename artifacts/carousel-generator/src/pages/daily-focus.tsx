@@ -40,6 +40,9 @@ type DailyFocusData = {
   monthlyPercent: number;
   nextClient: NextClient | null;
   monthlyClients: MonthlyClient[];
+  thirtyDayTargetDays: number;
+  thirtyDayOnTrackCount: number;
+  thirtyDayLagging: NextClient[];
 };
 
 function todayKey(): string {
@@ -170,7 +173,7 @@ export default function DailyFocus() {
   const clients = (data?.urgentClients || []).filter((c) => !done.has(c.presetId));
   const doneCount = (data?.urgentClients || []).filter((c) => done.has(c.presetId)).length;
   const totalToday = (data?.urgentClients || []).length;
-  const pctDone = totalToday > 0 ? doneCount / totalToday : 1;
+  const pctOnTrack = data && data.totalClients > 0 ? data.onTrackCount / data.totalClients : 1;
   const pieCircumference = 2 * Math.PI * 42;
 
   const monthlyList = data?.monthlyClients || [];
@@ -218,12 +221,12 @@ export default function DailyFocus() {
                 <circle
                   cx="50" cy="50" r="42" fill="none" stroke="#ec4899" strokeWidth="12" strokeLinecap="round"
                   strokeDasharray={pieCircumference}
-                  strokeDashoffset={pieCircumference * (1 - pctDone)}
+                  strokeDashoffset={pieCircumference * (1 - pctOnTrack)}
                   style={{ transition: "stroke-dashoffset 0.6s ease" }}
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-sm font-bold" style={{ color: "#ec4899" }}>{Math.round(pctDone * 100)}%</span>
+                <span className="text-sm font-bold" style={{ color: "#ec4899" }}>{Math.round(pctOnTrack * 100)}%</span>
               </div>
             </div>
             <div>
@@ -289,6 +292,33 @@ export default function DailyFocus() {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {data && (
+          <div className="rounded-2xl border border-border/50 p-4 flex items-center gap-4">
+            <div className="relative w-20 h-20 shrink-0">
+              <svg viewBox="0 0 100 100" className="w-20 h-20 -rotate-90">
+                <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="12" className="text-muted/20" />
+                <circle
+                  cx="50" cy="50" r="42" fill="none" stroke="#ec4899" strokeWidth="12" strokeLinecap="round"
+                  strokeDasharray={pieCircumference}
+                  strokeDashoffset={pieCircumference * (1 - (data.totalClients > 0 ? data.thirtyDayOnTrackCount / data.totalClients : 1))}
+                  style={{ transition: "stroke-dashoffset 0.6s ease" }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-sm font-bold" style={{ color: "#ec4899" }}>{Math.round((data.totalClients > 0 ? data.thirtyDayOnTrackCount / data.totalClients : 1) * 100)}%</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-semibold">{data.thirtyDayOnTrackCount} of {data.totalClients} clients have {data.thirtyDayTargetDays}+ days scheduled</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {data.thirtyDayLagging.length > 0
+                  ? `${data.thirtyDayLagging[0].clientName} needs ${data.thirtyDayLagging[0].daysNeeded} more day${data.thirtyDayLagging[0].daysNeeded === 1 ? "" : "s"} to hit ${data.thirtyDayTargetDays}`
+                  : "Everyone is stacked 30+ days deep."}
+              </p>
+            </div>
           </div>
         )}
 
