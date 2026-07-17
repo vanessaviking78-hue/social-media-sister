@@ -4,16 +4,17 @@
 //   Friday    -> treatment bulk carousel
 //   Sunday    -> shareable quote / about-me static
 // Everything posts at 19:45 local time.
-// Posting days are always Monday, Wednesday or Friday - Tuesday and Thursday are
-// kept free on purpose, so gap-finding and auto-fill logic must never suggest them.
+// Posting days are always Monday, Wednesday, Friday or Sunday - Tuesday, Thursday
+// and Saturday are kept free on purpose, so gap-finding and auto-fill logic must
+// never suggest them.
 
 export const POST_TIME = "19:45";
 
 export const WEEKDAY = { SUN: 0, MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6 } as const;
 export type Weekday = (typeof WEEKDAY)[keyof typeof WEEKDAY];
 
-// The only days we ever post on. Tuesday and Thursday are deliberately excluded.
-export const MWF_DAYS: Weekday[] = [WEEKDAY.MON, WEEKDAY.WED, WEEKDAY.FRI];
+// The only days we ever post on. Tuesday, Thursday and Saturday are deliberately excluded.
+export const MWF_DAYS: Weekday[] = [WEEKDAY.MON, WEEKDAY.WED, WEEKDAY.FRI, WEEKDAY.SUN];
 
 function ymd(d: Date): string {
   const y = d.getFullYear();
