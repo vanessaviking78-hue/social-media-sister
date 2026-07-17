@@ -252,6 +252,7 @@ router.post("/carousel/generate-caption", async (req, res) => {
       "- No AI or marketing slop. Banned words and phrases: unlock, elevate, game-changer, dive in, in today's world, when it comes to, look no further, the truth is, here is the thing, let's be honest, nestled, boasts, transform your, say goodbye to, journey, empower, seamless, effortless.",
       "- No bullet points, no emoji spam, no block of hashtags.",
       "- Keep it to about 6 to 9 natural sentences. Warm, real, and easy to read out loud.",
+      "- Weave in a soft, embedded sales pull, never a hard pitch. Use a small social proof mention, a gentle curiosity gap, or a light natural invite (come and ask, message me if this sounds like you) as the close. It should read like a natural next sentence, not a marketing tag. The reader should feel invited, not sold to.",
       "",
       "Write only the caption text.",
     ].join("\n");
