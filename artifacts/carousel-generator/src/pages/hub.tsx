@@ -5,6 +5,7 @@ import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageS
 const TOOLS = [
   {
     href: "/daily-focus",
+group: "today",
     icon: Target,
     name: "Daily Focus",
     description: "Your 12 for today: 2 personal, 10 client, picked live by who has gone quiet. Plus a reminders panel for renewals, invoicing and one-off flags.",
@@ -14,6 +15,7 @@ const TOOLS = [
   },
   {
     href: "/today",
+group: "today",
     icon: Sun,
     name: "Today",
     description: "What's going out today, for every client, with live posting status pulled straight from the scheduler.",
@@ -23,6 +25,7 @@ const TOOLS = [
   },
   {
     href: "/scheduler",
+group: "admin",
     icon: CalendarClock,
     name: "Posting Scheduler",
     description: "See everything queued, published or failed across every client. Retry, cancel, reschedule, or drag posts to a new date in the preview feed.",
@@ -32,6 +35,7 @@ const TOOLS = [
   },
   {
     href: "/catch-up",
+group: "today",
     icon: AlertTriangle,
     name: "Catch-Up Plan",
     description: "Live, not a snapshot: pulls straight from the scheduler and Meta connections every time you open it. Fires to sort today, clients with no post ever, and accounts that still aren't connected. Tick each one off as you clear it.",
@@ -41,6 +45,7 @@ const TOOLS = [
   },
   {
     href: "/health-check",
+group: "today",
     icon: Activity,
     name: "Health Check",
     description: "Live check of every client\u2019s Instagram and Facebook connection, plus their last successful and failed post, so you can catch a dropped connection before a client does.",
@@ -50,6 +55,7 @@ const TOOLS = [
   },
   {
     href: "/homework",
+group: "today",
     icon: MessageSquareText,
     name: "Homework",
     description: "Set a weekly set of three questions for every client to answer in their portal. Their replies land here, ready to be turned straight into content.",
@@ -59,6 +65,7 @@ const TOOLS = [
   },
   {
     href: "/bonus-content",
+group: "today",
     icon: Gift,
     name: "Bonus Content",
     description: "Drop images, videos and notes into a specific client's own space, ready for them to see and use whenever they check their portal.",
@@ -68,6 +75,7 @@ const TOOLS = [
   },
   {
     href: "/client-portal-view",
+group: "today",
     icon: Smartphone,
     name: "Client Portal",
     description: "Pick a client and see their portal exactly as they see it, posts, homework and bonus content included.",
@@ -77,6 +85,7 @@ const TOOLS = [
   },
   {
     href: "/blog",
+group: "content",
     icon: PenSquare,
     name: "Blog",
     description: "Post images and text to the public blog and to every client portal, all in one go.",
@@ -86,6 +95,7 @@ const TOOLS = [
   },
   {
     href: "/broadcasts",
+group: "content",
     icon: Megaphone,
     name: "Broadcasts",
     description: "Send a ready-made post from the content library to every connected client, branded automatically.",
@@ -95,6 +105,7 @@ const TOOLS = [
   },
   {
     href: "/reports",
+group: "admin",
     icon: FileText,
     name: "Monthly Report",
     description: "Top posts, Instagram enquiries, followers and engagement rate for a client, month by month.",
@@ -104,6 +115,7 @@ const TOOLS = [
   },
   {
     href: "/checklist",
+group: "today",
     icon: ListChecks,
     name: "Client Checklist",
     description: "One ongoing row per client. Hex colours, images, carousels, quotes, before and afters, footnote and logo, connected accounts. Always a live snapshot before your next 90-day batch.",
@@ -113,6 +125,7 @@ const TOOLS = [
   },
   {
     href: "/analytics",
+group: "admin",
     icon: BarChart3,
     name: "Analytics",
     description: "Track what you have created, per client and over time.",
@@ -122,6 +135,7 @@ const TOOLS = [
   },
   {
     href: "/calendar",
+group: "admin",
     icon: CalendarDays,
     name: "Calendar",
     description: "Plan the month ahead. Drag, drop and reschedule with ease.",
@@ -131,6 +145,7 @@ const TOOLS = [
   },
   {
     href: "/approval",
+group: "today",
     icon: ShieldCheck,
     name: "Approvals",
     description: "Share a link so clients can approve or flag images before posting.",
@@ -140,6 +155,7 @@ const TOOLS = [
   },
   {
     href: "/presets",
+group: "admin",
     icon: Palette,
     name: "Presets",
     description: "Save and load client brand colours, fonts, logos and style settings.",
@@ -149,6 +165,7 @@ const TOOLS = [
   },
   {
     href: "/brand",
+group: "admin",
     icon: Wand2,
     name: "Brand Settings",
     description: "Set your default logo, colours and fonts. Applied automatically when you open any generator.",
@@ -158,6 +175,7 @@ const TOOLS = [
   },
   {
     href: "/library",
+group: "admin",
     icon: Library,
     name: "Library",
     description: "Browse and manage all your saved content in one place.",
@@ -167,6 +185,7 @@ const TOOLS = [
   },
   {
     href: "/preview",
+group: "today",
     icon: Eye,
     name: "Client Content Preview",
     description: "Share a public preview link with each client so they can see their upcoming scheduled posts, as an Instagram grid or calendar view.",
@@ -176,6 +195,7 @@ const TOOLS = [
   },
   {
     href: "/approval-bundles",
+group: "today",
     icon: Send,
     name: "Client Approvals",
     description: "Send carousels to clients for approval via a shareable link. They review, approve or reject each one, and approved posts queue automatically.",
@@ -185,6 +205,7 @@ const TOOLS = [
   },
   {
     href: "/bundle-requests",
+group: "admin",
     icon: Inbox,
     name: "Bundle Requests",
     description: "Review inbound trial bundle requests from /trialbundle. Generate or decline each one.",
@@ -194,6 +215,7 @@ const TOOLS = [
   },
   {
     href: "/bundle-builder",
+group: "admin",
     icon: Package,
     name: "Trial Bundle",
     description: "Generate a full content preview bundle to share with a new clinic prospect. One link, four formats.",
@@ -203,6 +225,7 @@ const TOOLS = [
   },
   {
     href: "/news",
+group: "admin",
     icon: Newspaper,
     name: "News & Updates",
     description: "Post news and updates on a client's behalf. Shows straight away on their content preview page.",
@@ -212,6 +235,7 @@ const TOOLS = [
   },
   {
     href: "/resources",
+group: "admin",
     icon: FileText,
     name: "Resource Library",
     description: "Upload PDFs, cheat sheets and guides once. Every client sees them straight in their portal.",
@@ -221,6 +245,7 @@ const TOOLS = [
   },
   {
     href: "/revenue-ideas",
+group: "admin",
     icon: TrendingUp,
     name: "Revenue Ideas",
     description: "Generate, review and approve fresh revenue ideas per client, with a history of everything approved.",
@@ -230,6 +255,7 @@ const TOOLS = [
   },
   {
     href: "/upload-schedule",
+group: "content",
     icon: UploadCloud,
     name: "Upload & Schedule",
     description: "Upload images made in Canva or anywhere else. Write or generate a caption, pick a time, and queue it.",
@@ -239,6 +265,7 @@ const TOOLS = [
   },
   {
     href: "/dm-automations",
+group: "admin",
     icon: Bot,
     name: "DM Responder",
     description: "Auto-reply to Instagram DMs that match a keyword. Set it once, let it run.",
@@ -248,6 +275,7 @@ const TOOLS = [
   },
   {
     href: "/dm-prompts",
+group: "admin",
     icon: MessageSquare,
     name: "DM Prompts",
     description: "Generate human-sounding DM templates for new followers, enquiries, check-ins, and more.",
@@ -257,6 +285,7 @@ const TOOLS = [
   },
   {
     href: "/intake",
+group: "content",
     icon: Wand2,
     name: "Content Machine",
     description: "Upload a client intake form, pick a batch size, and generate a month of ready-to-post captions.",
@@ -266,6 +295,7 @@ const TOOLS = [
   },
   {
     href: "/reel-scripts",
+group: "content",
     icon: ScrollText,
     name: "Reel Scripts",
     description: "Write a reel script with a hook, talking points, and a call to action — ready to speak on camera.",
@@ -275,6 +305,7 @@ const TOOLS = [
   },
   {
     href: "/content-generator",
+group: "content",
     icon: Wand2,
     name: "Content Generator",
     description: "Enter clinician details, pick a tone, and generate carousel CSVs ready for the builder.",
@@ -284,6 +315,7 @@ const TOOLS = [
   },
   {
     href: "/tweet-maker",
+group: "content",
     icon: Twitter,
     name: "Tweet Maker",
     description: "Draft and format posts for X/Twitter, in the client's voice, ready to copy or schedule.",
@@ -293,6 +325,7 @@ const TOOLS = [
   },
   {
     href: "/submissions",
+group: "admin",
     icon: Inbox,
     name: "Before & After Inbox",
     description: "Clinics upload their before and after photos and a short story straight to you.",
@@ -302,6 +335,7 @@ const TOOLS = [
   },
   {
     href: "/seamless-bulk",
+group: "carousel",
     icon: Layers,
     name: "Seamless Carousels",
     description: "Drop wide strips, pick 2 to 5 slides, and it cuts them into seamless slides ready to schedule.",
@@ -311,6 +345,7 @@ const TOOLS = [
   },
   {
     href: "/seamless-carousel",
+group: "carousel",
     icon: Grid,
     name: "Seamless Caro Builder",
     description: "Pick a client's backgrounds, add their approved photos, drag each into place, and composite a whole batch of seamless carousels in one go.",
@@ -320,6 +355,7 @@ const TOOLS = [
   },
   {
     href: "/selfie-carousels",
+group: "carousel",
     icon: Camera,
     name: "Selfie to Carousels",
     description: "One make-up-free selfie in, twelve AI photoshoot images out, each composited into its own carousel ready to caption and schedule.",
@@ -329,6 +365,7 @@ const TOOLS = [
   },
   {
     href: "/single-image",
+group: "carousel",
     icon: ImagePlus,
     name: "Single Image",
     description: "One photo, one message. Quick single-post with text overlay.",
@@ -338,6 +375,7 @@ const TOOLS = [
   },
   {
     href: "/showcase-builder",
+group: "content",
     icon: Play,
     name: "Sample Showcase",
     description: "Build a 6-carousel showcase for a prospect. Auto-plays, ends on their grid, one link to send.",
@@ -347,6 +385,7 @@ const TOOLS = [
   },
   {
     href: "/bulk-carousel",
+group: "carousel",
     icon: Layers,
     name: "Bulk Carousel Creator",
     description: "Upload a CSV and image folder. Renders branded 4-slide carousels for every row and exports a master ZIP or sends direct to the scheduler.",
@@ -356,6 +395,7 @@ const TOOLS = [
   },
   {
     href: "/animated-carousels",
+group: "carousel",
     icon: Film,
     name: "Animated Carousels",
     description: "Upload your finished MP4 animated carousels, add captions, and schedule them in bulk. They post to Instagram as Reels.",
@@ -365,6 +405,7 @@ const TOOLS = [
   },
   {
     href: "/about-me-studio",
+group: "content",
     icon: User,
     name: "About Me Studio",
     description: "Upload a photo, it removes the background over a blurred version and lays your title, phrases and teaser on top.",
@@ -374,6 +415,7 @@ const TOOLS = [
   },
   {
     href: "/personal-page",
+group: "content",
     icon: User,
     name: "Personal Page",
     description: "Build a stand-alone about-me post: a photo up top, hand-picked sections like values and treatments, signed off with love from the client.",
@@ -383,6 +425,7 @@ const TOOLS = [
   },
   {
     href: "/before-after",
+group: "content",
     icon: ImagePlus,
     name: "Before & After Maker",
     description: "Upload a before and after, pick a template, add the story and post it.",
@@ -392,6 +435,7 @@ const TOOLS = [
   },
   {
     href: "/quotes",
+group: "content",
     icon: MessageSquareText,
     name: "Quote Maker",
     description: "Drop in a CSV of quotes and get bold, bright quote cards in your colours.",
@@ -401,6 +445,7 @@ const TOOLS = [
   },
   {
     href: "/meme",
+group: "content",
     icon: Sparkles,
     name: "Meme Maker",
     description: "Kind, funny memes for women over 40. Your photo, your voice, never a wrinkle in sight.",
@@ -410,6 +455,7 @@ const TOOLS = [
   },
   {
     href: "/stories",
+group: "content",
     icon: BookOpen,
     name: "Stories",
     description: "Create Instagram Story engagement posts with questions and custom designs.",
@@ -419,6 +465,7 @@ const TOOLS = [
   },
   {
     href: "/bulk-stories",
+group: "content",
     icon: CalendarRange,
     name: "Bulk Story Scheduler",
     description: "Upload a CSV of story questions and a set of images. Queues a full month of story posts with polls, quizzes, or question boxes in one go.",
@@ -428,6 +475,7 @@ const TOOLS = [
   },
   {
     href: "/reels",
+group: "carousel",
     icon: Film,
     name: "Reels",
     description: "Generate short-form video content with animated text overlays.",
@@ -437,6 +485,7 @@ const TOOLS = [
   },
   {
     href: "/video-overlay",
+group: "carousel",
     icon: Play,
     name: "Video Overlay",
     description: "Add branded text and logo overlays to existing video clips.",
@@ -446,6 +495,7 @@ const TOOLS = [
   },
   {
     href: "/ai-portrait-studio",
+group: "content",
     icon: Sparkles,
     name: "AI Portrait Studio",
     description: "Upload a reference photo and generate fresh AI portraits in multiple scenarios.",
@@ -459,6 +509,7 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export default function Hub() {
   const [newCount, setNewCount] = useState(0);
+  const [activeGroup, setActiveGroup] = useState<"today" | "admin" | "content" | "carousel">("today");
   useEffect(() => {
     const pw = localStorage.getItem("cybersuite-pw") || "";
     if (!pw) return;
@@ -490,14 +541,32 @@ export default function Hub() {
       <main className="max-w-5xl mx-auto px-6 py-12">
         <p className="text-muted-foreground text-base mb-10">Pick a tool to get started.</p>
 
-        {/* 3 rows of 4 */}
-        <div className="grid grid-cols-4 gap-4 mb-4">
-          {TOOLS.slice(0, 12).map((tool) => <ToolCard key={tool.href} tool={tool} badge={tool.href === "/submissions" ? newCount : 0} />)}
+        {/* Group tabs */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+          {[
+            { key: "today", label: "Today & Clients" },
+            { key: "admin", label: "Admin" },
+            { key: "content", label: "Content Creation" },
+            { key: "carousel", label: "Carousel" },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveGroup(tab.key as typeof activeGroup)}
+              className={`rounded-2xl border p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
+                activeGroup === tab.key
+                  ? "border-pink-500/60 bg-gradient-to-br from-pink-500/30 to-pink-500/10 shadow-lg"
+                  : "border-border/30 bg-gradient-to-br from-pink-500/10 to-pink-500/0 hover:border-pink-500/50"
+              }`}
+            >
+              <span className={`block text-base font-semibold ${activeGroup === tab.key ? "text-pink-300" : "text-foreground"}`}>{tab.label}</span>
+            </button>
+          ))}
         </div>
 
-        {/* Last rows */}
+        {/* Filtered grid */}
         <div className="grid grid-cols-4 gap-4">
-          {TOOLS.slice(12).map((tool) => <ToolCard key={tool.href} tool={tool} badge={tool.href === "/submissions" ? newCount : 0} />)}
+          {TOOLS.filter((tool) => tool.group === activeGroup).map((tool) => <ToolCard key={tool.href} tool={tool} badge={tool.href === "/submissions" ? newCount : 0} />)}
         </div>
       </main>
 
