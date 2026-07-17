@@ -509,6 +509,7 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export default function Hub() {
   const [newCount, setNewCount] = useState(0);
+  const [hwCount, setHwCount] = useState(0);
   const [activeGroup, setActiveGroup] = useState<"today" | "admin" | "content" | "carousel">("today");
   useEffect(() => {
     const pw = localStorage.getItem("cybersuite-pw") || "";
@@ -524,6 +525,23 @@ export default function Hub() {
     };
     load();
     const id = setInterval(load, 60000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const pw = localStorage.getItem("cybersuite-pw") || "";
+    if (!pw) return;
+    const loadHw = () => {
+      fetch(`${BASE}/api/homework/replies`, { headers: { "x-app-password": pw, "Authorization": "Bearer " + pw } })
+        .then((r) => (r.ok ? r.json() : { replies: [] }))
+        .then((d) => {
+          const arr = Array.isArray(d.replies) ? d.replies : [];
+          setHwCount(arr.filter((r: any) => r.set && r.set.status === "active").length);
+        })
+        .catch(() => {});
+    };
+    loadHw();
+    const id = setInterval(loadHw, 60000);
     return () => clearInterval(id);
   }, []);
   return (
@@ -566,7 +584,7 @@ export default function Hub() {
 
         {/* Filtered grid */}
         <div className="grid grid-cols-4 gap-4">
-          {TOOLS.filter((tool) => tool.group === activeGroup).map((tool) => <ToolCard key={tool.href} tool={tool} badge={tool.href === "/submissions" ? newCount : 0} />)}
+          {TOOLS.filter((tool) => tool.group === activeGroup).map((tool) => <ToolCard key={tool.href} tool={tool} badge={tool.href === "/submissions" ? newCount : tool.href === "/homework" ? hwCount : 0} />)}
         </div>
       </main>
 
