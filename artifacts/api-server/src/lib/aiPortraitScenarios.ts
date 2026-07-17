@@ -217,6 +217,129 @@ export interface PhotoStudioPreset {
     hasName?: boolean;
 }
 
+export const NEW_PORTRAITS_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "np-01",
+    name: "Studio Mono, Direct Gaze",
+    hasColour: true,
+    promptTemplate: `A woman from the reference photo wearing [COLOUR] scrubs, standing against a pure black seamless studio backdrop. Tight, harsh single key light from camera left, facing dead on to camera, chin slightly down, unflinching direct stare. High contrast black and white, deep blacks, visible film grain. Natural unretouched skin texture with real pores and fine lines, no airbrushing, no smoothing. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-02",
+    name: "Studio Mono, Close Crop",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in smart clothes, an open collar shirt. Extreme close crop from collarbone up, hard side light carving the jaw, one eye in soft shadow, pure black seamless background. Black and white, ultra realistic, unretouched skin, no smoothing, every texture detail visible. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-03",
+    name: "Studio Colour, Approachable Clinical",
+    hasColour: true,
+    promptTemplate: `A woman from the reference photo wearing [COLOUR] scrubs, warm easy smile, arms loosely crossed. Soft single key light on a black studio backdrop, gentle falloff, editorial but kind rather than severe. Hyper realistic skin with natural texture, no airbrushing, true to life colour. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-04",
+    name: "Studio Colour, Confident Stance",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in a smart tailored blazer, no tie, hands in pockets, three quarter turn toward camera. Black studio backdrop, controlled rim light on the shoulders, rich natural skin tones, real fabric weave visible, magazine cover energy. No retouching. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-05",
+    name: "Studio Mono, Profile Turn",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in smart clothes. Side profile turning into a three quarter view, strong rim light outlining the silhouette against a pure black backdrop, dramatic shadow play across the face. Black and white, unretouched, hyper realistic skin detail throughout. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-06",
+    name: "Coffee Shop Candid Mono",
+    hasColour: true,
+    promptTemplate: `A woman from the reference photo wearing [COLOUR] scrubs, seated at a coffee shop window table, coffee cup in hand, caught mid laugh looking off camera. Natural window light, shallow depth of field, background softly blurred. Black and white, documentary realism, no retouching, natural skin texture. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-07",
+    name: "Coffee Shop Colour Warm",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in smart casual clothes, a fine knit jumper with an open jacket, leaning on the coffee shop counter, relaxed half smile toward camera. Warm golden hour light through the window, rich amber and wood tones, unedited natural skin texture, editorial but lived in. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-08",
+    name: "Coffee Shop Approachable Clinical",
+    hasColour: true,
+    promptTemplate: `A woman from the reference photo wearing [COLOUR] scrubs, both hands wrapped around a coffee cup, soft genuine smile, seated in a coffee shop. Bright airy natural light, blurred café life behind, real unpolished skin texture, feels like a real morning rather than a shoot. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-09",
+    name: "Coffee Shop Mono Editorial",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in smart clothes, standing by a coffee shop counter, candid glance caught mid conversation. High contrast window light, deep shadow on one side of the face, grainy documentary feel, unretouched skin detail. Black and white. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-10",
+    name: "Sofa Colour Relaxed",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in smart casual clothes, seated on a neutral linen sofa, one arm along the backrest, easy confident posture. Soft diffused daylight from a large window, muted warm interior tones, hyper realistic natural skin, no glamming, lived in editorial feel. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-11",
+    name: "Sofa Mono Intimate",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in smart clothes, leaning forward slightly, elbows on knees, direct engaged gaze, seated on a sofa. Single soft window light, deep tonal range, minimal set dressing. Black and white, unretouched realism throughout. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-12",
+    name: "Sofa Approachable Clinical",
+    hasColour: true,
+    promptTemplate: `A woman from the reference photo wearing [COLOUR] scrubs, cross legged on a sofa, hands clasped, warm open expression as if mid conversation. Soft natural light, calm domestic tones, natural unedited skin, feels reassuring rather than clinical. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-13",
+    name: "Sofa Mono Editorial Recline",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in smart clothes, reclined into the corner of a sofa, one arm resting along the back, cool unbothered expression. Hard directional light, strong room shadow, high contrast. Black and white, real skin texture with no retouching. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-14",
+    name: "Studio Colour Close Crop Eyes",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in a plain fitted top. Extreme close crop on the eyes and upper face, sharp clear catchlight, black studio backdrop, intense but not cold. Hyper realistic pore level skin detail, no smoothing, no glamming. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-15",
+    name: "Smart Clothes Walking, Studio",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in a tailored coat, mid stride against a pure black studio backdrop, motion slightly caught in the fabric, strobe freezing the moment, high fashion energy. Black and white, unretouched skin, true film grain. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-16",
+    name: "Scrubs Corridor Candid",
+    hasColour: true,
+    promptTemplate: `A woman from the reference photo wearing [COLOUR] scrubs, caught mid stride in a softly blurred clinic corridor, natural unposed expression. Bright even light, natural skin texture, contemporary editorial rather than brochure gloss. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-17",
+    name: "Studio Mono Seated Stool",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in smart clothes, perched on a stool, forearms resting on knees, steady gaze to camera. Single hard light, deep black studio backdrop, stark and graphic. Black and white, raw unretouched skin detail. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-18",
+    name: "Coffee Shop Mono Reading",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in smart casual clothes, seated with a notebook or paper in a coffee shop, glancing up toward camera as if just noticed. Window light, soft grain, unguarded moment, real skin texture. Black and white. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-19",
+    name: "Studio Colour Confident Clinical",
+    hasColour: true,
+    promptTemplate: `A woman from the reference photo wearing [COLOUR] scrubs, standing tall, arms crossed, warm assured expression, slight smile. Soft studio light on a black backdrop, natural unpolished skin, approachable authority rather than stern. Same facial features as reference photo.`,
+  },
+  {
+    id: "np-20",
+    name: "Sofa Colour Editorial Wide",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in smart clothes, a wider shot showing more of the room, seated with a relaxed lean on a sofa, soft daylight, muted sophisticated palette, natural true to life skin throughout, no glamming. Same facial features as reference photo.`,
+  },
+];
+
 export const PHOTO_STUDIO_PRESETS: PhotoStudioPreset[] = [
   {
     id: "ps-01",
