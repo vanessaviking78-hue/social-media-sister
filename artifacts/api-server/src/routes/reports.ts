@@ -180,4 +180,70 @@ router.get("/reports/monthly", async (req, res) => {
   }
 });
 
+router.get("/reports/leaderboard", async (req, res) => {
+  try {
+    const month = String(req.query["month"] || "");
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      res.status(400).json({ error: "Missing or invalid month, expected format YYYY-MM" });
+      return;
+    }
+    const { start, end } = monthRange(month);
+
+    const presets = await db.select().from(clientPresetsTable);
+    const posts = await db
+      .select()
+      .from(scheduledPostsTable)
+      .where(
+        and(
+          eq(scheduledPostsTable.status, "published"),
+          gte(scheduledPostsTable.metaPostedAt, start),
+          lte(scheduledPostsTable.metaPostedAt, end)
+        )
+      );
+
+    const results = await Promise.all(
+      presets.map(async (preset) => {
+        const token = preset.metaPageAccessToken;
+        const clientPosts = posts.filter((p) => p.presetId === preset.id).slice(0, 20);
+        if (!token || clientPosts.length === 0) {
+          return {
+            presetId: preset.id,
+            clientName: preset.name,
+            postCount: clientPosts.length,
+            totalEngagement: 0,
+            avgEngagement: 0,
+            statsAvailable: false,
+          };
+        }
+        let totalEngagement = 0;
+        let countedPosts = 0;
+        for (const post of clientPosts) {
+          const result = post.metaResult as { igPostId?: string; fbPostId?: string } | null;
+          let stats: { likes: number; comments: number } | null = null;
+          if (result?.igPostId) stats = await fetchIgStats(result.igPostId, token);
+          if (!stats && result?.fbPostId) stats = await fetchFbStats(result.fbPostId, token);
+          if (stats) {
+            totalEngagement += stats.likes + stats.comments;
+            countedPosts++;
+          }
+        }
+        return {
+          presetId: preset.id,
+          clientName: preset.name,
+          postCount: clientPosts.length,
+          totalEngagement,
+          avgEngagement: countedPosts > 0 ? Number((totalEngagement / countedPosts).toFixed(1)) : 0,
+          statsAvailable: countedPosts > 0,
+        };
+      })
+    );
+
+    const ranked = results.filter((r) => r.statsAvailable).sort((a, b) => b.totalEngagement - a.totalEngagement);
+
+    res.json({ month, generatedAt: new Date().toISOString(), leaderboard: ranked });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to build leaderboard" });
+  }
+});
+
 export default router;
