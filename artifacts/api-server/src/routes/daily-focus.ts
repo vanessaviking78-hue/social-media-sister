@@ -8,6 +8,7 @@ const router: IRouter = Router();
 const TARGET_DAYS = 14;
 const TASK_TYPES = ["seamless carousel", "bulk carousel", "animated carousel", "single broadcast post"];
 const FLOATER_NAMES = ["kahlo", "cantik", "craig hobson", "lotus room"];
+const MONTHLY_TARGET_DAYS = 28;
 
 router.get("/daily-focus", async (_req, res) => {
   try {
@@ -53,12 +54,36 @@ router.get("/daily-focus", async (_req, res) => {
     const urgentClients = clients.filter((c) => c.urgent).sort((a, b) => a.daysCovered - b.daysCovered);
     const onTrackCount = clients.length - urgentClients.length;
 
+    const monthlyClients = clients.map((c) => ({
+      presetId: c.presetId,
+      clientName: c.clientName,
+      daysCovered: c.daysCovered,
+      pct: Math.min(100, Math.round((c.daysCovered / MONTHLY_TARGET_DAYS) * 100)),
+    }));
+    const monthlyPercent = monthlyClients.length > 0
+      ? Math.round((monthlyClients.reduce((sum, c) => sum + Math.min(c.daysCovered, MONTHLY_TARGET_DAYS), 0) / (monthlyClients.length * MONTHLY_TARGET_DAYS)) * 100)
+      : 100;
+    const monthlyIncomplete = monthlyClients
+      .filter((c) => c.daysCovered < MONTHLY_TARGET_DAYS)
+      .sort((a, b) => (MONTHLY_TARGET_DAYS - a.daysCovered) - (MONTHLY_TARGET_DAYS - b.daysCovered));
+    const nextClient = monthlyIncomplete.length > 0
+      ? {
+          presetId: monthlyIncomplete[0].presetId,
+          clientName: monthlyIncomplete[0].clientName,
+          daysCovered: monthlyIncomplete[0].daysCovered,
+          daysNeeded: MONTHLY_TARGET_DAYS - monthlyIncomplete[0].daysCovered,
+        }
+      : null;
+
     res.json({
       generatedAt: now.toISOString(),
       targetDays: TARGET_DAYS,
       totalClients: clients.length,
       onTrackCount,
       urgentClients,
+      monthlyTargetDays: MONTHLY_TARGET_DAYS,
+      monthlyPercent,
+      nextClient,
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to build daily focus" });
