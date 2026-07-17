@@ -149,8 +149,12 @@ router.post("/seamless-caro/composite", async (req: Request, res: Response) => {
     const cutoutMeta = await sharp(cutoutBuffer).metadata();
     const cw = cutoutMeta.width || 1;
     const ch = cutoutMeta.height || 1;
-    const targetW = Math.round(panelW * bg.anchorW);
-    const targetH = Math.round(targetW * (ch / cw));
+    let targetW = Math.round(panelW * bg.anchorW);
+    let targetH = Math.round(targetW * (ch / cw));
+    if (targetH > totalH) { targetH = totalH; targetW = Math.round(targetH * (cw / ch)); }
+    if (targetW > totalW) { targetW = totalW; targetH = Math.round(targetW * (ch / cw)); }
+    targetW = Math.max(1, targetW);
+    targetH = Math.max(1, targetH);
     const resizedCutout = await sharp(cutoutBuffer).resize(targetW, targetH).toBuffer();
 
     const composites = Array.from({ length: n }, (_, i) => {
@@ -220,8 +224,12 @@ router.post("/seamless-caro/composite-multi", async (req: Request, res: Response
       const anchorW = Math.max(0.05, Math.min(1, Number(p.anchorW) || 0.34));
       const anchorX = Math.max(0, Math.min(1, Number(p.anchorX ?? 0.5)));
       const anchorY = Math.max(0, Math.min(1, Number(p.anchorY ?? 0.94)));
-      const targetW = Math.round(panelW * anchorW);
-      const targetH = Math.round(targetW * (ch / cw));
+      let targetW = Math.round(panelW * anchorW);
+      let targetH = Math.round(targetW * (ch / cw));
+      if (targetH > totalH) { targetH = totalH; targetW = Math.round(targetH * (cw / ch)); }
+      if (targetW > totalW) { targetW = totalW; targetH = Math.round(targetW * (ch / cw)); }
+      targetW = Math.max(1, targetW);
+      targetH = Math.max(1, targetH);
       const resizedCutout = await sharp(cutoutBuffer).resize(targetW, targetH).toBuffer();
       const panelLeft = i * panelW;
       const centerX = panelLeft + anchorX * panelW;
