@@ -21,8 +21,11 @@ router.get("/homework/current", async (_req, res) => {
 // Admin: publish a new weekly set of 3 questions, closing off the previous one.
 router.post("/homework/questions", async (req, res) => {
   try {
-    const { question1, question2, question3, weekLabel } = req.body as {
-      question1?: string; question2?: string; question3?: string; weekLabel?: string;
+    const { question1, question2, question3, question4, question5, question6, question7, question8, question9, question10, weekLabel } = req.body as {
+      question1?: string; question2?: string; question3?: string;
+      question4?: string; question5?: string; question6?: string; question7?: string;
+      question8?: string; question9?: string; question10?: string;
+      weekLabel?: string;
     };
     if (!question1?.trim() || !question2?.trim() || !question3?.trim()) {
       res.status(400).json({ error: "All three questions are required" });
@@ -36,6 +39,13 @@ router.post("/homework/questions", async (req, res) => {
         question1: question1.trim(),
         question2: question2.trim(),
         question3: question3.trim(),
+        question4: (question4 || "").trim(),
+        question5: (question5 || "").trim(),
+        question6: (question6 || "").trim(),
+        question7: (question7 || "").trim(),
+        question8: (question8 || "").trim(),
+        question9: (question9 || "").trim(),
+        question10: (question10 || "").trim(),
         weekLabel: weekLabel || new Date().toISOString().slice(0, 10),
         status: "active",
       })
