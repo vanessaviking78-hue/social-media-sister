@@ -283,10 +283,17 @@ export default function ClientPortal({ token }: { token: string }) {
   const [reqDone, setReqDone] = useState(false);
   const [reqErr, setReqErr] = useState("");
 
-  const [hwSet, setHwSet] = useState<{ id: number; question1: string; question2: string; question3: string } | null>(null);
+  const [hwSet, setHwSet] = useState<{ id: number; question1: string; question2: string; question3: string; question4?: string; question5?: string; question6?: string; question7?: string; question8?: string; question9?: string; question10?: string } | null>(null);
   const [hwA1, setHwA1] = useState("");
   const [hwA2, setHwA2] = useState("");
   const [hwA3, setHwA3] = useState("");
+  const [hwA4, setHwA4] = useState("");
+  const [hwA5, setHwA5] = useState("");
+  const [hwA6, setHwA6] = useState("");
+  const [hwA7, setHwA7] = useState("");
+  const [hwA8, setHwA8] = useState("");
+  const [hwA9, setHwA9] = useState("");
+  const [hwA10, setHwA10] = useState("");
   const [hwBusy, setHwBusy] = useState(false);
   const [hwDone, setHwDone] = useState(false);
   const [hwErr, setHwErr] = useState("");
@@ -337,6 +344,13 @@ export default function ClientPortal({ token }: { token: string }) {
           setHwA1(d.existingReply.answer1 || "");
           setHwA2(d.existingReply.answer2 || "");
           setHwA3(d.existingReply.answer3 || "");
+          setHwA4(d.existingReply.answer4 || "");
+          setHwA5(d.existingReply.answer5 || "");
+          setHwA6(d.existingReply.answer6 || "");
+          setHwA7(d.existingReply.answer7 || "");
+          setHwA8(d.existingReply.answer8 || "");
+          setHwA9(d.existingReply.answer9 || "");
+          setHwA10(d.existingReply.answer10 || "");
           setHwDone(true);
         }
       })
@@ -469,7 +483,12 @@ export default function ClientPortal({ token }: { token: string }) {
       const r = await fetch(`${BASE}api/portal/${token}/homework/reply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ setId: hwSet.id, answer1: hwA1, answer2: hwA2, answer3: hwA3 }),
+        body: JSON.stringify({
+          setId: hwSet.id,
+          answer1: hwA1, answer2: hwA2, answer3: hwA3,
+          answer4: hwA4, answer5: hwA5, answer6: hwA6, answer7: hwA7,
+          answer8: hwA8, answer9: hwA9, answer10: hwA10,
+        }),
       });
       if (!r.ok) throw new Error("Failed to save");
       setHwDone(true);
@@ -746,6 +765,13 @@ export default function ClientPortal({ token }: { token: string }) {
                   <div><p className="text-zinc-400 mb-1">{hwSet.question1}</p><p>{hwA1}</p></div>
                   <div><p className="text-zinc-400 mb-1">{hwSet.question2}</p><p>{hwA2}</p></div>
                   <div><p className="text-zinc-400 mb-1">{hwSet.question3}</p><p>{hwA3}</p></div>
+                  {(hwSet.question4) && <div><p className="text-zinc-400 mb-1">{hwSet.question4}</p><p>{hwA4}</p></div>}
+                  {(hwSet.question5) && <div><p className="text-zinc-400 mb-1">{hwSet.question5}</p><p>{hwA5}</p></div>}
+                  {(hwSet.question6) && <div><p className="text-zinc-400 mb-1">{hwSet.question6}</p><p>{hwA6}</p></div>}
+                  {(hwSet.question7) && <div><p className="text-zinc-400 mb-1">{hwSet.question7}</p><p>{hwA7}</p></div>}
+                  {(hwSet.question8) && <div><p className="text-zinc-400 mb-1">{hwSet.question8}</p><p>{hwA8}</p></div>}
+                  {(hwSet.question9) && <div><p className="text-zinc-400 mb-1">{hwSet.question9}</p><p>{hwA9}</p></div>}
+                  {(hwSet.question10) && <div><p className="text-zinc-400 mb-1">{hwSet.question10}</p><p>{hwA10}</p></div>}
                 </div>
                 <button onClick={() => setHwDone(false)} className="text-xs text-pink-400 underline">Edit my answers</button>
               </div>
@@ -754,6 +780,13 @@ export default function ClientPortal({ token }: { token: string }) {
                 <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">{hwSet.question1}</label><textarea value={hwA1} onChange={(e) => setHwA1(e.target.value)} rows={3} className={inputCls + " resize-none"} /></div>
                 <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">{hwSet.question2}</label><textarea value={hwA2} onChange={(e) => setHwA2(e.target.value)} rows={3} className={inputCls + " resize-none"} /></div>
                 <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">{hwSet.question3}</label><textarea value={hwA3} onChange={(e) => setHwA3(e.target.value)} rows={3} className={inputCls + " resize-none"} /></div>
+                {(hwSet.question4) && <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">{hwSet.question4}</label><textarea value={hwA4} onChange={(e) => setHwA4(e.target.value)} rows={3} className={inputCls + " resize-none"} /></div>}
+                {(hwSet.question5) && <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">{hwSet.question5}</label><textarea value={hwA5} onChange={(e) => setHwA5(e.target.value)} rows={3} className={inputCls + " resize-none"} /></div>}
+                {(hwSet.question6) && <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">{hwSet.question6}</label><textarea value={hwA6} onChange={(e) => setHwA6(e.target.value)} rows={3} className={inputCls + " resize-none"} /></div>}
+                {(hwSet.question7) && <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">{hwSet.question7}</label><textarea value={hwA7} onChange={(e) => setHwA7(e.target.value)} rows={3} className={inputCls + " resize-none"} /></div>}
+                {(hwSet.question8) && <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">{hwSet.question8}</label><textarea value={hwA8} onChange={(e) => setHwA8(e.target.value)} rows={3} className={inputCls + " resize-none"} /></div>}
+                {(hwSet.question9) && <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">{hwSet.question9}</label><textarea value={hwA9} onChange={(e) => setHwA9(e.target.value)} rows={3} className={inputCls + " resize-none"} /></div>}
+                {(hwSet.question10) && <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">{hwSet.question10}</label><textarea value={hwA10} onChange={(e) => setHwA10(e.target.value)} rows={3} className={inputCls + " resize-none"} /></div>}
                 {hwErr && <p className="text-sm text-red-400">{hwErr}</p>}
                 <button onClick={submitHomework} disabled={hwBusy} className={sendBtn}>{hwBusy ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : SEND_LABEL}</button>
               </div>
