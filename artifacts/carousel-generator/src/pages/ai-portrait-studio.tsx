@@ -1091,13 +1091,7 @@ export default function AiPortraitStudio() {
                         {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        
-</>
-)}
-
-{activeSection === "injector" && (
-<>
-<p className="text-sm font-medium leading-snug">{preset.name}</p>
+                        <p className="text-sm font-medium leading-snug">{preset.name}</p>
                         {preset.hasColour && (
                           <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
                             scrubs colour
@@ -1121,6 +1115,12 @@ export default function AiPortraitStudio() {
               })}
             </div>
 
+
+</>
+)}
+
+{activeSection === "injector" && (
+<>
 {/* ── Injector Collection ── */}
             <div className="mt-6 border-t border-border/20 pt-5">
               <div className="flex items-center justify-between mb-1">
