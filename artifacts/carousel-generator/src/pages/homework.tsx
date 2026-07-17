@@ -10,6 +10,13 @@ type QuestionSet = {
   question1: string;
   question2: string;
   question3: string;
+  question4?: string;
+  question5?: string;
+  question6?: string;
+  question7?: string;
+  question8?: string;
+  question9?: string;
+  question10?: string;
   status: string;
   createdAt: string;
 };
@@ -21,6 +28,13 @@ type Reply = {
   answer1: string;
   answer2: string;
   answer3: string;
+  answer4?: string;
+  answer5?: string;
+  answer6?: string;
+  answer7?: string;
+  answer8?: string;
+  answer9?: string;
+  answer10?: string;
   submittedAt: string;
   set: QuestionSet | null;
 };
@@ -46,6 +60,14 @@ export default function Homework() {
   const [q1, setQ1] = useState("");
   const [q2, setQ2] = useState("");
   const [q3, setQ3] = useState("");
+  const [q4, setQ4] = useState("");
+  const [q5, setQ5] = useState("");
+  const [q6, setQ6] = useState("");
+  const [q7, setQ7] = useState("");
+  const [q8, setQ8] = useState("");
+  const [q9, setQ9] = useState("");
+  const [q10, setQ10] = useState("");
+  const [extraCount, setExtraCount] = useState(0);
   const [weekLabel, setWeekLabel] = useState("");
   const [publishing, setPublishing] = useState(false);
   const [publishErr, setPublishErr] = useState("");
@@ -84,10 +106,16 @@ export default function Homework() {
       const r = await fetch(`${BASE}/api/homework/questions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question1: q1, question2: q2, question3: q3, weekLabel }),
+        body: JSON.stringify({
+          question1: q1, question2: q2, question3: q3,
+          question4: q4, question5: q5, question6: q6, question7: q7,
+          question8: q8, question9: q9, question10: q10,
+          weekLabel,
+        }),
       });
       if (!r.ok) throw new Error("Failed to publish");
       setQ1(""); setQ2(""); setQ3(""); setWeekLabel("");
+      setQ4(""); setQ5(""); setQ6(""); setQ7(""); setQ8(""); setQ9(""); setQ10(""); setExtraCount(0);
       await load();
       setTab("replies");
     } catch {
@@ -150,7 +178,9 @@ export default function Homework() {
                 <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Currently live</p>
                 <p className="mb-1">1. {current.question1}</p>
                 <p className="mb-1">2. {current.question2}</p>
-                <p>3. {current.question3}</p>
+                <p className={[current.question4, current.question5, current.question6, current.question7, current.question8, current.question9, current.question10].some(Boolean) ? "mb-1" : ""}>3. {current.question3}</p>
+                {[current.question4, current.question5, current.question6, current.question7, current.question8, current.question9, current.question10]
+                  .map((q, i) => (q ? <p key={i} className={i < 6 ? "mb-1" : ""}>{i + 4}. {q}</p> : null))}
               </div>
             )}
             <div className="space-y-4">
@@ -158,6 +188,20 @@ export default function Homework() {
               <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Question 1</label><textarea value={q1} onChange={(e) => setQ1(e.target.value)} rows={2} className={inputCls + " resize-none"} /></div>
               <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Question 2</label><textarea value={q2} onChange={(e) => setQ2(e.target.value)} rows={2} className={inputCls + " resize-none"} /></div>
               <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Question 3</label><textarea value={q3} onChange={(e) => setQ3(e.target.value)} rows={2} className={inputCls + " resize-none"} /></div>
+              {[q4, q5, q6, q7, q8, q9, q10].slice(0, extraCount).map((qv, i) => {
+                const setters = [setQ4, setQ5, setQ6, setQ7, setQ8, setQ9, setQ10];
+                return (
+                  <div key={i}>
+                    <label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Question {i + 4}</label>
+                    <textarea value={qv} onChange={(e) => setters[i](e.target.value)} rows={2} className={inputCls + " resize-none"} />
+                  </div>
+                );
+              })}
+              {extraCount < 7 && (
+                <button onClick={() => setExtraCount((c) => Math.min(c + 1, 7))} className="text-xs text-pink-400 underline">
+                  + Add another question ({3 + extraCount}/10)
+                </button>
+              )}
               <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Week label (optional)</label><input value={weekLabel} onChange={(e) => setWeekLabel(e.target.value)} placeholder="e.g. 14 July" className={inputCls} /></div>
               {publishErr && <p className="text-sm text-red-400">{publishErr}</p>}
               <button onClick={publish} disabled={publishing} className="w-full rounded-full bg-pink-600 hover:bg-pink-500 disabled:opacity-60 text-white font-semibold py-3.5 flex items-center justify-center gap-2">
@@ -198,6 +242,10 @@ export default function Homework() {
                     <div><p className="text-xs text-muted-foreground">{r.set.question1}</p><p>{r.answer1 || "\u2014"}</p></div>
                     <div><p className="text-xs text-muted-foreground">{r.set.question2}</p><p>{r.answer2 || "\u2014"}</p></div>
                     <div><p className="text-xs text-muted-foreground">{r.set.question3}</p><p>{r.answer3 || "\u2014"}</p></div>
+                    {([["question4","answer4"],["question5","answer5"],["question6","answer6"],["question7","answer7"],["question8","answer8"],["question9","answer9"],["question10","answer10"]] as const)
+                      .map(([qk, ak]) => (r.set as any)[qk] ? (
+                        <div key={qk}><p className="text-xs text-muted-foreground">{(r.set as any)[qk]}</p><p>{(r as any)[ak] || "\u2014"}</p></div>
+                      ) : null)}
                   </div>
                 )}
               </div>
