@@ -508,6 +508,7 @@ export default function AiPortraitStudio() {
   };
 
   const [activeGender, setActiveGender]   = useState<"women" | "men">("women");
+  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector">("new");
   const [menScrubColor, setMenScrubColor] = useState("#453761");
 
   const selectAll = () => {
@@ -940,7 +941,31 @@ export default function AiPortraitStudio() {
             </div>
 
             {activeGender === "women" && (<>
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">New Portraits</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+              {[
+                { key: "new", label: "New Portraits" },
+                { key: "july", label: "July 2nd Shoot" },
+                { key: "photo", label: "Photo Studio" },
+                { key: "injector", label: "Injector Collection" },
+              ].map((tab) => (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveSection(tab.key as typeof activeSection)}
+                  className={`rounded-2xl border p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
+                    activeSection === tab.key
+                      ? "border-pink-500/60 bg-gradient-to-br from-pink-500/30 to-pink-500/10 shadow-lg"
+                      : "border-border/30 bg-gradient-to-br from-pink-500/10 to-pink-500/0 hover:border-pink-500/50"
+                  }`}
+                >
+                  <span className={`block text-base font-semibold ${activeSection === tab.key ? "text-pink-300" : "text-foreground"}`}>{tab.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {activeSection === "new" && (
+<>
+<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">New Portraits</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
               {NEW_PORTRAITS_PRESETS.map((preset) => {
@@ -986,6 +1011,12 @@ export default function AiPortraitStudio() {
               })}
             </div>
 
+
+</>
+)}
+
+{activeSection === "july" && (
+<>
 <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">July 2nd Shoot</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
@@ -1032,6 +1063,12 @@ export default function AiPortraitStudio() {
               })}
             </div>
 
+
+</>
+)}
+
+{activeSection === "photo" && (
+<>
 <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">Women — Photo Studio</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
@@ -1054,7 +1091,13 @@ export default function AiPortraitStudio() {
                         {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium leading-snug">{preset.name}</p>
+                        
+</>
+)}
+
+{activeSection === "injector" && (
+<>
+<p className="text-sm font-medium leading-snug">{preset.name}</p>
                         {preset.hasColour && (
                           <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
                             scrubs colour
@@ -1152,7 +1195,11 @@ export default function AiPortraitStudio() {
                 })}
               </div>
             </div>
-            </>)}
+            
+</>
+)}
+
+</>)}
 
             {activeGender === "men" && (() => {
               const menCategories = [
