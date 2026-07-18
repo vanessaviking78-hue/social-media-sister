@@ -1,3 +1,4 @@
+// deploy: reclaim stale-processing posts on server restart 2026-07-18
 // deploy: igPublish retry fix (carousel publish timing) 2026-06-30T18:11:55.260170Z
 // deploy: fetch timeouts + stuck-processing guard 2026-07-14
 import { db } from "@workspace/db";
@@ -434,6 +435,30 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
 
 let schedulerRunning = false;
 
+// A post can get orphaned at status "processing" if the server process itself
+// restarts mid-run (e.g. a Railway redeploy) between the atomic pending->processing
+// claim and the final published/failed write. The in-process try/catch guards
+// below can't help here — the process that held them is gone. So on every tick,
+// before claiming newly-due posts, reclaim anything that's been sat at
+// "processing" for longer than a live run could ever legitimately take, and
+// put it back to "pending" so the normal claim loop below picks it straight up.
+const STALE_PROCESSING_MS = 10 * 60 * 1000; // 10 minutes
+
+async function reclaimStaleProcessingPosts(): Promise<void> {
+  const staleCutoff = new Date(Date.now() - STALE_PROCESSING_MS);
+  const reclaimed = await db
+    .update(scheduledPostsTable)
+    .set({ status: "pending", updatedAt: new Date() })
+    .where(and(eq(scheduledPostsTable.status, "processing"), lte(scheduledPostsTable.updatedAt, staleCutoff)))
+    .returning();
+  if (reclaimed.length > 0) {
+    logger.warn(
+      { count: reclaimed.length, ids: reclaimed.map((p) => p.id) },
+      "Reclaimed post(s) stuck at 'processing' with no live run behind them (likely a server restart mid-run) — reset to pending for retry",
+    );
+  }
+}
+
 // Marks a post as failed. Used both for the expected "no preset" case and as
 // a catch-all so a post can never sit at status "processing" forever with no
 // resolution — the cron only ever re-claims posts still marked "pending".
@@ -458,6 +483,8 @@ async function processScheduledPosts(): Promise<void> {
   }
   schedulerRunning = true;
   try {
+    await reclaimStaleProcessingPosts();
+
     const now = new Date();
     // Atomically claim all due posts in a single UPDATE so overlapping runs
     // (or multiple instances) can never grab the same post twice. Only the
