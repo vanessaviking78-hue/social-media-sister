@@ -3,7 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 import sharp from "sharp";
 import { db } from "@workspace/db";
 import { clientPresetsTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { objectStorageClient } from "../lib/objectStorage";
 import { logger } from "../lib/logger";
 
@@ -43,6 +43,25 @@ async function fetchBuffer(url: string): Promise<Buffer> {
   const r = await fetch(url);
   if (!r.ok) throw new Error(`Could not fetch ${url}`);
   return Buffer.from(await r.arrayBuffer());
+}
+
+// Same insert seamless-caro-builder.ts uses for "Send to Seamless Carousels".
+// Called automatically the moment an image finishes generating in Quick mode
+// (a client is already picked before generation starts), so a background is
+// safely on that client's Seamless Carousels list even if the browser tab
+// closes, refreshes, or the batch grid is never touched again. Never allowed
+// to throw and take a whole generation down with it, an image that generated
+// fine but failed to auto-save is still a win, worst case Vanessa sends it
+// manually from the grid.
+async function registerBackground(presetId: number, imageUrl: string): Promise<void> {
+  try {
+    await db.execute(sql`
+      INSERT INTO client_backgrounds (preset_id, image_url, slide_count)
+      VALUES (${presetId}, ${imageUrl}, 4)
+    `);
+  } catch (err) {
+    logger.error({ err, presetId, imageUrl }, "Background Builder auto-save to Seamless Carousels failed");
+  }
 }
 
 function toHex(r: number, g: number, b: number): string {
@@ -149,18 +168,26 @@ router.get("/background-builder/styles", (_req: Request, res: Response) => {
   res.json({ styles: Object.keys(STYLE_TEMPLATES) });
 });
 
-function buildBriefLine(body: { prompt?: string; style?: string; colours?: string[]; extra?: string }): { briefLine: string } | { error: string } {
-  if (body.style) {
-    const template = STYLE_TEMPLATES[body.style];
-    if (!template) return { error: "Unknown style" };
-    const colours = (body.colours || []).filter((c) => /^#[0-9a-fA-F]{6}$/.test(c));
-    const colourText = colours.length > 0 ? colours.join(", ") : "the client's natural brand tones";
-    let briefLine = template.replace("{COLOURS}", colourText);
-    if (body.extra && body.extra.trim()) briefLine += ` Also include: ${body.extra.trim()}.`;
-    return { briefLine };
+// Accepts either the new "styles" array (multi-select Quick mode) or the old
+// single "style" string, so existing callers keep working. Unknown style
+// keys are silently dropped rather than erroring, since one bad key
+// shouldn't sink an otherwise valid multi-select request.
+function resolveStyles(body: { style?: string; styles?: string[] }): string[] {
+  if (Array.isArray(body.styles) && body.styles.length > 0) {
+    const valid = body.styles.filter((s) => STYLE_TEMPLATES[s]);
+    if (valid.length > 0) return valid;
   }
-  if (!body.prompt || !body.prompt.trim()) return { error: "A prompt is required" };
-  return { briefLine: body.prompt.trim() };
+  if (body.style && STYLE_TEMPLATES[body.style]) return [body.style];
+  return [];
+}
+
+function buildBriefForStyle(style: string, colours?: string[], extra?: string): string {
+  const template = STYLE_TEMPLATES[style];
+  const cleanColours = (colours || []).filter((c) => /^#[0-9a-fA-F]{6}$/.test(c));
+  const colourText = cleanColours.length > 0 ? cleanColours.join(", ") : "the client's natural brand tones";
+  let briefLine = template.replace("{COLOURS}", colourText);
+  if (extra && extra.trim()) briefLine += ` Also include: ${extra.trim()}.`;
+  return briefLine;
 }
 
 // Small set of layout/mood nudges rotated across a batch so ten backgrounds
@@ -240,15 +267,33 @@ async function mapWithConcurrency<T, R>(items: T[], limit: number, fn: (item: T,
   return results;
 }
 
+type GenerateBody = { prompt?: string; style?: string; styles?: string[]; colours?: string[]; extra?: string; presetId?: number };
+
+// Shared between /generate and /generate-batch: works out what brief line an
+// image at index i should use. Multi-select styles round-robin across the
+// batch (style[0], style[1], style[2], style[0], ...) so a ten-image batch
+// with three styles picked comes back as a genuine mix, not ten of one look.
+// Falls back to the raw custom prompt when no style is picked at all.
+function briefLineResolver(body: GenerateBody): { resolver: (i: number) => string } | { error: string } {
+  const styleList = resolveStyles(body);
+  if (styleList.length > 0) {
+    return { resolver: (i: number) => buildBriefForStyle(styleList[i % styleList.length], body.colours, body.extra) };
+  }
+  if (!body.prompt || !body.prompt.trim()) return { error: "A prompt is required" };
+  const promptLine = body.prompt.trim();
+  return { resolver: () => promptLine };
+}
+
 router.post("/background-builder/generate", async (req: Request, res: Response) => {
   try {
-    const body = req.body as { prompt?: string; style?: string; colours?: string[]; extra?: string };
-    const brief = buildBriefLine(body);
+    const body = req.body as GenerateBody;
+    const brief = briefLineResolver(body);
     if ("error" in brief) { res.status(400).json({ error: brief.error }); return; }
 
     const proto = (req.headers["x-forwarded-proto"] as string) || "https";
     const host = (req.headers["x-forwarded-host"] as string) || req.headers.host || "localhost";
-    const imageUrl = await generateOneImage(brief.briefLine, proto, host);
+    const imageUrl = await generateOneImage(brief.resolver(0), proto, host);
+    if (body.presetId) await registerBackground(Number(body.presetId), imageUrl);
     res.json({ imageUrl, width: TARGET_WIDTH, height: TARGET_HEIGHT });
   } catch (err: any) {
     logger.error({ err }, "Background Builder generate failed");
@@ -261,8 +306,8 @@ router.post("/background-builder/generate", async (req: Request, res: Response) 
 // from instead of generating one at a time.
 router.post("/background-builder/generate-batch", async (req: Request, res: Response) => {
   try {
-    const body = req.body as { prompt?: string; style?: string; colours?: string[]; extra?: string; count?: number };
-    const brief = buildBriefLine(body);
+    const body = req.body as GenerateBody & { count?: number };
+    const brief = briefLineResolver(body);
     if ("error" in brief) { res.status(400).json({ error: brief.error }); return; }
 
     const requested = Math.round(body.count ?? DEFAULT_BATCH);
@@ -273,7 +318,8 @@ router.post("/background-builder/generate-batch", async (req: Request, res: Resp
 
     const briefs = Array.from({ length: count }, (_, i) => {
       const nudge = VARIATION_NUDGES[i % VARIATION_NUDGES.length];
-      return `${brief.briefLine} Variation ${i + 1} of ${count} in this set: ${nudge}. Keep the same colours and overall style as the brief, but make the layout and composition clearly distinct from the other variations in the set.`;
+      const base = brief.resolver(i);
+      return `${base} Variation ${i + 1} of ${count} in this set: ${nudge}. Keep the same colours and overall style as the brief, but make the layout and composition clearly distinct from the other variations in the set.`;
     });
 
     const results = await mapWithConcurrency(briefs, BATCH_CONCURRENCY, (line) => generateOneImage(line, proto, host));
@@ -281,7 +327,15 @@ router.post("/background-builder/generate-batch", async (req: Request, res: Resp
 
     if (images.length === 0) { res.status(502).json({ error: "None of the variations generated successfully, please try again" }); return; }
 
-    res.json({ images, width: TARGET_WIDTH, height: TARGET_HEIGHT, requested: count, succeeded: images.length });
+    // Auto-save every image straight to the selected client's Seamless
+    // Carousels list. This is the safety net: nothing generated in Quick
+    // mode can ever be lost to a refresh or a closed tab again, it's already
+    // sitting in Seamless Caro Builder the moment generation finishes.
+    if (body.presetId) {
+      await Promise.all(images.map((img) => registerBackground(Number(body.presetId), img.imageUrl)));
+    }
+
+    res.json({ images, width: TARGET_WIDTH, height: TARGET_HEIGHT, requested: count, succeeded: images.length, autoSaved: !!body.presetId });
   } catch (err: any) {
     logger.error({ err }, "Background Builder batch generate failed");
     res.status(500).json({ error: err?.message || "Batch generation failed" });
