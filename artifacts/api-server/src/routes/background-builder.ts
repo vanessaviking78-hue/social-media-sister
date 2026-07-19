@@ -37,7 +37,15 @@ const TARGET_HEIGHT = 1440;
 
 const MAX_BATCH = 12;
 const DEFAULT_BATCH = 10;
-const BATCH_CONCURRENCY = 4;
+// Was 4. Netlify's proxy in front of the API times a request out at roughly
+// 26 to 30 seconds. At concurrency 4, a batch of 10 needs three rounds of
+// image generation (10 images over 4 workers), which measured out at 40+
+// seconds end to end, well past that window, so the browser got a 504 and
+// showed "Generation failed" even though Railway carried on and finished
+// the images anyway (and auto-saved them if a client was picked). Running
+// every image in the batch at once, one round instead of three, keeps the
+// whole request comfortably inside the proxy's timeout regardless of count.
+const BATCH_CONCURRENCY = MAX_BATCH;
 
 async function fetchBuffer(url: string): Promise<Buffer> {
   const r = await fetch(url);
