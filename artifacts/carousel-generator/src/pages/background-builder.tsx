@@ -61,7 +61,7 @@ export default function BackgroundBuilder() {
 
   // Quick mode state
   const [quickPresetId, setQuickPresetId] = useState<string>("");
-  const [style, setStyle] = useState<string>(STYLES[0].id);
+  const [styles, setStyles] = useState<string[]>([STYLES[0].id]);
   const [colour1, setColour1] = useState("");
   const [colour2, setColour2] = useState("");
   const [colour3, setColour3] = useState("");
@@ -102,18 +102,27 @@ export default function BackgroundBuilder() {
     if (quickPresetId) fetchLogoColours(quickPresetId);
   }, [quickPresetId, fetchLogoColours]);
 
+  // Keep "Send to" locked to whichever client is picked in Quick mode, every
+  // time it changes, not just the first time. Previously this only fired
+  // once (guarded by "!sendPresetId"), so switching client after an earlier
+  // batch left the Send button pointed at the old client with no visible
+  // warning, which is exactly the bug Vanessa hit sending Ryder Clinic
+  // backgrounds while it silently still said Taunton underneath.
   useEffect(() => {
-    if (quickPresetId && !sendPresetId) setSendPresetId(quickPresetId);
-  }, [quickPresetId, sendPresetId]);
+    if (mode === "quick" && quickPresetId) setSendPresetId(quickPresetId);
+  }, [quickPresetId, mode]);
 
   async function handleGenerate() {
     if (mode === "custom" && !prompt.trim()) { toast.error("Enter a prompt first"); return; }
 
+    if (mode === "quick" && styles.length === 0) { toast.error("Pick at least one style first"); return; }
+
     const body: Record<string, unknown> = { count };
     if (mode === "quick") {
-      body.style = style;
+      body.styles = styles;
       body.colours = [colour1, colour2, colour3].filter((c) => HEX_RE.test(c));
       if (extra.trim()) body.extra = extra.trim();
+      if (quickPresetId) body.presetId = Number(quickPresetId);
     } else {
       body.prompt = prompt.trim();
     }
@@ -132,10 +141,11 @@ export default function BackgroundBuilder() {
       }
       const d = await r.json();
       setResults(d.images || []);
+      const savedNote = d.autoSaved && sendClientName ? `, already saved to ${sendClientName}'s Seamless Carousels list` : "";
       if (d.succeeded < d.requested) {
-        toast.warning(`${d.succeeded} of ${d.requested} generated, a couple didn't land, try again if you want the full set`);
+        toast.warning(`${d.succeeded} of ${d.requested} generated, a couple didn't land, try again if you want the full set${savedNote}`);
       } else {
-        toast.success(`${d.succeeded} backgrounds ready`);
+        toast.success(`${d.succeeded} backgrounds ready${savedNote}`);
       }
     } catch (e: any) {
       toast.error(e.message || "Generation failed");
@@ -239,18 +249,30 @@ export default function BackgroundBuilder() {
               </div>
 
               <div>
-                <label className="text-zinc-300 text-sm mb-1.5 block">Style</label>
+                <label className="text-zinc-300 text-sm mb-1.5 block">
+                  Style {styles.length > 1 && <span className="text-zinc-500 font-normal">({styles.length} picked, split evenly across the batch)</span>}
+                </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {STYLES.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => setStyle(s.id)}
-                      className={`px-3 py-2 rounded-lg text-sm text-left border transition-colors ${style === s.id ? "bg-pink-600 border-pink-500 text-white" : "bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-600"}`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
+                  {STYLES.map((s) => {
+                    const picked = styles.includes(s.id);
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => setStyles((prev) => {
+                          if (prev.includes(s.id)) {
+                            const next = prev.filter((id) => id !== s.id);
+                            return next.length > 0 ? next : prev; // always keep at least one style picked
+                          }
+                          return [...prev, s.id];
+                        })}
+                        className={`px-3 py-2 rounded-lg text-sm text-left border transition-colors ${picked ? "bg-pink-600 border-pink-500 text-white" : "bg-zinc-800 border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-600"}`}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })}
                 </div>
+                <p className="text-xs text-zinc-500 mt-1.5">Pick as many as you like, the batch splits across them so you get a proper mix in one go.</p>
               </div>
 
               <div>
