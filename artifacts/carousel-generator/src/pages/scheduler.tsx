@@ -18,7 +18,7 @@ type ScheduledPost = {
   postType: "carousel" | "reel" | string;
   content: PostContent;
   scheduledAt: string;
-  status: "pending" | "processing" | "published" | "failed" | "cancelled";
+  status: "draft" | "pending" | "processing" | "published" | "failed" | "cancelled";
   metaStatus: "pending" | "success" | "failed" | "skipped";
   metaResult: { igPostId?: string; fbPostId?: string; error?: string } | null;
   metaPostedAt: string | null;
@@ -53,6 +53,7 @@ function railBadge(status: string) {
 
 function statusBadge(status: string) {
   const map: Record<string, string> = {
+    draft: "bg-purple-900/40 text-purple-300 border-purple-700",
     pending: "bg-blue-900/40 text-blue-300 border-blue-700",
     processing: "bg-yellow-900/40 text-yellow-300 border-yellow-700",
     published: "bg-emerald-900/40 text-emerald-300 border-emerald-700",
@@ -163,7 +164,10 @@ function ScheduleDialog({ presets, onClose, onSaved, editing }: ScheduleDialogPr
   const [imageUrls, setImageUrls] = useState(editing?.content.imageUrls?.join("\n") ?? "");
   const [videoUrl, setVideoUrl] = useState(editing?.content.videoUrl ?? "");
   const [scheduledAt, setScheduledAt] = useState(() => {
-    if (editing?.scheduledAt) {
+    // A draft's scheduledAt is just a placeholder (set to "now" when it was
+    // parked in the waiting room), not a real date, ignore it here and fall
+    // through to the normal tomorrow-evening default instead.
+    if (editing?.scheduledAt && editing.status !== "draft") {
       const d = new Date(editing.scheduledAt);
       d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
       return d.toISOString().slice(0, 16);
@@ -178,28 +182,47 @@ function ScheduleDialog({ presets, onClose, onSaved, editing }: ScheduleDialogPr
   const [notes, setNotes] = useState(editing?.notes ?? "");
   const [saving, setSaving] = useState(false);
 
+  function buildContent(): PostContent {
+    return {
+      caption: caption.trim(),
+      title: title.trim() || "Untitled",
+      ...(postType === "reel" ? { videoUrl: videoUrl.trim() } : {
+        imageUrls: imageUrls.split("\n").map((u) => u.trim()).filter(Boolean),
+      }),
+    };
+  }
+
+  function validate(): boolean {
+    if (!presetId) { toast.error("Select a client"); return false; }
+    if (!caption.trim()) { toast.error("Caption is required"); return false; }
+    if (postType === "reel" && !videoUrl.trim()) { toast.error("Video URL is required for reels"); return false; }
+    if (postType === "carousel" && !imageUrls.trim()) { toast.error("At least one image URL is required for carousels"); return false; }
+    return true;
+  }
+
+  // Releasing a draft: editing.status === "draft" means this dialog opened
+  // from the Waiting Room. Saving here picks a real date and flips the post
+  // to "pending" so it enters the normal posting queue.
+  const releasingDraft = editing?.status === "draft";
+
   async function handleSave() {
-    if (!presetId) { toast.error("Select a client"); return; }
-    if (!caption.trim()) { toast.error("Caption is required"); return; }
-    if (postType === "reel" && !videoUrl.trim()) { toast.error("Video URL is required for reels"); return; }
-    if (postType === "carousel" && !imageUrls.trim()) { toast.error("At least one image URL is required for carousels"); return; }
+    if (!validate()) return;
 
     setSaving(true);
     try {
-      const content: PostContent = {
-        caption: caption.trim(),
-        title: title.trim() || "Untitled",
-        ...(postType === "reel" ? { videoUrl: videoUrl.trim() } : {
-          imageUrls: imageUrls.split("\n").map((u) => u.trim()).filter(Boolean),
-        }),
-      };
+      const content = buildContent();
 
       if (editing) {
         await apiFetch(`/api/scheduler/posts/${editing.id}`, {
           method: "PATCH",
-          body: JSON.stringify({ content, scheduledAt: new Date(scheduledAt).toISOString(), notes }),
+          body: JSON.stringify({
+            content,
+            scheduledAt: new Date(scheduledAt).toISOString(),
+            notes,
+            ...(releasingDraft ? { status: "pending" } : {}),
+          }),
         });
-        toast.success("Post updated");
+        toast.success(releasingDraft ? "Scheduled" : "Post updated");
       } else {
         await apiFetch("/api/scheduler/posts", {
           method: "POST",
@@ -216,11 +239,35 @@ function ScheduleDialog({ presets, onClose, onSaved, editing }: ScheduleDialogPr
     }
   }
 
+  // Save to the waiting room: no date is committed yet, so this skips
+  // straight past the scheduled-date field and stores the idea against the
+  // client for later. Only available when creating fresh (not while editing
+  // or releasing an existing post).
+  async function handleSaveDraft() {
+    if (!validate()) return;
+
+    setSaving(true);
+    try {
+      const content = buildContent();
+      await apiFetch("/api/scheduler/posts", {
+        method: "POST",
+        body: JSON.stringify({ presetId: Number(presetId), postType, content, status: "draft", isTrial, notes }),
+      });
+      toast.success("Saved to waiting room");
+      onSaved();
+      onClose();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-zinc-900 border border-zinc-700 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="p-6 border-b border-zinc-800">
-          <h2 className="text-lg font-semibold text-white">{editing ? "Edit Scheduled Post" : "Schedule a Post"}</h2>
+          <h2 className="text-lg font-semibold text-white">{editing ? (releasingDraft ? "Schedule from Waiting Room" : "Edit Scheduled Post") : "Schedule a Post"}</h2>
           <p className="text-sm text-zinc-400 mt-1">Schedule posts to go live via Meta.</p>
         </div>
         <div className="p-6 space-y-4">
@@ -310,8 +357,18 @@ function ScheduleDialog({ presets, onClose, onSaved, editing }: ScheduleDialogPr
 
         <div className="p-6 pt-0 flex gap-3 justify-end">
           <Button variant="ghost" onClick={onClose} className="text-zinc-400 hover:text-white">Cancel</Button>
+          {!editing && (
+            <Button
+              variant="outline"
+              onClick={handleSaveDraft}
+              disabled={saving}
+              className="border-purple-700 text-purple-300 hover:text-purple-200 hover:bg-purple-900/20"
+            >
+              Save to Waiting Room
+            </Button>
+          )}
           <Button onClick={handleSave} disabled={saving} className="bg-pink-600 hover:bg-pink-700 text-white">
-            {saving ? "Saving..." : editing ? "Save Changes" : "Schedule Post"}
+            {saving ? "Saving..." : editing ? (releasingDraft ? "Schedule" : "Save Changes") : "Schedule Post"}
           </Button>
         </div>
       </div>
@@ -321,7 +378,7 @@ function ScheduleDialog({ presets, onClose, onSaved, editing }: ScheduleDialogPr
 
 export default function Scheduler() {
   const { presets } = usePresets();
-  const [tab, setTab] = useState<"upcoming" | "published" | "failed" | "dashboard" | "feed" | "grid">("upcoming");
+  const [tab, setTab] = useState<"upcoming" | "published" | "failed" | "dashboard" | "feed" | "grid" | "waitingroom">("upcoming");
   const [posts, setPosts] = useState<ScheduledPost[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -371,6 +428,10 @@ export default function Scheduler() {
       load();
     } catch (e: any) { toast.error(e.message); }
   }
+
+  // Waiting room drafts have no date yet. Editing one via ScheduleDialog and
+  // saving flips it to "pending" with a real date, see ScheduleDialog's
+  // handleSave, which checks editing?.status === "draft" to send that flag.
 
   async function handleRetry(id: number) {
     try {
@@ -475,6 +536,13 @@ export default function Scheduler() {
     return false;
   });
 
+  // Waiting room: content parked against a client with no committed date yet.
+  const waitingRoomPosts = posts.filter((p) => {
+    if (p.status !== "draft") return false;
+    if (filterClient !== "all" && p.clientName !== filterClient) return false;
+    return true;
+  });
+
   const upcoming = posts.filter((p) => p.status === "pending" || p.status === "processing").length;
   const published = posts.filter((p) => p.status === "published").length;
   const failed = posts.filter((p) => p.status === "failed").length;
@@ -483,7 +551,7 @@ export default function Scheduler() {
 
   // Posts shown on the Preview Feed grid: anything not cancelled, filtered by client.
   const feedPosts = posts.filter((p) => {
-    if (p.status === "cancelled") return false;
+    if (p.status === "cancelled" || p.status === "draft") return false;
     if (filterClient !== "all" && p.clientName !== filterClient) return false;
     return true;
   });
@@ -537,7 +605,7 @@ export default function Scheduler() {
 
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <div className="flex bg-zinc-900 border border-zinc-800 rounded-lg p-1 gap-1">
-            {(["upcoming", "published", "failed", "feed", "grid", "dashboard"] as const).map((t) => (
+            {(["upcoming", "published", "failed", "feed", "waitingroom", "grid", "dashboard"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -549,6 +617,7 @@ export default function Scheduler() {
                 {t === "published" && `Published ${published > 0 ? `(${published})` : ""}`}
                 {t === "failed" && `Failed ${failed > 0 ? `(${failed})` : ""}`}
                 {t === "feed" && "Preview Feed"}
+                {t === "waitingroom" && `Waiting Room ${posts.filter((p) => p.status === "draft").length > 0 ? `(${posts.filter((p) => p.status === "draft").length})` : ""}`}
                 {t === "grid" && "Client Grid"}
                 {t === "dashboard" && "Comparison"}
               </button>
@@ -754,6 +823,46 @@ export default function Scheduler() {
                 </div>
               )}
             </div>
+          </div>
+        ) : tab === "waitingroom" ? (
+          <div className="space-y-3">
+            <p className="text-xs text-zinc-500">
+              Park a piece of content here with no date attached, good for when you've built something you're not ready to commit to a slot yet.
+              When you're ready, hit Schedule and give it a real date. Nothing in here will ever post on its own.
+            </p>
+            {!loading && waitingRoomPosts.length === 0 && (
+              <div className="text-center py-16 text-zinc-500 bg-zinc-900 border border-zinc-800 rounded-xl">
+                <Layers size={40} className="mx-auto mb-3 opacity-30" />
+                <p className="text-sm">Nothing waiting. Save a piece of content here from the Schedule dialog when you're not ready to commit to a date.</p>
+              </div>
+            )}
+            {!loading && waitingRoomPosts.map((post) => (
+              <div key={post.id} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+                <div className="p-4 flex items-start gap-3">
+                  <div className="mt-0.5 shrink-0">
+                    {post.postType === "reel"
+                      ? <Film size={16} className="text-purple-400" />
+                      : <Layers size={16} className="text-blue-400" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-white text-sm">{post.clientName}</span>
+                      {statusBadge(post.status)}
+                    </div>
+                    <div className="text-xs text-zinc-400 mt-1 truncate">{post.content.title || "Untitled"}</div>
+                    <div className="text-xs text-zinc-500 mt-0.5 truncate">{post.content.caption?.slice(0, 80)}{(post.content.caption?.length ?? 0) > 80 ? "…" : ""}</div>
+                  </div>
+                  <div className="shrink-0 flex items-center gap-2">
+                    <Button size="sm" variant="ghost" onClick={() => setEditing(post)} className="text-pink-400 hover:text-pink-300 gap-1 h-7 text-xs">
+                      <Calendar size={12} /> Schedule
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => handleDelete(post.id)} className="text-red-400 hover:text-red-300 gap-1 h-7 text-xs">
+                      <Trash2 size={12} /> Delete
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div className="space-y-2">
