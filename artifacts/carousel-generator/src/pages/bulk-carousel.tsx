@@ -5,6 +5,7 @@ import {
   CheckCircle2, X, Edit2, GripVertical, Sparkles, Send, Trash2,
 } from "lucide-react";
 import { SendForApprovalModal } from "@/components/send-for-approval-modal";
+import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -825,10 +826,8 @@ export default function BulkCarousel() {
   const [rowSelected, setRowSelected] = useState<boolean[]>([]);
   const csvState = csvFile ? { file: csvFile, error: csvError, rows: csvRows } : null;
   const [coverFiles, setCoverFiles] = useState<File[]>([]);
-  const [bodyFiles, setBodyFiles] = useState<File[]>([]);
   const [csvDrag, setCsvDrag] = useState(false);
   const [coverDrag, setCoverDrag] = useState(false);
-  const [bodyDrag, setBodyDrag] = useState(false);
 
   // Preview state
   const [items, setItems] = useState<CarouselItem[]>([]);
@@ -858,7 +857,6 @@ export default function BulkCarousel() {
 
   const csvInputRef  = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
-  const bodyInputRef  = useRef<HTMLInputElement>(null);
 
   const { presets } = usePresets();
   const selectedPreset = useMemo(() => presets.find(p => p.id === selectedPresetId) ?? null, [presets, selectedPresetId]);
@@ -937,10 +935,6 @@ export default function BulkCarousel() {
     e.preventDefault(); setCoverDrag(false);
     appendImages(setCoverFiles, Array.from(e.dataTransfer.files));
   };
-  const handleBodyDrop = (e: React.DragEvent) => {
-    e.preventDefault(); setBodyDrag(false);
-    appendImages(setBodyFiles, Array.from(e.dataTransfer.files));
-  };
 
   // ── Generate ─────────────────────────────────────────────────────────────────
 
@@ -963,10 +957,9 @@ export default function BulkCarousel() {
         const i = activeIndexes[idx];
         const row = csvRows[i];
         let coverImg: HTMLImageElement | null = null;
-        let bodyImg: HTMLImageElement | null = null;
         if (coverFiles[i]) try { coverImg = await loadImg(URL.createObjectURL(coverFiles[i])); } catch {}
-        if (bodyFiles[i])  try { bodyImg  = await loadImg(URL.createObjectURL(bodyFiles[i]));  } catch {}
-        if (!bodyImg) bodyImg = coverImg;
+        // One image reused across every slide, no separate body image option.
+        const bodyImg = coverImg;
 
         const blocks = makeBlocks(row);
         const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, lineSpacing, heroWordColor);
@@ -1251,7 +1244,7 @@ export default function BulkCarousel() {
         </div>
         <div className="flex gap-3">
           <Button variant="outline" asChild><Link href="/scheduler">View queue</Link></Button>
-          <Button onClick={() => { setCsvFile(null); setCsvError(null); setCsvRows([]); setRowSelected([]); setCoverFiles([]); setBodyFiles([]); setItems([]); setSelectedPresetId(null); setPhase("upload"); }}>
+          <Button onClick={() => { setCsvFile(null); setCsvError(null); setCsvRows([]); setRowSelected([]); setCoverFiles([]); setItems([]); setSelectedPresetId(null); setPhase("upload"); }}>
             Start again
           </Button>
         </div>
@@ -1652,72 +1645,45 @@ export default function BulkCarousel() {
         <section className="space-y-4">
           <h2 className="font-semibold text-base">3. Upload images</h2>
           <p className="text-sm text-muted-foreground">
-            Images are matched to CSV rows in filename order (so name them 1, 2, 3... or however you want them sorted). Upload {csvRows.length > 0 ? csvRows.length : "N"} of each to match your {csvRows.length > 0 ? csvRows.length : ""} row{csvRows.length !== 1 ? "s" : ""}.
+            One image per row, used across every slide of that carousel. Images are matched to CSV rows in filename order (so name them 1, 2, 3... or however you want them sorted), or pick straight from your approved photos. Upload {csvRows.length > 0 ? csvRows.length : "N"} to match your {csvRows.length > 0 ? csvRows.length : ""} row{csvRows.length !== 1 ? "s" : ""}.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Cover / hero image (Slide 1)</Label>
-              <p className="text-xs text-muted-foreground">The main photo shown on the hook slide.</p>
-              <DropZone
-                label="Drop cover images" hint="One per row, sorted by filename"
-                files={coverFiles} accept="image/*" active={coverDrag} color="violet"
-                onDragOver={() => setCoverDrag(true)} onDragLeave={() => setCoverDrag(false)}
-                onDrop={handleCoverDrop} onClick={() => coverInputRef.current?.click()}
-              />
-              <input ref={coverInputRef} type="file" accept="image/*" multiple className="hidden"
-                onChange={e => { if (e.target.files) appendImages(setCoverFiles, Array.from(e.target.files)); e.target.value = ""; }} />
-              {coverFiles.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {coverFiles.map((f, i) => (
-                    <div key={i} className="flex items-center gap-1 text-xs bg-muted/40 rounded-full px-2.5 py-1">
-                      <span className="text-muted-foreground w-4 shrink-0">{i + 1}.</span>
-                      <span className="truncate max-w-28">{f.name}</span>
-                      <button onClick={() => setCoverFiles(prev => prev.filter((_, j) => j !== i))} className="ml-0.5 text-muted-foreground hover:text-foreground">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Body image (Slides 2, 3, 4) — optional</Label>
-              <p className="text-xs text-muted-foreground">Used behind the body and CTA slides. Leave empty to reuse the cover image automatically.</p>
-              <DropZone
-                label="Drop body images" hint="One per row, sorted by filename"
-                files={bodyFiles} accept="image/*" active={bodyDrag} color="indigo"
-                onDragOver={() => setBodyDrag(true)} onDragLeave={() => setBodyDrag(false)}
-                onDrop={handleBodyDrop} onClick={() => bodyInputRef.current?.click()}
-              />
-              <input ref={bodyInputRef} type="file" accept="image/*" multiple className="hidden"
-                onChange={e => { if (e.target.files) appendImages(setBodyFiles, Array.from(e.target.files)); e.target.value = ""; }} />
-              {bodyFiles.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {bodyFiles.map((f, i) => (
-                    <div key={i} className="flex items-center gap-1 text-xs bg-muted/40 rounded-full px-2.5 py-1">
-                      <span className="text-muted-foreground w-4 shrink-0">{i + 1}.</span>
-                      <span className="truncate max-w-28">{f.name}</span>
-                      <button onClick={() => setBodyFiles(prev => prev.filter((_, j) => j !== i))} className="ml-0.5 text-muted-foreground hover:text-foreground">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          <div className="max-w-md space-y-2">
+            <Label className="text-sm font-medium">Image (used on every slide)</Label>
+            <DropZone
+              label="Drop images" hint="One per row, sorted by filename"
+              files={coverFiles} accept="image/*" active={coverDrag} color="violet"
+              onDragOver={() => setCoverDrag(true)} onDragLeave={() => setCoverDrag(false)}
+              onDrop={handleCoverDrop} onClick={() => coverInputRef.current?.click()}
+            />
+            <input ref={coverInputRef} type="file" accept="image/*" multiple className="hidden"
+              onChange={e => { if (e.target.files) appendImages(setCoverFiles, Array.from(e.target.files)); e.target.value = ""; }} />
+            <ApprovedImagesPicker
+              clientName={selectedPreset?.name}
+              label="Choose from approved photos"
+              onAddImages={(files) => appendImages(setCoverFiles, files)}
+            />
+            {coverFiles.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {coverFiles.map((f, i) => (
+                  <div key={i} className="flex items-center gap-1 text-xs bg-muted/40 rounded-full px-2.5 py-1">
+                    <span className="text-muted-foreground w-4 shrink-0">{i + 1}.</span>
+                    <span className="truncate max-w-28">{f.name}</span>
+                    <button onClick={() => setCoverFiles(prev => prev.filter((_, j) => j !== i))} className="ml-0.5 text-muted-foreground hover:text-foreground">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {csvRows.length > 0 && (
             <div className="flex gap-4 text-xs text-muted-foreground">
               <span className={coverFiles.length >= csvRows.length ? "text-emerald-400" : "text-amber-400"}>
-                Cover: {coverFiles.length}/{csvRows.length}
+                Images: {coverFiles.length}/{csvRows.length}
               </span>
-              <span className={bodyFiles.length >= csvRows.length ? "text-emerald-400" : "text-amber-400"}>
-                Body: {bodyFiles.length}/{csvRows.length}
-              </span>
-              {(coverFiles.length < csvRows.length || bodyFiles.length < csvRows.length) && (
+              {coverFiles.length < csvRows.length && (
                 <span>Missing rows will render with a solid brand colour background.</span>
               )}
             </div>
@@ -1738,8 +1704,7 @@ export default function BulkCarousel() {
                       <th className="text-left px-3 py-2 font-medium">Hook</th>
                       <th className="text-left px-3 py-2 font-medium">Subtitle</th>
                       <th className="text-left px-3 py-2 font-medium">CTA</th>
-                      <th className="text-center px-3 py-2 font-medium">Cover</th>
-                      <th className="text-center px-3 py-2 font-medium">Body</th>
+                      <th className="text-center px-3 py-2 font-medium">Image</th>
                       <th className="text-center px-3 py-2 font-medium w-8"></th>
                     </tr>
                   </thead>
@@ -1763,18 +1728,12 @@ export default function BulkCarousel() {
                             : <X className="w-3.5 h-3.5 text-amber-400/60 mx-auto" />}
                         </td>
                         <td className="px-3 py-2 text-center">
-                          {bodyFiles[i]
-                            ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" />
-                            : <X className="w-3.5 h-3.5 text-amber-400/60 mx-auto" />}
-                        </td>
-                        <td className="px-3 py-2 text-center">
                           <button
                             type="button"
                             onClick={() => {
                               setCsvRows((prev) => prev.filter((_, idx) => idx !== i));
                               setRowSelected((prev) => prev.filter((_, idx) => idx !== i));
                               setCoverFiles((prev) => prev.filter((_, idx) => idx !== i));
-                              setBodyFiles((prev) => prev.filter((_, idx) => idx !== i));
                             }}
                             className="text-muted-foreground hover:text-red-400"
                           >
