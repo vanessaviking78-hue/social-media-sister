@@ -75,9 +75,17 @@ router.post("/scheduler/posts", async (req, res) => {
       stickerConfig?: StickerConfig | null;
     };
 
+    // A "waiting room" draft has no committed date yet - Vanessa parks an idea
+    // against a client and schedules it for real later (e.g. on the 1st of the
+    // month) once she's sure it's the piece she wants to run. Drafts carry a
+    // placeholder scheduledAt (now) purely to satisfy the NOT NULL column; the
+    // scheduler cron only ever claims status="pending" rows, so a draft's
+    // placeholder date can never cause it to post.
+    const isDraft = (req.body as { status?: string }).status === "draft";
+
     if (!presetId) { res.status(400).json({ error: "presetId required" }); return; }
     if (!postType) { res.status(400).json({ error: "postType required" }); return; }
-    if (!scheduledAt) { res.status(400).json({ error: "scheduledAt required" }); return; }
+    if (!isDraft && !scheduledAt) { res.status(400).json({ error: "scheduledAt required" }); return; }
     if (content?.caption == null) { res.status(400).json({ error: "content.caption required" }); return; }
 
     const [preset] = await db.select().from(clientPresetsTable).where(eq(clientPresetsTable.id, presetId));
@@ -90,7 +98,8 @@ router.post("/scheduler/posts", async (req, res) => {
         clientName: clientName || preset.name,
         postType,
         content,
-        scheduledAt: await nextFreeMinute(new Date(scheduledAt)),
+        scheduledAt: isDraft ? new Date() : await nextFreeMinute(new Date(scheduledAt)),
+        status: isDraft ? "draft" : "pending",
         isTrial: isTrial ?? false,
         notes: notes ?? "",
         stickerConfig: stickerConfig ?? null,
@@ -114,8 +123,14 @@ router.patch("/scheduler/posts/:id", async (req, res) => {
     };
 
     const updates: Record<string, unknown> = { updatedAt: new Date() };
-    if (scheduledAt) updates.scheduledAt = new Date(scheduledAt);
-    if (status === "cancelled") updates.status = "cancelled";
+    // Releasing a draft: status flips to "pending" and a real date comes in
+    // together, so route the date through the same collision-avoidance the
+    // normal create path uses. Any other update (edit caption on an already-
+    // pending post, cancel, etc.) keeps the date as given.
+    if (scheduledAt) {
+      updates.scheduledAt = status === "pending" ? await nextFreeMinute(new Date(scheduledAt)) : new Date(scheduledAt);
+    }
+    if (status) updates.status = status;
     if (notes !== undefined) updates.notes = notes;
     if (content) updates.content = content;
 
