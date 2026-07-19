@@ -22,6 +22,21 @@ function formatDate(dateStr: string) { const [y, m, d] = dateStr.split("-").map(
 function getDayOfWeek(dateStr: string) { const d = new Date(dateStr + "T12:00:00"); return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d.getDay()]; }
 function fileToBase64(file: File): Promise<string> { return new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result as string); r.onerror = reject; r.readAsDataURL(file); }); }
 
+// Detects when the portal is being viewed inside a social app's built-in
+// browser (Instagram, Facebook/Messenger, TikTok) rather than a real mobile
+// browser like Safari or Chrome. These in-app browsers block "Add to Home
+// Screen" and web push entirely, which is the actual reason clients on
+// Instagram/Facebook links can't seem to save the portal to their home
+// screen, no matter how clearly the tip is worded.
+function detectInAppBrowser(): string | null {
+  const ua = navigator.userAgent || "";
+  if (/FBAN|FBAV|FB_IAB/i.test(ua)) return "Facebook";
+  if (/Instagram/i.test(ua)) return "Instagram";
+  if (/BytedanceWebview|TikTok/i.test(ua)) return "TikTok";
+  if (/Line\//i.test(ua)) return "Line";
+  return null;
+}
+
 // Converts the VAPID public key (base64url) into the Uint8Array format the
 // Push API's applicationServerKey option expects.
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -243,6 +258,7 @@ export default function ClientPortal({ token }: { token: string }) {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("upcoming");
   const [showTip, setShowTip] = useState(true);
+  const [inAppBrowser] = useState<string | null>(() => (typeof navigator !== "undefined" ? detectInAppBrowser() : null));
 
   // "unknown" = hasn't decided yet, so we show the banner offering to turn them on.
   const [notifState, setNotifState] = useState<"unknown" | "on" | "off" | "unsupported">("unknown");
@@ -590,7 +606,13 @@ export default function ClientPortal({ token }: { token: string }) {
       </header>
 
       {showTip && (
-        <div className="max-w-3xl mx-auto px-4 pt-4"><div className="rounded-xl border border-pink-800/40 bg-pink-950/20 px-4 py-2.5 flex items-center gap-2 text-xs text-pink-200"><Share className="w-4 h-4 shrink-0" /><span>Tip: tap your browser's Share button, then <b>Add to Home Screen</b>, to keep your portal one tap away.</span><button onClick={() => setShowTip(false)} className="ml-auto text-pink-400/70 hover:text-pink-300">Got it</button></div></div>
+        <div className="max-w-3xl mx-auto px-4 pt-4">
+          {inAppBrowser ? (
+            <div className="rounded-xl border border-amber-700/40 bg-amber-950/20 px-4 py-2.5 flex items-center gap-2 text-xs text-amber-200"><Share className="w-4 h-4 shrink-0" /><span>You're viewing this inside {inAppBrowser}, which won't let you save it to your home screen from here. Tap the &bull;&bull;&bull; menu (usually top right), choose "Open in Browser" (or "Open in Safari"), then try Add to Home Screen from there.</span><button onClick={() => setShowTip(false)} className="ml-auto text-amber-400/70 hover:text-amber-300">Got it</button></div>
+          ) : (
+            <div className="rounded-xl border border-pink-800/40 bg-pink-950/20 px-4 py-2.5 flex items-center gap-2 text-xs text-pink-200"><Share className="w-4 h-4 shrink-0" /><span>Tip: tap your browser's Share button, then <b>Add to Home Screen</b>, to keep your portal one tap away.</span><button onClick={() => setShowTip(false)} className="ml-auto text-pink-400/70 hover:text-pink-300">Got it</button></div>
+          )}
+        </div>
       )}
 
       {notifState === "unknown" && (
