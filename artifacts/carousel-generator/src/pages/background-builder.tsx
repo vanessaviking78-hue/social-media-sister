@@ -78,6 +78,8 @@ export default function BackgroundBuilder() {
   const [sendPresetId, setSendPresetId] = useState<string>("");
   const [sendingUrl, setSendingUrl] = useState<string | null>(null);
 
+  const sendClientName = (presets || []).find((p) => String(p.id) === sendPresetId)?.name || "";
+
   const fetchLogoColours = useCallback(async (presetId: string) => {
     if (!presetId) { setColour1(""); setColour2(""); setColour3(""); return; }
     setLoadingColours(true);
@@ -334,9 +336,13 @@ export default function BackgroundBuilder() {
                     <button
                       onClick={() => handleSendToSeamless(bg)}
                       disabled={sendingUrl === bg.imageUrl}
-                      className="w-full flex items-center justify-center gap-1 py-1.5 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-xs disabled:opacity-60"
+                      title={sendClientName ? `Sends straight to ${sendClientName}'s Seamless Carousels background list` : "Pick a client above first"}
+                      className="w-full flex items-center justify-center gap-1 py-1.5 px-1 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-xs disabled:opacity-60"
                     >
-                      <Send size={12} /> {sendingUrl === bg.imageUrl ? "Sending..." : "Send"}
+                      <Send size={12} className="shrink-0" />
+                      <span className="truncate">
+                        {sendingUrl === bg.imageUrl ? "Sending..." : sendClientName ? `Send to ${sendClientName}` : "Send"}
+                      </span>
                     </button>
                   </div>
                 </div>
