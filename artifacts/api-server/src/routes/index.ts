@@ -49,6 +49,7 @@ import broadcastDraftsRouter from "./broadcast-drafts";
 import reportsRouter from "./reports";
 import dailyFocusRouter from "./daily-focus";
 import captionGeneratorRouter from "./caption-generator";
+import backgroundBuilderRouter from "./background-builder";
 
 const router: IRouter = Router();
 
@@ -71,6 +72,7 @@ router.use(libraryRouter);
 router.use(onboardingRouter);
 router.use(aboutMeRouter);
 router.use(seamlessCarouselRouter);
+router.use(backgroundBuilderRouter);
 router.use(aiPortraitRouter);
 router.use(memeRouter);
 router.use(hookImageRouter);
