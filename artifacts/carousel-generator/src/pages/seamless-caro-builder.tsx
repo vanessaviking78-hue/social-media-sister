@@ -44,7 +44,10 @@ type BatchResult = {
 
 const MAX_PHOTOS = 100;
 const PIECE_SIZE = 4;
-const DEFAULT_PLACEMENT: Placement = { anchorX: 0.5, anchorY: 0.94, anchorW: 0.34 };
+// Bottom-flush by default (anchorY: 1) so a fresh photo sits right on the
+// panel floor with no gap underneath until someone drags it. Width ratio
+// (anchorW) matches the standard portrait crop this tool is built around.
+const DEFAULT_PLACEMENT: Placement = { anchorX: 0.5, anchorY: 1, anchorW: 0.34 };
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -195,6 +198,72 @@ function PieceEditor({ background, piece, onChangePlacement }: {
   );
 }
 
+// Row of numbered thumbnails under each piece — this is the "which photo goes
+// on which slide" control. Left/right nudges the photo to a different panel
+// (swaps it with its neighbour), the X removes it from this carousel
+// entirely (min 2 photos, a carousel can't have fewer), and the dashed tile
+// opens the picker to bring in a different approved photo.
+function PhotoStrip({ piece, onDelete, onMove, onOpenAdd }: {
+  piece: Piece;
+  onDelete: (photoIndex: number) => void;
+  onMove: (photoIndex: number, direction: -1 | 1) => void;
+  onOpenAdd: () => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-3 items-start">
+      {piece.photos.map((photo, i) => (
+        <div key={photo.url + i} className="flex flex-col items-center gap-1">
+          <div className="relative">
+            <img src={photo.url} alt="" className="h-16 w-16 object-cover rounded-lg border border-emerald-500/40" />
+            <span className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center">{i + 1}</span>
+            <button
+              onClick={() => onDelete(i)}
+              disabled={piece.photos.length <= 2}
+              title={piece.photos.length <= 2 ? "A carousel needs at least 2 photos" : "Remove this photo from this carousel"}
+              className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-black/70 flex items-center justify-center hover:bg-black/90 disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <X className="w-3 h-3 text-white" />
+            </button>
+          </div>
+          <div className="flex gap-1">
+            <button onClick={() => onMove(i, -1)} disabled={i === 0} title="Move to an earlier slide" className="text-[11px] leading-none px-1.5 py-0.5 rounded border border-emerald-500/30 disabled:opacity-20 disabled:cursor-not-allowed hover:bg-emerald-500/10">‹</button>
+            <button onClick={() => onMove(i, 1)} disabled={i === piece.photos.length - 1} title="Move to a later slide" className="text-[11px] leading-none px-1.5 py-0.5 rounded border border-emerald-500/30 disabled:opacity-20 disabled:cursor-not-allowed hover:bg-emerald-500/10">›</button>
+          </div>
+        </div>
+      ))}
+      {piece.photos.length < 5 && (
+        <button onClick={onOpenAdd} title="Add a different photo to this carousel" className="h-16 w-16 rounded-lg border-2 border-dashed border-emerald-500/40 flex items-center justify-center hover:bg-emerald-500/10 text-emerald-400">
+          <Plus className="w-5 h-5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// Small inline picker for swapping a fresh photo from the approved pool onto
+// a piece, rather than being stuck with whatever the shuffle-bag handed it.
+function AddPhotoPicker({ photos, onPick, onClose }: {
+  photos: ApprovedPhoto[]; onPick: (p: ApprovedPhoto) => void; onClose: () => void;
+}) {
+  return (
+    <div className="rounded-xl border border-emerald-500/40 bg-card/90 p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-xs uppercase tracking-widest text-muted-foreground">Choose a photo to add to this carousel</p>
+        <button onClick={onClose} className="text-xs text-muted-foreground hover:text-foreground">Close</button>
+      </div>
+      {photos.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No approved photos in this batch's pool.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto">
+          {photos.map((p) => (
+            <img key={p.url} src={p.url} alt="" onClick={() => onPick(p)} className="h-16 w-16 object-cover rounded-lg border border-emerald-500/40 cursor-pointer hover:opacity-70" />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SeamlessCaroBuilder() {
   const { presets } = usePresets();
   const [presetId, setPresetId] = useState<number | null>(null);
@@ -204,6 +273,7 @@ export default function SeamlessCaroBuilder() {
   const [uploading, setUploading] = useState(false);
   const [phase, setPhase] = useState<"select" | "arrange">("select");
   const [pieces, setPieces] = useState<Piece[]>([]);
+  const [addPickerFor, setAddPickerFor] = useState<string | null>(null);
   const [batch, setBatch] = useState<BatchResult[]>([]);
   const [running, setRunning] = useState(false);
 
@@ -323,6 +393,51 @@ export default function SeamlessCaroBuilder() {
       ...piece,
       placements: piece.placements.map((old, i) => (i === photoIndex ? p : old)),
     })));
+  }
+
+  // Removes one photo (and its placement) from a piece. A carousel needs at
+  // least 2 photos, so this refuses below that rather than leaving a piece
+  // with nothing to composite.
+  function deletePhotoFromPiece(pieceKey: string, photoIndex: number) {
+    setPieces((prev) => prev.map((piece) => {
+      if (piece.key !== pieceKey) return piece;
+      if (piece.photos.length <= 2) { toast.error("A carousel needs at least 2 photos."); return piece; }
+      return {
+        ...piece,
+        photos: piece.photos.filter((_, i) => i !== photoIndex),
+        placements: piece.placements.filter((_, i) => i !== photoIndex),
+      };
+    }));
+  }
+
+  // Swaps a photo with its neighbour to change which slide it lands on —
+  // this is the "which shot goes on which page" control.
+  function movePiecePhoto(pieceKey: string, photoIndex: number, direction: -1 | 1) {
+    setPieces((prev) => prev.map((piece) => {
+      if (piece.key !== pieceKey) return piece;
+      const target = photoIndex + direction;
+      if (target < 0 || target >= piece.photos.length) return piece;
+      const photos = [...piece.photos];
+      const placements = [...piece.placements];
+      [photos[photoIndex], photos[target]] = [photos[target], photos[photoIndex]];
+      [placements[photoIndex], placements[target]] = [placements[target], placements[photoIndex]];
+      return { ...piece, photos, placements };
+    }));
+  }
+
+  // Brings in a different photo from the approved pool. Capped at 5, the
+  // same max the backend composite endpoint allows per carousel.
+  function addPhotoToPiece(pieceKey: string, photo: ApprovedPhoto) {
+    setPieces((prev) => prev.map((piece) => {
+      if (piece.key !== pieceKey) return piece;
+      if (piece.photos.length >= 5) { toast.error("5 photos is the most one background can take."); return piece; }
+      return {
+        ...piece,
+        photos: [...piece.photos, photo],
+        placements: [...piece.placements, { ...DEFAULT_PLACEMENT }],
+      };
+    }));
+    setAddPickerFor(null);
   }
 
   async function generateBatch() {
@@ -487,7 +602,7 @@ export default function SeamlessCaroBuilder() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <button onClick={() => setPhase("select")} className="text-sm text-muted-foreground hover:text-foreground">← Back to selection</button>
-              <p className="text-xs text-muted-foreground">Drag a photo to reposition it, drag its corner handle to resize it.</p>
+              <p className="text-xs text-muted-foreground">Drag a photo to reposition it, drag its corner handle to resize it. Use ‹ › below to change which slide a photo lands on, the X to remove one, or + to bring in a different photo.</p>
             </div>
             {pieces.map((piece) => {
               const bg = backgrounds.find((b) => b.id === piece.bgId)!;
@@ -495,6 +610,19 @@ export default function SeamlessCaroBuilder() {
                 <div key={piece.key} className="rounded-2xl border border-emerald-500/30 bg-card/60 p-5 space-y-3">
                   <p className="text-xs uppercase tracking-widest text-muted-foreground">{piece.photos.length} photos on this background</p>
                   <PieceEditor background={bg} piece={piece} onChangePlacement={(photoIndex, p) => updatePlacement(piece.key, photoIndex, p)} />
+                  <PhotoStrip
+                    piece={piece}
+                    onDelete={(i) => deletePhotoFromPiece(piece.key, i)}
+                    onMove={(i, dir) => movePiecePhoto(piece.key, i, dir)}
+                    onOpenAdd={() => setAddPickerFor(addPickerFor === piece.key ? null : piece.key)}
+                  />
+                  {addPickerFor === piece.key && (
+                    <AddPhotoPicker
+                      photos={photos}
+                      onPick={(p) => addPhotoToPiece(piece.key, p)}
+                      onClose={() => setAddPickerFor(null)}
+                    />
+                  )}
                 </div>
               );
             })}
