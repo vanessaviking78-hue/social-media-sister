@@ -67,6 +67,18 @@ async function downloadImage(url: string, filename: string) {
   }
 }
 
+// Tells the backend a client just downloaded something, so Vanessa gets an
+// email. Fire-and-forget: never awaited, never blocks or delays the actual
+// download above, which has already happened on the client's device by the
+// time this goes out.
+function pingDownload(token: string, title: string, fileCount: number) {
+  fetch(`${BASE}api/portal/${token}/download`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, fileCount }),
+  }).catch(() => {});
+}
+
 async function copyCaption(caption: string) {
   try {
     await navigator.clipboard.writeText(caption);
@@ -664,7 +676,7 @@ export default function ClientPortal({ token }: { token: string }) {
 
                         {urls.length > 0 && (
                           <div className="mt-4 pt-3 border-t border-zinc-800 flex flex-wrap gap-2">
-                            <button onClick={() => urls.forEach((u, i) => downloadImage(u, `${data.clientName.replace(/\s+/g, "-").toLowerCase()}-${post.date}-${i + 1}.jpg`))} className="text-xs font-semibold text-pink-400 hover:text-pink-300 flex items-center gap-1.5 rounded-full border border-pink-800/40 bg-pink-950/10 px-3 py-1.5">
+                            <button onClick={() => { urls.forEach((u, i) => downloadImage(u, `${data.clientName.replace(/\s+/g, "-").toLowerCase()}-${post.date}-${i + 1}.jpg`)); pingDownload(token, post.title || post.postType, urls.length); }} className="text-xs font-semibold text-pink-400 hover:text-pink-300 flex items-center gap-1.5 rounded-full border border-pink-800/40 bg-pink-950/10 px-3 py-1.5">
                               <Download className="w-3.5 h-3.5" /> Download image{urls.length > 1 ? "s" : ""}
                             </button>
                             {post.caption && (
