@@ -157,6 +157,35 @@ router.delete("/scheduler/posts/:id", async (req, res) => {
   }
 });
 
+// Bulk clear-out for a client, used by the "Delete all upcoming" button on
+// the scheduler page. Scoped to draft, pending and processing only, so a
+// client's published history and failed log are never touched by this, only
+// the posts that haven't gone out yet. Built after Vanessa needed a batch of
+// CT Aesthetics posts pulled because the captions never got uploaded, so this
+// is now something she can do herself instead of asking for it each time.
+router.delete("/scheduler/posts", async (req, res) => {
+  try {
+    const { clientName, presetId } = req.query as Record<string, string>;
+    if (!clientName && !presetId) {
+      res.status(400).json({ error: "clientName or presetId required" });
+      return;
+    }
+
+    const conditions = [inArray(scheduledPostsTable.status, ["draft", "pending", "processing"])];
+    if (presetId) conditions.push(eq(scheduledPostsTable.presetId, Number(presetId)));
+    if (clientName) conditions.push(eq(scheduledPostsTable.clientName, clientName));
+
+    const deleted = await db
+      .delete(scheduledPostsTable)
+      .where(and(...conditions))
+      .returning({ id: scheduledPostsTable.id });
+
+    res.json({ ok: true, deletedCount: deleted.length });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.post("/scheduler/posts/:id/retry", async (req, res) => {
   try {
     const id = Number(req.params.id);
