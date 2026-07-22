@@ -386,6 +386,7 @@ export default function Scheduler() {
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState<ScheduledPost | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   // Preview Feed month grid state
   const today = new Date();
@@ -427,6 +428,30 @@ export default function Scheduler() {
       toast.success("Post deleted");
       load();
     } catch (e: any) { toast.error(e.message); }
+  }
+
+  // Clears out everything not yet posted for the selected client (draft,
+  // pending and processing), leaving published history and the failed log
+  // untouched. This is the self-serve version of what used to mean asking
+  // for a batch to be pulled by hand, e.g. when captions never got uploaded
+  // before a run went into the queue.
+  async function handleDeleteAllUpcoming() {
+    if (filterClient === "all") return;
+    const count = posts.filter(
+      (p) => p.clientName === filterClient && (p.status === "pending" || p.status === "processing" || p.status === "draft")
+    ).length;
+    if (count === 0) { toast.info(`Nothing upcoming to delete for ${filterClient}`); return; }
+    if (!window.confirm(`Delete all ${count} upcoming post${count === 1 ? "" : "s"} for ${filterClient}? This can't be undone.`)) return;
+    setBulkDeleting(true);
+    try {
+      const result = await apiFetch(`/api/scheduler/posts?clientName=${encodeURIComponent(filterClient)}`, { method: "DELETE" });
+      toast.success(`Deleted ${result.deletedCount} upcoming post${result.deletedCount === 1 ? "" : "s"} for ${filterClient}`);
+      load();
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setBulkDeleting(false);
+    }
   }
 
   // Waiting room drafts have no date yet. Editing one via ScheduleDialog and
@@ -649,6 +674,18 @@ export default function Scheduler() {
               <ExternalLink size={12} />
               Client Preview
             </a>
+          )}
+
+          {filterClient !== "all" && (tab === "upcoming" || tab === "waitingroom") && (
+            <button
+              onClick={handleDeleteAllUpcoming}
+              disabled={bulkDeleting}
+              className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors px-3 py-1.5 rounded-lg border border-red-900/60 hover:border-red-500/60 whitespace-nowrap disabled:opacity-50"
+              title={`Delete every upcoming post for ${filterClient}`}
+            >
+              <Trash2 size={12} />
+              {bulkDeleting ? "Deleting..." : `Delete all upcoming for ${filterClient}`}
+            </button>
           )}
 
           <button onClick={load} className="ml-auto p-2 text-zinc-400 hover:text-white transition-colors" title="Refresh">
