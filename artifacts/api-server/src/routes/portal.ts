@@ -5,6 +5,7 @@ import { eq, and, gte, or, sql, desc } from "drizzle-orm";
 import crypto from "crypto";
 import { getApprovedIdeasForClient } from "./revenue-ideas";
 import { getVapidPublicKey } from "../lib/push";
+import { notifyDownload } from "../lib/notify";
 
 const router: IRouter = Router();
 
@@ -96,6 +97,23 @@ router.get("/portal/:token", async (req, res) => {
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to load portal" });
+  }
+});
+
+// Fired from the client portal the moment someone taps "Download image(s)".
+// Purely a notification beacon, it never blocks or affects the download
+// itself, which already happened client side before this call goes out.
+router.post("/portal/:token/download", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+    const { title, fileCount } = req.body as { title?: string; fileCount?: number };
+    void notifyDownload({ clientName: preset.name, title, fileCount });
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to log download" });
   }
 });
 
