@@ -28,6 +28,14 @@ export const SCALE = 2;
 const EDITOR_W = 360;
 const EDITOR_SCALE = EDITOR_W / W;
 
+// Line spacing is locked at 0.9 everywhere text gets drawn, canvas render and
+// the on-screen edit preview alike, so what you see while editing a slide is
+// always what actually comes out the other end. This used to be an
+// adjustable slider, which is how the drift crept in (a stray 1.2 in the
+// Seamless Carousels render path, plus the edit preview never applying the
+// slider's value at all), so it's fixed rather than left open to change.
+export const LOCKED_LINE_SPACING = 0.9;
+
 const CSV_COLS = ["slide1_hook", "slide1_subtitle", "slide2_body", "slide3_body", "slide4_cta"] as const;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -231,7 +239,7 @@ export function renderSlideCanvas(
   preset: ClientPreset,
   scale = SCALE,
   bgOnly = false,
-  lineSpacing = 0.9,
+  lineSpacing = LOCKED_LINE_SPACING,
   accentOverride?: string
 ): string {
   const canvas = document.createElement("canvas");
@@ -387,7 +395,7 @@ export function renderAllThumbs(
   item: Pick<CarouselItem, "blocks" | "coverImg" | "bodyImg">,
   logoImg: HTMLImageElement | null,
   preset: ClientPreset,
-  lineSpacing = 0.9,
+  lineSpacing = LOCKED_LINE_SPACING,
   accentOverride?: string
 ): string[] {
   return ([1,2,3,4] as const).map(n =>
@@ -717,7 +725,10 @@ export function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave,
                       style={{
                         fontFamily: st.font.replace(/"/g, "'"),
                         fontSize: dispFontSize,
-                        lineHeight: st.lineH,
+                        // Matches the canvas render exactly: fontSize * lineH * LOCKED_LINE_SPACING.
+                        // This used to just be st.lineH on its own, which is why the edit preview
+                        // never matched the actual exported slide.
+                        lineHeight: st.lineH * LOCKED_LINE_SPACING,
                         color: tc,
                         textShadow: "0 2px 12px rgba(0,0,0,0.95)",
                         whiteSpace: "pre-wrap",
@@ -835,11 +846,8 @@ export default function BulkCarousel() {
   const [renderProgress, setRenderProgress] = useState(0);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const logoImgRef = useRef<HTMLImageElement | null>(null);
-  const [lineSpacing, setLineSpacing] = useState(0.9);
-  const lineSpacingRef = useRef(0.9);
   const [heroWordColor, setHeroWordColor] = useState("#C4879A");
   const heroWordColorRef = useRef("#C4879A");
-  useEffect(() => { lineSpacingRef.current = lineSpacing; }, [lineSpacing]);
   useEffect(() => { heroWordColorRef.current = heroWordColor; }, [heroWordColor]);
 
   // Caption state
@@ -962,7 +970,7 @@ export default function BulkCarousel() {
         const bodyImg = coverImg;
 
         const blocks = makeBlocks(row);
-        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, lineSpacing, heroWordColor);
+        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, LOCKED_LINE_SPACING, heroWordColor);
         rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.slide1_hook, blocks, coverImg, bodyImg, thumbs });
         setRenderProgress(Math.round(((idx + 1) / activeIndexes.length) * 100));
       }
@@ -982,34 +990,19 @@ export default function BulkCarousel() {
     if (!selectedPreset) return;
     setItems(prev => prev.map(item => {
       if (item.id !== id) return item;
-      const thumbs = renderAllThumbs({ blocks: newBlocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, logoImgRef.current, selectedPreset, lineSpacingRef.current, heroWordColorRef.current);
+      const thumbs = renderAllThumbs({ blocks: newBlocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, logoImgRef.current, selectedPreset, LOCKED_LINE_SPACING, heroWordColorRef.current);
       return { ...item, blocks: newBlocks, thumbs };
     }));
   };
-
-  // Live re-render slide 1 thumbnails when line spacing changes
-  useEffect(() => {
-    if (phase !== "preview" || !selectedPreset || !items.length) return;
-    const id = setTimeout(() => {
-      const ls = lineSpacingRef.current;
-      setItems(prev => prev.map(item => {
-        const thumb1 = renderSlideCanvas(1, item.blocks, item.coverImg, item.bodyImg, logoImgRef.current, selectedPreset!, SCALE, false, ls, heroWordColorRef.current);
-        return { ...item, thumbs: [thumb1, ...item.thumbs.slice(1)] };
-      }));
-    }, 180);
-    return () => clearTimeout(id);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lineSpacing]);
 
   // Auto re-render all slides after any Vite HMR update
   useEffect(() => {
     if (!import.meta.hot) return;
     const handler = () => {
       if (phase !== "preview" || !selectedPreset || !items.length) return;
-      const ls = lineSpacingRef.current;
       setItems(prev => prev.map(item => ({
         ...item,
-        thumbs: renderAllThumbs(item, logoImgRef.current, selectedPreset!, ls, heroWordColorRef.current),
+        thumbs: renderAllThumbs(item, logoImgRef.current, selectedPreset!, LOCKED_LINE_SPACING, heroWordColorRef.current),
       })));
     };
     import.meta.hot.on("vite:afterUpdate", handler);
@@ -1160,7 +1153,7 @@ export default function BulkCarousel() {
             let targetLogo: HTMLImageElement | null = null;
             if (targetPreset?.logoUrl) { try { targetLogo = await loadImg(targetPreset.logoUrl); } catch {} }
             const thumbs = targetPreset
-              ? renderAllThumbs({ blocks: item.blocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, targetLogo, targetPreset, lineSpacingRef.current, heroWordColorRef.current)
+              ? renderAllThumbs({ blocks: item.blocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, targetLogo, targetPreset, LOCKED_LINE_SPACING, heroWordColorRef.current)
               : item.thumbs;
             const names = thumbs.map((_, j) => `carousel-${i + 1}-slide${j + 1}.png`);
             const imageUrls = await uploadDataUrls(thumbs, names);
@@ -1425,20 +1418,6 @@ export default function BulkCarousel() {
             </button>
             <h1 className="font-bold text-lg">Preview</h1>
             <span className="text-muted-foreground text-sm ml-1">{items.length} carousel{items.length !== 1 ? "s" : ""}</span>
-            <div className="flex items-center gap-2 ml-4 shrink-0">
-              <Label className="text-xs text-muted-foreground whitespace-nowrap">
-                Line spacing <span className="font-mono text-foreground/70 ml-1">{lineSpacing.toFixed(1)}</span>
-              </Label>
-              <input
-                type="range"
-                min={0.8}
-                max={2.0}
-                step={0.1}
-                value={lineSpacing}
-                onChange={e => setLineSpacing(Number(e.target.value))}
-                className="w-28 accent-sky-500"
-              />
-            </div>
             <div className="ml-auto flex gap-2">
               <Button variant="outline" size="sm" onClick={downloadAll}>
                 <Download className="w-4 h-4 mr-2" />Download All

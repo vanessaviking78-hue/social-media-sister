@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { usePresets, type ClientPreset } from "@/lib/use-presets";
 import { MusicPickerModal, type MusicTrack } from "@/components/music-picker-modal";
-import { renderSlideCanvas, makeBlocks, computeTuckedSubtitleY, SlideEditorModal, SCALE, type CsvRow, type Block } from "@/pages/bulk-carousel";
+import { renderSlideCanvas, makeBlocks, computeTuckedSubtitleY, SlideEditorModal, SCALE, LOCKED_LINE_SPACING, type CsvRow, type Block } from "@/pages/bulk-carousel";
 import JSZip from "jszip";
 import Papa from "papaparse";
 import { normalizeSlideCsvForHeaders, readFileAsText } from "@/lib/csv-format";
@@ -105,7 +105,11 @@ const blocksForRender = blocks
   .filter((b) => hasText || b.id !== "line")
   .map((b) => (b.id === "logo" ? { ...b, x: 0.17, y: 0.12, w: 0.26 } : b));
 const logoForSlide = i === 0 ? logoImg : null;
-out.push(renderSlideCanvas(n, blocksForRender, n === 1 ? img : null, n === 1 ? null : img, logoForSlide, p, SCALE, false, 1.2, accent, "#ffffff", overlay, 0));
+// Was hardcoded to 1.2 here, which is why these slides always rendered with
+// noticeably looser line spacing than the edit preview showed, and looser
+// than the main Bulk Carousel Creator besides. Locked to the same 0.9 as
+// everywhere else now.
+out.push(renderSlideCanvas(n, blocksForRender, n === 1 ? img : null, n === 1 ? null : img, logoForSlide, p, SCALE, false, LOCKED_LINE_SPACING, accent));
 }
 return out;
 }
