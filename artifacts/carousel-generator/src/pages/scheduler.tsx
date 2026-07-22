@@ -109,8 +109,10 @@ function postThumb(post: ScheduledPost): string | null {
   return null;
 }
 
-// A single draggable/droppable card in the Preview Feed grid.
-function FeedCard({ post, draggable, onDragStart }: { post: ScheduledPost; draggable: boolean; onDragStart: (e: React.DragEvent) => void }) {
+// A single draggable/droppable card in the Preview Feed grid and the Client
+// Grid. onDelete is optional so other, non-interactive uses of this card
+// (there are none right now, but might be later) don't have to wire one up.
+function FeedCard({ post, draggable, onDragStart, onDelete }: { post: ScheduledPost; draggable: boolean; onDragStart: (e: React.DragEvent) => void; onDelete?: () => void }) {
   const thumb = postThumb(post);
   const isVideo = post.postType === "reel" || post.postType === "video_carousel";
   return (
@@ -131,12 +133,12 @@ function FeedCard({ post, draggable, onDragStart }: { post: ScheduledPost; dragg
         <p className="text-[9px] text-white/90 truncate leading-tight">{post.clientName}</p>
       </div>
       {post.status === "published" && (
-        <span className="absolute top-0.5 right-0.5 bg-emerald-500/90 rounded-full p-0.5">
+        <span className="absolute top-0.5 right-0.5 bg-emerald-500/90 rounded-full p-0.5 group-hover:opacity-0 transition-opacity">
           <CheckCircle2 size={9} className="text-white" />
         </span>
       )}
       {post.status === "failed" && (
-        <span className="absolute top-0.5 right-0.5 bg-red-500/90 rounded-full p-0.5">
+        <span className="absolute top-0.5 right-0.5 bg-red-500/90 rounded-full p-0.5 group-hover:opacity-0 transition-opacity">
           <XCircle size={9} className="text-white" />
         </span>
       )}
@@ -144,6 +146,20 @@ function FeedCard({ post, draggable, onDragStart }: { post: ScheduledPost; dragg
         <span className="absolute top-0.5 left-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <GripVertical size={11} className="text-white/70" />
         </span>
+      )}
+      {onDelete && (
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (window.confirm(`Delete "${post.content.title || "this post"}"? This can't be undone.`)) onDelete();
+          }}
+          title="Delete this post"
+          className="absolute top-0.5 right-0.5 bg-black/70 hover:bg-red-600 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+        >
+          <Trash2 size={9} className="text-white" />
+        </button>
       )}
     </div>
   );
@@ -747,6 +763,7 @@ export default function Scheduler() {
                               post={post}
                               draggable={post.status === "pending"}
                               onDragStart={(e) => handleFeedDragStart(e, post)}
+                              onDelete={() => handleDelete(post.id)}
                             />
                           ))}
                         </div>
@@ -800,6 +817,7 @@ export default function Scheduler() {
                           post={post}
                           draggable={post.status === "pending"}
                           onDragStart={(e) => handleGridDragStart(e, post)}
+                          onDelete={() => handleDelete(post.id)}
                         />
                       </div>
                     ))}
