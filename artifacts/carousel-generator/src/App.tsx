@@ -32,6 +32,7 @@ import AboutMe from "@/pages/about-me";
 import AboutPublic from "@/pages/about-public";
 import SeamlessCarousel from "@/pages/seamless-caro-builder";
 import BackgroundBuilder from "@/pages/background-builder";
+import HighlightCovers from "@/pages/highlight-covers";
 import SelfieCarousels from "@/pages/selfie-carousels";
 import AiPortraitStudio from "@/pages/ai-portrait-studio";
 import Onboard from "@/pages/onboard";
@@ -124,6 +125,7 @@ function ProtectedRouter() {
       <Route path="/about-me" component={AboutMe} />
       <Route path="/seamless-carousel" component={SeamlessCarousel} />
       <Route path="/background-builder" component={BackgroundBuilder} />
+      <Route path="/highlight-covers" component={HighlightCovers} />
       <Route path="/selfie-carousels" component={SelfieCarousels} />
       <Route path="/ai-portrait-studio" component={AiPortraitStudio} />
       <Route path="/dm-automations" component={DmAutomations} />
