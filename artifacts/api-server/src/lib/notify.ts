@@ -97,6 +97,39 @@ export async function notifySubmission(opts: {
 }
 
 /**
+ * Sends a notification to NOTIFY_EMAIL whenever a client downloads a post's
+ * images from their portal. Fire-and-forget: never throws, never blocks the
+ * download itself, which happens entirely client side regardless of whether
+ * this email ever lands.
+ */
+export async function notifyDownload(opts: {
+  clientName: string;
+  title?: string;
+  fileCount?: number;
+}): Promise<void> {
+  const to = process.env.NOTIFY_EMAIL;
+  if (!to) return;
+  const transporter = getTransporter();
+  if (!transporter) return;
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  const client = opts.clientName || "A client";
+  const count = opts.fileCount && opts.fileCount > 0 ? opts.fileCount : 1;
+  const subject = `${client} downloaded content from their portal`;
+  const lines = [
+    `${client} just downloaded ${count} image${count === 1 ? "" : "s"} from their portal.`,
+    "",
+    opts.title ? `From: "${opts.title}"` : "",
+    "",
+    "The CyberSuite",
+  ].filter(Boolean);
+  try {
+    await transporter.sendMail({ from, to, subject, text: lines.join("\n") });
+  } catch (err) {
+    logger.warn({ err }, "Download notification email failed");
+  }
+}
+
+/**
  * Sends a notification to NOTIFY_EMAIL whenever a client rejects an
   * already-scheduled upcoming post from their portal, with their reason.
    * Fire-and-forget: never throws, never blocks the reject flow.
