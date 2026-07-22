@@ -101,16 +101,22 @@ async function fetchBuffer(url: string): Promise<Buffer> {
   return Buffer.from(await r.arrayBuffer());
 }
 
-// Strips the background off a photo using Photoroom's Remove Background API.
-// Needs PHOTOROOM_API_KEY set in Railway > Variables.
+// Strips the background off a photo using Pixian.AI's Remove Background API.
+// Switched over from Photoroom in July 2026, Photoroom's plans were locked
+// to a monthly renewal date with no way to top up mid-cycle, so running out
+// of images early meant being stuck until the 13th. Pixian is pay-as-you-go
+// with no renewal date and no lockout, and works out cheaper per image too.
+// Needs PIXIAN_API_ID and PIXIAN_API_SECRET set in Railway > Variables.
 async function removeBackground(photoBuffer: Buffer): Promise<Buffer> {
-  const apiKey = process.env.PHOTOROOM_API_KEY;
-  if (!apiKey) throw new Error("PHOTOROOM_API_KEY not set. Add it in Railway > Variables.");
+  const apiId = process.env.PIXIAN_API_ID;
+  const apiSecret = process.env.PIXIAN_API_SECRET;
+  if (!apiId || !apiSecret) throw new Error("PIXIAN_API_ID / PIXIAN_API_SECRET not set. Add them in Railway > Variables.");
   const form = new FormData();
-  form.append("image_file", new Blob([photoBuffer]), "photo.jpg");
-  const r = await fetch("https://sdk.photoroom.com/v1/segment", {
+  form.append("image", new Blob([photoBuffer]), "photo.jpg");
+  const auth = Buffer.from(`${apiId}:${apiSecret}`).toString("base64");
+  const r = await fetch("https://api.pixian.ai/api/v2/remove-background", {
     method: "POST",
-    headers: { "x-api-key": apiKey },
+    headers: { Authorization: `Basic ${auth}` },
     body: form,
   });
   if (!r.ok) {
