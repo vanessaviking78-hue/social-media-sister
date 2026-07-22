@@ -979,6 +979,18 @@ export default function Scheduler() {
                           <RefreshCw size={12} /> Retry now
                         </Button>
                       )}
+                      {(post.status === "pending" || post.status === "processing") && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            if (window.confirm(`Delete "${post.content.title || "this post"}"? This can't be undone.`)) handleDelete(post.id);
+                          }}
+                          className="text-red-400 hover:text-red-300 gap-1 h-7 text-xs"
+                        >
+                          <Trash2 size={12} /> Delete
+                        </Button>
+                      )}
                       {(post.status === "cancelled" || post.status === "failed" || post.status === "published") && (
                         <Button size="sm" variant="ghost" onClick={() => handleDelete(post.id)} className="text-red-400 hover:text-red-300 gap-1 h-7 text-xs">
                           <Trash2 size={12} /> Delete
