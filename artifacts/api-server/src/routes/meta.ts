@@ -526,6 +526,32 @@ setInterval(() => {
   }
 }, 5 * 60_000).unref();
 
+// Fetch failures on a freshly generated video URL are usually transient —
+// either the CDN hasn't finished propagating the file to every edge yet, or
+// the API server itself blipped for a moment (e.g. mid-deploy). Rather than
+// handing Meta a URL that might fail on their end (which comes back as a
+// cryptic "unable to fetch the video" on Facebook, or IG error 2207085),
+// verify our own server can reliably reach it a few times first, with a
+// short wait between attempts.
+async function waitForVideoReachable(videoUrl: string, attempts = 5, delayMs = 4000): Promise<boolean> {
+  for (let i = 0; i < attempts; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, delayMs));
+    try {
+      const res = await metaFetch(videoUrl, { method: "GET", headers: { Range: "bytes=0-1" } }, 15_000);
+      if (res.ok || res.status === 206) return true;
+    } catch {
+      // network error or timeout — treat as not yet reachable and retry
+    }
+  }
+  return false;
+}
+
+const FETCH_RELATED_ERROR_PHRASES = ["unable to fetch", "could not download", "download failed", "fetch the video", "media_data_download"];
+function isFetchRelatedError(msg: string): boolean {
+  const lower = msg.toLowerCase();
+  return FETCH_RELATED_ERROR_PHRASES.some((p) => lower.includes(p));
+}
+
 async function processReelJob(
   jobId: string,
   params: {
@@ -547,29 +573,53 @@ async function processReelJob(
   try {
     patch({ status: "processing" });
 
-    // Step 1: create Reel container
-    const containerBody: Record<string, unknown> = {
-      media_type: "REELS",
-      video_url: videoUrl,
-      caption,
-      access_token: token,
-    };
-    if (trial) {
-      containerBody.trial_params = JSON.stringify({
-        graduation_strategy: graduationStrategy,
-      });
+    // Confirm the video is actually reachable before handing the URL to
+    // Meta. Catches CDN propagation delay early with a clear message
+    // instead of a cryptic "unable to fetch" error further down the line.
+    const reachable = await waitForVideoReachable(videoUrl);
+    if (!reachable) {
+      throw new Error("Could not reach the video file before posting, it may still be propagating on the CDN. Please wait a minute and try again.");
     }
 
-    const containerRes = await metaFetch(
-      `${GRAPH}/${igId}/media`,
-      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(containerBody) },
-      60_000,
-    );
-    const containerData = await containerRes.json() as { id?: string; error?: { message?: string } };
-    if (!containerRes.ok || !containerData.id) {
-      throw new Error(`Reel container creation failed: ${containerData?.error?.message || JSON.stringify(containerData)}`);
+    // Step 1: create Reel container. Retried a few times if Meta itself
+    // reports it couldn't fetch the video — that's almost always the same
+    // transient CDN propagation delay, not a real problem with the file.
+    let containerId: string | undefined;
+    let containerErr = "";
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) {
+        logger.info({ jobId, attempt }, "Retrying reel container creation after a fetch-related error from Meta");
+        await new Promise((r) => setTimeout(r, 8_000));
+      }
+      const containerBody: Record<string, unknown> = {
+        media_type: "REELS",
+        video_url: videoUrl,
+        caption,
+        access_token: token,
+      };
+      if (trial) {
+        containerBody.trial_params = JSON.stringify({
+          graduation_strategy: graduationStrategy,
+        });
+      }
+      const containerRes = await metaFetch(
+        `${GRAPH}/${igId}/media`,
+        { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(containerBody) },
+        60_000,
+      );
+      const containerData = await containerRes.json() as { id?: string; error?: { message?: string } };
+      if (containerRes.ok && containerData.id) {
+        containerId = containerData.id;
+        break;
+      }
+      containerErr = containerData?.error?.message || JSON.stringify(containerData);
+      if (!isFetchRelatedError(containerErr)) {
+        throw new Error(`Reel container creation failed: ${containerErr}`);
+      }
     }
-    const containerId = containerData.id;
+    if (!containerId) {
+      throw new Error(`Reel container creation failed after retries: ${containerErr}`);
+    }
     logger.info({ jobId, containerId, igId }, "Reel container created");
 
     // Step 2: publish with retry loop.
