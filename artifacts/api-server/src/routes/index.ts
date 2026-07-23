@@ -51,6 +51,7 @@ import dailyFocusRouter from "./daily-focus";
 import captionGeneratorRouter from "./caption-generator";
 import backgroundBuilderRouter from "./background-builder";
 import highlightCoversRouter from "./highlight-covers";
+import veoRouter from "./veo";
 
 const router: IRouter = Router();
 
@@ -106,5 +107,6 @@ router.use(broadcastDraftsRouter);
 router.use(reportsRouter);
 router.use(dailyFocusRouter);
 router.use(captionGeneratorRouter);
+router.use(veoRouter);
 
 export default router;
