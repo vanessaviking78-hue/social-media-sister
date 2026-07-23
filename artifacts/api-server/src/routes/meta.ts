@@ -164,17 +164,17 @@ async function postToFacebook(
   const existing = await findRecentDuplicateFbPost(pageId, token, caption);
   if (existing) return existing;
 
-  if (imageUrls.length === 1) {
-    const res = await metaFetch(`${GRAPH}/${pageId}/photos`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: imageUrls[0], caption, access_token: token }),
-    }, 60_000);
-    const data = await res.json() as any;
-    if (!res.ok) throw new Error(`FB photo post failed (${res.status}): ${data?.error?.message || JSON.stringify(data)}`);
-    return data.post_id || data.id;
-  }
-
+  // Always upload the photo(s) unpublished first, then explicitly create a
+  // /feed post referencing them, for a single image too. Posting straight
+  // to /photos and letting Facebook auto-generate a News Feed story from
+  // the upload (the old single-image path here) is not reliable across
+  // every Page: for some Pages that auto-generation silently doesn't
+  // happen, the photo lands in the Page's Photos album but never appears
+  // on the feed, even though the API call itself reports success (it just
+  // returns the photo's own id with no post_id, which this code used to
+  // fall back to and treat as a success). Explicitly creating the /feed
+  // post is Meta's documented reliable path and guarantees a real, visible
+  // feed story every time regardless of that per-Page behaviour.
   const mediaFbids: { media_fbid: string }[] = [];
   for (const url of imageUrls) {
     const res = await metaFetch(`${GRAPH}/${pageId}/photos`, {
