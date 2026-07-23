@@ -22,10 +22,11 @@ router.use("/veo", requireAuth);
 // generation can take anywhere from 11 seconds to several minutes.
 router.post("/veo/generate", async (req: Request, res: Response) => {
   try {
-    const { prompt, aspectRatio = "9:16", tier = "lite", clientName } = req.body as {
+    const { prompt, aspectRatio = "9:16", tier = "lite", durationSeconds = "8", clientName } = req.body as {
       prompt?: string;
       aspectRatio?: "16:9" | "9:16";
       tier?: VeoTier;
+      durationSeconds?: "4" | "6" | "8";
       clientName?: string;
     };
     if (!prompt?.trim()) { res.status(400).json({ error: "prompt is required" }); return; }
@@ -35,7 +36,7 @@ router.post("/veo/generate", async (req: Request, res: Response) => {
 
     setImmediate(async () => {
       try {
-        await processVeoJob(jobId, prompt.trim(), aspectRatio, tier);
+        await processVeoJob(jobId, prompt.trim(), aspectRatio, tier, durationSeconds);
       } catch (err) {
         logger.error({ err, jobId }, "processVeoJob wrapper failed");
       }
