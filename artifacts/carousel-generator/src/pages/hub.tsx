@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video } from "lucide-react";
 
 const TOOLS = [
 {
@@ -102,6 +102,16 @@ description: "Send a ready-made post from the content library to every connected
 color: "from-orange-500/20 to-orange-500/5",
 border: "hover:border-orange-500/50",
 iconColor: "text-orange-400",
+},
+{
+href: "/veo-video",
+group: "content",
+icon: Video,
+name: "AI Video Generator",
+description: "Describe a video and generate it from scratch with Veo, then broadcast it straight out to every client.",
+color: "from-red-500/20 to-red-500/5",
+border: "hover:border-red-500/50",
+iconColor: "text-red-400",
 },
 {
 href: "/reports",
