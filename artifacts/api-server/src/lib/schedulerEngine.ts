@@ -98,9 +98,43 @@ async function postCarouselToIG(igId: string, token: string, imageUrls: string[]
     return igPublish(igId, token, data.id);
 }
 
-async function postCarouselToFB(pageId: string, token: string, imageUrls: string[], caption: string): Promise<string> {
+// Freshly generated carousel images can occasionally fail to fetch, or fetch
+// slowly, for a few seconds right after they're created (ImageKit CDN
+// propagation lag). Confirm our own server can reliably reach an image
+// before handing the URL to Facebook to fetch it server-side.
+async function waitForImageReachable(imageUrl: string, attempts = 5, delayMs = 3000): Promise<boolean> {
+  for (let i = 0; i < attempts; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, delayMs));
+    try {
+      const res = await fetchWithTimeout(imageUrl, { method: "GET", headers: { Range: "bytes=0-1" } }, 15000);
+      if (res.ok || res.status === 206) return true;
+    } catch {
+      // not reachable yet — retry
+    }
+  }
+  return false;
+}
+
+// Meta has occasionally reported a /feed post as created successfully (a
+// real post id back) but the post never actually renders on the Page's
+// timeline — the photo sits in the Page's Photos album (from the
+// unpublished upload step) with no visible feed story attached. Combined
+// with the settle delay and retry in postCarouselToFB below, this gives the
+// sequence a second, clean attempt with fresh photo uploads rather than
+// silently trusting the first result.
+async function verifyFbPostVisible(postId: string, token: string): Promise<boolean> {
+  try {
+    const res = await fetchWithTimeout(`${GRAPH}/${postId}?fields=id&access_token=${token}`, {}, 15000);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function attemptCarouselToFB(pageId: string, token: string, imageUrls: string[], caption: string): Promise<string> {
   const fbids: { media_fbid: string }[] = [];
   for (const url of imageUrls) {
+    await waitForImageReachable(url);
     const res = await fetchWithTimeout(`${GRAPH}/${pageId}/photos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -110,6 +144,11 @@ async function postCarouselToFB(pageId: string, token: string, imageUrls: string
     if (!res.ok || !data.id) throw new Error(`FB photo upload failed: ${data?.error?.message}`);
     fbids.push({ media_fbid: data.id });
   }
+  // Give Facebook's own systems a moment to settle each unpublished photo
+  // before referencing it in a /feed post — composing the feed post
+  // immediately back-to-back with the upload is where the "created but
+  // never shows on the timeline" behaviour has been traced to.
+  await new Promise((r) => setTimeout(r, 3000));
   const res = await fetchWithTimeout(`${GRAPH}/${pageId}/feed`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -118,6 +157,26 @@ async function postCarouselToFB(pageId: string, token: string, imageUrls: string
   const data = await res.json() as { id?: string; error?: { message?: string } };
   if (!res.ok || !data.id) throw new Error(`FB feed post failed: ${data?.error?.message}`);
   return data.id;
+}
+
+async function postCarouselToFB(pageId: string, token: string, imageUrls: string[], caption: string): Promise<string> {
+  let lastId: string | undefined;
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const id = await attemptCarouselToFB(pageId, token, imageUrls, caption);
+      const visible = await verifyFbPostVisible(id, token);
+      if (visible) return id;
+      lastId = id;
+      logger.warn({ pageId, id, attempt }, "FB carousel post created but didn't verify as visible — retrying with fresh photo uploads");
+      await new Promise((r) => setTimeout(r, 5000));
+    } catch (err) {
+      lastErr = err;
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 5000));
+    }
+  }
+  if (lastId) return lastId; // best effort — hand back the last id even if verification was inconclusive
+  throw lastErr instanceof Error ? lastErr : new Error("FB post failed after retries");
 }
 
 async function postReelToIG(igId: string, token: string, videoUrl: string, caption: string, isTrial: boolean, audioName?: string): Promise<string> {
