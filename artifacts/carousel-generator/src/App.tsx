@@ -61,6 +61,7 @@ import FounderWelcome from "@/pages/founder-welcome";
 import StrategyLibrary from "@/pages/strategy-library";
 import Brand from "@/pages/brand";
 import UploadSchedule from "@/pages/upload-schedule";
+import VeoVideo from "@/pages/veo-video";
 import BulkCarousel from "@/pages/bulk-carousel";
 import AnimatedCarousels from "@/pages/animated-carousels";
 import PersonalPage from "@/pages/personal-page";
@@ -137,6 +138,7 @@ function ProtectedRouter() {
       <Route path="/strategy-library" component={StrategyLibrary} />
       <Route path="/brand" component={Brand} />
       <Route path="/upload-schedule" component={UploadSchedule} />
+      <Route path="/veo-video" component={VeoVideo} />
       <Route path="/bulk-carousel" component={BulkCarousel} />
       <Route path="/animated-carousels" component={AnimatedCarousels} />
       <Route path="/personal-page" component={PersonalPage} />
