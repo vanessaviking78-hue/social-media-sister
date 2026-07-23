@@ -55,6 +55,11 @@ function ColourField({ label, value, onChange }: { label: string; value: string;
   );
 }
 
+// Small helper: wait ms milliseconds.
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export default function BackgroundBuilder() {
   const { presets } = usePresets();
   const [mode, setMode] = useState<"quick" | "custom">("quick");
@@ -139,13 +144,30 @@ export default function BackgroundBuilder() {
         const d = await r.json().catch(() => ({ error: "Generation failed" }));
         throw new Error(d.error || "Generation failed");
       }
-      const d = await r.json();
-      setResults(d.images || []);
-      const savedNote = d.autoSaved && sendClientName ? `, already saved to ${sendClientName}'s Seamless Carousels list` : "";
-      if (d.succeeded < d.requested) {
-        toast.warning(`${d.succeeded} of ${d.requested} generated, a couple didn't land, try again if you want the full set${savedNote}`);
+      const { jobId } = await r.json();
+
+      // The actual image generation runs in the background on the server,
+      // a full batch of Gemini calls can take longer than Netlify's ~30
+      // second proxy timeout even at max concurrency, so the POST above only
+      // hands back a jobId. Poll the status route until it's done instead of
+      // waiting on the original request.
+      let status: any = null;
+      for (;;) {
+        await sleep(2000);
+        const statusRes = await fetch(`${BASE}/api/background-builder/generate-batch/${jobId}/status`, { headers: authHeaders() });
+        status = await statusRes.json().catch(() => null);
+        if (!statusRes.ok || !status) throw new Error(status?.error || "Lost track of that generation job, please try again");
+        if (status.status === "done" || status.status === "error") break;
+      }
+
+      if (status.status === "error") throw new Error(status.error || "Generation failed");
+
+      setResults(status.images || []);
+      const savedNote = status.autoSaved && sendClientName ? `, already saved to ${sendClientName}'s Seamless Carousels list` : "";
+      if (status.succeeded < status.requested) {
+        toast.warning(`${status.succeeded} of ${status.requested} generated, a couple didn't land, try again if you want the full set${savedNote}`);
       } else {
-        toast.success(`${d.succeeded} backgrounds ready${savedNote}`);
+        toast.success(`${status.succeeded} backgrounds ready${savedNote}`);
       }
     } catch (e: any) {
       toast.error(e.message || "Generation failed");
