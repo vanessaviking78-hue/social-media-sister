@@ -5,6 +5,8 @@ import { Toaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthGate } from "@/components/auth-gate";
 import NotFound from "@/pages/not-found";
+import NinetyNineClub from "@/pages/ninety-nine-club";
+import Coffee from "@/pages/coffee";
 import DailyFocus from "@/pages/daily-focus";
 import Hub from "@/pages/hub";
 import Home from "@/pages/home";
@@ -193,6 +195,8 @@ function AppContent() {
   const [isBlogPublic] = useRoute("/socialmediasister");
   const [isBundle, bundleParams] = useRoute("/bundle/:token");
   const [isFounderSignup] = useRoute("/founder-signup");
+    const [isNinetyNineClub] = useRoute("/99club");
+    const [isCoffee] = useRoute("/coffee");
   const [isFounderWelcome] = useRoute("/founder-welcome");
   const [isTrialBundle] = useRoute("/trialbundle");
   const [isContentPreview, contentPreviewParams] = useRoute("/preview/:clientSlug");
@@ -263,6 +267,12 @@ function AppContent() {
   if (isFounderSignup) {
     return <FounderSignup />;
   }
+    if (isNinetyNineClub) {
+          return <NinetyNineClub />;
+    }
+    if (isCoffee) {
+          return <Coffee />;
+    }
   if (isFounderWelcome) {
     return <FounderWelcome />;
   }
