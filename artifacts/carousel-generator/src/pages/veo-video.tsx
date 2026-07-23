@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Sparkles, Send, Loader2, Video as VideoIcon } from "lucide-react";
+import { ArrowLeft, Sparkles, Send, Loader2, Video as VideoIcon, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -232,6 +232,14 @@ export default function VeoVideo() {
                 controls
                 playsInline
               />
+
+              <a
+                href={`${BASE}${job.videoUrl}`}
+                download={`veo-video-${Date.now()}.mp4`}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-zinc-900 hover:border-white/20 text-sm font-medium text-zinc-200 py-2 transition-colors"
+              >
+                <Download size={16} /> Download video
+              </a>
 
               <div className="border-t border-white/10 pt-4">
                 <h2 className="text-sm font-semibold text-zinc-200 mb-3">Broadcast this video</h2>
