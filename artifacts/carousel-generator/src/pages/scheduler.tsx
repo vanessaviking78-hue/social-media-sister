@@ -394,7 +394,7 @@ function ScheduleDialog({ presets, onClose, onSaved, editing }: ScheduleDialogPr
 
 export default function Scheduler() {
   const { presets } = usePresets();
-  const [tab, setTab] = useState<"upcoming" | "published" | "failed" | "dashboard" | "feed" | "grid" | "waitingroom">("upcoming");
+  const [tab, setTab] = useState<"upcoming" | "published" | "failed" | "dashboard" | "feed" | "grid" | "waitingroom" | "doubleposting">("upcoming");
   const [posts, setPosts] = useState<ScheduledPost[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -584,6 +584,25 @@ export default function Scheduler() {
     return true;
   });
 
+  // Double Posting: any client with more than one post due on the same
+  // calendar day. Easy to end up with by accident when scheduling in
+  // batches, this groups pending/processing posts by client + date and
+  // keeps only the groups with a clash, so they jump out immediately.
+  const doublePostingGroups = (() => {
+    const map = new Map<string, ScheduledPost[]>();
+    for (const p of posts) {
+      if (p.status !== "pending" && p.status !== "processing") continue;
+      if (filterClient !== "all" && p.clientName !== filterClient) continue;
+      const key = `${p.clientName}|${p.scheduledAt.slice(0, 10)}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(p);
+    }
+    return Array.from(map.entries())
+      .filter(([, group]) => group.length >= 2)
+      .map(([key, group]) => [key, group.sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt))] as [string, ScheduledPost[]])
+      .sort((a, b) => a[1][0].scheduledAt.localeCompare(b[1][0].scheduledAt));
+  })();
+
   const upcoming = posts.filter((p) => p.status === "pending" || p.status === "processing").length;
   const published = posts.filter((p) => p.status === "published").length;
   const failed = posts.filter((p) => p.status === "failed").length;
@@ -646,7 +665,7 @@ export default function Scheduler() {
 
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <div className="flex bg-zinc-900 border border-zinc-800 rounded-lg p-1 gap-1">
-            {(["upcoming", "published", "failed", "feed", "waitingroom", "grid", "dashboard"] as const).map((t) => (
+            {(["upcoming", "published", "failed", "feed", "waitingroom", "doubleposting", "grid", "dashboard"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -659,6 +678,7 @@ export default function Scheduler() {
                 {t === "failed" && `Failed ${failed > 0 ? `(${failed})` : ""}`}
                 {t === "feed" && "Preview Feed"}
                 {t === "waitingroom" && `Waiting Room ${posts.filter((p) => p.status === "draft").length > 0 ? `(${posts.filter((p) => p.status === "draft").length})` : ""}`}
+                {t === "doubleposting" && `Double Posting ${doublePostingGroups.length > 0 ? `(${doublePostingGroups.length})` : ""}`}
                 {t === "grid" && "Client Grid"}
                 {t === "dashboard" && "Comparison"}
               </button>
@@ -918,6 +938,51 @@ export default function Scheduler() {
                 </div>
               </div>
             ))}
+          </div>
+        ) : tab === "doubleposting" ? (
+          <div className="space-y-3">
+            <p className="text-xs text-zinc-500">
+              Flags any client with more than one post due on the same calendar day, easy to end up with two by accident when scheduling in batches. Reschedule one from here to clear it.
+            </p>
+            {!loading && doublePostingGroups.length === 0 && (
+              <div className="text-center py-16 text-zinc-500 bg-zinc-900 border border-zinc-800 rounded-xl">
+                <CheckCircle2 size={40} className="mx-auto mb-3 opacity-30" />
+                <p className="text-sm">No clashes. Every client has at most one post due per day.</p>
+              </div>
+            )}
+            {!loading && doublePostingGroups.map(([key, group]) => {
+              const [clientName, date] = key.split("|");
+              return (
+                <div key={key} className="bg-zinc-900 border border-amber-700/50 rounded-xl overflow-hidden">
+                  <div className="px-4 py-2.5 bg-amber-900/20 border-b border-amber-800/40 flex items-center justify-between flex-wrap gap-1">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle size={14} className="text-amber-400" />
+                      <span className="font-medium text-sm text-white">{clientName}</span>
+                      <span className="text-xs text-zinc-400">{new Date(date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</span>
+                    </div>
+                    <span className="text-xs text-amber-300">{group.length} posts due</span>
+                  </div>
+                  <div className="divide-y divide-zinc-800">
+                    {group.map((post) => (
+                      <div key={post.id} className="p-3 flex items-center gap-3">
+                        <div className="shrink-0">
+                          {post.postType === "reel"
+                            ? <Film size={16} className="text-purple-400" />
+                            : <Layers size={16} className="text-blue-400" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-zinc-200 truncate">{post.content.title || "Untitled"}</div>
+                          <div className="text-xs text-zinc-500 flex items-center gap-1 mt-0.5"><Clock size={11} />{fmtDate(post.scheduledAt)}</div>
+                        </div>
+                        <Button size="sm" variant="ghost" onClick={() => setEditing(post)} className="text-pink-400 hover:text-pink-300 gap-1 h-7 text-xs shrink-0">
+                          <Edit2 size={12} /> Reschedule
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="space-y-2">
