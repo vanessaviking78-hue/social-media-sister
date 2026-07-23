@@ -12,6 +12,7 @@ import { nameBucketOffsetMinutes } from "@/lib/broadcast-stagger";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 type AspectRatio = "9:16" | "16:9";
+type Duration = "4" | "6" | "8";
 type JobStatus = "queued" | "submitting" | "processing" | "saving" | "done" | "failed";
 
 interface VeoJobResponse {
@@ -32,6 +33,7 @@ export default function VeoVideo() {
 
   const [prompt, setPrompt] = useState("");
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>("9:16");
+  const [duration, setDuration] = useState<Duration>("4");
   const [jobId, setJobId] = useState<string | null>(null);
   const [job, setJob] = useState<VeoJobResponse | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -77,7 +79,7 @@ export default function VeoVideo() {
       const res = await fetch(`${BASE}/api/veo/generate`, {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ prompt: prompt.trim(), aspectRatio, tier: "lite" }),
+        body: JSON.stringify({ prompt: prompt.trim(), aspectRatio, tier: "lite", durationSeconds: duration }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to start generation");
@@ -178,6 +180,27 @@ export default function VeoVideo() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div>
+            <Label className="text-xs text-zinc-500 mb-1.5 block">Length</Label>
+            <div className="flex gap-2">
+              {(["4", "6", "8"] as Duration[]).map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setDuration(d)}
+                  disabled={generating}
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium border transition-all ${
+                    duration === d
+                      ? "bg-orange-600/20 border-orange-500/50 text-orange-300"
+                      : "bg-zinc-900 border-white/10 text-zinc-500 hover:border-white/20"
+                  }`}
+                >
+                  {d}s
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-zinc-500 mt-1.5">Veo only generates 4, 6 or 8 second clips.</p>
           </div>
 
           <Button
