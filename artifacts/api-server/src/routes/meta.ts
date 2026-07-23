@@ -155,15 +155,47 @@ async function findRecentDuplicateFbPost(pageId: string, token: string, caption:
   return null;
 }
 
-async function postToFacebook(
+// Freshly generated carousel images can occasionally fail to fetch, or fetch
+// slowly, for a few seconds right after they're created (ImageKit CDN
+// propagation lag — the same class of issue already hardened against for
+// reels below with waitForVideoReachable). Confirm our own server can
+// reliably reach an image before handing the URL to Facebook to fetch.
+async function waitForImageReachable(imageUrl: string, attempts = 5, delayMs = 3000): Promise<boolean> {
+  for (let i = 0; i < attempts; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, delayMs));
+    try {
+      const res = await metaFetch(imageUrl, { method: "GET", headers: { Range: "bytes=0-1" } }, 15_000);
+      if (res.ok || res.status === 206) return true;
+    } catch {
+      // not reachable yet — retry
+    }
+  }
+  return false;
+}
+
+// Meta has occasionally reported a /feed post as created successfully (200
+// OK, a real post id back) but the post never actually renders on the
+// Page's timeline — the photo sits in the Page's Photos album (from the
+// unpublished upload step) with no visible feed story attached to it. The
+// id itself resolves fine via a plain GET even when this happens, so this
+// check alone can't catch it, but combined with the settle delay and retry
+// in postToFacebook below it gives the sequence a second, clean attempt
+// with fresh photo uploads rather than silently trusting the first result.
+async function verifyFbPostVisible(postId: string, token: string): Promise<boolean> {
+  try {
+    const res = await metaFetch(`${GRAPH}/${postId}?fields=id&access_token=${token}`, {}, 15_000);
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function attemptFacebookPost(
   pageId: string,
   token: string,
   imageUrls: string[],
-  caption: string
+  caption: string,
 ): Promise<string> {
-  const existing = await findRecentDuplicateFbPost(pageId, token, caption);
-  if (existing) return existing;
-
   // Always upload the photo(s) unpublished first, then explicitly create a
   // /feed post referencing them, for a single image too. Posting straight
   // to /photos and letting Facebook auto-generate a News Feed story from
@@ -177,6 +209,7 @@ async function postToFacebook(
   // feed story every time regardless of that per-Page behaviour.
   const mediaFbids: { media_fbid: string }[] = [];
   for (const url of imageUrls) {
+    await waitForImageReachable(url);
     const res = await metaFetch(`${GRAPH}/${pageId}/photos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -186,6 +219,14 @@ async function postToFacebook(
     if (!res.ok) throw new Error(`FB photo upload failed (${res.status}): ${data?.error?.message || JSON.stringify(data)}`);
     mediaFbids.push({ media_fbid: data.id });
   }
+
+  // Give Facebook's own systems a moment to settle each unpublished photo
+  // before referencing it in a /feed post. Composing the feed post
+  // immediately back-to-back with the upload is where the "created but
+  // never shows on the timeline" behaviour has been traced to — the media
+  // object doesn't always seem fully committed on Meta's side yet when
+  // /feed tries to attach it.
+  await new Promise((r) => setTimeout(r, 3000));
 
   const feedRes = await metaFetch(`${GRAPH}/${pageId}/feed`, {
     method: "POST",
@@ -198,7 +239,37 @@ async function postToFacebook(
   }, 60_000);
   const feedData = await feedRes.json() as any;
   if (!feedRes.ok) throw new Error(`FB feed post failed (${feedRes.status}): ${feedData?.error?.message || JSON.stringify(feedData)}`);
-  return feedData.id;
+  return feedData.id as string;
+}
+
+async function postToFacebook(
+  pageId: string,
+  token: string,
+  imageUrls: string[],
+  caption: string
+): Promise<string> {
+  const existing = await findRecentDuplicateFbPost(pageId, token, caption);
+  if (existing) return existing;
+
+  let lastId: string | undefined;
+  let lastErr: unknown;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const id = await attemptFacebookPost(pageId, token, imageUrls, caption);
+      const visible = await verifyFbPostVisible(id, token);
+      if (visible) return id;
+      lastId = id;
+      logger.warn({ pageId, id, attempt }, "FB post created but didn't verify as visible — retrying with fresh photo uploads");
+      await new Promise((r) => setTimeout(r, 5_000));
+    } catch (err) {
+      lastErr = err;
+      if (attempt === 0) {
+        await new Promise((r) => setTimeout(r, 5_000));
+      }
+    }
+  }
+  if (lastId) return lastId; // best effort — hand back the last id even if verification was inconclusive
+  throw lastErr instanceof Error ? lastErr : new Error("FB post failed after retries");
 }
 
 async function igPostComment(igMediaId: string, token: string, commentText: string): Promise<void> {
