@@ -32,6 +32,15 @@ const FONT_PRESETS = [
     previewSize: "text-lg",
     tracking: "",
   },
+  {
+    id: "editorial",
+    fontName: "Lora",
+    role: "Title / editorial serif",
+    headingValue: "'Lora', serif",
+    bodyValue: "'Work Sans', sans-serif",
+    previewSize: "text-xl",
+    tracking: "",
+  },
 ] as const;
 
 export function FontSwitcher({ headingFont, onHeadingChange, onBodyChange }: FontSwitcherProps) {
