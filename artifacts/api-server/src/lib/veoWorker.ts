@@ -82,7 +82,7 @@ async function submitVeoJob(prompt: string, aspectRatio: "16:9" | "9:16", model:
     headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
     body: JSON.stringify({
       instances: [{ prompt }],
-      parameters: { aspectRatio, durationSeconds },
+      parameters: { aspectRatio, durationSeconds: Number(durationSeconds) },
     }),
   });
   const data = await safeJson<StartOperationResponse>(res, "Veo submission");
