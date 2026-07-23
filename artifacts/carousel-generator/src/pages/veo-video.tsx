@@ -1,10 +1,17 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Sparkles, Send, Loader2, Video as VideoIcon, Download } from "lucide-react";
+import { ArrowLeft, Sparkles, Send, Loader2, Video as VideoIcon, Download, Eye, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { usePresets } from "@/lib/use-presets";
 import { nameBucketOffsetMinutes } from "@/lib/broadcast-stagger";
@@ -46,9 +53,19 @@ export default function VeoVideo() {
   const [time, setTime] = useState("09:00");
   const [platforms, setPlatforms] = useState<Set<"instagram" | "facebook">>(new Set(["instagram", "facebook"]));
   const [broadcasting, setBroadcasting] = useState(false);
+  const [savingToWaitingRoom, setSavingToWaitingRoom] = useState(false);
+
+  // Trial reel — posts immediately to a single client, privately, for review
+  // before it graduates to a real published Reel.
+  const [trialPresetId, setTrialPresetId] = useState("");
+  const [trialPosting, setTrialPosting] = useState(false);
+  const trialPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+      if (trialPollRef.current) clearInterval(trialPollRef.current);
+    };
   }, []);
 
   const pollJob = useCallback((id: string) => {
@@ -88,6 +105,94 @@ export default function VeoVideo() {
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Failed to start generation");
       setGenerating(false);
+    }
+  };
+
+  const pollTrialJob = useCallback((id: string) => {
+    if (trialPollRef.current) clearInterval(trialPollRef.current);
+    trialPollRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`${BASE}/api/meta/push-reel/${id}/status`, { headers: authHeaders() });
+        if (!res.ok) return;
+        const data: { status: string; error?: string } = await res.json();
+        if (data.status === "finished" || data.status === "error") {
+          if (trialPollRef.current) clearInterval(trialPollRef.current);
+          setTrialPosting(false);
+          if (data.status === "error") toast.error(data.error || "Trial reel failed");
+          else toast.success("Trial reel posted. Check Instagram to review before graduating.");
+        }
+      } catch {
+        // transient network hiccup — next tick will retry
+      }
+    }, 4000);
+  }, []);
+
+  const handleTrialReel = async () => {
+    if (!job?.videoUrl) return;
+    if (!trialPresetId) { toast.error("Pick a client for the trial reel."); return; }
+    if (!caption.trim()) { toast.error("Write a caption first."); return; }
+
+    setTrialPosting(true);
+    try {
+      const absoluteVideoUrl = `${window.location.origin}${BASE}${job.videoUrl}`;
+      const res = await fetch(`${BASE}/api/meta/push-reel`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          videoUrl: absoluteVideoUrl,
+          caption: caption.trim(),
+          presetId: Number(trialPresetId),
+          trial: true,
+          graduationStrategy: "MANUAL",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to post trial reel");
+      toast.loading("Posting trial reel... this can take a minute or two.");
+      pollTrialJob(data.jobId);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to post trial reel");
+      setTrialPosting(false);
+    }
+  };
+
+  const handleSaveToWaitingRoom = async () => {
+    if (!job?.videoUrl) return;
+    if (selectedPresetIds.size === 0) { toast.error("Select at least one client."); return; }
+    if (!caption.trim()) { toast.error("Write a caption first."); return; }
+
+    setSavingToWaitingRoom(true);
+    const toastId = toast.loading(`Saving to Waiting Room for ${selectedPresetIds.size} clients...`);
+    try {
+      const targetIds = Array.from(selectedPresetIds);
+      for (const presetId of targetIds) {
+        const res = await fetch(`${BASE}/api/scheduler/posts`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({
+            presetId,
+            postType: "reel",
+            content: {
+              videoUrl: job.videoUrl,
+              caption: caption.trim(),
+              title: `AI Video — ${new Date().toLocaleDateString()}`,
+              platforms: Array.from(platforms),
+            },
+            status: "draft",
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({ error: "Saving failed" }));
+          throw new Error(data.error || "Saving failed");
+        }
+      }
+      toast.success(`Saved to Waiting Room for ${targetIds.length} clients. Pick a date for each whenever you're ready.`, { id: toastId });
+      setSelectedPresetIds(new Set());
+      setCaption("");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong", { id: toastId });
+    } finally {
+      setSavingToWaitingRoom(false);
     }
   };
 
@@ -242,6 +347,36 @@ export default function VeoVideo() {
               </a>
 
               <div className="border-t border-white/10 pt-4">
+                <h2 className="text-sm font-semibold text-zinc-200 mb-3">Trial reel</h2>
+                <p className="text-[11px] text-zinc-500 mb-2.5">
+                  Posts privately to one client's Instagram straight away, for you or them to review before it graduates to a real published Reel.
+                </p>
+                <div className="flex gap-2">
+                  <Select value={trialPresetId} onValueChange={setTrialPresetId}>
+                    <SelectTrigger className="bg-zinc-900 border-white/10 text-zinc-300 text-sm flex-1">
+                      <SelectValue placeholder="Trial reel for..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {presets.map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={handleTrialReel}
+                    disabled={trialPosting || !trialPresetId || !caption.trim()}
+                    className="bg-zinc-800 hover:bg-zinc-700 border border-white/10 text-white gap-2 shrink-0"
+                  >
+                    {trialPosting ? <Loader2 size={16} className="animate-spin" /> : <Eye size={16} />}
+                    Trial reel
+                  </Button>
+                </div>
+                {!caption.trim() && (
+                  <p className="text-[11px] text-zinc-600 mt-1.5">Write a caption below first, it's shared with the trial reel and broadcast.</p>
+                )}
+              </div>
+
+              <div className="border-t border-white/10 pt-4">
                 <h2 className="text-sm font-semibold text-zinc-200 mb-3">Broadcast this video</h2>
 
                 <div className="space-y-3">
@@ -311,17 +446,28 @@ export default function VeoVideo() {
                   </div>
 
                   <p className="text-[11px] text-zinc-500">
-                    Sent to every client ticked above, each lands in its own Scheduler queue, staggered a few minutes apart by client name so they don't all post at once.
+                    Broadcast sends it straight to every client ticked above at the date and time set, staggered a few minutes apart by client name so they don't all post at once. Save to Waiting Room parks it with no date attached, pick a slot for each client later from the Scheduler.
                   </p>
 
-                  <Button
-                    onClick={handleBroadcast}
-                    disabled={broadcasting || selectedPresetIds.size === 0 || !caption.trim() || !date}
-                    className="w-full bg-orange-600 hover:bg-orange-500 text-white gap-2"
-                  >
-                    {broadcasting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                    {broadcasting ? "Queuing..." : `Broadcast to ${selectedPresetIds.size || ""} client${selectedPresetIds.size === 1 ? "" : "s"}`}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleSaveToWaitingRoom}
+                      disabled={savingToWaitingRoom || broadcasting || selectedPresetIds.size === 0 || !caption.trim()}
+                      variant="outline"
+                      className="flex-1 border-white/15 text-zinc-300 hover:bg-white/5 gap-2"
+                    >
+                      {savingToWaitingRoom ? <Loader2 size={16} className="animate-spin" /> : <Clock size={16} />}
+                      {savingToWaitingRoom ? "Saving..." : "Save to Waiting Room"}
+                    </Button>
+                    <Button
+                      onClick={handleBroadcast}
+                      disabled={broadcasting || savingToWaitingRoom || selectedPresetIds.size === 0 || !caption.trim() || !date}
+                      className="flex-1 bg-orange-600 hover:bg-orange-500 text-white gap-2"
+                    >
+                      {broadcasting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                      {broadcasting ? "Queuing..." : `Broadcast to ${selectedPresetIds.size || ""} client${selectedPresetIds.size === 1 ? "" : "s"}`}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
