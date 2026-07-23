@@ -249,6 +249,39 @@ export default function Broadcasts() {
     }
   };
 
+  // Builds and uploads one client's branded slides. Pulled out so it can be
+  // fired off for every connected client at once instead of one after
+  // another, same fix as the Background Builder concurrency change.
+  const buildTopicDraftForClient = async (
+    preset: ClientPreset,
+    topic: Topic,
+    blocks: ReturnType<typeof makeBlocks>,
+    topicImg: HTMLImageElement | null
+  ) => {
+    let logoImg: HTMLImageElement | null = null;
+    if ((preset as any).logoUrl) {
+      try { logoImg = await loadImg((preset as any).logoUrl); } catch {}
+    }
+    const slideUrls = renderAllThumbs({ blocks, coverImg: topicImg, bodyImg: topicImg } as any, logoImg, preset, 0.9);
+    const images = slideUrls.map((url, i) => ({ name: `slide-${i + 1}.png`, base64: url }));
+    const uploadRes = await fetch(`${BASE}/api/content/upload-image`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images }),
+    });
+    if (!uploadRes.ok) throw new Error("Image upload failed");
+    const uploadData = await uploadRes.json();
+    const imageUrls = (uploadData.results || []).map((x: any) => x.url).filter(Boolean);
+    return {
+      presetId: (preset as any).id,
+      clientName: (preset as any).name || "",
+      topicId: topic.id,
+      imageUrls,
+      caption: `${topic.slide1Hook}\n\n${topic.slide4Cta}`,
+      title: topic.slide1Hook.slice(0, 60),
+    };
+  };
+
   const broadcast = async (topic: Topic) => {
     if (connectedClients.length === 0) {
       toast.error("No connected clients to broadcast to.");
@@ -262,38 +295,24 @@ export default function Broadcasts() {
     if (topic.imageUrl) {
       try { topicImg = await loadImg(topic.imageUrl); } catch {}
     }
-    const draftRows: any[] = [];
-    let failCount = 0;
-    for (const preset of connectedClients as ClientPreset[]) {
-      try {
-        let logoImg: HTMLImageElement | null = null;
-        if ((preset as any).logoUrl) {
-          try { logoImg = await loadImg((preset as any).logoUrl); } catch {}
+
+    // Every client's slides render and upload at the same time instead of
+    // one after another, so a 40-client broadcast takes as long as the
+    // slowest single client rather than the sum of all of them.
+    const results = await Promise.allSettled(
+      (connectedClients as ClientPreset[]).map(async (preset) => {
+        try {
+          return await buildTopicDraftForClient(preset, topic, blocks, topicImg);
+        } finally {
+          setProgress((p) => ({ ...p, done: p.done + 1 }));
         }
-        const slideUrls = renderAllThumbs({ blocks, coverImg: topicImg, bodyImg: topicImg } as any, logoImg, preset, 0.9);
-        const images = slideUrls.map((url, i) => ({ name: `slide-${i + 1}.png`, base64: url }));
-        const uploadRes = await fetch(`${BASE}/api/content/upload-image`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ images }),
-        });
-        if (!uploadRes.ok) throw new Error("Image upload failed");
-        const uploadData = await uploadRes.json();
-        const imageUrls = (uploadData.results || []).map((x: any) => x.url).filter(Boolean);
-        draftRows.push({
-          presetId: (preset as any).id,
-          clientName: (preset as any).name || "",
-          topicId: topic.id,
-          imageUrls,
-          caption: `${topic.slide1Hook}\n\n${topic.slide4Cta}`,
-          title: topic.slide1Hook.slice(0, 60),
-        });
-      } catch {
-        failCount++;
-      } finally {
-        setProgress((p) => ({ ...p, done: p.done + 1 }));
-      }
-    }
+      })
+    );
+    const draftRows = results
+      .filter((r): r is PromiseFulfilledResult<any> => r.status === "fulfilled")
+      .map((r) => r.value);
+    const failCount = results.length - draftRows.length;
+
     if (draftRows.length > 0) {
       try {
         const r = await fetch(`${BASE}/api/broadcast-drafts/bulk`, {
@@ -329,6 +348,39 @@ export default function Broadcasts() {
     setSingleImgFile(null);
     setSingleImgPreview("");
     setSingleImgContext("");
+  };
+
+  // Same concurrency fix applied to the single-photo broadcast path: build
+  // and upload every client's branded copy at once rather than in sequence.
+  const buildSingleImageDraftForClient = async (
+    preset: ClientPreset,
+    blocks: ReturnType<typeof makeBlocks>,
+    baseImg: HTMLImageElement,
+    caption: string
+  ) => {
+    let logoImg: HTMLImageElement | null = null;
+    if ((preset as any).logoUrl) {
+      try { logoImg = await loadImg((preset as any).logoUrl); } catch {}
+    }
+    const slideUrls = renderAllThumbs({ blocks, coverImg: baseImg, bodyImg: baseImg } as any, logoImg, preset, 0.9);
+    const brandedDataUrl = slideUrls[0];
+    const brandedUploadRes = await fetch(`${BASE}/api/content/upload-image`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images: [{ name: `single-${Date.now()}-${(preset as any).id}.png`, base64: brandedDataUrl }] }),
+    });
+    if (!brandedUploadRes.ok) throw new Error("Branded image upload failed");
+    const brandedUploadData = await brandedUploadRes.json();
+    const brandedUrl = brandedUploadData?.results?.[0]?.url;
+    if (!brandedUrl) throw new Error("No branded URL returned");
+    return {
+      presetId: (preset as any).id,
+      clientName: (preset as any).name || "",
+      topicId: null,
+      imageUrls: [brandedUrl],
+      caption,
+      title: caption.slice(0, 60),
+    };
   };
 
   const broadcastSingleImage = async () => {
@@ -372,37 +424,13 @@ export default function Broadcasts() {
       const blankRow: CsvRow = { slide1_hook: "", slide1_subtitle: "", slide2_body: "", slide3_body: "", slide4_cta: "" };
       const blocks = makeBlocks(blankRow);
 
-      const draftRows: any[] = [];
-      let failCount = 0;
-      for (const preset of connectedClients as ClientPreset[]) {
-        try {
-          let logoImg: HTMLImageElement | null = null;
-          if ((preset as any).logoUrl) {
-            try { logoImg = await loadImg((preset as any).logoUrl); } catch {}
-          }
-          const slideUrls = renderAllThumbs({ blocks, coverImg: baseImg, bodyImg: baseImg } as any, logoImg, preset, 0.9);
-          const brandedDataUrl = slideUrls[0];
-          const brandedUploadRes = await fetch(`${BASE}/api/content/upload-image`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ images: [{ name: `single-${Date.now()}.png`, base64: brandedDataUrl }] }),
-          });
-          if (!brandedUploadRes.ok) throw new Error("Branded image upload failed");
-          const brandedUploadData = await brandedUploadRes.json();
-          const brandedUrl = brandedUploadData?.results?.[0]?.url;
-          if (!brandedUrl) throw new Error("No branded URL returned");
-          draftRows.push({
-            presetId: (preset as any).id,
-            clientName: (preset as any).name || "",
-            topicId: null,
-            imageUrls: [brandedUrl],
-            caption,
-            title: caption.slice(0, 60),
-          });
-        } catch {
-          failCount++;
-        }
-      }
+      const results = await Promise.allSettled(
+        (connectedClients as ClientPreset[]).map((preset) => buildSingleImageDraftForClient(preset, blocks, baseImg, caption))
+      );
+      const draftRows = results
+        .filter((r): r is PromiseFulfilledResult<any> => r.status === "fulfilled")
+        .map((r) => r.value);
+      const failCount = results.length - draftRows.length;
 
       if (draftRows.length > 0) {
         const r = await fetch(`${BASE}/api/broadcast-drafts/bulk`, {
