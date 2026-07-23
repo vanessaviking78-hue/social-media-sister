@@ -37,14 +37,15 @@ const TARGET_HEIGHT = 1440;
 
 const MAX_BATCH = 12;
 const DEFAULT_BATCH = 10;
-// Was 4. Netlify's proxy in front of the API times a request out at roughly
-// 26 to 30 seconds. At concurrency 4, a batch of 10 needs three rounds of
-// image generation (10 images over 4 workers), which measured out at 40+
-// seconds end to end, well past that window, so the browser got a 504 and
-// showed "Generation failed" even though Railway carried on and finished
-// the images anyway (and auto-saved them if a client was picked). Running
-// every image in the batch at once, one round instead of three, keeps the
-// whole request comfortably inside the proxy's timeout regardless of count.
+// Running every image in the batch at once (one round instead of several)
+// was the first fix here, but it turned out not to be enough on its own: a
+// round of concurrent Gemini image calls is bound by whatever the single
+// slowest image in that round takes, not by how many rounds there are, and
+// a 2K 21:9 image can comfortably take longer than Netlify's ~26-30 second
+// proxy timeout by itself. So the request would still 504 even though
+// Railway kept working and finished the images anyway. The actual fix is
+// below: the POST returns a jobId immediately and the real generation runs
+// in the background, same pattern as the Meta reel job queue.
 const BATCH_CONCURRENCY = MAX_BATCH;
 
 async function fetchBuffer(url: string): Promise<Buffer> {
@@ -309,6 +310,22 @@ router.post("/background-builder/generate", async (req: Request, res: Response) 
   }
 });
 
+// In-memory job store for batch generation, same pattern as the Meta reel
+// job queue (reelJobs in meta.ts). A batch of concurrent Gemini image calls
+// can legitimately take longer than Netlify's ~26-30 second proxy timeout
+// (it's bound by the single slowest image in the round, not by count), so
+// the POST below kicks the real work off in the background and returns a
+// jobId immediately. The frontend polls the status route until it's done.
+type BackgroundJob = {
+  status: "processing" | "done" | "error";
+  images: { imageUrl: string }[];
+  requested: number;
+  succeeded: number;
+  autoSaved: boolean;
+  error?: string;
+};
+const backgroundJobs = new Map<string, BackgroundJob>();
+
 // Builds a full batch of variations from one brief in one go, so Vanessa can
 // pick a style, confirm colours, and come back to a set of ten to choose
 // from instead of generating one at a time.
@@ -330,24 +347,70 @@ router.post("/background-builder/generate-batch", async (req: Request, res: Resp
       return `${base} Variation ${i + 1} of ${count} in this set: ${nudge}. Keep the same colours and overall style as the brief, but make the layout and composition clearly distinct from the other variations in the set.`;
     });
 
-    const results = await mapWithConcurrency(briefs, BATCH_CONCURRENCY, (line) => generateOneImage(line, proto, host));
-    const images = results.filter((url): url is string => !!url).map((imageUrl) => ({ imageUrl }));
+    const jobId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    backgroundJobs.set(jobId, { status: "processing", images: [], requested: count, succeeded: 0, autoSaved: !!body.presetId });
 
-    if (images.length === 0) { res.status(502).json({ error: "None of the variations generated successfully, please try again" }); return; }
+    // Fire and forget, the response below returns before this resolves.
+    (async () => {
+      try {
+        const results = await mapWithConcurrency(briefs, BATCH_CONCURRENCY, (line) => generateOneImage(line, proto, host));
+        const images = results.filter((url): url is string => !!url).map((imageUrl) => ({ imageUrl }));
 
-    // Auto-save every image straight to the selected client's Seamless
-    // Carousels list. This is the safety net: nothing generated in Quick
-    // mode can ever be lost to a refresh or a closed tab again, it's already
-    // sitting in Seamless Caro Builder the moment generation finishes.
-    if (body.presetId) {
-      await Promise.all(images.map((img) => registerBackground(Number(body.presetId), img.imageUrl)));
-    }
+        const job = backgroundJobs.get(jobId);
+        if (!job) return; // job map entry expired or was cleared, nothing to update
 
-    res.json({ images, width: TARGET_WIDTH, height: TARGET_HEIGHT, requested: count, succeeded: images.length, autoSaved: !!body.presetId });
+        if (images.length === 0) {
+          job.status = "error";
+          job.error = "None of the variations generated successfully, please try again";
+          return;
+        }
+
+        // Auto-save every image straight to the selected client's Seamless
+        // Carousels list. This is the safety net: nothing generated in Quick
+        // mode can ever be lost to a refresh or a closed tab again, it's
+        // already sitting in Seamless Caro Builder the moment generation
+        // finishes.
+        if (body.presetId) {
+          await Promise.all(images.map((img) => registerBackground(Number(body.presetId), img.imageUrl)));
+        }
+
+        job.status = "done";
+        job.images = images;
+        job.succeeded = images.length;
+      } catch (err) {
+        logger.error({ err, jobId }, "Background Builder batch generate failed");
+        const job = backgroundJobs.get(jobId);
+        if (job) {
+          job.status = "error";
+          job.error = (err as any)?.message || "Batch generation failed";
+        }
+      } finally {
+        // Jobs are small (just an array of URLs), but don't let the map grow
+        // forever across a long-running server process.
+        setTimeout(() => backgroundJobs.delete(jobId), 10 * 60 * 1000);
+      }
+    })();
+
+    res.json({ jobId });
   } catch (err: any) {
     logger.error({ err }, "Background Builder batch generate failed");
     res.status(500).json({ error: err?.message || "Batch generation failed" });
   }
+});
+
+router.get("/background-builder/generate-batch/:jobId/status", (req: Request, res: Response) => {
+  const job = backgroundJobs.get(req.params.jobId);
+  if (!job) { res.status(404).json({ error: "That generation job could not be found, it may have expired" }); return; }
+  res.json({
+    status: job.status,
+    images: job.images,
+    requested: job.requested,
+    succeeded: job.succeeded,
+    autoSaved: job.autoSaved,
+    error: job.error,
+    width: TARGET_WIDTH,
+    height: TARGET_HEIGHT,
+  });
 });
 
 export default router;
