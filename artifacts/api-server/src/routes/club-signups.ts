@@ -40,8 +40,7 @@ async function notifyClubSignup(entry: { name: string; email: string; clinicName
     await transporter.sendMail({
           from,
           to: NOTIFY_EMAIL,
-          subject: `£99 Club: new sign-up — ${entry.name}`,
-          text: [
+        subject: `£99 Club: new sign-up - ${entry.name}`,          text: [
                   `New £99 Club sign-up.`,
                   ``,
                   `Name: ${entry.name}`,
