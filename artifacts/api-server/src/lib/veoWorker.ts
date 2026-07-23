@@ -74,7 +74,7 @@ interface StartOperationResponse {
   error?: { message?: string };
 }
 
-async function submitVeoJob(prompt: string, aspectRatio: "16:9" | "9:16", model: string): Promise<string> {
+async function submitVeoJob(prompt: string, aspectRatio: "16:9" | "9:16", model: string, durationSeconds: "4" | "6" | "8"): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY not set — add it in Railway > Variables.");
   const res = await fetch(`${GEMINI_BASE}/models/${model}:predictLongRunning`, {
@@ -82,7 +82,7 @@ async function submitVeoJob(prompt: string, aspectRatio: "16:9" | "9:16", model:
     headers: { "x-goog-api-key": apiKey, "Content-Type": "application/json" },
     body: JSON.stringify({
       instances: [{ prompt }],
-      parameters: { aspectRatio },
+      parameters: { aspectRatio, durationSeconds },
     }),
   });
   const data = await safeJson<StartOperationResponse>(res, "Veo submission");
@@ -156,11 +156,12 @@ export async function processVeoJob(
   prompt: string,
   aspectRatio: "16:9" | "9:16",
   tier: VeoTier,
+  durationSeconds: "4" | "6" | "8" = "8",
 ): Promise<void> {
   try {
     patch(jobId, { status: "submitting", progress: 0.05, message: "Sending your prompt to Veo…" });
     const model = MODEL_BY_TIER[tier];
-    const operationName = await submitVeoJob(prompt, aspectRatio, model);
+    const operationName = await submitVeoJob(prompt, aspectRatio, model, durationSeconds);
 
     patch(jobId, { status: "processing", progress: 0.15, message: "Generating your video…" });
     const videoUri = await pollVeoOperation(operationName, jobId);
