@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Trash2, Plus, BarChart3, Calendar, Film, Layers, ChevronDown, ChevronUp, Edit2, ExternalLink, ChevronLeft, ChevronRight, Image as ImageIcon, GripVertical } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Trash2, Plus, BarChart3, Calendar, Film, Layers, ChevronDown, ChevronUp, Edit2, ExternalLink, ChevronLeft, ChevronRight, Image as ImageIcon, GripVertical, Hourglass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -677,7 +677,12 @@ export default function Scheduler() {
                 {t === "published" && `Published ${published > 0 ? `(${published})` : ""}`}
                 {t === "failed" && `Failed ${failed > 0 ? `(${failed})` : ""}`}
                 {t === "feed" && "Preview Feed"}
-                {t === "waitingroom" && `Waiting Room ${posts.filter((p) => p.status === "draft").length > 0 ? `(${posts.filter((p) => p.status === "draft").length})` : ""}`}
+                {t === "waitingroom" && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Hourglass size={13} />
+                    Waiting Room {posts.filter((p) => p.status === "draft").length > 0 ? `(${posts.filter((p) => p.status === "draft").length})` : ""}
+                  </span>
+                )}
                 {t === "doubleposting" && `Double Posting ${doublePostingGroups.length > 0 ? `(${doublePostingGroups.length})` : ""}`}
                 {t === "grid" && "Client Grid"}
                 {t === "dashboard" && "Comparison"}
@@ -907,7 +912,7 @@ export default function Scheduler() {
             </p>
             {!loading && waitingRoomPosts.length === 0 && (
               <div className="text-center py-16 text-zinc-500 bg-zinc-900 border border-zinc-800 rounded-xl">
-                <Layers size={40} className="mx-auto mb-3 opacity-30" />
+                <Hourglass size={40} className="mx-auto mb-3 opacity-30" />
                 <p className="text-sm">Nothing waiting. Save a piece of content here from the Schedule dialog when you're not ready to commit to a date.</p>
               </div>
             )}
