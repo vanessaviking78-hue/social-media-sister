@@ -240,7 +240,8 @@ export function renderSlideCanvas(
   scale = SCALE,
   bgOnly = false,
   lineSpacing = LOCKED_LINE_SPACING,
-  accentOverride?: string
+  accentOverride?: string,
+  overlayOverride?: string
 ): string {
   const canvas = document.createElement("canvas");
   canvas.width = W * scale;
@@ -249,7 +250,7 @@ export function renderSlideCanvas(
   ctx.scale(scale, scale);
 
   const pageColor = preset.pageColor || "#1a1a2e";
-  const overlayColor = preset.overlayColor || "rgba(0,0,0,0.55)";
+      const overlayColor = overlayOverride ?? (preset.overlayColor || "rgba(0,0,0,0.55)");
   const textColor = preset.textColor || "#ffffff";
   const accentColor = accentOverride ?? preset.cornerColor ?? "#d4af37";
 
