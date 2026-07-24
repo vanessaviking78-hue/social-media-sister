@@ -222,12 +222,24 @@ export function computeTuckedSubtitleY(hookRaw: string, subRaw: string, hookBloc
   return Math.max(0.04, Math.min(0.96, subCY / H));
 }
 
-function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, alpha: number) {
-  const s = Math.max(W / img.width, H / img.height);
-  const iw = img.width * s, ih = img.height * s;
-  ctx.globalAlpha = alpha;
-  ctx.drawImage(img, (W - iw) / 2, (H - ih) / 2, iw, ih);
-  ctx.globalAlpha = 1;
+function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, alpha: number, zoom = 1, shadow = false) {
+    // zoom multiplies on top of the normal cover-fit scale, so 1 = fills the
+    // canvas exactly (old behaviour) and anything above that crops in tighter -
+    // this is the "mega zoom" control. shadow drops a soft drop shadow behind
+    // the image edge, only visible where zoom/positioning leaves the canvas
+    // background showing through.
+    const s = Math.max(W / img.width, H / img.height) * Math.max(1, zoom);
+    const iw = img.width * s, ih = img.height * s;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    if (shadow) {
+          ctx.shadowColor = "rgba(0,0,0,0.5)";
+          ctx.shadowBlur = 30;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 10;
+    }
+    ctx.drawImage(img, (W - iw) / 2, (H - ih) / 2, iw, ih);
+    ctx.restore();
 }
 
 export function renderSlideCanvas(
@@ -241,7 +253,10 @@ export function renderSlideCanvas(
   bgOnly = false,
   lineSpacing = LOCKED_LINE_SPACING,
   accentOverride?: string,
-  overlayOverride?: string
+  overlayOverride?: string,
+    imageOpacity?: number,
+    imageZoom?: number,
+    imageShadow?: boolean
 ): string {
   const canvas = document.createElement("canvas");
   canvas.width = W * scale;
@@ -259,16 +274,19 @@ export function renderSlideCanvas(
   ctx.fillRect(0, 0, W, H);
 
   // Image layer
-  const img = slideNum === 1 ? coverImg : bodyImg;
-  if (img) {
-    if (slideNum === 1) {
-      drawCover(ctx, img, 1.0);
-    } else {
-      drawCover(ctx, img, 1.0);
-      ctx.fillStyle = overlayColor;
-      ctx.fillRect(0, 0, W, H);
+    const img = slideNum === 1 ? coverImg : bodyImg;
+    const photoAlpha = imageOpacity ?? 1;
+    const photoZoom = imageZoom ?? 1;
+    const photoShadow = imageShadow ?? false;
+    if (img) {
+          if (slideNum === 1) {
+                  drawCover(ctx, img, photoAlpha, photoZoom, photoShadow);
+          } else {
+                  drawCover(ctx, img, photoAlpha, photoZoom, photoShadow);
+                  ctx.fillStyle = overlayColor;
+                  ctx.fillRect(0, 0, W, H);
+          }
     }
-  }
 
   // Slide 1 gets a bottom gradient; slides 2-4 get nothing extra (overlay already applied above)
   if (slideNum === 1) {
