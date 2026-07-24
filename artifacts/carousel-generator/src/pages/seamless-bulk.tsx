@@ -109,7 +109,7 @@ const logoForSlide = i === 0 ? logoImg : null;
 // noticeably looser line spacing than the edit preview showed, and looser
 // than the main Bulk Carousel Creator besides. Locked to the same 0.9 as
 // everywhere else now.
-out.push(renderSlideCanvas(n, blocksForRender, n === 1 ? img : null, n === 1 ? null : img, logoForSlide, p, SCALE, false, LOCKED_LINE_SPACING, accent));
+    out.push(renderSlideCanvas(n, blocksForRender, n === 1 ? img : null, n === 1 ? null : img, logoForSlide, p, SCALE, false, LOCKED_LINE_SPACING, accent, overlay));
 }
 return out;
 }
