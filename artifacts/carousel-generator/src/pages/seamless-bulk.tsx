@@ -531,7 +531,7 @@ onClose={() => setEditId(null)}
   <input type="checkbox" checked={c.imageShadow} onChange={(e) => applyImageStyle(c.id, { imageShadow: e.target.checked })} className="w-4 h-4 accent-pink-500" />
   Drop shadow behind photo
   </label>
-  </div></div>
+  </div>
 <div className="rounded-xl bg-white/[0.03] border border-border/40 p-3 space-y-2">
 <p className="text-xs uppercase tracking-widest text-muted-foreground">Text on the slides</p>
 <div className="grid sm:grid-cols-2 gap-2">
