@@ -11,6 +11,8 @@ import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, AI_PORTRAIT_SCE
 const GEMINI_MODEL = "gemini-2.5-flash-image";
 const REQUEST_GAP_MS = 4_000;
 const RATE_LIMIT_BACKOFF_MS = 30_000;
+const OVERLOAD_BACKOFF_MS = 8_000;
+const MAX_GENERATION_ATTEMPTS = 4;
 
 export type CardStatus = "idle" | "generating" | "success" | "failed" | "rate-limited";
 
@@ -213,7 +215,7 @@ export async function processPortraitJob(
     let attempt = 0;
     let succeeded = false;
 
-    while (attempt < 2 && !succeeded) {
+        while (attempt < MAX_GENERATION_ATTEMPTS && !succeeded) {
       try {
         const result = await genAI.models.generateContent({
           model: GEMINI_MODEL,
@@ -267,14 +269,17 @@ export async function processPortraitJob(
         succeeded = true;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        const is429 = msg.includes("429") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("rate");
+        
+            const is503 = msg.includes("503") || msg.toLowerCase().includes("unavailable") || msg.toLowerCase().includes("overloaded") || msg.toLowerCase().includes("high demand");
+            const isRetryable = is429 || is503;
 
-        if (is429 && attempt === 0) {
-          patchCard({ status: "rate-limited", retryAfter: Date.now() + RATE_LIMIT_BACKOFF_MS });
-          logger.warn({ jobId, scenarioId: cfg.id }, "Rate limited — waiting 30s");
-          await new Promise((r) => setTimeout(r, RATE_LIMIT_BACKOFF_MS));
-          patchCard({ status: "generating", retryAfter: undefined });
-          attempt++;
+            if (isRetryable && attempt < MAX_GENERATION_ATTEMPTS - 1) {
+                    const backoffMs = is429 ? RATE_LIMIT_BACKOFF_MS : OVERLOAD_BACKOFF_MS;
+                    patchCard({ status: "rate-limited", retryAfter: Date.now() + backoffMs });
+                    logger.warn({ jobId, scenarioId: cfg.id, attempt, reason: is429 ? "rate-limit" : "model-overloaded" }, "Retrying Gemini call after transient error");
+                    await new Promise((r) => setTimeout(r, backoffMs));
+                    patchCard({ status: "generating", retryAfter: undefined });
+                    attempt++;
         } else {
           logger.error({ jobId, scenarioId: cfg.id, err: msg }, "Portrait generation failed");
 
