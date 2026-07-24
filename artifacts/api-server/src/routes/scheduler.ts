@@ -67,7 +67,7 @@ router.post("/scheduler/posts", async (req, res) => {
     } = req.body as {
       presetId: number;
       clientName?: string;
-      postType: "carousel" | "reel" | "story" | "stories" | "single-image" | "about-me" | "seamless";
+            postType: "carousel" | "reel" | "story" | "stories" | "single-image" | "about-me" | "seamless" | "video_carousel";
       content: { imageUrls?: string[]; videoUrl?: string; caption: string; title: string };
       scheduledAt: string;
       isTrial?: boolean;
@@ -91,13 +91,29 @@ router.post("/scheduler/posts", async (req, res) => {
     const [preset] = await db.select().from(clientPresetsTable).where(eq(clientPresetsTable.id, presetId));
     if (!preset) { res.status(404).json({ error: "Preset not found" }); return; }
 
+        // Most content-creation tools never attach a firstComment, even though the
+        // auto-comment engagement system below is fully built and wired up. Rather
+        // than patch every page individually, backfill it here from the client's
+        // own default CTAs (set on their preset) whenever one wasn't sent through.
+        const contentWithDefaults = { ...(content as Record<string, unknown>) };
+        const existingFirstComment = (contentWithDefaults.firstComment as string | undefined)?.trim();
+        if (!existingFirstComment) {
+                const defaultComment =
+                          postType === "reel" || postType === "video_carousel"
+                    ? preset.defaultFirstCommentReel
+                            : postType === "single-image"
+                    ? preset.defaultFirstCommentSingle
+                            : preset.defaultFirstCommentCarousel;
+                if (defaultComment) contentWithDefaults.firstComment = defaultComment;
+        }
+
     const [post] = await db
       .insert(scheduledPostsTable)
       .values({
         presetId,
         clientName: clientName || preset.name,
         postType,
-        content,
+        content: contentWithDefaults,
         scheduledAt: isDraft ? new Date() : await nextFreeMinute(new Date(scheduledAt)),
         status: isDraft ? "draft" : "pending",
         isTrial: isTrial ?? false,
