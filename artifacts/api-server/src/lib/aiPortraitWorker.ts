@@ -270,7 +270,8 @@ export async function processPortraitJob(
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         
-            const is503 = msg.includes("503") || msg.toLowerCase().includes("unavailable") || msg.toLowerCase().includes("overloaded") || msg.toLowerCase().includes("high demand");
+      const is429 = msg.includes("429") || msg.toLowerCase().includes("quota") || msg.toLowerCase().includes("rate");
+        const is503 = msg.includes("503") || msg.toLowerCase().includes("unavailable") || msg.toLowerCase().includes("overloaded") || msg.toLowerCase().includes("high demand");
             const isRetryable = is429 || is503;
 
             if (isRetryable && attempt < MAX_GENERATION_ATTEMPTS - 1) {
