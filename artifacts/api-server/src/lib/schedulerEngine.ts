@@ -315,24 +315,11 @@ async function postStoryToIG(
       media_type: "STORIES",
       access_token: token,
     };
-    if (stickerConfig) {
-      if (stickerConfig.type === "poll") {
-        body.poll_sticker = JSON.stringify({
-          question: stickerConfig.question,
-          options: stickerConfig.options,
-        });
-      } else if (stickerConfig.type === "quiz") {
-        body.quiz_sticker = JSON.stringify({
-          question: stickerConfig.question,
-          options: stickerConfig.options,
-          correct_option: stickerConfig.correctIndex,
-        });
-      } else if (stickerConfig.type === "question") {
-        body.question_sticker = JSON.stringify({
-          question: stickerConfig.question,
-        });
-      }
-    }
+          // Meta's Graph API does not support publishing interactive stickers (poll,
+              // quiz, question, link) on stories through this endpoint, only image_url,
+              // video_url, media_type and user_tags are accepted. Sending sticker
+              // parameters here was a silent no-op: the story posted fine but the
+              // sticker never appeared. Removed rather than leave dead, misleading code.
     const containerRes = await fetchWithTimeout(`${GRAPH}/${igId}/media`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
