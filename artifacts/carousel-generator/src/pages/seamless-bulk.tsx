@@ -67,6 +67,7 @@ raw: string[]; slideImgs: HTMLImageElement[]; slideUrls: string[];
 row: CsvRow; blocks: Block[];
 presetId: number | null; caption: string; date: string; time: string; track: MusicTrack | null;
 assignedRow?: number;
+  imageOpacity: number; imageZoom: number; imageShadow: boolean;
 };
 type PRow = { slide1_hook: string; slide1_subtitle: string; slide2_body: string; slide3_body: string; slide4_cta: string; client: string; caption: string; date: string; time: string; };
 
@@ -85,9 +86,14 @@ const sub = blocks.find((b) => b.id === "subtitle"); const hook = blocks.find((b
 if (sub) sub.y = computeTuckedSubtitleY(row.slide1_hook, row.slide1_subtitle, hook, sub);
 return blocks;
 }
-async function renderFromBlocks(raw: string[], imgs: HTMLImageElement[], blocks: Block[], preset: ClientPreset | null): Promise<string[]> {
+async function renderFromBlocks(raw: string[], imgs: HTMLImageElement[], blocks: Block[], preset: ClientPreset | null, imageOpacity = 1, imageZoom = 1, imageShadow = false): Promise<string[]> {
 const hasText = blocks.some((b) => ((b as any).text || "").trim());
-const p = preset || DEFAULT_PRESET; const accent = "#ffffff"; const overlay = (p as any).overlayColor || "rgba(0,0,0,0)";
+const p = preset || DEFAULT_PRESET; const accent = "#ffffff";
+  // Seamless Carousels always renders slides at full opacity - no dark/tinted
+  // legibility overlay, regardless of what a client's preset has stored for
+  // other carousel tools. Vanessa has asked for this twice now after it kept
+  // reverting; hardcoded transparent so there is nothing left to revert.
+  const overlay = "rgba(0,0,0,0)";
 let logoImg: HTMLImageElement | null = null;
 const logoUrl = (p as any)?.logoUrl;
 if (logoUrl) { try { logoImg = await loadImgCors(logoUrl); } catch {} }
@@ -109,7 +115,7 @@ const logoForSlide = i === 0 ? logoImg : null;
 // noticeably looser line spacing than the edit preview showed, and looser
 // than the main Bulk Carousel Creator besides. Locked to the same 0.9 as
 // everywhere else now.
-    out.push(renderSlideCanvas(n, blocksForRender, n === 1 ? img : null, n === 1 ? null : img, logoForSlide, p, SCALE, false, LOCKED_LINE_SPACING, accent, overlay));
+        out.push(renderSlideCanvas(n, blocksForRender, n === 1 ? img : null, n === 1 ? null : img, logoForSlide, p, SCALE, false, LOCKED_LINE_SPACING, accent, overlay, imageOpacity, imageZoom, imageShadow));
 }
 return out;
 }
@@ -223,7 +229,7 @@ for (const s of strips) {
 const img = await fileToImage(s.file); const raw = cutStrip(img, s.slides); const slideImgs = await Promise.all(raw.map(loadImg));
 const blocks = blocksFromRow(EMPTY_ROW);
 const slideUrls = await renderFromBlocks(raw, slideImgs, blocks, preset);
-out.push({ id: `c-${Math.random().toString(36).slice(2, 7)}`, name: s.file.name.replace(/\.[^.]+$/, ""), raw, slideImgs, slideUrls, row: { ...EMPTY_ROW }, blocks, presetId: batchPresetId, caption: "", date: seamlessDate(idx), time: POST_TIME, track: null });
+out.push({ id: `c-${Math.random().toString(36).slice(2, 7)}`, name: s.file.name.replace(/\.[^.]+$/, ""), raw, slideImgs, slideUrls, row: { ...EMPTY_ROW }, blocks, presetId: batchPresetId, caption: "", date: seamlessDate(idx), time: POST_TIME, track: null, imageOpacity: 1, imageZoom: 1, imageShadow: false });
 idx++;
 }
 setCarousels(out); setPhase("preview");
@@ -258,7 +264,7 @@ const preset = presetFor(pid);
 setBusy(true);
 try {
 const updated = await Promise.all(carousels.map(async (c, i) => {
-const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, c.blocks, preset);
+        const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, c.blocks, preset, c.imageOpacity, c.imageZoom, c.imageShadow);
 return { ...c, presetId: pid, date: c.date || seamlessDate(i), slideUrls };
 }));
 setCarousels(updated);
@@ -275,11 +281,11 @@ try {
 const row: CsvRow = { slide1_hook: pr.slide1_hook, slide1_subtitle: pr.slide1_subtitle, slide2_body: pr.slide2_body, slide3_body: pr.slide3_body, slide4_cta: pr.slide4_cta };
 const preset = pr.client ? (presets.find((p) => p.name.trim().toLowerCase() === pr.client.toLowerCase()) || null) : presetFor(c.presetId);
 const blocks = blocksFromRow(row);
-const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, preset);
+const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, preset, c.imageOpacity, c.imageZoom, c.imageShadow);
 update(id, { row, blocks, presetId: preset ? preset.id : c.presetId, caption: pr.caption || c.caption, date: pr.date || c.date, time: pr.time || c.time, slideUrls, assignedRow: idx });
 } catch (e: any) { toast.error(e?.message || "Could not apply that row"); } finally { setBusy(false); }
 }
-
+}
 async function fillInOrder() {
 for (let i = 0; i < carousels.length && i < csvParsed.length; i++) { await assignRow(carousels[i].id, i); }
 toast.success("Rows matched to carousels in order.");
@@ -304,19 +310,26 @@ setGenning(false); toast.success(`Wrote ${ok} caption${ok !== 1 ? "s" : ""}.`, {
 }
 
 function updateRow(id: string, field: keyof CsvRow, value: string) { setCarousels((p) => p.map((c) => (c.id === id ? { ...c, row: { ...c.row, [field]: value } } : c))); }
+async function applyImageStyle(id: string, patch: Partial<Pick<Carousel, "imageOpacity" | "imageZoom" | "imageShadow">>) {
+  const c = carousels.find((x) => x.id === id); if (!c) return;
+  const next = { ...c, ...patch };
+  update(id, patch);
+  const slideUrls = await renderFromBlocks(next.raw, next.slideImgs, next.blocks, presetFor(next.presetId), next.imageOpacity, next.imageZoom, next.imageShadow);
+  update(id, { slideUrls });
+}
 async function applyText(id: string) {
 const c = carousels.find((x) => x.id === id); if (!c) return;
 setBusy(true);
-try { const blocks = blocksFromRow(c.row); const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, presetFor(c.presetId)); update(id, { blocks, slideUrls }); } finally { setBusy(false); }
+try { const blocks = blocksFromRow(c.row); const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, presetFor(c.presetId), c.imageOpacity, c.imageZoom, c.imageShadow); update(id, { blocks, slideUrls }); } finally { setBusy(false); }
 }
 async function changeClient(id: string, presetId: number | null) {
 const c = carousels.find((x) => x.id === id); update(id, { presetId });
-if (c) { const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, c.blocks, presetFor(presetId)); update(id, { presetId, slideUrls }); }
+if (c) { const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, c.blocks, presetFor(presetId), c.imageOpacity, c.imageZoom, c.imageShadow); update(id, { presetId, slideUrls }); }
 }
 async function saveEdit(id: string, blocks: Block[]) {
 const c = carousels.find((x) => x.id === id); if (!c) return;
 setBusy(true);
-try { const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, presetFor(c.presetId)); update(id, { blocks, slideUrls }); } finally { setBusy(false); setEditId(null); }
+try { const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, presetFor(c.presetId), c.imageOpacity, c.imageZoom, c.imageShadow); update(id, { blocks, slideUrls }); } finally { setBusy(false); setEditId(null); }
 }
 function downloadTemplate() {
 const csv = "client,caption,date,time,slide1_hook,slide1_subtitle,slide2_body,slide3_body,slide4_cta\nTweaked By Helen,\"Your caption\",2026-07-10,10:00,YOUR HOOK,A supporting line,Body slide two,Body slide three,DM me to book\n";
@@ -350,7 +363,7 @@ for (let i = 0; i < ready.length; i++) {
 const c = ready[i]; toast.loading(`Scheduling ${i + 1} / ${ready.length}...`, { id: tid });
 for (const targetId of targetIds) {
 const targetPreset = presetFor(targetId);
-const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, c.blocks, targetPreset);
+const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, c.blocks, targetPreset, c.imageOpacity, c.imageZoom, c.imageShadow);
 const names = slideUrls.map((_, j) => `seamless-${i + 1}-slide${j + 1}.png`);
 const imageUrls = await uploadDataUrls(slideUrls, names);
 const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: targetId, postType: "carousel", content: { imageUrls, caption: c.caption || "", title: (c.row.slide1_hook || c.name).slice(0, 80), platforms: ["instagram", "facebook"], musicTrack: c.track || undefined, sourceTool: "Seamless Carousels" }, scheduledAt: new Date(`${c.date}T${c.time}`).toISOString() }) });
@@ -502,6 +515,23 @@ onClose={() => setEditId(null)}
 <div className="flex flex-wrap gap-2">
 <button onClick={() => setEditId(c.id)} className="px-4 py-2 rounded-lg bg-white text-black text-sm font-semibold">Edit slides (drag text)</button>
 </div>
+  <div className="rounded-xl bg-white/[0.03] border border-border/40 p-3 space-y-3">
+  <p className="text-xs uppercase tracking-widest text-muted-foreground">Image style</p>
+  <div className="grid sm:grid-cols-2 gap-3">
+  <div>
+  <div className="flex items-center justify-between mb-1"><label className="text-xs text-muted-foreground">Opacity</label><span className="text-xs text-muted-foreground">{Math.round(c.imageOpacity * 100)}%</span></div>
+  <input type="range" min={0.2} max={1} step={0.05} value={c.imageOpacity} onChange={(e) => applyImageStyle(c.id, { imageOpacity: Number(e.target.value) })} className="w-full accent-pink-500" />
+  </div>
+  <div>
+  <div className="flex items-center justify-between mb-1"><label className="text-xs text-muted-foreground">Zoom</label><span className="text-xs text-muted-foreground">{Math.round(c.imageZoom * 100)}%</span></div>
+  <input type="range" min={1} max={2.5} step={0.05} value={c.imageZoom} onChange={(e) => applyImageStyle(c.id, { imageZoom: Number(e.target.value) })} className="w-full accent-pink-500" />
+  </div>
+  </div>
+  <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+  <input type="checkbox" checked={c.imageShadow} onChange={(e) => applyImageStyle(c.id, { imageShadow: e.target.checked })} className="w-4 h-4 accent-pink-500" />
+  Drop shadow behind photo
+  </label>
+  </div></div>
 <div className="rounded-xl bg-white/[0.03] border border-border/40 p-3 space-y-2">
 <p className="text-xs uppercase tracking-widest text-muted-foreground">Text on the slides</p>
 <div className="grid sm:grid-cols-2 gap-2">
