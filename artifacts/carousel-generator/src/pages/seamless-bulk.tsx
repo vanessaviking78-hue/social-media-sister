@@ -285,7 +285,7 @@ const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, preset, c.i
 update(id, { row, blocks, presetId: preset ? preset.id : c.presetId, caption: pr.caption || c.caption, date: pr.date || c.date, time: pr.time || c.time, slideUrls, assignedRow: idx });
 } catch (e: any) { toast.error(e?.message || "Could not apply that row"); } finally { setBusy(false); }
 }
-}
+  
 async function fillInOrder() {
 for (let i = 0; i < carousels.length && i < csvParsed.length; i++) { await assignRow(carousels[i].id, i); }
 toast.success("Rows matched to carousels in order.");
