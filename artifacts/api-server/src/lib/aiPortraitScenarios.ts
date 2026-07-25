@@ -215,6 +215,7 @@ export interface PhotoStudioPreset {
   hasColour: boolean;
     hasHairColour?: boolean;
     hasName?: boolean;
+  hasCustomText?: boolean;
 }
 
 export const NEW_PORTRAITS_PRESETS: PhotoStudioPreset[] = [
@@ -560,11 +561,24 @@ export const PHOTO_STUDIO_PRESETS: PhotoStudioPreset[] = [
     hasColour: false,
     promptTemplate: `A dramatic wrestling and fight night entrance stage scene, with a muscular athletic person standing confidently at the centre, wearing a fitted one piece gladiator style unitard in [COLOUR] with contrasting side stripes and a bold emblem on the chest, white wristbands, gladiator sandals with ankle wrapping. They are holding a large red and white checkered pugil stick diagonally across their body, gripped firmly with a determined smile, full body heroic pose. Above them, a metallic chrome and steel textured 3D logo reads '[NAME]' in bold blockbuster wrestling font, positioned inside a chrome triangular emblem frame. Two tall illuminated stage towers stand either side of the scene with spotlights, blue lighting on the left tower and red lighting on the right, each topped with a diamond plate cylindrical pillar bearing a chrome shield emblem. Smoky atmospheric background, dark arena setting, glossy black tiled floor reflecting the lights, high contrast dramatic lighting, hyper realistic 3D render style. In the bottom corner, include a futuristic sci-fi stat card overlay with a dark charcoal background, glowing red neon border lines and corner brackets, angular hexagon accents top and bottom. Bold white heading text '[NAME]', a thin red divider line beneath it, stat rows reading '[SKILL LABEL]: [SKILL VALUE]', and a bottom statement in clean white text reading '[NAME] is [KNOWN AS DESCRIPTION]'. Maintain the person's exact facial features, skin tone, and likeness from the reference photo.`,
   },
+  {
+    id: "ps-perspex-number",
+    name: "Perspex Number Studio",
+    hasColour: false,
+    promptTemplate: `A person standing confidently in the centre of a professional photography studio, facing the camera, holding a large clear perspex (acrylic) number board displaying the number [NUMBER] with both hands at chest height. The number itself is coloured [NUMBER COLOUR], cut cleanly into the perspex with crisp, professional signage-style edges, catching realistic studio light with subtle glass-like reflections and a soft edge-glow, the clear perspex material visibly transparent around the coloured number. They are wearing [OUTFIT]. The studio backdrop is a smooth, seamless [STUDIO COLOUR] paper background, evenly lit with soft professional studio lighting, gentle shadow beneath their feet, no harsh reflections. Full body or three-quarter length shot, natural relaxed confident stance. Maintain their exact facial features, skin tone, body shape, and likeness from the reference photo. Must look physically believable and naturally photographed, not CGI or illustrated, natural imperfections, realistic depth, tactile textures, subtle sensor grain, true to life reflections on the perspex.`,
+  },
+  {
+    id: "ps-custom",
+    name: "Your Own Prompt",
+    hasColour: false,
+    hasCustomText: true,
+    promptTemplate: `[CUSTOM PROMPT]`,
+  },
+    
 ];
 
 export const RANDOM_PROMPT_PRESETS: PhotoStudioPreset[] = [
-  {
-    id: "rp-01",
+  {id: "rp-01",
     name: "Street Sign Lean",
     hasColour: true,
     hasName: true,
@@ -1029,8 +1043,11 @@ export const RANDOM_PROMPT_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
-export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: string, aspectRatio = "3:4", vars?: { colour?: string; name?: string; skills?: string; knownAs?: string; hairColour?: string }): string {
+export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: string, aspectRatio = "3:4", vars?: { colour?: string; name?: string; skills?: string; knownAs?: string; hairColour?: string; number?: string; numberColour?: string; outfit?: string; studioColour?: string; customText?: string }): string {
     let prompt = preset.promptTemplate;
+  if (preset.hasCustomText && vars?.customText?.trim()) {
+    prompt = `${vars.customText.trim()}\n\nMaintain their exact facial features, skin tone, body shape, and likeness from the reference photo. Must look physically believable and naturally photographed, not CGI or illustrated, natural imperfections, realistic depth, tactile textures, subtle sensor grain, true to life reflections and lighting.`;
+  }
     if (preset.hasColour) {
           prompt = prompt.replace(/\[COLOUR\]/g, colour?.trim() || "navy blue");
   }
@@ -1039,6 +1056,10 @@ export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: strin
     if (vars.name?.trim()) prompt = prompt.replace(/\[NAME\]/g, vars.name.trim());
         if (vars.hairColour?.trim()) prompt = prompt.replace(/\[HAIR COLOUR\]/g, vars.hairColour.trim());
     if (vars.knownAs?.trim()) prompt = prompt.replace(/\[KNOWN AS DESCRIPTION\]/g, vars.knownAs.trim());
+    if (vars.number?.trim()) prompt = prompt.replace(/\[NUMBER\]/g, vars.number.trim());
+    if (vars.numberColour?.trim()) prompt = prompt.replace(/\[NUMBER COLOUR\]/g, vars.numberColour.trim());
+    if (vars.outfit?.trim()) prompt = prompt.replace(/\[OUTFIT\]/g, vars.outfit.trim());
+    if (vars.studioColour?.trim()) prompt = prompt.replace(/\[STUDIO COLOUR\]/g, vars.studioColour.trim());
     const rows = (vars.skills || "").split(/\n/).map((x) => x.trim()).filter(Boolean).join(", ");
     if (rows) prompt = prompt.replace(/\[SKILL LABEL\]: \[SKILL VALUE\]/g, rows);
   }
