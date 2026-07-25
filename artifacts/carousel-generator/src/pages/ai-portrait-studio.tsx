@@ -125,6 +125,8 @@ const PHOTO_STUDIO_PRESETS: PhotoStudioPreset[] = [
   { id: "ps-14", name: "Side-Lit Vintage Texture",             hasColour: false },
   { id: "ps-15", name: "Intense Eyes Close Crop",              hasColour: true  },
   { id: "ps-fightnight", name: "Fight Night Entrance",          hasColour: false },
+  { id: "ps-perspex-number", name: "Perspex Number Studio",     hasColour: false },
+  { id: "ps-custom", name: "Your Own Prompt",                   hasColour: false },
 ];
 
 const INJECTOR_COLLECTION_PRESETS: PhotoStudioPreset[] = [
@@ -396,6 +398,8 @@ export default function AiPortraitStudio() {
       const [presetHairColours, setPresetHairColours] = useState<Record<string, string>>({});
   const [aspectRatio, setAspectRatio]         = useState<AspectRatio>("3:4");
   const [fnVars, setFnVars] = useState({ colour: "", name: "", skills: "", knownAs: "" });
+  const [perspexVars, setPerspexVars] = useState({ number: "", numberColour: "", outfit: "", studioColour: "" });
+  const [customPromptText, setCustomPromptText] = useState("");
 
   // ── Generation state ───────────────────────────────────────────────────────
   const [jobId, setJobId]         = useState<string | null>(null);
@@ -541,6 +545,8 @@ export default function AiPortraitStudio() {
           : undefined,
         aspectRatio,
         ...(id === "ps-fightnight" ? { promptVars: fnVars } : {}),
+        ...(id === "ps-perspex-number" ? { promptVars: perspexVars } : {}),
+        ...(id === "ps-custom" ? { promptVars: { customText: customPromptText } } : {}),
                   ...(preset?.hasName || preset?.hasHairColour ? { promptVars: { name: presetNames[id], hairColour: presetHairColours[id] } } : {}),
       };
     });
@@ -902,6 +908,21 @@ export default function AiPortraitStudio() {
               <Input value={fnVars.knownAs} onChange={(e) => setFnVars((v) => ({ ...v, knownAs: e.target.value }))} placeholder="Known as... (e.g. unstoppable in the ring)" className="h-8 text-xs" />
             </div>
           )}
+          {selectedPresets.has("ps-perspex-number") && (
+      <div className="space-y-2 pt-2 border-t border-border/20">
+      <Label className="text-xs text-pink-300">Perspex Number Studio details</Label>
+      <Input value={perspexVars.number} onChange={(e) => setPerspexVars((v) => ({ ...v, number: e.target.value }))} placeholder="Number (e.g. 7)" className="h-8 text-xs" />
+      <Input value={perspexVars.numberColour} onChange={(e) => setPerspexVars((v) => ({ ...v, numberColour: e.target.value }))} placeholder="Number colour (e.g. hot pink)" className="h-8 text-xs" />
+      <Input value={perspexVars.outfit} onChange={(e) => setPerspexVars((v) => ({ ...v, outfit: e.target.value }))} placeholder="Outfit (e.g. black tailored suit)" className="h-8 text-xs" />
+      <Input value={perspexVars.studioColour} onChange={(e) => setPerspexVars((v) => ({ ...v, studioColour: e.target.value }))} placeholder="Studio backdrop colour (e.g. pale grey)" className="h-8 text-xs" />
+      </div>
+        )}
+          {selectedPresets.has("ps-custom") && (
+      <div className="space-y-2 pt-2 border-t border-border/20">
+      <Label className="text-xs text-pink-300">Your own prompt</Label>
+      <textarea value={customPromptText} onChange={(e) => setCustomPromptText(e.target.value)} placeholder="Type exactly what you want the image to show..." rows={4} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2 text-xs" />
+      </div>
+        )}
 
           {/* Save client name override */}
           {cards.some((c) => c.status === "success") && (
