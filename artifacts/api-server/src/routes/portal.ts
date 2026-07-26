@@ -6,6 +6,8 @@ import crypto from "crypto";
 import { getApprovedIdeasForClient } from "./revenue-ideas";
 import { getVapidPublicKey } from "../lib/push";
 import { notifyDownload } from "../lib/notify";
+import { openai } from "@workspace/integrations-openai-ai-server";
+import { BASE_RULES } from "./caption-generator";
 
 const router: IRouter = Router();
 
@@ -117,6 +119,71 @@ router.post("/portal/:token/download", async (req, res) => {
     res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to log download" });
+  }
+});
+
+// Lets a client update the caption on one of their own upcoming posts. Works
+// for both calendar posts and scheduler-sourced posts (the latter are
+// identified by the 900000000 offset baked into their id in the GET above).
+router.patch("/portal/:token/posts/:id", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const id = Number(req.params.id);
+    const { caption } = req.body as { caption?: string };
+    if (isNaN(id) || typeof caption !== "string") { res.status(400).json({ error: "Invalid request" }); return; }
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+
+    if (id >= 900000000) {
+      const realId = id - 900000000;
+      const [sp] = await db.select().from(scheduledPostsTable)
+        .where(and(eq(scheduledPostsTable.id, realId), eq(scheduledPostsTable.presetId, preset.id)));
+      if (!sp) { res.status(404).json({ error: "not_found" }); return; }
+      const content = { ...(sp.content || {}), caption: caption.trim() };
+      await db.update(scheduledPostsTable).set({ content }).where(eq(scheduledPostsTable.id, realId));
+    } else {
+      const [updated] = await db.update(calendarPostsTable)
+        .set({ caption: caption.trim(), updatedAt: new Date() })
+        .where(and(eq(calendarPostsTable.id, id), eq(calendarPostsTable.clientName, preset.name)))
+        .returning();
+      if (!updated) { res.status(404).json({ error: "not_found" }); return; }
+    }
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to update caption" });
+  }
+});
+
+// Rewrites a caption on request from the client, using their note plus the
+// post's existing title/caption for context. Reuses the same compliance
+// rules as the internal caption generator so nothing off-brand slips out.
+router.post("/portal/:token/posts/:id/generate-caption", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const id = Number(req.params.id);
+    const { note, currentCaption, title } = req.body as { note?: string; currentCaption?: string; title?: string };
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid request" }); return; }
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+
+    const systemPrompt = `You write a single Instagram/Facebook caption for an aesthetics clinic called ${preset.name}. Rewrite the caption below exactly the way the client has asked. Return plain text only, no JSON, no quote marks around it, no title.\n${BASE_RULES}`;
+    const userContent = `Post title: ${title || "(no title)"}\nCurrent caption: ${currentCaption || "(none yet)"}\nWhat the client wants changed: ${note?.trim() || "Just make it better."}`;
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent },
+      ],
+      temperature: 0.9,
+      max_tokens: 400,
+    });
+    const caption = completion.choices[0]?.message?.content?.trim() || "";
+    if (!caption) { res.status(500).json({ error: "No caption returned" }); return; }
+    res.json({ caption });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to generate caption" });
   }
 });
 
