@@ -397,7 +397,9 @@ export default function PresetsPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteDeleting, setDeleteDeleting] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [clientPhotoUploading, setClientPhotoUploading] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const clientPhotoInputRef = useRef<HTMLInputElement>(null);
 
   const handleDelete = (id: number) => {
     const preset = presets.find((p) => p.id === id);
@@ -475,6 +477,8 @@ export default function PresetsPage() {
         targetAudience: editData.targetAudience || null,
         contentPillars: editData.contentPillars || null,
         brandNotes: editData.brandNotes || null,
+        clientPhotoUrl: editData.clientPhotoUrl || null,
+        portalWelcomeMessage: editData.portalWelcomeMessage || null,
       });
       toast.success("Preset updated");
       cancelEdit();
@@ -769,6 +773,80 @@ export default function PresetsPage() {
                             setLogoUploading(false);
                           }
                         }}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-400">Client Photo</Label>
+                      <p className="text-xs text-gray-500 mt-0.5 mb-2">A headshot or clinic photo shown in their portal header, so it feels like their space, not just a template.</p>
+                      {editData.clientPhotoUrl ? (
+                        <div className="flex items-center gap-4 p-3 bg-gray-900/60 border border-gray-700 rounded-xl">
+                          <div className="w-16 h-16 rounded-full bg-white/5 border border-gray-700 flex items-center justify-center overflow-hidden shrink-0">
+                            <img src={editData.clientPhotoUrl} alt="Client photo" className="w-full h-full object-cover" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-gray-300 truncate">{editData.clientPhotoUrl.split("/").pop()}</p>
+                            <div className="flex gap-3 mt-1.5">
+                              <button
+                                onClick={() => clientPhotoInputRef.current?.click()}
+                                disabled={clientPhotoUploading}
+                                className="text-xs text-pink-400 hover:text-pink-300 transition-colors disabled:opacity-50"
+                              >
+                                {clientPhotoUploading ? "Uploading…" : "Replace"}
+                              </button>
+                              <button
+                                onClick={() => setEditData((d) => ({ ...d, clientPhotoUrl: null }))}
+                                className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => clientPhotoInputRef.current?.click()}
+                          disabled={clientPhotoUploading}
+                          className="w-full flex items-center gap-3 p-3 border border-dashed border-gray-700 rounded-xl hover:border-pink-500/50 transition-colors disabled:opacity-50"
+                        >
+                          {clientPhotoUploading ? (
+                            <Loader2 className="w-5 h-5 text-gray-500 animate-spin shrink-0" />
+                          ) : (
+                            <Upload className="w-5 h-5 text-gray-500 shrink-0" />
+                          )}
+                          <span className="text-xs text-gray-500">{clientPhotoUploading ? "Uploading…" : "Upload client photo"}</span>
+                        </button>
+                      )}
+                      <input
+                        ref={clientPhotoInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp"
+                        className="hidden"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          e.target.value = "";
+                          setClientPhotoUploading(true);
+                          try {
+                            const url = await uploadLogo(file);
+                            setEditData((d) => ({ ...d, clientPhotoUrl: url }));
+                            toast.success("Client photo uploaded");
+                          } catch (err: any) {
+                            toast.error(err?.message || "Photo upload failed");
+                          } finally {
+                            setClientPhotoUploading(false);
+                          }
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-gray-400">Portal Welcome Message</Label>
+                      <p className="text-xs text-gray-500 mt-0.5 mb-2">Shown under their name at the top of their portal, e.g. "Welcome back, Sarah". Leave blank to just show "Your Portal".</p>
+                      <Input
+                        value={editData.portalWelcomeMessage || ""}
+                        onChange={(e) => setEditData((d) => ({ ...d, portalWelcomeMessage: e.target.value || null }))}
+                        placeholder="Welcome back, Sarah"
+                        className="bg-gray-900 border-gray-700 text-white"
                       />
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
