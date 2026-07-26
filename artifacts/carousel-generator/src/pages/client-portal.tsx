@@ -590,22 +590,22 @@ export default function ClientPortal({ token }: { token: string }) {
 
   let reelIdx = -1;
 
-  return (
-    <div className="min-h-screen bg-zinc-950 text-white">
-      <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {data.logoUrl ? (<img src={data.logoUrl} alt="logo" className="h-9 w-auto object-contain rounded" />) : (<div className="flex items-center gap-2"><Layers className="w-5 h-5 text-pink-500" /><span className="font-bold text-sm text-pink-400">The CyberSuite&trade;</span></div>)}
-              <div className="min-h-screen bg-zinc-950 text-white" style={{ "--accent": accent } as React.CSSProperties}>
-                    <div className="flex items-center gap-2.5">
-            <div className="text-right">
-              <p className="text-sm font-semibold text-white">{data.clientName}</p>
-              <p className="text-xs text-zinc-500">{data.welcomeMessage || "Your Portal"}</p>
-            </div>
-            {data.photoUrl && (<img src={data.photoUrl} alt={data.clientName} className="h-9 w-9 rounded-full object-cover border border-zinc-700" />)}
-          </div>
-        </div>
-        <div className="max-w-3xl mx-auto px-4 pb-3 flex flex-wrap gap-2">
+return (
+<div className="min-h-screen bg-zinc-950 text-white" style={{ "--accent": accent } as React.CSSProperties}>
+<header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-50">
+<div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
+<div className="flex items-center gap-3">
+{data.logoUrl ? (<img src={data.logoUrl} alt="logo" className="h-9 w-auto object-contain rounded" />) : (<div className="flex items-center gap-2"><Layers className="w-5 h-5 text-pink-500" /><span className="font-bold text-sm text-pink-400">The CyberSuite&trade;</span></div>)}
+</div>
+<div className="flex items-center gap-2.5">
+<div className="text-right">
+<p className="text-sm font-semibold text-white">{data.clientName}</p>
+<p className="text-xs text-zinc-500">{data.welcomeMessage || "Your Portal"}</p>
+</div>
+{data.photoUrl && (<img src={data.photoUrl} alt={data.clientName} className="h-9 w-9 rounded-full object-cover border border-zinc-700" />)}
+</div>
+</div>
+<div className="max-w-3xl mx-auto px-4 pb-3 flex flex-wrap gap-2">
           <TabBtn id="upcoming" label="Posts" />
           <TabBtn id="homework" label="Homework" />
           <TabBtn id="bonus" label="Bonus Content" />
