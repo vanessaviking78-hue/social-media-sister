@@ -32,6 +32,7 @@ export async function runMigrations(): Promise<void> {
     await createBroadcastTopicsTable();
 await createBroadcastDraftsTable();
     await addPortalPersonalizationColumns();
+    await addHomeworkActionedColumn();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -94,6 +95,10 @@ async function addCoverSubheadingColumn(): Promise<void> {
 async function addPortalPersonalizationColumns(): Promise<void> {
   await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS client_photo_url text`);
   await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS portal_welcome_message text`);
+}
+async function addHomeworkActionedColumn(): Promise<void> {
+  await db.execute(sql`ALTER TABLE homework_replies ADD COLUMN IF NOT EXISTS actioned boolean NOT NULL DEFAULT false`);
+  await db.execute(sql`ALTER TABLE homework_replies ADD COLUMN IF NOT EXISTS actioned_at timestamp`);
 }
 
 async function addMetaConnectionColumns(): Promise<void> {
