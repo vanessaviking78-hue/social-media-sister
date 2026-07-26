@@ -87,4 +87,21 @@ router.get("/homework/questions", async (_req, res) => {
   }
 });
 
+// Admin: tick a reply as actioned (or un-tick it) once Vanessa has replied to it.
+router.patch("/homework/replies/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { actioned } = req.body as { actioned?: boolean };
+    if (isNaN(id) || typeof actioned !== "boolean") { res.status(400).json({ error: "Invalid request" }); return; }
+    const [updated] = await db.update(homeworkRepliesTable)
+      .set({ actioned, actionedAt: actioned ? new Date() : null })
+      .where(eq(homeworkRepliesTable.id, id))
+      .returning();
+    if (!updated) { res.status(404).json({ error: "not_found" }); return; }
+    res.json({ reply: updated });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to update reply" });
+  }
+});
+
 export default router;
