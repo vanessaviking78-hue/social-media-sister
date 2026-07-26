@@ -9,7 +9,7 @@ const SEND_LABEL = "Send to Vanessa, Aesthetic Angel / Digital Darling";
 type CalendarPost = { id: number; date: string; title: string; caption: string; postType: string; status: string; color: string; imageUrl: string | null; imageUrls: string[]; source: "calendar" | "scheduler"; scheduledPostId: number | null; };
 type ApprovalBatch = { id: number; name: string; token: string; status: string; totalImages: number; pendingImages: number; approvedImages: number; rejectedImages: number; createdAt: string; expiresAt: string | null; };
 type RevenueIdea = { title: string; instructions: string; draftContent: string; weekOf: string };
-type PortalData = { clientName: string; logoUrl: string | null; upcomingPosts: CalendarPost[]; approvalBatches: ApprovalBatch[]; revenueIdeas: RevenueIdea[]; };
+type PortalData = { clientName: string; logoUrl: string | null; photoUrl: string | null; accentColor: string | null; welcomeMessage: string | null; upcomingPosts: CalendarPost[]; approvalBatches: ApprovalBatch[]; revenueIdeas: RevenueIdea[]; };
 type Resource = { id: number; title: string; description: string; fileKey: string; fileName: string; createdAt: string; };
 
 const POST_TYPE_ICON: Record<string, React.ReactNode> = {
@@ -567,14 +567,15 @@ export default function ClientPortal({ token }: { token: string }) {
   const revenueIdeas = data.revenueIdeas || [];
 
   const inputCls = "w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-pink-600";
-  const sendBtn = "w-full rounded-full bg-pink-600 hover:bg-pink-500 disabled:opacity-60 text-white font-semibold py-3.5 flex items-center justify-center gap-2";
+    const accent = data.accentColor || "#ec4899";
+  const sendBtn = "w-full rounded-full bg-[var(--accent)] hover:brightness-110 disabled:opacity-60 text-white font-semibold py-3.5 flex items-center justify-center gap-2";
 
   const TabBtn = ({ id, label, badge }: { id: Tab; label: string; badge?: number }) => (
     <button
       onClick={() => setTab(id)}
       className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors ${
         tab === id
-          ? "bg-pink-600 text-white"
+                    ? "bg-[var(--accent)] text-white"
           : "bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-200 hover:border-zinc-700"
       }`}
     >
@@ -595,8 +596,14 @@ export default function ClientPortal({ token }: { token: string }) {
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             {data.logoUrl ? (<img src={data.logoUrl} alt="logo" className="h-9 w-auto object-contain rounded" />) : (<div className="flex items-center gap-2"><Layers className="w-5 h-5 text-pink-500" /><span className="font-bold text-sm text-pink-400">The CyberSuite&trade;</span></div>)}
+              <div className="min-h-screen bg-zinc-950 text-white" style={{ "--accent": accent } as React.CSSProperties}>
+                    <div className="flex items-center gap-2.5">
+            <div className="text-right">
+              <p className="text-sm font-semibold text-white">{data.clientName}</p>
+              <p className="text-xs text-zinc-500">{data.welcomeMessage || "Your Portal"}</p>
+            </div>
+            {data.photoUrl && (<img src={data.photoUrl} alt={data.clientName} className="h-9 w-9 rounded-full object-cover border border-zinc-700" />)}
           </div>
-          <div className="text-right"><p className="text-sm font-semibold text-white">{data.clientName}</p><p className="text-xs text-zinc-500">Your Portal</p></div>
         </div>
         <div className="max-w-3xl mx-auto px-4 pb-3 flex flex-wrap gap-2">
           <TabBtn id="upcoming" label="Posts" />
