@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Loader2, RotateCcw, Send, MessageSquareText, Search } from "lucide-react";
+import { ArrowLeft, Loader2, RotateCcw, Send, MessageSquareText, Search, CheckCircle2, Circle } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -35,6 +35,7 @@ type Reply = {
   answer8?: string;
   answer9?: string;
   answer10?: string;
+  actioned?: boolean;
   submittedAt: string;
   set: QuestionSet | null;
 };
@@ -122,6 +123,21 @@ export default function Homework() {
       setPublishErr("Something went wrong, please try again.");
     } finally {
       setPublishing(false);
+    }
+  };
+
+  const toggleActioned = async (r: Reply) => {
+    const next = !r.actioned;
+    setReplies((prev) => prev.map((x) => (x.id === r.id ? { ...x, actioned: next } : x)));
+    try {
+      const res = await fetch(`${BASE}/api/homework/replies/${r.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actioned: next }),
+      });
+      if (!res.ok) throw new Error("failed");
+    } catch {
+      setReplies((prev) => prev.map((x) => (x.id === r.id ? { ...x, actioned: !next } : x)));
     }
   };
 
@@ -229,13 +245,19 @@ export default function Homework() {
             )}
 
             {filteredReplies.map((r) => (
-              <div key={r.id} className="rounded-2xl border border-border/50 p-4">
+              <div key={r.id} className={`rounded-2xl border p-4 ${r.actioned ? "border-green-800/30 bg-green-950/10" : "border-border/50"}`}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <MessageSquareText className="w-4 h-4 text-pink-400" />
                     <span className="font-semibold text-sm">{r.clientName}</span>
                   </div>
-                  <span className="text-xs text-muted-foreground">{timeAgo(r.submittedAt)}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-muted-foreground">{timeAgo(r.submittedAt)}</span>
+                    <button onClick={() => toggleActioned(r)} className={`flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1 border ${r.actioned ? "border-green-700/40 bg-green-900/20 text-green-400" : "border-border/50 text-muted-foreground hover:text-foreground"}`}>
+                      {r.actioned ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Circle className="w-3.5 h-3.5" />}
+                      {r.actioned ? "Actioned" : "Mark as done"}
+                    </button>
+                  </div>
                 </div>
                 {r.set && (
                   <div className="space-y-2 text-sm">
