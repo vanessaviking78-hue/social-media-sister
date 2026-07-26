@@ -735,6 +735,8 @@ export const homeworkRepliesTable = pgTable("homework_replies", {
   answer8: text("answer8").notNull().default(""),
   answer9: text("answer9").notNull().default(""),
   answer10: text("answer10").notNull().default(""),
+  actioned: boolean("actioned").notNull().default(false),
+  actionedAt: timestamp("actioned_at"),
   submittedAt: timestamp("submitted_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
