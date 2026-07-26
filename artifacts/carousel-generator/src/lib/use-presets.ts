@@ -36,6 +36,7 @@ export interface ClientPreset {
   logoPosition: LogoPosition;
   logoSize: number;
   logoUrl: string | null;
+  clientPhotoUrl: string | null;
   accentColor: string;
   metaPageAccessToken: string | null;
   metaFacebookPageId: string | null;
@@ -57,6 +58,7 @@ export interface ClientPreset {
   targetAudience: string | null;
   contentPillars: string | null;
   brandNotes: string | null;
+  portalWelcomeMessage: string | null;
 }
 
 export interface PresetStyleFields {
@@ -159,7 +161,7 @@ export function usePresets() {
     logoUrl?: string | null,
     captionFootnote?: string,
     metaFields?: { metaPageAccessToken?: string | null; metaFacebookPageId?: string | null; metaFacebookPageName?: string | null; metaInstagramAccountId?: string | null; metaInstagramUsername?: string | null },
-    extra?: { defaultPostTime?: string; defaultFirstCommentCarousel?: string | null; defaultFirstCommentSingle?: string | null; defaultFirstCommentReel?: string | null; voiceStyle?: string; targetAudience?: string | null; contentPillars?: string | null; brandNotes?: string | null },
+    extra?: { defaultPostTime?: string; defaultFirstCommentCarousel?: string | null; defaultFirstCommentSingle?: string | null; defaultFirstCommentReel?: string | null; voiceStyle?: string; targetAudience?: string | null; contentPillars?: string | null; brandNotes?: string | null;  clientPhotoUrl?: string | null; portalWelcomeMessage?: string | null;},
   ) => {
     const body = {
       name,
@@ -168,7 +170,7 @@ export function usePresets() {
       logoUrl: logoUrl || null,
       captionFootnote: captionFootnote ?? "",
       ...(metaFields || {}),
-      ...(extra || {}),
+            ...(extra || {}),
     };
     const resp = await fetch(`${import.meta.env.BASE_URL}api/presets/${id}`, {
       method: "PUT",
