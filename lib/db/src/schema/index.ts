@@ -20,6 +20,7 @@ export const clientPresetsTable = pgTable("client_presets", {
   logoPosition: text("logo_position").notNull().default("top-right"),
   logoSize: integer("logo_size").notNull().default(140),
   logoUrl: text("logo_url"),
+  clientPhotoUrl: text("client_photo_url"),
   accentColor: text("accent_color").notNull().default("#d4af37"),
   metaPageAccessToken: text("meta_page_access_token"),
   metaFacebookPageId: text("meta_facebook_page_id"),
@@ -41,6 +42,7 @@ export const clientPresetsTable = pgTable("client_presets", {
   targetAudience: text("target_audience"),
   contentPillars: text("content_pillars"),
   brandNotes: text("brand_notes"),
+  portalWelcomeMessage: text("portal_welcome_message"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => [
