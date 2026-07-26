@@ -10,7 +10,7 @@ const CAPTION_TONE_PROMPTS: Record<string, string> = {
   "4": "Write like a warm medical expert who happens to also be a real human being. Authoritative but approachable. Evidence-led but never cold.",
 };
 
-const BASE_RULES = `
+export const BASE_RULES = `
 COMPLIANCE (non-negotiable, every single caption)
 - NEVER name Botox, anti-wrinkle injections, or any prescription-only medicine by name. Use: "facial aesthetics", "smoothing treatments", "injectable treatments", "facial rejuvenation".
 - Never use the word "safe" in advertising claims.
