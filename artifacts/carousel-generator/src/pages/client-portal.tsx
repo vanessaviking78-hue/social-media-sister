@@ -280,6 +280,12 @@ export default function ClientPortal({ token }: { token: string }) {
   const [rejectReason, setRejectReason] = useState("");
   const [rejectBusy, setRejectBusy] = useState(false);
 
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editCaption, setEditCaption] = useState("");
+  const [editNote, setEditNote] = useState("");
+  const [editBusy, setEditBusy] = useState(false);
+  const [genBusy, setGenBusy] = useState(false);
+
   const [resources, setResources] = useState<Resource[]>([]);
   const [resourcesLoading, setResourcesLoading] = useState(true);
 
@@ -486,6 +492,54 @@ export default function ClientPortal({ token }: { token: string }) {
     }
   };
 
+  const startEditCaption = (post: CalendarPost) => {
+    setEditingId(post.id);
+    setEditCaption(post.caption);
+    setEditNote("");
+  };
+  const cancelEditCaption = () => {
+    setEditingId(null);
+    setEditCaption("");
+    setEditNote("");
+  };
+  const saveCaption = async (post: CalendarPost) => {
+    setEditBusy(true);
+    try {
+      const r = await fetch(`${BASE}api/portal/${token}/posts/${post.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ caption: editCaption }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "Could not save, please try again.");
+      setData((prev) => (prev ? { ...prev, upcomingPosts: prev.upcomingPosts.map((p) => (p.id === post.id ? { ...p, caption: editCaption } : p)) } : prev));
+      setEditingId(null);
+      toast.success("Caption updated.");
+    } catch (e: any) {
+      toast.error(e?.message || "Something went wrong.");
+    } finally {
+      setEditBusy(false);
+    }
+  };
+  const generateCaption = async (post: CalendarPost) => {
+    setGenBusy(true);
+    try {
+      const r = await fetch(`${BASE}api/portal/${token}/posts/${post.id}/generate-caption`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: editNote, currentCaption: editCaption, title: post.title }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "Could not generate a caption, please try again.");
+      setEditCaption(d.caption || editCaption);
+      toast.success("New caption ready, have a read and save it if you're happy.");
+    } catch (e: any) {
+      toast.error(e?.message || "Something went wrong.");
+    } finally {
+      setGenBusy(false);
+    }
+  };
+
   const uploadOne = async (f: File): Promise<string> => {
     const base64 = await fileToBase64(f);
     const r = await fetch(`${BASE}api/content/upload-image`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ images: [{ name: f.name, base64 }] }) });
@@ -663,6 +717,7 @@ return (
                 {data.upcomingPosts.map((post) => {
                   const urls = post.imageUrls && post.imageUrls.length > 0 ? post.imageUrls : (post.imageUrl ? [post.imageUrl] : []);
                   const isRejecting = rejectingId === post.id;
+                  const isEditingCaption = editingId === post.id;
                   return (
                     <div key={post.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 overflow-hidden">
                       <div className="p-4">
@@ -679,18 +734,53 @@ return (
                           </div>
                         </div>
                         {post.title && <p className="font-medium text-white text-sm">{post.title}</p>}
-                        {post.caption && <p className="text-sm text-zinc-400 mt-1 whitespace-pre-wrap">{post.caption}</p>}
+                        {isEditingCaption ? (
+                          <div className="mt-2 space-y-2">
+                            <textarea
+                              value={editCaption}
+                              onChange={(e) => setEditCaption(e.target.value)}
+                              rows={4}
+                              className="w-full rounded-xl bg-zinc-800 border border-zinc-700 text-sm text-zinc-200 placeholder:text-zinc-600 px-3 py-2.5 resize-none focus:outline-none focus:ring-1 focus:ring-pink-500/50"
+                            />
+                            <input
+                              value={editNote}
+                              onChange={(e) => setEditNote(e.target.value)}
+                              placeholder="Not keen? Tell us how, e.g. 'make it more casual' or 'mention our offer'..."
+                              className="w-full rounded-xl bg-zinc-800 border border-zinc-700 text-sm text-zinc-200 placeholder:text-zinc-600 px-3 py-2"
+                            />
+                            <div className="flex flex-wrap gap-2">
+                              <button onClick={() => generateCaption(post)} disabled={genBusy} className="text-xs font-semibold text-pink-300 hover:text-pink-200 flex items-center gap-1.5 rounded-full border border-pink-800/40 bg-pink-950/10 px-3 py-1.5 disabled:opacity-60">
+                                {genBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageSquarePlus className="w-3.5 h-3.5" />} Generate caption
+                              </button>
+                              <button onClick={() => saveCaption(post)} disabled={editBusy} className="text-xs font-semibold text-white flex items-center gap-1.5 rounded-full bg-[var(--accent)] hover:brightness-110 px-3 py-1.5 disabled:opacity-60">
+                                {editBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />} Save
+                              </button>
+                              <button onClick={cancelEditCaption} className="text-xs font-semibold text-zinc-400 hover:text-zinc-200 px-3 py-1.5">
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          post.caption && <p className="text-sm text-zinc-400 mt-1 whitespace-pre-wrap">{post.caption}</p>
+                        )}
 
                         {urls.length > 0 && (
                           <div className="mt-4 pt-3 border-t border-zinc-800 flex flex-wrap gap-2">
                             <button onClick={() => { urls.forEach((u, i) => downloadImage(u, `${data.clientName.replace(/\s+/g, "-").toLowerCase()}-${post.date}-${i + 1}.jpg`)); pingDownload(token, post.title || post.postType, urls.length); }} className="text-xs font-semibold text-pink-400 hover:text-pink-300 flex items-center gap-1.5 rounded-full border border-pink-800/40 bg-pink-950/10 px-3 py-1.5">
                               <Download className="w-3.5 h-3.5" /> Download image{urls.length > 1 ? "s" : ""}
                             </button>
-                            {post.caption && (
+                            {post.caption && !isEditingCaption && (
                               <button onClick={() => copyCaption(post.caption)} className="text-xs font-semibold text-zinc-300 hover:text-white flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5">
                                 <ClipboardList className="w-3.5 h-3.5" /> Copy caption
                               </button>
                             )}
+                          </div>
+                        )}
+                        {!isEditingCaption && (
+                          <div className="mt-3">
+                            <button onClick={() => startEditCaption(post)} className="text-xs font-semibold text-zinc-400 hover:text-zinc-200 flex items-center gap-1">
+                              <MessageSquarePlus className="w-3.5 h-3.5" /> Not keen on the wording? Edit it
+                            </button>
                           </div>
                         )}
 
