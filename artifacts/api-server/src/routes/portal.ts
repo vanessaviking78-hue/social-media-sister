@@ -91,6 +91,9 @@ router.get("/portal/:token", async (req, res) => {
     res.json({
       clientName,
       logoUrl: preset.logoUrl || null,
+      photoUrl: preset.clientPhotoUrl || null,
+      accentColor: preset.accentColor || null,
+      welcomeMessage: preset.portalWelcomeMessage || null,
       upcomingPosts: mergedUpcoming,
       approvalBatches: batchesWithCounts,
       revenueIdeas,
