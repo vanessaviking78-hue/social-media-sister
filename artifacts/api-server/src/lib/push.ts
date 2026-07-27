@@ -1,6 +1,7 @@
 import webpush from "web-push";
 import { db } from "@workspace/db";
-import { sql } from "drizzle-orm";
+import { clientPresetsTable } from "@workspace/db/schema";
+import { sql, eq } from "drizzle-orm";
 
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "";
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
@@ -70,4 +71,17 @@ export async function notifyAllClients(payload: PushPayload) {
   const rows = await db.execute(sql`SELECT id, endpoint, p256dh, auth FROM portal_push_subscriptions`);
   const subs = (rows as any).rows ?? rows;
   await Promise.all((subs as SubscriptionRow[]).map((s) => sendToSubscription(s, payload)));
+}
+
+// Looks up a client's portal token by their name and sends them a push, if
+// they have a portal set up and are subscribed. Used by routes that only
+// have the client's name to hand (calendar posts, revenue ideas etc), so
+// they don't each need to repeat the token lookup themselves.
+export async function notifyClientByName(clientName: string, payload: PushPayload) {
+  if (!clientName) return;
+  const [preset] = await db.select({ token: clientPresetsTable.clientPortalToken })
+    .from(clientPresetsTable)
+    .where(eq(clientPresetsTable.name, clientName));
+  if (!preset?.token) return;
+  await notifyClientByToken(preset.token, payload);
 }
