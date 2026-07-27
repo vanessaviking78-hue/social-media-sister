@@ -134,7 +134,19 @@ return urls;
 }
 function normDate(v: string) { const x = (v || "").trim(); if (/^\d{4}-\d{2}-\d{2}$/.test(x)) return x; const m = x.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/); if (m) { let y = m[3]; if (y.length === 2) y = "20" + y; return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`; } return x; }
 function normTime(v: string) { const x = (v || "").trim(); const m = x.match(/^(\d{1,2}):(\d{2})/); return m ? `${m[1].padStart(2, "0")}:${m[2]}` : x; }
-function seamlessDate(i: number): string { const day = i % 2 === 0 ? WEEKDAY.MON : WEEKDAY.FRI; const week = Math.floor(i / 2); const first = new Date(`${nextWeekday(day, POST_TIME)}T${POST_TIME}`); const d = new Date(first); d.setDate(d.getDate() + week * 7); const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day2 = String(d.getDate()).padStart(2, "0"); return `${y}-${m}-${day2}`; }
+function dateForPattern(days: (typeof WEEKDAY)[keyof typeof WEEKDAY][], i: number): string { const list = days.length ? days : [WEEKDAY.MON]; const day = list[i % list.length]; const week = Math.floor(i / list.length); const first = new Date(`${nextWeekday(day, POST_TIME)}T${POST_TIME}`); const d = new Date(first); d.setDate(d.getDate() + week * 7); const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, "0"), day2 = String(d.getDate()).padStart(2, "0"); return `${y}-${m}-${day2}`; }
+function seamlessDate(i: number): string { return dateForPattern([WEEKDAY.MON, WEEKDAY.FRI], i); }
+
+// Quick reschedule presets, for bulk-assigning dates across a whole batch in one click.
+const DAY_OPTIONS: { value: (typeof WEEKDAY)[keyof typeof WEEKDAY]; label: string }[] = [
+{ value: WEEKDAY.MON, label: "Every Monday" },
+{ value: WEEKDAY.TUE, label: "Every Tuesday" },
+{ value: WEEKDAY.WED, label: "Every Wednesday" },
+{ value: WEEKDAY.THU, label: "Every Thursday" },
+{ value: WEEKDAY.FRI, label: "Every Friday" },
+{ value: WEEKDAY.SAT, label: "Every Saturday" },
+{ value: WEEKDAY.SUN, label: "Every Sunday" },
+];
 
 // Builds a browser download from a Blob. The anchor is attached to the DOM
 // before .click() and removed straight after — an unattached anchor's click()
@@ -168,6 +180,7 @@ const [broadcastPresetIds, setBroadcastPresetIds] = useState<Set<number>>(new Se
 const [genning, setGenning] = useState(false);
 const [genId, setGenId] = useState<string | null>(null);
 const [editLogo, setEditLogo] = useState<HTMLImageElement | null>(null);
+const [customDay, setCustomDay] = useState<(typeof WEEKDAY)[keyof typeof WEEKDAY]>(WEEKDAY.TUE);
 const isIn = (id: string) => !excluded.has(id);
 const toggleIn = (id: string) => setExcluded((p) => { const n = new Set(p); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
@@ -239,6 +252,20 @@ setCarousels(out); setPhase("preview");
 function update(id: string, patch: Partial<Carousel>) { setCarousels((p) => p.map((c) => (c.id === id ? { ...c, ...patch } : c))); }
 function removeCarousel(id: string) { setCarousels((p) => p.filter((c) => c.id !== id)); }
 function presetFor(id: number | null) { return presets.find((p) => p.id === id) || null; }
+
+// Bulk-reassign dates across every included carousel in one go, alternating through
+// `days` in order (e.g. Mon, Wed, Mon, Wed...), for a quicker bulk scheduling pass.
+function applyDatePattern(days: (typeof WEEKDAY)[keyof typeof WEEKDAY][], label: string) {
+if (!carousels.length) { toast.error("Nothing to reschedule yet."); return; }
+let idx = 0;
+setCarousels((prev) => prev.map((c) => {
+if (!isIn(c.id)) return c;
+const date = dateForPattern(days, idx);
+idx++;
+return { ...c, date };
+}));
+toast.success(`Dates set to ${label} across the selected carousels.`);
+}
 
 function importCsv(file: File) {
 readFileAsText(file).then((raw) => {
@@ -487,6 +514,16 @@ onClose={() => setEditId(null)}
 </div>
 </div>
 )}
+<div className="flex items-center gap-2 flex-wrap bg-white/[0.03] border border-border/40 rounded-xl px-3 py-2.5">
+<span className="text-xs uppercase tracking-widest text-muted-foreground mr-1">Quick reschedule</span>
+<button onClick={() => applyDatePattern([WEEKDAY.MON, WEEKDAY.WED], "Monday & Wednesday")} className="px-3 py-1.5 rounded-lg border border-border/50 hover:border-pink-500/60 text-xs">Monday & Wednesday</button>
+<button onClick={() => applyDatePattern([WEEKDAY.WED, WEEKDAY.SUN], "Wednesday & Sunday")} className="px-3 py-1.5 rounded-lg border border-border/50 hover:border-pink-500/60 text-xs">Wednesday & Sunday</button>
+<span className="text-xs text-muted-foreground">or</span>
+<select value={customDay} onChange={(e) => setCustomDay(Number(e.target.value) as (typeof WEEKDAY)[keyof typeof WEEKDAY])} className="bg-white/5 border border-border/50 rounded-md px-2 py-1.5 text-xs">
+{DAY_OPTIONS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+</select>
+<button onClick={() => applyDatePattern([customDay], DAY_OPTIONS.find((d) => d.value === customDay)?.label || "that day")} className="px-3 py-1.5 rounded-lg border border-border/50 hover:border-pink-500/60 text-xs">Apply</button>
+</div>
 <BookedDaysStrip presetId={batchPresetId} />
 {carousels.map((c) => (
 <div key={c.id} className={`rounded-2xl border p-4 space-y-4 transition-opacity ${isIn(c.id) ? "border-pink-500/40" : "border-border/40 opacity-50"}`}>
