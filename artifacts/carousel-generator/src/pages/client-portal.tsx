@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Loader2, AlertTriangle, CalendarDays, ChevronLeft, X, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star, FileText, Download, Newspaper, TrendingUp, Bell, BellOff, Gift } from "lucide-react";
+import { Loader2, AlertTriangle, CalendarDays, ChevronLeft, X, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star, FileText, Download, Newspaper, TrendingUp, Bell, BellOff, Gift, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { NewsList } from "@/pages/aesthetic-news";
 
@@ -679,6 +679,26 @@ export default function ClientPortal({ token }: { token: string }) {
 
 return (
 <div className="min-h-screen bg-zinc-950 text-white" style={{ "--accent": accent } as React.CSSProperties}>
+<section className="min-h-screen flex flex-col items-center justify-center text-center px-6 py-16 relative bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900">
+{data.photoUrl ? (
+<img src={data.photoUrl} alt={data.clientName} className="w-40 h-40 sm:w-56 sm:h-56 rounded-full object-cover border-4 mb-8" style={{ borderColor: "var(--accent)" }} />
+) : (
+<div className="w-40 h-40 sm:w-56 sm:h-56 rounded-full flex items-center justify-center border-4 mb-8 bg-zinc-900" style={{ borderColor: "var(--accent)" }}>
+<Layers className="w-16 h-16 text-pink-500" />
+</div>
+)}
+<p className="text-lg sm:text-2xl text-zinc-400 font-medium mb-2">Welcome back,</p>
+<h1 className="text-4xl sm:text-7xl font-black tracking-tight mb-4" style={{ color: "var(--accent)" }}>{data.clientName}</h1>
+{data.welcomeMessage && <p className="text-sm sm:text-base text-zinc-500 max-w-md">{data.welcomeMessage}</p>}
+<button
+onClick={() => document.getElementById("portal-main")?.scrollIntoView({ behavior: "smooth" })}
+className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 hover:text-zinc-300 transition-colors"
+>
+<span className="text-xs uppercase tracking-widest">Scroll to access your portal</span>
+<ChevronDown className="w-5 h-5 animate-bounce" />
+</button>
+</section>
+<div id="portal-main">
 <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-sm sticky top-0 z-50">
 <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
 <div className="flex items-center gap-3">
@@ -1170,6 +1190,7 @@ return (
       </main>
 
       <footer className="border-t border-zinc-900 py-6 mt-4"><p className="text-center text-xs text-zinc-700">Powered by <span className="text-zinc-600">The CyberSuite&trade;</span></p></footer>
+    </div>
     </div>
   );
 }
