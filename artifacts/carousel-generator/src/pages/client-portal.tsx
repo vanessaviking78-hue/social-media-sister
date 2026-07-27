@@ -366,6 +366,9 @@ export default function ClientPortal({ token }: { token: string }) {
   const [recap, setRecap] = useState<{ monthLabel: string; postsThisMonth: number; submissionsThisMonth: number; reelsCompleted: number } | null>(null);
 
   const [ticked, setTicked] = useState<Record<number, boolean>>({});
+  const [rantComments, setRantComments] = useState<Record<number, { id: number; clientName: string; comment: string; createdAt: string }[]>>({});
+  const [rantCommentDraft, setRantCommentDraft] = useState<Record<number, string>>({});
+  const [rantCommentBusy, setRantCommentBusy] = useState<number | null>(null);
   useEffect(() => {
     fetch(`${BASE}api/portal/${token}/reels`)
       .then((r) => r.json())
@@ -381,6 +384,33 @@ export default function ClientPortal({ token }: { token: string }) {
     }).catch(() => {});
     return n;
   });
+
+  const loadRantComments = (postId: number) => {
+    fetch(`${BASE}api/blog-posts/${postId}/comments`)
+      .then((r) => r.json())
+      .then((d) => setRantComments((prev) => ({ ...prev, [postId]: Array.isArray(d.comments) ? d.comments : [] })))
+      .catch(() => {});
+  };
+
+  const submitRantComment = async (postId: number) => {
+    const text = (rantCommentDraft[postId] || "").trim();
+    if (!text) return;
+    setRantCommentBusy(postId);
+    try {
+      const r = await fetch(`${BASE}api/portal/${token}/rants/${postId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ comment: text }),
+      });
+      if (!r.ok) throw new Error("Failed to post comment");
+      setRantCommentDraft((prev) => ({ ...prev, [postId]: "" }));
+      loadRantComments(postId);
+    } catch {
+      toast.error("Couldn't send that, give it another go.");
+    } finally {
+      setRantCommentBusy(null);
+    }
+  };
   const doneCount = Object.values(ticked).filter(Boolean).length;
 
   useEffect(() => {
@@ -1013,17 +1043,46 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
               <section className="space-y-4">
                 {blogLoading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Loading...</div>}
                 {!blogLoading && blogPosts.length === 0 && <p className="text-sm text-muted-foreground">Nothing here yet, check back soon.</p>}
-                {blogPosts.map((p: any) => (
+                {blogPosts.map((p: any) => {
+                  if (!(p.id in rantComments)) loadRantComments(p.id);
+                  const postComments = rantComments[p.id] || [];
+                  return (
                   <div key={p.id} className="rounded-2xl border border-border/50 p-4">
                     {p.title && <p className="font-semibold text-sm mb-1">{p.title}</p>}
                     {p.body && <p className="text-sm text-muted-foreground mb-2 whitespace-pre-wrap">{p.body}</p>}
+                    {p.videoUrl && <video src={p.videoUrl} controls className="rounded-lg w-full mb-2 bg-black" />}
                     {p.imageUrls?.length > 0 && (
                       <div className={`grid gap-2 ${p.imageUrls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
                         {p.imageUrls.map((url: string, i: number) => <img key={i} src={url} alt="" className="rounded-lg w-full object-cover" />)}
                       </div>
                     )}
+                    <div className="mt-3 pt-3 border-t border-zinc-800 space-y-2">
+                      {postComments.map((c) => (
+                        <div key={c.id} className="text-xs bg-zinc-900/60 rounded-lg px-3 py-2">
+                          <span className="font-semibold text-white">{c.clientName}</span>
+                          <p className="text-zinc-400 mt-0.5">{c.comment}</p>
+                        </div>
+                      ))}
+                      <div className="flex items-center gap-2 pt-1">
+                        <input
+                          value={rantCommentDraft[p.id] || ""}
+                          onChange={(e) => setRantCommentDraft((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                          onKeyDown={(e) => { if (e.key === "Enter") submitRantComment(p.id); }}
+                          placeholder="Leave a comment..."
+                          className="flex-1 rounded-full bg-zinc-900 border border-zinc-800 px-3.5 py-2 text-xs text-white outline-none focus:border-pink-600"
+                        />
+                        <button
+                          onClick={() => submitRantComment(p.id)}
+                          disabled={rantCommentBusy === p.id || !(rantCommentDraft[p.id] || "").trim()}
+                          className="text-xs font-semibold text-pink-400 hover:text-pink-300 disabled:opacity-40 px-2"
+                        >
+                          {rantCommentBusy === p.id ? "..." : "Send"}
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                ))}
+                  );
+                })}
               </section>
             )}
             {tab === "connect" && (
@@ -1183,7 +1242,7 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-3">
               <p className="text-sm text-zinc-300">Just get them to drop me a message, or pass on my email, and I'll take it from there.</p>
               <p className="text-sm font-semibold text-white">vanessaviking78@gmail.com</p>
-              <a href="mailto:vanessaviking78@gmail.com?subject=A%20clinic%20I%20think%20you%27d%20get%20on%20with" className="inline-flex items-center gap-1.5 text-sm font-semibold text-pink-400 hover:text-pink-300">Email Vanessa a heads up<ChevronRight className="w-4 h-4" /></a>
+              <a href="mailto:vanessa@thecybersuite.com?subject=A%20clinic%20I%20think%20you%27d%20get%20on%20with" className="inline-flex items-center gap-1.5 text-sm font-semibold text-pink-400 hover:text-pink-300">Email Vanessa a heads up<ChevronRight className="w-4 h-4" /></a>
             </div>
           </section>
         )}
