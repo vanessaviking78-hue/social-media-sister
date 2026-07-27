@@ -122,6 +122,99 @@ router.post("/portal/:token/download", async (req, res) => {
   }
 });
 
+// Client: get their saved reel checklist progress (100 Reels tab), synced
+// server side so it survives switching phones and Vanessa can actually see it.
+router.get("/portal/:token/reels", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+    let ticked: Record<string, boolean> = {};
+    try { ticked = JSON.parse(preset.completedReels || "{}"); } catch { ticked = {}; }
+    res.json({ ticked });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to load reel progress" });
+  }
+});
+
+// Client: save their reel checklist progress.
+router.patch("/portal/:token/reels", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { ticked } = req.body as { ticked?: Record<string, boolean> };
+    if (!ticked || typeof ticked !== "object") { res.status(400).json({ error: "Invalid request" }); return; }
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+    await db.update(clientPresetsTable)
+      .set({ completedReels: JSON.stringify(ticked) })
+      .where(eq(clientPresetsTable.id, preset.id));
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to save reel progress" });
+  }
+});
+
+// Client: their own history of before/afters, selfies, reviews, requests and
+// onboarding sends, with whether Vanessa's actioned them yet.
+router.get("/portal/:token/submissions", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+    const result = await db.execute(sql`
+      SELECT id, treatment, story, submitter_name AS "submitterName", status, created_at AS "createdAt"
+      FROM before_after_submissions WHERE preset_id = ${preset.id}
+      ORDER BY created_at DESC LIMIT 50
+    `);
+    res.json({ submissions: (result as { rows?: unknown[] }).rows ?? [] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to load submissions" });
+  }
+});
+
+// Client: a quick honest recap, posts made this month, reels filmed so far,
+// and how many things they've sent through, a small proof of work.
+router.get("/portal/:token/recap", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+
+    const now = new Date();
+    const monthPrefix = now.toISOString().slice(0, 7);
+    const monthLabel = now.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+
+    const postsResult = await db.execute(sql`
+      SELECT COUNT(*)::int AS count FROM calendar_posts
+      WHERE client_name = ${preset.name} AND date LIKE ${monthPrefix + "%"}
+    `);
+    const scheduledResult = await db.execute(sql`
+      SELECT COUNT(*)::int AS count FROM scheduled_posts
+      WHERE preset_id = ${preset.id} AND to_char(scheduled_at, 'YYYY-MM') = ${monthPrefix}
+    `);
+    const submissionsResult = await db.execute(sql`
+      SELECT COUNT(*)::int AS count FROM before_after_submissions
+      WHERE preset_id = ${preset.id} AND to_char(created_at, 'YYYY-MM') = ${monthPrefix}
+    `);
+
+    let ticked: Record<string, boolean> = {};
+    try { ticked = JSON.parse(preset.completedReels || "{}"); } catch { ticked = {}; }
+    const reelsCompleted = Object.values(ticked).filter(Boolean).length;
+
+    const postsThisMonth = Number((postsResult as { rows?: { count: number }[] }).rows?.[0]?.count ?? 0)
+      + Number((scheduledResult as { rows?: { count: number }[] }).rows?.[0]?.count ?? 0);
+    const submissionsThisMonth = Number((submissionsResult as { rows?: { count: number }[] }).rows?.[0]?.count ?? 0);
+
+    res.json({ monthLabel, postsThisMonth, submissionsThisMonth, reelsCompleted });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to load recap" });
+  }
+});
+
 // Lets a client update the caption on one of their own upcoming posts. Works
 // for both calendar posts and scheduler-sourced posts (the latter are
 // identified by the 900000000 offset baked into their id in the GET above).
