@@ -33,6 +33,25 @@ router.get("/presets", async (_req, res) => {
   }
 });
 
+router.get("/presets/reel-progress", async (_req, res) => {
+  try {
+    const presets = await db.select({
+      id: clientPresetsTable.id,
+      name: clientPresetsTable.name,
+      completedReels: clientPresetsTable.completedReels,
+    }).from(clientPresetsTable).orderBy(sql`LOWER(${clientPresetsTable.name})`);
+    const progress = presets.map((p) => {
+      let ticked: Record<string, boolean> = {};
+      try { ticked = JSON.parse(p.completedReels || "{}"); } catch { ticked = {}; }
+      const done = Object.values(ticked).filter(Boolean).length;
+      return { id: p.id, name: p.name, done, total: 100 };
+    });
+    res.json({ progress });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to load reel progress" });
+  }
+});
+
 router.get("/presets/:id", async (req, res) => {
   try {
     const id = Number(req.params["id"]);
