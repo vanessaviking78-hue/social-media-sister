@@ -35,6 +35,7 @@ await createBroadcastDraftsTable();
     await addHomeworkActionedColumn();
     await addCompletedReelsColumn();
     await addBlogVideoAndCommentsSupport();
+    await createGoogleCalendarTables();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -112,6 +113,28 @@ async function addBlogVideoAndCommentsSupport(): Promise<void> {
     blog_post_id integer NOT NULL,
     client_name text NOT NULL DEFAULT '',
     comment text NOT NULL DEFAULT '',
+    created_at timestamp NOT NULL DEFAULT now()
+  )`);
+}
+
+async function createGoogleCalendarTables(): Promise<void> {
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS google_tokens (
+    id serial PRIMARY KEY,
+    access_token text NOT NULL,
+    refresh_token text,
+    expires_at timestamptz,
+    google_email text,
+    calendar_id text NOT NULL DEFAULT 'primary',
+    updated_at timestamp NOT NULL DEFAULT now()
+  )`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS brainstorm_bookings (
+    id serial PRIMARY KEY,
+    slot_start timestamptz NOT NULL,
+    slot_end timestamptz NOT NULL,
+    client_name text NOT NULL DEFAULT '',
+    client_token text NOT NULL DEFAULT '',
+    google_event_id text,
+    status text NOT NULL DEFAULT 'confirmed',
     created_at timestamp NOT NULL DEFAULT now()
   )`);
 }
