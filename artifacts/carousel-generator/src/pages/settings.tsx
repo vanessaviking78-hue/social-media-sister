@@ -4,6 +4,7 @@ import { ArrowLeft, Settings as SettingsIcon, CheckCircle2, Unlink, ExternalLink
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { invalidateCanvaStatusCache } from "@/components/export-to-canva";
+import { Calendar } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL || "/";
 
@@ -12,10 +13,18 @@ interface CanvaStatus {
   canvaUserId?: string | null;
 }
 
+interface GoogleStatus {
+  connected: boolean;
+  googleEmail?: string | null;
+}
+
 export default function Settings() {
   const [canva, setCanva] = useState<CanvaStatus | null>(null);
   const [canvaLoading, setCanvaLoading] = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [google, setGoogle] = useState<GoogleStatus | null>(null);
+  const [googleLoading, setGoogleLoading] = useState(true);
+  const [googleDisconnecting, setGoogleDisconnecting] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
 
   const sendTestEmail = useCallback(async () => {
@@ -50,6 +59,65 @@ export default function Settings() {
   }, []);
 
   useEffect(() => { void fetchCanvaStatus(); }, [fetchCanvaStatus]);
+
+  const fetchGoogleStatus = useCallback(async () => {
+    setGoogleLoading(true);
+    try {
+      const r = await fetch(`${BASE}api/google/status`);
+      const d = (await r.json()) as GoogleStatus;
+      setGoogle(d);
+    } catch {
+      setGoogle({ connected: false });
+    } finally {
+      setGoogleLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void fetchGoogleStatus(); }, [fetchGoogleStatus]);
+
+  const openGoogleOAuth = () => {
+    const popup = window.open(
+      `${BASE}api/google/auth/start`,
+      "google-oauth",
+      "width=540,height=700,scrollbars=yes,resizable=yes"
+    );
+
+    const handler = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.type !== "google-oauth-result") return;
+      window.removeEventListener("message", handler);
+      popup?.close();
+      if (e.data.success) {
+        void fetchGoogleStatus();
+        toast.success("Google Calendar connected");
+      } else {
+        toast.error(`Google Calendar connection failed: ${e.data.error || "Unknown error"}`);
+      }
+    };
+
+    window.addEventListener("message", handler);
+
+    const poll = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(poll);
+        window.removeEventListener("message", handler);
+      }
+    }, 500);
+  };
+
+  const disconnectGoogle = async () => {
+    setGoogleDisconnecting(true);
+    try {
+      const r = await fetch(`${BASE}api/google/disconnect`, { method: "POST" });
+      if (!r.ok) throw new Error("Disconnect failed");
+      setGoogle({ connected: false });
+      toast.success("Google Calendar disconnected");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to disconnect");
+    } finally {
+      setGoogleDisconnecting(false);
+    }
+  };
 
   const openCanvaOAuth = () => {
     const popup = window.open(
@@ -178,6 +246,69 @@ export default function Settings() {
 
             <p className="text-xs text-gray-600">
               Canva Connect API — your token is stored securely on the server and never shared.
+            </p>
+          </div>
+
+          <div className="border border-violet-500/20 rounded-xl p-5 bg-violet-950/10 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center">
+                  <Calendar className="w-4 h-4 text-violet-300" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm text-white">Google Calendar</p>
+                  <p className="text-xs text-gray-500">Powers the Book your Brainstorm tab on the client portal</p>
+                </div>
+              </div>
+              {googleLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+              ) : google?.connected ? (
+                <span className="text-xs bg-green-900/40 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> Connected
+                </span>
+              ) : (
+                <span className="text-xs bg-gray-800 text-gray-500 border border-gray-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" /> Not connected
+                </span>
+              )}
+            </div>
+
+            {!googleLoading && google?.connected && google.googleEmail && (
+              <div className="text-xs text-gray-400 bg-gray-800/60 rounded-lg px-3 py-2 flex items-center gap-2">
+                <CheckCircle2 className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                Connected as <span className="text-white font-medium">{google.googleEmail}</span>
+              </div>
+            )}
+
+            <div className="text-xs text-gray-500 leading-relaxed">
+              Once connected, clients can book a Brainstorm call Monday to Thursday, 8am-12noon.
+              Every booking lands straight on your Google Calendar and you get an email the moment it's made.
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                onClick={openGoogleOAuth}
+                className="flex-1 bg-violet-600 hover:bg-violet-700 text-white font-medium text-sm h-9"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                {google?.connected ? "Reconnect Google Calendar" : "Connect Google Calendar"}
+              </Button>
+              {google?.connected && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={disconnectGoogle}
+                  disabled={googleDisconnecting}
+                  className="text-xs text-red-400 hover:text-red-300 hover:bg-red-950/30 h-9"
+                >
+                  {googleDisconnecting ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Unlink className="w-3.5 h-3.5 mr-1" />}
+                  Disconnect
+                </Button>
+              )}
+            </div>
+
+            <p className="text-xs text-gray-600">
+              Google Calendar API — your token is stored securely on the server and never shared.
             </p>
           </div>
         </section>
