@@ -83,6 +83,7 @@ import Blog from "@/pages/blog";
 import Broadcasts from "@/pages/broadcasts";
 import Reports from "@/pages/reports";
 import BlogPublic from "@/pages/blog-public";
+import RantPublic from "@/pages/rant-public";
 import TweetMaker from "@/pages/tweet-maker";
 import RevenueIdeas from "@/pages/revenue-ideas";
 import News from "@/pages/news";
@@ -195,6 +196,7 @@ function AppContent() {
   const [isCompetition] = useRoute("/competition");
   const [isAboutPage] = useRoute("/about");
   const [isBlogPublic] = useRoute("/socialmediasister");
+  const [isRantPublic, rantPublicParams] = useRoute("/rant/:id");
   const [isBundle, bundleParams] = useRoute("/bundle/:token");
   const [isFounderSignup] = useRoute("/founder-signup");
     const [isNinetyNineClub] = useRoute("/99club");
@@ -241,6 +243,9 @@ function AppContent() {
   }
   if (isBlogPublic) {
     return <BlogPublic />;
+  }
+  if (isRantPublic && rantPublicParams?.id) {
+    return <RantPublic id={rantPublicParams.id} />;
   }
   if (isSplash) {
     return <Splash />;
