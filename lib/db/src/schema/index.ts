@@ -805,3 +805,29 @@ export const broadcastDraftsTable = pgTable("broadcast_drafts", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 export type BroadcastDraft = typeof broadcastDraftsTable.$inferSelect;
+
+export const googleTokensTable = pgTable("google_tokens", {
+  id: serial("id").primaryKey(),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }),
+  googleEmail: text("google_email"),
+  calendarId: text("calendar_id").notNull().default("primary"),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+export type GoogleToken = typeof googleTokensTable.$inferSelect;
+
+export const BRAINSTORM_BOOKING_STATUSES = ["confirmed", "cancelled"] as const;
+export type BrainstormBookingStatus = typeof BRAINSTORM_BOOKING_STATUSES[number];
+
+export const brainstormBookingsTable = pgTable("brainstorm_bookings", {
+  id: serial("id").primaryKey(),
+  slotStart: timestamp("slot_start", { withTimezone: true }).notNull(),
+  slotEnd: timestamp("slot_end", { withTimezone: true }).notNull(),
+  clientName: text("client_name").notNull().default(""),
+  clientToken: text("client_token").notNull().default(""),
+  googleEventId: text("google_event_id"),
+  status: text("status").notNull().default("confirmed"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type BrainstormBooking = typeof brainstormBookingsTable.$inferSelect;
