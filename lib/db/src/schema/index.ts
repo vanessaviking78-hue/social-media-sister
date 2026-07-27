@@ -43,6 +43,7 @@ export const clientPresetsTable = pgTable("client_presets", {
   contentPillars: text("content_pillars"),
   brandNotes: text("brand_notes"),
   portalWelcomeMessage: text("portal_welcome_message"),
+  completedReels: text("completed_reels").notNull().default("{}"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => [
