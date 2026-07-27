@@ -33,6 +33,7 @@ export async function runMigrations(): Promise<void> {
 await createBroadcastDraftsTable();
     await addPortalPersonalizationColumns();
     await addHomeworkActionedColumn();
+    await addCompletedReelsColumn();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -99,6 +100,9 @@ async function addPortalPersonalizationColumns(): Promise<void> {
 async function addHomeworkActionedColumn(): Promise<void> {
   await db.execute(sql`ALTER TABLE homework_replies ADD COLUMN IF NOT EXISTS actioned boolean NOT NULL DEFAULT false`);
   await db.execute(sql`ALTER TABLE homework_replies ADD COLUMN IF NOT EXISTS actioned_at timestamp`);
+}
+async function addCompletedReelsColumn(): Promise<void> {
+  await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS completed_reels text NOT NULL DEFAULT '{}'`);
 }
 
 async function addMetaConnectionColumns(): Promise<void> {
