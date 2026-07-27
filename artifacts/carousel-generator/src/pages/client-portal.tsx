@@ -245,7 +245,7 @@ const REEL_GROUPS: { heading: string; items: string[] }[] = [
 ];
 const REEL_TOTAL = REEL_GROUPS.reduce((n, g) => n + g.items.length, 0);
 
-type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus" | "rants" | "connect";
+type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus" | "rants" | "connect" | "activity" | "refer";
 
 const TAB_ICON: Record<Tab, React.ReactNode> = {
   upcoming: <CalendarDays className="w-4 h-4" />,
@@ -262,6 +262,8 @@ const TAB_ICON: Record<Tab, React.ReactNode> = {
   homework: <MessageSquarePlus className="w-4 h-4" />,
   bonus: <Gift className="w-4 h-4" />,
   rants: <Newspaper className="w-4 h-4" />,
+  activity: <FileImage className="w-4 h-4" />,
+  refer: <TrendingUp className="w-4 h-4" />,
 };
 
 export default function ClientPortal({ token }: { token: string }) {
@@ -356,10 +358,29 @@ export default function ClientPortal({ token }: { token: string }) {
   const [rvErr, setRvErr] = useState("");
   const rvShotRef = useRef<HTMLInputElement>(null);
 
-  const reelsKey = `tcs_reels_${token}`;
+  const [reqImage, setReqImage] = useState<File | null>(null);
+  const [reqImagePrev, setReqImagePrev] = useState("");
+  const reqImageRef = useRef<HTMLInputElement>(null);
+
+  const [submissions, setSubmissions] = useState<Array<{ id: number; treatment: string; story: string; submitterName: string; status: string; createdAt: string }>>([]);
+  const [recap, setRecap] = useState<{ monthLabel: string; postsThisMonth: number; submissionsThisMonth: number; reelsCompleted: number } | null>(null);
+
   const [ticked, setTicked] = useState<Record<number, boolean>>({});
-  useEffect(() => { try { setTicked(JSON.parse(localStorage.getItem(reelsKey) || "{}")); } catch { /* ignore */ } }, [reelsKey]);
-  const toggleReel = (i: number) => setTicked((prev) => { const n = { ...prev, [i]: !prev[i] }; try { localStorage.setItem(reelsKey, JSON.stringify(n)); } catch { /* ignore */ } return n; });
+  useEffect(() => {
+    fetch(`${BASE}api/portal/${token}/reels`)
+      .then((r) => r.json())
+      .then((d) => setTicked(d.ticked || {}))
+      .catch(() => {});
+  }, [token]);
+  const toggleReel = (i: number) => setTicked((prev) => {
+    const n = { ...prev, [i]: !prev[i] };
+    fetch(`${BASE}api/portal/${token}/reels`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticked: n }),
+    }).catch(() => {});
+    return n;
+  });
   const doneCount = Object.values(ticked).filter(Boolean).length;
 
   useEffect(() => {
@@ -398,6 +419,17 @@ export default function ClientPortal({ token }: { token: string }) {
       .then((d) => setBcItems(Array.isArray(d.items) ? d.items : []))
       .catch(() => setBcItems([]))
       .finally(() => setBcLoading(false));
+  }, [token]);
+
+  useEffect(() => {
+    fetch(`${BASE}api/portal/${token}/submissions`)
+      .then((r) => r.json())
+      .then((d) => setSubmissions(Array.isArray(d.submissions) ? d.submissions : []))
+      .catch(() => setSubmissions([]));
+    fetch(`${BASE}api/portal/${token}/recap`)
+      .then((r) => r.json())
+      .then((d) => setRecap(d && d.monthLabel ? d : null))
+      .catch(() => setRecap(null));
   }, [token]);
 
   useEffect(() => {
@@ -554,6 +586,7 @@ export default function ClientPortal({ token }: { token: string }) {
   const pick = (which: "before" | "after") => (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (!f) return; const prev = URL.createObjectURL(f); if (which === "before") { setBefore(f); setBeforePrev(prev); } else { setAfter(f); setAfterPrev(prev); } };
   const pickSelfie = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (!f) return; setSelfie(f); setSelfiePrev(URL.createObjectURL(f)); };
   const pickLogo = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (!f) return; setObLogo(f); setObLogoPrev(URL.createObjectURL(f)); };
+  const pickReqImage = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (!f) return; setReqImage(f); setReqImagePrev(URL.createObjectURL(f)); };
 
   const submitBA = async () => { setBaErr(""); if (!before || !after) { setBaErr("Please add both a before and an after photo."); return; } setBaBusy(true); try { const beforeUrl = await uploadOne(before); const afterUrl = await uploadOne(after); await send({ beforeUrl, afterUrl, treatment, story, submitterName: baName }); setBaDone(true); } catch (e: any) { setBaErr(e?.message || "Something went wrong."); } finally { setBaBusy(false); } };
   const submitSelfie = async () => { setSelfieErr(""); if (!selfie) { setSelfieErr("Please add a selfie first."); return; } setSelfieBusy(true); try { const url = await uploadOne(selfie); await send({ beforeUrl: url, afterUrl: url, treatment: "SELFIE", story: selfieNote, submitterName: selfieName }); setSelfieDone(true); } catch (e: any) { setSelfieErr(e?.message || "Something went wrong."); } finally { setSelfieBusy(false); } };
@@ -580,7 +613,7 @@ export default function ClientPortal({ token }: { token: string }) {
       setHwBusy(false);
     }
   };
-  const submitRequest = async () => { setReqErr(""); if (!reqText.trim()) { setReqErr("Tell us what you'd like a post about."); return; } setReqBusy(true); try { await send({ beforeUrl: "", afterUrl: "", treatment: "POST REQUEST", story: reqText, submitterName: reqName }); setReqDone(true); } catch (e: any) { setReqErr(e?.message || "Something went wrong."); } finally { setReqBusy(false); } };
+  const submitRequest = async () => { setReqErr(""); if (!reqText.trim()) { setReqErr("Tell us what you'd like a post about."); return; } setReqBusy(true); try { let inspoUrl = ""; if (reqImage) inspoUrl = await uploadOne(reqImage); await send({ beforeUrl: inspoUrl, afterUrl: "", treatment: "POST REQUEST", story: reqText, submitterName: reqName }); setReqDone(true); } catch (e: any) { setReqErr(e?.message || "Something went wrong."); } finally { setReqBusy(false); } };
   const submitOnboarding = async () => {
     setObErr("");
     if (!obTreatments.trim() && !obAbout.trim() && !obLogo) { setObErr("Add your treatments, a bit about you, or your logo."); return; }
@@ -675,6 +708,8 @@ return (
           <TabBtn id="reels" label="100 Reels" />
           <TabBtn id="resources" label="Resources" />
           <TabBtn id="news" label="Aesthetic News" />
+          <TabBtn id="activity" label="My Activity" />
+          <TabBtn id="refer" label="Refer a Clinic" />
         </div>
       </header>
 
@@ -711,6 +746,16 @@ return (
       <main className="max-w-3xl mx-auto px-4 py-8">
         {tab === "upcoming" && (
           <section>
+            {recap && (
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 px-5 py-4 mb-6">
+                <p className="text-xs uppercase tracking-wide text-pink-400/80 mb-2">Your {recap.monthLabel} so far</p>
+                <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-zinc-300">
+                  <span><span className="font-semibold text-white">{recap.postsThisMonth}</span> post{recap.postsThisMonth === 1 ? "" : "s"} made for you</span>
+                  <span><span className="font-semibold text-white">{recap.submissionsThisMonth}</span> thing{recap.submissionsThisMonth === 1 ? "" : "s"} sent through</span>
+                  <span><span className="font-semibold text-white">{recap.reelsCompleted}</span>/{REEL_TOTAL} reels filmed so far</span>
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-2 mb-5"><CalendarDays className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Upcoming Content</h2>{data.upcomingPosts.length > 0 && (<span className="ml-auto text-xs text-zinc-500">{data.upcomingPosts.length} post{data.upcomingPosts.length !== 1 ? "s" : ""} scheduled</span>)}</div>
             {data.upcomingPosts.length === 0 ? (<div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-8 text-center"><CalendarDays className="w-8 h-8 mx-auto text-zinc-700 mb-3" /><p className="text-zinc-500">No upcoming content scheduled yet.</p></div>) : (
               <div className="space-y-4">
@@ -995,9 +1040,10 @@ return (
           <section>
             <div className="flex items-center gap-2 mb-2"><MessageSquarePlus className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Request a Post</h2></div>
             <p className="text-sm text-zinc-400 mb-6">Got something you'd like posted? An offer, an update, a treatment to shout about? Tell us here and we'll sort it.</p>
-            {reqDone ? (<DoneCard label="Want to send another request?" onAgain={() => { setReqDone(false); setReqText(""); setReqName(""); }} />) : (
+            {reqDone ? (<DoneCard label="Want to send another request?" onAgain={() => { setReqDone(false); setReqText(""); setReqName(""); setReqImage(null); setReqImagePrev(""); }} />) : (
               <div className="space-y-5">
                 <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">What would you like a post about?</label><textarea value={reqText} onChange={(e) => setReqText(e.target.value)} rows={5} placeholder="e.g. A post about our summer skin package, or that we now offer polynucleotides..." className={inputCls + " resize-none"} /></div>
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Got a photo for inspiration? (optional)</label><button type="button" onClick={() => reqImageRef.current?.click()} className="w-full h-32 rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/60 overflow-hidden flex items-center justify-center">{reqImagePrev ? <img src={reqImagePrev} alt="inspiration" className="max-h-full max-w-full object-contain p-2" /> : (<div className="text-center text-zinc-600"><ImageIcon className="w-6 h-6 mx-auto mb-1" /><span className="text-xs">Saw this and thought of us? Tap to add</span></div>)}</button><input ref={reqImageRef} type="file" accept="image/*" className="hidden" onChange={pickReqImage} /></div>
                 <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Your name</label><input value={reqName} onChange={(e) => setReqName(e.target.value)} placeholder="So we know who sent it" className={inputCls} /></div>
                 {reqErr && <p className="text-sm text-red-400">{reqErr}</p>}
                 <button onClick={submitRequest} disabled={reqBusy} className={sendBtn}>{reqBusy ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : SEND_LABEL}</button>
@@ -1088,6 +1134,39 @@ return (
           </section>
         )}
         {tab === "news" && (<section><div className="flex items-center gap-2 mb-5"><Newspaper className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Aesthetic News</h2></div><p className="text-sm text-zinc-400 mb-6">What's happening across aesthetics and skincare, refreshed every Monday.</p><NewsList /></section>)}
+        {tab === "activity" && (
+          <section>
+            <div className="flex items-center gap-2 mb-2"><FileImage className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">My Activity</h2></div>
+            <p className="text-sm text-zinc-400 mb-6">Everything you've sent through, and where it's up to.</p>
+            {submissions.length === 0 ? (
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-8 text-center"><FileImage className="w-8 h-8 mx-auto text-zinc-700 mb-3" /><p className="text-zinc-500">Nothing sent through yet.</p></div>
+            ) : (
+              <div className="space-y-3">
+                {submissions.map((s) => (
+                  <div key={s.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-medium text-white capitalize">{(s.treatment || "before and after").toLowerCase()}</span>
+                      <span className={`ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full ${s.status === "complete" ? "bg-green-950/40 text-green-400 border border-green-800/40" : "bg-amber-950/30 text-amber-300 border border-amber-800/40"}`}>{s.status === "complete" ? "Used in your content" : "Waiting with Vanessa"}</span>
+                    </div>
+                    {s.story && <p className="text-xs text-zinc-400 whitespace-pre-wrap line-clamp-3">{s.story}</p>}
+                    <p className="text-[11px] text-zinc-600 mt-2">{new Date(s.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+        {tab === "refer" && (
+          <section>
+            <div className="flex items-center gap-2 mb-2"><TrendingUp className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Refer a Clinic</h2></div>
+            <p className="text-sm text-zinc-400 mb-6">Know another clinic who'd love a bit of this? Send them my way, no forms, no fuss.</p>
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-3">
+              <p className="text-sm text-zinc-300">Just get them to drop me a message, or pass on my email, and I'll take it from there.</p>
+              <p className="text-sm font-semibold text-white">vanessaviking78@gmail.com</p>
+              <a href="mailto:vanessaviking78@gmail.com?subject=A%20clinic%20I%20think%20you%27d%20get%20on%20with" className="inline-flex items-center gap-1.5 text-sm font-semibold text-pink-400 hover:text-pink-300">Email Vanessa a heads up<ChevronRight className="w-4 h-4" /></a>
+            </div>
+          </section>
+        )}
       </main>
 
       <footer className="border-t border-zinc-900 py-6 mt-4"><p className="text-center text-xs text-zinc-700">Powered by <span className="text-zinc-600">The CyberSuite&trade;</span></p></footer>
