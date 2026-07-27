@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { calendarPostsTable } from "@workspace/db/schema";
 import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { notifyClientByName } from "../lib/push";
 
 const router: IRouter = Router();
 
@@ -51,6 +52,13 @@ router.post("/calendar", async (req, res) => {
       color: color?.trim() || "#ec4899",
       imageUrl: imageUrl?.trim() || null,
     }).returning();
+    if (post.clientName) {
+      notifyClientByName(post.clientName, {
+        title: "New post added",
+        body: post.title ? `A new post has been added to your calendar: ${post.title}` : "A new post has been added to your calendar.",
+        url: "/",
+      }).catch(() => {});
+    }
     res.json({ post });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to create calendar post";
