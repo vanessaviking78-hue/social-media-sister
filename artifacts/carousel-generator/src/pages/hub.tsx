@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard } from "lucide-react";
 
 const TOOLS = [
 {
@@ -62,6 +62,16 @@ description: "Set a weekly set of three questions for every client to answer in 
 color: "from-fuchsia-500/20 to-fuchsia-500/5",
 border: "hover:border-fuchsia-500/50",
 iconColor: "text-fuchsia-400",
+},
+{
+href: "/reel-progress",
+group: "today",
+icon: Clapperboard,
+name: "100 Reels Progress",
+description: "See how far every client has got through their 100 reel checklist, so you know who needs a nudge and who is smashing it.",
+color: "from-violet-500/20 to-violet-500/5",
+border: "hover:border-violet-500/50",
+iconColor: "text-violet-400",
 },
 {
 href: "/bonus-content",
