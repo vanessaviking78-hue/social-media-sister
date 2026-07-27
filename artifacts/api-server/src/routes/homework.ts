@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { homeworkQuestionSetsTable, homeworkRepliesTable, clientPresetsTable } from "@workspace/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { notifyAllClients } from "../lib/push";
 
 const router: IRouter = Router();
 
@@ -50,6 +51,11 @@ router.post("/homework/questions", async (req, res) => {
         status: "active",
       })
       .returning();
+    notifyAllClients({
+      title: "New homework is up",
+      body: "This week's questions are ready for you in your portal.",
+      url: "/",
+    }).catch(() => {});
     res.status(201).json({ set });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to publish homework questions" });
