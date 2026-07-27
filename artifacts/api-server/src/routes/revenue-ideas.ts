@@ -4,6 +4,7 @@ import { clientPresetsTable } from "@workspace/db/schema";
 import { sql } from "drizzle-orm";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { logger } from "../lib/logger";
+import { notifyClientByName } from "../lib/push";
 
 const router: IRouter = Router();
 
@@ -215,6 +216,13 @@ router.patch("/revenue-ideas/:id", requireAuth, async (req, res) => {
     `);
     const rows = (result as { rows?: any[] }).rows ?? [];
     if (!rows.length) { res.status(404).json({ error: "Idea not found" }); return; }
+    if (status === "approved") {
+      notifyClientByName(rows[0].client_name, {
+        title: "New revenue idea for you",
+        body: rows[0].title || "A new idea has been added to your portal.",
+        url: "/",
+      }).catch(() => {});
+    }
     res.json(rows[0]);
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to update idea" });
