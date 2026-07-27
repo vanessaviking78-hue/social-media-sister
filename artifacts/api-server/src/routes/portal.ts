@@ -1,11 +1,11 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { clientPresetsTable, calendarPostsTable, approvalBatchesTable, approvalImagesTable, scheduledPostsTable, homeworkQuestionSetsTable, homeworkRepliesTable, bonusContentTable } from "@workspace/db/schema";
-import { eq, and, gte, or, sql, desc } from "drizzle-orm";
+import { clientPresetsTable, calendarPostsTable, approvalBatchesTable, approvalImagesTable, scheduledPostsTable, homeworkQuestionSetsTable, homeworkRepliesTable, bonusContentTable, blogPostsTable, blogCommentsTable } from "@workspace/db/schema";
+import { eq, and, gte, or, sql, desc, asc } from "drizzle-orm";
 import crypto from "crypto";
 import { getApprovedIdeasForClient } from "./revenue-ideas";
 import { getVapidPublicKey } from "../lib/push";
-import { notifyDownload } from "../lib/notify";
+import { notifyDownload, notifyRantComment } from "../lib/notify";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { BASE_RULES } from "./caption-generator";
 
@@ -433,6 +433,29 @@ router.get("/portal/:token/bonus-content", async (req, res) => {
     res.json({ items });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to load bonus content" });
+  }
+});
+
+// Client: leave a comment under one of Vanessa's rants. Notifies Vanessa by
+// email; the comment shows straight away in the portal's rants tab and on
+// the public shareable page for that post.
+router.post("/portal/:token/rants/:postId/comments", async (req, res) => {
+  try {
+    const { token, postId } = req.params;
+    const { comment } = req.body as { comment?: string };
+    if (!comment?.trim()) { res.status(400).json({ error: "Say something first." }); return; }
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+    const id = Number(postId);
+    const [post] = await db.select().from(blogPostsTable).where(eq(blogPostsTable.id, id));
+    const [saved] = await db.insert(blogCommentsTable)
+      .values({ blogPostId: id, clientName: preset.name, comment: comment.trim() })
+      .returning();
+    notifyRantComment({ clientName: preset.name, postTitle: post?.title, comment: comment.trim() }).catch(() => {});
+    res.status(201).json({ comment: saved });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to save comment" });
   }
 });
 
