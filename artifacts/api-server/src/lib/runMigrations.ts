@@ -34,6 +34,7 @@ await createBroadcastDraftsTable();
     await addPortalPersonalizationColumns();
     await addHomeworkActionedColumn();
     await addCompletedReelsColumn();
+    await addBlogVideoAndCommentsSupport();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -103,6 +104,16 @@ async function addHomeworkActionedColumn(): Promise<void> {
 }
 async function addCompletedReelsColumn(): Promise<void> {
   await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS completed_reels text NOT NULL DEFAULT '{}'`);
+}
+async function addBlogVideoAndCommentsSupport(): Promise<void> {
+  await db.execute(sql`ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS video_url text`);
+  await db.execute(sql`CREATE TABLE IF NOT EXISTS blog_comments (
+    id serial PRIMARY KEY,
+    blog_post_id integer NOT NULL,
+    client_name text NOT NULL DEFAULT '',
+    comment text NOT NULL DEFAULT '',
+    created_at timestamp NOT NULL DEFAULT now()
+  )`);
 }
 
 async function addMetaConnectionColumns(): Promise<void> {
