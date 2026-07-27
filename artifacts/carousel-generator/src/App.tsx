@@ -75,6 +75,7 @@ import ContentPreview from "@/pages/content-preview";
 import PreviewIndex from "@/pages/preview-index";
 import Settings from "@/pages/settings";
 import CanvaOAuthResult from "@/pages/canva-oauth-result";
+import GoogleOAuthResult from "@/pages/google-oauth-result";
 import ApprovalBundles from "@/pages/approval-bundles";
 import ClientApproval from "@/pages/client-approval";
 import ContentGenerator from "@/pages/content-generator";
@@ -185,6 +186,7 @@ function AppContent() {
   const [isShowcase, showcaseParams] = useRoute("/showcase/:token");
   const [isMetaOAuth] = useRoute("/oauth/meta/result");
   const [isCanvaOAuth] = useRoute("/oauth/canva/result");
+  const [isGoogleOAuth] = useRoute("/oauth/google/result");
   const [isOnboardSuccess, onboardSuccessParams] = useRoute("/onboard/:token/success");
   const [isOnboardChoose, onboardChooseParams] = useRoute("/onboard/:token/choose-page");
   const [isOnboard, onboardParams] = useRoute("/onboard/:token");
@@ -213,6 +215,9 @@ function AppContent() {
   }
   if (isCanvaOAuth) {
     return <CanvaOAuthResult />;
+  }
+  if (isGoogleOAuth) {
+    return <GoogleOAuthResult />;
   }
   if (isPortal && portalParams?.token) {
     return <ClientPortal token={portalParams.token} />;
