@@ -97,6 +97,37 @@ export async function notifySubmission(opts: {
 }
 
 /**
+ * Sends a notification to NOTIFY_EMAIL whenever a client comments on one of
+ * Vanessa's rants from their portal. Fire-and-forget: never throws, never
+ * blocks the comment submission itself.
+ */
+export async function notifyRantComment(opts: {
+  clientName: string;
+  postTitle?: string;
+  comment: string;
+}): Promise<void> {
+  const to = process.env.NOTIFY_EMAIL;
+  if (!to) return;
+  const transporter = getTransporter();
+  if (!transporter) return;
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  const client = opts.clientName || "A client";
+  const subject = `${client} commented on ${opts.postTitle ? `"${opts.postTitle}"` : "one of your rants"}`;
+  const lines = [
+    `${client} just left a comment on ${opts.postTitle ? `"${opts.postTitle}"` : "one of your rants"}.`,
+    "",
+    `They said: ${opts.comment}`,
+    "",
+    "The CyberSuite",
+  ].filter(Boolean);
+  try {
+    await transporter.sendMail({ from, to, subject, text: lines.join("\n") });
+  } catch (err) {
+    logger.warn({ err }, "Rant comment notification email failed");
+  }
+}
+
+/**
  * Sends a notification to NOTIFY_EMAIL whenever a client downloads a post's
  * images from their portal. Fire-and-forget: never throws, never blocks the
  * download itself, which happens entirely client side regardless of whether
