@@ -127,6 +127,36 @@ export async function notifyRantComment(opts: {
   }
 }
 
+export async function notifyBrainstormBooking(opts: {
+  clientName: string;
+  slotStart: Date;
+  slotEnd: Date;
+}): Promise<void> {
+  const to = process.env.NOTIFY_EMAIL;
+  if (!to) return;
+  const transporter = getTransporter();
+  if (!transporter) return;
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  const client = opts.clientName || "A client";
+  const dateLabel = opts.slotStart.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/London" });
+  const timeLabel = `${opts.slotStart.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" })} - ${opts.slotEnd.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" })}`;
+  const subject = `${client} booked a Brainstorm call - ${dateLabel}`;
+  const lines = [
+    `${client} just booked a Brainstorm call with you.`,
+    "",
+    `${dateLabel}, ${timeLabel}`,
+    "",
+    "It's on your Google Calendar already if it's connected.",
+    "",
+    "The CyberSuite",
+  ].filter(Boolean);
+  try {
+    await transporter.sendMail({ from, to, subject, text: lines.join("\n") });
+  } catch (err) {
+    logger.warn({ err }, "Brainstorm booking notification email failed");
+  }
+}
+
 /**
  * Sends a notification to NOTIFY_EMAIL whenever a client downloads a post's
  * images from their portal. Fire-and-forget: never throws, never blocks the
