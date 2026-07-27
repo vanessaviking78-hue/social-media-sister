@@ -762,10 +762,23 @@ export const blogPostsTable = pgTable("blog_posts", {
   title: text("title").notNull().default(""),
   body: text("body").notNull().default(""),
   imageUrls: json("image_urls").$type<string[]>().notNull().default([]),
+  videoUrl: text("video_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export type BlogPost = typeof blogPostsTable.$inferSelect;
+
+// One rant/blog post can have many client comments underneath it, both in the
+// portal "Vanessa Rants" tab and on the public shareable page for that post.
+export const blogCommentsTable = pgTable("blog_comments", {
+  id: serial("id").primaryKey(),
+  blogPostId: integer("blog_post_id").notNull(),
+  clientName: text("client_name").notNull().default(""),
+  comment: text("comment").notNull().default(""),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export type BlogComment = typeof blogCommentsTable.$inferSelect;
 
 export const broadcastTopicsTable = pgTable("broadcast_topics", {
   id: serial("id").primaryKey(),
