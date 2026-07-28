@@ -245,7 +245,7 @@ const REEL_GROUPS: { heading: string; items: string[] }[] = [
 ];
 const REEL_TOTAL = REEL_GROUPS.reduce((n, g) => n + g.items.length, 0);
 
-type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus" | "rants" | "connect" | "activity" | "refer";
+type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus" | "rants" | "connect" | "activity" | "refer" | "brainstorm";
 
 const TAB_ICON: Record<Tab, React.ReactNode> = {
   upcoming: <CalendarDays className="w-4 h-4" />,
@@ -264,6 +264,7 @@ const TAB_ICON: Record<Tab, React.ReactNode> = {
   rants: <Newspaper className="w-4 h-4" />,
   activity: <FileImage className="w-4 h-4" />,
   refer: <TrendingUp className="w-4 h-4" />,
+  brainstorm: <CalendarDays className="w-4 h-4" />,
 };
 
 export default function ClientPortal({ token }: { token: string }) {
@@ -369,12 +370,21 @@ export default function ClientPortal({ token }: { token: string }) {
   const [rantComments, setRantComments] = useState<Record<number, { id: number; clientName: string; comment: string; createdAt: string }[]>>({});
   const [rantCommentDraft, setRantCommentDraft] = useState<Record<number, string>>({});
   const [rantCommentBusy, setRantCommentBusy] = useState<number | null>(null);
+  const [brainstormSlots, setBrainstormSlots] = useState<{ start: string; end: string }[]>([]);
+  const [brainstormLoading, setBrainstormLoading] = useState(true);
+  const [brainstormGoogleConnected, setBrainstormGoogleConnected] = useState(true);
+  const [brainstormBooking, setBrainstormBooking] = useState<{ start: string; end: string } | null>(null);
+  const [brainstormBusy, setBrainstormBusy] = useState(false);
+  const [brainstormDone, setBrainstormDone] = useState<{ start: string; end: string } | null>(null);
   useEffect(() => {
     fetch(`${BASE}api/portal/${token}/reels`)
       .then((r) => r.json())
       .then((d) => setTicked(d.ticked || {}))
       .catch(() => {});
   }, [token]);
+  useEffect(() => {
+    if (tab === "brainstorm") loadBrainstormSlots();
+  }, [tab]);
   const toggleReel = (i: number) => setTicked((prev) => {
     const n = { ...prev, [i]: !prev[i] };
     fetch(`${BASE}api/portal/${token}/reels`, {
@@ -410,6 +420,53 @@ export default function ClientPortal({ token }: { token: string }) {
     } finally {
       setRantCommentBusy(null);
     }
+  };
+
+  const loadBrainstormSlots = () => {
+    setBrainstormLoading(true);
+    fetch(`${BASE}api/brainstorm/slots`)
+      .then((r) => r.json())
+      .then((d) => {
+        setBrainstormSlots(Array.isArray(d.slots) ? d.slots : []);
+        setBrainstormGoogleConnected(d.googleConnected !== false);
+      })
+      .catch(() => setBrainstormSlots([]))
+      .finally(() => setBrainstormLoading(false));
+  };
+
+  const bookBrainstormSlot = async () => {
+    if (!brainstormBooking) return;
+    setBrainstormBusy(true);
+    try {
+      const r = await fetch(`${BASE}api/brainstorm/book`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slotStart: brainstormBooking.start, slotEnd: brainstormBooking.end, clientName: data?.clientName, clientToken: token }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Failed to book");
+      setBrainstormDone(brainstormBooking);
+      setBrainstormBooking(null);
+      loadBrainstormSlots();
+    } catch (e: any) {
+      toast.error(e.message || "Couldn't book that slot, give it another go.");
+    } finally {
+      setBrainstormBusy(false);
+    }
+  };
+
+  const formatSlot = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
+  };
+
+  const groupSlotsByDay = (slots: { start: string; end: string }[]) => {
+    const groups: Record<string, { start: string; end: string }[]> = {};
+    for (const slot of slots) {
+      const dayKey = new Date(slot.start).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "Europe/London" });
+      (groups[dayKey] ||= []).push(slot);
+    }
+    return groups;
   };
   const doneCount = Object.values(ticked).filter(Boolean).length;
 
@@ -760,6 +817,7 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
           <TabBtn id="news" label="Aesthetic News" />
           <TabBtn id="activity" label="My Activity" />
           <TabBtn id="refer" label="Refer a Clinic" />
+          <TabBtn id="brainstorm" label="Book your Brainstorm" />
         </div>
       </header>
 
@@ -1241,9 +1299,78 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
             <p className="text-sm text-zinc-400 mb-6">Know another clinic who'd love a bit of this? Send them my way, no forms, no fuss.</p>
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5 space-y-3">
               <p className="text-sm text-zinc-300">Just get them to drop me a message, or pass on my email, and I'll take it from there.</p>
-              <p className="text-sm font-semibold text-white">vanessaviking78@gmail.com</p>
+              <p className="text-sm font-semibold text-white">vanessa@thecybersuite.com</p>
               <a href="mailto:vanessa@thecybersuite.com?subject=A%20clinic%20I%20think%20you%27d%20get%20on%20with" className="inline-flex items-center gap-1.5 text-sm font-semibold text-pink-400 hover:text-pink-300">Email Vanessa a heads up<ChevronRight className="w-4 h-4" /></a>
             </div>
+          </section>
+        )}
+
+        {tab === "brainstorm" && (
+          <section>
+            <div className="flex items-center gap-2 mb-2"><CalendarDays className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Book your Brainstorm</h2></div>
+            <p className="text-sm text-zinc-400 mb-6">Grab a slot with me Monday to Thursday, 8am till noon. Pick a time and it's locked in.</p>
+
+            {brainstormDone ? (
+              <div className="rounded-2xl border border-green-800/40 bg-green-950/20 p-8 text-center">
+                <CheckCircle2 className="w-10 h-10 mx-auto text-green-500 mb-3" />
+                <h3 className="text-white font-semibold mb-1">Booked in.</h3>
+                <p className="text-zinc-400 text-sm mb-4">{formatSlot(brainstormDone.start)}. I'll see you then.</p>
+                <button onClick={() => setBrainstormDone(null)} className="text-pink-400 text-sm font-semibold">Book another</button>
+              </div>
+            ) : brainstormBooking ? (
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 space-y-4">
+                <p className="text-sm text-zinc-300">Confirm this slot:</p>
+                <p className="text-lg font-semibold text-white">{formatSlot(brainstormBooking.start)}</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={bookBrainstormSlot}
+                    disabled={brainstormBusy}
+                    className="flex-1 rounded-full bg-[var(--accent)] text-white font-semibold text-sm py-2.5 disabled:opacity-60"
+                  >
+                    {brainstormBusy ? "Booking..." : "Confirm booking"}
+                  </button>
+                  <button
+                    onClick={() => setBrainstormBooking(null)}
+                    disabled={brainstormBusy}
+                    className="rounded-full border border-zinc-800 text-zinc-400 text-sm font-semibold px-4"
+                  >
+                    Back
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                {!brainstormGoogleConnected && (
+                  <p className="text-sm text-amber-400 bg-amber-950/20 border border-amber-800/40 rounded-xl px-4 py-3 mb-4">
+                    Booking is being set up, check back shortly.
+                  </p>
+                )}
+                {brainstormLoading && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Loading available times...</div>}
+                {!brainstormLoading && brainstormSlots.length === 0 && (
+                  <p className="text-sm text-zinc-400">Nothing free right now, check back soon.</p>
+                )}
+                {!brainstormLoading && brainstormSlots.length > 0 && (
+                  <div className="space-y-5">
+                    {Object.entries(groupSlotsByDay(brainstormSlots)).map(([day, slots]) => (
+                      <div key={day}>
+                        <p className="text-xs uppercase tracking-wide text-zinc-500 mb-2">{day}</p>
+                        <div className="flex flex-wrap gap-2">
+                          {slots.map((slot) => (
+                            <button
+                              key={slot.start}
+                              onClick={() => setBrainstormBooking(slot)}
+                              className="rounded-full border border-zinc-800 bg-zinc-900 hover:border-[var(--accent)] hover:text-white text-zinc-300 text-xs font-semibold px-3.5 py-2 transition-colors"
+                            >
+                              {new Date(slot.start).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" })}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
           </section>
         )}
       </main>
