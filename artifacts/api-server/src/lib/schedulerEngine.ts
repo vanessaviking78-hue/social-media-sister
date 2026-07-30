@@ -136,8 +136,14 @@ async function waitForImageReachable(imageUrl: string, attempts = 5, delayMs = 3
 // silently trusting the first result.
 async function verifyFbPostVisible(postId: string, token: string): Promise<boolean> {
   try {
-    const res = await fetchWithTimeout(`${GRAPH}/${postId}?fields=id&access_token=${token}`, {}, 15000);
-    return res.ok;
+    // Checking that the id resolves to *some* Graph object was too weak — an
+    // orphaned post with no actual attachments still resolves fine and was
+    // passing this check. Require real photo/video attachments before we
+    // trust the post is genuinely live on the feed.
+    const res = await fetchWithTimeout(`${GRAPH}/${postId}?fields=id,attachments&access_token=${token}`, {}, 15000);
+    if (!res.ok) return false;
+    const data = await res.json() as { attachments?: { data?: unknown[] } };
+    return !!data.attachments?.data?.length;
   } catch {
     return false;
   }
@@ -161,10 +167,23 @@ async function attemptCarouselToFB(pageId: string, token: string, imageUrls: str
   // immediately back-to-back with the upload is where the "created but
   // never shows on the timeline" behaviour has been traced to.
   await new Promise((r) => setTimeout(r, 3000));
+  // attached_media has to travel as a JSON-encoded STRING inside a
+  // form-urlencoded body — this is Meta's documented format for multi-photo
+  // posts. The previous version sent it as a native JSON array nested in an
+  // application/json body. Graph API accepted that request and handed back
+  // a real post id, so the call looked successful, but the attachment
+  // binding itself silently failed — the photos never actually joined that
+  // post, so they surfaced only in the Page's Photos tab instead of the
+  // feed. This is the actual root cause for multi-slide carousels landing
+  // in the photos folder. Matching the documented format fixes it.
+  const feedParams = new URLSearchParams();
+  feedParams.set("message", caption);
+  feedParams.set("attached_media", JSON.stringify(fbids));
+  feedParams.set("access_token", token);
   const res = await fetchWithTimeout(`${GRAPH}/${pageId}/feed`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: caption, attached_media: fbids, access_token: token }),
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: feedParams.toString(),
   });
   const data = await res.json() as { id?: string; error?: { message?: string } };
   if (!res.ok || !data.id) throw new Error(`FB feed post failed: ${data?.error?.message}`);
@@ -312,10 +331,14 @@ async function postVideoCarouselToFB(pageId: string, token: string, videoUrls: s
     if (!res.ok || !data.id) throw new Error(`FB video upload failed: ${data?.error?.message || JSON.stringify(data)}`);
     fbids.push({ media_fbid: data.id });
   }
+  const vcFeedParams = new URLSearchParams();
+  vcFeedParams.set("message", caption);
+  vcFeedParams.set("attached_media", JSON.stringify(fbids));
+  vcFeedParams.set("access_token", token);
   const res = await fetchWithTimeout(`${GRAPH}/${pageId}/feed`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message: caption, attached_media: fbids, access_token: token }),
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: vcFeedParams.toString(),
   });
   const data = await res.json() as { id?: string; error?: { message?: string } };
   if (!res.ok || !data.id) throw new Error(`FB video carousel post failed: ${data?.error?.message || JSON.stringify(data)}`);
