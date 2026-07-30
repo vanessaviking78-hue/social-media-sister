@@ -153,15 +153,6 @@ async function attemptCarouselToFB(pageId: string, token: string, imageUrls: str
   const fbids: { media_fbid: string }[] = [];
   for (const url of imageUrls) {
     await waitForImageReachable(url);
-    // Uploading with published:false leaves the photo in a limbo state that a
-    // Page-admin token can query successfully (which is why this always looked
-    // fine to us) but that never gets a real, publicly-servable permalink —
-    // this is the actual root cause of carousels being invisible to anyone
-    // but a Page admin. Uploading as published:true with no_story:true makes
-    // the photo a genuine, live object immediately (so it's real, not limbo)
-    // while no_story suppresses Facebook's automatic "posted a photo" story
-    // so it doesn't also appear as its own separate post — it only shows up
-    // once attached into the /feed carousel below.
     const res = await fetchWithTimeout(`${GRAPH}/${pageId}/photos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -331,9 +322,6 @@ async function postVideoCarouselToFB(pageId: string, token: string, videoUrls: s
   const fbids: { media_fbid: string }[] = [];
   for (const url of videoUrls) {
         const absUrl = absolutizeUrl(url);
-    // Same fix as the photo carousel path above: published:true + no_story:true
-    // makes each video a genuine live object immediately instead of leaving it
-    // in an unpublished limbo state that never renders publicly.
     const res = await fetchWithTimeout(`${GRAPH}/${pageId}/videos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -521,7 +509,15 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
   const wantIG = !content.platforms || content.platforms.includes("instagram");
   const wantFB = !content.platforms || content.platforms.includes("facebook");
   if (wantIG && !igId) errors.push("IG: No Instagram Account ID configured for this client preset");
-  if (wantFB && !pageId) errors.push("FB: No FacetCommentText).catch((err) =>
+  if (wantFB && !pageId) errors.push("FB: No Facebook Page ID configured for this client preset");
+
+  if (igId && wantIG) {
+    try {
+      result.igPostId = await postCarouselToIG(igId, token, content.imageUrls, caption, audioName);
+      const firstCommentText = content.firstComment?.trim();
+      if (firstCommentText && result.igPostId) {
+        setTimeout(() => {
+          igPostComment(result.igPostId!, token, firstCommentText).catch((err) =>
             logger.warn({ err }, "Scheduled first comment failed")
           );
         }, 35_000);
@@ -597,12 +593,6 @@ async function processScheduledPosts(): Promise<void> {
 
     const now = new Date();
     // Atomically claim all due posts in a single UPDATE so overlapping runs
-    // (or multiple instances) can never grab the same post twice. Only the
-    // rows this statement actually flips from pending -> processing are returned.
-    const due = await db
-      .update(scheduledPostsTable)
-      .set({ status: "processing", updatedAt: new Date() })
-      .where(and(eq(scheduledPostsTabclaim all due posts in a single UPDATE so overlapping runs
     // (or multiple instances) can never grab the same post twice. Only the
     // rows this statement actually flips from pending -> processing are returned.
     const due = await db
