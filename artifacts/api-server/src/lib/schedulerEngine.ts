@@ -171,7 +171,28 @@ async function attemptCarouselToFB(pageId: string, token: string, imageUrls: str
   return data.id;
 }
 
+// Single-image FB posts are published directly to /{page-id}/photos with
+// published:true. This is the reliable path for one photo — it lands
+// straight on the Page's timeline. The two-step "upload unpublished, then
+// attach to /feed" dance below is only needed (and only reliable) for true
+// multi-photo carousels; using it for a single image was the root cause of
+// posts landing in the Page's Photos album with no visible feed story.
+async function postSingleImageToFB(pageId: string, token: string, imageUrl: string, caption: string): Promise<string> {
+  await waitForImageReachable(imageUrl);
+  const res = await fetchWithTimeout(`${GRAPH}/${pageId}/photos`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: imageUrl, message: caption, published: true, access_token: token }),
+  });
+  const data = await res.json() as { id?: string; post_id?: string; error?: { message?: string } };
+  if (!res.ok || !data.id) throw new Error(`FB photo publish failed: ${data?.error?.message}`);
+  return data.post_id || data.id;
+}
+
 async function postCarouselToFB(pageId: string, token: string, imageUrls: string[], caption: string): Promise<string> {
+  if (imageUrls.length === 1) {
+    return postSingleImageToFB(pageId, token, imageUrls[0], caption);
+  }
   let lastId: string | undefined;
   let lastErr: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
