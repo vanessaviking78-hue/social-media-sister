@@ -156,7 +156,7 @@ async function attemptCarouselToFB(pageId: string, token: string, imageUrls: str
     const res = await fetchWithTimeout(`${GRAPH}/${pageId}/photos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url, published: true, no_story: true, access_token: token }),
+      body: JSON.stringify({ url, published: false, access_token: token }),
     });
     const data = await res.json() as { id?: string; error?: { message?: string } };
     if (!res.ok || !data.id) throw new Error(`FB photo upload failed: ${data?.error?.message}`);
@@ -325,7 +325,7 @@ async function postVideoCarouselToFB(pageId: string, token: string, videoUrls: s
     const res = await fetchWithTimeout(`${GRAPH}/${pageId}/videos`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ file_url: absUrl, published: true, no_story: true, access_token: token }),
+      body: JSON.stringify({ file_url: absUrl, published: false, access_token: token }),
     });
     const data = await res.json() as { id?: string; error?: { message?: string } };
     if (!res.ok || !data.id) throw new Error(`FB video upload failed: ${data?.error?.message || JSON.stringify(data)}`);
