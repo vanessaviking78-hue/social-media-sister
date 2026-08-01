@@ -146,7 +146,7 @@ export default function Reels() {
   const [textColor, setTextColor] = useState("#ffffff");
   const [overlayOpacity, setOverlayOpacity] = useState(40);
   const [pageColor, setPageColor] = useState("#0d0d0d");
-  const [lineSpacing, setLineSpacing] = useState(1.3);
+  const [lineSpacing, setLineSpacing] = useState(0.9);
   const [textPosition, setTextPosition] = useState<"top" | "center" | "bottom">("center");
   const [textAlign, setTextAlign] = useState<"left" | "center" | "right">("center");
 
