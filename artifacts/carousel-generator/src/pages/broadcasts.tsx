@@ -66,7 +66,7 @@ function isVideoUrl(url: string): boolean {
 async function uploadVideoFile(file: File): Promise<string> {
   const fd = new FormData();
   fd.append("video", file);
-  const res = await fetch(`${BASE}/api/content/upload-video`, { method: "POST", body: fd });
+  const res = await fetch(`https://workspaceapi-server-production-0f0d.up.railway.app/api/content/upload-video`, { method: "POST", body: fd });
   if (!res.ok) {
     const data = await res.json().catch(() => ({ error: `Video upload failed (${res.status})` }));
     throw new Error(data.error || "Video upload failed");
