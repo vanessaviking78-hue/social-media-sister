@@ -679,7 +679,7 @@ export default function Reels() {
         const form = new FormData();
         const ext = blob.type.includes("mp4") ? "mp4" : "webm";
         form.append("video", blob, `reel-${String(i + 1).padStart(2, "0")}.${ext}`);
-        const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, { method: "POST", body: form });
+        const uploadRes = await fetch(`https://workspaceapi-server-production-0f0d.up.railway.app/api/content/upload-video`, { method: "POST", body: form });
         if (!uploadRes.ok) throw new Error(`Reel ${i + 1}: video upload failed`);
         const { url } = await uploadRes.json();
         setBulkPushProgress({ current: i + 1, total: bulkRows.length, label: `Reel ${reelNum}: Submitting…` });
@@ -747,7 +747,7 @@ export default function Reels() {
         const form = new FormData();
         const ext = blob.type.includes("mp4") ? "mp4" : "webm";
         form.append("video", blob, `reel-sched-${Date.now()}-${i + 1}.${ext}`);
-        const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, { method: "POST", body: form });
+        const uploadRes = await fetch(`https://workspaceapi-server-production-0f0d.up.railway.app/api/content/upload-video`, { method: "POST", body: form });
         if (!uploadRes.ok) throw new Error(`Reel ${i + 1}: video upload failed`);
         const { url } = await uploadRes.json();
         posts.push({ title: `Reel ${i + 1} – ${new Date().toLocaleDateString()}`, caption: "", videoUrl: url });
@@ -1005,7 +1005,7 @@ export default function Reels() {
       const form = new FormData();
       const ext = videoBlob.type.includes("mp4") ? "mp4" : "webm";
       form.append("video", videoBlob, `reel-${Date.now()}.${ext}`);
-      const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, { method: "POST", body: form });
+      const uploadRes = await fetch(`https://workspaceapi-server-production-0f0d.up.railway.app/api/content/upload-video`, { method: "POST", body: form });
       if (!uploadRes.ok) throw new Error("Video upload failed");
       const { url } = await uploadRes.json();
       setIgPushProgress("Submitting to Instagram…");
@@ -1072,7 +1072,7 @@ export default function Reels() {
       const form = new FormData();
       const ext = videoBlob.type.includes("mp4") ? "mp4" : "webm";
       form.append("video", videoBlob, `reel-sched-${Date.now()}.${ext}`);
-      const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, { method: "POST", body: form });
+      const uploadRes = await fetch(`https://workspaceapi-server-production-0f0d.up.railway.app/api/content/upload-video`, { method: "POST", body: form });
       if (!uploadRes.ok) throw new Error("Video upload failed");
       const { url } = await uploadRes.json();
       toast.dismiss(id);
