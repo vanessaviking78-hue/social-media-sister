@@ -565,7 +565,13 @@ export const PHOTO_STUDIO_PRESETS: PhotoStudioPreset[] = [
     id: "ps-perspex-number",
     name: "Perspex Number Studio",
     hasColour: false,
-    promptTemplate: `A person standing confidently in the centre of a professional photography studio, facing the camera, holding a large clear perspex (acrylic) number board displaying the number [NUMBER] with both hands at chest height. The number itself is coloured [NUMBER COLOUR], cut cleanly into the perspex with crisp, professional signage-style edges, catching realistic studio light with subtle glass-like reflections and a soft edge-glow, the clear perspex material visibly transparent around the coloured number. They are wearing [OUTFIT]. The studio backdrop is a smooth, seamless [STUDIO COLOUR] paper background, evenly lit with soft professional studio lighting, gentle shadow beneath their feet, no harsh reflections. Full body or three-quarter length shot, natural relaxed confident stance. Maintain their exact facial features, skin tone, body shape, and likeness from the reference photo. Must look physically believable and naturally photographed, not CGI or illustrated, natural imperfections, realistic depth, tactile textures, subtle sensor grain, true to life reflections on the perspex.`,
+        promptTemplate: `A person standing confidently in the centre of a professional photography studio, facing the camera, holding a large three-dimensional number [NUMBER] with both hands at chest height, the number closest to camera and clearly readable. The number is a solid moulded object made from high-shine glossy plastic in [NUMBER COLOUR], with a smooth, reflective, polished surface, sharp clean edges, and realistic studio light reflections and specular highlights across its glossy surface, no transparency, no glass or acrylic look, not a flat board or sign. They are wearing [OUTFIT]. The studio backdrop is a smooth, seamless [STUDIO COLOUR] paper background, evenly lit with soft professional studio lighting, gentle shadow beneath their feet, no harsh reflections. Full body or three-quarter length shot, natural relaxed confident stance. Maintain their exact facial features, skin tone, body shape, and likeness from the reference photo. Must look physically believable and naturally photographed, not CGI or illustrated, natural imperfections, realistic depth, tactile textures, subtle sensor grain, true to life reflections on the glossy plastic number.`,
+  },
+  {
+        id: "ps-word-hold",
+        name: "Word In Hand Studio",
+        hasColour: false,
+        promptTemplate: `A person standing in the centre of a professional photography studio, holding a large three-dimensional word [WORD] out in front of them with both hands at full arm extension, gripped confidently so the word is closest to camera and dominates the foreground, clearly readable. The word is a solid moulded object made from high-shine glossy plastic in [WORD COLOUR], with a smooth, reflective, polished surface, sharp clean lettering, and realistic studio light reflections and specular highlights, no transparency, no glass or acrylic look. Shallow depth of field: the word held in front is in crisp sharp focus, while the person holding it is only slightly out of focus behind it, a gentle soft blur across their face and body, still clearly recognisable, not heavily blurred. They are wearing [OUTFIT]. The studio backdrop is a smooth, seamless [STUDIO COLOUR] paper background, evenly lit with soft professional studio lighting, gentle shadow beneath their feet, no harsh reflections. Full body or three-quarter length shot, natural relaxed confident stance. Maintain their exact facial features, skin tone, body shape, and likeness from the reference photo, even where softly out of focus. Must look physically believable and naturally photographed, not CGI or illustrated, natural imperfections, realistic depth, tactile textures, subtle sensor grain, true to life reflections on the glossy plastic lettering.`,
   },
   {
     id: "ps-custom",
@@ -1043,7 +1049,7 @@ export const RANDOM_PROMPT_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
-export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: string, aspectRatio = "3:4", vars?: { colour?: string; name?: string; skills?: string; knownAs?: string; hairColour?: string; number?: string; numberColour?: string; outfit?: string; studioColour?: string; customText?: string }): string {
+export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: string, aspectRatio = "3:4", vars?: { colour?: string; name?: string; skills?: string; knownAs?: string; hairColour?: string; number?: string; numberColour?: string; word?: string; wordColour?: string; outfit?: string; studioColour?: string; customText?: string }): string {
     let prompt = preset.promptTemplate;
   if (preset.hasCustomText && vars?.customText?.trim()) {
     prompt = `${vars.customText.trim()}\n\nMaintain their exact facial features, skin tone, body shape, and likeness from the reference photo. Must look physically believable and naturally photographed, not CGI or illustrated, natural imperfections, realistic depth, tactile textures, subtle sensor grain, true to life reflections and lighting.`;
@@ -1058,6 +1064,8 @@ export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: strin
     if (vars.knownAs?.trim()) prompt = prompt.replace(/\[KNOWN AS DESCRIPTION\]/g, vars.knownAs.trim());
     if (vars.number?.trim()) prompt = prompt.replace(/\[NUMBER\]/g, vars.number.trim());
     if (vars.numberColour?.trim()) prompt = prompt.replace(/\[NUMBER COLOUR\]/g, vars.numberColour.trim());
+      if (vars.word?.trim()) prompt = prompt.replace(/\[WORD\]/g, vars.word.trim());
+      if (vars.wordColour?.trim()) prompt = prompt.replace(/\[WORD COLOUR\]/g, vars.wordColour.trim());
     if (vars.outfit?.trim()) prompt = prompt.replace(/\[OUTFIT\]/g, vars.outfit.trim());
     if (vars.studioColour?.trim()) prompt = prompt.replace(/\[STUDIO COLOUR\]/g, vars.studioColour.trim());
     const rows = (vars.skills || "").split(/\n/).map((x) => x.trim()).filter(Boolean).join(", ");
