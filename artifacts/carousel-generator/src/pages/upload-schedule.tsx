@@ -61,7 +61,7 @@ async function uploadImages(files: File[]): Promise<string[]> {
 async function uploadVideo(file: File): Promise<string> {
   const fd = new FormData();
   fd.append("video", file);
-  const res = await fetch(`${BASE}/api/content/upload-video`, {
+  const res = await fetch(`https://workspaceapi-server-production-0f0d.up.railway.app/api/content/upload-video`, {
     method: "POST",
     body: fd,
   });
