@@ -126,6 +126,7 @@ const PHOTO_STUDIO_PRESETS: PhotoStudioPreset[] = [
   { id: "ps-15", name: "Intense Eyes Close Crop",              hasColour: true  },
   { id: "ps-fightnight", name: "Fight Night Entrance",          hasColour: false },
   { id: "ps-perspex-number", name: "Perspex Number Studio",     hasColour: false },
+  { id: "ps-word-hold", name: "Word In Hand Studio",         hasColour: false },
   { id: "ps-custom", name: "Your Own Prompt",                   hasColour: false },
 ];
 
@@ -399,6 +400,7 @@ export default function AiPortraitStudio() {
   const [aspectRatio, setAspectRatio]         = useState<AspectRatio>("3:4");
   const [fnVars, setFnVars] = useState({ colour: "", name: "", skills: "", knownAs: "" });
   const [perspexVars, setPerspexVars] = useState({ number: "", numberColour: "", outfit: "", studioColour: "" });
+  const [wordVars, setWordVars] = useState({ word: "", wordColour: "", outfit: "", studioColour: "" });
   const [customPromptText, setCustomPromptText] = useState("");
 
   // ── Generation state ───────────────────────────────────────────────────────
@@ -546,6 +548,7 @@ export default function AiPortraitStudio() {
         aspectRatio,
         ...(id === "ps-fightnight" ? { promptVars: fnVars } : {}),
         ...(id === "ps-perspex-number" ? { promptVars: perspexVars } : {}),
+        ...(id === "ps-word-hold" ? { promptVars: wordVars } : {}),
         ...(id === "ps-custom" ? { promptVars: { customText: customPromptText } } : {}),
                   ...(preset?.hasName || preset?.hasHairColour ? { promptVars: { name: presetNames[id], hairColour: presetHairColours[id] } } : {}),
       };
@@ -917,7 +920,16 @@ export default function AiPortraitStudio() {
       <Input value={perspexVars.studioColour} onChange={(e) => setPerspexVars((v) => ({ ...v, studioColour: e.target.value }))} placeholder="Studio backdrop colour (e.g. pale grey)" className="h-8 text-xs" />
       </div>
         )}
-          {selectedPresets.has("ps-custom") && (
+          {selectedPresets.has("ps-word-hold") && (
+      <div className="space-y-2 pt-2 border-t border-border/20">
+      <Label className="text-xs text-pink-300">Word In Hand Studio details</Label>
+      <Input value={wordVars.word} onChange={(e) => setWordVars((v) => ({ ...v, word: e.target.value }))} placeholder="Word (e.g. SLAY)" className="h-8 text-xs" />
+          <Input value={wordVars.wordColour} onChange={(e) => setWordVars((v) => ({ ...v, wordColour: e.target.value }))} placeholder="Word colour (e.g. hot pink)" className="h-8 text-xs" />
+          <Input value={wordVars.outfit} onChange={(e) => setWordVars((v) => ({ ...v, outfit: e.target.value }))} placeholder="Outfit (e.g. black tailored suit)" className="h-8 text-xs" />
+          <Input value={wordVars.studioColour} onChange={(e) => setWordVars((v) => ({ ...v, studioColour: e.target.value }))} placeholder="Studio backdrop colour (e.g. pale grey)" className="h-8 text-xs" />
+      </div>
+      )}
+                   {selectedPresets.has("ps-custom") && (
       <div className="space-y-2 pt-2 border-t border-border/20">
       <Label className="text-xs text-pink-300">Your own prompt</Label>
       <textarea value={customPromptText} onChange={(e) => setCustomPromptText(e.target.value)} placeholder="Type exactly what you want the image to show..." rows={4} className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2 text-xs" />
