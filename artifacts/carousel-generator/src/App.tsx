@@ -301,7 +301,7 @@ function AppContent() {
   return (
     <>
       <ScrollToTop />
-      <ProtectedRouter />
+      <AuthGate><ProtectedRouter /></AuthGate>
     </>
   );
 }
