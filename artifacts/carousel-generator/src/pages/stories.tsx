@@ -617,7 +617,7 @@ export default function Stories() {
       toast.loading("Uploading reel…", { id: toastId });
       const fd = new FormData();
       fd.append("video", mp4Blob, "story-reel.mp4");
-      const uploadRes = await fetch(api("/content/upload-video"), { method: "POST", body: fd });
+      const uploadRes = await fetch("https://workspaceapi-server-production-0f0d.up.railway.app/api/content/upload-video", { method: "POST", body: fd });
       if (!uploadRes.ok) throw new Error("Upload failed");
       const { proxyUrl } = await uploadRes.json() as { proxyUrl: string; url: string };
       await fetch(api("/library"), {
