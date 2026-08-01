@@ -297,7 +297,7 @@ export default function VideoOverlay() {
       const form = new FormData();
       const ext = blob.type.includes("mp4") ? "mp4" : "webm";
       form.append("video", blob, `video-overlay-${Date.now()}.${ext}`);
-      const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, { method: "POST", body: form });
+      const uploadRes = await fetch(`https://workspaceapi-server-production-0f0d.up.railway.app/api/content/upload-video`, { method: "POST", body: form });
       if (!uploadRes.ok) throw new Error("Video upload failed");
       const { url } = await uploadRes.json();
 
@@ -353,7 +353,7 @@ export default function VideoOverlay() {
       const form = new FormData();
       const ext = blob.type.includes("mp4") ? "mp4" : "webm";
       form.append("video", blob, `video-overlay-sched-${Date.now()}.${ext}`);
-      const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, { method: "POST", body: form });
+      const uploadRes = await fetch(`https://workspaceapi-server-production-0f0d.up.railway.app/api/content/upload-video`, { method: "POST", body: form });
       if (!uploadRes.ok) throw new Error("Video upload failed");
       const { url } = await uploadRes.json();
       toast.dismiss(id);
