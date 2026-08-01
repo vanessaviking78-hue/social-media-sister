@@ -102,7 +102,7 @@ export default function Blog() {
       if (videoFile) {
         const form = new FormData();
         form.append("video", videoFile, videoFile.name);
-        const r = await fetch(`${BASE}/api/content/upload-video`, { method: "POST", body: form });
+        const r = await fetch(`https://workspaceapi-server-production-0f0d.up.railway.app/api/content/upload-video`, { method: "POST", body: form });
         if (!r.ok) throw new Error("Video upload failed");
         const d = await r.json();
         videoUrl = d.proxyUrl || d.url || null;
