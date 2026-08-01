@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
 import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard } from "lucide-react";
+import { LogOut } from "lucide-react";
 
 const TOOLS = [
 {
@@ -593,6 +594,19 @@ return (
 <h1 className="font-bold text-xl leading-none">The CyberSuite</h1>
 <p className="text-sm text-muted-foreground mt-0.5">Social Media Sister</p>
 </div>
+
+  <button
+    type="button"
+    onClick={() => {
+      localStorage.removeItem("cybersuite-auth");
+      localStorage.removeItem("cybersuite-pw");
+      window.location.href = "/";
+    }}
+    className="ml-auto flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+    >
+  <LogOut className="w-4 h-4" />
+  Log out
+  </button>
 </header>
 
 {/* Grid */}
