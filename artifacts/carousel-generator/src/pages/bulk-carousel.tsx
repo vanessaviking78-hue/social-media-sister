@@ -316,6 +316,10 @@ export function renderSlideCanvas(
       const SUB_SIZE    = subBlock?.fontSize  ?? 44;
       const SUB_LINE_H  = Math.round(SUB_SIZE  * 1.40);
       const PAD_X       = 90;
+            const HOOK_FONT = preset.fontFamily || "'Bebas Neue', sans-serif";
+            const SUB_FONT = preset.subheadingFont || "'Poppins', sans-serif";
+            const hookTextColor = preset.textColor || "#ffffff";
+            const subTextColor = preset.subheadingColor || accentColor;
 
       const hookCX = (hookBlock?.x ?? 0.5) * W;
       const hookCY = (hookBlock?.y ?? 0.695) * H;
@@ -330,12 +334,12 @@ export function renderSlideCanvas(
       const heroWord  = heroMatch ? heroMatch[1].toUpperCase() : null;
 
       // Measure wrapped lines (pipes stripped, uppercased)
-      ctx.font = `700 ${HOOK_SIZE}px 'Bebas Neue', sans-serif`;
+      ctx.font = `700 ${HOOK_SIZE}px ${HOOK_FONT}`;
       const hookLines = hookRaw.trim()
         ? wrapCanvas(ctx, stripPipes(hookRaw).trim().toUpperCase(), W - PAD_X * 2)
         : [];
 
-      ctx.font = `normal 400 ${SUB_SIZE}px 'Poppins', sans-serif`;
+      ctx.font = `normal 400 ${SUB_SIZE}px ${SUB_FONT}`;
       const subLines = subRaw.trim()
         ? wrapCanvas(ctx, stripPipes(subRaw).trim(), W - PAD_X * 2)
         : [];
@@ -343,10 +347,10 @@ export function renderSlideCanvas(
       // Hook — centred around hookCY; hero word in accent colour
       if (hookLines.length > 0) {
         const totalH = hookLines.length * HOOK_LINE_H;
-        ctx.font = `700 ${HOOK_SIZE}px 'Bebas Neue', sans-serif`;
+        ctx.font = `700 ${HOOK_SIZE}px ${HOOK_FONT}`;
         let y = hookCY - totalH / 2 + HOOK_LINE_H / 2;
         for (const line of hookLines) {
-          renderHookLine(ctx, line, heroWord, hookCX, y, "#ffffff", accentColor);
+          renderHookLine(ctx, line, heroWord, hookCX, y, hookTextColor, accentColor);
           y += HOOK_LINE_H;
         }
       }
@@ -354,8 +358,8 @@ export function renderSlideCanvas(
       // Subtitle — centred around subCY, accent colour
       if (subLines.length > 0) {
         const totalH = subLines.length * SUB_LINE_H;
-        ctx.font      = `normal 400 ${SUB_SIZE}px 'Poppins', sans-serif`;
-        ctx.fillStyle = accentColor;
+        ctx.font      = `normal 400 ${SUB_SIZE}px ${SUB_FONT}`;
+            ctx.fillStyle = subTextColor;
         let y = subCY - totalH / 2 + SUB_LINE_H / 2;
         for (const line of subLines) {
           ctx.fillText(stripPipes(line), subCX, y);
