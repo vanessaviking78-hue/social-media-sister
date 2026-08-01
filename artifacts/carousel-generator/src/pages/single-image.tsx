@@ -786,7 +786,7 @@ export default function SingleImage() {
       toast.loading("Uploading reel…", { id: toastId });
       const formData = new FormData();
       formData.append("video", mp4Blob, "animated-reel.mp4");
-      const uploadRes = await fetch(`${import.meta.env.BASE_URL}api/content/upload-video`, {
+      const uploadRes = await fetch(`https://workspaceapi-server-production-0f0d.up.railway.app/api/content/upload-video`, {
         method: "POST",
         body: formData,
       });
