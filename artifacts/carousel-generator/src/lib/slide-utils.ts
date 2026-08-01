@@ -373,7 +373,7 @@ export function drawSlide(
   coverEyebrowArch: number = 0,
   animationType?: AnimationType,
   animationProgress?: number,
-  opts?: { imageOffsetX?: number; imageOffsetY?: number; canvasW?: number; canvasH?: number; contentLetterSpacing?: number; pageColorEnd?: string; overlayGradient?: boolean; textShadow?: number; isCoverImageSlide?: boolean; noOverlay?: boolean }
+  opts?: { imageOffsetX?: number; imageOffsetY?: number; canvasW?: number; canvasH?: number; contentLetterSpacing?: number; pageColorEnd?: string; overlayGradient?: boolean; textShadow?: number; isCoverImageSlide?: boolean; noOverlay?: boolean ; subheadingColor?: string; subheadingDropShadow?: boolean}
 ) {
   const W = opts?.canvasW ?? CANVAS_WIDTH;
   const H = opts?.canvasH ?? CANVAS_HEIGHT;
@@ -701,12 +701,24 @@ export function drawSlide(
     lines.forEach((line, i) => ctx.fillText(line, startX, startY + i * lineH));
   }
 
-  if (hasCoverSubheading && subheadingLines.length > 0) {
-    const subFontStr = subheadingFont || font;
-    ctx.font = `500 ${subheadingSize}px ${subFontStr}`;
-    const subStartY = startY + eyebrowTotalH + effectiveTotalH + subheadingGap;
-    subheadingLines.forEach((line, i) => ctx.fillText(line, startX, subStartY + i * subheadingLineH));
-  }
+if (hasCoverSubheading && subheadingLines.length > 0) {
+      const subFontStr = subheadingFont || font;
+      ctx.font = `500 ${subheadingSize}px ${subFontStr}`;
+      ctx.save();
+      ctx.fillStyle = opts?.subheadingColor || textColor;
+      if (opts?.subheadingDropShadow) {
+              ctx.shadowColor = 'rgba(0,0,0,0.85)';
+              ctx.shadowBlur = 10;
+              ctx.shadowOffsetX = 0;
+              ctx.shadowOffsetY = 3;
+      } else {
+              ctx.shadowColor = 'transparent';
+              ctx.shadowBlur = 0;
+      }
+      const subStartY = startY + eyebrowTotalH + effectiveTotalH + subheadingGap;
+      subheadingLines.forEach((line, i) => ctx.fillText(line, startX, subStartY + i * subheadingLineH));
+      ctx.restore();
+}
 
   // Decorative thin line under slide 1 (cover) text
   if (isCoverSlide && !isLastSlide && displayText && !useInlineHero) {
