@@ -26,6 +26,9 @@ export interface ClientPreset {
   overlayColor: string;
   fontFamily: string;
   subheadingFont: string | null;
+    hookUppercase: boolean;
+    subheadingColor: string | null;
+    subheadingDropShadow: boolean;
   fontSize: number;
   contentFontSize: number;
   textColor: string;
