@@ -51,6 +51,8 @@ export default function Home() {
   const [fontFamily, setFontFamily] = useState(() => getBrandDefaults().fontFamily);
   const [subheadingFont, setSubheadingFont] = useState(() => getBrandDefaults().subheadingFont);
   const [textColor, setTextColor] = useState(() => getBrandDefaults().secondaryColor);
+    const [subheadingColor, setSubheadingColor] = useState("");
+    const [subheadingDropShadow, setSubheadingDropShadow] = useState(false);
   const [lineSpacing, setLineSpacing] = useState(0.9);
   const [coverLetterSpacing, setCoverLetterSpacing] = useState(0);
   const [contentLetterSpacing, setContentLetterSpacing] = useState(0);
@@ -176,6 +178,9 @@ export default function Home() {
     setOverlayColor(preset.overlayColor);
     setFontFamily(preset.fontFamily);
     setSubheadingFont(preset.subheadingFont || preset.fontFamily);
+        setSubheadingColor(preset.subheadingColor || preset.textColor);
+        setSubheadingDropShadow(preset.subheadingDropShadow);
+        setCoverUppercase(preset.hookUppercase);
     setFontSize(preset.fontSize);
     setContentFontSize(preset.contentFontSize ?? 44);
     setTextColor(preset.textColor);
@@ -256,7 +261,7 @@ export default function Home() {
       if (coverStyle === "hero") {
         drawHeroSlide(ctx, livePreviewImg, heroLeadIn || "LEAD-IN", heroWord || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
       } else {
-        drawSlide(ctx, livePreviewImg, previewText, fontFamily, fontSize, true, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 4, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined });
+        drawSlide(ctx, livePreviewImg, previewText, fontFamily, fontSize, true, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 4, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined , subheadingColor, subheadingDropShadow });
       }
     })();
     return () => { cancelled = true; };
