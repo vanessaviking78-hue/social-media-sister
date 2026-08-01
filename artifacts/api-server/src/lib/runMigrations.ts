@@ -36,6 +36,7 @@ await createBroadcastDraftsTable();
     await addCompletedReelsColumn();
     await addBlogVideoAndCommentsSupport();
     await createGoogleCalendarTables();
+            await addHookSubheadingStyleColumns();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -105,6 +106,11 @@ async function addHomeworkActionedColumn(): Promise<void> {
 }
 async function addCompletedReelsColumn(): Promise<void> {
   await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS completed_reels text NOT NULL DEFAULT '{}'`);
+}
+async function addHookSubheadingStyleColumns(): Promise<void> {
+    await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS hook_uppercase boolean NOT NULL DEFAULT false`);
+    await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS subheading_color text`);
+    await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS subheading_drop_shadow boolean NOT NULL DEFAULT false`);
 }
 async function addBlogVideoAndCommentsSupport(): Promise<void> {
   await db.execute(sql`ALTER TABLE blog_posts ADD COLUMN IF NOT EXISTS video_url text`);
