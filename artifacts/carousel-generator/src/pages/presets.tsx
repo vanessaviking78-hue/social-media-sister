@@ -875,6 +875,24 @@ export default function PresetsPage() {
                         </Select>
                       </div>
                       <div>
+                      <Label className="text-xs text-gray-400">Subtitle Font</Label>
+                      <Select value={editData.subheadingFont || ""} onValueChange={(v) => setEditData((d) => ({ ...d, subheadingFont: v }))}>
+                      <SelectTrigger className="bg-gray-900 border-gray-700 text-white">
+                      <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-gray-800 border-gray-700 max-h-80 overflow-y-auto">
+                        {FONT_OPTIONS.map((f) => (
+                    <SelectItem key={f.value} value={f.value} className="text-white">{f.label}</SelectItem>
+                    ))}
+                      </SelectContent>
+                      </Select>
+                      </div>
+                      <div>
+                      <Label className="text-xs text-gray-400">Subtitle Colour</Label>
+                      <div className="flex items-center gap-2">
+                      <input type="color" value={editData.subheadingColor || "#ffffff"} onChange={(e) => setEditData((d) => ({ ...d, subheadingColor: e.target.value }))} className="w-10 h-10 rounded cursor-pointer" />
+                      <Input value={editData.subheadingColor || ""} onChange={(e) => setEditData((d) => ({ ...d, subheadingColor: e.target.value }))} className="flex-1 bg-gray-900 border-gray-700 text-white" /></div></div>
+                      <div>
                         <Label className="text-xs text-gray-400">Page Colour</Label>
                         <div className="flex items-center gap-2">
                           <input type="color" value={editData.pageColor || "#000000"} onChange={(e) => setEditData((d) => ({ ...d, pageColor: e.target.value }))} className="w-10 h-10 rounded cursor-pointer" />
