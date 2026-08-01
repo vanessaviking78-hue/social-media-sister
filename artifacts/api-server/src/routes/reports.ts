@@ -246,4 +246,80 @@ router.get("/reports/leaderboard", async (req, res) => {
   }
 });
 
+router.get("/reports/top-content", async (req, res) => {
+  try {
+    const month = String(req.query["month"] || "");
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      res.status(400).json({ error: "Missing or invalid month, expected format YYYY-MM" });
+      return;
+    }
+    const limitParam = Number(req.query["limit"]);
+    const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, 100) : 20;
+    const { start, end } = monthRange(month);
+
+    const presets = await db.select().from(clientPresetsTable);
+    const presetById = new Map(presets.map((p) => [p.id, p]));
+
+    const posts = await db
+      .select()
+      .from(scheduledPostsTable)
+      .where(
+        and(
+          eq(scheduledPostsTable.status, "published"),
+          gte(scheduledPostsTable.metaPostedAt, start),
+          lte(scheduledPostsTable.metaPostedAt, end)
+        )
+      );
+
+    const enriched = await Promise.all(
+      posts.map(async (post) => {
+        const preset = presetById.get(post.presetId);
+        const token = preset?.metaPageAccessToken;
+        const result = post.metaResult as { igPostId?: string; fbPostId?: string } | null;
+        let stats: { likes: number; comments: number; shares?: number; permalink: string | null; caption: string | null } | null = null;
+
+        if (token && result?.igPostId) {
+          stats = await fetchIgStats(result.igPostId, token);
+        }
+        if (!stats && token && result?.fbPostId) {
+          stats = await fetchFbStats(result.fbPostId, token);
+        }
+
+        const content = post.content as { title?: string; caption?: string } | null;
+        const engagementScore = stats ? stats.likes + stats.comments * 2 + (stats.shares ?? 0) * 3 : 0;
+
+        return {
+          id: post.id,
+          presetId: post.presetId,
+          clientName: preset?.name || "Unknown client",
+          postType: post.postType,
+          title: content?.title || null,
+          caption: stats?.caption || content?.caption || null,
+          permalink: stats?.permalink || null,
+          likes: stats?.likes ?? null,
+          comments: stats?.comments ?? null,
+          shares: stats?.shares ?? null,
+          engagementScore,
+          postedAt: post.metaPostedAt,
+          statsAvailable: !!stats,
+        };
+      })
+    );
+
+    const ranked = enriched
+      .filter((p) => p.statsAvailable)
+      .sort((a, b) => b.engagementScore - a.engagementScore)
+      .slice(0, limit);
+
+    res.json({
+      month,
+      generatedAt: new Date().toISOString(),
+      totalPostsConsidered: posts.length,
+      topContent: ranked,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to build top content report" });
+  }
+});
+
 export default router;
