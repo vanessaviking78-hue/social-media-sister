@@ -93,7 +93,7 @@ export default function BonusContent() {
         if (file.type.startsWith("video/")) {
           const form = new FormData();
           form.append("video", file);
-          const r = await fetch(`${BASE}/api/content/upload-video`, { method: "POST", body: form });
+          const r = await fetch(`https://workspaceapi-server-production-0f0d.up.railway.app/api/content/upload-video`, { method: "POST", body: form });
           if (!r.ok) throw new Error("Video upload failed");
           const d = await r.json();
           mediaUrl = d.proxyUrl || d.url;
