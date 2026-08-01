@@ -66,6 +66,7 @@ export default function SingleImage() {
   const [contentFontSize, setContentFontSize] = useState(44);
   const [textColor, setTextColor] = useState(() => getBrandDefaults().secondaryColor);
   const [lineSpacing, setLineSpacing] = useState(0.9);
+  const [titleLetterSpacing, setTitleLetterSpacing] = useState(0);
   const [overlayColor, setOverlayColor] = useState("rgba(0,0,0,0.5)");
   const [pageColor, setPageColor] = useState(() => getBrandDefaults().primaryColor);
   const [cornerStyle, setCornerStyle] = useState<CornerStyle>("none");
@@ -163,13 +164,14 @@ export default function SingleImage() {
         false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize,
         pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont,
         textAlign, textBoxOutline, textBoxOutlineColor, "",
+        0, false, false, "'Great Vibes', cursive", false, "", "#ffffff", 0.45, false, false, 400, 2, false, 700, 0, undefined, undefined, { contentLetterSpacing: post.index === 1 ? titleLetterSpacing : 0 }
       );
     }
   }, [textStyle, heroLeadIn, heroWord, heroLeadInColor, heroWordColor, heroWordFont,
     heroVerticalPosition, heroSpacing, heroUppercase,
     fontFamily, fontSize, contentFontSize, textColor, lineSpacing, overlayColor,
     logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor,
-    textPosition, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor]);
+        textPosition, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, titleLetterSpacing]);
 
   const applyPreset = (preset: ClientPreset) => {
     setSelectedPresetId(preset.id);
@@ -282,6 +284,7 @@ export default function SingleImage() {
           textBoxOutline,
           textBoxOutlineColor,
           "",
+          0, false, false, "'Great Vibes', cursive", false, "", "#ffffff", 0.45, false, false, 400, 2, false, 700, 0, undefined, undefined, { contentLetterSpacing: titleLetterSpacing }
         );
       }
       setDesignPreviewDataUrl(canvas.toDataURL("image/png"));
@@ -295,6 +298,7 @@ export default function SingleImage() {
     overlayColor, pageColor, cornerStyle, cornerColor, textPosition, textAlign,
     textBoxOutline, textBoxOutlineColor, logoImg, logoPosition, logoSize,
     allCsvRows,
+    titleLetterSpacing,
   ]);
 
   useEffect(() => {
@@ -584,7 +588,7 @@ export default function SingleImage() {
         const tick = () => {
           const elapsed = performance.now() - startTime;
           const progress = Math.min(1, elapsed / durationMs);
-          drawSlide(offCtx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, "", 0, false, false, "'Great Vibes', cursive", false, "", "#ffffff", 0.45, false, false, 400, 2, false, 700, 0, videoAnimType, progress);
+                            drawSlide(offCtx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, "", 0, false, false, "'Great Vibes', cursive", false, "", "#ffffff", 0.45, false, false, 400, 2, false, 700, 0, videoAnimType, progress, { contentLetterSpacing: post.index === 1 ? titleLetterSpacing : 0 });
           ctx.fillStyle = '#000000';
           ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
           ctx.drawImage(offscreen, 0, yOff);
@@ -630,7 +634,7 @@ export default function SingleImage() {
         await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
 
         const videoBlob = await recordSlideVideo(canvas, (progress) => {
-          drawSlide(offCtx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, "", 0, false, false, "'Great Vibes', cursive", false, "", "#ffffff", 0.45, false, false, 400, 2, false, 700, 0, videoAnimType, progress);
+          drawSlide(offCtx, img, post.text, fontFamily, post.index === 1 ? fontSize : contentFontSize, false, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, 1, 1, textPosition, true, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, "", 0, false, false, "'Great Vibes', cursive", false, "", "#ffffff", 0.45, false, false, 400, 2, false, 700, 0, videoAnimType, progress, { contentLetterSpacing: post.index === 1 ? titleLetterSpacing : 0 });
           ctx.fillStyle = '#000000';
           ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
           ctx.drawImage(offscreen, 0, yOff);
@@ -1509,7 +1513,15 @@ export default function SingleImage() {
                   <Slider min={0.7} max={2} step={0.05} value={[lineSpacing]} onValueChange={([v]) => setLineSpacing(v)} className="w-full" />
                 </div>
 
-                <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
+                                                  <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
+            <div className="flex items-center justify-between">
+              <Label className="text-base font-semibold">Title Letter Spacing</Label>
+              <span className="text-base font-semibold tabular-nums">{titleLetterSpacing}px</span>
+            </div>
+            <Slider min={-5} max={20} step={0.5} value={[titleLetterSpacing]} onValueChange={([v]) => setTitleLetterSpacing(v)} className="w-full" />
+          </div>
+
+          <div className="space-y-3 rounded-2xl border border-border/30 bg-card/50 p-6">
                   <Label className="text-base font-semibold flex items-center gap-2"><Palette className="w-4 h-4" /> Page Colour</Label>
                   <div className="flex gap-3">
                     <Input type="color" value={pageColor} onChange={(e) => setPageColor(e.target.value)} className="w-14 h-12 p-1 cursor-pointer" />
