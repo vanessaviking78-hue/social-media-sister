@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { clientPresetsTable, calendarPostsTable, approvalBatchesTable, approvalImagesTable, scheduledPostsTable, homeworkQuestionSetsTable, homeworkRepliesTable, bonusContentTable, blogPostsTable, blogCommentsTable } from "@workspace/db/schema";
-import { eq, and, gte, or, sql, desc, asc } from "drizzle-orm";
+import { eq, and, gte, lte, or, sql, desc, asc } from "drizzle-orm";
 import crypto from "crypto";
 import { getApprovedIdeasForClient } from "./revenue-ideas";
 import { getVapidPublicKey } from "../lib/push";
@@ -72,6 +72,57 @@ router.get("/portal/:token", async (req, res) => {
     });
     const mergedUpcoming = [...upcomingPosts, ...scheduledMapped].sort((a, b) => a.date.localeCompare(b.date));
 
+    // Already-posted content, so clients can look back at and download
+    // things that have gone live rather than losing access the moment a
+    // post moves off the "upcoming" list.
+    const postedCalendar = await db.select().from(calendarPostsTable)
+      .where(and(
+        eq(calendarPostsTable.clientName, clientName),
+        eq(calendarPostsTable.status, "posted"),
+      ));
+    const postedCalendarMapped = postedCalendar.map((p) => ({
+      id: p.id,
+      date: p.date,
+      title: p.title,
+      caption: p.caption,
+      postType: p.postType,
+      status: "posted",
+      color: p.color,
+      imageUrl: p.imageUrl,
+      imageUrls: p.imageUrl ? [p.imageUrl] : [],
+      videoUrl: null as string | null,
+      source: "calendar" as const,
+      scheduledPostId: null as number | null,
+    }));
+
+    const publishedRaw = await db.select().from(scheduledPostsTable)
+      .where(and(
+        eq(scheduledPostsTable.presetId, preset.id),
+        eq(scheduledPostsTable.status, "published"),
+      ));
+    const publishedMapped = publishedRaw.map((sp) => {
+      const c = (sp.content || {}) as { imageUrls?: string[]; videoUrl?: string; caption?: string; title?: string };
+      const postedDate = sp.metaPostedAt || sp.scheduledAt;
+      return {
+        id: 900000000 + sp.id,
+        date: new Date(postedDate).toISOString().slice(0, 10),
+        title: c.title || "",
+        caption: c.caption || "",
+        postType: sp.postType,
+        status: "posted",
+        color: "#ec4899",
+        imageUrl: (c.imageUrls && c.imageUrls[0]) || null,
+        imageUrls: c.imageUrls || [],
+        videoUrl: c.videoUrl || null,
+        source: "scheduler" as const,
+        scheduledPostId: sp.id,
+      };
+    });
+
+    const publishedPosts = [...postedCalendarMapped, ...publishedMapped]
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 100);
+
     const batches = await db.select().from(approvalBatchesTable)
       .where(eq(approvalBatchesTable.clientName, clientName));
 
@@ -97,6 +148,7 @@ router.get("/portal/:token", async (req, res) => {
       accentColor: preset.accentColor || null,
       welcomeMessage: preset.portalWelcomeMessage || null,
       upcomingPosts: mergedUpcoming,
+      publishedPosts,
       approvalBatches: batchesWithCounts,
       revenueIdeas,
     });
