@@ -48,20 +48,23 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
-// Downloads an image URL to the device rather than opening it in a new tab.
-// Falls back to a plain link open if the fetch/blob approach is blocked.
+// Downloads an image or video URL to the device rather than opening it in
+// a new tab. Routed through our own /api/portal-download endpoint (hitting
+// the API origin directly, bypassing the Netlify proxy which chokes on
+// larger video files) so the server sets a Content-Disposition: attachment
+// header - this forces a real download on every browser and device,
+// instead of the old client-side fetch+blob approach which silently fell
+// back to opening the file on screen whenever the CDN's CORS headers
+// blocked the browser-side fetch, losing the client's place in the portal.
 async function downloadImage(url: string, filename: string) {
+  const proxied = `https://workspaceapi-server-production-0f0d.up.railway.app/api/portal-download?url=${encodeURIComponent(url)}&filename=${encodeURIComponent(filename)}`;
   try {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    const objectUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = objectUrl;
+    a.href = proxied;
     a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(objectUrl);
   } catch {
     window.open(url, "_blank");
   }
