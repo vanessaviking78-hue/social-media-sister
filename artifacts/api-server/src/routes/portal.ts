@@ -27,6 +27,28 @@ router.post("/presets/:id/generate-portal-token", async (req, res) => {
   }
 });
 
+// Streams a remote asset (image or video) back to the browser with a
+// Content-Disposition: attachment header, so clicking "Download" in the
+// client portal always saves the file to the device instead of just
+// opening it in a new tab. Fetching the CDN url directly from the browser
+// was hitting CORS restrictions on some clients' devices, which silently
+// fell back to opening the file in-page instead of downloading it.
+router.get("/portal-download", async (req, res) => {
+  try {
+    const fileUrl = req.query["url"] as string;
+    const filename = (req.query["filename"] as string) || "download";
+    if (!fileUrl) { res.status(400).json({ error: "Missing url" }); return; }
+    const upstream = await fetch(fileUrl);
+    if (!upstream.ok) { res.status(502).json({ error: "Failed to fetch file" }); return; }
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    res.setHeader("Content-Disposition", `attachment; filename="${filename.replace(/"/g, "")}"`);
+    res.setHeader("Content-Type", upstream.headers.get("content-type") || "application/octet-stream");
+    res.send(buf);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Download failed" });
+  }
+});
+
 router.get("/portal/:token", async (req, res) => {
   try {
     const { token } = req.params;
