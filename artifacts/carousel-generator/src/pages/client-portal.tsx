@@ -6,10 +6,10 @@ import { NewsList } from "@/pages/aesthetic-news";
 const BASE = import.meta.env.BASE_URL || "/";
 const SEND_LABEL = "Send to Vanessa, Aesthetic Angel / Digital Darling";
 
-type CalendarPost = { id: number; date: string; title: string; caption: string; postType: string; status: string; color: string; imageUrl: string | null; imageUrls: string[]; source: "calendar" | "scheduler"; scheduledPostId: number | null; };
+type CalendarPost = { id: number; date: string; title: string; caption: string; postType: string; status: string; color: string; imageUrl: string | null; imageUrls: string[]; videoUrl?: string | null; source: "calendar" | "scheduler"; scheduledPostId: number | null; };
 type ApprovalBatch = { id: number; name: string; token: string; status: string; totalImages: number; pendingImages: number; approvedImages: number; rejectedImages: number; createdAt: string; expiresAt: string | null; };
 type RevenueIdea = { title: string; instructions: string; draftContent: string; weekOf: string };
-type PortalData = { clientName: string; logoUrl: string | null; photoUrl: string | null; accentColor: string | null; welcomeMessage: string | null; upcomingPosts: CalendarPost[]; approvalBatches: ApprovalBatch[]; revenueIdeas: RevenueIdea[]; };
+type PortalData = { clientName: string; logoUrl: string | null; photoUrl: string | null; accentColor: string | null; welcomeMessage: string | null; upcomingPosts: CalendarPost[]; publishedPosts: CalendarPost[]; approvalBatches: ApprovalBatch[]; revenueIdeas: RevenueIdea[]; };
 type Resource = { id: number; title: string; description: string; fileKey: string; fileName: string; createdAt: string; };
 
 const POST_TYPE_ICON: Record<string, React.ReactNode> = {
@@ -245,10 +245,11 @@ const REEL_GROUPS: { heading: string; items: string[] }[] = [
 ];
 const REEL_TOTAL = REEL_GROUPS.reduce((n, g) => n + g.items.length, 0);
 
-type Tab = "upcoming" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus" | "rants" | "connect" | "activity" | "refer" | "brainstorm";
+type Tab = "upcoming" | "published" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus" | "rants" | "connect" | "activity" | "refer" | "brainstorm";
 
 const TAB_ICON: Record<Tab, React.ReactNode> = {
   upcoming: <CalendarDays className="w-4 h-4" />,
+  published: <Download className="w-4 h-4" />,
   approvals: <ShieldCheck className="w-4 h-4" />,
   ba: <Camera className="w-4 h-4" />,
   selfies: <Smile className="w-4 h-4" />,
@@ -801,6 +802,7 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
 </div>
 <div className="max-w-3xl mx-auto px-4 pb-3 flex flex-wrap gap-2">
           <TabBtn id="upcoming" label="Posts" />
+          <TabBtn id="published" label="Past Posts" />
           <TabBtn id="homework" label="Homework" />
           <TabBtn id="bonus" label="Bonus Content" />
               <TabBtn id="rants" label="Vanessa Rants" />
@@ -959,6 +961,59 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
                                   <button onClick={() => { setRejectingId(null); setRejectReason(""); }} className="rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-sm font-semibold py-2.5 px-4">Cancel</button>
                                 </div>
                               </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        )}
+
+        {tab === "published" && (
+          <section>
+            <div className="flex items-center gap-2 mb-5"><Download className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Past Posts</h2>{data.publishedPosts.length > 0 && (<span className="ml-auto text-xs text-zinc-500">{data.publishedPosts.length} post{data.publishedPosts.length !== 1 ? "s" : ""}</span>)}</div>
+            {data.publishedPosts.length === 0 ? (<div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-8 text-center"><Download className="w-8 h-8 mx-auto text-zinc-700 mb-3" /><p className="text-zinc-500">Nothing's gone live yet, check back once your first post is posted.</p></div>) : (
+              <div className="space-y-4">
+                {data.publishedPosts.map((post) => {
+                  const urls = post.imageUrls && post.imageUrls.length > 0 ? post.imageUrls : (post.imageUrl ? [post.imageUrl] : []);
+                  return (
+                    <div key={`${post.source}-${post.id}`} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 overflow-hidden">
+                      <div className="p-4">
+                        {post.videoUrl ? (
+                          <video src={post.videoUrl} controls playsInline className="w-full rounded-xl bg-black aspect-[4/5] object-contain" />
+                        ) : urls.length > 0 ? <SlideShow urls={urls} /> : (
+                          <div className="aspect-square rounded-xl flex items-center justify-center" style={{ backgroundColor: post.color + "22" }}>
+                            <FileImage className="w-6 h-6 text-zinc-600" />
+                          </div>
+                        )}
+                        <div className="flex items-start justify-between gap-2 mt-3 mb-1">
+                          <div className="flex items-center gap-1.5 text-xs text-zinc-400"><span className="font-semibold text-white">{getDayOfWeek(post.date)}</span><span>{formatDate(post.date)}</span></div>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className="flex items-center gap-1 text-xs text-zinc-500 capitalize">{POST_TYPE_ICON[post.postType] || <FileImage className="w-3.5 h-3.5" />}{post.postType.replace("-", " ")}</span>
+                            <span className="text-xs px-2 py-0.5 rounded-full border bg-green-900/30 text-green-400 border-green-700/40">posted</span>
+                          </div>
+                        </div>
+                        {post.title && <p className="font-medium text-white text-sm">{post.title}</p>}
+                        {post.caption && <p className="text-sm text-zinc-400 mt-1 whitespace-pre-wrap">{post.caption}</p>}
+                        {(urls.length > 0 || post.videoUrl) && (
+                          <div className="mt-4 pt-3 border-t border-zinc-800 flex flex-wrap gap-2">
+                            {post.videoUrl ? (
+                              <button onClick={() => { downloadImage(post.videoUrl as string, `${data.clientName.replace(/\s+/g, "-").toLowerCase()}-${post.date}.mp4`); pingDownload(token, post.title || post.postType, 1); }} className="text-xs font-semibold text-pink-400 hover:text-pink-300 flex items-center gap-1.5 rounded-full border border-pink-800/40 bg-pink-950/10 px-3 py-1.5">
+                                <Download className="w-3.5 h-3.5" /> Download video
+                              </button>
+                            ) : (
+                              <button onClick={() => { urls.forEach((u, i) => downloadImage(u, `${data.clientName.replace(/\s+/g, "-").toLowerCase()}-${post.date}-${i + 1}.jpg`)); pingDownload(token, post.title || post.postType, urls.length); }} className="text-xs font-semibold text-pink-400 hover:text-pink-300 flex items-center gap-1.5 rounded-full border border-pink-800/40 bg-pink-950/10 px-3 py-1.5">
+                                <Download className="w-3.5 h-3.5" /> Download image{urls.length > 1 ? "s" : ""}
+                              </button>
+                            )}
+                            {post.caption && (
+                              <button onClick={() => copyCaption(post.caption)} className="text-xs font-semibold text-zinc-300 hover:text-white flex items-center gap-1.5 rounded-full border border-zinc-700 bg-zinc-900 px-3 py-1.5">
+                                <ClipboardList className="w-3.5 h-3.5" /> Copy caption
+                              </button>
                             )}
                           </div>
                         )}
