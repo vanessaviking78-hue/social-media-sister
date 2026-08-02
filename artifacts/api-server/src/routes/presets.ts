@@ -64,7 +64,7 @@ router.get("/presets/:id", async (req, res) => {
   }
 });
 
-const DEFAULT_FIRST_COMMENT_CAROUSEL = "Share this with a friend";
+const DEFAULT_FIRST_COMMENT_CAROUSEL = "I'd love to know your thoughts";
 const DEFAULT_FIRST_COMMENT_SINGLE   = "Save this for later";
 const DEFAULT_FIRST_COMMENT_REEL     = "Save this and share to someone who needs to know";
 
