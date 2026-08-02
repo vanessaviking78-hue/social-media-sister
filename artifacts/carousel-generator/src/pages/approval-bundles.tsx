@@ -83,6 +83,10 @@ function thumb(item: LibraryItem): string | null {
   return item.thumbnailUrl ?? item.mediaUrls?.[0] ?? item.mediaUrl ?? null;
 }
 
+function isVideoUrl(url: string): boolean {
+  return /\.(mp4|mov|webm|m4v)(\?|$)/i.test(url);
+}
+
 export default function ApprovalBundles() {
   const [, navigate] = useLocation();
   const [bundles, setBundles] = useState<BundleSummary[]>([]);
@@ -316,7 +320,11 @@ export default function ApprovalBundles() {
                       }`}>
                       <div className="aspect-square bg-zinc-900 relative">
                         {t ? (
-                          <img src={t} alt="" className="w-full h-full object-cover" />
+                          isVideoUrl(t) ? (
+                            <video src={t} className="w-full h-full object-cover" muted playsInline />
+                          ) : (
+                            <img src={t} alt="" className="w-full h-full object-cover" />
+                          )
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">No image</div>
                         )}
@@ -457,7 +465,13 @@ export default function ApprovalBundles() {
                               return (
                                 <div key={item.id} className="rounded-lg border border-border/20 overflow-hidden bg-black/20">
                                   <div className="aspect-square relative bg-zinc-900">
-                                    {t ? <img src={t} alt="" className="w-full h-full object-cover" /> : (
+                                    {t ? (
+                                      isVideoUrl(t) ? (
+                                        <video src={t} className="w-full h-full object-cover" muted playsInline />
+                                      ) : (
+                                        <img src={t} alt="" className="w-full h-full object-cover" />
+                                      )
+                                    ) : (
                                       <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No image</div>
                                     )}
                                     {response && (
