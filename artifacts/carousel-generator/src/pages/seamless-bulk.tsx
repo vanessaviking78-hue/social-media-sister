@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePresets, type ClientPreset } from "@/lib/use-presets";
 import { MusicPickerModal, type MusicTrack } from "@/components/music-picker-modal";
 import { renderSlideCanvas, makeBlocks, computeTuckedSubtitleY, SlideEditorModal, SCALE, LOCKED_LINE_SPACING, type CsvRow, type Block } from "@/pages/bulk-carousel";
@@ -168,6 +168,7 @@ export default function SeamlessBulk() {
 const { presets } = usePresets();
 const [strips, setStrips] = useState<Strip[]>([]);
 const [carousels, setCarousels] = useState<Carousel[]>([]);
+const imageStyleTickets = useRef<Record<string, number>>({});
 const [phase, setPhase] = useState<"upload" | "preview">("upload");
 const [busy, setBusy] = useState(false);
 const [musicId, setMusicId] = useState<string | null>(null);
@@ -341,7 +342,15 @@ async function applyImageStyle(id: string, patch: Partial<Pick<Carousel, "imageO
   const c = carousels.find((x) => x.id === id); if (!c) return;
   const next = { ...c, ...patch };
   update(id, patch);
+  // Dragging a slider fires this on every tick, and each call awaits a network
+  // logo fetch + font load before it can render. Those can resolve out of
+  // order, so without this ticket guard a stale render from an earlier drag
+  // position could land after a newer one and freeze the preview on the
+  // wrong opacity/zoom/shadow — exactly the "preview doesn't update" bug.
+  const ticket = (imageStyleTickets.current[id] || 0) + 1;
+  imageStyleTickets.current[id] = ticket;
   const slideUrls = await renderFromBlocks(next.raw, next.slideImgs, next.blocks, presetFor(next.presetId), next.imageOpacity, next.imageZoom, next.imageShadow);
+  if (imageStyleTickets.current[id] !== ticket) return;
   update(id, { slideUrls });
 }
 async function applyText(id: string) {
