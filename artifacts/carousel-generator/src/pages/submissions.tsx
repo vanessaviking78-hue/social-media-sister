@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Inbox, Loader2, ImageOff } from "lucide-react";
+import { ArrowLeft, Inbox, Loader2, ImageOff, Send, CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 
 const BASE = import.meta.env.BASE_URL || "/";
 
@@ -24,6 +25,8 @@ function authHeaders(): Record<string, string> {
 export default function Submissions() {
   const [rows, setRows] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [canvaBusy, setCanvaBusy] = useState<Record<string, boolean>>({});
+  const [canvaDone, setCanvaDone] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetch(`${BASE}api/submissions`, { headers: authHeaders() })
@@ -43,6 +46,29 @@ export default function Submissions() {
       });
     } catch {
       // optimistic update stays; a page refresh will resync if the request failed
+    }
+  }
+
+  async function sendToCanva(s: Submission, label: string, url: string) {
+    const key = `${s.id}-${label}`;
+    if (canvaBusy[key]) return;
+    setCanvaBusy((prev) => ({ ...prev, [key]: true }));
+    try {
+      const absoluteUrl = url.startsWith("http") ? url : `${window.location.origin}${url}`;
+      const r = await fetch(`${BASE}api/canva/upload`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageUrl: absoluteUrl, name: `${s.clientName} ${s.treatment || ""} ${label}`.trim() }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "Upload failed");
+      toast.success("Sent to Canva.");
+      setCanvaDone((prev) => ({ ...prev, [key]: true }));
+      setTimeout(() => setCanvaDone((prev) => ({ ...prev, [key]: false })), 3000);
+    } catch (err: any) {
+      toast.error(err?.message || "Couldn't send to Canva. Check your Canva connection.");
+    } finally {
+      setCanvaBusy((prev) => ({ ...prev, [key]: false }));
     }
   }
 
@@ -99,13 +125,26 @@ export default function Submissions() {
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-px bg-zinc-800">
-                    {[["Before", s.beforeUrl], ["After", s.afterUrl]].map(([lab, url]) => (
+                    {[["Before", s.beforeUrl], ["After", s.afterUrl]].map(([lab, url]) => {
+                      const key = `${s.id}-${lab}`;
+                      const busy = !!canvaBusy[key];
+                      const done = !!canvaDone[key];
+                      return (
                       <div key={lab} className="relative bg-zinc-900">
                         <img src={url as string} alt={lab as string} className="w-full h-56 object-cover" />
                         <span className="absolute top-2 left-2 text-[10px] uppercase tracking-wide bg-black/60 px-2 py-0.5 rounded-full">{lab}</span>
+                        <button
+                          onClick={() => sendToCanva(s, lab as string, url as string)}
+                          disabled={busy}
+                          className="absolute bottom-2 left-2 flex items-center gap-1 text-[10px] bg-black/60 hover:bg-black/80 px-2 py-0.5 rounded-full text-violet-300"
+                        >
+                          {busy ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : done ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Send className="w-2.5 h-2.5" />}
+                          Canva
+                        </button>
                         <a href={url as string} download className="absolute bottom-2 right-2 text-[10px] bg-black/60 hover:bg-black/80 px-2 py-0.5 rounded-full">Download</a>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                   {(s.story || s.submitterName) && (
                     <div className="px-4 py-3">
