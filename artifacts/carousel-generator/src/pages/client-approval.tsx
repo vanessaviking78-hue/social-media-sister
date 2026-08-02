@@ -52,6 +52,10 @@ interface ItemDecision {
   feedback: string;
 }
 
+function isVideoUrl(url: string): boolean {
+  return /\.(mp4|mov|webm|m4v)(\?|$)/i.test(url);
+}
+
 function SlideShow({ urls }: { urls: string[] }) {
   const [idx, setIdx] = useState(0);
   if (urls.length === 0) {
@@ -60,12 +64,22 @@ function SlideShow({ urls }: { urls: string[] }) {
   return (
     <div className="relative select-none">
       <div className="aspect-[4/5] bg-zinc-900 rounded-xl overflow-hidden">
-        <img
-          src={urls[idx]}
-          alt={`Slide ${idx + 1}`}
-          className="w-full h-full object-cover"
-          loading="lazy"
-        />
+        {isVideoUrl(urls[idx]) ? (
+          <video
+            key={urls[idx]}
+            src={urls[idx]}
+            controls
+            playsInline
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <img
+            src={urls[idx]}
+            alt={`Slide ${idx + 1}`}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        )}
       </div>
       {urls.length > 1 && (
         <>
