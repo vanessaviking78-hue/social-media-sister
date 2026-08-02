@@ -270,13 +270,16 @@ export default function UploadSchedule() {
       const hasExistingImages = prev.some((i) => !i.isVideo);
       if (videos.length) {
         if (hasExistingImages) { toast.error("Remove your images before adding a video."); return prev; }
-        if (prev.length > 0) { toast.error("Only one video at a time."); return prev; }
-        const video = videos[0];
-        if (video.size > MAX_VIDEO_MB * 1024 * 1024) {
-          toast.error(`Video must be under ${MAX_VIDEO_MB} MB.`);
-          return prev;
+        const available = MAX_IMAGES - prev.length;
+        if (available <= 0) { toast.error(`You have ${MAX_IMAGES} videos already — remove one to add more.`); return prev; }
+        const withinSize = videos.filter((v) => v.size <= MAX_VIDEO_MB * 1024 * 1024);
+        if (withinSize.length < videos.length) {
+          toast.error(`${videos.length - withinSize.length} video(s) skipped — must be under ${MAX_VIDEO_MB} MB.`);
         }
-        return [{ file: video, localUrl: URL.createObjectURL(video), isVideo: true }];
+        const toAdd = withinSize.slice(0, available);
+        if (withinSize.length > available) toast.info(`Added ${toAdd.length} of ${withinSize.length} videos — limit is ${MAX_IMAGES}.`);
+        if (!toAdd.length) return prev;
+        return [...prev, ...toAdd.map((v) => ({ file: v, localUrl: URL.createObjectURL(v), isVideo: true }))];
       }
       // Images
       if (hasExistingVideo) { toast.error("Remove your video before adding images."); return prev; }
@@ -398,11 +401,16 @@ export default function UploadSchedule() {
     const selectedPreset = presets.find((p) => String(p.id) === presetId);
     const isVideoPost = images.some((i) => i.isVideo);
     const isAnimated = animateSlides && !isVideoPost && images.length >= 2;
+    const videoItems = images.filter((i) => i.isVideo);
+    const isMultiVideo = isVideoPost && videoItems.length >= 2;
+    const effectivePostType = isAnimated ? "reel" : isMultiVideo ? "video_carousel" : isVideoPost ? "reel" : postType;
 
     setScheduling(true);
     const id = toast.loading(
       isAnimated
         ? `Stitching ${images.length} slides into animated reel...`
+        : isMultiVideo
+        ? `Uploading ${videoItems.length} video clips...`
         : isVideoPost
         ? "Uploading video..."
         : "Uploading images..."
@@ -414,7 +422,18 @@ export default function UploadSchedule() {
 
       let postContent: Record<string, unknown>;
 
-      if (isVideoPost || isAnimated) {
+      if (isMultiVideo) {
+        const videoUrls: string[] = [];
+        for (const item of videoItems) {
+          videoUrls.push(await uploadVideo(item.file));
+        }
+        postContent = {
+          videoUrls,
+          caption: caption.trim(),
+          title: titleBase,
+          platforms: Array.from(platforms),
+        };
+      } else if (isVideoPost || isAnimated) {
         let videoFile: File;
         if (isAnimated) {
           videoFile = await stitchImagesToVideo(images, dimension);
@@ -465,11 +484,11 @@ export default function UploadSchedule() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             presetId: targetPresetId,
-            postType,
+            postType: effectivePostType,
             content: postContent,
             scheduledAt: finalScheduledAt,
             stickerConfig,
-            isTrial: postType === "reel" ? isTrial : false,
+            isTrial: effectivePostType === "reel" ? isTrial : false,
           }),
         });
 
@@ -498,8 +517,10 @@ export default function UploadSchedule() {
   const handleGetApprovalGroups = useCallback(async () => {
     let mediaUrls: string[];
     if (images.some((i) => i.isVideo)) {
-      const url = await uploadVideo(images[0].file);
-      mediaUrls = [url];
+      mediaUrls = [];
+      for (const item of images) {
+        mediaUrls.push(await uploadVideo(item.file));
+      }
     } else {
       mediaUrls = await uploadImages(images.map((i) => i.file));
     }
@@ -555,9 +576,9 @@ export default function UploadSchedule() {
           <div>
             <div className="flex items-baseline justify-between mb-3">
               <Label className="text-xs font-semibold tracking-widest uppercase text-zinc-400">
-                {hasVideo ? "Video" : animateSlides ? "Slides (animating as reel)" : "Images"}
+                {hasVideo ? (images.length > 1 ? "Video clips (carousel)" : "Video") : animateSlides ? "Slides (animating as reel)" : "Images"}
               </Label>
-              {!hasVideo && <span className="text-xs text-zinc-500">{images.length} / {MAX_IMAGES}</span>}
+              <span className="text-xs text-zinc-500">{images.length} / {MAX_IMAGES}</span>
             </div>
 
             {images.length === 0 && (
@@ -584,7 +605,7 @@ export default function UploadSchedule() {
               </div>
             )}
 
-            {images.length > 0 && !hasVideo && images.length < MAX_IMAGES && (
+            {images.length > 0 && images.length < MAX_IMAGES && (
               <div
                 ref={dropZoneRef}
                 onClick={() => fileInputRef.current?.click()}
@@ -593,7 +614,7 @@ export default function UploadSchedule() {
                 className="border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center gap-2 py-6 cursor-pointer hover:border-pink-500/40 hover:bg-white/[0.02] transition-colors mb-4"
               >
                 <Upload size={18} className="text-zinc-500" />
-                <p className="text-sm text-zinc-400">Drop more images here or click to browse</p>
+                <p className="text-sm text-zinc-400">{hasVideo ? "Drop more video clips here or click to browse" : "Drop more images here or click to browse"}</p>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -605,8 +626,8 @@ export default function UploadSchedule() {
               </div>
             )}
 
-            {/* Video preview */}
-            {hasVideo && images[0] && (
+            {/* Video preview — single clip */}
+            {hasVideo && images.length === 1 && images[0] && (
               <div className="relative rounded-xl overflow-hidden bg-zinc-900 border border-white/10 mb-4">
                 <video
                   src={images[0].localUrl}
@@ -625,6 +646,45 @@ export default function UploadSchedule() {
                   <X size={14} className="text-white" />
                 </button>
               </div>
+            )}
+
+            {/* Video grid — 2+ clips post as a video carousel */}
+            {hasVideo && images.length > 1 && (
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                {images.map((img, idx) => (
+                  <div
+                    key={img.localUrl}
+                    draggable
+                    onDragStart={(e) => handleThumbDragStart(idx, e)}
+                    onDragOver={(e) => handleThumbDragOver(idx, e)}
+                    onDrop={(e) => handleThumbDrop(idx, e)}
+                    onDragEnd={handleThumbDragEnd}
+                    style={{ touchAction: "pan-y" }}
+                    className={`relative rounded-lg overflow-hidden aspect-square bg-zinc-900 cursor-grab active:cursor-grabbing border-2 transition-all ${
+                      dragOverIdx === idx ? "border-pink-500 scale-105" : "border-transparent"
+                    }`}
+                  >
+                    <video src={img.localUrl} className="w-full h-full object-cover" muted playsInline />
+                    <div className="absolute top-1 left-1 bg-black/60 rounded p-0.5">
+                      <GripVertical size={12} className="text-white/60" />
+                    </div>
+                    <button
+                      onClick={() => removeImage(idx)}
+                      className="absolute top-1 right-1 bg-black/70 rounded-full p-0.5 hover:bg-red-600/80 transition-colors"
+                    >
+                      <X size={12} className="text-white" />
+                    </button>
+                    <div className="absolute bottom-1 left-1 bg-black/60 rounded px-1.5 py-0.5 text-[10px] text-white font-medium">
+                      {idx + 1}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {hasVideo && images.length > 1 && (
+              <p className="text-[11px] text-zinc-500 mb-2">
+                {images.length} clips will post together as a video carousel. Drag thumbnails to reorder.
+              </p>
             )}
 
             {/* Image grid */}
