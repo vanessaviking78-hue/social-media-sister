@@ -80,6 +80,7 @@ export default function Home() {
   const [textPosition, setTextPosition] = useState<TextPosition>("bottom");
   const [textAlign, setTextAlign] = useState<TextAlign>("center");
   const [showTextOverlay, setShowTextOverlay] = useState(true);
+  const [coverTextOverlay, setCoverTextOverlay] = useState(false);
   const [textBoxOutline, setTextBoxOutline] = useState(false);
   const [textBoxOutlineColor, setTextBoxOutlineColor] = useState("#ffffff");
 
@@ -265,7 +266,7 @@ export default function Home() {
       }
     })();
     return () => { cancelled = true; };
-  }, [livePreviewImg, fontFamily, fontSize, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, contentLetterSpacing, pageColorEnd, overlayGradient, textShadow, allCsvRows, coverStyle, heroLeadIn, heroWord, heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase]);
+  }, [livePreviewImg, fontFamily, fontSize, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, textPosition, showTextOverlay, coverTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, contentLetterSpacing, pageColorEnd, overlayGradient, textShadow, allCsvRows, coverStyle, heroLeadIn, heroWord, heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase]);
 
   const pushToMeta = async () => {
     if (!result?.slides.length) return;
@@ -294,7 +295,7 @@ export default function Home() {
         if (isCover && coverStyle === "hero") {
           drawHeroSlide(ctx, img, (slide.heroLeadIn || heroLeadIn) || "LEAD-IN", (slide.heroWord || heroWord) || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
         } else {
-          drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, isCover ? textPosition : "bottom", showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide, noOverlay: isCover });
+          drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, isCover ? textPosition : "bottom", showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide, noOverlay: isCover && !coverTextOverlay });
         }
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
@@ -373,7 +374,7 @@ export default function Home() {
         if (isCover && coverStyle === "hero") {
           drawHeroSlide(ctx, img, (slide.heroLeadIn || heroLeadIn) || "LEAD-IN", (slide.heroWord || heroWord) || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
         } else {
-          drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, isCover ? textPosition : "bottom", showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide, noOverlay: isCover });
+          drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, isCover ? textPosition : "bottom", showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide, noOverlay: isCover && !coverTextOverlay });
         }
         URL.revokeObjectURL(img.src);
         const fileName = `sched-${String(slide.groupIndex).padStart(2, "0")}-slide-${String(slide.groupPosition).padStart(2, "0")}.png`;
@@ -807,7 +808,7 @@ export default function Home() {
         if (isCover && coverStyle === "hero") {
           drawHeroSlide(ctx, img, (slide.heroLeadIn || heroLeadIn) || "LEAD-IN", (slide.heroWord || heroWord) || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
         } else {
-          drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, isCover ? textPosition : "bottom", showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide, noOverlay: isCover });
+          drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, isCover ? textPosition : "bottom", showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide, noOverlay: isCover && !coverTextOverlay });
         }
         URL.revokeObjectURL(img.src);
         const outBlob = await new Promise<Blob | null>((r) => canvas.toBlob(r, "image/png"));
@@ -861,7 +862,7 @@ export default function Home() {
         if (isCover && coverStyle === "hero") {
           drawHeroSlide(ctx, img, (slide.heroLeadIn || heroLeadIn) || "LEAD-IN", (slide.heroWord || heroWord) || "HERO", heroLeadInColor, heroWordColor, heroWordFont, heroVerticalPosition, heroSpacing, heroUppercase, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor);
         } else {
-          drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, isCover ? textPosition : "bottom", showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide, noOverlay: isCover });
+          drawSlide(ctx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, isCover ? textPosition : "bottom", showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, undefined, undefined, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide, noOverlay: isCover && !coverTextOverlay });
         }
         URL.revokeObjectURL(img.src);
         const dataUrl = canvas.toDataURL("image/png");
@@ -950,7 +951,7 @@ export default function Home() {
         const tick = () => {
           const elapsed = performance.now() - startTime;
           const progress = Math.min(1, elapsed / durationMs);
-          drawSlide(offCtx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, isCover ? textPosition : "bottom", showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, videoAnimType, progress, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide, noOverlay: isCover });
+          drawSlide(offCtx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, isCover ? textPosition : "bottom", showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, videoAnimType, progress, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide, noOverlay: isCover && !coverTextOverlay });
           ctx.fillStyle = '#000000';
           ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
           ctx.drawImage(offscreen, 0, yOff);
@@ -968,7 +969,7 @@ export default function Home() {
       console.error('Preview failed', e);
       setVideoPreviewPlaying(false);
     }
-  }, [result, videoDurationSec, videoAnimType, fontFamily, fontSize, contentFontSize, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, textPosition, showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, stopPreview]);
+  }, [result, videoDurationSec, videoAnimType, fontFamily, fontSize, contentFontSize, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, textPosition, showTextOverlay, coverTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, stopPreview]);
 
   const downloadVideos = async () => {
     if (!result?.slides.length) return;
@@ -1005,7 +1006,7 @@ export default function Home() {
           const videoBlob = await recordGroupVideo(canvas, videoDurationSec * 1000, 300, groupSlides.length, (si, progress) => {
             const slide = groupSlides[si];
             const isCover = slide.groupPosition === 1;
-            drawSlide(offCtx, imgs[si], slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, isCover ? textPosition : "bottom", showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, videoAnimType, progress, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide, noOverlay: isCover });
+            drawSlide(offCtx, imgs[si], slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, isCover ? textPosition : "bottom", showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, videoAnimType, progress, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide, noOverlay: isCover && !coverTextOverlay });
             ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
             ctx.drawImage(offscreen, 0, yOff);
@@ -1023,7 +1024,7 @@ export default function Home() {
           const img = new Image();
           await new Promise<void>((ok, fail) => { img.onload = () => ok(); img.onerror = fail; img.src = URL.createObjectURL(blob); });
           const videoBlob = await recordSlideVideo(canvas, (progress) => {
-            drawSlide(offCtx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, isCover ? textPosition : "bottom", showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, videoAnimType, progress, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide, noOverlay: isCover });
+            drawSlide(offCtx, img, slide.text, fontFamily, isCover ? fontSize : contentFontSize, isCover, textColor, lineSpacing, overlayColor, logoImg, logoPosition, logoSize, pageColor, cornerStyle, cornerColor, slide.groupPosition, result.slidesPerCarousel, isCover ? textPosition : "bottom", showTextOverlay, subheadingFont, textAlign, textBoxOutline, textBoxOutlineColor, coverSubheading, coverLetterSpacing, coverUppercase, coverDropCap, coverDropCapFont, coverSplit, coverEyebrowFont, coverEyebrowColor, coverEyebrowSizeRatio, coverEyebrowItalic, coverEyebrowUppercase, coverEyebrowWeight, coverEyebrowLetterSpacing, coverHeadlineItalic, coverHeadlineWeight, coverEyebrowArch, videoAnimType, progress, { contentLetterSpacing, pageColorEnd: pageColorEnd || undefined, overlayGradient, textShadow: textShadow || undefined, isCoverImageSlide: !!slide.isCoverImageSlide, noOverlay: isCover && !coverTextOverlay });
             ctx.fillStyle = '#000000';
             ctx.fillRect(0, 0, VIDEO_WIDTH, VIDEO_HEIGHT);
             ctx.drawImage(offscreen, 0, yOff);
@@ -2081,6 +2082,19 @@ export default function Home() {
                       </button>
                     </div>
                     <p className="text-xs text-muted-foreground">{showTextOverlay ? "Coloured box behind text" : "Text only"}</p>
+                    {/* Title/cover slide background toggle — off by default so existing designs don't change */}
+                    <div className="flex items-center justify-between pt-1">
+                      <div>
+                        <p className="text-sm font-medium">Background behind title</p>
+                        <p className="text-xs text-muted-foreground">Also puts the coloured box behind the cover slide's title text</p>
+                      </div>
+                      <button
+                        onClick={() => setCoverTextOverlay(!coverTextOverlay)}
+                        className={`relative w-12 h-6 rounded-full transition-colors ${coverTextOverlay ? "bg-pink-500" : "bg-gray-600"}`}
+                      >
+                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${coverTextOverlay ? "translate-x-6" : ""}`} />
+                      </button>
+                    </div>
                     {/* Gradient overlay toggle */}
                     <div className="flex items-center justify-between pt-1">
                       <div>
