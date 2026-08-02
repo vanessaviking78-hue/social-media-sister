@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import {
   Layers, Plus, Trash2, Copy, Check, ExternalLink, Loader2,
   ImagePlus, CalendarDays, BarChart3, PenTool, BookOpen,
-  MessageSquareText, Eye, CheckCircle2, XCircle, Clock, ShieldCheck, Film, Play,
+  MessageSquareText, Eye, CheckCircle2, XCircle, Clock, ShieldCheck, Film, Play, Send,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -280,6 +280,35 @@ export default function Approval() {
 
 function BatchDetail({ id, onClose }: { id: number; onClose: () => void }) {
   const { data, isLoading } = useApprovalBatchDetail(id);
+  const [sendingAll, setSendingAll] = useState(false);
+
+  const sendAllToCanva = async () => {
+    if (!data || data.images.length === 0 || sendingAll) return;
+    setSendingAll(true);
+    const toastId = toast.loading(`Sending 0/${data.images.length} to Canva...`);
+    let sent = 0;
+    let failed = 0;
+    for (const img of data.images) {
+      try {
+        const r = await fetch(`${import.meta.env.BASE_URL}api/canva/upload`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageUrl: img.imageUrl, name: canvaAssetName(data.clientName, data.name) }),
+        });
+        if (!r.ok) throw new Error();
+        sent++;
+      } catch {
+        failed++;
+      }
+      toast.loading(`Sending ${sent + failed}/${data.images.length} to Canva...`, { id: toastId });
+    }
+    if (failed === 0) {
+      toast.success(`Sent all ${sent} image${sent === 1 ? "" : "s"} to Canva.`, { id: toastId });
+    } else {
+      toast.error(`Sent ${sent}, ${failed} failed. Check your Canva connection.`, { id: toastId });
+    }
+    setSendingAll(false);
+  };
 
   if (isLoading) return (
     <div className="bg-card border border-border rounded-xl p-6 mb-8 flex items-center justify-center py-10">
@@ -299,7 +328,21 @@ function BatchDetail({ id, onClose }: { id: number; onClose: () => void }) {
     <div className="bg-card border border-border rounded-xl p-6 mb-8">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold">{data.name}</h2>
-        <Button variant="ghost" size="sm" onClick={onClose}>Close</Button>
+        <div className="flex items-center gap-2">
+          {data.images.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={sendAllToCanva}
+              disabled={sendingAll}
+              className="text-violet-400 hover:text-violet-300 hover:bg-violet-950/30"
+            >
+              {sendingAll ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Send className="w-3.5 h-3.5 mr-1.5" />}
+              {sendingAll ? "Sending..." : "Send all to Canva"}
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={onClose}>Close</Button>
+        </div>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {data.images.map((img) => (
