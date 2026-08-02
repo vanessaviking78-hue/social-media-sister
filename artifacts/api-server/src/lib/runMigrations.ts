@@ -37,6 +37,7 @@ await createBroadcastDraftsTable();
     await addBlogVideoAndCommentsSupport();
     await createGoogleCalendarTables();
             await addHookSubheadingStyleColumns();
+    await updateShareFriendCommentCTA();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -507,4 +508,17 @@ title TEXT NOT NULL DEFAULT '',
 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 )
 `);
+}
+
+
+async function updateShareFriendCommentCTA(): Promise<void> {
+  const result = await db.execute(sql`
+    UPDATE client_presets
+    SET default_first_comment_carousel = 'I''d love to know your thoughts'
+    WHERE default_first_comment_carousel = 'Share this with a friend'
+  `);
+  const updated = (result as { rowCount?: number }).rowCount ?? 0;
+  if (updated > 0) {
+    logger.info({ updated }, "Updated default first-comment carousel CTA to new wording");
+  }
 }
