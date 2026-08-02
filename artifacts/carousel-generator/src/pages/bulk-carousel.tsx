@@ -377,7 +377,8 @@ export function renderSlideCanvas(
         const st = BLOCK_STYLE[block.id];
         const fontSize = block.fontSize ?? st.size;
         const maxW = block.w ? block.w * W : st.maxW;
-        ctx.font = `${fontSize}px ${st.font}`;
+        const blockFont = preset.subheadingFont || st.font;
+        ctx.font = `${fontSize}px ${blockFont}`;
         const lines = wrapCanvas(ctx, stripPipes(block.text), maxW);
         const totalH = lines.length * fontSize * st.lineH * lineSpacing;
         const cx = block.x * W;
@@ -737,7 +738,7 @@ export function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave,
                       onKeyDown={e => e.key === "Enter" && setEditingId(null)}
                       className="bg-black/70 border border-white/40 rounded px-2 py-0.5 outline-none text-center relative z-20"
                       style={{
-                        fontFamily: st.font.replace(/"/g, "'"),
+                        fontFamily: (preset.subheadingFont || st.font).replace(/"/g, "'"),
                         fontSize: dispFontSize,
                         color: tc,
                         width: blockDisplayW,
@@ -746,7 +747,7 @@ export function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave,
                   ) : (
                     <span
                       style={{
-                        fontFamily: st.font.replace(/"/g, "'"),
+                        fontFamily: (preset.subheadingFont || st.font).replace(/"/g, "'"),
                         fontSize: dispFontSize,
                         // Matches the canvas render exactly: fontSize * lineH * LOCKED_LINE_SPACING.
                         // This used to just be st.lineH on its own, which is why the edit preview
