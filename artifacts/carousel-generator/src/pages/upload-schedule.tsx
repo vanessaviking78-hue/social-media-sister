@@ -224,6 +224,7 @@ export default function UploadSchedule() {
     new Set(["instagram", "facebook"])
   );
   const [postType, setPostType] = useState<PostTypeOption>("carousel");
+  const [isTrial, setIsTrial] = useState(false);
   const [dimension, setDimension] = useState<DimensionOption>("1080x1440");
   const [animateSlides, setAnimateSlides] = useState(false);
   const [stickerType, setStickerType] = useState<StickerType>("none");
@@ -468,6 +469,7 @@ export default function UploadSchedule() {
             content: postContent,
             scheduledAt: finalScheduledAt,
             stickerConfig,
+            isTrial: postType === "reel" ? isTrial : false,
           }),
         });
 
@@ -480,6 +482,7 @@ export default function UploadSchedule() {
       toast.success(broadcastMode ? `Post queued for ${targetPresetIds.length} clients.` : "Post queued.", { id });
       setScheduled(true);
       setImages([]);
+      setIsTrial(false);
       setCaption("");
       setBrief("");
       setAnimateSlides(false);
@@ -764,6 +767,22 @@ export default function UploadSchedule() {
                   <p className="text-[11px] text-amber-400/80 mt-1.5">Video posts are best scheduled as Reels.</p>
                 )}
               </div>
+
+              {postType === "reel" && (
+                <div className="flex items-center justify-between rounded-lg border border-white/10 bg-zinc-900 px-3 py-2.5">
+                  <div>
+                    <p className="text-sm font-medium text-zinc-200">Trial Reel</p>
+                    <p className="text-[11px] text-zinc-500">Posts privately for testing — only shown to non-followers until you graduate it in Instagram.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsTrial((v) => !v)}
+                    className={`relative w-10 h-6 rounded-full transition-colors shrink-0 ${isTrial ? "bg-pink-600" : "bg-zinc-700"}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${isTrial ? "translate-x-4" : ""}`} />
+                  </button>
+                </div>
+              )}
 
               {/* Dimension picker — shown when video or animate mode */}
               {showDimensionPicker && (
