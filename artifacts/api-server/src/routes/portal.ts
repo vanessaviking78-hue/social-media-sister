@@ -90,9 +90,16 @@ router.get("/portal/:token", async (req, res) => {
         color: "#ec4899",
         imageUrl: (c.imageUrls && c.imageUrls[0]) || null,
         imageUrls: c.imageUrls || [],
+        source: "scheduler" as const,
+        scheduledPostId: sp.id,
       };
     });
-    const mergedUpcoming = [...upcomingPosts, ...scheduledMapped].sort((a, b) => a.date.localeCompare(b.date));
+    const upcomingCalendarMapped = upcomingPosts.map((p) => ({
+      ...p,
+      source: "calendar" as const,
+      scheduledPostId: null as number | null,
+    }));
+    const mergedUpcoming = [...upcomingCalendarMapped, ...scheduledMapped].sort((a, b) => a.date.localeCompare(b.date));
 
     // Already-posted content, so clients can look back at and download
     // things that have gone live rather than losing access the moment a
@@ -319,6 +326,42 @@ router.patch("/portal/:token/posts/:id", async (req, res) => {
     res.json({ ok: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to update caption" });
+  }
+});
+
+// Lets a client bounce a post they don't want going out, with a short note
+// on why, so Vanessa can see the reason without a back-and-forth message.
+// Scheduler-sourced posts (id >= 900000000) get their status flipped to
+// "cancelled" so the scheduler engine skips them; the reason is stored in
+// the reusable notes column. Calendar-sourced posts aren't supported yet
+// (the calendar_posts status check constraint has no "cancelled"/"rejected"
+// value), so we return a clear 400 rather than silently failing.
+router.post("/portal/:token/posts/:id/reject", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const id = Number(req.params.id);
+    const { reason } = req.body as { reason?: string };
+    if (isNaN(id) || typeof reason !== "string" || !reason.trim()) {
+      res.status(400).json({ error: "A reason is required" }); return;
+    }
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+
+    if (id >= 900000000) {
+      const realId = id - 900000000;
+      const [sp] = await db.select().from(scheduledPostsTable)
+        .where(and(eq(scheduledPostsTable.id, realId), eq(scheduledPostsTable.presetId, preset.id)));
+      if (!sp) { res.status(404).json({ error: "not_found" }); return; }
+      await db.update(scheduledPostsTable)
+        .set({ status: "cancelled", notes: `Rejected by client: ${reason.trim()}`, updatedAt: new Date() })
+        .where(eq(scheduledPostsTable.id, realId));
+      res.json({ ok: true });
+    } else {
+      res.status(400).json({ error: "This post can't be rejected from here yet. Please message Vanessa directly." });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to reject post" });
   }
 });
 
