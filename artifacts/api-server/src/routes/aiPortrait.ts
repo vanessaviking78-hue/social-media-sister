@@ -203,7 +203,7 @@ router.get("/ai-portrait/images/*key", (req: Request, res: Response) => {
 router.post("/ai-portrait/generate", async (req: Request, res: Response) => {
   try {
     const { sourcePhotoId, clientName = "", scenarios } = req.body as {
-      sourcePhotoId: number;
+      sourcePhotoId?: number;
       clientName?: string;
       scenarios: Array<{
         id: string;
@@ -214,24 +214,43 @@ router.post("/ai-portrait/generate", async (req: Request, res: Response) => {
         backdropColor?: string;
         backgroundImageUrl?: string;
         aspectRatio: string;
+        textOnly?: boolean;
         promptVars?: { colour?: string; name?: string; skills?: string; knownAs?: string; hairColour?: string; number?: string; numberColour?: string; outfit?: string; studioColour?: string; customText?: string };
       }>;
     };
 
-    if (!sourcePhotoId) { res.status(400).json({ error: "sourcePhotoId required" }); return; }
     if (!Array.isArray(scenarios) || scenarios.length === 0) { res.status(400).json({ error: "scenarios array required" }); return; }
     if (scenarios.length > 30) { res.status(400).json({ error: "Maximum 30 scenarios per job" }); return; }
 
-    const [source] = await db.select().from(aiSourcePhotosTable).where(eq(aiSourcePhotosTable.id, sourcePhotoId));
-    if (!source) { res.status(404).json({ error: "Source photo not found" }); return; }
+    const allTextOnly = scenarios.every((s) => s.textOnly);
+    if (!sourcePhotoId && !allTextOnly) { res.status(400).json({ error: "sourcePhotoId required" }); return; }
+
+    let resolvedSourcePhotoId = sourcePhotoId;
+    let sourceBuf = Buffer.alloc(0);
+
+    if (resolvedSourcePhotoId) {
+      const [source] = await db.select().from(aiSourcePhotosTable).where(eq(aiSourcePhotosTable.id, resolvedSourcePhotoId));
+      if (!source) { res.status(404).json({ error: "Source photo not found" }); return; }
+      sourceBuf = await fetchBufFromStorage(source.photoUrl);
+    } else {
+      // Text-only generation — no photo uploaded. Insert a placeholder source
+      // record purely so the ai_generated_portraits.source_photo_id foreign
+      // key has something valid to point at; it's never read as an image.
+      const [placeholder] = await db.insert(aiSourcePhotosTable).values({
+        clientName: clientName || "",
+        uploader: "text-only",
+        photoUrl: "",
+        notes: "Text-only generation — no photo uploaded",
+      }).returning();
+      resolvedSourcePhotoId = placeholder.id;
+    }
 
     const jobId = `ap_${Date.now()}_${uuid().slice(0, 8)}`;
     createJob(jobId, scenarios.map((s) => s.id));
 
     setImmediate(async () => {
       try {
-        const buf = await fetchBufFromStorage(source.photoUrl);
-        await processPortraitJob(jobId, buf, sourcePhotoId, clientName, scenarios);
+        await processPortraitJob(jobId, sourceBuf, resolvedSourcePhotoId!, clientName, scenarios);
       } catch (err) {
         logger.error({ err, jobId }, "Portrait job failed at top level");
       }
