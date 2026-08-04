@@ -10,6 +10,7 @@ import { randomUUID } from "crypto";
 import { tmpdir } from "os";
 import { join } from "path";
 const videoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 300 * 1024 * 1024 } });
+const audioUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024 } });
 
 function getVoiceSystemPrompt(voiceStyle: string): string {
   const base = `
@@ -747,6 +748,76 @@ router.post("/content/upload-video", videoUpload.single("video"), async (req, re
     res.json({ url: signedUrl, proxyUrl });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Video upload failed" });
+  }
+});
+
+// Bakes a client-supplied music file (e.g. downloaded from Pixabay) directly
+// into a reel's video, since Instagram has no way to attach an arbitrary
+// audio file to a post, only a name+artist reference into its own catalog.
+// This replaces the clip's existing audio track entirely with the chosen
+// track (trimmed to the video's length, starting from an optional offset
+// into the track and at an optional volume), then re-uploads the merged
+// video the same way /content/upload-video does so it can be scheduled
+// exactly like any other reel.
+router.post("/content/merge-audio", audioUpload.single("audio"), async (req, res) => {
+  const videoInPath = join(tmpdir(), `merge-video-${randomUUID()}.mp4`);
+  const audioInPath = join(tmpdir(), `merge-audio-${randomUUID()}${req.file ? "" : ""}.mp3`);
+  const outPath = join(tmpdir(), `merge-out-${randomUUID()}.mp4`);
+  try {
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    if (!bucketId) { res.status(500).json({ error: "Object storage not configured" }); return; }
+    if (!req.file) { res.status(400).json({ error: "No audio file provided" }); return; }
+    const { videoUrl } = req.body as { videoUrl?: string };
+    if (!videoUrl) { res.status(400).json({ error: "No video URL provided" }); return; }
+    const startSec = Math.max(0, parseFloat(req.body?.startSec as string) || 0);
+    const parsedVolume = parseFloat(req.body?.volume as string);
+    const volume = isNaN(parsedVolume) ? 1 : Math.min(2, Math.max(0, parsedVolume));
+
+    const videoResp = await fetch(videoUrl);
+    if (!videoResp.ok) throw new Error("Could not fetch the video to add music to");
+    await writeFile(videoInPath, Buffer.from(await videoResp.arrayBuffer()));
+    await writeFile(audioInPath, req.file.buffer);
+
+    await new Promise<void>((resolve, reject) => {
+      const ffmpeg = spawn("ffmpeg", [
+        "-i", videoInPath,
+        "-ss", String(startSec),
+        "-i", audioInPath,
+        "-filter_complex", `[1:a]volume=${volume}[a]`,
+        "-map", "0:v",
+        "-map", "[a]",
+        "-c:v", "copy",
+        "-c:a", "aac",
+        "-shortest",
+        "-y",
+        outPath,
+      ]);
+      ffmpeg.stderr.on("data", () => {});
+      ffmpeg.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`ffmpeg exited with code ${code}`))));
+      ffmpeg.on("error", reject);
+    });
+
+    const mergedBuffer = await readFile(outPath);
+    const timestamp = Date.now();
+    const objectPath = `reel-videos/${timestamp}-music-${randomUUID()}.mp4`;
+    const bucket = objectStorageClient.bucket(bucketId);
+    const file = bucket.file(objectPath);
+    await file.save(mergedBuffer, {
+      contentType: "video/mp4",
+      metadata: { cacheControl: "public, max-age=31536000" },
+    });
+    const signedUrl = await signObjectURL({ bucketName: bucketId, objectName: objectPath, method: "GET", ttlSec: 7200 });
+    const proto = (req.headers["x-forwarded-proto"] as string) || "https";
+    const host = (req.headers["x-forwarded-host"] as string) || req.headers.host || "localhost";
+    const proxyUrl = `${proto}://${host}/api/content/videos/${objectPath}`;
+    res.json({ url: signedUrl, proxyUrl });
+  } catch (err: any) {
+    console.error("Music merge error:", err);
+    res.status(500).json({ error: err.message || "Could not add music to video" });
+  } finally {
+    await unlink(videoInPath).catch(() => {});
+    await unlink(audioInPath).catch(() => {});
+    await unlink(outPath).catch(() => {});
   }
 });
 
