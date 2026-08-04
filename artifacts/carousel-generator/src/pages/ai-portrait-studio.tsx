@@ -927,6 +927,86 @@ export default function AiPortraitStudio() {
                   Save
                 </Button>
               </div>
+
+              {/* Motion reel section — same generic animate pipeline as the preset results */}
+              {noPhotoResult.portraitId && (() => {
+                const pid = noPhotoResult.portraitId!;
+                const mj = motionJobMap[pid];
+                const isActive = mj && mj.status !== "done" && mj.status !== "failed";
+                return (
+                  <div className="pt-1 border-t border-border/20">
+                    {mj?.status === "done" && mj.videoUrl ? (
+                      <div className="flex flex-col gap-1.5">
+                        <video src={mj.videoUrl} controls loop muted playsInline className="w-full rounded border border-border/30 bg-black" />
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => downloadReel(mj.videoUrl!)}
+                            className="flex-1 flex items-center justify-center gap-1 text-[10px] h-6 rounded border border-border/40 text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Download className="w-3 h-3" /> Download
+                          </button>
+                          {mj.libraryId ? (
+                            <span className="flex-1 text-[9px] text-green-500 flex items-center justify-center gap-0.5 shrink-0">
+                              <Check className="w-3 h-3" /> Saved
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => saveReelToLibrary(pid)}
+                              disabled={savingReel === pid}
+                              className="flex-1 flex items-center justify-center gap-1 text-[10px] h-6 rounded border border-green-500/40 text-green-400 hover:bg-green-950/30 transition-colors disabled:opacity-50"
+                            >
+                              {savingReel === pid ? <Loader2 className="w-3 h-3 animate-spin" /> : <BookImage className="w-3 h-3" />} Save to library
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ) : isActive ? (
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] text-muted-foreground truncate">{mj.message}</span>
+                          <span className="text-[10px] text-muted-foreground ml-1 shrink-0">{Math.round(mj.progress * 100)}%</span>
+                        </div>
+                        <div className="h-1 rounded-full bg-muted/30 overflow-hidden">
+                          <div className="h-full bg-primary/70 transition-all duration-500 rounded-full" style={{ width: `${Math.round(mj.progress * 100)}%` }} />
+                        </div>
+                      </div>
+                    ) : mj?.status === "failed" ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-red-400 truncate flex-1">{mj.error ?? "Failed"}</span>
+                        <button
+                          className="text-[10px] text-muted-foreground hover:text-foreground shrink-0"
+                          onClick={() => setMotionJobMap(prev => { const n = { ...prev }; delete n[pid]; return n; })}
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    ) : motionPickerOpen === pid ? (
+                      <div className="flex flex-col gap-1.5">
+                        <Select value={motionSelection[pid] ?? "cinematic-drift"} onValueChange={(v) => setMotionSelection(prev => ({ ...prev, [pid]: v }))}>
+                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {CAMERA_MOTION_OPTIONS.map(o => (
+                              <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <div className="flex gap-1.5">
+                          <Button size="sm" className="flex-1 text-xs h-8" onClick={() => handleAnimate(noPhotoResult, motionSelection[pid] ?? "cinematic-drift")}>
+                            Generate
+                          </Button>
+                          <Button size="sm" variant="ghost" className="text-xs h-8" onClick={() => setMotionPickerOpen(null)}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button size="sm" variant="outline" className="w-full text-xs h-8" onClick={() => setMotionPickerOpen(pid)}>
+                        <Film className="w-3.5 h-3.5 mr-1.5" /> Motion Reel
+                      </Button>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
