@@ -82,6 +82,39 @@ function pingDownload(token: string, title: string, fileCount: number) {
   }).catch(() => {});
 }
 
+// Downloads every slide of a multi-image post as one zip instead of firing
+// several individual <a download> clicks in a row — browsers only reliably
+// honour one automatic download per user gesture, which is why a client only
+// ever got the last slide of a 4-slide post. Single images still go through
+// the plain downloadImage path, no zip needed for one file.
+async function downloadAllImages(urls: string[], baseFilename: string) {
+  if (urls.length <= 1) {
+    if (urls[0]) downloadImage(urls[0], `${baseFilename}.jpg`);
+    return;
+  }
+  try {
+    const files = urls.map((u, i) => ({ url: u, filename: `${baseFilename}-${i + 1}.jpg` }));
+    const resp = await fetch(`${BASE}api/portal-download-zip`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ files, zipName: baseFilename }),
+    });
+    if (!resp.ok) throw new Error("Zip download failed");
+    const blob = await resp.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${baseFilename}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  } catch {
+    // Fallback so the client still gets every slide even if the zip
+    // endpoint is ever unreachable, just back to individual downloads.
+    urls.forEach((u, i) => downloadImage(u, `${baseFilename}-${i + 1}.jpg`));
+  }
+}
+
 async function copyCaption(caption: string) {
   try {
     await navigator.clipboard.writeText(caption);
@@ -924,7 +957,7 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
 
                         {urls.length > 0 && (
                           <div className="mt-4 pt-3 border-t border-zinc-800 flex flex-wrap gap-2">
-                            <button onClick={() => { urls.forEach((u, i) => downloadImage(u, `${data.clientName.replace(/\s+/g, "-").toLowerCase()}-${post.date}-${i + 1}.jpg`)); pingDownload(token, post.title || post.postType, urls.length); }} className="text-xs font-semibold text-pink-400 hover:text-pink-300 flex items-center gap-1.5 rounded-full border border-pink-800/40 bg-pink-950/10 px-3 py-1.5">
+                            <button onClick={() => { downloadAllImages(urls, `${data.clientName.replace(/\s+/g, "-").toLowerCase()}-${post.date}`); pingDownload(token, post.title || post.postType, urls.length); }} className="text-xs font-semibold text-pink-400 hover:text-pink-300 flex items-center gap-1.5 rounded-full border border-pink-800/40 bg-pink-950/10 px-3 py-1.5">
                               <Download className="w-3.5 h-3.5" /> Download image{urls.length > 1 ? "s" : ""}
                             </button>
                             {post.caption && !isEditingCaption && (
@@ -1009,7 +1042,7 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
                                 <Download className="w-3.5 h-3.5" /> Download video
                               </button>
                             ) : (
-                              <button onClick={() => { urls.forEach((u, i) => downloadImage(u, `${data.clientName.replace(/\s+/g, "-").toLowerCase()}-${post.date}-${i + 1}.jpg`)); pingDownload(token, post.title || post.postType, urls.length); }} className="text-xs font-semibold text-pink-400 hover:text-pink-300 flex items-center gap-1.5 rounded-full border border-pink-800/40 bg-pink-950/10 px-3 py-1.5">
+                              <button onClick={() => { downloadAllImages(urls, `${data.clientName.replace(/\s+/g, "-").toLowerCase()}-${post.date}`); pingDownload(token, post.title || post.postType, urls.length); }} className="text-xs font-semibold text-pink-400 hover:text-pink-300 flex items-center gap-1.5 rounded-full border border-pink-800/40 bg-pink-950/10 px-3 py-1.5">
                                 <Download className="w-3.5 h-3.5" /> Download image{urls.length > 1 ? "s" : ""}
                               </button>
                             )}
