@@ -477,6 +477,17 @@ export const insertSeamlessCarouselSchema = createInsertSchema(seamlessCarousels
 export type InsertSeamlessCarousel = z.infer<typeof insertSeamlessCarouselSchema>;
 export type SeamlessCarousel = typeof seamlessCarouselsTable.$inferSelect;
 
+// A shared library of prompts Vanessa can save and reuse for the "Generate
+// without a photo" tool in AI Photo Studio, so new prompts can be added on
+// the fly without needing a code change each time.
+export const aiCustomPromptsTable = pgTable("ai_custom_prompts", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  promptText: text("prompt_text").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type AiCustomPrompt = typeof aiCustomPromptsTable.$inferSelect;
+
 export const aiSourcePhotosTable = pgTable("ai_source_photos", {
   id: serial("id").primaryKey(),
   clientName: text("client_name").notNull().default(""),
