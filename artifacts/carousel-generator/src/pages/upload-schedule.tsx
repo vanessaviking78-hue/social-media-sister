@@ -73,6 +73,29 @@ async function uploadVideo(file: File): Promise<string> {
   return (data.url ?? data.proxyUrl) as string;
 }
 
+// Bakes a downloaded music file (e.g. from Pixabay) directly into a reel's
+// video before it's scheduled, since Instagram has no way to attach an
+// arbitrary audio file after the fact — only a name+artist text reference
+// into its own catalog, which is what the "Add music" picker elsewhere in
+// the app uses. This is a genuine merge: the clip's own audio is replaced
+// with the chosen track, trimmed to start at startSec.
+async function mergeAudioIntoVideo(videoUrl: string, audioFile: File, startSec: number): Promise<string> {
+  const fd = new FormData();
+  fd.append("audio", audioFile);
+  fd.append("videoUrl", videoUrl);
+  fd.append("startSec", String(Math.max(0, startSec || 0)));
+  const res = await fetch(`https://workspaceapi-server-production-0f0d.up.railway.app/api/content/merge-audio`, {
+    method: "POST",
+    body: fd,
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: `Adding music failed (${res.status})` }));
+    throw new Error(data.error || "Adding music failed");
+  }
+  const data = await res.json();
+  return (data.url ?? data.proxyUrl) as string;
+}
+
 async function stitchImagesToVideo(items: MediaItem[], dim: DimensionOption): Promise<File> {
   const [w, h] = dim === "1080x1440" ? [1080, 1440] : [1080, 1920];
   const canvas = document.createElement("canvas");
@@ -225,6 +248,9 @@ export default function UploadSchedule() {
   );
   const [postType, setPostType] = useState<PostTypeOption>("carousel");
   const [isTrial, setIsTrial] = useState(false);
+  const [musicFile, setMusicFile] = useState<File | null>(null);
+  const [musicStartSec, setMusicStartSec] = useState(0);
+  const [addingMusic, setAddingMusic] = useState(false);
   const [dimension, setDimension] = useState<DimensionOption>("1080x1440");
   const [animateSlides, setAnimateSlides] = useState(false);
   const [stickerType, setStickerType] = useState<StickerType>("none");
@@ -251,6 +277,9 @@ export default function UploadSchedule() {
   const showSticker = postType === "story" && platforms.has("instagram");
   const hasVideo = images.some((i) => i.isVideo);
   const showDimensionPicker = hasVideo || animateSlides;
+  // Music can only be baked into a single stitched/uploaded clip, not a
+  // multi-video carousel (each clip would need its own separate merge).
+  const showMusicOption = (hasVideo && images.filter((i) => i.isVideo).length < 2) || (animateSlides && !hasVideo && images.length >= 2);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragFromIdx = useRef<number | null>(null);
@@ -441,7 +470,16 @@ export default function UploadSchedule() {
         } else {
           videoFile = images[0].file;
         }
-        const url = await uploadVideo(videoFile);
+        let url = await uploadVideo(videoFile);
+        if (musicFile) {
+          toast.loading("Adding your music...", { id });
+          setAddingMusic(true);
+          try {
+            url = await mergeAudioIntoVideo(url, musicFile, musicStartSec);
+          } finally {
+            setAddingMusic(false);
+          }
+        }
         postContent = {
           videoUrl: url,
           caption: caption.trim(),
@@ -505,6 +543,8 @@ export default function UploadSchedule() {
       setCaption("");
       setBrief("");
       setAnimateSlides(false);
+      setMusicFile(null);
+      setMusicStartSec(0);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Something went wrong", { id });
     } finally {
@@ -841,6 +881,50 @@ export default function UploadSchedule() {
                   >
                     <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${isTrial ? "translate-x-4" : ""}`} />
                   </button>
+                </div>
+              )}
+
+              {showMusicOption && (
+                <div className="rounded-lg border border-white/10 bg-zinc-900 px-3 py-3 flex flex-col gap-2.5">
+                  <div>
+                    <p className="text-sm font-medium text-zinc-200">Add music</p>
+                    <p className="text-[11px] text-zinc-500">Upload a track you've downloaded (e.g. from Pixabay) and it'll be baked into the video before it's scheduled.</p>
+                  </div>
+                  {!musicFile ? (
+                    <label className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-white/15 py-2.5 text-sm text-zinc-400 hover:border-pink-500/50 hover:text-pink-300 cursor-pointer transition-colors">
+                      <Film className="w-4 h-4" />
+                      Choose an audio file
+                      <input
+                        type="file"
+                        accept="audio/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f) setMusicFile(f);
+                          e.target.value = "";
+                        }}
+                      />
+                    </label>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between gap-2 rounded-lg bg-zinc-800 px-3 py-2">
+                        <span className="text-xs text-zinc-300 truncate">{musicFile.name}</span>
+                        <button type="button" onClick={() => { setMusicFile(null); setMusicStartSec(0); }} className="text-zinc-500 hover:text-red-400 shrink-0">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div>
+                        <Label className="text-[11px] text-zinc-500 mb-1 block">Start point in track (seconds)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={musicStartSec}
+                          onChange={(e) => setMusicStartSec(Math.max(0, Number(e.target.value) || 0))}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
