@@ -6,11 +6,12 @@ import { db } from "@workspace/db";
 import {
   aiSourcePhotosTable,
   aiGeneratedPortraitsTable,
+  aiCustomPromptsTable,
   approvalBatchesTable,
   approvalImagesTable,
   contentLibraryTable,
 } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { objectStorageClient } from "../lib/objectStorage";
 import { logger } from "../lib/logger";
 import { AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS } from "../lib/aiPortraitScenarios";
@@ -168,6 +169,40 @@ router.post("/ai-portrait/source", upload.single("photo"), async (req: Request, 
     const msg = err instanceof Error ? err.message : "Upload failed";
     req.log.error({ err }, "ai-portrait/source upload failed");
     res.status(500).json({ error: msg });
+  }
+});
+
+// Vanessa's own saved-prompt library for "Generate without a photo" — lets
+// her add new prompts on the fly from the UI instead of needing a code
+// change each time. Shared across all clinicians (one list, reused for any).
+router.get("/ai-portrait/custom-prompts", async (_req: Request, res: Response) => {
+  try {
+    const prompts = await db.select().from(aiCustomPromptsTable).orderBy(desc(aiCustomPromptsTable.createdAt));
+    res.json({ prompts });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to load saved prompts" });
+  }
+});
+
+router.post("/ai-portrait/custom-prompts", async (req: Request, res: Response) => {
+  try {
+    const { name, promptText } = req.body as { name?: string; promptText?: string };
+    if (!name?.trim() || !promptText?.trim()) { res.status(400).json({ error: "Name and prompt text are required" }); return; }
+    const [prompt] = await db.insert(aiCustomPromptsTable).values({ name: name.trim(), promptText: promptText.trim() }).returning();
+    res.json({ prompt });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to save prompt" });
+  }
+});
+
+router.delete("/ai-portrait/custom-prompts/:id", async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+    await db.delete(aiCustomPromptsTable).where(eq(aiCustomPromptsTable.id, id));
+    res.json({ ok: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to delete prompt" });
   }
 });
 
