@@ -6,7 +6,7 @@ import { aiGeneratedPortraitsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { objectStorageClient } from "./objectStorage";
 import { logger } from "./logger";
-import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS } from "./aiPortraitScenarios";
+import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, buildTextOnlyPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS } from "./aiPortraitScenarios";
 
 const GEMINI_MODEL = "gemini-2.5-flash-image";
 const REQUEST_GAP_MS = 4_000;
@@ -89,7 +89,8 @@ interface ScenarioConfig {
   backdropColor?: string;
   backgroundImageUrl?: string;
   aspectRatio: string;
-  promptVars?: { colour?: string; name?: string; skills?: string; knownAs?: string };
+  textOnly?: boolean;
+  promptVars?: { colour?: string; name?: string; skills?: string; knownAs?: string; customText?: string };
 }
 
 export async function processPortraitJob(
@@ -151,7 +152,9 @@ export async function processPortraitJob(
       continue;
     }
 
-    if (photoStudioPreset) {
+    if (cfg.textOnly) {
+      prompt = buildTextOnlyPrompt(cfg.promptVars?.customText || "", cfg.aspectRatio);
+    } else if (photoStudioPreset) {
       prompt = buildPhotoStudioPrompt(photoStudioPreset, cfg.scrubColor, cfg.aspectRatio, cfg.promptVars);
     } else if (cfg.outfitType) {
       prompt = buildCustomPrompt({
@@ -188,16 +191,21 @@ export async function processPortraitJob(
       prompt = buildPrompt(scenario, cfg.scrubColor, cfg.outfitStyle, cfg.aspectRatio);
     }
 
-    // Detect actual MIME type from buffer bytes so non-JPEG uploads work correctly
-    const sharpMeta = await sharp(sourcePhotoBuffer).metadata();
-    const formatToMime: Record<string, string> = {
-      jpeg: "image/jpeg",
-      png: "image/png",
-      webp: "image/webp",
-      gif: "image/gif",
-    };
-    const sourceMime = formatToMime[sharpMeta.format ?? ""] ?? "image/jpeg";
-    const base64Photo = sourcePhotoBuffer.toString("base64");
+    // Detect actual MIME type from buffer bytes so non-JPEG uploads work correctly.
+    // Skipped entirely for text-only jobs, which have no real source photo buffer.
+    let sourceMime = "image/jpeg";
+    let base64Photo = "";
+    if (!cfg.textOnly) {
+      const sharpMeta = await sharp(sourcePhotoBuffer).metadata();
+      const formatToMime: Record<string, string> = {
+        jpeg: "image/jpeg",
+        png: "image/png",
+        webp: "image/webp",
+        gif: "image/gif",
+      };
+      sourceMime = formatToMime[sharpMeta.format ?? ""] ?? "image/jpeg";
+      base64Photo = sourcePhotoBuffer.toString("base64");
+    }
 
     // Fetch uploaded background image when "upload-own" background type is used
     let backgroundImagePart: { inlineData: { mimeType: string; data: string } } | null = null;
@@ -223,7 +231,7 @@ export async function processPortraitJob(
             {
               role: "user",
               parts: [
-                { inlineData: { mimeType: sourceMime, data: base64Photo } },
+                ...(cfg.textOnly ? [] : [{ inlineData: { mimeType: sourceMime, data: base64Photo } }]),
                 ...(backgroundImagePart ? [backgroundImagePart] : []),
                 { text: prompt },
               ],
