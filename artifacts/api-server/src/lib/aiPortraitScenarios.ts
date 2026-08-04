@@ -1078,6 +1078,19 @@ export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: strin
   return `${prompt}\n\nCompose the image in ${ratioDescription}.\n\n${PHOTO_STUDIO_NEGATIVE}`;
 }
 
+// Pure text-to-image generation with no reference photo at all — used by the
+// "Generate without a photo" mode so Vanessa can produce genuinely faceless
+// content (e.g. "a woman looking stressed at a desk") without needing a
+// client photo on file. No likeness-preservation clause, since there's no
+// person's photo to preserve.
+export function buildTextOnlyPrompt(customText: string, aspectRatio = "3:4"): string {
+  const ratioDescription =
+    aspectRatio === "9:16" ? "a vertical 9:16 portrait orientation (tall and narrow)" :
+    aspectRatio === "3:4" ? "a 3:4 portrait orientation" :
+    "a square 1:1 format";
+  return `${customText.trim()}\n\nPhotorealistic, professionally photographed, natural lighting and depth of field, true-to-life textures and detail, not CGI or illustrated.\n\nCompose the image in ${ratioDescription}.\n\n${PHOTO_STUDIO_NEGATIVE}`;
+}
+
 // ─── Men's Studio — 10 presets ─────────────────────────────────────────────
 
 export const MEN_STUDIO_PRESETS: PhotoStudioPreset[] = [
