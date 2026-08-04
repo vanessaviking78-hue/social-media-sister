@@ -2,6 +2,7 @@ import { v4 as uuid } from "uuid";
 import { db } from "@workspace/db";
 import { contentLibraryTable } from "@workspace/db/schema";
 import { objectStorageClient } from "./objectStorage";
+import { transcodeToMp4 } from "./transcodeVideo";
 import { logger } from "./logger";
 
 const FAL_BASE = "https://queue.fal.run/fal-ai/wan-25-preview/image-to-video";
@@ -208,8 +209,9 @@ return Buffer.from(await res.arrayBuffer());
 async function uploadVideoToStorage(buf: Buffer): Promise<string> {
 const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
 if (!bucketId) throw new Error("DEFAULT_OBJECT_STORAGE_BUCKET_ID not set");
+const mp4Buf = await transcodeToMp4(buf);
 const key = `motion-reels/${uuid()}/motion-reel.mp4`;
-await objectStorageClient.bucket(bucketId).file(key).save(buf, {
+await objectStorageClient.bucket(bucketId).file(key).save(mp4Buf, {
 contentType: "video/mp4",
 metadata: { cacheControl: "public, max-age=86400" },
 });
@@ -234,7 +236,7 @@ const { requestId, statusUrl, resultUrl } = await submitFalJob(publicImageUrl, c
 patch(jobId, { status: "processing", progress: 0.2, message: "Generating your motion reel… this can take up to 15 minutes" });
 const videoUrl = await pollFalJob(requestId, statusUrl, resultUrl, jobId);
 
-patch(jobId, { status: "saving", progress: 0.88, message: "Saving video…" });
+patch(jobId, { status: "saving", progress: 0.88, message: "Converting to MP4 and saving…" });
 const videoBuf = await downloadVideo(videoUrl);
 const storedUrl = await uploadVideoToStorage(videoBuf);
 
