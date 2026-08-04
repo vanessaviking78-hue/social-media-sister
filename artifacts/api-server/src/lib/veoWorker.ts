@@ -1,5 +1,6 @@
 import { v4 as uuid } from "uuid";
 import { objectStorageClient } from "./objectStorage";
+import { transcodeToMp4 } from "./transcodeVideo";
 import { logger } from "./logger";
 
 // Generates video from a text prompt using Google's Veo 3.1 model, through
@@ -143,8 +144,9 @@ async function downloadVeoVideo(uri: string): Promise<Buffer> {
 async function uploadVideoToStorage(buf: Buffer): Promise<string> {
   const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
   if (!bucketId) throw new Error("DEFAULT_OBJECT_STORAGE_BUCKET_ID not set");
+  const mp4Buf = await transcodeToMp4(buf);
   const key = `veo-videos/${uuid()}/veo-video.mp4`;
-  await objectStorageClient.bucket(bucketId).file(key).save(buf, {
+  await objectStorageClient.bucket(bucketId).file(key).save(mp4Buf, {
     contentType: "video/mp4",
     metadata: { cacheControl: "public, max-age=86400" },
   });
@@ -166,7 +168,7 @@ export async function processVeoJob(
     patch(jobId, { status: "processing", progress: 0.15, message: "Generating your video…" });
     const videoUri = await pollVeoOperation(operationName, jobId);
 
-    patch(jobId, { status: "saving", progress: 0.9, message: "Saving video…" });
+    patch(jobId, { status: "saving", progress: 0.9, message: "Converting to MP4 and saving…" });
     const videoBuf = await downloadVeoVideo(videoUri);
     const storedUrl = await uploadVideoToStorage(videoBuf);
 
