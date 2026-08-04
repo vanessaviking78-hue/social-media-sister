@@ -386,7 +386,8 @@ export default function AiPortraitStudio() {
   const [noPhotoPrompt, setNoPhotoPrompt]         = useState("");
   const [noPhotoAspect, setNoPhotoAspect]         = useState<"1:1" | "3:4" | "9:16">("3:4");
   const [noPhotoGenerating, setNoPhotoGenerating] = useState(false);
-  const [noPhotoResult, setNoPhotoResult]         = useState<string | null>(null);
+  const [noPhotoResult, setNoPhotoResult]         = useState<CardState | null>(null);
+  const [noPhotoSaving, setNoPhotoSaving]         = useState(false);
   const [uploading, setUploading]           = useState(false);
   const [photoPreview, setPhotoPreview]     = useState<string | null>(null);
   const [clientName, setClientName]         = useState("");
@@ -558,7 +559,7 @@ export default function AiPortraitStudio() {
           if (!card) return;
           if (card.status === "success") {
             clearInterval(poll);
-            setNoPhotoResult(card.outputImageUrl || null);
+            setNoPhotoResult(card as CardState);
             setNoPhotoGenerating(false);
             toast.success("Image ready");
           } else if (card.status === "failed") {
@@ -571,6 +572,25 @@ export default function AiPortraitStudio() {
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Failed");
       setNoPhotoGenerating(false);
+    }
+  };
+
+  const handleNoPhotoSave = async () => {
+    if (!noPhotoResult?.portraitId) return;
+    setNoPhotoSaving(true);
+    try {
+      const r = await fetch(`${BASE}api/ai-portrait/${noPhotoResult.portraitId}/save-to-library`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ applyWatermark: true, clientName }),
+      });
+      const data = await r.json() as { success?: boolean; error?: string };
+      if (!r.ok) throw new Error(data.error || "Save failed");
+      toast.success("Saved to Approvals for client review");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setNoPhotoSaving(false);
     }
   };
 
@@ -887,9 +907,26 @@ export default function AiPortraitStudio() {
               )}
             </Button>
           </div>
-          {noPhotoResult && (
-            <div className="pt-2">
-              <img src={noPhotoResult} alt="Generated" className="max-w-xs rounded-lg border border-border/40" />
+          {noPhotoResult && noPhotoResult.outputImageUrl && (
+            <div className="pt-2 flex flex-col gap-2 max-w-xs">
+              <img src={noPhotoResult.outputImageUrl} alt="Generated" className="rounded-lg border border-border/40" />
+              <div className="flex gap-1.5 flex-wrap">
+                <Button size="sm" variant="outline" className="flex-1 text-xs h-8" onClick={() => handleDownload(noPhotoResult)}>
+                  <Download className="w-3.5 h-3.5 mr-1.5" />
+                  Download
+                </Button>
+                <ExportToCanvaButton
+                  imageUrl={noPhotoResult.outputImageUrl}
+                  name="AI Generated Image"
+                  size="sm"
+                  className="flex-1 text-xs h-8"
+                  label="Canva"
+                />
+                <Button size="sm" variant="outline" className="flex-1 text-xs h-8" onClick={handleNoPhotoSave} disabled={noPhotoSaving || !noPhotoResult.portraitId}>
+                  {noPhotoSaving ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <BookImage className="w-3.5 h-3.5 mr-1.5" />}
+                  Save
+                </Button>
+              </div>
             </div>
           )}
         </div>
