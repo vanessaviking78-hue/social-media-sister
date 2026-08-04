@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { clientPresetsTable, calendarPostsTable, approvalBatchesTable, approvalImagesTable, scheduledPostsTable, homeworkQuestionSetsTable, homeworkRepliesTable, bonusContentTable, blogPostsTable, blogCommentsTable } from "@workspace/db/schema";
 import { eq, and, gte, lte, or, sql, desc, asc } from "drizzle-orm";
 import crypto from "crypto";
+import JSZip from "jszip";
 import { getApprovedIdeasForClient } from "./revenue-ideas";
 import { getVapidPublicKey } from "../lib/push";
 import { notifyDownload, notifyRantComment } from "../lib/notify";
@@ -46,6 +47,40 @@ router.get("/portal-download", async (req, res) => {
     res.send(buf);
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Download failed" });
+  }
+});
+
+// Zips several remote assets together and streams back one attachment.
+// Added because looping individual <a download> clicks for a multi-slide
+// carousel is unreliable — browsers only honour one automatic download per
+// user gesture in some cases (a client only got the last slide of a 4-slide
+// Madame Wax post). One zip, one click, works everywhere.
+router.post("/portal-download-zip", async (req, res) => {
+  try {
+    const { files, zipName } = req.body as { files?: { url: string; filename: string }[]; zipName?: string };
+    if (!files || !files.length) { res.status(400).json({ error: "No files provided" }); return; }
+    const zip = new JSZip();
+    let added = 0;
+    for (const f of files) {
+      try {
+        const upstream = await fetch(f.url);
+        if (!upstream.ok) continue;
+        const buf = Buffer.from(await upstream.arrayBuffer());
+        zip.file(f.filename, buf);
+        added++;
+      } catch {
+        // Skip any single file that fails to fetch — still deliver a zip
+        // with whatever did come through rather than failing the whole batch.
+      }
+    }
+    if (!added) { res.status(502).json({ error: "Could not fetch any of the files" }); return; }
+    const zipBuf = await zip.generateAsync({ type: "nodebuffer" });
+    const safeName = (zipName || "download").replace(/[^a-z0-9\-_]/gi, "-");
+    res.setHeader("Content-Disposition", `attachment; filename="${safeName}.zip"`);
+    res.setHeader("Content-Type", "application/zip");
+    res.send(zipBuf);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Zip download failed" });
   }
 });
 
