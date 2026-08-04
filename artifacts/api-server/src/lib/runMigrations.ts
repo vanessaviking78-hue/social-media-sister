@@ -38,6 +38,7 @@ await createBroadcastDraftsTable();
     await createGoogleCalendarTables();
             await addHookSubheadingStyleColumns();
     await updateShareFriendCommentCTA();
+    await createAiCustomPromptsTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -450,6 +451,17 @@ async function addHomeworkExtraQuestionColumns(): Promise<void> {
   await db.execute(sql`ALTER TABLE homework_replies ADD COLUMN IF NOT EXISTS answer8 text NOT NULL DEFAULT ''`);
   await db.execute(sql`ALTER TABLE homework_replies ADD COLUMN IF NOT EXISTS answer9 text NOT NULL DEFAULT ''`);
   await db.execute(sql`ALTER TABLE homework_replies ADD COLUMN IF NOT EXISTS answer10 text NOT NULL DEFAULT ''`);
+}
+
+async function createAiCustomPromptsTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS ai_custom_prompts (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      prompt_text TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
 }
 
 async function createBonusContentTable(): Promise<void> {
