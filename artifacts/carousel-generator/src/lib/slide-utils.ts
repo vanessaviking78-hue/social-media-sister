@@ -85,6 +85,18 @@ export const FONT_OPTIONS = [
   { label: "Cormorant SC", value: "'Cormorant SC', serif" },
   { label: "Spectral", value: "'Spectral', serif" },
   { label: "Yeseva One", value: "'Yeseva One', serif" },
+  { label: "Sekuya", value: "'Sekuya', cursive" },
+  { label: "Ruslan Display", value: "'Ruslan Display', cursive" },
+  { label: "Beau Rivage", value: "'Beau Rivage', cursive" },
+  { label: "Norican", value: "'Norican', cursive" },
+  { label: "Cookie", value: "'Cookie', cursive" },
+  { label: "Love Light", value: "'Love Light', cursive" },
+  { label: "Limelight", value: "'Limelight', cursive" },
+  { label: "Londrina Shadow", value: "'Londrina Shadow', cursive" },
+  { label: "Moon Dance", value: "'Moon Dance', cursive" },
+  { label: "Julius Sans One", value: "'Julius Sans One', sans-serif" },
+  { label: "Spicy Rice", value: "'Spicy Rice', cursive" },
+  { label: "Zilla Slab Highlight", value: "'Zilla Slab Highlight', serif" },
 ];
 
 export const ALL_FONTS = [
@@ -198,7 +210,7 @@ export function loadGoogleFonts() {
     link.rel = "stylesheet";
     link.setAttribute("data-slide-fonts", "true");
     link.href =
-      "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&family=Montserrat:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400;1,700&family=Lato:ital,wght@0,300;0,400;0,700;1,400&family=Oswald:wght@300;400;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Raleway:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400&family=Roboto:ital,wght@0,300;0,400;0,700;1,400&family=Poppins:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400&family=Bebas+Neue&family=Dancing+Script:wght@400;700&family=Pacifico&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Serif+Display:ital@0;1&family=Abril+Fatface&family=Quicksand:wght@300;400;600;700&family=Nunito:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Work+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Bitter:ital,wght@0,400;0,600;0,700;1,400&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Great+Vibes&family=Cinzel:wght@400;600;700;900&family=Bodoni+Moda:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&family=Barlow+Condensed:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,700;1,400;1,700&family=Italiana&family=Fjalla+One&family=Tenor+Sans&family=Cormorant+SC:wght@300;400;500;600;700&family=Spectral:ital,wght@0,300;0,400;0,600;0,700;1,400;1,700&family=Yeseva+One&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600;1,700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap";
+      "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400;1,700&family=Montserrat:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400;1,700&family=Lato:ital,wght@0,300;0,400;0,700;1,400&family=Oswald:wght@300;400;600;700&family=Merriweather:ital,wght@0,400;0,700;1,400&family=Raleway:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400&family=Roboto:ital,wght@0,300;0,400;0,700;1,400&family=Poppins:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400&family=Bebas+Neue&family=Dancing+Script:wght@400;700&family=Pacifico&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Serif+Display:ital@0;1&family=Abril+Fatface&family=Quicksand:wght@300;400;600;700&family=Nunito:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Crimson+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Work+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Bitter:ital,wght@0,400;0,600;0,700;1,400&family=Josefin+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&family=Great+Vibes&family=Cinzel:wght@400;600;700;900&family=Bodoni+Moda:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400;1,700&family=Barlow+Condensed:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400;1,700&family=EB+Garamond:ital,wght@0,400;0,700;1,400;1,700&family=Italiana&family=Fjalla+One&family=Tenor+Sans&family=Cormorant+SC:wght@300;400;500;600;700&family=Spectral:ital,wght@0,300;0,400;0,600;0,700;1,400;1,700&family=Yeseva+One&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600;1,700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Sekuya&family=Ruslan+Display&family=Beau+Rivage&family=Norican&family=Cookie&family=Love+Light&family=Limelight&family=Londrina+Shadow&family=Moon+Dance&family=Julius+Sans+One&family=Spicy+Rice&family=Zilla+Slab+Highlight:wght@400;700&display=swap";
     document.head.appendChild(link);
   }
 }
