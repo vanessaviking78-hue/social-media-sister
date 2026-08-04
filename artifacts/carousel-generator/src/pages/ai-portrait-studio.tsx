@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import ExportToCanvaButton from "@/components/export-to-canva";
+import { usePresets } from "@/lib/use-presets";
 import JSZip from "jszip";
 import {
   Sparkles, Upload, X, Check, Download, RefreshCcw, Loader2, AlertCircle,
@@ -388,6 +389,10 @@ export default function AiPortraitStudio() {
   const [noPhotoGenerating, setNoPhotoGenerating] = useState(false);
   const [noPhotoResult, setNoPhotoResult]         = useState<CardState | null>(null);
   const [noPhotoSaving, setNoPhotoSaving]         = useState(false);
+  const [customPrompts, setCustomPrompts]         = useState<{ id: number; name: string; promptText: string }[]>([]);
+  const [savePromptName, setSavePromptName]       = useState("");
+  const [savingPrompt, setSavingPrompt]           = useState(false);
+  const { presets } = usePresets();
   const [uploading, setUploading]           = useState(false);
   const [photoPreview, setPhotoPreview]     = useState<string | null>(null);
   const [clientName, setClientName]         = useState("");
@@ -434,6 +439,45 @@ export default function AiPortraitStudio() {
       for (const id of Object.values(motionPollRefs.current)) clearInterval(id);
     };
   }, []);
+
+  const fetchCustomPrompts = async () => {
+    try {
+      const r = await fetch(`${BASE}api/ai-portrait/custom-prompts`);
+      if (!r.ok) return;
+      const data = await r.json() as { prompts?: { id: number; name: string; promptText: string }[] };
+      setCustomPrompts(data.prompts || []);
+    } catch { /* ignore — saved prompts are a nice-to-have, not blocking */ }
+  };
+
+  useEffect(() => { fetchCustomPrompts(); }, []);
+
+  const handleSavePrompt = async () => {
+    if (!savePromptName.trim() || !noPhotoPrompt.trim()) { toast.error("Give the prompt a name first"); return; }
+    setSavingPrompt(true);
+    try {
+      const r = await fetch(`${BASE}api/ai-portrait/custom-prompts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: savePromptName.trim(), promptText: noPhotoPrompt }),
+      });
+      const data = await r.json() as { prompt?: { id: number; name: string; promptText: string }; error?: string };
+      if (!r.ok) throw new Error(data.error || "Failed to save prompt");
+      setCustomPrompts((prev) => [data.prompt!, ...prev]);
+      setSavePromptName("");
+      toast.success("Prompt saved — it'll show up in the list next time");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Failed to save prompt");
+    } finally {
+      setSavingPrompt(false);
+    }
+  };
+
+  const handleDeletePrompt = async (id: number) => {
+    setCustomPrompts((prev) => prev.filter((p) => p.id !== id));
+    try {
+      await fetch(`${BASE}api/ai-portrait/custom-prompts/${id}`, { method: "DELETE" });
+    } catch { /* already removed from the list — a failed delete just leaves it in the DB, harmless */ }
+  };
 
   // ── Polling ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -877,6 +921,18 @@ export default function AiPortraitStudio() {
             <h2 className="font-semibold text-sm">Generate without a photo</h2>
           </div>
           <p className="text-xs text-muted-foreground">No face, no upload — just describe the image and it's generated from scratch. Good for faceless posts.</p>
+
+          {customPrompts.length > 0 && (
+            <Select onValueChange={(v) => { const p = customPrompts.find((cp) => String(cp.id) === v); if (p) setNoPhotoPrompt(p.promptText); }}>
+              <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Load a saved prompt…" /></SelectTrigger>
+              <SelectContent>
+                {customPrompts.map((p) => (
+                  <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
           <textarea
             value={noPhotoPrompt}
             onChange={(e) => setNoPhotoPrompt(e.target.value)}
@@ -884,6 +940,31 @@ export default function AiPortraitStudio() {
             rows={3}
             className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm"
           />
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <Input
+              value={savePromptName}
+              onChange={(e) => setSavePromptName(e.target.value)}
+              placeholder="Name this prompt to save it…"
+              className="h-8 text-xs flex-1 min-w-[160px]"
+            />
+            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleSavePrompt} disabled={savingPrompt || !savePromptName.trim() || !noPhotoPrompt.trim()}>
+              {savingPrompt ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null}
+              Save prompt
+            </Button>
+          </div>
+
+          {customPrompts.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {customPrompts.map((p) => (
+                <span key={p.id} className="inline-flex items-center gap-1 text-[10px] bg-white/5 border border-border/40 rounded-full px-2 py-1 text-muted-foreground">
+                  {p.name}
+                  <button onClick={() => handleDeletePrompt(p.id)} className="hover:text-red-400"><X className="w-3 h-3" /></button>
+                </span>
+              ))}
+            </div>
+          )}
+
           <div className="flex items-center gap-3 flex-wrap">
             <Select value={noPhotoAspect} onValueChange={(v) => setNoPhotoAspect(v as "1:1" | "3:4" | "9:16")}>
               <SelectTrigger className="w-36 h-9 text-xs"><SelectValue /></SelectTrigger>
@@ -1023,14 +1104,15 @@ export default function AiPortraitStudio() {
             </p>
 
             <div className="space-y-2 mb-3">
-              <Label htmlFor="clientName" className="text-xs">Client name (optional)</Label>
-              <Input
-                id="clientName"
-                value={clientName}
-                onChange={(e) => setClientName(e.target.value)}
-                placeholder="e.g. Dr Sarah Smith"
-                className="h-8 text-sm"
-              />
+              <Label htmlFor="clientName" className="text-xs">Clinician</Label>
+              <Select value={clientName} onValueChange={setClientName}>
+                <SelectTrigger id="clientName" className="h-8 text-sm"><SelectValue placeholder="Choose a clinician" /></SelectTrigger>
+                <SelectContent>
+                  {presets.map((p) => (
+                    <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div
