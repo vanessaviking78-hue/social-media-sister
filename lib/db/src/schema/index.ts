@@ -105,7 +105,7 @@ export const insertCaptionSchema = createInsertSchema(captionsTable).omit({ id: 
 export type InsertCaption = z.infer<typeof insertCaptionSchema>;
 export type Caption = typeof captionsTable.$inferSelect;
 
-export const CALENDAR_POST_STATUSES = ["draft", "scheduled", "posted"] as const;
+export const CALENDAR_POST_STATUSES = ["draft", "scheduled", "posted", "cancelled"] as const;
 export type CalendarPostStatus = typeof CALENDAR_POST_STATUSES[number];
 
 export const CALENDAR_POST_TYPES = ["carousel", "single-image", "story"] as const;
@@ -125,7 +125,7 @@ export const calendarPostsTable = pgTable("calendar_posts", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 }, (table) => [
-  check("calendar_posts_status_check", sql`${table.status} IN ('draft', 'scheduled', 'posted')`),
+  check("calendar_posts_status_check", sql`${table.status} IN ('draft', 'scheduled', 'posted', 'cancelled')`),
   check("calendar_posts_post_type_check", sql`${table.postType} IN ('carousel', 'single-image', 'story')`),
 ]);
 
