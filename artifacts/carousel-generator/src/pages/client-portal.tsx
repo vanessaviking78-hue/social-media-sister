@@ -979,7 +979,7 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
             </div>
             <div className="bg-white px-5 py-5 space-y-4">
               <p className="text-sm text-gray-700">
-                Upload your raw 60-90 second reel to the portal and I'll add the captions, back to you within 48 hours.
+                Upload your raw 60-90 second reel here and I'll add the captions and post it straight to your page from this end. You just film it, send it to me, and forget about it.
               </p>
               <div>
                 <input
