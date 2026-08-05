@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { usePresets } from "@/lib/use-presets";
 import { Link } from "wouter";
 import {
   ArrowLeft,
@@ -11,6 +12,7 @@ import {
   Pencil,
   Check,
   X,
+  UploadCloud,
 } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -51,6 +53,12 @@ export default function ReelCaptioning() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draftChunks, setDraftChunks] = useState<Chunk[]>([]);
 
+  const { presets } = usePresets();
+  const [sendClientName, setSendClientName] = useState("");
+  const [sendFile, setSendFile] = useState<File | null>(null);
+  const [sending, setSending] = useState(false);
+  const sendFileRef = useRef<HTMLInputElement>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -79,6 +87,30 @@ export default function ReelCaptioning() {
     load();
     loadFonts();
   }, [load, loadFonts]);
+
+  const sendToClient = async () => {
+    if (!sendClientName || !sendFile) return;
+    setSending(true);
+    try {
+      const form = new FormData();
+      form.append("clientName", sendClientName);
+      form.append("video", sendFile);
+      const pw = localStorage.getItem("cybersuite-pw") || "";
+      const r = await fetch(`${BASE}/api/reel-captions/submissions`, {
+        method: "POST",
+        headers: { "x-app-password": pw, Authorization: `Bearer ${pw}` },
+        body: form,
+      });
+      if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.error || "Upload failed");
+      setSendFile(null);
+      if (sendFileRef.current) sendFileRef.current.value = "";
+      await load();
+    } catch (e: any) {
+      alert(e?.message || "Upload failed");
+    } finally {
+      setSending(false);
+    }
+  };
 
   const transcribe = async (id: number) => {
     setBusyId(id);
@@ -183,6 +215,44 @@ export default function ReelCaptioning() {
       </header>
 
       <div className="max-w-3xl mx-auto px-6 py-8">
+        <div className="rounded-2xl border border-border/50 p-4 mb-6 space-y-3">
+          <div className="flex items-center gap-2">
+            <UploadCloud className="w-4 h-4 text-pink-400" />
+            <h2 className="font-semibold text-sm">Send a video to a client</h2>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Got something filmed already? Push it straight into their portal — no need for them to upload it themselves.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={sendClientName}
+              onChange={(e) => setSendClientName(e.target.value)}
+              className="rounded-lg bg-zinc-900 border border-zinc-800 px-3 py-2 text-sm text-white outline-none focus:border-pink-600"
+            >
+              <option value="">Choose a client…</option>
+              {presets.map((p) => (
+                <option key={p.id} value={p.name}>{p.name}</option>
+              ))}
+            </select>
+            <input
+              ref={sendFileRef}
+              type="file"
+              accept="video/*"
+              onChange={(e) => setSendFile(e.target.files?.[0] || null)}
+              className="text-xs text-gray-400 file:mr-2 file:rounded-full file:border-0 file:bg-pink-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-pink-700 hover:file:bg-pink-200"
+            />
+            <button
+              type="button"
+              onClick={sendToClient}
+              disabled={!sendClientName || !sendFile || sending}
+              className="flex items-center gap-1.5 text-xs font-semibold bg-pink-600 hover:bg-pink-500 text-white rounded-full px-4 py-2 disabled:opacity-50 transition-colors"
+            >
+              {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <UploadCloud className="w-3.5 h-3.5" />}
+              Send to portal
+            </button>
+          </div>
+        </div>
+
         <div className="rounded-2xl border border-border/50 p-4 mb-6 flex flex-wrap items-end gap-4">
           <div>
             <label className="block text-xs text-muted-foreground mb-1.5">Caption font</label>
