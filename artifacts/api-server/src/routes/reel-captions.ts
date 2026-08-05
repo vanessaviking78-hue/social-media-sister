@@ -11,6 +11,8 @@ import { writeFile, unlink, readFile, access } from "fs/promises";
 import { randomUUID } from "crypto";
 import { tmpdir } from "os";
 import { join } from "path";
+import multer from "multer";
+import { v4 as uuidv4 } from "uuid";
 
 const router: IRouter = Router();
 
@@ -26,6 +28,8 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
 }
 
 router.use("/reel-captions", requireAuth);
+
+const reelUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 300 * 1024 * 1024 } });
 
 const FONT_CANDIDATES = [
   "/usr/share/fonts/truetype/dejavu/DejaVu-Bold.ttf",
@@ -127,6 +131,32 @@ async function fetchBuffer(url: string): Promise<Buffer> {
 router.get("/reel-captions/fonts", async (req: Request, res: Response) => {
   const fonts = Object.entries(FONT_LIBRARY).map(([key, entry]) => ({ key, label: entry.label }));
   res.json({ fonts, defaultFontKey: DEFAULT_FONT_KEY });
+});
+
+// Lets Vanessa push a video straight into a client's portal from this end —
+// same reel_submissions row a client's own upload would create, so it shows
+// up in both this queue and the client's Upload Reel tab.
+router.post("/reel-captions/submissions", reelUpload.single("video"), async (req: Request, res: Response) => {
+  try {
+    const { clientName } = req.body as { clientName?: string };
+    if (!clientName) { res.status(400).json({ error: "clientName is required" }); return; }
+    if (!req.file) { res.status(400).json({ error: "No video file provided" }); return; }
+    const [preset] = await db.select().from(clientPresetsTable).where(eq(clientPresetsTable.name, clientName));
+    if (!preset) { res.status(404).json({ error: "Client not found" }); return; }
+
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    if (!bucketId) { res.status(500).json({ error: "Object storage not configured" }); return; }
+    const objectPath = `reel-submissions/${uuidv4()}-${(req.file.originalname || "reel.mp4").replace(/[^a-zA-Z0-9.\-_]/g, "-")}`;
+    await objectStorageClient.bucket(bucketId).file(objectPath).save(req.file.buffer, {
+      contentType: req.file.mimetype || "video/mp4",
+      metadata: { cacheControl: "public, max-age=31536000" },
+    });
+    const videoUrl = `/api/media/${objectPath}`;
+    const [row] = await db.insert(reelSubmissionsTable).values({ clientName, videoUrl, status: "pending" }).returning();
+    res.json({ ok: true, id: row?.id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to upload video" });
+  }
 });
 
 // List every submission, most recent first, with the client's brand colour
