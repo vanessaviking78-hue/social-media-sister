@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Loader2, AlertTriangle, CalendarDays, ChevronLeft, X, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star, FileText, Download, Newspaper, TrendingUp, Bell, BellOff, Gift, ChevronDown } from "lucide-react";
+import { Loader2, AlertTriangle, CalendarDays, ChevronLeft, X, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star, FileText, Download, Newspaper, TrendingUp, Bell, BellOff, Gift, ChevronDown, Trophy } from "lucide-react";
 import { toast } from "sonner";
 import { NewsList } from "@/pages/aesthetic-news";
 
@@ -281,9 +281,10 @@ const REEL_GROUPS: { heading: string; items: string[] }[] = [
 ];
 const REEL_TOTAL = REEL_GROUPS.reduce((n, g) => n + g.items.length, 0);
 
-type Tab = "upcoming" | "published" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus" | "rants" | "connect" | "activity" | "refer" | "brainstorm";
+type Tab = "reelsChallenge" | "upcoming" | "published" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus" | "rants" | "connect" | "activity" | "refer" | "brainstorm";
 
 const TAB_ICON: Record<Tab, React.ReactNode> = {
+  reelsChallenge: <Trophy className="w-4 h-4" />,
   upcoming: <CalendarDays className="w-4 h-4" />,
   published: <Download className="w-4 h-4" />,
   approvals: <ShieldCheck className="w-4 h-4" />,
@@ -308,7 +309,7 @@ export default function ClientPortal({ token }: { token: string }) {
   const [data, setData] = useState<PortalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("upcoming");
+  const [tab, setTab] = useState<Tab>("reelsChallenge");
   const [showTip, setShowTip] = useState(true);
   const [inAppBrowser] = useState<string | null>(() => (typeof navigator !== "undefined" ? detectInAppBrowser() : null));
 
@@ -403,6 +404,11 @@ export default function ClientPortal({ token }: { token: string }) {
   const [submissions, setSubmissions] = useState<Array<{ id: number; treatment: string; story: string; submitterName: string; status: string; createdAt: string }>>([]);
   const [recap, setRecap] = useState<{ monthLabel: string; postsThisMonth: number; submissionsThisMonth: number; reelsCompleted: number } | null>(null);
 
+  const [challengeItems, setChallengeItems] = useState<string[]>([]);
+  const [challengeCompleted, setChallengeCompleted] = useState<Set<number>>(new Set());
+  const [challengeLoading, setChallengeLoading] = useState(true);
+  const [leaderboard, setLeaderboard] = useState<{ clientName: string; count: number }[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [ticked, setTicked] = useState<Record<number, boolean>>({});
   const [rantComments, setRantComments] = useState<Record<number, { id: number; clientName: string; comment: string; createdAt: string }[]>>({});
   const [rantCommentDraft, setRantCommentDraft] = useState<Record<number, string>>({});
@@ -420,6 +426,10 @@ export default function ClientPortal({ token }: { token: string }) {
       .catch(() => {});
   }, [token]);
   useEffect(() => {
+    loadReelsChallenge();
+    loadLeaderboard();
+  }, [token]);
+  useEffect(() => {
     if (tab === "brainstorm") loadBrainstormSlots();
   }, [tab]);
   const toggleReel = (i: number) => setTicked((prev) => {
@@ -431,6 +441,31 @@ export default function ClientPortal({ token }: { token: string }) {
     }).catch(() => {});
     return n;
   });
+
+  const loadReelsChallenge = () => {
+    fetch(`${BASE}api/portal/${token}/reels-challenge`)
+      .then((r) => r.json())
+      .then((d) => { setChallengeItems(d.items || []); setChallengeCompleted(new Set(d.completed || [])); })
+      .catch(() => {})
+      .finally(() => setChallengeLoading(false));
+  };
+  const loadLeaderboard = () => {
+    fetch(`${BASE}api/portal/${token}/reels-challenge/leaderboard`)
+      .then((r) => r.json())
+      .then((d) => setLeaderboard(Array.isArray(d.leaderboard) ? d.leaderboard : []))
+      .catch(() => {})
+      .finally(() => setLeaderboardLoading(false));
+  };
+  const toggleChallengeItem = (index: number) => {
+    setChallengeCompleted((prev) => {
+      const n = new Set(prev);
+      n.has(index) ? n.delete(index) : n.add(index);
+      return n;
+    });
+    fetch(`${BASE}api/portal/${token}/reels-challenge/${index}/toggle`, { method: "POST" })
+      .then(() => loadLeaderboard())
+      .catch(() => {});
+  };
 
   const loadRantComments = (postId: number) => {
     fetch(`${BASE}api/blog-posts/${postId}/comments`)
@@ -837,6 +872,13 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
 </div>
 </div>
 <div className="max-w-3xl mx-auto px-4 pb-3 flex flex-wrap gap-2">
+          <button
+            onClick={() => setTab("reelsChallenge")}
+            className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-extrabold transition-colors bg-pink-600 text-white hover:bg-pink-500 ${tab === "reelsChallenge" ? "ring-2 ring-pink-300" : ""}`}
+          >
+            <Trophy className="w-4 h-4" />
+            <span>Reels Challenge</span>
+          </button>
           <TabBtn id="upcoming" label="Posts" />
           <TabBtn id="published" label="Past Posts" />
           <TabBtn id="homework" label="Homework" />
@@ -890,6 +932,65 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
       )}
 
       <main className="max-w-3xl mx-auto px-4 py-8">
+        {tab === "reelsChallenge" && (
+          <section>
+            <div className="rounded-2xl border-2 border-pink-600 bg-pink-950/20 p-5 mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Trophy className="w-5 h-5 text-pink-400" />
+                <h2 className="text-lg font-extrabold text-pink-400">Reels Challenge</h2>
+              </div>
+              <p className="text-sm text-zinc-200 mb-3">Right, I want you to actually use this one.</p>
+              <p className="text-sm text-zinc-300 mb-3">Inside you'll find a list of relatable reel ideas which are not work related, ready to go, no excuses left about not knowing what to film.</p>
+              <p className="text-sm text-zinc-300 mb-3">If you really want to strike a chord with your followers this month, do as many of these as you possibly can. Not just the easy ones.</p>
+              <p className="text-sm text-zinc-300 mb-3">Push yourself into a few that make you a bit nervous too, those are usually the ones that land hardest.</p>
+              <p className="text-sm text-zinc-300 mb-3">Tick them off in the portal as you go. I'll be watching your progress.</p>
+              <p className="text-sm text-zinc-300">And because I want you properly motivated, whichever clinic gets through the most by the end of August wins a prize from me. So get filming.</p>
+            </div>
+
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm font-semibold text-white">{challengeCompleted.size}/{challengeItems.length || 30} filmed</span>
+            </div>
+            <div className="w-full h-2 bg-zinc-800 rounded-full mb-6 overflow-hidden">
+              <div className="h-full bg-pink-500 transition-all" style={{ width: (challengeItems.length ? Math.round((challengeCompleted.size / challengeItems.length) * 100) : 0) + "%" }} />
+            </div>
+
+            {challengeLoading ? (
+              <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-pink-500" /></div>
+            ) : (
+              <div className="space-y-2 mb-8">
+                {challengeItems.map((idea, i) => (
+                  <button key={i} onClick={() => toggleChallengeItem(i)} className={"w-full text-left flex items-start gap-3 rounded-xl border px-4 py-3 transition-colors " + (challengeCompleted.has(i) ? "border-pink-700/50 bg-pink-950/20" : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-700")}>
+                    {challengeCompleted.has(i) ? <CheckCircle2 className="w-5 h-5 text-pink-500 shrink-0 mt-0.5" /> : <Circle className="w-5 h-5 text-zinc-600 shrink-0 mt-0.5" />}
+                    <span className={"text-sm " + (challengeCompleted.has(i) ? "text-zinc-500 line-through" : "text-white")}>{idea}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <Trophy className="w-5 h-5 text-pink-400" />
+                <h3 className="text-base font-bold text-white">Leaderboard</h3>
+              </div>
+              {leaderboardLoading ? (
+                <div className="flex justify-center py-6"><Loader2 className="w-5 h-5 animate-spin text-pink-500" /></div>
+              ) : leaderboard.length === 0 ? (
+                <p className="text-sm text-zinc-500">No one's filmed anything yet, be the first.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {leaderboard.map((row, i) => (
+                    <div key={row.clientName} className={"flex items-center gap-3 rounded-xl px-3 py-2 " + (row.clientName === data.clientName ? "bg-pink-950/30 border border-pink-700/40" : "")}>
+                      <span className="text-xs font-bold text-zinc-500 w-5">{i + 1}</span>
+                      <span className={"text-sm flex-1 " + (row.clientName === data.clientName ? "text-pink-300 font-semibold" : "text-zinc-300")}>{row.clientName}{row.clientName === data.clientName ? " (you)" : ""}</span>
+                      <span className="text-sm font-bold text-white">{row.count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
         {tab === "upcoming" && (
           <section>
             {recap && (
