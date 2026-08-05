@@ -1,11 +1,23 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { db } from "@workspace/db";
 import { clientPresetsTable, scheduledPostsTable, dmInteractionsTable } from "@workspace/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
+import { openai } from "@workspace/integrations-openai-ai-server";
 
 const router: IRouter = Router();
 
 const GRAPH_BASE = "https://graph.facebook.com/v19.0";
+
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  const appPassword = process.env.APP_PASSWORD;
+  if (!appPassword) return next();
+  const expected = appPassword.trim().toLowerCase();
+  const provided = (req.headers["x-app-password"] as string | undefined)?.trim().toLowerCase();
+  if (provided === expected) return next();
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ") && authHeader.slice(7).trim().toLowerCase() === expected) return next();
+  res.status(401).json({ error: "Unauthorized" });
+}
 
 function monthRange(month: string): { start: Date; end: Date } {
   const [yearStr, monthStr] = month.split("-");
@@ -177,6 +189,79 @@ router.get("/reports/monthly", async (req, res) => {
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to build monthly report" });
+  }
+});
+
+// Writes a short, three paragraph narrative report for one client's month,
+// in Vanessa's own voice, grounded in the exact numbers already shown on
+// screen. Takes the report object the frontend already fetched rather than
+// re-querying the database or the Graph API, so this only costs an AI call
+// and nothing else, and only runs when Vanessa actually asks for it.
+router.post("/reports/monthly/narrative", requireAuth, async (req, res) => {
+  try {
+    const { report } = req.body as { report?: any };
+    if (!report || !report.preset || !report.preset.name) {
+      res.status(400).json({ error: "Missing report data" });
+      return;
+    }
+
+    const topPosts = Array.isArray(report.topPosts) ? report.topPosts.slice(0, 5) : [];
+    const topPostsSummary = topPosts.length
+      ? topPosts
+          .map((p: any, i: number) => {
+            const label = p.title || p.caption || "Untitled post";
+            const shares = p.shares ? `, ${p.shares} shares` : "";
+            return `${i + 1}. "${label}" (${p.postType || "post"}) - ${p.likes ?? "N/A"} likes, ${p.comments ?? "N/A"} comments${shares}`;
+          })
+          .join("\n")
+      : "No published posts with stats available this month.";
+
+    const engagementLine =
+      report.engagementRatePercent !== null && report.engagementRatePercent !== undefined
+        ? `${report.engagementRatePercent}%`
+        : "not available";
+
+    const systemPrompt = `You are Vanessa Wormald, a social media strategist for medical aesthetics clinics with 7 years in aesthetics and 20 years in social media marketing. You are writing a short monthly performance report about one of your clinic clients, in your own voice, professional but with real personality, not corporate, not stiff. Write in first person, as Vanessa. British English throughout.
+
+WRITING RULES (non-negotiable)
+- Never use em dashes or en dashes. Use a comma, a full stop, or a plain hyphen in compound adjectives only.
+- No AI cliche phrases and no generic marketing filler. Do not use words like elevate, unlock, journey, empower, revolutionise, game-changer, dive into, harness, leverage, delve, navigate, streamline, cutting-edge, holistic, synergy, or bespoke, and do not use lines like "not fuss not fluff" or "it's not a content problem, it's a system problem" or anything that reads like a template.
+- No exclamation marks unless they genuinely earn it. One maximum across the whole report.
+- Sound like a real strategist who has actually looked at these numbers, not like a template filled in with a client's name.
+- Write exactly three paragraphs, each three to five sentences, no headings, no bullet points, no bold text, no lists.
+
+PARAGRAPH 1: why the content performed well this month. Reference specific numbers and specific posts from the data below. Be specific about what actually worked, the format, the topic, the timing, not generic praise.
+
+PARAGRAPH 2: what we should do next. Concrete, specific recommendations based on what this data shows for this client, not generic social media advice that could apply to anyone.
+
+PARAGRAPH 3: anything else that validates return on investment for this client. Tie the numbers back to real business value, enquiries, followers, engagement, so it's clear the work is paying off. This paragraph should make the work look good, grounded honestly in the real numbers, not inflated or oversold.
+
+CLIENT DATA FOR ${report.preset.name}, ${report.month}
+Posts published: ${report.totalPosts}
+Instagram enquiries this month: ${report.dmEnquiryCount}
+New followers this month: ${report.newFollowers ?? "not available"}
+Follower count at end of month: ${report.followerCountEnd ?? "not available"}
+Engagement rate: ${engagementLine}
+
+Top performing posts this month:
+${topPostsSummary}
+
+If a data point says not available, do not invent a number for it, just don't lean on it in the report.`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: "Write the three paragraph report now." },
+      ],
+      temperature: 0.8,
+      max_tokens: 900,
+    });
+
+    const narrative = completion.choices[0]?.message?.content?.trim() || "";
+    res.json({ narrative });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to write report narrative" });
   }
 });
 
