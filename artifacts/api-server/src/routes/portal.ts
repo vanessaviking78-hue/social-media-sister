@@ -282,7 +282,7 @@ router.patch("/portal/:token/reels", async (req, res) => {
 // The August 2026 "Reels Challenge" — a fixed list of relatable,
 // non-work-related reel prompts, tracked per-client server-side (not
 // localStorage) so a cross-client leaderboard is possible.
-const REELS_CHALLENGE_ITEMS: string[] = [
+export const REELS_CHALLENGE_ITEMS: string[] = [
   "Things I hate hearing other women say about themselves",
   "Things menopause doesn't prepare you for",
   "Things nobody tells you about turning 40",
