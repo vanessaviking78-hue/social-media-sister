@@ -694,10 +694,9 @@ export default function ClientPortal({ token }: { token: string }) {
 
   const submitReject = async (post: CalendarPost) => {
     if (!rejectReason.trim()) { toast.error("Please add a reason."); return; }
-    if (!post.scheduledPostId) return;
     setRejectBusy(true);
     try {
-      const r = await fetch(`${BASE}api/portal/${token}/posts/${post.scheduledPostId}/reject`, {
+      const r = await fetch(`${BASE}api/portal/${token}/posts/${post.id}/reject`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason: rejectReason.trim() }),
@@ -1179,7 +1178,7 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
                           </div>
                         )}
 
-                        {post.source === "scheduler" && (
+                        {(
                           <div className="mt-4 pt-3 border-t border-zinc-800">
                             {!isRejecting ? (
                               <button onClick={() => { setRejectingId(post.id); setRejectReason(""); }} className="text-xs font-semibold text-red-400 hover:text-red-300 flex items-center gap-1">
