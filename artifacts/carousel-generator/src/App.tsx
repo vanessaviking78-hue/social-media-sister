@@ -95,6 +95,7 @@ import ResourceLibrary from "@/pages/resources";
 import HealthCheck from "@/pages/health-check";
 import Homework from "@/pages/homework";
 import ReelProgress from "@/pages/reel-progress";
+import ReelCaptioning from "@/pages/reel-captioning";
 import BonusContent from "@/pages/bonus-content";
 
 const queryClient = new QueryClient();
@@ -172,6 +173,7 @@ function ProtectedRouter() {
 <Route path="/health-check" component={HealthCheck} />
       <Route path="/homework" component={Homework} />
       <Route path="/reel-progress" component={ReelProgress} />
+      <Route path="/reel-captioning" component={ReelCaptioning} />
       <Route path="/bonus-content" component={BonusContent} />
       <Route component={NotFound} />
     </Switch>
