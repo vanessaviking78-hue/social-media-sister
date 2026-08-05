@@ -17,6 +17,8 @@ import {
   LOGO_POSITIONS,
 } from "@workspace/db/schema";
 import { eq, inArray, sql } from "drizzle-orm";
+import { reelsChallengeCompletionsTable } from "@workspace/db/schema";
+import { REELS_CHALLENGE_ITEMS } from "./portal";
 
 const VALID_TEXT_POSITIONS = new Set(TEXT_POSITIONS);
 const VALID_TEXT_ALIGNS = new Set(TEXT_ALIGNS);
@@ -49,6 +51,30 @@ router.get("/presets/reel-progress", async (_req, res) => {
     res.json({ progress });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to load reel progress" });
+  }
+});
+
+router.get("/presets/reels-challenge-progress", async (_req, res) => {
+  try {
+    const presets = await db.select({ id: clientPresetsTable.id, name: clientPresetsTable.name })
+      .from(clientPresetsTable)
+      .orderBy(sql`LOWER(${clientPresetsTable.name})`);
+    const completions = await db.select().from(reelsChallengeCompletionsTable);
+    const byClient = new Map<string, number[]>();
+    for (const c of completions) {
+      const arr = byClient.get(c.clientName) || [];
+      arr.push(c.itemIndex);
+      byClient.set(c.clientName, arr);
+    }
+    const progress = presets
+      .map((p) => {
+        const completedIndexes = (byClient.get(p.name) || []).slice().sort((a, b) => a - b);
+        return { id: p.id, name: p.name, completedIndexes, done: completedIndexes.length, total: REELS_CHALLENGE_ITEMS.length };
+      })
+      .sort((a, b) => b.done - a.done || a.name.localeCompare(b.name));
+    res.json({ progress, items: REELS_CHALLENGE_ITEMS });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to load reels challenge progress" });
   }
 });
 
