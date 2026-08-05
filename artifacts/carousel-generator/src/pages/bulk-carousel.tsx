@@ -300,10 +300,10 @@ export function renderSlideCanvas(
   if (!bgOnly) {
     ctx.textAlign    = "center";
     ctx.textBaseline = "top";
-    ctx.shadowColor  = "rgba(0,0,0,0.75)";
-    ctx.shadowBlur   = 18;
+    ctx.shadowColor  = "transparent";
+    ctx.shadowBlur   = 0;
     ctx.shadowOffsetX = 0;
-    ctx.shadowOffsetY = 3;
+    ctx.shadowOffsetY = 0;
 
     if (slideNum === 1) {
       // ── Slide 1 layout — positions driven by block.x / block.y ──────────────
