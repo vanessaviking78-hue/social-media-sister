@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { clientPresetsTable, calendarPostsTable, approvalBatchesTable, approvalImagesTable, scheduledPostsTable, homeworkQuestionSetsTable, homeworkRepliesTable, bonusContentTable, blogPostsTable, blogCommentsTable } from "@workspace/db/schema";
+import { clientPresetsTable, calendarPostsTable, approvalBatchesTable, approvalImagesTable, scheduledPostsTable, homeworkQuestionSetsTable, homeworkRepliesTable, bonusContentTable, blogPostsTable, blogCommentsTable, reelsChallengeCompletionsTable } from "@workspace/db/schema";
 import { eq, and, gte, lte, or, sql, desc, asc } from "drizzle-orm";
 import crypto from "crypto";
 import JSZip from "jszip";
@@ -274,6 +274,106 @@ router.patch("/portal/:token/reels", async (req, res) => {
 
 // Client: their own history of before/afters, selfies, reviews, requests and
 // onboarding sends, with whether Vanessa's actioned them yet.
+// The August 2026 "Reels Challenge" — a fixed list of relatable,
+// non-work-related reel prompts, tracked per-client server-side (not
+// localStorage) so a cross-client leaderboard is possible.
+const REELS_CHALLENGE_ITEMS: string[] = [
+  "Things I hate hearing other women say about themselves",
+  "Things menopause doesn't prepare you for",
+  "Things nobody tells you about turning 40",
+  "Things I wish I'd known in my twenties",
+  "Things people say that are actually just sexist in disguise",
+  "Things that annoy me about \"hustle culture\"",
+  "Things I stopped apologising for",
+  "Things that make me roll my eyes on social media",
+  "Things nobody warns you about running your own business",
+  "Things I used to believe about ageing that were rubbish",
+  "Things I wish someone had told me before having kids",
+  "Things that instantly tell me a woman doesn't rate herself",
+  "Things people get wrong about northern women",
+  "Things I've changed my mind about since my thirties",
+  "Things I refuse to feel guilty about anymore",
+  "Things that make me want to scream in group chats",
+  "Things nobody tells you about grief",
+  "Things I wish my mum had told me",
+  "Things that make me proud to be a working mother",
+  "Things people say to justify being rude",
+  "Things I've learned from failing at something publicly",
+  "Things that used to embarrass me and now don't",
+  "Things people assume about you when you're self-employed",
+  "Things I want my daughter to know that I didn't",
+  "Things that make me switch off a conversation instantly",
+  "Things nobody tells you about starting again",
+  "Things I stopped explaining myself for",
+  "Things that make me trust a woman instantly",
+  "Things I wish I'd said at the time instead of biting my tongue",
+  "Things that prove you're finally comfortable in your own skin"
+];
+
+router.get("/portal/:token/reels-challenge", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+    const rows = await db.select().from(reelsChallengeCompletionsTable)
+      .where(eq(reelsChallengeCompletionsTable.clientName, preset.name));
+    res.json({ items: REELS_CHALLENGE_ITEMS, completed: rows.map((r) => r.itemIndex) });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to load reels challenge" });
+  }
+});
+
+// Client: tick/untick one item. Toggles rather than a bulk save, since this
+// also has to keep the cross-client leaderboard accurate in real time.
+router.post("/portal/:token/reels-challenge/:index/toggle", async (req, res) => {
+  try {
+    const { token, index } = req.params;
+    const itemIndex = Number(index);
+    if (!Number.isInteger(itemIndex) || itemIndex < 0 || itemIndex >= REELS_CHALLENGE_ITEMS.length) {
+      res.status(400).json({ error: "Invalid item" }); return;
+    }
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+    const existing = await db.select().from(reelsChallengeCompletionsTable)
+      .where(and(eq(reelsChallengeCompletionsTable.clientName, preset.name), eq(reelsChallengeCompletionsTable.itemIndex, itemIndex)));
+    if (existing.length) {
+      await db.delete(reelsChallengeCompletionsTable).where(eq(reelsChallengeCompletionsTable.id, existing[0].id));
+      res.json({ completed: false });
+    } else {
+      await db.insert(reelsChallengeCompletionsTable).values({ clientName: preset.name, itemIndex });
+      res.json({ completed: true });
+    }
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to update reels challenge" });
+  }
+});
+
+// Leaderboard across every clinic with a live portal — any client's token
+// can fetch it (it's shown inside their own portal), it's not filtered to
+// just them. Lets Vanessa see standings from any single client's portal
+// too, without a separate admin page.
+router.get("/portal/:token/reels-challenge/leaderboard", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+    const result = await db.execute(sql`
+      SELECT cp.name AS "clientName", COUNT(rc.id)::int AS "count"
+      FROM client_presets cp
+      LEFT JOIN reels_challenge_completions rc ON rc.client_name = cp.name
+      WHERE cp.client_portal_token IS NOT NULL
+      GROUP BY cp.name
+      ORDER BY count DESC, cp.name ASC
+    `);
+    res.json({ leaderboard: (result as { rows?: unknown[] }).rows ?? [], total: REELS_CHALLENGE_ITEMS.length, you: preset.name });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to load leaderboard" });
+  }
+});
+
 router.get("/portal/:token/submissions", async (req, res) => {
   try {
     const { token } = req.params;
