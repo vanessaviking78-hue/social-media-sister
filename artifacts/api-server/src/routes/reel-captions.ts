@@ -35,24 +35,54 @@ const FONT_CANDIDATES = [
   "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
 ];
 
-async function resolveFontPath(): Promise<string | null> {
-  for (const candidate of FONT_CANDIDATES) {
-    try {
-      await access(candidate);
-      return candidate;
-    } catch {
-      // try next
-    }
+type FontEntry = { label: string; url: string };
+
+// Bold, caption-friendly Google Fonts, downloaded once and cached on disk —
+// keeps the repo free of binary font files while still giving Vanessa a
+// real dropdown of fonts to pick from when rendering.
+const FONT_LIBRARY: Record<string, FontEntry> = {
+  "montserrat-bold": {
+    label: "Montserrat Bold",
+    url: "https://fonts.gstatic.com/s/montserrat/v31/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCuM70w-.ttf",
+  },
+};
+const DEFAULT_FONT_KEY = "montserrat-bold";
+
+async function resolveFontPath(fontKey?: string): Promise<string | null> {
+  const key = fontKey && FONT_LIBRARY[fontKey] ? fontKey : DEFAULT_FONT_KEY;
+  const entry = FONT_LIBRARY[key];
+  const cachePath = join(tmpdir(), `reel-caption-font-${key}.ttf`);
+  try {
+    await access(cachePath);
+    return cachePath;
+  } catch {
+    // not cached yet — download it below
   }
-  return null;
+  try {
+    const r = await fetch(entry.url);
+    if (!r.ok) throw new Error(`Font download failed: ${r.status}`);
+    const buf = Buffer.from(await r.arrayBuffer());
+    await writeFile(cachePath, buf);
+    return cachePath;
+  } catch (err) {
+    logger.error({ err }, "Failed to download caption font, falling back to system font");
+    for (const candidate of FONT_CANDIDATES) {
+      try {
+        await access(candidate);
+        return candidate;
+      } catch {
+        // try next
+      }
+    }
+    return null;
+  }
 }
 
 function escapeDrawtextPath(p: string): string {
   return p.replace(/\\/g, "\\\\").replace(/:/g, "\\:");
 }
 
-function hexToFfmpegColor(hex: string | null | undefined): string {
-  const fallback = "0xffffff";
+function hexToFfmpegColor(hex: string | null | undefined, fallback = "0x000000"): string {
   if (!hex) return fallback;
   const clean = hex.replace("#", "").trim();
   if (!/^[0-9a-fA-F]{6}$/.test(clean)) return fallback;
@@ -92,6 +122,12 @@ async function fetchBuffer(url: string): Promise<Buffer> {
   if (!r.ok) throw new Error(`Could not fetch ${url}`);
   return Buffer.from(await r.arrayBuffer());
 }
+
+// The font choices available in the caption render dropdown.
+router.get("/reel-captions/fonts", async (req: Request, res: Response) => {
+  const fonts = Object.entries(FONT_LIBRARY).map(([key, entry]) => ({ key, label: entry.label }));
+  res.json({ fonts, defaultFontKey: DEFAULT_FONT_KEY });
+});
 
 // List every submission, most recent first, with the client's brand colour
 // alongside so the captioning tool can default to it.
@@ -168,10 +204,10 @@ router.post("/reel-captions/submissions/:id/render", async (req: Request, res: R
     const chunks = (sub.transcript as unknown as Chunk[]) || [];
     if (!chunks.length) { res.status(400).json({ error: "No transcript yet — transcribe first" }); return; }
 
-    const [preset] = await db.select().from(clientPresetsTable).where(eq(clientPresetsTable.name, sub.clientName));
-    const color = hexToFfmpegColor(preset?.accentColor);
+    const { fontKey, boxColor: requestedBoxColor } = (req.body || {}) as { fontKey?: string; boxColor?: string };
+    const boxColor = hexToFfmpegColor(requestedBoxColor) || "0x000000";
 
-    const fontPath = await resolveFontPath();
+    const fontPath = await resolveFontPath(fontKey);
     if (!fontPath) { res.status(500).json({ error: "No system font available for captioning" }); return; }
 
     const videoBuf = await fetchBuffer(sub.videoUrl);
@@ -187,7 +223,7 @@ router.post("/reel-captions/submissions/:id/render", async (req: Request, res: R
       const safePath = escapeDrawtextPath(txtPath);
       const safeFont = escapeDrawtextPath(fontPath);
       filters.push(
-        `drawtext=fontfile='${safeFont}':textfile='${safePath}':fontsize=54:fontcolor=${color}:box=1:boxcolor=black@0.6:boxborderw=20:x=(w-text_w)/2:y=h-220:enable='between(t,${chunk.start},${chunk.end})'`
+        `drawtext=fontfile='${safeFont}':textfile='${safePath}':fontsize=54:fontcolor=white:box=1:boxcolor=${boxColor}@0.85:boxborderw=20:x=(w-text_w)/2:y=(h*2/3)-(text_h/2):enable='between(t,${chunk.start},${chunk.end})'`
       );
     }
 
