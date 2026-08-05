@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Loader2, AlertTriangle, CalendarDays, ChevronLeft, X, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star, FileText, Download, Newspaper, TrendingUp, Bell, BellOff, Gift, ChevronDown, Trophy } from "lucide-react";
+import { Loader2, AlertTriangle, CalendarDays, ChevronLeft, X, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star, FileText, Download, Newspaper, TrendingUp, Bell, BellOff, Gift, ChevronDown, Trophy, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { NewsList } from "@/pages/aesthetic-news";
 
@@ -281,10 +281,11 @@ const REEL_GROUPS: { heading: string; items: string[] }[] = [
 ];
 const REEL_TOTAL = REEL_GROUPS.reduce((n, g) => n + g.items.length, 0);
 
-type Tab = "reelsChallenge" | "upcoming" | "published" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus" | "rants" | "connect" | "activity" | "refer" | "brainstorm";
+type Tab = "reelsChallenge" | "uploadReel" | "upcoming" | "published" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus" | "rants" | "connect" | "activity" | "refer" | "brainstorm";
 
 const TAB_ICON: Record<Tab, React.ReactNode> = {
   reelsChallenge: <Trophy className="w-4 h-4" />,
+  uploadReel: <Upload className="w-4 h-4" />,
   upcoming: <CalendarDays className="w-4 h-4" />,
   published: <Download className="w-4 h-4" />,
   approvals: <ShieldCheck className="w-4 h-4" />,
@@ -404,6 +405,11 @@ export default function ClientPortal({ token }: { token: string }) {
   const [submissions, setSubmissions] = useState<Array<{ id: number; treatment: string; story: string; submitterName: string; status: string; createdAt: string }>>([]);
   const [recap, setRecap] = useState<{ monthLabel: string; postsThisMonth: number; submissionsThisMonth: number; reelsCompleted: number } | null>(null);
 
+  const [reelFile, setReelFile] = useState<File | null>(null);
+  const [reelUploading, setReelUploading] = useState(false);
+  const [reelSubmissions, setReelSubmissions] = useState<{ id: number; videoUrl: string; status: string; captionedVideoUrl: string | null; createdAt: string }[]>([]);
+  const [reelSubmissionsLoading, setReelSubmissionsLoading] = useState(true);
+  const reelFileRef = useRef<HTMLInputElement>(null);
   const [challengeItems, setChallengeItems] = useState<string[]>([]);
   const [challengeCompleted, setChallengeCompleted] = useState<Set<number>>(new Set());
   const [challengeLoading, setChallengeLoading] = useState(true);
@@ -428,6 +434,7 @@ export default function ClientPortal({ token }: { token: string }) {
   useEffect(() => {
     loadReelsChallenge();
     loadLeaderboard();
+    loadReelSubmissions();
   }, [token]);
   useEffect(() => {
     if (tab === "brainstorm") loadBrainstormSlots();
@@ -455,6 +462,31 @@ export default function ClientPortal({ token }: { token: string }) {
       .then((d) => setLeaderboard(Array.isArray(d.leaderboard) ? d.leaderboard : []))
       .catch(() => {})
       .finally(() => setLeaderboardLoading(false));
+  };
+  const loadReelSubmissions = () => {
+    fetch(`${BASE}api/portal/${token}/reel-submissions`)
+      .then((r) => r.json())
+      .then((d) => setReelSubmissions(Array.isArray(d.submissions) ? d.submissions : []))
+      .catch(() => {})
+      .finally(() => setReelSubmissionsLoading(false));
+  };
+  const uploadReel = async () => {
+    if (!reelFile) return;
+    setReelUploading(true);
+    try {
+      const form = new FormData();
+      form.append("video", reelFile);
+      const r = await fetch(`${BASE}api/portal/${token}/reel-submissions`, { method: "POST", body: form });
+      if (!r.ok) throw new Error("Upload failed, please try again.");
+      setReelFile(null);
+      if (reelFileRef.current) reelFileRef.current.value = "";
+      toast.success("Uploaded — I'll have captions back to you within 48 hours.");
+      loadReelSubmissions();
+    } catch (e: any) {
+      toast.error(e?.message || "Upload failed, please try again.");
+    } finally {
+      setReelUploading(false);
+    }
   };
   const toggleChallengeItem = (index: number) => {
     setChallengeCompleted((prev) => {
@@ -879,6 +911,13 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
             <Trophy className="w-4 h-4" />
             <span>Reels Challenge</span>
           </button>
+          <button
+            onClick={() => setTab("uploadReel")}
+            className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors ${tab === "uploadReel" ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"}`}
+          >
+            <Upload className="w-4 h-4" />
+            <span>Upload Reel</span>
+          </button>
           <TabBtn id="upcoming" label="Posts" />
           <TabBtn id="published" label="Past Posts" />
           <TabBtn id="homework" label="Homework" />
@@ -932,7 +971,71 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
       )}
 
       <main className="max-w-3xl mx-auto px-4 py-8">
-        {tab === "reelsChallenge" && (
+        {tab === "uploadReel" && (
+        <div className="space-y-4">
+          <div className="rounded-2xl overflow-hidden border border-pink-200">
+            <div className="bg-pink-600 px-5 py-4">
+              <h2 className="text-white font-extrabold text-lg">Upload your video</h2>
+            </div>
+            <div className="bg-white px-5 py-5 space-y-4">
+              <p className="text-sm text-gray-700">
+                Upload your raw 60-90 second reel to the portal and I'll add the captions, back to you within 48 hours.
+              </p>
+              <div>
+                <input
+                  ref={reelFileRef}
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => setReelFile(e.target.files?.[0] || null)}
+                  className="block w-full text-sm text-gray-600 file:mr-3 file:rounded-full file:border-0 file:bg-pink-100 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-pink-700 hover:file:bg-pink-200"
+                />
+              </div>
+              <button
+                onClick={uploadReel}
+                disabled={!reelFile || reelUploading}
+                className="w-full rounded-full bg-pink-600 text-white font-bold py-2.5 text-sm disabled:opacity-50 hover:bg-pink-500 transition-colors"
+              >
+                {reelUploading ? "Uploading..." : "Upload video"}
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-gray-200 bg-white p-5">
+            <h3 className="font-bold text-gray-900 mb-3">Your uploads</h3>
+            {reelSubmissionsLoading ? (
+              <p className="text-sm text-gray-500">Loading...</p>
+            ) : reelSubmissions.length === 0 ? (
+              <p className="text-sm text-gray-500">No uploads yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {reelSubmissions.map((s) => (
+                  <li key={s.id} className="flex items-center justify-between rounded-xl border border-gray-100 px-3 py-2">
+                    <span className="text-sm text-gray-700">
+                      {new Date(s.createdAt).toLocaleDateString()}
+                    </span>
+                    {s.status === "done" && s.captionedVideoUrl ? (
+                      <a
+                        href={s.captionedVideoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs font-bold text-pink-600 hover:underline"
+                      >
+                        Download captioned video
+                      </a>
+                    ) : (
+                      <span className="text-xs font-semibold text-gray-400">
+                        {s.status === "pending" ? "Awaiting captions" : s.status}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === "reelsChallenge" && (
           <section>
             <div className="rounded-2xl border-2 border-pink-600 bg-pink-950/20 p-5 mb-6">
               <div className="flex items-center gap-2 mb-3">
