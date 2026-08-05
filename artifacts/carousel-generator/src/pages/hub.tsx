@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions } from "lucide-react";
 import { LogOut } from "lucide-react";
 
 const TOOLS = [
@@ -73,6 +73,16 @@ description: "See how far every client has got through their 100 reel checklist,
 color: "from-violet-500/20 to-violet-500/5",
 border: "hover:border-violet-500/50",
 iconColor: "text-violet-400",
+},
+{
+href: "/reel-captioning",
+group: "today",
+icon: Captions,
+name: "Reel Captions",
+description: "Turn a client's raw uploaded reel into a captioned one — transcribe, edit the text, and burn it on in their chosen font and colours.",
+color: "from-pink-500/20 to-pink-500/5",
+border: "hover:border-pink-500/50",
+iconColor: "text-pink-400",
 },
 {
 href: "/bonus-content",
