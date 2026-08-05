@@ -516,11 +516,9 @@ router.patch("/portal/:token/posts/:id", async (req, res) => {
 
 // Lets a client bounce a post they don't want going out, with a short note
 // on why, so Vanessa can see the reason without a back-and-forth message.
-// Scheduler-sourced posts (id >= 900000000) get their status flipped to
-// "cancelled" so the scheduler engine skips them; the reason is stored in
-// the reusable notes column. Calendar-sourced posts aren't supported yet
-// (the calendar_posts status check constraint has no "cancelled"/"rejected"
-// value), so we return a clear 400 rather than silently failing.
+// Both scheduler-sourced posts (id >= 900000000) and calendar-sourced posts
+// get their status flipped to "cancelled" so they drop off the upcoming
+// list; the reason is stored in the reusable notes column either way.
 router.post("/portal/:token/posts/:id/reject", async (req, res) => {
   try {
     const { token } = req.params;
@@ -543,7 +541,12 @@ router.post("/portal/:token/posts/:id/reject", async (req, res) => {
         .where(eq(scheduledPostsTable.id, realId));
       res.json({ ok: true });
     } else {
-      res.status(400).json({ error: "This post can't be rejected from here yet. Please message Vanessa directly." });
+      const [updated] = await db.update(calendarPostsTable)
+        .set({ status: "cancelled", notes: `Rejected by client: ${reason.trim()}`, updatedAt: new Date() })
+        .where(and(eq(calendarPostsTable.id, id), eq(calendarPostsTable.clientName, preset.name)))
+        .returning();
+      if (!updated) { res.status(404).json({ error: "not_found" }); return; }
+      res.json({ ok: true });
     }
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to reject post" });
