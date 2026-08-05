@@ -189,6 +189,7 @@ router.post("/reel-captions/submissions/:id/transcribe", async (req: Request, re
     const transcription: any = await openai.audio.transcriptions.create({
       file,
       model: "whisper-1",
+      language: "en",
       response_format: "verbose_json",
       timestamp_granularities: ["word"],
     });
