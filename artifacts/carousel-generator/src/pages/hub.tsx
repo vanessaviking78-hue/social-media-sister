@@ -561,6 +561,7 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 export default function Hub() {
 const [newCount, setNewCount] = useState(0);
 const [hwCount, setHwCount] = useState(0);
+const [reelCaptionCount, setReelCaptionCount] = useState(0);
 const [activeGroup, setActiveGroup] = useState<"today" | "admin" | "content" | "carousel">("today");
 useEffect(() => {
 const pw = localStorage.getItem("cybersuite-pw") || "";
@@ -594,6 +595,23 @@ setHwCount(arr.filter((r: any) => r.set && r.set.status === "active").length);
 loadHw();
 const id = setInterval(loadHw, 60000);
 return () => clearInterval(id);
+}, []);
+
+useEffect(() => {
+const pw = localStorage.getItem("cybersuite-pw") || "";
+if (!pw) return;
+const loadReelCaptions = () => {
+fetch(`${BASE}/api/reel-captions/submissions`, { headers: { "x-app-password": pw, "Authorization": "Bearer " + pw } })
+.then((r) => (r.ok ? r.json() : { submissions: [] }))
+.then((d) => {
+const arr = Array.isArray(d.submissions) ? d.submissions : [];
+setReelCaptionCount(arr.filter((s: any) => s.status === "pending").length);
+})
+.catch(() => {});
+};
+loadReelCaptions();
+const id2 = setInterval(loadReelCaptions, 60000);
+return () => clearInterval(id2);
 }, []);
 return (
 <div className="min-h-[100dvh] w-full bg-background">
@@ -648,7 +666,7 @@ activeGroup === tab.key
 
 {/* Filtered grid */}
 <div className="grid grid-cols-4 gap-4">
-{TOOLS.filter((tool) => tool.group === activeGroup).map((tool) => <ToolCard key={tool.href} tool={tool} badge={tool.href === "/submissions" ? newCount : tool.href === "/homework" ? hwCount : 0} />)}
+{TOOLS.filter((tool) => tool.group === activeGroup).map((tool) => <ToolCard key={tool.href} tool={tool} badge={tool.href === "/submissions" ? newCount : tool.href === "/homework" ? hwCount : tool.href === "/reel-captioning" ? reelCaptionCount : 0} />)}
 </div>
 </main>
 
