@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy } from "lucide-react";
 import { LogOut } from "lucide-react";
 
 const TOOLS = [
@@ -83,6 +83,16 @@ description: "Turn a client's raw uploaded reel into a captioned one — transcr
 color: "from-pink-500/20 to-pink-500/5",
 border: "hover:border-pink-500/50",
 iconColor: "text-pink-400",
+},
+{
+href: "/reels-challenge-admin",
+group: "today",
+icon: Trophy,
+name: "Reels Challenge",
+description: "See who's smashing the 30 reel ideas and who needs a nudge, with a full leaderboard across every client.",
+color: "from-yellow-500/20 to-yellow-500/5",
+border: "hover:border-yellow-500/50",
+iconColor: "text-yellow-400",
 },
 {
 href: "/bonus-content",
