@@ -488,6 +488,17 @@ export const aiCustomPromptsTable = pgTable("ai_custom_prompts", {
 });
 export type AiCustomPrompt = typeof aiCustomPromptsTable.$inferSelect;
 
+// Tracks which items of the August "Reels Challenge" each clinic has ticked
+// off in their portal, so the leaderboard can rank clinics by how many
+// they've filmed. One row per client + item combo.
+export const reelsChallengeCompletionsTable = pgTable("reels_challenge_completions", {
+  id: serial("id").primaryKey(),
+  clientName: text("client_name").notNull(),
+  itemIndex: integer("item_index").notNull(),
+  completedAt: timestamp("completed_at").notNull().defaultNow(),
+});
+export type ReelsChallengeCompletion = typeof reelsChallengeCompletionsTable.$inferSelect;
+
 export const aiSourcePhotosTable = pgTable("ai_source_photos", {
   id: serial("id").primaryKey(),
   clientName: text("client_name").notNull().default(""),
