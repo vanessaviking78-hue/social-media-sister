@@ -42,6 +42,7 @@ await createBroadcastDraftsTable();
     await createReelsChallengeCompletionsTable();
     await createReelSubmissionsTable();
     await allowCancelledCalendarPostStatus();
+    await createRevenueIdeaPoolTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -58,6 +59,24 @@ async function allowCancelledCalendarPostStatus(): Promise<void> {
   await db.execute(sql`
     ALTER TABLE calendar_posts ADD CONSTRAINT calendar_posts_status_check
     CHECK (status IN ('draft', 'scheduled', 'posted', 'cancelled'))
+  `);
+}
+
+// A shared pool of generic revenue ideas (not tied to one clinic) that
+// Vanessa can approve once and have show up on every client's portal at
+// the same time, instead of approving the same idea 40 separate times.
+async function createRevenueIdeaPoolTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS revenue_idea_pool (
+      id SERIAL PRIMARY KEY,
+      week_of TEXT NOT NULL,
+      title TEXT NOT NULL DEFAULT '',
+      instructions TEXT NOT NULL DEFAULT '',
+      draft_content TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'draft',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
   `);
 }
 
