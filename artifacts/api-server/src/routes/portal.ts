@@ -1,9 +1,14 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { clientPresetsTable, calendarPostsTable, approvalBatchesTable, approvalImagesTable, scheduledPostsTable, homeworkQuestionSetsTable, homeworkRepliesTable, bonusContentTable, blogPostsTable, blogCommentsTable, reelsChallengeCompletionsTable } from "@workspace/db/schema";
+import { clientPresetsTable, calendarPostsTable, approvalBatchesTable, approvalImagesTable, scheduledPostsTable, homeworkQuestionSetsTable, homeworkRepliesTable, bonusContentTable, blogPostsTable, blogCommentsTable, reelsChallengeCompletionsTable, reelSubmissionsTable } from "@workspace/db/schema";
 import { eq, and, gte, lte, or, sql, desc, asc } from "drizzle-orm";
 import crypto from "crypto";
 import JSZip from "jszip";
+import multer from "multer";
+import { v4 as uuidv4 } from "uuid";
+import { objectStorageClient } from "../lib/objectStorage";
+
+const reelUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 300 * 1024 * 1024 } });
 import { getApprovedIdeasForClient } from "./revenue-ideas";
 import { getVapidPublicKey } from "../lib/push";
 import { notifyDownload, notifyRantComment } from "../lib/notify";
@@ -371,6 +376,51 @@ router.get("/portal/:token/reels-challenge/leaderboard", async (req, res) => {
     res.json({ leaderboard: (result as { rows?: unknown[] }).rows ?? [], total: REELS_CHALLENGE_ITEMS.length, you: preset.name });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to load leaderboard" });
+  }
+});
+
+// Client uploads a raw reel (60-90 seconds, no editing needed on their end)
+// for Vanessa to caption in the admin captioning tool. Just stores the file
+// and a pending row — the actual captioning happens admin-side.
+router.post("/portal/:token/reel-submissions", reelUpload.single("video"), async (req, res) => {
+  try {
+    const { token } = req.params;
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+    if (!req.file) { res.status(400).json({ error: "No video file provided" }); return; }
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    if (!bucketId) { res.status(500).json({ error: "Object storage not configured" }); return; }
+    const objectPath = `reel-submissions/${uuidv4()}-${(req.file.originalname || "reel.mp4").replace(/[^a-zA-Z0-9.\-_]/g, "-")}`;
+    await objectStorageClient.bucket(bucketId).file(objectPath).save(req.file.buffer, {
+      contentType: req.file.mimetype || "video/mp4",
+      metadata: { cacheControl: "public, max-age=31536000" },
+    });
+    const videoUrl = `/api/media/${objectPath}`;
+    const [row] = await db.insert(reelSubmissionsTable).values({
+      clientName: preset.name,
+      videoUrl,
+      status: "pending",
+    }).returning();
+    res.json({ ok: true, id: row?.id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to upload reel" });
+  }
+});
+
+// Client: their own upload history and status (pending / captions added).
+router.get("/portal/:token/reel-submissions", async (req, res) => {
+  try {
+    const { token } = req.params;
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+    const rows = await db.select().from(reelSubmissionsTable)
+      .where(eq(reelSubmissionsTable.clientName, preset.name))
+      .orderBy(desc(reelSubmissionsTable.createdAt));
+    res.json({ submissions: rows });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to load reel submissions" });
   }
 });
 
