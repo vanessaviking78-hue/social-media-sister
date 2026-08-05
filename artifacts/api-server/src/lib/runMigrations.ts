@@ -40,6 +40,7 @@ await createBroadcastDraftsTable();
     await updateShareFriendCommentCTA();
     await createAiCustomPromptsTable();
     await createReelsChallengeCompletionsTable();
+    await createReelSubmissionsTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -473,6 +474,20 @@ async function createReelsChallengeCompletionsTable(): Promise<void> {
       item_index INTEGER NOT NULL,
       completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE(client_name, item_index)
+    )
+  `);
+}
+
+async function createReelSubmissionsTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS reel_submissions (
+      id SERIAL PRIMARY KEY,
+      client_name TEXT NOT NULL,
+      video_url TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      transcript JSON,
+      captioned_video_url TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
 }
