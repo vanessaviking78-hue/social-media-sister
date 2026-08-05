@@ -499,6 +499,20 @@ export const reelsChallengeCompletionsTable = pgTable("reels_challenge_completio
 });
 export type ReelsChallengeCompletion = typeof reelsChallengeCompletionsTable.$inferSelect;
 
+// A raw reel a client has uploaded from their portal for Vanessa to caption.
+// transcript holds the word-by-word Whisper output ([{word,start,end}, ...])
+// once transcribed, edited in the admin captioning tool before rendering.
+export const reelSubmissionsTable = pgTable("reel_submissions", {
+  id: serial("id").primaryKey(),
+  clientName: text("client_name").notNull(),
+  videoUrl: text("video_url").notNull(),
+  status: text("status").notNull().default("pending"),
+  transcript: json("transcript"),
+  captionedVideoUrl: text("captioned_video_url"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type ReelSubmission = typeof reelSubmissionsTable.$inferSelect;
+
 export const aiSourcePhotosTable = pgTable("ai_source_photos", {
   id: serial("id").primaryKey(),
   clientName: text("client_name").notNull().default(""),
