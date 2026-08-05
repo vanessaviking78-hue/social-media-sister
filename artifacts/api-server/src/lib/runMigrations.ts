@@ -41,10 +41,24 @@ await createBroadcastDraftsTable();
     await createAiCustomPromptsTable();
     await createReelsChallengeCompletionsTable();
     await createReelSubmissionsTable();
+    await allowCancelledCalendarPostStatus();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
   }
+}
+
+// Lets a client's "reject" action on a calendar-sourced post actually
+// stick — the original check constraint only allowed draft/scheduled/posted,
+// so a rejected calendar post had nowhere valid to go.
+async function allowCancelledCalendarPostStatus(): Promise<void> {
+  await db.execute(sql`
+    ALTER TABLE calendar_posts DROP CONSTRAINT IF EXISTS calendar_posts_status_check
+  `);
+  await db.execute(sql`
+    ALTER TABLE calendar_posts ADD CONSTRAINT calendar_posts_status_check
+    CHECK (status IN ('draft', 'scheduled', 'posted', 'cancelled'))
+  `);
 }
 
 async function runNameLowerUniqueIndexMigration(): Promise<void> {
