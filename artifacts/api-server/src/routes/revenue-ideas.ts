@@ -159,9 +159,76 @@ export async function generateWeeklyRevenueIdeas(weekOf?: string): Promise<{ wee
   return { weekOf: week, created, skipped, failed };
 }
 
+// Generates a small batch of generic revenue ideas that aren't tied to any
+// one clinic — a shared pool Vanessa can approve once, rather than
+// approving the same idea separately for every single client.
+async function generateGenericIdeaPool(weekOf?: string, count = 5): Promise<GeneratedIdea[]> {
+  const week = weekOf || currentWeekOf();
+  const systemPrompt = `You are a social media and revenue strategist for aesthetic and wellness clinics, writing a shared batch of revenue ideas that could work for almost any clinic on the books, not one tailored to a single clinic's brand or audience.
+
+${NORTHERN_GRIT_VOICE}
+
+TASK
+Come up with ${count} fresh, distinct revenue ideas that would genuinely suit most medical aesthetics clinics. These are not weekly social media promos, they are genuine ways a clinic could make more money, the kind of thing a clinic owner would actually build and run for months, not a one-off post. Cover a spread of real revenue mechanics across the batch, for example recurring revenue (subscriptions, memberships, pre-paid plans), winning back lapsed clients with a specific mechanic, referral systems with real structure, VIP or loyalty tiers, and treatment bundles or upsells.
+
+Make sure all ${count} are genuinely different mechanics from each other. Avoid generic "book now" offers and avoid anything that reads like a nail bar or beauty salon deal, these are medical aesthetics clinics. Keep the wording generic enough that any clinic reading it could adapt it to their own brand and treatments.
+
+Return a JSON object with exactly this shape:
+
+{ "ideas": [ { "title": "...", "instructions": "...", "draftContent": "..." }, ... ${count} items total ... ] }
+
+title
+A short, punchy name for the idea. Max 8 words.
+
+instructions
+A brief written directly to a clinic owner explaining the idea and how to actually set it up and run it, in the voice above. 4-6 sentences. Practical and specific: what it is, roughly how it would work operationally (pricing structure, who it targets, how it gets communicated), and why it makes sense. No fluff.
+
+draftContent
+A ready-to-use piece of copy (a social caption, email, or short post) announcing or promoting the idea, that a clinic could post or send as-is or lightly tweak. 4-6 sentences.
+${COMPLIANCE_RULES}`;
+
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `Generate ${count} generic revenue ideas now.` },
+    ],
+    response_format: { type: "json_object" },
+    temperature: 0.9,
+    max_tokens: 2600,
+  });
+
+  const raw = completion.choices[0]?.message?.content ?? "{}";
+  let parsed: { ideas?: Partial<GeneratedIdea>[] } = {};
+  try {
+    parsed = JSON.parse(raw) as { ideas?: Partial<GeneratedIdea>[] };
+  } catch {
+    logger.warn({ raw }, "revenue-ideas: failed to parse generic pool AI JSON");
+  }
+  return (parsed.ideas || []).slice(0, count).map((idea) => ({
+    title: idea.title || "A revenue idea",
+    instructions: idea.instructions || "",
+    draftContent: idea.draftContent || "",
+  }));
+}
+
+export async function generateIdeaPool(weekOf?: string, count = 5): Promise<{ weekOf: string; created: number }> {
+  const week = weekOf || currentWeekOf();
+  const ideas = await generateGenericIdeaPool(week, count);
+  for (const idea of ideas) {
+    await db.execute(sql`
+      INSERT INTO revenue_idea_pool (week_of, title, instructions, draft_content, status)
+      VALUES (${week}, ${idea.title}, ${idea.instructions}, ${idea.draftContent}, 'draft')
+    `);
+  }
+  logger.info({ week, created: ideas.length }, "Generic revenue idea pool generation complete");
+  return { weekOf: week, created: ideas.length };
+}
+
 // Used by the client portal route to show the client every idea approved for
 // them so far, newest week first, so ideas build up over time rather than
-// disappearing once the week ends.
+// disappearing once the week ends. Also folds in any approved ideas from the
+// shared generic pool, since those go out to every client at once.
 export async function getApprovedIdeasForClient(clientName: string): Promise<Array<{ title: string; instructions: string; draftContent: string; weekOf: string }>> {
   const result = await db.execute(sql`
     SELECT title, instructions, draft_content, week_of FROM revenue_ideas
@@ -169,8 +236,79 @@ export async function getApprovedIdeasForClient(clientName: string): Promise<Arr
     ORDER BY week_of DESC, idea_index ASC
   `);
   const rows = (result as { rows?: any[] }).rows ?? [];
-  return rows.map((row) => ({ title: row.title, instructions: row.instructions, draftContent: row.draft_content, weekOf: row.week_of }));
+  const own = rows.map((row) => ({ title: row.title, instructions: row.instructions, draftContent: row.draft_content, weekOf: row.week_of }));
+
+  const poolResult = await db.execute(sql`
+    SELECT title, instructions, draft_content, week_of FROM revenue_idea_pool
+    WHERE status = 'approved'
+    ORDER BY week_of DESC, id ASC
+  `);
+  const poolRows = (poolResult as { rows?: any[] }).rows ?? [];
+  const pool = poolRows.map((row) => ({ title: row.title, instructions: row.instructions, draftContent: row.draft_content, weekOf: row.week_of }));
+
+  return [...own, ...pool].sort((a, b) => (b.weekOf || "").localeCompare(a.weekOf || ""));
 }
+
+// Generic pool: one shared batch, approve-once-applies-to-all-clients.
+router.post("/revenue-ideas/pool/generate", requireAuth, async (req, res) => {
+  try {
+    const { weekOf, count } = req.body as { weekOf?: string; count?: number };
+    const result = await generateIdeaPool(weekOf, count && count > 0 ? count : 5);
+    res.json(result);
+  } catch (err: any) {
+    logger.error({ err }, "revenue-ideas: pool generate endpoint failed");
+    res.status(500).json({ error: err.message || "Failed to generate idea pool" });
+  }
+});
+
+router.get("/revenue-ideas/pool", requireAuth, async (req, res) => {
+  try {
+    const result = await db.execute(sql`
+      SELECT * FROM revenue_idea_pool ORDER BY created_at DESC
+    `);
+    res.json({ ideas: (result as { rows?: any[] }).rows ?? [] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to list idea pool" });
+  }
+});
+
+router.patch("/revenue-ideas/pool/:id", requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+    const { title, instructions, draftContent, status } = req.body as { title?: string; instructions?: string; draftContent?: string; status?: string };
+    if (status && !["draft", "approved", "rejected"].includes(status)) {
+      res.status(400).json({ error: "Status must be draft, approved or rejected" });
+      return;
+    }
+    const result = await db.execute(sql`
+      UPDATE revenue_idea_pool SET
+        title = COALESCE(${title ?? null}, title),
+        instructions = COALESCE(${instructions ?? null}, instructions),
+        draft_content = COALESCE(${draftContent ?? null}, draft_content),
+        status = COALESCE(${status ?? null}, status),
+        updated_at = NOW()
+      WHERE id = ${id}
+      RETURNING *
+    `);
+    const rows = (result as { rows?: any[] }).rows ?? [];
+    if (!rows.length) { res.status(404).json({ error: "Idea not found" }); return; }
+    res.json(rows[0]);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to update pool idea" });
+  }
+});
+
+router.delete("/revenue-ideas/pool/:id", requireAuth, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+    await db.execute(sql`DELETE FROM revenue_idea_pool WHERE id = ${id}`);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to delete pool idea" });
+  }
+});
 
 router.post("/revenue-ideas/generate", requireAuth, async (req, res) => {
   try {
