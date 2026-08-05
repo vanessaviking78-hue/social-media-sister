@@ -754,7 +754,7 @@ export function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave,
                         // never matched the actual exported slide.
                         lineHeight: st.lineH * LOCKED_LINE_SPACING,
                         color: tc,
-                        textShadow: "0 2px 12px rgba(0,0,0,0.95)",
+                        textShadow: "none",
                         whiteSpace: "pre-wrap",
                         wordBreak: "break-word",
                         display: "block",
