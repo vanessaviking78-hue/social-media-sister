@@ -39,6 +39,7 @@ await createBroadcastDraftsTable();
             await addHookSubheadingStyleColumns();
     await updateShareFriendCommentCTA();
     await createAiCustomPromptsTable();
+    await createReelsChallengeCompletionsTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -460,6 +461,18 @@ async function createAiCustomPromptsTable(): Promise<void> {
       name TEXT NOT NULL,
       prompt_text TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
+async function createReelsChallengeCompletionsTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS reels_challenge_completions (
+      id SERIAL PRIMARY KEY,
+      client_name TEXT NOT NULL,
+      item_index INTEGER NOT NULL,
+      completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(client_name, item_index)
     )
   `);
 }
