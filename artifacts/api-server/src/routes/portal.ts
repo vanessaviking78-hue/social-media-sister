@@ -329,6 +329,53 @@ router.get("/portal/:token/reels-challenge", async (req, res) => {
   }
 });
 
+// Client: generate a 60-90 second script for one reel idea, in the
+// client's brand voice (falls back to a friendly professional-with-
+// personality default until they've set their own via brandNotes).
+// Formatted with [PAUSE] markers so they can stop the camera, compose
+// themselves, and pick the next line back up without needing to nail
+// the whole thing in one take.
+router.post("/portal/:token/reels-challenge/:index/script", async (req, res) => {
+  try {
+    const { token, index } = req.params;
+    const itemIndex = Number(index);
+    if (!Number.isInteger(itemIndex) || itemIndex < 0 || itemIndex >= REELS_CHALLENGE_ITEMS.length) {
+      res.status(400).json({ error: "Invalid item" }); return;
+    }
+    const [preset] = await db.select().from(clientPresetsTable)
+      .where(eq(clientPresetsTable.clientPortalToken, token));
+    if (!preset) { res.status(404).json({ error: "not_found" }); return; }
+
+    const title = REELS_CHALLENGE_ITEMS[itemIndex];
+    const brandVoice = (preset.brandNotes && preset.brandNotes.trim()) || "professional with personality";
+
+    const systemPrompt = [
+      `You write short-form video scripts for aesthetics and beauty clinic owners to film on their phone.`,
+      `Write a script for a reel titled "${title}".`,
+      `Brand voice: ${brandVoice}.`,
+      `Length: it must read aloud in 60-90 seconds at a natural conversational pace (roughly 150-220 words of actual spoken content, not counting the [PAUSE] markers).`,
+      `Structure it as short, punchy lines the way someone actually talks on camera, not as paragraphs.`,
+      `After every one or two sentences, insert a line that says exactly [PAUSE] on its own, with a blank line above and below it. Use [PAUSE] roughly 4-6 times through the whole script so they have natural stopping points.`,
+      `Do not explain what [PAUSE] means inside the script itself, that instruction is added separately by the app.`,
+      `Do not use hashtags, emojis, or camera directions. Just the spoken words and the [PAUSE] markers.`,
+    ].join(" ");
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: "Write the script now." },
+      ],
+      temperature: 0.85,
+      max_tokens: 700,
+    });
+    const script = completion.choices[0]?.message?.content?.trim() || "";
+    res.json({ script });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to write script" });
+  }
+});
+
 // Client: tick/untick one item. Toggles rather than a bulk save, since this
 // also has to keep the cross-client leaderboard accurate in real time.
 router.post("/portal/:token/reels-challenge/:index/toggle", async (req, res) => {
