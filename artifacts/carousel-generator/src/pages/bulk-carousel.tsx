@@ -92,7 +92,7 @@ export const SLIDE_BLOCK_IDS: Record<number, BlockId[]> = {
 type BlockStyle = { font: string; size: number; lineH: number; maxW: number; label: string };
 
 export const BLOCK_STYLE: Record<BlockId, BlockStyle> = {
-  hook:     { font: '"Bebas Neue"',  size: 108, lineH: 1.10, maxW: W - 120, label: "Hook"     },
+  hook:     { font: '"Bebas Neue"',  size: 108, lineH: 1.10, maxW: W - 180, label: "Hook"     },
   subtitle: { font: '"Poppins"',     size:  44, lineH: 1.40, maxW: W - 180, label: "Subtitle" },
   body2:    { font: '"Poppins"',     size:  50, lineH: 1.50, maxW: W - 160, label: "Body"     },
   body3:    { font: '"Poppins"',     size:  50, lineH: 1.50, maxW: W - 160, label: "Body"     },
