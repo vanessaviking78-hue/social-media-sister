@@ -984,10 +984,13 @@ export default function BulkCarousel() {
       const hookFontName = (selectedPreset.fontFamily || "Bebas Neue").replace(/["']/g, "").split(",")[0].trim();
       const subFontName = (selectedPreset.subheadingFont || "Poppins").replace(/["']/g, "").split(",")[0].trim();
       try {
-        await Promise.all([
-          document.fonts.load(`700 100px "${hookFontName}"`),
-          document.fonts.load(`400 100px "${subFontName}"`),
-        ]);
+        const wantedFamilies = [hookFontName.toLowerCase(), subFontName.toLowerCase()];
+        const facesToLoad: any[] = [];
+        document.fonts.forEach((face: any) => {
+          const fam = String(face.family).replace(/["']/g, "").toLowerCase();
+          if (wantedFamilies.includes(fam)) facesToLoad.push(face);
+        });
+        await Promise.all(facesToLoad.map((face: any) => face.load().catch(() => {})));
       } catch {}
       await document.fonts.ready;
 
