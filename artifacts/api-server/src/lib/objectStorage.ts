@@ -82,11 +82,13 @@ function signedUrlForKey(key: string, ttlSec: number): string {
   const baseUrl = `${getUrlEndpoint()}/${cleanKey}`;
   const signature = createHmac("sha1", getPrivateKey()).update(baseUrl + expire).digest("hex");
   // Videos: skip ImageKit's video processing pipeline entirely and serve the
-  // raw uploaded file. Every video request otherwise counts against the
-  // account's video transformation quota, even with no transform params in
-  // the URL, since ImageKit's video CDN processes on delivery by default.
+  // raw uploaded file via ImageKit's documented "orig-true" transformation,
+  // passed as a real transformation ("tr=orig-true"), not a made-up flag.
+  // Every video request otherwise counts against the account's video
+  // transformation quota, even with no transform params in the URL, since
+  // ImageKit's video CDN processes on delivery by default.
   const isVideo = /\.(mp4|mov|webm|m4v|avi)$/i.test(cleanKey);
-  const originalFlag = isVideo ? "&ik-original=true" : "";
+  const originalFlag = isVideo ? "&tr=orig-true" : "";
   return `${baseUrl}?ik-t=${expire}&ik-s=${signature}${originalFlag}`;
 }
 
