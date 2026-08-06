@@ -984,13 +984,12 @@ export default function BulkCarousel() {
       const hookFontName = (selectedPreset.fontFamily || "Bebas Neue").replace(/["']/g, "").split(",")[0].trim();
       const subFontName = (selectedPreset.subheadingFont || "Poppins").replace(/["']/g, "").split(",")[0].trim();
       try {
-        const wantedFamilies = [hookFontName.toLowerCase(), subFontName.toLowerCase()];
-        const facesToLoad: any[] = [];
-        document.fonts.forEach((face: any) => {
-          const fam = String(face.family).replace(/["']/g, "").toLowerCase();
-          if (wantedFamilies.includes(fam)) facesToLoad.push(face);
-        });
-        await Promise.all(facesToLoad.map((face: any) => face.load().catch(() => {})));
+        const sampleHookText = (csvRows.map((r: any) => String(r.slide1_hook || "")).join(" ") || "SAMPLE TEXT").toUpperCase();
+        const sampleSubText = csvRows.map((r: any) => String(r.slide1_subtitle || "")).join(" ") || "sample text";
+        await Promise.all([
+          document.fonts.load(`700 100px "${hookFontName}"`, sampleHookText),
+          document.fonts.load(`400 100px "${subFontName}"`, sampleSubText),
+        ]);
       } catch {}
       await document.fonts.ready;
 
