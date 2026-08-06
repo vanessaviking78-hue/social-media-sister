@@ -79,9 +79,9 @@ function publicUrlForKey(key: string): string {
 function signedUrlForKey(key: string, ttlSec: number): string {
   const cleanKey = key.replace(/^\/+/, "");
   const expire = Math.floor(Date.now() / 1000) + (ttlSec > 0 ? ttlSec : 300);
-  const baseUrl = `${getUrlEndpoint()}/${cleanKey}?ik-t=${expire}`;
-  const signature = createHmac("sha1", getPrivateKey()).update(baseUrl).digest("hex");
-  return `${baseUrl}&ik-s=${signature}`;
+  const baseUrl = `${getUrlEndpoint()}/${cleanKey}`;
+  const signature = createHmac("sha1", getPrivateKey()).update(baseUrl + expire).digest("hex");
+  return `${baseUrl}?ik-t=${expire}&ik-s=${signature}`;
 }
 
 export class ObjectNotFoundError extends Error {
