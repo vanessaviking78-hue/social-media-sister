@@ -1,6 +1,6 @@
 import type { File } from "@google-cloud/storage";
 import { Readable, PassThrough } from "stream";
-import { randomUUID } from "crypto";
+import { randomUUID, createHmac } from "crypto";
 import {
   ObjectAclPolicy,
   ObjectPermission,
@@ -74,6 +74,14 @@ function splitKey(key: string): { folder: string; fileName: string } {
 
 function publicUrlForKey(key: string): string {
   return `${getUrlEndpoint()}/${key.replace(/^\/+/, "")}`;
+}
+
+function signedUrlForKey(key: string, ttlSec: number): string {
+  const cleanKey = key.replace(/^\/+/, "");
+  const expire = Math.floor(Date.now() / 1000) + (ttlSec > 0 ? ttlSec : 300);
+  const baseUrl = `${getUrlEndpoint()}/${cleanKey}?ik-t=${expire}`;
+  const signature = createHmac("sha1", getPrivateKey()).update(baseUrl).digest("hex");
+  return `${baseUrl}&ik-s=${signature}`;
 }
 
 export class ObjectNotFoundError extends Error {
@@ -373,5 +381,5 @@ export async function signObjectURL({
       `signObjectURL only supports reads on ImageKit storage (got ${method}).`
     );
   }
-  return publicUrlForKey(objectName);
+  return signedUrlForKey(objectName, _ttlSec);
 }
