@@ -1066,6 +1066,11 @@ export default function BulkCarousel() {
     }
   };
 
+  const deleteItem = (id: string) => {
+    setItems((prev) => prev.filter((it) => it.id !== id));
+    toast.success("Carousel removed.");
+  };
+
   const downloadAll = async () => {
     const tid = toast.loading("Building ZIP...");
     try {
@@ -1527,6 +1532,13 @@ export default function BulkCarousel() {
                       ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                       : <Sparkles className="w-3.5 h-3.5 mr-1.5" />}
                     Caption
+                  </Button>
+                  <Button
+                    variant="outline" size="sm"
+                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                    onClick={() => deleteItem(item.id)}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />Delete
                   </Button>
                 </div>
               </div>
