@@ -413,6 +413,9 @@ export default function ClientPortal({ token }: { token: string }) {
   const [challengeItems, setChallengeItems] = useState<string[]>([]);
   const [challengeCompleted, setChallengeCompleted] = useState<Set<number>>(new Set());
   const [challengeLoading, setChallengeLoading] = useState(true);
+  const [reelScripts, setReelScripts] = useState<Record<number, string>>({});
+  const [reelScriptBusy, setReelScriptBusy] = useState<number | null>(null);
+  const [reelScriptOpen, setReelScriptOpen] = useState<number | null>(null);
   const [leaderboard, setLeaderboard] = useState<{ clientName: string; count: number }[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [ticked, setTicked] = useState<Record<number, boolean>>({});
@@ -497,6 +500,25 @@ export default function ClientPortal({ token }: { token: string }) {
     fetch(`${BASE}api/portal/${token}/reels-challenge/${index}/toggle`, { method: "POST" })
       .then(() => loadLeaderboard())
       .catch(() => {});
+  };
+
+  const generateReelScript = (index: number) => {
+    setReelScriptOpen(index);
+    if (reelScripts[index]) return;
+    setReelScriptBusy(index);
+    fetch(`${BASE}api/portal/${token}/reels-challenge/${index}/script`, { method: "POST" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.error) { toast.error(d.error || "Could not write the script"); return; }
+        setReelScripts((prev) => ({ ...prev, [index]: d.script || "" }));
+      })
+      .catch(() => toast.error("Could not write the script"))
+      .finally(() => setReelScriptBusy(null));
+  };
+  const copyReelScript = (index: number) => {
+    const script = reelScripts[index];
+    if (!script) return;
+    navigator.clipboard.writeText(script).then(() => toast.success("Script copied."));
   };
 
   const loadRantComments = (postId: number) => {
@@ -1061,10 +1083,39 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
             ) : (
               <div className="space-y-2 mb-8">
                 {challengeItems.map((idea, i) => (
-                  <button key={i} onClick={() => toggleChallengeItem(i)} className={"w-full text-left flex items-start gap-3 rounded-xl border px-4 py-3 transition-colors " + (challengeCompleted.has(i) ? "border-pink-700/50 bg-pink-950/20" : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-700")}>
-                    {challengeCompleted.has(i) ? <CheckCircle2 className="w-5 h-5 text-pink-500 shrink-0 mt-0.5" /> : <Circle className="w-5 h-5 text-zinc-600 shrink-0 mt-0.5" />}
-                    <span className={"text-sm " + (challengeCompleted.has(i) ? "text-zinc-500 line-through" : "text-white")}>{idea}</span>
-                  </button>
+<div className={"w-full rounded-xl border px-4 py-3 transition-colors " + (challengeCompleted.has(i) ? "border-pink-700/50 bg-pink-950/20" : "border-zinc-800 bg-zinc-900/50")}>
+                  <div className="flex items-start gap-3">
+                    <button onClick={() => toggleChallengeItem(i)} className="flex items-start gap-3 flex-1 text-left">
+                      {challengeCompleted.has(i) ? <CheckCircle2 className="w-5 h-5 text-pink-500 shrink-0 mt-0.5" /> : <Circle className="w-5 h-5 text-zinc-600 shrink-0 mt-0.5" />}
+                      <span className={"text-sm " + (challengeCompleted.has(i) ? "text-zinc-500 line-through" : "text-white")}>{idea}</span>
+                    </button>
+                    <button onClick={() => generateReelScript(i)} className="shrink-0 text-xs font-semibold text-pink-400 hover:text-pink-300 border border-pink-700/50 rounded-full px-3 py-1">
+                      {reelScriptOpen === i ? "Hide script" : "Script"}
+                    </button>
+                  </div>
+                  {reelScriptOpen === i && (
+                    <div className="mt-3 pt-3 border-t border-zinc-800">
+                      {reelScriptBusy === i ? (
+                        <div className="flex items-center gap-2 text-xs text-zinc-400 py-2"><Loader2 className="w-4 h-4 animate-spin" /> Writing your script...</div>
+                      ) : (
+                        <>
+                          <p className="text-xs text-zinc-500 mb-2">
+                            When you hit a line that says <span className="text-pink-400 font-semibold">[PAUSE]</span>, stop the camera, take a breath and reset yourself, then press record again for the next line. It's how you get a clean take without needing to nail it all in one go.
+                          </p>
+                          <div className="rounded-lg bg-zinc-950/60 border border-zinc-800 p-3 space-y-2 mb-2 max-h-72 overflow-y-auto">
+                            {(reelScripts[i] || "").split(/\n+/).filter(Boolean).map((line, li) => (
+                              <p key={li} className={line.trim() === "[PAUSE]" ? "text-xs font-bold text-pink-400 text-center py-1" : "text-sm text-zinc-200 leading-relaxed"}>{line}</p>
+                            ))}
+                          </div>
+                          <div className="flex gap-2">
+                            <button onClick={() => copyReelScript(i)} className="text-xs font-semibold text-white bg-pink-600 hover:bg-pink-500 rounded-full px-3 py-1.5">Copy script</button>
+                            <button onClick={() => setReelScriptOpen(null)} className="text-xs font-semibold text-zinc-400 hover:text-white rounded-full px-3 py-1.5">Close</button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
                 ))}
               </div>
             )}
