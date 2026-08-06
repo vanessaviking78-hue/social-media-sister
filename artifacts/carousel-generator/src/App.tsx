@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthGate } from "@/components/auth-gate";
 import NotFound from "@/pages/not-found";
 import NinetyNineClub from "@/pages/ninety-nine-club";
+import PublicRants from "@/pages/rants-feed";
 import Coffee from "@/pages/coffee";
 import DailyFocus from "@/pages/daily-focus";
 import Hub from "@/pages/hub";
@@ -206,6 +207,7 @@ function AppContent() {
   const [isBundle, bundleParams] = useRoute("/bundle/:token");
   const [isFounderSignup] = useRoute("/founder-signup");
     const [isNinetyNineClub] = useRoute("/99club");
+    const [isPublicRants] = useRoute("/rants");
     const [isCoffee] = useRoute("/coffee");
   const [isFounderWelcome] = useRoute("/founder-welcome");
   const [isTrialBundle] = useRoute("/trialbundle");
@@ -285,6 +287,9 @@ function AppContent() {
   }
     if (isNinetyNineClub) {
           return <NinetyNineClub />;
+    }
+    if (isPublicRants) {
+          return <PublicRants />;
     }
     if (isCoffee) {
           return <Coffee />;
