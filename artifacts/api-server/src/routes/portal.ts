@@ -11,7 +11,7 @@ import { objectStorageClient } from "../lib/objectStorage";
 const reelUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 300 * 1024 * 1024 } });
 import { getApprovedIdeasForClient } from "./revenue-ideas";
 import { getVapidPublicKey } from "../lib/push";
-import { notifyDownload, notifyRantComment } from "../lib/notify";
+import { notifyDownload, notifyRantComment, notifyReject } from "../lib/notify";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { BASE_RULES } from "./caption-generator";
 
@@ -539,6 +539,7 @@ router.post("/portal/:token/posts/:id/reject", async (req, res) => {
       await db.update(scheduledPostsTable)
         .set({ status: "cancelled", notes: `Rejected by client: ${reason.trim()}`, updatedAt: new Date() })
         .where(eq(scheduledPostsTable.id, realId));
+        notifyReject({ clientName: preset.name, title: (sp.content as any)?.title || "a scheduled post", reason: reason.trim() }).catch(() => {});
       res.json({ ok: true });
     } else {
       const [updated] = await db.update(calendarPostsTable)
@@ -546,6 +547,7 @@ router.post("/portal/:token/posts/:id/reject", async (req, res) => {
         .where(and(eq(calendarPostsTable.id, id), eq(calendarPostsTable.clientName, preset.name)))
         .returning();
       if (!updated) { res.status(404).json({ error: "not_found" }); return; }
+        notifyReject({ clientName: preset.name, title: (updated as any)?.title || "a scheduled post", reason: reason.trim() }).catch(() => {});
       res.json({ ok: true });
     }
   } catch (err: any) {
