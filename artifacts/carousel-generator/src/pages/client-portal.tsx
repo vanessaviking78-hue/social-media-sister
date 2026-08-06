@@ -479,7 +479,7 @@ export default function ClientPortal({ token }: { token: string }) {
     try {
       const form = new FormData();
       form.append("video", reelFile);
-      const r = await fetch(`${BASE}api/portal/${token}/reel-submissions`, { method: "POST", body: form });
+      const r = await fetch(`https://workspaceapi-server-production-0f0d.up.railway.app/api/portal/${token}/reel-submissions`, { method: "POST", body: form });
       if (!r.ok) throw new Error("Upload failed, please try again.");
       setReelFile(null);
       if (reelFileRef.current) reelFileRef.current.value = "";
