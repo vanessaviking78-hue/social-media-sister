@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { blogPostsTable, blogCommentsTable } from "@workspace/db/schema";
 import { eq, desc, asc } from "drizzle-orm";
+import { notifyRantComment } from "../lib/notify";
 
 const router: IRouter = Router();
 
@@ -36,6 +37,24 @@ router.get("/blog-posts/:id/comments", async (req, res) => {
       .where(eq(blogCommentsTable.blogPostId, id))
       .orderBy(asc(blogCommentsTable.createdAt));
     res.json({ comments });
+
+// Public: leave a comment from the shareable rants page (no client token needed).
+router.post("/blog-posts/:id/comments", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { comment, clientName } = req.body as { comment?: string; clientName?: string };
+    if (!comment?.trim()) { res.status(400).json({ error: "Say something first." }); return; }
+    const [post] = await db.select().from(blogPostsTable).where(eq(blogPostsTable.id, id));
+    const name = (clientName || "").trim() || "A client";
+    const [saved] = await db.insert(blogCommentsTable)
+      .values({ blogPostId: id, clientName: name, comment: comment.trim() })
+      .returning();
+    notifyRantComment({ clientName: name, postTitle: post?.title, comment: comment.trim() }).catch(() => {});
+    res.status(201).json({ comment: saved });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to save comment" });
+  }
+});
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to load comments" });
   }
