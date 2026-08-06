@@ -304,6 +304,7 @@ export function renderSlideCanvas(
     ctx.shadowBlur   = 0;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
+    // force-rebuild-marker 1785997150350
 
     if (slideNum === 1) {
       // ── Slide 1 layout — positions driven by block.x / block.y ──────────────
