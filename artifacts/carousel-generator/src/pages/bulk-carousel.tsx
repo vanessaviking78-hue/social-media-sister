@@ -976,6 +976,19 @@ export default function BulkCarousel() {
     setRendering(true);
     setRenderProgress(0);
     try {
+      // Explicitly force the actual webfonts to load before measuring/drawing on canvas.
+      // document.fonts.ready alone resolves even when a @font-face has never been
+      // triggered to load (canvas text doesn't trigger a lazy webfont load the way
+      // on-screen DOM text does), which was letting the very first generate in a
+      // session silently fall back to a system font and wrap differently than the editor.
+      const hookFontName = (selectedPreset.fontFamily || "Bebas Neue").replace(/["']/g, "").split(",")[0].trim();
+      const subFontName = (selectedPreset.subheadingFont || "Poppins").replace(/["']/g, "").split(",")[0].trim();
+      try {
+        await Promise.all([
+          document.fonts.load(`700 100px "${hookFontName}"`),
+          document.fonts.load(`400 100px "${subFontName}"`),
+        ]);
+      } catch {}
       await document.fonts.ready;
 
       let logoImg: HTMLImageElement | null = null;
