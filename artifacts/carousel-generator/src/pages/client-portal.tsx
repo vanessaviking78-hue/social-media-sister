@@ -281,7 +281,7 @@ const REEL_GROUPS: { heading: string; items: string[] }[] = [
 ];
 const REEL_TOTAL = REEL_GROUPS.reduce((n, g) => n + g.items.length, 0);
 
-type Tab = "reelsChallenge" | "uploadReel" | "upcoming" | "published" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus" | "rants" | "connect" | "activity" | "refer" | "brainstorm";
+type Tab = "reelsChallenge" | "uploadReel" | "toolRequest" | "upcoming" | "published" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus" | "rants" | "connect" | "activity" | "refer" | "brainstorm";
 
 const TAB_ICON: Record<Tab, React.ReactNode> = {
   reelsChallenge: <Trophy className="w-4 h-4" />,
@@ -358,6 +358,12 @@ export default function ClientPortal({ token }: { token: string }) {
   const [reqBusy, setReqBusy] = useState(false);
   const [reqDone, setReqDone] = useState(false);
   const [reqErr, setReqErr] = useState("");
+
+  const [toolReqText, setToolReqText] = useState("");
+  const [toolReqName, setToolReqName] = useState("");
+  const [toolReqBusy, setToolReqBusy] = useState(false);
+  const [toolReqDone, setToolReqDone] = useState(false);
+  const [toolReqErr, setToolReqErr] = useState("");
 
   const [hwSet, setHwSet] = useState<{ id: number; question1: string; question2: string; question3: string; question4?: string; question5?: string; question6?: string; question7?: string; question8?: string; question9?: string; question10?: string } | null>(null);
   const [hwA1, setHwA1] = useState("");
@@ -826,6 +832,19 @@ export default function ClientPortal({ token }: { token: string }) {
     }
   };
   const submitRequest = async () => { setReqErr(""); if (!reqText.trim()) { setReqErr("Tell us what you'd like a post about."); return; } setReqBusy(true); try { let inspoUrl = ""; if (reqImage) inspoUrl = await uploadOne(reqImage); await send({ beforeUrl: inspoUrl, afterUrl: "", treatment: "POST REQUEST", story: reqText, submitterName: reqName }); setReqDone(true); } catch (e: any) { setReqErr(e?.message || "Something went wrong."); } finally { setReqBusy(false); } };
+  const submitToolRequest = async () => {
+    setToolReqErr("");
+    if (!toolReqText.trim()) { setToolReqErr("Tell us what tool you'd like."); return; }
+    setToolReqBusy(true);
+    try {
+      await send({ beforeUrl: "", afterUrl: "", treatment: "TOOL REQUEST", story: toolReqText, submitterName: toolReqName });
+      setToolReqDone(true);
+    } catch (e: any) {
+      setToolReqErr(e?.message || "Something went wrong.");
+    } finally {
+      setToolReqBusy(false);
+    }
+  };
   const submitOnboarding = async () => {
     setObErr("");
     if (!obTreatments.trim() && !obAbout.trim() && !obLogo) { setObErr("Add your treatments, a bit about you, or your logo."); return; }
@@ -950,6 +969,7 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
           <TabBtn id="ba" label="Before & After" />
           <TabBtn id="selfies" label="Selfies" />
           <TabBtn id="request" label="Request a post" />
+          <TabBtn id="toolRequest" label="Request a tool" />
           <TabBtn id="reviews" label="Reviews" />
           <TabBtn id="onboarding" label="Get set up" />
           <TabBtn id="reels" label="100 Reels" />
@@ -1529,6 +1549,21 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
                 <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Your name</label><input value={reqName} onChange={(e) => setReqName(e.target.value)} placeholder="So we know who sent it" className={inputCls} /></div>
                 {reqErr && <p className="text-sm text-red-400">{reqErr}</p>}
                 <button onClick={submitRequest} disabled={reqBusy} className={sendBtn}>{reqBusy ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : SEND_LABEL}</button>
+              </div>
+            )}
+          </section>
+        )}
+
+        {tab === "toolRequest" && (
+          <section>
+            <div className="flex items-center gap-2 mb-2"><MessageSquarePlus className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Request a Tool</h2></div>
+            <p className="text-sm text-zinc-400 mb-6">Something missing from your portal that would make your life easier? Tell me what you're after and I'll see what I can build.</p>
+            {toolReqDone ? (<DoneCard label="Want to request another one?" onAgain={() => { setToolReqDone(false); setToolReqText(""); setToolReqName(""); }} />) : (
+              <div className="space-y-5">
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">What tool or feature would you like?</label><textarea value={toolReqText} onChange={(e) => setToolReqText(e.target.value)} rows={5} placeholder="e.g. A way to see all my before and afters in one place" className={inputCls} /></div>
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Your name</label><input value={toolReqName} onChange={(e) => setToolReqName(e.target.value)} placeholder="So we know who sent it" className={inputCls} /></div>
+                {toolReqErr && <p className="text-sm text-red-400">{toolReqErr}</p>}
+                <button onClick={submitToolRequest} disabled={toolReqBusy} className={sendBtn}>{toolReqBusy ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : SEND_LABEL}</button>
               </div>
             )}
           </section>
