@@ -78,4 +78,58 @@ ${BASE_RULES}`;
   }
 });
 
+router.post("/caption-generator/from-image", async (req: Request, res: Response) => {
+  try {
+    const { tone, imageUrl, clinicName } = req.body as {
+      tone?: string;
+      imageUrl?: string;
+      clinicName?: string;
+    };
+
+    if (!imageUrl || !imageUrl.trim()) {
+      res.status(400).json({ error: "imageUrl is required" });
+      return;
+    }
+
+    const toneKey = String(tone ?? "2");
+    const tonePrompt = CAPTION_TONE_PROMPTS[toneKey] ?? CAPTION_TONE_PROMPTS["2"];
+
+    const systemPrompt = `You write a single Instagram/Facebook caption for an aesthetics clinic post. You will be shown an image, which may be a branded quote card, a photo, or a graphic with text on it. First read any words in the image carefully. If it is a quote card, base the caption on that quote, do not just repeat it verbatim, write a caption that captures its meaning in your own words unless the quote itself is short enough to use directly.
+
+TONE: ${tonePrompt}
+
+${clinicName ? `Clinic: ${clinicName}` : ""}
+
+Write one caption for this image. Return plain text only, no JSON, no quote marks around it, no title.
+${BASE_RULES}`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Write the caption for this image." },
+            { type: "image_url", image_url: { url: imageUrl } },
+          ] as any,
+        },
+      ],
+      temperature: 0.9,
+      max_tokens: 400,
+    });
+
+    const caption = completion.choices[0]?.message?.content?.trim() ?? "";
+    if (!caption) {
+      res.status(500).json({ error: "No caption returned" });
+      return;
+    }
+    res.json({ caption });
+  } catch (err: any) {
+    const message = err instanceof Error ? err.message : "Caption generation failed";
+    req.log?.error({ err }, "caption-generator: from-image error");
+    res.status(500).json({ error: message });
+  }
+});
+
 export default router;
