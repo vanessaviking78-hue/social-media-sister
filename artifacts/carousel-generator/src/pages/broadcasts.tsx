@@ -337,7 +337,22 @@ export default function Broadcasts() {
     Array.from(files).forEach(async (file) => {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const preview = await fileToDataUrl(file);
-      setBulkImgItems((prev) => [...prev, { id, file, preview, context: "" }]);
+      setBulkImgItems((prev) => [...prev, { id, file, preview, context: "", ocrLoading: true }]);
+      try {
+        const r = await fetch(`${BASE}/api/caption-generator/from-image`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tone: singleImgTone, imageUrl: preview }),
+        });
+        if (r.ok) {
+          const d = await r.json();
+          if (d.caption) {
+            setBulkImgItems((prev) => prev.map((it) => (it.id === id ? { ...it, context: d.caption, ocrLoading: false } : it)));
+            return;
+          }
+        }
+      } catch {}
+      setBulkImgItems((prev) => prev.map((it) => (it.id === id ? { ...it, ocrLoading: false } : it)));
     });
   };
 
@@ -358,9 +373,14 @@ export default function Broadcasts() {
       toast.error("Add at least one photo first.");
       return;
     }
+    const stillReading = bulkImgItems.some((it) => it.ocrLoading);
+    if (stillReading) {
+      toast.error("Still reading one or more images, give it a second.");
+      return;
+    }
     const missing = bulkImgItems.filter((it) => !it.context.trim());
     if (missing.length > 0) {
-      toast.error("Add a line about what is in each photo, it helps the caption.");
+      toast.error("A caption is missing on one or more photos, add a line for it or wait for it to finish reading.");
       return;
     }
     if (connectedClients.length === 0) {
@@ -384,16 +404,7 @@ export default function Broadcasts() {
         const imageUrl = uploadData?.results?.[0]?.url;
         if (!imageUrl) throw new Error("No image URL returned");
 
-        const captionRes = await fetch(`${BASE}/api/caption-generator/generate`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tone: singleImgTone, context: item.context.trim() }),
-        });
-        let caption = item.context.trim();
-        if (captionRes.ok) {
-          const captionData = await captionRes.json();
-          caption = captionData.caption || caption;
-        }
+        const caption = item.context.trim();
 
         const baseImg = await loadImg(imageUrl);
         const blankRow: CsvRow = { slide1_hook: "", slide1_subtitle: "", slide2_body: "", slide3_body: "", slide4_cta: "" };
@@ -685,7 +696,7 @@ export default function Broadcasts() {
             <h2 className="font-semibold text-sm">Upload photos (bulk)</h2>
           </div>
           <p className="text-xs text-muted-foreground -mt-2">
-            Drop in as many finished photos as you like at once. Add a line about what is in each one, and every photo gets its own caption, every connected client logo, and its own slot in the Pending Queue above. Nothing is scheduled until you set a time.
+            Drop in as many finished photos as you like at once, quote cards, before and afters, anything. Each one gets read automatically and a caption written for it, in your chosen tone below, every connected client logo, and its own slot in the Pending Queue above. Check the caption before you send, it is always editable. Nothing is scheduled until you set a time.
           </p>
           <label className="w-full rounded-lg border border-dashed border-zinc-700 flex flex-col items-center justify-center gap-2 py-6 cursor-pointer text-zinc-500 hover:border-pink-600 hover:text-pink-500">
             <Upload className="w-5 h-5" />
@@ -707,9 +718,9 @@ export default function Broadcasts() {
                   <input
                     value={item.context}
                     onChange={(e) => updateBulkImageContext(item.id, e.target.value)}
-                    placeholder="What is in this photo? e.g. before and after lip filler"
+                    placeholder={item.ocrLoading ? "Reading the image..." : "Caption, auto filled from the image, edit if you like"}
                     className={inputCls}
-                    disabled={singleImgBusy}
+                    disabled={singleImgBusy || item.ocrLoading}
                   />
                   <button onClick={() => removeBulkImage(item.id)} disabled={singleImgBusy} className="text-zinc-500 hover:text-red-400 shrink-0"><X className="w-4 h-4" /></button>
                 </div>
