@@ -98,11 +98,10 @@ export default function Broadcasts() {
   const [schedulingId, setSchedulingId] = useState<number | null>(null);
   const [draftTimes, setDraftTimes] = useState<Record<number, string>>({});
 
-  const [singleImgFile, setSingleImgFile] = useState<File | null>(null);
-  const [singleImgPreview, setSingleImgPreview] = useState("");
-  const [singleImgContext, setSingleImgContext] = useState("");
+  const [bulkImgItems, setBulkImgItems] = useState([]);
   const [singleImgTone, setSingleImgTone] = useState("1");
   const [singleImgBusy, setSingleImgBusy] = useState(false);
+  const [bulkImgProgress, setBulkImgProgress] = useState({ done: 0, total: 0 });
   const [singleVidFile, setSingleVidFile] = useState<File | null>(null);
   const [singleVidPreview, setSingleVidPreview] = useState("");
   const [singleVidContext, setSingleVidContext] = useState("");
@@ -334,123 +333,127 @@ export default function Broadcasts() {
     }
   };
 
-  const onPickSingleImage = async (file: File) => {
-    setSingleImgFile(file);
-    try {
-      const dataUrl = await fileToDataUrl(file);
-      setSingleImgPreview(dataUrl);
-    } catch {
-      setSingleImgPreview("");
-    }
-  };
-
-  const clearSingleImage = () => {
-    setSingleImgFile(null);
-    setSingleImgPreview("");
-    setSingleImgContext("");
-  };
-
-  // Same concurrency fix applied to the single-photo broadcast path: build
-  // and upload every client's branded copy at once rather than in sequence.
-  const buildSingleImageDraftForClient = async (
-    preset: ClientPreset,
-    blocks: ReturnType<typeof makeBlocks>,
-    baseImg: HTMLImageElement,
-    caption: string
-  ) => {
-    let logoImg: HTMLImageElement | null = null;
-    if ((preset as any).logoUrl) {
-      try { logoImg = await loadImg((preset as any).logoUrl); } catch {}
-    }
-    const slideUrls = renderAllThumbs({ blocks, coverImg: baseImg, bodyImg: baseImg } as any, logoImg, preset, 0.9);
-    const brandedDataUrl = slideUrls[0];
-    const brandedUploadRes = await fetch(`${BASE}/api/content/upload-image`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ images: [{ name: `single-${Date.now()}-${(preset as any).id}.png`, base64: brandedDataUrl }] }),
+  const addBulkImages = (files: FileList) => {
+    Array.from(files).forEach(async (file) => {
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const preview = await fileToDataUrl(file);
+      setBulkImgItems((prev) => [...prev, { id, file, preview, context: "" }]);
     });
-    if (!brandedUploadRes.ok) throw new Error("Branded image upload failed");
-    const brandedUploadData = await brandedUploadRes.json();
-    const brandedUrl = brandedUploadData?.results?.[0]?.url;
-    if (!brandedUrl) throw new Error("No branded URL returned");
-    return {
-      presetId: (preset as any).id,
-      clientName: (preset as any).name || "",
-      topicId: null,
-      imageUrls: [brandedUrl],
-      caption,
-      title: caption.slice(0, 60),
-    };
   };
 
-  const broadcastSingleImage = async () => {
-    if (!singleImgFile) {
-      toast.error("Choose a photo first.");
+  const removeBulkImage = (id: string) => {
+    setBulkImgItems((prev) => prev.filter((it) => it.id !== id));
+  };
+
+  const updateBulkImageContext = (id: string, text: string) => {
+    setBulkImgItems((prev) => prev.map((it) => (it.id === id ? { ...it, context: text } : it)));
+  };
+
+  const clearBulkImages = () => {
+    setBulkImgItems([]);
+  };
+
+  const broadcastAllImages = async () => {
+    if (bulkImgItems.length === 0) {
+      toast.error("Add at least one photo first.");
       return;
     }
-    if (!singleImgContext.trim()) {
-      toast.error("Add a line about what is in the photo, it helps the caption.");
+    const missing = bulkImgItems.filter((it) => !it.context.trim());
+    if (missing.length > 0) {
+      toast.error("Add a line about what is in each photo, it helps the caption.");
       return;
     }
     if (connectedClients.length === 0) {
       toast.error("No connected clients to broadcast to.");
       return;
     }
+    const totalPhotos = bulkImgItems.length;
     setSingleImgBusy(true);
-    try {
-      const dataUrl = singleImgPreview || (await fileToDataUrl(singleImgFile));
-      const uploadRes = await fetch(`${BASE}/api/content/upload-image`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ images: [{ name: singleImgFile.name, base64: dataUrl }] }),
-      });
-      if (!uploadRes.ok) throw new Error("Photo upload failed");
-      const uploadData = await uploadRes.json();
-      const imageUrl = uploadData?.results?.[0]?.url;
-      if (!imageUrl) throw new Error("No image URL returned");
-
-      const captionRes = await fetch(`${BASE}/api/caption-generator/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tone: singleImgTone, context: singleImgContext.trim() }),
-      });
-      let caption = singleImgContext.trim();
-      if (captionRes.ok) {
-        const captionData = await captionRes.json();
-        caption = captionData.caption || caption;
-      }
-
-      const baseImg = await loadImg(imageUrl);
-      const blankRow: CsvRow = { slide1_hook: "", slide1_subtitle: "", slide2_body: "", slide3_body: "", slide4_cta: "" };
-      const blocks = makeBlocks(blankRow);
-
-      const results = await Promise.allSettled(
-        (connectedClients as ClientPreset[]).map((preset) => buildSingleImageDraftForClient(preset, blocks, baseImg, caption))
-      );
-      const draftRows = results
-        .filter((r): r is PromiseFulfilledResult<any> => r.status === "fulfilled")
-        .map((r) => r.value);
-      const failCount = results.length - draftRows.length;
-
-      if (draftRows.length > 0) {
-        const r = await fetch(`${BASE}/api/broadcast-drafts/bulk`, {
+    setBulkImgProgress({ done: 0, total: totalPhotos });
+    let totalQueued = 0;
+    let totalFailed = 0;
+    for (const item of bulkImgItems) {
+      try {
+        const uploadRes = await fetch(`${BASE}/api/content/upload-image`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ rows: draftRows }),
+          body: JSON.stringify({ images: [{ name: item.file.name, base64: item.preview }] }),
         });
-        if (!r.ok) throw new Error("Could not save to pending queue");
-        loadDrafts();
+        if (!uploadRes.ok) throw new Error("Photo upload failed");
+        const uploadData = await uploadRes.json();
+        const imageUrl = uploadData?.results?.[0]?.url;
+        if (!imageUrl) throw new Error("No image URL returned");
+
+        const captionRes = await fetch(`${BASE}/api/caption-generator/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tone: singleImgTone, context: item.context.trim() }),
+        });
+        let caption = item.context.trim();
+        if (captionRes.ok) {
+          const captionData = await captionRes.json();
+          caption = captionData.caption || caption;
+        }
+
+        const baseImg = await loadImg(imageUrl);
+        const blankRow: CsvRow = { slide1_hook: "", slide1_subtitle: "", slide2_body: "", slide3_body: "", slide4_cta: "" };
+        const blocks = makeBlocks(blankRow);
+
+        const draftRows: any[] = [];
+        let failCount = 0;
+        for (const preset of connectedClients as ClientPreset[]) {
+          try {
+            let logoImg: HTMLImageElement | null = null;
+            if ((preset as any).logoUrl) {
+              try { logoImg = await loadImg((preset as any).logoUrl); } catch {}
+            }
+            const slideUrls = renderAllThumbs({ blocks, coverImg: baseImg, bodyImg: baseImg } as any, logoImg, preset, 0.9);
+            const brandedDataUrl = slideUrls[0];
+            const brandedUploadRes = await fetch(`${BASE}/api/content/upload-image`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ images: [{ name: `bulk-${Date.now()}.png`, base64: brandedDataUrl }] }),
+            });
+            if (!brandedUploadRes.ok) throw new Error("Branded image upload failed");
+            const brandedUploadData = await brandedUploadRes.json();
+            const brandedUrl = brandedUploadData?.results?.[0]?.url;
+            if (!brandedUrl) throw new Error("No branded URL returned");
+            draftRows.push({
+              presetId: (preset as any).id,
+              clientName: (preset as any).name || "",
+              topicId: null,
+              imageUrls: [brandedUrl],
+              caption,
+              title: caption.slice(0, 60),
+            });
+          } catch {
+            failCount++;
+          }
+        }
+
+        if (draftRows.length > 0) {
+          const r = await fetch(`${BASE}/api/broadcast-drafts/bulk`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ rows: draftRows }),
+          });
+          if (!r.ok) throw new Error("Could not save to pending queue");
+          totalQueued += draftRows.length;
+        }
+        if (failCount > 0) totalFailed += failCount;
+      } catch {
+        totalFailed += connectedClients.length;
+      } finally {
+        setBulkImgProgress((p) => ({ ...p, done: p.done + 1 }));
       }
-      if (failCount === 0) {
-        toast.success(`Added to Pending Queue for ${draftRows.length} clients, logo included.`);
-      } else {
-        toast.error(`${draftRows.length} added, ${failCount} failed. Check the pending queue.`);
-      }
-      clearSingleImage();
-    } catch (e: any) {
-      toast.error(e?.message || "Could not broadcast this photo.");
-    } finally {
-      setSingleImgBusy(false);
+    }
+    loadDrafts();
+    clearBulkImages();
+    setSingleImgBusy(false);
+    if (totalFailed === 0) {
+      toast.success(`Added ${totalQueued} branded posts to the Pending Queue across ${totalPhotos} photos.`);
+    } else {
+      toast.error(`${totalQueued} added, ${totalFailed} failed. Check the pending queue.`);
     }
   };
 
@@ -679,61 +682,65 @@ export default function Broadcasts() {
         <div className="rounded-2xl border border-border/50 p-4 space-y-3">
           <div className="flex items-center gap-2">
             <ImageIcon className="w-4 h-4 text-pink-500" />
-            <h2 className="font-semibold text-sm">Upload a single photo</h2>
+            <h2 className="font-semibold text-sm">Upload photos (bulk)</h2>
           </div>
           <p className="text-xs text-muted-foreground -mt-2">
-            Drop in one finished photo, add a line about what it is, and it writes a caption, adds every connected client logo, and drops it in the Pending Queue above. Nothing is scheduled until you set a time.
+            Drop in as many finished photos as you like at once. Add a line about what is in each one, and every photo gets its own caption, every connected client logo, and its own slot in the Pending Queue above. Nothing is scheduled until you set a time.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <label className="shrink-0 w-24 h-24 rounded-lg border border-dashed border-zinc-700 flex items-center justify-center cursor-pointer text-zinc-500 hover:border-pink-600 hover:text-pink-500 overflow-hidden">
-              {singleImgPreview ? (
-                <img src={singleImgPreview} alt="" className="w-full h-full object-cover" />
-              ) : (
-                <ImageIcon className="w-6 h-6" />
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                disabled={singleImgBusy}
-                onChange={(e) => { const f = e.target.files?.[0]; if (f) onPickSingleImage(f); e.target.value = ""; }}
-              />
-            </label>
-            <div className="flex-1 space-y-2">
-              <input
-                value={singleImgContext}
-                onChange={(e) => setSingleImgContext(e.target.value)}
-                placeholder="What is in the photo? e.g. before and after lip filler, patient thrilled"
-                className={inputCls}
-                disabled={singleImgBusy}
-              />
-              <div className="flex flex-col sm:flex-row gap-2">
-                <select
-                  value={singleImgTone}
-                  onChange={(e) => setSingleImgTone(e.target.value)}
-                  disabled={singleImgBusy}
-                  className="rounded-xl bg-zinc-900 border border-zinc-800 px-3 py-2.5 text-sm text-white outline-none focus:border-pink-600"
-                >
-                  {CAPTION_TONES.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-                <button
-                  onClick={broadcastSingleImage}
-                  disabled={singleImgBusy || !singleImgFile}
-                  className="flex-1 rounded-full bg-pink-600 hover:bg-pink-500 disabled:opacity-60 text-white font-semibold py-2.5 flex items-center justify-center gap-2 text-sm"
-                >
-                  {singleImgBusy ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Adding...</>
-                  ) : (
-                    <><Send className="w-4 h-4" /> Broadcast this photo</>
-                  )}
-                </button>
-                {singleImgFile && !singleImgBusy && (
-                  <button onClick={clearSingleImage} className="text-zinc-500 hover:text-red-400 px-2 shrink-0"><X className="w-4 h-4" /></button>
-                )}
-              </div>
+          <label className="w-full rounded-lg border border-dashed border-zinc-700 flex flex-col items-center justify-center gap-2 py-6 cursor-pointer text-zinc-500 hover:border-pink-600 hover:text-pink-500">
+            <Upload className="w-5 h-5" />
+            <span className="text-xs">Click to add photos, you can select several at once</span>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              disabled={singleImgBusy}
+              onChange={(e) => { if (e.target.files && e.target.files.length > 0) addBulkImages(e.target.files); e.target.value = ""; }}
+            />
+          </label>
+          {bulkImgItems.length > 0 && (
+            <div className="space-y-3">
+              {bulkImgItems.map((item) => (
+                <div key={item.id} className="flex items-center gap-3 rounded-xl bg-zinc-900/60 border border-zinc-800 p-3">
+                  <img src={item.preview} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0" />
+                  <input
+                    value={item.context}
+                    onChange={(e) => updateBulkImageContext(item.id, e.target.value)}
+                    placeholder="What is in this photo? e.g. before and after lip filler"
+                    className={inputCls}
+                    disabled={singleImgBusy}
+                  />
+                  <button onClick={() => removeBulkImage(item.id)} disabled={singleImgBusy} className="text-zinc-500 hover:text-red-400 shrink-0"><X className="w-4 h-4" /></button>
+                </div>
+              ))}
             </div>
+          )}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <select
+              value={singleImgTone}
+              onChange={(e) => setSingleImgTone(e.target.value)}
+              disabled={singleImgBusy}
+              className="rounded-xl bg-zinc-900 border border-zinc-800 px-3 py-2.5 text-sm text-white outline-none focus:border-pink-600"
+            >
+              {CAPTION_TONES.map((t) => (
+                <option key={t.value} value={t.value}>{t.label}</option>
+              ))}
+            </select>
+            <button
+              onClick={broadcastAllImages}
+              disabled={singleImgBusy || bulkImgItems.length === 0}
+              className="flex-1 rounded-full bg-pink-600 hover:bg-pink-500 disabled:opacity-60 text-white font-semibold py-2.5 flex items-center justify-center gap-2 text-sm"
+            >
+              {singleImgBusy ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Building {bulkImgProgress.done}/{bulkImgProgress.total} photos...</>
+              ) : (
+                <><Send className="w-4 h-4" /> Broadcast {bulkImgItems.length > 0 ? `${bulkImgItems.length} photo${bulkImgItems.length === 1 ? "" : "s"}` : "photos"}</>
+              )}
+            </button>
+            {bulkImgItems.length > 0 && !singleImgBusy && (
+              <button onClick={clearBulkImages} className="text-zinc-500 hover:text-red-400 px-2 shrink-0"><X className="w-4 h-4" /></button>
+            )}
           </div>
         </div>
 
