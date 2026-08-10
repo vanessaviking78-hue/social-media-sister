@@ -51,6 +51,7 @@ import broadcastDraftsRouter from "./broadcast-drafts";
 import reportsRouter from "./reports";
 import dailyFocusRouter from "./daily-focus";
 import captionGeneratorRouter from "./caption-generator";
+import reelCaptionsRouter from "./reel-captions";
 import backgroundBuilderRouter from "./background-builder";
 import highlightCoversRouter from "./highlight-covers";
 import veoRouter from "./veo";
@@ -117,6 +118,7 @@ router.use(broadcastDraftsRouter);
 router.use(reportsRouter);
 router.use(dailyFocusRouter);
 router.use(captionGeneratorRouter);
+router.use(reelCaptionsRouter);
 router.use(veoRouter);
 
 export default router;
