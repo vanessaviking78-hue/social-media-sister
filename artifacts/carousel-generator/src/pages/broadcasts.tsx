@@ -77,7 +77,10 @@ async function uploadVideoFile(file: File): Promise<string> {
 
 function defaultLocalDateTime(defaultPostTime?: string): string {
   const base = new Date();
-  base.setDate(base.getDate() + 1);
+  const day = base.getDay(); // 0 = Sunday
+    let daysUntilSunday = (7 - day) % 7;
+    if (daysUntilSunday === 0) daysUntilSunday = 7; // always roll forward to the next Sunday
+    base.setDate(base.getDate() + daysUntilSunday);
   const [hh, mm] = (defaultPostTime || "18:00").split(":").map((x) => parseInt(x, 10));
   base.setHours(hh || 18, mm || 0, 0, 0);
   const pad = (n: number) => String(n).padStart(2, "0");
