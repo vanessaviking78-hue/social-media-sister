@@ -874,6 +874,26 @@ export default function BulkCarousel() {
   const [heroWordColor, setHeroWordColor] = useState("#C4879A");
   const heroWordColorRef = useRef("#C4879A");
   useEffect(() => { heroWordColorRef.current = heroWordColor; }, [heroWordColor]);
+  const [lowerThird, setLowerThird] = useState(false);
+  const [applyingLowerThird, setApplyingLowerThird] = useState(false);
+  const handleLowerThirdToggle = async (checked: boolean) => {
+    setLowerThird(checked);
+    if (!selectedPreset || !items.length) return;
+    setApplyingLowerThird(true);
+    try {
+      const accentColorForOverlay = heroWordColor || selectedPreset.cornerColor || "#d4af37";
+      const updated = await Promise.all(items.map(async (it) => {
+        const baseThumbs: string[] = (it as any).baseThumbs || it.thumbs;
+        const newThumbs = checked
+          ? await Promise.all(baseThumbs.map(t => applyLowerThirdOverlay(t, accentColorForOverlay)))
+          : baseThumbs;
+        return { ...it, baseThumbs, thumbs: newThumbs } as typeof it;
+      }));
+      setItems(updated);
+    } finally {
+      setApplyingLowerThird(false);
+    }
+  };
 
   // Caption state
   const [captionMap, setCaptionMap] = useState<Record<string, string>>({});
@@ -1462,6 +1482,15 @@ export default function BulkCarousel() {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <h1 className="font-bold text-lg">Preview</h1>
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground ml-3 cursor-pointer select-none whitespace-nowrap">
+              <input
+                type="checkbox"
+                checked={lowerThird}
+                onChange={e => handleLowerThirdToggle(e.target.checked)}
+                className="accent-sky-500"
+              />
+              Lower third colour overlay{applyingLowerThird ? "..." : ""}
+            </label>
             <span className="text-muted-foreground text-sm ml-1">{items.length} carousel{items.length !== 1 ? "s" : ""}</span>
             <div className="ml-auto flex gap-2">
               <Button variant="outline" size="sm" onClick={downloadAll}>
@@ -1797,4 +1826,28 @@ export default function BulkCarousel() {
       </div>
     </div>
   );
+}
+
+
+export function applyLowerThirdOverlay(dataUrl: string, color: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d")!;
+      ctx.drawImage(img, 0, 0);
+      const [r, g, b] = hexToRgb(color);
+      const bandH = canvas.height * 0.34;
+      const grad = ctx.createLinearGradient(0, canvas.height - bandH, 0, canvas.height);
+      grad.addColorStop(0, `rgba(${r},${g},${b},0)`);
+      grad.addColorStop(0.5, `rgba(${r},${g},${b},0.55)`);
+      grad.addColorStop(1, `rgba(${r},${g},${b},0.88)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, canvas.height - bandH, canvas.width, bandH);
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.src = dataUrl;
+  });
 }
