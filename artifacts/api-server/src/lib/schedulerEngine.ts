@@ -214,20 +214,35 @@ async function postCarouselToFB(pageId: string, token: string, imageUrls: string
   }
   let lastId: string | undefined;
   let lastErr: unknown;
-  for (let attempt = 0; attempt < 2; attempt++) {
+  const MAX_ATTEMPTS = 3;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     try {
       const id = await attemptCarouselToFB(pageId, token, imageUrls, caption);
       const visible = await verifyFbPostVisible(id, token);
       if (visible) return id;
       lastId = id;
       logger.warn({ pageId, id, attempt }, "FB carousel post created but didn't verify as visible — retrying with fresh photo uploads");
-      await new Promise((r) => setTimeout(r, 5000));
+      await new Promise((r) => setTimeout(r, 6000));
     } catch (err) {
       lastErr = err;
-      if (attempt === 0) await new Promise((r) => setTimeout(r, 5000));
+      if (attempt < MAX_ATTEMPTS - 1) await new Promise((r) => setTimeout(r, 5000));
     }
   }
-  if (lastId) return lastId; // best effort — hand back the last id even if verification was inconclusive
+  // Every attempt produced a post id, but Meta never confirmed a real feed
+  // attachment on any of them — this is the exact "photo lands in the Page's
+  // Photos tab but never shows on the timeline" symptom Vanessa keeps seeing.
+  // The old code silently returned the last id here and marked the post
+  // "published" even though nothing was actually live, so it never surfaced.
+  // Fail loudly instead so it shows as a real failure + notification, with
+  // the orphaned post id logged for manual cleanup in the Page's Photos tab.
+  if (lastId) {
+    throw new Error(
+      `FB post ${lastId} was created but never verified visible on the Page feed after ${MAX_ATTEMPTS} attempts — ` +
+      `this usually means the Page access token doesn't have full pages_manage_posts access yet ` +
+      `(Meta App Review still pending/not approved), or Meta is delaying distribution. The photo may ` +
+      `be sitting unattached in the Page's Photos tab — check there and remove it manually if so.`
+    );
+  }
   throw lastErr instanceof Error ? lastErr : new Error("FB post failed after retries");
 }
 
