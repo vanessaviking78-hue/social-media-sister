@@ -1754,10 +1754,14 @@ export default function BulkCarousel() {
         {csvRows.length > 0 && (
           <section className="space-y-3">
             <h2 className="font-semibold text-base">4. Review rows</h2>
+        <div className="flex gap-3 -mt-1">
+          <button type="button" onClick={() => setRowSelected(csvRows.map(() => true))} className="text-xs text-muted-foreground hover:text-foreground">Select all</button>
+          <button type="button" onClick={() => setRowSelected(csvRows.map(() => false))} className="text-xs text-muted-foreground hover:text-foreground">Clear all</button>
+        </div>
             <div className="rounded-xl overflow-hidden">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
                 <table className="w-full text-xs">
-                  <thead className="bg-muted/30 text-muted-foreground">
+                  <thead className="bg-muted/30 text-muted-foreground sticky top-0 z-10">
                     <tr>
                       <th className="text-center px-3 py-2 font-medium w-8">Use</th>
                       <th className="text-left px-3 py-2 font-medium w-8">#</th>
