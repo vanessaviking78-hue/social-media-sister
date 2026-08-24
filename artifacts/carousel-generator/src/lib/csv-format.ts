@@ -97,6 +97,73 @@ export function normalizeSlideCsvForHeaders(text: string, targetColumns: string[
   return renameSlideHeaderRow(stripped, targetColumns);
 }
 
+/**
+ * Maps an arbitrary CSV header row onto a fixed set of target columns by
+ * reading keywords inside each header cell rather than requiring an exact
+ * match. This lets any client-supplied CSV work as long as the column
+ * headers hint at what they contain (e.g. "Hook", "Main Text", "Slide 2",
+ * "Call to Action") -- the instruction lives in the header itself instead of
+ * needing to match one rigid naming scheme.
+ *
+ * Matching rules, in priority order:
+ * 1. A header that already exactly equals one of targetColumns (case and
+ *    whitespace insensitive) is left alone.
+ * 2. A header containing a strong keyword (hook, subtitle/subheading, cta /
+ *    call to action) maps straight to the matching target column.
+ * 3. Anything left over is assigned, in the order the columns appear in the
+ *    CSV, to whichever target columns are still unfilled -- covering plain
+ *    "Slide1/Slide2/..." headers, "Body", "Text", or anything else generic.
+ */
+export function smartMapCsvHeaders(text: string, targetColumns: string[]): string {
+  const { lines, nl } = splitLines(text);
+  if (!lines.length) return text;
+  const headerCells = splitCsvCells(lines[0]);
+  if (!headerCells.length) return text;
+
+  const lower = headerCells.map((c) => c.toLowerCase().trim());
+  const used = new Set<string>();
+  const mapped: (string | null)[] = headerCells.map(() => null);
+
+  headerCells.forEach((_cell, i) => {
+    const exact = targetColumns.find((t) => t.toLowerCase() === lower[i]);
+    if (exact) {
+      mapped[i] = exact;
+      used.add(exact);
+    }
+  });
+
+  const KEYWORDS: { col: string; test: (h: string) => boolean }[] = [
+    { col: "slide1_hook", test: (h) => h.includes("hook") || h.includes("headline") || h.includes("title") },
+    { col: "slide1_subtitle", test: (h) => h.includes("subtitle") || h.includes("sub-title") || h.includes("subheading") || h.includes("sub heading") },
+    { col: "slide4_cta", test: (h) => h.includes("cta") || h.includes("call to action") || h.includes("call-to-action") },
+  ];
+  headerCells.forEach((_cell, i) => {
+    if (mapped[i]) return;
+    for (const { col, test } of KEYWORDS) {
+      if (used.has(col) || !targetColumns.includes(col)) continue;
+      if (test(lower[i])) {
+        mapped[i] = col;
+        used.add(col);
+        break;
+      }
+    }
+  });
+
+  const remaining = targetColumns.filter((c) => !used.has(c));
+  let r = 0;
+  headerCells.forEach((_cell, i) => {
+    if (mapped[i]) return;
+    if (r < remaining.length) {
+      mapped[i] = remaining[r];
+      used.add(remaining[r]);
+      r++;
+    }
+  });
+
+  lines[0] = headerCells.map((cell, i) => mapped[i] ?? cell).join(",");
+  return lines.join(nl);
+}
+
 /** Reads a File as text. Small wrapper so call sites don't need to juggle
  *  FileReader vs File.text() (older Safari lacks File.text()). */
 export function readFileAsText(file: File): Promise<string> {
