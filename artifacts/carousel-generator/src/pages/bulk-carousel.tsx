@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import Papa from "papaparse";
-import { normalizeSlideCsvForHeaders } from "@/lib/csv-format";
+import { normalizeSlideCsvForHeaders, smartMapCsvHeaders } from "@/lib/csv-format";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { loadGoogleFonts } from "@/lib/slide-utils";
@@ -920,9 +920,10 @@ export default function BulkCarousel() {
     setCsvFile(file);
     const reader = new FileReader();
     reader.onload = (e) => {
-      const text = normalizeSlideCsvForHeaders(
-        e.target?.result as string,
-        ["slide1_hook", "slide1_subtitle", "slide2_body", "slide3_body", "slide4_cta"],
+      const CSV_TARGET_COLUMNS = ["slide1_hook", "slide1_subtitle", "slide2_body", "slide3_body", "slide4_cta"];
+      const text = smartMapCsvHeaders(
+        normalizeSlideCsvForHeaders(e.target?.result as string, CSV_TARGET_COLUMNS),
+        CSV_TARGET_COLUMNS,
       );
       const firstLine = text.split('\n')[0];
       const commas = (firstLine.match(/,/g) || []).length;
