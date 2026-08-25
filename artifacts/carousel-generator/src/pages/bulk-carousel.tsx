@@ -36,19 +36,11 @@ const EDITOR_SCALE = EDITOR_W / W;
 // slider's value at all), so it's fixed rather than left open to change.
 export const LOCKED_LINE_SPACING = 0.9;
 
-const CSV_COLS = ["slide1_hook", "slide1_subtitle", "slide2_body", "slide3_body", "slide4_cta"] as const;
-
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type CsvRow = {
-  slide1_hook: string;
-  slide1_subtitle: string;
-  slide2_body: string;
-  slide3_body: string;
-  slide4_cta: string;
-};
+export type CsvRow = { hook: string; cta: string; [key: string]: string };
 
-export type BlockId = "hook" | "subtitle" | "body2" | "body3" | "cta" | "logo" | "line";
+export type BlockId = "hook" | "subtitle" | "cta" | "logo" | "line" | "body1" | "body2" | "body3" | "body4" | "body5" | "body6" | "body7" | "body8" | "body9" | "body10";
 
 export type Block = {
   id: BlockId;
@@ -82,20 +74,32 @@ type Phase = "upload" | "preview" | "schedule" | "done";
 
 // ── Block config ──────────────────────────────────────────────────────────────
 
-export const SLIDE_BLOCK_IDS: Record<number, BlockId[]> = {
-  1: ["hook", "subtitle"],
-  2: ["body2"],
-  3: ["body3"],
-  4: ["cta"],
-};
+export function getSlideBlockIds(blocks: Block[]): Record<number, BlockId[]> {
+  const bodyIds = blocks
+    .map(b => b.id)
+    .filter(id => /^body\d+$/.test(id))
+    .sort((a, b) => parseInt(a.slice(4)) - parseInt(b.slice(4)));
+  const map: Record<number, BlockId[]> = { 1: ["hook"] };
+  bodyIds.forEach((id, i) => { map[i + 2] = [id]; });
+  map[bodyIds.length + 2] = ["cta"];
+  return map;
+}
 
 type BlockStyle = { font: string; size: number; lineH: number; maxW: number; label: string };
 
 export const BLOCK_STYLE: Record<BlockId, BlockStyle> = {
   hook:     { font: '"Bebas Neue"',  size: 108, lineH: 1.10, maxW: W - 180, label: "Hook"     },
   subtitle: { font: '"Poppins"',     size:  44, lineH: 1.40, maxW: W - 180, label: "Subtitle" },
-  body2:    { font: '"Poppins"',     size:  50, lineH: 1.50, maxW: W - 160, label: "Body"     },
-  body3:    { font: '"Poppins"',     size:  50, lineH: 1.50, maxW: W - 160, label: "Body"     },
+  body1: { font: '"Poppins"', size: 50, lineH: 1.50, maxW: W - 160, label: "Body" },
+  body2: { font: '"Poppins"', size: 50, lineH: 1.50, maxW: W - 160, label: "Body" },
+  body3: { font: '"Poppins"', size: 50, lineH: 1.50, maxW: W - 160, label: "Body" },
+  body4: { font: '"Poppins"', size: 50, lineH: 1.50, maxW: W - 160, label: "Body" },
+  body5: { font: '"Poppins"', size: 50, lineH: 1.50, maxW: W - 160, label: "Body" },
+  body6: { font: '"Poppins"', size: 50, lineH: 1.50, maxW: W - 160, label: "Body" },
+  body7: { font: '"Poppins"', size: 50, lineH: 1.50, maxW: W - 160, label: "Body" },
+  body8: { font: '"Poppins"', size: 50, lineH: 1.50, maxW: W - 160, label: "Body" },
+  body9: { font: '"Poppins"', size: 50, lineH: 1.50, maxW: W - 160, label: "Body" },
+  body10: { font: '"Poppins"', size: 50, lineH: 1.50, maxW: W - 160, label: "Body" },
   cta:      { font: '"Poppins"',     size:  76, lineH: 1.35, maxW: W - 140, label: "CTA"      },
   logo:     { font: '"Poppins"',     size:  44, lineH: 1.00, maxW: W,       label: "Logo"     },
   line:     { font: '"Poppins"',     size:  44, lineH: 1.00, maxW: W,       label: "Line"     },
@@ -105,9 +109,17 @@ const defaultBlock = (id: BlockId, text = ""): Block => {
   const pos: Record<BlockId, { x: number; y: number }> = {
     hook:     { x: 0.5,  y: 0.695 },
     subtitle: { x: 0.5,  y: 0.785 },
-    body2:    { x: 0.5,  y: 0.80  },
-    body3:    { x: 0.5,  y: 0.80  },
-    cta:      { x: 0.5,  y: 0.80  },
+    body1: { x: 0.5, y: 0.80 },
+      body2: { x: 0.5, y: 0.80 },
+      body3: { x: 0.5, y: 0.80 },
+      body4: { x: 0.5, y: 0.80 },
+      body5: { x: 0.5, y: 0.80 },
+      body6: { x: 0.5, y: 0.80 },
+      body7: { x: 0.5, y: 0.80 },
+      body8: { x: 0.5, y: 0.80 },
+      body9: { x: 0.5, y: 0.80 },
+      body10: { x: 0.5, y: 0.80 },
+      cta: { x: 0.5, y: 0.80 },
     logo:     { x: 0.09, y: 0.07  },
     line:     { x: 0.5,  y: 0.90  },
   };
@@ -118,12 +130,14 @@ const defaultBlock = (id: BlockId, text = ""): Block => {
 };
 
 export function makeBlocks(row: CsvRow): Block[] {
+  const bodyKeys = Object.keys(row)
+    .filter(k => /^body\d+$/.test(k))
+    .sort((a, b) => parseInt(a.slice(4)) - parseInt(b.slice(4)))
+    .slice(0, 10);
   return [
-    defaultBlock("hook",     row.slide1_hook),
-    defaultBlock("subtitle", row.slide1_subtitle),
-    defaultBlock("body2",    row.slide2_body),
-    defaultBlock("body3",    row.slide3_body),
-    defaultBlock("cta",      row.slide4_cta),
+    defaultBlock("hook", row.hook),
+    ...bodyKeys.map(k => defaultBlock(k as BlockId, row[k])),
+    defaultBlock("cta", row.cta),
     defaultBlock("logo"),
     defaultBlock("line"),
   ];
@@ -243,7 +257,7 @@ function drawCover(ctx: CanvasRenderingContext2D, img: HTMLImageElement, alpha: 
 }
 
 export function renderSlideCanvas(
-  slideNum: 1|2|3|4,
+  slideNum: number,
   blocks: Block[],
   coverImg: HTMLImageElement | null,
   bodyImg: HTMLImageElement | null,
@@ -372,7 +386,7 @@ export function renderSlideCanvas(
       // ── Slides 2-4 unchanged ────────────────────────────────────────────────
       ctx.fillStyle = textColor;
       ctx.textBaseline = "middle";
-      const activeIds = SLIDE_BLOCK_IDS[slideNum];
+      const activeIds = getSlideBlockIds(blocks)[slideNum] ?? [];
       for (const block of blocks.filter(b => activeIds.includes(b.id))) {
         if (!block.text.trim()) continue;
         const st = BLOCK_STYLE[block.id];
@@ -423,7 +437,8 @@ export function renderAllThumbs(
   lineSpacing = LOCKED_LINE_SPACING,
   accentOverride?: string
 ): string[] {
-  return ([1,2,3,4] as const).map(n =>
+  const totalSlides = item.blocks.filter(b => /^body\d+$/.test(b.id)).length + 2;
+  return Array.from({ length: totalSlides }, (_, i) => i + 1).map(n =>
     renderSlideCanvas(n, item.blocks, item.coverImg, item.bodyImg, logoImg, preset, SCALE, false, lineSpacing, accentOverride)
   );
 }
@@ -480,8 +495,8 @@ async function uploadDataUrls(dataUrls: string[], names: string[]): Promise<stri
 
 function makeSampleCsv(): string {
   return [
-    CSV_COLS.join(","),
-    "Your headline hook here,A short supporting subtitle,Body copy for slide two goes here.,Body copy for slide three goes here.,Book your consultation today",
+    "hook,body1,body2,cta",
+    "Your headline hook here,Body copy for slide two goes here.,Body copy for slide three goes here.,Book your consultation today",
     "",
   ].join("\n");
 }
@@ -510,15 +525,15 @@ export function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave,
   const [editingId, setEditingId] = useState<BlockId | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const bgUrls = useMemo(() =>
-    ([1,2,3,4] as const).map(n =>
+  const totalSlides = useMemo(() => blocks.filter(b => /^body\d+$/.test(b.id)).length + 2, [blocks]);
+  const bgUrls = useMemo(() => Array.from({ length: totalSlides }, (_, i) => i + 1).map(n =>
       renderSlideCanvas(n, blocks, item.coverImg, item.bodyImg, logoImg, preset, 1, true)
     ),
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  [item.coverImg, item.bodyImg, logoImg, preset.pageColor, preset.overlayColor]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [item.coverImg, item.bodyImg, logoImg, preset.pageColor, preset.overlayColor, totalSlides]
   );
 
-  const activeBlockIds = SLIDE_BLOCK_IDS[activeSlide];
+  const activeBlockIds = getSlideBlockIds(blocks)[activeSlide] ?? [];
   const activeBlocks = blocks.filter(b => activeBlockIds.includes(b.id) || b.id === "logo" || b.id === "line");
 
   const handleContainerPointerMove = (e: React.PointerEvent) => {
@@ -622,7 +637,7 @@ export function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave,
 
         {/* Slide tabs */}
         <div className="flex border-b border-border/30">
-          {([1,2,3,4] as const).map(n => (
+          {(Array.from({ length: totalSlides }, (_, i) => i + 1)).map(n => (
             <button
               key={n}
               onClick={() => { setEditingId(null); setDragging(null); setResizing(null); setActiveSlide(n); }}
@@ -655,7 +670,7 @@ export function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave,
 
             {activeBlocks.map(block => {
               const st = BLOCK_STYLE[block.id];
-              const isText = block.id === "hook" || block.id === "subtitle" || block.id === "body2" || block.id === "body3" || block.id === "cta";
+              const isText = block.id === "hook" || block.id === "cta" || /^body\d+$/.test(block.id);
               const isLogo = block.id === "logo";
               const isLine = block.id === "line";
               const logoSrc = logoImg?.src ?? "";
@@ -920,11 +935,7 @@ export default function BulkCarousel() {
     setCsvFile(file);
     const reader = new FileReader();
     reader.onload = (e) => {
-      const CSV_TARGET_COLUMNS = ["slide1_hook", "slide1_subtitle", "slide2_body", "slide3_body", "slide4_cta"];
-      const text = smartMapCsvHeaders(
-        normalizeSlideCsvForHeaders(e.target?.result as string, CSV_TARGET_COLUMNS),
-        CSV_TARGET_COLUMNS,
-      );
+      const text = smartMapCsvHeaders(e.target?.result as string);
       const firstLine = text.split('\n')[0];
       const commas = (firstLine.match(/,/g) || []).length;
       const semis = (firstLine.match(/;/g) || []).length;
@@ -935,13 +946,16 @@ export default function BulkCarousel() {
         delimiter: delim,
         skipEmptyLines: true,
         complete: (results) => {
-          const required = ['slide1_hook','slide1_subtitle','slide2_body','slide3_body','slide4_cta'];
           const headers = (results.meta.fields || []).map((h: string) => h.trim());
-          const missing = required.filter(col => !headers.includes(col));
-          if (missing.length > 0) {
-            setCsvError(`Missing columns: ${missing.join(', ')}`);
-            return;
-          }
+              if (!headers.includes('hook') || !headers.includes('cta')) {
+                setCsvError('Could not find a hook column and a call-to-action column in this CSV.');
+                return;
+              }
+              const bodyCols = headers.filter(h => /^body\d+$/.test(h));
+              if (bodyCols.length > 10) {
+                setCsvError('Too many columns in that CSV — the tool supports up to 12 slides per post (hook + 10 body slides + a CTA).');
+                return;
+              }
           setCsvError(null);
           const rows = results.data as CsvRow[];
           setCsvRows(rows);
@@ -1032,7 +1046,7 @@ export default function BulkCarousel() {
 
         const blocks = makeBlocks(row);
         const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, LOCKED_LINE_SPACING, heroWordColor);
-        rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.slide1_hook, blocks, coverImg, bodyImg, thumbs });
+        rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.hook, blocks, coverImg, bodyImg, thumbs });
         setRenderProgress(Math.round(((idx + 1) / activeIndexes.length) * 100));
       }
 
@@ -1662,7 +1676,7 @@ export default function BulkCarousel() {
               <Download className="w-3.5 h-3.5" />Download template
             </button>
           </div>
-          <p className="text-sm text-muted-foreground">Required columns: {CSV_COLS.join(", ")}. Each row becomes one carousel.</p>
+          <p className="text-sm text-muted-foreground">First column is your hook (goes alone on slide 1), last column is your call to action, and everything in between becomes its own slide — add as many as you need. Each row becomes one carousel.</p>
 
           <div className="flex items-center gap-3">
             <label className="text-sm text-muted-foreground whitespace-nowrap">Hero Word Colour</label>
