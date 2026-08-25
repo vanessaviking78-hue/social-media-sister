@@ -891,16 +891,16 @@ export default function BulkCarousel() {
   useEffect(() => { heroWordColorRef.current = heroWordColor; }, [heroWordColor]);
   const [lowerThird, setLowerThird] = useState(false);
   const [applyingLowerThird, setApplyingLowerThird] = useState(false);
-  const handleLowerThirdToggle = async (checked: boolean) => {
-    setLowerThird(checked);
+  const [lowerThirdColor1, setLowerThirdColor1] = useState("#000000");
+  const [lowerThirdColor2, setLowerThirdColor2] = useState("#000000");
+  const applyLowerThird = async (checked: boolean, color1: string, color2: string) => {
     if (!selectedPreset || !items.length) return;
     setApplyingLowerThird(true);
     try {
-      const accentColorForOverlay = heroWordColor || selectedPreset.cornerColor || "#d4af37";
       const updated = await Promise.all(items.map(async (it) => {
         const baseThumbs: string[] = (it as any).baseThumbs || it.thumbs;
         const newThumbs = checked
-          ? await Promise.all(baseThumbs.map(t => applyLowerThirdOverlay(t, accentColorForOverlay)))
+          ? await Promise.all(baseThumbs.map(t => applyLowerThirdOverlay(t, color1, color2)))
           : baseThumbs;
         return { ...it, baseThumbs, thumbs: newThumbs } as typeof it;
       }));
@@ -908,6 +908,16 @@ export default function BulkCarousel() {
     } finally {
       setApplyingLowerThird(false);
     }
+  };
+  const handleLowerThirdToggle = async (checked: boolean) => {
+    setLowerThird(checked);
+    await applyLowerThird(checked, lowerThirdColor1, lowerThirdColor2);
+  };
+  const handleLowerThirdColorChange = async (which: 1 | 2, value: string) => {
+    const c1 = which === 1 ? value : lowerThirdColor1;
+    const c2 = which === 2 ? value : lowerThirdColor2;
+    if (which === 1) setLowerThirdColor1(value); else setLowerThirdColor2(value);
+    if (lowerThird) await applyLowerThird(true, c1, c2);
   };
 
   // Caption state
@@ -1506,6 +1516,24 @@ export default function BulkCarousel() {
               />
               Lower third colour overlay{applyingLowerThird ? "..." : ""}
             </label>
+              {lowerThird && (
+                <div className="flex items-center gap-1 ml-2">
+                  <input
+                    type="color"
+                    value={lowerThirdColor1}
+                    onChange={e => handleLowerThirdColorChange(1, e.target.value)}
+                    className="h-8 w-8 rounded cursor-pointer border border-border/40 bg-transparent p-0.5"
+                    title="Overlay colour 1 (top of band)"
+                  />
+                  <input
+                    type="color"
+                    value={lowerThirdColor2}
+                    onChange={e => handleLowerThirdColorChange(2, e.target.value)}
+                    className="h-8 w-8 rounded cursor-pointer border border-border/40 bg-transparent p-0.5"
+                    title="Overlay colour 2 (bottom of band)"
+                  />
+                </div>
+              )}
             <span className="text-muted-foreground text-sm ml-1">{items.length} carousel{items.length !== 1 ? "s" : ""}</span>
             <div className="ml-auto flex gap-2">
               <Button variant="outline" size="sm" onClick={downloadAll}>
@@ -1848,7 +1876,7 @@ export default function BulkCarousel() {
 }
 
 
-export function applyLowerThirdOverlay(dataUrl: string, color: string): Promise<string> {
+export function applyLowerThirdOverlay(dataUrl: string, color1: string, color2: string): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -1857,12 +1885,13 @@ export function applyLowerThirdOverlay(dataUrl: string, color: string): Promise<
       canvas.height = img.height;
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(img, 0, 0);
-      const [r, g, b] = hexToRgb(color);
+      const [r1, g1, b1] = hexToRgb(color1);
+      const [r2, g2, b2] = hexToRgb(color2);
       const bandH = canvas.height * 0.34;
       const grad = ctx.createLinearGradient(0, canvas.height - bandH, 0, canvas.height);
-      grad.addColorStop(0, `rgba(${r},${g},${b},0)`);
-      grad.addColorStop(0.5, `rgba(${r},${g},${b},0.55)`);
-      grad.addColorStop(1, `rgba(${r},${g},${b},0.88)`);
+      grad.addColorStop(0, `rgba(${r1},${g1},${b1},0)`);
+      grad.addColorStop(0.5, `rgba(${r1},${g1},${b1},0.55)`);
+      grad.addColorStop(1, `rgba(${r2},${g2},${b2},0.88)`);
       ctx.fillStyle = grad;
       ctx.fillRect(0, canvas.height - bandH, canvas.width, bandH);
       resolve(canvas.toDataURL("image/png"));
