@@ -75,11 +75,12 @@ type Phase = "upload" | "preview" | "schedule" | "done";
 // ── Block config ──────────────────────────────────────────────────────────────
 
 export function getSlideBlockIds(blocks: Block[]): Record<number, BlockId[]> {
+  const hasSubtitle = blocks.some(b => b.id === "subtitle" && b.text);
   const bodyIds = blocks
     .map(b => b.id)
     .filter(id => /^body\d+$/.test(id))
     .sort((a, b) => parseInt(a.slice(4)) - parseInt(b.slice(4)));
-  const map: Record<number, BlockId[]> = { 1: ["hook"] };
+  const map: Record<number, BlockId[]> = { 1: hasSubtitle ? ["hook", "subtitle"] : ["hook"] };
   bodyIds.forEach((id, i) => { map[i + 2] = [id]; });
   map[bodyIds.length + 2] = ["cta"];
   return map;
@@ -130,14 +131,29 @@ const defaultBlock = (id: BlockId, text = ""): Block => {
 };
 
 export function makeBlocks(row: CsvRow): Block[] {
-  const bodyKeys = Object.keys(row)
-    .filter(k => /^body\d+$/.test(k))
-    .sort((a, b) => parseInt(a.slice(4)) - parseInt(b.slice(4)))
-    .slice(0, 10);
+  if ("hook" in row) {
+    // Generic schema used by Bulk Carousel Creator: hook alone on slide 1,
+    // every other column becomes its own slide in order, CTA last.
+    const bodyKeys = Object.keys(row)
+      .filter(k => /^body\d+$/.test(k))
+      .sort((a, b) => parseInt(a.slice(4)) - parseInt(b.slice(4)))
+      .slice(0, 10);
+    return [
+      defaultBlock("hook", row.hook),
+      ...bodyKeys.map(k => defaultBlock(k as BlockId, row[k])),
+      defaultBlock("cta", row.cta),
+      defaultBlock("logo"),
+      defaultBlock("line"),
+    ];
+  }
+  // Legacy fixed schema still used by Seamless Carousels and Broadcasts:
+  // hook + subtitle share slide 1, two body slides, then the CTA slide.
   return [
-    defaultBlock("hook", row.hook),
-    ...bodyKeys.map(k => defaultBlock(k as BlockId, row[k])),
-    defaultBlock("cta", row.cta),
+    defaultBlock("hook", row.slide1_hook),
+    defaultBlock("subtitle", row.slide1_subtitle),
+    defaultBlock("body1", row.slide2_body),
+    defaultBlock("body2", row.slide3_body),
+    defaultBlock("cta", row.slide4_cta),
     defaultBlock("logo"),
     defaultBlock("line"),
   ];
