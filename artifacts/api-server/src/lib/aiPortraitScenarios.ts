@@ -1091,6 +1091,24 @@ export function buildTextOnlyPrompt(customText: string, aspectRatio = "3:4"): st
   return `${customText.trim()}\n\nPhotorealistic, professionally photographed, natural lighting and depth of field, true-to-life textures and detail, not CGI or illustrated.\n\nCompose the image in ${ratioDescription}.\n\n${PHOTO_STUDIO_NEGATIVE}`;
 }
 
+export function buildCustomTextWithPhotoPrompt(customText: string, aspectRatio = "3:4"): string {
+  const ratioDescription =
+    aspectRatio === "9:16"
+      ? "a vertical 9:16 portrait orientation (tall and narrow)"
+      : aspectRatio === "3:4"
+        ? "a 3:4 portrait orientation"
+        : "a square 1:1 format";
+  return `${customText.trim()}
+
+Maintain their exact facial features, skin tone, body shape, and likeness from the reference photo. Must look physically believable and naturally photographed, not CGI or illustrated, natural imperfections, realistic depth, tactile textures, subtle sensor grain, true to life reflections and lighting.
+
+Photorealistic, professionally photographed, natural lighting and depth of field, true-to-life textures and detail, not CGI or illustrated.
+
+Compose the image in ${ratioDescription}.
+
+${PHOTO_STUDIO_NEGATIVE}`;
+}
+
 // ─── Men's Studio — 10 presets ─────────────────────────────────────────────
 
 export const MEN_STUDIO_PRESETS: PhotoStudioPreset[] = [
