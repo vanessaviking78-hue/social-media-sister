@@ -6,7 +6,7 @@ import { aiGeneratedPortraitsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { objectStorageClient } from "./objectStorage";
 import { logger } from "./logger";
-import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, buildTextOnlyPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS } from "./aiPortraitScenarios";
+import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, buildTextOnlyPrompt, buildCustomTextWithPhotoPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS } from "./aiPortraitScenarios";
 
 const GEMINI_MODEL = "gemini-2.5-flash-image";
 const REQUEST_GAP_MS = 4_000;
@@ -182,7 +182,9 @@ export async function processPortraitJob(
       } catch {
         prompt = buildCustomPrompt({ outfitType: "white-shirt-jeans", backgroundType: "white-studio", aspectRatio: cfg.aspectRatio });
       }
-    } else {
+    } else if (cfg.promptVars?.customText?.trim()) {
+        prompt = buildCustomTextWithPhotoPrompt(cfg.promptVars.customText, cfg.aspectRatio);
+      } else {
       const scenario = AI_PORTRAIT_SCENARIOS.find((s) => s.id === cfg.id);
       if (!scenario) {
         patchCard({ status: "failed", failureReason: "Unknown scenario id." });
