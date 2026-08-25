@@ -114,53 +114,34 @@ export function normalizeSlideCsvForHeaders(text: string, targetColumns: string[
  *    CSV, to whichever target columns are still unfilled -- covering plain
  *    "Slide1/Slide2/..." headers, "Body", "Text", or anything else generic.
  */
-export function smartMapCsvHeaders(text: string, targetColumns: string[]): string {
+export function smartMapCsvHeaders(text: string): string {
   const { lines, nl } = splitLines(text);
   if (!lines.length) return text;
   const headerCells = splitCsvCells(lines[0]);
   if (!headerCells.length) return text;
-
   const lower = headerCells.map((c) => c.toLowerCase().trim());
-  const used = new Set<string>();
-  const mapped: (string | null)[] = headerCells.map(() => null);
 
-  headerCells.forEach((_cell, i) => {
-    const exact = targetColumns.find((t) => t.toLowerCase() === lower[i]);
-    if (exact) {
-      mapped[i] = exact;
-      used.add(exact);
-    }
-  });
+  let hookIdx = lower.findIndex((h) => h.includes("hook") || h.includes("headline") || h.includes("title"));
+  let ctaIdx = lower.findIndex((h) => h.includes("cta") || h.includes("call to action") || h.includes("call-to-action"));
 
-  const KEYWORDS: { col: string; test: (h: string) => boolean }[] = [
-    { col: "slide1_hook", test: (h) => h.includes("hook") || h.includes("headline") || h.includes("title") },
-    { col: "slide1_subtitle", test: (h) => h.includes("subtitle") || h.includes("sub-title") || h.includes("subheading") || h.includes("sub heading") },
-    { col: "slide4_cta", test: (h) => h.includes("cta") || h.includes("call to action") || h.includes("call-to-action") },
-  ];
-  headerCells.forEach((_cell, i) => {
-    if (mapped[i]) return;
-    for (const { col, test } of KEYWORDS) {
-      if (used.has(col) || !targetColumns.includes(col)) continue;
-      if (test(lower[i])) {
-        mapped[i] = col;
-        used.add(col);
-        break;
-      }
-    }
-  });
+  // Positional fallback: first column is the hook, last column is the call
+  // to action, whatever's in between becomes its own body slide in order.
+  // This is what makes plain "Slide1,Slide2,...,SlideN" headers work too.
+  if (hookIdx === -1) hookIdx = 0;
+  if (ctaIdx === -1 || ctaIdx === hookIdx) ctaIdx = headerCells.length - 1;
+  if (ctaIdx === hookIdx) ctaIdx = -1;
 
-  const remaining = targetColumns.filter((c) => !used.has(c));
-  let r = 0;
+  const mapped: string[] = headerCells.map(() => "");
+  mapped[hookIdx] = "hook";
+  if (ctaIdx !== -1) mapped[ctaIdx] = "cta";
+
+  let bodyNum = 1;
   headerCells.forEach((_cell, i) => {
     if (mapped[i]) return;
-    if (r < remaining.length) {
-      mapped[i] = remaining[r];
-      used.add(remaining[r]);
-      r++;
-    }
+    mapped[i] = `body${bodyNum++}`;
   });
 
-  lines[0] = headerCells.map((cell, i) => mapped[i] ?? cell).join(",");
+  lines[0] = mapped.join(",");
   return lines.join(nl);
 }
 
