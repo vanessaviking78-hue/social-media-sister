@@ -1029,8 +1029,8 @@ export default function BulkCarousel() {
       const hookFontName = (selectedPreset.fontFamily || "Bebas Neue").replace(/["']/g, "").split(",")[0].trim();
       const subFontName = (selectedPreset.subheadingFont || "Poppins").replace(/["']/g, "").split(",")[0].trim();
       try {
-        const sampleHookText = (csvRows.map((r: any) => String(r.slide1_hook || "")).join(" ") || "SAMPLE TEXT").toUpperCase();
-        const sampleSubText = csvRows.map((r: any) => String(r.slide1_subtitle || "")).join(" ") || "sample text";
+        const sampleHookText = (csvRows.map((r: any) => String(r.hook || "")).join(" ") || "SAMPLE TEXT").toUpperCase();
+        const sampleSubText = csvRows.map((r: any) => String(r.body1 || "")).join(" ") || "sample text";
         await Promise.all([
           document.fonts.load(`700 100px "${hookFontName}"`, sampleHookText),
           document.fonts.load(`400 100px "${subFontName}"`, sampleSubText),
@@ -1826,9 +1826,9 @@ export default function BulkCarousel() {
                           />
                         </td>
                         <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
-                        <td className="px-3 py-2 font-medium max-w-[160px] truncate">{stripPipes(row.slide1_hook)}</td>
-                        <td className="px-3 py-2 text-muted-foreground max-w-[140px] truncate">{row.slide1_subtitle}</td>
-                        <td className="px-3 py-2 text-muted-foreground max-w-[120px] truncate">{row.slide4_cta}</td>
+                        <td className="px-3 py-2 font-medium max-w-[160px] truncate">{stripPipes(row.hook)}</td>
+                        <td className="px-3 py-2 text-muted-foreground max-w-[140px] truncate">{row.body1 || ""}</td>
+                        <td className="px-3 py-2 text-muted-foreground max-w-[120px] truncate">{row.cta}</td>
                         <td className="px-3 py-2 text-center">
                           {coverFiles[i]
                             ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" />
