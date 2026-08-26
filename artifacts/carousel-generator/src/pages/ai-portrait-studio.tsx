@@ -86,6 +86,29 @@ const NEW_PORTRAITS_PRESETS: PhotoStudioPreset[] = [
   { id: "np-20", name: "Sofa Colour Editorial Wide", hasColour: false },
 ];
 
+const HOMEWORK_SHOTS_PRESETS: PhotoStudioPreset[] = [
+  { id: "hw-01", name: "Point Down (Both Hands)", hasColour: false },
+  { id: "hw-02", name: "Point To The Side", hasColour: false },
+  { id: "hw-03", name: "Point Behind/Beside", hasColour: false },
+  { id: "hw-04", name: "Point Up (Both Hands)", hasColour: false },
+  { id: "hw-05", name: "Hold Up Tablet", hasColour: false },
+  { id: "hw-06", name: "Hands On Hips", hasColour: false },
+  { id: "hw-07", name: "Arms Crossed", hasColour: false },
+  { id: "hw-08", name: "Friendly Wave", hasColour: false },
+  { id: "hw-09", name: "Thinking Pose", hasColour: false },
+  { id: "hw-10", name: "Double Thumbs Up", hasColour: false },
+  { id: "hw-11", name: "Shh Secret Tip", hasColour: false },
+  { id: "hw-12", name: "Product Showcase", hasColour: false },
+  { id: "hw-13", name: "Seated With Clipboard", hasColour: false },
+  { id: "hw-14", name: "Candid Laugh Over Shoulder", hasColour: false },
+  { id: "hw-15", name: "Heart Hands", hasColour: false },
+  { id: "hw-16", name: "Presenting Gesture", hasColour: false },
+  { id: "hw-17", name: "Walking Towards Camera", hasColour: false },
+  { id: "hw-18", name: "Applying Product", hasColour: false },
+  { id: "hw-19", name: "Before and After Reveal", hasColour: false },
+  { id: "hw-20", name: "Casual Lean", hasColour: false },
+];
+
 const JULY_2ND_SHOOT_PRESETS: PhotoStudioPreset[] = [
   { id: "js-01", name: "Head to Waist, Studio Neutral", hasColour: false },
   { id: "js-02", name: "Head to Waist, Window Light", hasColour: false },
@@ -1291,6 +1314,7 @@ export default function AiPortraitStudio() {
                 { key: "july", label: "July 2nd Shoot" },
                 { key: "photo", label: "Photo Studio" },
                 { key: "injector", label: "Injector Collection" },
+                { key: "homework", label: "Homework Shots" },
               ].map((tab) => (
                 <button
                   key={tab.key}
@@ -1542,6 +1566,60 @@ export default function AiPortraitStudio() {
             
 </>
 )}
+
+{activeSection === "homework" && (
+<>
+<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">Homework Shots</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+              {HOMEWORK_SHOTS_PRESETS.map((preset) => {
+                const isSelected = selectedPresets.has(preset.id);
+                return (
+                  <div
+                    key={preset.id}
+                    className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
+                      isSelected
+                        ? "border-violet-500/70 bg-violet-500/10"
+                        : "border-border/30 hover:border-border/60 hover:bg-muted/20"
+                    }`}
+                    onClick={() => togglePreset(preset.id)}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                        isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
+                      }`}>
+                        {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium leading-snug">{preset.name}</p>
+                        {preset.hasColour && (
+                          <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                            scrubs colour
+                          </Badge>
+                        )}
+                        {preset.hasColour && isSelected && (
+                          <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              value={presetColours[preset.id] ?? ""}
+                              onChange={(e) => setPresetColours((prev) => ({ ...prev, [preset.id]: e.target.value }))}
+                              placeholder="e.g. navy blue"
+                              className="w-full text-xs bg-background border border-border/50 rounded px-2 py-1 focus:outline-none focus:border-violet-500/50"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+
+</>
+)}
+
+
 
 </>)}
 
