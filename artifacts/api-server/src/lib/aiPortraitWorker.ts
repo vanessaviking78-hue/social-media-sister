@@ -144,7 +144,7 @@ export async function processPortraitJob(
         PHOTO_STUDIO_PRESETS.find((p) => p.id === cfg.id) ??
         INJECTOR_COLLECTION_PRESETS.find((p) => p.id === cfg.id) ??
         MEN_STUDIO_PRESETS.find((p) => p.id === cfg.id) ??
-        HOMEWORK_SHOTS_PRESETS.find((p) => p.id === cfg.id) ||
+        HOMEWORK_SHOTS_PRESETS.find((p) => p.id === cfg.id) ??
         RANDOM_PROMPT_PRESETS.find((p) => p.id === cfg.id);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
