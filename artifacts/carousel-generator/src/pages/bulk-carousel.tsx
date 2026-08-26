@@ -242,7 +242,7 @@ export function computeTuckedSubtitleY(hookRaw: string, subRaw: string, hookBloc
   const hookCY = (hookBlock?.y ?? 0.695) * H;
   ctx.font = `700 ${HOOK_SIZE}px 'Bebas Neue', sans-serif`;
   const hookLines = hookRaw && hookRaw.trim()
-    ? wrapCanvas(ctx, stripPipes(hookRaw).trim().toUpperCase(), W - PAD_X * 2)
+    ? wrapCanvas(ctx, stripPipes(hookRaw).trim(), W - PAD_X * 2)
     : [];
   ctx.font = `normal 400 ${SUB_SIZE}px 'Poppins', sans-serif`;
   const subLines = wrapCanvas(ctx, stripPipes(subRaw).trim(), W - PAD_X * 2);
@@ -371,12 +371,12 @@ export function renderSlideCanvas(
 
       // Extract hero word (text wrapped in |pipes|) for accent-colour rendering
       const heroMatch = hookRaw.match(/\|([^|]+)\|/);
-      const heroWord  = heroMatch ? heroMatch[1].toUpperCase() : null;
+      const heroWord  = heroMatch ? heroMatch[1] : null;
 
       // Measure wrapped lines (pipes stripped, uppercased)
       ctx.font = `700 ${HOOK_SIZE}px ${HOOK_FONT}`;
       const hookLines = hookRaw.trim()
-        ? wrapCanvas(ctx, stripPipes(hookRaw).trim().toUpperCase(), W - PAD_X * 2)
+        ? wrapCanvas(ctx, stripPipes(hookRaw).trim(), W - PAD_X * 2)
         : [];
 
       ctx.font = `normal 400 ${SUB_SIZE}px ${SUB_FONT}`;
