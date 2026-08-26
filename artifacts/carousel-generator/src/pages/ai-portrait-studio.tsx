@@ -428,6 +428,7 @@ export default function AiPortraitStudio() {
   // ── Preset selection ───────────────────────────────────────────────────────
   const [selectedPresets, setSelectedPresets] = useState<Set<string>>(new Set());
   const [presetColours, setPresetColours]     = useState<Record<string, string>>({});
+  const [presetScrubColours, setPresetScrubColours] = useState<Record<string, string>>({});
       const [presetNames, setPresetNames]         = useState<Record<string, string>>({});
       const [presetHairColours, setPresetHairColours] = useState<Record<string, string>>({});
   const [aspectRatio, setAspectRatio]         = useState<AspectRatio>("3:4");
@@ -682,6 +683,7 @@ export default function AiPortraitStudio() {
         ...(id === "ps-word-hold" ? { promptVars: wordVars } : {}),
         ...(id === "ps-custom" ? { promptVars: { customText: customPromptText } } : {}),
                   ...(preset?.hasName || preset?.hasHairColour ? { promptVars: { name: presetNames[id], hairColour: presetHairColours[id] } } : {}),
+        ...(id.startsWith("hw-") ? { promptVars: { scrubColour: presetScrubColours[id]?.trim() || "black" } } : {}),
       };
     });
 
@@ -1605,6 +1607,20 @@ export default function AiPortraitStudio() {
                               onChange={(e) => setPresetColours((prev) => ({ ...prev, [preset.id]: e.target.value }))}
                               placeholder="e.g. navy blue"
                               className="w-full text-xs bg-background border border-border/50 rounded px-2 py-1 focus:outline-none focus:border-violet-500/50"
+                            />
+                          </div>
+                        )}
+                        <Badge variant="outline" className="mt-1 ml-1 text-[10px] px-1.5 py-0 border-fuchsia-500/30 text-fuchsia-400">
+                          scrubs colour
+                        </Badge>
+                        {isSelected && (
+                          <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              value={presetScrubColours[preset.id] ?? ""}
+                              onChange={(e) => setPresetScrubColours((prev) => ({ ...prev, [preset.id]: e.target.value }))}
+                              placeholder="e.g. black"
+                              className="w-full text-xs bg-background border border-border/50 rounded px-2 py-1 focus:outline-none focus:border-fuchsia-500/50"
                             />
                           </div>
                         )}
