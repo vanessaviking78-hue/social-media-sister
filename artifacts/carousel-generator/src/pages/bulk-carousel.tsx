@@ -296,7 +296,15 @@ export function renderSlideCanvas(
   ctx.scale(scale, scale);
 
   const pageColor = preset.pageColor || "#1a1a2e";
-      const overlayColor = overlayOverride ?? (preset.overlayColor || "rgba(0,0,0,0.55)");
+      const toOverlayRgba = (color: string, alpha = 0.55) => {
+    if (!color.startsWith("#")) return color;
+    const h = color.replace("#", "");
+    const r = parseInt(h.length === 3 ? h[0] + h[0] : h.slice(0, 2), 16);
+    const g = parseInt(h.length === 3 ? h[1] + h[1] : h.slice(2, 4), 16);
+    const b = parseInt(h.length === 3 ? h[2] + h[2] : h.slice(4, 6), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+  };
+  const overlayColor = overlayOverride ? toOverlayRgba(overlayOverride) : (preset.overlayColor || "rgba(0,0,0,0.55)");
   const textColor = preset.textColor || "#ffffff";
   const accentColor = accentOverride ?? preset.cornerColor ?? "#d4af37";
 
