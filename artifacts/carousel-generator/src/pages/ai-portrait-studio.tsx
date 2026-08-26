@@ -926,7 +926,13 @@ export default function AiPortraitStudio() {
             <Select onValueChange={(v) => { const p = customPrompts.find((cp) => String(cp.id) === v); if (p) setNoPhotoPrompt(p.promptText); }}>
               <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Load a saved prompt…" /></SelectTrigger>
               <SelectContent>
-                {customPrompts.map((p) => (
+                {customPrompts.filter((p) => p.name.startsWith("Homework Shots")).length > 0 && (
+                  <SelectItem value="__homework_shots_header" disabled className="text-[10px] uppercase tracking-wide opacity-60">Homework Shots</SelectItem>
+                )}
+                {customPrompts.filter((p) => p.name.startsWith("Homework Shots")).map((p) => (
+                  <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                ))}
+                {customPrompts.filter((p) => !p.name.startsWith("Homework Shots")).map((p) => (
                   <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -955,13 +961,30 @@ export default function AiPortraitStudio() {
           </div>
 
           {customPrompts.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {customPrompts.map((p) => (
-                <span key={p.id} className="inline-flex items-center gap-1 text-[10px] bg-white/5 border border-border/40 rounded-full px-2 py-1 text-muted-foreground">
-                  {p.name}
-                  <button onClick={() => handleDeletePrompt(p.id)} className="hover:text-red-400"><X className="w-3 h-3" /></button>
-                </span>
-              ))}
+            <div className="flex flex-col gap-2">
+              {customPrompts.filter((p) => p.name.startsWith("Homework Shots")).length > 0 && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">Homework Shots</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {customPrompts.filter((p) => p.name.startsWith("Homework Shots")).map((p) => (
+                      <span key={p.id} className="inline-flex items-center gap-1 text-[10px] bg-white/5 border border-border/40 rounded-full px-2 py-1 text-muted-foreground">
+                        {p.name}
+                        <button onClick={() => handleDeletePrompt(p.id)} className="hover:text-red-400"><X className="w-3 h-3" /></button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {customPrompts.filter((p) => !p.name.startsWith("Homework Shots")).length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {customPrompts.filter((p) => !p.name.startsWith("Homework Shots")).map((p) => (
+                    <span key={p.id} className="inline-flex items-center gap-1 text-[10px] bg-white/5 border border-border/40 rounded-full px-2 py-1 text-muted-foreground">
+                      {p.name}
+                      <button onClick={() => handleDeletePrompt(p.id)} className="hover:text-red-400"><X className="w-3 h-3" /></button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
