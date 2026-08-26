@@ -304,7 +304,8 @@ export function renderSlideCanvas(
     const b = parseInt(h.length === 3 ? h[2] + h[2] : h.slice(4, 6), 16);
     return `rgba(${r},${g},${b},${alpha})`;
   };
-  const overlayColor = overlayOverride ? toOverlayRgba(overlayOverride) : (preset.overlayColor || "rgba(0,0,0,0.55)");
+  const overlayColor = preset.overlayColor || "rgba(0,0,0,0.55)";
+  const textBoxFill = overlayOverride ? toOverlayRgba(overlayOverride, 0.92) : null;
   const textColor = preset.textColor || "#ffffff";
   const accentColor = accentOverride ?? preset.cornerColor ?? "#d4af37";
 
@@ -320,10 +321,6 @@ export function renderSlideCanvas(
     if (img) {
           if (slideNum === 1) {
                 drawCover(ctx, img, photoAlpha, photoZoom, photoShadow);
-                if (overlayOverride) {
-                  ctx.fillStyle = overlayColor;
-                  ctx.fillRect(0, 0, W, H);
-                }
           } else {
                 drawCover(ctx, img, photoAlpha, photoZoom, photoShadow);
                 ctx.fillStyle = overlayColor;
@@ -392,6 +389,12 @@ export function renderSlideCanvas(
       if (hookLines.length > 0) {
         const totalH = hookLines.length * HOOK_LINE_H;
         ctx.font = `700 ${HOOK_SIZE}px ${HOOK_FONT}`;
+        if (textBoxFill) {
+          const maxLineW = Math.max(...hookLines.map(l => ctx.measureText(stripPipes(l)).width));
+          const padX = 28, padY = 16;
+          ctx.fillStyle = textBoxFill;
+          ctx.fillRect(hookCX - maxLineW / 2 - padX, hookCY - totalH / 2 - padY, maxLineW + padX * 2, totalH + padY * 2);
+        }
         let y = hookCY - totalH / 2 + HOOK_LINE_H / 2;
         for (const line of hookLines) {
           renderHookLine(ctx, line, heroWord, hookCX, y, hookTextColor, accentColor);
@@ -404,6 +407,13 @@ export function renderSlideCanvas(
         const totalH = subLines.length * SUB_LINE_H;
         ctx.font      = `normal 400 ${SUB_SIZE}px ${SUB_FONT}`;
             ctx.fillStyle = subTextColor;
+        if (textBoxFill) {
+          const maxLineW = Math.max(...subLines.map(l => ctx.measureText(stripPipes(l)).width));
+          const padX = 20, padY = 12;
+          ctx.fillStyle = textBoxFill;
+          ctx.fillRect(subCX - maxLineW / 2 - padX, subCY - totalH / 2 - padY, maxLineW + padX * 2, totalH + padY * 2);
+          ctx.fillStyle = subTextColor;
+        }
         let y = subCY - totalH / 2 + SUB_LINE_H / 2;
         for (const line of subLines) {
           ctx.fillText(stripPipes(line), subCX, y);
@@ -427,6 +437,13 @@ export function renderSlideCanvas(
         const totalH = lines.length * fontSize * st.lineH * lineSpacing;
         const cx = block.x * W;
         let y = block.y * H - totalH / 2 + (fontSize * st.lineH * lineSpacing) / 2;
+        if (textBoxFill) {
+          const maxLineW = Math.max(...lines.map(l => ctx.measureText(stripPipes(l)).width));
+          const padX = 20, padY = 12;
+          ctx.fillStyle = textBoxFill;
+          ctx.fillRect(cx - padX, block.y * H - totalH / 2 - padY, maxLineW + padX * 2, totalH + padY * 2);
+          ctx.fillStyle = textColor;
+        }
         for (const line of lines) { ctx.fillText(stripPipes(line), cx, y); y += fontSize * st.lineH * lineSpacing; }
       }
     }
