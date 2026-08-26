@@ -377,7 +377,7 @@ router.post("/ai-portrait/save-batch-to-library", async (req: Request, res: Resp
         ?? INJECTOR_COLLECTION_PRESETS.find((s) => s.id === portrait.scenarioId)
         ?? MEN_STUDIO_PRESETS.find((s) => s.id === portrait.scenarioId)
               ?? HOMEWORK_SHOTS_PRESETS.find((s) => s.id === portrait.scenarioId)
-        || RANDOM_PROMPT_PRESETS.find((s) => s.id === portrait.scenarioId);
+        ?? RANDOM_PROMPT_PRESETS.find((s) => s.id === portrait.scenarioId);
       const scenarioName = scenario?.name ?? portrait.scenarioId;
 
       toInsert.push({
