@@ -429,6 +429,8 @@ export default function AiPortraitStudio() {
   const [selectedPresets, setSelectedPresets] = useState<Set<string>>(new Set());
   const [presetColours, setPresetColours]     = useState<Record<string, string>>({});
   const [presetScrubColours, setPresetScrubColours] = useState<Record<string, string>>({});
+  const [bulkBackdropColour, setBulkBackdropColour] = useState("");
+  const [bulkScrubColour, setBulkScrubColour] = useState("");
       const [presetNames, setPresetNames]         = useState<Record<string, string>>({});
       const [presetHairColours, setPresetHairColours] = useState<Record<string, string>>({});
   const [aspectRatio, setAspectRatio]         = useState<AspectRatio>("3:4");
@@ -1571,7 +1573,53 @@ export default function AiPortraitStudio() {
 
 {activeSection === "homework" && (
 <>
-<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">Homework Shots</p>
+<div className="flex items-center justify-between mb-2">
+  <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium">Homework Shots</p>
+  <div className="flex items-center gap-3">
+    <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={() => selectCategory(HOMEWORK_SHOTS_PRESETS.map((p) => p.id))}>Select all</button>
+    <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={() => deselectCategory(HOMEWORK_SHOTS_PRESETS.map((p) => p.id))}>Clear all</button>
+  </div>
+</div>
+<div className="flex flex-wrap items-end gap-2 mb-3 p-2 rounded-lg border border-border/30 bg-muted/10">
+  <div className="flex-1 min-w-[140px]">
+    <label className="block text-[10px] uppercase tracking-wide text-muted-foreground/60 mb-1">Backdrop colour (all 20)</label>
+    <input
+      type="text"
+      value={bulkBackdropColour}
+      onChange={(e) => setBulkBackdropColour(e.target.value)}
+      placeholder="e.g. navy blue"
+      className="w-full text-xs bg-background border border-border/50 rounded px-2 py-1 focus:outline-none focus:border-violet-500/50"
+    />
+  </div>
+  <div className="flex-1 min-w-[140px]">
+    <label className="block text-[10px] uppercase tracking-wide text-muted-foreground/60 mb-1">Scrubs colour (all 20)</label>
+    <input
+      type="text"
+      value={bulkScrubColour}
+      onChange={(e) => setBulkScrubColour(e.target.value)}
+      placeholder="e.g. black"
+      className="w-full text-xs bg-background border border-border/50 rounded px-2 py-1 focus:outline-none focus:border-fuchsia-500/50"
+    />
+  </div>
+  <Button
+    type="button"
+    size="sm"
+    variant="secondary"
+    className="h-8 text-xs"
+    onClick={() => {
+      const ids = HOMEWORK_SHOTS_PRESETS.map((p) => p.id);
+      if (bulkBackdropColour.trim()) {
+        setPresetColours((prev) => { const next = { ...prev }; ids.forEach((id) => { next[id] = bulkBackdropColour; }); return next; });
+      }
+      if (bulkScrubColour.trim()) {
+        setPresetScrubColours((prev) => { const next = { ...prev }; ids.forEach((id) => { next[id] = bulkScrubColour; }); return next; });
+      }
+      toast.success("Applied to all 20 Homework Shots");
+    }}
+  >
+    Apply to all 20
+  </Button>
+</div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
               {HOMEWORK_SHOTS_PRESETS.map((preset) => {
