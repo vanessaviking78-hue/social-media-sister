@@ -87,26 +87,26 @@ const NEW_PORTRAITS_PRESETS: PhotoStudioPreset[] = [
 ];
 
 const HOMEWORK_SHOTS_PRESETS: PhotoStudioPreset[] = [
-  { id: "hw-01", name: "Point Down (Both Hands)", hasColour: false },
-  { id: "hw-02", name: "Point To The Side", hasColour: false },
-  { id: "hw-03", name: "Point Behind/Beside", hasColour: false },
-  { id: "hw-04", name: "Point Up (Both Hands)", hasColour: false },
-  { id: "hw-05", name: "Hold Up Tablet", hasColour: false },
-  { id: "hw-06", name: "Hands On Hips", hasColour: false },
-  { id: "hw-07", name: "Arms Crossed", hasColour: false },
-  { id: "hw-08", name: "Friendly Wave", hasColour: false },
-  { id: "hw-09", name: "Thinking Pose", hasColour: false },
-  { id: "hw-10", name: "Double Thumbs Up", hasColour: false },
-  { id: "hw-11", name: "Shh Secret Tip", hasColour: false },
-  { id: "hw-12", name: "Product Showcase", hasColour: false },
-  { id: "hw-13", name: "Seated With Clipboard", hasColour: false },
-  { id: "hw-14", name: "Candid Laugh Over Shoulder", hasColour: false },
-  { id: "hw-15", name: "Heart Hands", hasColour: false },
-  { id: "hw-16", name: "Presenting Gesture", hasColour: false },
-  { id: "hw-17", name: "Walking Towards Camera", hasColour: false },
-  { id: "hw-18", name: "Applying Product", hasColour: false },
-  { id: "hw-19", name: "Before and After Reveal", hasColour: false },
-  { id: "hw-20", name: "Casual Lean", hasColour: false },
+  { id: "hw-01", name: "Point Down (Both Hands)", hasColour: true },
+  { id: "hw-02", name: "Point To The Side", hasColour: true },
+  { id: "hw-03", name: "Point Behind/Beside", hasColour: true },
+  { id: "hw-04", name: "Point Up (Both Hands)", hasColour: true },
+  { id: "hw-05", name: "Hold Up Tablet", hasColour: true },
+  { id: "hw-06", name: "Hands On Hips", hasColour: true },
+  { id: "hw-07", name: "Arms Crossed", hasColour: true },
+  { id: "hw-08", name: "Friendly Wave", hasColour: true },
+  { id: "hw-09", name: "Thinking Pose", hasColour: true },
+  { id: "hw-10", name: "Double Thumbs Up", hasColour: true },
+  { id: "hw-11", name: "Shh Secret Tip", hasColour: true },
+  { id: "hw-12", name: "Product Showcase", hasColour: true },
+  { id: "hw-13", name: "Seated With Clipboard", hasColour: true },
+  { id: "hw-14", name: "Candid Laugh Over Shoulder", hasColour: true },
+  { id: "hw-15", name: "Heart Hands", hasColour: true },
+  { id: "hw-16", name: "Presenting Gesture", hasColour: true },
+  { id: "hw-17", name: "Walking Towards Camera", hasColour: true },
+  { id: "hw-18", name: "Applying Product", hasColour: true },
+  { id: "hw-19", name: "Before and After Reveal", hasColour: true },
+  { id: "hw-20", name: "Casual Lean", hasColour: true },
 ];
 
 const JULY_2ND_SHOOT_PRESETS: PhotoStudioPreset[] = [
@@ -1594,7 +1594,7 @@ export default function AiPortraitStudio() {
                         <p className="text-sm font-medium leading-snug">{preset.name}</p>
                         {preset.hasColour && (
                           <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
-                            scrubs colour
+                            backdrop colour
                           </Badge>
                         )}
                         {preset.hasColour && isSelected && (
