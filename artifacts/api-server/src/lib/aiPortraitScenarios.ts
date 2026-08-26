@@ -705,7 +705,6 @@ export const HOMEWORK_SHOTS_PRESETS: PhotoStudioPreset[] = [
     promptTemplate: `A woman from the reference photo, wearing a fitted black long-sleeve dress, standing against a seamless [COLOUR] studio backdrop, soft even studio lighting, shot like a professional but natural phone photo for social media content, leaning casually against a treatment couch or counter edge with arms loosely crossed, one ankle crossed over the other, relaxed confident smile. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing, no glamming up. Same facial features as reference photo.`,
   },
 ];
-];
 
 export const RANDOM_PROMPT_PRESETS: PhotoStudioPreset[] = [
   {id: "rp-01",
