@@ -14,7 +14,7 @@ import {
 import { eq, desc } from "drizzle-orm";
 import { objectStorageClient } from "../lib/objectStorage";
 import { logger } from "../lib/logger";
-import { AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS } from "../lib/aiPortraitScenarios";
+import { AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS, HOMEWORK_SHOTS_PRESETS } from "../lib/aiPortraitScenarios";
 import {
   createJob,
   getJob,
@@ -376,7 +376,8 @@ router.post("/ai-portrait/save-batch-to-library", async (req: Request, res: Resp
         ?? PHOTO_STUDIO_PRESETS.find((s) => s.id === portrait.scenarioId)
         ?? INJECTOR_COLLECTION_PRESETS.find((s) => s.id === portrait.scenarioId)
         ?? MEN_STUDIO_PRESETS.find((s) => s.id === portrait.scenarioId)
-              ?? RANDOM_PROMPT_PRESETS.find((s) => s.id === portrait.scenarioId);
+              ?? HOMEWORK_SHOTS_PRESETS.find((s) => s.id === portrait.scenarioId)
+        || RANDOM_PROMPT_PRESETS.find((s) => s.id === portrait.scenarioId);
       const scenarioName = scenario?.name ?? portrait.scenarioId;
 
       toInsert.push({
