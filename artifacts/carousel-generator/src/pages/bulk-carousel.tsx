@@ -15,7 +15,7 @@ import Papa from "papaparse";
 import { normalizeSlideCsvForHeaders, smartMapCsvHeaders } from "@/lib/csv-format";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
-import { loadGoogleFonts } from "@/lib/slide-utils";
+import { loadGoogleFonts, FONT_OPTIONS } from "@/lib/slide-utils";
 
 import { usePresets, type ClientPreset } from "@/lib/use-presets";
 
@@ -284,9 +284,10 @@ export function renderSlideCanvas(
   lineSpacing = LOCKED_LINE_SPACING,
   accentOverride?: string,
   overlayOverride?: string,
-    imageOpacity?: number,
-    imageZoom?: number,
-    imageShadow?: boolean
+  imageOpacity?: number,
+  imageZoom?: number,
+  imageShadow?: boolean,
+  fontOverride?: string
 ): string {
   const canvas = document.createElement("canvas");
   canvas.width = W * scale;
@@ -347,8 +348,8 @@ export function renderSlideCanvas(
       const SUB_SIZE    = subBlock?.fontSize  ?? 44;
       const SUB_LINE_H  = Math.round(SUB_SIZE  * 1.40);
       const PAD_X       = 90;
-            const HOOK_FONT = preset.fontFamily || "'Bebas Neue', sans-serif";
-            const SUB_FONT = preset.subheadingFont || "'Poppins', sans-serif";
+            const HOOK_FONT = fontOverride || preset.fontFamily || "'Bebas Neue', sans-serif";
+            const SUB_FONT = fontOverride || preset.subheadingFont || "'Poppins', sans-serif";
             const hookTextColor = preset.textColor || "#ffffff";
             const subTextColor = preset.subheadingColor || accentColor;
 
@@ -451,11 +452,13 @@ export function renderAllThumbs(
   logoImg: HTMLImageElement | null,
   preset: ClientPreset,
   lineSpacing = LOCKED_LINE_SPACING,
-  accentOverride?: string
+  accentOverride?: string,
+  overlayOverride?: string,
+  fontOverride?: string
 ): string[] {
   const totalSlides = item.blocks.filter(b => /^body\d+$/.test(b.id)).length + 2;
   return Array.from({ length: totalSlides }, (_, i) => i + 1).map(n =>
-    renderSlideCanvas(n, item.blocks, item.coverImg, item.bodyImg, logoImg, preset, SCALE, false, lineSpacing, accentOverride)
+    renderSlideCanvas(n, item.blocks, item.coverImg, item.bodyImg, logoImg, preset, SCALE, false, lineSpacing, accentOverride, overlayOverride, undefined, undefined, undefined, fontOverride)
   );
 }
 
@@ -905,6 +908,15 @@ export default function BulkCarousel() {
   const [heroWordColor, setHeroWordColor] = useState("#C4879A");
   const heroWordColorRef = useRef("#C4879A");
   useEffect(() => { heroWordColorRef.current = heroWordColor; }, [heroWordColor]);
+  const [textFont, setTextFont] = useState("");
+  const textFontRef = useRef("");
+  useEffect(() => { textFontRef.current = textFont; }, [textFont]);
+  const [textBoxEnabled, setTextBoxEnabled] = useState(false);
+  const [textBoxColor, setTextBoxColor] = useState("#000000");
+  const textBoxEnabledRef = useRef(false);
+  const textBoxColorRef = useRef("#000000");
+  useEffect(() => { textBoxEnabledRef.current = textBoxEnabled; }, [textBoxEnabled]);
+  useEffect(() => { textBoxColorRef.current = textBoxColor; }, [textBoxColor]);
   const [lowerThird, setLowerThird] = useState(false);
   const [applyingLowerThird, setApplyingLowerThird] = useState(false);
   const [lowerThirdColor1, setLowerThirdColor1] = useState("#000000");
@@ -1071,7 +1083,7 @@ export default function BulkCarousel() {
         const bodyImg = coverImg;
 
         const blocks = makeBlocks(row);
-        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, LOCKED_LINE_SPACING, heroWordColor);
+        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, LOCKED_LINE_SPACING, heroWordColor, textBoxEnabled ? textBoxColor : undefined, textFont || undefined);
         rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.hook, blocks, coverImg, bodyImg, thumbs });
         setRenderProgress(Math.round(((idx + 1) / activeIndexes.length) * 100));
       }
@@ -1091,7 +1103,7 @@ export default function BulkCarousel() {
     if (!selectedPreset) return;
     setItems(prev => prev.map(item => {
       if (item.id !== id) return item;
-      const thumbs = renderAllThumbs({ blocks: newBlocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, logoImgRef.current, selectedPreset, LOCKED_LINE_SPACING, heroWordColorRef.current);
+      const thumbs = renderAllThumbs({ blocks: newBlocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, logoImgRef.current, selectedPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined);
       return { ...item, blocks: newBlocks, thumbs };
     }));
   };
@@ -1103,7 +1115,7 @@ export default function BulkCarousel() {
       if (phase !== "preview" || !selectedPreset || !items.length) return;
       setItems(prev => prev.map(item => ({
         ...item,
-        thumbs: renderAllThumbs(item, logoImgRef.current, selectedPreset!, LOCKED_LINE_SPACING, heroWordColorRef.current),
+        thumbs: renderAllThumbs(item, logoImgRef.current, selectedPreset!, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined),
       })));
     };
     import.meta.hot.on("vite:afterUpdate", handler);
@@ -1259,7 +1271,7 @@ export default function BulkCarousel() {
             let targetLogo: HTMLImageElement | null = null;
             if (targetPreset?.logoUrl) { try { targetLogo = await loadImg(targetPreset.logoUrl); } catch {} }
             const thumbs = targetPreset
-              ? renderAllThumbs({ blocks: item.blocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, targetLogo, targetPreset, LOCKED_LINE_SPACING, heroWordColorRef.current)
+              ? renderAllThumbs({ blocks: item.blocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, targetLogo, targetPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined)
               : item.thumbs;
             const names = thumbs.map((_, j) => `carousel-${i + 1}-slide${j + 1}.png`);
             const imageUrls = await uploadDataUrls(thumbs, names);
@@ -1731,6 +1743,22 @@ export default function BulkCarousel() {
               className="h-8 w-14 rounded cursor-pointer border border-border/40 bg-transparent p-0.5"
             />
           </div>
+              <div className="flex items-center gap-3">
+                <label className="text-sm text-muted-foreground whitespace-nowrap">Font</label>
+                <select value={textFont} onChange={e => setTextFont(e.target.value)} className="h-8 rounded border border-border/40 bg-background px-2 text-sm">
+                  <option value="">Preset default</option>
+                  {FONT_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                </select>
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+                  <input type="checkbox" checked={textBoxEnabled} onChange={e => setTextBoxEnabled(e.target.checked)} className="w-4 h-4 accent-pink-500" />
+                  Coloured box behind text
+                </label>
+                {textBoxEnabled && (
+                  <input type="color" value={textBoxColor} onChange={e => setTextBoxColor(e.target.value)} className="h-8 w-14 rounded cursor-pointer border border-border/40 bg-transparent p-0.5" />
+                )}
+              </div>
 
           <div
             onDrop={handleCsvDrop}
