@@ -319,11 +319,15 @@ export function renderSlideCanvas(
     const photoShadow = imageShadow ?? false;
     if (img) {
           if (slideNum === 1) {
-                  drawCover(ctx, img, photoAlpha, photoZoom, photoShadow);
-          } else {
-                  drawCover(ctx, img, photoAlpha, photoZoom, photoShadow);
+                drawCover(ctx, img, photoAlpha, photoZoom, photoShadow);
+                if (overlayOverride) {
                   ctx.fillStyle = overlayColor;
                   ctx.fillRect(0, 0, W, H);
+                }
+          } else {
+                drawCover(ctx, img, photoAlpha, photoZoom, photoShadow);
+                ctx.fillStyle = overlayColor;
+                ctx.fillRect(0, 0, W, H);
           }
     }
 
