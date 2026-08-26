@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { usePresets, type ClientPreset } from "@/lib/use-presets";
 import { MusicPickerModal, type MusicTrack } from "@/components/music-picker-modal";
 import { renderSlideCanvas, makeBlocks, computeTuckedSubtitleY, SlideEditorModal, SCALE, LOCKED_LINE_SPACING, type CsvRow, type Block } from "@/pages/bulk-carousel";
+import { FONT_OPTIONS } from "@/lib/slide-utils";
 import JSZip from "jszip";
 import Papa from "papaparse";
 import { normalizeSlideCsvForHeaders, readFileAsText } from "@/lib/csv-format";
@@ -68,6 +69,8 @@ row: CsvRow; blocks: Block[];
 presetId: number | null; caption: string; date: string; time: string; track: MusicTrack | null;
 assignedRow?: number;
   imageOpacity: number; imageZoom: number; imageShadow: boolean; textBg: boolean;
+  textFont: string;
+  textBgColor: string;
 };
 type PRow = { slide1_hook: string; slide1_subtitle: string; slide2_body: string; slide3_body: string; slide4_cta: string; client: string; caption: string; date: string; time: string; };
 
@@ -86,14 +89,21 @@ const sub = blocks.find((b) => b.id === "subtitle"); const hook = blocks.find((b
 if (sub) sub.y = computeTuckedSubtitleY(row.slide1_hook, row.slide1_subtitle, hook, sub);
 return blocks;
 }
-async function renderFromBlocks(raw: string[], imgs: HTMLImageElement[], blocks: Block[], preset: ClientPreset | null, imageOpacity = 1, imageZoom = 1, imageShadow = false, textBg = false): Promise<string[]> {
+async function renderFromBlocks(raw: string[], imgs: HTMLImageElement[], blocks: Block[], preset: ClientPreset | null, imageOpacity = 1, imageZoom = 1, imageShadow = false, textBg = false, textFont = "", textBgColor = "#000000"): Promise<string[]> {
 const hasText = blocks.some((b) => ((b as any).text || "").trim());
 const p = preset || DEFAULT_PRESET; const accent = "#ffffff";
   // Seamless Carousels used to always render at full opacity with no legibility
   // box at all (Vanessa asked for that twice after it kept reverting). It's now
   // a genuine per-carousel opt-in instead of hardcoded either way: off by
   // default (same look as before), on uses the client's saved overlay colour.
-  const overlay = textBg ? (p.overlayColor || "rgba(0,0,0,0.55)") : "rgba(0,0,0,0)";
+  const hexToRgba = (hex: string, a: number) => {
+    const h = hex.replace("#", "");
+    const r = parseInt(h.length === 3 ? h[0] + h[0] : h.slice(0, 2), 16);
+    const g = parseInt(h.length === 3 ? h[1] + h[1] : h.slice(2, 4), 16);
+    const b = parseInt(h.length === 3 ? h[2] + h[2] : h.slice(4, 6), 16);
+    return `rgba(${r},${g},${b},${a})`;
+  };
+  const overlay = textBg ? (textBgColor ? hexToRgba(textBgColor, 0.55) : (p.overlayColor || "rgba(0,0,0,0.55)")) : "rgba(0,0,0,0)";
 let logoImg: HTMLImageElement | null = null;
 const logoUrl = (p as any)?.logoUrl;
 if (logoUrl) { try { logoImg = await loadImgCors(logoUrl); } catch {} }
@@ -115,7 +125,7 @@ const logoForSlide = i === 0 ? logoImg : null;
 // noticeably looser line spacing than the edit preview showed, and looser
 // than the main Bulk Carousel Creator besides. Locked to the same 0.9 as
 // everywhere else now.
-        out.push(renderSlideCanvas(n, blocksForRender, n === 1 ? img : null, n === 1 ? null : img, logoForSlide, p, SCALE, false, LOCKED_LINE_SPACING, accent, overlay, imageOpacity, imageZoom, imageShadow));
+        out.push(renderSlideCanvas(n, blocksForRender, n === 1 ? img : null, n === 1 ? null : img, logoForSlide, p, SCALE, false, LOCKED_LINE_SPACING, accent, overlay, imageOpacity, imageZoom, imageShadow, textFont || undefined));
 }
 return out;
 }
@@ -243,7 +253,7 @@ for (const s of strips) {
 const img = await fileToImage(s.file); const raw = cutStrip(img, s.slides); const slideImgs = await Promise.all(raw.map(loadImg));
 const blocks = blocksFromRow(EMPTY_ROW);
 const slideUrls = await renderFromBlocks(raw, slideImgs, blocks, preset);
-out.push({ id: `c-${Math.random().toString(36).slice(2, 7)}`, name: s.file.name.replace(/\.[^.]+$/, ""), raw, slideImgs, slideUrls, row: { ...EMPTY_ROW }, blocks, presetId: batchPresetId, caption: "", date: seamlessDate(idx), time: POST_TIME, track: null, imageOpacity: 1, imageZoom: 1, imageShadow: false, textBg: false });
+out.push({ id: `c-${Math.random().toString(36).slice(2, 7)}`, name: s.file.name.replace(/\.[^.]+$/, ""), raw, slideImgs, slideUrls, row: { ...EMPTY_ROW }, blocks, presetId: batchPresetId, caption: "", date: seamlessDate(idx), time: POST_TIME, track: null, imageOpacity: 1, imageZoom: 1, imageShadow: false, textBg: false, textFont: "", textBgColor: "#000000" });
 idx++;
 }
 setCarousels(out); setPhase("preview");
@@ -292,7 +302,7 @@ const preset = presetFor(pid);
 setBusy(true);
 try {
 const updated = await Promise.all(carousels.map(async (c, i) => {
-        const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, c.blocks, preset, c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg);
+        const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, c.blocks, preset, c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg, c.textFont, c.textBgColor);
 return { ...c, presetId: pid, date: c.date || seamlessDate(i), slideUrls };
 }));
 setCarousels(updated);
@@ -309,7 +319,7 @@ try {
 const row: CsvRow = { slide1_hook: pr.slide1_hook, slide1_subtitle: pr.slide1_subtitle, slide2_body: pr.slide2_body, slide3_body: pr.slide3_body, slide4_cta: pr.slide4_cta };
 const preset = pr.client ? (presets.find((p) => p.name.trim().toLowerCase() === pr.client.toLowerCase()) || null) : presetFor(c.presetId);
 const blocks = blocksFromRow(row);
-const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, preset, c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg);
+const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, preset, c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg, c.textFont, c.textBgColor);
 update(id, { row, blocks, presetId: preset ? preset.id : c.presetId, caption: pr.caption || c.caption, date: pr.date || c.date, time: pr.time || c.time, slideUrls, assignedRow: idx });
 } catch (e: any) { toast.error(e?.message || "Could not apply that row"); } finally { setBusy(false); }
 }
@@ -338,7 +348,7 @@ setGenning(false); toast.success(`Wrote ${ok} caption${ok !== 1 ? "s" : ""}.`, {
 }
 
 function updateRow(id: string, field: keyof CsvRow, value: string) { setCarousels((p) => p.map((c) => (c.id === id ? { ...c, row: { ...c.row, [field]: value } } : c))); }
-async function applyImageStyle(id: string, patch: Partial<Pick<Carousel, "imageOpacity" | "imageZoom" | "imageShadow" | "textBg">>) {
+async function applyImageStyle(id: string, patch: Partial<Pick<Carousel, "imageOpacity" | "imageZoom" | "imageShadow" | "textBg" | "textFont" | "textBgColor">>) {
   const c = carousels.find((x) => x.id === id); if (!c) return;
   const next = { ...c, ...patch };
   update(id, patch);
@@ -349,23 +359,23 @@ async function applyImageStyle(id: string, patch: Partial<Pick<Carousel, "imageO
   // wrong opacity/zoom/shadow — exactly the "preview doesn't update" bug.
   const ticket = (imageStyleTickets.current[id] || 0) + 1;
   imageStyleTickets.current[id] = ticket;
-  const slideUrls = await renderFromBlocks(next.raw, next.slideImgs, next.blocks, presetFor(next.presetId), next.imageOpacity, next.imageZoom, next.imageShadow, next.textBg);
+  const slideUrls = await renderFromBlocks(next.raw, next.slideImgs, next.blocks, presetFor(next.presetId), next.imageOpacity, next.imageZoom, next.imageShadow, next.textBg, next.textFont, next.textBgColor);
   if (imageStyleTickets.current[id] !== ticket) return;
   update(id, { slideUrls });
 }
 async function applyText(id: string) {
 const c = carousels.find((x) => x.id === id); if (!c) return;
 setBusy(true);
-try { const blocks = blocksFromRow(c.row); const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, presetFor(c.presetId), c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg); update(id, { blocks, slideUrls }); } finally { setBusy(false); }
+try { const blocks = blocksFromRow(c.row); const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, presetFor(c.presetId), c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg, c.textFont, c.textBgColor); update(id, { blocks, slideUrls }); } finally { setBusy(false); }
 }
 async function changeClient(id: string, presetId: number | null) {
 const c = carousels.find((x) => x.id === id); update(id, { presetId });
-if (c) { const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, c.blocks, presetFor(presetId), c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg); update(id, { presetId, slideUrls }); }
+if (c) { const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, c.blocks, presetFor(presetId), c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg, c.textFont, c.textBgColor); update(id, { presetId, slideUrls }); }
 }
 async function saveEdit(id: string, blocks: Block[]) {
 const c = carousels.find((x) => x.id === id); if (!c) return;
 setBusy(true);
-try { const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, presetFor(c.presetId), c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg); update(id, { blocks, slideUrls }); } finally { setBusy(false); setEditId(null); }
+try { const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, presetFor(c.presetId), c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg, c.textFont, c.textBgColor); update(id, { blocks, slideUrls }); } finally { setBusy(false); setEditId(null); }
 }
 function downloadTemplate() {
 const csv = "client,caption,date,time,slide1_hook,slide1_subtitle,slide2_body,slide3_body,slide4_cta\nTweaked By Helen,\"Your caption\",2026-07-10,10:00,YOUR HOOK,A supporting line,Body slide two,Body slide three,DM me to book\n";
@@ -399,7 +409,7 @@ for (let i = 0; i < ready.length; i++) {
 const c = ready[i]; toast.loading(`Scheduling ${i + 1} / ${ready.length}...`, { id: tid });
 for (const targetId of targetIds) {
 const targetPreset = presetFor(targetId);
-const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, c.blocks, targetPreset, c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg);
+const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, c.blocks, targetPreset, c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg, c.textFont, c.textBgColor);
 const names = slideUrls.map((_, j) => `seamless-${i + 1}-slide${j + 1}.png`);
 const imageUrls = await uploadDataUrls(slideUrls, names);
 const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: targetId, postType: "carousel", content: { imageUrls, caption: c.caption || "", title: (c.row.slide1_hook || c.name).slice(0, 80), platforms: ["instagram", "facebook"], musicTrack: c.track || undefined, sourceTool: "Seamless Carousels" }, scheduledAt: new Date(`${c.date}T${c.time}`).toISOString() }) });
@@ -581,6 +591,16 @@ onClose={() => setEditId(null)}
   <input type="checkbox" checked={c.textBg} onChange={(e) => applyImageStyle(c.id, { textBg: e.target.checked })} className="w-4 h-4 accent-pink-500" />
   Coloured box behind text
   </label>
+              {c.textBg && (
+                <input type="color" value={c.textBgColor} onChange={(e) => applyImageStyle(c.id, { textBgColor: e.target.value })} className="h-8 w-14 rounded cursor-pointer border border-border/40 bg-transparent p-0.5" />
+              )}
+              <div className="flex items-center gap-2">
+                <label className="text-sm text-muted-foreground whitespace-nowrap">Font</label>
+                <select value={c.textFont} onChange={(e) => applyImageStyle(c.id, { textFont: e.target.value })} className="h-8 rounded border border-border/40 bg-background px-2 text-sm">
+                  <option value="">Preset default</option>
+                  {FONT_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                </select>
+              </div>
   </div>
 <div className="rounded-xl bg-white/[0.03] border border-border/40 p-3 space-y-2">
 <p className="text-xs uppercase tracking-widest text-muted-foreground">Text on the slides</p>
