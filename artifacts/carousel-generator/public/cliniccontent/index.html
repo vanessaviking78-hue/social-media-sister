@@ -82,6 +82,89 @@
   .card .tick{
     display:inline-flex;align-items:center;justify-content:center;
     width:34px;height:34px;border-radius:9px;background:rgba(255,20,147,0.12);
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="theme-color" content="#08080D">
+<title>The Clinic Content Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#08080D;
+    --bg-panel:#100f16;
+    --card:#151319;
+    --border:rgba(240,235,229,0.10);
+    --cream:#F0EBE5;
+    --cream-dim:rgba(240,235,229,0.65);
+    --cream-faint:rgba(240,235,229,0.38);
+    --pink:#FF1493;
+    --tan:#C4937F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--cream);
+    font-family:'League Spartan', 'Helvetica Neue', sans-serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding:0 24px;}
+  header{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:22px 24px;border-bottom:1px solid var(--border);
+  }
+  .logo{font-weight:800;font-size:18px;letter-spacing:-0.02em;}
+  .logo span{color:var(--pink);}
+  .badge-price{
+    background:var(--pink);color:#08080D;font-weight:800;
+    padding:8px 18px;border-radius:100px;font-size:14px;
+  }
+  .hero{padding:90px 24px 60px;text-align:center;}
+  .eyebrow{
+    color:var(--tan);text-transform:uppercase;letter-spacing:0.14em;
+    font-size:13px;font-weight:700;margin-bottom:22px;
+  }
+  h1{
+    font-weight:800;font-size:56px;line-height:1.05;letter-spacing:-0.02em;
+    max-width:820px;margin:0 auto 26px;
+  }
+  h1 .pink{color:var(--pink);}
+  .sub{
+    color:var(--cream-dim);font-size:19px;max-width:600px;margin:0 auto 40px;
+    font-weight:500;
+  }
+  .cta{
+    display:inline-block;background:var(--pink);color:#08080D;
+    font-weight:800;font-size:17px;padding:18px 38px;border-radius:100px;
+    text-decoration:none;box-shadow:0 0 40px rgba(255,20,147,0.25);
+  }
+  .cta-note{margin-top:16px;color:var(--cream-faint);font-size:14px;font-weight:500;}
+  .stat-bar{
+    border-top:1px solid var(--border);border-bottom:1px solid var(--border);
+    padding:24px;text-align:center;color:var(--cream-dim);font-weight:600;font-size:16px;
+  }
+  section{padding:80px 24px;}
+  .section-eyebrow{
+    color:var(--tan);text-transform:uppercase;letter-spacing:0.14em;
+    font-size:13px;font-weight:700;margin-bottom:16px;text-align:center;
+  }
+  h2{
+    font-weight:800;font-size:38px;letter-spacing:-0.02em;text-align:center;
+    max-width:700px;margin:0 auto 50px;line-height:1.15;
+  }
+  .grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px;margin:0 auto;
+  }
+  .card{
+    background:var(--card);border:1px solid var(--border);border-radius:16px;
+    padding:30px;
+  }
+  .card .tick{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:34px;height:34px;border-radius:9px;background:rgba(255,20,147,0.12);
     color:var(--pink);font-weight:800;margin-bottom:16px;font-size:16px;
   }
   .card h3{font-weight:700;font-size:19px;margin-bottom:10px;}
@@ -146,7 +229,7 @@
 
 <header>
   <div class="logo">Clinic Content <span>Hub</span></div>
-  <div class="badge-price">£29 lifetime</div>
+  <div class="badge-price">£29 launch price</div>
 </header>
 
 <div class="hero">
@@ -154,7 +237,7 @@
   <h1>Stop starting from a <span class="pink">blank page.</span></h1>
   <p class="sub">5,000+ hooks, monthly content ideas, real strategy training and full access to the tools I built for my own paying clinic clients. £29, once, yours for good.</p>
   <a href="#join" class="cta">Get lifetime access — £29</a>
-  <p class="cta-note">One payment. No subscription. No contract.</p>
+  <p class="cta-note">One payment. No subscription. No contract. £29 launch price for the first 3 months, then £59 lifetime access.</p>
 </div>
 
 <div class="stat-bar">Seven years in aesthetics. 300+ clinics worked with. Built from what actually works.</div>
@@ -221,7 +304,7 @@
   <h2>What you get for £29, once.</h2>
   <div class="price-card">
     <div class="amount">£29</div>
-    <div class="amount-note">Lifetime access. No renewal, ever.</div>
+    <div class="amount-note">Lifetime access. No renewal, ever. £29 launch price, first 3 months only, then £59.</div>
     <ul class="price-list">
       <li>5,000+ hooks, yours to keep</li>
       <li>Monthly seasonal idea drops</li>
