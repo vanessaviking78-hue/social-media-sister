@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="theme-color" content="#08080D">
+<title>The Hook Vault â Clinic Content Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#08080D; --bg-panel:#100f16; --card:#151319;
+    --border:rgba(240,235,229,0.10);
+    --cream:#F0EBE5; --cream-dim:rgba(240,235,229,0.65); --cream-faint:rgba(240,235,229,0.38);
+    --pink:#FF1493; --tan:#C4937F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--bg); color:var(--cream);
+    font-family:'League Spartan','Helvetica Neue',sans-serif;
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  header{
+    position:sticky; top:0; z-index:10; background:rgba(8,8,13,0.92); backdrop-filter:blur(8px);
+    display:flex;justify-content:space-between;align-items:center;
+    padding:18px 24px;border-bottom:1px solid var(--border);
+  }
+  .logo{font-weight:800;font-size:18px;letter-spacing:-0.02em;}
+  .logo span{color:var(--pink);}
+  .count-badge{
+    background:rgba(255,20,147,0.12);color:var(--pink);font-weight:700;
+    padding:7px 16px;border-radius:100px;font-size:13px;
+  }
+  .intro{padding:50px 24px 30px;text-align:center;}
+  .eyebrow{
+    color:var(--tan);text-transform:uppercase;letter-spacing:0.14em;
+    font-size:13px;font-weight:700;margin-bottom:16px;
+  }
+  h1{font-weight:800;font-size:40px;letter-spacing:-0.02em;margin-bottom:14px;}
+  h1 .pink{color:var(--pink);}
+  .sub{color:var(--cream-dim);font-size:16px;max-width:560px;margin:0 auto;font-weight:500;}
+
+  .controls{
+    max-width:1000px;margin:0 auto;padding:0 24px 30px;
+    display:flex;flex-direction:column;gap:16px;
+  }
+  .search-box{
+    width:100%;padding:14px 20px;border-radius:100px;border:1px solid var(--border);
+    background:var(--card);color:var(--cream);font-family:inherit;font-size:15px;font-weight:500;
+    outline:none;
+  }
+  .search-box::placeholder{color:var(--cream-faint);}
+  .search-box:focus{border-color:var(--pink);}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;}
+  .chip{
+    padding:9px 18px;border-radius:100px;border:1px solid var(--border);
+    background:var(--card);color:var(--cream-dim);font-family:inherit;font-size:13px;font-weight:700;
+    cursor:pointer;transition:all .15s ease; white-space:nowrap;
+  }
+  .chip:hover{border-color:var(--pink);color:var(--cream);}
+  .chip.active{background:var(--pink);color:#08080D;border-color:var(--pink);}
+
+  .vault{max-width:1000px;margin:0 auto;padding:0 24px 100px;}
+  .cat-section{margin-bottom:50px;}
+  .cat-title{
+    display:flex;align-items:center;gap:12px;margin-bottom:18px;
+  }
+  .cat-title h2{font-weight:800;font-size:22px;letter-spacing:-0.01em;}
+  .cat-title .n{color:var(--tan);font-size:13px;font-weight:700;}
+  .hook-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .hook-card{
+    background:var(--card);border:1px solid var(--border);border-radius:12px;
+    padding:18px 20px;font-size:14.5px;font-weight:500;color:var(--cream);
+    display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+    cursor:pointer; transition:border-color .15s ease;
+  }
+  .hook-card:hover{border-color:rgba(255,20,147,0.4);}
+  .hook-text{flex:1;line-height:1.5;}
+  .copy-btn{
+    flex-shrink:0;width:30px;height:30px;border-radius:8px;background:rgba(255,20,147,0.1);
+    color:var(--pink);display:flex;align-items:center;justify-content:center;
+    font-size:13px;font-weight:800;border:none;cursor:pointer;
+  }
+  .copy-btn.copied{background:var(--pink);color:#08080D;}
+  .empty-state{
+    text-align:center;padding:60px 24px;color:var(--cream-faint);font-size:15px;font-weight:500;
+  }
+  @media (max-width:720px){
+    h1{font-size:28px;}
+    .hook-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">The Hook <span>Vault</span></div>
+  <div class="count-badge" id="countBadge">400 hooks</div>
+</header>
+
+<div class="intro">
+  <div class="eyebrow">Clinic Content Hub</div>
+  <h1>Never start from a <span class="pink">blank page</span> again.</h1>
+  <p class="sub">Search, filter, tap to copy. Swipe and adapt for your clinic, never copy word for word.</p>
+</div>
+
+<div class="controls">
+  <input type="text" class="search-box" id="searchBox" placeholder="Search hooks...">
+  <div class="chips" id="chips"></div>
+</div>
+
+<div class="vault" id="vault"></div>
+
+<script>
+const HOOKS = {
+"Curiosity Gap": [
+"The question every new patient asks in week two (and nobody warns them about).",
+"What actually happens in the 48 hours after you leave the clinic.",
+"The one thing on your consultation form that changes everything.",
+"Why some faces respond differently, and it's not what you think.",
+"The bit of the treatment nobody puts in the marketing photos.",
+"What your practitioner is actually looking at when they study your face.",
+"The question I ask every single patient before I touch their skin.",
+"Why two people can have the exact same treatment and leave with different opinions.",
+"The one word patients use most in consultations that tells me everything.",
+"What happens to your skin in the six months you're not thinking about it.",
+"The real reason some results take longer, and it's rarely down to the treatment.",
+"What I look for on a face before I even mention treatment options.",
+"The question that ends most consultations early, and it's not about price.",
+"Why the \"natural look\" request means something different to every patient.",
+"What we actually track between appointments that patients never see.",
+"The pattern I've noticed after years of consultations that changed how I treat people.",
+"Why some patients cry in the chair, and it's rarely about pain.",
+"The bit of aftercare nobody reads until it's too late.",
+"What your face tells a trained eye before you've said a word.",
+"The one question that separates a good consultation from a rushed one.",
+"Why \"just a little\" is the most complicated request in this industry.",
+"What actually determines how long results last, and it's not the treatment itself.",
+"The thing patients apologise for in consultations that they never need to.",
+"Why some faces need patience, not more product.",
+"What we notice in the first thirty seconds of a consultation.",
+"The question I wish more patients asked before booking.",
+"Why some of the best results come from doing less, not more.",
+"What happens when a patient's expectations and their anatomy don't quite match.",
+"The real difference between a rushed clinic and a careful one, and you can spot it in five minutes.",
+"Why age isn't the number that matters most in a consultation.",
+"What I'm actually assessing when I ask you to pull different expressions.",
+"The one thing that predicts a good outcome better than anything else.",
+"Why some patients need a second consultation before any treatment happens.",
+"What \"downtime\" actually means, and why it's different for everyone.",
+"The question that tells me if someone's ready, or just curious.",
+"Why some results take three appointments to understand, not one.",
+"What we do differently for a first-time patient versus a regular.",
+"The thing most patients don't realise they're consenting to.",
+"Why some faces are harder to read than others, even for experienced practitioners.",
+"What actually happens during the \"settling\" period everyone mentions but nobody explains.",
+"The one habit that affects your results more than people think.",
+"Why some patients leave happier with subtle change than dramatic change.",
+"What we're really assessing when we ask about your skincare routine.",
+"The question I ask myself before recommending anything.",
+"Why the consultation matters more than the treatment itself.",
+"What changes in a face over a single decade that most people never notice.",
+"The thing that makes some practitioners say no, even when a patient says yes.",
+"Why timing matters more than most people realise.",
+"What we actually mean when we say \"let's see how you settle first.\"",
+"The question that ends with either a booking, or a much better conversation."
+],
+"Contrarian": [
+"More product isn't the fix. It's usually the problem.",
+"Your dramatic before and after photo isn't the win you think it is.",
+"The clinic that says yes to everything isn't the one you want.",
+"Younger doesn't always mean better results.",
+"A five minute consultation isn't a bargain, it's a red flag.",
+"The cheapest clinic in town isn't saving you money.",
+"\"Natural results\" doesn't mean \"does nothing.\"",
+"Saying no to a patient is sometimes the best thing a practitioner can do.",
+"More frequent appointments aren't a sign of a better clinic.",
+"The loudest clinic on social media isn't always the safest one.",
+"A full consultation room doesn't mean a good one.",
+"Waiting longer for an appointment can be the better sign, not the worse one.",
+"The patient who asks the most questions isn't being difficult, they're being smart.",
+"A perfect Instagram grid tells you nothing about clinical skill.",
+"The trend everyone's asking for isn't always the trend that suits them.",
+"Subtle isn't boring. It's usually harder to achieve.",
+"Your face doesn't need to match a filter to look good.",
+"Same day treatment isn't always a good sign.",
+"The clinic that talks about risk isn't trying to put you off, they're trying to protect you.",
+"Experience matters more than trends, every time.",
+"A practitioner who won't treat you today might be the one who treats you best long term.",
+"Following a trend blindly rarely ages well.",
+"The most booked practitioner isn't automatically the most skilled.",
+"Confidence in a consultation room isn't the same as competence.",
+"A patient who says \"just do what you think\" is trusting you more than they realise, and that trust deserves more care, not less.",
+"The clinic with the biggest before and after gallery isn't always the one with the best judgement.",
+"Fast results aren't always the safest ones.",
+"Treating everyone the same way isn't consistency, it's carelessness.",
+"A practitioner who refuses to treat you isn't losing you as a client, they're protecting you as a patient.",
+"Bigger clinics aren't automatically better clinics.",
+"The most popular treatment on social media isn't automatically the right one for your face.",
+"A rushed yes is worse than a slow no.",
+"Following everyone else's face isn't the same as understanding your own.",
+"Cheap treatments and cheap consequences rarely arrive separately.",
+"The practitioner who talks you out of something might be the one worth trusting most.",
+"A five-star review says nothing about medical judgement.",
+"More reviews doesn't mean more skill.",
+"The safest option is rarely the one that trends the fastest.",
+"A clinic that never says \"let's wait\" is a clinic that's not thinking long term.",
+"Doing nothing is sometimes the most professional advice you'll get in a consultation.",
+"The loudest opinions on social media are rarely the most qualified ones.",
+"A good practitioner isn't afraid to disagree with what you've asked for.",
+"Matching a filter isn't the same as matching your features.",
+"The clinic that never has appointments free isn't necessarily the best one, sometimes it's just the busiest.",
+"Comparing your face to someone else's results isn't fair to either of you.",
+"A long consultation isn't wasted time, it's the part that actually matters.",
+"The trend cycle moves faster than good judgement ever should.",
+"Your practitioner's honesty matters more than their aesthetic.",
+"A clinic that never questions your request isn't being accommodating, it's being careless.",
+"The right answer in a consultation is sometimes \"not yet.\""
+],
+"Engaging": [
+"What's the one skincare myth you believed for years before finding out the truth?",
+"Would you rather a longer consultation or a same-day appointment? Genuinely curious.",
+"What's the question you were too embarrassed to ask at your last consultation?",
+"Tag someone who needs to book that consultation they keep putting off.",
+"What made you finally book your first appointment with us?",
+"Team subtle change or team dramatic change? No wrong answer.",
+"What's the one thing you wish someone told you before your first treatment?",
+"Drop a ð if you've ever cancelled a consultation because you got nervous.",
+"What's your biggest skincare \"why did nobody tell me this sooner\" moment?",
+"Would you tell a friend which treatments you've had, or keep it private?",
+"What age did you start actually caring about your skincare routine?",
+"Comment below: what's the one question you always ask in a consultation?",
+"What's more important to you, the practitioner's experience or the clinic's reviews?",
+"Be honest, have you ever Googled a practitioner before booking?",
+"What's the longest you've waited before booking a treatment you knew you wanted?",
+"Which matters more to you: how a clinic looks online or how it feels in person?",
+"What's the one thing that would make you leave a consultation and never come back?",
+"Tell us the last time a practitioner talked you out of something, and how you felt about it.",
+"What's your non-negotiable when choosing a new clinic?",
+"Would you rather know every risk upfront, or trust your practitioner to flag what matters?",
+"What's one question new patients always forget to ask?",
+"Comment your skincare routine in three words.",
+"What's the one aftercare instruction you always forget?",
+"Which matters more to you, price or experience? Be honest.",
+"What's the biggest misconception people have about this industry?",
+"Tell us your first ever treatment and how you felt walking in.",
+"What's one thing that would make you trust a clinic instantly?",
+"Would you rather your practitioner over-explain or keep it brief?",
+"What's the one aesthetics trend you're glad you didn't follow?",
+"Comment if you've ever left a consultation feeling more confused than when you arrived.",
+"What's the question you wish practitioners asked more often?",
+"Tell us about the moment you knew you'd found the right clinic.",
+"What matters more to you in a consultation, honesty or reassurance?",
+"Would you rather a practitioner with 20 years experience or the latest technology? Discuss.",
+"What's the first thing you notice when you walk into a clinic?",
+"Comment your biggest \"I wish I'd known this earlier\" moment.",
+"What's one thing you'd tell your past self before your first appointment?",
+"Would you rather book online or speak to someone first?",
+"What's the one thing that instantly puts you off a clinic?",
+"Tell us your honest opinion, does more reviews always mean better results?",
+"What's the biggest factor in deciding you were ready to book?",
+"Comment if you've ever changed your mind mid-consultation.",
+"What's one question you think every clinic should ask before treating someone?",
+"Would you rather your clinic text you reminders or leave it up to you?",
+"What's the one thing that made you finally trust the process?",
+"Tell us honestly, do you research a treatment before or after booking?",
+"What matters more, a beautiful clinic or a knowledgeable practitioner?",
+"Comment your number one tip for anyone nervous about their first consultation.",
+"What's the one thing you wish more clinics were honest about?",
+"Would you rather know exactly what to expect, or be pleasantly surprised?"
+],
+"Fun": [
+"Me, professionally assessing your skin while internally screaming \"I LOVE THIS JOB.\"",
+"Consultation room energy: part science, part therapy session, fully worth it.",
+"Breaking news: your practitioner definitely notices you switched moisturisers. We see everything.",
+"POV: you finally booked the consultation you've been \"thinking about\" since March.",
+"Not me getting genuinely excited about someone's skin barrier finally behaving.",
+"The unofficial clinic motto: \"let's just see how you settle first\" energy, always.",
+"Practitioners really said \"I'll just pop this on\" and changed the game forever.",
+"Me explaining aftercare for the fortieth time today with the same enthusiasm as the first.",
+"Plot twist: the consultation is the best bit, not just the treatment.",
+"Reminder that \"just a consultation\" has never once been \"just\" anything.",
+"Me, watching someone's face when they finally see the results in the mirror.",
+"Confidence looks good on everyone, we just help it show up a bit faster.",
+"Not the practitioner getting unreasonably attached to a good skincare routine update.",
+"Consultation room confession: we clock the good skincare days immediately.",
+"Me, five minutes into small talk, already planning your whole treatment journey in my head.",
+"The real MVP of this clinic is the SPF reminder we give every single appointment.",
+"Some people collect stamps. We collect \"why did nobody tell me this sooner\" reactions.",
+"Booking a consultation: the most productive kind of impulsive decision.",
+"Me, personally offended when someone apologises for asking \"too many questions.\"",
+"Aftercare instructions: read once, ignore, message us in a panic, we still love you.",
+"The unofficial clinic superpower: spotting a good skincare glow-up from across the room.",
+"Not us getting emotionally invested in your confidence journey, but also, definitely us.",
+"Practitioner brain: constantly assessing everyone's skin, even at the supermarket. Occupational hazard.",
+"The consultation chair has heard more life updates than most therapists.",
+"Me, watching a nervous first-time patient relax by minute ten. Best part of the job.",
+"Plot twist: the \"boring\" skincare basics are doing more than the exciting stuff.",
+"We don't do miracles, we do consistency, patience, and the occasional celebratory happy dance.",
+"Not the practitioner mentally redoing your skincare routine while you talk about your weekend.",
+"Booking confirmation email hits different when you've been \"thinking about it\" for six months.",
+"Me, internally cheering every time someone finally uses SPF daily.",
+"The most underrated part of this job: watching someone stand a little taller on the way out.",
+"Consultation room rule number one: there's no such thing as a silly question here.",
+"Practitioners really out here being part scientist, part hype person. Multitasking at its finest.",
+"Not us getting weirdly proud of a patient's skin progress like it's our own.",
+"Aftercare texts we send: gentle reminders. Aftercare texts we receive: full essays. We love the essays.",
+"The unofficial clinic bingo card: \"I've been thinking about this for ages\" appears every single day.",
+"Me, watching someone's confidence shift mid-consultation before we've even discussed treatment.",
+"Practitioner brain during a day off: still thinking about skin barriers. It's a lifestyle.",
+"Not the whole team getting invested in your skincare glow-up like it's a group project.",
+"The real winner of every consultation: whoever finally admits they've been Googling this for weeks.",
+"Booking the consultation is the hard part. Everything after that, we've got you.",
+"Me, treating \"I don't really know what I want, I just want to feel better\" as the most valid answer there is.",
+"Practitioners collecting \"wait, that's normal?\" reactions like it's a competitive sport.",
+"Not us getting oddly sentimental watching a regular patient's five year skin journey.",
+"The unofficial team achievement unlocked: patient leaves more confident than they walked in.",
+"Consultation room truths: nerves are normal, questions are welcome, judgement is never on the menu.",
+"Me, low-key delighted every time someone actually reads the aftercare instructions.",
+"Practitioner brain, permanently stuck in \"have you considered SPF\" mode. No off switch.",
+"Not the team collectively celebrating every \"I finally feel like myself again\" comment.",
+"The best part of this job isn't the treatments. It's watching someone walk out taller than they walked in."
+],
+"Educational": [
+"The three things a good consultation always covers, and why skipping any of them is a red flag.",
+"Why your skin in January and your skin in July need completely different routines.",
+"What \"downtime\" actually means, and why it's different for every single treatment.",
+"The difference between a patch test and a full consultation, and why both matter.",
+"Why practitioners ask about your medical history before anything else.",
+"What SPF actually protects against, and why most people apply far too little.",
+"The real reason results take time to settle, explained without the jargon.",
+"Why some clinics require a cooling off period, and why that's a good thing.",
+"What your practitioner is legally required to tell you before any treatment.",
+"The difference between a qualified practitioner and a \"trained\" one, and why it matters.",
+"Why patch testing exists, and what it's actually checking for.",
+"What happens to your skin barrier when you over-exfoliate, explained simply.",
+"The three questions you should always ask before booking anywhere.",
+"Why \"one size fits all\" treatment plans rarely work, and what should happen instead.",
+"What consent actually means in a clinical setting, beyond just signing a form.",
+"The real difference between clinical grade skincare and what you'll find on the high street.",
+"Why hydration affects your results more than most people realise.",
+"What a proper consultation should feel like, and what should raise concern.",
+"The difference between a side effect and a complication, and why the distinction matters.",
+"Why your practitioner asks about allergies before anything else, every single time.",
+"What \"settling period\" actually means, explained without the vague language.",
+"The real reason clinics recommend spacing out certain treatments.",
+"Why some practitioners will only treat you after a video consultation first.",
+"What questions your practitioner should be asking you, not the other way round.",
+"The difference between marketing claims and clinical evidence, and how to spot the gap.",
+"Why insurance and qualifications matter more than a nice looking clinic.",
+"What actually happens during a skin assessment, step by step.",
+"The real reason \"more\" isn't always the answer in this industry.",
+"Why some clinics won't treat under a certain age, and the reasoning behind it.",
+"What informed consent should actually look like in practice.",
+"The difference between a complication and a normal healing response.",
+"Why your skincare routine matters before treatment, not just after.",
+"What a proper aftercare plan should include, and why some are far too vague.",
+"The real reason practitioners ask about your lifestyle, not just your skin.",
+"Why \"natural\" is one of the most misused words in this industry.",
+"What actually determines how long results last, beyond the treatment itself.",
+"The difference between an aesthetic practitioner and a medical aesthetic practitioner.",
+"Why some clinics insist on seeing you in person before any online booking is confirmed.",
+"What questions to ask about qualifications, and why vague answers are a warning sign.",
+"The real reason clinics record so much information at your first appointment.",
+"Why hydration, sleep and stress all show up on your face eventually.",
+"What a genuine before and after should actually show, and what to be sceptical of.",
+"The difference between correction and prevention, and why the conversation matters.",
+"Why practitioners are trained to say no, not just yes.",
+"What actually happens to skin as we age, beyond the surface level explanation.",
+"The real reason patch tests take 24 to 48 hours, not five minutes.",
+"Why some clinics ask for photos before your consultation even begins.",
+"What a genuine complaints procedure looks like, and why every clinic should have one.",
+"The difference between a trend and a treatment that's actually right for you.",
+"Why the best clinics talk about risk as much as they talk about results."
+],
+"Before/After": [
+"Same face, more confidence. That's the actual before and after that matters.",
+"The transformation isn't always visible in a photo. Sometimes it's how someone stands afterwards.",
+"Six months of consistency looks like this. Not a miracle, just patience.",
+"The best before and after we've seen this year wasn't dramatic, it was quiet confidence.",
+"What changed wasn't just the face, it was how she talked about herself afterwards.",
+"Before: nervous and unsure. After: walking in like she owns the room. That's the real result.",
+"The photo doesn't show the four consultations it took to get the plan right.",
+"Not every transformation is loud. Some of the best ones are barely noticeable, and that's the point.",
+"Before: hiding from photos. After: taking them without thinking twice. That's what we're actually measuring.",
+"The result that mattered most wasn't on the skin, it was in the way she talked about herself.",
+"Same bone structure, same features, just better cared for. That's the honest version of \"transformation.\"",
+"What you can't see in this photo: the two months of patience it took to get here.",
+"Before: convinced nothing would work. After: wishing she'd started sooner.",
+"The real before and after is the conversation, not just the photo.",
+"Subtle enough that only she notices the difference, and that's exactly how she wanted it.",
+"Before: covering up. After: not thinking about it at all. That's the goal, every time.",
+"The transformation people don't talk about enough: the confidence to stop comparing.",
+"What changed in six weeks wasn't dramatic, it was consistent. That's usually how it works.",
+"Before: asking \"is this normal?\" constantly. After: barely thinking about it. That's progress.",
+"The photo shows the skin. It doesn't show the years of not liking what she saw in the mirror.",
+"Same person, same personality, just a little more at ease in photos. That's the whole point.",
+"Before: avoiding eye contact in consultations. After: asking all the right questions with confidence.",
+"What actually changed wasn't just visible, it was how long it took her to stop second guessing herself.",
+"The most honest before and after isn't the photo, it's the way someone answers \"how do you feel\" afterwards.",
+"Before: three years of \"maybe next year.\" After: wishing she hadn't waited.",
+"Not every result needs a filter. Some of the best ones are the least edited photos we have.",
+"The transformation nobody photographs: someone finally feeling like themselves again.",
+"Before: constant comparison. After: barely checking anymore. That's the real shift.",
+"What changed over these months wasn't loud, but she noticed it every single day.",
+"The best part of this before and after isn't the skin, it's the way she talks now.",
+"Same face, same laugh lines, just more at peace with them. That's a result too.",
+"Before: nervous about every photo taken of her. After: not thinking twice.",
+"The transformation that matters most rarely fits in a single photo.",
+"What you're seeing here took patience, not perfection.",
+"Before: hesitant, unsure, asking a hundred questions. After: confident, informed, glad she asked them.",
+"The real result isn't just visible, it's audible, in how differently she talks about herself now.",
+"Same features, just less tension held in the face. That's often the biggest change nobody names.",
+"Before: avoiding certain angles in photos. After: not even thinking about angles anymore.",
+"What changed wasn't overnight, and that's exactly why it's lasted.",
+"The photo captures a moment. It doesn't capture the months of consistency that got her there.",
+"Before: convinced she'd left it too late. After: wishing more people knew it's never too late.",
+"Not every transformation needs before and after side by side, some just need \"and now she smiles more.\"",
+"What actually changed over these appointments wasn't dramatic, it was steady, and that's the version that lasts.",
+"The result you can't see: she stopped avoiding mirrors somewhere around week four.",
+"Before: unsure if any of this was \"for her.\" After: certain it was the right call.",
+"Same person, just less time spent worrying about something that used to take up so much headspace.",
+"The transformation that mattered most happened in the consultation room, before any treatment even started.",
+"What changed wasn't just her face, it was how much time she spent thinking about it.",
+"Before: apologising for wanting this. After: not apologising for anything.",
+"The best before and after isn't always about difference, sometimes it's about relief."
+],
+"Myth-Busting": [
+"Myth: more experience always means better results. Truth: it means better judgement, which isn't always the same thing as more product.",
+"Myth: natural results mean doing less. Truth: natural results are usually the hardest to achieve, not the laziest option.",
+"Myth: younger practitioners are less skilled. Truth: skill comes from training and supervision, not just years in the chair.",
+"Myth: a longer consultation means something's wrong. Truth: it usually means someone's actually being thorough.",
+"Myth: if one clinic says yes and another says no, the one that says yes is more skilled. Truth: it's often the opposite.",
+"Myth: results should look the same on everyone. Truth: the same approach on different faces gives completely different outcomes, on purpose.",
+"Myth: cheaper always means the same quality, just a better price. Truth: price differences usually reflect training, products and safety standards.",
+"Myth: patch tests are just a formality. Truth: they're one of the only ways to catch a reaction before it becomes a problem.",
+"Myth: more reviews means more trustworthy. Truth: reviews say nothing about qualifications or safety record.",
+"Myth: if it's popular online, it's probably safe. Truth: popularity and safety are two completely different things.",
+"Myth: a clinic that treats you same day is being efficient. Truth: proper consultations often need more than one appointment.",
+"Myth: the best practitioners never say no. Truth: the best ones say no more often than you'd think.",
+"Myth: aftercare is optional if you're careful. Truth: it's not optional, it's part of the treatment.",
+"Myth: results are instant. Truth: most results settle and develop over days or weeks, not minutes.",
+"Myth: if a friend had a good result, you'll get the same one. Truth: every face responds differently.",
+"Myth: qualifications don't matter as much as experience. Truth: both matter, and neither replaces the other.",
+"Myth: a clinic with the most followers is the safest choice. Truth: social media presence has nothing to do with clinical training.",
+"Myth: consultations are just a sales pitch. Truth: a proper one is where the actual clinical decisions happen.",
+"Myth: skin only changes with age, not lifestyle. Truth: sleep, stress and hydration show up on your face constantly.",
+"Myth: more products in your routine means better skin. Truth: consistency with fewer products often outperforms an overloaded routine.",
+"Myth: if it worked quickly, it'll last. Truth: speed and longevity aren't related.",
+"Myth: practitioners can tell exactly what you need just by looking. Truth: a proper assessment takes time, questions and often more than one visit.",
+"Myth: everyone heals at the same rate. Truth: healing time varies hugely and has nothing to do with how \"well\" the treatment went.",
+"Myth: if you're not told about risks, there aren't any. Truth: every treatment carries some risk, and you should always be told.",
+"Myth: the newest technology is always the best option. Truth: newer isn't automatically better, it's just newer.",
+"Myth: a good practitioner can treat any face the same way. Truth: good practitioners adapt their approach every single time.",
+"Myth: if it's not painful, it's not working. Truth: comfort and effectiveness aren't connected.",
+"Myth: once you start, you can't stop. Truth: you're always in control of your own treatment plan.",
+"Myth: clinics that ask lots of questions are being difficult. Truth: they're being responsible.",
+"Myth: subtle results mean the treatment \"didn't work.\" Truth: subtle is often exactly what was planned.",
+"Myth: skincare doesn't matter if you're having treatments anyway. Truth: your skincare routine affects your results more than most people realise.",
+"Myth: a clinic without a waiting list isn't in demand. Truth: it might just mean they don't overbook.",
+"Myth: if it's trending, it must be tested and safe. Truth: trends move faster than research often does.",
+"Myth: practitioners can undo any past treatment easily. Truth: some past treatments limit future options significantly.",
+"Myth: consultations are the same everywhere. Truth: what's covered in a consultation varies hugely between clinics.",
+"Myth: a clinic that talks about complications is trying to scare you. Truth: they're being transparent, which is what you want.",
+"Myth: more frequent treatments give faster results. Truth: overdoing it can undo progress, not speed it up.",
+"Myth: if you don't ask, there's nothing to worry about. Truth: not being told isn't the same as there being no risk.",
+"Myth: everyone's timeline for results is the same. Truth: it varies person to person, and that's completely normal.",
+"Myth: a busy clinic is automatically a good clinic. Truth: busy sometimes just means well marketed, not well practiced.",
+"Myth: skincare brands endorsed by influencers are clinically tested the same way. Truth: endorsement and evidence are not the same thing.",
+"Myth: you should feel dramatic results to know it worked. Truth: sometimes the absence of a problem is the actual result.",
+"Myth: practitioners want you to keep coming back for more. Truth: good ones want you to need less over time, not more.",
+"Myth: once you're informed, consent is just a formality. Truth: consent should be an ongoing conversation, not a one time signature.",
+"Myth: a clinic that's been open longer is automatically more experienced. Truth: it depends entirely on who's actually treating you.",
+"Myth: skin concerns are purely cosmetic. Truth: they're often deeply tied to confidence and how people show up in their own lives.",
+"Myth: results should look identical to whoever inspired the treatment. Truth: your own features should always lead the decision, not someone else's.",
+"Myth: if nobody notices, it didn't work. Truth: for a lot of patients, that's exactly the goal.",
+"Myth: practitioners are trying to upsell you every time they explain more options. Truth: informed choice means explaining everything, not just what you asked about.",
+"Myth: once you've had one treatment, you understand the whole industry. Truth: every treatment, practitioner and face is different, every single time."
+],
+"Objection-Handling": [
+"\"I'm scared it'll look obvious.\" That's usually the first thing we talk about, and the easiest to plan around.",
+"\"What if I don't like it?\" Most plans are designed to be adjusted, not permanent from the first appointment.",
+"\"I don't know what I actually want.\" That's a completely normal place to start a consultation from.",
+"\"Is it too late for me to start?\" There's rarely a wrong age to have this conversation.",
+"\"I'm worried people will know.\" Subtle, well planned treatment is usually the opposite of obvious.",
+"\"What if it hurts?\" Comfort is part of the plan, not an afterthought.",
+"\"I don't want to look like someone else.\" Good consultations are built around your face, not a reference photo.",
+"\"I've heard horror stories.\" That's exactly why qualifications and proper consultations matter so much.",
+"\"What if my skin reacts badly?\" That's what patch testing and full medical history checks are there for.",
+"\"I'm worried I'll regret it.\" A good practitioner will talk you through every option, including waiting.",
+"\"I don't want anyone to notice.\" Most patients say that, and most leave looking like a well rested version of themselves, not a different person.",
+"\"What if it doesn't work?\" A proper consultation sets realistic expectations before anything happens, not after.",
+"\"I'm nervous about the needle.\" Most patients say the anticipation is worse than the actual appointment.",
+"\"I don't want to feel judged.\" Consultations should feel like a conversation, never an assessment of your choices.",
+"\"What if I can't afford to keep it up?\" A good plan works with your budget, not against it.",
+"\"I've been putting this off for years.\" You're not behind, you're just ready now.",
+"\"What if my partner or family disapproves?\" This is your decision, and a good clinic will always centre what you want.",
+"\"I don't want to become 'that person' who keeps having treatments.\" Most patients want to look like themselves, just a little more at ease.",
+"\"What if the results are permanent and I hate them?\" Most concerns in aesthetics are far more reversible or adjustable than people assume.",
+"\"I'm worried about looking different at work.\" Subtlety is usually the entire point of a well planned treatment.",
+"\"What if I ask a stupid question?\" There's no such thing in a consultation, that's genuinely what it's there for.",
+"\"I don't know if I'm 'ready.'\" Booking a consultation doesn't commit you to anything, it just gets you information.",
+"\"What if the practitioner talks me into something I don't want?\" A good one will talk you out of things just as often.",
+"\"I'm scared of the recovery time.\" Every treatment is different, and that's covered clearly before you book anything.",
+"\"What if people ask what I've had done?\" That's completely your choice to share or not, always.",
+"\"I don't want to spend money on myself.\" This isn't indulgent, it's just another form of looking after yourself.",
+"\"What if I look better in some photos than others afterwards?\" Lighting and angles affect everyone, treated or not.",
+"\"I'm worried it'll become addictive.\" A responsible clinic will always tell you when enough is enough.",
+"\"What if my skin is 'too far gone' to help?\" That phrase gets used a lot, and it's almost never true.",
+"\"I don't want to be treated differently once I've had something done.\" You're the same person, just a bit more at ease in your own face.",
+"\"What if I chicken out halfway through the consultation?\" That's completely fine, and it happens more than people think.",
+"\"I'm scared it'll change how I look in a bad way.\" That fear is exactly why proper consultations exist.",
+"\"What if I need multiple appointments and it gets expensive?\" That should always be explained clearly before you commit to anything.",
+"\"I don't know how to explain what I want.\" Most patients don't, that's what the consultation conversation is for.",
+"\"What if it's obvious I've had 'work done'?\" Most well planned treatment reads as \"well rested,\" not \"different.\"",
+"\"I'm worried about being pressured into booking.\" A good clinic gives you time to think, every time.",
+"\"What if my skin concerns are 'too minor' to bother with?\" If it bothers you, it's worth a conversation, full stop.",
+"\"I don't want it to be the only thing people notice about me.\" That's usually a sign subtlety is the right approach for you.",
+"\"What if I'm too anxious to go through with it?\" Nerves are normal, and a good practitioner will slow down for you.",
+"\"What if I ask to stop halfway through?\" You're allowed to at any point, always.",
+"\"I'm worried it'll hurt more than I can handle.\" Pain tolerance and options are always discussed beforehand, not assumed.",
+"\"What if the results take longer than expected?\" Timelines vary, and that should be explained honestly upfront.",
+"\"I don't want to feel 'high maintenance.'\" Looking after yourself isn't high maintenance, it's just self care.",
+"\"What if I need to explain this to my kids one day?\" Most patients find that conversation far easier than they expected.",
+"\"I'm scared of judgement from the practitioner.\" Good practitioners have heard every concern before, and none of it surprises them.",
+"\"What if this becomes a slippery slope?\" A responsible clinic will always check in on that with you, not just book you in.",
+"\"I don't want to lose my facial expressions.\" That's one of the most common questions in consultations, and a completely fair one to ask.",
+"\"What if I feel silly for caring this much?\" You're allowed to care about how you feel in your own skin.",
+"\"What if it's not 'me' anymore afterwards?\" The goal is usually to feel more like yourself, not less.",
+"\"What if I ask and the answer is no?\" Then you'll have more information than you did before, and that's never wasted."
+]
+};
+
+const categories = Object.keys(HOOKS);
+const chipsEl = document.getElementById('chips');
+const vaultEl = document.getElementById('vault');
+const searchEl = document.getElementById('searchBox');
+const countBadge = document.getElementById('countBadge');
+
+let activeCategory = 'All';
+let searchTerm = '';
+
+function totalCount(){
+  return Object.values(HOOKS).reduce((sum, arr) => sum + arr.length, 0);
+}
+
+function renderChips(){
+  const allChip = `<button class="chip ${activeCategory==='All' ? 'active':''}" data-cat="All">All (${totalCount()})</button>`;
+  const catChips = categories.map(cat =>
+    `<button class="chip ${activeCategory===cat ? 'active':''}" data-cat="${cat}">${cat} (${HOOKS[cat].length})</button>`
+  ).join('');
+  chipsEl.innerHTML = allChip + catChips;
+  chipsEl.querySelectorAll('.chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeCategory = btn.dataset.cat;
+      render();
+    });
+  });
+}
+
+function escapeHtml(str){
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function render(){
+  renderChips();
+  const term = searchTerm.trim().toLowerCase();
+  const catsToShow = activeCategory === 'All' ? categories : [activeCategory];
+  let shownCount = 0;
+  let html = '';
+
+  catsToShow.forEach(cat => {
+    const filtered = HOOKS[cat].filter(h => h.toLowerCase().includes(term));
+    if (filtered.length === 0) return;
+    shownCount += filtered.length;
+    html += `<div class="cat-section">
+      <div class="cat-title"><h2>${cat}</h2><span class="n">${filtered.length} hooks</span></div>
+      <div class="hook-grid">
+        ${filtered.map(h => `
+          <div class="hook-card" data-text="${escapeHtml(h).replace(/"/g,'&quot;')}">
+            <span class="hook-text">${escapeHtml(h)}</span>
+            <button class="copy-btn">Copy</button>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  });
+
+  if (shownCount === 0){
+    html = `<div class="empty-state">No hooks match "${escapeHtml(searchTerm)}". Try a different word.</div>`;
+  }
+
+  vaultEl.innerHTML = html;
+  countBadge.textContent = shownCount + ' hooks shown';
+
+  vaultEl.querySelectorAll('.hook-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const text = card.dataset.text.replace(/&quot;/g,'"');
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = card.querySelector('.copy-btn');
+        btn.textContent = 'Copied';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1200);
+      });
+    });
+  });
+}
+
+searchEl.addEventListener('input', (e) => {
+  searchTerm = e.target.value;
+  render();
+});
+
+render();
+</script>
+
+</body>
+</html>
