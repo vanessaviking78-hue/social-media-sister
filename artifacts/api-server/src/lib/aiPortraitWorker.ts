@@ -80,6 +80,35 @@ async function fetchBufFromStorageLocal(urlOrPath: string): Promise<Buffer> {
   return buffer;
 }
 
+async function applyPhotoroomBackground(buffer: Buffer, colour: string): Promise<Buffer> {
+  const apiKey = process.env.PHOTOROOM_API_KEY;
+  if (!apiKey) {
+    logger.warn("PHOTOROOM_API_KEY not set, skipping Homework Shots background replacement");
+    return buffer;
+  }
+  try {
+    const form = new FormData();
+    form.append("imageFile", new Blob([buffer], { type: "image/png" }), "portrait.png");
+    form.append("removeBackground", "true");
+    form.append("background.color", colour);
+    const res = await fetch("https://image-api.photoroom.com/v2/edit", {
+      method: "POST",
+      headers: { "x-api-key": apiKey },
+      body: form,
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      logger.warn(`Photoroom background replace failed (${res.status}): ${errText}`);
+      return buffer;
+    }
+    const arrayBuf = await res.arrayBuffer();
+    return Buffer.from(arrayBuf);
+  } catch (err) {
+    logger.warn(`Photoroom background replace threw: ${err instanceof Error ? err.message : String(err)}`);
+    return buffer;
+  }
+}
+
 interface ScenarioConfig {
   id: string;
   scrubColor?: string;
@@ -250,7 +279,11 @@ export async function processPortraitJob(
           throw new Error("Gemini returned no image in response.");
         }
 
-        const imgBuffer = Buffer.from(imagePart.inlineData.data, "base64");
+        let imgBuffer = Buffer.from(imagePart.inlineData.data, "base64");
+
+        if (cfg.id.startsWith("hw-") && cfg.promptVars?.colour?.trim()) {
+          imgBuffer = await applyPhotoroomBackground(imgBuffer, cfg.promptVars.colour.trim());
+        }
 
         const originalUrl = await uploadBuf(imgBuffer, `portrait-${cfg.id}-original.png`, "ai-portraits/original");
         const outputUrl = originalUrl;
