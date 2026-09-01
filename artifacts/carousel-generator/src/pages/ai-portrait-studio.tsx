@@ -1582,7 +1582,7 @@ export default function AiPortraitStudio() {
 </div>
 <div className="flex flex-wrap items-end gap-2 mb-3 p-2 rounded-lg border border-border/30 bg-muted/10">
   <div className="flex-1 min-w-[140px]">
-    <label className="block text-[10px] uppercase tracking-wide text-muted-foreground/60 mb-1">Backdrop colour (all 20)</label>
+    <label className="block text-[10px] uppercase tracking-wide text-muted-foreground/60 mb-1">Background colour (all 20)</label>
     <input
       type="text"
       value={bulkBackdropColour}
@@ -1644,7 +1644,7 @@ export default function AiPortraitStudio() {
                         <p className="text-sm font-medium leading-snug">{preset.name}</p>
                         {preset.hasColour && (
                           <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
-                            backdrop colour
+                            background colour
                           </Badge>
                         )}
                         {preset.hasColour && isSelected && (
