@@ -269,8 +269,9 @@ router.post("/carousel/generate-caption", async (req, res) => {
     const caption = completion.choices[0]?.message?.content?.trim() ?? "";
     res.json({ caption });
   } catch (e: unknown) {
-    req.log.error(e, "carousel generate-caption failed");
-    res.status(500).json({ error: "Caption generation failed" });
+    const anyErr = e as any;
+        req.log.error(e, "carousel generate-caption failed");
+        res.status(500).json({ error: "Caption generation failed", debug: anyErr?.message || anyErr?.error?.message || String(anyErr), status: anyErr?.status });
   }
 });
 
