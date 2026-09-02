@@ -1205,46 +1205,63 @@ export default function BulkCarousel() {
           cta:      item.blocks.find(b => b.id === "cta")?.text      ?? "",
         }),
       });
-      if (!res.ok) throw new Error("Caption generation failed");
+    if (!res.ok) { let d = "Caption generation failed"; try { const b = await res.json(); d = b?.debug || b?.error || d; } catch {} throw new Error(d); }
       const { caption } = await res.json() as { caption: string };
       setCaptionMap(prev => ({ ...prev, [item.id]: caption }));
     } catch (e: any) {
-      toast.error(e.message || "Caption generation failed");
+            toast.error(e.message || "Caption generation failed");
     } finally {
-      setGeneratingCaptionId(null);
+            setGeneratingCaptionId(null);
     }
   };
 
-  const generateAllCaptions = async () => {
-    setGeneratingAll(true);
-    setGenerateAllProgress({ current: 0, total: items.length });
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      setGenerateAllProgress({ current: i + 1, total: items.length });
-      try {
-        const res = await fetch(`${BASE}/api/carousel/generate-caption`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            hook:     item.blocks.find(b => b.id === "hook")?.text     ?? "",
-            subtitle: item.blocks.find(b => b.id === "subtitle")?.text ?? "",
-            body2:    item.blocks.find(b => b.id === "body2")?.text    ?? "",
-            body3:    item.blocks.find(b => b.id === "body3")?.text    ?? "",
-            cta:      item.blocks.find(b => b.id === "cta")?.text      ?? "",
-          }),
-        });
-        if (res.ok) {
-          const { caption } = await res.json() as { caption: string };
-          setCaptionMap(prev => ({ ...prev, [item.id]: caption }));
-        }
-      } catch {
-        // continue to next item on failure
-      }
-    }
-    setGeneratingAll(false);
-    setGenerateAllProgress(null);
-    toast.success("All captions generated.");
-  };
+    const generateAllCaptions = async () => {
+          setGeneratingAll(true);
+          setGenerateAllProgress({ current: 0, total: items.length });
+          let failCount = 0;
+          let lastErrorDetail = "";
+          for (let i = 0; i < items.length; i++) {
+                  const item = items[i];
+                  setGenerateAllProgress({ current: i + 1, total: items.length });
+                  try {
+                            const res = await fetch(`${BASE}/api/carousel/generate-caption`, {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({
+                                                      hook:     item.blocks.find(b => b.id === "hook")?.text     ?? "",
+                                                      subtitle: item.blocks.find(b => b.id === "subtitle")?.text ?? "",
+                                                      body2:    item.blocks.find(b => b.id === "body2")?.text    ?? "",
+                                                      body3:    item.blocks.find(b => b.id === "body3")?.text    ?? "",
+                                                      cta:      item.blocks.find(b => b.id === "cta")?.text      ?? "",
+                                        }),
+                            });
+                            if (res.ok) {
+                                        const { caption } = await res.json() as { caption: string };
+                                        setCaptionMap(prev => ({ ...prev, [item.id]: caption }));
+                            } else {
+                                        failCount++;
+                                        try {
+                                                      const errBody = await res.json();
+                                                      lastErrorDetail = errBody?.debug || errBody?.error || `HTTP ${res.status}`;
+                                        } catch {
+                                                      lastErrorDetail = `HTTP ${res.status}`;
+                                        }
+                            }
+                  } catch (e: any) {
+                            failCount++;
+                            lastErrorDetail = e?.message || "network error";
+                  }
+          }
+          setGeneratingAll(false);
+          setGenerateAllProgress(null);
+          if (failCount === 0) {
+                  toast.success("All captions generated.");
+          } else if (failCount === items.length) {
+                  toast.error(`All ${items.length} captions failed. Last error: ${lastErrorDetail}`);
+          } else {
+                  toast.error(`${items.length - failCount} of ${items.length} captions generated, ${failCount} failed. Last error: ${lastErrorDetail}`);
+          }
+    };
 
   // ── Schedule ─────────────────────────────────────────────────────────────────
 
