@@ -1112,7 +1112,7 @@ export default function BulkCarousel() {
         const bodyImg = coverImg;
 
         const blocks = makeBlocks(row);
-        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, LOCKED_LINE_SPACING, heroWordColor, textBoxEnabled ? textBoxColor : undefined, textFont || undefined);
+        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, LOCKED_LINE_SPACING, heroWordColor, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFont || undefined);
         rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.hook, blocks, coverImg, bodyImg, thumbs });
         setRenderProgress(Math.round(((idx + 1) / activeIndexes.length) * 100));
       }
