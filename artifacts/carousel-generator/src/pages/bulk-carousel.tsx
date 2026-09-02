@@ -441,7 +441,7 @@ export function renderSlideCanvas(
           const maxLineW = Math.max(...lines.map(l => ctx.measureText(stripPipes(l)).width));
           const padX = 20, padY = 12;
           ctx.fillStyle = textBoxFill;
-          ctx.fillRect(cx - padX, block.y * H - totalH / 2 - padY, maxLineW + padX * 2, totalH + padY * 2);
+          ctx.fillRect(cx - maxLineW / 2 - padX, block.y * H - totalH / 2 - padY, maxLineW + padX * 2, totalH + padY * 2);
           ctx.fillStyle = textColor;
         }
         for (const line of lines) { ctx.fillText(stripPipes(line), cx, y); y += fontSize * st.lineH * lineSpacing; }
