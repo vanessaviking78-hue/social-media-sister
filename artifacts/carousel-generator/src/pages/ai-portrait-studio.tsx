@@ -685,7 +685,7 @@ export default function AiPortraitStudio() {
         ...(id === "ps-word-hold" ? { promptVars: wordVars } : {}),
         ...(id === "ps-custom" ? { promptVars: { customText: customPromptText } } : {}),
                   ...(preset?.hasName || preset?.hasHairColour ? { promptVars: { name: presetNames[id], hairColour: presetHairColours[id] } } : {}),
-        ...(id.startsWith("hw-") ? { promptVars: { scrubColour: presetScrubColours[id]?.trim() || "black" } } : {}),
+        ...(id.startsWith("hw-") ? { scrubColor: presetScrubColours[id]?.trim() || "black", promptVars: { colour: presetColours[id]?.trim() || "white" } } : {}),
       };
     });
 
