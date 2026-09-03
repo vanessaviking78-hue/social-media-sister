@@ -5,7 +5,7 @@ import { renderSlideCanvas, makeBlocks, computeTuckedSubtitleY, SlideEditorModal
 import { FONT_OPTIONS } from "@/lib/slide-utils";
 import JSZip from "jszip";
 import Papa from "papaparse";
-import { normalizeSlideCsvForHeaders, readFileAsText } from "@/lib/csv-format";
+import { smartMapCsvHeaders, readFileAsText } from "@/lib/csv-format";
 import { toast } from "sonner";
 
 import { nextWeekday, WEEKDAY, POST_TIME, shortTagForBookedPost } from "@/lib/schedule";
@@ -58,12 +58,12 @@ booked ? "bg-card/60 border-border/50 text-muted-foreground" : "bg-card/30 borde
 );
 }
 const SLIDE_W = 1080, SLIDE_H = 1440;
-const EMPTY_ROW: CsvRow = { slide1_hook: "", slide1_subtitle: "", slide2_body: "", slide3_body: "", slide4_cta: "" };
+const EMPTY_ROW: CsvRow = { hook: "", cta: "" };
 const DEFAULT_PRESET = { pageColor: "#000000", overlayColor: "rgba(0,0,0,0)", textColor: "#ffffff", cornerColor: "#ffffff", accentColor: "#ffffff" } as unknown as ClientPreset;
 
 type Strip = { id: string; file: File; url: string; width: number; height: number; slides: number };
 type Carousel = {
-id: string; name: string;
+id: string; name: string; sourceFile: File;
 raw: string[]; slideImgs: HTMLImageElement[]; slideUrls: string[];
 row: CsvRow; blocks: Block[];
 presetId: number | null; caption: string; date: string; time: string; track: MusicTrack | null;
@@ -72,7 +72,7 @@ assignedRow?: number;
   textFont: string;
   textBgColor: string;
 };
-type PRow = { slide1_hook: string; slide1_subtitle: string; slide2_body: string; slide3_body: string; slide4_cta: string; client: string; caption: string; date: string; time: string; };
+type PRow = CsvRow & { client?: string; caption?: string; date?: string; time?: string };
 
 function loadImg(src: string): Promise<HTMLImageElement> { return new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = src; }); }
 function loadImgCors(src: string): Promise<HTMLImageElement> { return new Promise((r, j) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => r(i); i.onerror = j; i.src = src; }); }
@@ -86,8 +86,17 @@ function accentOf(p: ClientPreset | null): string { return (p as any)?.accentCol
 function blocksFromRow(row: CsvRow): Block[] {
 const blocks = makeBlocks(row);
 const sub = blocks.find((b) => b.id === "subtitle"); const hook = blocks.find((b) => b.id === "hook");
-if (sub) sub.y = computeTuckedSubtitleY(row.slide1_hook, row.slide1_subtitle, hook, sub);
+if (sub) sub.y = computeTuckedSubtitleY((row as any).slide1_hook ?? row.hook, (row as any).slide1_subtitle ?? "", hook, sub);
 return blocks;
+}
+
+// How many slides a CSV row actually calls for: the hook always counts, any
+// body column with real text in this row counts, and the CTA only counts
+// when this row's last column isn't blank — matches the same rule Bulk
+// Carousel Creator uses, so a strip gets cut into exactly as many pieces as
+// the row needs rather than always assuming a fixed shape.
+function desiredSlideCount(row: CsvRow): number {
+return makeBlocks(row).filter((b) => /^(hook|body\d+|cta)$/.test(b.id)).length;
 }
 async function renderFromBlocks(raw: string[], imgs: HTMLImageElement[], blocks: Block[], preset: ClientPreset | null, imageOpacity = 1, imageZoom = 1, imageShadow = false, textBg = false, textFont = "", textBgColor = "#000000"): Promise<string[]> {
 const hasText = blocks.some((b) => ((b as any).text || "").trim());
@@ -111,8 +120,7 @@ if (!hasText && !logoImg) return raw;
 await document.fonts.ready;
 const out: string[] = [];
 for (let i = 0; i < raw.length; i++) {
-if (i + 1 > 4) { out.push(raw[i]); continue; }
-const n = (i + 1) as 1 | 2 | 3 | 4; const img = imgs[i] || null;
+const n = i + 1; const img = imgs[i] || null;
 // Drop the decorative underline when there's no caption text at all (e.g.
 // composites straight from Selfie to Carousels / Seamless Caro Builder before
 // captions are written) — it was showing as a stray white line with nothing
@@ -253,7 +261,7 @@ for (const s of strips) {
 const img = await fileToImage(s.file); const raw = cutStrip(img, s.slides); const slideImgs = await Promise.all(raw.map(loadImg));
 const blocks = blocksFromRow(EMPTY_ROW);
 const slideUrls = await renderFromBlocks(raw, slideImgs, blocks, preset);
-out.push({ id: `c-${Math.random().toString(36).slice(2, 7)}`, name: s.file.name.replace(/\.[^.]+$/, ""), raw, slideImgs, slideUrls, row: { ...EMPTY_ROW }, blocks, presetId: batchPresetId, caption: "", date: seamlessDate(idx), time: POST_TIME, track: null, imageOpacity: 1, imageZoom: 1, imageShadow: false, textBg: false, textFont: "", textBgColor: "#000000" });
+out.push({ id: `c-${Math.random().toString(36).slice(2, 7)}`, name: s.file.name.replace(/\.[^.]+$/, ""), sourceFile: s.file, raw, slideImgs, slideUrls, row: { ...EMPTY_ROW }, blocks, presetId: batchPresetId, caption: "", date: seamlessDate(idx), time: POST_TIME, track: null, imageOpacity: 1, imageZoom: 1, imageShadow: false, textBg: false, textFont: "", textBgColor: "#000000" });
 idx++;
 }
 setCarousels(out); setPhase("preview");
@@ -280,18 +288,26 @@ toast.success(`Dates set to ${label} across the selected carousels.`);
 
 function importCsv(file: File) {
 readFileAsText(file).then((raw) => {
-const normalized = normalizeSlideCsvForHeaders(raw, ["slide1_hook", "slide1_subtitle", "slide2_body", "slide3_body", "slide4_cta"]);
-Papa.parse(normalized, { header: true, skipEmptyLines: true, complete: (res: any) => {
+const mapped = smartMapCsvHeaders(raw);
+Papa.parse(mapped, { header: true, skipEmptyLines: true, complete: (res: any) => {
 const rows = (res.data || []) as any[];
+const headers = (res.meta.fields || []).map((h: string) => h.trim());
+if (!headers.includes("hook") || !headers.includes("cta")) {
+toast.error("Could not find a hook column and a call-to-action column in this CSV.");
+return;
+}
 const key = (r: any, ...n: string[]) => { for (const k of Object.keys(r)) if (n.includes(k.trim().toLowerCase())) return r[k]; return ""; };
-const parsed: PRow[] = rows.map((r) => ({
-slide1_hook: String(key(r, "slide1_hook") ?? ""), slide1_subtitle: String(key(r, "slide1_subtitle") ?? ""),
-slide2_body: String(key(r, "slide2_body") ?? ""), slide3_body: String(key(r, "slide3_body") ?? ""), slide4_cta: String(key(r, "slide4_cta") ?? ""),
-client: String(key(r, "client", "clinic", "account") || "").trim(),
-caption: String(key(r, "caption") || ""), date: key(r, "date") ? normDate(key(r, "date")) : "", time: key(r, "time") ? normTime(key(r, "time")) : "",
-}));
+const parsed: PRow[] = rows.map((r) => {
+const row: PRow = { hook: String(r.hook ?? ""), cta: String(r.cta ?? "") };
+Object.keys(r).forEach((k) => { if (/^body\d+$/.test(k)) row[k] = String(r[k] ?? ""); });
+row.client = String(key(r, "client", "clinic", "account") || "").trim();
+row.caption = String(key(r, "caption") || "");
+row.date = key(r, "date") ? normDate(key(r, "date")) : "";
+row.time = key(r, "time") ? normTime(key(r, "time")) : "";
+return row;
+});
 setCsvParsed(parsed);
-toast.success(`Loaded ${parsed.length} row(s). Pick a row for each carousel to marry them up.`);
+toast.success(\`Loaded \${parsed.length} row(s). Pick a row for each carousel to marry them up.\`);
 }, error: () => toast.error("Could not read that CSV.") });
 });
 }
@@ -316,11 +332,18 @@ if (idx < 0) { update(id, { assignedRow: -1 }); return; }
 const pr = csvParsed[idx]; if (!pr) return;
 setBusy(true);
 try {
-const row: CsvRow = { slide1_hook: pr.slide1_hook, slide1_subtitle: pr.slide1_subtitle, slide2_body: pr.slide2_body, slide3_body: pr.slide3_body, slide4_cta: pr.slide4_cta };
-const preset = pr.client ? (presets.find((p) => p.name.trim().toLowerCase() === pr.client.toLowerCase()) || null) : presetFor(c.presetId);
+const row: CsvRow = pr;
+const preset = pr.client ? (presets.find((p) => p.name.trim().toLowerCase() === (pr.client as string).toLowerCase()) || null) : presetFor(c.presetId);
 const blocks = blocksFromRow(row);
-const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, preset, c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg, c.textFont, c.textBgColor);
-update(id, { row, blocks, presetId: preset ? preset.id : c.presetId, caption: pr.caption || c.caption, date: pr.date || c.date, time: pr.time || c.time, slideUrls, assignedRow: idx });
+// The CSV row's own slide count now drives how many pieces the source strip
+// gets cut into, so a shorter row (blank trailing columns) gives a shorter
+// carousel instead of always assuming a fixed shape.
+const desired = Math.max(2, Math.min(12, desiredSlideCount(row)));
+const img = await fileToImage(c.sourceFile);
+const raw = cutStrip(img, desired);
+const slideImgs = await Promise.all(raw.map(loadImg));
+const slideUrls = await renderFromBlocks(raw, slideImgs, blocks, preset, c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg, c.textFont, c.textBgColor);
+update(id, { row, blocks, raw, slideImgs, presetId: preset ? preset.id : c.presetId, caption: (pr.caption as string) || c.caption, date: (pr.date as string) || c.date, time: (pr.time as string) || c.time, slideUrls, assignedRow: idx });
 } catch (e: any) { toast.error(e?.message || "Could not apply that row"); } finally { setBusy(false); }
 }
   
@@ -330,7 +353,8 @@ toast.success("Rows matched to carousels in order.");
 }
 
 async function genCaptionFor(c: Carousel): Promise<string | undefined> {
-const res = await fetch(`${BASE}/api/carousel/generate-caption`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ hook: c.row.slide1_hook, subtitle: c.row.slide1_subtitle, body2: c.row.slide2_body, body3: c.row.slide3_body, cta: c.row.slide4_cta }) });
+const bodyText = c.blocks.filter((b) => /^body\d+$/.test(b.id)).map((b) => (b as any).text || "").filter(Boolean).join(" ");
+const res = await fetch(`${BASE}/api/carousel/generate-caption`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ hook: c.row.hook ?? (c.row as any).slide1_hook, subtitle: (c.row as any).slide1_subtitle ?? "", body2: bodyText, body3: "", cta: c.row.cta ?? (c.row as any).slide4_cta }) });
 if (!res.ok) return undefined;
 const d = await res.json(); return d.caption as string;
 }
@@ -347,7 +371,7 @@ for (let i = 0; i < list.length; i++) { toast.loading(`Caption ${i + 1} / ${list
 setGenning(false); toast.success(`Wrote ${ok} caption${ok !== 1 ? "s" : ""}.`, { id: tid });
 }
 
-function updateRow(id: string, field: keyof CsvRow, value: string) { setCarousels((p) => p.map((c) => (c.id === id ? { ...c, row: { ...c.row, [field]: value } } : c))); }
+function updateBlockText(id: string, blockId: string, value: string) { setCarousels((p) => p.map((c) => (c.id === id ? { ...c, blocks: c.blocks.map((b) => (b.id === blockId ? { ...b, text: value } : b)) } : c))); }
 async function applyImageStyle(id: string, patch: Partial<Pick<Carousel, "imageOpacity" | "imageZoom" | "imageShadow" | "textBg" | "textFont" | "textBgColor">>) {
   const c = carousels.find((x) => x.id === id); if (!c) return;
   const next = { ...c, ...patch };
@@ -366,7 +390,7 @@ async function applyImageStyle(id: string, patch: Partial<Pick<Carousel, "imageO
 async function applyText(id: string) {
 const c = carousels.find((x) => x.id === id); if (!c) return;
 setBusy(true);
-try { const blocks = blocksFromRow(c.row); const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, presetFor(c.presetId), c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg, c.textFont, c.textBgColor); update(id, { blocks, slideUrls }); } finally { setBusy(false); }
+try { const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, c.blocks, presetFor(c.presetId), c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg, c.textFont, c.textBgColor); update(id, { slideUrls }); } finally { setBusy(false); }
 }
 async function changeClient(id: string, presetId: number | null) {
 const c = carousels.find((x) => x.id === id); update(id, { presetId });
@@ -378,7 +402,7 @@ setBusy(true);
 try { const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, blocks, presetFor(c.presetId), c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg, c.textFont, c.textBgColor); update(id, { blocks, slideUrls }); } finally { setBusy(false); setEditId(null); }
 }
 function downloadTemplate() {
-const csv = "client,caption,date,time,slide1_hook,slide1_subtitle,slide2_body,slide3_body,slide4_cta\nTweaked By Helen,\"Your caption\",2026-07-10,10:00,YOUR HOOK,A supporting line,Body slide two,Body slide three,DM me to book\n";
+const csv = "client,caption,date,time,hook,body1,body2,body3,cta\nTweaked By Helen,\"Your caption\",2026-07-10,10:00,YOUR HOOK,Body slide one,Body slide two,Body slide three,DM me to book\n";
 triggerDownload(new Blob([csv], { type: "text/csv" }), "seamless-template.csv");
 }
 async function downloadZip() {
@@ -556,7 +580,7 @@ onClose={() => setEditId(null)}
 <label className="text-xs uppercase tracking-widest text-muted-foreground shrink-0">CSV row</label>
 <select value={c.assignedRow ?? -1} onChange={(e) => assignRow(c.id, Number(e.target.value))} className="flex-1 bg-white/5 border border-pink-500/40 rounded-md px-3 py-2 text-sm">
 <option value={-1}>None (type it in manually)</option>
-{csvParsed.map((pr, idx) => <option key={idx} value={idx}>{idx + 1}. {(pr.slide1_hook || "(no hook)").slice(0, 44)}{pr.client ? ` — ${pr.client}` : ""}</option>)}
+{csvParsed.map((pr, idx) => <option key={idx} value={idx}>{idx + 1}. {((pr.hook as string) || "(no hook)").slice(0, 44)}{pr.client ? ` — ${pr.client}` : ""}</option>)}
 </select>
 </div>
 )}
@@ -605,11 +629,9 @@ onClose={() => setEditId(null)}
 <div className="rounded-xl bg-white/[0.03] border border-border/40 p-3 space-y-2">
 <p className="text-xs uppercase tracking-widest text-muted-foreground">Text on the slides</p>
 <div className="grid sm:grid-cols-2 gap-2">
-<input value={c.row.slide1_hook} onChange={(e) => updateRow(c.id, "slide1_hook", e.target.value)} placeholder="Slide 1 hook" className="bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm" />
-<input value={c.row.slide1_subtitle} onChange={(e) => updateRow(c.id, "slide1_subtitle", e.target.value)} placeholder="Slide 1 subtitle" className="bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm" />
-<input value={c.row.slide2_body} onChange={(e) => updateRow(c.id, "slide2_body", e.target.value)} placeholder="Slide 2 text" className="bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm" />
-<input value={c.row.slide3_body} onChange={(e) => updateRow(c.id, "slide3_body", e.target.value)} placeholder="Slide 3 text" className="bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm" />
-<input value={c.row.slide4_cta} onChange={(e) => updateRow(c.id, "slide4_cta", e.target.value)} placeholder="Slide 4 text / CTA" className="bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm sm:col-span-2" />
+{c.blocks.filter((b) => b.id === "hook" || /^body\d+$/.test(b.id) || b.id === "cta").map((b, i, arr) => (
+<input key={b.id} value={(b as any).text || ""} onChange={(e) => updateBlockText(c.id, b.id, e.target.value)} placeholder={b.id === "hook" ? "Hook (slide 1)" : b.id === "cta" ? "Call to action (last slide)" : `Slide text ${i + 1}`} className={`bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm ${i === arr.length - 1 && arr.length % 2 === 1 ? "sm:col-span-2" : ""}`} />
+))}
 </div>
 <button onClick={() => applyText(c.id)} disabled={busy} className="px-4 py-2 rounded-lg bg-white text-black text-sm font-semibold disabled:opacity-40">Update slides</button>
 </div>
