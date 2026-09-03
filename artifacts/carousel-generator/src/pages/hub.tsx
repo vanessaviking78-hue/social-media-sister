@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3 } from "lucide-react";
 import { LogOut } from "lucide-react";
 
 const TOOLS = [
@@ -454,6 +454,16 @@ color: "from-cyan-500/20 to-cyan-500/5",
 border: "hover:border-cyan-500/50",
 iconColor: "text-cyan-400",
 },
+  {
+    href: "/editorial-posts",
+    group: "carousel",
+    icon: Rows3,
+    name: "Editorial Posts",
+    description: "Upload 12 photos and one CSV. Renders branded 3-slide editorial carousels, one photo reused across all three slides, with a font and colour picker per slide.",
+    color: "from-cyan-500/20 to-cyan-500/5",
+    border: "hover:border-cyan-500/50",
+    iconColor: "text-cyan-400",
+  },
 {
 href: "/animated-carousels",
 group: "carousel",
