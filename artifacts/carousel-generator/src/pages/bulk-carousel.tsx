@@ -2,9 +2,11 @@ import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, Upload, FileText, Download, Loader2, CalendarClock,
-  CheckCircle2, X, Edit2, GripVertical, Sparkles, Send, Trash2,
+  CheckCircle2, X, Edit2, GripVertical, Sparkles, Send, Trash2, Archive,
 } from "lucide-react";
 import { SendForApprovalModal } from "@/components/send-for-approval-modal";
+import { AddToBankModal } from "@/components/add-to-bank-modal";
+import type { SchedulePostPayload } from "@/components/schedule-modal";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -989,6 +991,23 @@ export default function BulkCarousel() {
   const [broadcastMode, setBroadcastMode] = useState(false);
   const [broadcastPresetIds, setBroadcastPresetIds] = useState<Set<number>>(new Set());
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+const [bankItem, setBankItem] = useState<any>(null);
+const [bankPosts, setBankPosts] = useState<SchedulePostPayload[]>([]);
+const [bankBusyId, setBankBusyId] = useState<string | null>(null);
+
+async function openBankFor(item: any) {
+  setBankBusyId(item.id);
+  try {
+    const names = item.thumbs.map((_: string, j: number) => `bank-${item.id}-slide${j + 1}.png`);
+    const imageUrls = await uploadDataUrls(item.thumbs, names);
+    setBankPosts([{ title: stripPipes(item.hook).slice(0, 80), caption: captionMap[item.id] ?? "", imageUrls, sourceTool: "Bulk Carousel Creator" }]);
+    setBankItem(item);
+  } catch (e: any) {
+    toast.error(e?.message || "Could not prepare that for the Bank");
+  } finally {
+    setBankBusyId(null);
+  }
+}
 
   const csvInputRef  = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -1575,6 +1594,17 @@ export default function BulkCarousel() {
           />
         )}
 
+        {bankItem && (
+          <AddToBankModal
+            presetId={selectedPresetId}
+            postType="carousel"
+            posts={bankPosts}
+            presets={presets}
+            sourceTool="Bulk Carousel Creator"
+            onClose={() => setBankItem(null)}
+          />
+        )}
+
         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b border-border/30">
           <header className="px-6 py-4 flex items-center gap-3">
             <button onClick={() => setPhase("upload")} className="text-muted-foreground hover:text-foreground transition-colors">
@@ -1668,6 +1698,9 @@ export default function BulkCarousel() {
                   </Button>
                   <Button variant="outline" size="sm" onClick={goToSchedule}>
                     <CalendarClock className="w-3.5 h-3.5 mr-1.5" />Schedule
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => openBankFor(item)} disabled={bankBusyId === item.id}>
+                    <Archive className="w-3.5 h-3.5 mr-1.5" />{bankBusyId === item.id ? "..." : "Bank"}
                   </Button>
                   <Button
                     variant="outline" size="sm"
