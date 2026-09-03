@@ -307,7 +307,7 @@ row.time = key(r, "time") ? normTime(key(r, "time")) : "";
 return row;
 });
 setCsvParsed(parsed);
-toast.success(\`Loaded \${parsed.length} row(s). Pick a row for each carousel to marry them up.\`);
+toast.success(`Loaded ${parsed.length} row(s). Pick a row for each carousel to marry them up.`);
 }, error: () => toast.error("Could not read that CSV.") });
 });
 }
