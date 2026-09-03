@@ -72,6 +72,7 @@ import MemeGenerator from "@/pages/meme-generator";
 import QuoteGenerator from "@/pages/quote-generator";
 import BulkStories from "@/pages/bulk-stories";
 import CsvSlideCarousel from "@/pages/csv-slide-carousel";
+import EditorialPosts from "@/pages/editorial-posts";
 import ContentPreview from "@/pages/content-preview";
 import PreviewIndex from "@/pages/preview-index";
 import Settings from "@/pages/settings";
@@ -154,6 +155,7 @@ function ProtectedRouter() {
       <Route path="/quotes" component={QuoteGenerator} />
       <Route path="/bulk-stories" component={BulkStories} />
       <Route path="/csv-slide-carousel" component={CsvSlideCarousel} />
+      <Route path="/editorial-posts" component={EditorialPosts} />
       <Route path="/preview" component={PreviewIndex} />
       <Route path="/settings" component={Settings} />
       <Route path="/approval-bundles" component={ApprovalBundles} />
