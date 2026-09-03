@@ -72,7 +72,7 @@ assignedRow?: number;
   textFont: string;
   textBgColor: string;
 };
-type PRow = CsvRow & { client?: string; caption?: string; date?: string; time?: string };
+type PRow = CsvRow & { client: string; caption: string; date: string; time: string };
 
 function loadImg(src: string): Promise<HTMLImageElement> { return new Promise((r, j) => { const i = new Image(); i.onload = () => r(i); i.onerror = j; i.src = src; }); }
 function loadImgCors(src: string): Promise<HTMLImageElement> { return new Promise((r, j) => { const i = new Image(); i.crossOrigin = "anonymous"; i.onload = () => r(i); i.onerror = j; i.src = src; }); }
@@ -436,7 +436,7 @@ const targetPreset = presetFor(targetId);
 const slideUrls = await renderFromBlocks(c.raw, c.slideImgs, c.blocks, targetPreset, c.imageOpacity, c.imageZoom, c.imageShadow, c.textBg, c.textFont, c.textBgColor);
 const names = slideUrls.map((_, j) => `seamless-${i + 1}-slide${j + 1}.png`);
 const imageUrls = await uploadDataUrls(slideUrls, names);
-const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: targetId, postType: "carousel", content: { imageUrls, caption: c.caption || "", title: (c.row.slide1_hook || c.name).slice(0, 80), platforms: ["instagram", "facebook"], musicTrack: c.track || undefined, sourceTool: "Seamless Carousels" }, scheduledAt: new Date(`${c.date}T${c.time}`).toISOString() }) });
+const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: targetId, postType: "carousel", content: { imageUrls, caption: c.caption || "", title: ((c.row.hook as string) || c.name).slice(0, 80), platforms: ["instagram", "facebook"], musicTrack: c.track || undefined, sourceTool: "Seamless Carousels" }, scheduledAt: new Date(`${c.date}T${c.time}`).toISOString() }) });
 if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(`${c.name}: ${err.error}`); }
 sent++;
 }
@@ -453,7 +453,7 @@ for (let i = 0; i < ready.length; i++) {
 const c = ready[i]; toast.loading(`Scheduling ${i + 1} / ${ready.length}...`, { id: tid });
 const names = c.slideUrls.map((_, j) => `seamless-${i + 1}-slide${j + 1}.png`);
 const imageUrls = await uploadDataUrls(c.slideUrls, names);
-const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: c.presetId, postType: "carousel", content: { imageUrls, caption: c.caption || "", title: (c.row.slide1_hook || c.name).slice(0, 80), platforms: ["instagram", "facebook"], musicTrack: c.track || undefined, sourceTool: "Seamless Carousels" }, scheduledAt: new Date(`${c.date}T${c.time}`).toISOString() }) });
+const r = await fetch(`${BASE}/api/scheduler/posts`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ presetId: c.presetId, postType: "carousel", content: { imageUrls, caption: c.caption || "", title: ((c.row.hook as string) || c.name).slice(0, 80), platforms: ["instagram", "facebook"], musicTrack: c.track || undefined, sourceTool: "Seamless Carousels" }, scheduledAt: new Date(`${c.date}T${c.time}`).toISOString() }) });
 if (!r.ok) { const err = await r.json().catch(() => ({ error: "Failed" })); throw new Error(`${c.name}: ${err.error}`); }
 }
 toast.success(`${ready.length} seamless carousel${ready.length !== 1 ? "s" : ""} queued.`, { id: tid });
