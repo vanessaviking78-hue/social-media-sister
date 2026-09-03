@@ -574,6 +574,16 @@ color: "from-purple-500/20 to-purple-500/5",
 border: "hover:border-purple-500/50",
 iconColor: "text-purple-400",
 },
+{
+href: "/client-bank",
+group: "today",
+icon: Package,
+name: "Client Bank",
+description: "Park finished carousels and single images against a client with no date attached. Invisible in their portal until you pull it out and schedule it or send it for approval.",
+color: "from-pink-500/20 to-pink-500/5",
+border: "hover:border-pink-500/50",
+iconColor: "text-pink-400",
+},
 ];
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
