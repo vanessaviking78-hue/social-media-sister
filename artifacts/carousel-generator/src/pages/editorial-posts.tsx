@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, FileText, Download, Loader2, CalendarClock, CheckCircle2, RefreshCw, ImageIcon,
+  RotateCcw, ChevronLeft, ChevronRight, MoveDiagonal,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -14,6 +15,7 @@ import { saveAs } from "file-saver";
 import { loadGoogleFonts, FONT_OPTIONS } from "@/lib/slide-utils";
 import { usePresets, type ClientPreset } from "@/lib/use-presets";
 import { ScheduleModal } from "@/components/schedule-modal";
+import { Canvas as FabricCanvas, Textbox, Image as FabricImage } from "fabric";
 
 loadGoogleFonts();
 
@@ -23,6 +25,13 @@ const H = 1440;
 const SCALE = 2;
 const SLIDES_PER_POST = 3;
 const LIST_MAX = 8;
+
+// Layout editor canvases are displayed at DISPLAY_W and zoomed, but every
+// object's left/top/width/fontSize is kept in real 1080×1440 design space —
+// setZoom() only affects rendering, not the coordinate values Fabric reports.
+const DISPLAY_W = 260;
+const DISPLAY_H = Math.round((DISPLAY_W * H) / W);
+const ZOOM = DISPLAY_W / W;
 
 // ── CSV columns (positional, 15 total) ───────────────────────────────────────
 // Slide1Text1, Slide1Text2, Slide1Text3, Slide2Title, Slide2Text,
@@ -41,8 +50,85 @@ type EditorialRow = {
   s3t1: string; s3cta: string;
 };
 
-type Phase = "upload" | "preview";
+type Phase = "upload" | "layout" | "preview";
 type SlideFonts = { s1: string; s2: string; s3: string };
+type SlideKey = "s1" | "s2" | "s3";
+
+// ── Draggable / resizable text box layout ────────────────────────────────────
+type BoxLayout = { left: number; top: number; width: number; fontSize: number };
+type EditorialLayout = {
+  s1: { t1: BoxLayout; t2: BoxLayout; t3: BoxLayout };
+  s2: { title: BoxLayout; text: BoxLayout; list: BoxLayout };
+  s3: { t1: BoxLayout; cta: BoxLayout };
+};
+type BoxMeta = { weight: string; style: "normal" | "italic"; align: "left" | "center" };
+
+const SLIDE_BOX_IDS: Record<SlideKey, string[]> = {
+  s1: ["t1", "t2", "t3"],
+  s2: ["title", "text", "list"],
+  s3: ["t1", "cta"],
+};
+
+const BOX_META: Record<SlideKey, Record<string, BoxMeta>> = {
+  s1: {
+    t1: { weight: "400", style: "normal", align: "center" },
+    t2: { weight: "700", style: "italic", align: "center" },
+    t3: { weight: "400", style: "normal", align: "center" },
+  },
+  s2: {
+    title: { weight: "700", style: "normal", align: "center" },
+    text: { weight: "400", style: "normal", align: "center" },
+    list: { weight: "400", style: "normal", align: "left" },
+  },
+  s3: {
+    t1: { weight: "400", style: "normal", align: "center" },
+    cta: { weight: "700", style: "italic", align: "center" },
+  },
+};
+
+const DEFAULT_LAYOUT: EditorialLayout = {
+  s1: {
+    t1: { left: 90, top: 470, width: 900, fontSize: 44 },
+    t2: { left: 90, top: 550, width: 900, fontSize: 58 },
+    t3: { left: 90, top: 660, width: 900, fontSize: 36 },
+  },
+  s2: {
+    title: { left: 80, top: 170, width: 920, fontSize: 56 },
+    text: { left: 80, top: 280, width: 920, fontSize: 40 },
+    list: { left: 90, top: 420, width: 860, fontSize: 34 },
+  },
+  s3: {
+    t1: { left: 90, top: 760, width: 900, fontSize: 46 },
+    cta: { left: 90, top: 860, width: 900, fontSize: 60 },
+  },
+};
+
+function cloneLayout(l: EditorialLayout): EditorialLayout {
+  return JSON.parse(JSON.stringify(l));
+}
+
+function slideNumOf(key: SlideKey): 1 | 2 | 3 {
+  return key === "s1" ? 1 : key === "s2" ? 2 : 3;
+}
+
+function getBoxText(slideKey: SlideKey, id: string, row: EditorialRow): string {
+  if (slideKey === "s1") {
+    if (id === "t1") return row.s1t1;
+    if (id === "t2") return row.s1t2;
+    return row.s1t3;
+  }
+  if (slideKey === "s2") {
+    if (id === "title") return row.s2title;
+    if (id === "text") return row.s2text;
+    return row.s2list.filter(t => t.trim().length > 0).map(t => `✦ ${t}`).join("\n");
+  }
+  if (id === "t1") return row.s3t1;
+  return row.s3cta;
+}
+
+function getFontForSlide(fonts: SlideFonts, slideKey: SlideKey): string {
+  return slideKey === "s1" ? fonts.s1 : slideKey === "s2" ? fonts.s2 : fonts.s3;
+}
 
 function makeSampleCsv(): string {
   return [
@@ -146,6 +232,53 @@ function drawBg(ctx: CanvasRenderingContext2D, preset: ClientPreset, bgImg: HTML
   ctx.fillRect(0, 0, W, H);
 }
 
+// Background + corner + logo are identical across all 3 slides — composited once.
+function buildBackgroundComposite(
+  preset: ClientPreset,
+  bgImg: HTMLImageElement | null,
+  logoImg: HTMLImageElement | null,
+  scale = 1,
+): string {
+  const canvas = document.createElement("canvas");
+  canvas.width = W * scale;
+  canvas.height = H * scale;
+  const ctx = canvas.getContext("2d")!;
+  ctx.scale(scale, scale);
+  drawBg(ctx, preset, bgImg);
+  drawCornerDecoration(ctx, preset.cornerStyle || "none", preset.cornerColor || "#d4af37");
+  if (logoImg) drawLogo(ctx, logoImg, preset.logoPosition || "top-left", preset.logoSize || 110);
+  return canvas.toDataURL("image/png");
+}
+
+function drawTextBox(ctx: CanvasRenderingContext2D, text: string, box: BoxLayout, font: string, meta: BoxMeta) {
+  if (!text) return;
+  ctx.font = `${meta.style} ${meta.weight} ${box.fontSize}px ${font}`;
+  ctx.textAlign = meta.align;
+  const lines = wrapText(ctx, text, box.width);
+  const lineH = Math.round(box.fontSize * 1.25);
+  const x = meta.align === "center" ? box.left + box.width / 2 : box.left;
+  let y = box.top;
+  for (const line of lines) { ctx.fillText(line, x, y); y += lineH; }
+}
+
+function drawListBox(ctx: CanvasRenderingContext2D, items: string[], box: BoxLayout, font: string) {
+  const validItems = items.filter(t => t.trim().length > 0);
+  if (!validItems.length) return;
+  ctx.font = `400 ${box.fontSize}px ${font}`;
+  ctx.textAlign = "left";
+  const lineH = Math.round(box.fontSize * 1.3);
+  const bulletIndent = Math.round(box.fontSize * 1.5);
+  let y = box.top;
+  for (const item of validItems) {
+    const lines = wrapText(ctx, item, box.width - bulletIndent);
+    ctx.fillText("✦", box.left, y);
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], box.left + bulletIndent, y + i * lineH);
+    }
+    y += lines.length * lineH + Math.round(box.fontSize * 0.35);
+  }
+}
+
 function renderSlide(
   slideNum: 1 | 2 | 3,
   row: EditorialRow,
@@ -154,6 +287,7 @@ function renderSlide(
   textColor: string,
   logoImg: HTMLImageElement | null,
   bgImg: HTMLImageElement | null,
+  layout: EditorialLayout,
   scale = SCALE,
 ): string {
   const canvas = document.createElement("canvas");
@@ -165,7 +299,6 @@ function renderSlide(
   drawBg(ctx, preset, bgImg);
   drawCornerDecoration(ctx, preset.cornerStyle || "none", preset.cornerColor || "#d4af37");
 
-  ctx.textAlign = "center";
   ctx.textBaseline = "top";
   ctx.shadowColor = "rgba(0,0,0,0.75)";
   ctx.shadowBlur = 16;
@@ -173,88 +306,22 @@ function renderSlide(
   ctx.shadowOffsetY = 2;
   ctx.fillStyle = textColor;
 
-  const PAD = 90;
-  const maxW = W - PAD * 2;
-
   if (slideNum === 1) {
     const font = fonts.s1;
-    const blocks: { text: string; size: number; weight: string; style: string; gapAfter: number }[] = [];
-    if (row.s1t1) blocks.push({ text: row.s1t1, size: 44, weight: "400", style: "normal", gapAfter: 14 });
-    if (row.s1t2) blocks.push({ text: row.s1t2, size: 58, weight: "700", style: "italic", gapAfter: 14 });
-    if (row.s1t3) blocks.push({ text: row.s1t3, size: 36, weight: "400", style: "normal", gapAfter: 0 });
-
-    const measured = blocks.map(b => {
-      ctx.font = `${b.style} ${b.weight} ${b.size}px ${font}`;
-      const lines = wrapText(ctx, b.text, maxW);
-      const lineH = Math.round(b.size * 1.25);
-      return { ...b, lines, lineH, blockH: lines.length * lineH };
-    });
-    const totalH = measured.reduce((sum, b) => sum + b.blockH + b.gapAfter, 0);
-    let y = Math.round(H * 0.42 - totalH / 2);
-    for (const b of measured) {
-      ctx.font = `${b.style} ${b.weight} ${b.size}px ${font}`;
-      for (const line of b.lines) { ctx.fillText(line, W / 2, y); y += b.lineH; }
-      y += b.gapAfter;
-    }
+    drawTextBox(ctx, row.s1t1, layout.s1.t1, font, BOX_META.s1.t1);
+    drawTextBox(ctx, row.s1t2, layout.s1.t2, font, BOX_META.s1.t2);
+    drawTextBox(ctx, row.s1t3, layout.s1.t3, font, BOX_META.s1.t3);
   }
-
   if (slideNum === 2) {
     const font = fonts.s2;
-    let y = Math.round(H * 0.14);
-
-    if (row.s2title) {
-      ctx.font = `700 56px ${font}`;
-      const lines = wrapText(ctx, row.s2title, maxW);
-      const lineH = Math.round(56 * 1.2);
-      for (const line of lines) { ctx.fillText(line, W / 2, y); y += lineH; }
-      y += 26;
-    }
-    if (row.s2text) {
-      ctx.font = `400 40px ${font}`;
-      const lines = wrapText(ctx, row.s2text, maxW);
-      const lineH = Math.round(40 * 1.35);
-      for (const line of lines) { ctx.fillText(line, W / 2, y); y += lineH; }
-      y += 34;
-    }
-
-    const items = row.s2list.filter(t => t.trim().length > 0);
-    if (items.length) {
-      ctx.font = `400 34px ${font}`;
-      const itemLineH = Math.round(34 * 1.3);
-      const bulletMaxW = maxW - 60;
-      const savedAlign = ctx.textAlign;
-      ctx.textAlign = "left";
-      for (const item of items) {
-        const lines = wrapText(ctx, item, bulletMaxW);
-        ctx.fillText("✦", PAD, y);
-        for (let i = 0; i < lines.length; i++) {
-          ctx.fillText(lines[i], PAD + 54, y + i * itemLineH);
-        }
-        y += lines.length * itemLineH + 12;
-      }
-      ctx.textAlign = savedAlign;
-    }
+    drawTextBox(ctx, row.s2title, layout.s2.title, font, BOX_META.s2.title);
+    drawTextBox(ctx, row.s2text, layout.s2.text, font, BOX_META.s2.text);
+    drawListBox(ctx, row.s2list, layout.s2.list, font);
   }
-
   if (slideNum === 3) {
     const font = fonts.s3;
-    const blocks: { text: string; size: number; weight: string; style: string; gapAfter: number }[] = [];
-    if (row.s3t1) blocks.push({ text: row.s3t1, size: 46, weight: "400", style: "normal", gapAfter: 20 });
-    if (row.s3cta) blocks.push({ text: row.s3cta, size: 60, weight: "700", style: "italic", gapAfter: 0 });
-
-    const measured = blocks.map(b => {
-      ctx.font = `${b.style} ${b.weight} ${b.size}px ${font}`;
-      const lines = wrapText(ctx, b.text, maxW);
-      const lineH = Math.round(b.size * 1.25);
-      return { ...b, lines, lineH, blockH: lines.length * lineH };
-    });
-    const totalH = measured.reduce((sum, b) => sum + b.blockH + b.gapAfter, 0);
-    let y = Math.round(H * 0.58 - totalH / 2);
-    for (const b of measured) {
-      ctx.font = `${b.style} ${b.weight} ${b.size}px ${font}`;
-      for (const line of b.lines) { ctx.fillText(line, W / 2, y); y += b.lineH; }
-      y += b.gapAfter;
-    }
+    drawTextBox(ctx, row.s3t1, layout.s3.t1, font, BOX_META.s3.t1);
+    drawTextBox(ctx, row.s3cta, layout.s3.cta, font, BOX_META.s3.cta);
   }
 
   if (logoImg) drawLogo(ctx, logoImg, preset.logoPosition || "top-left", preset.logoSize || 110);
@@ -343,6 +410,7 @@ export default function EditorialPosts() {
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [photoDrag, setPhotoDrag] = useState(false);
+  const [photoImgs, setPhotoImgs] = useState<HTMLImageElement[]>([]);
 
   const [fonts, setFonts] = useState<SlideFonts>({
     s1: "'Bebas Neue', sans-serif",
@@ -350,6 +418,11 @@ export default function EditorialPosts() {
     s3: "'Bebas Neue', sans-serif",
   });
   const [textColor, setTextColor] = useState("#ffffff");
+
+  // Draggable / resizable text layout — shared across the whole batch.
+  const [layout, setLayout] = useState<EditorialLayout>(() => cloneLayout(DEFAULT_LAYOUT));
+  const [previewRowIdx, setPreviewRowIdx] = useState(0);
+  const [layoutReady, setLayoutReady] = useState(false);
 
   const [thumbs, setThumbs] = useState<string[][]>([]); // per row: 3 data URLs
   const [rendering, setRendering] = useState(false);
@@ -360,6 +433,13 @@ export default function EditorialPosts() {
 
   const csvInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const s1CanvasRef = useRef<HTMLCanvasElement>(null);
+  const s2CanvasRef = useRef<HTMLCanvasElement>(null);
+  const s3CanvasRef = useRef<HTMLCanvasElement>(null);
+  const fabricRefs = useRef<Record<1 | 2 | 3, FabricCanvas | null>>({ 1: null, 2: null, 3: null });
+  const boxRefs = useRef<Record<SlideKey, Record<string, Textbox>>>({ s1: {}, s2: {}, s3: {} });
+  const bgObjRefs = useRef<Record<1 | 2 | 3, FabricImage | null>>({ 1: null, 2: null, 3: null });
 
   const selectedPreset = presets.find(p => p.id === selectedPresetId) ?? null;
 
@@ -386,6 +466,7 @@ export default function EditorialPosts() {
           if (!parsed.length) { setCsvError("No valid rows found"); return; }
           setRows(parsed);
           setCsvFile(file);
+          setPreviewRowIdx(0);
         },
         error: (err: Error) => setCsvError(err.message),
       });
@@ -412,14 +493,14 @@ export default function EditorialPosts() {
     return results.flatMap(r => r.status === "fulfilled" ? [r.value] : []);
   }, [photoUrls]);
 
-  const renderThumbs = useCallback(async (preset: ClientPreset, rowList: EditorialRow[], photoImgs: HTMLImageElement[]) => {
+  const renderThumbs = useCallback(async (preset: ClientPreset, rowList: EditorialRow[], photoImgList: HTMLImageElement[]) => {
     setRendering(true);
     try {
       await warmFonts(fonts);
       const logoImg = await loadPresetLogo(preset);
       const out = rowList.map((row, i) => {
-        const img = photoImgs[i] ?? photoImgs[photoImgs.length - 1] ?? null;
-        return [1, 2, 3].map(n => renderSlide(n as 1 | 2 | 3, row, preset, fonts, textColor, logoImg, img, 1));
+        const img = photoImgList[i] ?? photoImgList[photoImgList.length - 1] ?? null;
+        return [1, 2, 3].map(n => renderSlide(n as 1 | 2 | 3, row, preset, fonts, textColor, logoImg, img, layout, 1));
       });
       setThumbs(out);
     } catch (err: unknown) {
@@ -427,29 +508,177 @@ export default function EditorialPosts() {
     } finally {
       setRendering(false);
     }
-  }, [fonts, textColor]);
+  }, [fonts, textColor, layout]);
 
-  const handleGenerate = async () => {
+  // ── Upload → Layout ──────────────────────────────────────────────────────
+  const handleContinueToLayout = async () => {
     if (!selectedPreset) { toast.error("Select a client preset first"); return; }
     if (!rows.length) { toast.error("Upload a CSV first"); return; }
     if (!photoFiles.length) { toast.error("Upload your photos first"); return; }
-    const photoImgs = await loadPhotoImgs();
+    const imgs = await loadPhotoImgs();
+    setPhotoImgs(imgs);
+    setPreviewRowIdx(0);
+    setPhase("layout");
+  };
+
+  // ── Layout phase: init the 3 Fabric canvases once per phase entry ───────
+  useEffect(() => {
+    if (phase !== "layout") return;
+    if (!s1CanvasRef.current || !s2CanvasRef.current || !s3CanvasRef.current) return;
+
+    void warmFonts(fonts);
+
+    const canvases: Record<1 | 2 | 3, FabricCanvas> = {
+      1: new FabricCanvas(s1CanvasRef.current, { width: DISPLAY_W, height: DISPLAY_H, selection: false, preserveObjectStacking: true }),
+      2: new FabricCanvas(s2CanvasRef.current, { width: DISPLAY_W, height: DISPLAY_H, selection: false, preserveObjectStacking: true }),
+      3: new FabricCanvas(s3CanvasRef.current, { width: DISPLAY_W, height: DISPLAY_H, selection: false, preserveObjectStacking: true }),
+    };
+    (Object.values(canvases) as FabricCanvas[]).forEach(c => c.setZoom(ZOOM));
+    fabricRefs.current = canvases;
+    boxRefs.current = { s1: {}, s2: {}, s3: {} };
+
+    const row = rows[previewRowIdx] ?? rows[0];
+    (["s1", "s2", "s3"] as SlideKey[]).forEach(slideKey => {
+      const canvas = canvases[slideNumOf(slideKey)];
+      const font = getFontForSlide(fonts, slideKey);
+      SLIDE_BOX_IDS[slideKey].forEach(id => {
+        const box = (layout[slideKey] as Record<string, BoxLayout>)[id];
+        const meta = BOX_META[slideKey][id];
+        const text = row ? getBoxText(slideKey, id, row) : "";
+        const tb = new Textbox(text || "(no text in this column)", {
+          left: box.left, top: box.top, width: box.width, fontSize: box.fontSize,
+          fontFamily: font, fill: textColor,
+          fontWeight: meta.weight, fontStyle: meta.style, textAlign: meta.align,
+          editable: false, hasControls: true, lockRotation: true,
+          originX: "left", originY: "top", splitByGrapheme: false,
+        });
+        tb.setControlVisible("mtr", false);
+        (tb as unknown as { __boxId: string }).__boxId = id;
+        canvas.add(tb);
+        boxRefs.current[slideKey][id] = tb;
+      });
+
+      canvas.on("object:modified", (e) => {
+        const obj = e.target as Textbox | undefined;
+        if (!obj) return;
+        const boxId = (obj as unknown as { __boxId?: string }).__boxId;
+        if (!boxId) return;
+        const newWidth = Math.max(80, Math.round((obj.width ?? 100) * (obj.scaleX ?? 1)));
+        const newFontSize = Math.max(12, Math.round((obj.fontSize ?? 30) * (obj.scaleY ?? 1)));
+        obj.set({ width: newWidth, fontSize: newFontSize, scaleX: 1, scaleY: 1 });
+        obj.setCoords();
+        const newLeft = Math.round(obj.left ?? 0);
+        const newTop = Math.round(obj.top ?? 0);
+        setLayout(prev => ({
+          ...prev,
+          [slideKey]: {
+            ...prev[slideKey],
+            [boxId]: { left: newLeft, top: newTop, width: newWidth, fontSize: newFontSize },
+          },
+        }));
+        canvas.requestRenderAll();
+      });
+
+      void document.fonts.ready.then(() => canvas.requestRenderAll());
+      canvas.renderAll();
+    });
+
+    setLayoutReady(true);
+
+    return () => {
+      (Object.values(canvases) as FabricCanvas[]).forEach(c => c.dispose());
+      fabricRefs.current = { 1: null, 2: null, 3: null };
+      boxRefs.current = { s1: {}, s2: {}, s3: {} };
+      bgObjRefs.current = { 1: null, 2: null, 3: null };
+      setLayoutReady(false);
+    };
+    // Canvases are (re)built only when the layout phase is (re)entered.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  // ── Layout phase: composite background swaps with preset / previewed photo ──
+  useEffect(() => {
+    if (phase !== "layout" || !layoutReady || !selectedPreset) return;
+    let cancelled = false;
+    (async () => {
+      const img = photoImgs[previewRowIdx] ?? photoImgs[photoImgs.length - 1] ?? null;
+      const logoImg = await loadPresetLogo(selectedPreset);
+      if (cancelled) return;
+      const bgDataUrl = buildBackgroundComposite(selectedPreset, img, logoImg, 1);
+      const elem = await loadImg(bgDataUrl);
+      if (cancelled) return;
+      ([1, 2, 3] as const).forEach(n => {
+        const canvas = fabricRefs.current[n];
+        if (!canvas) return;
+        const prev = bgObjRefs.current[n];
+        if (prev) canvas.remove(prev);
+        const bgImg = new FabricImage(elem, {
+          left: 0, top: 0, selectable: false, evented: false, originX: "left", originY: "top",
+        });
+        canvas.add(bgImg);
+        canvas.sendObjectToBack(bgImg);
+        bgObjRefs.current[n] = bgImg;
+        canvas.requestRenderAll();
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [phase, layoutReady, selectedPreset, photoImgs, previewRowIdx]);
+
+  // ── Layout phase: text content / font / colour sync (position untouched) ──
+  useEffect(() => {
+    if (phase !== "layout" || !layoutReady) return;
+    const row = rows[previewRowIdx] ?? rows[0];
+    if (!row) return;
+    (["s1", "s2", "s3"] as SlideKey[]).forEach(slideKey => {
+      const canvas = fabricRefs.current[slideNumOf(slideKey)];
+      const font = getFontForSlide(fonts, slideKey);
+      SLIDE_BOX_IDS[slideKey].forEach(id => {
+        const tb = boxRefs.current[slideKey]?.[id];
+        if (!tb) return;
+        const text = getBoxText(slideKey, id, row);
+        tb.set({ text: text || "(no text in this column)", fontFamily: font, fill: textColor });
+      });
+      canvas?.requestRenderAll();
+    });
+  }, [phase, layoutReady, rows, previewRowIdx, fonts, textColor]);
+
+  const handleResetLayout = () => {
+    setLayout(cloneLayout(DEFAULT_LAYOUT));
+    const row = rows[previewRowIdx] ?? rows[0];
+    (["s1", "s2", "s3"] as SlideKey[]).forEach(slideKey => {
+      const canvas = fabricRefs.current[slideNumOf(slideKey)];
+      SLIDE_BOX_IDS[slideKey].forEach(id => {
+        const tb = boxRefs.current[slideKey]?.[id];
+        const box = (DEFAULT_LAYOUT[slideKey] as Record<string, BoxLayout>)[id];
+        if (!tb) return;
+        tb.set({ left: box.left, top: box.top, width: box.width, fontSize: box.fontSize, scaleX: 1, scaleY: 1 });
+        tb.setCoords();
+        if (row) tb.set({ text: getBoxText(slideKey, id, row) || "(no text in this column)" });
+      });
+      canvas?.requestRenderAll();
+    });
+    toast.success("Layout reset to default");
+  };
+
+  // ── Layout → Generate (renders the whole batch, then shows preview) ─────
+  const handleGenerate = async () => {
+    if (!selectedPreset) return;
     await renderThumbs(selectedPreset, rows, photoImgs);
     setPhase("preview");
   };
 
   const handleReRender = async () => {
     if (!selectedPreset) return;
-    const photoImgs = await loadPhotoImgs();
-    await renderThumbs(selectedPreset, rows, photoImgs);
+    const imgs = photoImgs.length ? photoImgs : await loadPhotoImgs();
+    await renderThumbs(selectedPreset, rows, imgs);
   };
 
   const handlePresetSwitch = async (id: number) => {
     setSelectedPresetId(id);
     const p = presets.find(x => x.id === id);
     if (p && rows.length && phase === "preview") {
-      const photoImgs = await loadPhotoImgs();
-      await renderThumbs(p, rows, photoImgs);
+      const imgs = photoImgs.length ? photoImgs : await loadPhotoImgs();
+      await renderThumbs(p, rows, imgs);
     }
   };
 
@@ -458,13 +687,13 @@ export default function EditorialPosts() {
     setExporting(true);
     try {
       await warmFonts(fonts);
-      const [logoImg, photoImgs] = await Promise.all([loadPresetLogo(selectedPreset), loadPhotoImgs()]);
+      const [logoImg, imgs] = await Promise.all([loadPresetLogo(selectedPreset), photoImgs.length ? Promise.resolve(photoImgs) : loadPhotoImgs()]);
       const zip = new JSZip();
       rows.forEach((row, ri) => {
         const folder = `post-${String(ri + 1).padStart(2, "0")}`;
-        const img = photoImgs[ri] ?? photoImgs[photoImgs.length - 1] ?? null;
+        const img = imgs[ri] ?? imgs[imgs.length - 1] ?? null;
         [1, 2, 3].forEach((n) => {
-          const png = renderSlide(n as 1 | 2 | 3, row, selectedPreset, fonts, textColor, logoImg, img, SCALE);
+          const png = renderSlide(n as 1 | 2 | 3, row, selectedPreset, fonts, textColor, logoImg, img, layout, SCALE);
           const b64 = png.split(",")[1];
           zip.file(`${folder}/slide-${n}.png`, b64, { base64: true });
         });
@@ -484,12 +713,12 @@ export default function EditorialPosts() {
     setScheduling(true);
     try {
       await warmFonts(fonts);
-      const [logoImg, photoImgs] = await Promise.all([loadPresetLogo(selectedPreset), loadPhotoImgs()]);
+      const [logoImg, imgs] = await Promise.all([loadPresetLogo(selectedPreset), photoImgs.length ? Promise.resolve(photoImgs) : loadPhotoImgs()]);
       const toastId = toast.loading(`Uploading ${rows.length * SLIDES_PER_POST} image${rows.length !== 1 ? "s" : ""}…`);
       const grouped: string[][] = [];
       for (let ri = 0; ri < rows.length; ri++) {
-        const img = photoImgs[ri] ?? photoImgs[photoImgs.length - 1] ?? null;
-        const dataUrls = [1, 2, 3].map(n => renderSlide(n as 1 | 2 | 3, rows[ri], selectedPreset, fonts, textColor, logoImg, img, SCALE));
+        const img = imgs[ri] ?? imgs[imgs.length - 1] ?? null;
+        const dataUrls = [1, 2, 3].map(n => renderSlide(n as 1 | 2 | 3, rows[ri], selectedPreset, fonts, textColor, logoImg, img, layout, SCALE));
         const names = [1, 2, 3].map(n => `${String(ri + 1).padStart(3, "0")}-slide-${n}.png`);
         const urls = await uploadDataUrls(dataUrls, names);
         grouped.push(urls);
@@ -503,14 +732,6 @@ export default function EditorialPosts() {
       setScheduling(false);
     }
   };
-
-  // Re-render when fonts/colour change during preview
-  useEffect(() => {
-    if (phase !== "preview" || !selectedPreset || !rows.length) return;
-    const id = setTimeout(() => { handleReRender(); }, 200);
-    return () => clearTimeout(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fonts, textColor]);
 
   return (
     <div className="min-h-[100dvh] bg-background">
@@ -716,14 +937,84 @@ export default function EditorialPosts() {
             </div>
 
             <Button
-              onClick={handleGenerate}
+              onClick={handleContinueToLayout}
               disabled={!rows.length || !photoFiles.length || !selectedPreset || rendering}
               className="bg-sky-600 hover:bg-sky-700 text-white"
             >
               {rendering
-                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Rendering…</>
-                : "Generate Posts"}
+                ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Loading…</>
+                : "Continue to Layout"}
             </Button>
+          </div>
+        )}
+
+        {phase === "layout" && (
+          <div className="space-y-6">
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <h2 className="text-2xl font-bold mb-1">Position your text</h2>
+                <p className="text-muted-foreground text-sm max-w-xl leading-relaxed flex items-center gap-1.5">
+                  <MoveDiagonal className="w-3.5 h-3.5 shrink-0" />
+                  Drag a box to move it, drag its corner to resize. This layout applies to all {rows.length} posts in the batch.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPhase("upload")}>
+                  <ArrowLeft className="w-4 h-4 mr-1.5" />Back
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleResetLayout}>
+                  <RotateCcw className="w-4 h-4 mr-1.5" />Reset Layout
+                </Button>
+                <Button size="sm" onClick={handleGenerate} disabled={rendering} className="bg-sky-600 hover:bg-sky-700 text-white">
+                  {rendering
+                    ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />Rendering…</>
+                    : "Generate Posts"}
+                </Button>
+              </div>
+            </div>
+
+            {rows.length > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline" size="sm"
+                  onClick={() => setPreviewRowIdx(i => Math.max(0, i - 1))}
+                  disabled={previewRowIdx === 0}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="text-xs text-muted-foreground w-32 text-center">
+                  Previewing post {previewRowIdx + 1} of {rows.length}
+                </span>
+                <Button
+                  variant="outline" size="sm"
+                  onClick={() => setPreviewRowIdx(i => Math.min(rows.length - 1, i + 1))}
+                  disabled={previewRowIdx === rows.length - 1}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+                <span className="text-xs text-muted-foreground pl-2">
+                  Positions apply to every post — only the preview content changes here.
+                </span>
+              </div>
+            )}
+
+            <div className="flex gap-6 overflow-x-auto pb-2">
+              {(["Slide 1", "Slide 2", "Slide 3"] as const).map((label, i) => (
+                <div key={label} className="space-y-2 shrink-0">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
+                  <div
+                    className="rounded-lg overflow-hidden border border-border/30 bg-black"
+                    style={{ width: DISPLAY_W, height: DISPLAY_H }}
+                  >
+                    <canvas
+                      ref={i === 0 ? s1CanvasRef : i === 1 ? s2CanvasRef : s3CanvasRef}
+                      width={DISPLAY_W}
+                      height={DISPLAY_H}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -737,8 +1028,8 @@ export default function EditorialPosts() {
                 </p>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
-                <Button variant="outline" size="sm" onClick={() => setPhase("upload")}>
-                  <ArrowLeft className="w-4 h-4 mr-1.5" />Back
+                <Button variant="outline" size="sm" onClick={() => setPhase("layout")}>
+                  <ArrowLeft className="w-4 h-4 mr-1.5" />Edit Layout
                 </Button>
 
                 <Select
