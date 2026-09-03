@@ -82,7 +82,7 @@ export function getSlideBlockIds(blocks: Block[]): Record<number, BlockId[]> {
     .sort((a, b) => parseInt(a.slice(4)) - parseInt(b.slice(4)));
   const map: Record<number, BlockId[]> = { 1: hasSubtitle ? ["hook", "subtitle"] : ["hook"] };
   bodyIds.forEach((id, i) => { map[i + 2] = [id]; });
-  map[bodyIds.length + 2] = ["cta"];
+  if (blocks.some(b => b.id === "cta")) map[bodyIds.length + 2] = ["cta"];
   return map;
 }
 
@@ -141,7 +141,7 @@ export function makeBlocks(row: CsvRow): Block[] {
     return [
       defaultBlock("hook", row.hook),
       ...bodyKeys.map(k => defaultBlock(k as BlockId, row[k])),
-      defaultBlock("cta", row.cta),
+      ...(row.cta?.trim() ? [defaultBlock("cta", row.cta)] : []),
       defaultBlock("logo"),
       defaultBlock("line"),
     ];
@@ -485,7 +485,7 @@ export function renderAllThumbs(
   overlayOverride?: string,
   fontOverride?: string
 ): string[] {
-  const totalSlides = item.blocks.filter(b => /^body\d+$/.test(b.id)).length + 2;
+  const totalSlides = item.blocks.filter(b => /^(hook|body\d+|cta)$/.test(b.id)).length;
   return Array.from({ length: totalSlides }, (_, i) => i + 1).map(n =>
     renderSlideCanvas(n, item.blocks, item.coverImg, item.bodyImg, logoImg, preset, SCALE, false, lineSpacing, accentOverride, overlayOverride, undefined, undefined, undefined, fontOverride)
   );
@@ -573,7 +573,7 @@ export function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave,
   const [editingId, setEditingId] = useState<BlockId | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const totalSlides = useMemo(() => blocks.filter(b => /^body\d+$/.test(b.id)).length + 2, [blocks]);
+  const totalSlides = useMemo(() => blocks.filter(b => /^(hook|body\d+|cta)$/.test(b.id)).length, [blocks]);
   const bgUrls = useMemo(() => Array.from({ length: totalSlides }, (_, i) => i + 1).map(n =>
       renderSlideCanvas(n, blocks, item.coverImg, item.bodyImg, logoImg, preset, 1, true)
     ),
