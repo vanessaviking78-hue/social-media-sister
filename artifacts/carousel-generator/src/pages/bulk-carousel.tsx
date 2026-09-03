@@ -135,7 +135,7 @@ export function makeBlocks(row: CsvRow): Block[] {
     // Generic schema used by Bulk Carousel Creator: hook alone on slide 1,
     // every other column becomes its own slide in order, CTA last.
     const bodyKeys = Object.keys(row)
-      .filter(k => /^body\d+$/.test(k))
+      .filter(k => /^body\d+$/.test(k) && row[k]?.trim())
       .sort((a, b) => parseInt(a.slice(4)) - parseInt(b.slice(4)))
       .slice(0, 10);
     return [
