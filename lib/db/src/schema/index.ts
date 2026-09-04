@@ -870,3 +870,13 @@ export const brainstormBookingsTable = pgTable("brainstorm_bookings", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 export type BrainstormBooking = typeof brainstormBookingsTable.$inferSelect;
+
+// Generic shared tick state for simple public content ticklists (e.g. the
+// Madame Wax approved-content list). One row per list id, state is a map of
+// item key -> true for "done", so any viewer of the page sees the same list.
+export const contentTicklistsTable = pgTable("content_ticklists", {
+  id: text("id").primaryKey(),
+  state: json("state").notNull().default({}),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+export type ContentTicklist = typeof contentTicklistsTable.$inferSelect;
