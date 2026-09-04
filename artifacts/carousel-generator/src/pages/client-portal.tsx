@@ -886,7 +886,7 @@ export default function ClientPortal({ token }: { token: string }) {
 
   const inputCls = "w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-pink-600";
     const accent = data.accentColor || "#ec4899";
-  
+  const sendBtn = "w-full rounded-full bg-[var(--accent)] hover:brightness-110 disabled:opacity-60 text-white font-semibold py-3.5 flex items-center justify-center gap-2";
   const isMadameWax = (data.clientName || "").toLowerCase().includes("madame wax");
 
   const TabBtn = ({ id, label, badge }: { id: Tab; label: string; badge?: number }) => (
