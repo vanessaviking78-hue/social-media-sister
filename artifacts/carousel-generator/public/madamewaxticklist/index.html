@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="theme-color" content="#0a0a0a">
+<title>Approved Content List</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Work+Sans:wght@500;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  :root{
+    --bg:#0a0a0a;
+    --surface:#161616;
+    --surface-raised:#1f1f1f;
+    --white:#ffffff;
+    --grey:#a6a6a6;
+    --line:#2c2c2c;
+    --teal:#22b8ab;
+    --stone:#d4bd94;
+    --pink:#d585ae;
+  }
+
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--white);
+    font-family:'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight:700;
+    line-height:1.5;
+  }
+  ::selection{background:var(--teal); color:#04140f;}
+  :focus-visible{outline:2px solid var(--teal); outline-offset:2px;}
+
+  .wrap{max-width:760px; margin:0 auto; padding:0 20px 110px;}
+
+  header.top{
+    padding:34px 0 26px;
+    border-bottom:2px solid var(--line);
+    margin-bottom:26px;
+    text-align:center;
+  }
+  .brandmark{
+    width:104px; height:auto; display:block; margin:0 auto 18px;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--grey);
+    margin:0 0 12px;
+  }
+  h1{
+    font-family:'Archivo Black', 'Work Sans', sans-serif;
+    font-weight:400;
+    font-size:clamp(30px,6vw,46px);
+    line-height:1.02;
+    letter-spacing:-.01em;
+    margin:0 0 12px;
+    text-wrap:balance;
+    text-transform:uppercase;
+  }
+  .lede{
+    max-width:52ch;
+    margin:0 auto;
+    color:var(--grey);
+    font-weight:500;
+    font-size:15px;
+  }
+
+  .statusbar{
+    position:sticky; top:0; z-index:5;
+    background:var(--bg);
+    border-bottom:2px solid var(--line);
+    display:flex; align-items:center; gap:16px;
+    padding:12px 0;
+    margin:0 0 30px;
+  }
+  .wrap > .statusbar{margin-left:-20px; margin-right:-20px; padding-left:20px; padding-right:20px;}
+  .count{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-variant-numeric: tabular-nums;
+    font-size:13px;
+    color:var(--grey);
+    white-space:nowrap;
+  }
+  .count b{color:var(--white); font-weight:700;}
+  .jumpnav{
+    display:flex; gap:6px; overflow-x:auto; flex:1;
+    scrollbar-width:none;
+  }
+  .jumpnav::-webkit-scrollbar{display:none;}
+  .jumpnav a{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:11px;
+    letter-spacing:.03em;
+    text-decoration:none;
+    color:var(--grey);
+    border:1.5px solid var(--line);
+    border-radius:100px;
+    padding:5px 12px;
+    white-space:nowrap;
+    transition:border-color .15s, color .15s;
+  }
+  .jumpnav a:hover{border-color:var(--white); color:var(--white);}
+  .synced{
+    display:flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:10.5px;
+    color:var(--grey);
+    white-space:nowrap;
+  }
+  .dot{width:6px; height:6px; border-radius:50%; background:var(--teal); flex:none;}
+  .dot.off{background:var(--line);}
+
+  section.group{margin-bottom:44px; scroll-margin-top:76px;}
+  .group-head{
+    display:flex; align-items:baseline; gap:12px;
+    margin-bottom:4px;
+  }
+  .group-head h2{
+    font-family:'Archivo Black', 'Work Sans', sans-serif;
+    font-weight:400;
+    font-size:21px;
+    text-transform:uppercase;
+    letter-spacing:-.005em;
+    margin:0;
+  }
+  .group-head .tally{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:11px;
+    color:var(--grey);
+    font-variant-numeric: tabular-nums;
+  }
+  .group-sub{
+    font-size:13px;
+    font-weight:500;
+    color:var(--grey);
+    margin:0 0 16px;
+  }
+  .group[data-cat="wax"] .group-head h2{color:var(--teal);}
+  .group[data-cat="hifu"] .group-head h2,
+  .group[data-cat="skin"] .group-head h2{color:var(--stone);}
+  .group[data-cat="brand"] .group-head h2{color:var(--pink);}
+
+  .bar{height:3px; border-radius:2px; margin:10px 0 18px;}
+  .group[data-cat="wax"] .bar{background:var(--teal);}
+  .group[data-cat="hifu"] .bar,
+  .group[data-cat="skin"] .bar{background:var(--stone);}
+  .group[data-cat="brand"] .bar{background:var(--pink);}
+
+  ul.list{list-style:none; margin:0; padding:0; border-top:2px solid var(--line);}
+  .row{
+    border-bottom:2px solid var(--line);
+    overflow:hidden;
+    max-height:80px;
+    transition:max-height .32s ease, opacity .28s ease, padding .32s ease;
+  }
+  .row.leaving{
+    max-height:0;
+    opacity:0;
+    pointer-events:none;
+  }
+  .row label{
+    display:flex; align-items:flex-start; gap:14px;
+    padding:14px 4px;
+    cursor:pointer;
+  }
+  .box{
+    flex:none;
+    width:21px; height:21px; margin-top:2px;
+    border:2px solid var(--grey);
+    border-radius:5px;
+    background:var(--surface);
+    position:relative;
+    transition:border-color .15s, background .15s;
+  }
+  .row input{position:absolute; opacity:0; width:21px; height:21px; margin:0; cursor:pointer;}
+  .box svg{
+    position:absolute; inset:0; margin:auto;
+    width:13px; height:13px;
+    opacity:0; transform:scale(.6);
+    transition:opacity .1s, transform .1s;
+  }
+  .group[data-cat="wax"] .row input:checked ~ .box{background:var(--teal); border-color:var(--teal);}
+  .group[data-cat="hifu"] .row input:checked ~ .box,
+  .group[data-cat="skin"] .row input:checked ~ .box{background:var(--stone); border-color:var(--stone);}
+  .group[data-cat="brand"] .row input:checked ~ .box{background:var(--pink); border-color:var(--pink);}
+  .row input:checked ~ .box svg{opacity:1; transform:scale(1);}
+  .row input:focus-visible ~ .box{outline:2px solid var(--white); outline-offset:2px;}
+
+  .title{font-size:15.5px; font-weight:700;}
+  .row:hover{background:var(--surface);}
+
+  footer.foot{
+    margin-top:50px;
+    padding-top:26px;
+    border-top:2px solid var(--line);
+    text-align:center;
+  }
+  footer.foot .sistermark{width:64px; height:auto; margin:0 auto 12px; display:block; opacity:.92;}
+  footer.foot p{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--grey);
+    margin:0;
+  }
+
+  .empty-state{
+    display:none;
+    text-align:center;
+    padding:60px 20px;
+    color:var(--grey);
+    font-weight:500;
+  }
+  .empty-state h2{
+    font-family:'Archivo Black', 'Work Sans', sans-serif;
+    font-weight:400;
+    text-transform:uppercase;
+    color:var(--white);
+    font-size:26px;
+    margin:0 0 10px;
+  }
+
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom:26px;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--white);
+    color:#0a0a0a;
+    font-weight:700;
+    font-size:13.5px;
+    padding:12px 16px;
+    border-radius:10px;
+    display:flex; align-items:center; gap:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s, transform .2s;
+    z-index:20;
+    max-width:calc(100vw - 40px);
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto;}
+  .toast button{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:700;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    background:none;
+    border:none;
+    color:var(--teal);
+    cursor:pointer;
+    padding:0;
+    white-space:nowrap;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="top">
+    <img class="brandmark" alt="Madame Wax and Madame Skin" src="madame-logo.png"><p class="eyebrow">Content pipeline</p>
+    <h1>Approved Content List</h1>
+    <p class="lede">Everything below is greenlit. Tick it off once it's written and live, and it clears itself off the list.</p>
+  </header>
+
+  <div class="statusbar">
+    <span class="count"><b id="countNum">0</b> written of <b id="totalNum">0</b></span>
+    <nav class="jumpnav">
+      <a href="#g-wax">Waxing</a>
+      <a href="#g-hifu">HIFU</a>
+      <a href="#g-skin">Skincare</a>
+      <a href="#g-brand">Bigger picture</a>
+    </nav>
+    <span class="synced"><span class="dot off" id="syncDot"></span><span id="syncLabel">connecting</span></span>
+  </div>
+
+  <main id="groups"></main>
+
+  <div class="empty-state" id="emptyState">
+    <h2>All caught up.</h2>
+    <p>Every approved line has been written. Send over more when you're ready, Adele.</p>
+  </div>
+
+  <footer class="foot">
+    <img class="sistermark" alt="Social Media Sister" src="sister-logo.png">
+    <p>Curated by Social Media Sister</p>
+  </footer>
+
+</div>
+
+<div class="toast" id="toast">
+  <span id="toastText">Marked as written</span>
+  <button id="toastUndo" type="button">Undo</button>
+</div>
+
+<script>
+(function(){
+  var ITEMS = [["wax", "Things Your Waxer Has Seen Before"], ["wax", "The Lies We Tell Our Waxer"], ["wax", "Things Women Do 10 Minutes Before A Wax"], ["wax", "Your Waxer Does Not Care About This"], ["wax", "Things You Should Never Say During A Wax"], ["wax", "The Bikini Wax Starter Pack Nobody Asked For"], ["wax", "Things Waxers Can Discuss Without Blinking"], ["wax", "Things Nobody Warns You About Your First Wax"], ["wax", "What Your Waxer Really Means By 'Nearly Done'"], ["wax", "Waxing Facts That Sound Made Up"], ["wax", "Things People Believe About Waxing That Need To Retire"], ["wax", "Your Razor And Your Waxer Are In A Toxic Relationship"], ["wax", "Things That Make Your Waxer Quietly Happy"], ["wax", "The Most Awkward Part Of Waxing Is Usually In Your Head"], ["wax", "Can We Retire 'Summer Body' Yet?"], ["wax", "Waxing Is Not A Personality Test"], ["wax", "Things Men Ask Before Their First Wax"], ["wax", "Men Get Waxed Too. The World Continues To Turn."], ["wax", "Things Your Skin Wants After Waxing"], ["wax", "Why Your Waxer Keeps Talking About Exfoliation"], ["wax", "Please Stop Picking Your Ingrowns"], ["wax", "The Car Mirror Has Betrayed Women Again"], ["wax", "Chin Hairs Have Excellent Time Management"], ["wax", "Waxing After 40 Is A Different Sport"], ["wax", "Things Menopausal Women Know About Facial Hair"], ["hifu", "HIFU Sounds Like Something Your Dad Shouts Sneezing"], ["hifu", "Things HIFU Is Not"], ["hifu", "The HIFU Question Everyone Actually Wants Answered"], ["hifu", "Things People Secretly Google About HIFU"], ["hifu", "HIFU Is Not Amazon Prime"], ["hifu", "Why HIFU Results Don't Arrive With A Drum Roll"], ["hifu", "Things Nobody Should Promise You About HIFU"], ["hifu", "Your Face Is Not A HIFU Template"], ["hifu", "Can HIFU Replace A Facelift?"], ["hifu", "HIFU And The Great 'One Session' Myth"], ["hifu", "The Best HIFU Consultation Might End In 'No'"], ["hifu", "Things Your Practitioner Is Looking At Before HIFU"], ["hifu", "The Internet Has Oversold 'Non-Surgical'"], ["hifu", "What HIFU Feels Like Is A Terrible Dinner Conversation"], ["hifu", "Why We Don't Treat Machines Like Magic Wands"], ["hifu", "Things Women Over 40 Actually Ask About HIFU"], ["hifu", "Your Jawline Did Not Commit A Crime By Ageing"], ["hifu", "You Are Allowed To Want HIFU And Like Your Face"], ["hifu", "Things HIFU Marketing Needs To Stop Saying"], ["hifu", "The Most Underrated HIFU Result"], ["skin", "Cliniccare Is Not A Magic Potion"], ["skin", "Things Your Skin Does Not Care About"], ["skin", "Your Skin Routine Should Not Need A Spreadsheet"], ["skin", "The Skincare Drawer Of Shame"], ["skin", "Things Women Do When Skincare Isn't Working Fast Enough"], ["skin", "Your Skin Barrier Would Like A Word"], ["skin", "Skincare Should Not Hurt To Prove It Works"], ["skin", "Things Your Face Wishes You'd Stop Doing"], ["skin", "The £150 Serum Cannot Outrun The Sun"], ["skin", "Things We Put On Our Faces In The 90s"], ["skin", "Remember When Skincare Was Soap?"], ["skin", "The 90s Called. It Wants Its Face Wipes Back."], ["skin", "Things We Thought Were Skincare In 1998"], ["skin", "Your Pores Have Not Betrayed You"], ["skin", "Nobody Has Skin Like The Filter"], ["skin", "Things Your Skin Remembers"], ["skin", "Your Skin Is Not 'Bad'"], ["skin", "Things Menopause Can Do To Your Skin"], ["skin", "Why Your Old Skincare Suddenly Stopped Behaving"], ["skin", "Menopause Has Entered The Bathroom Cabinet"], ["skin", "The Neck Has Entered The Group Chat"], ["skin", "Things Your Décolletage Would Like To Discuss"], ["skin", "Skincare Advice I Would Put In The Bin"], ["skin", "Things Expensive Skincare Cannot Fix"], ["skin", "The Product You Actually Use Usually Wins"], ["skin", "Your Bathroom Shelf Is Not A Chemistry Competition"], ["skin", "Stop Letting TikTok Diagnose Your Skin"], ["skin", "Things I Would Never Do To My Skin"], ["skin", "Your Skin Doesn't Need Punishing"], ["skin", "The Most Boring Skincare Advice Is Often The Best"], ["skin", "Why Cliniccare Rather Than A Supermarket Grab"], ["skin", "Cliniccare Without The Sales Pitch"], ["skin", "Things I Like About Cliniccare"], ["skin", "Your Skincare Routine Needs A Job Description"], ["skin", "What Your Cleanser Is Actually Supposed To Do"], ["skin", "Moisturiser Is Not Admitting Defeat"], ["skin", "SPF Is Not Just For Ibiza"], ["skin", "Central Heating Has Entered The Skincare Chat"], ["skin", "Your Winter Skin Is Not Being Dramatic"], ["skin", "Things Your Skin Hates About December"], ["skin", "January Skin Has Seen Things"], ["skin", "The Sunday Night Skincare Olympics"], ["skin", "Things Women Over 40 Are Tired Of Hearing About Their Skin"], ["skin", "You Don't Need Your 25-Year-Old Skin Back"], ["skin", "The Face You Have Now Deserves Skincare Too"], ["brand", "Waxing, HIFU And Skincare Have One Thing In Common"], ["brand", "Things Beauty Marketing Needs To Stop Doing To Women"], ["brand", "Your Body Hair Is Not A Hygiene Failure"], ["brand", "Your Lines Are Not A Skincare Emergency"], ["brand", "Your Face Is Allowed To Move"], ["brand", "Things People Secretly Think During A Facial"], ["brand", "The Treatment Bed Turns Everyone Into A Confessional"], ["brand", "The Best Compliment After A Treatment"], ["brand", "Beauty Without The Bullshit"], ["brand", "The Madame Wax Rule Book"]]
+;
+
+  var GROUPS = [
+    {cat:"wax", id:"g-wax", title:"Waxing", sub:"The stuff nobody says out loud."},
+    {cat:"hifu", id:"g-hifu", title:"HIFU", sub:"Cutting through the noise."},
+    {cat:"skin", id:"g-skin", title:"Skincare & Cliniccare", sub:"Real talk, no sales pitch."},
+    {cat:"brand", id:"g-brand", title:"The bigger picture", sub:"Where waxing, HIFU and skincare meet."}
+  ];
+
+  var checkSvg = '<svg viewBox="0 0 12 12" fill="none"><path d="M2 6.2L4.8 9 10 3" stroke="#0a0a0a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  var groupsEl = document.getElementById('groups');
+  var byIndex = {};
+  var totalItems = ITEMS.length;
+
+  GROUPS.forEach(function(g){
+    var items = [];
+    ITEMS.forEach(function(it, idx){ if(it[0] === g.cat) items.push({idx:idx, text:it[1]}); });
+
+    var section = document.createElement('section');
+    section.className = 'group';
+    section.id = g.id;
+    section.dataset.cat = g.cat;
+
+    var head = document.createElement('div');
+    head.className = 'group-head';
+    head.innerHTML = '<h2>'+g.title+'</h2><span class="tally"><span class="remaining-tally">'+items.length+'</span> outstanding</span>';
+    section.appendChild(head);
+
+    var sub = document.createElement('p');
+    sub.className = 'group-sub';
+    sub.textContent = g.sub;
+    section.appendChild(sub);
+
+    var bar = document.createElement('div');
+    bar.className = 'bar';
+    section.appendChild(bar);
+
+    var ul = document.createElement('ul');
+    ul.className = 'list';
+
+    items.forEach(function(item){
+      var li = document.createElement('li');
+      li.className = 'row';
+      var label = document.createElement('label');
+
+      var input = document.createElement('input');
+      input.type = 'checkbox';
+      input.dataset.idx = item.idx;
+
+      var box = document.createElement('span');
+      box.className = 'box';
+      box.innerHTML = checkSvg;
+
+      var title = document.createElement('span');
+      title.className = 'title';
+      title.textContent = item.text;
+
+      label.appendChild(input);
+      label.appendChild(box);
+      label.appendChild(title);
+      li.appendChild(label);
+      ul.appendChild(li);
+
+      byIndex[item.idx] = {row:li, input:input, cat:g.cat, text:item.text};
+    });
+
+    section.appendChild(ul);
+    groupsEl.appendChild(section);
+  });
+
+  var countNum = document.getElementById('countNum');
+  var totalNum = document.getElementById('totalNum');
+  var syncDot = document.getElementById('syncDot');
+  var syncLabel = document.getElementById('syncLabel');
+  var emptyState = document.getElementById('emptyState');
+  var toast = document.getElementById('toast');
+  var toastText = document.getElementById('toastText');
+  var toastUndo = document.getElementById('toastUndo');
+
+  totalNum.textContent = totalItems;
+
+  var state = {};
+  var toastTimer = null;
+  var lastCompletedIdx = null;
+
+  function updateTallies(){
+    var writtenCount = 0;
+    var remaining = {};
+    GROUPS.forEach(function(g){ remaining[g.cat] = 0; });
+
+    Object.keys(byIndex).forEach(function(idxStr){
+      var idx = Number(idxStr);
+      var entry = byIndex[idx];
+      var done = !!state[idx];
+      if(done) writtenCount++; else remaining[entry.cat]++;
+    });
+
+    GROUPS.forEach(function(g){
+      var el = document.querySelector('#'+g.id+' .remaining-tally');
+      if(el) el.textContent = remaining[g.cat];
+      var section = document.getElementById(g.id);
+      if(section) section.style.display = remaining[g.cat] === 0 ? 'none' : '';
+    });
+
+    countNum.textContent = writtenCount;
+    emptyState.style.display = (writtenCount === totalItems) ? 'block' : 'none';
+  }
+
+  function applyState(next, animate){
+    Object.keys(byIndex).forEach(function(idxStr){
+      var idx = Number(idxStr);
+      var entry = byIndex[idx];
+      var wasDone = !!state[idx];
+      var isDone = !!next[idx];
+      if(isDone !== wasDone){
+        if(isDone){
+          if(animate) entry.row.classList.add('leaving');
+          else entry.row.style.display = 'none';
+        } else {
+          entry.row.classList.remove('leaving');
+          entry.row.style.display = '';
+          entry.input.checked = false;
+        }
+      }
+    });
+    state = next;
+    updateTallies();
+  }
+
+  function showToast(text, onUndo){
+    toastText.textContent = text;
+    toast.classList.add('show');
+    if(toastTimer) clearTimeout(toastTimer);
+    toastUndo.onclick = function(){
+      if(onUndo) onUndo();
+      toast.classList.remove('show');
+      if(toastTimer) clearTimeout(toastTimer);
+    };
+    toastTimer = setTimeout(function(){ toast.classList.remove('show'); }, 5000);
+  }
+
+  var LIST_ID = 'madame-wax-approved';
+  var API = '/api/content-ticklist/' + LIST_ID;
+  var pollTimer = null;
+  var writeQueue = Promise.resolve();
+
+  function writeState(idx, val){
+    writeQueue = writeQueue.then(function(){
+      return fetch(API, {
+        method: 'PATCH',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({key:String(idx), value: val})
+      }).then(function(r){
+        if(!r.ok) throw new Error('bad response');
+        syncDot.classList.remove('off');
+        syncLabel.textContent = 'saved & shared';
+      }).catch(function(){
+        syncDot.classList.add('off');
+        syncLabel.textContent = 'not saved, try again in a moment';
+      });
+    });
+  }
+
+  groupsEl.addEventListener('change', function(e){
+    var input = e.target;
+    if(!input || input.type !== 'checkbox') return;
+    var idx = Number(input.dataset.idx);
+
+    if(input.checked){
+      var next = Object.assign({}, state);
+      next[idx] = true;
+      applyState(next, true);
+      writeState(idx, true);
+      showToast('Marked as written', function(){
+        var restore = Object.assign({}, state);
+        delete restore[idx];
+        applyState(restore, false);
+        writeState(idx, false);
+      });
+    } else {
+      var next2 = Object.assign({}, state);
+      delete next2[idx];
+      applyState(next2, false);
+      writeState(idx, false);
+    }
+  });
+
+  updateTallies();
+
+  function fetchState(){
+    return fetch(API, {cache:'no-store'})
+      .then(function(r){ if(!r.ok) throw new Error('bad response'); return r.json(); })
+      .then(function(data){
+        syncDot.classList.remove('off');
+        syncLabel.textContent = 'saved & shared';
+        var raw = (data && data.state) || {};
+        var next = {};
+        Object.keys(raw).forEach(function(k){
+          if(raw[k]) next[Number(k)] = true;
+        });
+        applyState(next, false);
+      })
+      .catch(function(){
+        syncDot.classList.add('off');
+        syncLabel.textContent = 'sync paused';
+      });
+  }
+
+  function connect(){
+    fetchState();
+    if(pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(fetchState, 6000);
+  }
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible') fetchState();
+  });
+  connect();
+
+})();
+</script>
+</body>
+</html>
+
