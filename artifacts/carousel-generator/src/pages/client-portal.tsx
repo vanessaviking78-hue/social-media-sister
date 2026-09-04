@@ -888,6 +888,7 @@ export default function ClientPortal({ token }: { token: string }) {
     const accent = data.accentColor || "#ec4899";
   const sendBtn = "w-full rounded-full bg-[var(--accent)] hover:brightness-110 disabled:opacity-60 text-white font-semibold py-3.5 flex items-center justify-center gap-2";
   const isMadameWax = (data.clientName || "").toLowerCase().includes("madame wax");
+  const isRyderClinic = (data.clientName || "").toLowerCase().includes("ryder");
 
   const TabBtn = ({ id, label, badge }: { id: Tab; label: string; badge?: number }) => (
     <button
@@ -952,6 +953,18 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
               rel="noreferrer"
               className="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-extrabold transition-colors text-white hover:brightness-110"
               style={{ backgroundColor: "#22b8ab" }}
+            >
+              <ClipboardList className="w-4 h-4" />
+              <span>Content List</span>
+            </a>
+          )}
+          {isRyderClinic && (
+            <a
+              href="/ryderclinicticklist"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-extrabold transition-colors text-white hover:brightness-110"
+              style={{ backgroundColor: "#6b3fa0" }}
             >
               <ClipboardList className="w-4 h-4" />
               <span>Content List</span>
