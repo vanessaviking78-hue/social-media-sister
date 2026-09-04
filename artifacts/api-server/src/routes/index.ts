@@ -57,6 +57,7 @@ import highlightCoversRouter from "./highlight-covers";
 import veoRouter from "./veo";
 import googleAuthRouter from "./google-auth";
 import brainstormRouter from "./brainstorm";
+import contentTicklistRouter from "./content-ticklist";
 import reelCaptionsRouter from "./reel-captions";
 
 const router: IRouter = Router();
@@ -104,6 +105,7 @@ router.use(stickersRouter);
 router.use(canvaRouter);
 router.use(googleAuthRouter);
 router.use(brainstormRouter);
+router.use(contentTicklistRouter);
 router.use(reelCaptionsRouter);
 router.use(waitlistRouter);
 router.use(approvalBundlesRouter);
