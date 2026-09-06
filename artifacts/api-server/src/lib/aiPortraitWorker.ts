@@ -109,6 +109,35 @@ async function applyPhotoroomBackground(buffer: Buffer, colour: string): Promise
   }
 }
 
+export async function removeBackgroundTransparent(buffer: Buffer): Promise<Buffer> {
+  const apiKey = process.env.PHOTOROOM_API_KEY;
+  if (!apiKey) {
+    logger.warn("PHOTOROOM_API_KEY not set, skipping background removal");
+    return buffer;
+  }
+  try {
+    const form = new FormData();
+    form.append("imageFile", new Blob([buffer], { type: "image/png" }), "photo.png");
+    form.append("removeBackground", "true");
+    form.append("format", "png");
+    const res = await fetch("https://image-api.photoroom.com/v2/edit", {
+      method: "POST",
+      headers: { "x-api-key": apiKey },
+      body: form,
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "");
+      logger.warn(`Photoroom transparent background removal failed (${res.status}): ${errText}`);
+      return buffer;
+    }
+    const arrayBuf = await res.arrayBuffer();
+    return Buffer.from(arrayBuf);
+  } catch (err) {
+    logger.warn(`Photoroom transparent background removal threw: ${err instanceof Error ? err.message : String(err)}`);
+    return buffer;
+  }
+}
+
 interface ScenarioConfig {
   id: string;
   scrubColor?: string;
