@@ -54,6 +54,8 @@ export type Block = {
   thickness?: number; // line thickness in canvas px (line block only)
 };
 
+type SlideOverlay = { img: HTMLImageElement; x: number; y: number; scale: number; opacity: number };
+
 type CarouselItem = {
   id: string;
   rowNum: number;
@@ -62,6 +64,8 @@ type CarouselItem = {
   coverImg: HTMLImageElement | null;
   bodyImg: HTMLImageElement | null;
   slideImgs: (HTMLImageElement | null)[]; // per-slide photo override, index 0 = slide 1; falls back to coverImg/bodyImg when unset
+  slideBgOpacity: number[]; // 0-1 opacity for the per-slide background image, defaults to 1
+  slideOverlays: (SlideOverlay | null)[]; // approved photo layered on top of the background, draggable/resizable
   thumbs: string[]; // 4 data URLs
 };
 
@@ -290,7 +294,8 @@ export function renderSlideCanvas(
   imageOpacity?: number,
   imageZoom?: number,
   imageShadow?: boolean,
-  fontOverride?: string
+  fontOverride?: string,
+  overlay?: { img: HTMLImageElement; x: number; y: number; scale: number; opacity: number } | null
 ): string {
   const canvas = document.createElement("canvas");
   canvas.width = W * scale;
@@ -330,6 +335,22 @@ export function renderSlideCanvas(
                 ctx.fillRect(0, 0, W, H);
           }
     }
+
+  // Approved client photo layered on top of the background, positioned/sized
+  // by the person dragging it in the slide layer editor. Drawn before the
+  // gradient/text so text always stays legible on top.
+  if (overlay?.img) {
+    ctx.save();
+    ctx.globalAlpha = overlay.opacity;
+    const ow = overlay.img.naturalWidth || overlay.img.width || 1;
+    const oh = overlay.img.naturalHeight || overlay.img.height || 1;
+    const drawW = W * overlay.scale;
+    const drawH = drawW * (oh / ow);
+    const cx = overlay.x * W;
+    const cy = overlay.y * H;
+    ctx.drawImage(overlay.img, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
+    ctx.restore();
+  }
 
   // Slide 1 gets a bottom gradient; slides 2-4 get nothing extra (overlay already applied above)
   if (slideNum === 1) {
@@ -480,7 +501,7 @@ export function renderSlideCanvas(
 }
 
 export function renderAllThumbs(
-  item: Pick<CarouselItem, "blocks" | "coverImg" | "bodyImg" | "slideImgs">,
+  item: Pick<CarouselItem, "blocks" | "coverImg" | "bodyImg" | "slideImgs" | "slideBgOpacity" | "slideOverlays">,
   logoImg: HTMLImageElement | null,
   preset: ClientPreset,
   lineSpacing = LOCKED_LINE_SPACING,
@@ -493,7 +514,9 @@ export function renderAllThumbs(
     const override = item.slideImgs?.[n - 1] ?? null;
     const c = override ?? item.coverImg;
     const b = override ?? item.bodyImg;
-    return renderSlideCanvas(n, item.blocks, c, b, logoImg, preset, SCALE, false, lineSpacing, accentOverride, overlayOverride, undefined, undefined, undefined, fontOverride);
+    const bgOpacity = override ? (item.slideBgOpacity?.[n - 1] ?? 1) : 1;
+    const overlay = item.slideOverlays?.[n - 1] ?? null;
+    return renderSlideCanvas(n, item.blocks, c, b, logoImg, preset, SCALE, false, lineSpacing, accentOverride, overlayOverride, bgOpacity, undefined, undefined, fontOverride, overlay);
   });
 }
 
@@ -868,6 +891,199 @@ export function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave,
 
 // ── Drop zone ─────────────────────────────────────────────────────────────────
 
+// ── Per-slide background + draggable/resizable approved-photo overlay ─────────
+
+type LayerEditorProps = {
+  item: CarouselItem;
+  slideIndex: number;
+  preset: ClientPreset;
+  logoImg: HTMLImageElement | null;
+  onChangeBackground: (file: File) => void;
+  onBgOpacity: (opacity: number) => void;
+  onSetOverlay: (file: File) => void;
+  onOverlayTransform: (patch: Partial<SlideOverlay>) => void;
+  onRemoveOverlay: () => void;
+  onClose: () => void;
+};
+
+export function SlideLayerEditorModal({
+  item, slideIndex, preset, logoImg,
+  onChangeBackground, onBgOpacity, onSetOverlay, onOverlayTransform, onRemoveOverlay, onClose,
+}: LayerEditorProps) {
+  const slideNum = slideIndex + 1;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dragging, setDragging] = useState<{ startPx: number; startPy: number; startX: number; startY: number } | null>(null);
+  const [resizing, setResizing] = useState<{ startDist: number; startScale: number } | null>(null);
+
+  const bgImg = item.slideImgs[slideIndex] ?? null;
+  const bgOpacity = item.slideBgOpacity[slideIndex] ?? 1;
+  const overlay = item.slideOverlays[slideIndex] ?? null;
+
+  const bgUrl = useMemo(
+    () => renderSlideCanvas(slideNum, item.blocks, bgImg, bgImg, logoImg, preset, 1, true, LOCKED_LINE_SPACING, undefined, undefined, bgOpacity),
+    [slideNum, item.blocks, bgImg, bgOpacity, logoImg, preset]
+  );
+
+  const handleOverlayPointerDown = (e: React.PointerEvent) => {
+    if (!overlay) return;
+    e.preventDefault();
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    setDragging({ startPx: e.clientX, startPy: e.clientY, startX: overlay.x, startY: overlay.y });
+  };
+
+  const handleResizeDown = (e: React.PointerEvent) => {
+    if (!overlay || !containerRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    const rect = containerRef.current.getBoundingClientRect();
+    const cx = overlay.x * rect.width + rect.left;
+    const cy = overlay.y * rect.height + rect.top;
+    const dist = Math.sqrt((e.clientX - cx) ** 2 + (e.clientY - cy) ** 2) || 50;
+    setResizing({ startDist: dist, startScale: overlay.scale });
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!containerRef.current || !overlay) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    if (dragging) {
+      const dx = (e.clientX - dragging.startPx) / rect.width;
+      const dy = (e.clientY - dragging.startPy) / rect.height;
+      onOverlayTransform({
+        x: Math.max(0.05, Math.min(0.95, dragging.startX + dx)),
+        y: Math.max(0.05, Math.min(0.95, dragging.startY + dy)),
+      });
+    }
+    if (resizing) {
+      const cx = overlay.x * rect.width + rect.left;
+      const cy = overlay.y * rect.height + rect.top;
+      const dist = Math.sqrt((e.clientX - cx) ** 2 + (e.clientY - cy) ** 2) || 1;
+      const factor = dist / resizing.startDist;
+      onOverlayTransform({ scale: Math.max(0.1, Math.min(1.5, resizing.startScale * factor)) });
+    }
+  };
+
+  const handlePointerUp = () => {
+    setDragging(null);
+    setResizing(null);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-5 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-white font-semibold text-sm">Slide {slideNum} — background & photo</h3>
+          <button onClick={onClose} className="text-zinc-400 hover:text-white">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div
+          ref={containerRef}
+          className="relative mx-auto rounded-lg overflow-hidden bg-black/40 touch-none select-none"
+          style={{ width: EDITOR_W, height: Math.round(EDITOR_W * (H / W)) }}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+        >
+          <img src={bgUrl} alt="" className="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+          {overlay && (
+            <div
+              className="absolute cursor-move"
+              style={{
+                left: `${overlay.x * 100}%`,
+                top: `${overlay.y * 100}%`,
+                width: `${overlay.scale * 100}%`,
+                transform: "translate(-50%, -50%)",
+                opacity: overlay.opacity,
+              }}
+              onPointerDown={handleOverlayPointerDown}
+            >
+              <img src={overlay.img.src} alt="" className="w-full h-auto pointer-events-none" draggable={false} />
+              <div
+                className="absolute -bottom-1.5 -right-1.5 w-4 h-4 rounded-full bg-pink-500 border-2 border-white cursor-nwse-resize"
+                onPointerDown={handleResizeDown}
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="mt-4 space-y-4">
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <Label className="text-zinc-300 text-xs">Background photo</Label>
+              <label className="text-xs text-pink-400 hover:text-pink-300 cursor-pointer">
+                {bgImg ? "Change" : "Upload"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) onChangeBackground(f);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            </div>
+            {bgImg && (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-zinc-500 w-14">Opacity</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={Math.round(bgOpacity * 100)}
+                  onChange={(e) => onBgOpacity(Number(e.target.value) / 100)}
+                  className="flex-1"
+                />
+              </div>
+            )}
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <Label className="text-zinc-300 text-xs">Approved photo overlay</Label>
+              {overlay && (
+                <button onClick={onRemoveOverlay} className="text-xs text-red-400 hover:text-red-300">
+                  Remove
+                </button>
+              )}
+            </div>
+            <ApprovedImagesPicker
+              clientName={preset.name || ""}
+              mode="single"
+              label={overlay ? "Replace approved photo" : "Add approved photo"}
+              onAddImages={(files) => {
+                const f = files[0];
+                if (f) onSetOverlay(f);
+              }}
+            />
+            {overlay && (
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-[10px] text-zinc-500 w-14">Opacity</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={Math.round(overlay.opacity * 100)}
+                  onChange={(e) => onOverlayTransform({ opacity: Number(e.target.value) / 100 })}
+                  className="flex-1"
+                />
+              </div>
+            )}
+            <p className="text-[10px] text-zinc-500 mt-1">Drag the photo to reposition it, pull the pink dot to resize.</p>
+          </div>
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <Button onClick={onClose} className="bg-pink-600 hover:bg-pink-700 text-white">Done</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DropZone({
   label, hint, files, accept, multiple = true, active, color,
   onDragOver, onDragLeave, onDrop, onClick,
@@ -939,6 +1155,7 @@ export default function BulkCarousel() {
   const [rendering, setRendering] = useState(false);
   const [renderProgress, setRenderProgress] = useState(0);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [layerEditorTarget, setLayerEditorTarget] = useState<{ itemId: string; slideIndex: number } | null>(null);
   const logoImgRef = useRef<HTMLImageElement | null>(null);
   const [heroWordColor, setHeroWordColor] = useState("#C4879A");
   const heroWordColorRef = useRef("#C4879A");
@@ -1136,7 +1353,7 @@ async function openBankFor(item: any) {
 
         const blocks = makeBlocks(row);
         const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, LOCKED_LINE_SPACING, heroWordColor, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFont || undefined);
-        rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.hook, blocks, coverImg, bodyImg, slideImgs: [], thumbs });
+        rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.hook, blocks, coverImg, bodyImg, slideImgs: [], slideBgOpacity: [], slideOverlays: [], thumbs });
         setRenderProgress(Math.round(((idx + 1) / activeIndexes.length) * 100));
       }
 
@@ -1155,7 +1372,7 @@ async function openBankFor(item: any) {
     if (!selectedPreset) return;
     setItems(prev => prev.map(item => {
       if (item.id !== id) return item;
-      const thumbs = renderAllThumbs({ blocks: newBlocks, coverImg: item.coverImg, bodyImg: item.bodyImg, slideImgs: item.slideImgs }, logoImgRef.current, selectedPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined);
+      const thumbs = renderAllThumbs({ blocks: newBlocks, coverImg: item.coverImg, bodyImg: item.bodyImg, slideImgs: item.slideImgs, slideBgOpacity: item.slideBgOpacity, slideOverlays: item.slideOverlays }, logoImgRef.current, selectedPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined);
       return { ...item, blocks: newBlocks, thumbs };
     }));
   };
@@ -1163,21 +1380,73 @@ async function openBankFor(item: any) {
   // Lets a specific slide take its own photo instead of the one bulk-uploaded
   // for the whole row, so a person can mix and match up to 5 different shots
   // across one carousel while the text overlay keeps rendering on top as usual.
-  const handleSlideImageChange = async (id: string, slideIndex: number, file: File) => {
+  // Re-renders one row's thumbs after any per-slide layer edit (background
+  // photo, background opacity, or the approved-photo overlay on top of it).
+  const applySlideLayerPatch = (id: string, patch: (item: CarouselItem) => Partial<CarouselItem>) => {
     if (!selectedPreset) return;
+    setItems((prev) => prev.map((item) => {
+      if (item.id !== id) return item;
+      const updated = { ...item, ...patch(item) };
+      const thumbs = renderAllThumbs(updated, logoImgRef.current, selectedPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined);
+      return { ...updated, thumbs };
+    }));
+  };
+
+  // Sets (or replaces) the background photo for one slide.
+  const handleSlideImageChange = async (id: string, slideIndex: number, file: File) => {
     try {
       const img = await loadImg(URL.createObjectURL(file));
-      setItems((prev) => prev.map((item) => {
-        if (item.id !== id) return item;
+      applySlideLayerPatch(id, (item) => {
         const slideImgs = [...item.slideImgs];
         slideImgs[slideIndex] = img;
-        const updated = { ...item, slideImgs };
-        const thumbs = renderAllThumbs(updated, logoImgRef.current, selectedPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined);
-        return { ...updated, thumbs };
-      }));
+        const slideBgOpacity = [...item.slideBgOpacity];
+        if (slideBgOpacity[slideIndex] === undefined) slideBgOpacity[slideIndex] = 1;
+        return { slideImgs, slideBgOpacity };
+      });
     } catch {
       toast.error("Could not load that photo");
     }
+  };
+
+  // Adjusts how see-through the background photo is on one slide.
+  const handleSlideBgOpacityChange = (id: string, slideIndex: number, opacity: number) => {
+    applySlideLayerPatch(id, (item) => {
+      const slideBgOpacity = [...item.slideBgOpacity];
+      slideBgOpacity[slideIndex] = opacity;
+      return { slideBgOpacity };
+    });
+  };
+
+  // Places an approved client photo as a draggable/resizable layer on top of
+  // the slide's background, centred and at a sensible default size.
+  const handleSlideOverlaySet = (id: string, slideIndex: number, file: File) => {
+    loadImg(URL.createObjectURL(file)).then((img) => {
+      applySlideLayerPatch(id, (item) => {
+        const slideOverlays = [...item.slideOverlays];
+        slideOverlays[slideIndex] = { img, x: 0.5, y: 0.55, scale: 0.6, opacity: 1 };
+        return { slideOverlays };
+      });
+    }).catch(() => toast.error("Could not load that photo"));
+  };
+
+  // Updates position/size/opacity of an existing overlay (used while dragging
+  // or resizing it, and by the opacity slider).
+  const handleSlideOverlayTransform = (id: string, slideIndex: number, patch: Partial<SlideOverlay>) => {
+    applySlideLayerPatch(id, (item) => {
+      const existing = item.slideOverlays[slideIndex];
+      if (!existing) return {};
+      const slideOverlays = [...item.slideOverlays];
+      slideOverlays[slideIndex] = { ...existing, ...patch };
+      return { slideOverlays };
+    });
+  };
+
+  const handleSlideOverlayRemove = (id: string, slideIndex: number) => {
+    applySlideLayerPatch(id, (item) => {
+      const slideOverlays = [...item.slideOverlays];
+      slideOverlays[slideIndex] = null;
+      return { slideOverlays };
+    });
   };
 
   // Auto re-render all slides after any Vite HMR update
@@ -1360,7 +1629,7 @@ async function openBankFor(item: any) {
             let targetLogo: HTMLImageElement | null = null;
             if (targetPreset?.logoUrl) { try { targetLogo = await loadImg(targetPreset.logoUrl); } catch {} }
             const thumbs = targetPreset
-              ? renderAllThumbs({ blocks: item.blocks, coverImg: item.coverImg, bodyImg: item.bodyImg, slideImgs: item.slideImgs }, targetLogo, targetPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined)
+              ? renderAllThumbs({ blocks: item.blocks, coverImg: item.coverImg, bodyImg: item.bodyImg, slideImgs: item.slideImgs, slideBgOpacity: item.slideBgOpacity, slideOverlays: item.slideOverlays }, targetLogo, targetPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined)
               : item.thumbs;
             const names = thumbs.map((_, j) => `carousel-${i + 1}-slide${j + 1}.png`);
             const imageUrls = await uploadDataUrls(thumbs, names);
@@ -1605,6 +1874,25 @@ async function openBankFor(item: any) {
           />
         )}
 
+        {layerEditorTarget && (() => {
+          const layerItem = items.find((it) => it.id === layerEditorTarget.itemId);
+          if (!layerItem || !selectedPreset) return null;
+          return (
+            <SlideLayerEditorModal
+              item={layerItem}
+              slideIndex={layerEditorTarget.slideIndex}
+              preset={selectedPreset}
+              logoImg={logoImgRef.current}
+              onChangeBackground={(file) => handleSlideImageChange(layerItem.id, layerEditorTarget.slideIndex, file)}
+              onBgOpacity={(opacity) => handleSlideBgOpacityChange(layerItem.id, layerEditorTarget.slideIndex, opacity)}
+              onSetOverlay={(file) => handleSlideOverlaySet(layerItem.id, layerEditorTarget.slideIndex, file)}
+              onOverlayTransform={(patch) => handleSlideOverlayTransform(layerItem.id, layerEditorTarget.slideIndex, patch)}
+              onRemoveOverlay={() => handleSlideOverlayRemove(layerItem.id, layerEditorTarget.slideIndex)}
+              onClose={() => setLayerEditorTarget(null)}
+            />
+          );
+        })()}
+
         {showApprovalModal && (
           <SendForApprovalModal
             defaultClientName={selectedPreset?.name ?? ""}
@@ -1705,22 +1993,18 @@ async function openBankFor(item: any) {
             <div key={item.id} className="rounded-xl overflow-hidden bg-card/40">
               <div className="flex gap-1 p-3 bg-black/20">
                 {item.thumbs.map((du, si) => (
-                  <label key={si} className="relative flex-1 group cursor-pointer" title="Give this slide its own photo">
+                  <button
+                    key={si}
+                    type="button"
+                    className="relative flex-1 group"
+                    title="Set background & approved photo for this slide"
+                    onClick={() => setLayerEditorTarget({ itemId: item.id, slideIndex: si })}
+                  >
                     <img src={du} alt={`slide ${si + 1}`} className="w-full rounded object-cover" style={{ aspectRatio: "3/4" }} />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleSlideImageChange(item.id, si, file);
-                        e.target.value = "";
-                      }}
-                    />
                     <span className="absolute inset-0 rounded bg-black/0 group-hover:bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-semibold text-white text-center px-1">
-                      {item.slideImgs?.[si] ? "Change photo" : "Add photo"}
+                      {item.slideImgs?.[si] ? "Edit background/photo" : "Add background/photo"}
                     </span>
-                  </label>
+                  </button>
                 ))}
               </div>
               <div className="px-4 py-3 flex items-center justify-between gap-3">
