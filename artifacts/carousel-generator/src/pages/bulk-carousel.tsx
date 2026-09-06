@@ -61,6 +61,7 @@ type CarouselItem = {
   blocks: Block[];
   coverImg: HTMLImageElement | null;
   bodyImg: HTMLImageElement | null;
+  slideImgs: (HTMLImageElement | null)[]; // per-slide photo override, index 0 = slide 1; falls back to coverImg/bodyImg when unset
   thumbs: string[]; // 4 data URLs
 };
 
@@ -479,7 +480,7 @@ export function renderSlideCanvas(
 }
 
 export function renderAllThumbs(
-  item: Pick<CarouselItem, "blocks" | "coverImg" | "bodyImg">,
+  item: Pick<CarouselItem, "blocks" | "coverImg" | "bodyImg" | "slideImgs">,
   logoImg: HTMLImageElement | null,
   preset: ClientPreset,
   lineSpacing = LOCKED_LINE_SPACING,
@@ -488,9 +489,12 @@ export function renderAllThumbs(
   fontOverride?: string
 ): string[] {
   const totalSlides = item.blocks.filter(b => /^(hook|body\d+|cta)$/.test(b.id)).length;
-  return Array.from({ length: totalSlides }, (_, i) => i + 1).map(n =>
-    renderSlideCanvas(n, item.blocks, item.coverImg, item.bodyImg, logoImg, preset, SCALE, false, lineSpacing, accentOverride, overlayOverride, undefined, undefined, undefined, fontOverride)
-  );
+  return Array.from({ length: totalSlides }, (_, i) => i + 1).map(n => {
+    const override = item.slideImgs?.[n - 1] ?? null;
+    const c = override ?? item.coverImg;
+    const b = override ?? item.bodyImg;
+    return renderSlideCanvas(n, item.blocks, c, b, logoImg, preset, SCALE, false, lineSpacing, accentOverride, overlayOverride, undefined, undefined, undefined, fontOverride);
+  });
 }
 
 // ── Upload helper ─────────────────────────────────────────────────────────────
@@ -1132,7 +1136,7 @@ async function openBankFor(item: any) {
 
         const blocks = makeBlocks(row);
         const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, LOCKED_LINE_SPACING, heroWordColor, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFont || undefined);
-        rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.hook, blocks, coverImg, bodyImg, thumbs });
+        rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.hook, blocks, coverImg, bodyImg, slideImgs: [], thumbs });
         setRenderProgress(Math.round(((idx + 1) / activeIndexes.length) * 100));
       }
 
@@ -1151,9 +1155,29 @@ async function openBankFor(item: any) {
     if (!selectedPreset) return;
     setItems(prev => prev.map(item => {
       if (item.id !== id) return item;
-      const thumbs = renderAllThumbs({ blocks: newBlocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, logoImgRef.current, selectedPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined);
+      const thumbs = renderAllThumbs({ blocks: newBlocks, coverImg: item.coverImg, bodyImg: item.bodyImg, slideImgs: item.slideImgs }, logoImgRef.current, selectedPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined);
       return { ...item, blocks: newBlocks, thumbs };
     }));
+  };
+
+  // Lets a specific slide take its own photo instead of the one bulk-uploaded
+  // for the whole row, so a person can mix and match up to 5 different shots
+  // across one carousel while the text overlay keeps rendering on top as usual.
+  const handleSlideImageChange = async (id: string, slideIndex: number, file: File) => {
+    if (!selectedPreset) return;
+    try {
+      const img = await loadImg(URL.createObjectURL(file));
+      setItems((prev) => prev.map((item) => {
+        if (item.id !== id) return item;
+        const slideImgs = [...item.slideImgs];
+        slideImgs[slideIndex] = img;
+        const updated = { ...item, slideImgs };
+        const thumbs = renderAllThumbs(updated, logoImgRef.current, selectedPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined);
+        return { ...updated, thumbs };
+      }));
+    } catch {
+      toast.error("Could not load that photo");
+    }
   };
 
   // Auto re-render all slides after any Vite HMR update
@@ -1336,7 +1360,7 @@ async function openBankFor(item: any) {
             let targetLogo: HTMLImageElement | null = null;
             if (targetPreset?.logoUrl) { try { targetLogo = await loadImg(targetPreset.logoUrl); } catch {} }
             const thumbs = targetPreset
-              ? renderAllThumbs({ blocks: item.blocks, coverImg: item.coverImg, bodyImg: item.bodyImg }, targetLogo, targetPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined)
+              ? renderAllThumbs({ blocks: item.blocks, coverImg: item.coverImg, bodyImg: item.bodyImg, slideImgs: item.slideImgs }, targetLogo, targetPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined)
               : item.thumbs;
             const names = thumbs.map((_, j) => `carousel-${i + 1}-slide${j + 1}.png`);
             const imageUrls = await uploadDataUrls(thumbs, names);
@@ -1681,7 +1705,22 @@ async function openBankFor(item: any) {
             <div key={item.id} className="rounded-xl overflow-hidden bg-card/40">
               <div className="flex gap-1 p-3 bg-black/20">
                 {item.thumbs.map((du, si) => (
-                  <img key={si} src={du} alt={`slide ${si + 1}`} className="flex-1 rounded object-cover" style={{ aspectRatio: "3/4" }} />
+                  <label key={si} className="relative flex-1 group cursor-pointer" title="Give this slide its own photo">
+                    <img src={du} alt={`slide ${si + 1}`} className="w-full rounded object-cover" style={{ aspectRatio: "3/4" }} />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleSlideImageChange(item.id, si, file);
+                        e.target.value = "";
+                      }}
+                    />
+                    <span className="absolute inset-0 rounded bg-black/0 group-hover:bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-semibold text-white text-center px-1">
+                      {item.slideImgs?.[si] ? "Change photo" : "Add photo"}
+                    </span>
+                  </label>
                 ))}
               </div>
               <div className="px-4 py-3 flex items-center justify-between gap-3">
