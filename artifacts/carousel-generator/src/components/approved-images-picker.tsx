@@ -12,6 +12,27 @@ interface ApprovedImagesPickerProps {
   label?: string;
 }
 
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+// Every approved photo pulled into a builder gets its background stripped
+// automatically via Photoroom, no toggle needed. Falls back to the original
+// image if the removal call fails for any reason, so a Photoroom hiccup never
+// blocks someone from adding a photo.
+async function removeBackground(url: string): Promise<string> {
+  try {
+    const res = await fetch(`${BASE}/api/ai-portrait/remove-background`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ imageUrl: url }),
+    });
+    if (!res.ok) return url;
+    const data = await res.json();
+    return data.url || url;
+  } catch {
+    return url;
+  }
+}
+
 async function urlToFile(url: string, index: number): Promise<File> {
   const res = await fetch(url);
   const blob = await res.blob();
@@ -79,7 +100,10 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
       const byId = new Map(allImages.map((img) => [img.id, img]));
       const selectedImages = selectedOrder.map((id) => byId.get(id)).filter((img): img is NonNullable<typeof img> => Boolean(img));
 
-      const results = await Promise.allSettled(selectedImages.map((img, i) => urlToFile(img.imageUrl, i)));
+      const results = await Promise.allSettled(selectedImages.map(async (img, i) => {
+        const cleanUrl = await removeBackground(img.imageUrl);
+        return urlToFile(cleanUrl, i);
+      }));
       const files = results
         .filter((r): r is PromiseFulfilledResult<File> => r.status === "fulfilled")
         .map((r) => r.value);
