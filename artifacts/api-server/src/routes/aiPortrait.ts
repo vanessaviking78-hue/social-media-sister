@@ -20,6 +20,7 @@ import {
   getJob,
   processPortraitJob,
   regenerateSingleCard,
+  removeBackgroundTransparent,
 } from "../lib/aiPortraitWorker";
 import {
   createMotionJob,
@@ -529,6 +530,24 @@ router.post("/ai-portrait/:portraitId/regenerate", async (req: Request, res: Res
     const msg = err instanceof Error ? err.message : "Regen failed";
     req.log.error({ err }, "ai-portrait/regenerate failed");
     res.status(500).json({ error: msg });
+  }
+});
+
+router.post("/ai-portrait/remove-background", async (req: Request, res: Response) => {
+  try {
+    const imageUrl = req.body?.imageUrl;
+    if (!imageUrl || typeof imageUrl !== "string") {
+      return res.status(400).json({ error: "imageUrl is required" });
+    }
+    const imgRes = await fetch(imageUrl);
+    if (!imgRes.ok) return res.status(400).json({ error: "Could not fetch source image" });
+    const srcBuf = Buffer.from(await imgRes.arrayBuffer());
+    const processed = await removeBackgroundTransparent(srcBuf);
+    const url = await uploadBuf(processed, `${uuid()}.png`, "bg-removed", "image/png");
+    res.json({ url });
+  } catch (err) {
+    logger.warn(`remove-background route failed: ${err instanceof Error ? err.message : String(err)}`);
+    res.status(500).json({ error: "Background removal failed" });
   }
 });
 
