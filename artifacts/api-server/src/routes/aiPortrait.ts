@@ -539,9 +539,7 @@ router.post("/ai-portrait/remove-background", async (req: Request, res: Response
     if (!imageUrl || typeof imageUrl !== "string") {
       return res.status(400).json({ error: "imageUrl is required" });
     }
-    const imgRes = await fetch(imageUrl);
-    if (!imgRes.ok) return res.status(400).json({ error: "Could not fetch source image" });
-    const srcBuf = Buffer.from(await imgRes.arrayBuffer());
+    const srcBuf = await fetchBufSecure(imageUrl);
     const processed = await removeBackgroundTransparent(srcBuf);
     const url = await uploadBuf(processed, `${uuid()}.png`, "bg-removed", "image/png");
     res.json({ url });
