@@ -399,6 +399,10 @@ export default function Scheduler() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [filterClient, setFilterClient] = useState("all");
+  // Calendar-sourced posts (from Broadcasts/Calendar tool) for the selected
+  // client — merged into the Client Grid tab so it matches exactly what the
+  // client sees on their content-preview feed (which merges both tables).
+  const [calendarPosts, setCalendarPosts] = useState<{ id: number; clientName: string; postType: string; title: string; status: string; imageUrl: string | null; date: string }[]>([]);
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState<ScheduledPost | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -429,6 +433,25 @@ export default function Scheduler() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Keep the Client Grid tab's calendar posts in sync with whichever client
+  // is selected, so it matches what the client sees on their preview feed.
+  useEffect(() => {
+    if (filterClient === "all") { setCalendarPosts([]); return; }
+    let cancelled = false;
+    apiFetch(`/api/calendar?client=${encodeURIComponent(filterClient)}`)
+      .then((d) => { if (!cancelled) setCalendarPosts(d.posts || []); })
+      .catch(() => { if (!cancelled) setCalendarPosts([]); });
+    return () => { cancelled = true; };
+  }, [filterClient]);
+
+  async function handleDeleteCalendarPost(id: number) {
+    try {
+      await apiFetch(`/api/calendar/${id}`, { method: "DELETE" });
+      toast.success("Post deleted");
+      setCalendarPosts((prev) => prev.filter((p) => p.id !== id));
+    } catch (e: any) { toast.error(e.message); }
+  }
 
   async function handleCancel(id: number) {
     try {
@@ -813,9 +836,36 @@ export default function Scheduler() {
                 <p>Pick a client above to see their grid and drag posts into place.</p>
               </div>
             ) : (() => {
-              const gridPosts = posts
+              const schedulerGridPosts = posts
                 .filter((p) => p.clientName === filterClient && p.status !== "cancelled" && p.status !== "failed")
-                .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+                .map((p) => ({ post: p, draggable: p.status === "pending", onDelete: () => handleDelete(p.id) }));
+              // Calendar-sourced posts don't live in scheduledPostsTable, so they
+              // can't be dragged/rescheduled here — but they must still show up,
+              // otherwise this grid doesn't match what the client actually sees
+              // on their content-preview feed (which merges both tables).
+              const calendarGridPosts = calendarPosts
+                .filter((p) => p.clientName === filterClient)
+                .map((p) => ({
+                  post: {
+                    id: p.id + 100_000,
+                    presetId: 0,
+                    clientName: p.clientName,
+                    postType: p.postType,
+                    content: { imageUrls: p.imageUrl ? [p.imageUrl] : [], videoUrl: "", videoUrls: [], caption: "", title: p.title },
+                    scheduledAt: new Date(`${p.date}T12:00:00.000Z`).toISOString(),
+                    status: (p.status === "posted" ? "published" : p.status) as ScheduledPost["status"],
+                    metaStatus: "pending" as const,
+                    metaResult: null,
+                    metaPostedAt: null,
+                    isTrial: false,
+                    notes: "",
+                    createdAt: p.date,
+                  } as ScheduledPost,
+                  draggable: false,
+                  onDelete: () => handleDeleteCalendarPost(p.id),
+                }));
+              const gridPosts = [...schedulerGridPosts, ...calendarGridPosts]
+                .sort((a, b) => new Date(a.post.scheduledAt).getTime() - new Date(b.post.scheduledAt).getTime());
               if (!gridPosts.length) {
                 return (
                   <div className="text-center py-16 text-zinc-500">
@@ -827,22 +877,22 @@ export default function Scheduler() {
               return (
                 <>
                   <p className="text-xs text-zinc-500">
-                    Drag a tile onto another to swap their dates and rearrange the grid. Already-published posts are shown but can't be moved.
+                    Drag a tile onto another to swap their dates and rearrange the grid. Already-published posts and posts from Broadcasts/Calendar are shown but can't be moved.
                   </p>
                   <div className="grid grid-cols-3 gap-1 max-w-xl border border-zinc-800 rounded-xl overflow-hidden p-1 bg-zinc-950">
-                    {gridPosts.map((post) => (
+                    {gridPosts.map(({ post, draggable, onDelete }) => (
                       <div
                         key={post.id}
-                        onDragOver={post.status === "pending" ? (e) => handleGridDragOver(e, post) : undefined}
+                        onDragOver={draggable ? (e) => handleGridDragOver(e, post) : undefined}
                         onDragLeave={handleGridDragLeave}
-                        onDrop={post.status === "pending" ? (e) => handleGridDrop(e, post) : undefined}
+                        onDrop={draggable ? (e) => handleGridDrop(e, post) : undefined}
                         className={gridDragOverId === post.id ? "ring-1 ring-pink-500/60 rounded-md" : ""}
                       >
                         <FeedCard
                           post={post}
-                          draggable={post.status === "pending"}
+                          draggable={draggable}
                           onDragStart={(e) => handleGridDragStart(e, post)}
-                          onDelete={() => handleDelete(post.id)}
+                          onDelete={onDelete}
                         />
                       </div>
                     ))}
