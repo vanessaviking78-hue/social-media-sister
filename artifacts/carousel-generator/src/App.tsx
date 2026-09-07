@@ -99,7 +99,6 @@ import Homework from "@/pages/homework";
 import ReelProgress from "@/pages/reel-progress";
 import ReelCaptioning from "@/pages/reel-captioning";
 import EngagingReels from "@/pages/engaging-reels";
-        <Route path="/engaging-reels" component={EngagingReels} />
 import ReelsChallengeAdmin from "@/pages/reels-challenge-admin";
 import BonusContent from "@/pages/bonus-content";
 import ClientBank from "@/pages/client-bank";
@@ -181,14 +180,12 @@ function ProtectedRouter() {
       <Route path="/homework" component={Homework} />
       <Route path="/reel-progress" component={ReelProgress} />
       <Route path="/reel-captioning" component={ReelCaptioning} />
+      <Route path="/engaging-reels" component={EngagingReels} />
       <Route path="/reels-challenge-admin" component={ReelsChallengeAdmin} />
       <Route path="/bonus-content" component={BonusContent} />
 <Route path="/client-bank" component={ClientBank} />
       <Route component={NotFound} />
     </Switch>
-  );
-}
-
 function AppContent() {
   const [isClientApproval, clientApprovalParams] = useRoute("/client-approval/:token");
   const [isApprove, approveParams] = useRoute("/approve/:token");
@@ -335,3 +332,5 @@ function App() {
 }
 
 export default App;
+  );
+}
