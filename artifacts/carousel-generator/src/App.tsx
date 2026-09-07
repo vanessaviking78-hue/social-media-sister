@@ -186,6 +186,9 @@ function ProtectedRouter() {
 <Route path="/client-bank" component={ClientBank} />
       <Route component={NotFound} />
     </Switch>
+      );
+}
+
 function AppContent() {
   const [isClientApproval, clientApprovalParams] = useRoute("/client-approval/:token");
   const [isApprove, approveParams] = useRoute("/approve/:token");
