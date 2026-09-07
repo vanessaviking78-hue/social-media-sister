@@ -2213,34 +2213,33 @@ async function openBankForMany(selectedItems: any[]) {
                     <p className="text-xs truncate mt-0.5">{item.hook}</p>
                   </div>
                 </div>
-                <div className="flex gap-2.5 shrink-0 flex-wrap justify-end">
-                  <Button variant="outline" size="lg" className="h-10 px-4" onClick={() => setEditingItemId(item.id)}>
-                    <Edit2 className="w-4.5 h-4.5 mr-2" />Edit
+                <div className="flex gap-1 shrink-0 flex-wrap justify-end">
+                  <Button variant="outline" size="icon" className="h-8 w-8" title="Edit" onClick={() => setEditingItemId(item.id)}>
+                    <Edit2 className="w-3.5 h-3.5" />
                   </Button>
-                  <Button variant="outline" size="lg" className="h-10 px-4" onClick={() => downloadSingle(item)}>
-                    <Download className="w-4.5 h-4.5 mr-2" />ZIP
+                  <Button variant="outline" size="icon" className="h-8 w-8" title="Download ZIP" onClick={() => downloadSingle(item)}>
+                    <Download className="w-3.5 h-3.5" />
                   </Button>
-                  <Button variant="outline" size="lg" className="h-10 px-4" onClick={goToSchedule}>
-                    <CalendarClock className="w-4.5 h-4.5 mr-2" />Schedule
+                  <Button variant="outline" size="icon" className="h-8 w-8" title="Schedule" onClick={goToSchedule}>
+                    <CalendarClock className="w-3.5 h-3.5" />
                   </Button>
-                  <Button variant="outline" size="lg" className="h-10 px-4" onClick={() => openBankFor(item)} disabled={bankBusyId === item.id}>
-                    <Archive className="w-4.5 h-4.5 mr-2" />{bankBusyId === item.id ? "..." : "Bank"}
+                  <Button variant="outline" size="icon" className="h-8 w-8" title="Send to Bank" onClick={() => openBankFor(item)} disabled={bankBusyId === item.id}>
+                    {bankBusyId === item.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Archive className="w-3.5 h-3.5" />}
                   </Button>
                   <Button
-                    variant="outline" size="lg" className="h-10 px-4"
+                    variant="outline" size="icon" className="h-8 w-8" title="Generate caption"
                     onClick={() => generateCaption(item)}
                     disabled={generatingCaptionId === item.id}
                   >
                     {generatingCaptionId === item.id
-                      ? <Loader2 className="w-4.5 h-4.5 mr-2 animate-spin" />
-                      : <Sparkles className="w-4.5 h-4.5 mr-2" />}
-                    Caption
+                      ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      : <Sparkles className="w-3.5 h-3.5" />}
                   </Button>
                   <Button
-                    variant="outline" size="lg" className="h-10 px-4 text-red-400 hover:text-red-300 hover:bg-red-500/10 border-red-500/30"
+                    variant="outline" size="icon" className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10 border-red-500/30" title="Delete"
                     onClick={() => deleteItem(item.id)}
                   >
-                    <Trash2 className="w-4.5 h-4.5 mr-2" />Delete
+                    <Trash2 className="w-3.5 h-3.5" />
                   </Button>
                 </div>
               </div>
