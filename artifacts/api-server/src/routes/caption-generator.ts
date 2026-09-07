@@ -3,7 +3,7 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 
 const router: IRouter = Router();
 
-const CAPTION_TONE_PROMPTS: Record<string, string> = {
+export const CAPTION_TONE_PROMPTS: Record<string, string> = {
   "1": "Write like a no-nonsense northern woman — direct, warm, working-class honest. Plain words. Real talk. No fluff, no poetry, no corporate speak. Like talking to your best mate over a brew.",
   "2": "Write like a poetic storyteller — vivid, character-led, a little wistful. Paint scenes. Use unexpected metaphors. Let the emotion sit in the detail rather than the statement.",
   "3": "Write like a funny, sharp woman in her 40s-50s who has earned the right to say what she thinks. Self-deprecating, warm, genuinely funny. Never cruel. Always honest.",
