@@ -74,6 +74,7 @@ import BulkStories from "@/pages/bulk-stories";
 import CsvSlideCarousel from "@/pages/csv-slide-carousel";
 import EditorialPosts from "@/pages/editorial-posts";
 import ContentPreview from "@/pages/content-preview";
+import ClientBankView from "@/pages/client-bank-view";
 import PreviewIndex from "@/pages/preview-index";
 import Settings from "@/pages/settings";
 import CanvaOAuthResult from "@/pages/canva-oauth-result";
@@ -218,6 +219,7 @@ function AppContent() {
   const [isFounderWelcome] = useRoute("/founder-welcome");
   const [isTrialBundle] = useRoute("/trialbundle");
   const [isContentPreview, contentPreviewParams] = useRoute("/preview/:clientSlug");
+  const [isClientBankView, clientBankViewParams] = useRoute("/bank/:clientSlug");
   const [isContentGenerator] = useRoute("/content-generator");
   const [location] = useLocation();
   const isSplash = location === "/";
@@ -308,6 +310,9 @@ function AppContent() {
   }
   if (isContentPreview && contentPreviewParams?.clientSlug) {
     return <ContentPreview clientSlug={contentPreviewParams.clientSlug} />;
+  }
+  if (isClientBankView && clientBankViewParams?.clientSlug) {
+    return <ClientBankView clientSlug={clientBankViewParams.clientSlug} />;
   }
   if (isContentGenerator) {
     return <ContentGenerator />;
