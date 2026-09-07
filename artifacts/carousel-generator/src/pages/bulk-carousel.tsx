@@ -1084,6 +1084,82 @@ export function SlideLayerEditorModal({
   );
 }
 
+
+// ── Row image mode modal ──────────────────────────────────────────────────────
+// Lets a single CSV row either pick an approved photo to use as its full
+// background (no cutout), or add an approved-photo overlay (background
+// auto-removed) on top of whatever background that row already has, with
+// opacity and size sliders. One choice per row, applied to every slide of
+// that row's carousel when it's generated.
+
+function RowImageModal({
+  mode, currentOverlayFile, overlayOpacity, overlayScale, presetName,
+  onSetBackground, onSetOverlay, onOverlayOpacity, onOverlayScale, onRemoveOverlay, onClose,
+}: {
+  mode: "bg-only" | "bg-overlay" | "approved-as-bg";
+  currentOverlayFile: File | null;
+  overlayOpacity: number;
+  overlayScale: number;
+  presetName?: string;
+  onSetBackground: (file: File) => void;
+  onSetOverlay: (file: File) => void;
+  onOverlayOpacity: (v: number) => void;
+  onOverlayScale: (v: number) => void;
+  onRemoveOverlay: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 overflow-y-auto">
+      <div className="bg-zinc-900 rounded-2xl w-full max-w-md p-5 space-y-4 my-auto">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold">{mode === "approved-as-bg" ? "Pick background photo" : "Overlay photo"}</h3>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {mode === "approved-as-bg" && (
+          <ApprovedImagesPicker
+            clientName={presetName}
+            mode="single"
+            label="Choose approved photo (used as-is, no cutout)"
+            skipBackgroundRemoval
+            onAddImages={(files) => { if (files[0]) { onSetBackground(files[0]); onClose(); } }}
+          />
+        )}
+
+        {mode === "bg-overlay" && (
+          <>
+            <ApprovedImagesPicker
+              clientName={presetName}
+              mode="single"
+              label={currentOverlayFile ? "Replace overlay photo" : "Choose overlay photo (background auto-removed)"}
+              onAddImages={(files) => { if (files[0]) onSetOverlay(files[0]); }}
+            />
+            {currentOverlayFile && (
+              <>
+                <div className="space-y-1">
+                  <Label className="text-xs">Overlay opacity</Label>
+                  <input type="range" min={0.2} max={1} step={0.05} value={overlayOpacity} onChange={(e) => onOverlayOpacity(Number(e.target.value))} className="w-full" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Overlay size</Label>
+                  <input type="range" min={0.2} max={1} step={0.05} value={overlayScale} onChange={(e) => onOverlayScale(Number(e.target.value))} className="w-full" />
+                </div>
+                <Button variant="outline" size="sm" onClick={onRemoveOverlay}>Remove overlay</Button>
+              </>
+            )}
+          </>
+        )}
+
+        <div className="flex justify-end">
+          <Button size="sm" onClick={onClose}>Done</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DropZone({
   label, hint, files, accept, multiple = true, active, color,
   onDragOver, onDragLeave, onDrop, onClick,
@@ -1145,6 +1221,11 @@ export default function BulkCarousel() {
   const [csvError, setCsvError] = useState<string | null>(null);
   const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
   const [rowSelected, setRowSelected] = useState<boolean[]>([]);
+  const [rowMode, setRowMode] = useState<("bg-only" | "bg-overlay" | "approved-as-bg")[]>([]);
+  const [rowOverlayFile, setRowOverlayFile] = useState<(File | null)[]>([]);
+  const [rowOverlayOpacity, setRowOverlayOpacity] = useState<number[]>([]);
+  const [rowOverlayScale, setRowOverlayScale] = useState<number[]>([]);
+  const [rowImageModalIndex, setRowImageModalIndex] = useState<number | null>(null);
   const csvState = csvFile ? { file: csvFile, error: csvError, rows: csvRows } : null;
   const [coverFiles, setCoverFiles] = useState<File[]>([]);
   const [csvDrag, setCsvDrag] = useState(false);
@@ -1351,9 +1432,20 @@ async function openBankFor(item: any) {
         // One image reused across every slide, no separate body image option.
         const bodyImg = coverImg;
 
+        // Row-level overlay: one approved photo composited on top of every
+        // slide's background, same registration point throughout.
+        let overlayImg: HTMLImageElement | null = null;
+        if (rowMode[i] === "bg-overlay" && rowOverlayFile[i]) {
+          try { overlayImg = await loadImg(URL.createObjectURL(rowOverlayFile[i]!)); } catch {}
+        }
+        const overlayObj = overlayImg
+          ? { img: overlayImg, x: 0.5, y: 0.55, scale: rowOverlayScale[i] ?? 0.6, opacity: rowOverlayOpacity[i] ?? 1 }
+          : null;
+        const slideOverlays = overlayObj ? Array(5).fill(overlayObj) : [];
+
         const blocks = makeBlocks(row);
-        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg }, logoImg, selectedPreset, LOCKED_LINE_SPACING, heroWordColor, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFont || undefined);
-        rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.hook, blocks, coverImg, bodyImg, slideImgs: [], slideBgOpacity: [], slideOverlays: [], thumbs });
+        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg, slideImgs: [], slideBgOpacity: [], slideOverlays }, logoImg, selectedPreset, LOCKED_LINE_SPACING, heroWordColor, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFont || undefined);
+        rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.hook, blocks, coverImg, bodyImg, slideImgs: [], slideBgOpacity: [], slideOverlays, thumbs });
         setRenderProgress(Math.round(((idx + 1) / activeIndexes.length) * 100));
       }
 
@@ -1893,6 +1985,22 @@ async function openBankFor(item: any) {
           );
         })()}
 
+        {rowImageModalIndex !== null && (
+          <RowImageModal
+            mode={rowMode[rowImageModalIndex] ?? "bg-only"}
+            currentOverlayFile={rowOverlayFile[rowImageModalIndex] ?? null}
+            overlayOpacity={rowOverlayOpacity[rowImageModalIndex] ?? 1}
+            overlayScale={rowOverlayScale[rowImageModalIndex] ?? 0.6}
+            presetName={selectedPreset?.name}
+            onSetBackground={(file) => { const idx = rowImageModalIndex; setCoverFiles((prev) => { const next = [...prev]; next[idx] = file; return next; }); }}
+            onSetOverlay={(file) => { const idx = rowImageModalIndex; setRowOverlayFile((prev) => { const next = [...prev]; next[idx] = file; return next; }); }}
+            onOverlayOpacity={(v) => { const idx = rowImageModalIndex; setRowOverlayOpacity((prev) => { const next = [...prev]; next[idx] = v; return next; }); }}
+            onOverlayScale={(v) => { const idx = rowImageModalIndex; setRowOverlayScale((prev) => { const next = [...prev]; next[idx] = v; return next; }); }}
+            onRemoveOverlay={() => { const idx = rowImageModalIndex; setRowOverlayFile((prev) => { const next = [...prev]; next[idx] = null; return next; }); }}
+            onClose={() => setRowImageModalIndex(null)}
+          />
+        )}
+
         {showApprovalModal && (
           <SendForApprovalModal
             defaultClientName={selectedPreset?.name ?? ""}
@@ -2258,6 +2366,7 @@ async function openBankFor(item: any) {
                       <th className="text-left px-3 py-2 font-medium">Subtitle</th>
                       <th className="text-left px-3 py-2 font-medium">CTA</th>
                       <th className="text-center px-3 py-2 font-medium">Image</th>
+                      <th className="text-center px-3 py-2 font-medium">Mode</th>
                       <th className="text-center px-3 py-2 font-medium w-8"></th>
                     </tr>
                   </thead>
@@ -2281,12 +2390,36 @@ async function openBankFor(item: any) {
                             : <X className="w-3.5 h-3.5 text-amber-400/60 mx-auto" />}
                         </td>
                         <td className="px-3 py-2 text-center">
+                          <select
+                            value={rowMode[i] ?? "bg-only"}
+                            onChange={(e) => setRowMode((prev) => { const next = [...prev]; next[i] = e.target.value as "bg-only" | "bg-overlay" | "approved-as-bg"; return next; })}
+                            className="bg-transparent border border-border/40 rounded px-1 py-0.5 text-[11px] max-w-[120px]"
+                          >
+                            <option value="bg-only">Background only</option>
+                            <option value="bg-overlay">+ overlay</option>
+                            <option value="approved-as-bg">Approved as bg</option>
+                          </select>
+                          {(rowMode[i] === "bg-overlay" || rowMode[i] === "approved-as-bg") && (
+                            <button
+                              type="button"
+                              onClick={() => setRowImageModalIndex(i)}
+                              className="block mx-auto mt-1 text-[10px] text-violet-400 hover:text-violet-300 underline"
+                            >
+                              {rowMode[i] === "bg-overlay" ? (rowOverlayFile[i] ? "Edit overlay" : "Add overlay photo") : "Pick photo"}
+                            </button>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-center">
                           <button
                             type="button"
                             onClick={() => {
                               setCsvRows((prev) => prev.filter((_, idx) => idx !== i));
                               setRowSelected((prev) => prev.filter((_, idx) => idx !== i));
                               setCoverFiles((prev) => prev.filter((_, idx) => idx !== i));
+                              setRowMode((prev) => prev.filter((_, idx) => idx !== i));
+                              setRowOverlayFile((prev) => prev.filter((_, idx) => idx !== i));
+                              setRowOverlayOpacity((prev) => prev.filter((_, idx) => idx !== i));
+                              setRowOverlayScale((prev) => prev.filter((_, idx) => idx !== i));
                             }}
                             className="text-muted-foreground hover:text-red-400"
                           >
