@@ -880,3 +880,23 @@ export const contentTicklistsTable = pgTable("content_ticklists", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 export type ContentTicklist = typeof contentTicklistsTable.$inferSelect;
+
+// One row per uploaded B-roll clip in an Engaging Reels batch. text1/2/3 are
+// the raw CSV sentences as uploaded; hook/secondHook/cta are the same three
+// sentences after OpenAI assigns each a role, editable before render.
+export const engagingReelsTable = pgTable("engaging_reels", {
+    id: serial("id").primaryKey(),
+    batchId: text("batch_id").notNull(),
+    videoUrl: text("video_url").notNull(),
+    text1: text("text1").notNull(),
+    text2: text("text2").notNull(),
+    text3: text("text3").notNull(),
+    hook: text("hook").notNull(),
+    secondHook: text("second_hook").notNull(),
+    cta: text("cta").notNull(),
+    status: text("status").notNull().default("assigned"),
+    renderedVideoUrl: text("rendered_video_url"),
+    caption: text("caption"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type EngagingReel = typeof engagingReelsTable.$inferSelect;
