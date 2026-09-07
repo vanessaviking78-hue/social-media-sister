@@ -366,7 +366,7 @@ async function backfillPersonalityProfileDefaults(): Promise<void> {
       OR content_pillars IS NULL OR TRIM(content_pillars) = ''
       OR brand_notes IS NULL OR TRIM(brand_notes) = ''
   `);
-  const updated = (result as { rowCount?.number }).rowCount ?? 0;
+  const updated = (result as { rowCount?: number }).rowCount ?? 0;
   logger.info({ updated }, "Backfilled default personality profile fields on existing client presets");
 }
 
