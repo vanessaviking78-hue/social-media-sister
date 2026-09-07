@@ -343,7 +343,16 @@ description: "Write a reel script with a hook, talking points, and a call to act
 color: "from-orange-500/20 to-orange-500/5",
 border: "hover:border-orange-500/50",
 iconColor: "text-orange-400",
-},
+},  {
+    href: "/engaging-reels",
+    group: "content",
+    icon: Rows3,
+    name: "Engaging Reels",
+    description: "Bulk-upload silent B-roll clips with a CSV of three sentences each. The AI sorts hook, second hook and CTA, burns the text onto the video, and writes the caption.",
+    color: "from-fuchsia-500/20 to-fuchsia-500/5",
+    border: "hover:border-fuchsia-500/50",
+    iconColor: "text-fuchsia-400",
+  },
 {
 href: "/content-generator",
 group: "content",
