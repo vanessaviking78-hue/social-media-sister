@@ -10,6 +10,8 @@ interface ApprovedImagesPickerProps {
   onAddImages: (files: File[]) => void;
   mode?: "multi" | "single";
   label?: string;
+  /** Skip auto background-removal -- use when the photo is meant to be a plain full-bleed background, not a cutout overlay. Defaults to false (removal on). */
+  skipBackgroundRemoval?: boolean;
 }
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -48,7 +50,7 @@ function canvaAssetName(clientName: string, topic: string): string {
   return `${client}${cleanTopic}`;
 }
 
-export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "multi", label }: ApprovedImagesPickerProps) {
+export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "multi", label, skipBackgroundRemoval = false }: ApprovedImagesPickerProps) {
   const [open, setOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<string>(clientName || "");
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -101,7 +103,7 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
       const selectedImages = selectedOrder.map((id) => byId.get(id)).filter((img): img is NonNullable<typeof img> => Boolean(img));
 
       const results = await Promise.allSettled(selectedImages.map(async (img, i) => {
-        const cleanUrl = await removeBackground(img.imageUrl);
+        const cleanUrl = skipBackgroundRemoval ? img.imageUrl : await removeBackground(img.imageUrl);
         return urlToFile(cleanUrl, i);
       }));
       const files = results
