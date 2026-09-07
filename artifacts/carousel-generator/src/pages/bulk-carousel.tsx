@@ -2355,6 +2355,46 @@ async function openBankFor(item: any) {
           <button type="button" onClick={() => setRowSelected(csvRows.map(() => true))} className="text-xs text-muted-foreground hover:text-foreground">Select all</button>
           <button type="button" onClick={() => setRowSelected(csvRows.map(() => false))} className="text-xs text-muted-foreground hover:text-foreground">Clear all</button>
         </div>
+
+        <div className="rounded-lg border border-violet-500/30 bg-violet-500/5 p-3 space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Label className="text-xs shrink-0">Mode for all rows</Label>
+            <select
+              onChange={(e) => {
+                const v = e.target.value as "bg-only" | "bg-overlay" | "approved-as-bg";
+                setRowMode(csvRows.map(() => v));
+                e.target.value = "";
+              }}
+              defaultValue=""
+              className="bg-transparent border border-violet-500/40 rounded px-2 py-1 text-xs"
+            >
+              <option value="" disabled>Apply to every row…</option>
+              <option value="bg-only">Background only</option>
+              <option value="bg-overlay">Background + overlay</option>
+              <option value="approved-as-bg">Approved photo as background</option>
+            </select>
+            <span className="text-xs text-muted-foreground">Sets every row at once — you can still tweak individual rows after.</span>
+          </div>
+          <div className="max-w-md">
+            <ApprovedImagesPicker
+              clientName={selectedPreset?.name}
+              mode="multi"
+              label="Bulk-add overlay photos (fills rows in order, background auto-removed, sets Mode to + overlay)"
+              onAddImages={(files) => {
+                setRowOverlayFile((prev) => {
+                  const next = [...prev];
+                  files.forEach((f, j) => { next[j] = f; });
+                  return next;
+                });
+                setRowMode((prev) => {
+                  const next = [...prev];
+                  files.forEach((_, j) => { next[j] = "bg-overlay"; });
+                  return next;
+                });
+              }}
+            />
+          </div>
+        </div>
             <div className="rounded-xl overflow-hidden">
               <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
                 <table className="w-full text-xs">
