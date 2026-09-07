@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const API_ORIGIN = "https://workspaceapi-server-production-0f0d.up.railway.app";
 
 function authHeaders(): Record<string, string> {
   const pw = localStorage.getItem("cybersuite-pw") || "";
@@ -76,7 +77,7 @@ export default function EngagingReels() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await fetch(`${BASE}/api/engaging-reels`, { headers: authHeaders() });
+      const r = await fetch(`${API_ORIGIN}/api/engaging-reels`, { headers: authHeaders() });
       const d = await r.json();
       setItems(Array.isArray(d.items) ? d.items : []);
     } catch {
@@ -88,7 +89,7 @@ export default function EngagingReels() {
 
   const loadFonts = useCallback(async () => {
     try {
-      const r = await fetch(`${BASE}/api/engaging-reels/fonts`, { headers: authHeaders() });
+      const r = await fetch(`${API_ORIGIN}/api/engaging-reels/fonts`, { headers: authHeaders() });
       const d = await r.json();
       setFonts(Array.isArray(d.fonts) ? d.fonts : []);
       if (d.defaultFontKey) setFontKey(d.defaultFontKey);
@@ -113,7 +114,7 @@ export default function EngagingReels() {
       Array.from(videoFiles).forEach((f) => form.append("videos", f));
       form.append("csv", csvFile);
       const pw = localStorage.getItem("cybersuite-pw") || "";
-      const r = await fetch(`${BASE}/api/engaging-reels/batches`, {
+      const r = await fetch(`${API_ORIGIN}/api/engaging-reels/batches`, {
         method: "POST",
         headers: { "x-app-password": pw, Authorization: `Bearer ${pw}` },
         body: form,
@@ -146,7 +147,7 @@ export default function EngagingReels() {
     setBusyId(id);
     setBusyAction("render");
     try {
-      const r = await fetch(`${BASE}/api/engaging-reels/${id}`, {
+      const r = await fetch(`${API_ORIGIN}/api/engaging-reels/${id}`, {
         method: "PATCH",
         headers: authHeaders(),
         body: JSON.stringify(draft),
@@ -166,7 +167,7 @@ export default function EngagingReels() {
     setBusyId(id);
     setBusyAction("render");
     try {
-      const r = await fetch(`${BASE}/api/engaging-reels/${id}/render`, {
+      const r = await fetch(`${API_ORIGIN}/api/engaging-reels/${id}/render`, {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({ fontKey, boxColor }),
@@ -185,7 +186,7 @@ export default function EngagingReels() {
     setBusyId(id);
     setBusyAction("caption");
     try {
-      const r = await fetch(`${BASE}/api/engaging-reels/${id}/caption`, {
+      const r = await fetch(`${API_ORIGIN}/api/engaging-reels/${id}/caption`, {
         method: "POST",
         headers: authHeaders(),
         body: JSON.stringify({ tone: captionStyle }),
@@ -209,7 +210,7 @@ export default function EngagingReels() {
     setBusyId(id);
     setBusyAction("delete");
     try {
-      await fetch(`${BASE}/api/engaging-reels/${id}`, { method: "DELETE", headers: authHeaders() });
+      await fetch(`${API_ORIGIN}/api/engaging-reels/${id}`, { method: "DELETE", headers: authHeaders() });
       await load();
     } finally {
       setBusyId(null);
@@ -510,3 +511,4 @@ export default function EngagingReels() {
     </div>
   );
 }
+
