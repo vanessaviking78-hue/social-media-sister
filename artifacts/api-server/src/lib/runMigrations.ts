@@ -43,10 +43,33 @@ await createBroadcastDraftsTable();
     await createReelSubmissionsTable();
     await allowCancelledCalendarPostStatus();
     await createRevenueIdeaPoolTable();
+    await createEngagingReelsTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
   }
+}
+
+// Create the engaging_reels table for AI-generated reel content
+async function createEngagingReelsTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS engaging_reels (
+      id serial PRIMARY KEY,
+      batch_id text NOT NULL,
+      video_url text NOT NULL,
+      text1 text NOT NULL,
+      text2 text NOT NULL,
+      text3 text NOT NULL,
+      hook text NOT NULL,
+      second_hook text NOT NULL,
+      cta text NOT NULL,
+      status text NOT NULL DEFAULT 'assigned',
+      rendered_video_url text,
+      caption text,
+      created_at timestamp NOT NULL DEFAULT now()
+    )
+  `);
+  logger.info("Created engaging_reels table");
 }
 
 // Lets a client's "reject" action on a calendar-sourced post actually
@@ -343,7 +366,7 @@ async function backfillPersonalityProfileDefaults(): Promise<void> {
       OR content_pillars IS NULL OR TRIM(content_pillars) = ''
       OR brand_notes IS NULL OR TRIM(brand_notes) = ''
   `);
-  const updated = (result as { rowCount?: number }).rowCount ?? 0;
+  const updated = (result as { rowCount?.number }).rowCount ?? 0;
   logger.info({ updated }, "Backfilled default personality profile fields on existing client presets");
 }
 
@@ -595,3 +618,4 @@ async function updateShareFriendCommentCTA(): Promise<void> {
     logger.info({ updated }, "Updated default first-comment carousel CTA to new wording");
   }
 }
+
