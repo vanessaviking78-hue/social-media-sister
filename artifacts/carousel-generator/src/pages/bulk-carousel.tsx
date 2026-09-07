@@ -67,6 +67,10 @@ type CarouselItem = {
   slideBgOpacity: number[]; // 0-1 opacity for the per-slide background image, defaults to 1
   slideOverlays: (SlideOverlay | null)[]; // approved photo layered on top of the background, draggable/resizable
   thumbs: string[]; // 4 data URLs
+  fontOverride?: string; // per-carousel font override, set from the Edit modal; falls back to the batch-wide font when unset
+  textBoxOverride?: boolean; // per-carousel coloured-text-box toggle override; falls back to the batch-wide toggle when unset
+  textBoxColorOverride?: string; // per-carousel text box colour override
+  pageColorOverride?: string; // per-row/per-carousel background colour override, set from the CSV row colour picker
 };
 
 type ScheduleEntry = {
@@ -295,7 +299,8 @@ export function renderSlideCanvas(
   imageZoom?: number,
   imageShadow?: boolean,
   fontOverride?: string,
-  overlay?: { img: HTMLImageElement; x: number; y: number; scale: number; opacity: number } | null
+  overlay?: { img: HTMLImageElement; x: number; y: number; scale: number; opacity: number } | null,
+  pageColorOverride?: string
 ): string {
   const canvas = document.createElement("canvas");
   canvas.width = W * scale;
@@ -303,7 +308,7 @@ export function renderSlideCanvas(
   const ctx = canvas.getContext("2d")!;
   ctx.scale(scale, scale);
 
-  const pageColor = preset.pageColor || "#1a1a2e";
+  const pageColor = pageColorOverride || preset.pageColor || "#1a1a2e";
       const toOverlayRgba = (color: string, alpha = 0.55) => {
     if (!color.startsWith("#")) return color;
     const h = color.replace("#", "");
@@ -507,7 +512,8 @@ export function renderAllThumbs(
   lineSpacing = LOCKED_LINE_SPACING,
   accentOverride?: string,
   overlayOverride?: string,
-  fontOverride?: string
+  fontOverride?: string,
+  pageColorOverride?: string
 ): string[] {
   const totalSlides = item.blocks.filter(b => /^(hook|body\d+|cta)$/.test(b.id)).length;
   return Array.from({ length: totalSlides }, (_, i) => i + 1).map(n => {
@@ -516,7 +522,7 @@ export function renderAllThumbs(
     const b = override ?? item.bodyImg;
     const bgOpacity = override ? (item.slideBgOpacity?.[n - 1] ?? 1) : 1;
     const overlay = item.slideOverlays?.[n - 1] ?? null;
-    return renderSlideCanvas(n, item.blocks, c, b, logoImg, preset, SCALE, false, lineSpacing, accentOverride, overlayOverride, bgOpacity, undefined, undefined, fontOverride, overlay);
+    return renderSlideCanvas(n, item.blocks, c, b, logoImg, preset, SCALE, false, lineSpacing, accentOverride, overlayOverride, bgOpacity, undefined, undefined, fontOverride, overlay, pageColorOverride);
   });
 }
 
@@ -585,12 +591,18 @@ type EditorProps = {
   preset: ClientPreset;
   logoImg: HTMLImageElement | null;
   heroWordColor: string;
-  onSave: (blocks: Block[]) => void;
+  globalFont?: string;
+  globalTextBoxEnabled?: boolean;
+  globalTextBoxColor?: string;
+  onSave: (blocks: Block[], overrides?: { font?: string; textBoxEnabled?: boolean; textBoxColor?: string }) => void;
   onClose: () => void;
 };
 
-export function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave, onClose }: EditorProps) {
+export function SlideEditorModal({ item, preset, logoImg, heroWordColor, globalFont = "", globalTextBoxEnabled = false, globalTextBoxColor = "#000000", onSave, onClose }: EditorProps) {
   const [activeSlide, setActiveSlide] = useState<1|2|3|4>(1);
+  const [itemFont, setItemFont] = useState(item.fontOverride ?? globalFont);
+  const [itemTextBoxEnabled, setItemTextBoxEnabled] = useState(item.textBoxOverride ?? globalTextBoxEnabled);
+  const [itemTextBoxColor, setItemTextBoxColor] = useState(item.textBoxColorOverride ?? globalTextBoxColor);
   const [blocks, setBlocks] = useState<Block[]>(() => item.blocks.map(b => ({ ...b })));
   const [dragging, setDragging] = useState<{
     id: BlockId; startPx: number; startPy: number; startBx: number; startBy: number;
@@ -730,6 +742,25 @@ export function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave,
             <GripVertical className="w-3 h-3 inline mr-1 opacity-60" />
             Drag to move. Drag corners or sides to resize. Double-click text to edit. Logo and line are draggable too.
           </p>
+
+          <div className="flex flex-wrap items-center gap-4 mb-3 p-3 rounded-lg border border-border/40 bg-background/40">
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Font (this carousel)</label>
+              <select value={itemFont} onChange={e => setItemFont(e.target.value)} className="h-8 rounded border border-border/40 bg-background px-2 text-sm">
+                <option value="">Use batch default</option>
+                {FONT_OPTIONS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+                <input type="checkbox" checked={itemTextBoxEnabled} onChange={e => setItemTextBoxEnabled(e.target.checked)} className="w-4 h-4 accent-pink-500" />
+                Coloured box behind text
+              </label>
+              {itemTextBoxEnabled && (
+                <input type="color" value={itemTextBoxColor} onChange={e => setItemTextBoxColor(e.target.value)} className="h-7 w-10 rounded border border-border/40 bg-transparent cursor-pointer" />
+              )}
+            </div>
+          </div>
 
           {/* Slide canvas area */}
           <div
@@ -882,7 +913,7 @@ export function SlideEditorModal({ item, preset, logoImg, heroWordColor, onSave,
 
         <div className="flex justify-end gap-3 px-5 py-4 border-t border-border/30">
           <Button variant="outline" size="sm" onClick={onClose}>Discard</Button>
-          <Button size="sm" onClick={() => { onSave(blocks); onClose(); }}>Save changes</Button>
+          <Button size="sm" onClick={() => { onSave(blocks, { font: itemFont || undefined, textBoxEnabled: itemTextBoxEnabled, textBoxColor: itemTextBoxColor }); onClose(); }}>Save changes</Button>
         </div>
       </div>
     </div>
@@ -1226,6 +1257,7 @@ export default function BulkCarousel() {
   const [rowOverlayOpacity, setRowOverlayOpacity] = useState<number[]>([]);
   const [rowOverlayScale, setRowOverlayScale] = useState<number[]>([]);
   const [rowImageModalIndex, setRowImageModalIndex] = useState<number | null>(null);
+  const [rowBgColor, setRowBgColor] = useState<(string | null)[]>([]);
   const csvState = csvFile ? { file: csvFile, error: csvError, rows: csvRows } : null;
   const [coverFiles, setCoverFiles] = useState<File[]>([]);
   const [csvDrag, setCsvDrag] = useState(false);
@@ -1296,6 +1328,8 @@ export default function BulkCarousel() {
 const [bankItem, setBankItem] = useState<any>(null);
 const [bankPosts, setBankPosts] = useState<SchedulePostPayload[]>([]);
 const [bankBusyId, setBankBusyId] = useState<string | null>(null);
+const [bankSelected, setBankSelected] = useState<string[]>([]);
+const [bankBulkBusy, setBankBulkBusy] = useState(false);
 
 async function openBankFor(item: any) {
   setBankBusyId(item.id);
@@ -1308,6 +1342,24 @@ async function openBankFor(item: any) {
     toast.error(e?.message || "Could not prepare that for the Bank");
   } finally {
     setBankBusyId(null);
+  }
+}
+
+async function openBankForMany(selectedItems: any[]) {
+  if (!selectedItems.length) return;
+  setBankBulkBusy(true);
+  try {
+    const posts = await Promise.all(selectedItems.map(async (item) => {
+      const names = item.thumbs.map((_: string, j: number) => `bank-${item.id}-slide${j + 1}.png`);
+      const imageUrls = await uploadDataUrls(item.thumbs, names);
+      return { title: stripPipes(item.hook).slice(0, 80), caption: captionMap[item.id] || "", imageUrls, sourceTool: "Bulk Carousel Creator" };
+    }));
+    setBankPosts(posts);
+    setBankItem(selectedItems[0]);
+  } catch (e: any) {
+    toast.error(e?.message || "Could not prepare those for the Bank");
+  } finally {
+    setBankBulkBusy(false);
   }
 }
 
@@ -1444,8 +1496,8 @@ async function openBankFor(item: any) {
         const slideOverlays = overlayObj ? Array(5).fill(overlayObj) : [];
 
         const blocks = makeBlocks(row);
-        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg, slideImgs: [], slideBgOpacity: [], slideOverlays }, logoImg, selectedPreset, LOCKED_LINE_SPACING, heroWordColor, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFont || undefined);
-        rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.hook, blocks, coverImg, bodyImg, slideImgs: [], slideBgOpacity: [], slideOverlays, thumbs });
+        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg, slideImgs: [], slideBgOpacity: [], slideOverlays }, logoImg, selectedPreset, LOCKED_LINE_SPACING, heroWordColor, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFont || undefined, rowBgColor[i] || undefined);
+        rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.hook, blocks, coverImg, bodyImg, slideImgs: [], slideBgOpacity: [], slideOverlays, thumbs, pageColorOverride: rowBgColor[i] || undefined });
         setRenderProgress(Math.round(((idx + 1) / activeIndexes.length) * 100));
       }
 
@@ -1460,12 +1512,18 @@ async function openBankFor(item: any) {
 
   // ── Edit save ────────────────────────────────────────────────────────────────
 
-  const handleSaveEdit = (id: string, newBlocks: Block[]) => {
+  const handleSaveEdit = (id: string, newBlocks: Block[], overrides?: { font?: string; textBoxEnabled?: boolean; textBoxColor?: string }) => {
     if (!selectedPreset) return;
     setItems(prev => prev.map(item => {
       if (item.id !== id) return item;
-      const thumbs = renderAllThumbs({ blocks: newBlocks, coverImg: item.coverImg, bodyImg: item.bodyImg, slideImgs: item.slideImgs, slideBgOpacity: item.slideBgOpacity, slideOverlays: item.slideOverlays }, logoImgRef.current, selectedPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined);
-      return { ...item, blocks: newBlocks, thumbs };
+      const fontOverride = overrides?.font;
+      const textBoxOverride = overrides?.textBoxEnabled;
+      const textBoxColorOverride = overrides?.textBoxColor;
+      const effFont = fontOverride || textFontRef.current || undefined;
+      const effTextBoxEnabled = textBoxOverride ?? textBoxEnabledRef.current;
+      const effTextBoxColor = textBoxColorOverride || textBoxColorRef.current;
+      const thumbs = renderAllThumbs({ blocks: newBlocks, coverImg: item.coverImg, bodyImg: item.bodyImg, slideImgs: item.slideImgs, slideBgOpacity: item.slideBgOpacity, slideOverlays: item.slideOverlays }, logoImgRef.current, selectedPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, effTextBoxEnabled ? effTextBoxColor : undefined, effFont, item.pageColorOverride);
+      return { ...item, blocks: newBlocks, thumbs, fontOverride, textBoxOverride, textBoxColorOverride };
     }));
   };
 
@@ -1479,7 +1537,7 @@ async function openBankFor(item: any) {
     setItems((prev) => prev.map((item) => {
       if (item.id !== id) return item;
       const updated = { ...item, ...patch(item) };
-      const thumbs = renderAllThumbs(updated, logoImgRef.current, selectedPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined);
+      const thumbs = renderAllThumbs(updated, logoImgRef.current, selectedPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined, updated.pageColorOverride);
       return { ...updated, thumbs };
     }));
   };
@@ -1548,7 +1606,7 @@ async function openBankFor(item: any) {
       if (phase !== "preview" || !selectedPreset || !items.length) return;
       setItems(prev => prev.map(item => ({
         ...item,
-        thumbs: renderAllThumbs(item, logoImgRef.current, selectedPreset!, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined),
+        thumbs: renderAllThumbs(item, logoImgRef.current, selectedPreset!, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined, item.pageColorOverride),
       })));
     };
     import.meta.hot.on("vite:afterUpdate", handler);
@@ -1721,7 +1779,7 @@ async function openBankFor(item: any) {
             let targetLogo: HTMLImageElement | null = null;
             if (targetPreset?.logoUrl) { try { targetLogo = await loadImg(targetPreset.logoUrl); } catch {} }
             const thumbs = targetPreset
-              ? renderAllThumbs({ blocks: item.blocks, coverImg: item.coverImg, bodyImg: item.bodyImg, slideImgs: item.slideImgs, slideBgOpacity: item.slideBgOpacity, slideOverlays: item.slideOverlays }, targetLogo, targetPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined)
+              ? renderAllThumbs({ blocks: item.blocks, coverImg: item.coverImg, bodyImg: item.bodyImg, slideImgs: item.slideImgs, slideBgOpacity: item.slideBgOpacity, slideOverlays: item.slideOverlays }, targetLogo, targetPreset, LOCKED_LINE_SPACING, heroWordColorRef.current, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFontRef.current || undefined, item.pageColorOverride)
               : item.thumbs;
             const names = thumbs.map((_, j) => `carousel-${i + 1}-slide${j + 1}.png`);
             const imageUrls = await uploadDataUrls(thumbs, names);
@@ -1961,7 +2019,10 @@ async function openBankFor(item: any) {
             preset={selectedPreset}
             logoImg={logoImgRef.current}
             heroWordColor={heroWordColor}
-            onSave={blocks => handleSaveEdit(editingItem.id, blocks)}
+            globalFont={textFont}
+            globalTextBoxEnabled={textBoxEnabled}
+            globalTextBoxColor={textBoxColor}
+            onSave={(blocks, overrides) => handleSaveEdit(editingItem.id, blocks, overrides)}
             onClose={() => setEditingItemId(null)}
           />
         )}
@@ -2096,6 +2157,29 @@ async function openBankFor(item: any) {
           </div>
         </div>
 
+        <div className="max-w-5xl mx-auto px-6 pt-4 flex items-center gap-3 flex-wrap">
+          <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={items.length > 0 && bankSelected.length === items.length}
+              onChange={(e) => setBankSelected(e.target.checked ? items.map(it => it.id) : [])}
+              className="w-4 h-4 accent-pink-500"
+            />
+            Select all for Bank
+          </label>
+          {bankSelected.length > 0 && (
+            <Button
+              size="sm"
+              onClick={() => openBankForMany(items.filter(it => bankSelected.includes(it.id)))}
+              disabled={bankBulkBusy}
+              className="font-semibold"
+            >
+              {bankBulkBusy ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Archive className="w-3.5 h-3.5 mr-1.5" />}
+              Send {bankSelected.length} to Bank
+            </Button>
+          )}
+        </div>
+
         <div className="max-w-5xl mx-auto px-6 py-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
           {items.map(item => (
             <div key={item.id} className="rounded-xl overflow-hidden bg-card/40">
@@ -2116,39 +2200,47 @@ async function openBankFor(item: any) {
                 ))}
               </div>
               <div className="px-4 py-3 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm text-muted-foreground">Row {item.rowNum}</p>
-                  <p className="text-xs truncate mt-0.5">{item.hook}</p>
+                <div className="flex items-center gap-2 min-w-0">
+                  <input
+                    type="checkbox"
+                    checked={bankSelected.includes(item.id)}
+                    onChange={(e) => setBankSelected((prev) => e.target.checked ? [...prev, item.id] : prev.filter((id) => id !== item.id))}
+                    className="w-4 h-4 accent-pink-500 shrink-0"
+                    title="Select for bulk Send to Bank"
+                  />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm text-muted-foreground">Row {item.rowNum}</p>
+                    <p className="text-xs truncate mt-0.5">{item.hook}</p>
+                  </div>
                 </div>
-                <div className="flex gap-2 shrink-0 flex-wrap justify-end">
-                  <Button variant="outline" size="sm" onClick={() => setEditingItemId(item.id)}>
-                    <Edit2 className="w-3.5 h-3.5 mr-1.5" />Edit
+                <div className="flex gap-2.5 shrink-0 flex-wrap justify-end">
+                  <Button variant="outline" size="lg" className="h-10 px-4" onClick={() => setEditingItemId(item.id)}>
+                    <Edit2 className="w-4.5 h-4.5 mr-2" />Edit
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => downloadSingle(item)}>
-                    <Download className="w-3.5 h-3.5 mr-1.5" />ZIP
+                  <Button variant="outline" size="lg" className="h-10 px-4" onClick={() => downloadSingle(item)}>
+                    <Download className="w-4.5 h-4.5 mr-2" />ZIP
                   </Button>
-                  <Button variant="outline" size="sm" onClick={goToSchedule}>
-                    <CalendarClock className="w-3.5 h-3.5 mr-1.5" />Schedule
+                  <Button variant="outline" size="lg" className="h-10 px-4" onClick={goToSchedule}>
+                    <CalendarClock className="w-4.5 h-4.5 mr-2" />Schedule
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => openBankFor(item)} disabled={bankBusyId === item.id}>
-                    <Archive className="w-3.5 h-3.5 mr-1.5" />{bankBusyId === item.id ? "..." : "Bank"}
+                  <Button variant="outline" size="lg" className="h-10 px-4" onClick={() => openBankFor(item)} disabled={bankBusyId === item.id}>
+                    <Archive className="w-4.5 h-4.5 mr-2" />{bankBusyId === item.id ? "..." : "Bank"}
                   </Button>
                   <Button
-                    variant="outline" size="sm"
+                    variant="outline" size="lg" className="h-10 px-4"
                     onClick={() => generateCaption(item)}
                     disabled={generatingCaptionId === item.id}
                   >
                     {generatingCaptionId === item.id
-                      ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                      : <Sparkles className="w-3.5 h-3.5 mr-1.5" />}
+                      ? <Loader2 className="w-4.5 h-4.5 mr-2 animate-spin" />
+                      : <Sparkles className="w-4.5 h-4.5 mr-2" />}
                     Caption
                   </Button>
                   <Button
-                    variant="outline" size="sm"
-                    className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                    variant="outline" size="lg" className="h-10 px-4 text-red-400 hover:text-red-300 hover:bg-red-500/10 border-red-500/30"
                     onClick={() => deleteItem(item.id)}
                   >
-                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />Delete
+                    <Trash2 className="w-4.5 h-4.5 mr-2" />Delete
                   </Button>
                 </div>
               </div>
@@ -2374,6 +2466,22 @@ async function openBankFor(item: any) {
               <option value="approved-as-bg">Approved photo as background</option>
             </select>
             <span className="text-xs text-muted-foreground">Sets every row at once — you can still tweak individual rows after.</span>
+            <Label className="text-xs shrink-0 ml-2">Background colour for all rows</Label>
+            <input
+              type="color"
+              defaultValue="#1a1a2e"
+              onChange={(e) => setRowBgColor(csvRows.map(() => e.target.value))}
+              className="h-7 w-10 rounded border border-violet-500/40 bg-transparent cursor-pointer"
+            />
+            {rowBgColor.some(Boolean) && (
+              <button
+                type="button"
+                onClick={() => setRowBgColor(csvRows.map(() => null))}
+                className="text-xs text-muted-foreground hover:text-red-400 underline"
+              >
+                Clear all colours
+              </button>
+            )}
           </div>
           <div className="max-w-md">
             <ApprovedImagesPicker
@@ -2407,6 +2515,7 @@ async function openBankFor(item: any) {
                       <th className="text-left px-3 py-2 font-medium">CTA</th>
                       <th className="text-center px-3 py-2 font-medium">Image</th>
                       <th className="text-center px-3 py-2 font-medium">Mode</th>
+                      <th className="text-center px-3 py-2 font-medium">Colour</th>
                       <th className="text-center px-3 py-2 font-medium w-8"></th>
                     </tr>
                   </thead>
@@ -2450,6 +2559,25 @@ async function openBankFor(item: any) {
                           )}
                         </td>
                         <td className="px-3 py-2 text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <input
+                              type="color"
+                              value={rowBgColor[i] || "#1a1a2e"}
+                              onChange={(e) => setRowBgColor((prev) => { const next = [...prev]; next[i] = e.target.value; return next; })}
+                              className="h-6 w-8 rounded border border-border/40 bg-transparent cursor-pointer"
+                            />
+                            {rowBgColor[i] && (
+                              <button
+                                type="button"
+                                onClick={() => setRowBgColor((prev) => { const next = [...prev]; next[i] = null; return next; })}
+                                className="text-[10px] text-muted-foreground hover:text-red-400"
+                              >
+                                reset
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-3 py-2 text-center">
                           <button
                             type="button"
                             onClick={() => {
@@ -2460,6 +2588,7 @@ async function openBankFor(item: any) {
                               setRowOverlayFile((prev) => prev.filter((_, idx) => idx !== i));
                               setRowOverlayOpacity((prev) => prev.filter((_, idx) => idx !== i));
                               setRowOverlayScale((prev) => prev.filter((_, idx) => idx !== i));
+                              setRowBgColor((prev) => prev.filter((_, idx) => idx !== i));
                             }}
                             className="text-muted-foreground hover:text-red-400"
                           >
