@@ -98,6 +98,8 @@ import HealthCheck from "@/pages/health-check";
 import Homework from "@/pages/homework";
 import ReelProgress from "@/pages/reel-progress";
 import ReelCaptioning from "@/pages/reel-captioning";
+import EngagingReels from "@/pages/engaging-reels";
+        <Route path="/engaging-reels" component={EngagingReels} />
 import ReelsChallengeAdmin from "@/pages/reels-challenge-admin";
 import BonusContent from "@/pages/bonus-content";
 import ClientBank from "@/pages/client-bank";
