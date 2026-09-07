@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Archive, CalendarClock, Send, Trash2, Loader2, RefreshCcw } from "lucide-react";
+import { Archive, CalendarClock, Send, Trash2, Loader2, RefreshCcw, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
 import { usePresets } from "@/lib/use-presets";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
@@ -35,6 +35,7 @@ export default function ClientBank() {
   const [scheduleTarget, setScheduleTarget] = useState<BankPost | null>(null);
   const [approvalTarget, setApprovalTarget] = useState<BankPost | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -86,6 +87,22 @@ export default function ClientBank() {
       }]
     : [];
 
+  function safeClientSlug(name: string) {
+    return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  }
+
+  const selectedPreset = clientFilter !== "all" ? presets.find((p) => p.id === clientFilter) : null;
+  const bankLink = selectedPreset
+    ? `${window.location.origin}${BASE}/bank/${safeClientSlug(selectedPreset.name)}`
+    : "";
+
+  function copyBankLink() {
+    if (!bankLink) return;
+    navigator.clipboard.writeText(bankLink);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
+  }
+
   return (
     <div className="min-h-[100dvh] w-full bg-background text-foreground">
       <header className="border-b border-border/40 px-6 py-5">
@@ -111,6 +128,16 @@ export default function ClientBank() {
           <button onClick={load} className="px-3 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm flex items-center gap-1.5">
             <RefreshCcw className="w-3.5 h-3.5" /> Refresh
           </button>
+          {selectedPreset && (
+            <button
+              onClick={copyBankLink}
+              className="px-3 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm flex items-center gap-1.5"
+              title={`Copy ${selectedPreset.name}'s Bank link`}
+            >
+              {linkCopied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {linkCopied ? "Copied!" : "Copy Bank link"}
+            </button>
+          )}
           <span className="text-sm text-muted-foreground ml-auto">{filtered.length} item{filtered.length !== 1 ? "s" : ""} in the Bank</span>
         </div>
 
