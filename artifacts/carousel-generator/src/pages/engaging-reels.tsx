@@ -491,8 +491,8 @@ export default function EngagingReels() {
                       controls
                       className="w-full max-h-80 rounded-xl bg-black"
                     />
-                    
-                      href={`${BASE}${item.renderedVideoUrl}`}
+                    <a
+                    href={`${BASE}${item.renderedVideoUrl}`}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-1.5 text-xs font-semibold text-pink-400 hover:text-pink-300 transition-colors"
