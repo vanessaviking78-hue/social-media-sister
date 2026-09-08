@@ -1173,22 +1173,24 @@ export const RANDOM_PROMPT_PRESETS: PhotoStudioPreset[] = [
 ];
 
 export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: string, aspectRatio = "3:4", vars?: { colour?: string; name?: string; skills?: string; knownAs?: string; hairColour?: string; number?: string; numberColour?: string; word?: string; wordColour?: string; outfit?: string; studioColour?: string; scrubColour?: string; customText?: string }): string {
-    let prompt = preset.promptTemplate;
+  let prompt = preset.promptTemplate;
   if (preset.hasCustomText && vars?.customText?.trim()) {
     prompt = `${vars.customText.trim()}\n\nMaintain their exact facial features, skin tone, body shape, and likeness from the reference photo. Must look physically believable and naturally photographed, not CGI or illustrated, natural imperfections, realistic depth, tactile textures, subtle sensor grain, true to life reflections and lighting.`;
   }
-    if (preset.hasColour) {
-          prompt = prompt.replace(/\[COLOUR\]/g, colour?.trim() || "navy blue");
+  let resolvedScrubColour = "";
+  if (preset.hasColour) {
+    resolvedScrubColour = colour?.trim() || "navy blue";
+    prompt = prompt.replace(/\[COLOUR\]/g, resolvedScrubColour);
   }
   if (vars) {
     if (vars.colour?.trim()) prompt = prompt.replace(/\[COLOUR\]/g, vars.colour.trim());
     if (vars.name?.trim()) prompt = prompt.replace(/\[NAME\]/g, vars.name.trim());
-        if (vars.hairColour?.trim()) prompt = prompt.replace(/\[HAIR COLOUR\]/g, vars.hairColour.trim());
+    if (vars.hairColour?.trim()) prompt = prompt.replace(/\[HAIR COLOUR\]/g, vars.hairColour.trim());
     if (vars.knownAs?.trim()) prompt = prompt.replace(/\[KNOWN AS DESCRIPTION\]/g, vars.knownAs.trim());
     if (vars.number?.trim()) prompt = prompt.replace(/\[NUMBER\]/g, vars.number.trim());
     if (vars.numberColour?.trim()) prompt = prompt.replace(/\[NUMBER COLOUR\]/g, vars.numberColour.trim());
-      if (vars.word?.trim()) prompt = prompt.replace(/\[WORD\]/g, vars.word.trim());
-      if (vars.wordColour?.trim()) prompt = prompt.replace(/\[WORD COLOUR\]/g, vars.wordColour.trim());
+    if (vars.word?.trim()) prompt = prompt.replace(/\[WORD\]/g, vars.word.trim());
+    if (vars.wordColour?.trim()) prompt = prompt.replace(/\[WORD COLOUR\]/g, vars.wordColour.trim());
     if (vars.outfit?.trim()) prompt = prompt.replace(/\[OUTFIT\]/g, vars.outfit.trim());
     if (vars.studioColour?.trim()) prompt = prompt.replace(/\[STUDIO COLOUR\]/g, vars.studioColour.trim());
     if (vars.scrubColour?.trim()) prompt = prompt.replace(/\[SCRUB COLOUR\]/g, vars.scrubColour.trim());
@@ -1199,7 +1201,10 @@ export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: strin
     aspectRatio === "9:16" ? "a vertical 9:16 portrait orientation (tall and narrow)" :
     aspectRatio === "3:4" ? "a 3:4 portrait orientation" :
     "a square 1:1 format";
-  return `${prompt}\n\nCompose the image in ${ratioDescription}.\n\n${PHOTO_STUDIO_NEGATIVE}`;
+  const colourEmphasis = resolvedScrubColour
+    ? `\n\nThe outfit colour is critical: the scrubs must be rendered in ${resolvedScrubColour}, exactly that colour and no other. Do not default to navy, black or any other colour, do not mute or desaturate it, do not let lighting shift it towards a different hue. Before finishing the image, check the scrub colour matches ${resolvedScrubColour}.`
+    : "";
+  return `${prompt}\n\nCompose the image in ${ratioDescription}.${colourEmphasis}\n\n${PHOTO_STUDIO_NEGATIVE}`;
 }
 
 // Pure text-to-image generation with no reference photo at all — used by the
