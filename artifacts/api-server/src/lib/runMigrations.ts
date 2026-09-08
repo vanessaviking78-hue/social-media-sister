@@ -44,6 +44,7 @@ await createBroadcastDraftsTable();
     await allowCancelledCalendarPostStatus();
     await createRevenueIdeaPoolTable();
     await createEngagingReelsTable();
+    await addTextLayoutToEngagingReels();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -70,6 +71,15 @@ async function createEngagingReelsTable(): Promise<void> {
     )
   `);
   logger.info("Created engaging_reels table");
+}
+
+// Add text_layout jsonb column for storing hook/secondHook/cta positioning
+async function addTextLayoutToEngagingReels(): Promise<void> {
+  await db.execute(sql`
+    ALTER TABLE engaging_reels
+    ADD COLUMN IF NOT EXISTS text_layout jsonb
+  `);
+  logger.info("Added text_layout column to engaging_reels table");
 }
 
 // Lets a client's "reject" action on a calendar-sourced post actually

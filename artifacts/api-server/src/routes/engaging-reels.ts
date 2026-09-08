@@ -45,20 +45,11 @@ const FONT_CANDIDATES = [
   "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
 ];
 
-type FontEntry = { label: string; url: string };
+// Hard-coded to Inter Bold
+const INTER_BOLD_URL = "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLteQiYUEtPgJgvHuG6aEQzunL_4qFfJU.ttf";
 
-const FONT_LIBRARY: Record<string, FontEntry> = {
-  "montserrat-bold": {
-    label: "Montserrat Bold",
-    url: "https://fonts.gstatic.com/s/montserrat/v31/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCuM70w-.ttf",
-  },
-};
-const DEFAULT_FONT_KEY = "montserrat-bold";
-
-async function resolveFontPath(fontKey?: string): Promise<string | null> {
-  const key = fontKey && FONT_LIBRARY[fontKey] ? fontKey : DEFAULT_FONT_KEY;
-  const entry = FONT_LIBRARY[key];
-  const cachePath = join(tmpdir(), `engaging-reel-font-${key}.ttf`);
+async function resolveFont(): Promise<string | null> {
+  const cachePath = join(tmpdir(), "engaging-reel-font-inter-bold.ttf");
   try {
     await access(cachePath);
     return cachePath;
@@ -66,13 +57,13 @@ async function resolveFontPath(fontKey?: string): Promise<string | null> {
     // not cached yet
   }
   try {
-    const r = await fetch(entry.url);
+    const r = await fetch(INTER_BOLD_URL);
     if (!r.ok) throw new Error(`Font download failed: ${r.status}`);
     const buf = Buffer.from(await r.arrayBuffer());
     await writeFile(cachePath, buf);
     return cachePath;
   } catch (err) {
-    logger.error({ err }, "Failed to download engaging-reels font, falling back to system font");
+    logger.error({ err }, "Failed to download Inter Bold font, falling back to system font");
     for (const candidate of FONT_CANDIDATES) {
       try {
         await access(candidate);
@@ -119,6 +110,12 @@ function getDuration(path: string): Promise<number> {
     ffprobe.on("error", reject);
   });
 }
+
+type TextLayout = {
+  hook?: { x: number; y: number; w: number; fontSize: number };
+  secondHook?: { x: number; y: number; w: number; fontSize: number };
+  cta?: { x: number; y: number; w: number; fontSize: number };
+};
 
 type CsvRow = { index: number; text1: string; text2: string; text3: string };
 
@@ -172,11 +169,6 @@ Return strict JSON only, in this shape: {"rows":[{"index":0,"hook":"...","second
     };
   });
 }
-
-router.get("/engaging-reels/fonts", async (req: Request, res: Response) => {
-  const fonts = Object.entries(FONT_LIBRARY).map(([key, entry]) => ({ key, label: entry.label }));
-  res.json({ fonts, defaultFontKey: DEFAULT_FONT_KEY });
-});
 
 router.get("/engaging-reels", async (req: Request, res: Response) => {
   try {
@@ -269,15 +261,21 @@ router.post("/engaging-reels/batches", batchUpload, async (req: Request, res: Re
 });
 
 // Lets Vanessa fix the AI's role assignment, or just rewrite a line, before
-// it gets burned onto the video.
+// it gets burned onto the video. Also accepts textLayout for custom positioning.
 router.patch("/engaging-reels/:id", async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
-    const { hook, secondHook, cta } = (req.body || {}) as { hook?: string; secondHook?: string; cta?: string };
-    const updates: Record<string, string> = {};
+    const { hook, secondHook, cta, textLayout } = (req.body || {}) as { 
+      hook?: string; 
+      secondHook?: string; 
+      cta?: string;
+      textLayout?: TextLayout;
+    };
+    const updates: Record<string, any> = {};
     if (hook !== undefined) updates.hook = hook;
     if (secondHook !== undefined) updates.secondHook = secondHook;
     if (cta !== undefined) updates.cta = cta;
+    if (textLayout !== undefined) updates.textLayout = textLayout;
     if (!Object.keys(updates).length) { res.status(400).json({ error: "Nothing to update" }); return; }
     await db.update(engagingReelsTable).set(updates).where(eq(engagingReelsTable.id, id));
     res.json({ ok: true });
@@ -298,10 +296,9 @@ router.post("/engaging-reels/:id/render", async (req: Request, res: Response) =>
     const [item] = await db.select().from(engagingReelsTable).where(eq(engagingReelsTable.id, id));
     if (!item) { res.status(404).json({ error: "Not found" }); return; }
 
-    const { fontKey, boxColor: requestedBoxColor } = (req.body || {}) as { fontKey?: string; boxColor?: string };
-    const boxColor = hexToFfmpegColor(requestedBoxColor) || "0x000000";
+    const { textLayout: layoutFromBody, boxColor: boxColorFromBody } = (req.body || {}) as { textLayout?: TextLayout; boxColor?: string };
 
-    const fontPath = await resolveFontPath(fontKey);
+    const fontPath = await resolveFont();
     if (!fontPath) { res.status(500).json({ error: "No system font available for text overlay" }); return; }
 
     const videoBuf = await fetchBuffer(item.videoUrl);
@@ -312,23 +309,67 @@ router.post("/engaging-reels/:id/render", async (req: Request, res: Response) =>
     const ctaLen = Math.min(3.5, duration * 0.35);
     const ctaStart = Math.max(hookEnd, duration - ctaLen);
 
-    const segments: { text: string; start: number; end: number; y: string }[] = [
-      { text: item.hook, start: 0, end: hookEnd, y: "h*0.12" },
-      { text: item.secondHook, start: hookEnd, end: ctaStart, y: "(h-text_h)/2" },
-      { text: item.cta, start: ctaStart, end: duration, y: "h*0.80-text_h" },
+    // Default segment positions (0-1 fractions of video dimensions)
+    const defaultLayout: TextLayout = {
+      hook: { x: 0.5, y: 0.12, w: 0.8, fontSize: 54 },
+      secondHook: { x: 0.5, y: 0.5, w: 0.8, fontSize: 54 },
+      cta: { x: 0.5, y: 0.88, w: 0.8, fontSize: 54 },
+    };
+    const layout = layoutFromBody || defaultLayout;
+
+    const segments: { 
+      text: string; 
+      key: "hook" | "secondHook" | "cta";
+      start: number; 
+      end: number; 
+      config: { x: number; y: number; w: number; fontSize: number };
+    }[] = [
+      { 
+        text: item.hook, 
+        key: "hook",
+        start: 0, 
+        end: hookEnd,
+        config: layout.hook || defaultLayout.hook!
+      },
+      { 
+        text: item.secondHook, 
+        key: "secondHook",
+        start: hookEnd, 
+        end: ctaStart,
+        config: layout.secondHook || defaultLayout.secondHook!
+      },
+      { 
+        text: item.cta, 
+        key: "cta",
+        start: ctaStart, 
+        end: duration,
+        config: layout.cta || defaultLayout.cta!
+      },
     ];
 
+    const resolvedBoxColor = hexToFfmpegColor(boxColorFromBody, "0xffffff");
     const filters: string[] = [];
     for (const seg of segments) {
       const text = (seg.text || "").trim();
       if (!text || seg.end <= seg.start) continue;
+      
+      // Word-wrap text to fit within the box width
+      const wrappedText = wrapText(text, seg.config.w, seg.config.fontSize);
+      
       const txtPath = join(tmpdir(), `engaging-reel-text-${randomUUID()}.txt`);
-      await writeFile(txtPath, text, "utf8");
+      await writeFile(txtPath, wrappedText, "utf8");
       tmpTextFiles.push(txtPath);
       const safePath = escapeDrawtextPath(txtPath);
       const safeFont = escapeDrawtextPath(fontPath);
+      
+      // x/y are 0-1 fractions; convert to pixel offsets
+      // x is center point, so subtract half of text_w
+      // y is also center-based for secondHook, or top-based for hook/cta depending on config
+      const xPos = `w*${seg.config.x}-text_w/2`;
+      const yPos = `h*${seg.config.y}-text_h/2`;
+      
       filters.push(
-        `drawtext=fontfile='${safeFont}':textfile='${safePath}':fontsize=54:fontcolor=white:box=1:boxcolor=${boxColor}@0.85:boxborderw=20:x=(w-text_w)/2:y=${seg.y}:enable='between(t,${seg.start},${seg.end})'`
+        `drawtext=fontfile='${safeFont}':textfile='${safePath}':fontsize=${seg.config.fontSize}:fontcolor=black:box=1:boxcolor=${resolvedBoxColor}@0.85:boxborderw=20:x=${xPos}:y=${yPos}:enable='between(t,${seg.start},${seg.end})'`
       );
     }
     if (!filters.length) { res.status(400).json({ error: "No text to burn in — add a hook, second hook or CTA first" }); return; }
@@ -351,7 +392,7 @@ router.post("/engaging-reels/:id/render", async (req: Request, res: Response) =>
     });
     const renderedVideoUrl = `/api/media/${objectPath}`;
 
-    await db.update(engagingReelsTable).set({ renderedVideoUrl, status: "rendered" }).where(eq(engagingReelsTable.id, id));
+    await db.update(engagingReelsTable).set({ renderedVideoUrl, status: "rendered", textLayout: layoutFromBody || null }).where(eq(engagingReelsTable.id, id));
     res.json({ renderedVideoUrl });
   } catch (err: any) {
     logger.error({ err }, "Engaging Reels render failed");
@@ -362,6 +403,34 @@ router.post("/engaging-reels/:id/render", async (req: Request, res: Response) =>
     await Promise.all(tmpTextFiles.map((f) => unlink(f).catch(() => {})));
   }
 });
+
+// Simple word-wrap function to fit text within a box width (as fraction of video)
+function wrapText(text: string, widthFraction: number, fontSize: number): string {
+  // Rough estimate: average character width is ~0.5 * fontSize in pixels
+  // Assume 1920px video width, so width in pixels = 1920 * widthFraction
+  // Chars per line ≈ (1920 * widthFraction) / (0.5 * fontSize)
+  const pixelWidth = 1920 * widthFraction;
+  const avgCharWidth = 0.5 * fontSize;
+  const charsPerLine = Math.floor(pixelWidth / avgCharWidth);
+  
+  if (charsPerLine <= 0) return text; // fallback if config is weird
+  
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let currentLine = "";
+  
+  for (const word of words) {
+    if ((currentLine + " " + word).trim().length <= charsPerLine) {
+      currentLine = currentLine ? currentLine + " " + word : word;
+    } else {
+      if (currentLine) lines.push(currentLine);
+      currentLine = word;
+    }
+  }
+  if (currentLine) lines.push(currentLine);
+  
+  return lines.join("\n");
+}
 
 // Generates a postable caption from the hook/second hook/CTA, in one of the
 // site's four house tones, same compliance rules as every other caption tool.
@@ -417,3 +486,4 @@ router.delete("/engaging-reels/:id", async (req: Request, res: Response) => {
 });
 
 export default router;
+
