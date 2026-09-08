@@ -38,8 +38,9 @@ COMPLIANCE (non-negotiable, every single word)
 WRITING RULES (non-negotiable)
 - NEVER use em dashes or en dashes. Not once. Use a comma, a full stop, or a plain hyphen in compound adjectives only.
 - No exclamation marks unless they genuinely earn it. One per idea maximum.
-- BANNED words: elevate, transform, unlock, journey, empower, revolutionise, game-changer, dive into, harness, leverage, delve, navigate, streamline, cutting-edge, holistic, synergy, bespoke
-- BANNED hook openers: "Are you tired of", "It's time to", "What if we told you", "Picture this", "Imagine a world", "In today's world"
+- BANNED words: elevate, transform, unlock, journey, empower, revolutionise, game-changer, dive into, harness, leverage, delve, navigate, streamline, cutting-edge, holistic, synergy, bespoke, unleash, tapestry, landscape, realm, testament, boasts, nestled, seamless, effortless, next level, top-tier, being honest, the truth is, at the end of the day, when it comes to, look no further, say goodbye to, buckle up, spoiler alert, trust me, make no mistake
+- BANNED hook openers: "Are you tired of", "It's time to", "What if we told you", "Picture this", "Imagine a world", "In today's world", "In a world where", "In the ever-changing landscape"
+- Do not use the construction where it is not about X, it is about Y, or any rule of three escalation that sounds like a TED talk. Do not open with a rhetorical question. Say the thing plainly, the way you would actually say it to someone face to face. If a sentence could have been written by a chatbot, delete it.
 - Use contractions naturally: you're, it's, don't, we're, that's.
 - British English throughout. "colour" not "color". "practitioner" not "provider". "clinic" not "office".`;
 
