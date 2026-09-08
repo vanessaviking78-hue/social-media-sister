@@ -838,7 +838,16 @@ router.post("/about-me/generate-caption", async (req, res) => {
       subtitle && `Subtitle: "${subtitle}"`,
       wordList && `Words on the image: ${wordList}`,
     ].filter(Boolean).join(". ");
-    const prompt = [\n  `Write a warm, personal Instagram caption for an About Me post, as if the clinic owner is writing it themselves. ${context}`,\n  "Write it the way a real person talks, not the way a brand talks. First person. British English. Honest and grounded, not polished or performative.",\n  "Write 3 to 5 sentences. No hashtags. No em dashes or en dashes, use full stops and commas instead. Max 180 words.",\n  "Do not use any of these words or phrases: elevate, transform, unlock, journey, empower, revolutionise, game-changer, dive into, harness, leverage, delve, navigate, streamline, cutting-edge, holistic, synergy, bespoke, seamless, effortless, unleash, tapestry, landscape, realm, testament, boasts, nestled, next level, top tier, being honest, the truth is, at the end of the day, when it comes to, look no further, say goodbye to.",\n  "Do not open with a rhetorical question or a line like Are you tired of, It is time to, What if we told you, Picture this, or Imagine a world.",\n  "Do not use the construction where it is not about X, it is about Y, or any rule of three escalation. Say the thing plainly, the way you would actually say it to a friend.",\n  "If a sentence could have been written by a chatbot, delete it and write what you would actually say instead.",\n  "End with a gentle question to invite comments.",\n].join(" ");
+    const prompt = [
+  `Write a warm, personal Instagram caption for an About Me post, as if the clinic owner is writing it themselves. ${context}`,
+  "Write it the way a real person talks, not the way a brand talks. First person. British English. Honest and grounded, not polished or performative.",
+  "Write 3 to 5 sentences. No hashtags. No em dashes or en dashes, use full stops and commas instead. Max 180 words.",
+  "Do not use any of these words or phrases: elevate, transform, unlock, journey, empower, revolutionise, game-changer, dive into, harness, leverage, delve, navigate, streamline, cutting-edge, holistic, synergy, bespoke, seamless, effortless, unleash, tapestry, landscape, realm, testament, boasts, nestled, next level, top tier, being honest, the truth is, at the end of the day, when it comes to, look no further, say goodbye to.",
+  "Do not open with a rhetorical question or a line like Are you tired of, It is time to, What if we told you, Picture this, or Imagine a world.",
+  "Do not use the construction where it is not about X, it is about Y, or any rule of three escalation. Say the thing plainly, the way you would actually say it to a friend.",
+  "If a sentence could have been written by a chatbot, delete it and write what you would actually say instead.",
+  "End with a gentle question to invite comments.",
+].join(" ");
     const completion = await openai.chat.completions.create({
       model: "gpt-5.2",
       messages: [{ role: "user", content: prompt }],
