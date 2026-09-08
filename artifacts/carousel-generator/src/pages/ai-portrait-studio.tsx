@@ -434,6 +434,7 @@ export default function AiPortraitStudio() {
       const [presetNames, setPresetNames]         = useState<Record<string, string>>({});
       const [presetHairColours, setPresetHairColours] = useState<Record<string, string>>({});
   const [aspectRatio, setAspectRatio]         = useState<AspectRatio>("3:4");
+  const [globalBgColour, setGlobalBgColour] = useState("");
   const [fnVars, setFnVars] = useState({ colour: "", name: "", skills: "", knownAs: "" });
   const [perspexVars, setPerspexVars] = useState({ number: "", numberColour: "", outfit: "", studioColour: "" });
   const [wordVars, setWordVars] = useState({ word: "", wordColour: "", outfit: "", studioColour: "" });
@@ -674,7 +675,7 @@ export default function AiPortraitStudio() {
 
     const scenarios = Array.from(selectedPresets).map((id) => {
       const preset = findPreset(id);
-      return {
+      const scenario: any = {
         id,
         scrubColor: preset?.hasColour
           ? (MEN_SCRUBS_IDS.includes(id) ? menScrubColor : (presetColours[id]?.trim() || (id.startsWith("np-") || id.startsWith("js-") ? "black" : "navy blue")))
@@ -687,6 +688,10 @@ export default function AiPortraitStudio() {
                   ...(preset?.hasName || preset?.hasHairColour ? { promptVars: { name: presetNames[id], hairColour: presetHairColours[id] } } : {}),
         ...(id.startsWith("hw-") ? { scrubColor: presetScrubColours[id]?.trim() || "black", promptVars: { colour: presetColours[id]?.trim() || "white", scrubColour: presetScrubColours[id]?.trim() || "black" } } : {}),
       };
+      if (globalBgColour.trim()) {
+        scenario.promptVars = { ...(scenario.promptVars || {}), colour: globalBgColour.trim() };
+      }
+      return scenario;
     });
 
     setGenerating(true);
@@ -1238,6 +1243,21 @@ export default function AiPortraitStudio() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Background colour override */}
+          <div className="space-y-2">
+            <Label className="text-xs">Background colour (optional)</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                value={globalBgColour}
+                onChange={(e) => setGlobalBgColour(e.target.value)}
+                placeholder="e.g. #f5f0e8, leave blank for default"
+                className="h-8 text-xs flex-1 uppercase"
+              />
+              <div className="w-6 h-6 rounded-md border border-border/40 flex-shrink-0" style={{ backgroundColor: globalBgColour || "transparent" }} />
+            </div>
+            <p className="text-[10px] text-muted-foreground">Leave blank to use each preset's own backdrop. Set a colour here to force a flat, solid background on every image in this batch.</p>
           </div>
 
           {selectedPresets.has("ps-fightnight") && (
