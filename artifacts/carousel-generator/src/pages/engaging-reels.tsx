@@ -431,8 +431,9 @@ export default function EngagingReels() {
  </button>
  </div>
  </div>
+ <div className="flex justify-center">
  <div
- className="relative"
+ className="relative inline-block"
  ref={(el) => {
  containerRefs.current[item.id] = el;
  }}
@@ -440,7 +441,7 @@ export default function EngagingReels() {
  <video
  src={`${BASE}${item.videoUrl}`}
  controls={!isPositioning}
- className="w-full max-h-80 rounded-xl bg-black"
+ className="block max-w-full max-h-80 rounded-xl bg-black"
  />
  {isPositioning &&
  SEGMENT_ORDER.map((key) => {
@@ -473,6 +474,8 @@ export default function EngagingReels() {
  </div>
  );
  })}
+ </div>
+ </div>
  </div>
  {isPositioning && (
  <div className="flex flex-wrap items-center gap-2 -mt-1">
