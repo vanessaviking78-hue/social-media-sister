@@ -435,6 +435,7 @@ export default function AiPortraitStudio() {
       const [presetHairColours, setPresetHairColours] = useState<Record<string, string>>({});
   const [aspectRatio, setAspectRatio]         = useState<AspectRatio>("3:4");
   const [globalBgColour, setGlobalBgColour] = useState("");
+  const [globalMonochrome, setGlobalMonochrome] = useState(false);
   const [fnVars, setFnVars] = useState({ colour: "", name: "", skills: "", knownAs: "" });
   const [perspexVars, setPerspexVars] = useState({ number: "", numberColour: "", outfit: "", studioColour: "" });
   const [wordVars, setWordVars] = useState({ word: "", wordColour: "", outfit: "", studioColour: "" });
@@ -690,6 +691,9 @@ export default function AiPortraitStudio() {
       };
       if (globalBgColour.trim()) {
         scenario.promptVars = { ...(scenario.promptVars || {}), colour: globalBgColour.trim() };
+      }
+      if (globalMonochrome) {
+        scenario.promptVars = { ...(scenario.promptVars || {}), monochrome: true };
       }
       return scenario;
     });
@@ -1258,6 +1262,17 @@ export default function AiPortraitStudio() {
               <div className="w-6 h-6 rounded-md border border-border/40 flex-shrink-0" style={{ backgroundColor: globalBgColour || "transparent" }} />
             </div>
             <p className="text-[10px] text-muted-foreground">Leave blank to use each preset's own backdrop. Set a colour here to force a flat, solid background on every image in this batch.</p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="global-monochrome"
+              checked={globalMonochrome}
+              onChange={(e) => setGlobalMonochrome(e.target.checked)}
+              className="h-3.5 w-3.5"
+            />
+            <label htmlFor="global-monochrome" className="text-xs text-muted-foreground">Monochrome (black & white)</label>
           </div>
 
           {selectedPresets.has("ps-fightnight") && (
