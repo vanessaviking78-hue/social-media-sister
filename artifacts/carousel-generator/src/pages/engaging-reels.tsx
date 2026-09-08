@@ -287,7 +287,6 @@ export default function EngagingReels() {
  setBusyAction(null);
  }
  };
-
  return (
  <div className="min-h-screen">
  <header className="border-b border-border/30 px-6 py-4 flex items-center gap-3 sticky top-0 bg-background/95 backdrop-blur z-10">
@@ -431,8 +430,9 @@ export default function EngagingReels() {
  </button>
  </div>
  </div>
+ <div className="flex justify-center">
  <div
- className="relative"
+ className="relative inline-block"
  ref={(el) => {
  containerRefs.current[item.id] = el;
  }}
@@ -440,7 +440,7 @@ export default function EngagingReels() {
  <video
  src={`${BASE}${item.videoUrl}`}
  controls={!isPositioning}
- className="w-full max-h-80 rounded-xl bg-black"
+ className="block max-w-full max-h-80 rounded-xl bg-black"
  />
  {isPositioning &&
  SEGMENT_ORDER.map((key) => {
@@ -474,7 +474,9 @@ export default function EngagingReels() {
  );
  })}
  </div>
- {isPositioning && (
+ </div>
+         </div>
+         {isPositioning && (
  <div className="flex flex-wrap items-center gap-2 -mt-1">
  <p className="text-[11px] text-muted-foreground flex-1 min-w-[160px]">
  Drag a box to move it, drag its pink corner handle to resize the box and its text.
