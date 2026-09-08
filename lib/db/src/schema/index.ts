@@ -897,6 +897,11 @@ export const engagingReelsTable = pgTable("engaging_reels", {
     status: text("status").notNull().default("assigned"),
     renderedVideoUrl: text("rendered_video_url"),
     caption: text("caption"),
+    textLayout: json("text_layout").$type<{
+      hook?: { x: number; y: number; w: number; fontSize: number };
+      secondHook?: { x: number; y: number; w: number; fontSize: number };
+      cta?: { x: number; y: number; w: number; fontSize: number };
+    } | null>(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 export type EngagingReel = typeof engagingReelsTable.$inferSelect;

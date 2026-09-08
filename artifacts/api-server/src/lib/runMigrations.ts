@@ -69,6 +69,9 @@ async function createEngagingReelsTable(): Promise<void> {
       created_at timestamp NOT NULL DEFAULT now()
     )
   `);
+  await db.execute(sql`
+    ALTER TABLE engaging_reels ADD COLUMN IF NOT EXISTS text_layout jsonb
+  `);
   logger.info("Created engaging_reels table");
 }
 
