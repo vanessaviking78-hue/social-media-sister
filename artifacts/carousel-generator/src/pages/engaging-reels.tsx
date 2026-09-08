@@ -476,7 +476,6 @@ export default function EngagingReels() {
  })}
  </div>
  </div>
- </div>
  {isPositioning && (
  <div className="flex flex-wrap items-center gap-2 -mt-1">
  <p className="text-[11px] text-muted-foreground flex-1 min-w-[160px]">
