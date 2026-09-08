@@ -14,6 +14,7 @@ import {
   UploadCloud,
   MessageSquareText,
   Copy,
+  Move,
 } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -31,6 +32,28 @@ const CAPTION_STYLES = [
   { value: "4", label: "Professional with Personality" },
 ];
 
+type TextLayoutSeg = { x: number; y: number; w: number; fontSize: number };
+type TextLayout = { hook?: TextLayoutSeg; secondHook?: TextLayoutSeg; cta?: TextLayoutSeg };
+type SegKey = "hook" | "secondHook" | "cta";
+
+const DEFAULT_LAYOUT: Record<SegKey, TextLayoutSeg> = {
+  hook: { x: 0.5, y: 0.12, w: 0.8, fontSize: 54 },
+  secondHook: { x: 0.5, y: 0.5, w: 0.8, fontSize: 54 },
+  cta: { x: 0.5, y: 0.88, w: 0.8, fontSize: 54 },
+};
+
+const SEGMENT_LABELS: Record<SegKey, string> = {
+  hook: "Hook",
+  secondHook: "2nd hook",
+  cta: "CTA",
+};
+
+const SEGMENT_ORDER: SegKey[] = ["hook", "secondHook", "cta"];
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, n));
+}
+
 type Item = {
   id: number;
   batchId: string;
@@ -45,27 +68,36 @@ type Item = {
   renderedVideoUrl: string | null;
   status: string;
   createdAt: string;
+  textLayout: TextLayout | null;
 };
-
-type FontOption = { key: string; label: string };
 
 const STATUS_LABEL: Record<string, string> = {
   assigned: "Ready to render",
   rendered: "Rendered",
 };
 
+type DragState = {
+  itemId: number;
+  key: SegKey;
+  mode: "move" | "resize";
+  startX: number;
+  startY: number;
+  orig: TextLayoutSeg;
+};
+
 export default function EngagingReels() {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
-  const [fonts, setFonts] = useState<FontOption[]>([]);
-  const [fontKey, setFontKey] = useState("montserrat-bold");
-  const [boxColor, setBoxColor] = useState("#000000");
+  const [boxColor, setBoxColor] = useState("#ffffff");
   const [captionStyle, setCaptionStyle] = useState("1");
-
   const [busyId, setBusyId] = useState<number | null>(null);
-  const [busyAction, setBusyAction] = useState<"render" | "caption" | "delete" | null>(null);
+  const [busyAction, setBusyAction] = useState<"render" | "caption" | "delete" | "save" | null>(null);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [draft, setDraft] = useState({ hook: "", secondHook: "", cta: "" });
+  const [positioningId, setPositioningId] = useState<number | null>(null);
+  const [layouts, setLayouts] = useState<Record<number, TextLayout>>({});
+  const containerRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const dragStateRef = useRef<DragState | null>(null);
 
   const videosRef = useRef<HTMLInputElement>(null);
   const csvRef = useRef<HTMLInputElement>(null);
@@ -87,21 +119,9 @@ export default function EngagingReels() {
     }
   }, []);
 
-  const loadFonts = useCallback(async () => {
-    try {
-      const r = await fetch(`${API_ORIGIN}/api/engaging-reels/fonts`, { headers: authHeaders() });
-      const d = await r.json();
-      setFonts(Array.isArray(d.fonts) ? d.fonts : []);
-      if (d.defaultFontKey) setFontKey(d.defaultFontKey);
-    } catch {
-      setFonts([]);
-    }
-  }, []);
-
   useEffect(() => {
     load();
-    loadFonts();
-  }, [load, loadFonts]);
+  }, [load]);
 
   const upload = async () => {
     const videoFiles = videosRef.current?.files;
@@ -163,14 +183,93 @@ export default function EngagingReels() {
     }
   };
 
+  const getSegConfig = useCallback(
+    (item: Item, key: SegKey): TextLayoutSeg => {
+      const custom = layouts[item.id]?.[key] || item.textLayout?.[key];
+      return custom || DEFAULT_LAYOUT[key];
+    },
+    [layouts]
+  );
+
+  const onDragMove = useCallback((e: MouseEvent) => {
+    const drag = dragStateRef.current;
+    if (!drag) return;
+    const container = containerRefs.current[drag.itemId];
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const dxFrac = (e.clientX - drag.startX) / rect.width;
+    const dyFrac = (e.clientY - drag.startY) / rect.height;
+    setLayouts((prev) => {
+      const base = prev[drag.itemId] || {};
+      const seg: TextLayoutSeg = { ...drag.orig };
+      if (drag.mode === "move") {
+        seg.x = clamp(drag.orig.x + dxFrac, 0, 1);
+        seg.y = clamp(drag.orig.y + dyFrac, 0, 1);
+      } else {
+        seg.w = clamp(drag.orig.w + dxFrac * 2, 0.15, 1);
+        seg.fontSize = clamp(drag.orig.fontSize + dyFrac * 200, 20, 120);
+      }
+      return { ...prev, [drag.itemId]: { ...base, [drag.key]: seg } };
+    });
+  }, []);
+
+  const onDragEnd = useCallback(() => {
+    dragStateRef.current = null;
+    window.removeEventListener("mousemove", onDragMove);
+    window.removeEventListener("mouseup", onDragEnd);
+  }, [onDragMove]);
+
+  const startDrag = useCallback(
+    (e: React.MouseEvent, item: Item, key: SegKey, mode: "move" | "resize") => {
+      e.preventDefault();
+      e.stopPropagation();
+      const orig = getSegConfig(item, key);
+      dragStateRef.current = { itemId: item.id, key, mode, startX: e.clientX, startY: e.clientY, orig };
+      window.addEventListener("mousemove", onDragMove);
+      window.addEventListener("mouseup", onDragEnd);
+    },
+    [getSegConfig, onDragMove, onDragEnd]
+  );
+
+  const savePositioning = async (id: number) => {
+    const layout = layouts[id];
+    setBusyId(id);
+    setBusyAction("save");
+    try {
+      if (layout) {
+        await fetch(`${API_ORIGIN}/api/engaging-reels/${id}`, {
+          method: "PATCH",
+          headers: authHeaders(),
+          body: JSON.stringify({ textLayout: layout }),
+        });
+        await load();
+      }
+    } catch {
+      // best effort
+    } finally {
+      setBusyId(null);
+      setBusyAction(null);
+      setPositioningId(null);
+    }
+  };
+
+  const resetPositioning = (id: number) => {
+    setLayouts((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  };
+
   const render = async (id: number) => {
     setBusyId(id);
     setBusyAction("render");
     try {
+      const layout = layouts[id] || items.find((i) => i.id === id)?.textLayout || undefined;
       const r = await fetch(`${API_ORIGIN}/api/engaging-reels/${id}/render`, {
         method: "POST",
         headers: authHeaders(),
-        body: JSON.stringify({ fontKey, boxColor }),
+        body: JSON.stringify({ textLayout: layout, boxColor }),
       });
       if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.error || "Render failed");
       await load();
@@ -217,6 +316,7 @@ export default function EngagingReels() {
       setBusyAction(null);
     }
   };
+
   return (
     <div className="min-h-screen">
       <header className="border-b border-border/30 px-6 py-4 flex items-center gap-3 sticky top-0 bg-background/95 backdrop-blur z-10">
@@ -290,19 +390,7 @@ export default function EngagingReels() {
 
         <div className="rounded-2xl border border-border/50 p-4 mb-6 flex flex-wrap items-end gap-4">
           <div>
-            <label className="block text-xs text-muted-foreground mb-1.5">Text font</label>
-            <select
-              value={fontKey}
-              onChange={(e) => setFontKey(e.target.value)}
-              className="rounded-lg bg-zinc-900 border border-zinc-800 px-3 py-2 text-sm text-white outline-none focus:border-pink-600"
-            >
-              {fonts.map((f) => (
-                <option key={f.key} value={f.key}>{f.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-muted-foreground mb-1.5">Box colour</label>
+            <label className="block text-xs text-muted-foreground mb-1.5">Text box colour</label>
             <div className="flex items-center gap-2 rounded-lg bg-zinc-900 border border-zinc-800 px-2 py-1.5">
               <input
                 type="color"
@@ -326,7 +414,9 @@ export default function EngagingReels() {
             </select>
           </div>
           <p className="text-xs text-muted-foreground flex-1 min-w-[160px]">
-            Hook plays over the first third of the clip, second hook over the middle, CTA over the last third.
+            Font is Inter, black text on a coloured box. Hook plays over the first third of the clip, second hook over
+            the middle, CTA over the last third. Use "Position text" on each reel below to drag, resize and font-size
+            each of the three lines.
           </p>
         </div>
 
@@ -346,6 +436,7 @@ export default function EngagingReels() {
           {items.map((item) => {
             const isBusy = busyId === item.id;
             const isEditing = editingId === item.id;
+            const isPositioning = positioningId === item.id;
             return (
               <div key={item.id} className="rounded-2xl border border-border/50 p-4 space-y-3">
                 <div className="flex items-center justify-between">
@@ -375,11 +466,82 @@ export default function EngagingReels() {
                   </div>
                 </div>
 
-                <video
-                  src={`${BASE}${item.videoUrl}`}
-                  controls
-                  className="w-full max-h-80 rounded-xl bg-black"
-                />
+                <div
+                  className="relative"
+                  ref={(el) => {
+                    containerRefs.current[item.id] = el;
+                  }}
+                >
+                  <video
+                    src={`${BASE}${item.videoUrl}`}
+                    controls={!isPositioning}
+                    className="w-full max-h-80 rounded-xl bg-black"
+                  />
+                  {isPositioning &&
+                    SEGMENT_ORDER.map((key) => {
+                      const seg = getSegConfig(item, key);
+                      const previewFontSize = clamp(seg.fontSize * 0.32, 9, 34);
+                      return (
+                        <div
+                          key={key}
+                          onMouseDown={(e) => startDrag(e, item, key, "move")}
+                          className="absolute flex items-center justify-center text-center text-black font-bold border-2 border-pink-500 select-none cursor-move rounded-sm"
+                          style={{
+                            left: `${seg.x * 100}%`,
+                            top: `${seg.y * 100}%`,
+                            width: `${seg.w * 100}%`,
+                            minHeight: "22px",
+                            transform: "translate(-50%, -50%)",
+                            fontSize: `${previewFontSize}px`,
+                            fontFamily: "Inter, sans-serif",
+                            backgroundColor: `${boxColor}cc`,
+                            padding: "3px 4px",
+                          }}
+                        >
+                          {SEGMENT_LABELS[key]}
+                          <div
+                            onMouseDown={(e) => startDrag(e, item, key, "resize")}
+                            title="Drag to resize width and font size"
+                            className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-pink-600 rounded-sm cursor-se-resize"
+                            style={{ transform: "translate(50%, 50%)" }}
+                          />
+                        </div>
+                      );
+                    })}
+                </div>
+
+                {isPositioning && (
+                  <div className="flex flex-wrap items-center gap-2 -mt-1">
+                    <p className="text-[11px] text-muted-foreground flex-1 min-w-[160px]">
+                      Drag a box to move it, drag its pink corner handle to resize the box and its text.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => savePositioning(item.id)}
+                      disabled={isBusy}
+                      className="flex items-center gap-1.5 text-xs font-semibold bg-pink-600 hover:bg-pink-500 text-white rounded-full px-4 py-2 disabled:opacity-50 transition-colors"
+                    >
+                      {isBusy && busyAction === "save" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                      Save positions
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => resetPositioning(item.id)}
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Reset to default
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPositioningId(null)}
+                      className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      Done
+                    </button>
+                  </div>
+                )}
 
                 {!isEditing && (
                   <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 space-y-1.5 text-xs">
@@ -431,7 +593,7 @@ export default function EngagingReels() {
                   </div>
                 )}
 
-                {!isEditing && (
+                {!isEditing && !isPositioning && (
                   <div className="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
@@ -441,6 +603,15 @@ export default function EngagingReels() {
                     >
                       <Pencil className="w-3.5 h-3.5" />
                       Edit text
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPositioningId(item.id)}
+                      disabled={isBusy}
+                      className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-white rounded-full px-4 py-2 disabled:opacity-50 transition-colors"
+                    >
+                      <Move className="w-3.5 h-3.5" />
+                      Position text
                     </button>
                     <button
                       type="button"
@@ -493,7 +664,7 @@ export default function EngagingReels() {
                       className="w-full max-h-80 rounded-xl bg-black"
                     />
                     <a
-                    href={`${BASE}${item.renderedVideoUrl}`}
+                      href={`${BASE}${item.renderedVideoUrl}`}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-1.5 text-xs font-semibold text-pink-400 hover:text-pink-300 transition-colors"
