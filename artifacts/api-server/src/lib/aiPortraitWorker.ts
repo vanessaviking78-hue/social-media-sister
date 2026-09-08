@@ -310,7 +310,7 @@ export async function processPortraitJob(
 
         let imgBuffer = Buffer.from(imagePart.inlineData.data, "base64");
 
-        if (cfg.id.startsWith("hw-") && cfg.promptVars?.colour?.trim()) {
+        if (cfg.promptVars?.colour?.trim()) {
           imgBuffer = await applyPhotoroomBackground(imgBuffer, cfg.promptVars.colour.trim());
         }
 
