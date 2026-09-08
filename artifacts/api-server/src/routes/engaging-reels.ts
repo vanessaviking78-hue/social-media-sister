@@ -296,7 +296,7 @@ router.post("/engaging-reels/:id/render", async (req: Request, res: Response) =>
     const [item] = await db.select().from(engagingReelsTable).where(eq(engagingReelsTable.id, id));
     if (!item) { res.status(404).json({ error: "Not found" }); return; }
 
-    const { textLayout: layoutFromBody } = (req.body || {}) as { textLayout?: TextLayout };
+    const { textLayout: layoutFromBody, boxColor: boxColorFromBody } = (req.body || {}) as { textLayout?: TextLayout; boxColor?: string };
 
     const fontPath = await resolveFont();
     if (!fontPath) { res.status(500).json({ error: "No system font available for text overlay" }); return; }
@@ -347,6 +347,7 @@ router.post("/engaging-reels/:id/render", async (req: Request, res: Response) =>
       },
     ];
 
+    const resolvedBoxColor = hexToFfmpegColor(boxColorFromBody, "0xffffff");
     const filters: string[] = [];
     for (const seg of segments) {
       const text = (seg.text || "").trim();
@@ -365,10 +366,10 @@ router.post("/engaging-reels/:id/render", async (req: Request, res: Response) =>
       // x is center point, so subtract half of text_w
       // y is also center-based for secondHook, or top-based for hook/cta depending on config
       const xPos = `w*${seg.config.x}-text_w/2`;
-      const yPos = `h*${seg.config.y}`;
+      const yPos = `h*${seg.config.y}-text_h/2`;
       
       filters.push(
-        `drawtext=fontfile='${safeFont}':textfile='${safePath}':fontsize=${seg.config.fontSize}:fontcolor=black:box=1:boxcolor=0xffffff@0.85:boxborderw=20:x=${xPos}:y=${yPos}:enable='between(t,${seg.start},${seg.end})'`
+        `drawtext=fontfile='${safeFont}':textfile='${safePath}':fontsize=${seg.config.fontSize}:fontcolor=black:box=1:boxcolor=${resolvedBoxColor}@0.85:boxborderw=20:x=${xPos}:y=${yPos}:enable='between(t,${seg.start},${seg.end})'`
       );
     }
     if (!filters.length) { res.status(400).json({ error: "No text to burn in — add a hook, second hook or CTA first" }); return; }
