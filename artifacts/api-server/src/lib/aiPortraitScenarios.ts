@@ -1172,7 +1172,7 @@ export const RANDOM_PROMPT_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
-export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: string, aspectRatio = "3:4", vars?: { colour?: string; name?: string; skills?: string; knownAs?: string; hairColour?: string; number?: string; numberColour?: string; word?: string; wordColour?: string; outfit?: string; studioColour?: string; scrubColour?: string; customText?: string }): string {
+export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: string, aspectRatio = "3:4", vars?: { colour?: string; name?: string; skills?: string; knownAs?: string; hairColour?: string; number?: string; numberColour?: string; word?: string; wordColour?: string; outfit?: string; studioColour?: string; scrubColour?: string; customText?: string; monochrome?: boolean }): string {
   let prompt = preset.promptTemplate;
   if (preset.hasCustomText && vars?.customText?.trim()) {
     prompt = `${vars.customText.trim()}\n\nMaintain their exact facial features, skin tone, body shape, and likeness from the reference photo. Must look physically believable and naturally photographed, not CGI or illustrated, natural imperfections, realistic depth, tactile textures, subtle sensor grain, true to life reflections and lighting.`;
@@ -1182,8 +1182,12 @@ export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: strin
     resolvedScrubColour = colour?.trim() || "navy blue";
     prompt = prompt.replace(/\[COLOUR\]/g, resolvedScrubColour);
   }
+  let resolvedBgColour = "";
   if (vars) {
-    if (vars.colour?.trim()) prompt = prompt.replace(/\[COLOUR\]/g, vars.colour.trim());
+    if (vars.colour?.trim()) {
+      resolvedBgColour = vars.colour.trim();
+      prompt = prompt.replace(/\[COLOUR\]/g, resolvedBgColour);
+    }
     if (vars.name?.trim()) prompt = prompt.replace(/\[NAME\]/g, vars.name.trim());
     if (vars.hairColour?.trim()) prompt = prompt.replace(/\[HAIR COLOUR\]/g, vars.hairColour.trim());
     if (vars.knownAs?.trim()) prompt = prompt.replace(/\[KNOWN AS DESCRIPTION\]/g, vars.knownAs.trim());
@@ -1204,7 +1208,13 @@ export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: strin
   const colourEmphasis = resolvedScrubColour
     ? `\n\nThe outfit colour is critical: the scrubs must be rendered in ${resolvedScrubColour}, exactly that colour and no other. Do not default to navy, black or any other colour, do not mute or desaturate it, do not let lighting shift it towards a different hue. Before finishing the image, check the scrub colour matches ${resolvedScrubColour}.`
     : "";
-  return `${prompt}\n\nCompose the image in ${ratioDescription}.${colourEmphasis}\n\n${PHOTO_STUDIO_NEGATIVE}`;
+  const bgEmphasis = resolvedBgColour
+    ? `\n\nBackground instruction, this overrides anything else said about the backdrop above: replace the entire background behind the subject with a flat, solid, single block of colour in ${resolvedBgColour}. No studio grey, no black, no gradient, no texture, no vignette, just one flat solid ${resolvedBgColour} fill from edge to edge behind the subject. Before finishing the image, check the background colour matches ${resolvedBgColour} exactly.`
+    : "";
+  const monoEmphasis = vars?.monochrome
+    ? `\n\nRender the entire finished image in monochrome black and white. Rich greyscale tones, proper contrast and shadow detail, no colour anywhere in the image at all, including skin, outfit and background.`
+    : "";
+  return `${prompt}\n\nCompose the image in ${ratioDescription}.${colourEmphasis}${bgEmphasis}${monoEmphasis}\n\n${PHOTO_STUDIO_NEGATIVE}`;
 }
 
 // Pure text-to-image generation with no reference photo at all — used by the
