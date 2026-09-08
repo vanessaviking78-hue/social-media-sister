@@ -249,7 +249,7 @@ router.post("/carousel/generate-caption", async (req, res) => {
       "- Never use em dashes or en dashes at all. Use full stops and commas.",
       "- British English only, no americanisations (colour, realise, favourite).",
       "- Do not use the 'not this, not that, but this' construction, or any variation like 'it is not about x, it is about y'. Avoid neat antithesis and rule-of-three escalations. Just say the thing plainly.",
-      "- No AI or marketing slop. Banned words and phrases: unlock, elevate, game-changer, dive in, in today's world, when it comes to, look no further, the truth is, here is the thing, let's be honest, nestled, boasts, transform your, say goodbye to, journey, empower, seamless, effortless.",
+      "- No AI or marketing slop. Banned words and phrases: unlock, elevate, game-changer, dive in, in today's world, when it comes to, look no further, the truth is, here is the thing, let's be honest, nestled, boasts, transform your, say goodbye to, journey, empower, seamless, effortless. Also avoid: unleash, tapestry, landscape, realm, testament, next level, top tier, at the end of the day, buckle up, spoiler alert, trust me, make no mistake, picture this, imagine a world.",
       "- No bullet points, no emoji spam, no block of hashtags.",
       "- Keep it to about 6 to 9 natural sentences. Warm, real, and easy to read out loud.",
       "- Weave in a soft, embedded sales pull, never a hard pitch. Use a small social proof mention, a gentle curiosity gap, or a light natural invite (come and ask, message me if this sounds like you) as the close. It should read like a natural next sentence, not a marketing tag. The reader should feel invited, not sold to.",
