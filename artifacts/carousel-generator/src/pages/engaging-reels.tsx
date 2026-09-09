@@ -16,6 +16,8 @@ import {
  Copy,
  Move,
 } from "lucide-react";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const API_ORIGIN = "https://workspaceapi-server-production-0f0d.up.railway.app";
 function authHeaders(): Record<string, string> {
@@ -92,6 +94,8 @@ export default function EngagingReels() {
  const [csvName, setCsvName] = useState("");
  const [uploading, setUploading] = useState(false);
  const [uploadError, setUploadError] = useState("");
+ const [bulkBusy, setBulkBusy] = useState<"render" | "zip" | null>(null);
+ const [bulkProgress, setBulkProgress] = useState<{ done: number; total: number } | null>(null);
  const load = useCallback(async () => {
  setLoading(true);
  try {
@@ -288,6 +292,56 @@ export default function EngagingReels() {
  }
  };
 
+ const renderAllPending = async () => {
+ const pending = items.filter((i) => i.status !== "rendered");
+ if (!pending.length) return;
+ setBulkBusy("render");
+ setBulkProgress({ done: 0, total: pending.length });
+ for (let i = 0; i < pending.length; i++) {
+ const item = pending[i];
+ try {
+ const layout = layouts[item.id] || item.textLayout || undefined;
+ const r = await fetch(`${API_ORIGIN}/api/engaging-reels/${item.id}/render`, {
+ method: "POST",
+ headers: authHeaders(),
+ body: JSON.stringify({ textLayout: layout, boxColor }),
+ });
+ if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.error || "Render failed");
+ } catch (e) {
+ console.error(`Render failed for reel ${item.id}`, e);
+ }
+ setBulkProgress({ done: i + 1, total: pending.length });
+ }
+ await load();
+ setBulkBusy(null);
+ setBulkProgress(null);
+ };
+
+ const downloadAllRendered = async () => {
+ const rendered = items.filter((i) => i.status === "rendered" && i.renderedVideoUrl);
+ if (!rendered.length) return;
+ setBulkBusy("zip");
+ setBulkProgress({ done: 0, total: rendered.length });
+ try {
+ const zip = new JSZip();
+ for (let i = 0; i < rendered.length; i++) {
+ const item = rendered[i];
+ try {
+ const res = await fetch(`${BASE}${item.renderedVideoUrl}`);
+ const blob = await res.blob();
+ zip.file(`reel-${i + 1}-${item.id}.mp4`, blob);
+ } catch (e) {
+ console.error(`Could not fetch reel ${item.id} for zip`, e);
+ }
+ setBulkProgress({ done: i + 1, total: rendered.length });
+ }
+ const content = await zip.generateAsync({ type: "blob" });
+ saveAs(content, `engaging-reels-${new Date().toISOString().slice(0, 10)}.zip`);
+ } finally {
+ setBulkBusy(null);
+ setBulkProgress(null);
+ }
+ };
  return (
  <div className="min-h-screen">
  <header className="border-b border-border/30 px-6 py-4 flex items-center gap-3 sticky top-0 bg-background/95 backdrop-blur z-10">
@@ -388,6 +442,33 @@ export default function EngagingReels() {
  each of the three lines.
  </p>
  </div>
+ {items.length > 0 && (
+ <div className="rounded-2xl border border-border/50 p-4 mb-6 flex flex-wrap items-center gap-3">
+ <button
+ type="button"
+ onClick={renderAllPending}
+ disabled={!!bulkBusy || !items.some((i) => i.status !== "rendered")}
+ className="flex items-center gap-1.5 text-xs font-semibold bg-pink-600 hover:bg-pink-500 text-white rounded-full px-4 py-2 disabled:opacity-50 transition-colors"
+ >
+ {bulkBusy === "render" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+ Render all ({items.filter((i) => i.status !== "rendered").length} left)
+ </button>
+ <button
+ type="button"
+ onClick={downloadAllRendered}
+ disabled={!!bulkBusy || !items.some((i) => i.status === "rendered" && i.renderedVideoUrl)}
+ className="flex items-center gap-1.5 text-xs font-semibold bg-zinc-800 hover:bg-zinc-700 text-white rounded-full px-4 py-2 disabled:opacity-50 transition-colors"
+ >
+ {bulkBusy === "zip" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+ Download all as zip ({items.filter((i) => i.status === "rendered" && i.renderedVideoUrl).length})
+ </button>
+ {bulkProgress && (
+ <span className="text-xs text-muted-foreground">
+ {bulkBusy === "zip" ? "Zipping" : "Rendering"} {bulkProgress.done}/{bulkProgress.total}...
+ </span>
+ )}
+ </div>
+ )}
  {loading && items.length === 0 && (
  <div className="flex items-center justify-center py-16 text-muted-foreground text-sm gap-2">
  <Loader2 className="w-4 h-4 animate-spin" /> Loading reels...
