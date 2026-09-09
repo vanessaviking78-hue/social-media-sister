@@ -443,6 +443,11 @@ function wrapText(text: string, widthFraction: number, fontSize: number, videoWi
     }
   }
   if (currentLine) lines.push(currentLine);
+
+ if (lines.length > 2) {
+ const rest = lines.slice(1).join(" ");
+ return [lines[0], rest].join("\n");
+ }
   
   return lines.join("\n");
 }
