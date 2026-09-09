@@ -90,9 +90,23 @@ router.get("/presets/:id", async (req, res) => {
   }
 });
 
-const DEFAULT_FIRST_COMMENT_CAROUSEL = "I'd love to know your thoughts";
-const DEFAULT_FIRST_COMMENT_SINGLE   = "Save this for later";
-const DEFAULT_FIRST_COMMENT_REEL     = "Save this and share to someone who needs to know";
+// Several lines each, one per line — the scheduler picks a random line per post
+// so the same client's first comment never reads identically twice in a row.
+const DEFAULT_FIRST_COMMENT_CAROUSEL = [
+  "I'd love to know your thoughts",
+  "Which slide stood out to you the most?",
+  "Let me know what you think below",
+].join("\n");
+const DEFAULT_FIRST_COMMENT_SINGLE = [
+  "Save this for later",
+  "Tag someone who needs to see this",
+  "Comment below if this is you",
+].join("\n");
+const DEFAULT_FIRST_COMMENT_REEL = [
+  "Save this and share to someone who needs to know",
+  "Drop a comment if this helped",
+  "Send this to a friend who needs it",
+].join("\n");
 
 const DEFAULT_TARGET_AUDIENCE = "Women over 35, perimenopause, women in the local area, who want to feel good in themselves";
 const DEFAULT_CONTENT_PILLARS = "Set by Vanessa's spreadsheets";
