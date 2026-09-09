@@ -32,9 +32,9 @@ type TextLayoutSeg = { x: number; y: number; w: number; fontSize: number };
 type TextLayout = { hook?: TextLayoutSeg; secondHook?: TextLayoutSeg; cta?: TextLayoutSeg };
 type SegKey = "hook" | "secondHook" | "cta";
 const DEFAULT_LAYOUT: Record<SegKey, TextLayoutSeg> = {
- hook: { x: 0.5, y: 0.12, w: 0.8, fontSize: 54 },
- secondHook: { x: 0.5, y: 0.5, w: 0.8, fontSize: 54 },
- cta: { x: 0.5, y: 0.88, w: 0.8, fontSize: 54 },
+ hook: { x: 0.5, y: 0.12, w: 0.33, fontSize: 54 },
+ secondHook: { x: 0.5, y: 0.45, w: 0.42, fontSize: 54 },
+ cta: { x: 0.5, y: 0.81, w: 0.42, fontSize: 54 },
 };
 const SEGMENT_LABELS: Record<SegKey, string> = {
  hook: "Hook",
