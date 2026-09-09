@@ -95,16 +95,27 @@ router.post("/scheduler/posts", async (req, res) => {
         // auto-comment engagement system below is fully built and wired up. Rather
         // than patch every page individually, backfill it here from the client's
         // own default CTAs (set on their preset) whenever one wasn't sent through.
+        //
+        // Each default field can hold several comments, one per line. We pick a
+        // random one each time so the same client never posts the identical first
+        // comment twice in a row, it still reads as a real person, not a bot.
         const contentWithDefaults = { ...(content as Record<string, unknown>) };
         const existingFirstComment = (contentWithDefaults.firstComment as string | undefined)?.trim();
         if (!existingFirstComment) {
-                const defaultComment =
+                const defaultCommentPool =
                           postType === "reel" || postType === "video_carousel"
                     ? preset.defaultFirstCommentReel
                             : postType === "single-image"
                     ? preset.defaultFirstCommentSingle
                             : preset.defaultFirstCommentCarousel;
-                if (defaultComment) contentWithDefaults.firstComment = defaultComment;
+                const commentOptions = (defaultCommentPool || "")
+                  .split("\n")
+                  .map((line) => line.trim())
+                  .filter(Boolean);
+                if (commentOptions.length > 0) {
+                  const pick = commentOptions[Math.floor(Math.random() * commentOptions.length)];
+                  contentWithDefaults.firstComment = pick;
+                }
         }
 
     const [post] = await db
