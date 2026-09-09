@@ -992,33 +992,34 @@ export default function PresetsPage() {
                     </div>
                     <div className="space-y-3 border-t border-gray-800 pt-3">
                       <p className="text-xs text-gray-500 font-medium uppercase tracking-widest">Default First Comments</p>
+                      <p className="text-[11px] text-gray-500 -mt-2">Add a few options, one per line. We'll post a random one each time so it never repeats word for word.</p>
                       <div>
                         <Label className="text-xs text-gray-400">Carousel default</Label>
                         <textarea
-                          placeholder="Which slide surprised you most? Comment the number below 👇"
+                          placeholder={"Which slide surprised you most? Comment the number below 👇\nSave this one for later 💕\nTag someone who needs to see this"}
                           value={editData.defaultFirstCommentCarousel || ""}
                           onChange={(e) => setEditData((d) => ({ ...d, defaultFirstCommentCarousel: e.target.value }))}
-                          rows={2}
+                          rows={4}
                           className="w-full bg-gray-900 border border-gray-700 text-white rounded-md px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-pink-500"
                         />
                       </div>
                       <div>
                         <Label className="text-xs text-gray-400">Single image default</Label>
                         <textarea
-                          placeholder="Save this one for later 💗"
+                          placeholder={"Save this one for later 💕\nComment below if this is you\nShare this with someone who needs it"}
                           value={editData.defaultFirstCommentSingle || ""}
                           onChange={(e) => setEditData((d) => ({ ...d, defaultFirstCommentSingle: e.target.value }))}
-                          rows={2}
+                          rows={4}
                           className="w-full bg-gray-900 border border-gray-700 text-white rounded-md px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-pink-500"
                         />
                       </div>
                       <div>
                         <Label className="text-xs text-gray-400">Reel default</Label>
                         <textarea
-                          placeholder="Drop a 🔥 if this helped"
+                          placeholder={"Drop a 🔥 if this helped\nSave this and share to someone who needs to know\nComment below with your thoughts"}
                           value={editData.defaultFirstCommentReel || ""}
                           onChange={(e) => setEditData((d) => ({ ...d, defaultFirstCommentReel: e.target.value }))}
-                          rows={2}
+                          rows={4}
                           className="w-full bg-gray-900 border border-gray-700 text-white rounded-md px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-pink-500"
                         />
                       </div>
