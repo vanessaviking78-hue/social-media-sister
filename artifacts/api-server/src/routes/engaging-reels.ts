@@ -111,6 +111,20 @@ function getDuration(path: string): Promise<number> {
   });
 }
 
+function getVideoWidth(path: string): Promise<number> {
+ return new Promise((resolve) => {
+ const ffprobe = spawn("ffprobe", ["-v", "error", "-select_streams", "v:0", "-show_entries", "stream=width", "-of", "default=noprint_wrappers=1:nokey=1", path]);
+ let out = "";
+ ffprobe.stdout.on("data", (d) => { out += d.toString(); });
+ ffprobe.on("close", (code) => {
+ const val = parseInt(out.trim(), 10);
+ if (code === 0 && !isNaN(val) && val > 0) resolve(val);
+ else resolve(1920);
+ });
+ ffprobe.on("error", () => resolve(1920));
+ });
+}
+
 type TextLayout = {
   hook?: { x: number; y: number; w: number; fontSize: number };
   secondHook?: { x: number; y: number; w: number; fontSize: number };
@@ -304,6 +318,7 @@ router.post("/engaging-reels/:id/render", async (req: Request, res: Response) =>
     const videoBuf = await fetchBuffer(item.videoUrl);
     await writeFile(inputPath, videoBuf);
     const duration = await getDuration(inputPath);
+ const videoWidth = await getVideoWidth(inputPath);
 
     const hookEnd = Math.min(3, duration * 0.3);
     const ctaLen = Math.min(3.5, duration * 0.35);
@@ -354,7 +369,7 @@ router.post("/engaging-reels/:id/render", async (req: Request, res: Response) =>
       if (!text || seg.end <= seg.start) continue;
       
       // Word-wrap text to fit within the box width
-      const wrappedText = wrapText(text, seg.config.w, seg.config.fontSize);
+      const wrappedText = wrapText(text, seg.config.w, seg.config.fontSize, videoWidth);
       
       const txtPath = join(tmpdir(), `engaging-reel-text-${randomUUID()}.txt`);
       await writeFile(txtPath, wrappedText, "utf8");
@@ -405,11 +420,11 @@ router.post("/engaging-reels/:id/render", async (req: Request, res: Response) =>
 });
 
 // Simple word-wrap function to fit text within a box width (as fraction of video)
-function wrapText(text: string, widthFraction: number, fontSize: number): string {
+function wrapText(text: string, widthFraction: number, fontSize: number, videoWidth: number): string {
   // Rough estimate: average character width is ~0.5 * fontSize in pixels
   // Assume 1920px video width, so width in pixels = 1920 * widthFraction
   // Chars per line ≈ (1920 * widthFraction) / (0.5 * fontSize)
-  const pixelWidth = 1920 * widthFraction;
+  const pixelWidth = videoWidth * widthFraction;
   const avgCharWidth = 0.5 * fontSize;
   const charsPerLine = Math.floor(pixelWidth / avgCharWidth);
   
@@ -428,6 +443,11 @@ function wrapText(text: string, widthFraction: number, fontSize: number): string
     }
   }
   if (currentLine) lines.push(currentLine);
+
+ if (lines.length > 2) {
+ const rest = lines.slice(1).join(" ");
+ return [lines[0], rest].join("\n");
+ }
   
   return lines.join("\n");
 }
