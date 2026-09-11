@@ -10,8 +10,9 @@ import { toast } from "sonner";
 import { usePresets } from "@/lib/use-presets";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const POST_COUNT = 16;
 
-type Slides = { hook: string; body1: string; body2: string; cta: string };
+type Post = { hook: string; body1: string; body2: string; cta: string };
 
 function toCsvField(v: string): string {
   return `"${(v || "").replace(/"/g, '""')}"`;
@@ -24,13 +25,14 @@ function slugify(v: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-function downloadCsv(slides: Slides, filenameHint: string) {
-  const csv = `hook,body1,body2,cta\n${[slides.hook, slides.body1, slides.body2, slides.cta].map(toCsvField).join(",")}\n`;
+function downloadCsv(posts: Post[], filenameHint: string) {
+  const rows = posts.map((p) => [p.hook, p.body1, p.body2, p.cta].map(toCsvField).join(","));
+  const csv = `hook,body1,body2,cta\n${rows.join("\n")}\n`;
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `${filenameHint || "carousel"}.csv`;
+  a.download = `${filenameHint || "carousels"}.csv`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -44,15 +46,15 @@ export default function CsvCreator() {
   const [website, setWebsite] = useState("");
   const [brief, setBrief] = useState("");
   const [generating, setGenerating] = useState(false);
-  const [slides, setSlides] = useState<Slides | null>(null);
+  const [posts, setPosts] = useState<Post[] | null>(null);
 
   const selectedPreset = presets.find((p) => String(p.id) === presetId);
 
   const handleGenerate = async () => {
     if (!area.trim()) { toast.error("Add an area first."); return; }
-    if (!brief.trim()) { toast.error("Say what you want the post to be about."); return; }
+    if (!brief.trim()) { toast.error("Say what you want the posts to be about."); return; }
     setGenerating(true);
-    const id = toast.loading("Writing your 4 slides...");
+    const id = toast.loading(`Writing ${POST_COUNT} carousels...`);
     try {
       const res = await fetch(`${BASE}/api/content/csv-creator`, {
         method: "POST",
@@ -63,6 +65,7 @@ export default function CsvCreator() {
           brief: brief.trim(),
           clientName: selectedPreset?.name ?? "",
           voiceStyle: selectedPreset?.voiceStyle ?? "northern-grit",
+          count: POST_COUNT,
         }),
       });
       if (!res.ok) {
@@ -70,8 +73,10 @@ export default function CsvCreator() {
         throw new Error(data.error || "Generation failed");
       }
       const data = await res.json();
-      setSlides({ hook: data.hook || "", body1: data.body1 || "", body2: data.body2 || "", cta: data.cta || "" });
-      toast.success("Slides ready. Have a read through before you download.", { id });
+      const list: Post[] = Array.isArray(data.posts) ? data.posts : [];
+      if (!list.length) throw new Error("Nothing came back, try again");
+      setPosts(list);
+      toast.success(`${list.length} carousels ready. Have a read through before you download.`, { id });
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Something went wrong", { id });
     } finally {
@@ -79,10 +84,17 @@ export default function CsvCreator() {
     }
   };
 
+  const updatePost = (idx: number, patch: Partial<Post>) => {
+    if (!posts) return;
+    const next = [...posts];
+    next[idx] = { ...next[idx], ...patch };
+    setPosts(next);
+  };
+
   const handleDownload = () => {
-    if (!slides) return;
-    const filenameHint = slugify(`${selectedPreset?.name || "client"}-${area || "post"}`);
-    downloadCsv(slides, filenameHint);
+    if (!posts) return;
+    const filenameHint = slugify(`${selectedPreset?.name || "client"}-${area || "posts"}`);
+    downloadCsv(posts, filenameHint);
   };
 
   return (
@@ -94,7 +106,7 @@ export default function CsvCreator() {
           </button>
         </Link>
         <h1 className="font-semibold text-white tracking-tight text-lg">CSV Creator</h1>
-        <span className="text-zinc-500 text-sm">Area, website, and a brief in. A 4-slide carousel CSV out.</span>
+        <span className="text-zinc-500 text-sm">Area, website, and a brief in. {POST_COUNT} carousel posts out.</span>
       </div>
 
       <div className="max-w-3xl mx-auto px-4 py-8 flex flex-col gap-6">
@@ -134,11 +146,11 @@ export default function CsvCreator() {
         </div>
 
         <div>
-          <Label className="text-xs text-zinc-500 mb-1.5 block">What do you want this post to be about?</Label>
+          <Label className="text-xs text-zinc-500 mb-1.5 block">What do you want these posts to cover?</Label>
           <Textarea
             value={brief}
             onChange={(e) => setBrief(e.target.value)}
-            placeholder="Describe the treatment, offer or angle you want this carousel to cover."
+            placeholder="Describe the treatments, offers or angles you want covered. We'll spread them across the batch so nothing repeats."
             className="min-h-[100px] resize-y text-sm bg-zinc-900 border-white/10 placeholder:text-zinc-600"
           />
         </div>
@@ -150,46 +162,56 @@ export default function CsvCreator() {
           size="lg"
         >
           <Wand2 className="w-4 h-4 mr-2" />
-          {generating ? "Writing..." : "Generate 4 slides"}
+          {generating ? `Writing ${POST_COUNT} carousels...` : `Generate ${POST_COUNT} carousels`}
         </Button>
 
-        {slides && (
+        {posts && (
           <div className="border border-white/8 rounded-xl p-5 flex flex-col gap-4">
-            <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">
-              Your slides, edit anything before you download
-            </p>
+            <div className="flex items-baseline justify-between">
+              <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">
+                Your carousels, edit anything before you download
+              </p>
+              <span className="text-xs text-zinc-500">{posts.length} posts</span>
+            </div>
 
-            <div>
-              <Label className="text-xs text-zinc-500 mb-1.5 block">Hook (slide 1)</Label>
-              <Textarea
-                value={slides.hook}
-                onChange={(e) => setSlides({ ...slides, hook: e.target.value })}
-                className="min-h-[50px] text-sm bg-zinc-900 border-white/10"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-zinc-500 mb-1.5 block">Body (slide 2)</Label>
-              <Textarea
-                value={slides.body1}
-                onChange={(e) => setSlides({ ...slides, body1: e.target.value })}
-                className="min-h-[70px] text-sm bg-zinc-900 border-white/10"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-zinc-500 mb-1.5 block">Body (slide 3)</Label>
-              <Textarea
-                value={slides.body2}
-                onChange={(e) => setSlides({ ...slides, body2: e.target.value })}
-                className="min-h-[70px] text-sm bg-zinc-900 border-white/10"
-              />
-            </div>
-            <div>
-              <Label className="text-xs text-zinc-500 mb-1.5 block">CTA (slide 4)</Label>
-              <Textarea
-                value={slides.cta}
-                onChange={(e) => setSlides({ ...slides, cta: e.target.value })}
-                className="min-h-[50px] text-sm bg-zinc-900 border-white/10"
-              />
+            <div className="flex flex-col gap-4 max-h-[60vh] overflow-y-auto pr-1">
+              {posts.map((post, idx) => (
+                <div key={idx} className="border border-white/8 rounded-lg p-4 flex flex-col gap-2 bg-white/[0.02]">
+                  <p className="text-[11px] font-semibold text-zinc-500">Post {idx + 1}</p>
+                  <div>
+                    <Label className="text-[11px] text-zinc-500 mb-1 block">Hook (slide 1)</Label>
+                    <Textarea
+                      value={post.hook}
+                      onChange={(e) => updatePost(idx, { hook: e.target.value })}
+                      className="min-h-[44px] text-sm bg-zinc-900 border-white/10"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[11px] text-zinc-500 mb-1 block">Body (slide 2)</Label>
+                    <Textarea
+                      value={post.body1}
+                      onChange={(e) => updatePost(idx, { body1: e.target.value })}
+                      className="min-h-[56px] text-sm bg-zinc-900 border-white/10"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[11px] text-zinc-500 mb-1 block">Body (slide 3)</Label>
+                    <Textarea
+                      value={post.body2}
+                      onChange={(e) => updatePost(idx, { body2: e.target.value })}
+                      className="min-h-[56px] text-sm bg-zinc-900 border-white/10"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[11px] text-zinc-500 mb-1 block">CTA (slide 4)</Label>
+                    <Textarea
+                      value={post.cta}
+                      onChange={(e) => updatePost(idx, { cta: e.target.value })}
+                      className="min-h-[44px] text-sm bg-zinc-900 border-white/10"
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
 
             <Button
@@ -198,7 +220,7 @@ export default function CsvCreator() {
               className="w-full border-green-500/40 text-green-400 hover:bg-green-500/10 hover:border-green-500/60 font-semibold"
               size="lg"
             >
-              <Download className="w-4 h-4 mr-2" />Download CSV
+              <Download className="w-4 h-4 mr-2" />Download CSV ({posts.length} posts)
             </Button>
             <p className="text-[11px] text-zinc-600 text-center">
               Drops straight into Bulk Carousel Creator, headers are hook, body1, body2, cta.
