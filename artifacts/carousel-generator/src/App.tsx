@@ -47,6 +47,7 @@ import OnboardSuccess from "@/pages/onboard-success";
 import DmAutomations from "@/pages/dm-automations";
 import Intake from "@/pages/intake";
 import Privacy from "@/pages/privacy";
+import Prizes from "@/pages/prizes";
 import Terms from "@/pages/terms";
 import DataDeletion from "@/pages/data-deletion";
 import Splash from "@/pages/splash";
@@ -205,6 +206,7 @@ function AppContent() {
   const [isOnboardChoose, onboardChooseParams] = useRoute("/onboard/:token/choose-page");
   const [isOnboard, onboardParams] = useRoute("/onboard/:token");
   const [isPrivacy] = useRoute("/privacy");
+  const [isPrizes] = useRoute("/prizes");
   const [isTerms] = useRoute("/terms");
   const [isDataDeletion] = useRoute("/data-deletion");
   const [isBulkTemplates] = useRoute("/bulk-import-templates");
@@ -273,6 +275,9 @@ function AppContent() {
   }
   if (isPrivacy) {
     return <Privacy />;
+  }
+  if (isPrizes) {
+    return <Prizes />;
   }
   if (isTerms) {
     return <Terms />;
