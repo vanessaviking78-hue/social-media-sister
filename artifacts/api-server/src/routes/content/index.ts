@@ -1153,4 +1153,107 @@ router.post("/content/ba-caption", async (req, res) => {
   }
 });
 
+function stripHtmlForContext(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+router.post("/content/csv-creator", async (req, res) => {
+  try {
+    const { area, website, brief, clientName, voiceStyle, industry } = req.body as {
+      area?: string;
+      website?: string;
+      brief?: string;
+      clientName?: string;
+      voiceStyle?: string;
+      industry?: string;
+    };
+
+    if (!(area || "").trim() || !(brief || "").trim()) {
+      res.status(400).json({ error: "Add an area and a brief first" });
+      return;
+    }
+
+    let siteContext = "";
+    if ((website || "").trim()) {
+      try {
+        let url = website!.trim();
+        if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        const siteRes = await fetch(url, {
+          signal: controller.signal,
+          headers: { "User-Agent": "Mozilla/5.0 (compatible; CyberSuiteBot/1.0)" },
+        });
+        clearTimeout(timeout);
+        if (siteRes.ok) {
+          const html = await siteRes.text();
+          siteContext = stripHtmlForContext(html).slice(0, 4000);
+        }
+      } catch (siteErr) {
+        console.error("csv-creator: website fetch failed", siteErr);
+      }
+    }
+
+    const voicePrompt = getVoiceSystemPrompt(voiceStyle || "northern-grit");
+
+    const systemPrompt = `${voicePrompt}
+
+You are writing the copy for a 4-slide Instagram carousel post for a ${industry || "aesthetics"} clinic${clientName ? ` called "${clientName}"` : ""} based in or serving ${area}.
+${siteContext ? `Here is some text pulled from the clinic's website, for context on their services, tone and offer. Use it for facts only, do not copy sentences from it:
+"""${siteContext}"""
+` : ""}
+What Vanessa wants this post to be about: ${brief}
+
+Slide structure, exactly 4 slides, follow this precisely:
+- hook: the opening slide. Under 10 words. Sounds like something a real person would actually say, quiet and specific, not a marketing line. Give it a local flavour where it fits naturally, mentioning ${area} only if it reads naturally, never forced.
+- body1: the first value slide. One idea, 1-3 short sentences, specific over general.
+- body2: the second value slide. A different idea to body1, one idea, 1-3 short sentences.
+- cta: a warm, unhurried invitation to get in touch or book a consultation. No urgency, no "DM us NOW".
+
+Rules:
+- Fully MHRA and ASA compliant
+- Text must fit on a 1080x1350 image, keep each slide concise
+- Follow the brief closely, but keep it grounded and real, not a sales pitch
+
+Output ONLY a valid JSON object with exactly these four keys: "hook", "body1", "body2", "cta". No markdown, no code fences, no extra text.`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-5.2",
+      max_completion_tokens: 1024,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Write the 4 slides now.` },
+      ],
+    });
+
+    const raw = completion.choices[0]?.message?.content ?? "{}";
+    let parsed: { hook?: string; body1?: string; body2?: string; cta?: string } = {};
+    try {
+      parsed = JSON.parse(raw);
+    } catch (parseErr) {
+      console.error("csv-creator: failed to parse AI response", parseErr, raw);
+      res.status(500).json({ error: "Could not parse the AI response, try again" });
+      return;
+    }
+
+    res.json({
+      hook: String(parsed.hook || "").trim(),
+      body1: String(parsed.body1 || "").trim(),
+      body2: String(parsed.body2 || "").trim(),
+      cta: String(parsed.cta || "").trim(),
+    });
+  } catch (err: any) {
+    console.error("CSV creator error:", err);
+    res.status(500).json({ error: err.message || "Generation failed" });
+  }
+});
+
 export default router;
