@@ -82,6 +82,7 @@ import GoogleOAuthResult from "@/pages/google-oauth-result";
 import ApprovalBundles from "@/pages/approval-bundles";
 import ClientApproval from "@/pages/client-approval";
 import ContentGenerator from "@/pages/content-generator";
+import CsvCreator from "@/pages/csv-creator";
 import ClientPortalView from "@/pages/client-portal-view";
 import Blog from "@/pages/blog";
 import Broadcasts from "@/pages/broadcasts";
@@ -163,6 +164,7 @@ function ProtectedRouter() {
       <Route path="/settings" component={Settings} />
       <Route path="/approval-bundles" component={ApprovalBundles} />
       <Route path="/content-generator" component={ContentGenerator} />
+      <Route path="/csv-creator" component={CsvCreator} />
       <Route path="/client-portal-view" component={ClientPortalView} />
       <Route path="/blog" component={Blog} />
       <Route path="/broadcasts" component={Broadcasts} />
