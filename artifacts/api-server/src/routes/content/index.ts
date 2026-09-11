@@ -1166,19 +1166,22 @@ function stripHtmlForContext(html) {
 
 router.post("/content/csv-creator", async (req, res) => {
   try {
-    const { area, website, brief, clientName, voiceStyle, industry } = req.body as {
+    const { area, website, brief, clientName, voiceStyle, industry, count } = req.body as {
       area?: string;
       website?: string;
       brief?: string;
       clientName?: string;
       voiceStyle?: string;
       industry?: string;
+      count?: number;
     };
 
     if (!(area || "").trim() || !(brief || "").trim()) {
       res.status(400).json({ error: "Add an area and a brief first" });
       return;
     }
+
+    const postCount = Math.max(1, Math.min(Number(count) || 16, 20));
 
     let siteContext = "";
     if ((website || "").trim()) {
@@ -1205,37 +1208,39 @@ router.post("/content/csv-creator", async (req, res) => {
 
     const systemPrompt = `${voicePrompt}
 
-You are writing the copy for a 4-slide Instagram carousel post for a ${industry || "aesthetics"} clinic${clientName ? ` called "${clientName}"` : ""} based in or serving ${area}.
+You are writing the copy for ${postCount} separate 4-slide Instagram carousel posts for a ${industry || "aesthetics"} clinic${clientName ? ` called "${clientName}"` : ""} based in or serving ${area}.
 ${siteContext ? `Here is some text pulled from the clinic's website, for context on their services, tone and offer. Use it for facts only, do not copy sentences from it:
 """${siteContext}"""
 ` : ""}
-What Vanessa wants this post to be about: ${brief}
+What Vanessa wants these posts to cover: ${brief}
 
-Slide structure, exactly 4 slides, follow this precisely:
-- hook: the opening slide. Under 10 words. Sounds like something a real person would actually say, quiet and specific, not a marketing line. Give it a local flavour where it fits naturally, mentioning ${area} only if it reads naturally, never forced.
+Each post has exactly 4 slides, follow this precisely for every single post:
+- hook: the opening slide. Under 10 words. Sounds like something a real person would actually say, quiet and specific, not a marketing line. Give it a local flavour where it fits naturally, mentioning ${area} only if it reads naturally, never forced, and don't do it in every single post.
 - body1: the first value slide. One idea, 1-3 short sentences, specific over general.
 - body2: the second value slide. A different idea to body1, one idea, 1-3 short sentences.
 - cta: a warm, unhurried invitation to get in touch or book a consultation. No urgency, no "DM us NOW".
 
-Rules:
+Rules across the batch:
+- Write exactly ${postCount} posts, each one genuinely different: a different angle, a different hook structure, a different opening line. No two hooks should sound alike.
+- Between them, cover different facets of the brief rather than repeating the same point 16 times
 - Fully MHRA and ASA compliant
 - Text must fit on a 1080x1350 image, keep each slide concise
 - Follow the brief closely, but keep it grounded and real, not a sales pitch
 
-Output ONLY a valid JSON object with exactly these four keys: "hook", "body1", "body2", "cta". No markdown, no code fences, no extra text.`;
+Output ONLY a valid JSON object with a single key "posts", whose value is an array of exactly ${postCount} objects. Each object has exactly these four keys: "hook", "body1", "body2", "cta". No markdown, no code fences, no extra text.`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-5.2",
-      max_completion_tokens: 1024,
+      max_completion_tokens: 8192,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Write the 4 slides now.` },
+        { role: "user", content: `Write all ${postCount} posts now.` },
       ],
     });
 
     const raw = completion.choices[0]?.message?.content ?? "{}";
-    let parsed: { hook?: string; body1?: string; body2?: string; cta?: string } = {};
+    let parsed: { posts?: Array<{ hook?: string; body1?: string; body2?: string; cta?: string }> } = {};
     try {
       parsed = JSON.parse(raw);
     } catch (parseErr) {
@@ -1244,12 +1249,20 @@ Output ONLY a valid JSON object with exactly these four keys: "hook", "body1", "
       return;
     }
 
-    res.json({
-      hook: String(parsed.hook || "").trim(),
-      body1: String(parsed.body1 || "").trim(),
-      body2: String(parsed.body2 || "").trim(),
-      cta: String(parsed.cta || "").trim(),
-    });
+    const posts = Array.isArray(parsed.posts) ? parsed.posts : [];
+    const cleaned = posts.slice(0, postCount).map((p) => ({
+      hook: String(p?.hook || "").trim(),
+      body1: String(p?.body1 || "").trim(),
+      body2: String(p?.body2 || "").trim(),
+      cta: String(p?.cta || "").trim(),
+    }));
+
+    if (!cleaned.length) {
+      res.status(500).json({ error: "Nothing came back, try again" });
+      return;
+    }
+
+    res.json({ posts: cleaned });
   } catch (err: any) {
     console.error("CSV creator error:", err);
     res.status(500).json({ error: err.message || "Generation failed" });
