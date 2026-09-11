@@ -261,6 +261,12 @@ export default function UploadSchedule() {
   const [scheduling, setScheduling] = useState(false);
   const [scheduled, setScheduled] = useState(false);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkSchedule, setBulkSchedule] = useState<Record<number, { date: string; time: string }>>({});
+  const getBulkSlot = (idx: number) => bulkSchedule[idx] ?? { date, time };
+  const setBulkSlot = (idx: number, patch: Partial<{ date: string; time: string }>) => {
+    setBulkSchedule((prev) => ({ ...prev, [idx]: { ...(prev[idx] ?? { date, time }), ...patch } }));
+  };
 
   // Auto-switch to Reel when a video is added or animate mode is on
   useEffect(() => {
@@ -273,6 +279,15 @@ export default function UploadSchedule() {
   useEffect(() => {
     if (images.length < 2) setAnimateSlides(false);
   }, [images.length]);
+
+  // Bulk single-post mode only works with plain images, and can't be combined
+  // with the animated-reel or broadcast-to-multiple-clients options.
+  useEffect(() => {
+    if (bulkMode && images.some((i) => i.isVideo)) setBulkMode(false);
+  }, [images, bulkMode]);
+  useEffect(() => {
+    if (bulkMode) { setAnimateSlides(false); setBroadcastMode(false); }
+  }, [bulkMode]);
 
   const showSticker = postType === "story" && platforms.has("instagram");
   const hasVideo = images.some((i) => i.isVideo);
@@ -552,6 +567,59 @@ export default function UploadSchedule() {
     }
   };
 
+  // Uploads up to 12 plain images and schedules each as its own single-image
+  // post, one call to the scheduler per image, each with its own date/time —
+  // this is separate from the carousel path above, which bundles every
+  // uploaded image into one multi-slide post instead.
+  const handleBulkSchedule = async () => {
+    if (!images.length) { toast.error("Upload at least one image."); return; }
+    if (images.some((i) => i.isVideo)) { toast.error("Bulk single posts only works with images, not video."); return; }
+    if (!caption.trim()) { toast.error("Write a caption first."); return; }
+    if (!presetId) { toast.error("Pick a client."); return; }
+    const slots = images.map((_, idx) => getBulkSlot(idx));
+    if (slots.some((s) => !s.date || !s.time)) { toast.error("Set a date and time for every image."); return; }
+
+    const selectedPreset = presets.find((p) => String(p.id) === presetId);
+    setScheduling(true);
+    const id = toast.loading(`Uploading ${images.length} images...`);
+    try {
+      const urls = await uploadImages(images.map((i) => i.file));
+      toast.loading(`Queuing ${urls.length} posts...`, { id });
+      for (let i = 0; i < urls.length; i++) {
+        const slot = slots[i];
+        const scheduledAt = new Date(`${slot.date}T${slot.time}:00`).toISOString();
+        const res = await fetch(`${BASE}/api/scheduler/posts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            presetId: Number(presetId),
+            postType: "single-image",
+            content: {
+              imageUrls: [urls[i]],
+              caption: caption.trim(),
+              title: `Upload & Schedule — ${selectedPreset?.name ?? "Client"} bulk ${i + 1}/${urls.length}`,
+              platforms: Array.from(platforms),
+            },
+            scheduledAt,
+          }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({ error: "Scheduling failed" }));
+          throw new Error(`Post ${i + 1} of ${urls.length}: ${data.error || "Scheduling failed"}`);
+        }
+      }
+      toast.success(`${urls.length} posts scheduled.`, { id });
+      setScheduled(true);
+      setImages([]);
+      setBulkSchedule({});
+      setCaption("");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Something went wrong", { id });
+    } finally {
+      setScheduling(false);
+    }
+  };
+
   const selectedPresetForApproval = presets.find((p) => String(p.id) === presetId);
 
   const handleGetApprovalGroups = useCallback(async () => {
@@ -766,8 +834,28 @@ export default function UploadSchedule() {
               </div>
             )}
 
-            {/* Animate as Reel button */}
+            {/* Bulk single posts toggle */}
             {!hasVideo && images.length >= 2 && (
+              <button
+                onClick={() => setBulkMode((v) => !v)}
+                className={`w-full py-2.5 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2 mb-2 ${
+                  bulkMode
+                    ? "bg-pink-600/20 border-pink-500/50 text-pink-300"
+                    : "bg-zinc-900 border-white/10 text-zinc-400 hover:border-pink-500/30 hover:text-pink-300"
+                }`}
+              >
+                <GripVertical size={15} />
+                {bulkMode ? `Bulk single posts: On — ${images.length} separate posts` : "Post each image separately (bulk)"}
+              </button>
+            )}
+            {bulkMode && (
+              <p className="text-[11px] text-zinc-500 mb-2">
+                Each image becomes its own single-image post with the same caption. Set the date and time for each one below.
+              </p>
+            )}
+
+            {/* Animate as Reel button */}
+            {!hasVideo && !bulkMode && images.length >= 2 && (
               <button
                 onClick={() => setAnimateSlides((v) => !v)}
                 className={`w-full py-2.5 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2 mb-2 ${
@@ -845,7 +933,7 @@ export default function UploadSchedule() {
                 Schedule
               </p>
 
-              {/* Post type */}
+              {!bulkMode && (
               <div>
                 <Label className="text-xs text-zinc-500 mb-1.5 block">Post type</Label>
                 <div className="flex gap-2">
@@ -867,6 +955,7 @@ export default function UploadSchedule() {
                   <p className="text-[11px] text-amber-400/80 mt-1.5">Video posts are best scheduled as Reels.</p>
                 )}
               </div>
+              )}
 
               {postType === "reel" && (
                 <div className="flex items-center justify-between rounded-lg border border-white/10 bg-zinc-900 px-3 py-2.5">
@@ -1015,28 +1104,62 @@ export default function UploadSchedule() {
                 )}
               </div>
 
-              {/* Date + Time */}
-              <div className="grid grid-cols-2 gap-3">
+              {!bulkMode && (
+                <>
+                  {/* Date + Time */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs text-zinc-500 mb-1.5 block">Date</Label>
+                      <Input
+                        type="date"
+                        value={date}
+                        min={todayStr()}
+                        onChange={(e) => setDate(e.target.value)}
+                        className="bg-zinc-900 border-white/10 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs text-zinc-500 mb-1.5 block">Time</Label>
+                      <Input
+                        type="time"
+                        value={time}
+                        onChange={(e) => setTime(e.target.value)}
+                        className="bg-zinc-900 border-white/10 text-sm"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {bulkMode && (
                 <div>
-                  <Label className="text-xs text-zinc-500 mb-1.5 block">Date</Label>
-                  <Input
-                    type="date"
-                    value={date}
-                    min={todayStr()}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="bg-zinc-900 border-white/10 text-sm"
-                  />
+                  <Label className="text-xs text-zinc-500 mb-1.5 block">Schedule each post</Label>
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                    {images.map((img, idx) => {
+                      const slot = getBulkSlot(idx);
+                      return (
+                        <div key={img.localUrl} className="flex items-center gap-2 bg-zinc-900 border border-white/10 rounded-lg p-2">
+                          <img src={img.localUrl} alt={`Post ${idx + 1}`} className="w-9 h-9 rounded object-cover shrink-0" />
+                          <span className="text-[11px] text-zinc-500 w-4 shrink-0">{idx + 1}</span>
+                          <Input
+                            type="date"
+                            value={slot.date}
+                            min={todayStr()}
+                            onChange={(e) => setBulkSlot(idx, { date: e.target.value })}
+                            className="bg-zinc-950 border-white/10 text-xs h-8"
+                          />
+                          <Input
+                            type="time"
+                            value={slot.time}
+                            onChange={(e) => setBulkSlot(idx, { time: e.target.value })}
+                            className="bg-zinc-950 border-white/10 text-xs h-8"
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div>
-                  <Label className="text-xs text-zinc-500 mb-1.5 block">Time</Label>
-                  <Input
-                    type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    className="bg-zinc-900 border-white/10 text-sm"
-                  />
-                </div>
-              </div>
+              )}
 
               {/* Platforms */}
               <div>
@@ -1201,17 +1324,28 @@ export default function UploadSchedule() {
               </div>
 
               <Button
-                onClick={handleSchedule}
-                disabled={scheduling || !images.length || !caption.trim() || (broadcastMode ? selectedPresetIds.size === 0 : !presetId) || !date}
+                onClick={bulkMode ? handleBulkSchedule : handleSchedule}
+                disabled={
+                  scheduling ||
+                  !images.length ||
+                  !caption.trim() ||
+                  (bulkMode
+                    ? !presetId || images.some((_, idx) => !getBulkSlot(idx).date || !getBulkSlot(idx).time)
+                    : (broadcastMode ? selectedPresetIds.size === 0 : !presetId) || !date)
+                }
                 className="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold"
                 size="lg"
               >
                 {scheduling
-                  ? animateSlides
+                  ? bulkMode
+                    ? `Scheduling ${images.length} posts...`
+                    : animateSlides
                     ? "Creating animated reel..."
                     : hasVideo
                     ? "Uploading video..."
                     : "Scheduling..."
+                  : bulkMode
+                  ? `Schedule ${images.length} posts`
                   : "Schedule Post"}
               </Button>
 
