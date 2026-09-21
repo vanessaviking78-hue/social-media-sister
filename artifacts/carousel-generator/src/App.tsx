@@ -60,6 +60,7 @@ import BundleBuilder from "@/pages/bundle-builder";
 import BundlePreview from "@/pages/bundle-preview";
 import BundleRequest from "@/pages/bundle-request";
 import BundleRequestsDashboard from "@/pages/bundle-requests-dashboard";
+import ReviewsHub from "@/pages/reviews-hub";
 import FounderSignup from "@/pages/founder-signup";
 import FounderWelcome from "@/pages/founder-welcome";
 import StrategyLibrary from "@/pages/strategy-library";
@@ -151,6 +152,7 @@ function ProtectedRouter() {
       <Route path="/reel-scripts" component={ReelScripts} />
       <Route path="/bundle-builder" component={BundleBuilder} />
       <Route path="/bundle-requests" component={BundleRequestsDashboard} />
+      <Route path="/client-reviews" component={ReviewsHub} />
       <Route path="/strategy-library" component={StrategyLibrary} />
       <Route path="/brand" component={Brand} />
       <Route path="/upload-schedule" component={UploadSchedule} />
