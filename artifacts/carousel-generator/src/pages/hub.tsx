@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, Search } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, Search, ClipboardCheck } from "lucide-react";
 import { LogOut } from "lucide-react";
 
 const TOOLS = [
@@ -303,6 +303,16 @@ description: "Private to you. Paste in the research on a client's top nearby com
 color: "from-amber-500/20 to-amber-500/5",
 border: "hover:border-amber-500/50",
 iconColor: "text-amber-400",
+},
+{
+href: "/audit",
+group: "admin",
+icon: ClipboardCheck,
+name: "Page Audit",
+description: "Private to you. Type in any Instagram handle and get a scored mini audit, a compliance check and a ready-to-send write-up. Every audit is saved so you can see what's working.",
+color: "from-teal-500/20 to-teal-500/5",
+border: "hover:border-teal-500/50",
+iconColor: "text-teal-400",
 },
 {
 href: "/upload-schedule",

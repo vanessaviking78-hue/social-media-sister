@@ -93,6 +93,7 @@ import RantPublic from "@/pages/rant-public";
 import TweetMaker from "@/pages/tweet-maker";
 import RevenueIdeas from "@/pages/revenue-ideas";
 import CompetitorScout from "@/pages/competitor-scout";
+import AuditPage from "@/pages/audit";
 import News from "@/pages/news";
 import Today from "@/pages/today";
 import Checklist from "@/pages/checklist";
@@ -177,6 +178,7 @@ function ProtectedRouter() {
       <Route path="/tweet-maker" component={TweetMaker} />
       <Route path="/revenue-ideas" component={RevenueIdeas} />
       <Route path="/competitor" component={CompetitorScout} />
+      <Route path="/audit" component={AuditPage} />
       <Route path="/news" component={News} />
       <Route path="/today" component={Today} />
       <Route path="/checklist" component={Checklist} />
