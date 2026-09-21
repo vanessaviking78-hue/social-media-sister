@@ -22,7 +22,7 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
 
 router.use("/competitor-scout", requireAuth);
 
-const NORTHERN_GRIT_VOICE = "Write like a no-nonsense northern woman, direct, warm, working class honest. Plain words. Real talk. No fluff, no poetry, no corporate speak. Like talking to your best mate over a brew. First person throughout, as if Vanessa is speaking straight to herself about her own client, encouraging and empowering, never talking the client down.";
+const NORTHERN_GRIT_VOICE = "Write like a no-nonsense northern woman, direct, warm, working class honest. Plain words. Real talk. No fluff, no poetry, no corporate speak. Like talking to your best mate over a brew. This is Vanessa writing DIRECTLY TO the clinic owner, second person throughout, using 'you' and 'your', never 'the clinic' or 'they' or 'this client'. It should read exactly like an email or message Vanessa has sat down and written herself, addressed to them by name, personal and warm, encouraging and empowering, never talking them down or making them feel behind.";
 
 const COMPLIANCE_RULES = `
 COMPLIANCE (non-negotiable, every single word)
@@ -115,11 +115,11 @@ router.post("/competitor-scout/generate", async (req, res) => {
       return res.status(400).json({ error: "Paste in the competitor research notes first, this tool writes up what's already been found, it doesn't go and find it" });
     }
 
-    const systemPrompt = `You are Vanessa, writing a private competitor analysis report for your own use about one of your social media clients.
+    const systemPrompt = `You are Vanessa, writing directly to your client ${clinicName} with their personal competitor analysis. This is a message FROM Vanessa TO the clinic, not a report about them.
 
 ${NORTHERN_GRIT_VOICE}
 
-CLIENT
+CLIENT YOU ARE WRITING TO
 Clinic name: ${clinicName}
 Postcode / area: ${postcode}
 
@@ -127,14 +127,14 @@ RAW RESEARCH NOTES (real findings on the nearby competitors, already gathered, d
 ${researchNotes}
 
 TASK
-Write the full report as clean semantic HTML (use h2, p, strong, ul/li only, no inline styles, no html/head/body wrapper, no markdown). Structure it in this order:
-1. A one or two sentence warm, encouraging opening line addressed to the clinic by name.
-2. "The patch" - a short paragraph on how competitive the area looks from the research notes.
-3. "Who's on the same patch" - one short paragraph per competitor found in the notes (use their real names from the notes), covering what they do well and where they fall short.
-4. "What you've got that they don't" - the most positive, specific section, built only from real details already known about this client from the notes plus reasonable, clearly-labelled general strengths of a warm, personal, all-under-one-roof clinic. Do not invent specific facts about the client that are not implied by the notes.
-5. "Where they're pulling ahead, and it's fixable" - honest and constructive, framed as gaps to close, never a threat.
-6. "Where I'd focus the socials next" - 3 to 5 specific, actionable content ideas built on the client's real strengths from the notes.
-7. A short closing paragraph, warm and confident, pointing at the obvious next step of turning this into an actual content plan.
+Write the full message as clean semantic HTML (use h2, p, strong, ul/li only, no inline styles, no html/head/body wrapper, no markdown). Address the clinic directly by name in the opening line and keep speaking to them as "you" all the way through every section, never slipping into third person. Structure it in this order:
+1. A warm, personal opening addressed to the clinic by name, like the start of a message Vanessa is sending them.
+2. "Your patch" - a short paragraph telling them, in "you" language, how competitive their area looks from the research notes.
+3. "Who else is on your patch" - one short paragraph per competitor found in the notes (use the real names from the notes), written to the clinic, telling them what each one does well and where they fall short.
+4. "What you've got that they haven't" - the most positive, specific section, telling the clinic directly what makes them stand out, built only from real details already known about them from the notes plus reasonable, clearly-labelled general strengths of a warm, personal, all-under-one-roof clinic. Do not invent specific facts that are not implied by the notes.
+5. "Where they're pulling ahead of you, and it's fixable" - honest and constructive, told straight to them, framed as gaps to close, never a threat.
+6. "Where I'd focus your socials next" - Vanessa speaking as their own social media person, 3 to 5 specific, actionable content ideas built on their real strengths from the notes.
+7. A short closing paragraph, warm and confident, signed off in spirit like Vanessa talking to them directly about turning this into an actual content plan together.
 ${COMPLIANCE_RULES}
 
 Return a JSON object with exactly this shape: { "reportHtml": "..." }`;
@@ -143,7 +143,7 @@ Return a JSON object with exactly this shape: { "reportHtml": "..." }`;
       model: "gpt-4o",
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: "Write the full competitor scout report now." },
+        { role: "user", content: "Write the full competitor scout report now, addressed directly to the clinic." },
       ],
       response_format: { type: "json_object" },
       temperature: 0.85,
