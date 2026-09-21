@@ -67,12 +67,12 @@ export default function CompetitorScout() {
   }
 
   async function generate() {
-    if (!clinicName.trim() || !postcode.trim() || !researchNotes.trim()) {
-      toast.error("Clinic name, postcode and your research notes are all needed first.");
+    if (!clinicName.trim() || !postcode.trim()) {
+      toast.error("Clinic name and postcode are needed first.");
       return;
     }
     setGenerating(true);
-    const tid = toast.loading("Writing the report…");
+    const tid = toast.loading("Searching for their top competitors…");
     try {
       const r = await fetch(`${BASE}/api/competitor-scout/generate`, {
         method: "POST",
@@ -120,7 +120,7 @@ export default function CompetitorScout() {
     <div className="min-h-[100dvh] w-full bg-background text-foreground">
       <header className="border-b border-border/40 px-6 py-5">
         <h1 className="text-2xl font-bold">Competitor Scout</h1>
-        <p className="text-sm text-muted-foreground mt-1">Private to you, never shown to clients. Paste in what you or Claude found on a client's top nearby competitors, and this writes the full report in your voice.</p>
+        <p className="text-sm text-muted-foreground mt-1">Private to you, never shown to clients. Give it a clinic name and postcode and it goes and finds their top 3 real local competitors itself, then writes the full comparison report in your voice, addressed straight to the client.</p>
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-8 space-y-10">
@@ -146,12 +146,12 @@ export default function CompetitorScout() {
             </div>
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">Research notes (paste in what's already been found on the top 2-3 competitors nearby)</label>
+            <label className="text-xs text-muted-foreground">Anything you already know (optional, helps it search smarter)</label>
             <textarea
               value={researchNotes}
               onChange={(e) => setResearchNotes(e.target.value)}
-              rows={8}
-              placeholder="Competitor names, locations, what they offer, review counts, anything about their socials..."
+              rows={5}
+              placeholder="Only fill this in if you already know something worth feeding in, competitor names, a review you've seen, anything about their socials. Leave blank and it'll go and find it all itself."
               className="w-full mt-1 px-3 py-2 rounded-lg bg-card border border-border/40 text-sm"
             />
           </div>
@@ -161,8 +161,11 @@ export default function CompetitorScout() {
             className="px-5 py-2.5 rounded-full bg-amber-500 text-black font-semibold text-sm disabled:opacity-40 hover:bg-amber-400 flex items-center gap-2"
           >
             {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-            {generating ? "Writing…" : "Write the report"}
+            {generating ? "Researching and writing…" : "Find competitors & write the report"}
           </button>
+          {generating && (
+            <p className="text-xs text-muted-foreground">This one takes a bit longer, it's out there searching for real competitors before it starts writing. Give it a minute or two.</p>
+          )}
         </section>
 
         <section className="space-y-3">
