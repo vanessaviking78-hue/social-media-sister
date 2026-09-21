@@ -45,6 +45,7 @@ await createBroadcastDraftsTable();
     await createRevenueIdeaPoolTable();
     await createEngagingReelsTable();
     await addTextLayoutToEngagingReels();
+    await createCompetitorScoutReportsTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -464,6 +465,20 @@ async function createRevenueIdeasTable(): Promise<void> {
   `);
 }
 
+async function createCompetitorScoutReportsTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS competitor_scout_reports (
+      id SERIAL PRIMARY KEY,
+      clinic_name TEXT NOT NULL,
+      postcode TEXT NOT NULL,
+      research_notes TEXT NOT NULL DEFAULT '',
+      report_html TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'ready',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
 async function createClientNewsTable(): Promise<void> {
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS client_news (
@@ -628,4 +643,3 @@ async function updateShareFriendCommentCTA(): Promise<void> {
     logger.info({ updated }, "Updated default first-comment carousel CTA to new wording");
   }
 }
-
