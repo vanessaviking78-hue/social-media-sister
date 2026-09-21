@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="theme-color" content="#000000">
+<title>Client Wheel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Work+Sans:wght@500;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  :root{
+    --bg:#000000;
+    --surface:#121212;
+    --surface-raised:#1c1c1c;
+    --white:#ffffff;
+    --grey:#a6a6a6;
+    --line:#2b2b2b;
+    --teal:#ff3fa4;
+  }
+
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--white);
+    font-family:'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight:700;
+    line-height:1.5;
+  }
+  ::selection{background:var(--teal); color:#1a0011;}
+  :focus-visible{outline:2px solid var(--teal); outline-offset:2px;}
+
+  .wrap{max-width:640px; margin:0 auto; padding:0 20px 90px;}
+
+  header.top{
+    padding:34px 0 22px;
+    border-bottom:2px solid var(--line);
+    margin-bottom:30px;
+    text-align:center;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--grey);
+    margin:0 0 12px;
+  }
+  h1{
+    font-family:'Archivo Black', 'Work Sans', sans-serif;
+    font-weight:400;
+    font-size:clamp(30px,6vw,46px);
+    line-height:1.02;
+    letter-spacing:-.01em;
+    margin:0 0 12px;
+    text-wrap:balance;
+    text-transform:uppercase;
+  }
+  .lede{
+    max-width:46ch;
+    margin:0 auto;
+    color:var(--grey);
+    font-weight:500;
+    font-size:15px;
+  }
+
+  .mode-tabs{
+    display:flex;
+    justify-content:center;
+    gap:8px;
+    margin-bottom:28px;
+  }
+  .mode-tab{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:700;
+    font-size:12px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    background:var(--surface);
+    color:var(--grey);
+    border:1.5px solid var(--line);
+    border-radius:100px;
+    padding:9px 20px;
+    cursor:pointer;
+    transition:border-color .15s, color .15s, background .15s;
+  }
+  .mode-tab:hover{color:var(--white); border-color:var(--white);}
+  .mode-tab.active{
+    background:rgba(34,184,171,.14);
+    border-color:var(--teal);
+    color:var(--teal);
+  }
+
+  .stage{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:22px;
+    margin-bottom:36px;
+  }
+
+  .wheel-holder{
+    position:relative;
+    width:min(360px, 82vw);
+    height:min(360px, 82vw);
+  }
+  .pointer{
+    position:absolute;
+    top:-6px;
+    left:50%;
+    transform:translateX(-50%);
+    width:0; height:0;
+    border-left:14px solid transparent;
+    border-right:14px solid transparent;
+    border-top:24px solid var(--white);
+    filter:drop-shadow(0 3px 6px rgba(0,0,0,.5));
+    z-index:3;
+  }
+  #wheel{
+    display:block;
+    width:100%;
+    height:100%;
+    border-radius:50%;
+    box-shadow:0 0 0 6px var(--surface-raised), 0 0 0 8px var(--line), 0 22px 50px rgba(0,0,0,.55);
+    transition:transform 5.5s cubic-bezier(.14,.72,.12,1);
+    will-change:transform;
+  }
+  .hub{
+    position:absolute;
+    top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    width:19%; height:19%;
+    border-radius:50%;
+    background:var(--bg);
+    border:3px solid var(--surface-raised);
+    display:flex; align-items:center; justify-content:center;
+    z-index:2;
+    box-shadow:0 4px 14px rgba(0,0,0,.5);
+  }
+  .hub svg{width:34%; height:34%;}
+
+  .spin-btn{
+    font-family:'Archivo Black', 'Work Sans', sans-serif;
+    font-weight:400;
+    font-size:16px;
+    letter-spacing:.02em;
+    text-transform:uppercase;
+    background:var(--teal);
+    color:#1a0011;
+    border:none;
+    border-radius:100px;
+    padding:16px 46px;
+    cursor:pointer;
+    transition:transform .12s ease, opacity .12s ease, background .12s ease;
+  }
+  .spin-btn:hover{transform:translateY(-1px);}
+  .spin-btn:active{transform:translateY(0);}
+  .spin-btn:disabled{opacity:.45; cursor:not-allowed; transform:none;}
+
+  .toggle-row{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:12px;
+    letter-spacing:.03em;
+    color:var(--grey);
+  }
+  .switch{
+    position:relative; width:38px; height:22px; flex:none;
+  }
+  .switch input{position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer;}
+  .switch .track{
+    position:absolute; inset:0; background:var(--surface-raised); border:1.5px solid var(--line);
+    border-radius:100px; transition:background .15s, border-color .15s;
+  }
+  .switch .knob{
+    position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%;
+    background:var(--grey); transition:transform .15s, background .15s;
+  }
+  .switch input:checked ~ .track{background:rgba(255,63,164,.18); border-color:var(--teal);}
+  .switch input:checked ~ .track .knob{transform:none;}
+  .switch input:checked ~ .knob{transform:translateX(16px); background:var(--teal);}
+
+  .result-card{
+    width:100%;
+    background:var(--surface);
+    border:2px solid var(--line);
+    border-radius:16px;
+    padding:22px 24px;
+    text-align:center;
+    display:none;
+  }
+  .result-card.show{display:block;}
+  .result-eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--teal);
+    margin:0 0 8px;
+  }
+  .result-name{
+    font-family:'Archivo Black', 'Work Sans', sans-serif;
+    font-weight:400;
+    font-size:clamp(24px,5vw,34px);
+    text-transform:uppercase;
+    margin:0;
+    line-height:1.1;
+  }
+
+  .rounds{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:11px;
+    color:var(--grey);
+    text-align:center;
+  }
+  .rounds b{color:var(--white);}
+  .rounds button{
+    background:none; border:none; color:var(--teal);
+    font-family:'IBM Plex Mono', monospace; font-weight:700;
+    font-size:11px; text-transform:uppercase; letter-spacing:.03em;
+    cursor:pointer; padding:0; margin-left:8px;
+  }
+
+  details.editor{
+    border-top:2px solid var(--line);
+    padding-top:22px;
+  }
+  details.editor summary{
+    cursor:pointer;
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:11.5px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--grey);
+    list-style:none;
+    display:flex; align-items:center; gap:8px;
+  }
+  details.editor summary::-webkit-details-marker{display:none;}
+  details.editor summary::before{
+    content:'+';
+    font-family:'Work Sans', sans-serif;
+    font-size:15px;
+    color:var(--teal);
+    width:16px;
+  }
+  details.editor[open] summary::before{content:'\2212';}
+  details.editor summary:hover{color:var(--white);}
+  .editor-body{padding:18px 0 0;}
+  .editor-body p{color:var(--grey); font-weight:500; font-size:13px; margin:0 0 12px;}
+  textarea{
+    width:100%;
+    min-height:220px;
+    background:var(--surface);
+    border:2px solid var(--line);
+    border-radius:10px;
+    color:var(--white);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    line-height:1.7;
+    padding:14px;
+    resize:vertical;
+  }
+  textarea:focus-visible{outline:2px solid var(--teal); outline-offset:1px;}
+  .editor-actions{
+    display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;
+  }
+  .btn-secondary{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:700;
+    font-size:12px;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    background:var(--surface-raised);
+    color:var(--white);
+    border:1.5px solid var(--line);
+    border-radius:100px;
+    padding:10px 18px;
+    cursor:pointer;
+    transition:border-color .15s;
+  }
+  .btn-secondary:hover{border-color:var(--white);}
+  .btn-secondary.primary{background:var(--teal); color:#1a0011; border-color:var(--teal);}
+  .save-note{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--teal);
+    margin-left:2px;
+    opacity:0;
+    transition:opacity .2s;
+  }
+  .save-note.show{opacity:1;}
+
+  footer.foot{
+    margin-top:50px;
+    padding-top:26px;
+    border-top:2px solid var(--line);
+    text-align:center;
+  }
+  footer.foot p{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--grey);
+    margin:0;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    #wheel{transition:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="top">
+    <p class="eyebrow">The Cyber Suite</p>
+    <h1>Client Wheel</h1>
+    <p class="lede" id="ledeText">One spin, one clinic. Every name stays blurred until it wins, so nobody's reading ahead.</p>
+  </header>
+
+  <div class="mode-tabs" role="tablist">
+    <button class="mode-tab active" id="tabClients" type="button">Clients</button>
+    <button class="mode-tab" id="tabCustom" type="button">Blank wheel</button>
+  </div>
+
+  <div class="stage">
+    <div class="wheel-holder">
+      <div class="pointer"></div>
+      <canvas id="wheel" width="720" height="720"></canvas>
+      <div class="hub">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#a6a6a6" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg>
+      </div>
+    </div>
+
+    <button class="spin-btn" id="spinBtn" type="button">Spin the wheel</button>
+
+    <label class="toggle-row" for="noRepeat">
+      <span class="switch">
+        <input type="checkbox" id="noRepeat" checked>
+        <span class="track"><span class="knob"></span></span>
+      </span>
+      Don't repeat a name until everyone's had a spin
+    </label>
+
+    <p class="rounds" id="roundsLabel"></p>
+
+    <div class="result-card" id="resultCard">
+      <p class="result-eyebrow">Landed on</p>
+      <p class="result-name" id="resultName">&nbsp;</p>
+    </div>
+  </div>
+
+  <details class="editor" id="editor" open>
+    <summary id="editorSummary">Edit the client list</summary>
+    <div class="editor-body">
+      <p id="editorHint">One name per line. Saved to this browser only, so it'll stay exactly as you left it next time you're here.</p>
+      <textarea id="namesInput" spellcheck="false"></textarea>
+      <div class="editor-actions">
+        <button class="btn-secondary primary" id="saveNames" type="button">Save list</button>
+        <button class="btn-secondary" id="resetNames" type="button">Reset to default list</button>
+        <span class="save-note" id="saveNote">Saved</span>
+      </div>
+    </div>
+  </details>
+
+  <footer class="foot">
+    <p>Built by Social Media Sister</p>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var DEFAULT_NAMES = [
+    "A D Aesthetics Pharmacist Ltd","AMII","Annorlunda Aesthetics","Aspyre Aesthetics","Behold Me",
+    "Castle Clinic","CK","Clare Connolly","CT","Dr Kathryn",
+    "Dr Lisa Academy","Dr Lisa Aesthetics","Dr V","Eaton","Eva Garcia Aesthetics",
+    "Forever Young","Happy Face Aesthetics","Harwood","Highcroft Aesthetics","Kahlo Skin & Soul",
+    "Kelly Rafique","Lotus Rooms","Madame Wax","Nova Aesthetics","Pura",
+    "Rebecca Gledhill","Taunton","Teviot","The Church Street Clinic","The Glow Getter",
+    "The Ryder Clinic","Timeless By Sarah","Tweaked By Helen"
+  ];
+
+  var MODE_KEY = 'clientwheel.mode.v1';
+  var MODES = {
+    clients: { storageKey:'clientwheel.names.v1', historyKey:'clientwheel.history.v1', defaultNames:DEFAULT_NAMES,
+      title:'Client Wheel', lede:'One spin, one clinic. Every name stays blurred until it wins, so nobody’s reading ahead.',
+      summary:'Edit the client list', hint:'One name per line. Saved to this browser only, so it’ll stay exactly as you left it next time you’re here.',
+      resetLabel:'Reset to default list', emptyHint:'Add at least two names in the panel below to spin.' },
+    custom: { storageKey:'clientwheel.custom.v1', historyKey:'clientwheel.customhistory.v1', defaultNames:[],
+      title:'Blank Wheel', lede:'Your own list, your own spin. Type in whatever names you like and every one stays blurred until it wins.',
+      summary:'Add your names', hint:'One name per line. Saved to this browser only, so it’ll be waiting next time you’re here.',
+      resetLabel:'Clear list', emptyHint:'Type your names in below (one per line) and hit save to bring the wheel to life.' }
+  };
+
+  var COLORS = ['#ff3fa4', '#ffffff', '#000000'];
+  var TEXT_ON = { '#ff3fa4':'#000000', '#ffffff':'#000000', '#000000':'#ffffff' };
+
+  var canvas = document.getElementById('wheel');
+  var ctx = canvas.getContext('2d');
+  var supportsCanvasBlur = (function(){
+    try { return 'filter' in ctx; } catch(e){ return false; }
+  })();
+  var spinBtn = document.getElementById('spinBtn');
+  var noRepeat = document.getElementById('noRepeat');
+  var roundsLabel = document.getElementById('roundsLabel');
+  var resultCard = document.getElementById('resultCard');
+  var resultName = document.getElementById('resultName');
+  var namesInput = document.getElementById('namesInput');
+  var saveBtn = document.getElementById('saveNames');
+  var resetBtn = document.getElementById('resetNames');
+  var saveNote = document.getElementById('saveNote');
+  var ledeText = document.getElementById('ledeText');
+  var editorSummary = document.getElementById('editorSummary');
+  var editorHint = document.getElementById('editorHint');
+  var tabClients = document.getElementById('tabClients');
+  var tabCustom = document.getElementById('tabCustom');
+  var titleEl = document.querySelector('h1');
+
+  var currentMode = 'clients';
+  var names = [];
+  var remaining = [];
+  var currentRotation = 0;
+  var spinning = false;
+  var revealIndex = -1;
+  var BLUR_PX = 5;
+
+  function safeGet(key){
+    try { return localStorage.getItem(key); } catch(e){ return null; }
+  }
+  function safeSet(key, val){
+    try { localStorage.setItem(key, val); } catch(e){}
+  }
+
+  function loadNames(mode){
+    var cfg = MODES[mode];
+    var raw = safeGet(cfg.storageKey);
+    if(raw){
+      try {
+        var parsed = JSON.parse(raw);
+        if(Array.isArray(parsed) && parsed.length) return parsed;
+      } catch(e){}
+    }
+    return cfg.defaultNames.slice();
+  }
+
+  function loadHistory(mode){
+    var raw = safeGet(MODES[mode].historyKey);
+    if(raw){
+      try {
+        var parsed = JSON.parse(raw);
+        if(Array.isArray(parsed)) return parsed;
+      } catch(e){}
+    }
+    return [];
+  }
+
+  function saveHistory(){
+    safeSet(MODES[currentMode].historyKey, JSON.stringify(remaining));
+  }
+
+  function wrapCenteredText(text, cx, cy, maxWidth, lineHeight){
+    var words = text.split(' ');
+    var lines = [];
+    var line = '';
+    words.forEach(function(w){
+      var test = line ? line + ' ' + w : w;
+      if(ctx.measureText(test).width > maxWidth && line){
+        lines.push(line);
+        line = w;
+      } else {
+        line = test;
+      }
+    });
+    if(line) lines.push(line);
+    var startY = cy - ((lines.length - 1) * lineHeight) / 2;
+    lines.forEach(function(l, i){
+      ctx.fillText(l, cx, startY + i*lineHeight);
+    });
+  }
+
+  function drawWheel(){
+    var size = canvas.width;
+    var cx = size/2, cy = size/2, r = size/2 - 6;
+    var n = names.length;
+
+    ctx.clearRect(0,0,size,size);
+
+    if(n === 0){
+      ctx.save();
+      ctx.strokeStyle = '#3a3a3a';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([14,10]);
+      ctx.beginPath();
+      ctx.arc(cx,cy,r,0,Math.PI*2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#a6a6a6';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = '700 20px "Work Sans", sans-serif';
+      wrapCenteredText('Add names below', cx, cy, 220, 26);
+      ctx.restore();
+      return;
+    }
+
+    var seg = (Math.PI*2)/n;
+
+    for(var i=0;i<n;i++){
+      var start = i*seg - Math.PI/2;
+      var end = start + seg;
+      var color = COLORS[i % COLORS.length];
+
+      ctx.beginPath();
+      ctx.moveTo(cx,cy);
+      ctx.arc(cx,cy,r,start,end);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.save();
+      ctx.translate(cx,cy);
+      ctx.rotate(start + seg/2);
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = TEXT_ON[color] || '#000000';
+      var fontSize = n > 26 ? 13 : (n > 16 ? 15 : 18);
+      ctx.font = '700 ' + fontSize + 'px "Work Sans", sans-serif';
+      var label = names[i];
+      var maxLen = n > 26 ? 20 : 26;
+      if(label.length > maxLen) label = label.slice(0, maxLen-1) + '…';
+      var isRevealed = (i === revealIndex);
+      if(!isRevealed && supportsCanvasBlur){
+        ctx.filter = 'blur(' + BLUR_PX + 'px)';
+      }
+      if(!isRevealed && !supportsCanvasBlur){
+        // Fallback for browsers without canvas filter support: scramble the letters instead of blurring.
+        label = label.replace(/[^\s]/g, '█');
+        ctx.globalAlpha = 0.55;
+      }
+      ctx.fillText(label, r - 16, 0);
+      ctx.filter = 'none';
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
+
+  function renderTextarea(){
+    namesInput.value = names.join('\n');
+  }
+
+  function updateRoundsLabel(){
+    if(!noRepeat.checked || names.length === 0){
+      roundsLabel.textContent = '';
+      return;
+    }
+    var doneCount = names.length - remaining.length;
+    roundsLabel.innerHTML = '<b>' + doneCount + '</b> of <b>' + names.length + '</b> had a spin this round.' +
+      (doneCount > 0 ? '<button id="clearRound" type="button">Start round over</button>' : '');
+    var clearBtn = document.getElementById('clearRound');
+    if(clearBtn){
+      clearBtn.addEventListener('click', function(){
+        remaining = names.slice();
+        saveHistory();
+        updateRoundsLabel();
+      });
+    }
+  }
+
+  function applyModeChrome(){
+    var cfg = MODES[currentMode];
+    titleEl.textContent = cfg.title;
+    ledeText.textContent = cfg.lede;
+    editorSummary.textContent = cfg.summary;
+    editorHint.textContent = names.length ? cfg.hint : cfg.emptyHint;
+    resetBtn.textContent = cfg.resetLabel;
+    tabClients.classList.toggle('active', currentMode === 'clients');
+    tabCustom.classList.toggle('active', currentMode === 'custom');
+    spinBtn.disabled = names.length < 2;
+    spinBtn.style.opacity = names.length < 2 ? '.45' : '';
+  }
+
+  function setMode(mode, skipSave){
+    currentMode = mode;
+    if(!skipSave) safeSet(MODE_KEY, mode);
+    init(loadNames(mode));
+  }
+
+  function init(names_){
+    names = names_;
+    remaining = loadHistory(currentMode).filter(function(n){ return names.indexOf(n) !== -1; });
+    if(!remaining.length) remaining = names.slice();
+    revealIndex = -1;
+    currentRotation = 0;
+    canvas.style.transition = 'none';
+    canvas.style.transform = 'rotate(0deg)';
+    void canvas.offsetHeight;
+    canvas.style.transition = '';
+    drawWheel();
+    renderTextarea();
+    updateRoundsLabel();
+    applyModeChrome();
+    resultCard.classList.remove('show');
+  }
+
+  function pickIndex(){
+    var pool = noRepeat.checked ? remaining : names;
+    if(!pool.length){
+      remaining = names.slice();
+      pool = remaining;
+    }
+    var pick = pool[Math.floor(Math.random()*pool.length)];
+    return names.indexOf(pick);
+  }
+
+  tabClients.addEventListener('click', function(){ if(currentMode !== 'clients') setMode('clients'); });
+  tabCustom.addEventListener('click', function(){ if(currentMode !== 'custom') setMode('custom'); });
+
+  spinBtn.addEventListener('click', function(){
+    if(spinning || names.length < 2) return;
+    spinning = true;
+    spinBtn.disabled = true;
+    resultCard.classList.remove('show');
+    revealIndex = -1;
+    drawWheel();
+
+    var idx = pickIndex();
+    var n = names.length;
+    var segDeg = 360/n;
+    var targetCenter = idx*segDeg + segDeg/2;
+    var extraSpins = 6 + Math.floor(Math.random()*3);
+    var jitter = (Math.random()-0.5) * (segDeg*0.6);
+    var finalRotation = currentRotation - (currentRotation % 360) + extraSpins*360 + (360 - targetCenter) + jitter;
+
+    currentRotation = finalRotation;
+    canvas.style.transform = 'rotate(' + finalRotation + 'deg)';
+
+    setTimeout(function(){
+      spinning = false;
+      spinBtn.disabled = false;
+      revealIndex = idx;
+      drawWheel();
+      resultName.textContent = names[idx];
+      resultCard.classList.add('show');
+
+      if(noRepeat.checked){
+        remaining = remaining.filter(function(n){ return n !== names[idx]; });
+        if(!remaining.length) remaining = names.slice();
+        saveHistory();
+        updateRoundsLabel();
+      }
+    }, 5600);
+  });
+
+  noRepeat.addEventListener('change', function(){
+    if(noRepeat.checked && !remaining.length) remaining = names.slice();
+    updateRoundsLabel();
+  });
+
+  saveBtn.addEventListener('click', function(){
+    var lines = namesInput.value.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
+    if(lines.length === 1){
+      alert('Add at least two names to spin the wheel.');
+      return;
+    }
+    safeSet(MODES[currentMode].storageKey, JSON.stringify(lines));
+    init(lines);
+    saveNote.classList.add('show');
+    setTimeout(function(){ saveNote.classList.remove('show'); }, 2200);
+  });
+
+  resetBtn.addEventListener('click', function(){
+    var cfg = MODES[currentMode];
+    safeSet(cfg.storageKey, JSON.stringify(cfg.defaultNames));
+    safeSet(cfg.historyKey, JSON.stringify(cfg.defaultNames));
+    init(cfg.defaultNames.slice());
+  });
+
+  var startMode = safeGet(MODE_KEY) === 'custom' ? 'custom' : 'clients';
+  currentMode = startMode;
+  init(loadNames(startMode));
+})();
+</script>
+</body>
+</html>
