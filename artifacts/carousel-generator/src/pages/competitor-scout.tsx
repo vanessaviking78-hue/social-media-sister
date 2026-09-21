@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Search, Trash2, ChevronLeft } from "lucide-react";
+import { Loader2, Search, Trash2, ChevronLeft, HardDriveDownload } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -31,6 +31,7 @@ export default function CompetitorScout() {
   const [postcode, setPostcode] = useState("");
   const [researchNotes, setResearchNotes] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [savingToDrive, setSavingToDrive] = useState(false);
 
   function load() {
     setLoading(true);
@@ -137,6 +138,61 @@ export default function CompetitorScout() {
     }
   }
 
+  function connectGoogleThenRetry(retry: () => void) {
+    const popup = window.open(
+      `${BASE}/api/google/auth/start`,
+      "google-oauth",
+      "width=540,height=700,scrollbars=yes,resizable=yes",
+    );
+    const handler = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.type !== "google-oauth-result") return;
+      window.removeEventListener("message", handler);
+      popup?.close();
+      if (e.data.success) {
+        toast.success("Google connected.");
+        retry();
+      } else {
+        toast.error(`Google connection failed: ${e.data.error || "Unknown error"}`);
+      }
+    };
+    window.addEventListener("message", handler);
+    const poll = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(poll);
+        window.removeEventListener("message", handler);
+      }
+    }, 500);
+  }
+
+  async function saveToDrive(id: number) {
+    setSavingToDrive(true);
+    try {
+      const r = await fetch(`${BASE}/api/competitor-scout/${id}/save-to-drive`, {
+        method: "POST",
+        headers: authHeaders(),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        if (d.error === "not_connected") {
+          toast("Connect Google Drive first, opening that now…");
+          connectGoogleThenRetry(() => saveToDrive(id));
+          return;
+        }
+        throw new Error(d.error || "Could not save to Drive");
+      }
+      toast.success(`Saved to Drive as ${d.fileName}`, {
+        action: d.webViewLink
+          ? { label: "Open", onClick: () => window.open(d.webViewLink, "_blank") }
+          : undefined,
+      });
+    } catch (e: any) {
+      toast.error(e?.message || "Could not save to Drive");
+    } finally {
+      setSavingToDrive(false);
+    }
+  }
+
   if (open) {
     return (
       <div className="min-h-[100dvh] w-full bg-background text-foreground">
@@ -144,10 +200,18 @@ export default function CompetitorScout() {
           <button onClick={() => setOpen(null)} className="p-2 rounded-full hover:bg-card/60">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-xl font-bold">{open.clinic_name}</h1>
             <p className="text-sm text-muted-foreground">{open.postcode} · {new Date(open.created_at).toLocaleDateString("en-GB")}</p>
           </div>
+          <button
+            onClick={() => saveToDrive(open.id)}
+            disabled={savingToDrive}
+            className="px-4 py-2 rounded-full bg-card border border-border/40 text-sm font-medium disabled:opacity-40 hover:bg-card/70 flex items-center gap-2"
+          >
+            {savingToDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <HardDriveDownload className="w-4 h-4" />}
+            {savingToDrive ? "Saving…" : "Save to Drive"}
+          </button>
         </header>
         <main className="max-w-3xl mx-auto px-6 py-8">
           <div
