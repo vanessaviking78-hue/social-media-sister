@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3 } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, Search } from "lucide-react";
 import { LogOut } from "lucide-react";
 
 const TOOLS = [
@@ -293,6 +293,16 @@ description: "Generate, review and approve fresh revenue ideas per client, with 
 color: "from-emerald-500/20 to-emerald-500/5",
 border: "hover:border-emerald-500/50",
 iconColor: "text-emerald-400",
+},
+{
+href: "/competitor",
+group: "admin",
+icon: Search,
+name: "Competitor Scout",
+description: "Private to you. Paste in the research on a client's top nearby competitors and get the full written report in your voice, saved to a library.",
+color: "from-amber-500/20 to-amber-500/5",
+border: "hover:border-amber-500/50",
+iconColor: "text-amber-400",
 },
 {
 href: "/upload-schedule",
