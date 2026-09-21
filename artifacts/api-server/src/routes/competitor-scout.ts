@@ -97,11 +97,12 @@ router.delete("/competitor-scout/:id", async (req, res) => {
 });
 
 // POST /api/competitor-scout/generate
-// { clinicName, postcode, researchNotes }
-// researchNotes is the raw digging Vanessa (or Claude alongside her) has
-// already done on the top nearby competitors, since this server has no
-// live web search of its own. This endpoint's job is turning that raw
-// material into the finished, on-brand, compliant written report.
+// { clinicName, postcode, researchNotes? }
+// researchNotes is now OPTIONAL: any extra digging Vanessa already has on
+// the clinic or its competitors. The tool itself uses a live web search
+// tool to go and find the clinic and its top 3 real nearby competitors,
+// then writes the finished, on-brand, compliant report from what it finds
+// (plus whatever notes Vanessa has added on top).
 router.post("/competitor-scout/generate", async (req, res) => {
   try {
     const clinicName = String(req.body?.clinicName || "").trim();
@@ -111,55 +112,46 @@ router.post("/competitor-scout/generate", async (req, res) => {
     if (!clinicName || !postcode) {
       return res.status(400).json({ error: "Clinic name and postcode are required" });
     }
-    if (!researchNotes) {
-      return res.status(400).json({ error: "Paste in the competitor research notes first, this tool writes up what's already been found, it doesn't go and find it" });
-    }
 
     const systemPrompt = `You are Vanessa, writing directly to your client ${clinicName} with their personal competitor analysis. This is a message FROM Vanessa TO the clinic, not a report about them.
 
 ${NORTHERN_GRIT_VOICE}
 
-CLIENT YOU ARE WRITING TO
-Clinic name: ${clinicName}
-Postcode / area: ${postcode}
+RESEARCH TASK (use your live web search tool, this is real research, not a guess)
+1. Find ${clinicName} near postcode ${postcode} in the UK. Work out from whatever is genuinely findable, their own website, Google Business listing, Instagram or Facebook, what they actually offer and what stands out about them.
+2. Find their top 3 real, currently trading local competitors: other businesses of the same broad type, in or close to that postcode area. For each one, find out what they offer, what they seem to do well, and anything they are missing or doing less well.
+3. Only use real facts you find. Never invent a competitor, a name, a review, or a fact about either side that your search does not support.
 
-RAW RESEARCH NOTES (real findings on the nearby competitors, already gathered, do not invent anything beyond this)
-${researchNotes}
+VANESSA'S OWN NOTES ON THIS CLIENT (may be empty, treat as true and combine with your own search, never contradict them)
+${researchNotes || "(none given, rely fully on your own search)"}
 
-TASK
-Write the full message as clean semantic HTML (use h2, p, strong, ul/li only, no inline styles, no html/head/body wrapper, no markdown). Address the clinic directly by name in the opening line and keep speaking to them as "you" all the way through every section, never slipping into third person. Structure it in this order:
+WRITING TASK
+Once your research is done, write the full message as clean semantic HTML (use h2, p, strong, ul/li only, no inline styles, no html/head/body wrapper, no markdown, no code fences). Address the clinic directly by name in the opening line and keep speaking to them as "you" all the way through every section, never slipping into third person. Structure it in this order:
 1. A warm, personal opening addressed to the clinic by name, like the start of a message Vanessa is sending them.
-2. "Your patch" - a short paragraph telling them, in "you" language, how competitive their area looks from the research notes.
-3. "Who else is on your patch" - one short paragraph per competitor found in the notes (use the real names from the notes), written to the clinic, telling them what each one does well and where they fall short.
-4. "What you've got that they haven't" - the most positive, specific section, telling the clinic directly what makes them stand out, built only from real details already known about them from the notes plus reasonable, clearly-labelled general strengths of a warm, personal, all-under-one-roof clinic. Do not invent specific facts that are not implied by the notes.
+2. "Your patch" - a short paragraph telling them, in "you" language, how competitive their area looks from what you found.
+3. "Who else is on your patch" - one short paragraph per real competitor you found, written to the clinic, telling them what each one does well and where they fall short.
+4. "What you've got that they haven't" - the most positive, specific section, telling the clinic directly what makes them stand out, built only from real details you found plus reasonable, clearly-labelled general strengths of a warm, personal, all-under-one-roof clinic. Do not invent specific facts.
 5. "Where they're pulling ahead of you, and it's fixable" - honest and constructive, told straight to them, framed as gaps to close, never a threat.
-6. "Where I'd focus your socials next" - Vanessa speaking as their own social media person, 3 to 5 specific, actionable content ideas built on their real strengths from the notes.
+6. "Where I'd focus your socials next" - Vanessa speaking as their own social media person, 3 to 5 specific, actionable content ideas built on their real strengths.
 7. A short closing paragraph, warm and confident, signed off in spirit like Vanessa talking to them directly about turning this into an actual content plan together.
 ${COMPLIANCE_RULES}
 
-Return a JSON object with exactly this shape: { "reportHtml": "..." }`;
+Return ONLY the finished HTML for the message. No preamble, no explanation of your research, no JSON, no code fences, nothing else.`;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: "Write the full competitor scout report now, addressed directly to the clinic." },
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.85,
-      max_tokens: 2600,
+    const response = await openai.responses.create({
+      model: "gpt-5.5",
+      reasoning: { effort: "high" },
+      tools: [{ type: "web_search" }],
+      instructions: systemPrompt,
+      input: `Research ${clinicName} near postcode ${postcode} and its top 3 real local competitors, then write the full report now, addressed directly to the clinic.`,
+      max_output_tokens: 3000,
     });
 
-    const raw = completion.choices[0]?.message?.content ?? "{}";
-    let reportHtml = "";
-    try {
-      const parsed = JSON.parse(raw) as { reportHtml?: string };
-      reportHtml = parsed.reportHtml || "";
-    } catch {
-      logger.warn({ raw, clinicName }, "competitor-scout: failed to parse AI JSON");
-    }
+    let reportHtml = (response.output_text ?? "").trim();
+    reportHtml = reportHtml.replace(/^```(?:html)?\s*/i, "").replace(/```\s*$/i, "").trim();
 
     if (!reportHtml) {
+      logger.warn({ clinicName, postcode }, "competitor-scout: empty response from web search generation");
       return res.status(502).json({ error: "The write up didn't come back properly, try generating again" });
     }
 
