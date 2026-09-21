@@ -61,6 +61,7 @@ import brainstormRouter from "./brainstorm";
 import contentTicklistRouter from "./content-ticklist";
 import engagingReelsRouter from "./engaging-reels";
 import competitorScoutRouter from "./competitor-scout";
+import igAuditRouter from "./ig-audit";
 
 const router: IRouter = Router();
 
@@ -125,6 +126,7 @@ router.use(dailyFocusRouter);
 router.use(captionGeneratorRouter);
 router.use(engagingReelsRouter);
 router.use(competitorScoutRouter);
+router.use(igAuditRouter);
 router.use(veoRouter);
 
 export default router;
