@@ -105,7 +105,57 @@ async function discover(handle: string, igUserId: string, token: string, withPro
   return { ok: r.ok, data };
 }
 
+async function fetchViaApify(handle: string, token: string): Promise<{ profile: Profile; media: Media[] }> {
+  const url = `https://api.apify.com/v2/acts/apify~instagram-profile-scraper/run-sync-get-dataset-items?token=${encodeURIComponent(token)}&timeout=90`;
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ usernames: [handle] }),
+  });
+  const data: any = await r.json().catch(() => null);
+  if (!r.ok) {
+    logger.warn({ handle, status: r.status, err: data?.error }, "ig-audit: scraper request failed");
+    if (r.status === 401 || r.status === 403) {
+      throw Object.assign(new Error("The scraper key isn't being accepted. Check APIFY_TOKEN in Railway."), { status: 502 });
+    }
+    if (r.status === 402) {
+      throw Object.assign(new Error("The scraper account is out of credit. Top it up on apify.com and try again."), { status: 502 });
+    }
+    throw Object.assign(new Error("The scraper had a wobble. Give it a minute and try again."), { status: 502 });
+  }
+  const item = Array.isArray(data) ? data[0] : null;
+  if (!item || item.error || !item.username) {
+    throw Object.assign(new Error("I couldn't find that account. Check the handle is spelled exactly right."), { status: 404 });
+  }
+  if (item.private === true) {
+    throw Object.assign(new Error("That account is private, so I can't see the posts."), { status: 404 });
+  }
+  const profile: Profile = {
+    username: item.username || handle,
+    name: item.fullName || "",
+    biography: item.biography || "",
+    website: item.externalUrl || "",
+    followers: item.followersCount ?? 0,
+    following: item.followsCount ?? 0,
+    mediaCount: item.postsCount ?? 0,
+    picture: item.profilePicUrl || "",
+  };
+  const media: Media[] = ((item.latestPosts ?? []) as any[]).map((p) => ({
+    id: String(p.id ?? p.shortCode ?? p.url ?? Math.random()),
+    caption: p.caption || "",
+    like_count: typeof p.likesCount === "number" && p.likesCount >= 0 ? p.likesCount : undefined,
+    comments_count: typeof p.commentsCount === "number" && p.commentsCount >= 0 ? p.commentsCount : 0,
+    media_type: p.type === "Sidecar" ? "CAROUSEL_ALBUM" : p.type === "Video" ? "VIDEO" : "IMAGE",
+    media_product_type: p.type === "Video" ? "REELS" : undefined,
+    timestamp: p.timestamp,
+    permalink: p.url,
+  }));
+  return { profile, media };
+}
+
 async function fetchInstagram(handle: string): Promise<{ profile: Profile; media: Media[] }> {
+  // Preferred route: a scraper service, because Meta has not approved this app to read other public accounts
+  if (process.env.APIFY_TOKEN) return fetchViaApify(handle, process.env.APIFY_TOKEN);
   const creds = await getCredentials();
   if (!creds) {
     throw Object.assign(new Error("No connected Instagram account to run the audit through. Connect a client account first."), { status: 400 });
@@ -123,6 +173,9 @@ async function fetchInstagram(handle: string): Promise<{ profile: Profile; media
     }
     if (code === 190) {
       throw Object.assign(new Error("The connected Instagram token has expired. Reconnect a client account in Settings and try again."), { status: 502 });
+    }
+    if (code === 10 || code === 200) {
+      throw Object.assign(new Error("Meta has not approved this app to read other public Instagram accounts yet. Add APIFY_TOKEN in Railway to use the scraper route instead."), { status: 502 });
     }
     throw Object.assign(
       new Error("I couldn't read that account. It needs to be a public Business or Creator account and the handle spelled exactly right. Personal accounts can't be audited this way."),
@@ -218,7 +271,9 @@ function analyse(profile: Profile, media: Media[]) {
 
   // Consistency
   const recent = dated.filter((m) => now - m.t <= 60 * DAY);
-  const perWeek = recent.length / (60 / 7);
+  const spanDays = dated.length > 1 ? Math.max(1, (dated[0].t - dated[dated.length - 1].t) / DAY) : 0;
+  // Scraped samples only hold the latest handful of posts, so measure frequency across the span they cover
+  const perWeek = dated.length > 0 && dated.length <= 15 && spanDays > 0 ? ((dated.length - 1) / spanDays) * 7 : recent.length / (60 / 7);
   const daysSinceLast = dated.length ? Math.floor((now - dated[0].t) / DAY) : null;
   let longestGap = 0;
   for (let i = 0; i < dated.length - 1; i++) longestGap = Math.max(longestGap, Math.floor((dated[i].t - dated[i + 1].t) / DAY));
@@ -313,7 +368,7 @@ function analyse(profile: Profile, media: Media[]) {
     },
     {
       key: "consistency", label: "Posting consistency", max: 20, score: round1(consistencyRatio * 20),
-      note: `${round1(perWeek)} posts a week over the last 60 days${daysSinceLast !== null ? `, last post ${daysSinceLast} day${daysSinceLast === 1 ? "" : "s"} ago` : ""}${longestGap > 21 ? `, longest gap ${longestGap} days` : ""}.`,
+      note: `${round1(perWeek)} posts a week${daysSinceLast !== null ? `, last post ${daysSinceLast} day${daysSinceLast === 1 ? "" : "s"} ago` : ""}${longestGap > 21 ? `, longest gap ${longestGap} days` : ""}.`,
     },
     {
       key: "engagement", label: "Engagement", max: 25, score: round1(erRatio * 25),
