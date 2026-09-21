@@ -48,6 +48,14 @@ export default function CompetitorScout() {
       const r = await fetch(`${BASE}/api/competitor-scout/${id}`, { headers: authHeaders() });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Could not open report");
+      if (d.status === "processing") {
+        toast("Still out there researching this one, give it a bit longer.");
+        return;
+      }
+      if (d.status === "failed") {
+        toast.error("This one didn't come back properly. Best to delete it and run it again.");
+        return;
+      }
       setOpen(d);
     } catch (e: any) {
       toast.error(e?.message || "Could not open report");
@@ -66,6 +74,42 @@ export default function CompetitorScout() {
     }
   }
 
+  function sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  async function pollForResult(id: number, tid: string | number) {
+    // This can genuinely take a minute or two since it's out there doing
+    // live research before it writes a word. Poll a short GET rather than
+    // holding one request open, since the proxy in front of the API cuts
+    // any single request off at 30 seconds.
+    const maxAttempts = 40; // roughly 3 minutes at 4.5s apart
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      await sleep(4500);
+      try {
+        const r = await fetch(`${BASE}/api/competitor-scout/${id}`, { headers: authHeaders() });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || "Could not check on the report");
+        if (d.status === "ready") {
+          toast.success("Report's ready.", { id: tid });
+          load();
+          setOpen(d);
+          return;
+        }
+        if (d.status === "failed") {
+          toast.error("The write up didn't come back properly, try generating again.", { id: tid });
+          load();
+          return;
+        }
+      } catch (e: any) {
+        toast.error(e?.message || "Could not check on the report", { id: tid });
+        return;
+      }
+    }
+    toast.error("This one's taking longer than usual, check the library in a minute.", { id: tid });
+    load();
+  }
+
   async function generate() {
     if (!clinicName.trim() || !postcode.trim()) {
       toast.error("Clinic name and postcode are needed first.");
@@ -81,12 +125,11 @@ export default function CompetitorScout() {
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Generation failed");
-      toast.success("Report's ready.", { id: tid });
       setClinicName("");
       setPostcode("");
       setResearchNotes("");
       load();
-      setOpen(d);
+      await pollForResult(d.id, tid);
     } catch (e: any) {
       toast.error(e?.message || "Generation failed", { id: tid });
     } finally {
@@ -181,7 +224,17 @@ export default function CompetitorScout() {
               {reports.map((r) => (
                 <div key={r.id} className="rounded-xl border border-border/40 bg-card/30 p-4 flex items-center justify-between gap-3">
                   <button onClick={() => openReport(r.id)} className="text-left flex-1">
-                    <p className="font-semibold text-sm">{r.clinic_name}</p>
+                    <p className="font-semibold text-sm flex items-center gap-2">
+                      {r.clinic_name}
+                      {r.status === "processing" && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-normal text-amber-400">
+                          <Loader2 className="w-3 h-3 animate-spin" /> researching…
+                        </span>
+                      )}
+                      {r.status === "failed" && (
+                        <span className="text-[11px] font-normal text-red-400">didn't finish</span>
+                      )}
+                    </p>
                     <p className="text-xs text-muted-foreground">{r.postcode} · {new Date(r.created_at).toLocaleDateString("en-GB")}</p>
                   </button>
                   <button onClick={() => removeReport(r.id)} className="p-2 rounded-full hover:bg-red-950/30 text-muted-foreground hover:text-red-400">

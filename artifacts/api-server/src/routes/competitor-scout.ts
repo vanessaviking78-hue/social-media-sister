@@ -96,23 +96,20 @@ router.delete("/competitor-scout/:id", async (req, res) => {
   }
 });
 
-// POST /api/competitor-scout/generate
-// { clinicName, postcode, researchNotes? }
-// researchNotes is now OPTIONAL: any extra digging Vanessa already has on
-// the clinic or its competitors. The tool itself uses a live web search
-// tool to go and find the clinic and its top 3 real nearby competitors,
-// then writes the finished, on-brand, compliant report from what it finds
-// (plus whatever notes Vanessa has added on top).
-router.post("/competitor-scout/generate", async (req, res) => {
+// Runs the actual research and write up in the background, well after the
+// HTTP response has already gone back. This has to happen out of band
+// because the live web search plus high reasoning effort routinely takes
+// a minute or two, and the Netlify proxy that sits in front of this API
+// kills any single request at 30 seconds flat, handing the browser an
+// HTML error page instead of JSON. Polling a short GET instead sidesteps
+// that limit entirely, however long the research actually takes.
+async function runReportGeneration(
+  id: number,
+  clinicName: string,
+  postcode: string,
+  researchNotes: string,
+): Promise<void> {
   try {
-    const clinicName = String(req.body?.clinicName || "").trim();
-    const postcode = String(req.body?.postcode || "").trim();
-    const researchNotes = String(req.body?.researchNotes || "").trim();
-
-    if (!clinicName || !postcode) {
-      return res.status(400).json({ error: "Clinic name and postcode are required" });
-    }
-
     const systemPrompt = `You are Vanessa, writing directly to your client ${clinicName} with their personal competitor analysis. This is a message FROM Vanessa TO the clinic, not a report about them.
 
 ${NORTHERN_GRIT_VOICE}
@@ -152,18 +149,65 @@ Return ONLY the finished HTML for the message. No preamble, no explanation of yo
 
     if (!reportHtml) {
       logger.warn({ clinicName, postcode }, "competitor-scout: empty response from web search generation");
-      return res.status(502).json({ error: "The write up didn't come back properly, try generating again" });
+      await db.execute(sql`
+        UPDATE competitor_scout_reports SET status = 'failed' WHERE id = ${id}
+      `);
+      return;
+    }
+
+    await db.execute(sql`
+      UPDATE competitor_scout_reports
+      SET report_html = ${reportHtml}, status = 'ready'
+      WHERE id = ${id}
+    `);
+  } catch (err) {
+    logger.error({ err, id, clinicName }, "Failed to generate competitor scout report");
+    await db.execute(sql`
+      UPDATE competitor_scout_reports SET status = 'failed' WHERE id = ${id}
+    `).catch((updateErr) => {
+      logger.error({ updateErr, id }, "Failed to mark competitor scout report as failed");
+    });
+  }
+}
+
+// POST /api/competitor-scout/generate
+// { clinicName, postcode, researchNotes? }
+// researchNotes is now OPTIONAL: any extra digging Vanessa already has on
+// the clinic or its competitors. The tool itself uses a live web search
+// tool to go and find the clinic and its top 3 real nearby competitors,
+// then writes the finished, on-brand, compliant report from what it finds
+// (plus whatever notes Vanessa has added on top).
+//
+// This kicks the actual research and writing off in the background and
+// responds immediately with a 'processing' row, since the full job can
+// take a minute or two and the Netlify proxy in front of this API times
+// requests out at 30 seconds. The frontend polls GET /:id until it flips
+// to 'ready' (or 'failed').
+router.post("/competitor-scout/generate", async (req, res) => {
+  try {
+    const clinicName = String(req.body?.clinicName || "").trim();
+    const postcode = String(req.body?.postcode || "").trim();
+    const researchNotes = String(req.body?.researchNotes || "").trim();
+
+    if (!clinicName || !postcode) {
+      return res.status(400).json({ error: "Clinic name and postcode are required" });
     }
 
     const insertResult = await db.execute(sql`
       INSERT INTO competitor_scout_reports (clinic_name, postcode, research_notes, report_html, status)
-      VALUES (${clinicName}, ${postcode}, ${researchNotes}, ${reportHtml}, 'ready')
+      VALUES (${clinicName}, ${postcode}, ${researchNotes}, '', 'processing')
       RETURNING id, clinic_name, postcode, research_notes, report_html, status, created_at
     `);
     const row = (insertResult as { rows?: ScoutReportRow[] }).rows?.[0];
+    if (!row) {
+      return res.status(500).json({ error: "Failed to start the report" });
+    }
+
     res.json(row);
+
+    void runReportGeneration(row.id, clinicName, postcode, researchNotes);
   } catch (err) {
-    logger.error({ err }, "Failed to generate competitor scout report");
+    logger.error({ err }, "Failed to start competitor scout report");
     res.status(500).json({ error: "Failed to generate report" });
   }
 });
