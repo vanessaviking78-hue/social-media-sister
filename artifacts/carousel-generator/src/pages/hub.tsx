@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, Search, ClipboardCheck } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, Search, ClipboardCheck, Star } from "lucide-react";
 import { LogOut } from "lucide-react";
 
 const TOOLS = [
@@ -243,6 +243,16 @@ description: "Send carousels to clients for approval via a shareable link. They 
 color: "from-green-500/20 to-green-500/5",
 border: "hover:border-green-500/50",
 iconColor: "text-green-400",
+},
+{
+href: "/client-reviews",
+group: "admin",
+icon: Star,
+name: "Client Reviews",
+description: "Every review clients leave on /reviews, with averages, downloadable review cards and a wall of love for the ones you approve.",
+color: "from-pink-500/20 to-pink-500/5",
+border: "hover:border-pink-500/50",
+iconColor: "text-pink-400",
 },
 {
 href: "/bundle-requests",

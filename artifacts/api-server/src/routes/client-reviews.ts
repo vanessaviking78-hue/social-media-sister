@@ -1,5 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import nodemailer from "nodemailer";
+import { db } from "@workspace/db";
+import { sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 
@@ -25,6 +27,33 @@ function getTransporter() {
     secure: false,
     auth: { user: SMTP_USER, pass: SMTP_PASS },
   });
+}
+
+let tableReady = false;
+async function ensureTable() {
+  if (tableReady) return;
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS client_reviews (
+      id          SERIAL PRIMARY KEY,
+      name        TEXT NOT NULL,
+      clinic      TEXT,
+      email       TEXT,
+      average     DOUBLE PRECISION NOT NULL,
+      ratings     JSONB NOT NULL,
+      ticks       JSONB,
+      heart       TEXT NOT NULL,
+      review_text TEXT,
+      consent     BOOLEAN NOT NULL DEFAULT TRUE,
+      approved    BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  tableReady = true;
+}
+
+function isAuthed(req: Request) {
+  const appPassword = process.env.APP_PASSWORD;
+  return !!appPassword && req.headers["x-app-password"] === appPassword;
 }
 
 // Very small in-memory throttle: 6 reviews per IP per hour
@@ -62,8 +91,28 @@ router.post("/client-reviews", async (req: Request, res: Response) => {
     const tickList = (k: string): string[] =>
       Array.isArray(ticks[k]) ? (ticks[k] as unknown[]).map((x) => String(x).slice(0, 120)).slice(0, 6) : [];
 
+    const reviewTextForDb = String(b.reviewText || "").slice(0, 6000);
+    let saved = false;
+    try {
+      await ensureTable();
+      await db.execute(sql`
+        INSERT INTO client_reviews (name, clinic, email, average, ratings, ticks, heart, review_text)
+        VALUES (${name}, ${clinic || null}, ${email || null}, ${average},
+                ${JSON.stringify(Object.fromEntries(keys.map((k) => [k, Number(ratings[k])])))}::jsonb,
+                ${JSON.stringify(Object.fromEntries(keys.map((k) => [k, tickList(k)])))}::jsonb,
+                ${heart}, ${reviewTextForDb})
+      `);
+      saved = true;
+    } catch (err) {
+      req.log.error({ err }, "client review save failed");
+    }
+
     const transporter = getTransporter();
-    if (!transporter) { res.status(500).json({ error: "Email is not set up yet" }); return; }
+    if (!transporter) {
+      if (saved) { res.json({ ok: true }); return; }
+      res.status(500).json({ error: "Email is not set up yet" });
+      return;
+    }
 
     const to = process.env.REVIEWS_NOTIFY_EMAIL || "vanessaviking78@gmail.com";
     const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
@@ -122,6 +171,7 @@ router.post("/client-reviews", async (req: Request, res: Response) => {
       });
     }
 
+    try {
     await transporter.sendMail({
       from,
       to,
@@ -132,11 +182,80 @@ router.post("/client-reviews", async (req: Request, res: Response) => {
       ...(email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? { replyTo: email } : {}),
     });
 
-    req.log.info({ name, clinic, average }, "Client review received");
+    } catch (mailErr) {
+      req.log.error({ err: mailErr }, "client review email failed");
+      if (!saved) throw mailErr;
+    }
+
+    req.log.info({ name, clinic, average, saved }, "Client review received");
     res.json({ ok: true });
   } catch (err) {
     req.log.error({ err }, "client review failed");
     res.status(500).json({ error: "The email would not send" });
+  }
+});
+
+// ---- Hub: list all reviews (password protected) ----
+router.get("/client-reviews", async (req: Request, res: Response) => {
+  if (!isAuthed(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  try {
+    await ensureTable();
+    const rows = await db.execute(sql`
+      SELECT id, name, clinic, email, average, ratings, ticks, heart, review_text AS "reviewText",
+             consent, approved, created_at AS "createdAt"
+      FROM client_reviews ORDER BY created_at DESC
+    `);
+    res.json({ reviews: rows.rows });
+  } catch (err) {
+    req.log.error({ err }, "client reviews fetch failed");
+    res.status(500).json({ error: "Failed to load reviews" });
+  }
+});
+
+// ---- Public wall: approved reviews only, no email ----
+router.get("/client-reviews/public", async (req: Request, res: Response) => {
+  try {
+    await ensureTable();
+    const rows = await db.execute(sql`
+      SELECT id, name, clinic, average, ratings, heart, created_at AS "createdAt"
+      FROM client_reviews WHERE approved = TRUE AND consent = TRUE
+      ORDER BY created_at DESC LIMIT 200
+    `);
+    res.json({ reviews: rows.rows });
+  } catch (err) {
+    req.log.error({ err }, "public reviews fetch failed");
+    res.status(500).json({ error: "Failed to load reviews" });
+  }
+});
+
+// ---- Hub: approve / unapprove for the public wall ----
+router.patch("/client-reviews/:id/approve", async (req: Request, res: Response) => {
+  if (!isAuthed(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const id = parseInt(String(req.params.id), 10);
+  if (!Number.isInteger(id)) { res.status(400).json({ error: "Bad id" }); return; }
+  const approved = !!(req.body && (req.body as { approved?: unknown }).approved);
+  try {
+    await ensureTable();
+    await db.execute(sql`UPDATE client_reviews SET approved = ${approved} WHERE id = ${id}`);
+    res.json({ ok: true, approved });
+  } catch (err) {
+    req.log.error({ err }, "client review approve failed");
+    res.status(500).json({ error: "Failed to update review" });
+  }
+});
+
+// ---- Hub: delete a review ----
+router.delete("/client-reviews/:id", async (req: Request, res: Response) => {
+  if (!isAuthed(req)) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const id = parseInt(String(req.params.id), 10);
+  if (!Number.isInteger(id)) { res.status(400).json({ error: "Bad id" }); return; }
+  try {
+    await ensureTable();
+    await db.execute(sql`DELETE FROM client_reviews WHERE id = ${id}`);
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "client review delete failed");
+    res.status(500).json({ error: "Failed to delete review" });
   }
 });
 
