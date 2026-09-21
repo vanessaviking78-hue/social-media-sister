@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { logger } from "../lib/logger";
+import { getStoredGoogleToken, refreshGoogleTokenIfNeeded } from "./google-auth";
 
 const router: IRouter = Router();
 
@@ -93,6 +94,101 @@ router.delete("/competitor-scout/:id", async (req, res) => {
   } catch (err) {
     logger.error({ err }, "Failed to delete competitor scout report");
     res.status(500).json({ error: "Failed to delete report" });
+  }
+});
+
+// Turns the finished report into a proper Google Doc in Vanessa's own Drive,
+// named after the clinic. Drive's upload endpoint will happily convert plain
+// HTML into a native Google Doc (headings, bold, lists and all) as long as
+// the target mimeType is set to a Google Doc and the uploaded content type
+// is text/html, so the semantic HTML the report is already written in comes
+// across cleanly with no extra conversion step needed.
+async function createDriveDoc(
+  accessToken: string,
+  name: string,
+  html: string,
+): Promise<{ id: string; webViewLink?: string }> {
+  const boundary = `cybersuite-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const metadata = { name, mimeType: "application/vnd.google-apps.document" };
+  const fullHtml = `<html><body>${html}</body></html>`;
+
+  const body =
+    `--${boundary}\r\n` +
+    `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
+    `${JSON.stringify(metadata)}\r\n` +
+    `--${boundary}\r\n` +
+    `Content-Type: text/html; charset=UTF-8\r\n\r\n` +
+    `${fullHtml}\r\n` +
+    `--${boundary}--`;
+
+  const uploadRes = await fetch(
+    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": `multipart/related; boundary=${boundary}`,
+      },
+      body,
+    },
+  );
+
+  if (!uploadRes.ok) {
+    const errText = await uploadRes.text().catch(() => "");
+    const err = new Error(`Drive upload failed: ${uploadRes.status} ${errText}`) as Error & { status?: number };
+    err.status = uploadRes.status;
+    throw err;
+  }
+
+  return (await uploadRes.json()) as { id: string; webViewLink?: string };
+}
+
+// POST /api/competitor-scout/:id/save-to-drive
+// Saves a finished report into Vanessa's connected Google Drive as a Google
+// Doc, named after the clinic, e.g. "BeautyAestheticsByEmmaJB-CompAnalysis".
+// Reuses the same Google connection as the calendar feature (see
+// google-auth.ts). If she's never connected Google, or connected before the
+// Drive permission was added, this comes back with a clear "not_connected"
+// error so the frontend can send her through the connect flow again.
+router.post("/competitor-scout/:id/save-to-drive", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid id" });
+
+    const result = await db.execute(sql`
+      SELECT id, clinic_name, report_html, status FROM competitor_scout_reports WHERE id = ${id}
+    `);
+    const row = (result as { rows?: ScoutReportRow[] }).rows?.[0];
+    if (!row) return res.status(404).json({ error: "Report not found" });
+    if (row.status !== "ready" || !row.report_html) {
+      return res.status(400).json({ error: "This one isn't finished yet, nothing to save." });
+    }
+
+    let token = await getStoredGoogleToken();
+    if (!token) {
+      return res.status(400).json({ error: "not_connected" });
+    }
+    const refreshed = await refreshGoogleTokenIfNeeded(token);
+    if (!refreshed) {
+      return res.status(400).json({ error: "not_connected" });
+    }
+    token = refreshed;
+
+    const fileName = `${row.clinic_name.replace(/[^a-zA-Z0-9]/g, "")}-CompAnalysis`;
+
+    try {
+      const { id: fileId, webViewLink } = await createDriveDoc(token.accessToken, fileName, row.report_html);
+      res.json({ success: true, fileId, webViewLink, fileName });
+    } catch (driveErr: any) {
+      if (driveErr?.status === 401 || driveErr?.status === 403) {
+        logger.warn({ status: driveErr.status }, "competitor-scout: Drive permission missing or expired");
+        return res.status(400).json({ error: "not_connected" });
+      }
+      throw driveErr;
+    }
+  } catch (err) {
+    logger.error({ err }, "Failed to save competitor scout report to Drive");
+    res.status(500).json({ error: "Failed to save to Drive" });
   }
 });
 

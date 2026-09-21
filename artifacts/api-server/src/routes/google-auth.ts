@@ -83,7 +83,7 @@ router.get("/google/auth/start", (req: Request, res: Response) => {
       response_type: "code",
       client_id: clientId,
       redirect_uri: redirectUri,
-      scope: "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/userinfo.email",
+      scope: "https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email",
       state,
       access_type: "offline",
       prompt: "consent",
