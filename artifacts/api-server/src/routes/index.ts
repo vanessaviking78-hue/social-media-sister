@@ -60,6 +60,7 @@ import googleAuthRouter from "./google-auth";
 import brainstormRouter from "./brainstorm";
 import contentTicklistRouter from "./content-ticklist";
 import engagingReelsRouter from "./engaging-reels";
+import competitorScoutRouter from "./competitor-scout";
 
 const router: IRouter = Router();
 
@@ -123,6 +124,7 @@ router.use(reportsRouter);
 router.use(dailyFocusRouter);
 router.use(captionGeneratorRouter);
 router.use(engagingReelsRouter);
+router.use(competitorScoutRouter);
 router.use(veoRouter);
 
 export default router;
