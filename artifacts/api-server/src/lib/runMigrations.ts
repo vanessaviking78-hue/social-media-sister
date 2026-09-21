@@ -46,6 +46,7 @@ await createBroadcastDraftsTable();
     await createEngagingReelsTable();
     await addTextLayoutToEngagingReels();
     await createCompetitorScoutReportsTable();
+    await createIgAuditsTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -477,6 +478,30 @@ async function createCompetitorScoutReportsTable(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+}
+
+async function createIgAuditsTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS ig_audits (
+      id SERIAL PRIMARY KEY,
+      handle TEXT NOT NULL,
+      display_name TEXT NOT NULL DEFAULT '',
+      followers INTEGER NOT NULL DEFAULT 0,
+      score INTEGER NOT NULL DEFAULT 0,
+      tag TEXT NOT NULL DEFAULT 'prospect',
+      notes TEXT NOT NULL DEFAULT '',
+      style TEXT NOT NULL DEFAULT 'northern',
+      contact_name TEXT NOT NULL DEFAULT '',
+      profile JSONB NOT NULL DEFAULT '{}'::jsonb,
+      breakdown JSONB NOT NULL DEFAULT '[]'::jsonb,
+      metrics JSONB NOT NULL DEFAULT '{}'::jsonb,
+      flags JSONB NOT NULL DEFAULT '[]'::jsonb,
+      posts JSONB NOT NULL DEFAULT '[]'::jsonb,
+      sales_html TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS ig_audits_handle_idx ON ig_audits (handle, created_at DESC)`);
 }
 
 async function createClientNewsTable(): Promise<void> {
