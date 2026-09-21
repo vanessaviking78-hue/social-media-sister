@@ -137,18 +137,29 @@ Return ONLY the finished HTML for the message. No preamble, no explanation of yo
 
     const response = await openai.responses.create({
       model: "gpt-5.5",
-      reasoning: { effort: "high" },
+      // "high" reasoning plus live web search burns through a lot of hidden
+      // reasoning and tool-call tokens before a word of the actual report
+      // gets written, and those come out of the same max_output_tokens
+      // budget. At 3000 that budget was running out mid-research, leaving
+      // nothing for the write-up itself, hence the empty response. "medium"
+      // still does the research and writing properly, with far less risk of
+      // running the tank dry, and the much larger cap gives it real headroom
+      // even if a search takes a few extra steps.
+      reasoning: { effort: "medium" },
       tools: [{ type: "web_search" }],
       instructions: systemPrompt,
       input: `Research ${clinicName} near postcode ${postcode} and its top 3 real local competitors, then write the full report now, addressed directly to the clinic.`,
-      max_output_tokens: 3000,
+      max_output_tokens: 12000,
     });
 
     let reportHtml = (response.output_text ?? "").trim();
     reportHtml = reportHtml.replace(/^```(?:html)?\s*/i, "").replace(/```\s*$/i, "").trim();
 
     if (!reportHtml) {
-      logger.warn({ clinicName, postcode }, "competitor-scout: empty response from web search generation");
+      logger.warn(
+        { clinicName, postcode, status: response.status, incompleteReason: response.incomplete_details?.reason },
+        "competitor-scout: empty response from web search generation",
+      );
       await db.execute(sql`
         UPDATE competitor_scout_reports SET status = 'failed' WHERE id = ${id}
       `);
