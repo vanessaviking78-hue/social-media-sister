@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Link } from "wouter";
-import { ArrowLeft, ClipboardCheck, Copy, ExternalLink, Loader2, RefreshCw, Trash2, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowLeft, ClipboardCheck, Copy, Download, ExternalLink, Loader2, RefreshCw, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -220,6 +220,43 @@ export default function AuditPage() {
     }
   }
 
+  function downloadPdf() {
+    if (!current?.sales_html) return;
+    const w = window.open("", "_blank");
+    if (!w) {
+      toast.error("Your browser blocked the popup. Allow popups for this site and try again.");
+      return;
+    }
+    const dateStr = new Date(current.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    w.document.write(`<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>${current.display_name || current.handle} - page audit</title>
+<style>
+  @page { margin: 2.2cm; }
+  body { font-family: Georgia, 'Times New Roman', serif; color: #1a1a1a; line-height: 1.65; max-width: 680px; margin: 0 auto; padding: 48px 24px; }
+  h1 { font-size: 21px; margin: 0 0 4px; }
+  .meta { color: #666; font-size: 13px; margin-bottom: 34px; }
+  h2 { font-size: 16px; margin-top: 26px; margin-bottom: 8px; }
+  p { margin: 0 0 14px; }
+  ul { margin: 0 0 14px; padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  strong { font-weight: 600; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+  <h1>${current.display_name || current.handle}</h1>
+  <div class="meta">@${current.handle} &middot; ${dateStr}</div>
+  ${current.sales_html}
+</body>
+</html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 300);
+  }
+
   // Previous audit of the same handle, for the trend badge
   const previousScore = useMemo(() => {
     if (!current) return null;
@@ -352,6 +389,11 @@ export default function AuditPage() {
                   <button onClick={rewrite} disabled={rewriting} className="px-3 py-1.5 rounded-full border border-amber-500/50 text-amber-300 text-xs font-medium hover:bg-amber-500/10 flex items-center gap-1.5 disabled:opacity-40">
                     {rewriting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />} Write it again
                   </button>
+                  {current.sales_html && (
+                    <button onClick={downloadPdf} className="px-3 py-1.5 rounded-full border border-amber-500/50 text-amber-300 text-xs font-medium hover:bg-amber-500/10 flex items-center gap-1.5">
+                      <Download className="w-3.5 h-3.5" /> Download PDF
+                    </button>
+                  )}
                   {current.sales_html && (
                     <button onClick={copySales} className="px-3 py-1.5 rounded-full bg-amber-500 text-black text-xs font-semibold hover:bg-amber-400 flex items-center gap-1.5">
                       <Copy className="w-3.5 h-3.5" /> Copy
