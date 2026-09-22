@@ -103,6 +103,7 @@ export default function AuditPage() {
   const [rewriting, setRewriting] = useState(false);
   const [notes, setNotes] = useState("");
   const salesRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   function loadHistory() {
     setHistoryLoading(true);
@@ -228,41 +229,42 @@ export default function AuditPage() {
     }
   }
 
-  function downloadPdf() {
-    if (!current?.sales_html) return;
-    const w = window.open("", "_blank");
-    if (!w) {
-      toast.error("Your browser blocked the popup. Allow popups for this site and try again.");
-      return;
+  function loadScript(src: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (document.querySelector(`script[src="${src}"]`)) {
+        resolve();
+        return;
+      }
+      const s = document.createElement("script");
+      s.src = src;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error("Could not load a required library, check your connection and try again."));
+      document.head.appendChild(s);
+    });
+  }
+
+  async function saveAsDoc() {
+    if (!current?.sales_html || !exportRef.current) return;
+    const tid = toast.loading("Putting your document together…");
+    try {
+      await loadScript("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js");
+      await loadScript("https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js");
+      const html2canvas = (window as any).html2canvas;
+      const jsPDFLib = (window as any).jspdf?.jsPDF;
+      if (!html2canvas || !jsPDFLib) throw new Error("Couldn't load the save tools, try again in a moment.");
+      const bg = getComputedStyle(document.body).backgroundColor || "#09090b";
+      const scale = 2;
+      const canvas = await html2canvas(exportRef.current, { backgroundColor: bg, scale, useCORS: true });
+      const imgData = canvas.toDataURL("image/png");
+      const w = canvas.width / scale;
+      const h = canvas.height / scale;
+      const pdf = new jsPDFLib({ unit: "px", format: [w, h] });
+      pdf.addImage(imgData, "PNG", 0, 0, w, h);
+      pdf.save(`${current.handle}-audit.pdf`);
+      toast.success("Saved to your downloads.", { id: tid });
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't save that, try again.", { id: tid });
     }
-    const dateStr = new Date(current.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-    w.document.write(`<!doctype html>
-<html>
-<head>
-<meta charset="utf-8" />
-<title>${current.display_name || current.handle} - page audit</title>
-<style>
-  @page { margin: 2.2cm; }
-  body { font-family: Georgia, 'Times New Roman', serif; color: #1a1a1a; line-height: 1.65; max-width: 680px; margin: 0 auto; padding: 48px 24px; }
-  h1 { font-size: 21px; margin: 0 0 4px; }
-  .meta { color: #666; font-size: 13px; margin-bottom: 34px; }
-  h2 { font-size: 16px; margin-top: 26px; margin-bottom: 8px; }
-  p { margin: 0 0 14px; }
-  ul { margin: 0 0 14px; padding-left: 20px; }
-  li { margin-bottom: 6px; }
-  strong { font-weight: 600; }
-  @media print { body { padding: 0; } }
-</style>
-</head>
-<body>
-  <h1>${current.display_name || current.handle}</h1>
-  <div class="meta">@${current.handle} &middot; ${dateStr}</div>
-  ${current.sales_html}
-</body>
-</html>`);
-    w.document.close();
-    w.focus();
-    setTimeout(() => w.print(), 300);
   }
 
   // Previous audit of the same handle, for the trend badge
@@ -359,6 +361,7 @@ export default function AuditPage() {
 
         {tab === "audit" && current && (
           <div className="space-y-8">
+            <div ref={exportRef} className="space-y-8">
             {/* Score */}
             <section className="rounded-2xl border border-border/40 bg-card/30 p-6 flex flex-wrap items-center gap-6">
               <div className="text-center">
@@ -400,8 +403,8 @@ export default function AuditPage() {
                     {rewriting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />} Write it again
                   </button>
                   {current.sales_html && (
-                    <button onClick={downloadPdf} className="px-3 py-1.5 rounded-full border border-amber-500/50 text-amber-300 text-xs font-medium hover:bg-amber-500/10 flex items-center gap-1.5">
-                      <Download className="w-3.5 h-3.5" /> Download PDF
+                    <button onClick={saveAsDoc} className="px-3 py-1.5 rounded-full border border-amber-500/50 text-amber-300 text-xs font-medium hover:bg-amber-500/10 flex items-center gap-1.5">
+                      <Download className="w-3.5 h-3.5" /> Save
                     </button>
                   )}
                   {current.sales_html && (
@@ -421,6 +424,7 @@ export default function AuditPage() {
                 <p className="text-sm text-muted-foreground">No write-up yet. Pick a style and hit "Write it again".</p>
               )}
             </section>
+            </div>
 
             {/* Breakdown */}
             <section className="space-y-3">
