@@ -441,10 +441,11 @@ WRITING RULES (non-negotiable)
 - Never mention any software, app, platform or tool of mine by name. Never mention the Graph API or how the numbers were gathered.
 - Consumer psychology of women over 35: warm, validating, a bit of humour, never shaming, never make them feel behind. No boring medical education.`;
 
-async function writeSales(row: { profile: Profile; score: number; breakdown: BreakdownItem[]; metrics: Record<string, any>; flags: Flag[] }, style: string, contactName: string): Promise<string> {
+async function writeSales(row: { profile: Profile; score: number; breakdown: BreakdownItem[]; metrics: Record<string, any>; flags: Flag[] }, style: string, contactName: string, tag: string): Promise<string> {
   const directive = STYLE_DIRECTIVES[style] || STYLE_DIRECTIVES.northern;
+  const isClient = tag === "client";
   const ranked = [...row.breakdown].sort((a, b) => b.score / b.max - a.score / a.max);
-  const strengths = ranked.slice(0, 2).map((b) => `${b.label}: ${b.note}`);
+  const strengths = ranked.slice(0, isClient ? 4 : 2).map((b) => `${b.label}: ${b.note}`);
   const gaps = ranked.slice(-3).reverse().map((b) => `${b.label}: ${b.note}`);
   const flagCategories = [...new Set(row.flags.map((f) => f.category))];
   const best = row.metrics.formatStats?.[0];
@@ -462,10 +463,20 @@ async function writeSales(row: { profile: Profile; score: number; breakdown: Bre
     wordingFlags: flagCategories,
   };
 
-  const instructions = `You are Vanessa Wormald, a UK social media strategist for the medical and aesthetics sector. You have 7 years in aesthetics, 20 in social media marketing, and have managed hundreds of clinics. You are known for a real, honest approach and for helping clinics show their true personality online. You are writing a short, friendly mini page audit that you are sending directly to a clinic owner you'd love to work with.
+  const clientContentRules = `
+CONTENT RULES
+- Only use the facts in the data given. Never invent a post, a treatment, a review or a number.
+- This is one of my own clients, not a cold prospect, so this is a warm check in on how their page is doing, not a pitch.
+- Open warmly and personally, using ${contactName ? "their first name" : "the clinic name"}.
+- Mention the score once, as "X out of 100", and frame it kindly and positively whatever the number is.
+- The whole tone is complimentary and encouraging, like their strategist popping up to say the page is looking good. Genuinely celebrate what's working, using specifics from the data, not generic praise.
+- Section "What's working": 3 to 4 specific, genuine compliments drawn from the data.
+- Section "A couple of ideas": exactly 2 small, low-pressure suggestions, framed as fun extras to try, never as problems, gaps or things missing.
+- If wordingFlags is not empty, fold one gentle mention into the ideas section, framed as "one to keep an eye on" rather than a compliance telling off. Refer to it generally, never repeat a drug name.
+- Close warmly, inviting them to have a chat about it next time we're in touch. No hard sell and no "book a call", just a warm sign off as their strategist who has their back.
+- Around 200 to 300 words in total.`;
 
-VOICE FOR THIS ONE: ${directive}
-
+  const prospectContentRules = `
 CONTENT RULES
 - Only use the facts in the data given. Never invent a post, a treatment, a review or a number.
 - Open warmly and personally, using ${contactName ? "their first name" : "the clinic name"}.
@@ -474,10 +485,30 @@ CONTENT RULES
 - Section "Where I'd start": the 3 biggest gaps as easy, doable wins. Make each feel fixable this week. Never a telling off.
 - If wordingFlags is not empty, add a short, gentle "Worth a tidy" paragraph saying a few captions use wording the ASA and CAP Code tend to look at, and that it's an easy fix. Refer to it generally. Never repeat a drug name.
 - Close with a strong stealth-sales call to action: warm, low-pressure and specific, an offer to have a proper look through their page together and map out their next 30 days of content, asking them to reply or send a message to book it in. It must feel like a friend's invitation, not a pitch. Keep it short.
-- Around 250 to 350 words in total.
+- Around 250 to 350 words in total.`;
+
+  const instructions = `You are Vanessa Wormald, a UK social media strategist for the medical and aesthetics sector. You have 7 years in aesthetics, 20 in social media marketing, and have managed hundreds of clinics. You are known for a real, honest approach and for helping clinics show their true personality online. You are writing a short, friendly mini page audit${isClient ? " for one of your own existing clients" : " that you are sending directly to a clinic owner you'd love to work with"}.
+
+VOICE FOR THIS ONE: ${directive}
+${isClient ? clientContentRules : prospectContentRules}
 ${COMPLIANCE_AND_WRITING_RULES}
 
 OUTPUT: clean semantic HTML only (h2, p, strong, ul, li). No inline styles, no html/head/body wrapper, no markdown, no code fences, no preamble.`;
+
+  const response = await openai.responses.create({
+    model: "gpt-5.5",
+    reasoning: { effort: "low" },
+    instructions,
+    input: `Data for this audit:\n${JSON.stringify(data, null, 2)}\n\nWrite the mini audit now.`,
+    max_output_tokens: 2500,
+  });
+
+  let html = (response.output_text ?? "").trim();
+  html = html.replace(/^```(?:html)?\s*/i, "").replace(/```\s*$/i, "").trim();
+  // Belt and braces: the no em dash rule
+  html = html.replace(/\s*[—–]\s*/g, ", ");
+  return html;
+}
 
   const response = await openai.responses.create({
     model: "gpt-5.5",
@@ -620,7 +651,7 @@ router.post("/ig-audit/run", async (req, res) => {
 
     let salesHtml = "";
     try {
-      salesHtml = await writeSales({ profile, score, breakdown, metrics, flags }, style, contactName);
+      salesHtml = await writeSales({ profile, score, breakdown, metrics, flags }, style, contactName, tag);
     } catch (err) {
       logger.error({ err, handle }, "ig-audit: sales write-up failed, saving audit without it");
     }
@@ -653,15 +684,17 @@ router.post("/ig-audit/:id/sales", async (req, res) => {
     const result = await db.execute(sql`SELECT ${FULL_COLS} FROM ig_audits WHERE id = ${id}`);
     const row = rowsOf(result)[0] as AuditRow | undefined;
     if (!row) return res.status(404).json({ error: "Audit not found" });
+    const tag = ["prospect", "client", "won", "lost"].includes(req.body?.tag) ? req.body.tag : row.tag;
 
     const html = await writeSales(
       { profile: row.profile, score: row.score, breakdown: row.breakdown, metrics: row.metrics, flags: row.flags },
       style,
-      contactName || row.contact_name
+      contactName || row.contact_name,
+      tag
     );
     if (!html) return res.status(502).json({ error: "The write up didn't come back properly, try again" });
-    await db.execute(sql`UPDATE ig_audits SET sales_html = ${html}, style = ${style}, contact_name = ${contactName || row.contact_name} WHERE id = ${id}`);
-    res.json({ sales_html: html, style });
+    await db.execute(sql`UPDATE ig_audits SET sales_html = ${html}, style = ${style}, contact_name = ${contactName || row.contact_name}, tag = ${tag} WHERE id = ${id}`);
+    res.json({ sales_html: html, style, tag });
   } catch (err) {
     logger.error({ err }, "Failed to rewrite ig audit sales copy");
     res.status(500).json({ error: "Failed to rewrite" });
