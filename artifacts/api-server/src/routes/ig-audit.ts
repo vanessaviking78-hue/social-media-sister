@@ -510,21 +510,6 @@ OUTPUT: clean semantic HTML only (h2, p, strong, ul, li). No inline styles, no h
   return html;
 }
 
-  const response = await openai.responses.create({
-    model: "gpt-5.5",
-    reasoning: { effort: "low" },
-    instructions,
-    input: `Data for this audit:\n${JSON.stringify(data, null, 2)}\n\nWrite the mini audit now.`,
-    max_output_tokens: 2500,
-  });
-
-  let html = (response.output_text ?? "").trim();
-  html = html.replace(/^```(?:html)?\s*/i, "").replace(/```\s*$/i, "").trim();
-  // Belt and braces: the no em dash rule
-  html = html.replace(/\s*[—–]\s*/g, ", ");
-  return html;
-}
-
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
