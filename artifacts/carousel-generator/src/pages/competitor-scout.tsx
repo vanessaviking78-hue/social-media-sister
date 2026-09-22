@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Search, Trash2, ChevronLeft, HardDriveDownload } from "lucide-react";
+import { Loader2, Search, Trash2, ChevronLeft, Download } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -209,8 +209,8 @@ export default function CompetitorScout() {
             disabled={savingToDrive}
             className="px-4 py-2 rounded-full bg-card border border-border/40 text-sm font-medium disabled:opacity-40 hover:bg-card/70 flex items-center gap-2"
           >
-            {savingToDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <HardDriveDownload className="w-4 h-4" />}
-            {savingToDrive ? "Saving…" : "Save to Drive"}
+            {savingToDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            {savingToDrive ? "Downloading…" : "Download"}
           </button>
         </header>
         <main className="max-w-3xl mx-auto px-6 py-8">
