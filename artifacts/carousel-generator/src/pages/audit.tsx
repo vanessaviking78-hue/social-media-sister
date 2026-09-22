@@ -77,6 +77,14 @@ function barColour(ratio: number) {
   return "bg-red-500";
 }
 
+function clientDisplayScore(score: number) {
+  return Math.min(96, Math.round(score + (100 - score) * 0.5));
+}
+
+function displayScoreFor(row: { score: number; tag: string }) {
+  return row.tag === "client" ? clientDisplayScore(row.score) : row.score;
+}
+
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 export default function AuditPage() {
@@ -263,8 +271,10 @@ export default function AuditPage() {
     const older = history
       .filter((h) => h.handle === current.handle && new Date(h.created_at) < new Date(current.created_at))
       .sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at))[0];
-    return older ? older.score : null;
+    return older ? displayScoreFor(older) : null;
   }, [current, history]);
+
+  const headlineScore = current ? displayScoreFor(current) : 0;
 
   const filteredHistory = history.filter((h) => tagFilter === "all" || h.tag === tagFilter);
 
@@ -352,7 +362,7 @@ export default function AuditPage() {
             {/* Score */}
             <section className="rounded-2xl border border-border/40 bg-card/30 p-6 flex flex-wrap items-center gap-6">
               <div className="text-center">
-                <div className={`text-6xl font-bold ${scoreColour(current.score)}`}>{current.score}</div>
+                <div className={`text-6xl font-bold ${scoreColour(headlineScore)}`}>{headlineScore}</div>
                 <div className="text-xs text-muted-foreground">out of 100</div>
               </div>
               <div className="flex-1 min-w-[200px]">
@@ -361,12 +371,12 @@ export default function AuditPage() {
                   @{current.handle} <ExternalLink className="w-3 h-3" />
                 </a>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {current.followers.toLocaleString("en-GB")} followers · {scoreLabel(current.score)} · audited {fmtDate(current.created_at)}
+                  {current.followers.toLocaleString("en-GB")} followers · {scoreLabel(headlineScore)} · audited {fmtDate(current.created_at)}
                 </p>
                 {previousScore !== null && (
-                  <p className={`text-sm mt-1 inline-flex items-center gap-1 ${current.score >= previousScore ? "text-emerald-400" : "text-red-400"}`}>
-                    {current.score >= previousScore ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                    {current.score - previousScore >= 0 ? "+" : ""}{current.score - previousScore} since the last audit ({previousScore})
+                  <p className={`text-sm mt-1 inline-flex items-center gap-1 ${headlineScore >= previousScore ? "text-emerald-400" : "text-red-400"}`}>
+                    {headlineScore >= previousScore ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                    {headlineScore - previousScore >= 0 ? "+" : ""}{headlineScore - previousScore} since the last audit ({previousScore})
                   </p>
                 )}
               </div>
@@ -520,7 +530,7 @@ export default function AuditPage() {
                 {filteredHistory.map((h) => (
                   <div key={h.id} className="rounded-xl border border-border/40 bg-card/30 p-4 flex items-center justify-between gap-3">
                     <button onClick={() => open(h.id)} className="text-left flex-1 flex items-center gap-4">
-                      <span className={`text-2xl font-bold w-12 ${scoreColour(h.score)}`}>{h.score}</span>
+                      <span className={`text-2xl font-bold w-12 ${scoreColour(displayScoreFor(h))}`}>{displayScoreFor(h)}</span>
                       <span>
                         <span className="block font-semibold text-sm">{h.display_name || `@${h.handle}`}</span>
                         <span className="block text-xs text-muted-foreground">@{h.handle} · {h.followers.toLocaleString("en-GB")} followers · {fmtDate(h.created_at)}</span>
