@@ -145,8 +145,8 @@ async function createDriveDoc(
 
 // POST /api/competitor-scout/:id/save-to-drive
 // Saves a finished report into Vanessa's connected Google Drive as a Google
-// Doc, named after the clinic, e.g. "BeautyAestheticsByEmmaJB-CompAnalysis".
-// Reuses the same Google connection as the calendar feature (see
+// Doc, named after the clinic, e.g. "Beauty and Aesthetics by Emma JB
+// Competitor Analysis". Reuses the same Google connection as the calendar feature (see
 // google-auth.ts). If she's never connected Google, or connected before the
 // Drive permission was added, this comes back with a clear "not_connected"
 // error so the frontend can send her through the connect flow again.
@@ -174,7 +174,7 @@ router.post("/competitor-scout/:id/save-to-drive", async (req, res) => {
     }
     token = refreshed;
 
-    const fileName = `${row.clinic_name.replace(/[^a-zA-Z0-9]/g, "")}-CompAnalysis`;
+    const fileName = `${row.clinic_name.replace(/[\\/:*?"<>|]/g, "").trim()} Competitor Analysis`;
 
     try {
       const { id: fileId, webViewLink } = await createDriveDoc(token.accessToken, fileName, row.report_html);
