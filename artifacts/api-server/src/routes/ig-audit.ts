@@ -212,6 +212,7 @@ const CLAIM_RULES: { re: RegExp; category: string; severity: "high" | "medium" }
   { re: /\b(100%|completely|totally)\s+(safe|painless|risk[- ]free)\b/i, category: "Safety or pain claim", severity: "high" },
   { re: /\b(painless|risk[- ]free|no (risk|side effects?))\b/i, category: "Safety or pain claim", severity: "high" },
   { re: /\bsafe\b/i, category: "The word 'safe' used as a claim", severity: "medium" },
+  { re: /\banti[- ]?wrinkle\b/i, category: "Efficacy claim ('anti-wrinkle')", severity: "medium" },
   { re: /\b(best|no\.? ?1|number one|#1|leading|top[- ]rated|award[- ]winning)\b/i, category: "Superlative", severity: "medium" },
   { re: /\b(no downtime|instant results?|overnight results?)\b/i, category: "Results or downtime claim", severity: "medium" },
 ];
@@ -427,7 +428,8 @@ const STYLE_DIRECTIVES: Record<string, string> = {
 
 const COMPLIANCE_AND_WRITING_RULES = `
 COMPLIANCE (non-negotiable)
-- NEVER name Botox or any prescription-only medicine, by brand or generic name. Say "anti-wrinkle injections", "facial aesthetics", "injectable treatments".
+- NEVER name Botox or any prescription-only medicine, by brand or generic name. NEVER say "anti-wrinkle" or "anti-wrinkle injections" either, that's an efficacy claim in its own right. Say "facial aesthetics", "injectable treatments", "facial rejuvenation" instead.
+- If a client's own existing caption is being referenced back to them as an example of what's already on their page, "anti-wrinkle" can only be quoted to flag it as something to fix, never used approvingly or repeated as if it's fine.
 - Never use the word "safe" as a marketing claim. No medical claims, no guaranteed results. No superlatives (best, number one, guaranteed).
 
 WRITING RULES (non-negotiable)
