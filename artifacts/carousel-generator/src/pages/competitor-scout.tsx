@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, Search, Trash2, ChevronLeft, Download } from "lucide-react";
+import { Search, Trash2, ChevronLeft, Download, Loader2 } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -31,7 +31,6 @@ export default function CompetitorScout() {
   const [postcode, setPostcode] = useState("");
   const [researchNotes, setResearchNotes] = useState("");
   const [generating, setGenerating] = useState(false);
-  const [savingToDrive, setSavingToDrive] = useState(false);
 
   function load() {
     setLoading(true);
@@ -138,59 +137,48 @@ export default function CompetitorScout() {
     }
   }
 
-  function connectGoogleThenRetry(retry: () => void) {
-    const popup = window.open(
-      `${BASE}/api/google/auth/start`,
-      "google-oauth",
-      "width=540,height=700,scrollbars=yes,resizable=yes",
-    );
-    const handler = (e: MessageEvent) => {
-      if (e.origin !== window.location.origin) return;
-      if (e.data?.type !== "google-oauth-result") return;
-      window.removeEventListener("message", handler);
-      popup?.close();
-      if (e.data.success) {
-        toast.success("Google connected.");
-        retry();
-      } else {
-        toast.error(`Google connection failed: ${e.data.error || "Unknown error"}`);
-      }
-    };
-    window.addEventListener("message", handler);
-    const poll = setInterval(() => {
-      if (popup?.closed) {
-        clearInterval(poll);
-        window.removeEventListener("message", handler);
-      }
-    }, 500);
-  }
+  // Downloads the report straight to the browser's Downloads folder, exactly
+  // as it looks on screen, no Google account or backend round trip needed.
+  // Named after the clinic, stripped down to letters and numbers only, e.g.
+  // "BeautyAestheticsByEmmaJB-CompAnalysis.html".
+  const DOWNLOAD_STYLES = `
+    body{background:#0a0a12;color:#fff;font-family:'League Spartan',Arial,sans-serif;line-height:1.6;max-width:760px;margin:0 auto;padding:40px 24px 80px;}
+    h1{font-size:1.6rem;margin:0 0 4px;}
+    .cs-doc-meta{color:#b3b0c4;font-size:0.85rem;margin-bottom:32px;}
+    h2{font-family:Arial,sans-serif;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.06em;color:#fbbf24;font-weight:600;margin:32px 0 8px;}
+    p{margin:0 0 14px;font-size:1rem;}
+    ul{margin:0 0 14px;padding-left:20px;}
+    li{margin-bottom:6px;}
+    strong{color:#fff;}
+    .cs-lede{font-size:1.1rem;font-style:italic;border-left:3px solid #fbbf24;padding-left:16px;margin:0 0 24px;}
+    .cs-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:0 0 8px;}
+    .cs-card{background:#15141f;border:1px solid #24222f;border-radius:16px;padding:18px;}
+    .cs-card h3{font-family:Arial,sans-serif;font-size:1rem;font-weight:600;margin:0 0 2px;color:#fff;}
+    .cs-loc{font-family:Arial,sans-serif;font-size:0.75rem;color:#b3b0c4;margin-bottom:10px;}
+    .cs-card p{font-size:0.875rem;margin:8px 0 0;}
+    .cs-edge{background:rgba(217,119,6,0.1);border:1px solid rgba(217,119,6,0.35);border-radius:16px;padding:22px 22px 4px;margin:26px 0;}
+    .cs-edge h2{margin-top:0;}
+    .cs-cta{background:rgba(236,26,153,0.12);border:1px solid rgba(236,26,153,0.35);border-radius:16px;padding:24px;margin-top:32px;}
+    .cs-cta strong{color:#ec1a99;}
+  `;
 
-  async function saveToDrive(id: number) {
-    setSavingToDrive(true);
-    try {
-      const r = await fetch(`${BASE}/api/competitor-scout/${id}/save-to-drive`, {
-        method: "POST",
-        headers: authHeaders(),
-      });
-      const d = await r.json();
-      if (!r.ok) {
-        if (d.error === "not_connected") {
-          toast("Connect Google Drive first, opening that now…");
-          connectGoogleThenRetry(() => saveToDrive(id));
-          return;
-        }
-        throw new Error(d.error || "Could not save to Drive");
-      }
-      toast.success(`Saved to Drive as ${d.fileName}`, {
-        action: d.webViewLink
-          ? { label: "Open", onClick: () => window.open(d.webViewLink, "_blank") }
-          : undefined,
-      });
-    } catch (e: any) {
-      toast.error(e?.message || "Could not save to Drive");
-    } finally {
-      setSavingToDrive(false);
-    }
+  function downloadReport(report: ReportFull) {
+    const safeName = report.clinic_name.replace(/[^a-zA-Z0-9]/g, "");
+    const fullHtml = `<!doctype html><html><head><meta charset="utf-8"><title>${report.clinic_name} Competitor Analysis</title><style>${DOWNLOAD_STYLES}</style></head><body>
+<h1>${report.clinic_name}</h1>
+<div class="cs-doc-meta">${report.postcode} &middot; ${new Date(report.created_at).toLocaleDateString("en-GB")}</div>
+${report.report_html}
+</body></html>`;
+    const blob = new Blob([fullHtml], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${safeName}-CompAnalysis.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast.success(`Downloaded as ${safeName}-CompAnalysis.html`);
   }
 
   if (open) {
@@ -205,17 +193,16 @@ export default function CompetitorScout() {
             <p className="text-sm text-muted-foreground">{open.postcode} · {new Date(open.created_at).toLocaleDateString("en-GB")}</p>
           </div>
           <button
-            onClick={() => saveToDrive(open.id)}
-            disabled={savingToDrive}
-            className="px-4 py-2 rounded-full bg-card border border-border/40 text-sm font-medium disabled:opacity-40 hover:bg-card/70 flex items-center gap-2"
+            onClick={() => downloadReport(open)}
+            className="px-4 py-2 rounded-full bg-card border border-border/40 text-sm font-medium hover:bg-card/70 flex items-center gap-2"
           >
-            {savingToDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-            {savingToDrive ? "Downloading…" : "Download"}
+            <Download className="w-4 h-4" />
+            Download
           </button>
         </header>
         <main className="max-w-3xl mx-auto px-6 py-8">
           <div
-            className="prose prose-invert max-w-none prose-h2:text-xs prose-h2:uppercase prose-h2:tracking-wide prose-h2:text-amber-400 prose-h2:font-semibold prose-h2:mt-8 prose-h2:mb-2"
+            className="cs-report prose prose-invert max-w-none prose-h2:text-xs prose-h2:uppercase prose-h2:tracking-wide prose-h2:text-amber-400 prose-h2:font-semibold prose-h2:mt-8 prose-h2:mb-2"
             dangerouslySetInnerHTML={{ __html: open.report_html }}
           />
         </main>

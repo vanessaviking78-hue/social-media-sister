@@ -158,3 +158,74 @@
   box-shadow: 0 0 0 4px hsl(var(--primary) / 0.08), inset 0 0 20px hsl(var(--primary) / 0.04);
   animation: dash-pulse 1.8s ease-in-out infinite;
 }
+
+
+/* Competitor Scout report styling. These classes are written into the
+   report_html by the AI generation prompt (competitor-scout.ts), so they
+   live here as plain CSS rather than Tailwind utilities, since Tailwind's
+   build-time scanner never sees class names that only exist inside
+   runtime-generated HTML. Palette matches the rest of this tool: dark
+   card surfaces, amber for the "gold" accent role, hot pink primary for
+   the closing call to action. */
+.cs-report .cs-lede {
+    font-size: 1.1rem;
+    font-style: italic;
+    color: hsl(var(--foreground));
+    border-left: 3px solid #fbbf24;
+    padding-left: 16px;
+    margin: 0 0 24px;
+}
+
+.cs-report .cs-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+    margin: 0 0 8px;
+}
+.cs-report .cs-card {
+    background: hsl(var(--card));
+    border: 1px solid hsl(var(--card-border));
+    border-radius: 1rem;
+    padding: 18px;
+}
+.cs-report .cs-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: hsl(var(--foreground));
+    margin: 0 0 2px;
+}
+.cs-report .cs-loc {
+    font-size: 0.75rem;
+    color: hsl(var(--muted-foreground));
+    margin-bottom: 10px;
+}
+.cs-report .cs-card p {
+    font-size: 0.875rem;
+    margin: 8px 0 0;
+}
+
+.cs-report .cs-edge {
+    background: rgba(217, 119, 6, 0.08);
+    border: 1px solid rgba(217, 119, 6, 0.3);
+    border-radius: 1rem;
+    padding: 22px 22px 4px;
+    margin: 26px 0;
+}
+.cs-report .cs-edge h2 {
+    margin-top: 0 !important;
+}
+
+.cs-report .cs-cta {
+    background: hsl(var(--primary) / 0.1);
+    border: 1px solid hsl(var(--primary) / 0.3);
+    border-radius: 1rem;
+    padding: 24px;
+    margin-top: 32px;
+}
+.cs-report .cs-cta p {
+    margin: 0;
+    font-size: 1rem;
+}
+.cs-report .cs-cta strong {
+    color: hsl(var(--primary));
+}

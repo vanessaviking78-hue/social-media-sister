@@ -11,14 +11,14 @@ const router: IRouter = Router();
 // password as the rest of the ProtectedRouter, never on the client-facing
 // apps.thecybersuite.com side. Nobody but Vanessa should ever hit this.
 function requireAuth(req: Request, res: Response, next: NextFunction) {
-  const appPassword = process.env.APP_PASSWORD;
-  if (!appPassword) return next();
-  const expected = appPassword.trim().toLowerCase();
-  const provided = (req.headers["x-app-password"] as string | undefined)?.trim().toLowerCase();
-  if (provided === expected) return next();
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith("Bearer ") && authHeader.slice(7).trim().toLowerCase() === expected) return next();
-  res.status(401).json({ error: "Unauthorized" });
+    const appPassword = process.env.APP_PASSWORD;
+    if (!appPassword) return next();
+    const expected = appPassword.trim().toLowerCase();
+    const provided = (req.headers["x-app-password"] as string | undefined)?.trim().toLowerCase();
+    if (provided === expected) return next();
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ") && authHeader.slice(7).trim().toLowerCase() === expected) return next();
+    res.status(401).json({ error: "Unauthorized" });
 }
 
 router.use("/competitor-scout", requireAuth);
@@ -42,59 +42,59 @@ WRITING RULES (non-negotiable)
 - Always end on a short, warm, confident line pointing at the obvious next step. Never a hard sales pitch, never generic.`;
 
 type ScoutReportRow = {
-  id: number;
-  clinic_name: string;
-  postcode: string;
-  research_notes: string;
-  report_html: string;
-  status: string;
-  created_at: string;
+    id: number;
+    clinic_name: string;
+    postcode: string;
+    research_notes: string;
+    report_html: string;
+    status: string;
+    created_at: string;
 };
 
 // GET /api/competitor-scout - library list, newest first
 router.get("/competitor-scout", async (_req, res) => {
-  try {
-    const result = await db.execute(sql`
-      SELECT id, clinic_name, postcode, status, created_at
-      FROM competitor_scout_reports
-      ORDER BY created_at DESC
-    `);
-    res.json({ reports: (result as { rows?: ScoutReportRow[] }).rows ?? [] });
-  } catch (err) {
-    logger.error({ err }, "Failed to list competitor scout reports");
-    res.status(500).json({ error: "Failed to load reports" });
-  }
+    try {
+          const result = await db.execute(sql`
+                SELECT id, clinic_name, postcode, status, created_at
+                      FROM competitor_scout_reports
+                            ORDER BY created_at DESC
+                                `);
+          res.json({ reports: (result as { rows?: ScoutReportRow[] }).rows ?? [] });
+    } catch (err) {
+          logger.error({ err }, "Failed to list competitor scout reports");
+          res.status(500).json({ error: "Failed to load reports" });
+    }
 });
 
 // GET /api/competitor-scout/:id - one full report
 router.get("/competitor-scout/:id", async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    if (!id) return res.status(400).json({ error: "Invalid id" });
-    const result = await db.execute(sql`
-      SELECT id, clinic_name, postcode, research_notes, report_html, status, created_at
-      FROM competitor_scout_reports WHERE id = ${id}
-    `);
-    const row = (result as { rows?: ScoutReportRow[] }).rows?.[0];
-    if (!row) return res.status(404).json({ error: "Report not found" });
-    res.json(row);
-  } catch (err) {
-    logger.error({ err }, "Failed to fetch competitor scout report");
-    res.status(500).json({ error: "Failed to load report" });
-  }
+    try {
+          const id = Number(req.params.id);
+          if (!id) return res.status(400).json({ error: "Invalid id" });
+          const result = await db.execute(sql`
+                SELECT id, clinic_name, postcode, research_notes, report_html, status, created_at
+                      FROM competitor_scout_reports WHERE id = ${id}
+                          `);
+          const row = (result as { rows?: ScoutReportRow[] }).rows?.[0];
+          if (!row) return res.status(404).json({ error: "Report not found" });
+          res.json(row);
+    } catch (err) {
+          logger.error({ err }, "Failed to fetch competitor scout report");
+          res.status(500).json({ error: "Failed to load report" });
+    }
 });
 
 // DELETE /api/competitor-scout/:id
 router.delete("/competitor-scout/:id", async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    if (!id) return res.status(400).json({ error: "Invalid id" });
-    await db.execute(sql`DELETE FROM competitor_scout_reports WHERE id = ${id}`);
-    res.json({ success: true });
-  } catch (err) {
-    logger.error({ err }, "Failed to delete competitor scout report");
-    res.status(500).json({ error: "Failed to delete report" });
-  }
+    try {
+          const id = Number(req.params.id);
+          if (!id) return res.status(400).json({ error: "Invalid id" });
+          await db.execute(sql`DELETE FROM competitor_scout_reports WHERE id = ${id}`);
+          res.json({ success: true });
+    } catch (err) {
+          logger.error({ err }, "Failed to delete competitor scout report");
+          res.status(500).json({ error: "Failed to delete report" });
+    }
 });
 
 // Turns the finished report into a proper Google Doc in Vanessa's own Drive,
@@ -104,40 +104,40 @@ router.delete("/competitor-scout/:id", async (req, res) => {
 // is text/html, so the semantic HTML the report is already written in comes
 // across cleanly with no extra conversion step needed.
 async function createDriveDoc(
-  accessToken: string,
-  name: string,
-  html: string,
-): Promise<{ id: string; webViewLink?: string }> {
-  const boundary = `cybersuite-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  const metadata = { name, mimeType: "application/vnd.google-apps.document" };
-  const fullHtml = `<html><body>${html}</body></html>`;
+    accessToken: string,
+    name: string,
+    html: string,
+  ): Promise<{ id: string; webViewLink?: string }> {
+    const boundary = `cybersuite-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const metadata = { name, mimeType: "application/vnd.google-apps.document" };
+    const fullHtml = `<html><body>${html}</body></html>`;
 
   const body =
-    `--${boundary}\r\n` +
-    `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
-    `${JSON.stringify(metadata)}\r\n` +
-    `--${boundary}\r\n` +
-    `Content-Type: text/html; charset=UTF-8\r\n\r\n` +
-    `${fullHtml}\r\n` +
-    `--${boundary}--`;
+        `--${boundary}\r\n` +
+        `Content-Type: application/json; charset=UTF-8\r\n\r\n` +
+        `${JSON.stringify(metadata)}\r\n` +
+        `--${boundary}\r\n` +
+        `Content-Type: text/html; charset=UTF-8\r\n\r\n` +
+        `${fullHtml}\r\n` +
+        `--${boundary}--`;
 
   const uploadRes = await fetch(
-    "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink",
+        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,webViewLink",
     {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": `multipart/related; boundary=${boundary}`,
-      },
-      body,
+            method: "POST",
+            headers: {
+                      Authorization: `Bearer ${accessToken}`,
+                      "Content-Type": `multipart/related; boundary=${boundary}`,
+            },
+            body,
     },
-  );
+      );
 
   if (!uploadRes.ok) {
-    const errText = await uploadRes.text().catch(() => "");
-    const err = new Error(`Drive upload failed: ${uploadRes.status} ${errText}`) as Error & { status?: number };
-    err.status = uploadRes.status;
-    throw err;
+        const errText = await uploadRes.text().catch(() => "");
+        const err = new Error(`Drive upload failed: ${uploadRes.status} ${errText}`) as Error & { status?: number };
+        err.status = uploadRes.status;
+        throw err;
   }
 
   return (await uploadRes.json()) as { id: string; webViewLink?: string };
@@ -151,45 +151,45 @@ async function createDriveDoc(
 // Drive permission was added, this comes back with a clear "not_connected"
 // error so the frontend can send her through the connect flow again.
 router.post("/competitor-scout/:id/save-to-drive", async (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    if (!id) return res.status(400).json({ error: "Invalid id" });
-
-    const result = await db.execute(sql`
-      SELECT id, clinic_name, report_html, status FROM competitor_scout_reports WHERE id = ${id}
-    `);
-    const row = (result as { rows?: ScoutReportRow[] }).rows?.[0];
-    if (!row) return res.status(404).json({ error: "Report not found" });
-    if (row.status !== "ready" || !row.report_html) {
-      return res.status(400).json({ error: "This one isn't finished yet, nothing to save." });
-    }
-
-    let token = await getStoredGoogleToken();
-    if (!token) {
-      return res.status(400).json({ error: "not_connected" });
-    }
-    const refreshed = await refreshGoogleTokenIfNeeded(token);
-    if (!refreshed) {
-      return res.status(400).json({ error: "not_connected" });
-    }
-    token = refreshed;
-
-    const fileName = `${row.clinic_name.replace(/[\\/:*?"<>|]/g, "").trim()} Competitor Analysis`;
-
     try {
-      const { id: fileId, webViewLink } = await createDriveDoc(token.accessToken, fileName, row.report_html);
-      res.json({ success: true, fileId, webViewLink, fileName });
-    } catch (driveErr: any) {
+          const id = Number(req.params.id);
+          if (!id) return res.status(400).json({ error: "Invalid id" });
+
+      const result = await db.execute(sql`
+            SELECT id, clinic_name, report_html, status FROM competitor_scout_reports WHERE id = ${id}
+                `);
+          const row = (result as { rows?: ScoutReportRow[] }).rows?.[0];
+          if (!row) return res.status(404).json({ error: "Report not found" });
+          if (row.status !== "ready" || !row.report_html) {
+                  return res.status(400).json({ error: "This one isn't finished yet, nothing to save." });
+          }
+
+      let token = await getStoredGoogleToken();
+          if (!token) {
+                  return res.status(400).json({ error: "not_connected" });
+          }
+          const refreshed = await refreshGoogleTokenIfNeeded(token);
+          if (!refreshed) {
+                  return res.status(400).json({ error: "not_connected" });
+          }
+          token = refreshed;
+
+      const fileName = `${row.clinic_name.replace(/[\\/:*?"<>|]/g, "").trim()} Competitor Analysis`;
+
+      try {
+              const { id: fileId, webViewLink } = await createDriveDoc(token.accessToken, fileName, row.report_html);
+              res.json({ success: true, fileId, webViewLink, fileName });
+      } catch (driveErr: any) {
       if (driveErr?.status === 401 || driveErr?.status === 403) {
-        logger.warn({ status: driveErr.status }, "competitor-scout: Drive permission missing or expired");
-        return res.status(400).json({ error: "not_connected" });
+                logger.warn({ status: driveErr.status }, "competitor-scout: Drive permission missing or expired");
+                return res.status(400).json({ error: "not_connected" });
       }
-      throw driveErr;
+              throw driveErr;
+      }
+    } catch (err) {
+          logger.error({ err }, "Failed to save competitor scout report to Drive");
+          res.status(500).json({ error: "Failed to save to Drive" });
     }
-  } catch (err) {
-    logger.error({ err }, "Failed to save competitor scout report to Drive");
-    res.status(500).json({ error: "Failed to save to Drive" });
-  }
 });
 
 // Runs the actual research and write up in the background, well after the
@@ -200,81 +200,82 @@ router.post("/competitor-scout/:id/save-to-drive", async (req, res) => {
 // HTML error page instead of JSON. Polling a short GET instead sidesteps
 // that limit entirely, however long the research actually takes.
 async function runReportGeneration(
-  id: number,
-  clinicName: string,
-  postcode: string,
-  researchNotes: string,
-): Promise<void> {
-  try {
-    const systemPrompt = `You are Vanessa, writing directly to your client ${clinicName} with their personal competitor analysis. This is a message FROM Vanessa TO the clinic, not a report about them.
+    id: number,
+    clinicName: string,
+    postcode: string,
+    researchNotes: string,
+  ): Promise<void> {
+    try {
+          const systemPrompt = `You are Vanessa, writing directly to your client ${clinicName} with their personal competitor analysis. This is a message FROM Vanessa TO the clinic, not a report about them.
 
-${NORTHERN_GRIT_VOICE}
+          ${NORTHERN_GRIT_VOICE}
 
-RESEARCH TASK (use your live web search tool, this is real research, not a guess)
-1. Find ${clinicName} near postcode ${postcode} in the UK. Work out from whatever is genuinely findable, their own website, Google Business listing, Instagram or Facebook, what they actually offer and what stands out about them.
-2. Find their top 3 real, currently trading local competitors: other businesses of the same broad type, in or close to that postcode area. For each one, find out what they offer, what they seem to do well, and anything they are missing or doing less well.
-3. Only use real facts you find. Never invent a competitor, a name, a review, or a fact about either side that your search does not support.
+          RESEARCH TASK (use your live web search tool, this is real research, not a guess)
+          1. Find ${clinicName} near postcode ${postcode} in the UK. Work out from whatever is genuinely findable, their own website, Google Business listing, Instagram or Facebook, what they actually offer and what stands out about them.
+          2. Find their top 3 real, currently trading local competitors: other businesses of the same broad type, in or close to that postcode area. For each one, find out what they offer, what they seem to do well, and anything they are missing or doing less well.
+          3. Only use real facts you find. Never invent a competitor, a name, a review, or a fact about either side that your search does not support.
 
-VANESSA'S OWN NOTES ON THIS CLIENT (may be empty, treat as true and combine with your own search, never contradict them)
-${researchNotes || "(none given, rely fully on your own search)"}
+          VANESSA'S OWN NOTES ON THIS CLIENT (may be empty, treat as true and combine with your own search, never contradict them)
+          ${researchNotes || "(none given, rely fully on your own search)"}
 
-WRITING TASK
-Once your research is done, write the full message as clean semantic HTML (use h2, p, strong, ul/li only, no inline styles, no html/head/body wrapper, no markdown, no code fences). Address the clinic directly by name in the opening line and keep speaking to them as "you" all the way through every section, never slipping into third person. Structure it in this order:
-1. A warm, personal opening addressed to the clinic by name, like the start of a message Vanessa is sending them.
-2. "Your patch" - a short paragraph telling them, in "you" language, how competitive their area looks from what you found.
-3. "Who else is on your patch" - one short paragraph per real competitor you found, written to the clinic, telling them what each one does well and where they fall short.
-4. "What you've got that they haven't" - the most positive, specific section, telling the clinic directly what makes them stand out, built only from real details you found plus reasonable, clearly-labelled general strengths of a warm, personal, all-under-one-roof clinic. Do not invent specific facts.
-5. "Where they're pulling ahead of you, and it's fixable" - honest and constructive, told straight to them, framed as gaps to close, never a threat.
-6. "Where I'd focus your socials next" - Vanessa speaking as their own social media person, 3 to 5 specific, actionable content ideas built on their real strengths.
-7. A short closing paragraph, warm and confident, signed off in spirit like Vanessa talking to them directly about turning this into an actual content plan together.
-${COMPLIANCE_RULES}
+          WRITING TASK
+          Once your research is done, write the full message as clean semantic HTML, no inline styles, no html/head/body wrapper, no markdown, no code fences. Address the clinic directly by name in the opening line and keep speaking to them as "you" all the way through every section, never slipping into third person. Use ONLY the tags and classes below, in exactly this structure and order:
 
-Return ONLY the finished HTML for the message. No preamble, no explanation of your research, no JSON, no code fences, nothing else.`;
+          1. <p class="cs-lede">...</p> - a warm, personal opening of 2 to 3 sentences addressed to the clinic by name, like the start of a message Vanessa is sending them.
+          2. <h2>Your patch</h2> followed by one or two <p> paragraphs telling them, in "you" language, how competitive their area looks from what you found.
+          3. <h2>Who else is on your patch</h2> followed by <div class="cs-cards"> containing one <div class="cs-card"> per real competitor found (up to 3), each built exactly as <h3>Competitor name</h3><div class="cs-loc">location and rough distance from the clinic</div><p>3 to 5 sentences on what they do well and where they fall short</p>, then close each card's </div>. Close the whole set with </div> after the last card.
+          4. <div class="cs-edge"><h2>What you've got that they haven't</h2> followed by 2 to 3 <p> paragraphs, the most positive, specific section, telling the clinic directly what makes them stand out, built only from real details you found plus reasonable, clearly-labelled general strengths of a warm, personal, all-under-one-roof clinic. Do not invent specific facts. Close with </div>.
+          5. <h2>Where they're pulling ahead of you, and it's fixable</h2> followed by one or two <p> paragraphs, honest and constructive, told straight to them, framed as gaps to close, never a threat.
+          6. <h2>Where I'd focus your socials next</h2> followed by a <ul> of 3 to 5 <li> specific, actionable content ideas built on their real strengths, Vanessa speaking as their own social media person.
+          7. <div class="cs-cta"><p>...</p></div> - one short, warm, confident closing paragraph, signed off in spirit like Vanessa talking to them directly about turning this into an actual content plan together. A single <strong> may be used for emphasis inside it.
+          ${COMPLIANCE_RULES}
 
-    const response = await openai.responses.create({
-      model: "gpt-5.5",
-      // "high" reasoning plus live web search burns through a lot of hidden
-      // reasoning and tool-call tokens before a word of the actual report
-      // gets written, and those come out of the same max_output_tokens
-      // budget. At 3000 that budget was running out mid-research, leaving
-      // nothing for the write-up itself, hence the empty response. "medium"
-      // still does the research and writing properly, with far less risk of
-      // running the tank dry, and the much larger cap gives it real headroom
-      // even if a search takes a few extra steps.
-      reasoning: { effort: "medium" },
-      tools: [{ type: "web_search" }],
-      instructions: systemPrompt,
-      input: `Research ${clinicName} near postcode ${postcode} and its top 3 real local competitors, then write the full report now, addressed directly to the clinic.`,
-      max_output_tokens: 12000,
-    });
+          Return ONLY the finished HTML for the message. No preamble, no explanation of your research, no JSON, no code fences, nothing else.`;
 
-    let reportHtml = (response.output_text ?? "").trim();
-    reportHtml = reportHtml.replace(/^```(?:html)?\s*/i, "").replace(/```\s*$/i, "").trim();
+      const response = await openai.responses.create({
+              model: "gpt-5.5",
+              // "high" reasoning plus live web search burns through a lot of hidden
+              // reasoning and tool-call tokens before a word of the actual report
+              // gets written, and those come out of the same max_output_tokens
+              // budget. At 3000 that budget was running out mid-research, leaving
+              // nothing for the write-up itself, hence the empty response. "medium"
+              // still does the research and writing properly, with far less risk of
+              // running the tank dry, and the much larger cap gives it real headroom
+              // even if a search takes a few extra steps.
+              reasoning: { effort: "medium" },
+              tools: [{ type: "web_search" }],
+              instructions: systemPrompt,
+              input: `Research ${clinicName} near postcode ${postcode} and its top 3 real local competitors, then write the full report now, addressed directly to the clinic.`,
+              max_output_tokens: 12000,
+      });
 
-    if (!reportHtml) {
-      logger.warn(
-        { clinicName, postcode, status: response.status, incompleteReason: response.incomplete_details?.reason },
-        "competitor-scout: empty response from web search generation",
-      );
+      let reportHtml = (response.output_text ?? "").trim();
+          reportHtml = reportHtml.replace(/^```(?:html)?\s*/i, "").replace(/```\s*$/i, "").trim();
+
+      if (!reportHtml) {
+              logger.warn(
+                { clinicName, postcode, status: response.status, incompleteReason: response.incomplete_details?.reason },
+                        "competitor-scout: empty response from web search generation",
+                      );
+              await db.execute(sql`
+                      UPDATE competitor_scout_reports SET status = 'failed' WHERE id = ${id}
+                            `);
+              return;
+      }
+
       await db.execute(sql`
-        UPDATE competitor_scout_reports SET status = 'failed' WHERE id = ${id}
-      `);
-      return;
+            UPDATE competitor_scout_reports
+                  SET report_html = ${reportHtml}, status = 'ready'
+                        WHERE id = ${id}
+                            `);
+    } catch (err) {
+          logger.error({ err, id, clinicName }, "Failed to generate competitor scout report");
+          await db.execute(sql`
+                UPDATE competitor_scout_reports SET status = 'failed' WHERE id = ${id}
+                    `).catch((updateErr) => {
+                  logger.error({ updateErr, id }, "Failed to mark competitor scout report as failed");
+          });
     }
-
-    await db.execute(sql`
-      UPDATE competitor_scout_reports
-      SET report_html = ${reportHtml}, status = 'ready'
-      WHERE id = ${id}
-    `);
-  } catch (err) {
-    logger.error({ err, id, clinicName }, "Failed to generate competitor scout report");
-    await db.execute(sql`
-      UPDATE competitor_scout_reports SET status = 'failed' WHERE id = ${id}
-    `).catch((updateErr) => {
-      logger.error({ updateErr, id }, "Failed to mark competitor scout report as failed");
-    });
-  }
 }
 
 // POST /api/competitor-scout/generate
@@ -291,32 +292,32 @@ Return ONLY the finished HTML for the message. No preamble, no explanation of yo
 // requests out at 30 seconds. The frontend polls GET /:id until it flips
 // to 'ready' (or 'failed').
 router.post("/competitor-scout/generate", async (req, res) => {
-  try {
-    const clinicName = String(req.body?.clinicName || "").trim();
-    const postcode = String(req.body?.postcode || "").trim();
-    const researchNotes = String(req.body?.researchNotes || "").trim();
+    try {
+          const clinicName = String(req.body?.clinicName || "").trim();
+          const postcode = String(req.body?.postcode || "").trim();
+          const researchNotes = String(req.body?.researchNotes || "").trim();
 
-    if (!clinicName || !postcode) {
-      return res.status(400).json({ error: "Clinic name and postcode are required" });
+      if (!clinicName || !postcode) {
+              return res.status(400).json({ error: "Clinic name and postcode are required" });
+      }
+
+      const insertResult = await db.execute(sql`
+            INSERT INTO competitor_scout_reports (clinic_name, postcode, research_notes, report_html, status)
+                  VALUES (${clinicName}, ${postcode}, ${researchNotes}, '', 'processing')
+                        RETURNING id, clinic_name, postcode, research_notes, report_html, status, created_at
+                            `);
+          const row = (insertResult as { rows?: ScoutReportRow[] }).rows?.[0];
+          if (!row) {
+                  return res.status(500).json({ error: "Failed to start the report" });
+          }
+
+      res.json(row);
+
+      void runReportGeneration(row.id, clinicName, postcode, researchNotes);
+    } catch (err) {
+          logger.error({ err }, "Failed to start competitor scout report");
+          res.status(500).json({ error: "Failed to generate report" });
     }
-
-    const insertResult = await db.execute(sql`
-      INSERT INTO competitor_scout_reports (clinic_name, postcode, research_notes, report_html, status)
-      VALUES (${clinicName}, ${postcode}, ${researchNotes}, '', 'processing')
-      RETURNING id, clinic_name, postcode, research_notes, report_html, status, created_at
-    `);
-    const row = (insertResult as { rows?: ScoutReportRow[] }).rows?.[0];
-    if (!row) {
-      return res.status(500).json({ error: "Failed to start the report" });
-    }
-
-    res.json(row);
-
-    void runReportGeneration(row.id, clinicName, postcode, researchNotes);
-  } catch (err) {
-    logger.error({ err }, "Failed to start competitor scout report");
-    res.status(500).json({ error: "Failed to generate report" });
-  }
 });
 
 export default router;
