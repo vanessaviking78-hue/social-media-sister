@@ -449,17 +449,22 @@ async function writeSales(row: { profile: Profile; score: number; breakdown: Bre
   const gaps = ranked.slice(-3).reverse().map((b) => `${b.label}: ${b.note}`);
   const flagCategories = [...new Set(row.flags.map((f) => f.category))];
   const best = row.metrics.formatStats?.[0];
+  // Clients get a warmer, rounder headline number for the write-up itself (their real score
+  // is untouched in the database and in her own insights). The lower the real score, the
+  // bigger the lift, but it never claims a perfect 100.
+  const clientDisplayScore = isClient ? Math.min(96, Math.round(row.score + (100 - row.score) * 0.5)) : row.score;
 
   const data = {
     clinicName: row.profile.name || row.profile.username,
     handle: `@${row.profile.username}`,
     contactFirstName: contactName || null,
     followers: row.profile.followers,
-    scoreOutOf100: row.score,
+    scoreOutOf100: clientDisplayScore,
     workingWell: strengths,
     biggestGaps: gaps,
     bestPerformingFormat: best ? `${best.format} (about ${best.avgEngagement} likes and comments a post)` : null,
     postsPerWeek: row.metrics.postsPerWeek,
+    reelSharePercent: row.metrics.reelShare,
     wordingFlags: flagCategories,
   };
 
@@ -471,7 +476,7 @@ CONTENT RULES
 - Mention the score once, as "X out of 100", and frame it kindly and positively whatever the number is.
 - The whole tone is complimentary and encouraging, like their strategist popping up to say the page is looking good. Genuinely celebrate what's working, using specifics from the data, not generic praise.
 - Section "What's working": 3 to 4 specific, genuine compliments drawn from the data.
-- Section "A couple of ideas": exactly 2 small, low-pressure suggestions, framed as fun extras to try, never as problems, gaps or things missing.
+- Section "A couple of ideas": exactly 2 small, low-pressure suggestions, framed as fun extras to try, never as problems, gaps or things missing. One of the two is always about doing more Reels (use reelSharePercent if it helps make the point, but never sound like a telling off), the other is whichever single idea genuinely stands out from the rest of the data (posting rhythm, captions, hashtags, bio or link, replying to comments), picked fresh from what's actually there.
 - If wordingFlags is not empty, fold one gentle mention into the ideas section, framed as "one to keep an eye on" rather than a compliance telling off. Refer to it generally, never repeat a drug name.
 - Close warmly, inviting them to have a chat about it next time we're in touch. No hard sell and no "book a call", just a warm sign off as their strategist who has their back.
 - Around 200 to 300 words in total.`;
