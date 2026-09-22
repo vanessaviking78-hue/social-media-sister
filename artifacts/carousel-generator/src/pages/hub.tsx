@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck, Grid3x3 } from "lucide-react";
 import { LogOut } from "lucide-react";
 
 const TOOLS = [
@@ -392,6 +392,16 @@ description: "Clinics upload their before and after photos and a short story str
 color: "from-teal-500/20 to-teal-500/5",
 border: "hover:border-teal-500/50",
 iconColor: "text-teal-400",
+},
+{
+href: "/banner-tool",
+group: "carousel",
+icon: Grid3x3,
+name: "Banner Tool",
+description: "Upload one image and it cuts perfectly into 3 tiles at 1080 x 1440, with the right posting order marked so the grid reads as one seamless banner.",
+color: "from-cyan-500/20 to-cyan-500/5",
+border: "hover:border-cyan-500/50",
+iconColor: "text-cyan-400",
 },
 {
 href: "/seamless-bulk",
