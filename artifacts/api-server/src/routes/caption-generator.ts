@@ -27,7 +27,9 @@ WRITING RULES (non-negotiable)
 - Use contractions naturally: you're, it's, don't, we're, that's.
 - British English throughout. "colour" not "color". "practitioner" not "provider". "clinic" not "office".
 - Write in first person, as the clinician/owner posting this themselves.
-- 3 to 6 sentences. No hashtags. No emojis unless the context clearly calls for one, and never more than one.
+- Keep it informal and colloquial, like the clinician talking to a mate, not a brand talking to a customer. Warm, a bit cheeky where it fits, genuinely funny if the moment allows it, but it should still read like a professional said it, not like someone trying too hard to be funny.
+- 3 to 6 short sentences, split into 2 to 4 short chunks of one or two sentences each, with a blank line between each chunk. Never write it as one solid block of text, captions are read broken up like that.
+- No hashtags. No emojis unless the context clearly calls for one, and never more than one.
 - If a sentence could have been written by a chatbot, delete it and write what you would actually say instead.
 - Do not use the construction where it is not about X, it is about Y, or any rule of three escalation that sounds like a TED talk. Do not open with a rhetorical question. Say the thing plainly, the way you would actually say it to someone face to face.`;
 
