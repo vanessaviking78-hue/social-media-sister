@@ -22,6 +22,7 @@ import ApprovePublic from "@/pages/approve-public";
 import ClientPortal from "@/pages/client-portal";
 import ShowcaseBuilder from "@/pages/showcase-builder";
 import SeamlessBulk from "@/pages/seamless-bulk";
+import BannerTool from "@/pages/banner-tool";
 import AboutMeStudio from "@/pages/about-me-studio";
 import ShowcasePlayer from "@/pages/showcase-player";
 import MetaOAuthResult from "@/pages/meta-oauth-result";
@@ -176,6 +177,7 @@ function ProtectedRouter() {
       <Route path="/reports" component={Reports} />
       <Route path="/showcase-builder" component={ShowcaseBuilder} />
       <Route path="/seamless-bulk" component={SeamlessBulk} />
+      <Route path="/banner-tool" component={BannerTool} />
       <Route path="/about-me-studio" component={AboutMeStudio} />
       <Route path="/tweet-maker" component={TweetMaker} />
       <Route path="/revenue-ideas" component={RevenueIdeas} />
