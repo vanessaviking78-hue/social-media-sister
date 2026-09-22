@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, Search, ClipboardCheck, Star } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw } from "lucide-react";
 import { LogOut } from "lucide-react";
 
 const TOOLS = [
@@ -245,16 +245,6 @@ border: "hover:border-green-500/50",
 iconColor: "text-green-400",
 },
 {
-href: "/client-reviews",
-group: "admin",
-icon: Star,
-name: "Client Reviews",
-description: "Every review clients leave on /reviews, with averages, downloadable review cards and a wall of love for the ones you approve.",
-color: "from-pink-500/20 to-pink-500/5",
-border: "hover:border-pink-500/50",
-iconColor: "text-pink-400",
-},
-{
 href: "/bundle-requests",
 group: "admin",
 icon: Inbox,
@@ -303,26 +293,6 @@ description: "Generate, review and approve fresh revenue ideas per client, with 
 color: "from-emerald-500/20 to-emerald-500/5",
 border: "hover:border-emerald-500/50",
 iconColor: "text-emerald-400",
-},
-{
-href: "/competitor",
-group: "admin",
-icon: Search,
-name: "Competitor Scout",
-description: "Private to you. Paste in the research on a client's top nearby competitors and get the full written report in your voice, saved to a library.",
-color: "from-amber-500/20 to-amber-500/5",
-border: "hover:border-amber-500/50",
-iconColor: "text-amber-400",
-},
-{
-href: "/audit",
-group: "admin",
-icon: ClipboardCheck,
-name: "Page Audit",
-description: "Private to you. Type in any Instagram handle and get a scored mini audit, a compliance check and a ready-to-send write-up. Every audit is saved so you can see what's working.",
-color: "from-teal-500/20 to-teal-500/5",
-border: "hover:border-teal-500/50",
-iconColor: "text-teal-400",
 },
 {
 href: "/upload-schedule",
@@ -633,6 +603,17 @@ color: "from-pink-500/20 to-pink-500/5",
 border: "hover:border-pink-500/50",
 iconColor: "text-pink-400",
 },
+{
+href: "/spinwheel",
+group: "admin",
+icon: RotateCw,
+name: "Client Wheel",
+description: "One spin, one clinic. Every name stays blurred until it wins. Switch to the blank wheel to spin a winner from any list you type in.",
+color: "from-pink-500/20 to-pink-500/5",
+border: "hover:border-pink-500/50",
+iconColor: "text-pink-400",
+external: true,
+},
 ];
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -763,8 +744,7 @@ type Tool = typeof TOOLS[number];
 
 function ToolCard({ tool, badge = 0 }: { tool: Tool; badge?: number }) {
 const Icon = tool.icon;
-return (
-<Link href={tool.href}>
+const cardBody = (
 <div className={`group relative rounded-2xl border border-border/30 bg-gradient-to-br ${tool.color} p-5 cursor-pointer transition-all duration-200 ${tool.border} hover:shadow-lg hover:-translate-y-0.5 h-full`}>
 {badge > 0 && (
 <span className="absolute -top-2 -right-2 z-10 min-w-[22px] h-[22px] px-1.5 flex items-center justify-center rounded-full bg-pink-500 text-white text-xs font-bold shadow-lg ring-2 ring-background animate-pulse">
@@ -777,6 +757,17 @@ return (
 <h2 className="font-semibold text-base mb-1.5 text-foreground">{tool.name}</h2>
 <p className="text-sm text-muted-foreground leading-snug">{tool.description}</p>
 </div>
+);
+if ((tool as any).external) {
+return (
+<a href={tool.href} target="_blank" rel="noopener noreferrer">
+{cardBody}
+</a>
+);
+}
+return (
+<Link href={tool.href}>
+{cardBody}
 </Link>
 );
 }
