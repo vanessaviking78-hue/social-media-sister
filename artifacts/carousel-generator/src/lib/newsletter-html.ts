@@ -1,0 +1,79 @@
+import { isLight, parseHex, readableAccent, type NewsletterBrand, type NewsletterContent } from "./newsletter-pdf";
+
+// Email-safe HTML: tables, inline styles, 600px wide, no scripts, no web
+// fonts. Pastes straight into Mailchimp, Klaviyo, Flodesk or similar as a
+// custom HTML block. Images must be hosted URLs, email clients block data URIs.
+
+const esc = (s: string) =>
+  (s || "")
+    .replace(/[—–]/g, ", ")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+const hex = (rgb: [number, number, number]) => "#" + rgb.map((c) => c.toString(16).padStart(2, "0")).join("");
+
+function paras(body: string, color: string, size = 15) {
+  return (body || "")
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => `<p style="margin:0 0 14px 0;font-family:Helvetica,Arial,sans-serif;font-size:${size}px;line-height:1.6;color:${color};">${esc(p).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+}
+
+export function buildNewsletterHtml(
+  content: NewsletterContent,
+  brand: Omit<NewsletterBrand, "logoDataUrl" | "heroDataUrl"> & { logoUrl: string | null; heroUrl: string | null },
+  subject: string,
+  preview: string,
+) {
+  const accentRaw = parseHex(brand.accent);
+  const accent = hex(readableAccent(accentRaw));
+  const accentFill = hex(accentRaw);
+  const soft = hex(accentRaw.map((c) => Math.round(c + (255 - c) * (isLight(accentRaw) ? 0.5 : 0.88))) as [number, number, number]);
+  const onAccent = isLight(accentRaw) ? "#1c1c1e" : "#ffffff";
+  const btnFill = isLight(accentRaw) ? "#1c1c1e" : "#ffffff";
+  const btnText = isLight(accentRaw) ? "#ffffff" : accent;
+  const get = (s: string) => content.sections.find((x) => x.slot === s);
+  const label = (t: string, c = accent) =>
+    `<p style="margin:0 0 6px 0;font-family:Helvetica,Arial,sans-serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;font-weight:bold;color:${c};">${esc(t)}</p>`;
+  const h = (t: string, size: number, c = "#1c1c1e") =>
+    `<h2 style="margin:0 0 10px 0;font-family:Georgia,'Times New Roman',serif;font-size:${size}px;line-height:1.2;color:${c};font-weight:bold;">${esc(t)}</h2>`;
+
+  const lead = get("lead"), ask = get("ask"), myth = get("myth"), bts = get("bts"), sell = get("sell");
+
+  return `<!DOCTYPE html>
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(subject)}</title></head>
+<body style="margin:0;padding:0;background:#f4f1ee;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(preview)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1ee;"><tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;">
+<tr><td align="center" style="padding:28px 32px 8px 32px;">
+${brand.logoUrl ? `<img src="${esc(brand.logoUrl)}" alt="${esc(brand.clinicName)}" style="max-width:200px;max-height:80px;height:auto;display:block;margin:0 auto 12px auto;">` : h(brand.clinicName, 26)}
+<p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:18px;color:${accent};">${esc(brand.newsletterName)}</p>
+<p style="margin:6px 0 0 0;font-family:Helvetica,Arial,sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#888;">${esc(brand.monthLabel)}</p>
+</td></tr>
+<tr><td style="padding:14px 32px 0 32px;"><div style="border-top:2px solid ${accentFill};"></div></td></tr>
+${brand.heroUrl ? `<tr><td style="padding:22px 32px 0 32px;"><img src="${esc(brand.heroUrl)}" alt="" width="536" style="width:100%;height:auto;display:block;border-radius:6px;"></td></tr>` : ""}
+${content.intro ? `<tr><td align="center" style="padding:22px 48px 4px 48px;"><p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:18px;line-height:1.5;color:#444;">${esc(content.intro)}</p></td></tr>` : ""}
+${lead ? `<tr><td style="padding:24px 32px 4px 32px;">${label(lead.label)}${h(lead.heading, 28)}${paras(lead.body, "#464646")}</td></tr>` : ""}
+${ask || myth ? `<tr><td style="padding:10px 26px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+${ask ? `<td valign="top" width="50%" style="padding:6px;"><div style="background:${soft};border-radius:6px;padding:18px;">${label(ask.label)}${h(ask.heading, 20)}${paras(ask.body, "#464646", 14)}</div></td>` : ""}
+${myth ? `<td valign="top" width="50%" style="padding:6px;"><div style="background:${soft};border-radius:6px;padding:18px;">${label(myth.label)}${h(myth.heading, 20)}${paras(myth.body, "#464646", 14)}</div></td>` : ""}
+</tr></table></td></tr>` : ""}
+${bts ? `<tr><td style="padding:18px 32px 4px 32px;">${label(bts.label)}${h(bts.heading, 22)}${paras(bts.body, "#464646")}</td></tr>` : ""}
+${sell ? `<tr><td style="padding:14px 32px 8px 32px;"><div style="background:${accentFill};border-radius:8px;padding:26px;">
+${label(sell.label, onAccent)}${h(sell.heading, 22, onAccent)}${paras(sell.body, onAccent)}
+${brand.bookingUrl ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:8px;"><tr><td style="background:${btnFill};border-radius:30px;"><a href="${esc(brand.bookingUrl)}" style="display:inline-block;padding:13px 28px;font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:bold;color:${btnText};text-decoration:none;">${esc(content.ctaText || "Book your consultation")}</a></td></tr></table>` : ""}
+</div></td></tr>` : ""}
+${content.signOff ? `<tr><td style="padding:18px 32px 26px 32px;"><p style="margin:0 0 6px 0;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:17px;color:#444;">${esc(content.signOff)}</p><p style="margin:0;font-family:Helvetica,Arial,sans-serif;font-size:14px;font-weight:bold;color:${accent};">${esc(brand.clinicName)}</p></td></tr>` : ""}
+<tr><td style="padding:18px 32px 26px 32px;border-top:1px solid #eee;">
+<p style="margin:0 0 6px 0;font-family:Helvetica,Arial,sans-serif;font-size:12px;color:#999;">${esc([brand.clinicName, brand.address].filter(Boolean).join(" | "))}</p>
+<p style="margin:0;font-family:Helvetica,Arial,sans-serif;font-size:12px;color:#999;">You're receiving this because you're a patient of ours and asked to hear from us. <a href="*|UNSUB|*" style="color:#999;">Unsubscribe</a></p>
+</td></tr>
+</table></td></tr></table>
+</body></html>`;
+}
