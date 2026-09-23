@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck, Grid3x3, Mail } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck, Grid3x3, Mail, Star, Heart } from "lucide-react";
 import { LogOut } from "lucide-react";
 
 const TOOLS = [
@@ -243,6 +243,27 @@ description: "Send carousels to clients for approval via a shareable link. They 
 color: "from-green-500/20 to-green-500/5",
 border: "hover:border-green-500/50",
 iconColor: "text-green-400",
+},
+{
+href: "/client-reviews",
+group: "admin",
+icon: Star,
+name: "Client Reviews",
+description: "Every review clients leave on /reviews, with averages, downloadable review cards and a wall of love for the ones you approve.",
+color: "from-pink-500/20 to-pink-500/5",
+border: "hover:border-pink-500/50",
+iconColor: "text-pink-400",
+},
+{
+href: "/wall",
+group: "admin",
+icon: Heart,
+name: "Wall of Love",
+description: "Your public wall of approved reviews, live at thecybersuite.com/wall and ready to share with prospects.",
+color: "from-rose-500/20 to-rose-500/5",
+border: "hover:border-rose-500/50",
+iconColor: "text-rose-400",
+external: true,
 },
 {
 href: "/bundle-requests",
