@@ -479,6 +479,9 @@ export default function PresetsPage() {
         brandNotes: editData.brandNotes || null,
         clientPhotoUrl: editData.clientPhotoUrl || null,
         portalWelcomeMessage: editData.portalWelcomeMessage || null,
+        bookingLink: editData.bookingLink?.trim() || null,
+        newsletterName: editData.newsletterName?.trim() || null,
+        clinicAddress: editData.clinicAddress?.trim() || null,
       });
       toast.success("Preset updated");
       cancelEdit();
@@ -848,6 +851,37 @@ export default function PresetsPage() {
                         placeholder="Welcome back, Sarah"
                         className="bg-gray-900 border-gray-700 text-white"
                       />
+                    </div>
+                    <div className="space-y-3 rounded-xl border border-gray-800 p-3">
+                      <p className="text-xs font-semibold text-gray-300">Newsletter details</p>
+                      <div>
+                        <Label className="text-xs text-gray-400">Booking link</Label>
+                        <Input
+                          value={editData.bookingLink || ""}
+                          onChange={(e) => setEditData((d) => ({ ...d, bookingLink: e.target.value || null }))}
+                          placeholder="https://clinic.co.uk/book"
+                          className="bg-gray-900 border-gray-700 text-white mt-1"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Used for the button and QR code in the Newsletter Maker.</p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-400">Newsletter name</Label>
+                        <Input
+                          value={editData.newsletterName || ""}
+                          onChange={(e) => setEditData((d) => ({ ...d, newsletterName: e.target.value || null }))}
+                          placeholder="The Skin Edit"
+                          className="bg-gray-900 border-gray-700 text-white mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-400">Clinic address (newsletter footer)</Label>
+                        <Input
+                          value={editData.clinicAddress || ""}
+                          onChange={(e) => setEditData((d) => ({ ...d, clinicAddress: e.target.value || null }))}
+                          placeholder="12 High Street, Harrogate, HG1 1AA"
+                          className="bg-gray-900 border-gray-700 text-white mt-1"
+                        />
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
