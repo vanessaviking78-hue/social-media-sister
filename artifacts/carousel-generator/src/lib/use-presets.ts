@@ -62,6 +62,9 @@ export interface ClientPreset {
   contentPillars: string | null;
   brandNotes: string | null;
   portalWelcomeMessage: string | null;
+  bookingLink?: string | null;
+  newsletterName?: string | null;
+  clinicAddress?: string | null;
 }
 
 export interface PresetStyleFields {
@@ -164,7 +167,7 @@ export function usePresets() {
     logoUrl?: string | null,
     captionFootnote?: string,
     metaFields?: { metaPageAccessToken?: string | null; metaFacebookPageId?: string | null; metaFacebookPageName?: string | null; metaInstagramAccountId?: string | null; metaInstagramUsername?: string | null },
-    extra?: { defaultPostTime?: string; defaultFirstCommentCarousel?: string | null; defaultFirstCommentSingle?: string | null; defaultFirstCommentReel?: string | null; voiceStyle?: string; targetAudience?: string | null; contentPillars?: string | null; brandNotes?: string | null;  clientPhotoUrl?: string | null; portalWelcomeMessage?: string | null;},
+    extra?: { defaultPostTime?: string; defaultFirstCommentCarousel?: string | null; defaultFirstCommentSingle?: string | null; defaultFirstCommentReel?: string | null; voiceStyle?: string; targetAudience?: string | null; contentPillars?: string | null; brandNotes?: string | null;  clientPhotoUrl?: string | null; portalWelcomeMessage?: string | null; bookingLink?: string | null; newsletterName?: string | null; clinicAddress?: string | null;},
   ) => {
     const body = {
       name,
