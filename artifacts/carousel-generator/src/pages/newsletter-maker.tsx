@@ -191,7 +191,7 @@ export default function NewsletterMaker() {
   const brand: NewsletterBrand | null = preset
     ? {
         clinicName: preset.name,
-        newsletterName: preset.newsletterName?.trim() || `Notes from ${preset.name}`,
+        newsletterName: preset.newsletterName?.trim() || "Catch Up from the Clinic",
         monthLabel,
         accent: preset.accentColor,
         logoDataUrl: logoPng,
