@@ -1,8 +1,8 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, Upload, FileText, Download, Loader2,
-  CheckCircle2, X, CalendarDays, Sparkles, RefreshCcw, Plus,
+  CheckCircle2, X, CalendarDays, Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -10,57 +10,183 @@ import { toast } from "sonner";
 import Papa from "papaparse";
 import { saveAs } from "file-saver";
 import { usePresets } from "@/lib/use-presets";
-import { compressImage } from "@/lib/slide-utils";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-// ── CSV template ──────────────────────────────────────────────────────────────
+// How it works now:
+//   1. Pick a client
+//   2. Upload a CSV with one row: the hook
+//   3. Upload the story images
+//   -> one story per image, one per day, at 7pm, starting tomorrow.
+// Instagram does not display captions or stickers on stories published via the
+// Graph API, so the hook is printed onto each 1080x1920 image before upload.
 
-const CSV_HEADERS = [
-  "date", "time", "sticker_type", "question",
-  "option_a", "option_b", "option_c", "option_d",
-  "correct_option", "caption",
-];
+const MAX_IMAGES = 31;
+const DEFAULT_TIME = "19:00";
+const STORY_W = 1080;
+const STORY_H = 1920;
 
-const CSV_EXAMPLE_ROWS = [
-  ["2026-07-01", "10:00", "poll",     "Would you try this treatment?",           "Yes",        "Not yet",    "",           "",        "",  ""],
-  ["2026-07-02", "11:00", "question", "Ask me anything about skincare!",          "",           "",           "",           "",        "",  ""],
-  ["2026-07-03", "09:00", "quiz",     "How long does Botox last?",                "2-4 months", "4-6 months", "6-12 months","1 year",  "1", ""],
-  ["2026-07-04", "14:00", "",         "",                                          "",           "",           "",           "",        "",  "Just a regular story — no sticker"],
-];
+// --- CSV ---
 
 function downloadTemplate() {
-  const rows = [CSV_HEADERS, ...CSV_EXAMPLE_ROWS];
-  const csv = rows.map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-  saveAs(blob, "bulk-stories-template.csv");
+  const csv = `"hook"\n"The one question every patient asks me before their first treatment"`;
+  saveAs(new Blob([csv], { type: "text/csv;charset=utf-8" }), "story-hook-template.csv");
 }
 
-// ── Types ─────────────────────────────────────────────────────────────────────
+/** Pull the hook out of a one-row CSV. A "hook" header row is optional. */
+function extractHook(rows: string[][]): string {
+  const cells = rows
+    .map((r) => r.map((c) => (c ?? "").trim()).filter(Boolean))
+    .filter((r) => r.length > 0);
+  if (!cells.length) return "";
+  const first = cells[0];
+  const headerIdx = first.findIndex((c) => c.toLowerCase() === "hook");
+  if (headerIdx >= 0) {
+    const next = cells[1];
+    if (!next) return "";
+    return (next[headerIdx] ?? next[0] ?? "").trim();
+  }
+  return first[0];
+}
 
-type StickerType = "none" | "poll" | "quiz" | "question";
+// --- Dates ---
 
-type StoryEntry = {
-  id: string;
-  rowNum: number;
-  date: string;
-  time: string;
-  stickerType: StickerType;
-  question: string;
-  options: string[];
-  correctIndex: number;
-  caption: string;
+function toYmd(d: Date) {
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+function tomorrowYmd() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return toYmd(d);
+}
+
+/** Local date/time for story i (handles the clocks changing). */
+function slotFor(startYmd: string, time: string, i: number): Date {
+  const [y, m, d] = startYmd.split("-").map(Number);
+  const [hh, mm] = time.split(":").map(Number);
+  return new Date(y, m - 1, d + i, hh, mm, 0, 0);
+}
+
+function niceDate(d: Date) {
+  return d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+}
+
+function niceTime(d: Date) {
+  return d.toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12: true }).replace(" ", "");
+}
+
+// --- Rendering ---
+
+type TextPos = "top" | "middle" | "bottom";
+
+type RenderOpts = {
+  hook: string;
+  showHook: boolean;
   fontSize: number;
-  imageFile: File | null;
-  imageLocalUrl: string | null;
-  status: "idle" | "scheduling" | "done" | "error";
-  error?: string;
+  position: TextPos;
+  boxColour: string;
 };
 
-type ImageItem = { file: File; localUrl: string };
-type Phase = "upload" | "preview" | "scheduling" | "done";
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let cur = "";
+  for (const w of words) {
+    const test = cur ? `${cur} ${w}` : w;
+    if (ctx.measureText(test).width > maxW && cur) {
+      lines.push(cur);
+      cur = w;
+    } else {
+      cur = test;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+async function drawStory(canvas: HTMLCanvasElement, imgUrl: string, opts: RenderOpts) {
+  canvas.width = STORY_W;
+  canvas.height = STORY_H;
+  const ctx = canvas.getContext("2d")!;
+  const img = await loadImage(imgUrl);
+
+  // Cover-fit the photo into 9:16
+  const scale = Math.max(STORY_W / img.width, STORY_H / img.height);
+  const w = img.width * scale;
+  const h = img.height * scale;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, STORY_W, STORY_H);
+  ctx.drawImage(img, (STORY_W - w) / 2, (STORY_H - h) / 2, w, h);
+
+  if (!opts.showHook || !opts.hook.trim()) return;
+
+  try { await document.fonts.load(`${opts.fontSize}px "Bebas Neue"`); } catch { /* fallback font */ }
+
+  const maxTextW = STORY_W * 0.78;
+  let fs = opts.fontSize;
+  let lines: string[] = [];
+  const measure = () => {
+    ctx.font = `${fs}px "Bebas Neue", Impact, sans-serif`;
+    lines = wrapLines(ctx, opts.hook.trim().toUpperCase(), maxTextW);
+  };
+  measure();
+  while (lines.length > 6 && fs > 48) { fs -= 6; measure(); }
+
+  const lh = fs * 1.08;
+  const padX = 48;
+  const padY = 36;
+  const textW = Math.max(...lines.map((l) => ctx.measureText(l).width));
+  const boxW = Math.min(STORY_W - 80, textW + padX * 2);
+  const boxH = lines.length * lh + padY * 2;
+
+  // Keep clear of Instagram's own UI at the top (profile bar) and bottom (reply box)
+  const centreY =
+    opts.position === "top" ? 330 + boxH / 2
+    : opts.position === "bottom" ? STORY_H - 380 - boxH / 2
+    : STORY_H / 2;
+  const boxX = (STORY_W - boxW) / 2;
+  const boxY = centreY - boxH / 2;
+
+  ctx.save();
+  ctx.globalAlpha = 0.92;
+  ctx.fillStyle = opts.boxColour;
+  ctx.beginPath();
+  ctx.roundRect(boxX, boxY, boxW, boxH, 28);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  lines.forEach((line, i) => {
+    ctx.fillText(line, STORY_W / 2, boxY + padY + lh * i + lh / 2);
+  });
+}
+
+async function renderStoryFile(imgUrl: string, opts: RenderOpts, name: string): Promise<File> {
+  const canvas = document.createElement("canvas");
+  await drawStory(canvas, imgUrl, opts);
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => blob ? resolve(new File([blob], name, { type: "image/jpeg" })) : reject(new Error("Render failed")),
+      "image/jpeg",
+      0.88,
+    );
+  });
+}
+
+// --- Upload ---
 
 function toBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -71,365 +197,126 @@ function toBase64(file: File): Promise<string> {
   });
 }
 
-async function uploadBatch(files: File[]): Promise<string[]> {
-  const BATCH = 5;
-  const urls: string[] = [];
-  for (let i = 0; i < files.length; i += BATCH) {
-    const chunk = files.slice(i, i + BATCH);
-    const images = await Promise.all(
-      chunk.map(async (f) => {
-        const compressed = await compressImage(f);
-        return { name: compressed.name, base64: await toBase64(compressed) };
-      })
-    );
-    const res = await fetch(`${BASE}/api/content/upload-image`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ images }),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({ error: res.status === 413 ? "Images too large — try smaller files" : `Upload failed (${res.status})` }));
-      throw new Error(data.error || "Upload failed");
-    }
-    const data = await res.json();
-    urls.push(...(data.results ?? []).map((r: { url: string }) => r.url));
-  }
-  return urls;
-}
-
-function parseStickerType(raw: string): StickerType {
-  const s = raw.trim().toLowerCase();
-  if (s === "poll") return "poll";
-  if (s === "quiz") return "quiz";
-  if (s === "question") return "question";
-  return "none";
-}
-
-function parseCsvRows(rows: Record<string, string>[]): StoryEntry[] {
-  return rows
-    .filter((r) => r["date"]?.trim())
-    .map((r, i) => {
-      const stickerType = parseStickerType(r["sticker_type"] || "");
-      const options = ["option_a", "option_b", "option_c", "option_d"]
-        .map((k) => (r[k] || "").trim())
-        .filter(Boolean);
-      const correctIndex = Math.max(0, parseInt(r["correct_option"] || "0", 10));
-      return {
-        id: `row-${i}`,
-        rowNum: i + 1,
-        date: r["date"]?.trim() || "",
-        time: r["time"]?.trim() || "09:00",
-        stickerType,
-        question: (r["question"] || "").trim(),
-        options,
-        correctIndex,
-        caption: (r["caption"] || "").trim(),
-        fontSize: 64,
-        imageFile: null,
-        imageLocalUrl: null,
-        status: "idle" as const,
-      };
-    });
-}
-
-const MAX_IMAGES = 10;
-
-// ── AI Question card rendering ────────────────────────────────────────────────
-
-function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-  const words = text.split(" ");
-  const lines: string[] = [];
-  let cur = "";
-  for (const word of words) {
-    const test = cur ? `${cur} ${word}` : word;
-    if (ctx.measureText(test).width > maxWidth && cur) {
-      lines.push(cur);
-      cur = word;
-    } else {
-      cur = test;
-    }
-  }
-  if (cur) lines.push(cur);
-  return lines;
-}
-
-async function renderQuestionCard(question: string, bgColour: string): Promise<File> {
-  const W = 1080, H = 1920;
-  const canvas = document.createElement("canvas");
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext("2d")!;
-
-  try { await document.fonts.load(`140px "Bebas Neue"`); } catch { /* fallback to sans-serif */ }
-
-  ctx.fillStyle = bgColour;
-  ctx.fillRect(0, 0, W, H);
-
-  const maxTextW = W * 0.80;
-  let fontSize = 148;
-
-  const getLines = (fs: number) => {
-    ctx.font = `${fs}px "Bebas Neue", Impact, sans-serif`;
-    return wrapCanvasText(ctx, question, maxTextW);
-  };
-
-  let lines = getLines(fontSize);
-  while (lines.length > 5 && fontSize > 64) {
-    fontSize -= 10;
-    lines = getLines(fontSize);
-  }
-
-  const lh = fontSize * 1.22;
-  const totalH = lines.length * lh;
-  const startY = (H - totalH) / 2 + fontSize * 0.85;
-
-  ctx.fillStyle = "#ffffff";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "alphabetic";
-  ctx.shadowColor = "rgba(0,0,0,0.40)";
-  ctx.shadowBlur = 20;
-  ctx.shadowOffsetY = 6;
-
-  lines.forEach((line, i) => {
-    ctx.fillText(line, W / 2, startY + i * lh);
+async function uploadOne(file: File): Promise<string> {
+  const res = await fetch(`${BASE}/api/content/upload-image`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ images: [{ name: file.name, base64: await toBase64(file) }] }),
   });
-
-  return new Promise((resolve) => {
-    canvas.toBlob(
-      (blob) => resolve(new File([blob!], `q-card-${Date.now()}-${Math.random().toString(36).slice(2)}.png`, { type: "image/png" })),
-      "image/png",
-    );
-  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({ error: `Upload failed (${res.status})` }));
+    throw new Error(data.error || "Upload failed");
+  }
+  const data = await res.json();
+  const url = data.results?.[0]?.url;
+  if (!url) throw new Error("Upload returned no URL");
+  return url;
 }
 
-function buildStickerConfig(entry: StoryEntry): object | null {
-  if (entry.stickerType === "none" || !entry.question) return null;
-  if (entry.stickerType === "poll" && entry.options.length >= 2) {
-    return { type: "poll", question: entry.question, options: [entry.options[0], entry.options[1]] };
-  }
-  if (entry.stickerType === "quiz" && entry.options.length >= 2) {
-    return {
-      type: "quiz",
-      question: entry.question,
-      options: entry.options,
-      correctIndex: Math.min(entry.correctIndex, entry.options.length - 1),
-    };
-  }
-  if (entry.stickerType === "question") {
-    return { type: "question", question: entry.question };
-  }
-  return null;
+// --- Live preview thumbnail ---
+
+function StoryThumb({ imgUrl, opts, className }: { imgUrl: string; opts: RenderOpts; className?: string }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    if (ref.current) drawStory(ref.current, imgUrl, opts).catch(() => {});
+  }, [imgUrl, opts]);
+  return <canvas ref={ref} className={className} style={{ aspectRatio: "9 / 16" }} />;
 }
 
-// ── Sticker badge ─────────────────────────────────────────────────────────────
+// --- Main ---
 
-function StickerBadge({ type }: { type: StickerType }) {
-  if (type === "none") return <span className="text-xs text-zinc-600">None</span>;
-  const label = type === "poll" ? "Poll" : type === "quiz" ? "Quiz" : "Q&A";
-  return (
-    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-pink-600/20 text-pink-300 border border-pink-500/30">
-      {label}
-    </span>
-  );
-}
-
-// ── Main ──────────────────────────────────────────────────────────────────────
+type ImageItem = { file: File; localUrl: string; status: "idle" | "working" | "done" | "error"; error?: string };
+type Phase = "setup" | "scheduling" | "done";
 
 export default function BulkStories() {
   const { presets, loading: presetsLoading } = usePresets();
   const [presetId, setPresetId] = useState("");
+  const [hook, setHook] = useState("");
+  const [csvName, setCsvName] = useState("");
   const [images, setImages] = useState<ImageItem[]>([]);
-  const [entries, setEntries] = useState<StoryEntry[]>([]);
-  const [phase, setPhase] = useState<Phase>("upload");
+  const [startDate, setStartDate] = useState(tomorrowYmd());
+  const [time, setTime] = useState(DEFAULT_TIME);
+  const [showHook, setShowHook] = useState(true);
+  const [fontSize, setFontSize] = useState(96);
+  const [position, setPosition] = useState<TextPos>("top");
+  const [phase, setPhase] = useState<Phase>("setup");
   const [csvDragOver, setCsvDragOver] = useState(false);
   const [imgDragOver, setImgDragOver] = useState(false);
-  const [doneCount, setDoneCount] = useState(0);
-  const [errorCount, setErrorCount] = useState(0);
-
-  const [generatedQuestions, setGeneratedQuestions] = useState<string[]>([]);
-  const [selectedQs, setSelectedQs] = useState<Set<number>>(new Set());
-  const [generatingQuestions, setGeneratingQuestions] = useState(false);
-  const [renderingCards, setRenderingCards] = useState(false);
 
   const csvInputRef = useRef<HTMLInputElement>(null);
   const imgInputRef = useRef<HTMLInputElement>(null);
 
-  // Clear uploads on every page visit so previous session images don't persist
-  useEffect(() => {
-    setImages([]);
-    setEntries([]);
-    setPhase("upload");
-  }, []);
-
   const selectedPreset = presets.find((p) => String(p.id) === presetId);
+
+  const renderOpts: RenderOpts = useMemo(() => ({
+    hook,
+    showHook,
+    fontSize,
+    position,
+    boxColour: selectedPreset?.accentColor || "#e91976",
+  }), [hook, showHook, fontSize, position, selectedPreset?.accentColor]);
+
+  const slots = useMemo(
+    () => images.map((_, i) => slotFor(startDate, time, i)),
+    [images, startDate, time],
+  );
+
+  const handleCsv = useCallback((file: File) => {
+    Papa.parse<string[]>(file, {
+      header: false,
+      skipEmptyLines: true,
+      complete: (result) => {
+        const h = extractHook(result.data as string[][]);
+        if (!h) { toast.error("Couldn't find a hook in that CSV"); return; }
+        setHook(h);
+        setCsvName(file.name);
+        toast.success("Hook loaded");
+      },
+      error: () => toast.error("Could not read that CSV"),
+    });
+  }, []);
 
   const handleImages = useCallback((files: File[]) => {
     const valid = files.filter((f) => f.type.startsWith("image/"));
     if (!valid.length) return;
     setImages((prev) => {
-      const slots = MAX_IMAGES - prev.length;
-      if (slots <= 0) { return prev; }
-      const toAdd = valid.slice(0, slots).map((f) => ({ file: f, localUrl: URL.createObjectURL(f) }));
-      return [...prev, ...toAdd];
+      const room = MAX_IMAGES - prev.length;
+      if (valid.length > room) toast.error(`Only ${MAX_IMAGES} images at a time, extras skipped`);
+      const add = valid.slice(0, Math.max(0, room)).map((f) => ({
+        file: f, localUrl: URL.createObjectURL(f), status: "idle" as const,
+      }));
+      return [...prev, ...add];
     });
   }, []);
 
-  const updateEntryFontSize = useCallback((id: string, size: number) => {
-    setEntries((prev) => prev.map((e) => e.id === id ? { ...e, fontSize: Math.max(12, Math.min(200, size)) } : e));
-  }, []);
-
-  const handleCsv = useCallback((file: File) => {
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (result) => {
-        const rows = result.data as Record<string, string>[];
-        if (!rows.length) { toast.error("CSV appears to be empty"); return; }
-        const parsed = parseCsvRows(rows);
-        if (!parsed.length) { toast.error("No valid rows found — make sure the date column is filled in."); return; }
-        setEntries(parsed);
-        toast.success(`${parsed.length} ${parsed.length === 1 ? "story" : "stories"} parsed`);
-      },
-      error: () => toast.error("Could not parse CSV"),
+  const moveImage = useCallback((from: number, to: number) => {
+    setImages((prev) => {
+      if (to < 0 || to >= prev.length) return prev;
+      const next = [...prev];
+      const [it] = next.splice(from, 1);
+      next.splice(to, 0, it);
+      return next;
     });
   }, []);
 
-  const handlePreview = useCallback(() => {
-    if (!presetId) { toast.error("Pick a client first"); return; }
-    if (!entries.length) { toast.error("Upload a CSV or add AI question cards first"); return; }
-    const csvEntries = entries.filter((e) => !e.imageFile);
-    if (csvEntries.length > 0 && !images.length) {
-      toast.error("Upload at least one story image for your CSV rows"); return;
-    }
-    // Map only entries that don't already have an image (CSV rows) to uploaded images
-    let csvImageIdx = 0;
-    const updated = entries.map((e) => {
-      if (e.imageFile) return e; // AI-rendered card — already has its image
-      const img = images[Math.min(csvImageIdx, images.length - 1)];
-      csvImageIdx++;
-      return { ...e, imageFile: img?.file ?? null, imageLocalUrl: img?.localUrl ?? null };
-    });
-    setEntries(updated);
-    setPhase("preview");
-  }, [presetId, entries, images]);
+  const firstSlotInPast = slots.length > 0 && slots[0].getTime() <= Date.now();
+  const ready = !!presetId && !!hook.trim() && images.length > 0 && !firstSlotInPast;
 
-  const handleGenerateQuestions = useCallback(async () => {
-    if (!presetId) { toast.error("Pick a client first"); return; }
-    setGeneratingQuestions(true);
-    try {
-      const res = await fetch(`${BASE}/api/stories/generate-questions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientName: selectedPreset?.name }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: "Generation failed" }));
-        throw new Error(data.error || "Generation failed");
-      }
-      const data = await res.json();
-      setGeneratedQuestions(data.questions ?? []);
-      setSelectedQs(new Set());
-    } catch (err: any) {
-      toast.error("Could not generate questions: " + err.message);
-    } finally {
-      setGeneratingQuestions(false);
-    }
-  }, [presetId, selectedPreset]);
-
-  const handleAddSelectedToStories = useCallback(async () => {
+  const handleSchedule = useCallback(async () => {
     if (!selectedPreset) { toast.error("Pick a client first"); return; }
-    const indices = [...selectedQs].sort((a, b) => a - b);
-    if (!indices.length) { toast.error("Select at least one question"); return; }
+    if (!hook.trim()) { toast.error("Upload your hook CSV first"); return; }
+    if (!images.length) { toast.error("Add at least one image"); return; }
+    if (firstSlotInPast) { toast.error("The first story would be in the past, pick a later start date"); return; }
 
-    setRenderingCards(true);
-    try {
-      const bgColour = selectedPreset.accentColor || "#e91976";
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      const newEntries: StoryEntry[] = [];
-
-      for (let i = 0; i < indices.length; i++) {
-        const qi = indices[i];
-        const question = generatedQuestions[qi];
-        const file = await renderQuestionCard(question, bgColour);
-        const localUrl = URL.createObjectURL(file);
-
-        const d = new Date(tomorrow);
-        d.setDate(d.getDate() + i);
-        const date = d.toISOString().slice(0, 10);
-
-        newEntries.push({
-          id: `ai-q-${qi}-${Date.now()}-${i}`,
-          rowNum: i + 1,
-          date,
-          time: "09:00",
-          stickerType: "none",
-          question,
-          options: [],
-          correctIndex: 0,
-          caption: question,
-          fontSize: 64,
-          imageFile: file,
-          imageLocalUrl: localUrl,
-          status: "idle",
-        });
-      }
-
-      // AI cards carry their own imageFile — don't put them in the shared images
-      // array, which is reserved for CSV-row background images.
-      setEntries((prev) => {
-        const merged = [...newEntries, ...prev].map((e, i) => ({ ...e, rowNum: i + 1 }));
-        return merged;
-      });
-
-      toast.success(
-        `${newEntries.length} question ${newEntries.length === 1 ? "card" : "cards"} added to your stories`,
-      );
-    } catch (err: any) {
-      toast.error("Failed to render cards: " + err.message);
-    } finally {
-      setRenderingCards(false);
-    }
-  }, [selectedPreset, selectedQs, generatedQuestions]);
-
-  const handleScheduleAll = useCallback(async () => {
-    if (!presetId || !selectedPreset) return;
     setPhase("scheduling");
+    setImages((prev) => prev.map((im) => ({ ...im, status: "idle", error: undefined })));
 
-    // Build index-safe mapping: only entries with an imageFile get uploaded.
-    // Preserve the entry index so uploadedUrls[j] maps back to the right entry.
-    const fileEntries: Array<{ entryIdx: number; file: File }> = [];
-    entries.forEach((e, i) => { if (e.imageFile) fileEntries.push({ entryIdx: i, file: e.imageFile }); });
-
-    let urlByEntryIdx = new Map<number, string>();
-    try {
-      const urls = await uploadBatch(fileEntries.map((x) => x.file));
-      fileEntries.forEach((x, j) => urlByEntryIdx.set(x.entryIdx, urls[j]));
-    } catch (err: any) {
-      toast.error("Image upload failed: " + err.message);
-      setPhase("preview");
-      return;
-    }
-
-    let done = 0;
-    let errors = 0;
-
-    for (let i = 0; i < entries.length; i++) {
-      const entry = entries[i];
-      const imageUrl = urlByEntryIdx.get(i);
-
-      setEntries((prev) => prev.map((e, j) => j === i ? { ...e, status: "scheduling" } : e));
-
-      if (!imageUrl) {
-        errors++;
-        setErrorCount(errors);
-        setEntries((prev) => prev.map((e, j) => j === i ? { ...e, status: "error", error: "No image URL" } : e));
-        continue;
-      }
-
+    for (let i = 0; i < images.length; i++) {
+      const when = slotFor(startDate, time, i);
+      setImages((prev) => prev.map((im, j) => j === i ? { ...im, status: "working" } : im));
       try {
-        const scheduledAt = new Date(`${entry.date}T${entry.time}:00`).toISOString();
+        const file = await renderStoryFile(images[i].localUrl, renderOpts, `story-${toYmd(when)}-${i + 1}.jpg`);
+        const imageUrl = await uploadOne(file);
         const res = await fetch(`${BASE}/api/scheduler/posts`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -438,37 +325,41 @@ export default function BulkStories() {
             postType: "story",
             content: {
               imageUrls: [imageUrl],
-              caption: entry.caption || "",
-              title: `Story — ${selectedPreset.name} ${entry.date}`,
-              fontSize: entry.fontSize,
+              caption: hook.trim(),
+              title: `Story — ${selectedPreset.name} ${toYmd(when)}`,
             },
-            scheduledAt,
-            stickerConfig: buildStickerConfig(entry),
+            scheduledAt: when.toISOString(),
+            stickerConfig: null,
           }),
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({ error: "Scheduling failed" }));
           throw new Error(data.error || "Scheduling failed");
         }
-        const data = await res.json();
-        done++;
-        setDoneCount(done);
-        setEntries((prev) => prev.map((e, j) => j === i ? { ...e, status: "done" } : e));
+        setImages((prev) => prev.map((im, j) => j === i ? { ...im, status: "done" } : im));
       } catch (err: any) {
-        errors++;
-        setErrorCount(errors);
-        setEntries((prev) => prev.map((e, j) => j === i ? { ...e, status: "error", error: err.message } : e));
+        setImages((prev) => prev.map((im, j) => j === i ? { ...im, status: "error", error: err.message } : im));
       }
     }
-
     setPhase("done");
-    if (done > 0) toast.success(`${done} ${done === 1 ? "story" : "stories"} queued`);
-    if (errors > 0) toast.error(`${errors} failed — check the summary`);
-  }, [presetId, selectedPreset, entries]);
+  }, [selectedPreset, hook, images, firstSlotInPast, startDate, time, renderOpts, presetId]);
 
-  // ── Upload phase ──────────────────────────────────────────────────────────────
+  const resetAll = () => {
+    setImages([]);
+    setHook("");
+    setCsvName("");
+    setStartDate(tomorrowYmd());
+    setPhase("setup");
+  };
 
-  if (phase === "upload") {
+  // --- Scheduling / done ---
+
+  if (phase !== "setup") {
+    const done = images.filter((i) => i.status === "done").length;
+    const failed = images.filter((i) => i.status === "error");
+    const finished = done + failed.length;
+    const pct = images.length ? Math.round((finished / images.length) * 100) : 0;
+
     return (
       <div className="min-h-[100dvh] bg-zinc-950 text-white">
         <div className="border-b border-white/8 px-6 py-4 flex items-center gap-3">
@@ -477,473 +368,66 @@ export default function BulkStories() {
               <ArrowLeft size={18} />
             </button>
           </Link>
-          <div className="flex-1">
-            <h1 className="font-semibold text-base leading-none">Bulk Story Scheduler</h1>
-            <p className="text-xs text-zinc-500 mt-1">Upload images and a CSV to queue a month of story sticker posts at once.</p>
-          </div>
-          {(images.length > 0 || entries.length > 0) && (
-            <button
-              onClick={() => { setImages([]); setEntries([]); }}
-              className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-red-400 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-500/10 border border-white/8"
-            >
-              <X size={12} />
-              Clear All
-            </button>
-          )}
+          <h1 className="font-semibold text-base">Bulk Story Scheduler</h1>
         </div>
 
-        <div className="max-w-3xl mx-auto px-6 py-8 flex flex-col gap-6">
-          {/* Client */}
-          <div className="border border-white/8 rounded-xl p-5 flex flex-col gap-3">
-            <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">Client</p>
-            <Select value={presetId} onValueChange={setPresetId} disabled={presetsLoading}>
-              <SelectTrigger className="bg-zinc-900 border-white/10 text-sm">
-                <SelectValue placeholder={presetsLoading ? "Loading..." : "Pick a client"} />
-              </SelectTrigger>
-              <SelectContent>
-                {presets.map((p) => (
-                  <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Generate Questions */}
-          <div className="border border-white/8 rounded-xl p-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
+        <div className="max-w-lg mx-auto px-6 py-12 flex flex-col items-center gap-6 text-center">
+          {phase === "scheduling" ? (
+            <>
+              <Loader2 size={36} className="text-pink-400 animate-spin" />
               <div>
-                <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">AI Question Generator</p>
-                <p className="text-xs text-zinc-600 mt-0.5">Generate engagement questions and render them as story cards</p>
+                <p className="text-lg font-semibold">Scheduling stories...</p>
+                <p className="text-sm text-zinc-500 mt-1">{finished} of {images.length} done</p>
               </div>
-              <div className="flex items-center gap-2">
-                {generatedQuestions.length > 0 && (
-                  <button
-                    onClick={handleGenerateQuestions}
-                    disabled={generatingQuestions || !presetId}
-                    className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-pink-400 transition-colors disabled:opacity-40 px-2.5 py-1.5 rounded-lg hover:bg-white/5 border border-white/8"
-                  >
-                    <RefreshCcw size={12} className={generatingQuestions ? "animate-spin" : ""} />
-                    Regenerate
-                  </button>
-                )}
-                <Button
-                  onClick={handleGenerateQuestions}
-                  disabled={!presetId || generatingQuestions}
-                  size="sm"
-                  className="bg-zinc-800 hover:bg-zinc-700 text-white border border-white/10"
-                >
-                  {generatingQuestions ? (
-                    <><Loader2 size={13} className="mr-1.5 animate-spin" />Generating...</>
-                  ) : (
-                    <><Sparkles size={13} className="mr-1.5 text-pink-400" />Generate Questions</>
-                  )}
-                </Button>
+              <div className="w-56 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                <div className="h-full bg-pink-500 rounded-full transition-all duration-300" style={{ width: `${pct}%` }} />
               </div>
-            </div>
-
-            {!presetId && (
-              <p className="text-xs text-zinc-600 italic">Pick a client above to enable question generation.</p>
-            )}
-
-            {generatedQuestions.length > 0 && (
-              <>
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-zinc-500">
-                    {selectedQs.size} of {generatedQuestions.length} selected
+            </>
+          ) : (
+            <>
+              <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+                <CheckCircle2 size={32} className="text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{done} {done === 1 ? "story" : "stories"} scheduled</p>
+                {slots.length > 0 && done > 0 && (
+                  <p className="text-sm text-zinc-500 mt-2">
+                    {niceTime(slots[0])} daily, {niceDate(slots[0])} to {niceDate(slots[slots.length - 1])}
                   </p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setSelectedQs(new Set(generatedQuestions.map((_, i) => i)))}
-                      className="text-xs text-zinc-500 hover:text-pink-400 transition-colors"
-                    >
-                      Select all
-                    </button>
-                    <span className="text-zinc-700">·</span>
-                    <button
-                      onClick={() => setSelectedQs(new Set())}
-                      className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
+                )}
+                {failed.length > 0 && <p className="text-sm text-red-400 mt-1">{failed.length} failed</p>}
+              </div>
 
-                <div className="flex flex-col divide-y divide-white/5 rounded-xl overflow-hidden border border-white/8">
-                  {generatedQuestions.map((q, i) => (
-                    <label
-                      key={i}
-                      className="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-white/[0.03] transition-colors"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedQs.has(i)}
-                        onChange={(e) =>
-                          setSelectedQs((prev) => {
-                            const next = new Set(prev);
-                            if (e.target.checked) next.add(i); else next.delete(i);
-                            return next;
-                          })
-                        }
-                        className="mt-0.5 h-4 w-4 accent-pink-500 flex-shrink-0"
-                      />
-                      <span
-                        className="text-sm text-zinc-200 leading-snug"
-                        style={{ fontFamily: "'Bebas Neue', cursive", fontSize: "18px", letterSpacing: "0.5px" }}
-                      >
-                        {q}
-                      </span>
-                    </label>
+              {failed.length > 0 && (
+                <div className="w-full border border-red-500/20 rounded-xl overflow-hidden text-left">
+                  {images.map((im, i) => im.status === "error" && (
+                    <div key={i} className="px-4 py-2.5 border-b border-white/5 last:border-0 flex items-start gap-3">
+                      <X size={13} className="text-red-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-medium text-zinc-300">Story {i + 1} ({niceDate(slots[i])})</p>
+                        <p className="text-xs text-zinc-600">{im.error}</p>
+                      </div>
+                    </div>
                   ))}
                 </div>
-
-                {selectedQs.size > 0 && (
-                  <Button
-                    onClick={handleAddSelectedToStories}
-                    disabled={renderingCards}
-                    className="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold"
-                  >
-                    {renderingCards ? (
-                      <><Loader2 size={14} className="mr-2 animate-spin" />Rendering cards...</>
-                    ) : (
-                      <><Plus size={14} className="mr-2" />Add {selectedQs.size} Selected to Stories</>
-                    )}
-                  </Button>
-                )}
-              </>
-            )}
-          </div>
-
-          {/* Images */}
-          <div className="border border-white/8 rounded-xl p-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">
-                Story Images
-                <span className="ml-2 text-zinc-600 normal-case font-normal">
-                  {images.length} / {MAX_IMAGES}
-                </span>
-              </p>
-              {images.length > 0 && (
-                <button onClick={() => setImages([])} className="text-xs text-zinc-500 hover:text-red-400 transition-colors">
-                  Clear
-                </button>
               )}
-            </div>
 
-            {images.length < MAX_IMAGES ? (
-              <div
-                onDragOver={(e) => { e.preventDefault(); setImgDragOver(true); }}
-                onDragLeave={() => setImgDragOver(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setImgDragOver(false);
-                  handleImages(Array.from(e.dataTransfer.files));
-                }}
-                onClick={() => imgInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-3 cursor-pointer transition-all ${
-                  imgDragOver ? "border-pink-500/60 bg-pink-500/5" : "border-white/10 hover:border-white/20"
-                }`}
-              >
-                <Upload size={28} className="text-zinc-600" />
-                <div className="text-center">
-                  <p className="text-sm font-medium text-zinc-300">Drop images here or click to browse</p>
-                  <p className="text-xs text-zinc-600 mt-1">
-                    Images are added to your selection (up to {MAX_IMAGES}). They match CSV rows in order.
-                  </p>
-                </div>
+              <div className="flex gap-3">
+                <Link href="/scheduler">
+                  <Button variant="secondary">View Scheduler Queue</Button>
+                </Link>
+                <Button onClick={resetAll} className="bg-pink-600 hover:bg-pink-500 text-white">
+                  Schedule Another Batch
+                </Button>
               </div>
-            ) : (
-              <div className="border-2 border-dashed border-white/5 rounded-xl p-5 flex items-center justify-center gap-2 text-xs text-zinc-600">
-                <CheckCircle2 size={14} className="text-emerald-500" />
-                Maximum {MAX_IMAGES} images reached. Clear some to add more.
-              </div>
-            )}
-            <input
-              ref={imgInputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => { handleImages(Array.from(e.target.files || [])); e.target.value = ""; }}
-            />
-
-            {images.length > 0 && (
-              <div className="flex flex-wrap gap-2 items-end">
-                {images.map((img, i) => (
-                  <div key={i} className="relative group">
-                    <img
-                      src={img.localUrl}
-                      alt=""
-                      className="w-14 h-14 rounded-lg object-cover border border-white/10"
-                    />
-                    <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-zinc-800 border border-white/20 flex items-center justify-center text-[9px] text-zinc-400 font-medium">
-                      {i + 1}
-                    </div>
-                    <button
-                      onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))}
-                      className="absolute inset-0 rounded-lg bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                    >
-                      <X size={14} className="text-white" />
-                    </button>
-                  </div>
-                ))}
-                <p className="w-full text-xs text-zinc-600 mt-1">
-                  {images.length} {images.length === 1 ? "image" : "images"} loaded
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* CSV */}
-          <div className="border border-white/8 rounded-xl p-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">Story Schedule CSV</p>
-              <button
-                onClick={downloadTemplate}
-                className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-pink-400 transition-colors"
-              >
-                <Download size={12} />
-                Download template
-              </button>
-            </div>
-
-            <div
-              onDragOver={(e) => { e.preventDefault(); setCsvDragOver(true); }}
-              onDragLeave={() => setCsvDragOver(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setCsvDragOver(false);
-                const file = e.dataTransfer.files[0];
-                if (file) handleCsv(file);
-              }}
-              onClick={() => csvInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-3 cursor-pointer transition-all ${
-                csvDragOver ? "border-pink-500/60 bg-pink-500/5" : "border-white/10 hover:border-white/20"
-              }`}
-            >
-              <FileText size={28} className="text-zinc-600" />
-              <div className="text-center">
-                <p className="text-sm font-medium text-zinc-300">Drop CSV here or click to browse</p>
-                <p className="text-xs text-zinc-600 mt-1">
-                  One row per story. Download the template above to get the column format.
-                </p>
-              </div>
-            </div>
-            <input
-              ref={csvInputRef}
-              type="file"
-              accept=".csv,text/csv"
-              className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCsv(f); }}
-            />
-
-            {entries.length > 0 && (
-              <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-emerald-950/40 border border-emerald-500/20">
-                <CheckCircle2 size={14} className="text-emerald-400 flex-shrink-0" />
-                <p className="text-xs text-emerald-300">
-                  {entries.length} {entries.length === 1 ? "story" : "stories"} parsed from CSV
-                </p>
-              </div>
-            )}
-
-            {/* Format guide */}
-            <div className="bg-zinc-900/60 rounded-xl p-4 flex flex-col gap-2">
-              <div className="flex items-center gap-1.5 mb-1">
-                <Sparkles size={12} className="text-pink-400" />
-                <p className="text-xs font-semibold text-zinc-400">CSV column guide</p>
-              </div>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                {[
-                  ["date", "YYYY-MM-DD (required)"],
-                  ["time", "HH:MM — defaults to 09:00"],
-                  ["sticker_type", "poll, quiz, question, or blank"],
-                  ["question", "Your sticker question or prompt"],
-                  ["option_a / option_b", "Poll options (exactly 2) or quiz options"],
-                  ["option_c / option_d", "Extra quiz options (optional)"],
-                  ["correct_option", "Quiz only: 0 for option_a, 1 for option_b…"],
-                  ["caption", "Internal note or caption for this story"],
-                ].map(([col, desc]) => (
-                  <div key={col} className="flex gap-1.5">
-                    <span className="text-[11px] text-zinc-500 font-medium flex-shrink-0">{col}</span>
-                    <span className="text-[11px] text-zinc-700">{desc}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <Button
-            onClick={handlePreview}
-            disabled={!presetId || !entries.length || !images.length}
-            className="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold"
-            size="lg"
-          >
-            Preview {entries.length > 0 ? `${entries.length} Stories` : "Stories"}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Preview phase ─────────────────────────────────────────────────────────────
-
-  if (phase === "preview") {
-    return (
-      <div className="min-h-[100dvh] bg-zinc-950 text-white">
-        <div className="border-b border-white/8 px-6 py-4 flex items-center gap-3">
-          <button
-            onClick={() => setPhase("upload")}
-            className="p-1.5 rounded-lg hover:bg-white/8 text-zinc-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <div className="flex-1">
-            <h1 className="font-semibold text-base leading-none">
-              Preview — {entries.length} {entries.length === 1 ? "Story" : "Stories"}
-            </h1>
-            <p className="text-xs text-zinc-500 mt-1">Client: {selectedPreset?.name}</p>
-          </div>
-          <Button
-            onClick={handleScheduleAll}
-            className="bg-pink-600 hover:bg-pink-500 text-white font-semibold"
-          >
-            <CalendarDays size={15} className="mr-1.5" />
-            Schedule All
-          </Button>
-        </div>
-
-        <div className="max-w-4xl mx-auto px-6 py-6 flex flex-col gap-4">
-          {images.length < entries.length && (
-            <div className="flex items-start gap-2 px-4 py-3 rounded-lg bg-amber-950/30 border border-amber-500/20 text-xs text-amber-300">
-              <span className="flex-shrink-0 mt-0.5">⚠</span>
-              <span>
-                You have {images.length} {images.length === 1 ? "image" : "images"} for {entries.length} stories.
-                Image #{images.length} will repeat for the remaining rows.
-              </span>
-            </div>
+            </>
           )}
-
-          <div className="border border-white/8 rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/8 bg-zinc-900/40 text-[11px] text-zinc-500 uppercase tracking-wider">
-                  <th className="text-left px-4 py-2.5 font-medium w-8">#</th>
-                  <th className="text-left px-4 py-2.5 font-medium w-16">Image</th>
-                  <th className="text-left px-4 py-2.5 font-medium">Date &amp; Time</th>
-                  <th className="text-left px-4 py-2.5 font-medium">Sticker</th>
-                  <th className="text-left px-4 py-2.5 font-medium">Question / Caption</th>
-                  <th className="text-left px-4 py-2.5 font-medium w-20">Size</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map((entry) => (
-                  <tr key={entry.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02]">
-                    <td className="px-4 py-2.5 text-zinc-600 text-xs">{entry.rowNum}</td>
-                    <td className="px-4 py-2.5">
-                      {entry.imageLocalUrl ? (
-                        <img
-                          src={entry.imageLocalUrl}
-                          alt=""
-                          className="w-12 h-12 rounded-lg object-cover border border-white/10"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-lg bg-zinc-800 border border-white/10 flex items-center justify-center">
-                          <Upload size={13} className="text-zinc-600" />
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <p className="text-sm font-medium text-white">{entry.date}</p>
-                      <p className="text-xs text-zinc-500">{entry.time}</p>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <StickerBadge type={entry.stickerType} />
-                    </td>
-                    <td className="px-4 py-2.5 max-w-xs">
-                      {entry.question ? (
-                        <>
-                          <p className="truncate text-zinc-200" style={{ fontFamily: "'Bebas Neue', cursive", fontSize: `${Math.round(entry.fontSize * 0.25)}px`, lineHeight: 1.2 }}>
-                            {entry.question}
-                          </p>
-                          {entry.stickerType === "poll" && entry.options.length >= 2 && (
-                            <p className="text-xs text-zinc-600 mt-0.5 truncate">{entry.options[0]} / {entry.options[1]}</p>
-                          )}
-                          {entry.stickerType === "quiz" && entry.options.length >= 2 && (
-                            <p className="text-xs text-zinc-600 mt-0.5 truncate">
-                              {entry.options.join(" / ")} · correct: option {entry.correctIndex + 1}
-                            </p>
-                          )}
-                        </>
-                      ) : entry.caption ? (
-                        <p className="text-sm text-zinc-500 truncate" style={{ fontFamily: "'Bebas Neue', cursive" }}>{entry.caption}</p>
-                      ) : (
-                        <p className="text-xs text-zinc-700">No sticker or caption</p>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <input
-                        type="number"
-                        min={12}
-                        max={200}
-                        value={entry.fontSize}
-                        onChange={(e) => updateEntryFontSize(entry.id, parseInt(e.target.value, 10) || 64)}
-                        className="w-16 bg-zinc-900 border border-white/10 rounded px-2 py-1 text-xs text-zinc-300 text-center focus:outline-none focus:border-pink-500/50"
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => setPhase("upload")}
-              className="text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
-            >
-              Back to upload
-            </button>
-            <Button
-              onClick={handleScheduleAll}
-              className="bg-pink-600 hover:bg-pink-500 text-white font-semibold"
-            >
-              <CalendarDays size={15} className="mr-1.5" />
-              Schedule {entries.length} {entries.length === 1 ? "Story" : "Stories"}
-            </Button>
-          </div>
         </div>
       </div>
     );
   }
 
-  // ── Scheduling phase ──────────────────────────────────────────────────────────
-
-  if (phase === "scheduling") {
-    const total = entries.length;
-    const completed = entries.filter((e) => e.status === "done" || e.status === "error").length;
-    const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-    return (
-      <div className="min-h-[100dvh] bg-zinc-950 text-white flex items-center justify-center">
-        <div className="text-center flex flex-col items-center gap-5">
-          <Loader2 size={36} className="text-pink-400 animate-spin" />
-          <div>
-            <p className="text-lg font-semibold text-white">Scheduling stories...</p>
-            <p className="text-sm text-zinc-500 mt-1">{completed} of {total} queued</p>
-          </div>
-          <div className="w-56 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-pink-500 rounded-full transition-all duration-300"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Done phase ────────────────────────────────────────────────────────────────
-
-  const failedEntries = entries.filter((e) => e.status === "error");
+  // --- Setup ---
 
   return (
     <div className="min-h-[100dvh] bg-zinc-950 text-white">
@@ -953,59 +437,226 @@ export default function BulkStories() {
             <ArrowLeft size={18} />
           </button>
         </Link>
-        <h1 className="font-semibold text-base">Bulk Story Scheduler</h1>
+        <div className="flex-1">
+          <h1 className="font-semibold text-base leading-none">Bulk Story Scheduler</h1>
+          <p className="text-xs text-zinc-500 mt-1">One hook, a pile of images, one story a day at 7pm.</p>
+        </div>
+        {(images.length > 0 || hook) && (
+          <button
+            onClick={resetAll}
+            className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-red-400 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-500/10 border border-white/8"
+          >
+            <X size={12} /> Clear All
+          </button>
+        )}
       </div>
 
-      <div className="max-w-lg mx-auto px-6 py-12 flex flex-col items-center gap-6 text-center">
-        <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
-          <CheckCircle2 size={32} className="text-emerald-400" />
-        </div>
-        <div>
-          <p className="text-2xl font-bold text-white">
-            {doneCount} {doneCount === 1 ? "story" : "stories"} queued
-          </p>
-          {errorCount > 0 && (
-            <p className="text-sm text-red-400 mt-1">{errorCount} failed</p>
-          )}
-          <p className="text-sm text-zinc-500 mt-2">
-            Head to the scheduler to review dates and fire when ready.
-          </p>
+      <div className="max-w-3xl mx-auto px-6 py-8 flex flex-col gap-6">
+        {/* 1. Client */}
+        <div className="border border-white/8 rounded-xl p-5 flex flex-col gap-3">
+          <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">1. Client</p>
+          <Select value={presetId} onValueChange={setPresetId} disabled={presetsLoading}>
+            <SelectTrigger className="bg-zinc-900 border-white/10 text-sm">
+              <SelectValue placeholder={presetsLoading ? "Loading..." : "Pick a client"} />
+            </SelectTrigger>
+            <SelectContent>
+              {presets.map((p) => (
+                <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        {failedEntries.length > 0 && (
-          <div className="w-full border border-red-500/20 rounded-xl overflow-hidden text-left">
-            <div className="px-4 py-2.5 bg-red-950/30 border-b border-red-500/20">
-              <p className="text-xs font-semibold text-red-400 uppercase tracking-wider">Failed rows</p>
+        {/* 2. Hook CSV */}
+        <div className="border border-white/8 rounded-xl p-5 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">2. Hook CSV</p>
+            <button onClick={downloadTemplate} className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-pink-400 transition-colors">
+              <Download size={12} /> Download template
+            </button>
+          </div>
+
+          <div
+            onDragOver={(e) => { e.preventDefault(); setCsvDragOver(true); }}
+            onDragLeave={() => setCsvDragOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setCsvDragOver(false);
+              const f = e.dataTransfer.files[0];
+              if (f) handleCsv(f);
+            }}
+            onClick={() => csvInputRef.current?.click()}
+            className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center gap-2 cursor-pointer transition-all ${
+              csvDragOver ? "border-pink-500/60 bg-pink-500/5" : "border-white/10 hover:border-white/20"
+            }`}
+          >
+            <FileText size={24} className="text-zinc-600" />
+            <p className="text-sm font-medium text-zinc-300">{csvName || "Drop your one-row CSV here or click to browse"}</p>
+            <p className="text-xs text-zinc-600">Just the hook in the first cell. A "hook" header row is optional.</p>
+          </div>
+          <input
+            ref={csvInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) handleCsv(f); e.target.value = ""; }}
+          />
+
+          {hook && (
+            <div className="flex flex-col gap-1.5">
+              <p className="text-[11px] text-zinc-500">Hook (tweak it here if you like)</p>
+              <textarea
+                value={hook}
+                onChange={(e) => setHook(e.target.value)}
+                rows={2}
+                className="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-zinc-100 focus:outline-none focus:border-pink-500/50"
+              />
             </div>
-            {failedEntries.map((e) => (
-              <div key={e.id} className="px-4 py-2.5 border-b border-white/5 last:border-0 flex items-start gap-3">
-                <X size={13} className="text-red-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-medium text-zinc-300">Row {e.rowNum} — {e.date}</p>
-                  <p className="text-xs text-zinc-600">{e.error}</p>
+          )}
+        </div>
+
+        {/* 3. Images */}
+        <div className="border border-white/8 rounded-xl p-5 flex flex-col gap-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">
+              3. Story Images
+              <span className="ml-2 text-zinc-600 normal-case font-normal">{images.length} / {MAX_IMAGES}</span>
+            </p>
+            {images.length > 0 && (
+              <button onClick={() => setImages([])} className="text-xs text-zinc-500 hover:text-red-400 transition-colors">Clear</button>
+            )}
+          </div>
+
+          {images.length < MAX_IMAGES && (
+            <div
+              onDragOver={(e) => { e.preventDefault(); setImgDragOver(true); }}
+              onDragLeave={() => setImgDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setImgDragOver(false);
+                handleImages(Array.from(e.dataTransfer.files));
+              }}
+              onClick={() => imgInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center gap-2 cursor-pointer transition-all ${
+                imgDragOver ? "border-pink-500/60 bg-pink-500/5" : "border-white/10 hover:border-white/20"
+              }`}
+            >
+              <Upload size={24} className="text-zinc-600" />
+              <p className="text-sm font-medium text-zinc-300">Drop images here or click to browse</p>
+              <p className="text-xs text-zinc-600">One image = one day. They go out in the order shown below.</p>
+            </div>
+          )}
+          <input
+            ref={imgInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={(e) => { handleImages(Array.from(e.target.files || [])); e.target.value = ""; }}
+          />
+        </div>
+
+        {/* 4. When + look */}
+        <div className="border border-white/8 rounded-xl p-5 flex flex-col gap-4">
+          <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">4. When and how it looks</p>
+          <div className="grid grid-cols-2 gap-4">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[11px] text-zinc-500 flex items-center gap-1"><CalendarDays size={11} /> First story</span>
+              <input
+                type="date"
+                value={startDate}
+                min={toYmd(new Date())}
+                onChange={(e) => e.target.value && setStartDate(e.target.value)}
+                className="bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-zinc-100 [color-scheme:dark]"
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[11px] text-zinc-500 flex items-center gap-1"><Clock size={11} /> Time each day</span>
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => e.target.value && setTime(e.target.value)}
+                className="bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-zinc-100 [color-scheme:dark]"
+              />
+            </label>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-zinc-300 cursor-pointer">
+            <input type="checkbox" checked={showHook} onChange={(e) => setShowHook(e.target.checked)} className="h-4 w-4 accent-pink-500" />
+            Print the hook on each story (Instagram won't show it otherwise)
+          </label>
+
+          {showHook && (
+            <div className="grid grid-cols-2 gap-4">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-[11px] text-zinc-500">Text size ({fontSize})</span>
+                <input type="range" min={56} max={160} step={4} value={fontSize} onChange={(e) => setFontSize(Number(e.target.value))} className="accent-pink-500" />
+              </label>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-[11px] text-zinc-500">Position</span>
+                <div className="flex gap-1">
+                  {(["top", "middle", "bottom"] as TextPos[]).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPosition(p)}
+                      className={`flex-1 text-xs capitalize py-1.5 rounded-md border transition-colors ${
+                        position === p ? "bg-pink-600 border-pink-500 text-white" : "border-white/10 text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
                 </div>
               </div>
-            ))}
+            </div>
+          )}
+        </div>
+
+        {/* Preview */}
+        {images.length > 0 && (
+          <div className="border border-white/8 rounded-xl p-5 flex flex-col gap-4">
+            <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">Preview</p>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+              {images.map((im, i) => (
+                <div key={im.localUrl} className="flex flex-col gap-1.5 group">
+                  <div className="relative">
+                    <StoryThumb imgUrl={im.localUrl} opts={renderOpts} className="w-full rounded-lg border border-white/10 bg-zinc-900" />
+                    <button
+                      onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))}
+                      className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/70 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                      title="Remove"
+                    >
+                      <X size={12} />
+                    </button>
+                    <div className="absolute bottom-1 left-1 right-1 flex justify-between opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => moveImage(i, i - 1)} disabled={i === 0} className="px-2 py-0.5 text-xs rounded bg-black/70 disabled:opacity-30">←</button>
+                      <button onClick={() => moveImage(i, i + 1)} disabled={i === images.length - 1} className="px-2 py-0.5 text-xs rounded bg-black/70 disabled:opacity-30">→</button>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-zinc-400 text-center leading-tight">
+                    {niceDate(slots[i])}<br /><span className="text-zinc-600">{niceTime(slots[i])}</span>
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        <div className="flex gap-3">
-          <Link href="/scheduler">
-            <Button variant="secondary">View Scheduler Queue</Button>
-          </Link>
-          <Button
-            onClick={() => {
-              setPhase("upload");
-              setEntries([]);
-              setImages([]);
-              setDoneCount(0);
-              setErrorCount(0);
-            }}
-            className="bg-pink-600 hover:bg-pink-500 text-white"
-          >
-            Schedule Another Batch
-          </Button>
-        </div>
+        {firstSlotInPast && (
+          <p className="text-xs text-amber-300">The first slot has already passed today, pick a later start date.</p>
+        )}
+
+        <Button
+          onClick={handleSchedule}
+          disabled={!ready}
+          className="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold"
+          size="lg"
+        >
+          <CalendarDays size={15} className="mr-1.5" />
+          {images.length
+            ? `Schedule ${images.length} ${images.length === 1 ? "story" : "stories"}, ${niceTime(slotFor(startDate, time, 0))} daily`
+            : "Schedule stories"}
+        </Button>
       </div>
     </div>
   );
