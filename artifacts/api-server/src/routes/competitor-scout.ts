@@ -147,7 +147,7 @@ async function createDriveDoc(
 // Saves a finished report into Vanessa's connected Google Drive as a Google
 // Doc, named after the clinic, e.g. "Beauty and Aesthetics by Emma JB
 // Competitor Analysis". Reuses the same Google connection as the calendar feature (see
-// google-auth.ts). If she's never connected Google, or connected before the
+// google-auth.ts). If she've never connected Google, or connected before the
 // Drive permission was added, this comes back with a clear "not_connected"
 // error so the frontend can send her through the connect flow again.
 router.post("/competitor-scout/:id/save-to-drive", async (req, res) => {
@@ -226,11 +226,11 @@ async function runReportGeneration(
           3. <h2>Who else is on your patch</h2> followed by <div class="cs-cards"> containing one <div class="cs-card"> per real competitor found (up to 3), each built exactly as <h3>Competitor name</h3><div class="cs-loc">location and rough distance from the clinic</div><p>3 to 5 sentences on what they do well and where they fall short</p>, then close each card's </div>. Close the whole set with </div> after the last card.
           4. <div class="cs-edge"><h2>What you've got that they haven't</h2> followed by 2 to 3 <p> paragraphs, the most positive, specific section, telling the clinic directly what makes them stand out, built only from real details you found plus reasonable, clearly-labelled general strengths of a warm, personal, all-under-one-roof clinic. Do not invent specific facts. Close with </div>.
           5. <h2>Where they're pulling ahead of you, and it's fixable</h2> followed by one or two <p> paragraphs, honest and constructive, told straight to them, framed as gaps to close, never a threat.
-          6. <h2>Where I'd focus your socials next</h2> followed by a <ul> of 3 to 5 <li> specific, actionable content ideas built on their real strengths, Vanessa speaking as their own social media person.
-          7. <div class="cs-cta"><p>...</p></div> - one short, warm, confident closing paragraph, signed off in spirit like Vanessa talking to them directly about turning this into an actual content plan together. A single <strong> may be used for emphasis inside it.
+
+          Stop there. Do not write anything after section 5, no socials plan, no closing call to action paragraph, no sign off. The app adds its own fixed closing section after your HTML, so anything you write beyond section 5 would just be cut off.
           ${COMPLIANCE_RULES}
 
-          Return ONLY the finished HTML for the message. No preamble, no explanation of your research, no JSON, no code fences, nothing else.`;
+          Return ONLY the finished HTML for the message, sections 1 to 5 exactly as described, nothing more. No preamble, no explanation of your research, no JSON, no code fences, nothing else.`;
 
       const response = await openai.responses.create({
               model: "gpt-5.5",
