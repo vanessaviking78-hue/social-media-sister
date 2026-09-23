@@ -25,7 +25,11 @@ function paras(body: string, color: string, size = 15) {
 
 export function buildNewsletterHtml(
   content: NewsletterContent,
-  brand: Omit<NewsletterBrand, "logoDataUrl" | "heroDataUrl"> & { logoUrl: string | null; heroUrl: string | null },
+  brand: Omit<NewsletterBrand, "logoDataUrl" | "heroDataUrl" | "closing"> & {
+    logoUrl: string | null;
+    heroUrl: string | null;
+    closing?: { thanks: string; name: string; photoUrl: string | null; signatureUrl: string | null } | null;
+  },
   subject: string,
   preview: string,
 ) {
@@ -43,6 +47,28 @@ export function buildNewsletterHtml(
     `<h2 style="margin:0 0 10px 0;font-family:Georgia,'Times New Roman',serif;font-size:${size}px;line-height:1.2;color:${c};font-weight:bold;">${esc(t)}</h2>`;
 
   const lead = get("lead"), ask = get("ask"), myth = get("myth"), bts = get("bts"), sell = get("sell");
+  const cardBg = hex(accentRaw.map((c) => Math.round(c + (255 - c) * (isLight(accentRaw) ? 0.6 : 0.92))) as [number, number, number]);
+  const ps = (content.signOff || "").trim().replace(/^p\.?s\.?\s*/i, "");
+
+  function closingHtml() {
+    const c = brand.closing;
+    if (!c || !(c.thanks || c.photoUrl || c.signatureUrl || c.name)) {
+      return content.signOff
+        ? `<tr><td style="padding:18px 32px 26px 32px;"><p style="margin:0 0 6px 0;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:17px;color:#444;">${esc(content.signOff)}</p><p style="margin:0;font-family:Helvetica,Arial,sans-serif;font-size:14px;font-weight:bold;color:${accent};">${esc(brand.clinicName)}</p></td></tr>`
+        : "";
+    }
+    const sig = c.signatureUrl
+      ? `<img src="${esc(c.signatureUrl)}" alt="${esc(c.name)}" height="52" style="height:52px;width:auto;display:block;margin-left:-4px;">`
+      : `<p style="margin:0;font-family:'Caveat','Segoe Script','Bradley Hand',cursive;font-size:34px;color:${accent};">${esc(c.name || brand.clinicName)}</p>`;
+    return `<tr><td style="padding:18px 32px 6px 32px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${cardBg};border-radius:8px;"><tr>
+${c.photoUrl ? `<td width="130" valign="middle" style="padding:20px 0 20px 22px;"><img src="${esc(c.photoUrl)}" alt="${esc(c.name)}" width="110" height="110" style="width:110px;height:110px;border-radius:55px;display:block;border:3px solid #ffffff;"></td>` : ""}
+<td valign="middle" style="padding:20px 22px;">
+${c.thanks ? `<p style="margin:0 0 8px 0;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:21px;line-height:1.3;color:#1c1c1e;">${esc(c.thanks)}</p>` : ""}
+<p style="margin:0 0 2px 0;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:14px;color:#666;">With love,</p>
+${sig}
+</td></tr></table></td></tr>
+${ps ? `<tr><td style="padding:14px 32px 24px 32px;"><p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:16px;line-height:1.5;color:#444;">P.S. ${esc(ps)}</p></td></tr>` : `<tr><td style="padding:0 0 18px 0;"></td></tr>`}`;
+  }
 
   return `<!DOCTYPE html>
 <html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -69,7 +95,7 @@ ${sell ? `<tr><td style="padding:14px 32px 8px 32px;"><div style="background:${a
 ${label(sell.label, onAccent)}${h(sell.heading, 22, onAccent)}${paras(sell.body, onAccent)}
 ${brand.bookingUrl ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:8px;"><tr><td style="background:${btnFill};border-radius:30px;"><a href="${esc(brand.bookingUrl)}" style="display:inline-block;padding:13px 28px;font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:bold;color:${btnText};text-decoration:none;">${esc(content.ctaText || "Book your consultation")}</a></td></tr></table>` : ""}
 </div></td></tr>` : ""}
-${content.signOff ? `<tr><td style="padding:18px 32px 26px 32px;"><p style="margin:0 0 6px 0;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:17px;color:#444;">${esc(content.signOff)}</p><p style="margin:0;font-family:Helvetica,Arial,sans-serif;font-size:14px;font-weight:bold;color:${accent};">${esc(brand.clinicName)}</p></td></tr>` : ""}
+${closingHtml()}
 <tr><td style="padding:18px 32px 26px 32px;border-top:1px solid #eee;">
 <p style="margin:0 0 6px 0;font-family:Helvetica,Arial,sans-serif;font-size:12px;color:#999;">${esc([brand.clinicName, brand.address].filter(Boolean).join(" | "))}</p>
 <p style="margin:0;font-family:Helvetica,Arial,sans-serif;font-size:12px;color:#999;">You're receiving this because you're a patient of ours and asked to hear from us. <a href="*|UNSUB|*" style="color:#999;">Unsubscribe</a></p>
