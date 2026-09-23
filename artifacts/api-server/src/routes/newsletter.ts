@@ -156,7 +156,7 @@ Return JSON only, in exactly this shape:
   "intro": "a short hello from the clinician, 2 to 3 sentences, 35 to 60 words, seasonal and personal",
   "sections": [ five objects in the order given, each { "slot": "...", "heading": "...", "body": "..." } ],
   "ctaText": "button label from the sell section",
-  "signOff": "a short warm sign off line, one sentence, then the clinician's first name is added separately so do not include a name"
+  "signOff": "a one-sentence P.S. that sits under the clinician's signature: playful, warm and personal, and it can carry a gentle nudge towards booking or replying. Do not start it with 'P.S.' (that is added for you) and do not include a name"
 }
 Use \\n\\n between paragraphs inside body text.`;
 
