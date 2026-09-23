@@ -49,7 +49,15 @@ export type NewsletterContent = {
   intro: string;
   sections: NewsletterSection[];
   ctaText: string;
-  signOff: string;
+  signOff: string; // shown as the P.S. under the closing card
+  closingThanks?: string;
+  closingName?: string;
+};
+
+export type NewsletterClosing = {
+  thanks: string;
+  photoDataUrl: string | null; // circle-cropped PNG
+  signatureDataUrl: string | null; // name in Caveat, transparent PNG
 };
 
 export type NewsletterBrand = {
@@ -61,6 +69,7 @@ export type NewsletterBrand = {
   heroDataUrl: string | null; // JPEG data URL, already cropped to HERO_RATIO
   bookingUrl: string;
   address: string;
+  closing?: NewsletterClosing | null;
 };
 
 export const HERO_RATIO = 16 / 9;
@@ -363,8 +372,68 @@ export async function buildNewsletterPdf(content: NewsletterContent, brand: News
     y += boxH + 9;
   }
 
-  // Sign off ---------------------------------------------------------------
-  if (content.signOff) {
+  // Closing card + P.S. ---------------------------------------------------
+  const closing = brand.closing;
+  if (closing && (closing.thanks || closing.photoDataUrl || closing.signatureDataUrl)) {
+    const pad = 7;
+    const photo = closing.photoDataUrl ? 34 : 0;
+    const tx = M + pad + (photo ? photo + 8 : 0);
+    const textW = CONTENT_W - (tx - M) - pad;
+    const thanksF: Font = { family: "times", style: "italic", size: 16, lh: 1.25 };
+    const thanksLines = closing.thanks ? wrap(doc, closing.thanks, thanksF, textW) : [];
+    let sigW = 0, sigH = 0;
+    if (closing.signatureDataUrl) {
+      const p = doc.getImageProperties(closing.signatureDataUrl);
+      sigH = 18;
+      sigW = Math.min((p.width / p.height) * sigH, textW);
+      sigH = sigW / (p.width / p.height);
+    }
+    const textH = thanksLines.length * lineH(thanksF) + 3 + lineH(F.body) + (sigH ? sigH : lineH(F.h2));
+    const boxH = Math.max(textH, photo) + pad * 2;
+    const ps = content.signOff?.trim();
+    const psLines = ps ? wrap(doc, "P.S. " + ps.replace(/^p\.?s\.?\s*/i, ""), F.intro, CONTENT_W) : [];
+    ensure(boxH + (psLines.length ? psLines.length * lineH(F.intro) + 6 : 0));
+
+    doc.setFillColor(...tint(accentRaw, isLight(accentRaw) ? 0.6 : 0.92));
+    doc.roundedRect(M, y, CONTENT_W, boxH, 4, 4, "F");
+    if (closing.photoDataUrl) {
+      const px = M + pad, py = y + (boxH - photo) / 2;
+      doc.setFillColor(255, 255, 255);
+      doc.circle(px + photo / 2, py + photo / 2, photo / 2 + 1.2, "F");
+      doc.addImage(closing.photoDataUrl, "PNG", px, py, photo, photo, undefined, "MEDIUM");
+    }
+    let ty = y + (boxH - textH) / 2;
+    doc.setTextColor(...ink);
+    thanksLines.forEach((ln) => {
+      setFont(doc, thanksF);
+      doc.text(ln, tx, ty + thanksF.size * PT * 0.8);
+      ty += lineH(thanksF);
+    });
+    ty += 3;
+    setFont(doc, { family: "times", style: "italic", size: 11, lh: 1.3 });
+    doc.setTextColor(90, 90, 90);
+    doc.text("With love,", tx, ty + 11 * PT * 0.8);
+    ty += lineH(F.body);
+    if (closing.signatureDataUrl) {
+      doc.addImage(closing.signatureDataUrl, "PNG", tx - 1.5, ty - 1, sigW, sigH, undefined, "FAST");
+    } else {
+      setFont(doc, F.h2);
+      doc.setTextColor(...accent);
+      doc.text(clean(brand.clinicName), tx, ty + F.h2.size * PT * 0.8);
+    }
+    y += boxH + 6;
+
+    if (psLines.length) {
+      doc.setTextColor(70, 70, 70);
+      psLines.forEach((ln) => {
+        setFont(doc, F.intro);
+        doc.text(ln, M, y + F.intro.size * PT * 0.8);
+        y += lineH(F.intro);
+      });
+      y += 4;
+    }
+  } else if (content.signOff) {
+    // No closing card this issue: fall back to the plain sign off.
     const lines = wrap(doc, content.signOff, F.intro, CONTENT_W);
     ensure(lines.length * lineH(F.intro) + 8);
     doc.setTextColor(60, 60, 60);
