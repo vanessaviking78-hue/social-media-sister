@@ -47,6 +47,7 @@ await createBroadcastDraftsTable();
     await addTextLayoutToEngagingReels();
     await createCompetitorScoutReportsTable();
     await createIgAuditsTable();
+    await addNewsletterColumnsAndTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -667,4 +668,26 @@ async function updateShareFriendCommentCTA(): Promise<void> {
   if (updated > 0) {
     logger.info({ updated }, "Updated default first-comment carousel CTA to new wording");
   }
+}
+
+// Newsletter Maker: booking link, newsletter name and address live on the
+// clinic profile; each generated issue is kept so the tool can steer away
+// from repeating last month's topics.
+async function addNewsletterColumnsAndTable(): Promise<void> {
+  await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS booking_link text`);
+  await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS newsletter_name text`);
+  await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS clinic_address text`);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS newsletters (
+      id SERIAL PRIMARY KEY,
+      preset_id INTEGER NOT NULL,
+      client_name TEXT NOT NULL DEFAULT '',
+      month_label TEXT NOT NULL DEFAULT '',
+      topics JSONB NOT NULL DEFAULT '[]'::jsonb,
+      content JSONB NOT NULL DEFAULT '{}'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS newsletters_preset_idx ON newsletters (preset_id, created_at DESC)`);
 }
