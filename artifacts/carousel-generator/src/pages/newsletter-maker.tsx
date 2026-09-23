@@ -5,7 +5,8 @@ import {
   AlertTriangle, ArrowLeft, Check, Code2, Copy, Download, FileText, History, ImagePlus, Loader2, Mail, RefreshCw, ShieldCheck, Sparkles, Trash2, Upload, X,
 } from "lucide-react";
 import { usePresets } from "@/lib/use-presets";
-import { buildNewsletterPdf, HERO_RATIO, type NewsletterBrand, type NewsletterContent, type NewsletterSection } from "@/lib/newsletter-pdf";
+import { buildNewsletterPdf, HERO_RATIO, parseHex, readableAccent, type NewsletterBrand, type NewsletterContent, type NewsletterSection } from "@/lib/newsletter-pdf";
+import { circlePhoto, DEFAULT_THANKS, renderSignature } from "@/lib/newsletter-closing";
 import { buildNewsletterHtml } from "@/lib/newsletter-html";
 import { applySwap, scanOffer, scanText, type ComplianceFlag } from "@/lib/newsletter-compliance";
 
@@ -125,6 +126,15 @@ export default function NewsletterMaker() {
   const [heroHostedUrl, setHeroHostedUrl] = useState<string | null>(null);
   const heroInput = useRef<HTMLInputElement>(null);
 
+  // Closing card: clinician photo (uploaded each issue), thank-you line and
+  // the name that gets written in Caveat.
+  const [clinicianImg, setClinicianImg] = useState<HTMLImageElement | null>(null);
+  const [thanksLine, setThanksLine] = useState(DEFAULT_THANKS);
+  const [signName, setSignName] = useState("");
+  const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
+  const [hostedClosing, setHostedClosing] = useState<{ photo: string | null; sig: string | null; key: string } | null>(null);
+  const clinicianInput = useRef<HTMLInputElement>(null);
+
   const [logoPng, setLogoPng] = useState<string | null>(null);
   const [content, setContent] = useState<NewsletterContent | null>(null);
   const [issueId, setIssueId] = useState<number | null>(null);
@@ -141,11 +151,35 @@ export default function NewsletterMaker() {
   const preset = presets.find((p) => p.id === presetId);
   const bookingUrl = (linkOverride.trim() || preset?.bookingLink || "").trim();
   const heroDataUrl = useMemo(() => (heroImg ? cropHero(heroImg, heroPos) : null), [heroImg, heroPos]);
+  const clinicianPhoto = useMemo(() => (clinicianImg ? circlePhoto(clinicianImg) : null), [clinicianImg]);
+  const inkHex = useMemo(() => {
+    const [r, g, b] = readableAccent(parseHex(preset?.accentColor));
+    return `rgb(${r}, ${g}, ${b})`;
+  }, [preset?.accentColor]);
+
+  // Redraw the handwritten name whenever it changes
+  useEffect(() => {
+    let live = true;
+    const t = setTimeout(() => {
+      renderSignature(signName, inkHex).then((u) => { if (live) setSignatureUrl(u); });
+    }, 300);
+    return () => { live = false; clearTimeout(t); };
+  }, [signName, inkHex]);
+
+  // Remember the last name each clinic signed off with
+  useEffect(() => {
+    const last = history.find((h) => h.content?.closingName)?.content;
+    if (last?.closingName && !signName) setSignName(last.closingName);
+    if (last?.closingThanks && thanksLine === DEFAULT_THANKS) setThanksLine(last.closingThanks);
+  }, [history]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Clinic change: logo + past issues
   useEffect(() => {
     setLogoPng(null);
     setHistory([]);
+    setSignName("");
+    setThanksLine(DEFAULT_THANKS);
+    setClinicianImg(null);
     if (!preset) return;
     loadLogoAsPng(preset.logoUrl).then(setLogoPng);
     fetch(`${BASE}/api/newsletter/history/${preset.id}`, { headers: authHeaders() })
@@ -164,6 +198,7 @@ export default function NewsletterMaker() {
         heroDataUrl,
         bookingUrl,
         address: preset.clinicAddress?.trim() || "",
+        closing: { thanks: thanksLine.trim(), photoDataUrl: clinicianPhoto, signatureDataUrl: signatureUrl },
       }
     : null;
 
@@ -183,7 +218,7 @@ export default function NewsletterMaker() {
       }
     }, 700);
     return () => clearTimeout(t);
-  }, [content, brand?.clinicName, brand?.newsletterName, brand?.monthLabel, brand?.accent, logoPng, heroDataUrl, bookingUrl, brand?.address]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [content, brand?.clinicName, brand?.newsletterName, brand?.monthLabel, brand?.accent, logoPng, heroDataUrl, bookingUrl, brand?.address, thanksLine, clinicianPhoto, signatureUrl]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Autosave edits
   useEffect(() => {
@@ -192,11 +227,11 @@ export default function NewsletterMaker() {
       fetch(`${BASE}/api/newsletter/${issueId}`, {
         method: "PUT",
         headers: authHeaders(),
-        body: JSON.stringify({ content, monthLabel }),
+        body: JSON.stringify({ content: { ...content, closingThanks: thanksLine, closingName: signName }, monthLabel }),
       }).catch(() => {});
     }, 1500);
     return () => clearTimeout(t);
-  }, [content, issueId, monthLabel]);
+  }, [content, issueId, monthLabel, thanksLine, signName]);
 
   const flags: ComplianceFlag[] = useMemo(() => {
     const out: ComplianceFlag[] = [...scanOffer(offer)];
@@ -207,7 +242,8 @@ export default function NewsletterMaker() {
       out.push(...scanText(s.body, s.label, `s${i}.body`));
     });
     out.push(...scanText(content.ctaText, "Button", "ctaText"));
-    out.push(...scanText(content.signOff, "Sign off", "signOff"));
+    out.push(...scanText(content.signOff, "P.S.", "signOff"));
+    out.push(...scanText(thanksLine, "Thank-you line", "thanks"));
     content.subjectLines.forEach((t, i) => out.push(...scanText(t, `Subject line ${i + 1}`, `subj${i}`)));
     content.previewTexts.forEach((t, i) => out.push(...scanText(t, `Preview text ${i + 1}`, `prev${i}`)));
     return out;
@@ -232,13 +268,14 @@ export default function NewsletterMaker() {
   function fixFlag(f: ComplianceFlag) {
     if (!f.swap) return;
     if (f.field === "offer") return;
+    if (f.field === "thanks") { setThanksLine((t) => applySwap(t, f.matched, f.swap!)); return; }
     setContent((c) => (c ? setField(c, f.field, applySwap(getField(c, f.field), f.matched, f.swap!)) : c));
   }
   function fixAll() {
     setContent((c) => {
       if (!c) return c;
       let next = c;
-      flags.filter((f) => f.swap && f.field !== "offer").forEach((f) => {
+      flags.filter((f) => f.swap && f.field !== "offer" && f.field !== "thanks").forEach((f) => {
         next = setField(next, f.field, applySwap(getField(next, f.field), f.matched, f.swap!));
       });
       return next;
@@ -252,6 +289,15 @@ export default function NewsletterMaker() {
     if (!file.type.startsWith("image/")) { toast.error("That's not an image"); return; }
     const img = new Image();
     img.onload = () => { setHeroImg(img); setHeroPos(50); setHeroHostedUrl(null); };
+    img.onerror = () => toast.error("Couldn't read that image");
+    img.src = URL.createObjectURL(file);
+  }, []);
+
+  const handleClinician = useCallback((file?: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { toast.error("That's not an image"); return; }
+    const img = new Image();
+    img.onload = () => setClinicianImg(img);
     img.onerror = () => toast.error("Couldn't read that image");
     img.src = URL.createObjectURL(file);
   }, []);
@@ -315,8 +361,10 @@ export default function NewsletterMaker() {
     setIssueId(issue.id);
     setMonthLabel(issue.month_label);
     setTopics(issue.content.sections?.map((s) => s.topic ?? "") ?? issue.topics);
+    if (issue.content.closingName) setSignName(issue.content.closingName);
+    if (issue.content.closingThanks) setThanksLine(issue.content.closingThanks);
     setShowHistory(false);
-    toast.success(`Loaded ${issue.month_label}. Upload the hero image again if you need it.`);
+    toast.success(`Loaded ${issue.month_label}. Pop the photos back in if you need them.`);
   }
 
   async function deleteIssue(id: number) {
@@ -355,9 +403,34 @@ export default function NewsletterMaker() {
         toast.error("Couldn't host the hero image, the email version will go without it");
       }
     }
+    const host = async (dataUrl: string | null, name: string) => {
+      if (!dataUrl) return null;
+      try {
+        const r = await fetch(`${BASE}/api/content/upload-image`, {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ images: [{ name: `${name}-${Date.now()}.png`, base64: dataUrl }] }),
+        });
+        const d = await r.json();
+        return (d.results?.[0]?.url as string) ?? null;
+      } catch {
+        return null;
+      }
+    };
+    const key = `${clinicianPhoto?.length ?? 0}|${signatureUrl?.length ?? 0}|${signName}`;
+    let hosted = hostedClosing;
+    if (!hosted || hosted.key !== key) {
+      hosted = { photo: await host(clinicianPhoto, "newsletter-clinician"), sig: await host(signatureUrl, "newsletter-signature"), key };
+      setHostedClosing(hosted);
+    }
     const html = buildNewsletterHtml(
       content,
-      { ...brand, logoUrl: preset.logoUrl, heroUrl },
+      {
+        ...brand,
+        logoUrl: preset.logoUrl,
+        heroUrl,
+        closing: { thanks: thanksLine.trim(), name: signName.trim(), photoUrl: hosted.photo, signatureUrl: hosted.sig },
+      },
       content.subjectLines[subjectIdx] ?? "",
       content.previewTexts[previewIdx] ?? "",
     );
@@ -509,6 +582,46 @@ export default function NewsletterMaker() {
               </div>
             </section>
 
+            <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-3">
+              <label className="text-xs uppercase tracking-widest text-zinc-500">Closing card</label>
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => clinicianInput.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => { e.preventDefault(); handleClinician(e.dataTransfer.files?.[0]); }}
+                  className="w-20 h-20 rounded-full border-2 border-dashed border-zinc-700 hover:border-rose-500/60 overflow-hidden shrink-0 flex items-center justify-center"
+                  title="Upload the clinician's photo"
+                >
+                  {clinicianPhoto ? <img src={clinicianPhoto} alt="Clinician" className="w-full h-full object-cover" /> : <ImagePlus size={20} className="text-zinc-600" />}
+                </button>
+                <input ref={clinicianInput} type="file" accept="image/*" className="hidden" onChange={(e) => { handleClinician(e.target.files?.[0]); e.currentTarget.value = ""; }} />
+                <div className="flex-1 min-w-0 space-y-2">
+                  <input
+                    value={signName}
+                    onChange={(e) => setSignName(e.target.value)}
+                    placeholder="Signs off as, e.g. Mary"
+                    className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm placeholder:text-zinc-600"
+                  />
+                  {signatureUrl && (
+                    <div className="bg-white rounded-lg px-3 py-1 flex items-center gap-2">
+                      <span className="text-[11px] italic text-zinc-500">With love,</span>
+                      <img src={signatureUrl} alt="Signature preview" className="h-8 w-auto" />
+                    </div>
+                  )}
+                </div>
+              </div>
+              {clinicianImg && (
+                <button onClick={() => setClinicianImg(null)} className="text-xs text-zinc-400 hover:text-white flex items-center gap-1"><X size={12} /> Remove photo</button>
+              )}
+              <input
+                value={thanksLine}
+                onChange={(e) => setThanksLine(e.target.value)}
+                placeholder={DEFAULT_THANKS}
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm placeholder:text-zinc-600"
+              />
+              <p className="text-[11px] text-zinc-600">Upload the clinician's photo each issue. The name is written in Caveat handwriting, and the AI's closing line becomes a P.S. underneath.</p>
+            </section>
+
             <button
               onClick={generate}
               disabled={!preset || generating}
@@ -619,7 +732,7 @@ export default function NewsletterMaker() {
                     </div>
                   ))}
                   <div className="border-t border-zinc-800 pt-5">
-                    <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">Sign off</p>
+                    <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">P.S. (under the closing card)</p>
                     <AutoText value={content.signOff} rows={1} onChange={(v) => setContent((c) => (c ? { ...c, signOff: v } : c))} className="text-sm italic text-zinc-300" />
                   </div>
                 </section>
