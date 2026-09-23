@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck, Grid3x3 } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck, Grid3x3, Mail } from "lucide-react";
 import { LogOut } from "lucide-react";
 
 const TOOLS = [
@@ -392,6 +392,16 @@ description: "Clinics upload their before and after photos and a short story str
 color: "from-teal-500/20 to-teal-500/5",
 border: "hover:border-teal-500/50",
 iconColor: "text-teal-400",
+},
+{
+href: "/newsletter-maker",
+group: "content",
+icon: Mail,
+name: "Newsletter Maker",
+description: "Pick a clinic, give it five topics and a photo, and it writes the monthly patient newsletter in their voice. Compliance checked, with a PDF and an email version to download.",
+color: "from-rose-500/20 to-rose-500/5",
+border: "hover:border-rose-500/50",
+iconColor: "text-rose-400",
 },
 {
 href: "/banner-tool",
