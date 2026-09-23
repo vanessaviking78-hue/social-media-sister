@@ -213,7 +213,8 @@ async function runReportGeneration(
           RESEARCH TASK (use your live web search tool, this is real research, not a guess)
           1. Find ${clinicName} near postcode ${postcode} in the UK. Work out from whatever is genuinely findable, their own website, Google Business listing, Instagram or Facebook, what they actually offer and what stands out about them.
           2. Find their top 3 real, currently trading local competitors: other businesses of the same broad type, in or close to that postcode area. For each one, find out what they offer, what they seem to do well, and anything they are missing or doing less well.
-          3. Only use real facts you find. Never invent a competitor, a name, a review, or a fact about either side that your search does not support.
+          3. Before you include any competitor, actively check it is still trading now, not just that it once existed. A website or old directory listing on its own is not enough. Look for signs of recent life: recent reviews, an active Google Business listing, an active Instagram or Facebook with recent posts. If you find any sign it has closed down, rebranded or stopped trading (for example "permanently closed" on Google, no activity for a long time, or a closure mentioned anywhere), leave it out and find a different real competitor instead. If you are genuinely unsure whether a business is still open, do not use it, pick one you are more confident about.
+          4. Only use real facts you find. Never invent a competitor, a name, a review, or a fact about either side that your search does not support.
 
           VANESSA'S OWN NOTES ON THIS CLIENT (may be empty, treat as true and combine with your own search, never contradict them)
           ${researchNotes || "(none given, rely fully on your own search)"}
