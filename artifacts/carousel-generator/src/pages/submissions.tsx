@@ -107,6 +107,9 @@ export default function Submissions() {
           <div className="space-y-4">
             {sorted.map((s) => {
               const done = s.status === "complete";
+              // Selfies, wardrobe photos etc. store one image (or the same one twice),
+              // so show a single photo rather than a duplicated Before / After pair.
+              const single = !s.afterUrl || s.afterUrl === s.beforeUrl;
               return (
                 <div key={s.id} className={`rounded-2xl border border-zinc-800 bg-zinc-900/60 overflow-hidden transition-opacity ${done ? "opacity-50" : ""}`}>
                   <div className="flex items-center justify-between px-4 py-2.5 border-b border-zinc-800">
@@ -124,8 +127,8 @@ export default function Submissions() {
                       </label>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-px bg-zinc-800">
-                    {[["Before", s.beforeUrl], ["After", s.afterUrl]].map(([lab, url]) => {
+                  <div className={`grid gap-px bg-zinc-800 ${single ? "grid-cols-1" : "grid-cols-2"}`}>
+                    {(single ? [["Photo", s.beforeUrl]] : [["Before", s.beforeUrl], ["After", s.afterUrl]]).map(([lab, url]) => {
                       const key = `${s.id}-${lab}`;
                       const busy = !!canvaBusy[key];
                       const done = !!canvaDone[key];

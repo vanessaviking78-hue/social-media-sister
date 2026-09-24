@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Loader2, AlertTriangle, CalendarDays, ChevronLeft, X, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star, FileText, Download, Newspaper, TrendingUp, Bell, BellOff, Gift, ChevronDown, Trophy, Upload } from "lucide-react";
+import { Loader2, AlertTriangle, CalendarDays, ChevronLeft, X, Clock, CheckCircle2, FileImage, Layers, Film, ImageIcon, ShieldCheck, Camera, ChevronRight, Share, Smile, MessageSquarePlus, ClipboardList, Clapperboard, Circle, Star, FileText, Download, Newspaper, TrendingUp, Bell, BellOff, Gift, ChevronDown, Trophy, Upload, Shirt } from "lucide-react";
 import { toast } from "sonner";
 import { NewsList } from "@/pages/aesthetic-news";
 
@@ -281,7 +281,7 @@ const REEL_GROUPS: { heading: string; items: string[] }[] = [
 ];
 const REEL_TOTAL = REEL_GROUPS.reduce((n, g) => n + g.items.length, 0);
 
-type Tab = "reelsChallenge" | "uploadReel" | "toolRequest" | "upcoming" | "published" | "approvals" | "ba" | "selfies" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus" | "rants" | "connect" | "activity" | "refer" | "brainstorm";
+type Tab = "reelsChallenge" | "uploadReel" | "toolRequest" | "upcoming" | "published" | "approvals" | "ba" | "selfies" | "wardrobe" | "request" | "onboarding" | "reels" | "reviews" | "resources" | "news" | "revenue" | "homework" | "bonus" | "rants" | "connect" | "activity" | "refer" | "brainstorm";
 
 const TAB_ICON: Record<Tab, React.ReactNode> = {
   reelsChallenge: <Trophy className="w-4 h-4" />,
@@ -291,6 +291,7 @@ const TAB_ICON: Record<Tab, React.ReactNode> = {
   approvals: <ShieldCheck className="w-4 h-4" />,
   ba: <Camera className="w-4 h-4" />,
   selfies: <Smile className="w-4 h-4" />,
+  wardrobe: <Shirt className="w-4 h-4" />,
   request: <MessageSquarePlus className="w-4 h-4" />,
   reviews: <Star className="w-4 h-4" />,
   onboarding: <ClipboardList className="w-4 h-4" />,
@@ -352,6 +353,16 @@ export default function ClientPortal({ token }: { token: string }) {
   const [selfieDone, setSelfieDone] = useState(false);
   const [selfieErr, setSelfieErr] = useState("");
   const selfieRef = useRef<HTMLInputElement>(null);
+
+  const WARDROBE_MAX = 6;
+  const [wardrobeFiles, setWardrobeFiles] = useState<File[]>([]);
+  const [wardrobePrevs, setWardrobePrevs] = useState<string[]>([]);
+  const [wardrobeNote, setWardrobeNote] = useState("");
+  const [wardrobeName, setWardrobeName] = useState("");
+  const [wardrobeBusy, setWardrobeBusy] = useState(false);
+  const [wardrobeDone, setWardrobeDone] = useState(false);
+  const [wardrobeErr, setWardrobeErr] = useState("");
+  const wardrobeRef = useRef<HTMLInputElement>(null);
 
   const [reqText, setReqText] = useState("");
   const [reqName, setReqName] = useState("");
@@ -803,11 +814,43 @@ export default function ClientPortal({ token }: { token: string }) {
 
   const pick = (which: "before" | "after") => (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (!f) return; const prev = URL.createObjectURL(f); if (which === "before") { setBefore(f); setBeforePrev(prev); } else { setAfter(f); setAfterPrev(prev); } };
   const pickSelfie = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (!f) return; setSelfie(f); setSelfiePrev(URL.createObjectURL(f)); };
+  const pickWardrobe = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!picked.length) return;
+    const room = WARDROBE_MAX - wardrobeFiles.length;
+    const keep = picked.slice(0, Math.max(0, room));
+    if (picked.length > keep.length) setWardrobeErr(`Lovely, but ${WARDROBE_MAX} photos at a time is the limit. You can send more afterwards.`); else setWardrobeErr("");
+    setWardrobeFiles((prev) => [...prev, ...keep]);
+    setWardrobePrevs((prev) => [...prev, ...keep.map((f) => URL.createObjectURL(f))]);
+  };
+  const removeWardrobe = (i: number) => {
+    URL.revokeObjectURL(wardrobePrevs[i]);
+    setWardrobeFiles((prev) => prev.filter((_, n) => n !== i));
+    setWardrobePrevs((prev) => prev.filter((_, n) => n !== i));
+    setWardrobeErr("");
+  };
   const pickLogo = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (!f) return; setObLogo(f); setObLogoPrev(URL.createObjectURL(f)); };
   const pickReqImage = (e: React.ChangeEvent<HTMLInputElement>) => { const f = e.target.files?.[0]; if (!f) return; setReqImage(f); setReqImagePrev(URL.createObjectURL(f)); };
 
   const submitBA = async () => { setBaErr(""); if (!before || !after) { setBaErr("Please add both a before and an after photo."); return; } setBaBusy(true); try { const beforeUrl = await uploadOne(before); const afterUrl = await uploadOne(after); await send({ beforeUrl, afterUrl, treatment, story, submitterName: baName }); setBaDone(true); } catch (e: any) { setBaErr(e?.message || "Something went wrong."); } finally { setBaBusy(false); } };
   const submitSelfie = async () => { setSelfieErr(""); if (!selfie) { setSelfieErr("Please add a selfie first."); return; } setSelfieBusy(true); try { const url = await uploadOne(selfie); await send({ beforeUrl: url, afterUrl: url, treatment: "SELFIE", story: selfieNote, submitterName: selfieName }); setSelfieDone(true); } catch (e: any) { setSelfieErr(e?.message || "Something went wrong."); } finally { setSelfieBusy(false); } };
+  const submitWardrobe = async () => {
+    setWardrobeErr("");
+    if (!wardrobeFiles.length) { setWardrobeErr("Please add at least one photo first."); return; }
+    setWardrobeBusy(true);
+    try {
+      const total = wardrobeFiles.length;
+      for (let i = 0; i < total; i++) {
+        const url = await uploadOne(wardrobeFiles[i]);
+        const note = total > 1 ? `Photo ${i + 1} of ${total}${wardrobeNote.trim() ? `\n\n${wardrobeNote.trim()}` : ""}` : wardrobeNote.trim();
+        // One inbox item per photo, but only the last one triggers the email
+        // to Vanessa so she gets a single notification per batch.
+        await send({ beforeUrl: url, afterUrl: url, treatment: "WARDROBE", story: note, submitterName: wardrobeName, notify: i === total - 1 });
+      }
+      setWardrobeDone(true);
+    } catch (e: any) { setWardrobeErr(e?.message || "Something went wrong."); } finally { setWardrobeBusy(false); }
+  };
   const submitHomework = async () => {
     setHwErr("");
     if (!hwSet) { setHwErr("No questions to answer right now."); return; }
@@ -1003,6 +1046,7 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
           <TabBtn id="approvals" label="Approvals" badge={pendingCount || undefined} />
           <TabBtn id="ba" label="Before & After" />
           <TabBtn id="selfies" label="Selfies" />
+          <TabBtn id="wardrobe" label="Wardrobe" />
           <TabBtn id="request" label="Request a post" />
           <TabBtn id="toolRequest" label="Request a tool" />
           <TabBtn id="reviews" label="Reviews" />
@@ -1421,6 +1465,37 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
           </section>
         )}
 
+        {tab === "wardrobe" && (
+          <section>
+            <div className="flex items-center gap-2 mb-2"><Shirt className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Your Wardrobe</h2></div>
+            <p className="text-sm text-zinc-400 mb-6">Your patients only ever see you in scrubs. Show me the real you: photos of you in the clothes you actually wear when you're not in clinic. Your favourite jumper, the going out top, the jeans you'd never give up. It helps me show your personality in your content, so people book with someone they feel they already know.</p>
+            {wardrobeDone ? (<DoneCard label="Want to send some more outfits?" onAgain={() => { setWardrobeDone(false); setWardrobeFiles([]); setWardrobePrevs([]); setWardrobeNote(""); setWardrobeName(""); }} />) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Your photos (up to {WARDROBE_MAX})</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {wardrobePrevs.map((src, i) => (
+                      <div key={src} className="relative aspect-[4/5] rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900">
+                        <img src={src} alt={`Outfit ${i + 1}`} className="w-full h-full object-cover" />
+                        <button type="button" onClick={() => removeWardrobe(i)} aria-label={`Remove photo ${i + 1}`} className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/70 hover:bg-black flex items-center justify-center text-white"><X className="w-3.5 h-3.5" /></button>
+                      </div>
+                    ))}
+                    {wardrobeFiles.length < WARDROBE_MAX && (
+                      <button type="button" onClick={() => wardrobeRef.current?.click()} className="aspect-[4/5] rounded-xl border border-dashed border-zinc-700 bg-zinc-900/60 flex items-center justify-center">
+                        <div className="text-center text-zinc-600"><Shirt className="w-7 h-7 mx-auto mb-1" /><span className="text-xs">{wardrobeFiles.length ? "Add more" : "Tap to add photos"}</span></div>
+                      </button>
+                    )}
+                  </div>
+                  <input ref={wardrobeRef} type="file" accept="image/*" multiple className="hidden" onChange={pickWardrobe} />
+                </div>
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Anything to add?</label><textarea value={wardrobeNote} onChange={(e) => setWardrobeNote(e.target.value)} rows={3} placeholder="Optional, e.g. my Saturday uniform, or the dress I wore to my sister's wedding..." className={inputCls + " resize-none"} /></div>
+                <div><label className="text-xs uppercase tracking-wide text-zinc-500 mb-1.5 block">Your name</label><input value={wardrobeName} onChange={(e) => setWardrobeName(e.target.value)} placeholder="So we know who sent it" className={inputCls} /></div>
+                {wardrobeErr && <p className="text-sm text-red-400">{wardrobeErr}</p>}
+                <button onClick={submitWardrobe} disabled={wardrobeBusy} className={sendBtn}>{wardrobeBusy ? <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : SEND_LABEL}</button>
+              </div>
+            )}
+          </section>
+        )}
         {tab === "selfies" && (
           <section>
             <div className="flex items-center gap-2 mb-2"><Smile className="w-5 h-5 text-pink-400" /><h2 className="text-lg font-semibold">Upload a Selfie</h2></div>
