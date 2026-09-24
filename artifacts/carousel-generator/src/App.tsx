@@ -1,6 +1,7 @@
 
 import AdventCalendar from "@/pages/advent-calendar";
 import Magazine from "@/pages/magazine";
+import MagazineMaker from "@/pages/magazine-maker";
 import { Switch, Route, Router as WouterRouter, useRoute, useLocation } from "wouter";
 import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -129,6 +130,7 @@ function ProtectedRouter() {
     <Switch>
       <Route path="/hub" component={Hub} />
       <Route path="/magazine" component={Magazine} />
+      <Route path="/magazinemaker" component={MagazineMaker} />
       <Route path="/daily-focus" component={DailyFocus} />
       <Route path="/carousel" component={Home} />
       <Route path="/single-image" component={SingleImage} />
