@@ -122,6 +122,16 @@ const CLASSY_CORPORATE_PRESETS: PhotoStudioPreset[] = [
   { id: "cc-10", name: "Consultation Chairs", hasColour: false },
   { id: "cc-11", name: "Black and White Desk Edge", hasColour: false },
   { id: "cc-12", name: "Golden Hour Terrace", hasColour: false },
+  { id: "cc-13", name: "Leafy Print Stool", hasColour: false },
+  { id: "cc-14", name: "Red Floral Boucle", hasColour: false },
+  { id: "cc-15", name: "Painterly Print Lean", hasColour: false },
+  { id: "cc-16", name: "Terracotta Print Laugh", hasColour: false },
+  { id: "cc-17", name: "Print Blouse Full Length", hasColour: false },
+  { id: "cc-18", name: "Mono White Suit", hasColour: false },
+  { id: "cc-19", name: "Blush Ivory Suit", hasColour: false },
+  { id: "cc-20", name: "Sage Suit Cube", hasColour: false },
+  { id: "cc-21", name: "Mono Black Suit Over the Shoulder", hasColour: false },
+  { id: "cc-22", name: "Navy Suit Standing Tall", hasColour: false },
 ];
 
 const JULY_2ND_SHOOT_PRESETS: PhotoStudioPreset[] = [
