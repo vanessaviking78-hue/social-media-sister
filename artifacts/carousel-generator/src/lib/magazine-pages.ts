@@ -63,15 +63,42 @@ function newCanvas(): [HTMLCanvasElement, CanvasRenderingContext2D] {
   return [c, c.getContext("2d")!];
 }
 
-// Draws src into the box (x, y, w, h) like object-fit: cover.
+// How a photo sits inside its frame. zoom 1 fills the frame, panX/panY run from -1 to 1.
+export type PhotoAdjust = { zoom: number; panX: number; panY: number };
+export const DEFAULT_ADJUST: PhotoAdjust = { zoom: 1, panX: 0, panY: 0 };
+
+// Where each photo frame landed on each page, so the tool can tell which photo you are dragging.
+export type PhotoHit = {
+  page: number;
+  slot: number;
+  inv: DOMMatrix;
+  w: number;
+  h: number;
+  x: number;
+  y: number;
+  slackX: number;
+  slackY: number;
+};
+let hits: PhotoHit[] = [];
+let curPage = 0;
+let slotBase = 0;
+let adjusts: (PhotoAdjust | undefined)[] = [];
+export function getPhotoHits(): PhotoHit[] {
+  return hits;
+}
+
+// Draws src into the box (x, y, w, h) like object-fit: cover, with optional zoom and pan.
 function drawCover(
   ctx: CanvasRenderingContext2D,
   src: CanvasImageSource | null,
   x: number,
   y: number,
   w: number,
-  h: number
+  h: number,
+  local = 0
 ) {
+  const slot = slotBase + local;
+  const adj = adjusts[slot] ?? DEFAULT_ADJUST;
   ctx.save();
   ctx.beginPath();
   ctx.rect(x, y, w, h);
@@ -79,10 +106,15 @@ function drawCover(
   if (src) {
     const sw = (src as HTMLCanvasElement).width;
     const sh = (src as HTMLCanvasElement).height;
-    const scale = Math.max(w / sw, h / sh);
+    const scale = Math.max(w / sw, h / sh) * Math.max(1, adj.zoom);
     const dw = sw * scale;
     const dh = sh * scale;
-    ctx.drawImage(src, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh);
+    const slackX = Math.max(0, dw - w);
+    const slackY = Math.max(0, dh - h);
+    const px = Math.max(-1, Math.min(1, adj.panX));
+    const py = Math.max(-1, Math.min(1, adj.panY));
+    ctx.drawImage(src, x + (w - dw) / 2 + (px * slackX) / 2, y + (h - dh) / 2 + (py * slackY) / 2, dw, dh);
+    hits.push({ page: curPage, slot, inv: ctx.getTransform().inverse(), w, h, x, y, slackX, slackY });
   } else {
     ctx.fillStyle = "#cfc6b8";
     ctx.fillRect(x, y, w, h);
@@ -248,7 +280,7 @@ export function drawCoverPage(brand: MagazineBrand, copy: MagazineCopy, photos: 
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(-insetW / 2 - 12, -insetH / 2 - 12, insetW + 24, insetH + 24);
   ctx.translate(-insetW / 2, -insetH / 2);
-  drawCover(ctx, photos[1], 0, 0, insetW, insetH);
+  drawCover(ctx, photos[1], 0, 0, insetW, insetH, 1);
   ctx.restore();
 
   // big headline and the three cover lines
@@ -332,7 +364,7 @@ export function drawPageTwo(brand: MagazineBrand, copy: MagazineCopy, photos: (C
   ctx.fillRect(sx - 10 + 8, sy - 10 + 12, sw + 20, sh + 20);
   ctx.fillStyle = CREAM;
   ctx.fillRect(sx - 10, sy - 10, sw + 20, sh + 20);
-  drawCover(ctx, photos[1], sx, sy, sw, sh);
+  drawCover(ctx, photos[1], sx, sy, sw, sh, 1);
 
   const ty = py + ph + 40;
   const introEnd = block(ctx, copy.page2.intro, {
@@ -370,8 +402,8 @@ export function drawPageThree(brand: MagazineBrand, copy: MagazineCopy, photos: 
   ctx.fillRect(0, 0, PAGE_W, PAGE_H);
 
   const rows = [
-    { y: 90, photoLeft: true, item: copy.page3[0], photo: photos[0] },
-    { y: 750, photoLeft: false, item: copy.page3[1], photo: photos[1] },
+    { y: 90, photoLeft: true, item: copy.page3[0], photo: photos[0], li: 0 },
+    { y: 750, photoLeft: false, item: copy.page3[1], photo: photos[1], li: 1 },
   ];
   const rowH = 590;
   const photoW = 420;
@@ -384,7 +416,7 @@ export function drawPageThree(brand: MagazineBrand, copy: MagazineCopy, photos: 
   for (const r of rows) {
     const photoX = r.photoLeft ? 80 : PAGE_W - 80 - photoW;
     const textX = r.photoLeft ? 80 + photoW + gap : 80;
-    drawCover(ctx, r.photo, photoX, r.y, photoW, rowH);
+    drawCover(ctx, r.photo, photoX, r.y, photoW, rowH, r.li);
     // colour block behind the corner of the photo
     ctx.fillStyle = brand.colour;
     ctx.fillRect(r.photoLeft ? photoX : photoX + photoW - 70, r.y + rowH - 16, 70, 16);
@@ -514,12 +546,21 @@ export function drawCtaPage(brand: MagazineBrand, copy: MagazineCopy) {
 export function drawAllPages(
   brand: MagazineBrand,
   copy: MagazineCopy,
-  photos: (CanvasImageSource | null)[]
+  photos: (CanvasImageSource | null)[],
+  photoAdjusts: (PhotoAdjust | undefined)[] = []
 ): HTMLCanvasElement[] {
-  return [
-    drawCoverPage(brand, copy, [photos[0], photos[1]]),
-    drawPageTwo(brand, copy, [photos[2], photos[3]]),
-    drawPageThree(brand, copy, [photos[4], photos[5]]),
-    drawCtaPage(brand, copy),
-  ];
+  hits = [];
+  adjusts = photoAdjusts;
+  curPage = 0;
+  slotBase = 0;
+  const p1 = drawCoverPage(brand, copy, [photos[0], photos[1]]);
+  curPage = 1;
+  slotBase = 2;
+  const p2 = drawPageTwo(brand, copy, [photos[2], photos[3]]);
+  curPage = 2;
+  slotBase = 4;
+  const p3 = drawPageThree(brand, copy, [photos[4], photos[5]]);
+  curPage = 3;
+  const p4 = drawCtaPage(brand, copy);
+  return [p1, p2, p3, p4];
 }
