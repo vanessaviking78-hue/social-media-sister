@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Upload, Download, Sparkles, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Upload, Download, Sparkles, X, Loader2, Move } from "lucide-react";
 import { toast } from "sonner";
 import { MagazineIcon } from "@/components/magazine-icon";
 import { coverToCanvas, loadImageFromFile } from "@/lib/advent-door";
 import {
   EMPTY_COPY,
   drawAllPages,
+  getPhotoHits,
+  DEFAULT_ADJUST,
+  PAGE_W,
+  PAGE_H,
+  type PhotoAdjust,
   type MagazineBrand,
   type MagazineCopy,
 } from "@/lib/magazine-pages";
@@ -131,6 +136,21 @@ export default function MagazineMaker() {
   const [writing, setWriting] = useState(false);
   const canvasRefs = useRef<(HTMLCanvasElement | null)[]>([null, null, null, null]);
   const pagesRef = useRef<HTMLCanvasElement[]>([]);
+  const [adjusts, setAdjusts] = useState<PhotoAdjust[]>(() => Array.from({ length: 6 }, () => ({ ...DEFAULT_ADJUST })));
+  const [activePage, setActivePage] = useState(0);
+  const [selected, setSelected] = useState<number | null>(null);
+  const bigRef = useRef<HTMLCanvasElement>(null);
+  const dragRef = useRef<{ slot: number; x: number; y: number; inv: DOMMatrix; slackX: number; slackY: number } | null>(null);
+  const adjustsRef = useRef(adjusts);
+  adjustsRef.current = adjusts;
+
+  function updateAdjust(slot: number, fn: (a: PhotoAdjust) => PhotoAdjust) {
+    setAdjusts((prev) => {
+      const next = [...prev];
+      next[slot] = fn(prev[slot]);
+      return next;
+    });
+  }
 
   const brand: MagazineBrand = {
     clinicName: clinicName.trim() || "Your clinic",
@@ -151,6 +171,11 @@ export default function MagazineMaker() {
         next[index] = { canvas, thumb: canvas.toDataURL("image/jpeg", 0.6), name: file.name };
         return next;
       });
+      setAdjusts((prev) => {
+        const next = [...prev];
+        next[index] = { ...DEFAULT_ADJUST };
+        return next;
+      });
     } catch (e: any) {
       toast.error(e?.message || "Couldn't read that image, try another file");
     }
@@ -162,9 +187,16 @@ export default function MagazineMaker() {
       const pages = drawAllPages(
         brand,
         copy,
-        photos.map((p) => p?.canvas ?? null)
+        photos.map((p) => p?.canvas ?? null),
+        adjusts
       );
       pagesRef.current = pages;
+      const big = bigRef.current;
+      if (big && pages[activePage]) {
+        const bctx = big.getContext("2d")!;
+        bctx.clearRect(0, 0, big.width, big.height);
+        bctx.drawImage(pages[activePage], 0, 0, big.width, big.height);
+      }
       pages.forEach((page, i) => {
         const target = canvasRefs.current[i];
         if (!target) return;
@@ -172,10 +204,82 @@ export default function MagazineMaker() {
         ctx.clearRect(0, 0, target.width, target.height);
         ctx.drawImage(page, 0, 0, target.width, target.height);
       });
-    }, 200);
+    }, 30);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clinicName, colour, accent, ctaButton, contact, copy, photos]);
+  }, [clinicName, colour, accent, ctaButton, contact, copy, photos, adjusts, activePage]);
+
+  // Find the photo under the pointer on the big page and return it with page coordinates.
+  function hitAt(e: { clientX: number; clientY: number }) {
+    const big = bigRef.current;
+    if (!big) return null;
+    const r = big.getBoundingClientRect();
+    const px = ((e.clientX - r.left) / r.width) * PAGE_W;
+    const py = ((e.clientY - r.top) / r.height) * PAGE_H;
+    const list = getPhotoHits().filter((h) => h.page === activePage);
+    for (let i = list.length - 1; i >= 0; i--) {
+      const h = list[i];
+      const lp = h.inv.transformPoint(new DOMPoint(px, py));
+      if (lp.x >= h.x && lp.x <= h.x + h.w && lp.y >= h.y && lp.y <= h.y + h.h) return { h, px, py };
+    }
+    return null;
+  }
+
+  function onBigDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    const hit = hitAt(e);
+    if (!hit) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setSelected(hit.h.slot);
+    dragRef.current = { slot: hit.h.slot, x: hit.px, y: hit.py, inv: hit.h.inv, slackX: hit.h.slackX, slackY: hit.h.slackY };
+  }
+
+  function onBigMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    const big = bigRef.current;
+    const d = dragRef.current;
+    if (!big) return;
+    if (!d) {
+      big.style.cursor = hitAt(e) ? "grab" : "default";
+      return;
+    }
+    big.style.cursor = "grabbing";
+    const r = big.getBoundingClientRect();
+    const px = ((e.clientX - r.left) / r.width) * PAGE_W;
+    const py = ((e.clientY - r.top) / r.height) * PAGE_H;
+    const dx = px - d.x;
+    const dy = py - d.y;
+    // move the drag into the frame's own (possibly tilted) space
+    const ldx = d.inv.a * dx + d.inv.c * dy;
+    const ldy = d.inv.b * dx + d.inv.d * dy;
+    d.x = px;
+    d.y = py;
+    updateAdjust(d.slot, (a) => ({
+      ...a,
+      panX: d.slackX > 0 ? Math.max(-1, Math.min(1, a.panX + ldx / (d.slackX / 2))) : 0,
+      panY: d.slackY > 0 ? Math.max(-1, Math.min(1, a.panY + ldy / (d.slackY / 2))) : 0,
+    }));
+  }
+
+  function onBigUp() {
+    dragRef.current = null;
+    if (bigRef.current) bigRef.current.style.cursor = "grab";
+  }
+
+  // Scroll wheel zooms the photo under the pointer. It needs a non passive listener to stop the page scrolling.
+  const wheelRef = useRef<(e: WheelEvent) => void>(() => {});
+  wheelRef.current = (e: WheelEvent) => {
+    const hit = hitAt(e);
+    if (!hit) return;
+    e.preventDefault();
+    setSelected(hit.h.slot);
+    updateAdjust(hit.h.slot, (a) => ({ ...a, zoom: Math.max(1, Math.min(4, a.zoom * (1 - e.deltaY * 0.0015))) }));
+  };
+  useEffect(() => {
+    const el = bigRef.current;
+    if (!el) return;
+    const fn = (e: WheelEvent) => wheelRef.current(e);
+    el.addEventListener("wheel", fn, { passive: false });
+    return () => el.removeEventListener("wheel", fn);
+  }, []);
 
   async function writeCopy() {
     if (topics.some((t) => !t.trim())) {
@@ -349,6 +453,66 @@ export default function MagazineMaker() {
 
           {/* RIGHT: preview and editable copy */}
           <div className="space-y-6 lg:sticky lg:top-6">
+            <div>
+              <p className="text-xs uppercase tracking-widest text-zinc-500 mb-2 flex items-center gap-1.5">
+                <Move size={12} /> Move and resize your photos
+              </p>
+              <div className="flex gap-1.5 mb-2">
+                {["Cover", "Page 2", "Page 3"].map((t, i) => (
+                  <button
+                    key={t}
+                    onClick={() => {
+                      setActivePage(i);
+                      setSelected(null);
+                    }}
+                    className={`px-3 py-1 rounded-full text-xs border ${
+                      activePage === i
+                        ? "bg-fuchsia-600 border-fuchsia-500 text-white"
+                        : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white"
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              <canvas
+                ref={bigRef}
+                width={540}
+                height={720}
+                onPointerDown={onBigDown}
+                onPointerMove={onBigMove}
+                onPointerUp={onBigUp}
+                onPointerCancel={onBigUp}
+                style={{ touchAction: "none" }}
+                className="w-full max-w-sm aspect-[3/4] rounded-lg border border-zinc-800 bg-zinc-900"
+                aria-label="Large page preview. Drag a photo to move it, scroll to zoom."
+              />
+              <p className="text-[11px] text-zinc-500 mt-1.5">
+                Drag a photo to slide it about inside its frame. Scroll over it, or use the slider, to zoom in.
+              </p>
+              {selected !== null && photos[selected] && (
+                <div className="mt-2 flex items-center gap-3 max-w-sm">
+                  <span className="text-[11px] text-zinc-400 shrink-0">{PHOTO_LABELS[selected]}</span>
+                  <input
+                    type="range"
+                    min={1}
+                    max={4}
+                    step={0.01}
+                    value={adjusts[selected].zoom}
+                    onChange={(e) => updateAdjust(selected, (a) => ({ ...a, zoom: Number(e.target.value) }))}
+                    className="flex-1 accent-fuchsia-500"
+                    aria-label="Zoom"
+                  />
+                  <button
+                    onClick={() => updateAdjust(selected, () => ({ ...DEFAULT_ADJUST }))}
+                    className="text-[11px] text-fuchsia-400 underline shrink-0"
+                  >
+                    Reset
+                  </button>
+                </div>
+              )}
+            </div>
+
             <div>
               <p className="text-xs uppercase tracking-widest text-zinc-500 mb-2">Your 4 pages</p>
               <div className="grid grid-cols-4 gap-2">
