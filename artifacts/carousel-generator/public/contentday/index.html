@@ -8,35 +8,19 @@
 <title>Content Day Checklist</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Anton&display=swap" rel="stylesheet">
 <style>
-  html{color-scheme:light dark} body{margin:0}
+  html{color-scheme:light} body{margin:0}
   :root{
-    --bg:#f5f3f6; --card:#ffffff; --ink:#221a2b; --muted:#6f6479; --line:#e3dde8;
-    --accent:#6b2d5c; --accent-ink:#ffffff; --accent-soft:#f0e2ec;
-    --done:#2f7d5b; --h:#2f5f8f; --v:#a63a5f; --warn-bg:#fbeef1; --warn-line:#efc6d0;
+    --bg:#f8d7e0; --card:#ffffff; --ink:#221a2b; --muted:#584651; --line:#ecc1cf;
+    --accent:#6b2d5c; --accent-ink:#ffffff; --accent-soft:#f3c4d2;
+    --done:#2f7d5b; --h:#2f5f8f; --v:#a63a5f; --warn-bg:#ffffff; --warn-line:#ecc1cf;
     --field:#ffffff;
-  }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      color-scheme:dark;
-      --bg:#17121c; --card:#211a28; --ink:#f1ecf4; --muted:#a99db3; --line:#372d40;
-      --accent:#d68bc2; --accent-ink:#1b1220; --accent-soft:#3a2537;
-      --done:#5ec394; --h:#7fb0e3; --v:#f08aab; --warn-bg:#33202a; --warn-line:#5a3341;
-      --field:#1b1521;
-    }
-  }
-  :root[data-theme="dark"]{
-    color-scheme:dark;
-    --bg:#17121c; --card:#211a28; --ink:#f1ecf4; --muted:#a99db3; --line:#372d40;
-    --accent:#d68bc2; --accent-ink:#1b1220; --accent-soft:#3a2537;
-    --done:#5ec394; --h:#7fb0e3; --v:#f08aab; --warn-bg:#33202a; --warn-line:#5a3341;
-    --field:#1b1521;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   body{background:var(--bg);color:var(--ink);font-family:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:18px;line-height:1.4;padding-inline:16px;padding-block:20px 130px}
   .wrap{max-width:880px;margin-inline:auto}
-  h1{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:32px;margin:0 0 4px;text-wrap:balance}
+  h1{font-family:Anton,Impact,"Arial Narrow",sans-serif;font-weight:400;font-size:44px;line-height:1.05;letter-spacing:.02em;text-transform:uppercase;color:#000;margin:0 0 6px;text-wrap:balance}
   .sub{color:var(--muted);font-size:16px;margin:0 0 18px}
   .setup{display:grid;grid-template-columns:2fr 1fr;gap:12px}
   @media(max-width:560px){.setup{grid-template-columns:1fr}}
@@ -52,8 +36,8 @@
   .filters{display:flex;gap:8px;margin:18px 0 14px;flex-wrap:wrap}
   .chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
   section{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden}
-  section>h2{margin:0;padding:16px;font-size:19px;display:flex;justify-content:space-between;gap:10px;align-items:center;cursor:pointer;font-weight:700}
-  section>h2 small{font-weight:500;color:var(--muted);font-size:15px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  section>h2{margin:0;padding:16px;font-family:Anton,Impact,"Arial Narrow",sans-serif;font-weight:400;font-size:24px;line-height:1.1;letter-spacing:.03em;text-transform:uppercase;color:#000;display:flex;justify-content:space-between;gap:10px;align-items:center;cursor:pointer}
+  section>h2 small{font-family:"DM Sans",-apple-system,sans-serif;text-transform:none;letter-spacing:0;font-weight:500;color:var(--muted);font-size:15px;white-space:nowrap;font-variant-numeric:tabular-nums}
   section.full>h2 small{color:var(--done)}
   .shots{border-top:1px solid var(--line)}
   section.closed .shots{display:none}
@@ -66,8 +50,7 @@
   .txt{flex:1}
   .tag{display:inline-block;font-size:12px;font-weight:700;color:#fff;border-radius:6px;padding:2px 7px;margin-left:6px;vertical-align:1px}
   .tag.H{background:var(--h)} .tag.V{background:var(--v)}
-  :root:not([data-theme="light"]) .tag{color:#12101a}
-  :root[data-theme="light"] .tag{color:#fff}
+  .tag{color:#fff}
   .note{color:var(--muted);font-size:15px;margin:16px 0}
   .bottom{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom, 0px));z-index:5}
   .bottom-in{max-width:880px;margin-inline:auto}
@@ -81,7 +64,7 @@
 
   body.client .setup,body.client .row,body.client #warn,body.client .bottom,body.client .box,body.client .filters{display:none}
   body.client #clientnote{display:block}
-  #clientnote{display:none;background:var(--accent-soft);border-radius:10px;padding:14px 16px;font-size:16px;margin:0 0 18px}
+  #clientnote{display:none;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-size:16px;margin:0 0 18px}
   body.client section>h2 small,body.client .note{display:none}
   body.client .shot{cursor:default}
   body.client{padding-block-end:24px}
