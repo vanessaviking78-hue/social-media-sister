@@ -970,6 +970,15 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
               <span>Content List</span>
             </a>
           )}
+          <a
+            href={`/contentday/?view=client&clinic=${encodeURIComponent(data.clientName || "")}`}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-extrabold transition-colors border border-pink-500 text-pink-400 hover:bg-pink-500/10"
+          >
+            <ClipboardList className="w-4 h-4" />
+            <span>Your content day</span>
+          </a>
           <button
             onClick={() => setTab("reelsChallenge")}
             className={`flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-extrabold transition-colors bg-pink-600 text-white hover:bg-pink-500 ${tab === "reelsChallenge" ? "ring-2 ring-pink-300" : ""}`}
