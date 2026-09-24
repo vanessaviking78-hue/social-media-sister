@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck, Grid3x3, Mail, Star, Heart } from "lucide-react";
 import { LogOut } from "lucide-react";
 import { AdventCalendarIcon } from "@/components/advent-icon";
+import { MagazineIcon } from "@/components/magazine-icon";
 
 const TOOLS = [
 {
@@ -134,6 +135,16 @@ description: "Send a ready-made post from the content library to every connected
 color: "from-orange-500/20 to-orange-500/5",
 border: "hover:border-orange-500/50",
 iconColor: "text-orange-400",
+},
+    {
+href: "/magazine",
+group: "content",
+icon: MagazineIcon,
+name: "Magazine Flip",
+description: "Add a front cover, page two, page three and a call to action. The pages turn one by one in a 10 second 1080 x 1440 MP4.",
+color: "from-fuchsia-500/20 to-fuchsia-500/5",
+border: "hover:border-fuchsia-500/50",
+iconColor: "text-fuchsia-400",
 },
     {
 href: "/adventcalendar",
