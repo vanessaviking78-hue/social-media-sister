@@ -6,7 +6,7 @@ import { aiGeneratedPortraitsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { objectStorageClient } from "./objectStorage";
 import { logger } from "./logger";
-import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, buildTextOnlyPrompt, buildCustomTextWithPhotoPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS, HOMEWORK_SHOTS_PRESETS, CLASSY_CORPORATE_PRESETS } from "./aiPortraitScenarios";
+import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, buildTextOnlyPrompt, buildCustomTextWithPhotoPrompt, buildCartoonPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS, HOMEWORK_SHOTS_PRESETS, CLASSY_CORPORATE_PRESETS } from "./aiPortraitScenarios";
 
 const GEMINI_MODEL = "gemini-2.5-flash-image";
 const REQUEST_GAP_MS = 4_000;
@@ -148,6 +148,8 @@ interface ScenarioConfig {
   backgroundImageUrl?: string;
   aspectRatio: string;
   textOnly?: boolean;
+  cartoon?: boolean;
+  cartoonRedraw?: boolean;
   promptVars?: { colour?: string; name?: string; skills?: string; knownAs?: string; customText?: string };
 }
 
@@ -212,7 +214,9 @@ export async function processPortraitJob(
       continue;
     }
 
-    if (cfg.textOnly) {
+    if (cfg.cartoon) {
+      prompt = buildCartoonPrompt(cfg.promptVars?.customText || "", cfg.aspectRatio, !cfg.textOnly, !!cfg.cartoonRedraw);
+    } else if (cfg.textOnly) {
       prompt = buildTextOnlyPrompt(cfg.promptVars?.customText || "", cfg.aspectRatio);
     } else if (photoStudioPreset) {
       prompt = buildPhotoStudioPrompt(photoStudioPreset, cfg.scrubColor, cfg.aspectRatio, cfg.promptVars);

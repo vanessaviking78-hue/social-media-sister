@@ -44,6 +44,7 @@ import BackgroundBuilder from "@/pages/background-builder";
 import HighlightCovers from "@/pages/highlight-covers";
 import SelfieCarousels from "@/pages/selfie-carousels";
 import AiPortraitStudio from "@/pages/ai-portrait-studio";
+import ComicPage from "@/pages/comic";
 import Onboard from "@/pages/onboard";
 import SubmitBeforeAfter from "@/pages/submit";
 import BeforeAfterMaker from "@/pages/before-after";
@@ -154,6 +155,7 @@ function ProtectedRouter() {
       <Route path="/highlight-covers" component={HighlightCovers} />
       <Route path="/selfie-carousels" component={SelfieCarousels} />
       <Route path="/ai-portrait-studio" component={AiPortraitStudio} />
+      <Route path="/comic" component={ComicPage} />
       <Route path="/dm-automations" component={DmAutomations} />
       <Route path="/intake" component={Intake} />
       <Route path="/dm-prompts" component={DmPrompts} />
