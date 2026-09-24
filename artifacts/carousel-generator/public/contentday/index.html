@@ -78,14 +78,22 @@
   .hide{display:none!important}
   .confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:15px}
   @media (prefers-reduced-motion:reduce){.bar>div{transition:none}}
+
+  body.client .setup,body.client .row,body.client #warn,body.client .bottom,body.client .box,body.client .filters{display:none}
+  body.client #clientnote{display:block}
+  #clientnote{display:none;background:var(--accent-soft);border-radius:10px;padding:14px 16px;font-size:16px;margin:0 0 18px}
+  body.client .shot{cursor:default}
+  body.client{padding-block-end:24px}
 </style>
 </head>
 <body>
 
 
 <div class="wrap">
-  <h1>Content Day</h1>
-  <p class="sub">Enter the clinic and the date, then tick each shot off as I film it. Ticks save on this iPad for each clinic and date.</p>
+  <h1 id="title">Content Day</h1>
+  <p class="sub" id="subline">Enter the clinic and the date, then tick each shot off as I film it. Ticks save on this iPad for each clinic and date.</p>
+
+  <div id="clientnote">On the day I need signed consent from anyone appearing on camera. I only film needles, injectables or before and afters if you have approved them and the wording has been checked against the CAP Code. Some shots may change on the day to suit your space and your team.</div>
 
   <div class="setup">
     <div><label for="clinic">Clinic name</label><input id="clinic" type="text" placeholder="e.g. Church Street Clinic" autocomplete="off" enterkeyhint="done"></div>
@@ -104,7 +112,7 @@
   <div id="warn">Before I film: signed consent from anyone on camera. No needles, injectables or before and afters unless the clinic has approved them and the wording has been checked against the CAP Code.</div>
 
   <div class="filters" role="group" aria-label="Filter shots">
-    <button class="chip" type="button" data-f="all" aria-pressed="true">All 80</button>
+    <button class="chip" type="button" data-f="all" aria-pressed="true">All</button>
     <button class="chip" type="button" data-f="todo" aria-pressed="false">Still to do</button>
     <button class="chip" type="button" data-f="H" aria-pressed="false">Horizontal (R50)</button>
     <button class="chip" type="button" data-f="V" aria-pressed="false">Vertical (iPhone)</button>
@@ -137,6 +145,11 @@ const DATA = [
   ["What I wish everyone knew before their first appointment","HV"],["The thing that surprises people","HV"],["What a consultation with me is really like","HV"],
   ["Who this is for and who it isn't","HV"],["The mistake I see most","HV"],["My honest view on trends","HV"],
   ["A 15 second hook line to camera, three takes","V"],["Sign off: book a consultation and come and say hello","HV"],["Reaction shots: nodding, listening, smiling","H"]]],
+ ["Podcast",[
+  ["Podcast set, wide, both chairs and mics in frame","H"],["Mic and headphones, close up","V"],["Host and guest sitting down, the first hello","H"],
+  ["Host introducing the episode to camera","HV"],["Guest introducing themselves","HV"],["Host asking the opening question, guest reacting","H"],
+  ["Guest mid answer, talking with their hands","H"],["Host listening, nodding and reacting","V"],["A proper laugh between host and guest","HV"],
+  ["Over the shoulder, host to guest","H"],["Guest's best one liner, repeated for clean audio","V"],["Host sign off: come and say hello","HV"]]],
  ["Treatment room and equipment",[
   ["Couch being dressed with fresh paper","V"],["Trolley laid out neatly, no sharps on show","H"],["Equipment being switched on, screen glowing","V"],
   ["Machine or device, hero shot","H"],["Hands wiping down the surfaces","V"],["Gloves going on","V"],["Lamp or light being angled","H"],
@@ -217,11 +230,13 @@ function render(){
   });
   $("list").innerHTML = html;
   $("ctext").textContent = done + " of " + n;
+  document.querySelector('.chip[data-f="all"]').textContent = "All " + n;
   $("fill").style.width = (done/n*100) + "%";
   const c = $("clinic").value.trim();
   $("cname").textContent = c ? (done===n ? c + ": all shots done" : c) : "Add a clinic name to begin";
 }
 function toggle(shot){
+  if(window.CLIENT_VIEW) return;
   if(!key()){ $("clinic").focus(); return; }
   const id = shot.dataset.id;
   if(state[id]) delete state[id]; else state[id] = 1;
@@ -251,6 +266,19 @@ document.querySelectorAll(".chip").forEach(b => b.onclick = () => {
 $("reset").onclick = () => { if(key()) $("confirmBox").classList.remove("hide"); };
 $("no").onclick = () => $("confirmBox").classList.add("hide");
 $("yes").onclick = () => { state = {}; save(); render(); $("confirmBox").classList.add("hide"); };
+
+
+(function(){
+  const q = new URLSearchParams(location.search);
+  if(q.get("view") === "client"){
+    document.body.classList.add("client");
+    const c = (q.get("clinic") || "").trim();
+    $("title").textContent = c ? "Your content day at " + c : "Your content day";
+    $("subline").textContent = "Here is everything I plan to film with you. H means I film it horizontally on the camera and V means vertically on my phone.";
+    document.title = "Your content day";
+    window.CLIENT_VIEW = true;
+  }
+})();
 
 (function(){
   const t = new Date(), p = n => String(n).padStart(2,"0");
