@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo, useEffect } from "react";
+import { Fragment, useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, Upload, FileText, Download, Loader2, CalendarClock,
@@ -140,6 +140,13 @@ const defaultBlock = (id: BlockId, text = ""): Block => {
     id === "line" ? { w: 0.40, thickness: 3 } : {};
   return { id, text, ...pos[id], ...extra };
 };
+
+export type ImageLayout = "one-all" | "per-slide" | "cover-only";
+
+// Number of photo-bearing slides a CSV row will produce (hook + bodies + CTA).
+export function slideCountForRow(row: CsvRow): number {
+  return makeBlocks(row).filter((b) => /^(hook|body\d+|cta)$/.test(b.id)).length;
+}
 
 export function makeBlocks(row: CsvRow): Block[] {
   if ("hook" in row) {
@@ -616,10 +623,10 @@ export function SlideEditorModal({ item, preset, logoImg, heroWordColor, globalF
 
   const totalSlides = useMemo(() => blocks.filter(b => /^(hook|body\d+|cta)$/.test(b.id)).length, [blocks]);
   const bgUrls = useMemo(() => Array.from({ length: totalSlides }, (_, i) => i + 1).map(n =>
-      renderSlideCanvas(n, blocks, item.coverImg, item.bodyImg, logoImg, preset, 1, true)
+      renderSlideCanvas(n, blocks, item.slideImgs?.[n - 1] ?? item.coverImg, item.slideImgs?.[n - 1] ?? item.bodyImg, logoImg, preset, 1, true, undefined, undefined, undefined, item.slideImgs?.[n - 1] ? (item.slideBgOpacity?.[n - 1] ?? 1) : 1)
     ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [item.coverImg, item.bodyImg, logoImg, preset.pageColor, preset.overlayColor, totalSlides]
+    [item.coverImg, item.bodyImg, item.slideImgs, item.slideBgOpacity, logoImg, preset.pageColor, preset.overlayColor, totalSlides]
   );
 
   const activeBlockIds = getSlideBlockIds(blocks)[activeSlide] ?? [];
@@ -1191,6 +1198,53 @@ function RowImageModal({
   );
 }
 
+// One photo slot for one slide in "Different image per slide" mode: shows a
+// thumbnail, lets you upload a file or pick an approved photo, or clear it.
+function SlideSlot({
+  slideNum, file, clientName, onPick, onClear,
+}: {
+  slideNum: number; file: File | null; clientName?: string;
+  onPick: (f: File) => void; onClear: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const url = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+  useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
+  return (
+    <div className="w-28 space-y-1">
+      <div className="text-[10px] text-muted-foreground">Slide {slideNum}</div>
+      <div
+        className="relative aspect-[3/4] rounded-md border border-border/40 bg-muted/20 overflow-hidden flex items-center justify-center cursor-pointer hover:border-violet-500/60"
+        onClick={() => inputRef.current?.click()}
+      >
+        {url
+          ? <img src={url} alt={`Slide ${slideNum}`} className="w-full h-full object-cover" />
+          : <Upload className="w-4 h-4 text-muted-foreground" />}
+        {file && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onClear(); }}
+            className="absolute top-1 right-1 rounded-full bg-black/60 p-0.5 text-white hover:bg-red-500"
+            title="Remove photo"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        )}
+      </div>
+      <input
+        ref={inputRef} type="file" accept="image/*" className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) onPick(f); e.target.value = ""; }}
+      />
+      <ApprovedImagesPicker
+        clientName={clientName}
+        mode="single"
+        label="Approved photo"
+        skipBackgroundRemoval
+        onAddImages={(files) => { if (files[0]) onPick(files[0]); }}
+      />
+    </div>
+  );
+}
+
 function DropZone({
   label, hint, files, accept, multiple = true, active, color,
   onDragOver, onDragLeave, onDrop, onClick,
@@ -1262,6 +1316,49 @@ export default function BulkCarousel() {
   const [coverFiles, setCoverFiles] = useState<File[]>([]);
   const [csvDrag, setCsvDrag] = useState(false);
   const [coverDrag, setCoverDrag] = useState(false);
+
+  // How photos are assigned:
+  //  "one-all"    one photo per carousel, used behind every slide (original behaviour)
+  //  "per-slide"  a different photo for each slide of each carousel
+  //  "cover-only" one photo per carousel, on the first slide only, other slides stay the brand colour
+  const [imageLayout, setImageLayout] = useState<ImageLayout>("one-all");
+  // slideFiles[row][slide] is the photo chosen for that slide in "per-slide" mode.
+  const [slideFiles, setSlideFiles] = useState<(File | null)[][]>([]);
+  const [slidePoolDrag, setSlidePoolDrag] = useState(false);
+  const [expandedSlideRow, setExpandedSlideRow] = useState<number | null>(null);
+  const slidePoolInputRef = useRef<HTMLInputElement | null>(null);
+
+  const setSlideFile = (rowIdx: number, slideIdx: number, file: File | null) => {
+    setSlideFiles((prev) => {
+      const next = prev.map((r) => (r ? [...r] : []));
+      while (next.length <= rowIdx) next.push([]);
+      next[rowIdx][slideIdx] = file;
+      return next;
+    });
+  };
+
+  // Fills slots in reading order (carousel 1 slide 1, slide 2 ... then carousel 2 slide 1 ...)
+  // using the files sorted by name, so 1.jpg, 2.jpg, 3.jpg... land where you'd expect.
+  const fillSlidesInOrder = (files: File[]) => {
+    const accepted = files
+      .filter((f) => f.type.startsWith("image/") || IMAGE_EXT_RE.test(f.name))
+      .sort((a, b) => naturalFileCompare(a.name, b.name));
+    if (accepted.length === 0) { toast.error("Those files didn't look like images."); return; }
+    const next: (File | null)[][] = csvRows.map((_, r) => (slideFiles[r] ? [...slideFiles[r]] : []));
+    let cursor = 0;
+    let placed = 0;
+    for (let r = 0; r < csvRows.length && cursor < accepted.length; r++) {
+      if (rowSelected[r] === false) continue;
+      const n = slideCountForRow(csvRows[r]);
+      for (let s = 0; s < n && cursor < accepted.length; s++) {
+        next[r][s] = accepted[cursor++];
+        placed++;
+      }
+    }
+    setSlideFiles(next);
+    const spare = accepted.length - placed;
+    toast.success(`Placed ${placed} photo${placed !== 1 ? "s" : ""} across your slides${spare > 0 ? `, ${spare} left over` : ""}.`);
+  };
 
   // Preview state
   const [items, setItems] = useState<CarouselItem[]>([]);
@@ -1480,9 +1577,26 @@ async function openBankForMany(selectedItems: any[]) {
         const i = activeIndexes[idx];
         const row = csvRows[i];
         let coverImg: HTMLImageElement | null = null;
-        if (coverFiles[i]) try { coverImg = await loadImg(URL.createObjectURL(coverFiles[i])); } catch {}
-        // One image reused across every slide, no separate body image option.
-        const bodyImg = coverImg;
+        let bodyImg: HTMLImageElement | null = null;
+        let slideImgs: (HTMLImageElement | null)[] = [];
+        let slideBgOpacity: number[] = [];
+        if (imageLayout === "per-slide") {
+          // A different photo per slide. Slides with no photo chosen keep the brand colour.
+          const chosen = slideFiles[i] ?? [];
+          const count = slideCountForRow(row);
+          slideImgs = await Promise.all(
+            Array.from({ length: count }, async (_, s) => {
+              const f = chosen[s];
+              if (!f) return null;
+              try { return await loadImg(URL.createObjectURL(f)); } catch { return null; }
+            })
+          );
+          slideBgOpacity = slideImgs.map(() => 1);
+        } else {
+          if (coverFiles[i]) try { coverImg = await loadImg(URL.createObjectURL(coverFiles[i])); } catch {}
+          // "one-all": the same photo behind every slide. "cover-only": first slide only.
+          bodyImg = imageLayout === "cover-only" ? null : coverImg;
+        }
 
         // Row-level overlay: one approved photo composited on top of every
         // slide's background, same registration point throughout.
@@ -1496,8 +1610,8 @@ async function openBankForMany(selectedItems: any[]) {
         const slideOverlays = overlayObj ? Array(5).fill(overlayObj) : [];
 
         const blocks = makeBlocks(row);
-        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg, slideImgs: [], slideBgOpacity: [], slideOverlays }, logoImg, selectedPreset, LOCKED_LINE_SPACING, heroWordColor, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFont || undefined, rowBgColor[i] || undefined);
-        rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.hook, blocks, coverImg, bodyImg, slideImgs: [], slideBgOpacity: [], slideOverlays, thumbs, pageColorOverride: rowBgColor[i] || undefined });
+        const thumbs = renderAllThumbs({ blocks, coverImg, bodyImg, slideImgs, slideBgOpacity, slideOverlays }, logoImg, selectedPreset, LOCKED_LINE_SPACING, heroWordColor, textBoxEnabledRef.current ? textBoxColorRef.current : undefined, textFont || undefined, rowBgColor[i] || undefined);
+        rendered.push({ id: `item-${i}`, rowNum: i + 1, hook: row.hook, blocks, coverImg, bodyImg, slideImgs, slideBgOpacity, slideOverlays, thumbs, pageColorOverride: rowBgColor[i] || undefined });
         setRenderProgress(Math.round(((idx + 1) / activeIndexes.length) * 100));
       }
 
@@ -2392,12 +2506,74 @@ async function openBankForMany(selectedItems: any[]) {
         {/* Step 3: Images */}
         <section className="space-y-4">
           <h2 className="font-semibold text-base">3. Upload images</h2>
+
+          <div className="grid gap-2 sm:grid-cols-3 max-w-3xl">
+            {([
+              { id: "one-all", title: "One image, every slide", desc: "One photo per carousel behind all of its slides." },
+              { id: "per-slide", title: "Different image per slide", desc: "Choose a separate photo for each slide of each carousel." },
+              { id: "cover-only", title: "One image, first slide only", desc: "Photo on slide 1, the rest stay your brand colour." },
+            ] as { id: ImageLayout; title: string; desc: string }[]).map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setImageLayout(opt.id)}
+                className={`text-left rounded-lg border p-3 transition-colors ${
+                  imageLayout === opt.id ? "border-violet-500/60 bg-violet-500/10" : "border-border/40 hover:border-border/70"
+                }`}
+              >
+                <span className="block text-sm font-medium">{opt.title}</span>
+                <span className="block text-xs text-muted-foreground mt-0.5">{opt.desc}</span>
+              </button>
+            ))}
+          </div>
+
+          {imageLayout === "per-slide" ? (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Drop a batch and I will place them in filename order: carousel 1 slide 1, slide 2, and so on, then carousel 2. Then fine tune any slot in step 4 by clicking the slide count next to each row. Slides with no photo keep your brand colour.
+                {csvRows.length > 0 && ` You need ${csvRows.reduce((sum, r, i) => sum + (rowSelected[i] === false ? 0 : slideCountForRow(r)), 0)} photos to fill every slide.`}
+              </p>
+              <div className="max-w-md space-y-2">
+                <Label className="text-sm font-medium">Photos for slides</Label>
+                <DropZone
+                  label="Drop images" hint="Filled in filename order across all slides"
+                  files={slideFiles.flat().filter(Boolean) as File[]} accept="image/*" active={slidePoolDrag} color="violet"
+                  onDragOver={() => setSlidePoolDrag(true)} onDragLeave={() => setSlidePoolDrag(false)}
+                  onDrop={(e) => { e.preventDefault(); setSlidePoolDrag(false); fillSlidesInOrder(Array.from(e.dataTransfer.files)); }}
+                  onClick={() => slidePoolInputRef.current?.click()}
+                />
+                <input ref={slidePoolInputRef} type="file" accept="image/*" multiple className="hidden"
+                  onChange={e => { if (e.target.files) fillSlidesInOrder(Array.from(e.target.files)); e.target.value = ""; }} />
+                <ApprovedImagesPicker
+                  clientName={selectedPreset?.name}
+                  label="Choose from approved photos (fills slides in the order you tap them)"
+                  skipBackgroundRemoval
+                  onAddImages={(files) => {
+                    const next: (File | null)[][] = csvRows.map((_, r) => (slideFiles[r] ? [...slideFiles[r]] : []));
+                    let cursor = 0;
+                    for (let r = 0; r < csvRows.length && cursor < files.length; r++) {
+                      if (rowSelected[r] === false) continue;
+                      const n = slideCountForRow(csvRows[r]);
+                      for (let s = 0; s < n && cursor < files.length; s++) next[r][s] = files[cursor++];
+                    }
+                    setSlideFiles(next);
+                  }}
+                />
+                {slideFiles.some((r) => r?.some(Boolean)) && (
+                  <button type="button" onClick={() => setSlideFiles([])} className="text-xs text-muted-foreground hover:text-red-400 underline">
+                    Clear all slide photos
+                  </button>
+                )}
+              </div>
+            </>
+          ) : (
+          <>
           <p className="text-sm text-muted-foreground">
-            One image per row, used across every slide of that carousel. Images are matched to CSV rows in filename order (so name them 1, 2, 3... or however you want them sorted), or pick straight from your approved photos. Upload {csvRows.length > 0 ? csvRows.length : "N"} to match your {csvRows.length > 0 ? csvRows.length : ""} row{csvRows.length !== 1 ? "s" : ""}.
+            {imageLayout === "cover-only" ? "One image per row, shown on the first slide only. " : "One image per row, used across every slide of that carousel. "}Images are matched to CSV rows in filename order (so name them 1, 2, 3... or however you want them sorted), or pick straight from your approved photos. Upload {csvRows.length > 0 ? csvRows.length : "N"} to match your {csvRows.length > 0 ? csvRows.length : ""} row{csvRows.length !== 1 ? "s" : ""}.
           </p>
 
           <div className="max-w-md space-y-2">
-            <Label className="text-sm font-medium">Image (used on every slide)</Label>
+            <Label className="text-sm font-medium">{imageLayout === "cover-only" ? "Image (first slide only)" : "Image (used on every slide)"}</Label>
             <DropZone
               label="Drop images" hint="One per row, sorted by filename"
               files={coverFiles} accept="image/*" active={coverDrag} color="violet"
@@ -2435,6 +2611,8 @@ async function openBankForMany(selectedItems: any[]) {
                 <span>Missing rows will render with a solid brand colour background.</span>
               )}
             </div>
+          )}
+          </>
           )}
         </section>
 
@@ -2520,7 +2698,8 @@ async function openBankForMany(selectedItems: any[]) {
                   </thead>
                   <tbody className="divide-y divide-border/20">
                     {csvRows.map((row, i) => (
-                      <tr key={i} className="hover:bg-muted/10">
+                      <Fragment key={i}>
+                      <tr className="hover:bg-muted/10">
                         <td className="px-3 py-2 text-center">
                           <input
                             type="checkbox"
@@ -2533,7 +2712,15 @@ async function openBankForMany(selectedItems: any[]) {
                         <td className="px-3 py-2 text-muted-foreground max-w-[140px] truncate">{row.body1 || ""}</td>
                         <td className="px-3 py-2 text-muted-foreground max-w-[120px] truncate">{row.cta}</td>
                         <td className="px-3 py-2 text-center">
-                          {coverFiles[i]
+                          {imageLayout === "per-slide" ? (
+                            <button
+                              type="button"
+                              onClick={() => setExpandedSlideRow((cur) => (cur === i ? null : i))}
+                              className="text-[11px] text-violet-400 hover:text-violet-300 underline whitespace-nowrap"
+                            >
+                              {(slideFiles[i] ?? []).filter(Boolean).length}/{slideCountForRow(row)} slides
+                            </button>
+                          ) : coverFiles[i]
                             ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mx-auto" />
                             : <X className="w-3.5 h-3.5 text-amber-400/60 mx-auto" />}
                         </td>
@@ -2583,6 +2770,8 @@ async function openBankForMany(selectedItems: any[]) {
                               setCsvRows((prev) => prev.filter((_, idx) => idx !== i));
                               setRowSelected((prev) => prev.filter((_, idx) => idx !== i));
                               setCoverFiles((prev) => prev.filter((_, idx) => idx !== i));
+                              setSlideFiles((prev) => prev.filter((_, idx) => idx !== i));
+                              setExpandedSlideRow(null);
                               setRowMode((prev) => prev.filter((_, idx) => idx !== i));
                               setRowOverlayFile((prev) => prev.filter((_, idx) => idx !== i));
                               setRowOverlayOpacity((prev) => prev.filter((_, idx) => idx !== i));
@@ -2595,6 +2784,25 @@ async function openBankForMany(selectedItems: any[]) {
                           </button>
                         </td>
                       </tr>
+                      {imageLayout === "per-slide" && expandedSlideRow === i && (
+                        <tr className="bg-violet-500/5">
+                          <td colSpan={9} className="px-3 py-3">
+                            <div className="flex flex-wrap gap-3">
+                              {Array.from({ length: slideCountForRow(row) }, (_, s) => (
+                                <SlideSlot
+                                  key={s}
+                                  slideNum={s + 1}
+                                  file={slideFiles[i]?.[s] ?? null}
+                                  clientName={selectedPreset?.name}
+                                  onPick={(f) => setSlideFile(i, s, f)}
+                                  onClear={() => setSlideFile(i, s, null)}
+                                />
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
