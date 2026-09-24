@@ -16,7 +16,7 @@ export const COMIC_TITLES: string[] = [
   "The Patch Test Chronicles",
   "Consultation Required",
   "Sensible Shoes, Steady Hands",
-  "Backstreet Betty Must Be Stopped",
+  "Bad Ideas Must Be Stopped",
   "Ask Before You Book",
   "Not On My Watch",
   "The Clinic That Said No",
