@@ -656,6 +656,66 @@ export const CLASSY_CORPORATE_PRESETS: PhotoStudioPreset[] = [
     hasColour: false,
     promptTemplate: `A woman from the reference photo standing on a stone terrace outside the clinic in warm late afternoon light, one hand in a trouser pocket, a light breeze moving the hair without changing the style. Rust coloured silk shirt, cream trousers. Softly blurred greenery and brick behind. Big, genuine smile. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
   },
+  {
+    id: "cc-13",
+    name: "Leafy Print Stool",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a simple pale oak stool against a seamless warm white studio wall, hands resting on one knee. Sheer black and cream leaf print blouse with a high gathered neckline and soft blouson sleeves, black tailored trousers. Soft even daylight, warm relaxed smile. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-14",
+    name: "Red Floral Boucle",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a cream boucle armchair against a plain pale wall, legs crossed, hands resting easily on her knees. Bold red floral silk blouse, cream flared trousers, nude heels. Clean and minimal, soft daylight, confident and glowing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-15",
+    name: "Painterly Print Lean",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo leaning one shoulder against a plain stone coloured wall, arms relaxed. Blue and white painterly print blouse, ivory tailored trousers. Nothing else in the frame, soft natural light, easy half smile. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-16",
+    name: "Terracotta Print Laugh",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo leaning forward on a simple wooden chair, caught mid laugh as if someone just said something funny. Terracotta and cream abstract print blouse, black tailored trousers. Plain white backdrop, bright soft light, completely unposed. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-17",
+    name: "Print Blouse Full Length",
+    hasColour: false,
+    promptTemplate: `Full length portrait of a woman from the reference photo standing straight, one hand resting lightly on her hip. Sheer patterned blouse tucked into black wide leg trousers with a slim belt. Seamless warm greige backdrop, soft even light, composed and approachable. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-18",
+    name: "Mono White Suit",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated slightly turned, one hand lightly touching the collar of a tailored white suit jacket with dark buttons on the cuff. Plain light backdrop, soft studio light, calm and knowing smile. Black and white, magazine feature quality. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-19",
+    name: "Blush Ivory Suit",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a cream boucle armchair against a plain blush pink wall, legs crossed, one hand resting on the arm of the chair. Ivory tailored suit, nude heels. Clean and minimal, soft daylight, gentle smile. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-20",
+    name: "Sage Suit Cube",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated sideways on a plain white cube, one leg extended. Sage green wide leg suit, cream shell top. Seamless warm grey backdrop, soft studio light, poised and warm. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-21",
+    name: "Mono Black Suit Over the Shoulder",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a simple chair turned three quarters away, glancing back over her shoulder. Tailored black suit jacket. Plain light backdrop with a soft window shadow, quietly confident. Black and white. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-22",
+    name: "Navy Suit Standing Tall",
+    hasColour: false,
+    promptTemplate: `Full length portrait of a woman from the reference photo standing straight with her hands clasped in front. Navy tailored suit, ivory silk shell top, black heels. Seamless warm greige backdrop, soft even light, composed and approachable. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
 ];
 
 export const HOMEWORK_SHOTS_PRESETS: PhotoStudioPreset[] = [
