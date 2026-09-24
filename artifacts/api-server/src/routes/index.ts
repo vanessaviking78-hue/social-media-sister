@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import magazineMakerRouter from "./magazine-maker";
 import healthRouter from "./health";
 import accountHealthRouter from "./account-health";
 import authRouter from "./auth";
@@ -68,6 +69,7 @@ import newsletterRouter from "./newsletter";
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(magazineMakerRouter);
 router.use(accountHealthRouter);
 router.use(authRouter);
 router.use(carouselRouter);
