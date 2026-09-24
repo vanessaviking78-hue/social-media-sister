@@ -1,3 +1,5 @@
+
+import AdventCalendar from "@/pages/advent-calendar";
 import { Switch, Route, Router as WouterRouter, useRoute, useLocation } from "wouter";
 import { useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -180,6 +182,7 @@ function ProtectedRouter() {
       <Route path="/seamless-bulk" component={SeamlessBulk} />
       <Route path="/banner-tool" component={BannerTool} />
       <Route path="/newsletter-maker" component={NewsletterMaker} />
+      <Route path="/adventcalendar" component={AdventCalendar} />
       <Route path="/about-me-studio" component={AboutMeStudio} />
       <Route path="/tweet-maker" component={TweetMaker} />
       <Route path="/revenue-ideas" component={RevenueIdeas} />
