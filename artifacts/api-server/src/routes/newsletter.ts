@@ -4,6 +4,7 @@ import { clientPresetsTable } from "@workspace/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { getVoiceSystemPrompt } from "../lib/voicePrompts";
+import { applySwap, isBlocking, scanOffer, scanText, type ComplianceFlag } from "../lib/newsletterCompliance";
 
 const router: IRouter = Router();
 
@@ -82,7 +83,116 @@ THIS IS A PATIENT EMAIL NEWSLETTER, NOT A SOCIAL CAPTION
 - Never promote or discount a prescription-only medicine treatment. Offers can only apply to consultations, skincare, facials, devices or other non-prescription services.
 - Never say safe, pain-free, painless, guaranteed, permanent, no downtime, risk-free, instant results, best, number one, miracle, or promise any result. No before and after claims.
 - No urgency or pressure: no "limited time", "hurry", "don't miss out", "last chance", "only X left".
-- Headings are short, human and a bit clever, 3 to 8 words, never clickbait, never all capitals.`;
+- Headings are short, human and a bit clever, 3 to 8 words, in normal sentence case (not Title Case), no colons, never clickbait, never all capitals.
+- Say "I" and "my", not "we" and "our", unless you are genuinely talking about the whole team.
+- One exclamation mark in the whole newsletter at most. Usually none.
+- Never trivialise a medical treatment ("quick fix", "lunchtime tweak"), never play on insecurity about ageing, and never suggest anyone needs fixing.`;
+
+// ---------------------------------------------------------------------------
+// Compliance enforcement. Every line the writer produces goes through this
+// before it is saved or shown: an automatic scan, an AI compliance edit of
+// anything risky, then deterministic swaps as the final safety net. Whatever
+// still can't be fixed automatically comes back flagged, and the page won't
+// let it download until it's sorted.
+// ---------------------------------------------------------------------------
+type FieldMap = Record<string, string>;
+
+const COMPLIANCE_EDITOR = `You are a senior UK advertising compliance editor for aesthetic clinics, expert in the ASA, the CAP Code (especially the rules on medicines, cosmetic interventions and substantiation) and MHRA rules on prescription-only medicines.
+
+You receive the fields of a patient newsletter as JSON, plus any issues an automatic scan found. Check EVERY field for breaches, not only the flagged ones:
+- naming or hinting at a prescription-only medicine or brand (Botox, "tox", Azzalure, Bocouture, Dysport, Xeomin, Letybo, Relfydess and similar), or "anti-wrinkle injections"
+- promoting, discounting or incentivising a prescription-only medicine treatment; offers may only attach to consultations, skincare, facials, devices or other non-prescription services
+- claims about results: guarantees, "safe", pain-free, no downtime, permanent, how long results last, "proven", looking X years younger, erasing or removing wrinkles, reversing or stopping ageing, miracle or instant results
+- superlatives such as best, number one, leading
+- urgency or scarcity pressure: limited, hurry, last chance, diary filling fast, only a few left
+- before and after claims
+- trivialising a medical procedure, playing on insecurity about ageing or appearance, or anything likely to mislead or cause harm or offence
+
+Fix each breach with the smallest rewrite that makes that field compliant. Keep the voice, the meaning, first person singular, British English, a similar length and any paragraph breaks (\\n\\n). Never use em dashes or en dashes. Never add disclaimers or legal wording into the copy.
+
+Return JSON only: {"changes": {"<field key>": "<the full rewritten text for that field>"}}. Include only fields you actually changed. If everything is compliant, return {"changes": {}}.`;
+
+function scanFields(fields: FieldMap): ComplianceFlag[] {
+  return Object.entries(fields).flatMap(([key, text]) => scanText(text || "", key, key));
+}
+
+async function enforceCompliance(fields: FieldMap, context: string) {
+  const out: FieldMap = { ...fields };
+  let rewritten = 0;
+  for (let round = 0; round < 2; round++) {
+    const flags = scanFields(out).filter(isBlocking);
+    // The first round always reviews everything; the second only runs if the scan still finds something.
+    if (round > 0 && flags.length === 0) break;
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        response_format: { type: "json_object" },
+        temperature: 0.2,
+        max_tokens: 3000,
+        messages: [
+          { role: "system", content: COMPLIANCE_EDITOR },
+          {
+            role: "user",
+            content: JSON.stringify({
+              context,
+              fields: out,
+              flaggedByScan: flags.map((f) => ({ field: f.field, matched: f.matched, reason: f.reason })),
+            }),
+          },
+        ],
+      });
+      const parsed = JSON.parse(completion.choices[0]?.message?.content ?? "{}");
+      for (const [key, value] of Object.entries(parsed.changes ?? {})) {
+        if (key in out && typeof value === "string" && value.trim() && value.trim() !== out[key]) {
+          out[key] = stripDashes(value);
+          rewritten++;
+        }
+      }
+    } catch {
+      // If the editor call fails, the deterministic pass and the page's lock still protect the copy.
+    }
+  }
+
+  // Deterministic safety net for anything with a known safe swap.
+  let autoFixed = 0;
+  for (let pass = 0; pass < 4; pass++) {
+    const swappable = scanFields(out).filter((f) => f.swap !== undefined);
+    if (!swappable.length) break;
+    for (const f of swappable) {
+      const next = applySwap(out[f.field], f.matched, f.swap!);
+      if (next !== out[f.field]) { out[f.field] = next; autoFixed++; }
+    }
+  }
+
+  const remaining = scanFields(out).filter(isBlocking).map((f) => ({ field: f.field, matched: f.matched, reason: f.reason }));
+  return { fields: out, report: { checked: true, rewritten, autoFixed, remaining } };
+}
+
+function contentToFields(c: NewsletterContent): FieldMap {
+  const f: FieldMap = { intro: c.intro, ctaText: c.ctaText, signOff: c.signOff };
+  c.subjectLines.forEach((t, i) => (f[`subjectLine${i + 1}`] = t));
+  c.previewTexts.forEach((t, i) => (f[`previewText${i + 1}`] = t));
+  c.sections.forEach((s) => {
+    f[`${s.slot}.heading`] = s.heading;
+    f[`${s.slot}.body`] = s.body;
+  });
+  return f;
+}
+
+function fieldsToContent(c: NewsletterContent, f: FieldMap): NewsletterContent {
+  return {
+    ...c,
+    intro: f.intro ?? c.intro,
+    ctaText: f.ctaText ?? c.ctaText,
+    signOff: f.signOff ?? c.signOff,
+    subjectLines: c.subjectLines.map((t, i) => f[`subjectLine${i + 1}`] ?? t),
+    previewTexts: c.previewTexts.map((t, i) => f[`previewText${i + 1}`] ?? t),
+    sections: c.sections.map((s) => ({ ...s, heading: f[`${s.slot}.heading`] ?? s.heading, body: f[`${s.slot}.body`] ?? s.body })),
+  };
+}
+
+const OFFER_REFUSAL =
+  "That offer looks like it's attached to a prescription-only treatment, which the MHRA and CAP Code don't allow. Put the offer on a consultation, skincare, a facial or another non-prescription service instead.";
 
 async function loadPreset(presetId: number) {
   const [preset] = await db.select().from(clientPresetsTable).where(eq(clientPresetsTable.id, presetId));
@@ -132,6 +242,8 @@ router.post("/newsletter/generate", async (req: Request, res: Response) => {
     const cleanTopics = (topics ?? []).map((t) => String(t ?? "").trim());
     if (cleanTopics.length !== 5) { res.status(400).json({ error: "Five topics are needed" }); return; }
 
+    if (scanOffer(offer ?? "").length) { res.status(400).json({ error: OFFER_REFUSAL }); return; }
+
     const preset = await loadPreset(id);
     if (!preset) { res.status(404).json({ error: "Clinic not found" }); return; }
 
@@ -175,7 +287,7 @@ Use \\n\\n between paragraphs inside body text.`;
     let parsed: any;
     try { parsed = JSON.parse(raw); } catch { res.status(500).json({ error: "The writer returned something odd, try again" }); return; }
 
-    const content: NewsletterContent = {
+    const draft: NewsletterContent = {
       subjectLines: (parsed.subjectLines ?? []).slice(0, 3).map(stripDashes),
       previewTexts: (parsed.previewTexts ?? []).slice(0, 3).map(stripDashes),
       intro: stripDashes(parsed.intro),
@@ -187,6 +299,9 @@ Use \\n\\n between paragraphs inside body text.`;
       signOff: stripDashes(parsed.signOff),
     };
 
+    const checked = await enforceCompliance(contentToFields(draft), `Patient newsletter for ${preset.name}, ${month}.${offer?.trim() ? ` Offer: ${offer.trim()}` : ""}`);
+    const content = fieldsToContent(draft, checked.fields);
+
     const ins = await db.execute(sql`
       INSERT INTO newsletters (preset_id, client_name, month_label, topics, content)
       VALUES (${id}, ${preset.name}, ${month}, ${JSON.stringify(cleanTopics)}::jsonb, ${JSON.stringify(content)}::jsonb)
@@ -194,7 +309,7 @@ Use \\n\\n between paragraphs inside body text.`;
     `);
     const newId = rowsOf(ins)[0]?.id ?? null;
 
-    res.json({ id: newId, monthLabel: month, content });
+    res.json({ id: newId, monthLabel: month, content, compliance: checked.report });
   } catch (err: unknown) {
     req.log?.error({ err }, "newsletter: generate error");
     res.status(500).json({ error: err instanceof Error ? err.message : "Newsletter generation failed" });
@@ -217,6 +332,7 @@ router.post("/newsletter/regenerate-section", async (req: Request, res: Response
     if (!preset) { res.status(404).json({ error: "Clinic not found" }); return; }
     const def = SLOTS.find((s) => s.slot === slot);
     if (!def) { res.status(400).json({ error: "Unknown section" }); return; }
+    if (def.slot === "sell" && scanOffer(offer ?? "").length) { res.status(400).json({ error: OFFER_REFUSAL }); return; }
 
     const month = (monthLabel || "").trim();
     const system = `${getVoiceSystemPrompt(preset.voiceStyle || "northern-grit")}
@@ -240,10 +356,14 @@ Return JSON only: { "heading": "...", "body": "..."${def.slot === "sell" ? ', "c
       ],
     });
     const parsed = JSON.parse(completion.choices[0]?.message?.content ?? "{}");
+    const fields: FieldMap = { [`${def.slot}.heading`]: stripDashes(parsed.heading), [`${def.slot}.body`]: stripDashes(parsed.body) };
+    if (parsed.ctaText) fields.ctaText = stripDashes(parsed.ctaText);
+    const checked = await enforceCompliance(fields, `One section ("${def.label}") of a patient newsletter for ${preset.name}.`);
     res.json({
-      heading: stripDashes(parsed.heading),
-      body: stripDashes(parsed.body),
-      ctaText: parsed.ctaText ? stripDashes(parsed.ctaText) : undefined,
+      heading: checked.fields[`${def.slot}.heading`],
+      body: checked.fields[`${def.slot}.body`],
+      ctaText: checked.fields.ctaText,
+      compliance: checked.report,
     });
   } catch (err: unknown) {
     req.log?.error({ err }, "newsletter: regenerate error");
