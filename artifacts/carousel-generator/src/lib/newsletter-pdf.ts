@@ -220,39 +220,58 @@ export async function buildNewsletterPdf(content: NewsletterContent, brand: News
     }
   };
 
-  // Masthead ---------------------------------------------------------------
+  // Masthead: a magazine cover top. Small logo and the date on a slim top
+  // row, the newsletter name set big and bold like a magazine title, then a
+  // double rule and a strapline naming the clinic.
+  const topRowH = 12;
+  let logoDrawn = false;
   if (brand.logoDataUrl) {
     try {
       const props = doc.getImageProperties(brand.logoDataUrl);
-      const maxW = 56, maxH = 22;
-      const scale = Math.min(maxW / props.width, maxH / props.height);
+      const scale = Math.min(38 / props.width, topRowH / props.height);
       const w = props.width * scale, h = props.height * scale;
-      doc.addImage(brand.logoDataUrl, "PNG", (PAGE_W - w) / 2, y, w, h, undefined, "FAST");
-      y += h + 5;
+      doc.addImage(brand.logoDataUrl, "PNG", M, y + (topRowH - h) / 2, w, h, undefined, "FAST");
+      logoDrawn = true;
     } catch {
-      /* fall through to name only */
+      /* no logo, the strapline still names the clinic */
     }
-  } else {
-    setFont(doc, F.h1);
-    doc.setTextColor(...ink);
-    doc.text(clean(brand.clinicName), PAGE_W / 2, y + 6, { align: "center" });
-    y += 11;
   }
-
-  setFont(doc, { family: "times", style: "italic", size: 13, lh: 1.2 });
-  doc.setTextColor(...accent);
-  doc.text(clean(brand.newsletterName), PAGE_W / 2, y + 4, { align: "center" });
-  y += 6.5;
   setFont(doc, F.label);
-  doc.setTextColor(120, 120, 120);
-  doc.setCharSpace(1.2);
-  doc.text(clean(brand.monthLabel).toUpperCase(), PAGE_W / 2, y + 2.5, { align: "center" });
+  doc.setTextColor(110, 110, 110);
+  // jsPDF's right-align ignores letter spacing, so measure it ourselves.
+  const dateText = clean(brand.monthLabel).toUpperCase();
+  const dateW = doc.getTextWidth(dateText) + 1.4 * (dateText.length - 1);
+  doc.setCharSpace(1.4);
+  doc.text(dateText, PAGE_W - M - dateW, y + topRowH / 2 + 1);
   doc.setCharSpace(0);
-  y += 6;
+  if (!logoDrawn) {
+    doc.setCharSpace(1.4);
+    doc.text(clean(brand.clinicName).toUpperCase(), M, y + topRowH / 2 + 1);
+    doc.setCharSpace(0);
+  }
+  y += topRowH + 3;
+
+  // Title: as big as fits the width, up to 54pt
+  const title = clean(brand.newsletterName);
+  doc.setFont("times", "bold");
+  doc.setFontSize(54);
+  const w54 = doc.getTextWidth(title);
+  const titleSize = Math.max(26, Math.min(54, (54 * CONTENT_W) / Math.max(w54, 1)));
+  doc.setFontSize(titleSize);
+  doc.setTextColor(...accent);
+  doc.text(title, PAGE_W / 2, y + titleSize * PT * 0.78, { align: "center" });
+  y += titleSize * PT * 0.98 + 2;
+
   doc.setDrawColor(...accentRaw);
-  doc.setLineWidth(0.5);
+  doc.setLineWidth(1.1);
   doc.line(M, y, PAGE_W - M, y);
-  y += 6;
+  doc.setLineWidth(0.3);
+  doc.line(M, y + 1.6, PAGE_W - M, y + 1.6);
+  y += 5.5;
+  setFont(doc, { family: "times", style: "italic", size: 11, lh: 1.2 });
+  doc.setTextColor(90, 90, 90);
+  doc.text(clean(`A letter from ${brand.clinicName}`), PAGE_W / 2, y + 2.5, { align: "center" });
+  y += 9;
 
   // Hero -------------------------------------------------------------------
   if (brand.heroDataUrl) {
