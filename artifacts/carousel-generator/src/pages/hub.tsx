@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { useEffect, useState } from "react";
 import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck, Grid3x3, Mail, Star, Heart } from "lucide-react";
 import { LogOut } from "lucide-react";
+import { AdventCalendarIcon } from "@/components/advent-icon";
 
 const TOOLS = [
 {
@@ -133,6 +134,16 @@ description: "Send a ready-made post from the content library to every connected
 color: "from-orange-500/20 to-orange-500/5",
 border: "hover:border-orange-500/50",
 iconColor: "text-orange-400",
+},
+    {
+href: "/adventcalendar",
+group: "content",
+icon: AdventCalendarIcon,
+name: "Advent Calendar Door",
+description: "Add a closed door and the picture behind it. Choose a door swing or a page turn and get a 5 second 1080 x 1440 MP4.",
+color: "from-red-500/20 to-red-500/5",
+border: "hover:border-red-500/50",
+iconColor: "text-red-400",
 },
 {
 href: "/veo-video",
