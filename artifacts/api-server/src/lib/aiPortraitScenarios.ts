@@ -1455,7 +1455,7 @@ export function buildCartoonPrompt(customText: string, aspectRatio = "3:4", with
     : withPhoto
     ? "Turn the person in the reference photo into a cartoon version of themselves. Keep what makes them recognisable: hairstyle, hair colour, skin tone, face shape, glasses or other distinguishing features. Flatter them gently, never mock them."
     : "Invent a fresh, friendly cartoon character.";
-  return `${customText.trim()}\n\n${likeness}\n\nArt style: modern flat-colour editorial cartoon, bold clean dark outlines, simple cel shading, big expressive eyes and eyebrows, slightly exaggerated proportions, warm British sitcom comic feel. The same character design and the same style every time.\n\nShow the character from the waist up, centred, facing slightly towards the camera, on a completely plain solid white background with nothing else in the frame. No text, no lettering, no speech bubbles, no captions, no logos, no watermark, no borders. Compose in ${ratioDescription}.`;
+  return `${customText.trim()}\n\n${likeness}\n\nArt style: bold pop-art comic book illustration, in the manner of classic 1960s pop-art comics. Confident black ink outlines of varying weight, flat saturated colour, Ben-Day halftone dot shading, dramatic cross-hatching, glamorous stylised proportions and expressive eyes and eyebrows. The same character design and the same style every time.\n\nShow the character from the waist up, centred, facing slightly towards the camera, on a completely plain solid white background with nothing else in the frame. No text, no lettering, no speech bubbles, no captions, no logos, no watermark, no borders. Compose in ${ratioDescription}.`;
 }
 
 // ─── Men's Studio — 10 presets ─────────────────────────────────────────────

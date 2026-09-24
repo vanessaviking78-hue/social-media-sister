@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Upload, Sparkles, Loader2, Download, Copy, Wand2, RefreshCcw, Check } from "lucide-react";
+import { ArrowLeft, Upload, Sparkles, Loader2, Download, Copy, Wand2, RefreshCcw, Check, Shuffle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { usePresets } from "@/lib/use-presets";
 import { COMIC_CONVERSATIONS, COMIC_EXPRESSIONS, type Expr } from "@/lib/comic-conversations";
-import { renderComicPage, comicSummary, COMIC_W, COMIC_H, type ComicSprites, type SpriteSet } from "@/lib/comic-render";
+import { renderComicPage, renderComicCover, comicSummary, COMIC_W, COMIC_H, type ComicSprites, type SpriteSet } from "@/lib/comic-render";
+import { COMIC_TITLES, COMIC_STRAPLINES, COMIC_ISSUES, fillTitle } from "@/lib/comic-titles";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -18,7 +19,7 @@ function ensureComicFonts() {
   const link = document.createElement("link");
   link.rel = "stylesheet";
   link.setAttribute("data-comic-fonts", "true");
-  link.href = "https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700;800&display=swap";
+  link.href = "https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700;800&family=Bangers&display=swap";
   document.head.appendChild(link);
 }
 ensureComicFonts();
@@ -45,7 +46,7 @@ const PATIENTS: { id: string; name: string; description: string }[] = [
 type ExprUrls = Partial<Record<Expr, string>>;
 type Store = { clinicians: Record<string, ExprUrls>; patients: Record<string, ExprUrls> };
 
-const STORE_KEY = "comic-characters-v1";
+const STORE_KEY = "comic-characters-v2";
 
 function loadStore(): Store {
   try {
@@ -92,15 +93,6 @@ async function runJob(sourcePhotoId: number | undefined, clientName: string, sce
     if (cards.every((c) => c.status === "success" || c.status === "failed")) return cards;
   }
   throw new Error("Timed out waiting for the artwork");
-}
-
-async function removeBg(url: string): Promise<string> {
-  try {
-    const d = await api("/ai-portrait/remove-background", { imageUrl: url });
-    return d.url || url;
-  } catch {
-    return url;
-  }
 }
 
 function loadImage(url: string): Promise<HTMLImageElement> {
@@ -157,16 +149,12 @@ async function buildCharacter(opts: {
     promptVars: { customText: `${description}. Expression: ${EXPR_TEXT[e]}.` },
   })));
 
-  onProgress("Cutting the backgrounds out");
-  const raw: ExprUrls = { neutral: base.outputImageUrl };
+  // The artwork comes back on plain white and is blended into the panels, so no cut-out step is needed.
+  const out: ExprUrls = { neutral: base.outputImageUrl };
   for (const c of cards) {
     const e = c.scenarioId.replace("cartoon-", "") as Expr;
-    if (c.status === "success" && c.outputImageUrl) raw[e] = c.outputImageUrl;
+    if (c.status === "success" && c.outputImageUrl) out[e] = c.outputImageUrl;
   }
-  const out: ExprUrls = {};
-  await Promise.all(
-    (Object.keys(raw) as Expr[]).map(async (e) => { out[e] = await removeBg(raw[e]!); }),
-  );
   // If an expression failed, fall back to neutral so the strip still renders.
   for (const e of COMIC_EXPRESSIONS) if (!out[e]) out[e] = out.neutral;
   return out;
@@ -188,6 +176,11 @@ export default function ComicPage() {
   const [footer, setFooter] = useState("");
   const [tone, setTone] = useState("5");
   const [caption, setCaption] = useState("");
+  const [titleIdx, setTitleIdx] = useState(0);
+  const [customTitle, setCustomTitle] = useState("");
+  const [strapline, setStrapline] = useState(COMIC_STRAPLINES[0]);
+  const [issue, setIssue] = useState("1");
+  const [clinicName, setClinicName] = useState("");
   const [writing, setWriting] = useState(false);
   const [sprites, setSprites] = useState<ComicSprites>({ inj: {}, pat: {} });
   const [fontsReady, setFontsReady] = useState(0);
@@ -221,13 +214,25 @@ export default function ComicPage() {
 
   useEffect(() => {
     const f = (document as { fonts?: { load?: (s: string) => Promise<unknown> } }).fonts;
-    f?.load?.('800 36px "Comic Neue"').then(() => setFontsReady((n) => n + 1)).catch(() => {});
+    Promise.all([f?.load?.('800 36px "Comic Neue"'), f?.load?.('400 60px "Bangers"')])
+      .then(() => setFontsReady((n) => n + 1)).catch(() => {});
   }, []);
 
+  const coverTitle = customTitle.trim() || fillTitle(COMIC_TITLES[titleIdx] ?? COMIC_TITLES[0], clientName, clinicName);
+
+  const shuffleTitle = () => {
+    setCustomTitle("");
+    setTitleIdx((cur) => {
+      let next = cur;
+      while (COMIC_TITLES.length > 1 && next === cur) next = Math.floor(Math.random() * COMIC_TITLES.length);
+      return next;
+    });
+  };
+
   const render = useCallback(() => {
-    if (c0.current) renderComicPage(c0.current, conv, 0, sprites, { footer });
-    if (c1.current) renderComicPage(c1.current, conv, 1, sprites, { footer });
-  }, [conv, sprites, footer]);
+    if (c0.current) renderComicCover(c0.current, conv, sprites, { title: coverTitle, strapline, issue, footer });
+    if (c1.current) renderComicPage(c1.current, conv, sprites, { footer });
+  }, [conv, sprites, footer, coverTitle, strapline, issue]);
 
   useEffect(() => { render(); }, [render, fontsReady]);
 
@@ -288,7 +293,7 @@ export default function ComicPage() {
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
         const slug = (clientName || "clinic").replace(/\s+/g, "-").toLowerCase();
-        a.download = `${slug}-comic-${conv.id}-${n}.png`;
+        a.download = `${slug}-comic-${conv.id}-${n === 1 ? "1-cover" : "2-page"}.png`;
         a.click();
         setTimeout(() => URL.revokeObjectURL(a.href), 2000);
         resolve();
@@ -306,7 +311,7 @@ export default function ComicPage() {
     setWriting(true);
     try {
       const context = [
-        `A two-slide comic strip carousel called "${conv.title}". The clinician is the sensible one and the joke pokes fun at the safety risks of unqualified or cheap treatment. The conversation:`,
+        `A two-slide comic book carousel: a cover titled "${coverTitle}" then one page of six panels called "${conv.title}". The clinician is the sensible one and the joke pokes fun at the safety risks of unqualified or cheap treatment. The conversation:`,
         comicSummary(conv),
         "Write the caption to go with the comic. Do not repeat the dialogue word for word, react to it like the clinician posting it. Finish with a strong, stealth-sales-friendly call to action that invites people to book a proper consultation or send a message, without sounding pushy.",
       ].join("\n\n");
@@ -330,7 +335,7 @@ export default function ComicPage() {
         </Link>
         <div>
           <h1 className="font-bold text-lg leading-none">Comic Strip Maker</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Turn a clinician into a cartoon and post a two slide comic that pokes fun at the safety side of aesthetics.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Turn a clinician into a pop-art cartoon and post a two slide comic (cover plus six panels) that pokes fun at the safety side of aesthetics.</p>
         </div>
       </header>
 
@@ -428,6 +433,48 @@ export default function ComicPage() {
               <Input value={footer} onChange={(e) => setFooter(e.target.value)} placeholder="@yourclinic" className="h-8 text-sm" />
             </div>
           </section>
+
+          <section className="space-y-2">
+            <h2 className="font-semibold text-base">5. Name the comic</h2>
+            <p className="text-xs text-muted-foreground">The cover slide. Pick a title, shuffle for a surprise, or type your own.</p>
+            <div className="space-y-1">
+              <Label className="text-xs">Clinic name (used in titles)</Label>
+              <Input value={clinicName} onChange={(e) => setClinicName(e.target.value)} placeholder={clientName || "The Clinic"} className="h-8 text-sm" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Title</Label>
+              <div className="flex gap-2">
+                <Select value={String(titleIdx)} onValueChange={(v) => { setCustomTitle(""); setTitleIdx(Number(v)); }}>
+                  <SelectTrigger className="h-8 text-sm flex-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {COMIC_TITLES.map((t, i) => <SelectItem key={t} value={String(i)}>{fillTitle(t, clientName, clinicName)}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button size="sm" variant="outline" onClick={shuffleTitle} title="Shuffle"><Shuffle className="w-3.5 h-3.5" /></Button>
+              </div>
+              <Input value={customTitle} onChange={(e) => setCustomTitle(e.target.value)} placeholder="Or type your own title" className="h-8 text-sm" />
+            </div>
+            <div className="grid grid-cols-[1fr_90px] gap-2">
+              <div className="space-y-1">
+                <Label className="text-xs">Strapline</Label>
+                <Select value={strapline} onValueChange={setStrapline}>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {COMIC_STRAPLINES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Issue</Label>
+                <Select value={issue} onValueChange={setIssue}>
+                  <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {COMIC_ISSUES.map((n) => <SelectItem key={n} value={n}>No. {n}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </section>
         </div>
 
         {/* Preview */}
@@ -437,16 +484,16 @@ export default function ComicPage() {
               <h2 className="font-semibold text-base">{convIndex + 1}. {conv.title}</h2>
               {!clinicianReady && <p className="text-xs text-amber-400 mt-0.5">Stand-in characters are showing until you make the cartoon.</p>}
             </div>
-            <Button onClick={downloadBoth}><Download className="w-4 h-4 mr-2" />Download both pages</Button>
+            <Button onClick={downloadBoth}><Download className="w-4 h-4 mr-2" />Download both slides</Button>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Slide 1</p>
+              <p className="text-xs text-muted-foreground mb-1">Slide 1: the cover</p>
               <canvas ref={c0} width={COMIC_W} height={COMIC_H} className="w-full h-auto rounded-lg border border-border/30" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Slide 2</p>
+              <p className="text-xs text-muted-foreground mb-1">Slide 2: the six panels</p>
               <canvas ref={c1} width={COMIC_W} height={COMIC_H} className="w-full h-auto rounded-lg border border-border/30" />
             </div>
           </div>
