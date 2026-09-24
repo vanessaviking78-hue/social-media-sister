@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#6b2d5c">
+<title>Content Day Checklist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Fraunces:opsz,wght@9..144,600&display=swap" rel="stylesheet">
+<style>
+  html{color-scheme:light dark} body{margin:0}
+  :root{
+    --bg:#f5f3f6; --card:#ffffff; --ink:#221a2b; --muted:#6f6479; --line:#e3dde8;
+    --accent:#6b2d5c; --accent-ink:#ffffff; --accent-soft:#f0e2ec;
+    --done:#2f7d5b; --h:#2f5f8f; --v:#a63a5f; --warn-bg:#fbeef1; --warn-line:#efc6d0;
+    --field:#ffffff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      color-scheme:dark;
+      --bg:#17121c; --card:#211a28; --ink:#f1ecf4; --muted:#a99db3; --line:#372d40;
+      --accent:#d68bc2; --accent-ink:#1b1220; --accent-soft:#3a2537;
+      --done:#5ec394; --h:#7fb0e3; --v:#f08aab; --warn-bg:#33202a; --warn-line:#5a3341;
+      --field:#1b1521;
+    }
+  }
+  :root[data-theme="dark"]{
+    color-scheme:dark;
+    --bg:#17121c; --card:#211a28; --ink:#f1ecf4; --muted:#a99db3; --line:#372d40;
+    --accent:#d68bc2; --accent-ink:#1b1220; --accent-soft:#3a2537;
+    --done:#5ec394; --h:#7fb0e3; --v:#f08aab; --warn-bg:#33202a; --warn-line:#5a3341;
+    --field:#1b1521;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{background:var(--bg);color:var(--ink);font-family:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:18px;line-height:1.4;padding-inline:16px;padding-block:20px 130px}
+  .wrap{max-width:880px;margin-inline:auto}
+  h1{font-family:Fraunces,Georgia,serif;font-weight:600;font-size:32px;margin:0 0 4px;text-wrap:balance}
+  .sub{color:var(--muted);font-size:16px;margin:0 0 18px}
+  .setup{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+  @media(max-width:560px){.setup{grid-template-columns:1fr}}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+  input[type=text],input[type=date]{width:100%;font:inherit;font-size:18px;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--field);color:var(--ink);min-height:52px}
+  input:focus-visible,button:focus-visible,.shot:focus-visible,h2:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:center}
+  button{font:inherit;font-size:16px;padding:12px 16px;min-height:48px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+  button.solid{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+  .recent{display:flex;gap:8px;flex-wrap:wrap}
+  .recent button{min-height:40px;font-size:14px;padding:8px 12px}
+  #warn{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:10px;padding:12px 14px;font-size:15px;margin:16px 0 0}
+  .filters{display:flex;gap:8px;margin:18px 0 14px;flex-wrap:wrap}
+  .chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden}
+  section>h2{margin:0;padding:16px;font-size:19px;display:flex;justify-content:space-between;gap:10px;align-items:center;cursor:pointer;font-weight:700}
+  section>h2 small{font-weight:500;color:var(--muted);font-size:15px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  section.full>h2 small{color:var(--done)}
+  .shots{border-top:1px solid var(--line)}
+  section.closed .shots{display:none}
+  .shot{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none;-webkit-user-select:none}
+  .shot:last-child{border-bottom:0}
+  .box{flex:0 0 34px;height:34px;border:2px solid var(--muted);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--accent-ink);background:transparent}
+  .shot.done .box{background:var(--done);border-color:var(--done)}
+  .shot.done .txt{color:var(--muted);text-decoration:line-through}
+  .num{color:var(--muted);font-size:14px;width:24px;text-align:right;flex:0 0 24px;font-variant-numeric:tabular-nums}
+  .txt{flex:1}
+  .tag{display:inline-block;font-size:12px;font-weight:700;color:#fff;border-radius:6px;padding:2px 7px;margin-left:6px;vertical-align:1px}
+  .tag.H{background:var(--h)} .tag.V{background:var(--v)}
+  :root:not([data-theme="light"]) .tag{color:#12101a}
+  :root[data-theme="light"] .tag{color:#fff}
+  .note{color:var(--muted);font-size:15px;margin:16px 0}
+  .bottom{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom, 0px));z-index:5}
+  .bottom-in{max-width:880px;margin-inline:auto}
+  .count{display:flex;justify-content:space-between;gap:10px;font-size:15px;margin-bottom:8px}
+  .count strong{font-variant-numeric:tabular-nums}
+  .bar{height:10px;background:var(--accent-soft);border-radius:8px;overflow:hidden}
+  .bar>div{height:100%;width:0;background:var(--done);transition:width .25s}
+  .hide{display:none!important}
+  .confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:15px}
+  @media (prefers-reduced-motion:reduce){.bar>div{transition:none}}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <h1>Content Day</h1>
+  <p class="sub">Enter the clinic and the date, then tick each shot off as I film it. Ticks save on this iPad for each clinic and date.</p>
+
+  <div class="setup">
+    <div><label for="clinic">Clinic name</label><input id="clinic" type="text" placeholder="e.g. Church Street Clinic" autocomplete="off" enterkeyhint="done"></div>
+    <div><label for="date">Date</label><input id="date" type="date"></div>
+  </div>
+  <div class="row">
+    <div class="recent" id="recent"></div>
+  </div>
+  <div class="row">
+    <button id="reset" type="button">Clear ticks</button>
+    <span class="confirm hide" id="confirmBox">Clear every tick for this clinic and date?
+      <button id="yes" class="solid" type="button">Yes, clear</button>
+      <button id="no" type="button">Keep them</button>
+    </span>
+  </div>
+  <div id="warn">Before I film: signed consent from anyone on camera. No needles, injectables or before and afters unless the clinic has approved them and the wording has been checked against the CAP Code.</div>
+
+  <div class="filters" role="group" aria-label="Filter shots">
+    <button class="chip" type="button" data-f="all" aria-pressed="true">All 80</button>
+    <button class="chip" type="button" data-f="todo" aria-pressed="false">Still to do</button>
+    <button class="chip" type="button" data-f="H" aria-pressed="false">Horizontal (R50)</button>
+    <button class="chip" type="button" data-f="V" aria-pressed="false">Vertical (iPhone)</button>
+  </div>
+
+  <div id="list"></div>
+  <p class="note"><span class="tag H">H</span> horizontal on the R50 &nbsp; <span class="tag V">V</span> vertical on the iPhone. Clap at the start of every talking head take so the two cameras sync.</p>
+</div>
+
+<div class="bottom"><div class="bottom-in">
+  <div class="count"><span id="cname">Add a clinic name to begin</span><strong id="ctext">0 of 80</strong></div>
+  <div class="bar"><div id="fill"></div></div>
+</div></div>
+
+<script>
+const DATA = [
+ ["Arrival and exterior",[
+  ["Front door and signage, wide","H"],["Signage close up","V"],["Someone opening the door and welcoming the camera","V"],
+  ["The street approach, walking towards the clinic","V"],["Window display or door details","H"],["The open sign or appointment book being flipped","V"]]],
+ ["Reception and interiors",[
+  ["Reception desk, wide","H"],["Reception desk, vertical for stories","V"],["Waiting area, empty and tidy","H"],
+  ["Sofa or chairs with a hot drink and magazines","V"],["Corridor leading to the treatment room","H"],["The treatment room door opening","V"],
+  ["Treatment room, wide","H"],["Treatment room, close detail of the couch and lighting","V"]]],
+ ["Team portraits",[
+  ["Owner or lead clinician, posed and smiling","H"],["Same person, laughing candid","H"],["Same person, vertical portrait","V"],
+  ["Each team member, posed portrait","H"],["Each team member, laughing candid","V"],["Team in a line, walking towards the camera","H"],
+  ["Team huddle, heads together","H"],["Team with mugs, chatting","V"],["Owner and receptionist at the desk","H"],["Clinician in the treatment room in uniform","V"]]],
+ ["Talking heads and podcast style",[
+  ["Introduce yourself: name, role, how long in practice","HV"],["The question I hear most","HV"],["The myth I would bin tomorrow","HV"],
+  ["What I wish everyone knew before their first appointment","HV"],["The thing that surprises people","HV"],["What a consultation with me is really like","HV"],
+  ["Who this is for and who it isn't","HV"],["The mistake I see most","HV"],["My honest view on trends","HV"],
+  ["A 15 second hook line to camera, three takes","V"],["Sign off: book a consultation and come and say hello","HV"],["Reaction shots: nodding, listening, smiling","H"]]],
+ ["Treatment room and equipment",[
+  ["Couch being dressed with fresh paper","V"],["Trolley laid out neatly, no sharps on show","H"],["Equipment being switched on, screen glowing","V"],
+  ["Machine or device, hero shot","H"],["Hands wiping down the surfaces","V"],["Gloves going on","V"],["Lamp or light being angled","H"],
+  ["Certificates and qualifications on the wall","H"],["Consultation notes and pen, clean and tidy","V"],["Tablet or consent form being filled in","V"],
+  ["Handwash at the sink","V"],["Room reset ready for the next person","H"]]],
+ ["Hands and process",[
+  ["Skin analysis with a device, no results shown","V"],["Cleanser being applied by a gloved hand","V"],["Facial massage or prep, close up","V"],
+  ["Mask or product being applied with a brush","V"],["Skincare being pumped or squeezed onto a palm","V"],["Clinician explaining something with hand gestures","H"],
+  ["Clinician and person in consultation, over the shoulder","H"],["Mirror moment: person looking at themselves","V"],["Aftercare sheet being handed over","V"],["The goodbye wave at the door","V"]]],
+ ["Products and retail",[
+  ["Product shelf, wide","H"],["Each hero product, styled and lit","H"],["Products in hand, label facing camera","V"],["Texture shot: cream, gel or serum swatch","V"],
+  ["Product being lined up on the vanity","V"],["Gift or voucher display","H"],["Price list or menu board","V"],["Packaging and bag being handed across the desk","V"]]],
+ ["Patient moments, with consent only",[
+  ["Person arriving and being greeted","V"],["Person chatting with the clinician, face turned away if not consented","H"],["Person laughing in the chair","V"],
+  ["Person leaving with a smile, from behind if not consented","V"],["Testimonial to camera, in their own words","HV"],["Hand-written thank you card or review on screen","V"]]],
+ ["Personality and behind the scenes",[
+  ["The kettle going on","V"],["Biscuits or cake on the counter","V"],["Clinic pet, plant or quirky object","V"],["Team having a laugh between appointments","V"],
+  ["The clinic playlist or radio, hand on the volume","V"],["Setting up my lights and backdrop, time lapse","V"],["A blooper: someone flubbing a line and laughing","V"],["The end of the day: lights off, door locked","HV"]]]
+];
+
+const $ = id => document.getElementById(id);
+const store = {
+  get(k){ try{ return localStorage.getItem(k) }catch(e){ return null } },
+  set(k,v){ try{ localStorage.setItem(k,v) }catch(e){} }
+};
+let state = {}, closed = {}, filter = "all";
+const memory = {}; // fallback if storage is blocked
+
+function key(){
+  const c = $("clinic").value.trim().toLowerCase();
+  return c ? "cd:" + c + "|" + $("date").value : null;
+}
+function readJSON(k, fallback){
+  try{ const v = store.get(k); return v ? JSON.parse(v) : (memory[k] ?? fallback) }catch(e){ return memory[k] ?? fallback }
+}
+function writeJSON(k, v){ memory[k] = v; store.set(k, JSON.stringify(v)); }
+
+function load(){ const k = key(); state = k ? readJSON(k, {}) : {}; }
+function save(){
+  const k = key(); if(!k) return;
+  writeJSON(k, state);
+  let idx = readJSON("cd:index", []);
+  const entry = {k, clinic:$("clinic").value.trim(), date:$("date").value};
+  idx = idx.filter(x => x.k !== k); idx.unshift(entry); idx = idx.slice(0,12);
+  writeJSON("cd:index", idx);
+  writeJSON("cd:last", entry);
+  renderRecent();
+}
+function renderRecent(){
+  const idx = readJSON("cd:index", []);
+  const box = $("recent");
+  box.innerHTML = "";
+  idx.slice(0,5).forEach(x => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = x.clinic + (x.date ? " " + x.date.split("-").reverse().join("/") : "");
+    b.onclick = () => { $("clinic").value = x.clinic; $("date").value = x.date; load(); render(); };
+    box.appendChild(b);
+  });
+}
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;") }
+function render(){
+  let n = 0, done = 0, html = "";
+  DATA.forEach(([title, shots], si) => {
+    let sd = 0;
+    const items = shots.map(([t, f]) => {
+      n++;
+      const id = "s" + n, isDone = !!state[id];
+      if(isDone){ done++; sd++; }
+      const show = filter==="all" || (filter==="todo" && !isDone) || (filter!=="todo" && f.includes(filter));
+      const tags = f.split("").map(x=>`<span class="tag ${x}">${x}</span>`).join("");
+      return `<div class="shot ${isDone?"done":""} ${show?"":"hide"}" data-id="${id}" role="checkbox" aria-checked="${isDone}" tabindex="0">
+        <span class="num">${n}</span><span class="box">${isDone?"&#10003;":""}</span>
+        <span class="txt">${esc(t)}${tags}</span></div>`;
+    }).join("");
+    html += `<section class="${closed[si]?"closed":""} ${sd===shots.length?"full":""}" data-s="${si}">
+      <h2 tabindex="0">${title}<small>${sd} of ${shots.length}</small></h2><div class="shots">${items}</div></section>`;
+  });
+  $("list").innerHTML = html;
+  $("ctext").textContent = done + " of " + n;
+  $("fill").style.width = (done/n*100) + "%";
+  const c = $("clinic").value.trim();
+  $("cname").textContent = c ? (done===n ? c + ": all shots done" : c) : "Add a clinic name to begin";
+}
+function toggle(shot){
+  if(!key()){ $("clinic").focus(); return; }
+  const id = shot.dataset.id;
+  if(state[id]) delete state[id]; else state[id] = 1;
+  save();
+  const y = window.scrollY; render(); window.scrollTo(0, y);
+}
+$("list").addEventListener("click", e => {
+  const shot = e.target.closest(".shot");
+  if(shot){ toggle(shot); return; }
+  const h = e.target.closest("h2");
+  if(h){ const s = h.parentElement.dataset.s; closed[s] = !closed[s]; render(); }
+});
+$("list").addEventListener("keydown", e => {
+  if(e.key !== "Enter" && e.key !== " ") return;
+  const shot = e.target.closest(".shot"), h = e.target.closest("h2");
+  if(shot){ e.preventDefault(); toggle(shot); }
+  else if(h){ e.preventDefault(); h.click(); }
+});
+document.querySelectorAll(".chip").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed","false"));
+  b.setAttribute("aria-pressed","true"); filter = b.dataset.f; render();
+});
+["clinic","date"].forEach(id => $(id).addEventListener("input", () => {
+  load(); render();
+  const k = key(); if(k) writeJSON("cd:last", {k, clinic:$("clinic").value.trim(), date:$("date").value});
+}));
+$("reset").onclick = () => { if(key()) $("confirmBox").classList.remove("hide"); };
+$("no").onclick = () => $("confirmBox").classList.add("hide");
+$("yes").onclick = () => { state = {}; save(); render(); $("confirmBox").classList.add("hide"); };
+
+(function(){
+  const t = new Date(), p = n => String(n).padStart(2,"0");
+  $("date").value = t.getFullYear()+"-"+p(t.getMonth()+1)+"-"+p(t.getDate());
+  const last = readJSON("cd:last", null);
+  if(last){ $("clinic").value = last.clinic; if(last.date) $("date").value = last.date; }
+  renderRecent(); load(); render();
+})();
+</script>
+
+</body>
+</html>
