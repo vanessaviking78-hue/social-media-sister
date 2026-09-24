@@ -35,11 +35,11 @@ router.post("/submit/:token", async (req: Request, res: Response) => {
     const [preset] = await db.select().from(clientPresetsTable)
       .where(eq(clientPresetsTable.clientPortalToken, req.params.token));
     if (!preset) { res.status(404).json({ error: "not_found" }); return; }
-    const { beforeUrl, afterUrl, story, treatment, submitterName } = req.body as {
-      beforeUrl?: string; afterUrl?: string; story?: string; treatment?: string; submitterName?: string;
+    const { beforeUrl, afterUrl, story, treatment, submitterName, notify } = req.body as {
+      beforeUrl?: string; afterUrl?: string; story?: string; treatment?: string; submitterName?: string; notify?: boolean;
     };
     const kind = (treatment || "").trim().toUpperCase();
-    const isSpecial = ["SELFIE", "REVIEW", "POST REQUEST", "ONBOARDING", "TOOL REQUEST"].includes(kind);
+    const isSpecial = ["SELFIE", "WARDROBE", "REVIEW", "POST REQUEST", "ONBOARDING", "TOOL REQUEST"].includes(kind);
     if (!isSpecial && (!beforeUrl || !afterUrl)) {
       res.status(400).json({ error: "Both a before and an after photo are required." });
       return;
@@ -53,12 +53,16 @@ router.post("/submit/:token", async (req: Request, res: Response) => {
       RETURNING id
     `);
     const id = (result as { rows?: { id?: number }[] }).rows?.[0]?.id ?? null;
-    void notifySubmission({
-      clientName: preset.name,
-      kind: (treatment || "before and after").toLowerCase(),
-      submitterName,
-      story,
-    });
+    // Multi-photo sends (e.g. Wardrobe) post one row per photo; the portal
+    // passes notify:false on all but the last so only one email goes out.
+    if (notify !== false) {
+      void notifySubmission({
+        clientName: preset.name,
+        kind: (treatment || "before and after").toLowerCase(),
+        submitterName,
+        story,
+      });
+    }
     res.json({ ok: true, id });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to save submission" });
