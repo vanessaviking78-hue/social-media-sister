@@ -716,6 +716,66 @@ export const CLASSY_CORPORATE_PRESETS: PhotoStudioPreset[] = [
     hasColour: false,
     promptTemplate: `Full length portrait of a woman from the reference photo standing straight with her hands clasped in front. Navy tailored suit, ivory silk shell top, black heels. Seamless warm greige backdrop, soft even light, composed and approachable. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
   },
+  {
+    id: "cc-23",
+    name: "Emerald Satin Boucle",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a cream boucle armchair against a plain pale wall, legs crossed, hands resting easily on her knees. Emerald green satin blouse, black tailored trousers, gold heels. Clean and minimal, soft daylight, confident and glowing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-24",
+    name: "Navy Bow Boucle",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a cream boucle armchair against a plain pale wall, leaning back with one arm draped along the arm of the chair. Navy silk pussy bow blouse, ivory pencil skirt, nude heels. Clean and minimal, soft daylight, confident and glowing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-25",
+    name: "Blush Knit Boucle",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a cream boucle armchair against a plain pale wall, sitting sideways with legs tucked up, laughing softly. Blush fine knit top, wide leg cream trousers, bare feet. Clean and minimal, soft daylight, confident and glowing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-26",
+    name: "Black Blazer Boucle",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a cream boucle armchair against a plain pale wall, sitting forward with elbows on her knees and hands loosely clasped. Black tailored blazer over a crisp white shirt, black trousers, pointed heels. Clean and minimal, soft daylight, confident and glowing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-27",
+    name: "Camel Wrap Boucle",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a cream boucle armchair against a plain pale wall, legs crossed at the ankle, one hand brushing her hair back. Camel wrap midi dress, tan heels, delicate gold necklace. Clean and minimal, soft daylight, confident and glowing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-28",
+    name: "Polka Dot Boucle",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a cream boucle armchair against a plain pale wall, perched on the edge of the seat, looking over her shoulder. Navy polka dot blouse, crisp white trousers, navy heels. Clean and minimal, soft daylight, confident and glowing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-29",
+    name: "Cobalt Shirt Dress Boucle",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a cream boucle armchair against a plain pale wall, one knee up on the seat, relaxed and smiling. Cobalt blue belted midi shirt dress, nude heels. Clean and minimal, soft daylight, confident and glowing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-30",
+    name: "Ivory Ruffle Boucle",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a cream boucle armchair against a plain pale wall, sitting tall with hands folded in her lap. Ivory ruffle neck blouse, chocolate brown tailored trousers, brown heels. Clean and minimal, soft daylight, confident and glowing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-31",
+    name: "Leopard Silk Boucle",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a cream boucle armchair against a plain pale wall, legs crossed, one arm resting along the back of the chair. Soft leopard print silk blouse, black cigarette trousers, black heels. Clean and minimal, soft daylight, confident and glowing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-32",
+    name: "Burgundy Velvet Boucle",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a cream boucle armchair against a plain pale wall, leaning in towards the camera with a warm knowing smile. Burgundy velvet blazer over a cream silk camisole, cream trousers, nude heels. Clean and minimal, soft daylight, confident and glowing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
 ];
 
 export const HOMEWORK_SHOTS_PRESETS: PhotoStudioPreset[] = [
