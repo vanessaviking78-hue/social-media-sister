@@ -77,12 +77,13 @@ ${ps ? `<tr><td style="padding:14px 32px 24px 32px;"><p style="margin:0;font-fam
 <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(preview)}</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f1ee;"><tr><td align="center" style="padding:24px 12px;">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;background:#ffffff;border-radius:8px;overflow:hidden;">
-<tr><td align="center" style="padding:28px 32px 8px 32px;">
-${brand.logoUrl ? `<img src="${esc(brand.logoUrl)}" alt="${esc(brand.clinicName)}" style="max-width:200px;max-height:80px;height:auto;display:block;margin:0 auto 12px auto;">` : h(brand.clinicName, 26)}
-<p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:18px;color:${accent};">${esc(brand.newsletterName)}</p>
-<p style="margin:6px 0 0 0;font-family:Helvetica,Arial,sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#888;">${esc(brand.monthLabel)}</p>
-</td></tr>
-<tr><td style="padding:14px 32px 0 32px;"><div style="border-top:2px solid ${accentFill};"></div></td></tr>
+<tr><td style="padding:22px 32px 0 32px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+<td align="left" valign="middle">${brand.logoUrl ? `<img src="${esc(brand.logoUrl)}" alt="${esc(brand.clinicName)}" style="max-width:130px;max-height:44px;height:auto;display:block;">` : `<span style="font-family:Helvetica,Arial,sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#777;">${esc(brand.clinicName)}</span>`}</td>
+<td align="right" valign="middle"><span style="font-family:Helvetica,Arial,sans-serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#777;">${esc(brand.monthLabel)}</span></td>
+</tr></table></td></tr>
+<tr><td align="center" style="padding:14px 24px 0 24px;"><h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-weight:bold;font-size:46px;line-height:1.02;letter-spacing:-1px;color:${accent};">${esc(brand.newsletterName)}</h1></td></tr>
+<tr><td style="padding:12px 32px 0 32px;"><div style="border-top:4px solid ${accentFill};"></div><div style="border-top:1px solid ${accentFill};margin-top:4px;"></div></td></tr>
+<tr><td align="center" style="padding:10px 32px 0 32px;"><p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:15px;color:#666;">A letter from ${esc(brand.clinicName)}</p></td></tr>
 ${brand.heroUrl ? `<tr><td style="padding:22px 32px 0 32px;"><img src="${esc(brand.heroUrl)}" alt="" width="536" style="width:100%;height:auto;display:block;border-radius:6px;"></td></tr>` : ""}
 ${content.intro ? `<tr><td align="center" style="padding:22px 48px 4px 48px;"><p style="margin:0;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:18px;line-height:1.5;color:#444;">${esc(content.intro)}</p></td></tr>` : ""}
 ${lead ? `<tr><td style="padding:24px 32px 4px 32px;">${label(lead.label)}${h(lead.heading, 28)}${paras(lead.body, "#464646")}</td></tr>` : ""}
