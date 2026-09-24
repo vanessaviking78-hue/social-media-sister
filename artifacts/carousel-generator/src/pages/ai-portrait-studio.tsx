@@ -132,6 +132,16 @@ const CLASSY_CORPORATE_PRESETS: PhotoStudioPreset[] = [
   { id: "cc-20", name: "Sage Suit Cube", hasColour: false },
   { id: "cc-21", name: "Mono Black Suit Over the Shoulder", hasColour: false },
   { id: "cc-22", name: "Navy Suit Standing Tall", hasColour: false },
+  { id: "cc-23", name: "Emerald Satin Boucle", hasColour: false },
+  { id: "cc-24", name: "Navy Bow Boucle", hasColour: false },
+  { id: "cc-25", name: "Blush Knit Boucle", hasColour: false },
+  { id: "cc-26", name: "Black Blazer Boucle", hasColour: false },
+  { id: "cc-27", name: "Camel Wrap Boucle", hasColour: false },
+  { id: "cc-28", name: "Polka Dot Boucle", hasColour: false },
+  { id: "cc-29", name: "Cobalt Shirt Dress Boucle", hasColour: false },
+  { id: "cc-30", name: "Ivory Ruffle Boucle", hasColour: false },
+  { id: "cc-31", name: "Leopard Silk Boucle", hasColour: false },
+  { id: "cc-32", name: "Burgundy Velvet Boucle", hasColour: false },
 ];
 
 const JULY_2ND_SHOOT_PRESETS: PhotoStudioPreset[] = [
