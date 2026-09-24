@@ -251,6 +251,8 @@ router.post("/ai-portrait/generate", async (req: Request, res: Response) => {
         backgroundImageUrl?: string;
         aspectRatio: string;
         textOnly?: boolean;
+        cartoon?: boolean;
+        cartoonRedraw?: boolean;
         promptVars?: { colour?: string; name?: string; skills?: string; knownAs?: string; hairColour?: string; number?: string; numberColour?: string; outfit?: string; studioColour?: string; customText?: string };
       }>;
     };
