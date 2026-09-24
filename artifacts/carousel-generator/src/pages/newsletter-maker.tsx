@@ -8,7 +8,7 @@ import { usePresets } from "@/lib/use-presets";
 import { buildNewsletterPdf, HERO_RATIO, parseHex, readableAccent, type NewsletterBrand, type NewsletterContent, type NewsletterSection } from "@/lib/newsletter-pdf";
 import { circlePhoto, DEFAULT_THANKS, renderSignature } from "@/lib/newsletter-closing";
 import { buildNewsletterHtml } from "@/lib/newsletter-html";
-import { applySwap, scanOffer, scanText, type ComplianceFlag } from "@/lib/newsletter-compliance";
+import { applySwap, isBlocking, scanOffer, scanText, type ComplianceFlag } from "@/lib/newsletter-compliance";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -248,7 +248,7 @@ export default function NewsletterMaker() {
     content.previewTexts.forEach((t, i) => out.push(...scanText(t, `Preview text ${i + 1}`, `prev${i}`)));
     return out;
   }, [content, offer]);
-  const blocking = flags.filter((f) => f.severity === "high").length;
+  const blocking = flags.filter(isBlocking).length;
 
   function getField(c: NewsletterContent, field: string): string {
     if (field === "intro" || field === "ctaText" || field === "signOff") return c[field];
@@ -318,7 +318,7 @@ export default function NewsletterMaker() {
       setSubjectIdx(0);
       setPreviewIdx(0);
       setHistory((h) => [{ id: d.id, month_label: d.monthLabel, topics, content: d.content, created_at: new Date().toISOString() }, ...h]);
-      toast.success("Newsletter written. Have a read and tweak anything.");
+      toast.success(complianceMessage(d.compliance, "Newsletter written and compliance checked."));
     } catch (e: any) {
       toast.error(e?.message || "Generation failed");
     } finally {
@@ -347,6 +347,7 @@ export default function NewsletterMaker() {
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Rewrite failed");
       updateSection(i, { heading: d.heading, body: d.body });
+      if (d.compliance?.rewritten || d.compliance?.autoFixed) toast.success(complianceMessage(d.compliance, "Rewritten and compliance checked."));
       if (d.ctaText) setContent((c) => (c ? { ...c, ctaText: d.ctaText } : c));
       setNotes((n) => ({ ...n, [s.slot]: "" }));
     } catch (e: any) {
@@ -375,7 +376,7 @@ export default function NewsletterMaker() {
 
   function confirmDespiteFlags() {
     if (blocking === 0) return true;
-    toast.error(`${blocking} compliance flag${blocking > 1 ? "s" : ""} still showing. Sort ${blocking > 1 ? "them" : "it"} before this goes to the client.`);
+    toast.error(`${blocking} compliance flag${blocking > 1 ? "s" : ""} still showing (red or amber). Sort ${blocking > 1 ? "them" : "it"} before this goes to the client.`);
     return false;
   }
 
@@ -441,6 +442,13 @@ export default function NewsletterMaker() {
 
   function copy(text: string) {
     navigator.clipboard.writeText(text).then(() => toast.success("Copied"));
+  }
+
+  function complianceMessage(c: { rewritten?: number; autoFixed?: number; remaining?: unknown[] } | undefined, base: string) {
+    if (!c) return base;
+    const fixed = (c.rewritten ?? 0) + (c.autoFixed ?? 0);
+    const left = c.remaining?.length ?? 0;
+    return `${base}${fixed ? ` ${fixed} line${fixed > 1 ? "s" : ""} reworded to keep it compliant.` : " Nothing needed changing."}${left ? ` ${left} still need${left > 1 ? "" : "s"} your eye.` : ""}`;
   }
 
   const sevStyle = (s: ComplianceFlag["severity"]) =>
@@ -740,10 +748,10 @@ export default function NewsletterMaker() {
                 {/* Downloads + preview */}
                 <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-4">
                   <div className="flex flex-wrap items-center gap-3">
-                    <button onClick={downloadPdf} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-sm font-semibold">
+                    <button onClick={downloadPdf} title={blocking ? "Fix the compliance flags first" : undefined} className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-sm font-semibold ${blocking ? "opacity-40" : ""}`}>
                       <Download size={15} /> Download PDF
                     </button>
-                    <button onClick={downloadHtml} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-sm">
+                    <button onClick={downloadHtml} title={blocking ? "Fix the compliance flags first" : undefined} className={`flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-sm ${blocking ? "opacity-40" : ""}`}>
                       <Code2 size={15} /> Email version (HTML)
                     </button>
                     {building && <span className="text-xs text-zinc-500 flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Updating preview</span>}
