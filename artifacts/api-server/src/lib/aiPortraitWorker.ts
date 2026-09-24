@@ -6,7 +6,7 @@ import { aiGeneratedPortraitsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { objectStorageClient } from "./objectStorage";
 import { logger } from "./logger";
-import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, buildTextOnlyPrompt, buildCustomTextWithPhotoPrompt, buildCartoonPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS, HOMEWORK_SHOTS_PRESETS } from "./aiPortraitScenarios";
+import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, buildTextOnlyPrompt, buildCustomTextWithPhotoPrompt, buildCartoonPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS, HOMEWORK_SHOTS_PRESETS, CLASSY_CORPORATE_PRESETS } from "./aiPortraitScenarios";
 
 const GEMINI_MODEL = "gemini-2.5-flash-image";
 const REQUEST_GAP_MS = 4_000;
@@ -205,6 +205,7 @@ export async function processPortraitJob(
         INJECTOR_COLLECTION_PRESETS.find((p) => p.id === cfg.id) ??
         MEN_STUDIO_PRESETS.find((p) => p.id === cfg.id) ??
         HOMEWORK_SHOTS_PRESETS.find((p) => p.id === cfg.id) ??
+        CLASSY_CORPORATE_PRESETS.find((p) => p.id === cfg.id) ??
         RANDOM_PROMPT_PRESETS.find((p) => p.id === cfg.id);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);

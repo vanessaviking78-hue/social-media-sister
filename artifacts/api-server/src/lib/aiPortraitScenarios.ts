@@ -583,6 +583,81 @@ export const PHOTO_STUDIO_PRESETS: PhotoStudioPreset[] = [
     
 ];
 
+export const CLASSY_CORPORATE_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "cc-01",
+    name: "Couch Lean",
+    hasColour: false,
+    promptTemplate: `Full length portrait of a woman from the reference photo standing and leaning back against a pale treatment couch with her hands resting on the edge, wearing a sheer patterned blouse with a high gathered neckline and black wide leg trousers with a slim belt. Bright, minimal clinic room behind her with timber framed windows, soft even daylight. Warm relaxed smile, looking straight to camera. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-02",
+    name: "Desk Smile",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated at a white desk, one hand on the keyboard and one resting on the desk, turned towards camera with a warm, natural smile. Sheer patterned blouse, black tailored trousers, cream leather office chair, desk phone and the edge of a monitor softly visible. Pale textured wall behind, soft daylight, three quarter angle. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-03",
+    name: "Sash Window Chair",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a cream boucle armchair with black legs, legs crossed, hands resting easily on her knees. Bold red floral silk blouse, cream flared trousers, nude heels. Tall white sash windows, a red brick townhouse outside, herringbone timber floor. Confident, glowing, editorial feel. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-04",
+    name: "Black and White Chin Rest",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated slightly turned, chin resting on the back of her hand, a ring catching the light. Tailored white blazer with dark buttons on the cuff. Soft studio light, a hint of foliage in a glass vase behind. Warm, knowing smile. Black and white, magazine feature quality. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-05",
+    name: "Boardroom Glow",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing at the end of a long light oak table, fingertips resting on it, leaning forward slightly. Camel tailored blazer, ivory silk shell top, slim dark trousers. Bright meeting room, large window, soft blurred city view behind. Approachable half smile. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-06",
+    name: "Doorway Power Stance",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing in an open doorway of a calm clinic corridor, one shoulder against the frame, arms loosely folded. Deep navy wrap dress, small gold earrings. Warm neutral walls, a single sculptural plant behind. Relaxed, assured, eye contact with camera. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-07",
+    name: "Coffee at Reception",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo perched on the edge of a stone topped reception desk holding a ceramic cup, laughing mid conversation as if someone just said something funny. Soft grey tweed jacket, cream blouse. Fresh flowers and a discreet appointment book in the background. Candid, natural, warm light. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-08",
+    name: "Window Light Laptop",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated at a small round table by a large window, laptop open, glancing up with a soft smile. Blush pink knit and tailored cream trousers. Sheer curtain, gentle morning light, a notebook and pen beside her. Calm, capable, unposed. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-09",
+    name: "Staircase Walk",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo mid stride on a sweeping pale staircase in a Georgian building, one hand lightly on the bannister, looking back towards camera. Emerald green blazer dress, black heels. Natural window light, elegant cornicing, slight movement in the fabric. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-10",
+    name: "Consultation Chairs",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated in a comfortable consultation armchair, angled towards an empty chair opposite as though welcoming a client, a tablet resting on her lap. Charcoal blazer, soft white top, pearl studs. Warm lamp light, neutral textured furnishings, inviting expression. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-11",
+    name: "Black and White Desk Edge",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on the edge of a desk, hands clasped on one knee, head tilted slightly. Crisp white shirt, dark tailored trousers. Simple studio backdrop, soft directional light, strong but kind expression. Black and white, classic editorial. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "cc-12",
+    name: "Golden Hour Terrace",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing on a stone terrace outside the clinic in warm late afternoon light, one hand in a trouser pocket, a light breeze moving the hair without changing the style. Rust coloured silk shirt, cream trousers. Softly blurred greenery and brick behind. Big, genuine smile. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+];
+
 export const HOMEWORK_SHOTS_PRESETS: PhotoStudioPreset[] = [
   {
     id: "hw-01",
