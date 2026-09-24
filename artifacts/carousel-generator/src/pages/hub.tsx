@@ -147,6 +147,7 @@ border: "hover:border-fuchsia-500/50",
 iconColor: "text-fuchsia-400",
 },
     { href: "/magazinemaker", group: "content", icon: MagazineIcon, name: "Magazine Maker", description: "Add 6 photos and 3 topics and get a finished front cover, two inside pages and a call to action, written in your voice and ready for Magazine Flip.", color: "from-fuchsia-500/20 to-fuchsia-500/5", border: "hover:border-fuchsia-500/50", iconColor: "text-fuchsia-400" },
+    { href: "/monthstart", group: "content", icon: MagazineIcon, name: "Month Start", description: "Turn a newsletter issue into a 5 page magazine. Download the pages as carousel images or as a page turn MP4.", color: "from-amber-500/20 to-amber-500/5", border: "hover:border-amber-500/50", iconColor: "text-amber-400" },
     {
 href: "/adventcalendar",
 group: "content",
