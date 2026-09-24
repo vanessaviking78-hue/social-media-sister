@@ -1248,6 +1248,21 @@ Compose the image in ${ratioDescription}.
 ${PHOTO_STUDIO_NEGATIVE}`;
 }
 
+// Cartoon characters for the Comic Strip tool. Deliberately NOT photorealistic:
+// the standard builders above force a photographic look, so this has its own.
+export function buildCartoonPrompt(customText: string, aspectRatio = "3:4", withPhoto = true, redraw = false): string {
+  const ratioDescription =
+    aspectRatio === "9:16" ? "a vertical 9:16 orientation" :
+    aspectRatio === "3:4" ? "a 3:4 portrait orientation" :
+    "a square 1:1 format";
+  const likeness = redraw
+    ? "The reference image is already the cartoon character. Redraw exactly the same character: identical face, hair, skin tone, glasses, outfit and art style. Change only the facial expression and pose as described above."
+    : withPhoto
+    ? "Turn the person in the reference photo into a cartoon version of themselves. Keep what makes them recognisable: hairstyle, hair colour, skin tone, face shape, glasses or other distinguishing features. Flatter them gently, never mock them."
+    : "Invent a fresh, friendly cartoon character.";
+  return `${customText.trim()}\n\n${likeness}\n\nArt style: modern flat-colour editorial cartoon, bold clean dark outlines, simple cel shading, big expressive eyes and eyebrows, slightly exaggerated proportions, warm British sitcom comic feel. The same character design and the same style every time.\n\nShow the character from the waist up, centred, facing slightly towards the camera, on a completely plain solid white background with nothing else in the frame. No text, no lettering, no speech bubbles, no captions, no logos, no watermark, no borders. Compose in ${ratioDescription}.`;
+}
+
 // ─── Men's Studio — 10 presets ─────────────────────────────────────────────
 
 export const MEN_STUDIO_PRESETS: PhotoStudioPreset[] = [
