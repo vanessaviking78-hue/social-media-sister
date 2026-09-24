@@ -119,7 +119,7 @@ function scanFields(fields: FieldMap): ComplianceFlag[] {
 async function enforceCompliance(fields: FieldMap, context: string) {
   const out: FieldMap = { ...fields };
   let rewritten = 0;
-  for (let round = 0; round < 2; round++) {
+  for (let round = 0; round < 3; round++) {
     const flags = scanFields(out).filter(isBlocking);
     // The first round always reviews everything; the second only runs if the scan still finds something.
     if (round > 0 && flags.length === 0) break;
@@ -133,11 +133,15 @@ async function enforceCompliance(fields: FieldMap, context: string) {
           { role: "system", content: COMPLIANCE_EDITOR },
           {
             role: "user",
-            content: JSON.stringify({
-              context,
-              fields: out,
-              flaggedByScan: flags.map((f) => ({ field: f.field, matched: f.matched, reason: f.reason })),
-            }),
+            content:
+              (round > 0
+                ? `These exact phrases are STILL in the copy and MUST be removed or reworded so they no longer appear in any form: ${flags.map((f) => `"${f.matched.trim()}" in ${f.field}`).join("; ")}.\n\n`
+                : "") +
+              JSON.stringify({
+                context,
+                fields: out,
+                flaggedByScan: flags.map((f) => ({ field: f.field, matched: f.matched, reason: f.reason })),
+              }),
           },
         ],
       });
@@ -164,8 +168,43 @@ async function enforceCompliance(fields: FieldMap, context: string) {
     }
   }
 
+  // Last resort: if a risky phrase still won't budge, drop the sentence it
+  // sits in, as long as the field still reads as something afterwards.
+  let removed = 0;
+  for (let pass = 0; pass < 4; pass++) {
+    const stuck = scanFields(out).filter(isBlocking);
+    if (!stuck.length) break;
+    let changed = false;
+    for (const f of stuck) {
+      const next = dropSentence(out[f.field], f.matched);
+      if (next !== null && next !== out[f.field]) { out[f.field] = next; removed++; changed = true; }
+    }
+    if (!changed) break;
+  }
+
   const remaining = scanFields(out).filter(isBlocking).map((f) => ({ field: f.field, matched: f.matched, reason: f.reason }));
-  return { fields: out, report: { checked: true, rewritten, autoFixed, remaining } };
+  return { fields: out, report: { checked: true, rewritten, autoFixed: autoFixed + removed, remaining } };
+}
+
+// Removes the sentence containing `phrase`. Returns null if nothing sensible
+// would be left, so the field stays flagged for a human instead.
+export function dropSentence(text: string, phrase: string): string | null {
+  const idx = text.indexOf(phrase);
+  if (idx < 0) return null;
+  let start = 0;
+  for (let i = idx - 1; i >= 0; i--) {
+    if (text[i] === "\n") { start = i + 1; break; }
+    if (/[.!?]/.test(text[i]) && /\s/.test(text[i + 1] ?? "")) { start = i + 1; break; }
+  }
+  const tail = text.slice(idx).search(/[.!?](\s|$)/);
+  const end = tail < 0 ? text.length : idx + tail + 1;
+  const next = (text.slice(0, start) + text.slice(end))
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/ +\n/g, "\n")
+    .replace(/\n +/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return next.length >= 25 ? next : null;
 }
 
 function contentToFields(c: NewsletterContent): FieldMap {
