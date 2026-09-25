@@ -37,7 +37,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "neutral", "I: That won’t suit your face shape, but we can enhance what you’ve got."),
     p("neutral", "smug", "P: The bloke at the car wash does them for a tenner."),
     p("smug", "neutral", "I: It’s not something I put my name to."),
-    p("smug", "angry", "P: Fine. I’ll go to him.", "I: Off you pop. Ring me when it’s stuck to the fridge."),
+    p("smug", "angry", "P: Fine. I’ll go to him.", "I: Off you pop, sweetheart. The kettle’s always on when you fancy doing it properly."),
   ]),
   c("foils", "The Foils", [
     p("neutral", "happy", "P: My hairdresser says she can do my forehead as well as my highlights."),
@@ -45,7 +45,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "happy", "P: She’s brilliant with foils."),
     p("neutral", "neutral", "I: Right. And her training?"),
     p("horrified", "happy", "P: A weekend course. And she’s very good at blow dries."),
-    p("smug", "neutral", "I: Foils belong on a jacket potato, not a forehead. Sit down."),
+    p("smug", "neutral", "I: Foils are for potatoes, pet, not foreheads. Sit yourself down and let’s do this properly."),
   ]),
   c("dr-google", "Dr Google", [
     p("neutral", "smug", "P: I’ve done my research."),
@@ -53,7 +53,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "happy", "P: A Facebook group."),
     p("neutral", "happy", "I: Right. And who runs it?"),
     p("horrified", "happy", "P: Barbara. She did a course on a Sunday."),
-    p("smug", "neutral", "I: Barbara did a Sunday. I did years. Her lip looks like a bread roll that lost an argument."),
+    p("smug", "neutral", "I: Barbara did a Sunday course, I did years of them. Let’s give you the version that actually suits your face."),
   ]),
   c("tupperware", "The Tupperware", [
     p("neutral", "happy", "P: I bought my own filler online. Twelve quid. Can you pop it in?"),
@@ -61,7 +61,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "happy", "P: A man called Dave. It arrived in a margarine tub."),
     p("horrified", "neutral", "I: Does it have a batch number?"),
     p("horrified", "happy", "P: It has a sticker of a unicorn."),
-    p("smug", "neutral", "I: Lovely. I’ll ask the unicorn to sign the consent form and be your emergency contact."),
+    p("smug", "neutral", "I: I’ll ask the unicorn to be your emergency contact. Meanwhile, let’s find something with a proper batch number."),
   ]),
   c("smurf", "The Smurf", [
     p("neutral", "horrified", "P: Bit embarrassing, but my lip’s gone a funny colour."),
@@ -69,7 +69,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("horrified", "neutral", "P: Blue. The lady on Facebook says it’s just bruising."),
     p("horrified", "neutral", "I: When did you have it done?"),
     p("horrified", "neutral", "P: This morning. She said to give it a day."),
-    p("angry", "horrified", "I: Blue is a cry for help, not a bruise. In the chair, before you start living in a mushroom."),
+    p("angry", "horrified", "I: Blue like that isn’t bruising, love. In the chair, before you start glowing in the dark."),
   ]),
   c("groupon", "The Voucher", [
     p("neutral", "happy", "P: I got a voucher. Three areas for forty quid."),
@@ -77,7 +77,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("horrified", "happy", "P: A lovely lad in a shed."),
     p("horrified", "neutral", "I: A shed?"),
     p("neutral", "happy", "P: A garden room. It has fairy lights."),
-    p("smug", "neutral", "I: Does the shed have insurance, or just a padlock and a dream?"),
+    p("smug", "neutral", "I: A shed with fairy lights sounds magical, but has it got insurance, or just good lighting?"),
   ]),
   c("candles", "Sharon's Kitchen", [
     p("neutral", "happy", "P: My mate Sharon does it at her kitchen table."),
@@ -85,7 +85,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("horrified", "happy", "P: She sells candles."),
     p("neutral", "neutral", "I: Candles."),
     p("neutral", "happy", "P: Very good ones. Lavender."),
-    p("smug", "neutral", "I: Lavender is for pillows. She can stick to wax and I’ll stick to medicine."),
+    p("smug", "neutral", "I: Lavender’s gorgeous on a pillow. Let’s leave your face to the people with the training."),
   ]),
   c("ring-light", "The Ring Light", [
     p("neutral", "happy", "P: I watched a video."),
@@ -93,7 +93,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "happy", "P: A woman doing her own lips in the car."),
     p("horrified", "neutral", "I: Is she trained?"),
     p("neutral", "smug", "P: She has a ring light."),
-    p("smug", "neutral", "I: A ring light is not a qualification, darling. It just makes the disaster well lit for the group chat."),
+    p("smug", "neutral", "I: A ring light makes a lovely video, darling, but it isn’t a qualification. Let’s get you booked in properly."),
   ]),
   c("numbing", "Six Hours of Cling Film", [
     p("neutral", "happy", "P: I put numbing cream on before I came."),
@@ -101,7 +101,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("horrified", "happy", "P: Six hours ago. Cling film and everything."),
     p("horrified", "neutral", "I: Six hours."),
     p("neutral", "happy", "P: I can’t feel my face!"),
-    p("smug", "neutral", "I: Six hours of cling film. You look like leftover lasagne. Sit down, we’re washing that off."),
+    p("smug", "neutral", "I: Six hours in cling film, bless you. Let’s wash that off and start you fresh."),
   ]),
   c("skip-consult", "The Lunch Break", [
     p("neutral", "neutral", "P: Can we skip the consultation? I’m on my lunch."),
@@ -109,7 +109,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "angry", "P: I’ve only got forty minutes."),
     p("neutral", "angry", "I: Then you’ve got forty minutes."),
     p("neutral", "neutral", "P: To have it done?"),
-    p("smug", "horrified", "I: To fill in the medical form. Your sandwich is not the one being injected. It can wait."),
+    p("smug", "horrified", "I: To fill in your medical form, love. Your sandwich isn’t the one having treatment, it can wait five minutes."),
   ]),
   c("carrier-bag", "The Carrier Bag", [
     p("neutral", "happy", "P: Nothing to declare. Healthy as a horse."),
@@ -117,7 +117,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "neutral", "P: Just the odd tablet."),
     p("neutral", "neutral", "I: Which odd tablet?"),
     p("horrified", "neutral", "P: Just these. In here. Don’t look."),
-    p("smug", "horrified", "I: That’s not an odd tablet, that’s a branch of Boots. Sit down, we’re doing this properly."),
+    p("smug", "horrified", "I: That’s not an odd tablet, that’s the whole pharmacy. Let’s go through it together, properly."),
   ]),
   c("might-be", "Two Lines", [
     p("neutral", "neutral", "P: I might be pregnant."),
@@ -125,7 +125,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "happy", "P: Two lines on a stick this morning."),
     p("happy", "happy", "I: Congratulations! Then we’re not doing it today."),
     p("neutral", "horrified", "P: But I booked!"),
-    p("smug", "happy", "I: Your lips can wait nine months. The baby can’t. And do put the stick down, you’re waving it about."),
+    p("smug", "happy", "I: Your lips can wait nine months, the baby can’t. Congratulations, and mind where you wave that stick."),
   ]),
   c("long-haul", "Wheels Up", [
     p("neutral", "happy", "P: Can you do my lips tonight? I fly to Turkey in the morning."),
@@ -133,7 +133,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "happy", "P: Four hours."),
     p("neutral", "neutral", "I: And who’s looking after you when you land?"),
     p("neutral", "happy", "P: My sunhat."),
-    p("smug", "neutral", "I: Your sunhat is not an aftercare team, and duty free lipstick is not a follow up. Rebook."),
+    p("smug", "neutral", "I: Your sunhat’s lovely, but it isn’t an aftercare team. Let’s get you sorted the week you’re home."),
   ]),
   c("wedding", "The Big Day", [
     p("neutral", "happy", "P: Wedding tomorrow. Whole face please."),
@@ -141,7 +141,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "happy", "P: Yes!"),
     p("neutral", "neutral", "I: You could be bruised in every photograph."),
     p("neutral", "horrified", "P: Is that bad?"),
-    p("smug", "horrified", "I: Only if you want an album that looks like a crime scene. Your mother in law will ask who won."),
+    p("smug", "horrified", "I: Only if you fancy wedding photos that look like a boxing match. Let’s pick you a kinder date."),
   ]),
   c("spin-class", "Spin Class", [
     p("neutral", "happy", "P: Can I go to spin class after?"),
@@ -149,7 +149,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "happy", "P: The sauna?"),
     p("neutral", "neutral", "I: No."),
     p("neutral", "smug", "P: A large glass of wine?"),
-    p("smug", "horrified", "I: Go home and lie down like a Victorian. And close the tab that says twelve miracle hacks."),
+    p("smug", "horrified", "I: Go home, put your feet up like a Victorian lady, and close that tab with the twelve miracle hacks."),
   ]),
   c("tiktok", "TikTok Says", [
     p("neutral", "neutral", "P: Do I actually need aftercare?"),
@@ -157,7 +157,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "smug", "P: TikTok says you don’t."),
     p("neutral", "smug", "I: Does it."),
     p("neutral", "happy", "P: A woman with a lot of followers said so."),
-    p("smug", "horrified", "I: She also told you to put a potato in your ear. Follow my instructions, keep the potato for chips."),
+    p("smug", "horrified", "I: She also told everyone to put a potato in their ear. Stick with my instructions, save the potato for chips."),
   ]),
   c("tenner", "A Tenner", [
     p("neutral", "happy", "P: Sandra does it for a tenner."),
@@ -165,7 +165,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "happy", "P: Water, probably."),
     p("horrified", "neutral", "I: Probably water?"),
     p("neutral", "happy", "P: She said it’s fine."),
-    p("smug", "horrified", "I: Then you’re paying a tenner to be gently drizzled. Very Manchester, very pointless."),
+    p("smug", "horrified", "I: Then you’re paying a tenner to be gently drizzled on. Let’s find you something that actually works."),
   ]),
   c("face-roller", "Five Steves", [
     p("neutral", "happy", "P: I bought a face roller with tiny needles."),
@@ -173,7 +173,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "happy", "P: A website that only takes gift cards."),
     p("horrified", "neutral", "I: That’s a red flag."),
     p("neutral", "smug", "P: It has five stars!"),
-    p("smug", "horrified", "I: Five Steves and a robot. Bin it, love, and block Steve while you’re there."),
+    p("smug", "horrified", "I: Five Steves and a robot left those reviews, love. Straight in the bin, and block Steve while you’re at it."),
   ]),
   c("consent", "The Napkin", [
     p("neutral", "neutral", "P: Do I have to sign all this?"),
@@ -181,7 +181,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "horrified", "P: It’s a lot of words."),
     p("neutral", "neutral", "I: It’s your face. Read the words. Ask me anything."),
     p("neutral", "smug", "P: The place down the road just took my card."),
-    p("smug", "horrified", "I: Their consent form was a napkin and a wink. Mine has words. The words are the point."),
+    p("smug", "horrified", "I: Their consent form was a napkin and a wink, apparently. Mine has words, because the words matter."),
   ]),
   c("pickled-onions", "The Fridge", [
     p("neutral", "happy", "P: Can I see the product first?"),
@@ -189,7 +189,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "neutral", "P: The last place never showed me."),
     p("neutral", "neutral", "I: Where did they keep it?"),
     p("neutral", "happy", "P: In the fridge. Next to the pickled onions."),
-    p("smug", "horrified", "I: That isn’t a medical fridge, that’s a deli. Your lips nearly came with a gherkin."),
+    p("smug", "horrified", "I: That’s not a medical fridge, sweetheart, that’s a deli counter. Let’s keep you well away from the gherkins."),
   ]),
   c("party", "The Party", [
     p("neutral", "happy", "P: There’s a party on Friday. Wine, nibbles and a lady with needles."),
@@ -197,7 +197,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "happy", "P: There’s a cheese board!"),
     p("neutral", "neutral", "I: Who’s the lady?"),
     p("neutral", "happy", "P: Debbie. She’s lovely."),
-    p("smug", "horrified", "I: That’s not a party, it’s a hostage situation with canapés. Is the sharps bin next to the sausage rolls?"),
+    p("smug", "horrified", "I: That’s not a party, it’s a hostage situation with canapés. Sharps bin next to the sausage rolls, is it?"),
   ]),
   c("dm", "The DM", [
     p("neutral", "happy", "P: She messaged me on Instagram. Sixty percent off."),
@@ -205,7 +205,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "neutral", "P: She asked for my bank details."),
     p("horrified", "neutral", "I: Your bank details."),
     p("neutral", "happy", "P: And a deposit in gift cards."),
-    p("smug", "horrified", "I: She’s not a clinician, she’s a thief with a good filter. Block her, then go and hug your bank card."),
+    p("smug", "horrified", "I: She’s not a clinician, love, just a lovely filter and sticky fingers. Block her and keep that bank card close."),
   ]),
   c("kev", "Four Hundred Kevs", [
     p("neutral", "happy", "P: She’s got four hundred five star reviews."),
@@ -213,7 +213,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "neutral", "P: All from people called Kev."),
     p("horrified", "neutral", "I: All of them."),
     p("neutral", "neutral", "P: Kev from Bolton. Kev from Leeds. Kevin."),
-    p("smug", "horrified", "I: Kev has had every treatment in Britain and reviewed it in the same handwriting. Busy lad."),
+    p("smug", "horrified", "I: Kev’s had every treatment in Britain, apparently, and reviewed them all in the same handwriting. Busy man."),
   ]),
   c("nda", "The Wonky Lip", [
     p("neutral", "horrified", "P: Can you fix my lip? It’s a bit wonky."),
@@ -221,7 +221,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "horrified", "P: I can’t say."),
     p("neutral", "neutral", "I: Why not?"),
     p("neutral", "horrified", "P: I signed something."),
-    p("horrified", "horrified", "I: You signed a secrecy agreement for a wonky lip. It’s a lip, not the nuclear codes. Sit down."),
+    p("horrified", "horrified", "I: You signed a secrecy agreement over a wonky lip. It’s a lip, love, not the nuclear codes. Let’s take a look."),
   ]),
   c("allergic", "Only Mondays", [
     p("neutral", "happy", "P: I’m not allergic to anything."),
@@ -253,7 +253,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "happy", "P: Just a little poke."),
     p("neutral", "neutral", "I: Would you prod a soufflé?"),
     p("neutral", "neutral", "P: No."),
-    p("smug", "horrified", "I: Hands in your pockets. It’s a face, not a stress ball. Poke it once more and I’ll charge for it."),
+    p("smug", "horrified", "I: Hands in your pockets, please. It’s a face, not a stress ball."),
   ]),
   c("diy-syringe", "Do It Yourself", [
     p("neutral", "happy", "P: Can you just give me the syringe to take home?"),
@@ -285,7 +285,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "happy", "P: I’ve had a very big glass of water."),
     p("neutral", "neutral", "I: You could bruise like a plum."),
     p("neutral", "horrified", "P: A nice plum?"),
-    p("smug", "horrified", "I: Come back when your liver has forgiven you. I won’t have my work looking like a fruit bowl."),
+    p("smug", "horrified", "I: Come back when your liver’s forgiven you, love. Let’s not have you bruised like a fruit bowl."),
   ]),
   c("cold-sore", "It Has A Name", [
     p("neutral", "happy", "P: I’ve got a tiny cold sore."),
@@ -301,7 +301,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "happy", "P: I’ve just got back from the beach."),
     p("neutral", "neutral", "I: Which beach?"),
     p("neutral", "happy", "P: The whole of Spain."),
-    p("smug", "horrified", "I: Come back when you’re a human being again. You’ve been cooked on both sides."),
+    p("smug", "horrified", "I: Come back when you’ve cooled down a bit, love. You’ve been cooked on both sides."),
   ]),
   c("extension", "The Kitchen Extension", [
     p("neutral", "happy", "P: Can we do everything today? Lips, cheeks, chin, jaw, nose."),
@@ -333,7 +333,7 @@ export const COMIC_CONVERSATIONS: ComicConversation[] = [
     p("neutral", "smug", "P: The woman off Facebook says she doesn’t need it."),
     p("neutral", "neutral", "I: Doesn’t she."),
     p("neutral", "neutral", "P: She says nothing ever goes wrong."),
-    p("smug", "horrified", "I: That’s not confidence, that’s a lawsuit with a ring light. I’m insured. Sit down."),
+    p("smug", "horrified", "I: That’s not confidence, love, that’s a lawsuit waiting to happen. I’m properly insured, so let’s begin."),
   ]),
   c("kettle", "The Hotel Room", [
     p("neutral", "happy", "P: She’s doing them in a hotel room."),
