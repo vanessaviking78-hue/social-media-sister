@@ -49,24 +49,24 @@ VOICE: ${stylePrompt}
 
 THE PAGES
 1. Cover: the treatment name is the title (already decided, do not write it). You write a tiny kicker above it and a tagline below it.
-2, 3 and 4. Three fact pages, each with a headline, a friendly intro line and three quick facts. Together they should tell a little story about the treatment: page 2 what it is and how it works in plain English, page 3 what having it is like and who tends to ask about it, page 4 what to expect afterwards and what a consultation covers.
+2. Fun facts: a headline, a friendly intro line and three fun facts about ${treat}.
+3. "This is for you if...": five short lines describing the sort of person who might be curious about ${treat}, written as her own thoughts or situations she will recognise ("You look in the mirror and think, tired?"). Warm, funny, specific.
+4. "Helps most with...": five short lines naming the concerns or areas people most often come in asking about for ${treat}. Frame them as what people ask about or hope for, never as results.
 5. Last page: a photo with "If this interests you, comment ${word || "the reply word"}". You write one short, sly line to sit under it.
 Plus a caption for the post itself.
 
-FACTS
+FACTS AND CLAIMS
 - Only include things that are widely and generally accepted about ${treat}. No statistics, no percentages, no timings you are not certain of, no brand or product claims.
 - If you are not sure of a detail, say something general and honest instead, or say what a practitioner will talk through at the consultation.
-- Never promise or imply a result. Use "may", "can", "some people".
+- Never promise or imply a result. On the "Helps most with" page use "may", "can", "some people", or phrase each line as what people often ask about.
 - Make it fun. A surprising angle, a bit of humour, something she would tell a friend. No textbook voice, no boring medical education.
 
 Return JSON only, in exactly this shape and within these limits:
 {
   "cover": { "kicker": "max 4 words", "tagline": "max 9 words" },
-  "pages": [
-    { "kicker": "max 3 words", "headline": "max 7 words", "intro": "max 18 words", "facts": [ { "label": "max 3 words", "text": "max 22 words" }, { "label": "max 3 words", "text": "max 22 words" }, { "label": "max 3 words", "text": "max 22 words" } ] },
-    { "kicker": "max 3 words", "headline": "max 7 words", "intro": "max 18 words", "facts": [ same shape x3 ] },
-    { "kicker": "max 3 words", "headline": "max 7 words", "intro": "max 18 words", "facts": [ same shape x3 ] }
-  ],
+  "funFacts": { "kicker": "max 3 words", "headline": "max 7 words", "intro": "max 18 words", "facts": [ { "label": "max 3 words", "text": "max 22 words" }, { "label": "max 3 words", "text": "max 22 words" }, { "label": "max 3 words", "text": "max 22 words" } ] },
+  "forYouIf": { "kicker": "max 3 words", "intro": "max 16 words", "items": ["max 12 words", "max 12 words", "max 12 words", "max 12 words", "max 12 words"] },
+  "helpsMostWith": { "kicker": "max 3 words", "intro": "max 16 words", "items": ["max 10 words", "max 10 words", "max 10 words", "max 10 words", "max 10 words"] },
   "cta": { "line": "max 12 words, a warm sly nudge to comment, no pressure" },
   "caption": "max 70 words. Opens with a hook, ends by inviting her to comment ${word || "the reply word"} so the details can be sent over. No hashtags."
 }
@@ -90,8 +90,7 @@ ${RULES}`;
     }
     const j = JSON.parse(raw);
 
-    const pages: any[] = Array.isArray(j?.pages) ? j.pages : [];
-    const page = (o: any) => {
+    const factPage = (o: any) => {
       const facts: any[] = Array.isArray(o?.facts) ? o.facts : [];
       const fact = (f: any) => ({ label: tidy(f?.label ?? "", 30), text: tidy(f?.text ?? "", 190) });
       return {
@@ -101,6 +100,15 @@ ${RULES}`;
         facts: [fact(facts[0]), fact(facts[1]), fact(facts[2])],
       };
     };
+    const listPage = (o: any, headline: string, max: number) => {
+      const items: any[] = Array.isArray(o?.items) ? o.items : [];
+      return {
+        kicker: tidy(o?.kicker ?? "", 30),
+        headline,
+        intro: tidy(o?.intro ?? "", 130),
+        items: [0, 1, 2, 3, 4].map((i) => tidy(items[i] ?? "", max)),
+      };
+    };
 
     res.json({
       cover: {
@@ -108,7 +116,7 @@ ${RULES}`;
         title: treat,
         tagline: tidy(j?.cover?.tagline ?? "", 80),
       },
-      pages: [page(pages[0]), page(pages[1]), page(pages[2])],
+      pages: [factPage(j?.funFacts), listPage(j?.forYouIf, "This is for you if...", 100), listPage(j?.helpsMostWith, "Helps most with...", 85)],
       cta: { lead: "If this interests you", word, line: tidy(j?.cta?.line ?? "", 100) },
       caption: tidy(j?.caption ?? "", 600),
     });

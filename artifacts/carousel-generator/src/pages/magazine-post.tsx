@@ -15,6 +15,7 @@ import {
   drawAllPostPages,
   photoRole,
   type MagazinePostCopy,
+  type ListPage,
 } from "@/lib/magazine-post-pages";
 import { scanText, applySwap, isBlocking } from "@/lib/newsletter-compliance";
 
@@ -30,7 +31,7 @@ const STYLES = [
   { key: "5", label: "Feral and sarcastic", hint: "Savage, cheeky, affable underneath" },
 ];
 
-const PAGE_TABS = ["Cover", "Fact 1", "Fact 2", "Fact 3", "Last page"];
+const PAGE_TABS = ["Cover", "Fun facts", "For you if", "Helps most with", "Last page"];
 
 function monthYear() {
   return new Date().toLocaleDateString("en-GB", { month: "long", year: "numeric" });
@@ -293,14 +294,18 @@ export default function MagazinePost() {
       { path: "cover.kicker", where: "Cover small heading" },
       { path: "cover.tagline", where: "Cover tagline" },
     ];
+    const names = ["Fun facts", "For you if", "Helps most with"];
     for (let p = 0; p < 3; p++) {
-      out.push({ path: `pages.${p}.kicker`, where: `Fact ${p + 1} small heading` });
-      out.push({ path: `pages.${p}.headline`, where: `Fact ${p + 1} headline` });
-      out.push({ path: `pages.${p}.intro`, where: `Fact ${p + 1} intro` });
-      for (let f = 0; f < 3; f++) {
-        out.push({ path: `pages.${p}.facts.${f}.label`, where: `Fact ${p + 1}, point ${f + 1} label` });
-        out.push({ path: `pages.${p}.facts.${f}.text`, where: `Fact ${p + 1}, point ${f + 1}` });
-      }
+      out.push({ path: `pages.${p}.kicker`, where: `${names[p]} small heading` });
+      out.push({ path: `pages.${p}.headline`, where: `${names[p]} headline` });
+      out.push({ path: `pages.${p}.intro`, where: `${names[p]} intro` });
+    }
+    for (let f = 0; f < 3; f++) {
+      out.push({ path: `pages.0.facts.${f}.label`, where: `Fun fact ${f + 1} label` });
+      out.push({ path: `pages.0.facts.${f}.text`, where: `Fun fact ${f + 1}` });
+    }
+    for (let p = 1; p < 3; p++) {
+      for (let i = 0; i < 5; i++) out.push({ path: `pages.${p}.items.${i}`, where: `${names[p]}, line ${i + 1}` });
     }
     out.push({ path: "cta.line", where: "Last page line" });
     out.push({ path: "caption", where: "Caption" });
@@ -415,7 +420,7 @@ export default function MagazinePost() {
               <MagazineIcon className="w-6 h-6 text-fuchsia-400" /> Magazine Post
             </h1>
             <p className="text-zinc-400 text-sm mt-0.5">
-              Add 5 to 10 photos and a treatment. The treatment becomes the title, three pages of fun facts follow, and the last page is a full photo asking people to comment your reply word.
+              Add 5 to 10 photos and a treatment. The treatment becomes the title, then come a page of fun facts, a page headed This is for you if, a page headed Helps most with, and the last page is a full photo asking people to comment your reply word.
             </p>
           </div>
         </div>
@@ -677,17 +682,24 @@ export default function MagazinePost() {
               <Field label="Cover title (the treatment)" value={copy.cover.title || treatment} onChange={set("cover.title")} />
               <Field label="Cover small heading" value={copy.cover.kicker} onChange={set("cover.kicker")} />
               <Field label="Cover tagline" value={copy.cover.tagline} onChange={set("cover.tagline")} />
-              {[0, 1, 2].map((p) => (
+              <div className="h-px bg-zinc-800" />
+              <Field label="Fun facts page: small heading" value={copy.pages[0].kicker} onChange={set("pages.0.kicker")} />
+              <Field label="Fun facts page: headline" value={copy.pages[0].headline} onChange={set("pages.0.headline")} />
+              <Field label="Fun facts page: intro" value={copy.pages[0].intro} onChange={set("pages.0.intro")} rows={2} />
+              {[0, 1, 2].map((f) => (
+                <div key={f} className="grid grid-cols-1 gap-2 pl-3 border-l-2 border-zinc-800">
+                  <Field label={`Fun fact ${f + 1} label`} value={copy.pages[0].facts[f].label} onChange={set(`pages.0.facts.${f}.label`)} />
+                  <Field label={`Fun fact ${f + 1} text`} value={copy.pages[0].facts[f].text} onChange={set(`pages.0.facts.${f}.text`)} rows={2} />
+                </div>
+              ))}
+              {([1, 2] as const).map((p) => (
                 <div key={p} className="space-y-3">
                   <div className="h-px bg-zinc-800" />
-                  <Field label={`Fact page ${p + 1} small heading`} value={copy.pages[p].kicker} onChange={set(`pages.${p}.kicker`)} />
-                  <Field label={`Fact page ${p + 1} headline`} value={copy.pages[p].headline} onChange={set(`pages.${p}.headline`)} />
-                  <Field label={`Fact page ${p + 1} intro`} value={copy.pages[p].intro} onChange={set(`pages.${p}.intro`)} rows={2} />
-                  {[0, 1, 2].map((f) => (
-                    <div key={f} className="grid grid-cols-1 gap-2 pl-3 border-l-2 border-zinc-800">
-                      <Field label={`Point ${f + 1} label`} value={copy.pages[p].facts[f].label} onChange={set(`pages.${p}.facts.${f}.label`)} />
-                      <Field label={`Point ${f + 1} text`} value={copy.pages[p].facts[f].text} onChange={set(`pages.${p}.facts.${f}.text`)} rows={2} />
-                    </div>
+                  <Field label={`${p === 1 ? "This is for you if" : "Helps most with"}: small heading`} value={copy.pages[p].kicker} onChange={set(`pages.${p}.kicker`)} />
+                  <Field label={`${p === 1 ? "This is for you if" : "Helps most with"}: headline`} value={copy.pages[p].headline} onChange={set(`pages.${p}.headline`)} />
+                  <Field label={`${p === 1 ? "This is for you if" : "Helps most with"}: intro`} value={copy.pages[p].intro} onChange={set(`pages.${p}.intro`)} rows={2} />
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <Field key={i} label={`Line ${i + 1}`} value={(copy.pages[p] as ListPage).items[i]} onChange={set(`pages.${p}.items.${i}`)} />
                   ))}
                 </div>
               ))}

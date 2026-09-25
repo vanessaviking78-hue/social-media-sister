@@ -25,9 +25,11 @@ import {
 export type FactItem = { label: string; text: string };
 export type FactPage = { kicker: string; headline: string; intro: string; facts: [FactItem, FactItem, FactItem] };
 
+export type ListPage = { kicker: string; headline: string; intro: string; items: [string, string, string, string, string] };
+
 export type MagazinePostCopy = {
   cover: { kicker: string; title: string; tagline: string };
-  pages: [FactPage, FactPage, FactPage];
+  pages: [FactPage, ListPage, ListPage];
   cta: { lead: string; word: string; line: string };
   caption: string;
 };
@@ -35,14 +37,16 @@ export type MagazinePostCopy = {
 const emptyFact = (): FactItem => ({ label: "", text: "" });
 const emptyPage = (): FactPage => ({ kicker: "", headline: "", intro: "", facts: [emptyFact(), emptyFact(), emptyFact()] });
 
+const emptyList = (headline: string): ListPage => ({ kicker: "", headline, intro: "", items: ["", "", "", "", ""] });
+
 export const EMPTY_POST_COPY: MagazinePostCopy = {
   cover: { kicker: "", title: "", tagline: "" },
-  pages: [emptyPage(), emptyPage(), emptyPage()],
+  pages: [emptyPage(), emptyList("This is for you if..."), emptyList("Helps most with...")],
   cta: { lead: "If this interests you", word: "", line: "" },
   caption: "",
 };
 
-export const PAGE_NAMES = ["cover", "fact-1", "fact-2", "fact-3", "comment-page"];
+export const PAGE_NAMES = ["cover", "fun-facts", "this-is-for-you-if", "helps-most-with", "comment-page"];
 export const MIN_PHOTOS = 5;
 export const MAX_PHOTOS = 10;
 
@@ -74,7 +78,7 @@ export function photoRole(index: number, count: number): string {
   const plan = planPhotos(count);
   if (plan.cover[0] === index) return "Cover";
   if (plan.cover[1] === index) return "Cover inset";
-  for (let p = 0; p < 3; p++) if (plan.pages[p].includes(index)) return `Fact page ${p + 1}`;
+  for (let p = 0; p < 3; p++) if (plan.pages[p].includes(index)) return ["Fun facts", "This is for you if", "Helps most with"][p];
   if (plan.final === index) return "Last page";
   return "Not used";
 }
@@ -248,9 +252,8 @@ function photoBlock(ctx: CanvasRenderingContext2D, photos: (CanvasImageSource | 
   }
 }
 
-// PAGES 2, 3, 4: a headline, a friendly intro, photos and three quick facts.
-export function drawFactPage(brand: MagazineBrand, page: FactPage, n: number, photos: (CanvasImageSource | null)[], idx: number[]) {
-  const [c, ctx] = newCanvas();
+// Kicker, headline and intro shared by the three inside pages. Returns the y just below them.
+function insideHeader(ctx: CanvasRenderingContext2D, brand: MagazineBrand, page: { kicker: string; headline: string; intro: string }): number {
   ctx.fillStyle = CREAM;
   ctx.fillRect(0, 0, PAGE_W, PAGE_H);
 
@@ -293,6 +296,14 @@ export function drawFactPage(brand: MagazineBrand, page: FactPage, n: number, ph
     colour: brand.colour,
     lineHeight: 1.3,
   });
+
+  return iy;
+}
+
+// PAGE 2: fun facts. A headline, a friendly intro, photos and three numbered facts.
+export function drawFactPage(brand: MagazineBrand, page: FactPage, n: number, photos: (CanvasImageSource | null)[], idx: number[]) {
+  const [c, ctx] = newCanvas();
+  const iy = insideHeader(ctx, brand, page);
 
   const py = Math.max(iy + 32, 430);
   const ph = 380;
@@ -339,6 +350,53 @@ export function drawFactPage(brand: MagazineBrand, page: FactPage, n: number, ph
     });
     fy += 132;
   });
+
+  footer(ctx, brand, n, INK);
+  return c;
+}
+
+// PAGES 3 and 4: "This is for you if..." and "Helps most with...". Photos, then five ticked lines.
+export function drawListPage(brand: MagazineBrand, page: ListPage, n: number, photos: (CanvasImageSource | null)[], idx: number[]) {
+  const [c, ctx] = newCanvas();
+  const iy = insideHeader(ctx, brand, page);
+
+  const py = Math.max(iy + 30, 420);
+  const ph = 320;
+  photoBlock(ctx, photos, idx, py, ph);
+  ctx.fillStyle = brand.colour;
+  ctx.fillRect(80, py + ph - 14, 70, 14);
+
+  const numFg = onColour(brand.colour);
+  let ly = py + ph + 46;
+  for (const item of page.items) {
+    ctx.fillStyle = brand.colour;
+    ctx.beginPath();
+    ctx.arc(80 + 26, ly + 30, 26, 0, Math.PI * 2);
+    ctx.fill();
+    // a tick
+    ctx.strokeStyle = numFg;
+    ctx.lineWidth = 6;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    ctx.moveTo(80 + 15, ly + 30);
+    ctx.lineTo(80 + 23, ly + 39);
+    ctx.lineTo(80 + 38, ly + 21);
+    ctx.stroke();
+    block(ctx, item, {
+      x: 158,
+      y: ly + 2,
+      maxW: PAGE_W - 240,
+      maxLines: 2,
+      size: 33,
+      minSize: 22,
+      family: SANS,
+      weight: "600",
+      colour: INK,
+      lineHeight: 1.28,
+    });
+    ly += 96;
+  }
 
   footer(ctx, brand, n, INK);
   return c;
@@ -473,10 +531,12 @@ export function drawAllPostPages(
   const plan = planPhotos(photos.length);
   setDrawPage(0, 0);
   const p1 = drawPostCover(brand, copy, photos, plan);
-  const facts = [1, 2, 3].map((n) => {
-    setDrawPage(n, 0);
-    return drawFactPage(brand, copy.pages[n - 1], n + 1, photos, plan.pages[n - 1]);
-  });
+  setDrawPage(1, 0);
+  const facts = [drawFactPage(brand, copy.pages[0], 2, photos, plan.pages[0])];
+  setDrawPage(2, 0);
+  facts.push(drawListPage(brand, copy.pages[1], 3, photos, plan.pages[1]));
+  setDrawPage(3, 0);
+  facts.push(drawListPage(brand, copy.pages[2], 4, photos, plan.pages[2]));
   setDrawPage(4, 0);
   const p5 = drawCommentPage(brand, copy.cta, photos, plan.final);
   return [p1, ...facts, p5];
