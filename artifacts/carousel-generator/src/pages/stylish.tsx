@@ -19,31 +19,54 @@ import { usePresets, type ClientPreset } from "@/lib/use-presets";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 
 loadGoogleFonts();
+if (typeof document !== "undefined" && !document.getElementById("stylish-fonts")) {
+  const link = document.createElement("link");
+  link.id = "stylish-fonts";
+  link.rel = "stylesheet";
+  link.href = "https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800;900&family=Jost:wght@300;400;500;600&family=Poppins:wght@400;600;700;800&display=swap";
+  document.head.appendChild(link);
+}
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const W = 1080;
 const H = 1440;
 const SIDE_PAD = 90;
-const STYLE_STORAGE_KEY = "stylish-style-v2";
+const STYLE_STORAGE_KEY = "stylish-style-v3";
 
 // ---------------------------------------------------------------------------
 // Types and defaults
 // ---------------------------------------------------------------------------
 
+type CoverLayout = "band" | "centred" | "block" | "split";
+
 type Style = {
+  // Slide 1 (cover)
+  coverLayout: CoverLayout;
+  cvFont: string;
+  cvSubFont: string;
+  cvWeight: number;
+  cvSubWeight: number;
+  cvCaps: boolean;
+  cvSubCaps: boolean;
+  cvTracking: number;
+  cvSize: number;
+  cvSubSize: number;
+  cvColour: string;
+  cvSubColour: string;
+  cvBlock: string;
+  cvBand: string;
+  cvBandOn: boolean;
+  cvPhoto: number;   // photo share of the slide, in percent
+  cvFocus: number;   // where the photo is cropped, in percent
+  cvY: number;       // vertical position, centred cover only
+  // Slides 2 onwards (photo with text over)
   layout: "editorial" | "classic";
-  fontFamily: string;      // small labels and subtitle
-  displayFont: string;     // headline and slide text
-  headlineWeight: number;
+  fontFamily: string;   // small labels
+  displayFont: string;  // slide text
   textWeight: number;
-  headlineItalic: boolean;
   textItalic: boolean;
-  headlineSize: number;
-  subtitleSize: number;
   bodySize: number;
   ctaSize: number;
-  headlineColour: string;
-  subtitleColour: string;
   bodyColour: string;
   ctaColour: string;
   lineColour: string;
@@ -51,7 +74,6 @@ type Style = {
   letterSpacing: number;
   lineHeight: number;
   align: "left" | "centre";
-  coverY: number;
   bodyY: number;
   overlay: number;
   scrim: number;
@@ -65,20 +87,40 @@ type Style = {
   showLogo: boolean;
 };
 
-const EDITORIAL_STYLE: Style = {
+const INTER_TIGHT = "'Inter Tight', sans-serif";
+
+// Each cover layout brings its own type, colours and proportions. Everything can be changed afterwards.
+const COVER_PRESETS: Record<CoverLayout, Partial<Style>> = {
+  band: {
+    coverLayout: "band", cvFont: INTER_TIGHT, cvSubFont: INTER_TIGHT, cvWeight: 900, cvSubWeight: 600,
+    cvCaps: true, cvSubCaps: true, cvTracking: -3, cvSize: 150, cvSubSize: 30,
+    cvColour: "#000000", cvSubColour: "#000000", cvBlock: "#faf9f5", cvBandOn: false, cvPhoto: 74, cvFocus: 30,
+  },
+  centred: {
+    coverLayout: "centred", cvFont: "'Montserrat', sans-serif", cvSubFont: "'Montserrat', sans-serif", cvWeight: 300, cvSubWeight: 300,
+    cvCaps: true, cvSubCaps: true, cvTracking: 1, cvSize: 170, cvSubSize: 52,
+    cvColour: "#38b6ff", cvSubColour: "#ffffff", cvPhoto: 100, cvFocus: 50, cvY: 58,
+  },
+  block: {
+    coverLayout: "block", cvFont: INTER_TIGHT, cvSubFont: INTER_TIGHT, cvWeight: 900, cvSubWeight: 800,
+    cvCaps: true, cvSubCaps: true, cvTracking: -8, cvSize: 300, cvSubSize: 34,
+    cvColour: "#000000", cvSubColour: "#000000", cvBlock: "#e4e2dd", cvBandOn: false, cvPhoto: 38, cvFocus: 35,
+  },
+  split: {
+    coverLayout: "split", cvFont: "'Poppins', sans-serif", cvSubFont: "'Jost', sans-serif", cvWeight: 700, cvSubWeight: 400,
+    cvCaps: true, cvSubCaps: false, cvTracking: 0, cvSize: 120, cvSubSize: 46,
+    cvColour: "#000000", cvSubColour: "#000000", cvBlock: "#ffffff", cvBand: "#666666", cvBandOn: true, cvPhoto: 47.5, cvFocus: 50,
+  },
+};
+
+const LOOK_EDITORIAL: Partial<Style> = {
   layout: "editorial",
   fontFamily: "'Montserrat', sans-serif",
   displayFont: "'Cormorant Garamond', serif",
-  headlineWeight: 400,
   textWeight: 400,
-  headlineItalic: false,
   textItalic: false,
-  headlineSize: 176,
-  subtitleSize: 28,
   bodySize: 78,
   ctaSize: 82,
-  headlineColour: "#ffffff",
-  subtitleColour: "#ffffff",
   bodyColour: "#ffffff",
   ctaColour: "#ffffff",
   lineColour: "#ffffff",
@@ -86,34 +128,25 @@ const EDITORIAL_STYLE: Style = {
   letterSpacing: 0,
   lineHeight: 1.14,
   align: "left",
-  coverY: 88,
   bodyY: 86,
   overlay: 0,
   scrim: 64,
   shadow: false,
-  background: "#8a8a8a",
   frame: true,
   counter: true,
   brandMark: true,
   arrow: true,
   rule: true,
-  showLogo: false,
 };
 
-const CLASSIC_STYLE: Style = {
+const LOOK_CLASSIC: Partial<Style> = {
   layout: "classic",
   fontFamily: "'Montserrat', sans-serif",
   displayFont: "'Montserrat', sans-serif",
-  headlineWeight: 300,
   textWeight: 300,
-  headlineItalic: false,
   textItalic: false,
-  headlineSize: 170,
-  subtitleSize: 52,
   bodySize: 62,
   ctaSize: 66,
-  headlineColour: "#38b6ff",
-  subtitleColour: "#ffffff",
   bodyColour: "#ffffff",
   ctaColour: "#ffffff",
   lineColour: "#ffffff",
@@ -121,21 +154,25 @@ const CLASSIC_STYLE: Style = {
   letterSpacing: 1,
   lineHeight: 1.25,
   align: "centre",
-  coverY: 58,
   bodyY: 50,
   overlay: 12,
   scrim: 0,
   shadow: true,
-  background: "#8a8a8a",
   frame: false,
   counter: false,
   brandMark: false,
   arrow: false,
   rule: false,
-  showLogo: false,
 };
 
-const DEFAULT_STYLE = EDITORIAL_STYLE;
+const DEFAULT_STYLE: Style = {
+  ...COVER_PRESETS.band,
+  ...LOOK_EDITORIAL,
+  cvBand: "#666666",
+  cvY: 58,
+  background: "#8a8a8a",
+  showLogo: false,
+} as Style;
 
 type Post = {
   id: string;
@@ -147,6 +184,31 @@ type Post = {
 
 type SlideKind = "cover" | "body" | "cta";
 type SlideSpec = { kind: SlideKind; text: string; sub: string };
+
+const COVER_FONTS = [
+  { label: "Inter Tight", value: INTER_TIGHT },
+  { label: "Poppins", value: "'Poppins', sans-serif" },
+  { label: "Montserrat", value: "'Montserrat', sans-serif" },
+  { label: "Jost", value: "'Jost', sans-serif" },
+  { label: "Anton", value: "'Anton', sans-serif" },
+  { label: "Bebas Neue", value: "'Bebas Neue', sans-serif" },
+  { label: "Oswald", value: "'Oswald', sans-serif" },
+  { label: "Barlow Condensed", value: "'Barlow Condensed', sans-serif" },
+  { label: "Raleway", value: "'Raleway', sans-serif" },
+  { label: "Playfair Display", value: "'Playfair Display', serif" },
+  { label: "Cormorant Garamond", value: "'Cormorant Garamond', serif" },
+  { label: "DM Serif Display", value: "'DM Serif Display', serif" },
+];
+
+const COVER_WEIGHTS = [
+  { label: "Light", value: 300 },
+  { label: "Regular", value: 400 },
+  { label: "Medium", value: 500 },
+  { label: "Semi bold", value: 600 },
+  { label: "Bold", value: 700 },
+  { label: "Extra bold", value: 800 },
+  { label: "Black", value: 900 },
+];
 
 const WEIGHTS = [
   { label: "Light", value: 300 },
@@ -296,6 +358,174 @@ function drawLogo(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, positio
 
 type RenderMeta = { index: number; total: number };
 
+function drawPhotoIn(
+  ctx: CanvasRenderingContext2D, bmp: ImageBitmap,
+  x: number, y: number, w: number, h: number, focus: number, axis: "x" | "y",
+) {
+  const sc = Math.max(w / bmp.width, h / bmp.height);
+  const dw = bmp.width * sc;
+  const dh = bmp.height * sc;
+  const dx = x + (w - dw) * (axis === "x" ? focus / 100 : 0.5);
+  const dy = y + (h - dh) * (axis === "y" ? focus / 100 : 0.5);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+  ctx.drawImage(bmp, dx, dy, dw, dh);
+  ctx.restore();
+}
+
+// Shrinks a heading to fit: one line if it can stay above 55% of the size, otherwise wrapped and balanced.
+function fitHeading(
+  ctx: CanvasRenderingContext2D, text: string, fontAt: (size: number) => string,
+  maxW: number, maxSize: number, maxLines = 3,
+): { size: number; lines: string[] } {
+  if (!text.includes("\n")) {
+    for (let sz = maxSize; sz >= maxSize * 0.55; sz -= 4) {
+      ctx.font = fontAt(sz);
+      if (ctx.measureText(text).width <= maxW) return { size: sz, lines: [text] };
+    }
+  }
+  let lines: string[] = [text];
+  let size = maxSize;
+  for (let sz = maxSize; sz >= 30; sz -= 4) {
+    ctx.font = fontAt(sz);
+    lines = balancedWrap(ctx, text, maxW);
+    size = sz;
+    if (lines.length <= maxLines && widest(ctx, lines) <= maxW) break;
+  }
+  return { size, lines };
+}
+
+async function drawCover(
+  ctx: CanvasRenderingContext2D, spec: SlideSpec, photo: File | null, style: Style,
+  logo: HTMLImageElement | null, preset: ClientPreset | null,
+) {
+  const layout = style.coverLayout;
+  const bmp = photo ? await (async () => {
+    const blob = await prepareImage(photo);
+    return blob ? createImageBitmap(blob) : null;
+  })() : null;
+
+  const heading = style.cvCaps ? spec.text.toUpperCase() : spec.text;
+  const subtitle = spec.sub ? (style.cvSubCaps ? spec.sub.toUpperCase() : spec.sub) : "";
+  const headFont = (sz: number) => `${style.cvWeight} ${sz}px ${style.cvFont}`;
+  const subFont = `${style.cvSubWeight} ${style.cvSubSize}px ${style.cvSubFont}`;
+  const lineH = (sz: number) => Math.round(sz * (layout === "centred" ? 1.05 : 0.94));
+  ctx.textBaseline = "top";
+
+  const drawLines = (lines: string[], x: number, y: number, lh: number, align: CanvasTextAlign) => {
+    ctx.textAlign = align;
+    for (const l of lines) { ctx.fillText(l, x, y); y += lh; }
+    return y;
+  };
+
+  if (layout === "band") {
+    const photoH = Math.round(H * (style.cvPhoto / 100));
+    const bandH = H - photoH;
+    ctx.fillStyle = style.cvBlock;
+    ctx.fillRect(0, 0, W, H);
+    if (bmp) drawPhotoIn(ctx, bmp, 0, 0, W, photoH, style.cvFocus, "y");
+    const x = 96, maxW = W - x * 2;
+    setSpacing(ctx, style.cvTracking);
+    const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, 2);
+    const lh = lineH(fit.size);
+    ctx.font = subFont;
+    setSpacing(ctx, 4);
+    const subLines = subtitle ? balancedWrap(ctx, subtitle, maxW) : [];
+    const subH = subLines.length * Math.round(style.cvSubSize * 1.4);
+    const total = fit.lines.length * lh + (subLines.length ? 26 + subH : 0);
+    let y = photoH + Math.round((bandH - total) / 2);
+    ctx.font = headFont(fit.size);
+    setSpacing(ctx, style.cvTracking);
+    ctx.fillStyle = style.cvColour;
+    y = drawLines(fit.lines, x, y, lh, "left") + 26;
+    if (subLines.length) {
+      ctx.font = subFont; setSpacing(ctx, 4); ctx.fillStyle = style.cvSubColour;
+      drawLines(subLines, x, y, Math.round(style.cvSubSize * 1.4), "left");
+    }
+  } else if (layout === "block") {
+    const photoH = Math.round(H * (style.cvPhoto / 100));
+    ctx.fillStyle = style.cvBlock;
+    ctx.fillRect(0, 0, W, H);
+    if (bmp) drawPhotoIn(ctx, bmp, 0, 0, W, photoH, style.cvFocus, "y");
+    const x = 50, maxW = W - x * 2;
+    setSpacing(ctx, style.cvTracking);
+    const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, 2);
+    const lh = lineH(fit.size);
+    const blockH = H - photoH;
+    const top = photoH + Math.round(blockH * 0.42 - (fit.lines.length * lh) / 2);
+    ctx.font = headFont(fit.size);
+    setSpacing(ctx, style.cvTracking);
+    ctx.fillStyle = style.cvColour;
+    drawLines(fit.lines, x, top, lh, "left");
+    if (subtitle) {
+      ctx.font = subFont; setSpacing(ctx, 0); ctx.fillStyle = style.cvSubColour;
+      const subLines = balancedWrap(ctx, subtitle, maxW);
+      const sh = Math.round(style.cvSubSize * 1.25);
+      drawLines(subLines, x + 12, H - 130 - subLines.length * sh, sh, "left");
+    }
+  } else if (layout === "split") {
+    const photoW = Math.round(W * (style.cvPhoto / 100));
+    ctx.fillStyle = style.cvBlock;
+    ctx.fillRect(0, 0, W, H);
+    if (bmp) drawPhotoIn(ctx, bmp, 0, 0, photoW, H, style.cvFocus, "x");
+    if (style.cvBandOn) {
+      ctx.fillStyle = style.cvBand;
+      ctx.fillRect(photoW, H - 133, W - photoW, 133);
+    }
+    const x0 = photoW + 50, x1 = W - 60, maxW = x1 - x0;
+    setSpacing(ctx, style.cvTracking);
+    const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, 4);
+    const lh = lineH(fit.size);
+    const top = Math.round(H * 0.255 - (fit.lines.length * lh) / 2);
+    ctx.font = headFont(fit.size);
+    setSpacing(ctx, style.cvTracking);
+    ctx.fillStyle = style.cvColour;
+    const bottom = drawLines(fit.lines, x0, top, lh, "left");
+    if (subtitle) {
+      ctx.font = subFont; setSpacing(ctx, 0); ctx.fillStyle = style.cvSubColour;
+      const subLines = balancedWrap(ctx, subtitle, maxW);
+      drawLines(subLines, x1, bottom + 110, Math.round(style.cvSubSize * 1.3), "right");
+    }
+  } else {
+    // centred: full bleed photo, heading and subtitle in the middle
+    ctx.fillStyle = style.background;
+    ctx.fillRect(0, 0, W, H);
+    if (bmp) drawPhotoIn(ctx, bmp, 0, 0, W, H, 50, "y");
+    if (style.overlay > 0) {
+      ctx.fillStyle = `rgba(0,0,0,${style.overlay / 100})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+    const maxW = W - 180;
+    setSpacing(ctx, style.cvTracking);
+    const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, 3);
+    const lh = lineH(fit.size);
+    ctx.font = subFont;
+    setSpacing(ctx, style.cvTracking);
+    const subLines = subtitle ? balancedWrap(ctx, subtitle, maxW) : [];
+    const sh = Math.round(style.cvSubSize * 1.25);
+    const total = fit.lines.length * lh + (subLines.length ? 30 + subLines.length * sh : 0);
+    let y = Math.round((style.cvY / 100) * H - total / 2);
+    if (style.shadow) { ctx.shadowColor = "rgba(0,0,0,0.35)"; ctx.shadowBlur = 14; ctx.shadowOffsetY = 2; }
+    ctx.font = headFont(fit.size);
+    setSpacing(ctx, style.cvTracking);
+    ctx.fillStyle = style.cvColour;
+    y = drawLines(fit.lines, W / 2, y, lh, "center") + 30;
+    if (subLines.length) {
+      ctx.font = subFont; setSpacing(ctx, style.cvTracking); ctx.fillStyle = style.cvSubColour;
+      drawLines(subLines, W / 2, y, sh, "center");
+    }
+    ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  }
+
+  bmp?.close();
+  setSpacing(ctx, 0);
+  if (logo && style.showLogo && preset) {
+    drawLogo(ctx, logo, preset.logoPosition || "top-left", preset.logoSize || 110);
+  }
+}
+
 async function renderSlide(
   spec: SlideSpec,
   photo: File | null,
@@ -310,6 +540,11 @@ async function renderSlide(
   canvas.height = Math.round(H * scale);
   const ctx = canvas.getContext("2d")!;
   ctx.scale(scale, scale);
+
+  if (spec.kind === "cover") {
+    await drawCover(ctx, spec, photo, style, logo, preset);
+    return canvas;
+  }
 
   ctx.fillStyle = style.background;
   ctx.fillRect(0, 0, W, H);
@@ -348,66 +583,25 @@ async function renderSlide(
   const x = left ? M : W / 2;
   const maxW = W - M * 2;
   const up = (t: string) => (style.uppercase ? t.toUpperCase() : t);
-  const italic = (on: boolean) => (on ? "italic " : "");
   const display = style.displayFont;
-  const sans = style.fontFamily;
   const blocks: Block[] = [];
 
   ctx.textAlign = left ? "left" : "center";
   ctx.textBaseline = "top";
   setSpacing(ctx, style.letterSpacing);
 
-  if (spec.kind === "cover") {
-    const text = up(spec.text);
-    const fontAt = (s: number) => `${italic(style.headlineItalic)}${style.headlineWeight} ${s}px ${display}`;
-    let size = style.headlineSize;
-    let lines: string[] = [text];
-    let fitted = false;
-    // Keep short headlines on a single line by shrinking a little, otherwise wrap and balance.
-    if (!text.includes("\n")) {
-      for (let s = style.headlineSize; s >= style.headlineSize * 0.6; s -= 4) {
-        ctx.font = fontAt(s);
-        if (ctx.measureText(text).width <= maxW) { size = s; lines = [text]; fitted = true; break; }
-      }
-    }
-    if (!fitted) {
-      for (let s = style.headlineSize; s >= 40; s -= 4) {
-        ctx.font = fontAt(s);
-        lines = balancedWrap(ctx, text, maxW);
-        size = s;
-        if (lines.length <= 3 && widest(ctx, lines) <= maxW) break;
-      }
-    }
-    blocks.push({
-      lines, font: fontAt(size),
-      lineH: Math.round(size * (editorial ? 1.0 : 1.05)), colour: style.headlineColour, gapBefore: 0, spacing: style.letterSpacing,
-    });
-    if (spec.sub) {
-      const f = `${style.textWeight} ${style.subtitleSize}px ${sans}`;
-      const sp = editorial ? 7 : style.letterSpacing;
-      ctx.font = f;
-      setSpacing(ctx, sp);
-      const subText = editorial || style.uppercase ? spec.sub.toUpperCase() : spec.sub;
-      blocks.push({
-        lines: balancedWrap(ctx, subText, maxW), font: f,
-        lineH: Math.round(style.subtitleSize * (editorial ? 1.5 : style.lineHeight)),
-        colour: style.subtitleColour, gapBefore: editorial ? 34 : 30, spacing: sp,
-      });
-    }
-  } else {
-    const isCta = spec.kind === "cta";
-    const size = isCta ? style.ctaSize : style.bodySize;
-    const f = `${italic(isCta && editorial ? true : style.textItalic)}${style.textWeight} ${size}px ${display}`;
-    ctx.font = f;
-    blocks.push({
-      lines: balancedWrap(ctx, up(spec.text), maxW - (left ? 40 : 30)), font: f,
-      lineH: Math.round(size * style.lineHeight),
-      colour: isCta ? style.ctaColour : style.bodyColour, gapBefore: 0, spacing: style.letterSpacing,
-    });
-  }
+  const isCta = spec.kind === "cta";
+  const size = isCta ? style.ctaSize : style.bodySize;
+  const f = `${isCta && editorial ? "italic " : style.textItalic ? "italic " : ""}${style.textWeight} ${size}px ${display}`;
+  ctx.font = f;
+  blocks.push({
+    lines: balancedWrap(ctx, up(spec.text), maxW - (left ? 40 : 30)), font: f,
+    lineH: Math.round(size * style.lineHeight),
+    colour: isCta ? style.ctaColour : style.bodyColour, gapBefore: 0, spacing: style.letterSpacing,
+  });
 
   const total = blocks.reduce((sum, b) => sum + b.gapBefore + b.lines.length * b.lineH, 0);
-  const anchor = ((spec.kind === "cover" ? style.coverY : style.bodyY) / 100) * H;
+  const anchor = (style.bodyY / 100) * H;
   // Editorial text hangs from a fixed bottom edge; classic text is centred on the anchor.
   let y = Math.round(editorial ? anchor - total : anchor - total / 2);
   const blockTop = y;
@@ -448,7 +642,7 @@ async function renderSlide(
     ctx.globalAlpha = 1;
   }
   if (style.counter || (style.brandMark && preset)) {
-    ctx.font = `400 22px ${sans}`;
+    ctx.font = `400 22px ${style.fontFamily}`;
     setSpacing(ctx, 6);
     ctx.textBaseline = "middle";
     ctx.fillStyle = style.lineColour;
@@ -485,10 +679,10 @@ async function renderSlide(
 
 async function warmFonts(style: Style) {
   await Promise.allSettled([
-    document.fonts.load(`${style.headlineItalic ? "italic " : ""}${style.headlineWeight} ${style.headlineSize}px ${style.displayFont}`),
+    document.fonts.load(`${style.cvWeight} ${style.cvSize}px ${style.cvFont}`),
+    document.fonts.load(`${style.cvSubWeight} ${style.cvSubSize}px ${style.cvSubFont}`),
     document.fonts.load(`${style.textItalic ? "italic " : ""}${style.textWeight} ${style.bodySize}px ${style.displayFont}`),
     document.fonts.load(`italic ${style.textWeight} ${style.ctaSize}px ${style.displayFont}`),
-    document.fonts.load(`${style.textWeight} ${style.subtitleSize}px ${style.fontFamily}`),
     document.fonts.load(`400 22px ${style.fontFamily}`),
   ]);
 }
@@ -864,10 +1058,10 @@ export default function Stylish() {
     if (!preset) { toast.error("Choose a client first"); return; }
     patch({
       displayFont: preset.fontFamily || style.displayFont,
-      headlineColour: style.layout === "editorial" ? (preset.textColor || style.headlineColour) : (preset.accentColor || style.headlineColour),
       lineColour: preset.accentColor || style.lineColour,
+      cvBand: preset.accentColor || style.cvBand,
+      cvColour: style.coverLayout === "centred" ? (preset.accentColor || style.cvColour) : style.cvColour,
       bodyColour: preset.textColor || style.bodyColour,
-      subtitleColour: preset.textColor || style.subtitleColour,
       ctaColour: preset.textColor || style.ctaColour,
       showLogo: !!preset.logoUrl,
     });
@@ -1001,30 +1195,136 @@ export default function Stylish() {
           </section>
 
           <section className="space-y-4 border-t border-border/30 pt-5">
-            <h3 className="text-sm font-semibold">Look</h3>
+            <h3 className="text-sm font-semibold">Slide 1: cover</h3>
+            <div className="grid grid-cols-4 gap-2">
+              {(["band", "centred", "block", "split"] as CoverLayout[]).map((k, i) => (
+                <button
+                  key={k} type="button"
+                  onClick={() => patch(COVER_PRESETS[k])}
+                  className={["rounded-lg border p-1.5 flex flex-col items-center gap-1 transition-colors", style.coverLayout === k ? "border-sky-500 bg-sky-500/10" : "border-border/40 hover:border-border/70"].join(" ")}
+                  aria-label={`Cover option ${i + 1}`}
+                >
+                  <div className="relative w-9 h-12 rounded-sm overflow-hidden bg-neutral-100 border border-border/30">
+                    {k === "band" && (<><div className="absolute inset-x-0 top-0 h-[74%] bg-amber-700/70" /><div className="absolute left-1 bottom-1.5 w-5 h-1 bg-black" /></>)}
+                    {k === "centred" && (<><div className="absolute inset-0 bg-amber-700/70" /><div className="absolute left-1.5 right-1.5 top-[42%] h-1 bg-sky-400" /><div className="absolute left-2.5 right-2.5 top-[58%] h-0.5 bg-white" /></>)}
+                    {k === "block" && (<><div className="absolute inset-x-0 top-0 h-[38%] bg-amber-700/70" /><div className="absolute left-1 right-1 top-[58%] h-2 bg-black" /><div className="absolute left-1 bottom-1.5 w-3 h-0.5 bg-black" /></>)}
+                    {k === "split" && (<><div className="absolute inset-y-0 left-0 w-[47%] bg-amber-700/70" /><div className="absolute left-[54%] right-1 top-[24%] h-1.5 bg-black" /><div className="absolute right-1 bottom-0 left-[47%] h-1.5 bg-neutral-500" /></>)}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">Option {i + 1}</span>
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {style.coverLayout === "band" && "Photo fills the slide with a thick colour band along the bottom."}
+              {style.coverLayout === "centred" && "Full photo with the headline and subtitle centred in the middle."}
+              {style.coverLayout === "block" && "Photo across the top with a big bold headline on a colour block."}
+              {style.coverLayout === "split" && "Photo on the left, colour block on the right with the headline."}
+              {" "}Picking one loads its fonts and colours, then change whatever you like.
+            </p>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Headline font</Label>
+              <Select value={style.cvFont} onValueChange={v => patch({ cvFont: v })}>
+                <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {COVER_FONTS.map(f => (
+                    <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Subtitle font</Label>
+              <Select value={style.cvSubFont} onValueChange={v => patch({ cvSubFont: v })}>
+                <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  {COVER_FONTS.map(f => (
+                    <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Headline weight</Label>
+                <Select value={String(style.cvWeight)} onValueChange={v => patch({ cvWeight: Number(v) })}>
+                  <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>{COVER_WEIGHTS.map(w => <SelectItem key={w.value} value={String(w.value)}>{w.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Subtitle weight</Label>
+                <Select value={String(style.cvSubWeight)} onValueChange={v => patch({ cvSubWeight: Number(v) })}>
+                  <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>{COVER_WEIGHTS.map(w => <SelectItem key={w.value} value={String(w.value)}>{w.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+            <SliderField label="Headline size (shrinks to fit)" value={style.cvSize} min={60} max={380} step={2} suffix="px" onChange={v => patch({ cvSize: v })} />
+            <SliderField label="Subtitle size" value={style.cvSubSize} min={20} max={100} suffix="px" onChange={v => patch({ cvSubSize: v })} />
+            <SliderField label="Headline letter spacing" value={style.cvTracking} min={-12} max={12} step={0.5} suffix="px" onChange={v => patch({ cvTracking: v })} />
+            {style.coverLayout !== "centred" && (
+              <>
+                <SliderField
+                  label={style.coverLayout === "split" ? "Photo width" : "Photo height"}
+                  value={style.cvPhoto} min={style.coverLayout === "split" ? 25 : 20} max={style.coverLayout === "split" ? 75 : 85} step={0.5} suffix="%"
+                  onChange={v => patch({ cvPhoto: v })}
+                />
+                <SliderField
+                  label={style.coverLayout === "split" ? "Photo focus (left to right)" : "Photo focus (top to bottom)"}
+                  value={style.cvFocus} min={0} max={100} suffix="%" onChange={v => patch({ cvFocus: v })}
+                />
+              </>
+            )}
+            {style.coverLayout === "centred" && (
+              <SliderField label="Text height" value={style.cvY} min={15} max={90} suffix="%" onChange={v => patch({ cvY: v })} />
+            )}
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={style.cvCaps} onChange={e => patch({ cvCaps: e.target.checked })} className="accent-sky-500" />
+              Capital letters on the headline
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={style.cvSubCaps} onChange={e => patch({ cvSubCaps: e.target.checked })} className="accent-sky-500" />
+              Capital letters on the subtitle
+            </label>
+            {style.coverLayout === "split" && (
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={style.cvBandOn} onChange={e => patch({ cvBandOn: e.target.checked })} className="accent-sky-500" />
+                Band along the bottom
+              </label>
+            )}
+            <div className="space-y-3 pt-1">
+              <ColourField label="Headline colour" value={style.cvColour} onChange={v => patch({ cvColour: v })} />
+              <ColourField label="Subtitle colour" value={style.cvSubColour} onChange={v => patch({ cvSubColour: v })} />
+              {style.coverLayout !== "centred" && (
+                <ColourField label={style.coverLayout === "band" ? "Band colour" : "Block colour"} value={style.cvBlock} onChange={v => patch({ cvBlock: v })} />
+              )}
+              {style.coverLayout === "split" && style.cvBandOn && (
+                <ColourField label="Bottom band colour" value={style.cvBand} onChange={v => patch({ cvBand: v })} />
+              )}
+            </div>
+          </section>
+
+          <section className="space-y-4 border-t border-border/30 pt-5">
+            <h3 className="text-sm font-semibold">Slides 2 onwards: photo with text</h3>
             <div className="grid grid-cols-2 gap-2">
               <Button
                 size="sm" variant={style.layout === "editorial" ? "default" : "outline"}
                 className={style.layout === "editorial" ? "bg-sky-600 hover:bg-sky-700 text-white" : ""}
-                onClick={() => setStyle(EDITORIAL_STYLE)}
+                onClick={() => patch(LOOK_EDITORIAL)}
               >Editorial</Button>
               <Button
                 size="sm" variant={style.layout === "classic" ? "default" : "outline"}
                 className={style.layout === "classic" ? "bg-sky-600 hover:bg-sky-700 text-white" : ""}
-                onClick={() => setStyle(CLASSIC_STYLE)}
+                onClick={() => patch(LOOK_CLASSIC)}
               >Classic centred</Button>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
               Picking a look resets the settings below to that look. Change anything after that and it sticks.
             </p>
-          </section>
-
-          <section className="space-y-4 border-t border-border/30 pt-5">
-            <h3 className="text-sm font-semibold">Text</h3>
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Headline and slide font</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Slide text font</Label>
               <Select value={style.displayFont} onValueChange={v => patch({ displayFont: v })}>
-                <SelectTrigger className="bg-muted/30 border-border/40"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
                   {FONT_OPTIONS.map(f => (
                     <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
@@ -1032,10 +1332,10 @@ export default function Stylish() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Small text font (subtitle, counter)</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Small text font (counter)</Label>
               <Select value={style.fontFamily} onValueChange={v => patch({ fontFamily: v })}>
-                <SelectTrigger className="bg-muted/30 border-border/40"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
                   {FONT_OPTIONS.map(f => (
                     <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
@@ -1045,45 +1345,31 @@ export default function Stylish() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Headline weight</Label>
-                <Select value={String(style.headlineWeight)} onValueChange={v => patch({ headlineWeight: Number(v) })}>
-                  <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
-                  <SelectContent>{WEIGHTS.map(w => <SelectItem key={w.value} value={String(w.value)}>{w.label}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Text weight</Label>
                 <Select value={String(style.textWeight)} onValueChange={v => patch({ textWeight: Number(v) })}>
                   <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                   <SelectContent>{WEIGHTS.map(w => <SelectItem key={w.value} value={String(w.value)}>{w.label}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Alignment</Label>
+                <Select value={style.align} onValueChange={v => patch({ align: v as Style["align"] })}>
+                  <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="left">Left</SelectItem>
+                    <SelectItem value="centre">Centre</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Alignment</Label>
-              <Select value={style.align} onValueChange={v => patch({ align: v as Style["align"] })}>
-                <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="left">Left</SelectItem>
-                  <SelectItem value="centre">Centre</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <SliderField label="Headline size (shrinks to fit)" value={style.headlineSize} min={80} max={260} step={2} suffix="px" onChange={v => patch({ headlineSize: v })} />
-            <SliderField label="Subtitle size" value={style.subtitleSize} min={20} max={100} suffix="px" onChange={v => patch({ subtitleSize: v })} />
             <SliderField label="Slide text size" value={style.bodySize} min={36} max={120} suffix="px" onChange={v => patch({ bodySize: v })} />
             <SliderField label="CTA size" value={style.ctaSize} min={36} max={120} suffix="px" onChange={v => patch({ ctaSize: v })} />
             <SliderField label="Letter spacing" value={style.letterSpacing} min={0} max={10} step={0.5} suffix="px" onChange={v => patch({ letterSpacing: v })} />
             <SliderField label="Line height" value={style.lineHeight} min={1} max={1.8} step={0.02} onChange={v => patch({ lineHeight: v })} />
-            <SliderField label={style.layout === "editorial" ? "Cover text bottom edge" : "Cover text height"} value={style.coverY} min={15} max={95} suffix="%" onChange={v => patch({ coverY: v })} />
-            <SliderField label={style.layout === "editorial" ? "Slide text bottom edge" : "Slide text height"} value={style.bodyY} min={15} max={95} suffix="%" onChange={v => patch({ bodyY: v })} />
+            <SliderField label={style.layout === "editorial" ? "Text bottom edge" : "Text height"} value={style.bodyY} min={15} max={95} suffix="%" onChange={v => patch({ bodyY: v })} />
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={style.uppercase} onChange={e => patch({ uppercase: e.target.checked })} className="accent-sky-500" />
               Capital letters
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={style.headlineItalic} onChange={e => patch({ headlineItalic: e.target.checked })} className="accent-sky-500" />
-              Italic headline
             </label>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={style.textItalic} onChange={e => patch({ textItalic: e.target.checked })} className="accent-sky-500" />
@@ -1119,14 +1405,12 @@ export default function Stylish() {
             </label>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={style.showLogo} onChange={e => patch({ showLogo: e.target.checked })} className="accent-sky-500" />
-              Client logo
+              Client logo (all slides)
             </label>
           </section>
 
           <section className="space-y-3 border-t border-border/30 pt-5">
-            <h3 className="text-sm font-semibold">Colours</h3>
-            <ColourField label="Cover headline" value={style.headlineColour} onChange={v => patch({ headlineColour: v })} />
-            <ColourField label="Cover subtitle" value={style.subtitleColour} onChange={v => patch({ subtitleColour: v })} />
+            <h3 className="text-sm font-semibold">Colours for slides 2 onwards</h3>
             <ColourField label="Slide text" value={style.bodyColour} onChange={v => patch({ bodyColour: v })} />
             <ColourField label="CTA" value={style.ctaColour} onChange={v => patch({ ctaColour: v })} />
             <ColourField label="Lines, frame, counter" value={style.lineColour} onChange={v => patch({ lineColour: v })} />
