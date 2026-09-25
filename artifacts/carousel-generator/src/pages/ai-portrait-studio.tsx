@@ -109,6 +109,29 @@ const HOMEWORK_SHOTS_PRESETS: PhotoStudioPreset[] = [
   { id: "hw-20", name: "Casual Lean", hasColour: true },
 ];
 
+const WINTER_WOOLIES_PRESETS: PhotoStudioPreset[] = [
+  { id: "ww-01", name: "Cream Cowl Clinic Desk", hasColour: false },
+  { id: "ww-02", name: "Coffee Off-Shoulder Armchair", hasColour: false },
+  { id: "ww-03", name: "Mustard Cable Knit Treatment Room", hasColour: false },
+  { id: "ww-04", name: "Sage Cowl Sofa", hasColour: false },
+  { id: "ww-05", name: "Black Jumper Dress Clinic", hasColour: false },
+  { id: "ww-06", name: "White Cable Knit Armchair", hasColour: false },
+  { id: "ww-07", name: "Brown Off-Shoulder Sofa", hasColour: false },
+  { id: "ww-08", name: "Navy Cowl Consultation Room", hasColour: false },
+  { id: "ww-09", name: "Purple Oversized Fireplace", hasColour: false },
+  { id: "ww-10", name: "Cream Jumper Dress Window Seat", hasColour: false },
+  { id: "ww-11", name: "Coffee Cowl Clinic Laptop", hasColour: false },
+  { id: "ww-12", name: "Mustard Off-Shoulder Tea Sofa", hasColour: false },
+  { id: "ww-13", name: "Sage Chunky Corridor", hasColour: false },
+  { id: "ww-14", name: "Black Cowl Reading Nook", hasColour: false },
+  { id: "ww-15", name: "White Jumper Dress Chaise", hasColour: false },
+  { id: "ww-16", name: "Brown Cowl Clinic Entrance", hasColour: false },
+  { id: "ww-17", name: "Navy Off-Shoulder Sofa Blanket", hasColour: false },
+  { id: "ww-18", name: "Purple Chunky Waiting Area", hasColour: false },
+  { id: "ww-19", name: "Cream Off-Shoulder Velvet Armchair", hasColour: false },
+  { id: "ww-20", name: "Coffee Jumper Dress Herringbone Sofa", hasColour: false },
+];
+
 const CLASSY_CORPORATE_PRESETS: PhotoStudioPreset[] = [
   { id: "cc-01", name: "Couch Lean", hasColour: false },
   { id: "cc-02", name: "Desk Smile", hasColour: false },
@@ -430,7 +453,7 @@ const MEN_SCRUBS_IDS  = ["cs-01","cs-02","cs-03","cs-04","cs-05","cs-06","cs-07"
 
 
 
-const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
+const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
 const findPreset = (id: string) => ALL_PRESETS.find((p) => p.id === id);
 
 const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
@@ -626,7 +649,7 @@ export default function AiPortraitStudio() {
   };
 
   const [activeGender, setActiveGender]   = useState<"women" | "men">("women");
-  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy">("new");
+  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter">("new");
   const [menScrubColor, setMenScrubColor] = useState("#453761");
 
   const selectAll = () => {
@@ -1390,6 +1413,7 @@ export default function AiPortraitStudio() {
                 { key: "injector", label: "Injector Collection" },
                 { key: "homework", label: "Homework Shots" },
                 { key: "classy", label: "CLASSY CORPORATE" },
+                { key: "winter", label: "WINTER WOOLIES" },
               ].map((tab) => (
                 <button
                   key={tab.key}
@@ -1516,6 +1540,55 @@ export default function AiPortraitStudio() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
               {CLASSY_CORPORATE_PRESETS.map((preset) => {
+                const isSelected = selectedPresets.has(preset.id);
+                return (
+                  <div
+                    key={preset.id}
+                    className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
+                      isSelected
+                        ? "border-violet-500/70 bg-violet-500/10"
+                        : "border-border/30 hover:border-border/60 hover:bg-muted/20"
+                    }`}
+                    onClick={() => togglePreset(preset.id)}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                        isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
+                      }`}>
+                        {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium leading-snug">{preset.name}</p>
+                        {preset.hasColour && (
+                          <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                            scrubs colour
+                          </Badge>
+                        )}
+                        {preset.hasColour && isSelected && (
+                          <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              value={presetColours[preset.id] ?? ""}
+                              onChange={(e) => setPresetColours((prev) => ({ ...prev, [preset.id]: e.target.value }))}
+                              placeholder="e.g. navy blue"
+                              className="w-full text-xs bg-background border border-border/50 rounded px-2 py-1 focus:outline-none focus:border-violet-500/50"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+
+{activeSection === "winter" && (
+<>
+<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">WINTER WOOLIES</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+              {WINTER_WOOLIES_PRESETS.map((preset) => {
                 const isSelected = selectedPresets.has(preset.id);
                 return (
                   <div
