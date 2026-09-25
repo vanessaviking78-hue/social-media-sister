@@ -23,7 +23,7 @@ if (typeof document !== "undefined" && !document.getElementById("stylish-fonts")
   const link = document.createElement("link");
   link.id = "stylish-fonts";
   link.rel = "stylesheet";
-  link.href = "https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800;900&family=Jost:wght@300;400;500;600&family=Poppins:wght@400;600;700;800&display=swap";
+  link.href = "https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800;900&family=Jost:wght@300;400;500;600&family=Poppins:wght@400;600;700;800&family=Instrument+Serif:ital@0;1&display=swap";
   document.head.appendChild(link);
 }
 
@@ -31,13 +31,13 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const W = 1080;
 const H = 1440;
 const SIDE_PAD = 90;
-const STYLE_STORAGE_KEY = "stylish-style-v3";
+const STYLE_STORAGE_KEY = "stylish-style-v4";
 
 // ---------------------------------------------------------------------------
 // Types and defaults
 // ---------------------------------------------------------------------------
 
-type CoverLayout = "band" | "centred" | "block" | "split";
+type CoverLayout = "band" | "centred" | "block" | "split" | "serif";
 
 type Style = {
   // Slide 1 (cover)
@@ -49,6 +49,8 @@ type Style = {
   cvCaps: boolean;
   cvSubCaps: boolean;
   cvTracking: number;
+  cvSubTracking: number;
+  cvScrim: number;
   cvSize: number;
   cvSubSize: number;
   cvColour: string;
@@ -88,28 +90,47 @@ type Style = {
 };
 
 const INTER_TIGHT = "'Inter Tight', sans-serif";
+const F_BREUL = "'Breul Grotesk', 'Inter Tight', sans-serif";
+const F_HELV = "'Helvetica Now Display', 'Inter Tight', sans-serif";
+const F_NOW = "'Now', 'Poppins', sans-serif";
+const F_EVOLVENTA = "'Evolventa', 'Montserrat', sans-serif";
+const F_INSTRUMENT = "'Instrument Serif', serif";
+
+// Fonts each cover is designed around. If a font is not free to bundle, the person adds their own copy.
+const COVER_WANTS: Record<CoverLayout, string[]> = {
+  band: ["Breul Grotesk"],
+  centred: ["Evolventa"],
+  block: ["Helvetica Now Display"],
+  split: ["Now"],
+  serif: [],
+};
 
 // Each cover layout brings its own type, colours and proportions. Everything can be changed afterwards.
 const COVER_PRESETS: Record<CoverLayout, Partial<Style>> = {
   band: {
-    coverLayout: "band", cvFont: INTER_TIGHT, cvSubFont: INTER_TIGHT, cvWeight: 900, cvSubWeight: 600,
-    cvCaps: true, cvSubCaps: true, cvTracking: -3, cvSize: 150, cvSubSize: 30,
+    coverLayout: "band", cvFont: F_BREUL, cvSubFont: F_BREUL, cvWeight: 700, cvSubWeight: 400,
+    cvCaps: true, cvSubCaps: true, cvTracking: -2, cvSubTracking: 4, cvSize: 150, cvSubSize: 30, cvScrim: 0,
     cvColour: "#000000", cvSubColour: "#000000", cvBlock: "#faf9f5", cvBandOn: false, cvPhoto: 74, cvFocus: 30,
   },
   centred: {
-    coverLayout: "centred", cvFont: "'Montserrat', sans-serif", cvSubFont: "'Montserrat', sans-serif", cvWeight: 300, cvSubWeight: 300,
-    cvCaps: true, cvSubCaps: true, cvTracking: 1, cvSize: 170, cvSubSize: 52,
+    coverLayout: "centred", cvFont: F_EVOLVENTA, cvSubFont: "'Montserrat', sans-serif", cvWeight: 700, cvSubWeight: 400,
+    cvCaps: true, cvSubCaps: true, cvTracking: 1, cvSubTracking: 2, cvSize: 170, cvSubSize: 46, cvScrim: 0,
     cvColour: "#38b6ff", cvSubColour: "#ffffff", cvPhoto: 100, cvFocus: 50, cvY: 58,
   },
   block: {
-    coverLayout: "block", cvFont: INTER_TIGHT, cvSubFont: INTER_TIGHT, cvWeight: 900, cvSubWeight: 800,
-    cvCaps: true, cvSubCaps: true, cvTracking: -8, cvSize: 300, cvSubSize: 34,
+    coverLayout: "block", cvFont: F_HELV, cvSubFont: F_HELV, cvWeight: 700, cvSubWeight: 400,
+    cvCaps: true, cvSubCaps: true, cvTracking: -6, cvSubTracking: 1, cvSize: 300, cvSubSize: 32, cvScrim: 0,
     cvColour: "#000000", cvSubColour: "#000000", cvBlock: "#e4e2dd", cvBandOn: false, cvPhoto: 38, cvFocus: 35,
   },
   split: {
-    coverLayout: "split", cvFont: "'Poppins', sans-serif", cvSubFont: "'Jost', sans-serif", cvWeight: 700, cvSubWeight: 400,
-    cvCaps: true, cvSubCaps: false, cvTracking: 0, cvSize: 120, cvSubSize: 46,
+    coverLayout: "split", cvFont: F_NOW, cvSubFont: F_NOW, cvWeight: 700, cvSubWeight: 400,
+    cvCaps: true, cvSubCaps: false, cvTracking: 0, cvSubTracking: 0, cvSize: 120, cvSubSize: 46, cvScrim: 0,
     cvColour: "#000000", cvSubColour: "#000000", cvBlock: "#ffffff", cvBand: "#666666", cvBandOn: true, cvPhoto: 47.5, cvFocus: 50,
+  },
+  serif: {
+    coverLayout: "serif", cvFont: F_INSTRUMENT, cvSubFont: F_INSTRUMENT, cvWeight: 400, cvSubWeight: 400,
+    cvCaps: true, cvSubCaps: false, cvTracking: -4, cvSubTracking: -2, cvSize: 170, cvSubSize: 66, cvScrim: 62,
+    cvColour: "#ffffff", cvSubColour: "#ffffff", cvPhoto: 100, cvFocus: 50, cvY: 90,
   },
 };
 
@@ -170,6 +191,7 @@ const DEFAULT_STYLE: Style = {
   ...LOOK_EDITORIAL,
   cvBand: "#666666",
   cvY: 58,
+  cvScrim: 0,
   background: "#8a8a8a",
   showLogo: false,
 } as Style;
@@ -187,6 +209,7 @@ type SlideSpec = { kind: SlideKind; text: string; sub: string };
 
 const COVER_FONTS = [
   { label: "Inter Tight", value: INTER_TIGHT },
+  { label: "Instrument Serif", value: F_INSTRUMENT },
   { label: "Poppins", value: "'Poppins', sans-serif" },
   { label: "Montserrat", value: "'Montserrat', sans-serif" },
   { label: "Jost", value: "'Jost', sans-serif" },
@@ -411,7 +434,8 @@ async function drawCover(
   const subtitle = spec.sub ? (style.cvSubCaps ? spec.sub.toUpperCase() : spec.sub) : "";
   const headFont = (sz: number) => `${style.cvWeight} ${sz}px ${style.cvFont}`;
   const subFont = `${style.cvSubWeight} ${style.cvSubSize}px ${style.cvSubFont}`;
-  const lineH = (sz: number) => Math.round(sz * (layout === "centred" ? 1.05 : 0.94));
+  const lineH = (sz: number) => Math.round(sz * (layout === "centred" ? 1.05 : layout === "serif" ? 0.9 : 0.94));
+  const subLineH = Math.round(style.cvSubSize * (layout === "serif" ? 1.05 : 1.3));
   ctx.textBaseline = "top";
 
   const drawLines = (lines: string[], x: number, y: number, lh: number, align: CanvasTextAlign) => {
@@ -419,6 +443,8 @@ async function drawCover(
     for (const l of lines) { ctx.fillText(l, x, y); y += lh; }
     return y;
   };
+  const setHead = (sz: number) => { ctx.font = headFont(sz); setSpacing(ctx, style.cvTracking); ctx.fillStyle = style.cvColour; };
+  const setSub = () => { ctx.font = subFont; setSpacing(ctx, style.cvSubTracking); ctx.fillStyle = style.cvSubColour; };
 
   if (layout === "band") {
     const photoH = Math.round(H * (style.cvPhoto / 100));
@@ -430,20 +456,13 @@ async function drawCover(
     setSpacing(ctx, style.cvTracking);
     const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, 2);
     const lh = lineH(fit.size);
-    ctx.font = subFont;
-    setSpacing(ctx, 4);
+    setSub();
     const subLines = subtitle ? balancedWrap(ctx, subtitle, maxW) : [];
-    const subH = subLines.length * Math.round(style.cvSubSize * 1.4);
-    const total = fit.lines.length * lh + (subLines.length ? 26 + subH : 0);
+    const total = fit.lines.length * lh + (subLines.length ? 26 + subLines.length * subLineH : 0);
     let y = photoH + Math.round((bandH - total) / 2);
-    ctx.font = headFont(fit.size);
-    setSpacing(ctx, style.cvTracking);
-    ctx.fillStyle = style.cvColour;
+    setHead(fit.size);
     y = drawLines(fit.lines, x, y, lh, "left") + 26;
-    if (subLines.length) {
-      ctx.font = subFont; setSpacing(ctx, 4); ctx.fillStyle = style.cvSubColour;
-      drawLines(subLines, x, y, Math.round(style.cvSubSize * 1.4), "left");
-    }
+    if (subLines.length) { setSub(); drawLines(subLines, x, y, subLineH, "left"); }
   } else if (layout === "block") {
     const photoH = Math.round(H * (style.cvPhoto / 100));
     ctx.fillStyle = style.cvBlock;
@@ -455,15 +474,12 @@ async function drawCover(
     const lh = lineH(fit.size);
     const blockH = H - photoH;
     const top = photoH + Math.round(blockH * 0.42 - (fit.lines.length * lh) / 2);
-    ctx.font = headFont(fit.size);
-    setSpacing(ctx, style.cvTracking);
-    ctx.fillStyle = style.cvColour;
+    setHead(fit.size);
     drawLines(fit.lines, x, top, lh, "left");
     if (subtitle) {
-      ctx.font = subFont; setSpacing(ctx, 0); ctx.fillStyle = style.cvSubColour;
+      setSub();
       const subLines = balancedWrap(ctx, subtitle, maxW);
-      const sh = Math.round(style.cvSubSize * 1.25);
-      drawLines(subLines, x + 12, H - 130 - subLines.length * sh, sh, "left");
+      drawLines(subLines, x + 12, H - 130 - subLines.length * subLineH, subLineH, "left");
     }
   } else if (layout === "split") {
     const photoW = Math.round(W * (style.cvPhoto / 100));
@@ -479,43 +495,42 @@ async function drawCover(
     const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, 4);
     const lh = lineH(fit.size);
     const top = Math.round(H * 0.255 - (fit.lines.length * lh) / 2);
-    ctx.font = headFont(fit.size);
-    setSpacing(ctx, style.cvTracking);
-    ctx.fillStyle = style.cvColour;
+    setHead(fit.size);
     const bottom = drawLines(fit.lines, x0, top, lh, "left");
     if (subtitle) {
-      ctx.font = subFont; setSpacing(ctx, 0); ctx.fillStyle = style.cvSubColour;
+      setSub();
       const subLines = balancedWrap(ctx, subtitle, maxW);
-      drawLines(subLines, x1, bottom + 110, Math.round(style.cvSubSize * 1.3), "right");
+      drawLines(subLines, x1, bottom + 110, subLineH, "right");
     }
   } else {
-    // centred: full bleed photo, heading and subtitle in the middle
+    // centred and serif: full bleed photo. Centred sits in the middle; serif hangs from a bottom edge on a soft gradient.
     ctx.fillStyle = style.background;
     ctx.fillRect(0, 0, W, H);
     if (bmp) drawPhotoIn(ctx, bmp, 0, 0, W, H, 50, "y");
-    if (style.overlay > 0) {
+    if (style.overlay > 0 && layout === "centred") {
       ctx.fillStyle = `rgba(0,0,0,${style.overlay / 100})`;
       ctx.fillRect(0, 0, W, H);
     }
-    const maxW = W - 180;
-    setSpacing(ctx, style.cvTracking);
-    const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, 3);
-    const lh = lineH(fit.size);
-    ctx.font = subFont;
-    setSpacing(ctx, style.cvTracking);
-    const subLines = subtitle ? balancedWrap(ctx, subtitle, maxW) : [];
-    const sh = Math.round(style.cvSubSize * 1.25);
-    const total = fit.lines.length * lh + (subLines.length ? 30 + subLines.length * sh : 0);
-    let y = Math.round((style.cvY / 100) * H - total / 2);
-    if (style.shadow) { ctx.shadowColor = "rgba(0,0,0,0.35)"; ctx.shadowBlur = 14; ctx.shadowOffsetY = 2; }
-    ctx.font = headFont(fit.size);
-    setSpacing(ctx, style.cvTracking);
-    ctx.fillStyle = style.cvColour;
-    y = drawLines(fit.lines, W / 2, y, lh, "center") + 30;
-    if (subLines.length) {
-      ctx.font = subFont; setSpacing(ctx, style.cvTracking); ctx.fillStyle = style.cvSubColour;
-      drawLines(subLines, W / 2, y, sh, "center");
+    if (layout === "serif" && style.cvScrim > 0) {
+      const g = ctx.createLinearGradient(0, H * 0.3, 0, H);
+      g.addColorStop(0, "rgba(0,0,0,0)");
+      g.addColorStop(1, `rgba(0,0,0,${style.cvScrim / 100})`);
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
     }
+    const maxW = layout === "serif" ? W - 90 : W - 180;
+    setSpacing(ctx, style.cvTracking);
+    const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, layout === "serif" ? 4 : 3);
+    const lh = lineH(fit.size);
+    setSub();
+    const subLines = subtitle ? balancedWrap(ctx, subtitle, maxW) : [];
+    const total = fit.lines.length * lh + (subLines.length ? (layout === "serif" ? 22 : 30) + subLines.length * subLineH : 0);
+    const anchor = (style.cvY / 100) * H;
+    let y = Math.round(layout === "serif" ? anchor - total : anchor - total / 2);
+    if (style.shadow && layout === "centred") { ctx.shadowColor = "rgba(0,0,0,0.35)"; ctx.shadowBlur = 14; ctx.shadowOffsetY = 2; }
+    setHead(fit.size);
+    y = drawLines(fit.lines, W / 2, y, lh, "center") + (layout === "serif" ? 22 : 30);
+    if (subLines.length) { setSub(); drawLines(subLines, W / 2, y, subLineH, "center"); }
     ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   }
 
@@ -718,6 +733,86 @@ function makeId() {
 }
 
 // ---------------------------------------------------------------------------
+// Your own fonts. Files stay in this browser only (IndexedDB) and are never uploaded anywhere.
+// ---------------------------------------------------------------------------
+
+type FontInfo = { family: string; compact: string; weight: number; italic: boolean };
+
+function parseFontFile(fileName: string): FontInfo {
+  let base = fileName.replace(/\.[^.]+$/, "");
+  const lower = base.toLowerCase();
+  const italic = /italic|oblique/.test(lower);
+  const weights: [RegExp, number][] = [
+    [/extra[-_ ]?black|ultra/, 950], [/black|heavy/, 900], [/extra[-_ ]?bold|ultra[-_ ]?bold/, 800],
+    [/semi[-_ ]?bold|demi/, 600], [/bold/, 700], [/medium/, 500], [/extra[-_ ]?light|ultra[-_ ]?light/, 200],
+    [/thin|hairline/, 100], [/light/, 300],
+  ];
+  let weight = 400;
+  for (const [re, w] of weights) if (re.test(lower)) { weight = Math.min(w, 900); break; }
+  base = base.replace(/([-_ ]?(extra|ultra|semi|demi)?[-_ ]?(black|heavy|bold|medium|light|thin|hairline|regular|italic|oblique|book|roman))+$/i, "");
+  const spaced = base.replace(/[-_]+/g, " ").replace(/([a-z])([A-Z])/g, "$1 $2").replace(/\s+/g, " ").trim() || "My font";
+  return { family: spaced, compact: spaced.replace(/\s+/g, ""), weight, italic };
+}
+
+const fontFaceRegistry = new Map<string, FontFace[]>();
+
+async function registerFont(fileName: string, data: ArrayBuffer): Promise<string | null> {
+  try {
+    const info = parseFontFile(fileName);
+    const faces: FontFace[] = [];
+    for (const fam of new Set([info.family, info.compact])) {
+      const face = new FontFace(fam, data.slice(0), { weight: String(info.weight), style: info.italic ? "italic" : "normal" });
+      await face.load();
+      document.fonts.add(face);
+      faces.push(face);
+    }
+    fontFaceRegistry.set(fileName, faces);
+    return info.family;
+  } catch {
+    return null;
+  }
+}
+
+function openFontDb(): Promise<IDBDatabase | null> {
+  return new Promise(resolve => {
+    try {
+      const req = indexedDB.open("stylish-fonts", 1);
+      req.onupgradeneeded = () => req.result.createObjectStore("fonts");
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    } catch { resolve(null); }
+  });
+}
+
+async function fontDbAll(): Promise<{ name: string; data: ArrayBuffer }[]> {
+  const db = await openFontDb();
+  if (!db) return [];
+  return new Promise(resolve => {
+    try {
+      const out: { name: string; data: ArrayBuffer }[] = [];
+      const cur = db.transaction("fonts").objectStore("fonts").openCursor();
+      cur.onsuccess = () => {
+        const c = cur.result;
+        if (c) { out.push({ name: String(c.key), data: c.value as ArrayBuffer }); c.continue(); } else resolve(out);
+      };
+      cur.onerror = () => resolve(out);
+    } catch { resolve([]); }
+  });
+}
+
+async function fontDbPut(name: string, data: ArrayBuffer) {
+  const db = await openFontDb();
+  if (!db) return;
+  try { db.transaction("fonts", "readwrite").objectStore("fonts").put(data, name); } catch { /* not saved, still usable this visit */ }
+}
+
+async function fontDbDelete(name: string) {
+  const db = await openFontDb();
+  if (!db) return;
+  try { db.transaction("fonts", "readwrite").objectStore("fonts").delete(name); } catch { /* ignore */ }
+}
+
+// ---------------------------------------------------------------------------
 // Small UI pieces
 // ---------------------------------------------------------------------------
 
@@ -797,6 +892,54 @@ export default function Stylish() {
 
   const [tone, setTone] = useState("1");
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
+  const [customFonts, setCustomFonts] = useState<{ file: string; family: string }[]>([]);
+  const [fontVersion, setFontVersion] = useState(0);
+  const fontInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let dead = false;
+    (async () => {
+      const saved = await fontDbAll();
+      const loaded: { file: string; family: string }[] = [];
+      for (const f of saved) {
+        const fam = await registerFont(f.name, f.data);
+        if (fam) loaded.push({ file: f.name, family: fam });
+      }
+      if (!dead && loaded.length) { setCustomFonts(loaded); setFontVersion(v => v + 1); }
+    })();
+    return () => { dead = true; };
+  }, []);
+
+  const addFonts = async (files: File[]) => {
+    const added: { file: string; family: string }[] = [];
+    for (const f of files) {
+      if (!/\.(otf|ttf|woff2?|)$/i.test(f.name)) continue;
+      const data = await f.arrayBuffer();
+      const fam = await registerFont(f.name, data);
+      if (fam) { added.push({ file: f.name, family: fam }); await fontDbPut(f.name, data); }
+      else toast.error(`Could not read ${f.name}`);
+    }
+    if (added.length) {
+      setCustomFonts(list => [...list.filter(x => !added.some(a => a.file === x.file)), ...added]);
+      setFontVersion(v => v + 1);
+      toast.success(`Added ${[...new Set(added.map(a => a.family))].join(", ")}`);
+    }
+  };
+
+  const removeFont = async (file: string) => {
+    for (const face of fontFaceRegistry.get(file) ?? []) document.fonts.delete(face);
+    fontFaceRegistry.delete(file);
+    await fontDbDelete(file);
+    setCustomFonts(list => list.filter(x => x.file !== file));
+    setFontVersion(v => v + 1);
+  };
+
+  const customFamilies = [...new Set(customFonts.map(f => f.family))];
+  const customOptions = customFamilies.map(fam => ({ label: `${fam} (yours)`, value: `'${fam}', sans-serif` }));
+  const coverFontOptions = [...customOptions, ...COVER_FONTS];
+  const slideFontOptions = [...customOptions, { label: "Instrument Serif", value: F_INSTRUMENT }, ...FONT_OPTIONS];
+  const norm = (t: string) => t.toLowerCase().replace(/\s+/g, "");
+  const missingFonts = COVER_WANTS[style.coverLayout].filter(w => !customFamilies.some(c => norm(c) === norm(w)));
   const [rendering, setRendering] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
   const [scheduling, setScheduling] = useState<string | null>(null);
@@ -863,9 +1006,9 @@ export default function Stylish() {
   const renderKey = useMemo(
     () => JSON.stringify([
       posts.map(p => [p.id, p.texts]), style, images.map(f => f.name + f.size), perPost,
-      Object.entries(overrides).map(([k, f]) => k + f.name + f.size), preset?.id, preset?.logoUrl,
+      Object.entries(overrides).map(([k, f]) => k + f.name + f.size), preset?.id, preset?.logoUrl, fontVersion,
     ]),
-    [posts, style, images, perPost, overrides, preset],
+    [posts, style, images, perPost, overrides, preset, fontVersion],
   );
 
   const postsRef = useRef(posts);
@@ -1196,8 +1339,8 @@ export default function Stylish() {
 
           <section className="space-y-4 border-t border-border/30 pt-5">
             <h3 className="text-sm font-semibold">Slide 1: cover</h3>
-            <div className="grid grid-cols-4 gap-2">
-              {(["band", "centred", "block", "split"] as CoverLayout[]).map((k, i) => (
+            <div className="grid grid-cols-5 gap-1.5">
+              {(["band", "centred", "block", "split", "serif"] as CoverLayout[]).map((k, i) => (
                 <button
                   key={k} type="button"
                   onClick={() => patch(COVER_PRESETS[k])}
@@ -1208,6 +1351,7 @@ export default function Stylish() {
                     {k === "band" && (<><div className="absolute inset-x-0 top-0 h-[74%] bg-amber-700/70" /><div className="absolute left-1 bottom-1.5 w-5 h-1 bg-black" /></>)}
                     {k === "centred" && (<><div className="absolute inset-0 bg-amber-700/70" /><div className="absolute left-1.5 right-1.5 top-[42%] h-1 bg-sky-400" /><div className="absolute left-2.5 right-2.5 top-[58%] h-0.5 bg-white" /></>)}
                     {k === "block" && (<><div className="absolute inset-x-0 top-0 h-[38%] bg-amber-700/70" /><div className="absolute left-1 right-1 top-[58%] h-2 bg-black" /><div className="absolute left-1 bottom-1.5 w-3 h-0.5 bg-black" /></>)}
+                    {k === "serif" && (<><div className="absolute inset-0 bg-amber-700/70" /><div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-black/70 to-transparent" /><div className="absolute left-1 right-1 bottom-4 h-1.5 bg-white" /><div className="absolute left-2 right-2 bottom-2 h-0.5 bg-white/80" /></>)}
                     {k === "split" && (<><div className="absolute inset-y-0 left-0 w-[47%] bg-amber-700/70" /><div className="absolute left-[54%] right-1 top-[24%] h-1.5 bg-black" /><div className="absolute right-1 bottom-0 left-[47%] h-1.5 bg-neutral-500" /></>)}
                   </div>
                   <span className="text-[10px] text-muted-foreground">Option {i + 1}</span>
@@ -1219,14 +1363,46 @@ export default function Stylish() {
               {style.coverLayout === "centred" && "Full photo with the headline and subtitle centred in the middle."}
               {style.coverLayout === "block" && "Photo across the top with a big bold headline on a colour block."}
               {style.coverLayout === "split" && "Photo on the left, colour block on the right with the headline."}
+              {style.coverLayout === "serif" && "Full photo with a big serif headline and subtitle along the bottom."}
               {" "}Picking one loads its fonts and colours, then change whatever you like.
             </p>
+            {missingFonts.length > 0 && (
+              <p className="text-xs text-amber-500/90 bg-amber-500/5 border border-amber-500/30 rounded-lg px-3 py-2 leading-relaxed">
+                This cover is designed around {missingFonts.join(" and ")}. Add your copy of the font below and it takes over.
+                Until then I use a close match.
+              </p>
+            )}
+            <div className="space-y-2 rounded-lg border border-border/30 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-xs font-medium">Your fonts</Label>
+                <button type="button" onClick={() => fontInputRef.current?.click()} className="text-xs text-sky-400 hover:underline">Add font files</button>
+              </div>
+              <input
+                ref={fontInputRef} type="file" multiple accept=".otf,.ttf,.woff,.woff2" className="hidden"
+                onChange={e => { const f = Array.from(e.target.files ?? []); if (f.length) addFonts(f); e.target.value = ""; }}
+              />
+              {customFonts.length === 0 ? (
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Add .otf, .ttf or .woff2 files, for example Helvetica Now Display, Breul Grotesk, Now or Evolventa. Add each weight you use (regular and bold).
+                  They stay in this browser on this computer and are not uploaded anywhere.
+                </p>
+              ) : (
+                <ul className="space-y-1">
+                  {customFonts.map(f => (
+                    <li key={f.file} className="flex items-center justify-between gap-2 text-[11px]">
+                      <span className="truncate" style={{ fontFamily: `'${f.family}', sans-serif` }}>{f.file}</span>
+                      <button type="button" onClick={() => removeFont(f.file)} className="text-muted-foreground hover:text-destructive shrink-0">remove</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Headline font</Label>
               <Select value={style.cvFont} onValueChange={v => patch({ cvFont: v })}>
                 <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
-                  {COVER_FONTS.map(f => (
+                  {coverFontOptions.map(f => (
                     <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
                   ))}
                 </SelectContent>
@@ -1237,7 +1413,7 @@ export default function Stylish() {
               <Select value={style.cvSubFont} onValueChange={v => patch({ cvSubFont: v })}>
                 <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
-                  {COVER_FONTS.map(f => (
+                  {coverFontOptions.map(f => (
                     <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
                   ))}
                 </SelectContent>
@@ -1262,7 +1438,8 @@ export default function Stylish() {
             <SliderField label="Headline size (shrinks to fit)" value={style.cvSize} min={60} max={380} step={2} suffix="px" onChange={v => patch({ cvSize: v })} />
             <SliderField label="Subtitle size" value={style.cvSubSize} min={20} max={100} suffix="px" onChange={v => patch({ cvSubSize: v })} />
             <SliderField label="Headline letter spacing" value={style.cvTracking} min={-12} max={12} step={0.5} suffix="px" onChange={v => patch({ cvTracking: v })} />
-            {style.coverLayout !== "centred" && (
+            <SliderField label="Subtitle letter spacing" value={style.cvSubTracking} min={-8} max={12} step={0.5} suffix="px" onChange={v => patch({ cvSubTracking: v })} />
+            {style.coverLayout !== "centred" && style.coverLayout !== "serif" && (
               <>
                 <SliderField
                   label={style.coverLayout === "split" ? "Photo width" : "Photo height"}
@@ -1275,8 +1452,11 @@ export default function Stylish() {
                 />
               </>
             )}
-            {style.coverLayout === "centred" && (
-              <SliderField label="Text height" value={style.cvY} min={15} max={90} suffix="%" onChange={v => patch({ cvY: v })} />
+            {(style.coverLayout === "centred" || style.coverLayout === "serif") && (
+              <SliderField label={style.coverLayout === "serif" ? "Text bottom edge" : "Text height"} value={style.cvY} min={15} max={96} suffix="%" onChange={v => patch({ cvY: v })} />
+            )}
+            {style.coverLayout === "serif" && (
+              <SliderField label="Bottom gradient" value={style.cvScrim} min={0} max={90} suffix="%" onChange={v => patch({ cvScrim: v })} />
             )}
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={style.cvCaps} onChange={e => patch({ cvCaps: e.target.checked })} className="accent-sky-500" />
@@ -1295,7 +1475,7 @@ export default function Stylish() {
             <div className="space-y-3 pt-1">
               <ColourField label="Headline colour" value={style.cvColour} onChange={v => patch({ cvColour: v })} />
               <ColourField label="Subtitle colour" value={style.cvSubColour} onChange={v => patch({ cvSubColour: v })} />
-              {style.coverLayout !== "centred" && (
+              {style.coverLayout !== "centred" && style.coverLayout !== "serif" && (
                 <ColourField label={style.coverLayout === "band" ? "Band colour" : "Block colour"} value={style.cvBlock} onChange={v => patch({ cvBlock: v })} />
               )}
               {style.coverLayout === "split" && style.cvBandOn && (
@@ -1326,7 +1506,7 @@ export default function Stylish() {
               <Select value={style.displayFont} onValueChange={v => patch({ displayFont: v })}>
                 <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
-                  {FONT_OPTIONS.map(f => (
+                  {slideFontOptions.map(f => (
                     <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
                   ))}
                 </SelectContent>
@@ -1337,7 +1517,7 @@ export default function Stylish() {
               <Select value={style.fontFamily} onValueChange={v => patch({ fontFamily: v })}>
                 <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
-                  {FONT_OPTIONS.map(f => (
+                  {slideFontOptions.map(f => (
                     <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
                   ))}
                 </SelectContent>
