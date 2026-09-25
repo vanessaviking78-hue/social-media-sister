@@ -204,6 +204,8 @@ type Post = {
   captionBusy: boolean;
   selected: boolean;
   cover?: CoverLayout; // this post's own cover option. Empty means it follows the main choice.
+  coverColour?: string;    // this post's own headline colour on slide 1. Empty means the option's colour.
+  coverSubColour?: string; // and its subtitle colour
 };
 
 type SlideKind = "cover" | "body" | "cta";
@@ -276,8 +278,12 @@ const COVER_ORDER: CoverLayout[] = ["band", "centred", "block", "split", "serif"
 // The look of a slide. A post that has its own cover option gets that option's designed fonts, colours and
 // proportions on slide 1. Every other slide, and every post on the main choice, uses the settings as they are.
 function styleForSlide(style: Style, post: Post, kind: SlideKind): Style {
-  if (kind !== "cover" || !post.cover || post.cover === style.coverLayout) return style;
-  return { ...style, ...COVER_PRESETS[post.cover] } as Style;
+  if (kind !== "cover") return style;
+  let out = style;
+  if (post.cover && post.cover !== style.coverLayout) out = { ...style, ...COVER_PRESETS[post.cover] } as Style;
+  if (post.coverColour) out = { ...out, cvColour: post.coverColour };
+  if (post.coverSubColour) out = { ...out, cvSubColour: post.coverSubColour };
+  return out;
 }
 
 function naturalSort(a: File, b: File) {
@@ -1030,6 +1036,7 @@ export default function Stylish() {
   const focusRef = useRef<Record<string, PhotoPos>>({});
   const [, bumpFocus] = useState(0);
   const logoRef = useRef<HTMLImageElement | null>(null);
+  const redrawSeq = useRef<Record<string, number>>({});
   const dragRef = useRef<{
     key: string; pi: number; si: number; startX: number; startY: number;
     start: PhotoPos; ox: number; oy: number; thumbScale: number; busy: boolean; pending: boolean;
@@ -1167,10 +1174,12 @@ export default function Stylish() {
     const run = async () => {
       const specs = buildSlides(post.texts);
       if (!specs[si]) return;
+      const seq = (redrawSeq.current[key] = (redrawSeq.current[key] ?? 0) + 1);
       const canvas = await renderSlide(
         specs[si], photoFor(pi, post, si), styleForSlide(style, post, specs[si].kind), logoRef.current, preset, 0.3,
         { index: si, total: specs.length }, focusRef.current[key],
       );
+      if (redrawSeq.current[key] !== seq) return; // a newer change has been drawn since, keep that one
       setThumbs(prev => ({ ...prev, [key]: canvas.toDataURL("image/jpeg", 0.75) }));
     };
     if (d && d.key === key) {
@@ -1247,8 +1256,14 @@ export default function Stylish() {
     setCoverVersion(v => v + 1);
   };
 
+  // Colour picked for one post's cover text. Empty puts it back to the option's own colour.
+  const setCoverColours = (post: Post, pi: number, patchColours: Pick<Post, "coverColour" | "coverSubColour">) => {
+    updatePost(post.id, patchColours);
+    redrawOne({ ...post, ...patchColours }, pi, 0);
+  };
+
   const sameCovers = () => {
-    setPosts(list => list.map(p => ({ ...p, cover: undefined })));
+    setPosts(list => list.map(p => ({ ...p, cover: undefined, coverColour: undefined, coverSubColour: undefined })));
     setCoverVersion(v => v + 1);
   };
 
@@ -1969,6 +1984,23 @@ export default function Stylish() {
                           </button>
                         ))}
                       </div>
+
+                      {(() => {
+                        const eff = styleForSlide(style, post, "cover");
+                        return (
+                          <div className="flex items-end gap-x-6 gap-y-2 flex-wrap">
+                            <div className="w-56"><ColourField label="Cover headline" value={eff.cvColour} onChange={v => setCoverColours(post, pi, { coverColour: v })} /></div>
+                            <div className="w-56"><ColourField label="Cover subtitle" value={eff.cvSubColour} onChange={v => setCoverColours(post, pi, { coverSubColour: v })} /></div>
+                            {(post.coverColour || post.coverSubColour) && (
+                              <button
+                                type="button"
+                                onClick={() => setCoverColours(post, pi, { coverColour: undefined, coverSubColour: undefined })}
+                                className="text-xs text-muted-foreground underline hover:text-foreground pb-1"
+                              >Put the colours back</button>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       <details className="text-sm">
                         <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">Edit the words on this post</summary>
