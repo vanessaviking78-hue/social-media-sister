@@ -883,6 +883,12 @@ export default function Stylish() {
   const [perPost, setPerPost] = useState(5);
   const [overrides, setOverrides] = useState<Record<string, File>>({});
   const [csvName, setCsvName] = useState<string | null>(null);
+  const [writeTone, setWriteTone] = useState("");
+  const [writeBrief, setWriteBrief] = useState("");
+  const [writeTopics, setWriteTopics] = useState("");
+  const [writeCount, setWriteCount] = useState(10);
+  const [writeSlides, setWriteSlides] = useState(3);
+  const [writeBusy, setWriteBusy] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [csvError, setCsvError] = useState<string | null>(null);
   const [imgDrag, setImgDrag] = useState(false);
@@ -1065,6 +1071,49 @@ export default function Stylish() {
     setPosts(list => list.map(x => (x.id === id ? { ...x, texts: x.texts.map((t, i) => (i === col ? value : t)) } : x)));
 
   const selectedPosts = posts.filter(p => p.selected);
+
+  // -- write my posts ----------------------------------------------------------
+
+  const handleWritePosts = async () => {
+    if (!writeTone) { toast.error("Choose a writing style first"); return; }
+    const topics = writeTopics.split("\n").map(t => t.trim()).filter(Boolean);
+    if (!topics.length && !writeBrief.trim()) { toast.error("Add a brief or a list of topics"); return; }
+    const total = topics.length || writeCount;
+    const chunks: { topics?: string[]; count?: number }[] = [];
+    if (topics.length) { for (let i = 0; i < topics.length; i += 5) chunks.push({ topics: topics.slice(i, i + 5) }); }
+    else { for (let left = total; left > 0; left -= 5) chunks.push({ count: Math.min(5, left) }); }
+    const written: string[][] = [];
+    try {
+      for (let i = 0; i < chunks.length; i++) {
+        setWriteBusy(`Writing ${written.length + 1} to ${Math.min(total, written.length + (chunks[i].topics?.length ?? chunks[i].count ?? 0))} of ${total}`);
+        const res = await fetch(`${BASE}/api/caption-generator/stylish-posts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tone: writeTone, clinicName: preset?.name, brief: writeBrief, textSlides: writeSlides, ...chunks[i],
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !Array.isArray(data.posts)) throw new Error(data.error || "Writing failed");
+        written.push(...(data.posts as string[][]));
+      }
+      setPosts(list => [
+        ...list,
+        ...written.map(texts => ({ id: makeId(), texts, caption: "", captionBusy: false, selected: true })),
+      ]);
+      toast.success(`${written.length} post${written.length !== 1 ? "s" : ""} written. Have a read and tweak anything you like.`);
+    } catch (e) {
+      if (written.length) {
+        setPosts(list => [
+          ...list,
+          ...written.map(texts => ({ id: makeId(), texts, caption: "", captionBusy: false, selected: true })),
+        ]);
+      }
+      toast.error(`${e instanceof Error ? e.message : "Writing failed"}${written.length ? `. ${written.length} were kept.` : ""}`);
+    } finally {
+      setWriteBusy(null);
+    }
+  };
 
   // -- captions ----------------------------------------------------------------
 
@@ -1342,6 +1391,48 @@ export default function Stylish() {
             />
             {csvError && <p className="text-xs text-destructive">{csvError}</p>}
             <button onClick={downloadSample} className="text-xs text-sky-400 hover:underline">Download a sample CSV</button>
+          </section>
+
+          <section className="space-y-2">
+            <Label className="text-sm font-medium">Or write my posts</Label>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Give me a brief or a list of topics and I will write the slide text for you. New posts are added to any you already have.
+            </p>
+            <Select value={writeTone} onValueChange={setWriteTone}>
+              <SelectTrigger className="bg-muted/30 border-border/40"><SelectValue placeholder="Choose a writing style" /></SelectTrigger>
+              <SelectContent>{TONES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+            </Select>
+            <textarea
+              value={writeTopics} onChange={e => setWriteTopics(e.target.value)} rows={4}
+              placeholder={"Topics, one per line (optional). One post per line.\ne.g. Why SPF matters in winter\nWhat a consultation really involves"}
+              className="w-full rounded-md bg-muted/30 border border-border/40 px-3 py-2 text-sm resize-y"
+            />
+            <textarea
+              value={writeBrief} onChange={e => setWriteBrief(e.target.value)} rows={3}
+              placeholder={writeTopics.trim() ? "Anything else I should know (optional)" : "Or a brief, e.g. skin health posts for a busy clinic in Leeds, focus on women 40 plus"}
+              className="w-full rounded-md bg-muted/30 border border-border/40 px-3 py-2 text-sm resize-y"
+            />
+            <div className="flex items-center justify-between gap-3">
+              <Label className="text-xs text-muted-foreground">
+                {writeTopics.trim() ? "Posts: one per topic" : "How many posts"}
+              </Label>
+              <input
+                type="number" min={1} max={30} value={writeCount} disabled={!!writeTopics.trim()}
+                onChange={e => setWriteCount(Math.min(30, Math.max(1, Number(e.target.value) || 1)))}
+                className="w-16 h-8 rounded bg-muted/30 border border-border/40 px-2 text-sm disabled:opacity-40"
+              />
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <Label className="text-xs text-muted-foreground">Text slides in each post</Label>
+              <input
+                type="number" min={1} max={4} value={writeSlides}
+                onChange={e => setWriteSlides(Math.min(4, Math.max(1, Number(e.target.value) || 1)))}
+                className="w-16 h-8 rounded bg-muted/30 border border-border/40 px-2 text-sm"
+              />
+            </div>
+            <Button size="sm" onClick={handleWritePosts} disabled={!!writeBusy} className="w-full">
+              {writeBusy ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{writeBusy}</> : <><Sparkles className="w-4 h-4 mr-1.5" />Write my posts</>}
+            </Button>
           </section>
 
           <section className="space-y-2">

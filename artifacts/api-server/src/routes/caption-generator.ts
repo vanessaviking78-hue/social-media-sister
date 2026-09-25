@@ -137,4 +137,98 @@ ${BASE_RULES}`;
   }
 });
 
+const SLIDE_RULES = `
+COMPLIANCE (non-negotiable)
+- NEVER name Botox or any prescription-only medicine. NEVER use "anti-wrinkle". Use "facial aesthetics", "smoothing treatments", "injectable treatments", "facial rejuvenation".
+- Never use the word "safe" in advertising claims. No medical claims, no guaranteed results, no superlatives (best, number one), no pressure or urgency language.
+- Frame everything as consultation and possibility: "may help", "can improve", never "will fix" or "cures".
+- The call to action must be a warm, low pressure invitation (a consultation, a chat, a message), never a hard sell and never urgent.
+
+WRITING RULES (non-negotiable)
+- NEVER use em dashes or en dashes. Use a comma or a full stop.
+- British English throughout. Write in first person as the clinician or owner where a person speaks.
+- Sound like a real woman talking, never like a brand or a chatbot. Plain words, contractions, a little humour where it fits.
+- BANNED words: elevate, transform, unlock, journey, empower, revolutionise, game-changer, dive into, harness, leverage, delve, navigate, streamline, cutting-edge, holistic, synergy, bespoke, unleash, tapestry, landscape, realm, testament, seamless, effortless, next level, top-tier, fluff, being honest, the truth is, trust me, buckle up.
+- Do not use "it is not about X, it is about Y", rule of three escalations, or rhetorical question openers on the text slides.
+- No hashtags, no emojis, no exclamation marks.
+- Consumer psychology: women over 35 who want to feel understood, not sold to. Evoke emotion or a wry smile. No boring medical education, make it fun and useful.
+
+SLIDE LENGTH
+- headline: 2 to 6 words, punchy.
+- subtitle: 2 to 8 words that finishes or twists the headline.
+- each text slide: one short sentence or two very short ones, 8 to 22 words.
+- cta: 3 to 9 words, a stealth-sales invitation that fits the post.`;
+
+router.post("/caption-generator/stylish-posts", async (req: Request, res: Response) => {
+  try {
+    const { tone, clinicName, topics, brief, count, textSlides } = req.body as {
+      tone?: string;
+      clinicName?: string;
+      topics?: string[];
+      brief?: string;
+      count?: number;
+      textSlides?: number;
+    };
+
+    const list = Array.isArray(topics) ? topics.map(t => String(t).trim()).filter(Boolean).slice(0, 12) : [];
+    const n = list.length ? list.length : Math.min(12, Math.max(1, Math.floor(Number(count) || 1)));
+    if (!list.length && !(brief && brief.trim())) {
+      res.status(400).json({ error: "A brief or a list of topics is required" });
+      return;
+    }
+    const slides = Math.min(4, Math.max(1, Math.floor(Number(textSlides) || 3)));
+
+    const toneKey = String(tone ?? "2");
+    const tonePrompt = CAPTION_TONE_PROMPTS[toneKey] ?? CAPTION_TONE_PROMPTS["2"];
+
+    const systemPrompt = `You write the on-slide text for Instagram carousel posts for UK aesthetics and dental clinics.
+
+TONE: ${tonePrompt}
+
+${clinicName ? `Clinic: ${clinicName}` : ""}
+
+Each post has exactly ${slides} text slide${slides === 1 ? "" : "s"} between its headline and its call to action.
+Return JSON only, in this exact shape:
+{"posts":[{"headline":"","subtitle":"","text":[${Array(slides).fill('""').join(",")}],"cta":""}]}
+${SLIDE_RULES}`;
+
+    const userPrompt = list.length
+      ? `Write ${n} posts, one for each of these topics, in this order:\n${list.map((t, i) => `${i + 1}. ${t}`).join("\n")}${brief?.trim() ? `\n\nExtra guidance: ${brief.trim()}` : ""}`
+      : `Write ${n} different posts on this brief. Give each post its own angle and its own hook so no two feel alike:\n${brief!.trim()}`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.95,
+      max_tokens: 3000,
+    });
+
+    const raw = completion.choices[0]?.message?.content?.trim() ?? "";
+    let parsed: any;
+    try { parsed = JSON.parse(raw); } catch { parsed = null; }
+    const clean = (v: unknown) => String(v ?? "").replace(/[\u2013\u2014]/g, ",").trim();
+    const posts: string[][] = (Array.isArray(parsed?.posts) ? parsed.posts : [])
+      .map((p: any) => [
+        clean(p.headline),
+        clean(p.subtitle),
+        ...Array.from({ length: slides }, (_, i) => clean(Array.isArray(p.text) ? p.text[i] : "")),
+        clean(p.cta),
+      ])
+      .filter((r: string[]) => r[0]);
+    if (!posts.length) {
+      res.status(500).json({ error: "No posts returned" });
+      return;
+    }
+    res.json({ posts });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Post writing failed";
+    req.log?.error({ err }, "caption-generator: stylish-posts error");
+    res.status(500).json({ error: message });
+  }
+});
+
 export default router;
