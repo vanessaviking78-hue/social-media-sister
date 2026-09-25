@@ -259,10 +259,61 @@ function photoBlock(ctx: CanvasRenderingContext2D, photos: (CanvasImageSource | 
   }
 }
 
+// The cover photo, washed out and softened, behind the inside pages.
+let bgSource: CanvasImageSource | null = null;
+let bgAlpha = 0;
+
+export type BackgroundLevel = "off" | "soft" | "strong";
+export const BACKGROUND_ALPHA: Record<BackgroundLevel, number> = { off: 0, soft: 0.14, strong: 0.26 };
+
+function drawBackgroundWash(ctx: CanvasRenderingContext2D) {
+  if (!bgSource || bgAlpha <= 0) return;
+  const sw = (bgSource as HTMLCanvasElement).width;
+  const sh = (bgSource as HTMLCanvasElement).height;
+  if (!sw || !sh) return;
+  // Shrink then stretch back up. That softens it into a gentle wash of colour on every browser.
+  const small = document.createElement("canvas");
+  small.width = 90;
+  small.height = 120;
+  const sctx = small.getContext("2d")!;
+  sctx.imageSmoothingQuality = "high";
+  const k = Math.max(small.width / sw, small.height / sh);
+  const dw = sw * k;
+  const dh = sh * k;
+  sctx.drawImage(bgSource, (small.width - dw) / 2, (small.height - dh) / 2, dw, dh);
+  // A dark cover would turn the cream page muddy grey, so ease it off the darker the photo is.
+  let lum = 0.7;
+  try {
+    const px = sctx.getImageData(0, 0, small.width, small.height).data;
+    let total = 0;
+    for (let i = 0; i < px.length; i += 4) total += (0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2]) / 255;
+    lum = total / (px.length / 4);
+  } catch {
+    // pixels unreadable, keep the default
+  }
+  const ease = Math.min(1, 0.35 / Math.max(0.05, 1 - lum));
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.globalAlpha = bgAlpha * Math.max(0.3, ease);
+  ctx.drawImage(small, 0, 0, PAGE_W, PAGE_H);
+  ctx.restore();
+  // Fade it back to clean cream where the words sit: the top, and the lower part of the page.
+  const fade = ctx.createLinearGradient(0, 0, 0, PAGE_H);
+  fade.addColorStop(0, "rgba(246,240,230,0.7)");
+  fade.addColorStop(0.3, "rgba(246,240,230,0.15)");
+  fade.addColorStop(0.55, "rgba(246,240,230,0.1)");
+  fade.addColorStop(0.75, "rgba(246,240,230,0.6)");
+  fade.addColorStop(1, "rgba(246,240,230,0.75)");
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, 0, PAGE_W, PAGE_H);
+}
+
 // Kicker, headline and intro shared by the three inside pages. Returns the y just below them.
 function insideHeader(ctx: CanvasRenderingContext2D, brand: MagazineBrand, page: { kicker: string; headline: string; intro: string }): number {
   ctx.fillStyle = CREAM;
   ctx.fillRect(0, 0, PAGE_W, PAGE_H);
+  drawBackgroundWash(ctx);
 
   ctx.fillStyle = brand.colour;
   ctx.fillRect(80, 90, 70, 8);
@@ -532,10 +583,13 @@ export function drawAllPostPages(
   brand: MagazineBrand,
   copy: MagazinePostCopy,
   photos: (CanvasImageSource | null)[],
-  photoAdjusts: (PhotoAdjust | undefined)[] = []
+  photoAdjusts: (PhotoAdjust | undefined)[] = [],
+  background: BackgroundLevel = "soft"
 ): HTMLCanvasElement[] {
   beginDraw(photoAdjusts);
   const plan = planPhotos(photos.length);
+  bgSource = photos[plan.cover[0]] ?? null;
+  bgAlpha = BACKGROUND_ALPHA[background];
   setDrawPage(0, 0);
   const p1 = drawPostCover(brand, copy, photos, plan);
   setDrawPage(1, 0);

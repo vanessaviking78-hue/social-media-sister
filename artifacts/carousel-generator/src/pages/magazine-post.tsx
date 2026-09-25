@@ -15,6 +15,7 @@ import {
   drawAllPostPages,
   photoRole,
   photoShape,
+  type BackgroundLevel,
   type MagazinePostCopy,
   type ListPage,
 } from "@/lib/magazine-post-pages";
@@ -110,6 +111,7 @@ export default function MagazinePost() {
   const [treatment, setTreatment] = useState("");
   const [replyWord, setReplyWord] = useState("");
   const [style, setStyle] = useState<string | null>(null);
+  const [background, setBackground] = useState<BackgroundLevel>("soft");
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [copy, setCopy] = useState<MagazinePostCopy>(EMPTY_POST_COPY);
   const [writing, setWriting] = useState(false);
@@ -194,7 +196,7 @@ export default function MagazinePost() {
         cover: { ...copy.cover, title: copy.cover.title || treatment.trim() },
         cta: { ...copy.cta, word: copy.cta.word || replyWord.trim() },
       };
-      const pages = drawAllPostPages(brand, drawCopy, canvases, photos.map((p) => p.adjust));
+      const pages = drawAllPostPages(brand, drawCopy, canvases, photos.map((p) => p.adjust), background);
       pagesRef.current = pages;
       const big = bigRef.current;
       if (big && pages[activePage]) {
@@ -212,7 +214,7 @@ export default function MagazinePost() {
     }, 30);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clinicName, colour, accent, contact, copy, photos, activePage, treatment, replyWord]);
+  }, [clinicName, colour, accent, contact, copy, photos, activePage, treatment, replyWord, background]);
 
   function hitAt(e: { clientX: number; clientY: number }) {
     const big = bigRef.current;
@@ -484,6 +486,27 @@ export default function MagazinePost() {
                 </label>
               </div>
               <Field label="Website, phone or handle (last page footer, optional)" value={contact} onChange={setContact} placeholder="www.yourclinic.co.uk" />
+              <div>
+                <span className="block text-[11px] uppercase tracking-widest text-zinc-500 mb-1">Cover photo as a soft background on pages 2 to 4</span>
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    ["off", "Off"],
+                    ["soft", "Soft"],
+                    ["strong", "Stronger"],
+                  ] as const).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => setBackground(key)}
+                      aria-pressed={background === key}
+                      className={`rounded-lg border px-3 py-2 text-sm font-semibold transition-colors ${
+                        background === key ? "border-fuchsia-500 bg-fuchsia-500/10" : "border-zinc-800 bg-zinc-900 hover:border-fuchsia-500/50"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </section>
 
             <section className="space-y-3">
