@@ -409,8 +409,59 @@ export function drawListPage(brand: MagazineBrand, page: ListPage, n: number, ph
   return c;
 }
 
+// Turns "www.clinic.co.uk/book" into a full link a phone camera will open.
+export function normaliseQrUrl(raw: string | undefined): string {
+  const t = (raw ?? "").trim();
+  if (!t) return "";
+  if (/^https?:\/\//i.test(t)) return t;
+  if (/^[\w-]+(\.[\w-]+)+(\/\S*)?$/.test(t)) return `https://${t}`;
+  return "";
+}
+
+// White card with a QR code of the booking link and "SCAN TO BOOK" under it.
+// Uses the qrcode-generator script the page loads from jsDelivr; if it isn't
+// there yet the page simply redraws once it arrives.
+function drawQrCard(ctx: CanvasRenderingContext2D, url: string, x: number, y: number, size: number, accent: string): boolean {
+  const qrcode = (globalThis as any).qrcode;
+  if (!url || typeof qrcode !== "function") return false;
+  const qr = qrcode(0, "M");
+  qr.addData(url);
+  qr.make();
+  const n = qr.getModuleCount();
+  const pad = 14;
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,0.25)";
+  ctx.shadowBlur = 18;
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.roundRect(x, y, size, size, 18);
+  ctx.fill();
+  ctx.restore();
+  const inner = size - pad * 2;
+  const cell = inner / n;
+  ctx.fillStyle = INK;
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      if (qr.isDark(r, c)) ctx.fillRect(Math.floor(x + pad + c * cell), Math.floor(y + pad + r * cell), Math.ceil(cell), Math.ceil(cell));
+    }
+  }
+  ctx.fillStyle = accent;
+  ctx.beginPath();
+  ctx.roundRect(x, y + size + 12, size, 40, 20);
+  ctx.fill();
+  ctx.fillStyle = onColour(accent);
+  ctx.font = `700 19px ${SANS}`;
+  (ctx as any).letterSpacing = "4px";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("SCAN TO BOOK", x + size / 2 + 2, y + size + 33);
+  ctx.textBaseline = "alphabetic";
+  (ctx as any).letterSpacing = "0px";
+  return true;
+}
+
 // PAGE 5: one big photo and "If this interests you, comment WORD".
-export function drawCommentPage(brand: MagazineBrand, copy: MagazineCopy2, photos: (CanvasImageSource | null)[], slot: number) {
+export function drawCommentPage(brand: MagazineBrand & { qrUrl?: string }, copy: MagazineCopy2, photos: (CanvasImageSource | null)[], slot: number) {
   const [c, ctx] = newCanvas();
   drawCover(ctx, photos[slot] ?? null, 0, 0, PAGE_W, PAGE_H, slot);
 
@@ -426,17 +477,21 @@ export function drawCommentPage(brand: MagazineBrand, copy: MagazineCopy2, photo
   ctx.fillStyle = bottom;
   ctx.fillRect(0, 640, PAGE_W, PAGE_H - 640);
 
+  // With a booking link the QR card takes the top-right corner and the clinic
+  // name moves to the left so the two never collide.
+  const qrSize = 200;
+  const hasQr = drawQrCard(ctx, normaliseQrUrl(brand.qrUrl), PAGE_W - 70 - qrSize, 60, qrSize, brand.accent);
   block(ctx, brand.clinicName.toUpperCase(), {
-    x: PAGE_W / 2,
+    x: hasQr ? 80 : PAGE_W / 2,
     y: 80,
-    maxW: PAGE_W - 200,
+    maxW: hasQr ? PAGE_W - 80 - qrSize - 130 : PAGE_W - 200,
     maxLines: 1,
     size: 30,
     minSize: 20,
     family: SANS,
     weight: "700",
     colour: "#ffffff",
-    align: "center",
+    align: hasQr ? "left" : "center",
     tracking: 8,
   });
 
@@ -529,7 +584,7 @@ export function drawCommentPage(brand: MagazineBrand, copy: MagazineCopy2, photo
 type MagazineCopy2 = MagazinePostCopy["cta"];
 
 export function drawAllPostPages(
-  brand: MagazineBrand,
+  brand: MagazineBrand & { qrUrl?: string },
   copy: MagazinePostCopy,
   photos: (CanvasImageSource | null)[],
   photoAdjusts: (PhotoAdjust | undefined)[] = []
