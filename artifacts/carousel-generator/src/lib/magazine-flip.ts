@@ -1,9 +1,9 @@
 // Magazine flip-through animation.
 //
-// Four pages go in: the front cover, page two, page three and a call to
-// action. A 10 second 1080 x 1440 clip comes out where the cover turns to
-// reveal page two, page two turns to reveal page three, page three turns to
-// reveal the call to action, and the call to action is left holding on screen.
+// Four to five pages go in: the front cover, one or two middle pages and a
+// call to action. A 1080 x 1440 clip comes out where each page turns to
+// reveal the next, and the call to action is left holding on screen. The
+// clip runs 10 seconds for 4 pages, 12 seconds for 5.
 //
 // Pages are hinged on the left, like the spine of a real magazine. The right
 // hand edge lifts, rolls over a cylinder and lays back on itself, all drawn on
@@ -14,25 +14,56 @@ import { DOOR_W, DOOR_H, DOOR_FPS } from "./advent-door";
 export const MAG_W = DOOR_W;
 export const MAG_H = DOOR_H;
 export const MAG_FPS = DOOR_FPS;
+/** @deprecated kept for older callers; use magSecondsFor(pageCount) instead */
 export const MAG_SECONDS = 10;
+/** @deprecated kept for older callers; use magFramesFor(pageCount) instead */
 export const MAG_FRAMES = MAG_FPS * MAG_SECONDS;
 export const MAG_PAGE_COUNT = 4;
+export const MAG_MIN_PAGES = 4;
+export const MAG_MAX_PAGES = 5;
 
-// Timeline, in seconds (total is 10).
-// Each turn starts with a little tug at the corner, then the page goes over.
-const TURN_STARTS = [1.6, 4.3, 7.0];
+// Timeline, in seconds. One start per page turn (pages.length - 1 turns),
+// each turn starting 2.7s after the last so extra pages just add time.
+const ALL_TURN_STARTS = [1.6, 4.3, 7.0, 9.7];
 const TURN_DURATION = 1.0;
 const TUG_DURATION = 0.4;
 const CURL_RADIUS = 170;
 const FOCAL = 2400;
 
-export const MAG_PAGE_LABELS = ["Front cover", "Page 2", "Page 3", "Call to action"];
-export const MAG_PAGE_HINTS = [
+function turnStartsFor(pageCount: number): number[] {
+  return ALL_TURN_STARTS.slice(0, Math.max(0, pageCount - 1));
+}
+
+/** Total clip length for a given page count: 10s for 4 pages, 12s for 5. */
+export function magSecondsFor(pageCount: number): number {
+  return pageCount >= 5 ? 12 : 10;
+}
+
+export function magFramesFor(pageCount: number): number {
+  return Math.round(MAG_FPS * magSecondsFor(pageCount));
+}
+
+export const MAG_PAGE_LABELS_ALL = ["Front cover", "Page 2", "Page 3", "Page 4"];
+export const MAG_PAGE_HINTS_ALL = [
   "The cover that opens the video",
   "The first page you turn to",
   "The second page you turn to",
-  "The last page, it stays on screen",
+  "The third page you turn to",
 ];
+export const MAG_CTA_LABEL = "Call to action";
+export const MAG_CTA_HINT = "The last page, it stays on screen";
+
+/** Labels/hints for however many pages are in play (4 or 5), CTA always last. */
+export function magLabelsFor(pageCount: number): string[] {
+  return [...MAG_PAGE_LABELS_ALL.slice(0, pageCount - 1), MAG_CTA_LABEL];
+}
+export function magHintsFor(pageCount: number): string[] {
+  return [...MAG_PAGE_HINTS_ALL.slice(0, pageCount - 1), MAG_CTA_HINT];
+}
+
+// Backwards-compatible 4-page defaults.
+export const MAG_PAGE_LABELS = magLabelsFor(4);
+export const MAG_PAGE_HINTS = magHintsFor(4);
 
 function easeInOutCubic(x: number) {
   return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
@@ -53,14 +84,14 @@ function foldAt(s: number): number {
 }
 
 // Which turn (if any) is in progress at time t, and which page is showing.
-function stateAt(t: number): { turn: number; s: number } {
-  for (let i = 0; i < TURN_STARTS.length; i++) {
-    const s = t - TURN_STARTS[i];
+function stateAt(t: number, turnStarts: number[]): { turn: number; s: number } {
+  for (let i = 0; i < turnStarts.length; i++) {
+    const s = t - turnStarts[i];
     if (s >= -TUG_DURATION && s <= TURN_DURATION) return { turn: i, s };
   }
   // Between turns: the page number showing is how many turns have finished.
   let done = 0;
-  for (let i = 0; i < TURN_STARTS.length; i++) if (t > TURN_STARTS[i] + TURN_DURATION) done = i + 1;
+  for (let i = 0; i < turnStarts.length; i++) if (t > turnStarts[i] + TURN_DURATION) done = i + 1;
   return { turn: -1 - done, s: 0 }; // -1 - done encodes "flat page number done"
 }
 
@@ -75,7 +106,7 @@ function drawSpine(ctx: CanvasRenderingContext2D) {
 
 // Draws one frame. t is seconds from the start.
 export function drawMagazineFrame(ctx: CanvasRenderingContext2D, pages: CanvasImageSource[], t: number) {
-  const st = stateAt(t);
+  const st = stateAt(t, turnStartsFor(pages.length));
   ctx.clearRect(0, 0, MAG_W, MAG_H);
 
   if (st.turn < 0) {
@@ -201,7 +232,8 @@ export async function exportMagazineMp4(
     framerate: MAG_FPS,
   });
 
-  for (let i = 0; i < MAG_FRAMES; i++) {
+  const frameCount = magFramesFor(pages.length);
+  for (let i = 0; i < frameCount; i++) {
     if (encoderError) throw encoderError;
     drawMagazineFrame(ctx, pages, i / MAG_FPS);
     const frame = new (window as any).VideoFrame(canvas, {
@@ -209,7 +241,7 @@ export async function exportMagazineMp4(
     });
     encoder.encode(frame, { keyFrame: i % (MAG_FPS * 2) === 0 });
     frame.close();
-    onProgress?.((i + 1) / MAG_FRAMES);
+    onProgress?.((i + 1) / frameCount);
     if (encoder.encodeQueueSize > 8) await new Promise<void>((r) => setTimeout(r, 4));
     else if (i % 6 === 0) await new Promise<void>((r) => setTimeout(r, 0));
   }
