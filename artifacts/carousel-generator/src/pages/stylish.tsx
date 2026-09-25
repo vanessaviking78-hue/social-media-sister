@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo, type PointerEvent as ReactPointerEvent } from "react";
 import { Link } from "wouter";
 import {
   ArrowLeft, FileText, Download, Loader2, CalendarClock, CheckCircle2, ImageIcon,
@@ -275,11 +275,14 @@ function naturalSort(a: File, b: File) {
 }
 
 // ---------------------------------------------------------------------------
-// Image preparation. Each photo is cropped once to fill 1080x1440 and kept as a
-// compressed blob so a large batch does not hold gigabytes of pixels in memory.
+// Image preparation. Each photo is shrunk once (never cropped, so it can be dragged
+// around later) and kept as a compressed blob so a large batch does not hold
+// gigabytes of pixels in memory.
 // ---------------------------------------------------------------------------
 
+const MAX_PHOTO_SIDE = 2400;
 const prepared = new Map<File, Promise<Blob | null>>();
+const photoDims = new Map<File, { w: number; h: number }>();
 
 function prepareImage(file: File): Promise<Blob | null> {
   const existing = prepared.get(file);
@@ -287,15 +290,16 @@ function prepareImage(file: File): Promise<Blob | null> {
   const p = (async () => {
     try {
       const bmp = await createImageBitmap(file);
+      const s = Math.min(1, MAX_PHOTO_SIDE / Math.max(bmp.width, bmp.height));
+      const w = Math.max(1, Math.round(bmp.width * s));
+      const h = Math.max(1, Math.round(bmp.height * s));
       const canvas = document.createElement("canvas");
-      canvas.width = W;
-      canvas.height = H;
+      canvas.width = w;
+      canvas.height = h;
       const ctx = canvas.getContext("2d")!;
-      const s = Math.max(W / bmp.width, H / bmp.height);
-      const dw = bmp.width * s;
-      const dh = bmp.height * s;
-      ctx.drawImage(bmp, (W - dw) / 2, (H - dh) / 2, dw, dh);
+      ctx.drawImage(bmp, 0, 0, w, h);
       bmp.close();
+      photoDims.set(file, { w, h });
       return await new Promise<Blob | null>(res => canvas.toBlob(b => res(b), "image/jpeg", 0.93));
     } catch {
       return null;
@@ -303,6 +307,24 @@ function prepareImage(file: File): Promise<Blob | null> {
   })();
   prepared.set(file, p);
   return p;
+}
+
+// Where a photo sits inside its frame, in percent (50, 50 is centred). Dragging changes it per slide.
+type PhotoPos = { x: number; y: number };
+
+// The frame a slide's photo fills, so a drag can be turned into a shift of the photo.
+function photoArea(kind: SlideKind, style: Style): { w: number; h: number } {
+  if (kind !== "cover") return { w: W, h: H };
+  if (style.coverLayout === "band" || style.coverLayout === "block") return { w: W, h: Math.round(H * (style.cvPhoto / 100)) };
+  if (style.coverLayout === "split") return { w: Math.round(W * (style.cvPhoto / 100)), h: H };
+  return { w: W, h: H };
+}
+
+function defaultPos(kind: SlideKind, style: Style): PhotoPos {
+  if (kind !== "cover") return { x: 50, y: 50 };
+  if (style.coverLayout === "band" || style.coverLayout === "block") return { x: 50, y: style.cvFocus };
+  if (style.coverLayout === "split") return { x: style.cvFocus, y: 50 };
+  return { x: 50, y: 50 };
 }
 
 function loadImg(src: string): Promise<HTMLImageElement> {
@@ -384,13 +406,13 @@ type RenderMeta = { index: number; total: number };
 
 function drawPhotoIn(
   ctx: CanvasRenderingContext2D, bmp: ImageBitmap,
-  x: number, y: number, w: number, h: number, focus: number, axis: "x" | "y",
+  x: number, y: number, w: number, h: number, pos: PhotoPos,
 ) {
   const sc = Math.max(w / bmp.width, h / bmp.height);
   const dw = bmp.width * sc;
   const dh = bmp.height * sc;
-  const dx = x + (w - dw) * (axis === "x" ? focus / 100 : 0.5);
-  const dy = y + (h - dh) * (axis === "y" ? focus / 100 : 0.5);
+  const dx = x + (w - dw) * (pos.x / 100);
+  const dy = y + (h - dh) * (pos.y / 100);
   ctx.save();
   ctx.beginPath();
   ctx.rect(x, y, w, h);
@@ -423,9 +445,10 @@ function fitHeading(
 
 async function drawCover(
   ctx: CanvasRenderingContext2D, spec: SlideSpec, photo: File | null, style: Style,
-  logo: HTMLImageElement | null, preset: ClientPreset | null,
+  logo: HTMLImageElement | null, preset: ClientPreset | null, pos?: PhotoPos,
 ) {
   const layout = style.coverLayout;
+  const at = pos ?? defaultPos("cover", style);
   const bmp = photo ? await (async () => {
     const blob = await prepareImage(photo);
     return blob ? createImageBitmap(blob) : null;
@@ -452,7 +475,7 @@ async function drawCover(
     const bandH = H - photoH;
     ctx.fillStyle = style.cvBlock;
     ctx.fillRect(0, 0, W, H);
-    if (bmp) drawPhotoIn(ctx, bmp, 0, 0, W, photoH, style.cvFocus, "y");
+    if (bmp) drawPhotoIn(ctx, bmp, 0, 0, W, photoH, at);
     const x = 96, maxW = W - x * 2;
     setSpacing(ctx, style.cvTracking);
     const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, 2);
@@ -468,7 +491,7 @@ async function drawCover(
     const photoH = Math.round(H * (style.cvPhoto / 100));
     ctx.fillStyle = style.cvBlock;
     ctx.fillRect(0, 0, W, H);
-    if (bmp) drawPhotoIn(ctx, bmp, 0, 0, W, photoH, style.cvFocus, "y");
+    if (bmp) drawPhotoIn(ctx, bmp, 0, 0, W, photoH, at);
     const x = 50, maxW = W - x * 2;
     setSpacing(ctx, style.cvTracking);
     const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, 2);
@@ -486,7 +509,7 @@ async function drawCover(
     const photoW = Math.round(W * (style.cvPhoto / 100));
     ctx.fillStyle = style.cvBlock;
     ctx.fillRect(0, 0, W, H);
-    if (bmp) drawPhotoIn(ctx, bmp, 0, 0, photoW, H, style.cvFocus, "x");
+    if (bmp) drawPhotoIn(ctx, bmp, 0, 0, photoW, H, at);
     if (style.cvBandOn) {
       ctx.fillStyle = style.cvBand;
       ctx.fillRect(photoW, H - 133, W - photoW, 133);
@@ -507,7 +530,7 @@ async function drawCover(
     // centred and serif: full bleed photo. Centred sits in the middle; serif hangs from a bottom edge on a soft gradient.
     ctx.fillStyle = style.background;
     ctx.fillRect(0, 0, W, H);
-    if (bmp) drawPhotoIn(ctx, bmp, 0, 0, W, H, 50, "y");
+    if (bmp) drawPhotoIn(ctx, bmp, 0, 0, W, H, at);
     if (style.overlay > 0 && layout === "centred") {
       ctx.fillStyle = `rgba(0,0,0,${style.overlay / 100})`;
       ctx.fillRect(0, 0, W, H);
@@ -550,6 +573,7 @@ async function renderSlide(
   preset: ClientPreset | null,
   scale: number,
   meta: RenderMeta = { index: 0, total: 1 },
+  pos?: PhotoPos,
 ): Promise<HTMLCanvasElement> {
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(W * scale);
@@ -558,7 +582,7 @@ async function renderSlide(
   ctx.scale(scale, scale);
 
   if (spec.kind === "cover") {
-    await drawCover(ctx, spec, photo, style, logo, preset);
+    await drawCover(ctx, spec, photo, style, logo, preset, pos);
     return canvas;
   }
 
@@ -569,7 +593,7 @@ async function renderSlide(
     const blob = await prepareImage(photo);
     if (blob) {
       const bmp = await createImageBitmap(blob);
-      ctx.drawImage(bmp, 0, 0, W, H);
+      drawPhotoIn(ctx, bmp, 0, 0, W, H, pos ?? defaultPos(spec.kind, style));
       bmp.close();
     }
   }
@@ -952,6 +976,16 @@ export default function Stylish() {
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const replaceTarget = useRef<string | null>(null);
 
+  // Where each photo has been dragged to, keyed by "postId:slideIndex". A ref so a drag is smooth,
+  // with a counter to refresh the buttons that depend on it.
+  const focusRef = useRef<Record<string, PhotoPos>>({});
+  const [, bumpFocus] = useState(0);
+  const logoRef = useRef<HTMLImageElement | null>(null);
+  const dragRef = useRef<{
+    key: string; pi: number; si: number; startX: number; startY: number;
+    start: PhotoPos; ox: number; oy: number; thumbScale: number; busy: boolean; pending: boolean;
+  } | null>(null);
+
   // -- which photo belongs to which slide ----------------------------------
 
   const photoFor = useCallback((postIndex: number, post: Post, slideIndex: number): File | null => {
@@ -969,6 +1003,7 @@ export default function Stylish() {
     if (!files.length) { toast.error("No images found in that selection"); return; }
     setImages(files);
     setOverrides({});
+    focusRef.current = {};
   };
 
   const addApproved = (files: File[]) => {
@@ -1000,6 +1035,7 @@ export default function Stylish() {
           setPosts(parsed);
           setCsvName(file.name);
           setOverrides({});
+          focusRef.current = {};
         },
         error: (err: Error) => setCsvError(err.message),
       });
@@ -1033,13 +1069,14 @@ export default function Stylish() {
       try {
         await warmFonts(style);
         const logo = style.showLogo ? await loadLogo(preset) : null;
+        logoRef.current = logo;
         for (let pi = 0; pi < postsRef.current.length; pi++) {
           if (cancelled) return;
           const post = postsRef.current[pi];
           const specs = buildSlides(post.texts);
           const batch: Record<string, string> = {};
           for (let si = 0; si < specs.length; si++) {
-            const canvas = await renderSlide(specs[si], photoForRef.current(pi, post, si), style, logo, preset, 0.3, { index: si, total: specs.length });
+            const canvas = await renderSlide(specs[si], photoForRef.current(pi, post, si), style, logo, preset, 0.3, { index: si, total: specs.length }, focusRef.current[`${post.id}:${si}`]);
             batch[`${post.id}:${si}`] = canvas.toDataURL("image/jpeg", 0.75);
           }
           if (cancelled) return;
@@ -1055,6 +1092,80 @@ export default function Stylish() {
     return () => { cancelled = true; clearTimeout(timer); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [renderKey]);
+
+  // -- dragging a photo to the right spot -----------------------------------------
+
+  // Redraws just the slide being dragged, so the preview follows the pointer without waiting for every post.
+  const redrawOne = useCallback(async (post: Post, pi: number, si: number) => {
+    const d = dragRef.current;
+    const key = `${post.id}:${si}`;
+    const run = async () => {
+      const specs = buildSlides(post.texts);
+      if (!specs[si]) return;
+      const canvas = await renderSlide(
+        specs[si], photoFor(pi, post, si), style, logoRef.current, preset, 0.3,
+        { index: si, total: specs.length }, focusRef.current[key],
+      );
+      setThumbs(prev => ({ ...prev, [key]: canvas.toDataURL("image/jpeg", 0.75) }));
+    };
+    if (d && d.key === key) {
+      if (d.busy) { d.pending = true; return; }
+      d.busy = true;
+      try {
+        do { d.pending = false; await run(); } while (d.pending);
+      } finally { d.busy = false; }
+    } else {
+      await run();
+    }
+  }, [photoFor, style, preset]);
+
+  const startDrag = (e: ReactPointerEvent<HTMLDivElement>, post: Post, pi: number, si: number, spec: SlideSpec) => {
+    if (e.button !== 0) return;
+    const photo = photoFor(pi, post, si);
+    const dims = photo ? photoDims.get(photo) : undefined;
+    if (!photo || !dims) return;
+    const area = photoArea(spec.kind, style);
+    const sc = Math.max(area.w / dims.w, area.h / dims.h);
+    const key = `${post.id}:${si}`;
+    const rect = e.currentTarget.getBoundingClientRect();
+    dragRef.current = {
+      key, pi, si, startX: e.clientX, startY: e.clientY,
+      start: focusRef.current[key] ?? defaultPos(spec.kind, style),
+      ox: dims.w * sc - area.w, oy: dims.h * sc - area.h,
+      thumbScale: rect.width / W, busy: false, pending: false,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  };
+
+  const moveDrag = (e: ReactPointerEvent<HTMLDivElement>, post: Post) => {
+    const d = dragRef.current;
+    if (!d || d.key !== `${post.id}:${d.si}`) return;
+    const clamp = (v: number) => Math.min(100, Math.max(0, v));
+    const dx = (e.clientX - d.startX) / d.thumbScale;
+    const dy = (e.clientY - d.startY) / d.thumbScale;
+    // Dragging the photo right shows more of its left side, so the focus moves the other way.
+    const x = d.ox > 1 ? clamp(d.start.x - (dx / d.ox) * 100) : d.start.x;
+    const y = d.oy > 1 ? clamp(d.start.y - (dy / d.oy) * 100) : d.start.y;
+    if (x === d.start.x && y === d.start.y && !focusRef.current[d.key]) return;
+    focusRef.current = { ...focusRef.current, [d.key]: { x, y } };
+    redrawOne(post, d.pi, d.si);
+  };
+
+  const endDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current) return;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* already released */ }
+    dragRef.current = null;
+    bumpFocus(n => n + 1);
+  };
+
+  const resetPos = (post: Post, pi: number, si: number) => {
+    const next = { ...focusRef.current };
+    delete next[`${post.id}:${si}`];
+    focusRef.current = next;
+    bumpFocus(n => n + 1);
+    redrawOne(post, pi, si);
+  };
 
   // -- post helpers ----------------------------------------------------------
 
@@ -1132,7 +1243,7 @@ export default function Stylish() {
     const specs = buildSlides(post.texts);
     const out: HTMLCanvasElement[] = [];
     for (let si = 0; si < specs.length; si++) {
-      out.push(await renderSlide(specs[si], photoFor(postIndex, post, si), style, logo, preset, 1, { index: si, total: specs.length }));
+      out.push(await renderSlide(specs[si], photoFor(postIndex, post, si), style, logo, preset, 1, { index: si, total: specs.length }, focusRef.current[`${post.id}:${si}`]));
     }
     return out;
   };
@@ -1292,7 +1403,7 @@ export default function Stylish() {
             {images.length > 0 && (
               <button
                 type="button"
-                onClick={() => { setImages([]); setOverrides({}); }}
+                onClick={() => { setImages([]); setOverrides({}); focusRef.current = {}; }}
                 className="text-xs text-muted-foreground underline hover:text-foreground"
               >
                 Clear all photos
@@ -1637,7 +1748,7 @@ export default function Stylish() {
                 <div>
                   <h2 className="text-xl font-bold">{posts.length} post{posts.length !== 1 ? "s" : ""}, {selectedPosts.length} ticked</h2>
                   <p className="text-xs text-muted-foreground">
-                    Slides export at 1080 x 1440.{rendering && " Refreshing previews…"}
+                    Slides export at 1080 x 1440. Drag any photo to move it, double click to put it back.{rendering && " Refreshing previews…"}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
@@ -1694,26 +1805,49 @@ export default function Stylish() {
                       <div className="flex gap-3 overflow-x-auto pb-1">
                         {specs.map((spec, si) => {
                           const thumb = thumbs[`${post.id}:${si}`];
+                          const hasPhoto = !!photoFor(pi, post, si);
+                          const moved = !!focusRef.current[`${post.id}:${si}`];
                           return (
-                            <button
-                              key={si} type="button"
-                              onClick={() => { replaceTarget.current = `${post.id}:${si}`; replaceInputRef.current?.click(); }}
-                              title="Click to swap this photo"
-                              className="relative rounded-lg overflow-hidden border border-border/30 shrink-0 group"
-                              style={{ width: 170 }}
+                            <div
+                              key={si}
+                              onPointerDown={e => startDrag(e, post, pi, si, spec)}
+                              onPointerMove={e => moveDrag(e, post)}
+                              onPointerUp={endDrag}
+                              onPointerCancel={endDrag}
+                              onDoubleClick={() => resetPos(post, pi, si)}
+                              title={hasPhoto ? "Drag to move the photo. Double click to put it back." : undefined}
+                              className={["relative rounded-lg overflow-hidden border border-border/30 shrink-0 group select-none", hasPhoto ? "cursor-grab active:cursor-grabbing" : ""].join(" ")}
+                              style={{ width: 170, touchAction: hasPhoto ? "none" : undefined }}
                             >
                               {thumb ? (
-                                <img src={thumb} alt={`Post ${pi + 1}, slide ${si + 1}`} className="w-full block" style={{ aspectRatio: `${W}/${H}` }} draggable={false} />
+                                <img src={thumb} alt={`Post ${pi + 1}, slide ${si + 1}`} className="w-full block pointer-events-none" style={{ aspectRatio: `${W}/${H}` }} draggable={false} />
                               ) : (
                                 <div className="w-full bg-muted/30 flex items-center justify-center" style={{ aspectRatio: `${W}/${H}` }}>
                                   <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                                 </div>
                               )}
-                              <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-1.5 py-1 bg-gradient-to-t from-black/70 to-transparent">
+                              <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 px-1.5 py-1 bg-gradient-to-t from-black/70 to-transparent">
                                 <span className="text-[10px] text-white/80 font-medium">{si + 1}</span>
-                                <span className="text-[8px] text-white/70 uppercase tracking-wider opacity-0 group-hover:opacity-100">swap photo</span>
+                                <span className="flex items-center gap-1.5">
+                                  {moved && (
+                                    <button
+                                      type="button"
+                                      onPointerDown={e => e.stopPropagation()}
+                                      onDoubleClick={e => e.stopPropagation()}
+                                      onClick={() => resetPos(post, pi, si)}
+                                      className="text-[9px] text-white/80 uppercase tracking-wider hover:text-white"
+                                    >reset</button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onPointerDown={e => e.stopPropagation()}
+                                    onDoubleClick={e => e.stopPropagation()}
+                                    onClick={() => { replaceTarget.current = `${post.id}:${si}`; replaceInputRef.current?.click(); }}
+                                    className="text-[9px] text-white/80 uppercase tracking-wider hover:text-white"
+                                  >swap</button>
+                                </span>
                               </div>
-                            </button>
+                            </div>
                           );
                         })}
                       </div>
@@ -1766,7 +1900,12 @@ export default function Stylish() {
         onChange={e => {
           const f = e.target.files?.[0];
           const key = replaceTarget.current;
-          if (f && key) setOverrides(o => ({ ...o, [key]: f }));
+          if (f && key) {
+            setOverrides(o => ({ ...o, [key]: f }));
+            const next = { ...focusRef.current };
+            delete next[key];
+            focusRef.current = next;
+          }
           e.target.value = "";
         }}
       />
