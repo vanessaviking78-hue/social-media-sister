@@ -778,6 +778,129 @@ export const CLASSY_CORPORATE_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
+export const WINTER_WOOLIES_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "ww-01",
+    name: "Cream Cowl Clinic Desk",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated at a modern clinic reception desk, leaning slightly forward with hands loosely clasped, warm engaging smile. Cream chunky knit cowl neck jumper, straight leg blue jeans. Bright, clean aesthetic clinic setting behind her with soft neutral tones and a hint of greenery. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-02",
+    name: "Coffee Off-Shoulder Armchair",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo curled up in a luxury cream boucle armchair by a window, one leg tucked beneath her, relaxed and glowing. Coffee brown off-the-shoulder knit jumper, black leggings, soft natural daylight streaming in, a knitted throw draped over the arm of the chair. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-03",
+    name: "Mustard Cable Knit Treatment Room",
+    hasColour: false,
+    promptTemplate: `Full length portrait of a woman from the reference photo standing in a bright clinical treatment room, one hand resting on a pale treatment couch. Mustard yellow chunky cable knit jumper, straight leg blue jeans, warm confident smile, soft even daylight through timber framed windows. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-04",
+    name: "Sage Cowl Sofa",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo relaxed on a herringbone sofa, legs tucked to one side, laughing softly. Sage green cowl neck jumper, black leggings, a knitted throw and cushions around her, warm cosy interior light. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-05",
+    name: "Black Jumper Dress Clinic",
+    hasColour: false,
+    promptTemplate: `Full length portrait of a woman from the reference photo standing in a clinic reception area, hands clasped in front, composed and approachable. Black oversized ribbed jumper dress, knee-high black boots, clean minimal clinic backdrop with soft daylight. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-06",
+    name: "White Cable Knit Armchair",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated in a plush velvet armchair, one arm draped over the side, warm relaxed expression. White cable knit jumper, straight leg blue jeans, soft window light, a cup of tea resting on a side table nearby. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-07",
+    name: "Brown Off-Shoulder Sofa",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo curled up on a soft sofa surrounded by cushions, knees drawn up, gentle smile. Brown off-the-shoulder knit jumper, black leggings, warm cosy living room light, a knitted blanket nearby. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-08",
+    name: "Navy Cowl Consultation Room",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated in a modern clinic consultation room, leaning slightly towards camera with hands resting on the desk, warm professional smile. Navy chunky cowl neck jumper, straight leg blue jeans, soft neutral clinic tones behind her. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-09",
+    name: "Purple Oversized Fireplace",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated in a cosy armchair beside a softly lit fireplace, legs tucked beneath her, relaxed and glowing. Purple oversized knit jumper, black leggings, warm ambient light, a knitted throw across her lap. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-10",
+    name: "Cream Jumper Dress Window Seat",
+    hasColour: false,
+    promptTemplate: `Full length portrait of a woman from the reference photo seated on a window seat with a soft blanket beside her, looking out with a gentle smile. Cream ribbed jumper dress, knee-high boots, soft natural daylight through the window. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-11",
+    name: "Coffee Cowl Clinic Laptop",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated at a clean white clinic desk, one hand resting near an open laptop, warm engaging smile turned to camera. Coffee brown chunky cowl neck jumper, straight leg blue jeans, soft neutral clinic tones and a hint of greenery behind her. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-12",
+    name: "Mustard Off-Shoulder Tea Sofa",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo relaxed on a soft sofa, a mug of tea cradled in both hands, warm content smile. Mustard yellow off-the-shoulder knit jumper, black leggings, cosy cushions and soft warm light around her. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-13",
+    name: "Sage Chunky Corridor",
+    hasColour: false,
+    promptTemplate: `Full length portrait of a woman from the reference photo walking through a bright clinic corridor, glancing back over her shoulder with a warm smile. Sage green chunky knit jumper, straight leg blue jeans, soft daylight and clean minimal clinical surroundings. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-14",
+    name: "Black Cowl Reading Nook",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo curled up in a cosy reading nook chair with an open book resting on her lap, soft relaxed smile. Black cowl neck knit jumper, black leggings, warm ambient lamp light, a knitted throw nearby. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-15",
+    name: "White Jumper Dress Chaise",
+    hasColour: false,
+    promptTemplate: `Full length portrait of a woman from the reference photo reclined elegantly on a chaise lounge, one arm resting along the back, composed and glowing. White ribbed jumper dress, knee-high boots, soft warm interior light. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-16",
+    name: "Brown Cowl Clinic Entrance",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing at the entrance of a modern aesthetic clinic, hands loosely clasped, warm welcoming smile. Brown chunky cowl neck jumper, straight leg blue jeans, soft daylight and clean minimal architecture behind her. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-17",
+    name: "Navy Off-Shoulder Sofa Blanket",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo curled up on a sofa with a soft blanket wrapped around her shoulders, relaxed and glowing. Navy off-the-shoulder knit jumper, black leggings, warm cosy living room light. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-18",
+    name: "Purple Chunky Waiting Area",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated in a bright clinic waiting area, legs crossed, warm relaxed smile. Purple chunky cable knit jumper, straight leg blue jeans, soft neutral tones and comfortable clinic seating behind her. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-19",
+    name: "Cream Off-Shoulder Velvet Armchair",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo relaxed in a plush velvet armchair, one leg tucked beneath her, soft content smile. Cream off-the-shoulder knit jumper, black leggings, warm ambient light, a cosy cushion nearby. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ww-20",
+    name: "Coffee Jumper Dress Herringbone Sofa",
+    hasColour: false,
+    promptTemplate: `Full length portrait of a woman from the reference photo seated on a herringbone sofa, hands resting gently in her lap, warm glowing smile. Coffee brown ribbed jumper dress, knee-high boots, soft warm interior light and cosy cushions around her. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+];
+
 export const HOMEWORK_SHOTS_PRESETS: PhotoStudioPreset[] = [
   {
     id: "hw-01",
