@@ -787,9 +787,9 @@ export const WINTER_WOOLIES_PRESETS: PhotoStudioPreset[] = [
   },
   {
     id: "ww-02",
-    name: "Coffee Off-Shoulder Armchair",
+    name: "Grey Off-Shoulder Armchair",
     hasColour: false,
-    promptTemplate: `A woman from the reference photo curled up in a luxury cream boucle armchair by a window, one leg tucked beneath her, relaxed and glowing. Coffee brown off-the-shoulder knit jumper, black leggings, soft natural daylight streaming in, a knitted throw draped over the arm of the chair. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+    promptTemplate: `A woman from the reference photo curled up in a luxury cream boucle armchair by a window, one leg tucked beneath her, relaxed and glowing. Grey off-the-shoulder knit jumper, black leggings, soft natural daylight streaming in, a knitted throw draped over the arm of the chair. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
   },
   {
     id: "ww-03",
@@ -811,9 +811,9 @@ export const WINTER_WOOLIES_PRESETS: PhotoStudioPreset[] = [
   },
   {
     id: "ww-06",
-    name: "White Cable Knit Armchair",
+    name: "Grey Cable Knit Armchair",
     hasColour: false,
-    promptTemplate: `A woman from the reference photo seated in a plush velvet armchair, one arm draped over the side, warm relaxed expression. White cable knit jumper, straight leg blue jeans, soft window light, a cup of tea resting on a side table nearby. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+    promptTemplate: `A woman from the reference photo seated in a plush velvet armchair, one arm draped over the side, warm relaxed expression. Grey cable knit jumper, straight leg blue jeans, soft window light, a cup of tea resting on a side table nearby. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
   },
   {
     id: "ww-07",
@@ -823,15 +823,15 @@ export const WINTER_WOOLIES_PRESETS: PhotoStudioPreset[] = [
   },
   {
     id: "ww-08",
-    name: "Navy Cowl Consultation Room",
+    name: "Grey Cowl Consultation Room",
     hasColour: false,
-    promptTemplate: `A woman from the reference photo seated in a modern clinic consultation room, leaning slightly towards camera with hands resting on the desk, warm professional smile. Navy chunky cowl neck jumper, straight leg blue jeans, soft neutral clinic tones behind her. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+    promptTemplate: `A woman from the reference photo seated in a modern clinic consultation room, leaning slightly towards camera with hands resting on the desk, warm professional smile. Grey chunky cowl neck jumper, straight leg blue jeans, soft neutral clinic tones behind her. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
   },
   {
     id: "ww-09",
-    name: "Purple Oversized Fireplace",
+    name: "Black Oversized Fireplace",
     hasColour: false,
-    promptTemplate: `A woman from the reference photo seated in a cosy armchair beside a softly lit fireplace, legs tucked beneath her, relaxed and glowing. Purple oversized knit jumper, black leggings, warm ambient light, a knitted throw across her lap. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+    promptTemplate: `A woman from the reference photo seated in a cosy armchair beside a softly lit fireplace, legs tucked beneath her, relaxed and glowing. Black oversized knit jumper, black leggings, warm ambient light, a knitted throw across her lap. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
   },
   {
     id: "ww-10",
@@ -841,9 +841,9 @@ export const WINTER_WOOLIES_PRESETS: PhotoStudioPreset[] = [
   },
   {
     id: "ww-11",
-    name: "Coffee Cowl Clinic Laptop",
+    name: "Mustard Cowl Clinic Laptop",
     hasColour: false,
-    promptTemplate: `A woman from the reference photo seated at a clean white clinic desk, one hand resting near an open laptop, warm engaging smile turned to camera. Coffee brown chunky cowl neck jumper, straight leg blue jeans, soft neutral clinic tones and a hint of greenery behind her. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+    promptTemplate: `A woman from the reference photo seated at a clean white clinic desk, one hand resting near an open laptop, warm engaging smile turned to camera. Mustard yellow chunky cowl neck jumper, straight leg blue jeans, soft neutral clinic tones and a hint of greenery behind her. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
   },
   {
     id: "ww-12",
@@ -865,9 +865,9 @@ export const WINTER_WOOLIES_PRESETS: PhotoStudioPreset[] = [
   },
   {
     id: "ww-15",
-    name: "White Jumper Dress Chaise",
+    name: "Brown Jumper Dress Chaise",
     hasColour: false,
-    promptTemplate: `Full length portrait of a woman from the reference photo reclined elegantly on a chaise lounge, one arm resting along the back, composed and glowing. White ribbed jumper dress, knee-high boots, soft warm interior light. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+    promptTemplate: `Full length portrait of a woman from the reference photo reclined elegantly on a chaise lounge, one arm resting along the back, composed and glowing. Brown ribbed jumper dress, knee-high boots, soft warm interior light. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
   },
   {
     id: "ww-16",
@@ -877,15 +877,15 @@ export const WINTER_WOOLIES_PRESETS: PhotoStudioPreset[] = [
   },
   {
     id: "ww-17",
-    name: "Navy Off-Shoulder Sofa Blanket",
+    name: "Sage Off-Shoulder Sofa Blanket",
     hasColour: false,
-    promptTemplate: `A woman from the reference photo curled up on a sofa with a soft blanket wrapped around her shoulders, relaxed and glowing. Navy off-the-shoulder knit jumper, black leggings, warm cosy living room light. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+    promptTemplate: `A woman from the reference photo curled up on a sofa with a soft blanket wrapped around her shoulders, relaxed and glowing. Sage green off-the-shoulder knit jumper, black leggings, warm cosy living room light. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
   },
   {
     id: "ww-18",
-    name: "Purple Chunky Waiting Area",
+    name: "Black Chunky Waiting Area",
     hasColour: false,
-    promptTemplate: `A woman from the reference photo seated in a bright clinic waiting area, legs crossed, warm relaxed smile. Purple chunky cable knit jumper, straight leg blue jeans, soft neutral tones and comfortable clinic seating behind her. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+    promptTemplate: `A woman from the reference photo seated in a bright clinic waiting area, legs crossed, warm relaxed smile. Black chunky cable knit jumper, straight leg blue jeans, soft neutral tones and comfortable clinic seating behind her. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
   },
   {
     id: "ww-19",
@@ -895,9 +895,72 @@ export const WINTER_WOOLIES_PRESETS: PhotoStudioPreset[] = [
   },
   {
     id: "ww-20",
-    name: "Coffee Jumper Dress Herringbone Sofa",
+    name: "Brown Jumper Dress Herringbone Sofa",
     hasColour: false,
-    promptTemplate: `Full length portrait of a woman from the reference photo seated on a herringbone sofa, hands resting gently in her lap, warm glowing smile. Coffee brown ribbed jumper dress, knee-high boots, soft warm interior light and cosy cushions around her. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+    promptTemplate: `Full length portrait of a woman from the reference photo seated on a herringbone sofa, hands resting gently in her lap, warm glowing smile. Brown ribbed jumper dress, knee-high boots, soft warm interior light and cosy cushions around her. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+];
+
+export const AUTUMN_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "au-01",
+    name: "Cream Jumper Candle Table",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated at a rustic wooden table styled with lit candles and small pumpkins arranged around her, warm content smile. Cream chunky knit jumper, soft golden autumn light, rust and burnt orange tones throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "au-02",
+    name: "Grey Jumper Pumpkin Hold",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo holding a small pumpkin in both hands, autumn leaves scattered on the table in front of her. Grey knit jumper, warm amber light, deep orange and brown autumn tones. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "au-03",
+    name: "Cream Jumper Cosy Armchair",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo relaxed in a cosy armchair with a rust coloured knitted throw across her lap, lit candles flickering on a side table nearby. Cream jumper, warm autumnal glow. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "au-04",
+    name: "Brown Cable Knit Wheat Table",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo leaning on a rustic wooden table styled with small pumpkins and dried wheat stems, gentle smile. Brown cable knit jumper, warm golden autumn light, mustard and terracotta tones. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "au-05",
+    name: "Cream Jumper Mantelpiece",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing beside a mantelpiece decorated with lit candles and a small pumpkin display, relaxed and glowing. Cream jumper, warm amber light, deep autumn tones. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "au-06",
+    name: "Black Jumper Rug Pumpkins",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated cross legged on a rug with a small stack of pumpkins and a lit candle beside her, soft content smile. Black knit jumper, warm cosy autumn light. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "au-07",
+    name: "Cream Cowl Pampas Vase",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo holding a warm mug, a vase of pampas grass and autumn foliage beside her, gentle smile. Cream cowl neck jumper, soft golden light, rust and mustard tones. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "au-08",
+    name: "Mustard Jumper Candle Table Florals",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated at a table styled with lit candles, small pumpkins and autumn florals, warm relaxed smile. Mustard yellow jumper, soft golden autumn light. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "au-09",
+    name: "Cream Jumper Sofa Blanket Pumpkins",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo curled up on a sofa with a burnt orange knitted blanket, small pumpkins resting on the floor nearby, candlelight glowing softly. Cream jumper, warm cosy autumn tones. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "au-10",
+    name: "Sage Chunky Jumper Window Sill",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing near a window with autumn leaves and small pumpkins arranged on the sill, lit candles glowing beside her. Sage green chunky knit jumper, warm golden light, deep autumn tones. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
   },
 ];
 
