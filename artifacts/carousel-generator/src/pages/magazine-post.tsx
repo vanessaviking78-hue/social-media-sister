@@ -13,6 +13,7 @@ import {
   MIN_PHOTOS,
   MAX_PHOTOS,
   drawAllPostPages,
+  normaliseQrUrl,
   photoRole,
   photoShape,
   type MagazinePostCopy,
@@ -107,6 +108,8 @@ export default function MagazinePost() {
   const [colour, setColour] = useState("#4a1942");
   const [accent, setAccent] = useState("#f0b8a4");
   const [contact, setContact] = useState("");
+  const [qrLink, setQrLink] = useState("");
+  const [qrReady, setQrReady] = useState(typeof window !== "undefined" && !!(window as any).qrcode);
   const [treatment, setTreatment] = useState("");
   const [replyWord, setReplyWord] = useState("");
   const [style, setStyle] = useState<string | null>(null);
@@ -123,13 +126,25 @@ export default function MagazinePost() {
   const bigRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<{ slot: number; x: number; y: number; inv: DOMMatrix; slackX: number; slackY: number } | null>(null);
 
-  const brand: MagazineBrand = {
+  // The QR encoder loads from jsDelivr once; pages redraw when it arrives.
+  useEffect(() => {
+    if ((window as any).qrcode) { setQrReady(true); return; }
+    const src = "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js";
+    const s = document.createElement("script");
+    s.src = src;
+    s.onload = () => setQrReady(true);
+    s.onerror = () => toast.error("Couldn't load the QR code maker, check your connection");
+    document.head.appendChild(s);
+  }, []);
+
+  const brand: MagazineBrand & { qrUrl?: string } = {
     clinicName: clinicName.trim() || "Your clinic",
     colour,
     accent,
     ctaButton: "",
     contact: contact.trim(),
     issue: monthYear(),
+    qrUrl: qrLink.trim(),
   };
 
   function pickClient(id: number | null) {
@@ -140,6 +155,7 @@ export default function MagazinePost() {
     if (isHex(p.pageColor)) setColour(p.pageColor.trim());
     if (isHex(p.accentColor)) setAccent(p.accentColor.trim());
     setContact((p.bookingLink ?? "").toString());
+    setQrLink((p.bookingLink ?? "").toString());
   }
 
   function updateAdjust(slot: number, fn: (a: PhotoAdjust) => PhotoAdjust) {
@@ -212,7 +228,7 @@ export default function MagazinePost() {
     }, 30);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clinicName, colour, accent, contact, copy, photos, activePage, treatment, replyWord]);
+  }, [clinicName, colour, accent, contact, qrLink, qrReady, copy, photos, activePage, treatment, replyWord]);
 
   function hitAt(e: { clientX: number; clientY: number }) {
     const big = bigRef.current;
@@ -484,6 +500,10 @@ export default function MagazinePost() {
                 </label>
               </div>
               <Field label="Website, phone or handle (last page footer, optional)" value={contact} onChange={setContact} placeholder="www.yourclinic.co.uk" />
+              <Field label="Booking link (QR code on the last page, optional)" value={qrLink} onChange={setQrLink} placeholder="https://yourclinic.co.uk/book" />
+              {qrLink.trim() && !normaliseQrUrl(qrLink) && (
+                <p className="text-[11px] text-amber-300">That doesn't look like a web link, so no QR code will show. Try something like www.yourclinic.co.uk/book</p>
+              )}
             </section>
 
             <section className="space-y-3">
