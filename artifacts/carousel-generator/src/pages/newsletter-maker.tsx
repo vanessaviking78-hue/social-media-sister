@@ -88,6 +88,70 @@ function download(url: string, filename: string) {
   document.body.removeChild(a);
 }
 
+// iPhone photos are HEIC, which Chrome can't open, and Macs sometimes hand
+// them over with no file type at all. Convert those to JPEG in the browser
+// (heic2any, loaded from jsDelivr on first use), and fall back to
+// createImageBitmap for anything else <img> struggles with.
+const HEIC2ANY_SRC = "https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js";
+const isHeic = (f: File) => /hei[cf]/i.test(f.type) || /\.(heic|heif)$/i.test(f.name);
+const looksLikeImage = (f: File) => f.type.startsWith("image/") || isHeic(f) || /\.(jpe?g|png|webp|gif|avif|bmp|tiff?)$/i.test(f.name);
+
+async function loadHeic2any(): Promise<any> {
+  const w = window as any;
+  if (w.heic2any) return w.heic2any;
+  await new Promise<void>((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = HEIC2ANY_SRC;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error("Couldn't load the iPhone photo converter"));
+    document.head.appendChild(s);
+  });
+  return w.heic2any;
+}
+
+function imgFromUrl(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error("unreadable"));
+    img.src = url;
+  });
+}
+
+async function readImageFile(file: File): Promise<HTMLImageElement> {
+  let blob: Blob = file;
+  if (isHeic(file)) {
+    const heic2any = await loadHeic2any();
+    const out = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+    blob = Array.isArray(out) ? out[0] : out;
+  }
+  try {
+    return await imgFromUrl(URL.createObjectURL(blob));
+  } catch {
+    const bmp = await createImageBitmap(blob);
+    const c = document.createElement("canvas");
+    c.width = bmp.width;
+    c.height = bmp.height;
+    c.getContext("2d")!.drawImage(bmp, 0, 0);
+    return await imgFromUrl(c.toDataURL("image/jpeg", 0.92));
+  }
+}
+
+async function readImageWithToast(file: File): Promise<HTMLImageElement | null> {
+  if (!looksLikeImage(file)) { toast.error("That doesn't look like a photo. JPG, PNG or iPhone (HEIC) photos all work."); return null; }
+  const slow = isHeic(file);
+  const id = slow ? toast.loading("Converting your iPhone photo…") : undefined;
+  try {
+    const img = await readImageFile(file);
+    if (id !== undefined) toast.dismiss(id);
+    return img;
+  } catch {
+    if (id !== undefined) toast.dismiss(id);
+    toast.error("Couldn't read that photo. Try saving it as a JPG and uploading again.");
+    return null;
+  }
+}
+
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
 type Issue = { id: number; month_label: string; topics: string[]; content: NewsletterContent; created_at: string };
@@ -284,22 +348,16 @@ export default function NewsletterMaker() {
   const updateSection = (i: number, patch: Partial<NewsletterSection>) =>
     setContent((c) => (c ? { ...c, sections: c.sections.map((s, j) => (j === i ? { ...s, ...patch } : s)) } : c));
 
-  const handleHero = useCallback((file?: File | null) => {
+  const handleHero = useCallback(async (file?: File | null) => {
     if (!file) return;
-    if (!file.type.startsWith("image/")) { toast.error("That's not an image"); return; }
-    const img = new Image();
-    img.onload = () => { setHeroImg(img); setHeroPos(50); setHeroHostedUrl(null); };
-    img.onerror = () => toast.error("Couldn't read that image");
-    img.src = URL.createObjectURL(file);
+    const img = await readImageWithToast(file);
+    if (img) { setHeroImg(img); setHeroPos(50); setHeroHostedUrl(null); }
   }, []);
 
-  const handleClinician = useCallback((file?: File | null) => {
+  const handleClinician = useCallback(async (file?: File | null) => {
     if (!file) return;
-    if (!file.type.startsWith("image/")) { toast.error("That's not an image"); return; }
-    const img = new Image();
-    img.onload = () => setClinicianImg(img);
-    img.onerror = () => toast.error("Couldn't read that image");
-    img.src = URL.createObjectURL(file);
+    const img = await readImageWithToast(file);
+    if (img) setClinicianImg(img);
   }, []);
 
   async function generate() {
@@ -526,7 +584,7 @@ export default function NewsletterMaker() {
                   onDrop={(e) => { e.preventDefault(); handleHero(e.dataTransfer.files?.[0]); }}
                   className="block border-2 border-dashed border-zinc-800 hover:border-rose-500/60 rounded-xl p-6 text-center cursor-pointer"
                 >
-                  <input ref={heroInput} type="file" accept="image/*" className="hidden" onChange={(e) => { handleHero(e.target.files?.[0]); e.currentTarget.value = ""; }} />
+                  <input ref={heroInput} type="file" accept="image/*,.heic,.heif" className="hidden" onChange={(e) => { handleHero(e.target.files?.[0]); e.currentTarget.value = ""; }} />
                   <ImagePlus className="mx-auto mb-2 text-zinc-600" size={26} />
                   <p className="text-sm">Drop this month's photo here</p>
                   <p className="text-xs text-zinc-500 mt-1">Landscape works best. No before and afters, no vials or syringes.</p>
@@ -543,7 +601,7 @@ export default function NewsletterMaker() {
                   <div className="flex gap-3 text-xs">
                     <button onClick={() => heroInput.current?.click()} className="text-rose-300 hover:text-rose-200 flex items-center gap-1"><Upload size={12} /> Replace</button>
                     <button onClick={() => { setHeroImg(null); setHeroHostedUrl(null); }} className="text-zinc-400 hover:text-white flex items-center gap-1"><X size={12} /> Remove</button>
-                    <input ref={heroInput} type="file" accept="image/*" className="hidden" onChange={(e) => { handleHero(e.target.files?.[0]); e.currentTarget.value = ""; }} />
+                    <input ref={heroInput} type="file" accept="image/*,.heic,.heif" className="hidden" onChange={(e) => { handleHero(e.target.files?.[0]); e.currentTarget.value = ""; }} />
                   </div>
                 </div>
               )}
@@ -602,7 +660,7 @@ export default function NewsletterMaker() {
                 >
                   {clinicianPhoto ? <img src={clinicianPhoto} alt="Clinician" className="w-full h-full object-cover" /> : <ImagePlus size={20} className="text-zinc-600" />}
                 </button>
-                <input ref={clinicianInput} type="file" accept="image/*" className="hidden" onChange={(e) => { handleClinician(e.target.files?.[0]); e.currentTarget.value = ""; }} />
+                <input ref={clinicianInput} type="file" accept="image/*,.heic,.heif" className="hidden" onChange={(e) => { handleClinician(e.target.files?.[0]); e.currentTarget.value = ""; }} />
                 <div className="flex-1 min-w-0 space-y-2">
                   <input
                     value={signName}
