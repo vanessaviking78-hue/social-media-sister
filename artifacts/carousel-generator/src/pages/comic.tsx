@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { usePresets } from "@/lib/use-presets";
 import { COMIC_CONVERSATIONS, COMIC_EXPRESSIONS, type Expr } from "@/lib/comic-conversations";
-import { renderComicPage, renderComicCover, comicSummary, COMIC_W, COMIC_H, type ComicSprites, type SpriteSet } from "@/lib/comic-render";
+import { renderComicPageTop, renderComicPageBottom, renderComicCover, comicSummary, COMIC_W, COMIC_H, type ComicSprites, type SpriteSet } from "@/lib/comic-render";
 import { COMIC_TITLES, COMIC_STRAPLINES, COMIC_ISSUES, fillTitle } from "@/lib/comic-titles";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -174,6 +174,7 @@ export default function ComicPage() {
   const [patientId, setPatientId] = useState("auto");
   const [search, setSearch] = useState("");
   const [footer, setFooter] = useState("");
+  const [tagline, setTagline] = useState('Follow along for more "How Not To Do Aesthetics"');
   const [tone, setTone] = useState("5");
   const [caption, setCaption] = useState("");
   const [titleIdx, setTitleIdx] = useState(0);
@@ -186,6 +187,7 @@ export default function ComicPage() {
   const [fontsReady, setFontsReady] = useState(0);
   const c0 = useRef<HTMLCanvasElement>(null);
   const c1 = useRef<HTMLCanvasElement>(null);
+  const c2 = useRef<HTMLCanvasElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const conv = useMemo(() => COMIC_CONVERSATIONS.find((c) => c.id === convId) ?? COMIC_CONVERSATIONS[0], [convId]);
@@ -231,8 +233,9 @@ export default function ComicPage() {
 
   const render = useCallback(() => {
     if (c0.current) renderComicCover(c0.current, conv, sprites, { title: coverTitle, strapline, issue, footer });
-    if (c1.current) renderComicPage(c1.current, conv, sprites, { footer });
-  }, [conv, sprites, footer, coverTitle, strapline, issue]);
+    if (c1.current) renderComicPageTop(c1.current, conv, sprites, { footer });
+    if (c2.current) renderComicPageBottom(c2.current, conv, sprites, { footer, tagline });
+  }, [conv, sprites, footer, tagline, coverTitle, strapline, issue]);
 
   useEffect(() => { render(); }, [render, fontsReady]);
 
@@ -285,6 +288,7 @@ export default function ComicPage() {
     }
   };
 
+  const SLIDE_NAMES = ["1-cover", "2-page", "3-page"];
   const download = (canvas: HTMLCanvasElement | null, n: number) =>
     new Promise<void>((resolve) => {
       if (!canvas) return resolve();
@@ -293,25 +297,27 @@ export default function ComicPage() {
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
         const slug = (clientName || "clinic").replace(/\s+/g, "-").toLowerCase();
-        a.download = `${slug}-comic-${conv.id}-${n === 1 ? "1-cover" : "2-page"}.png`;
+        a.download = `${slug}-comic-${conv.id}-${SLIDE_NAMES[n - 1] ?? `${n}-page`}.png`;
         a.click();
         setTimeout(() => URL.revokeObjectURL(a.href), 2000);
         resolve();
       }, "image/png");
     });
 
-  const downloadBoth = async () => {
+  const downloadAll = async () => {
     render();
     await download(c0.current, 1);
     await new Promise((r) => setTimeout(r, 400));
     await download(c1.current, 2);
+    await new Promise((r) => setTimeout(r, 400));
+    await download(c2.current, 3);
   };
 
   const writeCaption = async () => {
     setWriting(true);
     try {
       const context = [
-        `A two-slide comic book carousel: a cover titled "${coverTitle}" then one page of six panels called "${conv.title}". The clinician is the sensible one and the joke pokes fun at the safety risks of unqualified or cheap treatment. The conversation:`,
+        `A three-slide comic book carousel: a cover titled "${coverTitle}", then a page of four panels, then a page of the final two panels called "${conv.title}" with the punchline and a follow-along line reading "${tagline}". The clinician is the sensible one and the joke pokes fun at the safety risks of unqualified or cheap treatment. The conversation:`,
         comicSummary(conv),
         "Write the caption to go with the comic. Do not repeat the dialogue word for word, react to it like the clinician posting it. Finish with a strong, stealth-sales-friendly call to action that invites people to book a proper consultation or send a message, without sounding pushy.",
       ].join("\n\n");
@@ -335,7 +341,7 @@ export default function ComicPage() {
         </Link>
         <div>
           <h1 className="font-bold text-lg leading-none">Comic Strip Maker</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Turn a clinician into a pop-art cartoon and post a two slide comic (cover plus six panels) that pokes fun at the safety side of aesthetics.</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Turn a clinician into a pop-art cartoon and post a three slide comic (cover, four panels, then the last two with the punchline) that pokes fun at the safety side of aesthetics.</p>
         </div>
       </header>
 
@@ -432,6 +438,10 @@ export default function ComicPage() {
               <Label className="text-xs">Small footer line (optional)</Label>
               <Input value={footer} onChange={(e) => setFooter(e.target.value)} placeholder="@yourclinic" className="h-8 text-sm" />
             </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Funny follow line (under the last box)</Label>
+              <Input value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="Leave blank for none" className="h-8 text-sm" />
+            </div>
           </section>
 
           <section className="space-y-2">
@@ -484,17 +494,21 @@ export default function ComicPage() {
               <h2 className="font-semibold text-base">{convIndex + 1}. {conv.title}</h2>
               {!clinicianReady && <p className="text-xs text-amber-400 mt-0.5">Stand-in characters are showing until you make the cartoon.</p>}
             </div>
-            <Button onClick={downloadBoth}><Download className="w-4 h-4 mr-2" />Download both slides</Button>
+            <Button onClick={downloadAll}><Download className="w-4 h-4 mr-2" />Download all 3 slides</Button>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <p className="text-xs text-muted-foreground mb-1">Slide 1: the cover</p>
               <canvas ref={c0} width={COMIC_W} height={COMIC_H} className="w-full h-auto rounded-lg border border-border/30" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Slide 2: the six panels</p>
+              <p className="text-xs text-muted-foreground mb-1">Slide 2: four panels</p>
               <canvas ref={c1} width={COMIC_W} height={COMIC_H} className="w-full h-auto rounded-lg border border-border/30" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground mb-1">Slide 3: the punchline</p>
+              <canvas ref={c2} width={COMIC_W} height={COMIC_H} className="w-full h-auto rounded-lg border border-border/30" />
             </div>
           </div>
 
