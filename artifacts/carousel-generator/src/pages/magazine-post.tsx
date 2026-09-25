@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { MagazineIcon } from "@/components/magazine-icon";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { usePresets } from "@/lib/use-presets";
-import { coverToCanvas, loadImageFromFile } from "@/lib/advent-door";
+import { loadImageFromFile } from "@/lib/advent-door";
 import { getPhotoHits, DEFAULT_ADJUST, PAGE_W, PAGE_H, type PhotoAdjust, type MagazineBrand } from "@/lib/magazine-pages";
 import {
   EMPTY_POST_COPY,
@@ -14,6 +14,7 @@ import {
   MAX_PHOTOS,
   drawAllPostPages,
   photoRole,
+  photoShape,
   type MagazinePostCopy,
   type ListPage,
 } from "@/lib/magazine-post-pages";
@@ -21,7 +22,27 @@ import { scanText, applySwap, isBlocking } from "@/lib/newsletter-compliance";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-type Photo = { canvas: HTMLCanvasElement; thumb: string; name: string; adjust: PhotoAdjust };
+type Photo = { canvas: HTMLCanvasElement; thumb: string; name: string; adjust: PhotoAdjust; shape: "H" | "V" };
+
+// Keeps the whole photo, just capped in size. The pages crop it to each frame, so a horizontal photo
+// stays horizontal for the wide frames instead of being cut down to a portrait strip first.
+function fitPhoto(img: HTMLImageElement): HTMLCanvasElement {
+  const scale = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(img.naturalWidth * scale));
+  c.height = Math.max(1, Math.round(img.naturalHeight * scale));
+  c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
+
+function thumbOf(c: HTMLCanvasElement): string {
+  const t = document.createElement("canvas");
+  const k = 360 / Math.max(c.width, c.height);
+  t.width = Math.round(c.width * k);
+  t.height = Math.round(c.height * k);
+  t.getContext("2d")!.drawImage(c, 0, 0, t.width, t.height);
+  return t.toDataURL("image/jpeg", 0.7);
+}
 
 const STYLES = [
   { key: "1", label: "Northern grit", hint: "Straight talking, warm, dry" },
@@ -133,8 +154,14 @@ export default function MagazinePost() {
     for (const file of list) {
       try {
         const img = await loadImageFromFile(file);
-        const canvas = coverToCanvas(img);
-        loaded.push({ canvas, thumb: canvas.toDataURL("image/jpeg", 0.6), name: file.name, adjust: { ...DEFAULT_ADJUST } });
+        const canvas = fitPhoto(img);
+        loaded.push({
+          canvas,
+          thumb: thumbOf(canvas),
+          name: file.name,
+          adjust: { ...DEFAULT_ADJUST },
+          shape: img.naturalWidth > img.naturalHeight * 1.05 ? "H" : "V",
+        });
       } catch (e: any) {
         toast.error(`${file.name}: ${e?.message || "couldn't read that image"}`);
       }
@@ -484,14 +511,51 @@ export default function MagazinePost() {
                   />
                   <Upload className="mb-1.5 text-zinc-600" size={20} />
                   <p className="text-sm font-medium text-zinc-300">Drop your photos here, or tap to choose</p>
-                  <p className="text-[11px] text-zinc-500 mt-1">The first is the cover and the last is the full photo page. The rest are shared across the fact pages.</p>
+                  <p className="text-[11px] text-zinc-500 mt-1">The first is the cover and the last is the full photo page. The rest are shared across the inside pages.</p>
                 </label>
               )}
+              <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
+                <p className="text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
+                  Photo shapes needed <span className="normal-case tracking-normal text-zinc-600">(V = vertical, H = horizontal)</span>
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {Array.from({ length: Math.max(photos.length, MIN_PHOTOS) }, (_, i) => {
+                    const need = photoShape(i, Math.max(photos.length, MIN_PHOTOS));
+                    return (
+                      <span
+                        key={i}
+                        className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs font-semibold ${
+                          need === "V" ? "border-fuchsia-500/50 text-fuchsia-300" : "border-sky-500/50 text-sky-300"
+                        }`}
+                      >
+                        <span className="text-zinc-500 font-normal">{i + 1}</span> {need}
+                      </span>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-zinc-500 mt-2">
+                  With more photos the order shifts a little, so this updates as you add them. Squarish photos work as either.
+                </p>
+              </div>
               {photos.length > 0 && (
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
                   {photos.map((p, i) => (
                     <div key={`${p.name}-${i}`} className="relative rounded-xl overflow-hidden border border-zinc-800 bg-zinc-900">
                       <img src={p.thumb} alt={p.name} className="w-full aspect-[3/4] object-cover" />
+                      {(() => {
+                        const need = photoShape(i, Math.max(photos.length, MIN_PHOTOS));
+                        const ok = p.shape === need;
+                        return (
+                          <span
+                            className={`absolute top-1.5 left-1.5 rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                              ok ? "bg-black/65 text-white" : "bg-amber-500 text-black"
+                            }`}
+                            title={ok ? `Right shape (${need})` : `This one is ${p.shape === "H" ? "horizontal" : "vertical"} but this spot wants ${need === "H" ? "horizontal" : "vertical"}`}
+                          >
+                            {ok ? need : `Needs ${need}`}
+                          </span>
+                        );
+                      })()}
                       <button
                         onClick={() => {
                           setPhotos((prev) => prev.filter((_, j) => j !== i));

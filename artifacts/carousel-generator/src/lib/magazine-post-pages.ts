@@ -73,6 +73,13 @@ export function planPhotos(count: number): PhotoPlan {
   return { cover, pages: pages as PhotoPlan["pages"], final: n - 1 };
 }
 
+// The shape each photo slot needs. The cover, the cover inset and the last page are full height (V for vertical).
+// Everything on the inside pages sits in a wide frame (H for horizontal).
+export function photoShape(index: number, count: number): "H" | "V" {
+  const plan = planPhotos(count);
+  return index === plan.final || plan.cover.includes(index) ? "V" : "H";
+}
+
 // Where a photo lands, in words, for the labels under each thumbnail.
 export function photoRole(index: number, count: number): string {
   const plan = planPhotos(count);
