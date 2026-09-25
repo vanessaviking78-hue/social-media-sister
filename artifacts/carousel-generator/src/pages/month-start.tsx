@@ -173,6 +173,7 @@ export default function MonthStart() {
   const [topics, setTopics] = useState<string[]>(["", "", "", "", ""]);
   const [offer, setOffer] = useState("");
   const [linkOverride, setLinkOverride] = useState("");
+  const [colourOverride, setColourOverride] = useState("");
   const [content, setContent] = useState<NewsletterContent | null>(null);
   const [generating, setGenerating] = useState(false);
   const [history, setHistory] = useState<Issue[]>([]);
@@ -199,7 +200,7 @@ export default function MonthStart() {
     clinicName: preset?.name || "Your clinic",
     newsletterName: preset?.newsletterName?.trim() || "Catch Up from the Clinic",
     monthLabel,
-    accent: preset?.accentColor || "#b76e79",
+    accent: colourOverride || preset?.accentColor || "#b76e79",
     logo,
     bookingUrl,
     address: preset?.clinicAddress?.trim() || "",
@@ -210,6 +211,7 @@ export default function MonthStart() {
   useEffect(() => {
     setLogo(null);
     setHistory([]);
+    setColourOverride("");
     if (!preset) return;
     loadLogo(preset.logoUrl).then(setLogo);
     fetch(`${BASE}/api/newsletter/history/${preset.id}`, { headers: authHeaders() })
@@ -273,7 +275,7 @@ export default function MonthStart() {
     }, 30);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [content, photos, adjusts, activePage, preset?.id, monthLabel, logo, bookingUrl]);
+  }, [content, photos, adjusts, activePage, preset?.id, monthLabel, logo, bookingUrl, colourOverride]);
 
   // Live preview of the page turning video.
   useEffect(() => {
@@ -540,6 +542,26 @@ export default function MonthStart() {
                   </select>
                 </label>
               </div>
+              {preset && (
+                <label className="flex items-center gap-3">
+                  <span className="text-[11px] uppercase tracking-widest text-zinc-500">Colour for this issue</span>
+                  <input
+                    type="color"
+                    value={brand.accent}
+                    onChange={(e) => setColourOverride(e.target.value)}
+                    className="w-9 h-9 rounded-md border border-zinc-800 bg-zinc-950 cursor-pointer p-0.5"
+                    title="Overrides the clinic's saved colour for these 5 pages only"
+                  />
+                  {colourOverride && (
+                    <button
+                      onClick={() => setColourOverride("")}
+                      className="text-xs text-zinc-500 hover:text-amber-400 underline underline-offset-2"
+                    >
+                      Reset to {preset.name}'s colour
+                    </button>
+                  )}
+                </label>
+              )}
               {preset && history.length > 0 && (
                 <div>
                   <button
