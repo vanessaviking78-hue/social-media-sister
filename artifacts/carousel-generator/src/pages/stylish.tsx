@@ -203,6 +203,7 @@ type Post = {
   caption: string;
   captionBusy: boolean;
   selected: boolean;
+  cover?: CoverLayout; // this post's own cover option. Empty means it follows the main choice.
 };
 
 type SlideKind = "cover" | "body" | "cta";
@@ -268,6 +269,15 @@ function buildSlides(texts: string[]): SlideSpec[] {
     out.push({ kind: i === last ? "cta" : "body", text: t[i], sub: "" });
   }
   return out;
+}
+
+const COVER_ORDER: CoverLayout[] = ["band", "centred", "block", "split", "serif"];
+
+// The look of a slide. A post that has its own cover option gets that option's designed fonts, colours and
+// proportions on slide 1. Every other slide, and every post on the main choice, uses the settings as they are.
+function styleForSlide(style: Style, post: Post, kind: SlideKind): Style {
+  if (kind !== "cover" || !post.cover || post.cover === style.coverLayout) return style;
+  return { ...style, ...COVER_PRESETS[post.cover] } as Style;
 }
 
 function naturalSort(a: File, b: File) {
@@ -866,6 +876,18 @@ async function fontDbDelete(name: string) {
 // Small UI pieces
 // ---------------------------------------------------------------------------
 
+function CoverIcon({ k }: { k: CoverLayout }) {
+  return (
+    <div className="relative w-9 h-12 rounded-sm overflow-hidden bg-neutral-100 border border-border/30 shrink-0">
+      {k === "band" && (<><div className="absolute inset-x-0 top-0 h-[74%] bg-amber-700/70" /><div className="absolute left-1 bottom-1.5 w-5 h-1 bg-black" /></>)}
+      {k === "centred" && (<><div className="absolute inset-0 bg-amber-700/70" /><div className="absolute left-1.5 right-1.5 top-[42%] h-1 bg-sky-400" /><div className="absolute left-2.5 right-2.5 top-[58%] h-0.5 bg-white" /></>)}
+      {k === "block" && (<><div className="absolute inset-x-0 top-0 h-[38%] bg-amber-700/70" /><div className="absolute left-1 right-1 top-[58%] h-2 bg-black" /><div className="absolute left-1 bottom-1.5 w-3 h-0.5 bg-black" /></>)}
+      {k === "serif" && (<><div className="absolute inset-0 bg-amber-700/70" /><div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-black/70 to-transparent" /><div className="absolute left-1 right-1 bottom-4 h-1.5 bg-white" /><div className="absolute left-2 right-2 bottom-2 h-0.5 bg-white/80" /></>)}
+      {k === "split" && (<><div className="absolute inset-y-0 left-0 w-[47%] bg-amber-700/70" /><div className="absolute left-[54%] right-1 top-[24%] h-1.5 bg-black" /><div className="absolute right-1 bottom-0 left-[47%] h-1.5 bg-neutral-500" /></>)}
+    </div>
+  );
+}
+
 function ColourField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div className="flex items-center justify-between gap-2">
@@ -931,6 +953,7 @@ export default function Stylish() {
   const [images, setImages] = useState<File[]>([]);
   const [perPost, setPerPost] = useState(5);
   const [reusePhotos, setReusePhotos] = useState(true);
+  const [coverVersion, setCoverVersion] = useState(0);
   const [overrides, setOverrides] = useState<Record<string, File>>({});
   const [csvName, setCsvName] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -1085,14 +1108,21 @@ export default function Stylish() {
 
   const renderKey = useMemo(
     () => JSON.stringify([
-      posts.map(p => [p.id, p.texts]), style, images.map((f, i) => i + f.name + f.size), perPost, reusing,
+      posts.map(p => [p.id, p.texts]), style, images.map((f, i) => i + f.name + f.size), perPost, reusing, coverVersion,
       Object.entries(overrides).map(([k, f]) => k + f.name + f.size), preset?.id, preset?.logoUrl, fontVersion,
     ]),
-    [posts, style, images, perPost, reusing, overrides, preset, fontVersion],
+    [posts, style, images, perPost, reusing, coverVersion, overrides, preset, fontVersion],
   );
 
   const postsRef = useRef(posts);
   postsRef.current = posts;
+
+  // Loads the fonts for the main cover and for any cover option a post has picked for itself.
+  const warmAll = async () => {
+    await warmFonts(style);
+    const own = new Set(postsRef.current.map(p => p.cover).filter((c): c is CoverLayout => !!c && c !== style.coverLayout));
+    for (const c of own) await warmFonts({ ...style, ...COVER_PRESETS[c] } as Style);
+  };
   const photoForRef = useRef(photoFor);
   photoForRef.current = photoFor;
 
@@ -1102,7 +1132,7 @@ export default function Stylish() {
       if (!postsRef.current.length) { setThumbs({}); return; }
       setRendering(true);
       try {
-        await warmFonts(style);
+        await warmAll();
         const logo = style.showLogo ? await loadLogo(preset) : null;
         logoRef.current = logo;
         for (let pi = 0; pi < postsRef.current.length; pi++) {
@@ -1111,7 +1141,7 @@ export default function Stylish() {
           const specs = buildSlides(post.texts);
           const batch: Record<string, string> = {};
           for (let si = 0; si < specs.length; si++) {
-            const canvas = await renderSlide(specs[si], photoForRef.current(pi, post, si), style, logo, preset, 0.3, { index: si, total: specs.length }, focusRef.current[`${post.id}:${si}`]);
+            const canvas = await renderSlide(specs[si], photoForRef.current(pi, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 0.3, { index: si, total: specs.length }, focusRef.current[`${post.id}:${si}`]);
             batch[`${post.id}:${si}`] = canvas.toDataURL("image/jpeg", 0.75);
           }
           if (cancelled) return;
@@ -1138,7 +1168,7 @@ export default function Stylish() {
       const specs = buildSlides(post.texts);
       if (!specs[si]) return;
       const canvas = await renderSlide(
-        specs[si], photoFor(pi, post, si), style, logoRef.current, preset, 0.3,
+        specs[si], photoFor(pi, post, si), styleForSlide(style, post, specs[si].kind), logoRef.current, preset, 0.3,
         { index: si, total: specs.length }, focusRef.current[key],
       );
       setThumbs(prev => ({ ...prev, [key]: canvas.toDataURL("image/jpeg", 0.75) }));
@@ -1159,13 +1189,14 @@ export default function Stylish() {
     const photo = photoFor(pi, post, si);
     const dims = photo ? photoDims.get(photo) : undefined;
     if (!photo || !dims) return;
-    const area = photoArea(spec.kind, style);
+    const slideStyle = styleForSlide(style, post, spec.kind);
+    const area = photoArea(spec.kind, slideStyle);
     const sc = Math.max(area.w / dims.w, area.h / dims.h);
     const key = `${post.id}:${si}`;
     const rect = e.currentTarget.getBoundingClientRect();
     dragRef.current = {
       key, pi, si, startX: e.clientX, startY: e.clientY,
-      start: focusRef.current[key] ?? defaultPos(spec.kind, style),
+      start: focusRef.current[key] ?? defaultPos(spec.kind, slideStyle),
       ox: dims.w * sc - area.w, oy: dims.h * sc - area.h,
       thumbScale: rect.width / W, busy: false, pending: false,
     };
@@ -1200,6 +1231,25 @@ export default function Stylish() {
     focusRef.current = next;
     bumpFocus(n => n + 1);
     redrawOne(post, pi, si);
+  };
+
+  // -- choosing a cover for each post ----------------------------------------------
+
+  const setCover = (post: Post, pi: number, cover: CoverLayout | undefined) => {
+    if (post.cover === cover) return;
+    updatePost(post.id, { cover });
+    warmFonts({ ...style, ...COVER_PRESETS[cover ?? style.coverLayout] } as Style).then(() => redrawOne({ ...post, cover }, pi, 0));
+  };
+
+  // Gives every post a different cover option, going round the five in turn.
+  const mixCovers = () => {
+    setPosts(list => list.map((p, i) => ({ ...p, cover: COVER_ORDER[i % COVER_ORDER.length] })));
+    setCoverVersion(v => v + 1);
+  };
+
+  const sameCovers = () => {
+    setPosts(list => list.map(p => ({ ...p, cover: undefined })));
+    setCoverVersion(v => v + 1);
   };
 
   // -- post helpers ----------------------------------------------------------
@@ -1278,7 +1328,7 @@ export default function Stylish() {
     const specs = buildSlides(post.texts);
     const out: HTMLCanvasElement[] = [];
     for (let si = 0; si < specs.length; si++) {
-      out.push(await renderSlide(specs[si], photoFor(postIndex, post, si), style, logo, preset, 1, { index: si, total: specs.length }, focusRef.current[`${post.id}:${si}`]));
+      out.push(await renderSlide(specs[si], photoFor(postIndex, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 1, { index: si, total: specs.length }, focusRef.current[`${post.id}:${si}`]));
     }
     return out;
   };
@@ -1287,7 +1337,7 @@ export default function Stylish() {
     if (!selectedPosts.length) { toast.error("Tick at least one post first"); return; }
     setExporting("Starting");
     try {
-      await warmFonts(style);
+      await warmAll();
       const logo = style.showLogo ? await loadLogo(preset) : null;
       const zip = new JSZip();
       const captionRows: string[][] = [["post", "caption"]];
@@ -1325,7 +1375,7 @@ export default function Stylish() {
     if (!preset) { toast.error("Choose a client first so I know whose account to schedule to"); return; }
     setScheduling("Starting");
     try {
-      await warmFonts(style);
+      await warmAll();
       const logo = style.showLogo ? await loadLogo(preset) : null;
       const items: SchedulePostPayload[] = [];
       let n = 0;
@@ -1524,20 +1574,14 @@ export default function Stylish() {
           <section className="space-y-4 border-t border-border/30 pt-5">
             <h3 className="text-sm font-semibold">Slide 1: cover</h3>
             <div className="grid grid-cols-5 gap-1.5">
-              {(["band", "centred", "block", "split", "serif"] as CoverLayout[]).map((k, i) => (
+              {COVER_ORDER.map((k, i) => (
                 <button
                   key={k} type="button"
                   onClick={() => patch(COVER_PRESETS[k])}
                   className={["rounded-lg border p-1.5 flex flex-col items-center gap-1 transition-colors", style.coverLayout === k ? "border-sky-500 bg-sky-500/10" : "border-border/40 hover:border-border/70"].join(" ")}
                   aria-label={`Cover option ${i + 1}`}
                 >
-                  <div className="relative w-9 h-12 rounded-sm overflow-hidden bg-neutral-100 border border-border/30">
-                    {k === "band" && (<><div className="absolute inset-x-0 top-0 h-[74%] bg-amber-700/70" /><div className="absolute left-1 bottom-1.5 w-5 h-1 bg-black" /></>)}
-                    {k === "centred" && (<><div className="absolute inset-0 bg-amber-700/70" /><div className="absolute left-1.5 right-1.5 top-[42%] h-1 bg-sky-400" /><div className="absolute left-2.5 right-2.5 top-[58%] h-0.5 bg-white" /></>)}
-                    {k === "block" && (<><div className="absolute inset-x-0 top-0 h-[38%] bg-amber-700/70" /><div className="absolute left-1 right-1 top-[58%] h-2 bg-black" /><div className="absolute left-1 bottom-1.5 w-3 h-0.5 bg-black" /></>)}
-                    {k === "serif" && (<><div className="absolute inset-0 bg-amber-700/70" /><div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-black/70 to-transparent" /><div className="absolute left-1 right-1 bottom-4 h-1.5 bg-white" /><div className="absolute left-2 right-2 bottom-2 h-0.5 bg-white/80" /></>)}
-                    {k === "split" && (<><div className="absolute inset-y-0 left-0 w-[47%] bg-amber-700/70" /><div className="absolute left-[54%] right-1 top-[24%] h-1.5 bg-black" /><div className="absolute right-1 bottom-0 left-[47%] h-1.5 bg-neutral-500" /></>)}
-                  </div>
+                  <CoverIcon k={k} />
                   <span className="text-[10px] text-muted-foreground">Option {i + 1}</span>
                 </button>
               ))}
@@ -1820,6 +1864,9 @@ export default function Stylish() {
               <div className="flex items-center gap-4 text-xs">
                 <button className="text-sky-400 hover:underline" onClick={() => setPosts(l => l.map(p => ({ ...p, selected: true })))}>Tick all</button>
                 <button className="text-sky-400 hover:underline" onClick={() => setPosts(l => l.map(p => ({ ...p, selected: false })))}>Untick all</button>
+                <span className="text-border/60">|</span>
+                <button className="text-sky-400 hover:underline" onClick={mixCovers}>Give each post a different cover</button>
+                <button className="text-sky-400 hover:underline" onClick={sameCovers}>Same cover on every post</button>
               </div>
 
               {images.length > 0 && images.length !== expectedImages && (
@@ -1902,6 +1949,25 @@ export default function Stylish() {
                             </div>
                           );
                         })}
+                      </div>
+
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs text-muted-foreground mr-1">Cover</span>
+                        <button
+                          type="button" onClick={() => setCover(post, pi, undefined)}
+                          className={["rounded-lg border px-2.5 py-1.5 text-[11px] transition-colors", !post.cover ? "border-sky-500 bg-sky-500/10 text-foreground" : "border-border/40 text-muted-foreground hover:border-border/70"].join(" ")}
+                        >Main choice</button>
+                        {COVER_ORDER.map((k, ci) => (
+                          <button
+                            key={k} type="button" onClick={() => setCover(post, pi, k)}
+                            title={`Cover option ${ci + 1}`}
+                            aria-label={`Cover option ${ci + 1} for post ${pi + 1}`}
+                            className={["rounded-lg border p-1 flex items-center gap-1.5 transition-colors", post.cover === k ? "border-sky-500 bg-sky-500/10" : "border-border/40 hover:border-border/70"].join(" ")}
+                          >
+                            <span className="scale-[0.6] origin-left -mr-3.5"><CoverIcon k={k} /></span>
+                            <span className="text-[11px] text-muted-foreground pr-1">{ci + 1}</span>
+                          </button>
+                        ))}
                       </div>
 
                       <details className="text-sm">
