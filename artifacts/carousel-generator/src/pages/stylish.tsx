@@ -1431,6 +1431,7 @@ export default function Stylish() {
               clientName={preset?.name || ""}
               mode="multi"
               skipBackgroundRemoval
+              large
               label="Add approved photos"
               onAddImages={addApproved}
             />

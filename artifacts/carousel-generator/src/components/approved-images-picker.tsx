@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ShieldCheck, Loader2, X, CheckCircle2 } from "lucide-react";
+import { ShieldCheck, Loader2, X, CheckCircle2, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useApprovedImages } from "@/lib/use-approval";
 import { toast } from "sonner";
@@ -12,6 +12,8 @@ interface ApprovedImagesPickerProps {
   label?: string;
   /** Skip auto background-removal -- use when the photo is meant to be a plain full-bleed background, not a cutout overlay. Defaults to false (removal on). */
   skipBackgroundRemoval?: boolean;
+  /** Opens the picker as a big pop-up with whole, uncropped photos and a full size preview, instead of small square tiles. */
+  large?: boolean;
 }
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -50,7 +52,7 @@ function canvaAssetName(clientName: string, topic: string): string {
   return `${client}${cleanTopic}`;
 }
 
-export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "multi", label, skipBackgroundRemoval = false }: ApprovedImagesPickerProps) {
+export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "multi", label, skipBackgroundRemoval = false, large = false }: ApprovedImagesPickerProps) {
   const [open, setOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<string>(clientName || "");
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -58,6 +60,7 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
   // to a row by position. A Set alone doesn't guarantee click order survives.
   const [selectedOrder, setSelectedOrder] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState<string | null>(null);
 
   const { data: allImages = [] } = useApprovedImages("");
 
@@ -149,9 +152,12 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
     );
   }
 
-  return (
-    <div className="rounded-2xl border border-green-500/30 bg-card/80 p-5 space-y-4">
-      <div className="flex items-center justify-between">
+  const panel = (
+    <div className={large
+      ? "rounded-2xl border border-green-500/30 bg-card w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl"
+      : "rounded-2xl border border-green-500/30 bg-card/80 p-5 space-y-4"}
+    >
+      <div className={large ? "flex items-center justify-between shrink-0 px-5 pt-5 pb-3" : "flex items-center justify-between"}>
         <div className="flex items-center gap-2">
           <ShieldCheck className="w-5 h-5 text-green-400" />
           <h3 className="font-semibold text-lg">Approved Photos</h3>
@@ -162,7 +168,7 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
       </div>
 
       {clients.length > 0 && (
-        <div className="relative">
+        <div className={large ? "relative shrink-0 px-5 pb-3" : "relative"}>
           <div
             className="flex gap-2 overflow-x-auto pb-2 pr-8"
             style={{
@@ -193,25 +199,26 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
       )}
 
       {images.length === 0 ? (
-        <p className="text-muted-foreground text-center py-6">
+        <p className={`text-muted-foreground text-center py-6 ${large ? "px-5 pb-8" : ""}`}>
           {selectedClient ? `No approved photos for ${selectedClient}.` : "No approved photos available."}
         </p>
       ) : (
         <>
-          <div className="grid grid-cols-4 md:grid-cols-6 gap-2 max-h-[300px] overflow-y-auto">
+          <div className={large ? "flex-1 min-h-0 overflow-y-auto px-5 pb-3" : undefined}>
+          <div className={large ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3" : "grid grid-cols-4 md:grid-cols-6 gap-2 max-h-[300px] overflow-y-auto"}>
             {images.map((img) => {
               const orderIndex = selectedOrder.indexOf(img.id);
               return (
                 <div
                   key={img.id}
                   onClick={() => toggle(img.id)}
-                  className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer transition-all ${
+                  className={`relative ${large ? "aspect-[3/4] bg-muted/40" : "aspect-square"} rounded-xl overflow-hidden cursor-pointer transition-all ${
                     selected.has(img.id)
                       ? "ring-2 ring-green-500 ring-offset-2 ring-offset-background"
                       : "hover:ring-1 hover:ring-green-500/50"
                   }`}
                 >
-                  <img src={img.imageUrl} alt={`Approved ${img.id}`} className="w-full h-full object-cover" />
+                  <img src={img.imageUrl} alt={`Approved ${img.id}`} className={`w-full h-full ${large ? "object-contain" : "object-cover"}`} />
                   {selected.has(img.id) && (
                     <div className="absolute inset-0 bg-green-500/20 flex items-center justify-center">
                       {mode === "multi" && orderIndex >= 0 ? (
@@ -222,6 +229,17 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
                         <CheckCircle2 className="w-8 h-8 text-green-400 drop-shadow-lg" />
                       )}
                     </div>
+                  )}
+                  {large && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setPreview(img.imageUrl); }}
+                      className="absolute top-1 left-1 z-10 h-7 w-7 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center"
+                      aria-label="View this photo full size"
+                      title="View full size"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5 text-white" />
+                    </button>
                   )}
                   <div
                     className="absolute top-1 right-1 z-10"
@@ -243,8 +261,9 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
               );
             })}
           </div>
+          </div>
 
-          <div className="flex items-center justify-between pt-2">
+          <div className={large ? "flex items-center justify-between shrink-0 px-5 py-4 border-t border-border/30" : "flex items-center justify-between pt-2"}>
             <p className="text-sm text-muted-foreground">{selected.size} selected{selected.size > 1 ? ", in tap order" : ""}</p>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={() => { setOpen(false); setSelected(new Set()); setSelectedOrder([]); }}>
@@ -259,5 +278,35 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
         </>
       )}
     </div>
+  );
+
+  if (!large) return panel;
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 sm:p-6"
+        onClick={() => { setOpen(false); setSelected(new Set()); setSelectedOrder([]); }}
+      >
+        <div className="w-full max-w-6xl flex justify-center" onClick={(e) => e.stopPropagation()}>
+          {panel}
+        </div>
+      </div>
+      {preview && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
+          onClick={() => setPreview(null)}
+        >
+          <img src={preview} alt="Approved photo, full size" className="max-w-full max-h-full object-contain" />
+          <button
+            type="button"
+            className="absolute top-4 right-4 h-9 w-9 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center"
+            aria-label="Close preview"
+          >
+            <X className="w-5 h-5 text-white" />
+          </button>
+        </div>
+      )}
+    </>
   );
 }
