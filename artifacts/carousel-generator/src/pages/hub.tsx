@@ -147,6 +147,7 @@ border: "hover:border-fuchsia-500/50",
 iconColor: "text-fuchsia-400",
 },
     { href: "/magazinemaker", group: "content", icon: MagazineIcon, name: "Magazine Maker", description: "Add 6 photos and 3 topics and get a finished front cover, two inside pages and a call to action, written in your voice and ready for Magazine Flip.", color: "from-fuchsia-500/20 to-fuchsia-500/5", border: "hover:border-fuchsia-500/50", iconColor: "text-fuchsia-400" },
+    { href: "/magazinepost", group: "content", icon: MagazineIcon, name: "Magazine Post", description: "Add 5 to 10 photos and a treatment. The treatment becomes the cover title, then a page of fun facts, a This is for you if page and a Helps most with page, and the last page asks people to comment your reply word. Schedule it straight to a client.", color: "from-fuchsia-500/20 to-fuchsia-500/5", border: "hover:border-fuchsia-500/50", iconColor: "text-fuchsia-400" },
     { href: "/monthstart", group: "content", icon: MagazineIcon, name: "Month Start", description: "Turn a newsletter issue into a 5 page magazine. Download the pages as carousel images or as a page turn MP4.", color: "from-amber-500/20 to-amber-500/5", border: "hover:border-amber-500/50", iconColor: "text-amber-400" },
     {
 href: "/adventcalendar",
@@ -801,7 +802,7 @@ return (
 {[
 { key: "today", label: "Today & Clients" },
 { key: "admin", label: "Admin" },
-{ key: "content", label: "Content Creation" },
+{ key: "content", label: "Content Creation", icon: Wand2 },
 { key: "carousel", label: "Carousel" },
 ].map((tab) => (
 <button
@@ -814,7 +815,10 @@ activeGroup === tab.key
 : "border-border/30 bg-gradient-to-br from-pink-500/10 to-pink-500/0 hover:border-pink-500/50"
 }`}
 >
-<span className={`block text-base font-semibold ${activeGroup === tab.key ? "text-pink-300" : "text-foreground"}`}>{tab.label}</span>
+<span className={`flex items-center gap-2 text-base font-semibold ${activeGroup === tab.key ? "text-pink-300" : "text-foreground"}`}>
+{"icon" in tab && tab.icon ? <tab.icon className="w-5 h-5 shrink-0" /> : null}
+{tab.label}
+</span>
 </button>
 ))}
 </div>
