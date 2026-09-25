@@ -42,6 +42,8 @@ type Props = {
   presets?: Preset[];
   initialScheduledAt?: string;
   sourceTool?: string;
+  /** When true each post is scheduled with its own caption instead of one shared caption. */
+  perPostCaptions?: boolean;
 };
 
 function defaultScheduledAt() {
@@ -59,7 +61,7 @@ function dateKey(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt, sourceTool }: Props) {
+export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt, sourceTool, perPostCaptions }: Props) {
   const [scheduledAt, setScheduledAt] = useState(() => initialScheduledAt || defaultScheduledAt());
   const [notes, setNotes] = useState("");
   const [caption, setCaption] = useState(() => posts[0]?.caption || "");
@@ -174,7 +176,10 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
 
   async function handleSave() {
     if (!scheduledAt) { toast.error("Pick a date and time"); return; }
-    if (!caption.trim()) { toast.error("Add a caption before scheduling"); return; }
+    if (perPostCaptions) {
+      const missing = posts.findIndex((p) => !p.caption?.trim());
+      if (missing !== -1) { toast.error(`Post ${missing + 1} needs a caption before scheduling`); return; }
+    } else if (!caption.trim()) { toast.error("Add a caption before scheduling"); return; }
     if (broadcastMode) {
       if (selectedPresetIds.size === 0) { toast.error("Select at least one client"); return; }
     } else if (effectivePresetId === null) {
@@ -192,7 +197,7 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
           const post = posts[i];
           const nameOffsetMin = broadcastMode ? nameBucketOffsetMinutes(presets?.find((p) => p.id === targetPresetId)?.name ?? "") : 0;
 const staggeredAt = new Date(new Date(scheduledAt).getTime() + i * gap * 60000 + nameOffsetMin * 60000).toISOString();
-          const content: SchedulePostPayload = { caption: caption.trim(), title: post.title, platforms: platformList };
+          const content: SchedulePostPayload = { caption: (perPostCaptions ? (post.caption ?? "") : caption).trim(), title: post.title, platforms: platformList };
           if (isReel && post.videoUrl) content.videoUrl = post.videoUrl;
           if (!isReel && post.imageUrls) content.imageUrls = post.imageUrls;
           if (post.musicTrack) content.musicTrack = post.musicTrack;
@@ -454,16 +459,24 @@ const staggeredAt = new Date(new Date(scheduledAt).getTime() + i * gap * 60000 +
             </div>
           )}
 
-          <div>
-            <Label className="text-zinc-300 text-sm mb-1.5 block">Caption <span className="text-pink-400">*</span></Label>
-            <textarea
-              value={caption}
-              onChange={(e) => setCaption(e.target.value)}
-              placeholder="Write your caption here..."
-              rows={3}
-              className="w-full bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 rounded-md px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-pink-500"
-            />
-          </div>
+          {perPostCaptions ? (
+            <div className="rounded-lg border border-zinc-700 bg-zinc-800/60 p-3">
+              <p className="text-xs text-zinc-300 leading-relaxed">
+                Each post goes out with its own caption, exactly as written on the previous screen.
+              </p>
+            </div>
+          ) : (
+            <div>
+              <Label className="text-zinc-300 text-sm mb-1.5 block">Caption <span className="text-pink-400">*</span></Label>
+              <textarea
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                placeholder="Write your caption here..."
+                rows={3}
+                className="w-full bg-zinc-800 border border-zinc-700 text-white placeholder:text-zinc-500 rounded-md px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-pink-500"
+              />
+            </div>
+          )}
 
           <div>
             <Label className="text-zinc-300 text-sm mb-1.5 block">Notes (optional)</Label>
