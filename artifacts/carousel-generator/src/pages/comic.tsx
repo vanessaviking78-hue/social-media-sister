@@ -416,14 +416,16 @@ export default function ComicPage() {
           <section className="space-y-2">
             <h2 className="font-semibold text-base">4. Pick a conversation</h2>
             <Input placeholder="Search the 40..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-8 text-sm" />
-            <div className="max-h-64 overflow-y-auto rounded-lg border border-border/30 divide-y divide-border/20">
-              {filtered.map((c) => (
-                <button key={c.id} onClick={() => setConvId(c.id)}
-                  className={`w-full text-left px-3 py-2 text-sm hover:bg-muted/40 ${c.id === conv.id ? "bg-muted/60 font-medium" : ""}`}>
-                  <span className="text-muted-foreground mr-2">{COMIC_CONVERSATIONS.indexOf(c) + 1}.</span>{c.title}
-                </button>
-              ))}
-            </div>
+            <Select value={conv.id} onValueChange={setConvId}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent className="max-h-80">
+                {(filtered.length ? filtered : COMIC_CONVERSATIONS).map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {COMIC_CONVERSATIONS.indexOf(c) + 1}. {c.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <div className="space-y-1">
               <Label className="text-xs">Patient</Label>
               <Select value={patientId} onValueChange={setPatientId}>
