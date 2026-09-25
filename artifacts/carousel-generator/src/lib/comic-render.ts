@@ -3,7 +3,8 @@
 // the speech bubbles and the lettering, is drawn here so the words are always crisp
 // and can be edited without regenerating any art.
 //
-// Two slides: a comic book cover, then one page with all six panels (2 x 3).
+// Three slides: a comic book cover, a page of four panels, then a page of the
+// final two panels with a funny follow-along line banner under the punchline.
 import type { ComicConversation, ComicLine, Expr } from "./comic-conversations";
 
 export const COMIC_W = 1080;
@@ -13,12 +14,10 @@ const INK = "#111114";
 const SHOUT = '"Bangers", "Impact", "Arial Black", sans-serif';
 const TALK = '"Comic Neue", "Comic Sans MS", "Chalkboard SE", sans-serif';
 
-// Page layout: black page like a pop-art comic, six panels, footer strip along the bottom.
+// Page layout: black page like a pop-art comic, footer strip along the bottom.
 const PAGE_MARGIN = 24;
 const PAGE_FOOTER = 44;
 const PANEL_GAP = 16;
-const COLS = 2;
-const ROWS = 3;
 
 // [light, dark] pairs. Light is the panel colour, dark is the halftone dot colour.
 const PANEL_COLOURS: Array<[string, string]> = [
@@ -32,7 +31,7 @@ const PANEL_COLOURS: Array<[string, string]> = [
 
 export type SpriteSet = Partial<Record<Expr, HTMLImageElement>>;
 export interface ComicSprites { inj: SpriteSet; pat: SpriteSet }
-export interface ComicRenderOptions { footer?: string }
+export interface ComicRenderOptions { footer?: string; tagline?: string }
 export interface ComicCoverOptions {
   title: string;
   strapline: string;
@@ -195,37 +194,40 @@ function drawBubble(
   }
 }
 
-function pageLayout() {
-  const pw = Math.floor((COMIC_W - PAGE_MARGIN * 2 - PANEL_GAP * (COLS - 1)) / COLS);
-  const ph = Math.floor((COMIC_H - PAGE_MARGIN - PAGE_FOOTER - PANEL_GAP * (ROWS - 1)) / ROWS);
+// A banner across the bottom, like the cover's strapline band, for the funny
+// follow-along line under the last panel of the final page.
+const TAGLINE_BAND_H = 150;
+
+function pageLayout(cols: number, rows: number, bottomReserve: number) {
+  const pw = Math.floor((COMIC_W - PAGE_MARGIN * 2 - PANEL_GAP * (cols - 1)) / cols);
+  const ph = Math.floor((COMIC_H - PAGE_MARGIN - bottomReserve - PANEL_GAP * (rows - 1)) / rows);
   return { pw, ph };
 }
 
-// The six-panel page.
-export function renderComicPage(
-  canvas: HTMLCanvasElement,
+// Draws the given panels (by index into conv.panels) into a cols x rows grid.
+// panelIndices.length must equal cols * rows. punchAt, if given, is the index
+// within panelIndices (not conv.panels) that gets the punchline colours.
+function renderPanelGrid(
+  ctx: CanvasRenderingContext2D,
   conv: ComicConversation,
   sprites: ComicSprites,
-  opts: ComicRenderOptions = {},
+  panelIndices: number[],
+  cols: number,
+  rows: number,
+  bottomReserve: number,
+  punchAt: number,
 ) {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  canvas.width = COMIC_W;
-  canvas.height = COMIC_H;
-  ctx.fillStyle = INK;
-  ctx.fillRect(0, 0, COMIC_W, COMIC_H);
-
-  const { pw, ph } = pageLayout();
+  const { pw, ph } = pageLayout(cols, rows, bottomReserve);
   const seed = hash(conv.id);
 
-  for (let i = 0; i < 6; i++) {
-    const panel = conv.panels[i];
-    const col = i % COLS;
-    const row = Math.floor(i / COLS);
+  panelIndices.forEach((panelIdx, i) => {
+    const panel = conv.panels[panelIdx];
+    const col = i % cols;
+    const row = Math.floor(i / cols);
     const px = PAGE_MARGIN + col * (pw + PANEL_GAP);
     const py = PAGE_MARGIN + row * (ph + PANEL_GAP);
-    const isPunch = i === 5;
-    const [light, dark] = isPunch ? ["#fff06a", "#f2b800"] : PANEL_COLOURS[(seed + i) % PANEL_COLOURS.length];
+    const isPunch = i === punchAt;
+    const [light, dark] = isPunch ? ["#fff06a", "#f2b800"] : PANEL_COLOURS[(seed + panelIdx) % PANEL_COLOURS.length];
 
     ctx.save();
     roundRect(ctx, px, py, pw, ph, 8);
@@ -236,7 +238,7 @@ export function renderComicPage(
     halftone(ctx, px, py, pw, ph, dark, 13, 4.6);
 
     // Characters, patient on the left, clinician on the right, both standing on the panel floor.
-    const spriteH = 196;
+    const spriteH = Math.round(Math.min(420, Math.max(160, ph * 0.44)));
     const spriteW = spriteH * 0.75;
     const bottom = py + ph;
     const patX = px + 6;
@@ -257,7 +259,7 @@ export function renderComicPage(
     const maxW = bubbles.length > 1 ? Math.floor(zoneW * 0.88) : zoneW;
     const gap = bubbles.length > 1 ? 20 : 0;
 
-    let fontSize = isPunch ? 32 : 30;
+    let fontSize = isPunch ? 36 : 32;
     const measure = (fs: number) => bubbles.map((b) => measureBubble(ctx, b, maxW, fs));
     const total = (boxes: BubbleBox[]) => boxes.reduce((s, b) => s + b.h, 0) + gap * (boxes.length - 1);
     let boxes = measure(fontSize);
@@ -283,14 +285,75 @@ export function renderComicPage(
     ctx.lineWidth = 3;
     ctx.strokeStyle = INK;
     ctx.stroke();
-  }
+  });
+}
 
-  if (opts.footer) {
-    ctx.fillStyle = "#ffffff";
-    ctx.font = `700 22px ${TALK}`;
+function drawSmallFooter(ctx: CanvasRenderingContext2D, footer: string, bandTop: number, bandH: number) {
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `700 22px ${TALK}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(footer, COMIC_W / 2, bandTop + bandH / 2 - 2);
+}
+
+// Page two: the first four panels, two across, two down.
+export function renderComicPageTop(
+  canvas: HTMLCanvasElement,
+  conv: ComicConversation,
+  sprites: ComicSprites,
+  opts: ComicRenderOptions = {},
+) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  canvas.width = COMIC_W;
+  canvas.height = COMIC_H;
+  ctx.fillStyle = INK;
+  ctx.fillRect(0, 0, COMIC_W, COMIC_H);
+
+  renderPanelGrid(ctx, conv, sprites, [0, 1, 2, 3], 2, 2, PAGE_FOOTER, -1);
+
+  if (opts.footer) drawSmallFooter(ctx, opts.footer, COMIC_H - PAGE_FOOTER, PAGE_FOOTER);
+}
+
+// Page three: the final two panels, stacked, with a funny follow-along line
+// banner underneath the punchline panel.
+export function renderComicPageBottom(
+  canvas: HTMLCanvasElement,
+  conv: ComicConversation,
+  sprites: ComicSprites,
+  opts: ComicRenderOptions = {},
+) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  canvas.width = COMIC_W;
+  canvas.height = COMIC_H;
+  ctx.fillStyle = INK;
+  ctx.fillRect(0, 0, COMIC_W, COMIC_H);
+
+  const bandH = opts.tagline ? (opts.footer ? TAGLINE_BAND_H + 34 : TAGLINE_BAND_H) : PAGE_FOOTER;
+  renderPanelGrid(ctx, conv, sprites, [4, 5], 1, 2, bandH, 1);
+
+  if (opts.tagline) {
+    const bandY = COMIC_H - bandH;
+    const bandX = PAGE_MARGIN;
+    const bandW = COMIC_W - PAGE_MARGIN * 2;
+    roundRect(ctx, bandX, bandY, bandW, bandH - PAGE_MARGIN, 10);
+    ctx.fillStyle = INK;
+    ctx.fill();
+    const fit = fitShout(ctx, opts.tagline, bandW - 70, bandH - 70, 52, 26, 2);
+    ctx.font = shoutFont(fit.size);
+    ctx.fillStyle = "#ffe600";
     ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(opts.footer, COMIC_W / 2, COMIC_H - PAGE_FOOTER / 2 - 2);
+    ctx.textBaseline = "top";
+    const blockH = fit.lines.length * fit.lineH;
+    let sy = bandY + (opts.footer ? 16 : (bandH - PAGE_MARGIN - blockH) / 2 + 4);
+    for (const ln of fit.lines) {
+      ctx.fillText(ln, COMIC_W / 2, sy);
+      sy += fit.lineH;
+    }
+    if (opts.footer) drawSmallFooter(ctx, opts.footer, bandY + bandH - PAGE_MARGIN - 40, 40);
+  } else if (opts.footer) {
+    drawSmallFooter(ctx, opts.footer, COMIC_H - PAGE_FOOTER, PAGE_FOOTER);
   }
 }
 
