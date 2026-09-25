@@ -901,6 +901,69 @@ export const WINTER_WOOLIES_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
+export const AUTUMN_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "au-01",
+    name: "Cream Jumper Candle Table",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated at a rustic wooden table styled with lit candles and small pumpkins arranged around her, warm content smile. Cream chunky knit jumper, soft golden autumn light, rust and burnt orange tones throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "au-02",
+    name: "White Jumper Pumpkin Hold",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo holding a small pumpkin in both hands, autumn leaves scattered on the table in front of her. White knit jumper, warm amber light, deep orange and brown autumn tones. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "au-03",
+    name: "Cream Jumper Cosy Armchair",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo relaxed in a cosy armchair with a rust coloured knitted throw across her lap, lit candles flickering on a side table nearby. Cream jumper, warm autumnal glow. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "au-04",
+    name: "White Cable Knit Wheat Table",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo leaning on a rustic wooden table styled with small pumpkins and dried wheat stems, gentle smile. White cable knit jumper, warm golden autumn light, mustard and terracotta tones. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "au-05",
+    name: "Cream Jumper Mantelpiece",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing beside a mantelpiece decorated with lit candles and a small pumpkin display, relaxed and glowing. Cream jumper, warm amber light, deep autumn tones. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "au-06",
+    name: "White Jumper Rug Pumpkins",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated cross legged on a rug with a small stack of pumpkins and a lit candle beside her, soft content smile. White knit jumper, warm cosy autumn light. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "au-07",
+    name: "Cream Cowl Pampas Vase",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo holding a warm mug, a vase of pampas grass and autumn foliage beside her, gentle smile. Cream cowl neck jumper, soft golden light, rust and mustard tones. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "au-08",
+    name: "White Jumper Candle Table Florals",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated at a table styled with lit candles, small pumpkins and autumn florals, warm relaxed smile. White jumper, soft golden autumn light. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "au-09",
+    name: "Cream Jumper Sofa Blanket Pumpkins",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo curled up on a sofa with a burnt orange knitted blanket, small pumpkins resting on the floor nearby, candlelight glowing softly. Cream jumper, warm cosy autumn tones. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "au-10",
+    name: "White Chunky Jumper Window Sill",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing near a window with autumn leaves and small pumpkins arranged on the sill, lit candles glowing beside her. White chunky knit jumper, warm golden light, deep autumn tones. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+];
+
 export const HOMEWORK_SHOTS_PRESETS: PhotoStudioPreset[] = [
   {
     id: "hw-01",
