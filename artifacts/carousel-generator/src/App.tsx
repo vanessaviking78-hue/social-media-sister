@@ -2,6 +2,7 @@
 import AdventCalendar from "@/pages/advent-calendar";
 import Magazine from "@/pages/magazine";
 import MagazineMaker from "@/pages/magazine-maker";
+import MagazinePost from "@/pages/magazine-post";
 import MonthStart from "@/pages/month-start";
 import { Switch, Route, Router as WouterRouter, useRoute, useLocation } from "wouter";
 import { useEffect } from "react";
@@ -133,6 +134,7 @@ function ProtectedRouter() {
       <Route path="/hub" component={Hub} />
       <Route path="/magazine" component={Magazine} />
       <Route path="/magazinemaker" component={MagazineMaker} />
+      <Route path="/magazinepost" component={MagazinePost} />
       <Route path="/monthstart" component={MonthStart} />
       <Route path="/daily-focus" component={DailyFocus} />
       <Route path="/carousel" component={Home} />

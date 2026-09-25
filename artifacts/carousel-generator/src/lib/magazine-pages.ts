@@ -35,10 +35,10 @@ export const EMPTY_COPY: MagazineCopy = {
   cta: { headline: "", body: "" },
 };
 
-const SERIF = 'Georgia, "Times New Roman", serif';
-const SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
-const CREAM = "#f6f0e6";
-const INK = "#1d1a1a";
+export const SERIF = 'Georgia, "Times New Roman", serif';
+export const SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+export const CREAM = "#f6f0e6";
+export const INK = "#1d1a1a";
 
 function luminance(hex: string): number {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
@@ -52,11 +52,11 @@ function luminance(hex: string): number {
 }
 
 // White text on dark colours, near black on light ones.
-function onColour(hex: string): string {
+export function onColour(hex: string): string {
   return luminance(hex) > 0.42 ? INK : "#ffffff";
 }
 
-function newCanvas(): [HTMLCanvasElement, CanvasRenderingContext2D] {
+export function newCanvas(): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const c = document.createElement("canvas");
   c.width = PAGE_W;
   c.height = PAGE_H;
@@ -83,12 +83,23 @@ let hits: PhotoHit[] = [];
 let curPage = 0;
 let slotBase = 0;
 let adjusts: (PhotoAdjust | undefined)[] = [];
+// Lets other page sets (Magazine Post) draw with the same photo frames and hit testing.
+export function beginDraw(photoAdjusts: (PhotoAdjust | undefined)[] = []) {
+  hits = [];
+  adjusts = photoAdjusts;
+  curPage = 0;
+  slotBase = 0;
+}
+export function setDrawPage(page: number, base: number) {
+  curPage = page;
+  slotBase = base;
+}
 export function getPhotoHits(): PhotoHit[] {
   return hits;
 }
 
 // Draws src into the box (x, y, w, h) like object-fit: cover, with optional zoom and pan.
-function drawCover(
+export function drawCover(
   ctx: CanvasRenderingContext2D,
   src: CanvasImageSource | null,
   x: number,
@@ -145,7 +156,7 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number): string
 
 // Shrinks the font until the text fits in maxLines, then draws it from y down.
 // Returns the y just below the last line.
-function block(
+export function block(
   ctx: CanvasRenderingContext2D,
   text: string,
   o: {
@@ -172,7 +183,8 @@ function block(
     ctx.font = `${o.weight ?? "normal"} ${size}px ${o.family}`;
     (ctx as any).letterSpacing = o.tracking ? `${o.tracking}px` : "0px";
     lines = wrap(ctx, t, o.maxW);
-    if (lines.length <= o.maxLines || size <= o.minSize) break;
+    const tooWide = lines.some((l) => ctx.measureText(l).width > o.maxW);
+    if ((lines.length <= o.maxLines && !tooWide) || size <= o.minSize) break;
     size -= 2;
   }
   const lh = size * (o.lineHeight ?? 1.18);
@@ -188,7 +200,7 @@ function block(
   return y - lh + size * 0.25;
 }
 
-function footer(ctx: CanvasRenderingContext2D, brand: MagazineBrand, page: number, colour: string) {
+export function footer(ctx: CanvasRenderingContext2D, brand: MagazineBrand, page: number, colour: string) {
   ctx.fillStyle = colour;
   ctx.globalAlpha = 0.6;
   ctx.font = `600 22px ${SANS}`;
@@ -201,7 +213,7 @@ function footer(ctx: CanvasRenderingContext2D, brand: MagazineBrand, page: numbe
   ctx.globalAlpha = 1;
 }
 
-function pill(ctx: CanvasRenderingContext2D, text: string, cx: number, cy: number, bg: string, fg: string) {
+export function pill(ctx: CanvasRenderingContext2D, text: string, cx: number, cy: number, bg: string, fg: string) {
   ctx.font = `700 40px ${SANS}`;
   const w = Math.min(880, ctx.measureText(text).width + 120);
   const h = 104;

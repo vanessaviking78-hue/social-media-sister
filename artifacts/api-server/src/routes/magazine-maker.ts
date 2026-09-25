@@ -4,7 +4,7 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 const router: IRouter = Router();
 
 // The five voices Vanessa writes in. The key is what the front end sends.
-const STYLE_PROMPTS: Record<string, string> = {
+export const STYLE_PROMPTS: Record<string, string> = {
   "1": "Northern grit, Vanessa style. A no-nonsense northern woman, direct, warm and honest, with a dry sense of humour. Plain words, short sentences, real talk, like putting the world to rights over a brew. Never posh, never corporate.",
   "2": "Storytelling with a whimsical streak, in the manner of Bruce Springsteen. Small human scenes, a specific street, a specific morning, a person you can picture. Big-hearted, a little wistful, a bit of wonder in ordinary things. Never quote or mention lyrics or songs.",
   "3": "Funny and blunt, in the manner of Dawn French. Warm, self-deprecating, quick and daft, says the quiet bit out loud and gets away with it. Never cruel, always affable.",
@@ -12,7 +12,7 @@ const STYLE_PROMPTS: Record<string, string> = {
   "5": "Feral, savage and sarcastic. Sharp, cheeky, wickedly dry, roasts the nonsense of the industry without ever being cruel to the reader. Still affable underneath.",
 };
 
-const RULES = `
+export const RULES = `
 WRITING RULES (non-negotiable)
 - NEVER use em dashes or en dashes. Not once. Use a comma, a full stop or a plain hyphen in compound words only.
 - British English throughout: colour, practise, programme, organise, favourite. Never Americanisms (no "gotten", "vacation", "awesome", "y'all").
@@ -32,7 +32,7 @@ COMPLIANCE (UK, non-negotiable)
 - No pressure tactics and no urgency language (no "limited spaces", "book now before it's gone").
 - Frame treatment as consultation and possibility: "may help", "can improve".`;
 
-function clean(text: unknown, max: number): string {
+export function clean(text: unknown, max: number): string {
   if (typeof text !== "string") return "";
   return text
     .replace(/[–—]/g, ", ")
