@@ -274,6 +274,31 @@ function naturalSort(a: File, b: File) {
   return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" });
 }
 
+// Fills every slide by cycling through the photos. Slide 1 of each post is taken from the pool in turn,
+// so covers do not repeat until every photo has been a cover. The other slides carry on round the pool
+// without ever repeating the cover, or each other, inside the same post (as far as the pool allows).
+function planReusedPhotos(pool: File[], slideCounts: number[]): File[][] {
+  const n = pool.length;
+  if (!n) return slideCounts.map(() => []);
+  let body = 1;
+  return slideCounts.map((count, p) => {
+    if (count <= 0) return [];
+    const cover = p % n;
+    const picked = [cover];
+    let guard = 0;
+    while (picked.length < count && guard++ < n * count + 10) {
+      const idx = body % n;
+      body++;
+      if (n > 1 && picked.length < n && picked.includes(idx)) continue;
+      // Pool smaller than the slides: allow repeats, but never the cover or the slide just before.
+      if (n > 1 && picked.length >= n && (idx === cover || idx === picked[picked.length - 1])) continue;
+      picked.push(idx);
+    }
+    while (picked.length < count) picked.push(cover);
+    return picked.map(i => pool[i]);
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Image preparation. Each photo is shrunk once (never cropped, so it can be dragged
 // around later) and kept as a compressed blob so a large batch does not hold
@@ -905,6 +930,7 @@ export default function Stylish() {
 
   const [images, setImages] = useState<File[]>([]);
   const [perPost, setPerPost] = useState(5);
+  const [reusePhotos, setReusePhotos] = useState(true);
   const [overrides, setOverrides] = useState<Record<string, File>>({});
   const [csvName, setCsvName] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -988,13 +1014,22 @@ export default function Stylish() {
 
   // -- which photo belongs to which slide ----------------------------------
 
+  const slideCounts = useMemo(() => posts.map(p => buildSlides(p.texts).length), [posts]);
+  const shortOfPhotos = images.length > 0 && images.length < posts.reduce((sum, _p, i) => sum + Math.max(perPost, slideCounts[i] ?? 0), 0);
+  const reusing = reusePhotos && shortOfPhotos;
+  const reusePlan = useMemo(
+    () => (reusing ? planReusedPhotos(images, slideCounts) : null),
+    [reusing, images, slideCounts],
+  );
+
   const photoFor = useCallback((postIndex: number, post: Post, slideIndex: number): File | null => {
     const o = overrides[`${post.id}:${slideIndex}`];
     if (o) return o;
+    if (reusePlan) return reusePlan[postIndex]?.[slideIndex] ?? null;
     const start = postIndex * perPost;
     const idx = start + Math.min(slideIndex, perPost - 1);
     return images[idx] ?? (images[start + slideIndex] ?? null);
-  }, [images, perPost, overrides]);
+  }, [images, perPost, overrides, reusePlan]);
 
   // -- inputs ----------------------------------------------------------------
 
@@ -1050,10 +1085,10 @@ export default function Stylish() {
 
   const renderKey = useMemo(
     () => JSON.stringify([
-      posts.map(p => [p.id, p.texts]), style, images.map((f, i) => i + f.name + f.size), perPost,
+      posts.map(p => [p.id, p.texts]), style, images.map((f, i) => i + f.name + f.size), perPost, reusing,
       Object.entries(overrides).map(([k, f]) => k + f.name + f.size), preset?.id, preset?.logoUrl, fontVersion,
     ]),
-    [posts, style, images, perPost, overrides, preset, fontVersion],
+    [posts, style, images, perPost, reusing, overrides, preset, fontVersion],
   );
 
   const postsRef = useRef(posts);
@@ -1334,7 +1369,6 @@ export default function Stylish() {
   // -- checks shown to the user ------------------------------------------------
 
   const expectedImages = posts.length * perPost;
-  const slideCounts = posts.map(p => buildSlides(p.texts).length);
   const maxSlides = slideCounts.length ? Math.max(...slideCounts) : 0;
 
   return (
@@ -1417,6 +1451,19 @@ export default function Stylish() {
                 className="w-16 h-8 rounded bg-muted/30 border border-border/40 px-2 text-sm"
               />
             </div>
+            <label className="flex items-start gap-2 text-sm leading-snug">
+              <input
+                type="checkbox" checked={reusePhotos}
+                onChange={e => { setReusePhotos(e.target.checked); focusRef.current = {}; }}
+                className="accent-sky-500 mt-0.5"
+              />
+              <span>
+                Reuse my photos to fill every slide
+                <span className="block text-xs text-muted-foreground">
+                  Only kicks in when you have fewer photos than slides. Each post gets different photos, and slide 1 is a new photo each time until they have all been used.
+                </span>
+              </span>
+            </label>
           </section>
 
           <section className="space-y-2">
@@ -1777,7 +1824,11 @@ export default function Stylish() {
               {images.length > 0 && images.length !== expectedImages && (
                 <p className="text-xs text-amber-500/90 bg-amber-500/5 border border-amber-500/30 rounded-lg px-3 py-2">
                   You have {images.length} photo{images.length !== 1 ? "s" : ""} for {posts.length} post{posts.length !== 1 ? "s" : ""} at {perPost} each, which needs {expectedImages}.
-                  {images.length < expectedImages ? " Posts without photos get a plain background." : " The extra photos are ignored."}
+                  {images.length < expectedImages
+                    ? (reusing
+                      ? " I am reusing your photos to fill every slide. Slide 1 gets a different photo each time, and no post shows the same photo twice unless you have fewer photos than slides."
+                      : " Posts without photos get a plain background. Tick 'Reuse my photos' on the left to fill them.")
+                    : " The extra photos are ignored."}
                 </p>
               )}
               {maxSlides > perPost && (
