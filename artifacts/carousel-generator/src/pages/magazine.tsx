@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Upload, Download, Play, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Upload, Download, Play, X, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { MagazineIcon } from "@/components/magazine-icon";
 import { coverToCanvas, loadImageFromFile } from "@/lib/advent-door";
 import {
   MAG_W,
   MAG_H,
-  MAG_SECONDS,
-  MAG_PAGE_LABELS,
-  MAG_PAGE_HINTS,
+  MAG_MIN_PAGES,
+  MAG_MAX_PAGES,
+  magSecondsFor,
+  magLabelsFor,
+  magHintsFor,
   drawMagazineFrame,
   exportMagazineMp4,
 } from "@/lib/magazine-flip";
@@ -84,14 +86,30 @@ function UploadSlot({
 }
 
 export default function Magazine() {
-  const [slots, setSlots] = useState<(Slot | null)[]>([null, null, null, null]);
+  const [slots, setSlots] = useState<(Slot | null)[]>(Array.from({ length: MAG_MIN_PAGES }, () => null));
   const [progress, setProgress] = useState<number | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const previewRef = useRef<HTMLCanvasElement>(null);
   const startRef = useRef<number>(performance.now());
 
+  const pageCount = slots.length;
+  const labels = magLabelsFor(pageCount);
+  const hints = magHintsFor(pageCount);
   const ready = slots.every(Boolean);
   const filled = slots.filter(Boolean).length;
+
+  // Extra pages (beyond the front cover, one middle page and the CTA) go in
+  // just before the call to action, which always stays the last slot.
+  const addPage = () => {
+    if (slots.length >= MAG_MAX_PAGES) return;
+    setSlots((prev) => [...prev.slice(0, -1), null, prev[prev.length - 1]]);
+    setVideoUrl(null);
+  };
+  const removePage = () => {
+    if (slots.length <= MAG_MIN_PAGES) return;
+    setSlots((prev) => [...prev.slice(0, -2), prev[prev.length - 1]]);
+    setVideoUrl(null);
+  };
 
   const load = useCallback(async (index: number, file: File | undefined) => {
     if (!file) return;
@@ -126,11 +144,12 @@ export default function Magazine() {
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
     const pages = slots.map((s) => s!.canvas);
+    const seconds = magSecondsFor(pages.length);
     let raf = 0;
     const loop = () => {
       const elapsed = (performance.now() - startRef.current) / 1000;
-      const t = elapsed % (MAG_SECONDS + 1.2);
-      drawMagazineFrame(ctx, pages, Math.min(t, MAG_SECONDS - 0.01));
+      const t = elapsed % (seconds + 1.2);
+      drawMagazineFrame(ctx, pages, Math.min(t, seconds - 0.01));
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
@@ -181,34 +200,51 @@ export default function Magazine() {
               <MagazineIcon className="w-6 h-6 text-fuchsia-400" /> Magazine Flip
             </h1>
             <p className="text-zinc-400 text-sm mt-0.5">
-              Add the front cover, page two, page three and a call to action. The pages turn one by one and the last page stays on screen. 1080 x 1440, 10 seconds, MP4.
+              Add the front cover, up to three middle pages and a call to action. The pages turn one by one and the last page stays on screen. 1080 x 1440, {magSecondsFor(pageCount)} seconds, MP4.
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-6 items-start">
-          <div className="grid grid-cols-2 gap-4">
-            {MAG_PAGE_LABELS.map((label, i) => (
-              <UploadSlot
-                key={label}
-                step={i + 1}
-                title={label}
-                hint={MAG_PAGE_HINTS[i]}
-                slot={slots[i]}
-                onFile={(f) => load(i, f)}
-                onClear={() => clear(i)}
-              />
-            ))}
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              {labels.map((label, i) => (
+                <UploadSlot
+                  key={i}
+                  step={i + 1}
+                  title={label}
+                  hint={hints[i]}
+                  slot={slots[i]}
+                  onFile={(f) => load(i, f)}
+                  onClear={() => clear(i)}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-3">
+              {pageCount < MAG_MAX_PAGES && (
+                <button
+                  onClick={addPage}
+                  className="flex items-center gap-1.5 text-xs text-fuchsia-400 hover:text-fuchsia-300"
+                >
+                  <Plus size={14} /> Add a page ({pageCount} of {MAG_MAX_PAGES})
+                </button>
+              )}
+              {pageCount > MAG_MIN_PAGES && (
+                <button onClick={removePage} className="text-xs text-zinc-500 hover:text-zinc-300 underline underline-offset-2">
+                  Remove last page
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2 lg:sticky lg:top-6">
-            <p className="text-xs uppercase tracking-widest text-zinc-500">5. Preview</p>
+            <p className="text-xs uppercase tracking-widest text-zinc-500">{pageCount + 1}. Preview</p>
             <div className="rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 aspect-[3/4] max-w-sm mx-auto lg:max-w-none">
               {ready ? (
                 <canvas ref={previewRef} width={MAG_W} height={MAG_H} className="w-full h-full" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-center text-sm text-zinc-500 px-6">
-                  {filled} of 4 pages added. Add all four and your magazine will start turning here.
+                  {filled} of {pageCount} pages added. Add them all and your magazine will start turning here.
                 </div>
               )}
             </div>
