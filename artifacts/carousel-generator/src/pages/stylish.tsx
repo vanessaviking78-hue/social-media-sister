@@ -16,6 +16,7 @@ import { saveAs } from "file-saver";
 import { readFileAsText } from "@/lib/csv-format";
 import { loadGoogleFonts, FONT_OPTIONS } from "@/lib/slide-utils";
 import { usePresets, type ClientPreset } from "@/lib/use-presets";
+import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 
 loadGoogleFonts();
@@ -970,6 +971,14 @@ export default function Stylish() {
     setOverrides({});
   };
 
+  const addApproved = (files: File[]) => {
+    if (!files.length) return;
+    setImages(prev => [
+      ...prev,
+      ...files.map((f, i) => new File([f], `approved-${String(prev.length + i + 1).padStart(3, "0")}-${f.name}`, { type: f.type })),
+    ]);
+  };
+
   const parseCsv = useCallback((file: File) => {
     setCsvError(null);
     readFileAsText(file).then(raw => {
@@ -1005,7 +1014,7 @@ export default function Stylish() {
 
   const renderKey = useMemo(
     () => JSON.stringify([
-      posts.map(p => [p.id, p.texts]), style, images.map(f => f.name + f.size), perPost,
+      posts.map(p => [p.id, p.texts]), style, images.map((f, i) => i + f.name + f.size), perPost,
       Object.entries(overrides).map(([k, f]) => k + f.name + f.size), preset?.id, preset?.logoUrl, fontVersion,
     ]),
     [posts, style, images, perPost, overrides, preset, fontVersion],
@@ -1257,7 +1266,7 @@ export default function Stylish() {
                 <>
                   <CheckCircle2 className="w-7 h-7 text-amber-400" />
                   <p className="text-sm font-medium text-amber-400">{images.length} photo{images.length !== 1 ? "s" : ""} loaded</p>
-                  <p className="text-xs text-muted-foreground">Click to replace them all</p>
+                  <p className="text-xs text-muted-foreground">Click to replace them all, or add approved photos below</p>
                 </>
               ) : (
                 <>
@@ -1273,6 +1282,22 @@ export default function Stylish() {
               ref={imgInputRef} type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden"
               onChange={e => { const f = Array.from(e.target.files ?? []); if (f.length) handleImages(f); e.target.value = ""; }}
             />
+            <ApprovedImagesPicker
+              clientName={preset?.name || ""}
+              mode="multi"
+              skipBackgroundRemoval
+              label="Add approved photos"
+              onAddImages={addApproved}
+            />
+            {images.length > 0 && (
+              <button
+                type="button"
+                onClick={() => { setImages([]); setOverrides({}); }}
+                className="text-xs text-muted-foreground underline hover:text-foreground"
+              >
+                Clear all photos
+              </button>
+            )}
             <div className="flex items-center justify-between gap-3">
               <Label className="text-xs text-muted-foreground">Photos per post</Label>
               <input
