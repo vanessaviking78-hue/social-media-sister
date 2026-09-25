@@ -802,7 +802,7 @@ return (
 {[
 { key: "today", label: "Today & Clients" },
 { key: "admin", label: "Admin" },
-{ key: "content", label: "Content Creation" },
+{ key: "content", label: "Content Creation", icon: Wand2 },
 { key: "carousel", label: "Carousel" },
 ].map((tab) => (
 <button
@@ -815,7 +815,10 @@ activeGroup === tab.key
 : "border-border/30 bg-gradient-to-br from-pink-500/10 to-pink-500/0 hover:border-pink-500/50"
 }`}
 >
-<span className={`block text-base font-semibold ${activeGroup === tab.key ? "text-pink-300" : "text-foreground"}`}>{tab.label}</span>
+<span className={`flex items-center gap-2 text-base font-semibold ${activeGroup === tab.key ? "text-pink-300" : "text-foreground"}`}>
+{"icon" in tab && tab.icon ? <tab.icon className="w-5 h-5 shrink-0" /> : null}
+{tab.label}
+</span>
 </button>
 ))}
 </div>
