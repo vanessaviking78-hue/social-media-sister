@@ -1583,6 +1583,10 @@ export default function AiPortraitStudio() {
             </div>
 
 
+</>
+)}
+
+
 {activeSection === "winter" && (
 <>
 <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">WINTER WOOLIES</p>
