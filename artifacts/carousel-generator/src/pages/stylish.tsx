@@ -873,7 +873,7 @@ async function drawCover(
   const at = pos ?? defaultPos("cover", style);
   if (MORE_LAYOUTS.has(layout)) {
     await drawCoverMore(ctx, spec, photo, extras, style, layout, at);
-    if (logo && style.showLogo && preset) drawLogo(ctx, logo, preset.logoPosition || "top-left", preset.logoSize || 110);
+    if (logo && style.showLogo && preset) drawLogo(ctx, logo, "top-right", preset.logoSize || 110);
     return;
   }
   const bmp = photo && layout !== "plain" && layout !== "behind" ? await (async () => {
@@ -1029,7 +1029,7 @@ async function drawCover(
   bmp?.close();
   setSpacing(ctx, 0);
   if (logo && style.showLogo && preset) {
-    drawLogo(ctx, logo, preset.logoPosition || "top-left", preset.logoSize || 110);
+    drawLogo(ctx, logo, "top-right", preset.logoSize || 110);
   }
 }
 
@@ -1160,7 +1160,7 @@ async function renderSlide(
       const n = (v: number) => String(v).padStart(2, "0");
       ctx.fillText(`${n(meta.index + 1)} / ${n(meta.total)}`, M, 96);
     }
-    if (style.brandMark && preset) {
+    if (style.brandMark && preset && !(logo && style.showLogo)) { // the logo takes the top right corner
       ctx.textAlign = "right";
       ctx.fillText(preset.name.toUpperCase(), W - M + 6, 96);
     }
@@ -1180,7 +1180,7 @@ async function renderSlide(
   }
 
   if (logo && style.showLogo && preset) {
-    drawLogo(ctx, logo, preset.logoPosition || "top-left", preset.logoSize || 110);
+    drawLogo(ctx, logo, "top-right", preset.logoSize || 110);
   }
   return canvas;
 }
