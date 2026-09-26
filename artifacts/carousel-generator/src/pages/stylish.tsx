@@ -375,8 +375,6 @@ function faces(style: Style, layout: CoverLayout): [string, string] {
   const f = style.lf?.[layout];
   return f ? [f.h, f.s] : [style.cvFont, style.cvSubFont];
 }
-// "Give each post a different cover" goes round the five photo covers only. Option 6 is chosen by hand.
-const MIX_ORDER: CoverLayout[] = ["band", "centred", "block", "split", "serif"];
 
 // The look of a slide. A post that has its own cover option gets that option's designed fonts, colours and
 // proportions on slide 1. Every other slide, and every post on the main choice, uses the settings as they are.
@@ -1557,7 +1555,7 @@ export default function Stylish() {
           const parsed: Post[] = rows
             .map(r => Array.from({ length: cols }, (_, i) => (r[i] ?? "").trim()))
             .filter(t => t.some(Boolean))
-            .map(texts => ({ id: makeId(), texts, caption: "", captionBusy: false, selected: true }));
+            .map((texts, i) => ({ id: makeId(), texts, caption: "", captionBusy: false, selected: true, cover: COVER_ORDER[i % COVER_ORDER.length] }));
           if (!parsed.length) { setCsvError("No rows with text were found"); return; }
           setPosts(parsed);
           setCsvName(file.name);
@@ -1712,9 +1710,9 @@ export default function Stylish() {
     warmFonts({ ...style, ...COVER_PRESETS[cover ?? style.coverLayout] } as Style).then(() => redrawOne({ ...post, cover }, pi, 0));
   };
 
-  // Gives every post a different cover option, going round the five in turn.
+  // Gives every post a different cover option, going round all sixteen in turn.
   const mixCovers = () => {
-    setPosts(list => list.map((p, i) => ({ ...p, cover: MIX_ORDER[i % MIX_ORDER.length] })));
+    setPosts(list => list.map((p, i) => ({ ...p, cover: COVER_ORDER[i % COVER_ORDER.length] })));
     setCoverVersion(v => v + 1);
   };
 
