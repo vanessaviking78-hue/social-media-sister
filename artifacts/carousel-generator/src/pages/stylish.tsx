@@ -38,13 +38,15 @@ const STYLE_STORAGE_KEY = "stylish-style-v4";
 // Types and defaults
 // ---------------------------------------------------------------------------
 
-type CoverLayout = "band" | "centred" | "block" | "split" | "serif";
+type CoverLayout = "band" | "centred" | "block" | "split" | "serif" | "plain";
 
 type Style = {
   // Slide 1 (cover)
   coverLayout: CoverLayout;
   cvFont: string;
   cvSubFont: string;
+  plainFont: string;    // cover option 6: its own headline and subheading fonts
+  plainSubFont: string;
   cvWeight: number;
   cvSubWeight: number;
   cvCaps: boolean;
@@ -104,6 +106,7 @@ const COVER_WANTS: Record<CoverLayout, string[]> = {
   block: ["Helvetica Now Display"],
   split: ["Now"],
   serif: [],
+  plain: [],
 };
 
 // Each cover layout brings its own type, colours and proportions. Everything can be changed afterwards.
@@ -127,6 +130,11 @@ const COVER_PRESETS: Record<CoverLayout, Partial<Style>> = {
     coverLayout: "split", cvFont: F_NOW, cvSubFont: F_NOW, cvWeight: 700, cvSubWeight: 400,
     cvCaps: true, cvSubCaps: false, cvTracking: 0, cvSubTracking: 0, cvSize: 120, cvSubSize: 46, cvScrim: 0,
     cvColour: "#000000", cvSubColour: "#000000", cvBlock: "#ffffff", cvBand: "#666666", cvBandOn: true, cvPhoto: 47.5, cvFocus: 50,
+  },
+  plain: {
+    coverLayout: "plain", cvWeight: 700, cvSubWeight: 400,
+    cvCaps: false, cvSubCaps: false, cvTracking: 0, cvSubTracking: 0, cvSize: 150, cvSubSize: 56, cvScrim: 0,
+    cvColour: "#ffffff", cvSubColour: "#ffffff", cvBlock: "#1f2a44",
   },
   serif: {
     coverLayout: "serif", cvFont: F_INSTRUMENT, cvSubFont: F_INSTRUMENT, cvWeight: 400, cvSubWeight: 400,
@@ -190,6 +198,8 @@ const LOOK_CLASSIC: Partial<Style> = {
 const DEFAULT_STYLE: Style = {
   ...COVER_PRESETS.band,
   ...LOOK_EDITORIAL,
+  plainFont: "'Cormorant Garamond', serif",
+  plainSubFont: "'Montserrat', sans-serif",
   cvBand: "#666666",
   cvY: 58,
   cvScrim: 0,
@@ -279,7 +289,9 @@ function buildSlides(texts: string[]): SlideSpec[] {
   return out;
 }
 
-const COVER_ORDER: CoverLayout[] = ["band", "centred", "block", "split", "serif"];
+const COVER_ORDER: CoverLayout[] = ["band", "centred", "block", "split", "serif", "plain"];
+// "Give each post a different cover" goes round the five photo covers only. Option 6 is chosen by hand.
+const MIX_ORDER: CoverLayout[] = ["band", "centred", "block", "split", "serif"];
 
 // The look of a slide. A post that has its own cover option gets that option's designed fonts, colours and
 // proportions on slide 1. Every other slide, and every post on the main choice, uses the settings as they are.
@@ -498,15 +510,17 @@ async function drawCover(
 ) {
   const layout = style.coverLayout;
   const at = pos ?? defaultPos("cover", style);
-  const bmp = photo ? await (async () => {
+  const bmp = photo && layout !== "plain" ? await (async () => {
     const blob = await prepareImage(photo);
     return blob ? createImageBitmap(blob) : null;
   })() : null;
 
   const heading = style.cvCaps ? spec.text.toUpperCase() : spec.text;
   const subtitle = spec.sub ? (style.cvSubCaps ? spec.sub.toUpperCase() : spec.sub) : "";
-  const headFont = (sz: number) => `${style.cvWeight} ${sz}px ${style.cvFont}`;
-  const subFont = `${style.cvSubWeight} ${style.cvSubSize}px ${style.cvSubFont}`;
+  const headFace = layout === "plain" ? style.plainFont : style.cvFont;
+  const subFace = layout === "plain" ? style.plainSubFont : style.cvSubFont;
+  const headFont = (sz: number) => `${style.cvWeight} ${sz}px ${headFace}`;
+  const subFont = `${style.cvSubWeight} ${style.cvSubSize}px ${subFace}`;
   const lineH = (sz: number) => Math.round(sz * (layout === "centred" ? 1.05 : layout === "serif" ? 0.9 : 0.94));
   const subLineH = Math.round(style.cvSubSize * (layout === "serif" ? 1.05 : 1.3));
   ctx.textBaseline = "top";
@@ -575,6 +589,21 @@ async function drawCover(
       const subLines = balancedWrap(ctx, subtitle, maxW);
       drawLines(subLines, x1, bottom + 110, subLineH, "right");
     }
+  } else if (layout === "plain") {
+    // Option 6: no photo. A flat colour with the headline and subheading centred.
+    ctx.fillStyle = style.cvBlock;
+    ctx.fillRect(0, 0, W, H);
+    const maxW = W - 180;
+    setSpacing(ctx, style.cvTracking);
+    const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, 4);
+    const lh = lineH(fit.size);
+    setSub();
+    const subLines = subtitle ? balancedWrap(ctx, subtitle, maxW) : [];
+    const total = fit.lines.length * lh + (subLines.length ? 40 + subLines.length * subLineH : 0);
+    let y = Math.round(H / 2 - total / 2);
+    setHead(fit.size);
+    y = drawLines(fit.lines, W / 2, y, lh, "center") + 40;
+    if (subLines.length) { setSub(); drawLines(subLines, W / 2, y, subLineH, "center"); }
   } else {
     // centred and serif: full bleed photo. Centred sits in the middle; serif hangs from a bottom edge on a soft gradient.
     ctx.fillStyle = style.background;
@@ -770,6 +799,8 @@ async function warmFonts(style: Style) {
   await Promise.allSettled([
     document.fonts.load(`${style.cvWeight} ${style.cvSize}px ${style.cvFont}`),
     document.fonts.load(`${style.cvSubWeight} ${style.cvSubSize}px ${style.cvSubFont}`),
+    document.fonts.load(`${style.cvWeight} ${style.cvSize}px ${style.plainFont}`),
+    document.fonts.load(`${style.cvSubWeight} ${style.cvSubSize}px ${style.plainSubFont}`),
     document.fonts.load(`${style.textItalic ? "italic " : ""}${style.textWeight} ${style.bodySize}px ${style.displayFont}`),
     document.fonts.load(`italic ${style.textWeight} ${style.ctaSize}px ${style.displayFont}`),
     document.fonts.load(`400 22px ${style.fontFamily}`),
@@ -897,6 +928,7 @@ function CoverIcon({ k }: { k: CoverLayout }) {
       {k === "centred" && (<><div className="absolute inset-0 bg-amber-700/70" /><div className="absolute left-1.5 right-1.5 top-[42%] h-1 bg-sky-400" /><div className="absolute left-2.5 right-2.5 top-[58%] h-0.5 bg-white" /></>)}
       {k === "block" && (<><div className="absolute inset-x-0 top-0 h-[38%] bg-amber-700/70" /><div className="absolute left-1 right-1 top-[58%] h-2 bg-black" /><div className="absolute left-1 bottom-1.5 w-3 h-0.5 bg-black" /></>)}
       {k === "serif" && (<><div className="absolute inset-0 bg-amber-700/70" /><div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-black/70 to-transparent" /><div className="absolute left-1 right-1 bottom-4 h-1.5 bg-white" /><div className="absolute left-2 right-2 bottom-2 h-0.5 bg-white/80" /></>)}
+      {k === "plain" && (<><div className="absolute inset-0 bg-indigo-900" /><div className="absolute left-1.5 right-1.5 top-[40%] h-1.5 bg-white" /><div className="absolute left-2.5 right-2.5 top-[56%] h-0.5 bg-white/80" /></>)}
       {k === "split" && (<><div className="absolute inset-y-0 left-0 w-[47%] bg-amber-700/70" /><div className="absolute left-[54%] right-1 top-[24%] h-1.5 bg-black" /><div className="absolute right-1 bottom-0 left-[47%] h-1.5 bg-neutral-500" /></>)}
     </div>
   );
@@ -1261,7 +1293,7 @@ export default function Stylish() {
 
   // Gives every post a different cover option, going round the five in turn.
   const mixCovers = () => {
-    setPosts(list => list.map((p, i) => ({ ...p, cover: COVER_ORDER[i % COVER_ORDER.length] })));
+    setPosts(list => list.map((p, i) => ({ ...p, cover: MIX_ORDER[i % MIX_ORDER.length] })));
     setCoverVersion(v => v + 1);
   };
 
@@ -1621,7 +1653,7 @@ export default function Stylish() {
 
           <section className="space-y-4 border-t border-border/30 pt-5">
             <h3 className="text-sm font-semibold">Slide 1: cover</h3>
-            <div className="grid grid-cols-5 gap-1.5">
+            <div className="grid grid-cols-3 gap-1.5">
               {COVER_ORDER.map((k, i) => (
                 <button
                   key={k} type="button"
@@ -1640,6 +1672,7 @@ export default function Stylish() {
               {style.coverLayout === "block" && "Photo across the top with a big bold headline on a colour block."}
               {style.coverLayout === "split" && "Photo on the left, colour block on the right with the headline."}
               {style.coverLayout === "serif" && "Full photo with a big serif headline and subtitle along the bottom."}
+              {style.coverLayout === "plain" && "No photo. A flat colour of your choice with your own headline and subheading fonts."}
               {" "}Picking one loads its fonts and colours, then change whatever you like.
             </p>
             {missingFonts.length > 0 && (
@@ -1674,8 +1707,8 @@ export default function Stylish() {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Headline font</Label>
-              <Select value={style.cvFont} onValueChange={v => patch({ cvFont: v })}>
+              <Label className="text-xs text-muted-foreground">{style.coverLayout === "plain" ? "Headline font (option 6)" : "Headline font"}</Label>
+              <Select value={style.coverLayout === "plain" ? style.plainFont : style.cvFont} onValueChange={v => patch(style.coverLayout === "plain" ? { plainFont: v } : { cvFont: v })}>
                 <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
                   {coverFontOptions.map(f => (
@@ -1685,8 +1718,8 @@ export default function Stylish() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Subtitle font</Label>
-              <Select value={style.cvSubFont} onValueChange={v => patch({ cvSubFont: v })}>
+              <Label className="text-xs text-muted-foreground">{style.coverLayout === "plain" ? "Subheading font (option 6)" : "Subtitle font"}</Label>
+              <Select value={style.coverLayout === "plain" ? style.plainSubFont : style.cvSubFont} onValueChange={v => patch(style.coverLayout === "plain" ? { plainSubFont: v } : { cvSubFont: v })}>
                 <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
                   {coverFontOptions.map(f => (
@@ -1715,7 +1748,7 @@ export default function Stylish() {
             <SliderField label="Subtitle size" value={style.cvSubSize} min={20} max={100} suffix="px" onChange={v => patch({ cvSubSize: v })} />
             <SliderField label="Headline letter spacing" value={style.cvTracking} min={-12} max={12} step={0.5} suffix="px" onChange={v => patch({ cvTracking: v })} />
             <SliderField label="Subtitle letter spacing" value={style.cvSubTracking} min={-8} max={12} step={0.5} suffix="px" onChange={v => patch({ cvSubTracking: v })} />
-            {style.coverLayout !== "centred" && style.coverLayout !== "serif" && (
+            {style.coverLayout !== "centred" && style.coverLayout !== "serif" && style.coverLayout !== "plain" && (
               <>
                 <SliderField
                   label={style.coverLayout === "split" ? "Photo width" : "Photo height"}
@@ -1752,7 +1785,7 @@ export default function Stylish() {
               <ColourField label="Headline colour" value={style.cvColour} onChange={v => patch({ cvColour: v })} />
               <ColourField label="Subtitle colour" value={style.cvSubColour} onChange={v => patch({ cvSubColour: v })} />
               {style.coverLayout !== "centred" && style.coverLayout !== "serif" && (
-                <ColourField label={style.coverLayout === "band" ? "Band colour" : "Block colour"} value={style.cvBlock} onChange={v => patch({ cvBlock: v })} />
+                <ColourField label={style.coverLayout === "band" ? "Band colour" : style.coverLayout === "plain" ? "Background colour" : "Block colour"} value={style.cvBlock} onChange={v => patch({ cvBlock: v })} />
               )}
               {style.coverLayout === "split" && style.cvBandOn && (
                 <ColourField label="Bottom band colour" value={style.cvBand} onChange={v => patch({ cvBand: v })} />
@@ -2041,8 +2074,8 @@ export default function Stylish() {
                           <div className="flex items-end gap-x-6 gap-y-2 flex-wrap">
                             <div className="w-56"><ColourField label="Cover headline" value={eff.cvColour} onChange={v => setCoverColours(post, pi, { coverColour: v })} /></div>
                             <div className="w-56"><ColourField label="Cover subtitle" value={eff.cvSubColour} onChange={v => setCoverColours(post, pi, { coverSubColour: v })} /></div>
-                            {(eff.coverLayout === "band" || eff.coverLayout === "block" || eff.coverLayout === "split") && (
-                              <div className="w-56"><ColourField label={eff.coverLayout === "band" ? "Band colour" : "Block colour"} value={eff.cvBlock} onChange={v => setCoverColours(post, pi, { coverBlockColour: v })} /></div>
+                            {(eff.coverLayout === "band" || eff.coverLayout === "block" || eff.coverLayout === "split" || eff.coverLayout === "plain") && (
+                              <div className="w-56"><ColourField label={eff.coverLayout === "band" ? "Band colour" : eff.coverLayout === "plain" ? "Background colour" : "Block colour"} value={eff.cvBlock} onChange={v => setCoverColours(post, pi, { coverBlockColour: v })} /></div>
                             )}
                             {eff.coverLayout === "split" && eff.cvBandOn && (
                               <div className="w-56"><ColourField label="Bottom band colour" value={eff.cvBand} onChange={v => setCoverColours(post, pi, { coverBandColour: v })} /></div>
