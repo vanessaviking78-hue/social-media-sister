@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect, useMemo, type PointerEvent as
 import { Link } from "wouter";
 import {
   ArrowLeft, FileText, Download, Loader2, CalendarClock, CheckCircle2, ImageIcon,
-  Sparkles, Palette, RotateCcw, Wand2,
+  Sparkles, Palette, RotateCcw, Wand2, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -965,6 +965,7 @@ export default function Stylish() {
   const [reusePhotos, setReusePhotos] = useState(true);
   const [coverVersion, setCoverVersion] = useState(0);
   const [overrides, setOverrides] = useState<Record<string, File>>({});
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [csvName, setCsvName] = useState<string | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [csvError, setCsvError] = useState<string | null>(null);
@@ -1272,6 +1273,15 @@ export default function Stylish() {
   };
 
   // -- post helpers ----------------------------------------------------------
+
+  const deletePost = (id: string) => {
+    setPosts(list => list.filter(x => x.id !== id));
+    setOverrides(o => Object.fromEntries(Object.entries(o).filter(([k]) => !k.startsWith(`${id}:`))));
+    delete focusRef.current[id];
+    for (const k of Object.keys(focusRef.current)) if (k.startsWith(`${id}:`)) delete focusRef.current[k];
+    setConfirmDelete(null);
+    toast.success("Post deleted");
+  };
 
   const updatePost = (id: string, p: Partial<Post>) =>
     setPosts(list => list.map(x => (x.id === id ? { ...x, ...p } : x)));
@@ -1933,6 +1943,23 @@ export default function Stylish() {
                         <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Post {pi + 1}</span>
                         <span className="text-sm text-foreground/80 truncate">{post.texts[0]}</span>
                         <span className="ml-auto text-[11px] text-muted-foreground shrink-0">{specs.length} slides</span>
+                        {confirmDelete === post.id ? (
+                          <span className="flex items-center gap-2 text-xs shrink-0">
+                            <span className="text-muted-foreground">Delete post {pi + 1}?</span>
+                            <button type="button" className="text-red-400 font-medium hover:underline" onClick={() => deletePost(post.id)}>Yes, delete</button>
+                            <button type="button" className="text-muted-foreground hover:underline" onClick={() => setConfirmDelete(null)}>Keep</button>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDelete(post.id)}
+                            className="text-muted-foreground hover:text-red-400 shrink-0"
+                            title="Delete this post"
+                            aria-label={`Delete post ${pi + 1}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
 
                       <div className="flex gap-3 overflow-x-auto pb-1">
