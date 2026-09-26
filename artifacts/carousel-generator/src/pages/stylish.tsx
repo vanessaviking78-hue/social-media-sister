@@ -1894,7 +1894,7 @@ export default function Stylish() {
     try {
       await warmAll();
       const logo = style.showLogo ? await loadLogo(preset) : null;
-      const chosen = selectedPosts.slice(0, 5);
+      const chosen = selectedPosts.slice(0, 16);
       const canvases: HTMLCanvasElement[] = [];
       for (const post of chosen) {
         const pi = posts.indexOf(post);
@@ -1903,7 +1903,7 @@ export default function Stylish() {
         await tick();
       }
       setFlipHandoff({ canvases, clientName: preset?.name || "" });
-      if (selectedPosts.length > 5) toast.message(`Magazine Flip holds 5 pages, so I sent the first 5 of your ${selectedPosts.length} ticked posts`);
+      if (selectedPosts.length > 16) toast.message(`Magazine Flip holds 16 pages, so I sent the first 16 of your ${selectedPosts.length} ticked posts`);
       navigate("/magazine");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not send to Magazine Flip");
