@@ -128,6 +128,45 @@ export default function Magazine() {
     }
   }, []);
 
+  // Pick up to 16 images in one go. They fill the empty pages in order and the
+  // magazine grows (before the call to action) if there are more images than gaps.
+  const loadMany = useCallback(
+    async (fileList: FileList | File[] | null | undefined) => {
+      const files = Array.from(fileList || []).filter((f) => f.type.startsWith("image/"));
+      if (!files.length) return;
+      const empties = slots.filter((s) => !s).length;
+      const grow = Math.max(0, Math.min(files.length - empties, MAG_MAX_PAGES - slots.length));
+      const room = empties + grow;
+      const use = files.slice(0, room);
+      if (files.length > room) {
+        toast.message(`${MAG_MAX_PAGES} pages is the most, so I've used the first ${room} images`);
+      }
+      const loaded: Slot[] = [];
+      for (const f of use) {
+        try {
+          const img = await loadImageFromFile(f);
+          const canvas = coverToCanvas(img);
+          loaded.push({ canvas, thumb: canvas.toDataURL("image/jpeg", 0.7), name: f.name });
+        } catch {
+          toast.error(`Couldn't read ${f.name}, so I skipped it`);
+        }
+      }
+      if (!loaded.length) return;
+      setSlots((prev) => {
+        const g = Math.max(0, Math.min(loaded.length - prev.filter((s) => !s).length, MAG_MAX_PAGES - prev.length));
+        const next: (Slot | null)[] = [...prev.slice(0, -1), ...Array.from({ length: g }, () => null), prev[prev.length - 1]];
+        let k = 0;
+        for (let i = 0; i < next.length && k < loaded.length; i++) {
+          if (!next[i]) next[i] = loaded[k++];
+        }
+        return next;
+      });
+      setVideoUrl(null);
+      startRef.current = performance.now();
+    },
+    [slots]
+  );
+
   const clear = (index: number) => {
     setSlots((prev) => {
       const next = [...prev];
@@ -200,7 +239,7 @@ export default function Magazine() {
               <MagazineIcon className="w-6 h-6 text-fuchsia-400" /> Magazine Flip
             </h1>
             <p className="text-zinc-400 text-sm mt-0.5">
-              Add the front cover, up to three middle pages and a call to action. The pages turn one by one and the last page stays on screen. 1080 x 1440, {magSecondsFor(pageCount)} seconds, MP4.
+              Add the front cover, up to fourteen middle pages and a call to action, {MAG_MAX_PAGES} images at the most. The pages turn one by one and the last page stays on screen. 1080 x 1440, {magSecondsFor(pageCount)} seconds, MP4.
             </p>
           </div>
         </div>
@@ -220,7 +259,21 @@ export default function Magazine() {
                 />
               ))}
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <label className="flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg bg-fuchsia-600 hover:bg-fuchsia-500 text-white cursor-pointer">
+                <Upload size={14} /> Add several images at once (up to {MAG_MAX_PAGES})
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const picked = Array.from(e.target.files || []);
+                    e.currentTarget.value = "";
+                    loadMany(picked);
+                  }}
+                />
+              </label>
               {pageCount < MAG_MAX_PAGES && (
                 <button
                   onClick={addPage}

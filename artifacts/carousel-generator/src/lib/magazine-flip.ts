@@ -1,9 +1,10 @@
 // Magazine flip-through animation.
 //
-// Four to five pages go in: the front cover, one or two middle pages and a
-// call to action. A 1080 x 1440 clip comes out where each page turns to
+// Four to sixteen pages go in: the front cover, up to fourteen middle pages
+// and a call to action. A 1080 x 1440 clip comes out where each page turns to
 // reveal the next, and the call to action is left holding on screen. The
-// clip runs 10 seconds for 4 pages, 12 seconds for 5.
+// clip runs 10 seconds for 4 pages, 12 seconds for 5 and about 2.7 seconds
+// longer for every page after that.
 //
 // Pages are hinged on the left, like the spine of a real magazine. The right
 // hand edge lifts, rolls over a cylinder and lays back on itself, all drawn on
@@ -20,40 +21,46 @@ export const MAG_SECONDS = 10;
 export const MAG_FRAMES = MAG_FPS * MAG_SECONDS;
 export const MAG_PAGE_COUNT = 4;
 export const MAG_MIN_PAGES = 4;
-export const MAG_MAX_PAGES = 5;
+export const MAG_MAX_PAGES = 16;
 
 // Timeline, in seconds. One start per page turn (pages.length - 1 turns),
 // each turn starting 2.7s after the last so extra pages just add time.
-const ALL_TURN_STARTS = [1.6, 4.3, 7.0, 9.7];
+const FIRST_TURN_START = 1.6;
+const TURN_GAP = 2.7;
 const TURN_DURATION = 1.0;
 const TUG_DURATION = 0.4;
 const CURL_RADIUS = 170;
 const FOCAL = 2400;
 
 function turnStartsFor(pageCount: number): number[] {
-  return ALL_TURN_STARTS.slice(0, Math.max(0, pageCount - 1));
+  return Array.from({ length: Math.max(0, pageCount - 1) }, (_, i) => FIRST_TURN_START + TURN_GAP * i);
 }
 
-/** Total clip length for a given page count: 10s for 4 pages, 12s for 5. */
+/** Total clip length for a given page count: 10s for 4 pages, 12s for 5, then a page turn's worth more each time. */
 export function magSecondsFor(pageCount: number): number {
-  return pageCount >= 5 ? 12 : 10;
+  if (pageCount <= 4) return 10;
+  if (pageCount === 5) return 12;
+  // last turn starts, finishes 1s later, then the call to action holds for 1.3s
+  return Math.ceil(FIRST_TURN_START + TURN_GAP * (pageCount - 2) + TURN_DURATION + 1.3);
 }
 
 export function magFramesFor(pageCount: number): number {
   return Math.round(MAG_FPS * magSecondsFor(pageCount));
 }
 
-export const MAG_PAGE_LABELS_ALL = ["Front cover", "Page 2", "Page 3", "Page 4"];
+const ORDINALS = [
+  "first", "second", "third", "fourth", "fifth", "sixth", "seventh",
+  "eighth", "ninth", "tenth", "eleventh", "twelfth", "thirteenth", "fourteenth",
+];
+export const MAG_PAGE_LABELS_ALL = ["Front cover", ...Array.from({ length: MAG_MAX_PAGES - 2 }, (_, i) => `Page ${i + 2}`)];
 export const MAG_PAGE_HINTS_ALL = [
   "The cover that opens the video",
-  "The first page you turn to",
-  "The second page you turn to",
-  "The third page you turn to",
+  ...Array.from({ length: MAG_MAX_PAGES - 2 }, (_, i) => `The ${ORDINALS[i]} page you turn to`),
 ];
 export const MAG_CTA_LABEL = "Call to action";
 export const MAG_CTA_HINT = "The last page, it stays on screen";
 
-/** Labels/hints for however many pages are in play (4 or 5), CTA always last. */
+/** Labels/hints for however many pages are in play (4 to 16), CTA always last. */
 export function magLabelsFor(pageCount: number): string[] {
   return [...MAG_PAGE_LABELS_ALL.slice(0, pageCount - 1), MAG_CTA_LABEL];
 }
