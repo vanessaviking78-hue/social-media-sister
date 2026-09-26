@@ -44,6 +44,8 @@ type Props = {
   sourceTool?: string;
   /** When true each post is scheduled with its own caption instead of one shared caption. */
   perPostCaptions?: boolean;
+  /** Minutes between each post when several are scheduled. Defaults to 60. */
+  initialGapMinutes?: number;
 };
 
 function defaultScheduledAt() {
@@ -61,13 +63,13 @@ function dateKey(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt, sourceTool, perPostCaptions }: Props) {
+export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt, sourceTool, perPostCaptions, initialGapMinutes }: Props) {
   const [scheduledAt, setScheduledAt] = useState(() => initialScheduledAt || defaultScheduledAt());
   const [notes, setNotes] = useState("");
   const [caption, setCaption] = useState(() => posts[0]?.caption || "");
   const [saving, setSaving] = useState(false);
   const [isTrial, setIsTrial] = useState(false);
-  const [gapMinutes, setGapMinutes] = useState("60");
+  const [gapMinutes, setGapMinutes] = useState(String(initialGapMinutes ?? 60));
   const [activePresetId, setActivePresetId] = useState<number | null>(presetId);
   const [platforms, setPlatforms] = useState<Set<Platform>>(new Set(["instagram"]));
   const [accountInfo, setAccountInfo] = useState<AccountInfo | null>(null);

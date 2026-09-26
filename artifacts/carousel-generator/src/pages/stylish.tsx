@@ -1502,6 +1502,7 @@ export default function Stylish() {
   const missingFonts = COVER_WANTS[style.coverLayout].filter(w => !customFamilies.some(c => norm(c) === norm(w)));
   const [rendering, setRendering] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
+  const [scheduleStart, setScheduleStart] = useState<string | undefined>(undefined);
   const [scheduling, setScheduling] = useState<string | null>(null);
   const [captionAllBusy, setCaptionAllBusy] = useState(false);
   const [scheduleItems, setScheduleItems] = useState<SchedulePostPayload[] | null>(null);
@@ -1950,6 +1951,11 @@ export default function Stylish() {
           imageUrls: urls,
         });
       }
+      // First post goes out now (a few minutes ahead so it is not already in the past), then one every 1440 minutes.
+      const start = new Date(Date.now() + 5 * 60000);
+      start.setSeconds(0, 0);
+      start.setMinutes(start.getMinutes() - start.getTimezoneOffset());
+      setScheduleStart(start.toISOString().slice(0, 16));
       setScheduleItems(items);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed");
@@ -2677,6 +2683,8 @@ export default function Stylish() {
           postType="carousel"
           posts={scheduleItems}
           perPostCaptions
+          initialScheduledAt={scheduleStart}
+          initialGapMinutes={1440}
           sourceTool="stylish"
           onClose={() => setScheduleItems(null)}
           onSaved={() => setScheduleItems(null)}
