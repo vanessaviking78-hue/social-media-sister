@@ -216,6 +216,7 @@ export interface PhotoStudioPreset {
     hasHairColour?: boolean;
     hasName?: boolean;
   hasCustomText?: boolean;
+  hasOutfit?: boolean;
 }
 
 export const NEW_PORTRAITS_PRESETS: PhotoStudioPreset[] = [
@@ -964,6 +965,149 @@ export const AUTUMN_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
+export const CASUAL_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "ca-01",
+    name: "Desk Lean",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo leaning casually against the front edge of a desk with her arms relaxed, easy natural smile. Hot pink walls, a hot pink desk and a matching hot pink office chair behind her. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-02",
+    name: "Swivel Chair Turn",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo seated in a hot pink swivel chair turned slightly towards the camera, one knee crossed over the other, relaxed and smiling. Hot pink desk and hot pink wall behind her. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-03",
+    name: "Laptop Laugh",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo seated at a hot pink desk with an open laptop, caught mid laugh as if someone just said something funny. Hot pink walls, a small green plant on the desk. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-04",
+    name: "Pink Blinds Window",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo standing beside a window fitted with hot pink venetian blinds, soft daylight striping across the hot pink wall, gentle confident smile. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-05",
+    name: "Filing Cabinet Lean",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo leaning against a hot pink filing cabinet with her arms crossed, a knowing half smile. Hot pink walls and hot pink office furniture all around her. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-06",
+    name: "Coffee Break",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo standing at a hot pink kitchenette counter in the office holding a white mug in both hands, warm relaxed smile. Hot pink cabinets and hot pink walls. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-07",
+    name: "Doorway Lean",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo leaning on a hot pink door frame, one shoulder against it, looking at the camera with a friendly smile. A glass walled hot pink office is softly blurred behind her. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-08",
+    name: "Whiteboard Chat",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo standing beside a hot pink wall with a blank white board, holding a marker as if mid explanation, animated friendly expression. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-09",
+    name: "Velvet Sofa Corner",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo sitting on a hot pink velvet sofa in the corner of an office with a laptop resting on her knee, relaxed and glowing. Hot pink walls, a small side table with a plant. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-10",
+    name: "Desk Edge Phone Call",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo perched on the edge of a hot pink desk with a phone held to her ear, laughing naturally. Hot pink walls and a hot pink desk lamp. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-11",
+    name: "Notebook Scribble",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo seated at a hot pink desk writing in an open notebook, glancing up at the camera with a soft smile. Hot pink walls and hot pink stationery on the desk. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-12",
+    name: "Chin Rest",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo elbows on a hot pink desk, chin resting on her hands, a playful cheeky expression. Hot pink walls and a hot pink chair behind her. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-13",
+    name: "Corridor Walk",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo walking towards the camera down a hot pink open plan office, holding a folder against her side, confident easy stride. Hot pink walls and desks softly blurred behind. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-14",
+    name: "Bookshelf Pull",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo standing in front of hot pink bookshelves with one hand on her hip, the other pulling out a book, looking to camera with a smile. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-15",
+    name: "Meeting Table Head",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo seated at the head of a hot pink meeting table with her hands loosely clasped, warm approachable smile. Hot pink walls and hot pink chairs around the table. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-16",
+    name: "Standing Desk",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo standing at a raised hot pink desk with a laptop, glancing over at the camera mid type. Hot pink walls, natural window light. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-17",
+    name: "Reception Counter",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo leaning on a hot pink reception counter with a welcoming smile, a small vase of white flowers beside her. Hot pink walls behind. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-18",
+    name: "Arms Crossed Power",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo standing centre frame with her arms crossed and chin slightly lifted, relaxed confident expression. A hot pink office with hot pink walls and desks blurred behind her. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-19",
+    name: "Feet Up",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo seated in a hot pink office chair with her feet up on a hot pink desk, hands behind her head, completely relaxed and grinning. Hot pink walls behind her. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "ca-20",
+    name: "Head and Shoulders Pink Wall",
+    hasColour: false,
+    hasOutfit: true,
+    promptTemplate: `A woman from the reference photo close head and shoulders crop against a hot pink wall with a softly blurred hot pink office behind, natural warm smile, eyes to camera. She is wearing [OUTFIT]. Soft bright natural daylight, relaxed casual mood, hot pink dominant colour throughout the scene. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+];
+
 export const HOMEWORK_SHOTS_PRESETS: PhotoStudioPreset[] = [
   {
     id: "hw-01",
@@ -1553,6 +1697,8 @@ export const RANDOM_PROMPT_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
+const DEFAULT_CASUAL_OUTFIT = "a fitted black t-shirt";
+
 export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: string, aspectRatio = "3:4", vars?: { colour?: string; name?: string; skills?: string; knownAs?: string; hairColour?: string; number?: string; numberColour?: string; word?: string; wordColour?: string; outfit?: string; studioColour?: string; scrubColour?: string; customText?: string; monochrome?: boolean }): string {
   let prompt = preset.promptTemplate;
   if (preset.hasCustomText && vars?.customText?.trim()) {
@@ -1582,6 +1728,12 @@ export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: strin
     const rows = (vars.skills || "").split(/\n/).map((x) => x.trim()).filter(Boolean).join(", ");
     if (rows) prompt = prompt.replace(/\[SKILL LABEL\]: \[SKILL VALUE\]/g, rows);
   }
+  let outfitEmphasis = "";
+  if (preset.hasOutfit) {
+    const chosenOutfit = vars?.outfit?.trim() || DEFAULT_CASUAL_OUTFIT;
+    prompt = prompt.replace(/\[OUTFIT\]/g, chosenOutfit);
+    outfitEmphasis = `\n\nThe outfit is critical: she must be wearing ${chosenOutfit}, and the outfit must be entirely black, true jet black with no other colour, no logos and no prints. Do not swap it for a different garment.${resolvedBgColour ? "" : " Only the office and background are hot pink, her clothing stays black."}`;
+  }
   const ratioDescription =
     aspectRatio === "9:16" ? "a vertical 9:16 portrait orientation (tall and narrow)" :
     aspectRatio === "3:4" ? "a 3:4 portrait orientation" :
@@ -1595,7 +1747,7 @@ export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: strin
   const monoEmphasis = vars?.monochrome
     ? `\n\nRender the entire finished image in monochrome black and white. Rich greyscale tones, proper contrast and shadow detail, no colour anywhere in the image at all, including skin, outfit and background.`
     : "";
-  return `${prompt}\n\nCompose the image in ${ratioDescription}.${colourEmphasis}${bgEmphasis}${monoEmphasis}\n\n${PHOTO_STUDIO_NEGATIVE}`;
+  return `${prompt}\n\nCompose the image in ${ratioDescription}.${outfitEmphasis}${colourEmphasis}${bgEmphasis}${monoEmphasis}\n\n${PHOTO_STUDIO_NEGATIVE}`;
 }
 
 // Pure text-to-image generation with no reference photo at all — used by the

@@ -6,7 +6,7 @@ import { aiGeneratedPortraitsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { objectStorageClient } from "./objectStorage";
 import { logger } from "./logger";
-import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, buildTextOnlyPrompt, buildCustomTextWithPhotoPrompt, buildCartoonPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS, HOMEWORK_SHOTS_PRESETS, CLASSY_CORPORATE_PRESETS, WINTER_WOOLIES_PRESETS, AUTUMN_PRESETS } from "./aiPortraitScenarios";
+import { buildPrompt, buildCustomPrompt, buildPhotoStudioPrompt, buildTextOnlyPrompt, buildCustomTextWithPhotoPrompt, buildCartoonPrompt, AI_PORTRAIT_SCENARIOS, PHOTO_STUDIO_PRESETS, INJECTOR_COLLECTION_PRESETS, MEN_STUDIO_PRESETS, RANDOM_PROMPT_PRESETS, NEW_PORTRAITS_PRESETS, JULY_2ND_SHOOT_PRESETS, HOMEWORK_SHOTS_PRESETS, CLASSY_CORPORATE_PRESETS, WINTER_WOOLIES_PRESETS, AUTUMN_PRESETS, CASUAL_PRESETS } from "./aiPortraitScenarios";
 
 const GEMINI_MODEL = "gemini-2.5-flash-image";
 const REQUEST_GAP_MS = 4_000;
@@ -150,7 +150,7 @@ interface ScenarioConfig {
   textOnly?: boolean;
   cartoon?: boolean;
   cartoonRedraw?: boolean;
-  promptVars?: { colour?: string; name?: string; skills?: string; knownAs?: string; customText?: string };
+  promptVars?: { outfit?: string; colour?: string; name?: string; skills?: string; knownAs?: string; customText?: string };
 }
 
 export async function processPortraitJob(
@@ -208,6 +208,7 @@ export async function processPortraitJob(
         CLASSY_CORPORATE_PRESETS.find((p) => p.id === cfg.id) ??
         WINTER_WOOLIES_PRESETS.find((p) => p.id === cfg.id) ??
         AUTUMN_PRESETS.find((p) => p.id === cfg.id) ??
+        CASUAL_PRESETS.find((p) => p.id === cfg.id) ??
         RANDOM_PROMPT_PRESETS.find((p) => p.id === cfg.id);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -221,7 +222,11 @@ export async function processPortraitJob(
     } else if (cfg.textOnly) {
       prompt = buildTextOnlyPrompt(cfg.promptVars?.customText || "", cfg.aspectRatio);
     } else if (photoStudioPreset) {
-      prompt = buildPhotoStudioPrompt(photoStudioPreset, cfg.scrubColor, cfg.aspectRatio, cfg.promptVars);
+      // Outfit choice is saved in outfitStyle so a regenerate keeps the same outfit
+      const studioVars = photoStudioPreset.hasOutfit && !cfg.promptVars?.outfit?.trim() && cfg.outfitStyle
+        ? { ...(cfg.promptVars ?? {}), outfit: cfg.outfitStyle }
+        : cfg.promptVars;
+      prompt = buildPhotoStudioPrompt(photoStudioPreset, cfg.scrubColor, cfg.aspectRatio, studioVars);
     } else if (cfg.outfitType) {
       prompt = buildCustomPrompt({
         outfitType: cfg.outfitType as Parameters<typeof buildCustomPrompt>[0]["outfitType"],

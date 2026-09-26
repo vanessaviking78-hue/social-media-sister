@@ -61,6 +61,7 @@ interface PhotoStudioPreset {
   id: string;
   name: string;
   hasColour: boolean;
+  hasOutfit?: boolean;
 }
 
 const NEW_PORTRAITS_PRESETS: PhotoStudioPreset[] = [
@@ -143,6 +144,47 @@ const AUTUMN_PRESETS: PhotoStudioPreset[] = [
   { id: "au-08", name: "Mustard Jumper Candle Table Florals", hasColour: false },
   { id: "au-09", name: "Cream Jumper Sofa Blanket Pumpkins", hasColour: false },
   { id: "au-10", name: "Sage Chunky Jumper Window Sill", hasColour: false },
+];
+
+const CASUAL_PRESETS: PhotoStudioPreset[] = [
+  { id: "ca-01", name: "Desk Lean", hasColour: false, hasOutfit: true },
+  { id: "ca-02", name: "Swivel Chair Turn", hasColour: false, hasOutfit: true },
+  { id: "ca-03", name: "Laptop Laugh", hasColour: false, hasOutfit: true },
+  { id: "ca-04", name: "Pink Blinds Window", hasColour: false, hasOutfit: true },
+  { id: "ca-05", name: "Filing Cabinet Lean", hasColour: false, hasOutfit: true },
+  { id: "ca-06", name: "Coffee Break", hasColour: false, hasOutfit: true },
+  { id: "ca-07", name: "Doorway Lean", hasColour: false, hasOutfit: true },
+  { id: "ca-08", name: "Whiteboard Chat", hasColour: false, hasOutfit: true },
+  { id: "ca-09", name: "Velvet Sofa Corner", hasColour: false, hasOutfit: true },
+  { id: "ca-10", name: "Desk Edge Phone Call", hasColour: false, hasOutfit: true },
+  { id: "ca-11", name: "Notebook Scribble", hasColour: false, hasOutfit: true },
+  { id: "ca-12", name: "Chin Rest", hasColour: false, hasOutfit: true },
+  { id: "ca-13", name: "Corridor Walk", hasColour: false, hasOutfit: true },
+  { id: "ca-14", name: "Bookshelf Pull", hasColour: false, hasOutfit: true },
+  { id: "ca-15", name: "Meeting Table Head", hasColour: false, hasOutfit: true },
+  { id: "ca-16", name: "Standing Desk", hasColour: false, hasOutfit: true },
+  { id: "ca-17", name: "Reception Counter", hasColour: false, hasOutfit: true },
+  { id: "ca-18", name: "Arms Crossed Power", hasColour: false, hasOutfit: true },
+  { id: "ca-19", name: "Feet Up", hasColour: false, hasOutfit: true },
+  { id: "ca-20", name: "Head and Shoulders Pink Wall", hasColour: false, hasOutfit: true },
+];
+
+// All black. The value is the wording sent to the image model.
+const CASUAL_OUTFITS: { label: string; value: string }[] = [
+  { label: "Black t-shirt", value: "a fitted black t-shirt" },
+  { label: "Black off the shoulder jumper", value: "a black off the shoulder jumper" },
+  { label: "Black vest", value: "a black fitted vest top" },
+  { label: "Black shirt", value: "a black button up shirt" },
+  { label: "Black tailored suit", value: "a tailored black suit with a black top underneath" },
+  { label: "Black roll neck jumper", value: "a soft black roll neck jumper" },
+  { label: "Black hoodie", value: "a black hoodie" },
+  { label: "Black long sleeve top", value: "a fitted black long sleeve top" },
+  { label: "Black cardigan over vest", value: "a black cardigan over a black vest top" },
+  { label: "Black blazer over t-shirt", value: "a black blazer over a black t-shirt" },
+  { label: "Black denim jacket over t-shirt", value: "a black denim jacket over a black t-shirt" },
+  { label: "Black leather jacket over t-shirt", value: "a black leather jacket over a black t-shirt" },
+  { label: "Black wrap top", value: "a black wrap top" },
+  { label: "Black knit polo", value: "a black knitted polo top" },
 ];
 
 const CLASSY_CORPORATE_PRESETS: PhotoStudioPreset[] = [
@@ -466,7 +508,7 @@ const MEN_SCRUBS_IDS  = ["cs-01","cs-02","cs-03","cs-04","cs-05","cs-06","cs-07"
 
 
 
-const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...AUTUMN_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
+const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...AUTUMN_PRESETS, ...CASUAL_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
 const findPreset = (id: string) => ALL_PRESETS.find((p) => p.id === id);
 
 const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
@@ -499,6 +541,8 @@ export default function AiPortraitStudio() {
   // ── Preset selection ───────────────────────────────────────────────────────
   const [selectedPresets, setSelectedPresets] = useState<Set<string>>(new Set());
   const [presetColours, setPresetColours]     = useState<Record<string, string>>({});
+  const [casualOutfit, setCasualOutfit]       = useState(CASUAL_OUTFITS[0].value);
+  const [presetOutfits, setPresetOutfits]     = useState<Record<string, string>>({});
   const [presetScrubColours, setPresetScrubColours] = useState<Record<string, string>>({});
   const [bulkBackdropColour, setBulkBackdropColour] = useState("");
   const [bulkScrubColour, setBulkScrubColour] = useState("");
@@ -662,7 +706,7 @@ export default function AiPortraitStudio() {
   };
 
   const [activeGender, setActiveGender]   = useState<"women" | "men">("women");
-  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "autumn">("new");
+  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "autumn" | "casual">("new");
   const [menScrubColor, setMenScrubColor] = useState("#453761");
 
   const selectAll = () => {
@@ -758,6 +802,7 @@ export default function AiPortraitStudio() {
         ...(id === "ps-word-hold" ? { promptVars: wordVars } : {}),
         ...(id === "ps-custom" ? { promptVars: { customText: customPromptText } } : {}),
                   ...(preset?.hasName || preset?.hasHairColour ? { promptVars: { name: presetNames[id], hairColour: presetHairColours[id] } } : {}),
+        ...(preset?.hasOutfit ? { outfitStyle: presetOutfits[id] || casualOutfit, promptVars: { outfit: presetOutfits[id] || casualOutfit } } : {}),
         ...(id.startsWith("hw-") ? { scrubColor: presetScrubColours[id]?.trim() || "black", promptVars: { colour: presetColours[id]?.trim() || "white", scrubColour: presetScrubColours[id]?.trim() || "black" } } : {}),
       };
       if (globalBgColour.trim()) {
@@ -1428,6 +1473,7 @@ export default function AiPortraitStudio() {
                 { key: "classy", label: "CLASSY CORPORATE" },
                 { key: "winter", label: "WINTER WOOLIES" },
                 { key: "autumn", label: "AUTUMN" },
+                { key: "casual", label: "CASUAL" },
               ].map((tab) => (
                 <button
                   key={tab.key}
@@ -1701,6 +1747,70 @@ export default function AiPortraitStudio() {
               })}
             </div>
 
+
+</>
+)}
+
+{activeSection === "casual" && (
+<>
+<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">CASUAL</p>
+<p className="text-xs text-muted-foreground mb-3">Every shot is set in a hot pink office. Pick the outfit below, all in black.</p>
+
+            <div className="mb-4 rounded-lg border border-pink-500/30 bg-pink-500/5 p-3">
+              <label className="block text-xs font-medium mb-1.5">Outfit for every image in this section</label>
+              <select
+                value={casualOutfit}
+                onChange={(e) => setCasualOutfit(e.target.value)}
+                className="w-full sm:w-72 text-xs bg-background border border-border/50 rounded px-2 py-1.5 focus:outline-none focus:border-pink-500/50"
+              >
+                {CASUAL_OUTFITS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              <p className="text-[11px] text-muted-foreground/70 mt-1.5">Tick a shot to change the outfit for that one picture only.</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+              {CASUAL_PRESETS.map((preset) => {
+                const isSelected = selectedPresets.has(preset.id);
+                return (
+                  <div
+                    key={preset.id}
+                    className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
+                      isSelected
+                        ? "border-violet-500/70 bg-violet-500/10"
+                        : "border-border/30 hover:border-border/60 hover:bg-muted/20"
+                    }`}
+                    onClick={() => togglePreset(preset.id)}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                        isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
+                      }`}>
+                        {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium leading-snug">{preset.name}</p>
+                        {isSelected && (
+                          <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                            <select
+                              value={presetOutfits[preset.id] ?? ""}
+                              onChange={(e) => setPresetOutfits((prev) => ({ ...prev, [preset.id]: e.target.value }))}
+                              className="w-full text-xs bg-background border border-border/50 rounded px-2 py-1 focus:outline-none focus:border-violet-500/50"
+                            >
+                              <option value="">Use the section outfit</option>
+                              {CASUAL_OUTFITS.map((o) => (
+                                <option key={o.value} value={o.value}>{o.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
 
 </>
 )}
