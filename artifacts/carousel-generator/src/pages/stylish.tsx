@@ -1403,11 +1403,25 @@ export default function Stylish() {
         n++;
         const pi = posts.indexOf(post);
         setScheduling(`Uploading post ${n} of ${selectedPosts.length}`);
-        const canvases = await renderPostCanvases(pi, post, logo);
-        const urls = await uploadPngs(
-          canvases.map(c => c.toDataURL("image/png")),
-          canvases.map((_, si) => `stylish-${pi + 1}-slide-${si + 1}.png`),
-        );
+        // One slide at a time: render, upload, then free the canvas straight away so the tab never
+        // holds a whole post (or several posts) of full size images in memory.
+        const specs = buildSlides(post.texts);
+        const urls: string[] = [];
+        for (let si = 0; si < specs.length; si++) {
+          setScheduling(`Uploading post ${n} of ${selectedPosts.length} (slide ${si + 1} of ${specs.length})`);
+          const canvas = await renderSlide(specs[si], photoFor(pi, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 1, { index: si, total: specs.length }, focusRef.current[`${post.id}:${si}`]);
+          let dataUrl: string | null = canvas.toDataURL("image/png");
+          canvas.width = 0; canvas.height = 0;
+          const name = `stylish-${pi + 1}-slide-${si + 1}.png`;
+          let got: string[] | null = null;
+          for (let attempt = 0; attempt < 3 && !got; attempt++) {
+            try { got = await uploadPngs([dataUrl], [name]); }
+            catch (e) { if (attempt === 2) throw e; await new Promise(r => setTimeout(r, 1500 * (attempt + 1))); }
+          }
+          dataUrl = null;
+          urls.push(...(got ?? []));
+          await tick();
+        }
         items.push({
           title: `${buildSlides(post.texts)[0]?.text ?? `Post ${pi + 1}`} · ${preset.name}`,
           caption: noDashes(post.caption.trim()),
