@@ -1386,6 +1386,9 @@ function SliderField({
 // Page
 // ---------------------------------------------------------------------------
 
+const CLIENT_FONTS_KEY = "stylish-client-fonts-v1";
+const CLIENT_FONT_KEYS = ["cvFont", "cvSubFont", "plainFont", "plainSubFont", "behindFont", "behindSubFont", "displayFont", "lf"] as const;
+
 export default function Stylish() {
   const { presets, loading: presetsLoading } = usePresets();
 
@@ -1427,6 +1430,25 @@ export default function Stylish() {
 
   const [presetId, setPresetId] = useState<number | null>(null);
   const preset = presets.find(p => p.id === presetId) ?? null;
+
+  // Each client remembers the fonts chosen for them (browser only). Picking the client puts them back.
+  const clientFonts = () => {
+    try { return JSON.parse(localStorage.getItem(CLIENT_FONTS_KEY) || "{}") as Record<string, Partial<Style>>; } catch { return {}; }
+  };
+  const chooseClient = (id: number) => {
+    const saved = clientFonts()[String(id)];
+    setPresetId(id);
+    if (saved) patch(saved);
+  };
+  useEffect(() => {
+    if (!presetId) return;
+    try {
+      const all = clientFonts();
+      all[String(presetId)] = Object.fromEntries(CLIENT_FONT_KEYS.map(k => [k, style[k]])) as Partial<Style>;
+      localStorage.setItem(CLIENT_FONTS_KEY, JSON.stringify(all));
+    } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [presetId, style.cvFont, style.cvSubFont, style.plainFont, style.plainSubFont, style.behindFont, style.behindSubFont, style.displayFont, style.lf]);
 
   const [tone, setTone] = useState("1");
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
@@ -2089,7 +2111,7 @@ export default function Stylish() {
 
           <section className="space-y-2">
             <Label className="text-sm font-medium">Client</Label>
-            <Select value={presetId ? String(presetId) : ""} onValueChange={v => setPresetId(Number(v))}>
+            <Select value={presetId ? String(presetId) : ""} onValueChange={v => chooseClient(Number(v))}>
               <SelectTrigger className="bg-muted/30 border-border/40">
                 <SelectValue placeholder={presetsLoading ? "Loading…" : "Choose a client"} />
               </SelectTrigger>
