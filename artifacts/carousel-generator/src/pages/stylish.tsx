@@ -210,6 +210,8 @@ type Post = {
   cover?: CoverLayout; // this post's own cover option. Empty means it follows the main choice.
   coverColour?: string;    // this post's own headline colour on slide 1. Empty means the option's colour.
   coverSubColour?: string; // and its subtitle colour
+  coverBlockColour?: string; // its band or block colour (band, block and split covers)
+  coverBandColour?: string;  // and the split cover's bottom band
 };
 
 type SlideKind = "cover" | "body" | "cta";
@@ -287,6 +289,8 @@ function styleForSlide(style: Style, post: Post, kind: SlideKind): Style {
   if (post.cover && post.cover !== style.coverLayout) out = { ...style, ...COVER_PRESETS[post.cover] } as Style;
   if (post.coverColour) out = { ...out, cvColour: post.coverColour };
   if (post.coverSubColour) out = { ...out, cvSubColour: post.coverSubColour };
+  if (post.coverBlockColour) out = { ...out, cvBlock: post.coverBlockColour };
+  if (post.coverBandColour) out = { ...out, cvBand: post.coverBandColour };
   return out;
 }
 
@@ -1262,13 +1266,13 @@ export default function Stylish() {
   };
 
   // Colour picked for one post's cover text. Empty puts it back to the option's own colour.
-  const setCoverColours = (post: Post, pi: number, patchColours: Pick<Post, "coverColour" | "coverSubColour">) => {
+  const setCoverColours = (post: Post, pi: number, patchColours: Partial<Pick<Post, "coverColour" | "coverSubColour" | "coverBlockColour" | "coverBandColour">>) => {
     updatePost(post.id, patchColours);
     redrawOne({ ...post, ...patchColours }, pi, 0);
   };
 
   const sameCovers = () => {
-    setPosts(list => list.map(p => ({ ...p, cover: undefined, coverColour: undefined, coverSubColour: undefined })));
+    setPosts(list => list.map(p => ({ ...p, cover: undefined, coverColour: undefined, coverSubColour: undefined, coverBlockColour: undefined, coverBandColour: undefined })));
     setCoverVersion(v => v + 1);
   };
 
@@ -2037,10 +2041,16 @@ export default function Stylish() {
                           <div className="flex items-end gap-x-6 gap-y-2 flex-wrap">
                             <div className="w-56"><ColourField label="Cover headline" value={eff.cvColour} onChange={v => setCoverColours(post, pi, { coverColour: v })} /></div>
                             <div className="w-56"><ColourField label="Cover subtitle" value={eff.cvSubColour} onChange={v => setCoverColours(post, pi, { coverSubColour: v })} /></div>
-                            {(post.coverColour || post.coverSubColour) && (
+                            {(eff.coverLayout === "band" || eff.coverLayout === "block" || eff.coverLayout === "split") && (
+                              <div className="w-56"><ColourField label={eff.coverLayout === "band" ? "Band colour" : "Block colour"} value={eff.cvBlock} onChange={v => setCoverColours(post, pi, { coverBlockColour: v })} /></div>
+                            )}
+                            {eff.coverLayout === "split" && eff.cvBandOn && (
+                              <div className="w-56"><ColourField label="Bottom band colour" value={eff.cvBand} onChange={v => setCoverColours(post, pi, { coverBandColour: v })} /></div>
+                            )}
+                            {(post.coverColour || post.coverSubColour || post.coverBlockColour || post.coverBandColour) && (
                               <button
                                 type="button"
-                                onClick={() => setCoverColours(post, pi, { coverColour: undefined, coverSubColour: undefined })}
+                                onClick={() => setCoverColours(post, pi, { coverColour: undefined, coverSubColour: undefined, coverBlockColour: undefined, coverBandColour: undefined })}
                                 className="text-xs text-muted-foreground underline hover:text-foreground pb-1"
                               >Put the colours back</button>
                             )}
