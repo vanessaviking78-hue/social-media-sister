@@ -38,7 +38,8 @@ const STYLE_STORAGE_KEY = "stylish-style-v4";
 // Types and defaults
 // ---------------------------------------------------------------------------
 
-type CoverLayout = "band" | "centred" | "block" | "split" | "serif" | "plain" | "behind";
+type CoverLayout = "band" | "centred" | "block" | "split" | "serif" | "plain" | "behind"
+  | "fullbleed" | "blur" | "strip" | "diagonal" | "behind2" | "polaroid" | "sidebar" | "frame" | "layered";
 
 type Style = {
   // Slide 1 (cover)
@@ -49,6 +50,12 @@ type Style = {
   plainSubFont: string;
   behindFont: string;   // cover option 7: heading sits behind the person
   behindSubFont: string;
+  lf: Record<string, { h: string; s: string }>; // fonts for cover options 8 to 16
+  cvBlur: number;   // motion blur, option 9
+  cvAngle: number;  // heading angle, option 11
+  cvAll: boolean;   // one pair of text colours on every cover
+  cvAllColour: string;
+  cvAllSubColour: string;
   cvWeight: number;
   cvSubWeight: number;
   cvCaps: boolean;
@@ -110,6 +117,7 @@ const COVER_WANTS: Record<CoverLayout, string[]> = {
   serif: [],
   plain: [],
   behind: [],
+  fullbleed: [], blur: [], strip: [], diagonal: [], behind2: [], polaroid: [], sidebar: [], frame: [], layered: [],
 };
 
 // Each cover layout brings its own type, colours and proportions. Everything can be changed afterwards.
@@ -139,10 +147,46 @@ const COVER_PRESETS: Record<CoverLayout, Partial<Style>> = {
     cvCaps: false, cvSubCaps: false, cvTracking: 0, cvSubTracking: 0, cvSize: 150, cvSubSize: 56, cvScrim: 0,
     cvColour: "#ffffff", cvSubColour: "#ffffff", cvBlock: "#1f2a44",
   },
+  fullbleed: {
+    coverLayout: "fullbleed", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: false, cvTracking: 0, cvSubTracking: 0,
+    cvSize: 300, cvSubSize: 54, cvScrim: 12, cvColour: "#f5f5f5", cvSubColour: "#f5f5f5", cvY: 16,
+  },
+  blur: {
+    coverLayout: "blur", cvWeight: 400, cvSubWeight: 400, cvCaps: false, cvSubCaps: false, cvTracking: -3, cvSubTracking: 0,
+    cvSize: 190, cvSubSize: 40, cvScrim: 0, cvBlur: 90, cvColour: "#ffffff", cvSubColour: "#ffffff", cvY: 42,
+  },
+  strip: {
+    coverLayout: "strip", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: false, cvTracking: 1, cvSubTracking: 0,
+    cvSize: 120, cvSubSize: 46, cvScrim: 0, cvColour: "#0d0d0d", cvSubColour: "#0d0d0d", cvBlock: "#fff9e8",
+  },
+  diagonal: {
+    coverLayout: "diagonal", cvWeight: 300, cvSubWeight: 400, cvCaps: true, cvSubCaps: true, cvTracking: 3, cvSubTracking: 1,
+    cvSize: 150, cvSubSize: 50, cvScrim: 0, cvColour: "#ffffff", cvSubColour: "#ffffff", cvAngle: 24, cvY: 31,
+  },
+  behind2: {
+    coverLayout: "behind2", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: true, cvTracking: 0, cvSubTracking: 0,
+    cvSize: 420, cvSubSize: 40, cvScrim: 0, cvColour: "#274585", cvSubColour: "#274585", cvBlock: "#ffffff", cvY: 34,
+  },
+  polaroid: {
+    coverLayout: "polaroid", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: false, cvTracking: 0, cvSubTracking: 0,
+    cvSize: 96, cvSubSize: 44, cvScrim: 0, cvColour: "#111111", cvSubColour: "#111111", cvBlock: "#ffffff",
+  },
+  sidebar: {
+    coverLayout: "sidebar", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: true, cvTracking: 0, cvSubTracking: 1,
+    cvSize: 150, cvSubSize: 34, cvScrim: 0, cvColour: "#111111", cvSubColour: "#111111", cvBlock: "#ffffff", cvPhoto: 50, cvY: 29,
+  },
+  frame: {
+    coverLayout: "frame", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: false, cvTracking: -2, cvSubTracking: 0,
+    cvSize: 100, cvSubSize: 44, cvScrim: 0, cvColour: "#111111", cvSubColour: "#111111", cvBlock: "#ffffff",
+  },
+  layered: {
+    coverLayout: "layered", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: true, cvTracking: 0, cvSubTracking: 1,
+    cvSize: 92, cvSubSize: 30, cvScrim: 8, cvColour: "#1c1c1c", cvSubColour: "#1c1c1c", cvBlock: "#ececec",
+  },
   behind: {
     coverLayout: "behind", cvWeight: 400, cvSubWeight: 400,
     cvCaps: true, cvSubCaps: true, cvTracking: 0, cvSubTracking: 0, cvSize: 420, cvSubSize: 36, cvScrim: 0,
-    cvColour: "#1c1c1c", cvSubColour: "#1c1c1c", cvBlock: "#efefef", cvY: 22,
+    cvColour: "#1c1c1c", cvSubColour: "#1c1c1c", cvBlock: "#efefef", cvY: 31,
   },
   serif: {
     coverLayout: "serif", cvFont: F_INSTRUMENT, cvSubFont: F_INSTRUMENT, cvWeight: 400, cvSubWeight: 400,
@@ -210,6 +254,22 @@ const DEFAULT_STYLE: Style = {
   plainSubFont: "'Montserrat', sans-serif",
   behindFont: "'Anton', sans-serif",
   behindSubFont: "'Inter Tight', sans-serif",
+  lf: {
+    fullbleed: { h: "'Bebas Neue', sans-serif", s: "'Playfair Display', serif" },
+    blur: { h: "'Instrument Serif', serif", s: "'Inter Tight', sans-serif" },
+    strip: { h: "'Bebas Neue', sans-serif", s: "'Poppins', sans-serif" },
+    diagonal: { h: "'Jost', sans-serif", s: "'Jost', sans-serif" },
+    behind2: { h: "'Anton', sans-serif", s: "'Montserrat', sans-serif" },
+    polaroid: { h: "'DM Serif Display', serif", s: "'Inter Tight', sans-serif" },
+    sidebar: { h: "'DM Serif Display', serif", s: "'Inter Tight', sans-serif" },
+    frame: { h: "'Playfair Display', serif", s: "'Playfair Display', serif" },
+    layered: { h: "'Anton', sans-serif", s: "'Inter Tight', sans-serif" },
+  },
+  cvBlur: 90,
+  cvAngle: 24,
+  cvAll: false,
+  cvAllColour: "#ffffff",
+  cvAllSubColour: "#ffffff",
   cvBand: "#666666",
   cvY: 58,
   cvScrim: 0,
@@ -299,7 +359,21 @@ function buildSlides(texts: string[]): SlideSpec[] {
   return out;
 }
 
-const COVER_ORDER: CoverLayout[] = ["band", "centred", "block", "split", "serif", "plain", "behind"];
+const COVER_ORDER: CoverLayout[] = ["band", "centred", "block", "split", "serif", "plain", "behind", "fullbleed", "blur", "strip", "diagonal", "behind2", "polaroid", "sidebar", "frame", "layered"];
+
+// The name of each cover's colour block, for the colour picker. Covers not listed have no block.
+const BLOCK_LABEL: Partial<Record<CoverLayout, string>> = {
+  band: "Band colour", block: "Block colour", split: "Block colour", plain: "Background colour", behind: "Background colour",
+  behind2: "Background colour", strip: "Band colour", polaroid: "Background colour", sidebar: "Band colour", frame: "Panel colour", layered: "Card colour",
+};
+
+// Each cover's headline and subtitle fonts.
+function faces(style: Style, layout: CoverLayout): [string, string] {
+  if (layout === "plain") return [style.plainFont, style.plainSubFont];
+  if (layout === "behind") return [style.behindFont, style.behindSubFont];
+  const f = style.lf?.[layout];
+  return f ? [f.h, f.s] : [style.cvFont, style.cvSubFont];
+}
 // "Give each post a different cover" goes round the five photo covers only. Option 6 is chosen by hand.
 const MIX_ORDER: CoverLayout[] = ["band", "centred", "block", "split", "serif"];
 
@@ -309,6 +383,7 @@ function styleForSlide(style: Style, post: Post, kind: SlideKind): Style {
   if (kind !== "cover") return style;
   let out = style;
   if (post.cover && post.cover !== style.coverLayout) out = { ...style, ...COVER_PRESETS[post.cover] } as Style;
+  if (style.cvAll) out = { ...out, cvColour: style.cvAllColour, cvSubColour: style.cvAllSubColour };
   if (post.coverColour) out = { ...out, cvColour: post.coverColour };
   if (post.coverSubColour) out = { ...out, cvSubColour: post.coverSubColour };
   if (post.coverBlockColour) out = { ...out, cvBlock: post.coverBlockColour };
@@ -473,7 +548,7 @@ function drawLogo(ctx: CanvasRenderingContext2D, logo: HTMLImageElement, positio
   ctx.globalAlpha = 1;
 }
 
-type RenderMeta = { index: number; total: number };
+type RenderMeta = { index: number; total: number; extras?: (File | null)[] };
 
 function drawPhotoIn(
   ctx: CanvasRenderingContext2D, bmp: ImageBitmap,
@@ -550,12 +625,258 @@ async function getCutout(file: File): Promise<ImageBitmap | null> {
   return blob ? createImageBitmap(blob) : null;
 }
 
+
+// ---------------------------------------------------------------------------
+// Cover options 8 to 16
+// ---------------------------------------------------------------------------
+
+const MORE_LAYOUTS = new Set<CoverLayout>(["fullbleed", "blur", "strip", "diagonal", "behind2", "polaroid", "sidebar", "frame", "layered"]);
+
+// A small print style card, drawn tilted around its centre. Anything passed as inner is drawn in the tilted space.
+function drawPolaroid(
+  ctx: CanvasRenderingContext2D, bmp: ImageBitmap | null, cx: number, cy: number, w: number, h: number, rot: number,
+  card: string, pad: number, capH: number, inner?: () => void,
+) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  ctx.shadowColor = "rgba(0,0,0,0.3)"; ctx.shadowBlur = 30; ctx.shadowOffsetY = 14;
+  ctx.fillStyle = card;
+  ctx.fillRect(-w / 2, -h / 2, w, h);
+  ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+  if (bmp) drawPhotoIn(ctx, bmp, -w / 2 + pad, -h / 2 + pad, w - pad * 2, h - pad - capH, { x: 50, y: 50 });
+  inner?.();
+  ctx.restore();
+}
+
+function drawBinderClip(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.strokeStyle = "#c9c9c9"; ctx.lineWidth = 9; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(-32, 10); ctx.lineTo(-32, -70); ctx.arc(0, -70, 32, Math.PI, 0); ctx.lineTo(32, 10); ctx.stroke();
+  ctx.fillStyle = "#141414";
+  ctx.beginPath(); ctx.moveTo(-80, 0); ctx.lineTo(80, 0); ctx.lineTo(62, 86); ctx.lineTo(-62, 86); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function drawPaperclip(ctx: CanvasRenderingContext2D, x: number, y: number) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.strokeStyle = "#d9998a"; ctx.lineWidth = 7; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(0, 70); ctx.lineTo(0, -50); ctx.arc(18, -50, 18, Math.PI, 0); ctx.lineTo(36, 66); ctx.arc(24, 66, 12, 0, Math.PI); ctx.lineTo(12, -30); ctx.stroke();
+  ctx.restore();
+}
+
+async function drawCoverMore(
+  ctx: CanvasRenderingContext2D, spec: SlideSpec, photo: File | null, extras: (File | null)[],
+  style: Style, layout: CoverLayout, at: PhotoPos,
+) {
+  const [hf, sf] = faces(style, layout);
+  const head = style.cvCaps ? spec.text.toUpperCase() : spec.text;
+  const sub = spec.sub ? (style.cvSubCaps ? spec.sub.toUpperCase() : spec.sub) : "";
+  const headFont = (sz: number) => `${style.cvWeight} ${sz}px ${hf}`;
+  const subLineH = Math.round(style.cvSubSize * 1.3);
+  ctx.textBaseline = "top";
+  const drawLines = (ls: string[], x: number, y: number, lh: number, align: CanvasTextAlign) => {
+    ctx.textAlign = align;
+    for (const l of ls) { ctx.fillText(l, x, y); y += lh; }
+    return y;
+  };
+  const setHead = (sz: number) => { ctx.font = headFont(sz); setSpacing(ctx, style.cvTracking); ctx.fillStyle = style.cvColour; };
+  const setSub = () => { ctx.font = `${style.cvSubWeight} ${style.cvSubSize}px ${sf}`; setSpacing(ctx, style.cvSubTracking); ctx.fillStyle = style.cvSubColour; };
+  const opened: ImageBitmap[] = [];
+  const open = async (f: File | null) => {
+    if (!f) return null;
+    const blob = await prepareImage(f);
+    const b = blob ? await createImageBitmap(blob) : null;
+    if (b) opened.push(b);
+    return b;
+  };
+  const fill = (c: string) => { ctx.fillStyle = c; ctx.fillRect(0, 0, W, H); };
+  const scrim = () => { if (style.cvScrim > 0) { ctx.fillStyle = `rgba(0,0,0,${style.cvScrim / 100})`; ctx.fillRect(0, 0, W, H); } };
+  // Headline: from a top edge, or centred on a height.
+  const heading = (x: number, where: { top?: number; centre?: number }, maxW: number, maxLines: number, align: CanvasTextAlign, factor = 0.96) => {
+    setSpacing(ctx, style.cvTracking);
+    const fit = fitHeading(ctx, head, headFont, maxW, style.cvSize, maxLines);
+    const lh = Math.round(fit.size * factor);
+    const top = where.top ?? Math.round((where.centre ?? H / 2) - (fit.lines.length * lh) / 2);
+    setHead(fit.size);
+    return { bottom: drawLines(fit.lines, x, top, lh, align), size: fit.size };
+  };
+  const subtitle = (x: number, y: number, maxW: number, align: CanvasTextAlign) => {
+    if (!sub) return y;
+    setSub();
+    return drawLines(balancedWrap(ctx, sub, maxW), x, y, subLineH, align);
+  };
+  const shadowOn = () => { ctx.shadowColor = "rgba(0,0,0,0.25)"; ctx.shadowBlur = 26; ctx.shadowOffsetY = 12; };
+  const shadowOff = () => { ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; };
+
+  try {
+    if (layout === "fullbleed") {
+      // Option 8: full photo, big stacked headline top left, subtitle low down.
+      fill("#777777");
+      const b = await open(photo);
+      if (b) drawPhotoIn(ctx, b, 0, 0, W, H, at);
+      scrim();
+      heading(110, { top: Math.round((style.cvY / 100) * H) }, Math.round(W * 0.6), 4, "left");
+      subtitle(110, Math.round(H * 0.77), Math.round(W * 0.7), "left");
+    } else if (layout === "blur") {
+      // Option 9: the photo smeared sideways like a long exposure, headline and subtitle in the middle.
+      fill("#9a9a9a");
+      const b = await open(photo);
+      if (b) {
+        const n = 30, span = Math.max(0, style.cvBlur);
+        for (let i = 0; i < n; i++) {
+          ctx.globalAlpha = 1 / (i + 1);
+          const off = span ? (i / (n - 1) - 0.5) * span : 0;
+          drawPhotoIn(ctx, b, off - span, 0, W + span * 2, H, at);
+        }
+        ctx.globalAlpha = 1;
+      }
+      scrim();
+      const r = heading(W / 2, { centre: Math.round((style.cvY / 100) * H) }, W - 160, 3, "center", 1);
+      subtitle(W / 2, r.bottom + 50, Math.round(W * 0.7), "center");
+    } else if (layout === "strip") {
+      // Option 10: big photo, a dark strip of three small photos, and a colour band with the words.
+      fill("#777777");
+      const b = await open(photo);
+      if (b) drawPhotoIn(ctx, b, 0, 0, W, H, at);
+      const sx = Math.round(W * 0.1), sw = Math.round(W * 0.31);
+      ctx.fillStyle = "#0b0b0b";
+      ctx.fillRect(sx, 0, sw, H);
+      const gap = 30, ph = Math.round((H - gap * 4) / 3);
+      for (let i = 0; i < 3; i++) {
+        const e = await open(extras[i] ?? photo);
+        if (e) drawPhotoIn(ctx, e, sx + 22, gap + i * (ph + gap), sw - 44, ph, { x: 50, y: 50 });
+      }
+      const bx = sx + sw, by = Math.round(H * 0.68), bh = Math.round(H * 0.26);
+      ctx.fillStyle = style.cvBlock;
+      ctx.fillRect(bx, by, W - bx, bh);
+      const r = heading(bx + 50, { top: by + 44 }, W - bx - 100, 2, "left");
+      subtitle(bx + 50, r.bottom + 14, W - bx - 100, "left");
+    } else if (layout === "diagonal") {
+      // Option 11: headline set on a slant across the photo.
+      fill("#777777");
+      const b = await open(photo);
+      if (b) drawPhotoIn(ctx, b, 0, 0, W, H, at);
+      scrim();
+      ctx.save();
+      ctx.translate(Math.round(W * 0.4), Math.round((style.cvY / 100) * H));
+      ctx.rotate((style.cvAngle * Math.PI) / 180);
+      heading(0, { centre: 0 }, Math.round(W * 0.7), 2, "center", 1);
+      ctx.restore();
+      subtitle(80, Math.round(H * 0.56), Math.round(W * 0.5), "left");
+    } else if (layout === "behind2") {
+      // Option 12: like option 7, with the subtitle on the left.
+      fill(style.cvBlock);
+      const cut = photo ? await getCutout(photo) : null;
+      const r = heading(W / 2, { centre: Math.round((style.cvY / 100) * H) }, W - 60, 2, "center");
+      subtitle(52, r.bottom + 50, Math.round(W * 0.5), "left");
+      if (cut) {
+        drawPhotoIn(ctx, cut, 0, 0, W, H, at);
+        cut.close();
+      } else {
+        const whole = await open(photo);
+        if (whole) drawPhotoIn(ctx, whole, 0, 0, W, H, at);
+      }
+    } else if (layout === "polaroid") {
+      // Option 13: your photo in a print in the middle, a second card behind with the subtitle, held by a clip.
+      fill(style.cvBlock);
+      const b = await open(photo);
+      ctx.save();
+      ctx.translate(Math.round(W * 0.55), Math.round(H * 0.56));
+      ctx.rotate(-0.1);
+      shadowOn();
+      ctx.fillStyle = "#f3f1ed";
+      ctx.fillRect(-W * 0.23, -H * 0.31, W * 0.46, H * 0.62);
+      shadowOff();
+      ctx.restore();
+      if (sub) {
+        ctx.save();
+        ctx.translate(Math.round(W * 0.42), Math.round(H * 0.79));
+        ctx.rotate(-0.1);
+        setSub();
+        drawLines(balancedWrap(ctx, sub, Math.round(W * 0.36)), 0, 0, subLineH, "left");
+        ctx.restore();
+      }
+      const pw = Math.round(W * 0.51), phh = Math.round(H * 0.47), capH = Math.round(phh * 0.2);
+      drawPolaroid(ctx, b, Math.round(W * 0.44), Math.round(H * 0.48), pw, phh, 0, "#f2f0ec", Math.round(W * 0.022), capH, () => {
+        setSpacing(ctx, style.cvTracking);
+        // One line in the print's caption strip, shrunk until the whole headline fits.
+        let size = Math.min(style.cvSize, Math.round(capH * 0.8));
+        setSpacing(ctx, style.cvTracking);
+        while (size > 24) {
+          ctx.font = headFont(size);
+          if (ctx.measureText(head).width <= pw * 0.86) break;
+          size -= 4;
+        }
+        setHead(size);
+        ctx.textAlign = "center";
+        ctx.fillText(head, 0, phh / 2 - capH + Math.round((capH - size) / 2));
+      });
+      drawBinderClip(ctx, Math.round(W * 0.44), Math.round(H * 0.48 - phh / 2 - 60));
+    } else if (layout === "sidebar") {
+      // Option 14: full photo with a colour band down the side carrying the words.
+      fill("#777777");
+      const b = await open(photo);
+      if (b) drawPhotoIn(ctx, b, 0, 0, W, H, at);
+      const bx = Math.round(W * 0.07), bw = Math.round(W * (style.cvPhoto / 100));
+      ctx.fillStyle = style.cvBlock;
+      ctx.fillRect(bx, 0, bw, H);
+      const r = heading(bx + 34, { top: Math.round((style.cvY / 100) * H) }, bw - 68, 3, "left");
+      subtitle(bx + 50, r.bottom + 50, bw - 100, "left");
+    } else if (layout === "frame") {
+      // Option 15: photo behind, a white panel on top with two photos and two blocks of words on the diagonal.
+      fill("#777777");
+      const b = await open(photo);
+      if (b) drawPhotoIn(ctx, b, 0, 0, W, H, at);
+      const px = Math.round(W * 0.1), py = Math.round(H * 0.1), pw = Math.round(W * 0.8), ph = Math.round(H * 0.8);
+      ctx.fillStyle = style.cvBlock;
+      ctx.fillRect(px, py, pw, ph);
+      const cw = Math.round(pw / 2), ch = Math.round(ph / 2), m = 18;
+      const e0 = await open(extras[0] ?? photo), e1 = await open(extras[1] ?? photo);
+      if (e0) drawPhotoIn(ctx, e0, px + m, py + m, cw - m, ch - m, { x: 50, y: 50 });
+      if (e1) drawPhotoIn(ctx, e1, px + cw, py + ch, cw - m, ch - m, { x: 50, y: 50 });
+      heading(px + cw + cw / 2, { centre: py + ch / 2 }, cw - 40, 2, "center", 1);
+      if (sub) {
+        setSub();
+        const ls = balancedWrap(ctx, sub, cw - 60);
+        drawLines(ls, px + cw / 2, Math.round(py + ch + ch / 2 - (ls.length * subLineH) / 2), subLineH, "center");
+      }
+    } else if (layout === "layered") {
+      // Option 16: photo at the back, a second photo in a print at the front, words on a card below it.
+      fill("#777777");
+      const back = await open(photo);
+      if (back) drawPhotoIn(ctx, back, 0, 0, W, H, at);
+      scrim();
+      const front = await open(extras[0] ?? photo);
+      const cardX = Math.round(W * 0.283), cardW = Math.round(W * 0.4), cardY = Math.round(H * 0.235), cardH = Math.round(H * 0.545);
+      shadowOn();
+      ctx.fillStyle = style.cvBlock;
+      ctx.fillRect(cardX, cardY, cardW, cardH);
+      shadowOff();
+      drawPolaroid(ctx, front, Math.round(W * 0.485), Math.round(H * 0.415), Math.round(W * 0.505), Math.round(H * 0.4), 0.03, "#f4f3f0", Math.round(W * 0.02), Math.round(H * 0.03));
+      drawPaperclip(ctx, Math.round(W * 0.335), Math.round(H * 0.225));
+      const r = heading(cardX + 26, { top: Math.round(H * 0.655) }, cardW - 52, 2, "left");
+      subtitle(cardX + 26, r.bottom + 12, cardW - 52, "left");
+    }
+  } finally {
+    for (const b of opened) b.close();
+    setSpacing(ctx, 0);
+  }
+}
+
 async function drawCover(
   ctx: CanvasRenderingContext2D, spec: SlideSpec, photo: File | null, style: Style,
-  logo: HTMLImageElement | null, preset: ClientPreset | null, pos?: PhotoPos,
+  logo: HTMLImageElement | null, preset: ClientPreset | null, pos?: PhotoPos, extras: (File | null)[] = [],
 ) {
   const layout = style.coverLayout;
   const at = pos ?? defaultPos("cover", style);
+  if (MORE_LAYOUTS.has(layout)) {
+    await drawCoverMore(ctx, spec, photo, extras, style, layout, at);
+    if (logo && style.showLogo && preset) drawLogo(ctx, logo, preset.logoPosition || "top-left", preset.logoSize || 110);
+    return;
+  }
   const bmp = photo && layout !== "plain" && layout !== "behind" ? await (async () => {
     const blob = await prepareImage(photo);
     return blob ? createImageBitmap(blob) : null;
@@ -563,8 +884,7 @@ async function drawCover(
 
   const heading = style.cvCaps ? spec.text.toUpperCase() : spec.text;
   const subtitle = spec.sub ? (style.cvSubCaps ? spec.sub.toUpperCase() : spec.sub) : "";
-  const headFace = layout === "plain" ? style.plainFont : layout === "behind" ? style.behindFont : style.cvFont;
-  const subFace = layout === "plain" ? style.plainSubFont : layout === "behind" ? style.behindSubFont : style.cvSubFont;
+  const [headFace, subFace] = faces(style, layout);
   const headFont = (sz: number) => `${style.cvWeight} ${sz}px ${headFace}`;
   const subFont = `${style.cvSubWeight} ${style.cvSubSize}px ${subFace}`;
   const lineH = (sz: number) => Math.round(sz * (layout === "centred" ? 1.05 : layout === "serif" ? 0.9 : 0.94));
@@ -665,7 +985,7 @@ async function drawCover(
     if (subtitle) {
       setSub();
       const subLines = balancedWrap(ctx, subtitle, Math.round(W * 0.4));
-      drawLines(subLines, Math.round(W * 0.72), bottom + 60, subLineH, "center");
+      drawLines(subLines, Math.round(W * 0.69), bottom + 100, subLineH, "center");
     }
     if (cut) {
       drawPhotoIn(ctx, cut, 0, 0, W, H, at);
@@ -731,7 +1051,7 @@ async function renderSlide(
   ctx.scale(scale, scale);
 
   if (spec.kind === "cover") {
-    await drawCover(ctx, spec, photo, style, logo, preset, pos);
+    await drawCover(ctx, spec, photo, style, logo, preset, pos, meta.extras ?? []);
     return canvas;
   }
 
@@ -874,6 +1194,10 @@ async function warmFonts(style: Style) {
     document.fonts.load(`${style.cvSubWeight} ${style.cvSubSize}px ${style.plainSubFont}`),
     document.fonts.load(`${style.cvWeight} ${style.cvSize}px ${style.behindFont}`),
     document.fonts.load(`${style.cvSubWeight} ${style.cvSubSize}px ${style.behindSubFont}`),
+    ...Object.values(style.lf ?? {}).flatMap(f => [
+      document.fonts.load(`${style.cvWeight} 100px ${f.h}`),
+      document.fonts.load(`${style.cvSubWeight} 40px ${f.s}`),
+    ]),
     document.fonts.load(`${style.textItalic ? "italic " : ""}${style.textWeight} ${style.bodySize}px ${style.displayFont}`),
     document.fonts.load(`italic ${style.textWeight} ${style.ctaSize}px ${style.displayFont}`),
     document.fonts.load(`400 22px ${style.fontFamily}`),
@@ -1003,6 +1327,15 @@ function CoverIcon({ k }: { k: CoverLayout }) {
       {k === "serif" && (<><div className="absolute inset-0 bg-amber-700/70" /><div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-black/70 to-transparent" /><div className="absolute left-1 right-1 bottom-4 h-1.5 bg-white" /><div className="absolute left-2 right-2 bottom-2 h-0.5 bg-white/80" /></>)}
       {k === "behind" && (<><div className="absolute inset-0 bg-neutral-200" /><div className="absolute left-0.5 right-0.5 top-[14%] h-3 bg-neutral-800" /><div className="absolute left-2 right-2 bottom-0 top-[22%] bg-amber-700/80 rounded-t-full" /></>)}
       {k === "plain" && (<><div className="absolute inset-0 bg-indigo-900" /><div className="absolute left-1.5 right-1.5 top-[40%] h-1.5 bg-white" /><div className="absolute left-2.5 right-2.5 top-[56%] h-0.5 bg-white/80" /></>)}
+      {k === "fullbleed" && (<><div className="absolute inset-0 bg-amber-800/70" /><div className="absolute left-1 top-[18%] w-4 h-1.5 bg-white" /><div className="absolute left-1 top-[30%] w-4 h-1.5 bg-white" /><div className="absolute left-1 bottom-2 w-3 h-0.5 bg-white/80" /></>)}
+      {k === "blur" && (<><div className="absolute inset-0 bg-gradient-to-r from-neutral-300 via-amber-800/60 to-neutral-800/80 blur-[1px]" /><div className="absolute left-2 right-2 top-[42%] h-1 bg-white" /><div className="absolute left-3 right-3 top-[58%] h-0.5 bg-white/80" /></>)}
+      {k === "strip" && (<><div className="absolute inset-0 bg-amber-800/60" /><div className="absolute inset-y-0 left-1 w-3 bg-black" /><div className="absolute left-4 right-0 bottom-[6%] h-[26%] bg-amber-50" /><div className="absolute left-5 bottom-[16%] w-4 h-1 bg-black" /></>)}
+      {k === "diagonal" && (<><div className="absolute inset-0 bg-amber-800/70" /><div className="absolute left-1 right-1 top-[28%] h-1 bg-white rotate-[24deg]" /><div className="absolute left-1 bottom-3 w-3 h-0.5 bg-white/80" /></>)}
+      {k === "behind2" && (<><div className="absolute inset-0 bg-white" /><div className="absolute left-0.5 right-0.5 top-[16%] h-3 bg-blue-800" /><div className="absolute left-2 right-0 bottom-0 top-[30%] bg-amber-700/80 rounded-t-full" /></>)}
+      {k === "polaroid" && (<><div className="absolute inset-0 bg-white" /><div className="absolute left-2 right-1 top-[20%] bottom-[22%] bg-stone-200 rotate-[-6deg]" /><div className="absolute left-1 right-2 top-[26%] bottom-[30%] bg-amber-700/70 border-2 border-white" /></>)}
+      {k === "sidebar" && (<><div className="absolute inset-0 bg-amber-800/60" /><div className="absolute left-1 top-0 bottom-0 w-[50%] bg-white" /><div className="absolute left-1.5 top-[30%] w-3 h-1.5 bg-black" /></>)}
+      {k === "frame" && (<><div className="absolute inset-0 bg-amber-900/70" /><div className="absolute inset-1 bg-white" /><div className="absolute left-1.5 top-1.5 w-[42%] h-[42%] bg-amber-700/70" /><div className="absolute right-1.5 bottom-1.5 w-[42%] h-[42%] bg-amber-700/70" /></>)}
+      {k === "layered" && (<><div className="absolute inset-0 bg-amber-900/60" /><div className="absolute left-2 right-2 top-[20%] bottom-[18%] bg-stone-200" /><div className="absolute left-2.5 right-2.5 top-[24%] h-[32%] bg-amber-700/70" /></>)}
       {k === "split" && (<><div className="absolute inset-y-0 left-0 w-[47%] bg-amber-700/70" /><div className="absolute left-[54%] right-1 top-[24%] h-1.5 bg-black" /><div className="absolute right-1 bottom-0 left-[47%] h-1.5 bg-neutral-500" /></>)}
     </div>
   );
@@ -1065,6 +1398,17 @@ export default function Stylish() {
     return DEFAULT_STYLE;
   });
   const patch = useCallback((p: Partial<Style>) => setStyle(s => ({ ...s, ...p })), []);
+  const coverNo = COVER_ORDER.indexOf(style.coverLayout) + 1;
+  // Sets the headline (0) or subtitle (1) font of the cover that is showing.
+  const setFace = (which: 0 | 1, v: string) => {
+    const l = style.coverLayout;
+    if (l === "plain") patch(which === 0 ? { plainFont: v } : { plainSubFont: v });
+    else if (l === "behind") patch(which === 0 ? { behindFont: v } : { behindSubFont: v });
+    else if (MORE_LAYOUTS.has(l)) {
+      const cur = faces(style, l);
+      patch({ lf: { ...style.lf, [l]: { h: which === 0 ? v : cur[0], s: which === 1 ? v : cur[1] } } });
+    } else patch(which === 0 ? { cvFont: v } : { cvSubFont: v });
+  };
 
   useEffect(() => {
     try { localStorage.setItem(STYLE_STORAGE_KEY, JSON.stringify(style)); } catch { /* ignore */ }
@@ -1263,7 +1607,7 @@ export default function Stylish() {
           const specs = buildSlides(post.texts);
           const batch: Record<string, string> = {};
           for (let si = 0; si < specs.length; si++) {
-            const canvas = await renderSlide(specs[si], photoForRef.current(pi, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 0.3, { index: si, total: specs.length }, focusRef.current[`${post.id}:${si}`]);
+            const canvas = await renderSlide(specs[si], photoForRef.current(pi, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 0.3, { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoForRef.current(pi, post, k)) : undefined }, focusRef.current[`${post.id}:${si}`]);
             batch[`${post.id}:${si}`] = canvas.toDataURL("image/jpeg", 0.75);
           }
           if (cancelled) return;
@@ -1292,7 +1636,7 @@ export default function Stylish() {
       const seq = (redrawSeq.current[key] = (redrawSeq.current[key] ?? 0) + 1);
       const canvas = await renderSlide(
         specs[si], photoFor(pi, post, si), styleForSlide(style, post, specs[si].kind), logoRef.current, preset, 0.3,
-        { index: si, total: specs.length }, focusRef.current[key],
+        { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoFor(pi, post, k)) : undefined }, focusRef.current[key],
       );
       if (redrawSeq.current[key] !== seq) return; // a newer change has been drawn since, keep that one
       setThumbs(prev => ({ ...prev, [key]: canvas.toDataURL("image/jpeg", 0.75) }));
@@ -1375,6 +1719,14 @@ export default function Stylish() {
   const setCoverColours = (post: Post, pi: number, patchColours: Partial<Pick<Post, "coverColour" | "coverSubColour" | "coverBlockColour" | "coverBandColour">>) => {
     updatePost(post.id, patchColours);
     redrawOne({ ...post, ...patchColours }, pi, 0);
+  };
+
+  // Puts one pair of text colours on every post's cover, and clears any colours set on single posts.
+  const changeAllText = (head: string, subtitleColour: string) => {
+    patch({ cvAll: true, cvAllColour: head, cvAllSubColour: subtitleColour });
+    setPosts(list => list.map(p => ({ ...p, coverColour: undefined, coverSubColour: undefined })));
+    setCoverVersion(v => v + 1);
+    toast.success("Text colours changed on every cover");
   };
 
   const sameCovers = () => {
@@ -1468,7 +1820,7 @@ export default function Stylish() {
     const specs = buildSlides(post.texts);
     const out: HTMLCanvasElement[] = [];
     for (let si = 0; si < specs.length; si++) {
-      out.push(await renderSlide(specs[si], photoFor(postIndex, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 1, { index: si, total: specs.length }, focusRef.current[`${post.id}:${si}`]));
+      out.push(await renderSlide(specs[si], photoFor(postIndex, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 1, { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoFor(postIndex, post, k)) : undefined }, focusRef.current[`${post.id}:${si}`]));
     }
     return out;
   };
@@ -1529,7 +1881,7 @@ export default function Stylish() {
         const urls: string[] = [];
         for (let si = 0; si < specs.length; si++) {
           setScheduling(`Uploading post ${n} of ${selectedPosts.length} (slide ${si + 1} of ${specs.length})`);
-          const canvas = await renderSlide(specs[si], photoFor(pi, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 1, { index: si, total: specs.length }, focusRef.current[`${post.id}:${si}`]);
+          const canvas = await renderSlide(specs[si], photoFor(pi, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 1, { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoFor(pi, post, k)) : undefined }, focusRef.current[`${post.id}:${si}`]);
           let dataUrl: string | null = canvas.toDataURL("image/png");
           canvas.width = 0; canvas.height = 0;
           const name = `stylish-${pi + 1}-slide-${si + 1}.png`;
@@ -1747,6 +2099,15 @@ export default function Stylish() {
               {style.coverLayout === "split" && "Photo on the left, colour block on the right with the headline."}
               {style.coverLayout === "serif" && "Full photo with a big serif headline and subtitle along the bottom."}
               {style.coverLayout === "behind" && "Big heading behind the person in your photo. The person is cut out of the photo automatically, in your browser, the first time."}
+              {style.coverLayout === "fullbleed" && "Full photo with a big stacked headline top left and the subtitle low down."}
+              {style.coverLayout === "blur" && "Your photo smeared sideways like a long exposure, with the headline and subtitle in the middle."}
+              {style.coverLayout === "strip" && "A big photo, a dark strip of three small photos, and a colour band with the words. Uses this post's next three photos."}
+              {style.coverLayout === "diagonal" && "Full photo with the headline set on a slant."}
+              {style.coverLayout === "behind2" && "Heading behind a cut out person, with the subtitle on the left."}
+              {style.coverLayout === "polaroid" && "Your photo in a print in the middle of a colour background, held by a clip, with a second card behind."}
+              {style.coverLayout === "sidebar" && "Full photo with a colour band down the side carrying the words."}
+              {style.coverLayout === "frame" && "Photo behind, a panel on top with two photos and two blocks of words on the diagonal. Uses this post's next two photos."}
+              {style.coverLayout === "layered" && "One photo at the back, a print at the front and a card below with the words."}
               {style.coverLayout === "plain" && "No photo. A flat colour of your choice with your own headline and subheading fonts."}
               {" "}Picking one loads its fonts and colours, then change whatever you like.
             </p>
@@ -1782,8 +2143,8 @@ export default function Stylish() {
               )}
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">{style.coverLayout === "plain" ? "Headline font (option 6)" : style.coverLayout === "behind" ? "Headline font (option 7)" : "Headline font"}</Label>
-              <Select value={style.coverLayout === "plain" ? style.plainFont : style.coverLayout === "behind" ? style.behindFont : style.cvFont} onValueChange={v => patch(style.coverLayout === "plain" ? { plainFont: v } : style.coverLayout === "behind" ? { behindFont: v } : { cvFont: v })}>
+              <Label className="text-xs text-muted-foreground">{coverNo > 5 ? `Headline font (option ${coverNo})` : "Headline font"}</Label>
+              <Select value={faces(style, style.coverLayout)[0]} onValueChange={v => setFace(0, v)}>
                 <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
                   {coverFontOptions.map(f => (
@@ -1793,8 +2154,8 @@ export default function Stylish() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">{style.coverLayout === "plain" ? "Subheading font (option 6)" : style.coverLayout === "behind" ? "Subheading font (option 7)" : "Subtitle font"}</Label>
-              <Select value={style.coverLayout === "plain" ? style.plainSubFont : style.coverLayout === "behind" ? style.behindSubFont : style.cvSubFont} onValueChange={v => patch(style.coverLayout === "plain" ? { plainSubFont: v } : style.coverLayout === "behind" ? { behindSubFont: v } : { cvSubFont: v })}>
+              <Label className="text-xs text-muted-foreground">{coverNo > 5 ? `Subheading font (option ${coverNo})` : "Subtitle font"}</Label>
+              <Select value={faces(style, style.coverLayout)[1]} onValueChange={v => setFace(1, v)}>
                 <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
                   {coverFontOptions.map(f => (
@@ -1823,7 +2184,7 @@ export default function Stylish() {
             <SliderField label="Subtitle size" value={style.cvSubSize} min={20} max={100} suffix="px" onChange={v => patch({ cvSubSize: v })} />
             <SliderField label="Headline letter spacing" value={style.cvTracking} min={-12} max={12} step={0.5} suffix="px" onChange={v => patch({ cvTracking: v })} />
             <SliderField label="Subtitle letter spacing" value={style.cvSubTracking} min={-8} max={12} step={0.5} suffix="px" onChange={v => patch({ cvSubTracking: v })} />
-            {style.coverLayout !== "centred" && style.coverLayout !== "serif" && style.coverLayout !== "plain" && style.coverLayout !== "behind" && (
+            {(style.coverLayout === "band" || style.coverLayout === "block" || style.coverLayout === "split") && (
               <>
                 <SliderField
                   label={style.coverLayout === "split" ? "Photo width" : "Photo height"}
@@ -1836,8 +2197,20 @@ export default function Stylish() {
                 />
               </>
             )}
-            {(style.coverLayout === "centred" || style.coverLayout === "serif" || style.coverLayout === "behind") && (
-              <SliderField label={style.coverLayout === "serif" ? "Text bottom edge" : "Text height"} value={style.cvY} min={15} max={96} suffix="%" onChange={v => patch({ cvY: v })} />
+            {["centred", "serif", "behind", "behind2", "fullbleed", "blur", "diagonal", "sidebar"].includes(style.coverLayout) && (
+              <SliderField label={style.coverLayout === "serif" ? "Text bottom edge" : "Text height"} value={style.cvY} min={5} max={96} suffix="%" onChange={v => patch({ cvY: v })} />
+            )}
+            {style.coverLayout === "blur" && (
+              <SliderField label="Motion blur" value={style.cvBlur} min={0} max={240} suffix="px" onChange={v => patch({ cvBlur: v })} />
+            )}
+            {style.coverLayout === "diagonal" && (
+              <SliderField label="Headline angle" value={style.cvAngle} min={-60} max={60} suffix="°" onChange={v => patch({ cvAngle: v })} />
+            )}
+            {style.coverLayout === "sidebar" && (
+              <SliderField label="Band width" value={style.cvPhoto} min={25} max={80} suffix="%" onChange={v => patch({ cvPhoto: v })} />
+            )}
+            {["fullbleed", "blur", "diagonal", "layered"].includes(style.coverLayout) && (
+              <SliderField label="Darken the photo" value={style.cvScrim} min={0} max={70} suffix="%" onChange={v => patch({ cvScrim: v })} />
             )}
             {style.coverLayout === "serif" && (
               <SliderField label="Bottom gradient" value={style.cvScrim} min={0} max={90} suffix="%" onChange={v => patch({ cvScrim: v })} />
@@ -1857,10 +2230,23 @@ export default function Stylish() {
               </label>
             )}
             <div className="space-y-3 pt-1">
-              <ColourField label="Headline colour" value={style.cvColour} onChange={v => patch({ cvColour: v })} />
-              <ColourField label="Subtitle colour" value={style.cvSubColour} onChange={v => patch({ cvSubColour: v })} />
-              {style.coverLayout !== "centred" && style.coverLayout !== "serif" && (
-                <ColourField label={style.coverLayout === "band" ? "Band colour" : style.coverLayout === "plain" || style.coverLayout === "behind" ? "Background colour" : "Block colour"} value={style.cvBlock} onChange={v => patch({ cvBlock: v })} />
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={style.cvAll} onChange={e => patch({ cvAll: e.target.checked })} className="accent-sky-500" />
+                Same text colours on every cover
+              </label>
+              {style.cvAll ? (
+                <>
+                  <ColourField label="Headline colour (all covers)" value={style.cvAllColour} onChange={v => patch({ cvAllColour: v })} />
+                  <ColourField label="Subtitle colour (all covers)" value={style.cvAllSubColour} onChange={v => patch({ cvAllSubColour: v })} />
+                </>
+              ) : (
+                <>
+                  <ColourField label="Headline colour" value={style.cvColour} onChange={v => patch({ cvColour: v })} />
+                  <ColourField label="Subtitle colour" value={style.cvSubColour} onChange={v => patch({ cvSubColour: v })} />
+                </>
+              )}
+              {BLOCK_LABEL[style.coverLayout] && (
+                <ColourField label={BLOCK_LABEL[style.coverLayout]!} value={style.cvBlock} onChange={v => patch({ cvBlock: v })} />
               )}
               {style.coverLayout === "split" && style.cvBandOn && (
                 <ColourField label="Bottom band colour" value={style.cvBand} onChange={v => patch({ cvBand: v })} />
@@ -2149,12 +2535,18 @@ export default function Stylish() {
                           <div className="flex items-end gap-x-6 gap-y-2 flex-wrap">
                             <div className="w-56"><ColourField label="Cover headline" value={eff.cvColour} onChange={v => setCoverColours(post, pi, { coverColour: v })} /></div>
                             <div className="w-56"><ColourField label="Cover subtitle" value={eff.cvSubColour} onChange={v => setCoverColours(post, pi, { coverSubColour: v })} /></div>
-                            {(eff.coverLayout === "band" || eff.coverLayout === "block" || eff.coverLayout === "split" || eff.coverLayout === "plain" || eff.coverLayout === "behind") && (
-                              <div className="w-56"><ColourField label={eff.coverLayout === "band" ? "Band colour" : eff.coverLayout === "plain" || eff.coverLayout === "behind" ? "Background colour" : "Block colour"} value={eff.cvBlock} onChange={v => setCoverColours(post, pi, { coverBlockColour: v })} /></div>
+                            {BLOCK_LABEL[eff.coverLayout] && (
+                              <div className="w-56"><ColourField label={BLOCK_LABEL[eff.coverLayout]!} value={eff.cvBlock} onChange={v => setCoverColours(post, pi, { coverBlockColour: v })} /></div>
                             )}
                             {eff.coverLayout === "split" && eff.cvBandOn && (
                               <div className="w-56"><ColourField label="Bottom band colour" value={eff.cvBand} onChange={v => setCoverColours(post, pi, { coverBandColour: v })} /></div>
                             )}
+                            <button
+                              type="button"
+                              onClick={() => changeAllText(eff.cvColour, eff.cvSubColour)}
+                              className="text-xs rounded-lg border border-sky-500/50 text-sky-400 hover:bg-sky-500/10 px-2.5 py-1.5"
+                              title="Use this post's headline and subtitle colours on every cover"
+                            >Change all</button>
                             {(post.coverColour || post.coverSubColour || post.coverBlockColour || post.coverBandColour) && (
                               <button
                                 type="button"
