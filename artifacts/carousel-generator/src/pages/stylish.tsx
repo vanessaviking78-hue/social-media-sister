@@ -1765,7 +1765,9 @@ export default function Stylish() {
       specs.map((s, i) => `${i + 1}. ${s.text}${s.sub ? ` (${s.sub})` : ""}`).join("\n") +
       `\nThe last slide is the call to action. Write a caption that adds something the slides do not already say, ` +
       `and finish with a friendly, low pressure invitation that fits the last slide. ` +
-      `Never use em dashes or en dashes anywhere in the caption.`;
+      `Write the whole caption in the first person, as the clinician or clinic owner speaking directly to the reader ` +
+      `(I, me, my, and we or our when speaking for the clinic). Never write about "the clinic", "the team" or "she" as an outsider. ` +
+      `Use UK spelling. Never use em dashes or en dashes anywhere in the caption.`;
     const res = await fetch(`${BASE}/api/caption-generator/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
