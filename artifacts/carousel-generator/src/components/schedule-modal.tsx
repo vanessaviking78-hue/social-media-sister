@@ -46,6 +46,8 @@ type Props = {
   perPostCaptions?: boolean;
   /** Minutes between each post when several are scheduled. Defaults to 60. */
   initialGapMinutes?: number;
+  /** When the gap is whole days, keep the same time on the clock each day, even when the clocks change. */
+  keepClockTime?: boolean;
 };
 
 function defaultScheduledAt() {
@@ -63,7 +65,7 @@ function dateKey(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt, sourceTool, perPostCaptions, initialGapMinutes }: Props) {
+export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt, sourceTool, perPostCaptions, initialGapMinutes, keepClockTime }: Props) {
   const [scheduledAt, setScheduledAt] = useState(() => initialScheduledAt || defaultScheduledAt());
   const [notes, setNotes] = useState("");
   const [caption, setCaption] = useState(() => posts[0]?.caption || "");
@@ -198,7 +200,14 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
         for (let i = 0; i < posts.length; i++) {
           const post = posts[i];
           const nameOffsetMin = broadcastMode ? nameBucketOffsetMinutes(presets?.find((p) => p.id === targetPresetId)?.name ?? "") : 0;
-const staggeredAt = new Date(new Date(scheduledAt).getTime() + i * gap * 60000 + nameOffsetMin * 60000).toISOString();
+const staggeredAt = (() => {
+            if (keepClockTime && gap > 0 && gap % 1440 === 0) {
+              const d = new Date(scheduledAt);
+              d.setDate(d.getDate() + i * (gap / 1440));
+              return new Date(d.getTime() + nameOffsetMin * 60000).toISOString();
+            }
+            return new Date(new Date(scheduledAt).getTime() + i * gap * 60000 + nameOffsetMin * 60000).toISOString();
+          })();
           const content: SchedulePostPayload = { caption: (perPostCaptions ? (post.caption ?? "") : caption).trim(), title: post.title, platforms: platformList };
           if (isReel && post.videoUrl) content.videoUrl = post.videoUrl;
           if (!isReel && post.imageUrls) content.imageUrls = post.imageUrls;

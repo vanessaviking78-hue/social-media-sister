@@ -1951,9 +1951,10 @@ export default function Stylish() {
           imageUrls: urls,
         });
       }
-      // First post goes out now (a few minutes ahead so it is not already in the past), then one every 1440 minutes.
-      const start = new Date(Date.now() + 5 * 60000);
-      start.setSeconds(0, 0);
+      // First post at the next 6.15pm, then one every other day (2880 minutes) at 6.15pm.
+      const start = new Date();
+      start.setHours(18, 15, 0, 0);
+      if (start.getTime() <= Date.now() + 5 * 60000) start.setDate(start.getDate() + 1);
       start.setMinutes(start.getMinutes() - start.getTimezoneOffset());
       setScheduleStart(start.toISOString().slice(0, 16));
       setScheduleItems(items);
@@ -2684,7 +2685,8 @@ export default function Stylish() {
           posts={scheduleItems}
           perPostCaptions
           initialScheduledAt={scheduleStart}
-          initialGapMinutes={1440}
+          initialGapMinutes={2880}
+          keepClockTime
           sourceTool="stylish"
           onClose={() => setScheduleItems(null)}
           onSaved={() => setScheduleItems(null)}
