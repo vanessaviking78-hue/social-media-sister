@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { ArrowLeft, Upload, Download, Play, X, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { MagazineIcon } from "@/components/magazine-icon";
+import { takeFlipHandoff } from "@/lib/flip-handoff";
 import { coverToCanvas, loadImageFromFile } from "@/lib/advent-door";
 import {
   MAG_W,
@@ -89,6 +90,7 @@ export default function Magazine() {
   const [slots, setSlots] = useState<(Slot | null)[]>(Array.from({ length: MAG_MIN_PAGES }, () => null));
   const [progress, setProgress] = useState<number | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [fileName, setFileName] = useState("");
   const previewRef = useRef<HTMLCanvasElement>(null);
   const startRef = useRef<number>(performance.now());
 
@@ -176,6 +178,21 @@ export default function Magazine() {
     setVideoUrl(null);
   };
 
+  // Covers sent over from Stylish fill the pages in order and name the file Clientname-Preview.
+  useEffect(() => {
+    const h = takeFlipHandoff();
+    if (!h || !h.canvases.length) return;
+    const n = Math.min(MAG_MAX_PAGES, Math.max(MAG_MIN_PAGES, h.canvases.length));
+    setSlots(Array.from({ length: n }, (_, i) => {
+      const c = h.canvases[i];
+      return c ? { canvas: c, thumb: c.toDataURL("image/jpeg", 0.7), name: `Cover ${i + 1}` } : null;
+    }));
+    const clean = h.clientName.trim().replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "-");
+    setFileName(`${clean || "Client"}-Preview`);
+    startRef.current = performance.now();
+    if (h.canvases.length < MAG_MIN_PAGES) toast.message(`Only ${h.canvases.length} cover${h.canvases.length === 1 ? "" : "s"} came across. Magazine Flip needs at least ${MAG_MIN_PAGES}, so add the rest here.`);
+  }, []);
+
   // Live preview: plays the same frames the MP4 will use, then loops after a pause.
   useEffect(() => {
     if (!ready) return;
@@ -213,7 +230,7 @@ export default function Magazine() {
       setVideoUrl(url);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `magazine-flip-${new Date().toISOString().slice(0, 10)}.mp4`;
+      a.download = `${fileName.trim() || `magazine-flip-${new Date().toISOString().slice(0, 10)}`}.mp4`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -301,6 +318,15 @@ export default function Magazine() {
                 </div>
               )}
             </div>
+            <div className="max-w-sm mx-auto lg:max-w-none space-y-1">
+              <label className="text-[11px] uppercase tracking-widest text-zinc-500">File name</label>
+              <input
+                value={fileName}
+                onChange={(e) => setFileName(e.target.value)}
+                placeholder="magazine-flip"
+                className="w-full rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white"
+              />
+            </div>
             <div className="flex gap-2 max-w-sm mx-auto lg:max-w-none">
               <button
                 onClick={() => (startRef.current = performance.now())}
@@ -328,7 +354,7 @@ export default function Magazine() {
             {videoUrl && (
               <p className="text-xs text-zinc-500 max-w-sm mx-auto lg:max-w-none">
                 Didn't download?{" "}
-                <a href={videoUrl} download="magazine-flip.mp4" className="text-fuchsia-400 underline">
+                <a href={videoUrl} download={`${fileName.trim() || "magazine-flip"}.mp4`} className="text-fuchsia-400 underline">
                   Save it again
                 </a>
                 .

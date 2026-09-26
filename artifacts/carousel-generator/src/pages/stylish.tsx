@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo, type PointerEvent as ReactPointerEvent } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { setFlipHandoff } from "@/lib/flip-handoff";
 import {
   ArrowLeft, FileText, Download, Loader2, CalendarClock, CheckCircle2, ImageIcon,
   Sparkles, Palette, RotateCcw, Wand2, Trash2,
@@ -1484,6 +1485,8 @@ export default function Stylish() {
   const [scheduling, setScheduling] = useState<string | null>(null);
   const [captionAllBusy, setCaptionAllBusy] = useState(false);
   const [scheduleItems, setScheduleItems] = useState<SchedulePostPayload[] | null>(null);
+  const [, navigate] = useLocation();
+  const [sendingFlip, setSendingFlip] = useState(false);
 
   const imgInputRef = useRef<HTMLInputElement>(null);
   const csvInputRef = useRef<HTMLInputElement>(null);
@@ -1861,6 +1864,31 @@ export default function Stylish() {
   };
 
   // -- scheduling --------------------------------------------------------------
+
+  // Sends slide 1 of each ticked post (up to five) to Magazine Flip, named Clientname-Preview there.
+  const handleSendToFlip = async () => {
+    if (!selectedPosts.length) { toast.error("Tick at least one post first"); return; }
+    setSendingFlip(true);
+    try {
+      await warmAll();
+      const logo = style.showLogo ? await loadLogo(preset) : null;
+      const chosen = selectedPosts.slice(0, 5);
+      const canvases: HTMLCanvasElement[] = [];
+      for (const post of chosen) {
+        const pi = posts.indexOf(post);
+        const specs = buildSlides(post.texts);
+        canvases.push(await renderSlide(specs[0], photoFor(pi, post, 0), styleForSlide(style, post, specs[0].kind), logo, preset, 1, { index: 0, total: specs.length, extras: [1, 2, 3].map(k => photoFor(pi, post, k)) }, focusRef.current[`${post.id}:0`]));
+        await tick();
+      }
+      setFlipHandoff({ canvases, clientName: preset?.name || "" });
+      if (selectedPosts.length > 5) toast.message(`Magazine Flip holds 5 pages, so I sent the first 5 of your ${selectedPosts.length} ticked posts`);
+      navigate("/magazine");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not send to Magazine Flip");
+    } finally {
+      setSendingFlip(false);
+    }
+  };
 
   const handleSchedule = async () => {
     if (!selectedPosts.length) { toast.error("Tick at least one post first"); return; }
@@ -2396,6 +2424,10 @@ export default function Stylish() {
                   </Button>
                   <Button size="sm" variant="outline" onClick={handleDownload} disabled={!!exporting}>
                     {exporting ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{exporting}</> : <><Download className="w-4 h-4 mr-1.5" />Download ZIP</>}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={handleSendToFlip} disabled={sendingFlip || !!scheduling} title="Sends slide 1 of each ticked post to Magazine Flip">
+                    {sendingFlip ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <ImageIcon className="w-4 h-4 mr-1.5" />}
+                    Send to Magazine Flip
                   </Button>
                   <Button size="sm" onClick={handleSchedule} disabled={!!scheduling} className="bg-pink-600 hover:bg-pink-700 text-white">
                     {scheduling ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{scheduling}</> : <><CalendarClock className="w-4 h-4 mr-1.5" />Schedule</>}
