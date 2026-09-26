@@ -197,6 +197,10 @@ const DEFAULT_STYLE: Style = {
   showLogo: false,
 } as Style;
 
+// Vanessa never wants em dashes (or spaced en dashes) in captions.
+const noDashes = (t: string) =>
+  t.replace(/(\d)\u2013(\d)/g, "$1-$2").replace(/\s*[\u2014\u2013]\s*/g, ", ").replace(/,\s*,/g, ",");
+
 type Post = {
   id: string;
   texts: string[]; // headline, subtitle, ...text columns, cta
@@ -1285,7 +1289,8 @@ export default function Stylish() {
       `An Instagram carousel of ${specs.length} slides. The slide text, in order:\n` +
       specs.map((s, i) => `${i + 1}. ${s.text}${s.sub ? ` (${s.sub})` : ""}`).join("\n") +
       `\nThe last slide is the call to action. Write a caption that adds something the slides do not already say, ` +
-      `and finish with a friendly, low pressure invitation that fits the last slide.`;
+      `and finish with a friendly, low pressure invitation that fits the last slide. ` +
+      `Never use em dashes or en dashes anywhere in the caption.`;
     const res = await fetch(`${BASE}/api/caption-generator/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1293,7 +1298,7 @@ export default function Stylish() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.caption) throw new Error(data.error || "Caption generation failed");
-    let caption: string = data.caption;
+    let caption: string = noDashes(data.caption);
     const footnote = preset?.captionFootnote?.trim();
     if (footnote && !caption.includes(footnote)) caption += `\n\n${footnote}`;
     return caption;
@@ -1367,8 +1372,8 @@ export default function Stylish() {
           const blob = await new Promise<Blob | null>(res => canvases[si].toBlob(b => res(b), "image/png"));
           if (blob) zip.file(`${folder}/slide-${si + 1}.png`, blob);
         }
-        if (post.caption.trim()) zip.file(`${folder}/caption.txt`, post.caption.trim());
-        captionRows.push([folder, post.caption.trim()]);
+        if (post.caption.trim()) zip.file(`${folder}/caption.txt`, noDashes(post.caption.trim()));
+        captionRows.push([folder, noDashes(post.caption.trim())]);
         await tick();
       }
       zip.file("captions.csv", Papa.unparse(captionRows));
@@ -1405,7 +1410,7 @@ export default function Stylish() {
         );
         items.push({
           title: `${buildSlides(post.texts)[0]?.text ?? `Post ${pi + 1}`} · ${preset.name}`,
-          caption: post.caption.trim(),
+          caption: noDashes(post.caption.trim()),
           imageUrls: urls,
         });
       }
