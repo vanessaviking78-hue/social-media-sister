@@ -49,6 +49,7 @@ await createBroadcastDraftsTable();
     await createIgAuditsTable();
     await addNewsletterColumnsAndTable();
     await createClientQuestionTables();
+    await addStylishCoverFontColumns();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -691,6 +692,13 @@ async function addNewsletterColumnsAndTable(): Promise<void> {
     )
   `);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS newsletters_preset_idx ON newsletters (preset_id, created_at DESC)`);
+}
+
+// Stylish: a client's own headline + subtitle font for the cover slide, bought and
+// uploaded by Vanessa, so they follow the client rather than living in her browser.
+async function addStylishCoverFontColumns(): Promise<void> {
+  await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS stylish_cover_headline_font text`);
+  await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS stylish_cover_subtitle_font text`);
 }
 
 // The one evergreen /clientquestion link: whichever row has active = true is

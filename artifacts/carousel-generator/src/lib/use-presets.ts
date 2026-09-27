@@ -65,6 +65,8 @@ export interface ClientPreset {
   bookingLink?: string | null;
   newsletterName?: string | null;
   clinicAddress?: string | null;
+  stylishCoverHeadlineFont?: string | null;
+  stylishCoverSubtitleFont?: string | null;
 }
 
 export interface PresetStyleFields {
@@ -192,6 +194,23 @@ export function usePresets() {
     return data.preset as ClientPreset;
   }, [fetchPresets]);
 
+  // Stylish's per-client cover fonts only — a lean save that doesn't touch anything
+  // else on the preset, so it can fire the moment Vanessa picks a font.
+  const updatePresetCoverFonts = useCallback(async (id: number, headlineFont: string | null, subtitleFont: string | null) => {
+    const resp = await fetch(`${import.meta.env.BASE_URL}api/presets/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stylishCoverHeadlineFont: headlineFont, stylishCoverSubtitleFont: subtitleFont }),
+    });
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+      throw new Error(data.error || "Failed to save client fonts");
+    }
+    const data = await resp.json();
+    setPresets(list => list.map(p => (p.id === id ? (data.preset as ClientPreset) : p)));
+    return data.preset as ClientPreset;
+  }, []);
+
   const deletePreset = useCallback(async (id: number) => {
     const resp = await fetch(`${import.meta.env.BASE_URL}api/presets/${id}`, { method: "DELETE" });
     if (!resp.ok) {
@@ -201,5 +220,5 @@ export function usePresets() {
     await fetchPresets();
   }, [fetchPresets]);
 
-  return { presets, loading, fetchPresets, savePreset, updatePreset, deletePreset, uploadLogo };
+  return { presets, loading, fetchPresets, savePreset, updatePreset, updatePresetCoverFonts, deletePreset, uploadLogo };
 }

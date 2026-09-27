@@ -685,16 +685,21 @@ function drawPaperclip(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.restore();
 }
 
-// Metallic cover text. A headline or subtitle colour of "metallic-gold" or "metallic-silver" paints with a
-// shine-sweep gradient instead of a flat colour.
-const METALLIC_GOLD = "metallic-gold";
-const METALLIC_SILVER = "metallic-silver";
-const GOLD_STOPS: [number, string][] = [[0, "#fff6d8"], [0.25, "#e8c34a"], [0.5, "#b8860b"], [0.75, "#f5d67e"], [1, "#8a6a1f"]];
-const SILVER_STOPS: [number, string][] = [[0, "#ffffff"], [0.25, "#c9c9c9"], [0.5, "#8e8e8e"], [0.75, "#eaeaea"], [1, "#5a5a5a"]];
+// Metallic cover text. A headline or subtitle colour of one of the METALLICS keys below paints
+// with a shine-sweep gradient instead of a flat colour.
+const METALLICS: Record<string, { label: string; stops: [number, string][] }> = {
+  "metallic-gold": { label: "Gold", stops: [[0, "#fff6d8"], [0.25, "#e8c34a"], [0.5, "#b8860b"], [0.75, "#f5d67e"], [1, "#8a6a1f"]] },
+  "metallic-silver": { label: "Silver", stops: [[0, "#ffffff"], [0.25, "#c9c9c9"], [0.5, "#8e8e8e"], [0.75, "#eaeaea"], [1, "#5a5a5a"]] },
+  "metallic-rose-gold": { label: "Rose gold", stops: [[0, "#ffe4dc"], [0.25, "#e8a998"], [0.5, "#b76e79"], [0.75, "#f0c3b6"], [1, "#8a4a4f"]] },
+  "metallic-bronze": { label: "Bronze", stops: [[0, "#f0d3a8"], [0.25, "#cd7f32"], [0.5, "#8c5a26"], [0.75, "#e0a866"], [1, "#5c3a17"]] },
+  "metallic-gunmetal": { label: "Gunmetal", stops: [[0, "#d8dde1"], [0.25, "#8b969e"], [0.5, "#3a4148"], [0.75, "#aeb7bd"], [1, "#1c2024"]] },
+  "metallic-copper": { label: "Copper", stops: [[0, "#f7c9a3"], [0.25, "#c96f3e"], [0.5, "#8f4520"], [0.75, "#e39a68"], [1, "#5a2a11"]] },
+};
 function metallicFill(ctx: CanvasRenderingContext2D, colour: string): string | CanvasGradient {
-  if (colour !== METALLIC_GOLD && colour !== METALLIC_SILVER) return colour;
+  const m = METALLICS[colour];
+  if (!m) return colour;
   const g = ctx.createLinearGradient(0, 0, W * 0.75, H * 0.22);
-  for (const [offset, c] of colour === METALLIC_GOLD ? GOLD_STOPS : SILVER_STOPS) g.addColorStop(offset, c);
+  for (const [offset, c] of m.stops) g.addColorStop(offset, c);
   return g;
 }
 
@@ -1406,16 +1411,14 @@ function ColourField({ label, value, onChange, metallic }: { label: string; valu
       <div className="flex items-center gap-1.5">
         {metallic && (
           <>
-            <button
-              type="button" onClick={() => onChange("metallic-gold")} title="Metallic gold"
-              className={["w-6 h-7 rounded border shrink-0", value === "metallic-gold" ? "border-sky-500" : "border-border/40"].join(" ")}
-              style={{ background: "linear-gradient(135deg,#fff6d8,#b8860b,#8a6a1f)" }}
-            />
-            <button
-              type="button" onClick={() => onChange("metallic-silver")} title="Metallic silver"
-              className={["w-6 h-7 rounded border shrink-0", value === "metallic-silver" ? "border-sky-500" : "border-border/40"].join(" ")}
-              style={{ background: "linear-gradient(135deg,#ffffff,#8e8e8e,#5a5a5a)" }}
-            />
+            {Object.entries(METALLICS).map(([key, m]) => (
+              <button
+                key={key}
+                type="button" onClick={() => onChange(key)} title={m.label}
+                className={["w-6 h-7 rounded border shrink-0", value === key ? "border-sky-500" : "border-border/40"].join(" ")}
+                style={{ background: `linear-gradient(135deg, ${m.stops.map(([, c]) => c).join(", ")})` }}
+              />
+            ))}
           </>
         )}
         <input
@@ -1460,10 +1463,10 @@ function SliderField({
 // ---------------------------------------------------------------------------
 
 const CLIENT_FONTS_KEY = "stylish-client-fonts-v1";
-const CLIENT_FONT_KEYS = ["cvFont", "cvSubFont", "plainFont", "plainSubFont", "behindFont", "behindSubFont", "displayFont", "lf", "clientCoverFont", "clientCoverSubFont"] as const;
+const CLIENT_FONT_KEYS = ["cvFont", "cvSubFont", "plainFont", "plainSubFont", "behindFont", "behindSubFont", "displayFont", "lf"] as const;
 
 export default function Stylish() {
-  const { presets, loading: presetsLoading } = usePresets();
+  const { presets, loading: presetsLoading, updatePresetCoverFonts } = usePresets();
 
   const [style, setStyle] = useState<Style>(() => {
     try {
@@ -1504,17 +1507,25 @@ export default function Stylish() {
   const [presetId, setPresetId] = useState<number | null>(null);
   const preset = presets.find(p => p.id === presetId) ?? null;
 
-  // Each client remembers the fonts chosen for them (browser only). Picking the client puts them back.
+  // Each client remembers the per-option cover fonts chosen for them (browser only —
+  // these are the "Headline font (option N)" pickers, not the client's own cover fonts
+  // below, which live on the client's preset so they follow the client, not this browser).
   const clientFonts = () => {
     try { return JSON.parse(localStorage.getItem(CLIENT_FONTS_KEY) || "{}") as Record<string, Partial<Style>>; } catch { return {}; }
   };
   const chooseClient = (id: number) => {
     const saved = clientFonts()[String(id)];
+    const chosen = presets.find(p => p.id === id);
     setPresetId(id);
     // A client with no fonts saved yet starts from the defaults, not whichever fonts the
     // previously selected client happened to leave behind.
     const fallback = Object.fromEntries(CLIENT_FONT_KEYS.map(k => [k, DEFAULT_STYLE[k]])) as Partial<Style>;
-    patch({ ...fallback, ...saved });
+    patch({
+      ...fallback,
+      ...saved,
+      clientCoverFont: chosen?.stylishCoverHeadlineFont || "",
+      clientCoverSubFont: chosen?.stylishCoverSubtitleFont || "",
+    });
   };
   useEffect(() => {
     if (!presetId) return;
@@ -1524,13 +1535,28 @@ export default function Stylish() {
       localStorage.setItem(CLIENT_FONTS_KEY, JSON.stringify(all));
     } catch { /* ignore */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [presetId, style.cvFont, style.cvSubFont, style.plainFont, style.plainSubFont, style.behindFont, style.behindSubFont, style.displayFont, style.lf, style.clientCoverFont, style.clientCoverSubFont]);
+  }, [presetId, style.cvFont, style.cvSubFont, style.plainFont, style.plainSubFont, style.behindFont, style.behindSubFont, style.displayFont, style.lf]);
+
+  // The client's own cover fonts (headline + subtitle) live on their preset, not this
+  // browser, so picking one here saves straight to the client.
+  const setClientCoverFont = (which: "head" | "sub", v: string) => {
+    const value = v === "__none" ? "" : v;
+    const next = which === "head"
+      ? { clientCoverFont: value, clientCoverSubFont: style.clientCoverSubFont }
+      : { clientCoverFont: style.clientCoverFont, clientCoverSubFont: value };
+    patch(which === "head" ? { clientCoverFont: value } : { clientCoverSubFont: value });
+    if (!presetId) { toast.error("Choose a client first"); return; }
+    updatePresetCoverFonts(presetId, next.clientCoverFont || null, next.clientCoverSubFont || null)
+      .catch(() => toast.error("Could not save that font to the client"));
+  };
 
   const [tone, setTone] = useState("1");
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [customFonts, setCustomFonts] = useState<{ file: string; family: string }[]>([]);
   const [fontVersion, setFontVersion] = useState(0);
   const fontInputRef = useRef<HTMLInputElement>(null);
+  const headlineFontInputRef = useRef<HTMLInputElement>(null);
+  const subtitleFontInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let dead = false;
@@ -1560,6 +1586,15 @@ export default function Stylish() {
       setFontVersion(v => v + 1);
       toast.success(`Added ${[...new Set(added.map(a => a.family))].join(", ")}`);
     }
+    return added;
+  };
+
+  // Upload a font file straight into a client's headline or subtitle font, in one step:
+  // register it under "Your fonts" and set + save it for this client immediately.
+  const uploadClientFont = async (which: "head" | "sub", file: File) => {
+    const added = await addFonts([file]);
+    const fam = added[0]?.family;
+    if (fam) setClientCoverFont(which, `'${fam}', sans-serif`);
   };
 
   const removeFont = async (file: string) => {
@@ -2213,13 +2248,21 @@ export default function Stylish() {
           <section className="space-y-2 border-t border-border/30 pt-5">
             <Label className="text-sm font-medium">Client fonts</Label>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Their own headline and subtitle font, bought and added under "Your fonts" below. Once set, these
-              show on the cover of every post, whichever of the 16 cover options that post uses. Everything else
-              about each cover, and every other slide, stays as it is.
+              Their own headline and subtitle font, bought and added here or under "Your fonts" below. Once set,
+              these save straight to this client's profile — not just this browser — and show on the cover of
+              every post, whichever of the 16 cover options that post uses. Everything else about each cover,
+              and every other slide, stays as it is.
             </p>
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Headline font</Label>
-              <Select value={style.clientCoverFont || "__none"} onValueChange={v => patch({ clientCoverFont: v === "__none" ? "" : v })}>
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-xs text-muted-foreground">Headline font</Label>
+                <button type="button" onClick={() => headlineFontInputRef.current?.click()} className="text-xs text-sky-400 hover:underline">Upload a font file</button>
+              </div>
+              <input
+                ref={headlineFontInputRef} type="file" accept=".otf,.ttf,.woff,.woff2" className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) uploadClientFont("head", f); e.target.value = ""; }}
+              />
+              <Select value={style.clientCoverFont || "__none"} onValueChange={v => setClientCoverFont("head", v)}>
                 <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
                   <SelectItem value="__none">Use each cover's own font</SelectItem>
@@ -2230,8 +2273,15 @@ export default function Stylish() {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs text-muted-foreground">Subtitle font</Label>
-              <Select value={style.clientCoverSubFont || "__none"} onValueChange={v => patch({ clientCoverSubFont: v === "__none" ? "" : v })}>
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-xs text-muted-foreground">Subtitle font</Label>
+                <button type="button" onClick={() => subtitleFontInputRef.current?.click()} className="text-xs text-sky-400 hover:underline">Upload a font file</button>
+              </div>
+              <input
+                ref={subtitleFontInputRef} type="file" accept=".otf,.ttf,.woff,.woff2" className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) uploadClientFont("sub", f); e.target.value = ""; }}
+              />
+              <Select value={style.clientCoverSubFont || "__none"} onValueChange={v => setClientCoverFont("sub", v)}>
                 <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
                   <SelectItem value="__none">Use each cover's own font</SelectItem>
