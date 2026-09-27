@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo, type PointerEvent as ReactPointerEvent } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { setFlipHandoff } from "@/lib/flip-handoff";
 import {
   ArrowLeft, FileText, Download, Loader2, CalendarClock, CheckCircle2, ImageIcon,
@@ -1629,7 +1629,6 @@ export default function Stylish() {
   const [scheduling, setScheduling] = useState<string | null>(null);
   const [captionAllBusy, setCaptionAllBusy] = useState(false);
   const [scheduleItems, setScheduleItems] = useState<SchedulePostPayload[] | null>(null);
-  const [, navigate] = useLocation();
   const [sendingFlip, setSendingFlip] = useState(false);
 
   const imgInputRef = useRef<HTMLInputElement>(null);
@@ -2084,9 +2083,11 @@ export default function Stylish() {
         canvases.push(await renderSlide(specs[0], photoFor(pi, post, 0), styleForSlide(style, post, specs[0].kind), logo, preset, 1, { index: 0, total: specs.length, extras: [1, 2, 3].map(k => photoFor(pi, post, k)) }, focusRef.current[`${post.id}:0`]));
         await tick();
       }
-      setFlipHandoff({ canvases, clientName: preset?.name || "" });
+      await setFlipHandoff({ canvases, clientName: preset?.name || "" });
       if (selectedPosts.length > 16) toast.message(`Magazine Flip holds 16 pages, so I sent the first 16 of your ${selectedPosts.length} ticked posts`);
-      navigate("/magazine");
+      // Opens in its own tab rather than navigating away, so this page - ticks, captions, the
+      // Schedule button - is exactly as she left it when she comes back to it.
+      window.open("/magazine", "_blank", "noopener");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not send to Magazine Flip");
     } finally {

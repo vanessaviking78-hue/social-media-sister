@@ -178,19 +178,26 @@ export default function Magazine() {
     setVideoUrl(null);
   };
 
-  // Covers sent over from Stylish fill the pages in order and name the file Clientname-Preview.
+  // Covers sent over from Stylish (in its own tab, so Stylish itself stays open) fill the pages
+  // in order and name the file Clientname-Preview.
   useEffect(() => {
-    const h = takeFlipHandoff();
-    if (!h || !h.canvases.length) return;
-    const n = Math.min(MAG_MAX_PAGES, Math.max(MAG_MIN_PAGES, h.canvases.length));
-    setSlots(Array.from({ length: n }, (_, i) => {
-      const c = h.canvases[i];
-      return c ? { canvas: c, thumb: c.toDataURL("image/jpeg", 0.7), name: `Cover ${i + 1}` } : null;
-    }));
-    const clean = h.clientName.trim().replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "-");
-    setFileName(`${clean || "Client"}-Preview`);
-    startRef.current = performance.now();
-    if (h.canvases.length < MAG_MIN_PAGES) toast.message(`Only ${h.canvases.length} cover${h.canvases.length === 1 ? "" : "s"} came across. Magazine Flip needs at least ${MAG_MIN_PAGES}, so add the rest here.`);
+    let cancelled = false;
+    (async () => {
+      const h = await takeFlipHandoff();
+      if (cancelled || !h || !h.images.length) return;
+      const n = Math.min(MAG_MAX_PAGES, Math.max(MAG_MIN_PAGES, h.images.length));
+      setSlots(Array.from({ length: n }, (_, i) => {
+        const img = h.images[i];
+        if (!img) return null;
+        const canvas = coverToCanvas(img);
+        return { canvas, thumb: canvas.toDataURL("image/jpeg", 0.7), name: `Cover ${i + 1}` };
+      }));
+      const clean = h.clientName.trim().replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "-");
+      setFileName(`${clean || "Client"}-Preview`);
+      startRef.current = performance.now();
+      if (h.images.length < MAG_MIN_PAGES) toast.message(`Only ${h.images.length} cover${h.images.length === 1 ? "" : "s"} came across. Magazine Flip needs at least ${MAG_MIN_PAGES}, so add the rest here.`);
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   // Live preview: plays the same frames the MP4 will use, then loops after a pause.
