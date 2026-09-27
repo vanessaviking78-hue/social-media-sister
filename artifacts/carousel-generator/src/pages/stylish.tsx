@@ -1415,22 +1415,11 @@ function CoverIcon({ k }: { k: CoverLayout }) {
 }
 
 function ColourField({ label, value, onChange, metallic }: { label: string; value: string; onChange: (v: string) => void; metallic?: boolean }) {
+  const isMetallic = metallic && !!METALLICS[value];
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div className="space-y-1.5">
       <Label className="text-xs text-muted-foreground">{label}</Label>
       <div className="flex items-center gap-1.5">
-        {metallic && (
-          <>
-            {Object.entries(METALLICS).map(([key, m]) => (
-              <button
-                key={key}
-                type="button" onClick={() => onChange(key)} title={m.label}
-                className={["w-6 h-7 rounded border shrink-0", value === key ? "border-sky-500" : "border-border/40"].join(" ")}
-                style={{ background: `linear-gradient(135deg, ${m.stops.map(([, c]) => c).join(", ")})` }}
-              />
-            ))}
-          </>
-        )}
         <input
           type="text"
           value={value}
@@ -1445,7 +1434,20 @@ function ColourField({ label, value, onChange, metallic }: { label: string; valu
           className="w-8 h-7 rounded border border-border/40 bg-transparent cursor-pointer p-0"
           aria-label={`${label} picker`}
         />
+        {isMetallic && <span className="text-[10px] text-sky-400/90 whitespace-nowrap">using {METALLICS[value].label.toLowerCase()}</span>}
       </div>
+      {metallic && (
+        <div className="flex flex-wrap gap-1.5 max-w-[210px]">
+          {Object.entries(METALLICS).map(([key, m]) => (
+            <button
+              key={key}
+              type="button" onClick={() => onChange(key)} title={m.label}
+              className={["w-6 h-6 rounded border shrink-0", value === key ? "border-sky-500 ring-1 ring-sky-500" : "border-border/40"].join(" ")}
+              style={{ background: `linear-gradient(135deg, ${m.stops.map(([, c]) => c).join(", ")})` }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
