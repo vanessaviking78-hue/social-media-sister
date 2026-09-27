@@ -52,6 +52,8 @@ type Style = {
   behindFont: string;   // cover option 7: heading sits behind the person
   behindSubFont: string;
   lf: Record<string, { h: string; s: string }>; // fonts for cover options 8 to 16
+  clientCoverFont: string;    // this client's own headline font, forced on every cover option. Empty means unset.
+  clientCoverSubFont: string; // this client's own subtitle font, forced on every cover option. Empty means unset.
   cvBlur: number;   // motion blur, option 9
   cvAngle: number;  // heading angle, option 11
   cvAll: boolean;   // one pair of text colours on every cover
@@ -74,6 +76,10 @@ type Style = {
   cvPhoto: number;   // photo share of the slide, in percent
   cvFocus: number;   // where the photo is cropped, in percent
   cvY: number;       // vertical position, centred cover only
+  cvGradOn: boolean;    // a colour gradient wash over the cover photo
+  cvGradFrom: string;
+  cvGradTo: string;
+  cvGradOpacity: number;
   // Slides 2 onwards (photo with text over)
   layout: "editorial" | "classic";
   fontFamily: string;   // small labels
@@ -266,6 +272,8 @@ const DEFAULT_STYLE: Style = {
     frame: { h: "'Playfair Display', serif", s: "'Playfair Display', serif" },
     layered: { h: "'Anton', sans-serif", s: "'Inter Tight', sans-serif" },
   },
+  clientCoverFont: "",
+  clientCoverSubFont: "",
   cvBlur: 90,
   cvAngle: 24,
   cvAll: false,
@@ -274,6 +282,10 @@ const DEFAULT_STYLE: Style = {
   cvBand: "#666666",
   cvY: 58,
   cvScrim: 0,
+  cvGradOn: false,
+  cvGradFrom: "#ff5f6d",
+  cvGradTo: "#6a11cb",
+  cvGradOpacity: 45,
   background: "#8a8a8a",
   showLogo: false,
 } as Style;
@@ -368,12 +380,19 @@ const BLOCK_LABEL: Partial<Record<CoverLayout, string>> = {
   behind2: "Background colour", strip: "Band colour", polaroid: "Background colour", sidebar: "Band colour", frame: "Panel colour", layered: "Card colour",
 };
 
-// Each cover's headline and subtitle fonts.
-function faces(style: Style, layout: CoverLayout): [string, string] {
+// Each cover's headline and subtitle fonts, before any client override.
+function coverDefaultFaces(style: Style, layout: CoverLayout): [string, string] {
   if (layout === "plain") return [style.plainFont, style.plainSubFont];
   if (layout === "behind") return [style.behindFont, style.behindSubFont];
   const f = style.lf?.[layout];
   return f ? [f.h, f.s] : [style.cvFont, style.cvSubFont];
+}
+
+// Each cover's headline and subtitle fonts. Once a client has their own cover fonts set, those
+// take over on every cover option's slide 1, whichever look that option is otherwise using.
+function faces(style: Style, layout: CoverLayout): [string, string] {
+  const [h, s] = coverDefaultFaces(style, layout);
+  return [style.clientCoverFont || h, style.clientCoverSubFont || s];
 }
 
 // The look of a slide. A post that has its own cover option gets that option's designed fonts, colours and
@@ -666,6 +685,33 @@ function drawPaperclip(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.restore();
 }
 
+// Metallic cover text. A headline or subtitle colour of "metallic-gold" or "metallic-silver" paints with a
+// shine-sweep gradient instead of a flat colour.
+const METALLIC_GOLD = "metallic-gold";
+const METALLIC_SILVER = "metallic-silver";
+const GOLD_STOPS: [number, string][] = [[0, "#fff6d8"], [0.25, "#e8c34a"], [0.5, "#b8860b"], [0.75, "#f5d67e"], [1, "#8a6a1f"]];
+const SILVER_STOPS: [number, string][] = [[0, "#ffffff"], [0.25, "#c9c9c9"], [0.5, "#8e8e8e"], [0.75, "#eaeaea"], [1, "#5a5a5a"]];
+function metallicFill(ctx: CanvasRenderingContext2D, colour: string): string | CanvasGradient {
+  if (colour !== METALLIC_GOLD && colour !== METALLIC_SILVER) return colour;
+  const g = ctx.createLinearGradient(0, 0, W * 0.75, H * 0.22);
+  for (const [offset, c] of colour === METALLIC_GOLD ? GOLD_STOPS : SILVER_STOPS) g.addColorStop(offset, c);
+  return g;
+}
+
+// A colour gradient wash over the cover photo (or cutout), blended so the photo still shows through.
+function applyCoverGradient(ctx: CanvasRenderingContext2D, style: Style, x: number, y: number, w: number, h: number) {
+  if (!style.cvGradOn || style.cvGradOpacity <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = style.cvGradOpacity / 100;
+  ctx.globalCompositeOperation = "overlay";
+  const g = ctx.createLinearGradient(x, y, x + w, y + h);
+  g.addColorStop(0, style.cvGradFrom);
+  g.addColorStop(1, style.cvGradTo);
+  ctx.fillStyle = g;
+  ctx.fillRect(x, y, w, h);
+  ctx.restore();
+}
+
 async function drawCoverMore(
   ctx: CanvasRenderingContext2D, spec: SlideSpec, photo: File | null, extras: (File | null)[],
   style: Style, layout: CoverLayout, at: PhotoPos,
@@ -681,8 +727,8 @@ async function drawCoverMore(
     for (const l of ls) { ctx.fillText(l, x, y); y += lh; }
     return y;
   };
-  const setHead = (sz: number) => { ctx.font = headFont(sz); setSpacing(ctx, style.cvTracking); ctx.fillStyle = style.cvColour; };
-  const setSub = () => { ctx.font = `${style.cvSubWeight} ${style.cvSubSize}px ${sf}`; setSpacing(ctx, style.cvSubTracking); ctx.fillStyle = style.cvSubColour; };
+  const setHead = (sz: number) => { ctx.font = headFont(sz); setSpacing(ctx, style.cvTracking); ctx.fillStyle = metallicFill(ctx, style.cvColour); };
+  const setSub = () => { ctx.font = `${style.cvSubWeight} ${style.cvSubSize}px ${sf}`; setSpacing(ctx, style.cvSubTracking); ctx.fillStyle = metallicFill(ctx, style.cvSubColour); };
   const opened: ImageBitmap[] = [];
   const open = async (f: File | null) => {
     if (!f) return null;
@@ -716,6 +762,7 @@ async function drawCoverMore(
       fill("#777777");
       const b = await open(photo);
       if (b) drawPhotoIn(ctx, b, 0, 0, W, H, at);
+      applyCoverGradient(ctx, style, 0, 0, W, H);
       scrim();
       heading(110, { top: Math.round((style.cvY / 100) * H) }, Math.round(W * 0.6), 4, "left");
       subtitle(110, Math.round(H * 0.77), Math.round(W * 0.7), "left");
@@ -732,6 +779,7 @@ async function drawCoverMore(
         }
         ctx.globalAlpha = 1;
       }
+      applyCoverGradient(ctx, style, 0, 0, W, H);
       scrim();
       const r = heading(W / 2, { centre: Math.round((style.cvY / 100) * H) }, W - 160, 3, "center", 1);
       subtitle(W / 2, r.bottom + 50, Math.round(W * 0.7), "center");
@@ -740,6 +788,7 @@ async function drawCoverMore(
       fill("#777777");
       const b = await open(photo);
       if (b) drawPhotoIn(ctx, b, 0, 0, W, H, at);
+      applyCoverGradient(ctx, style, 0, 0, W, H);
       const sx = Math.round(W * 0.1), sw = Math.round(W * 0.31);
       ctx.fillStyle = "#0b0b0b";
       ctx.fillRect(sx, 0, sw, H);
@@ -758,6 +807,7 @@ async function drawCoverMore(
       fill("#777777");
       const b = await open(photo);
       if (b) drawPhotoIn(ctx, b, 0, 0, W, H, at);
+      applyCoverGradient(ctx, style, 0, 0, W, H);
       scrim();
       ctx.save();
       ctx.translate(Math.round(W * 0.4), Math.round((style.cvY / 100) * H));
@@ -773,10 +823,11 @@ async function drawCoverMore(
       subtitle(52, r.bottom + 50, Math.round(W * 0.5), "left");
       if (cut) {
         drawPhotoIn(ctx, cut, 0, 0, W, H, at);
+        applyCoverGradient(ctx, style, 0, 0, W, H);
         cut.close();
       } else {
         const whole = await open(photo);
-        if (whole) drawPhotoIn(ctx, whole, 0, 0, W, H, at);
+        if (whole) { drawPhotoIn(ctx, whole, 0, 0, W, H, at); applyCoverGradient(ctx, style, 0, 0, W, H); }
       }
     } else if (layout === "polaroid") {
       // Option 13: your photo in a print in the middle, a second card behind with the subtitle, held by a clip.
@@ -819,6 +870,7 @@ async function drawCoverMore(
       fill("#777777");
       const b = await open(photo);
       if (b) drawPhotoIn(ctx, b, 0, 0, W, H, at);
+      applyCoverGradient(ctx, style, 0, 0, W, H);
       const bx = Math.round(W * 0.07), bw = Math.round(W * (style.cvPhoto / 100));
       ctx.fillStyle = style.cvBlock;
       ctx.fillRect(bx, 0, bw, H);
@@ -829,6 +881,7 @@ async function drawCoverMore(
       fill("#777777");
       const b = await open(photo);
       if (b) drawPhotoIn(ctx, b, 0, 0, W, H, at);
+      applyCoverGradient(ctx, style, 0, 0, W, H);
       const px = Math.round(W * 0.1), py = Math.round(H * 0.1), pw = Math.round(W * 0.8), ph = Math.round(H * 0.8);
       ctx.fillStyle = style.cvBlock;
       ctx.fillRect(px, py, pw, ph);
@@ -847,6 +900,7 @@ async function drawCoverMore(
       fill("#777777");
       const back = await open(photo);
       if (back) drawPhotoIn(ctx, back, 0, 0, W, H, at);
+      applyCoverGradient(ctx, style, 0, 0, W, H);
       scrim();
       const front = await open(extras[0] ?? photo);
       const cardX = Math.round(W * 0.283), cardW = Math.round(W * 0.4), cardY = Math.round(H * 0.235), cardH = Math.round(H * 0.545);
@@ -895,8 +949,8 @@ async function drawCover(
     for (const l of lines) { ctx.fillText(l, x, y); y += lh; }
     return y;
   };
-  const setHead = (sz: number) => { ctx.font = headFont(sz); setSpacing(ctx, style.cvTracking); ctx.fillStyle = style.cvColour; };
-  const setSub = () => { ctx.font = subFont; setSpacing(ctx, style.cvSubTracking); ctx.fillStyle = style.cvSubColour; };
+  const setHead = (sz: number) => { ctx.font = headFont(sz); setSpacing(ctx, style.cvTracking); ctx.fillStyle = metallicFill(ctx, style.cvColour); };
+  const setSub = () => { ctx.font = subFont; setSpacing(ctx, style.cvSubTracking); ctx.fillStyle = metallicFill(ctx, style.cvSubColour); };
 
   if (layout === "band") {
     const photoH = Math.round(H * (style.cvPhoto / 100));
@@ -904,6 +958,7 @@ async function drawCover(
     ctx.fillStyle = style.cvBlock;
     ctx.fillRect(0, 0, W, H);
     if (bmp) drawPhotoIn(ctx, bmp, 0, 0, W, photoH, at);
+    applyCoverGradient(ctx, style, 0, 0, W, photoH);
     const x = 96, maxW = W - x * 2;
     setSpacing(ctx, style.cvTracking);
     const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, 2);
@@ -920,6 +975,7 @@ async function drawCover(
     ctx.fillStyle = style.cvBlock;
     ctx.fillRect(0, 0, W, H);
     if (bmp) drawPhotoIn(ctx, bmp, 0, 0, W, photoH, at);
+    applyCoverGradient(ctx, style, 0, 0, W, photoH);
     const x = 50, maxW = W - x * 2;
     setSpacing(ctx, style.cvTracking);
     const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, 2);
@@ -938,6 +994,7 @@ async function drawCover(
     ctx.fillStyle = style.cvBlock;
     ctx.fillRect(0, 0, W, H);
     if (bmp) drawPhotoIn(ctx, bmp, 0, 0, photoW, H, at);
+    applyCoverGradient(ctx, style, 0, 0, photoW, H);
     if (style.cvBandOn) {
       ctx.fillStyle = style.cvBand;
       ctx.fillRect(photoW, H - 133, W - photoW, 133);
@@ -988,17 +1045,19 @@ async function drawCover(
     }
     if (cut) {
       drawPhotoIn(ctx, cut, 0, 0, W, H, at);
+      applyCoverGradient(ctx, style, 0, 0, W, H);
       cut.close();
     } else {
       // The cut out did not work, so keep the photo whole rather than losing it.
       const whole = photo ? await (async () => { const b = await prepareImage(photo); return b ? createImageBitmap(b) : null; })() : null;
-      if (whole) { drawPhotoIn(ctx, whole, 0, 0, W, H, at); whole.close(); }
+      if (whole) { drawPhotoIn(ctx, whole, 0, 0, W, H, at); applyCoverGradient(ctx, style, 0, 0, W, H); whole.close(); }
     }
   } else {
     // centred and serif: full bleed photo. Centred sits in the middle; serif hangs from a bottom edge on a soft gradient.
     ctx.fillStyle = style.background;
     ctx.fillRect(0, 0, W, H);
     if (bmp) drawPhotoIn(ctx, bmp, 0, 0, W, H, at);
+    applyCoverGradient(ctx, style, 0, 0, W, H);
     if (style.overlay > 0 && layout === "centred") {
       ctx.fillStyle = `rgba(0,0,0,${style.overlay / 100})`;
       ctx.fillRect(0, 0, W, H);
@@ -1340,11 +1399,25 @@ function CoverIcon({ k }: { k: CoverLayout }) {
   );
 }
 
-function ColourField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function ColourField({ label, value, onChange, metallic }: { label: string; value: string; onChange: (v: string) => void; metallic?: boolean }) {
   return (
     <div className="flex items-center justify-between gap-2">
       <Label className="text-xs text-muted-foreground">{label}</Label>
       <div className="flex items-center gap-1.5">
+        {metallic && (
+          <>
+            <button
+              type="button" onClick={() => onChange("metallic-gold")} title="Metallic gold"
+              className={["w-6 h-7 rounded border shrink-0", value === "metallic-gold" ? "border-sky-500" : "border-border/40"].join(" ")}
+              style={{ background: "linear-gradient(135deg,#fff6d8,#b8860b,#8a6a1f)" }}
+            />
+            <button
+              type="button" onClick={() => onChange("metallic-silver")} title="Metallic silver"
+              className={["w-6 h-7 rounded border shrink-0", value === "metallic-silver" ? "border-sky-500" : "border-border/40"].join(" ")}
+              style={{ background: "linear-gradient(135deg,#ffffff,#8e8e8e,#5a5a5a)" }}
+            />
+          </>
+        )}
         <input
           type="text"
           value={value}
@@ -1387,7 +1460,7 @@ function SliderField({
 // ---------------------------------------------------------------------------
 
 const CLIENT_FONTS_KEY = "stylish-client-fonts-v1";
-const CLIENT_FONT_KEYS = ["cvFont", "cvSubFont", "plainFont", "plainSubFont", "behindFont", "behindSubFont", "displayFont", "lf"] as const;
+const CLIENT_FONT_KEYS = ["cvFont", "cvSubFont", "plainFont", "plainSubFont", "behindFont", "behindSubFont", "displayFont", "lf", "clientCoverFont", "clientCoverSubFont"] as const;
 
 export default function Stylish() {
   const { presets, loading: presetsLoading } = usePresets();
@@ -1407,7 +1480,7 @@ export default function Stylish() {
     if (l === "plain") patch(which === 0 ? { plainFont: v } : { plainSubFont: v });
     else if (l === "behind") patch(which === 0 ? { behindFont: v } : { behindSubFont: v });
     else if (MORE_LAYOUTS.has(l)) {
-      const cur = faces(style, l);
+      const cur = coverDefaultFaces(style, l);
       patch({ lf: { ...style.lf, [l]: { h: which === 0 ? v : cur[0], s: which === 1 ? v : cur[1] } } });
     } else patch(which === 0 ? { cvFont: v } : { cvSubFont: v });
   };
@@ -1438,7 +1511,10 @@ export default function Stylish() {
   const chooseClient = (id: number) => {
     const saved = clientFonts()[String(id)];
     setPresetId(id);
-    if (saved) patch(saved);
+    // A client with no fonts saved yet starts from the defaults, not whichever fonts the
+    // previously selected client happened to leave behind.
+    const fallback = Object.fromEntries(CLIENT_FONT_KEYS.map(k => [k, DEFAULT_STYLE[k]])) as Partial<Style>;
+    patch({ ...fallback, ...saved });
   };
   useEffect(() => {
     if (!presetId) return;
@@ -1448,7 +1524,7 @@ export default function Stylish() {
       localStorage.setItem(CLIENT_FONTS_KEY, JSON.stringify(all));
     } catch { /* ignore */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [presetId, style.cvFont, style.cvSubFont, style.plainFont, style.plainSubFont, style.behindFont, style.behindSubFont, style.displayFont, style.lf]);
+  }, [presetId, style.cvFont, style.cvSubFont, style.plainFont, style.plainSubFont, style.behindFont, style.behindSubFont, style.displayFont, style.lf, style.clientCoverFont, style.clientCoverSubFont]);
 
   const [tone, setTone] = useState("1");
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
@@ -2134,6 +2210,39 @@ export default function Stylish() {
             </Button>
           </section>
 
+          <section className="space-y-2 border-t border-border/30 pt-5">
+            <Label className="text-sm font-medium">Client fonts</Label>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Their own headline and subtitle font, bought and added under "Your fonts" below. Once set, these
+              show on the cover of every post, whichever of the 16 cover options that post uses. Everything else
+              about each cover, and every other slide, stays as it is.
+            </p>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Headline font</Label>
+              <Select value={style.clientCoverFont || "__none"} onValueChange={v => patch({ clientCoverFont: v === "__none" ? "" : v })}>
+                <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="__none">Use each cover's own font</SelectItem>
+                  {coverFontOptions.map(f => (
+                    <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Subtitle font</Label>
+              <Select value={style.clientCoverSubFont || "__none"} onValueChange={v => patch({ clientCoverSubFont: v === "__none" ? "" : v })}>
+                <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
+                <SelectContent className="max-h-72">
+                  <SelectItem value="__none">Use each cover's own font</SelectItem>
+                  {coverFontOptions.map(f => (
+                    <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </section>
+
           <section className="space-y-4 border-t border-border/30 pt-5">
             <h3 className="text-sm font-semibold">Slide 1: cover</h3>
             <div className="grid grid-cols-4 gap-1.5">
@@ -2199,9 +2308,15 @@ export default function Stylish() {
                 </ul>
               )}
             </div>
+            {(style.clientCoverFont || style.clientCoverSubFont) && (
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                This client's own fonts (set above, under "Client fonts") are showing on every cover instead of the
+                choices below. Clear them there to pick a font per option again.
+              </p>
+            )}
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">{coverNo > 5 ? `Headline font (option ${coverNo})` : "Headline font"}</Label>
-              <Select value={faces(style, style.coverLayout)[0]} onValueChange={v => setFace(0, v)}>
+              <Select value={coverDefaultFaces(style, style.coverLayout)[0]} onValueChange={v => setFace(0, v)}>
                 <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
                   {coverFontOptions.map(f => (
@@ -2212,7 +2327,7 @@ export default function Stylish() {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">{coverNo > 5 ? `Subheading font (option ${coverNo})` : "Subtitle font"}</Label>
-              <Select value={faces(style, style.coverLayout)[1]} onValueChange={v => setFace(1, v)}>
+              <Select value={coverDefaultFaces(style, style.coverLayout)[1]} onValueChange={v => setFace(1, v)}>
                 <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
                   {coverFontOptions.map(f => (
@@ -2272,6 +2387,21 @@ export default function Stylish() {
             {style.coverLayout === "serif" && (
               <SliderField label="Bottom gradient" value={style.cvScrim} min={0} max={90} suffix="%" onChange={v => patch({ cvScrim: v })} />
             )}
+            {style.coverLayout !== "plain" && (
+              <div className="space-y-2 rounded-lg border border-border/30 p-3">
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={style.cvGradOn} onChange={e => patch({ cvGradOn: e.target.checked })} className="accent-sky-500" />
+                  Colour gradient over the photo
+                </label>
+                {style.cvGradOn && (
+                  <>
+                    <ColourField label="Gradient from" value={style.cvGradFrom} onChange={v => patch({ cvGradFrom: v })} />
+                    <ColourField label="Gradient to" value={style.cvGradTo} onChange={v => patch({ cvGradTo: v })} />
+                    <SliderField label="Strength" value={style.cvGradOpacity} min={0} max={100} suffix="%" onChange={v => patch({ cvGradOpacity: v })} />
+                  </>
+                )}
+              </div>
+            )}
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={style.cvCaps} onChange={e => patch({ cvCaps: e.target.checked })} className="accent-sky-500" />
               Capital letters on the headline
@@ -2293,13 +2423,13 @@ export default function Stylish() {
               </label>
               {style.cvAll ? (
                 <>
-                  <ColourField label="Headline colour (all covers)" value={style.cvAllColour} onChange={v => patch({ cvAllColour: v })} />
-                  <ColourField label="Subtitle colour (all covers)" value={style.cvAllSubColour} onChange={v => patch({ cvAllSubColour: v })} />
+                  <ColourField label="Headline colour (all covers)" value={style.cvAllColour} onChange={v => patch({ cvAllColour: v })} metallic />
+                  <ColourField label="Subtitle colour (all covers)" value={style.cvAllSubColour} onChange={v => patch({ cvAllSubColour: v })} metallic />
                 </>
               ) : (
                 <>
-                  <ColourField label="Headline colour" value={style.cvColour} onChange={v => patch({ cvColour: v })} />
-                  <ColourField label="Subtitle colour" value={style.cvSubColour} onChange={v => patch({ cvSubColour: v })} />
+                  <ColourField label="Headline colour" value={style.cvColour} onChange={v => patch({ cvColour: v })} metallic />
+                  <ColourField label="Subtitle colour" value={style.cvSubColour} onChange={v => patch({ cvSubColour: v })} metallic />
                 </>
               )}
               {BLOCK_LABEL[style.coverLayout] && (
@@ -2594,8 +2724,8 @@ export default function Stylish() {
                         const eff = styleForSlide(style, post, "cover");
                         return (
                           <div className="flex items-end gap-x-6 gap-y-2 flex-wrap">
-                            <div className="w-56"><ColourField label="Cover headline" value={eff.cvColour} onChange={v => setCoverColours(post, pi, { coverColour: v })} /></div>
-                            <div className="w-56"><ColourField label="Cover subtitle" value={eff.cvSubColour} onChange={v => setCoverColours(post, pi, { coverSubColour: v })} /></div>
+                            <div className="w-56"><ColourField label="Cover headline" value={eff.cvColour} onChange={v => setCoverColours(post, pi, { coverColour: v })} metallic /></div>
+                            <div className="w-56"><ColourField label="Cover subtitle" value={eff.cvSubColour} onChange={v => setCoverColours(post, pi, { coverSubColour: v })} metallic /></div>
                             {BLOCK_LABEL[eff.coverLayout] && (
                               <div className="w-56"><ColourField label={BLOCK_LABEL[eff.coverLayout]!} value={eff.cvBlock} onChange={v => setCoverColours(post, pi, { coverBlockColour: v })} /></div>
                             )}
