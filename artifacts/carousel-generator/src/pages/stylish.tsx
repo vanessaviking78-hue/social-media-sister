@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { setFlipHandoff } from "@/lib/flip-handoff";
 import {
   ArrowLeft, FileText, Download, Loader2, CalendarClock, CheckCircle2, ImageIcon,
-  Sparkles, Palette, RotateCcw, Wand2, Trash2, Move,
+  Sparkles, Palette, RotateCcw, Wand2, Trash2, Move, ArrowUpDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -728,12 +728,14 @@ function applyCoverGradient(ctx: CanvasRenderingContext2D, style: Style, x: numb
 async function drawCoverMore(
   ctx: CanvasRenderingContext2D, spec: SlideSpec, photo: File | null, extras: (File | null)[],
   style: Style, layout: CoverLayout, at: PhotoPos, textAt: TextPos = ZERO_TEXT_POS, subTextAt: TextPos = ZERO_TEXT_POS,
+  headScale = 1, subScale = 1,
 ) {
   const [hf, sf] = faces(style, layout);
   const head = style.cvCaps ? spec.text.toUpperCase() : spec.text;
   const sub = spec.sub ? (style.cvSubCaps ? spec.sub.toUpperCase() : spec.sub) : "";
   const headFont = (sz: number) => `${style.cvWeight} ${sz}px ${hf}`;
-  const subLineH = Math.round(style.cvSubSize * 1.3);
+  const subSize = Math.round(style.cvSubSize * subScale);
+  const subLineH = Math.round(subSize * 1.3);
   ctx.textBaseline = "top";
   const drawLines = (ls: string[], x: number, y: number, lh: number, align: CanvasTextAlign) => {
     ctx.textAlign = align;
@@ -741,7 +743,7 @@ async function drawCoverMore(
     return y;
   };
   const setHead = (sz: number) => { ctx.font = headFont(sz); setSpacing(ctx, style.cvTracking); ctx.fillStyle = metallicFill(ctx, style.cvColour); };
-  const setSub = () => { ctx.font = `${style.cvSubWeight} ${style.cvSubSize}px ${sf}`; setSpacing(ctx, style.cvSubTracking); ctx.fillStyle = metallicFill(ctx, style.cvSubColour); };
+  const setSub = () => { ctx.font = `${style.cvSubWeight} ${subSize}px ${sf}`; setSpacing(ctx, style.cvSubTracking); ctx.fillStyle = metallicFill(ctx, style.cvSubColour); };
   const opened: ImageBitmap[] = [];
   const open = async (f: File | null) => {
     if (!f) return null;
@@ -755,7 +757,7 @@ async function drawCoverMore(
   // Headline: from a top edge, or centred on a height.
   const heading = (x: number, where: { top?: number; centre?: number }, maxW: number, maxLines: number, align: CanvasTextAlign, factor = 0.96) => {
     setSpacing(ctx, style.cvTracking);
-    const fit = fitHeading(ctx, head, headFont, maxW, style.cvSize, maxLines);
+    const fit = fitHeading(ctx, head, headFont, maxW, style.cvSize * headScale, maxLines);
     const lh = Math.round(fit.size * factor);
     const top = where.top ?? Math.round((where.centre ?? H / 2) - (fit.lines.length * lh) / 2);
     setHead(fit.size);
@@ -866,7 +868,7 @@ async function drawCoverMore(
       drawPolaroid(ctx, b, Math.round(W * 0.44), Math.round(H * 0.48), pw, phh, 0, "#f2f0ec", Math.round(W * 0.022), capH, () => {
         setSpacing(ctx, style.cvTracking);
         // One line in the print's caption strip, shrunk until the whole headline fits.
-        let size = Math.min(style.cvSize, Math.round(capH * 0.8));
+        let size = Math.min(Math.round(style.cvSize * headScale), Math.round(capH * 0.8));
         setSpacing(ctx, style.cvTracking);
         while (size > 24) {
           ctx.font = headFont(size);
@@ -935,12 +937,12 @@ async function drawCoverMore(
 async function drawCover(
   ctx: CanvasRenderingContext2D, spec: SlideSpec, photo: File | null, style: Style,
   logo: HTMLImageElement | null, preset: ClientPreset | null, pos?: PhotoPos, extras: (File | null)[] = [],
-  textAt: TextPos = ZERO_TEXT_POS, subTextAt: TextPos = ZERO_TEXT_POS,
+  textAt: TextPos = ZERO_TEXT_POS, subTextAt: TextPos = ZERO_TEXT_POS, headScale = 1, subScale = 1,
 ) {
   const layout = style.coverLayout;
   const at = pos ?? defaultPos("cover", style);
   if (MORE_LAYOUTS.has(layout)) {
-    await drawCoverMore(ctx, spec, photo, extras, style, layout, at, textAt, subTextAt);
+    await drawCoverMore(ctx, spec, photo, extras, style, layout, at, textAt, subTextAt, headScale, subScale);
     if (logo && style.showLogo && preset) drawLogo(ctx, logo, "top-right", preset.logoSize || 110);
     return;
   }
@@ -953,9 +955,11 @@ async function drawCover(
   const subtitle = spec.sub ? (style.cvSubCaps ? spec.sub.toUpperCase() : spec.sub) : "";
   const [headFace, subFace] = faces(style, layout);
   const headFont = (sz: number) => `${style.cvWeight} ${sz}px ${headFace}`;
-  const subFont = `${style.cvSubWeight} ${style.cvSubSize}px ${subFace}`;
+  const cvSizeScaled = style.cvSize * headScale;
+  const subSize = Math.round(style.cvSubSize * subScale);
+  const subFont = `${style.cvSubWeight} ${subSize}px ${subFace}`;
   const lineH = (sz: number) => Math.round(sz * (layout === "centred" ? 1.05 : layout === "serif" ? 0.9 : 0.94));
-  const subLineH = Math.round(style.cvSubSize * (layout === "serif" ? 1.05 : 1.3));
+  const subLineH = Math.round(subSize * (layout === "serif" ? 1.05 : 1.3));
   ctx.textBaseline = "top";
 
   const drawLines = (lines: string[], x: number, y: number, lh: number, align: CanvasTextAlign) => {
@@ -975,7 +979,7 @@ async function drawCover(
     applyCoverGradient(ctx, style, 0, 0, W, photoH);
     const x = 96, maxW = W - x * 2;
     setSpacing(ctx, style.cvTracking);
-    const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, 2);
+    const fit = fitHeading(ctx, heading, headFont, maxW, cvSizeScaled, 2);
     const lh = lineH(fit.size);
     setSub();
     const subLines = subtitle ? balancedWrap(ctx, subtitle, maxW) : [];
@@ -992,7 +996,7 @@ async function drawCover(
     applyCoverGradient(ctx, style, 0, 0, W, photoH);
     const x = 50, maxW = W - x * 2;
     setSpacing(ctx, style.cvTracking);
-    const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, 2);
+    const fit = fitHeading(ctx, heading, headFont, maxW, cvSizeScaled, 2);
     const lh = lineH(fit.size);
     const blockH = H - photoH;
     const top = photoH + Math.round(blockH * 0.42 - (fit.lines.length * lh) / 2);
@@ -1015,7 +1019,7 @@ async function drawCover(
     }
     const x0 = photoW + 50, x1 = W - 60, maxW = x1 - x0;
     setSpacing(ctx, style.cvTracking);
-    const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, 4);
+    const fit = fitHeading(ctx, heading, headFont, maxW, cvSizeScaled, 4);
     const lh = lineH(fit.size);
     const top = Math.round(H * 0.255 - (fit.lines.length * lh) / 2);
     setHead(fit.size);
@@ -1031,7 +1035,7 @@ async function drawCover(
     ctx.fillRect(0, 0, W, H);
     const maxW = W - 180;
     setSpacing(ctx, style.cvTracking);
-    const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, 4);
+    const fit = fitHeading(ctx, heading, headFont, maxW, cvSizeScaled, 4);
     const lh = lineH(fit.size);
     setSub();
     const subLines = subtitle ? balancedWrap(ctx, subtitle, maxW) : [];
@@ -1047,7 +1051,7 @@ async function drawCover(
     const cut = photo ? await getCutout(photo) : null;
     const maxW = W - 100;
     setSpacing(ctx, style.cvTracking);
-    const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, 2);
+    const fit = fitHeading(ctx, heading, headFont, maxW, cvSizeScaled, 2);
     const lh = lineH(fit.size);
     const top = Math.round((style.cvY / 100) * H - (fit.lines.length * lh) / 2);
     setHead(fit.size);
@@ -1085,7 +1089,7 @@ async function drawCover(
     }
     const maxW = layout === "serif" ? W - 90 : W - 180;
     setSpacing(ctx, style.cvTracking);
-    const fit = fitHeading(ctx, heading, headFont, maxW, style.cvSize, layout === "serif" ? 4 : 3);
+    const fit = fitHeading(ctx, heading, headFont, maxW, cvSizeScaled, layout === "serif" ? 4 : 3);
     const lh = lineH(fit.size);
     setSub();
     const subLines = subtitle ? balancedWrap(ctx, subtitle, maxW) : [];
@@ -1117,6 +1121,8 @@ async function renderSlide(
   pos?: PhotoPos,
   textPos?: TextPos,
   subTextPos?: TextPos,
+  headScale?: number,
+  subScale?: number,
 ): Promise<HTMLCanvasElement> {
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(W * scale);
@@ -1125,7 +1131,7 @@ async function renderSlide(
   ctx.scale(scale, scale);
 
   if (spec.kind === "cover") {
-    await drawCover(ctx, spec, photo, style, logo, preset, pos, meta.extras ?? [], textPos, subTextPos);
+    await drawCover(ctx, spec, photo, style, logo, preset, pos, meta.extras ?? [], textPos, subTextPos, headScale, subScale);
     return canvas;
   }
 
@@ -1645,6 +1651,9 @@ export default function Stylish() {
   // off its usual spot.
   const textFocusRef = useRef<Record<string, TextPos>>({});
   const subTextFocusRef = useRef<Record<string, TextPos>>({});
+  // How much bigger or smaller than normal a cover's headline/subtitle has been dragged to, 1 = normal size.
+  const textScaleRef = useRef<Record<string, number>>({});
+  const subTextScaleRef = useRef<Record<string, number>>({});
   const logoRef = useRef<HTMLImageElement | null>(null);
   const redrawSeq = useRef<Record<string, number>>({});
   const dragRef = useRef<{
@@ -1658,6 +1667,12 @@ export default function Stylish() {
   const subTextDragRef = useRef<{
     key: string; pi: number; si: number; startX: number; startY: number;
     start: TextPos; thumbScale: number; busy: boolean; pending: boolean;
+  } | null>(null);
+  const textResizeRef = useRef<{
+    key: string; pi: number; si: number; startY: number; start: number; thumbScale: number; busy: boolean; pending: boolean;
+  } | null>(null);
+  const subTextResizeRef = useRef<{
+    key: string; pi: number; si: number; startY: number; start: number; thumbScale: number; busy: boolean; pending: boolean;
   } | null>(null);
 
   // -- which photo belongs to which slide ----------------------------------
@@ -1766,7 +1781,8 @@ export default function Stylish() {
           const specs = buildSlides(post.texts);
           const batch: Record<string, string> = {};
           for (let si = 0; si < specs.length; si++) {
-            const canvas = await renderSlide(specs[si], photoForRef.current(pi, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 0.3, { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoForRef.current(pi, post, k)) : undefined }, focusRef.current[`${post.id}:${si}`], textFocusRef.current[`${post.id}:${si}`], subTextFocusRef.current[`${post.id}:${si}`]);
+            const tk = `${post.id}:${si}`;
+            const canvas = await renderSlide(specs[si], photoForRef.current(pi, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 0.3, { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoForRef.current(pi, post, k)) : undefined }, focusRef.current[tk], textFocusRef.current[tk], subTextFocusRef.current[tk], textScaleRef.current[tk], subTextScaleRef.current[tk]);
             batch[`${post.id}:${si}`] = canvas.toDataURL("image/jpeg", 0.75);
           }
           if (cancelled) return;
@@ -1793,6 +1809,8 @@ export default function Stylish() {
       dragRef.current?.key === key ? dragRef.current
       : textDragRef.current?.key === key ? textDragRef.current
       : subTextDragRef.current?.key === key ? subTextDragRef.current
+      : textResizeRef.current?.key === key ? textResizeRef.current
+      : subTextResizeRef.current?.key === key ? subTextResizeRef.current
       : null;
     const run = async () => {
       const specs = buildSlides(post.texts);
@@ -1802,6 +1820,7 @@ export default function Stylish() {
         specs[si], photoFor(pi, post, si), styleForSlide(style, post, specs[si].kind), logoRef.current, preset, 0.3,
         { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoFor(pi, post, k)) : undefined },
         focusRef.current[key], textFocusRef.current[key], subTextFocusRef.current[key],
+        textScaleRef.current[key], subTextScaleRef.current[key],
       );
       if (redrawSeq.current[key] !== seq) return; // a newer change has been drawn since, keep that one
       setThumbs(prev => ({ ...prev, [key]: canvas.toDataURL("image/jpeg", 0.75) }));
@@ -1905,10 +1924,11 @@ export default function Stylish() {
     e.stopPropagation();
   };
 
+  // Puts the headline back to its usual spot and its usual size.
   const resetTextPos = (post: Post, pi: number, si: number) => {
-    const next = { ...textFocusRef.current };
-    delete next[`${post.id}:${si}`];
-    textFocusRef.current = next;
+    const key = `${post.id}:${si}`;
+    const nextPos = { ...textFocusRef.current }; delete nextPos[key]; textFocusRef.current = nextPos;
+    const nextScale = { ...textScaleRef.current }; delete nextScale[key]; textScaleRef.current = nextScale;
     bumpFocus(n => n + 1);
     redrawOne(post, pi, si);
   };
@@ -1949,10 +1969,97 @@ export default function Stylish() {
     e.stopPropagation();
   };
 
+  // Puts the subtitle back to its usual spot and its usual size.
   const resetSubTextPos = (post: Post, pi: number, si: number) => {
-    const next = { ...subTextFocusRef.current };
+    const key = `${post.id}:${si}`;
+    const nextPos = { ...subTextFocusRef.current }; delete nextPos[key]; subTextFocusRef.current = nextPos;
+    const nextScale = { ...subTextScaleRef.current }; delete nextScale[key]; subTextScaleRef.current = nextScale;
+    bumpFocus(n => n + 1);
+    redrawOne(post, pi, si);
+  };
+
+  // -- resizing the headline and subtitle ------------------------------------------
+
+  const TEXT_SCALE_MIN = 0.5, TEXT_SCALE_MAX = 2.2;
+
+  const startTextResize = (e: ReactPointerEvent<HTMLDivElement>, post: Post, pi: number, si: number) => {
+    if (e.button !== 0) return;
+    const key = `${post.id}:${si}`;
+    const thumb = e.currentTarget.closest("[data-thumb]") as HTMLElement | null;
+    const rect = (thumb ?? e.currentTarget).getBoundingClientRect();
+    textResizeRef.current = {
+      key, pi, si, startY: e.clientY, start: textScaleRef.current[key] ?? 1,
+      thumbScale: rect.width / W, busy: false, pending: false,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.stopPropagation();
+    e.preventDefault();
+  };
+
+  const moveTextResize = (e: ReactPointerEvent<HTMLDivElement>, post: Post) => {
+    const d = textResizeRef.current;
+    if (!d || d.key !== `${post.id}:${d.si}`) return;
+    // Dragging up makes it bigger, dragging down makes it smaller.
+    const scale = Math.min(TEXT_SCALE_MAX, Math.max(TEXT_SCALE_MIN, d.start - (e.clientY - d.startY) / (d.thumbScale * 220)));
+    if (scale === d.start && !textScaleRef.current[d.key]) return;
+    textScaleRef.current = { ...textScaleRef.current, [d.key]: scale };
+    redrawOne(post, d.pi, d.si);
+    e.stopPropagation();
+  };
+
+  const endTextResize = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!textResizeRef.current) return;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* already released */ }
+    textResizeRef.current = null;
+    bumpFocus(n => n + 1);
+    e.stopPropagation();
+  };
+
+  const resetTextScale = (post: Post, pi: number, si: number) => {
+    const next = { ...textScaleRef.current };
     delete next[`${post.id}:${si}`];
-    subTextFocusRef.current = next;
+    textScaleRef.current = next;
+    bumpFocus(n => n + 1);
+    redrawOne(post, pi, si);
+  };
+
+  // Same again, for the subtitle's own size.
+  const startSubTextResize = (e: ReactPointerEvent<HTMLDivElement>, post: Post, pi: number, si: number) => {
+    if (e.button !== 0) return;
+    const key = `${post.id}:${si}`;
+    const thumb = e.currentTarget.closest("[data-thumb]") as HTMLElement | null;
+    const rect = (thumb ?? e.currentTarget).getBoundingClientRect();
+    subTextResizeRef.current = {
+      key, pi, si, startY: e.clientY, start: subTextScaleRef.current[key] ?? 1,
+      thumbScale: rect.width / W, busy: false, pending: false,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.stopPropagation();
+    e.preventDefault();
+  };
+
+  const moveSubTextResize = (e: ReactPointerEvent<HTMLDivElement>, post: Post) => {
+    const d = subTextResizeRef.current;
+    if (!d || d.key !== `${post.id}:${d.si}`) return;
+    const scale = Math.min(TEXT_SCALE_MAX, Math.max(TEXT_SCALE_MIN, d.start - (e.clientY - d.startY) / (d.thumbScale * 220)));
+    if (scale === d.start && !subTextScaleRef.current[d.key]) return;
+    subTextScaleRef.current = { ...subTextScaleRef.current, [d.key]: scale };
+    redrawOne(post, d.pi, d.si);
+    e.stopPropagation();
+  };
+
+  const endSubTextResize = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!subTextResizeRef.current) return;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* already released */ }
+    subTextResizeRef.current = null;
+    bumpFocus(n => n + 1);
+    e.stopPropagation();
+  };
+
+  const resetSubTextScale = (post: Post, pi: number, si: number) => {
+    const next = { ...subTextScaleRef.current };
+    delete next[`${post.id}:${si}`];
+    subTextScaleRef.current = next;
     bumpFocus(n => n + 1);
     redrawOne(post, pi, si);
   };
@@ -2861,8 +2968,8 @@ export default function Stylish() {
                           const thumb = thumbs[`${post.id}:${si}`];
                           const hasPhoto = !!photoFor(pi, post, si);
                           const moved = !!focusRef.current[`${post.id}:${si}`];
-                          const textMoved = !!textFocusRef.current[`${post.id}:${si}`];
-                          const subTextMoved = !!subTextFocusRef.current[`${post.id}:${si}`];
+                          const textMoved = !!textFocusRef.current[`${post.id}:${si}`] || !!textScaleRef.current[`${post.id}:${si}`];
+                          const subTextMoved = !!subTextFocusRef.current[`${post.id}:${si}`] || !!subTextScaleRef.current[`${post.id}:${si}`];
                           const isCover = spec.kind === "cover";
                           return (
                             <div
@@ -2900,6 +3007,20 @@ export default function Stylish() {
                               )}
                               {isCover && (
                                 <div
+                                  onPointerDown={e => startTextResize(e, post, pi, si)}
+                                  onPointerMove={e => moveTextResize(e, post)}
+                                  onPointerUp={endTextResize}
+                                  onPointerCancel={endTextResize}
+                                  onDoubleClick={e => { e.stopPropagation(); resetTextScale(post, pi, si); }}
+                                  title="Drag up or down to resize the headline. Double click to put it back."
+                                  className="absolute top-7 left-1.5 flex items-center rounded-md bg-black/55 p-0.5 text-white/90 opacity-0 group-hover:opacity-100 cursor-ns-resize select-none"
+                                  style={{ touchAction: "none" }}
+                                >
+                                  <ArrowUpDown className="w-2.5 h-2.5" />
+                                </div>
+                              )}
+                              {isCover && (
+                                <div
                                   onPointerDown={e => startSubTextDrag(e, post, pi, si)}
                                   onPointerMove={e => moveSubTextDrag(e, post)}
                                   onPointerUp={endSubTextDrag}
@@ -2910,6 +3031,20 @@ export default function Stylish() {
                                   style={{ touchAction: "none" }}
                                 >
                                   <Move className="w-2.5 h-2.5" /> aa
+                                </div>
+                              )}
+                              {isCover && (
+                                <div
+                                  onPointerDown={e => startSubTextResize(e, post, pi, si)}
+                                  onPointerMove={e => moveSubTextResize(e, post)}
+                                  onPointerUp={endSubTextResize}
+                                  onPointerCancel={endSubTextResize}
+                                  onDoubleClick={e => { e.stopPropagation(); resetSubTextScale(post, pi, si); }}
+                                  title="Drag up or down to resize the subtitle. Double click to put it back."
+                                  className="absolute top-7 right-1.5 flex items-center rounded-md bg-black/55 p-0.5 text-white/90 opacity-0 group-hover:opacity-100 cursor-ns-resize select-none"
+                                  style={{ touchAction: "none" }}
+                                >
+                                  <ArrowUpDown className="w-2.5 h-2.5" />
                                 </div>
                               )}
                               <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 px-1.5 py-1 bg-gradient-to-t from-black/70 to-transparent">
