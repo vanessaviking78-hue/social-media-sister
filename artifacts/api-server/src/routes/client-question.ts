@@ -61,7 +61,24 @@ router.post("/client-question/answer", async (req: Request, res: Response) => {
   }
 });
 
+// Admin: how many answers Vanessa hasn't opened the results page to see yet.
+// Polled by the Hub tile for the pink badge; viewing the full list (below)
+// clears it.
+router.get("/client-questions/unseen-count", requireAuth, async (_req: Request, res: Response) => {
+  try {
+    const result = await db.execute(sql`
+      SELECT COUNT(*)::int AS count FROM client_question_answers WHERE seen = FALSE
+    `);
+    const count = (result as unknown as { rows?: { count: number }[] }).rows?.[0]?.count ?? 0;
+    res.set("Cache-Control", "no-store");
+    res.json({ count });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || "Failed to count answers" });
+  }
+});
+
 // Admin: every question asked, newest first, each with its answers attached.
+// Opening this marks every answer seen, which clears the Hub badge.
 router.get("/client-questions", requireAuth, async (_req: Request, res: Response) => {
   try {
     const questions = (await db.execute(sql`
@@ -78,6 +95,7 @@ router.get("/client-questions", requireAuth, async (_req: Request, res: Response
     }));
     res.set("Cache-Control", "no-store");
     res.json(withAnswers);
+    void db.execute(sql`UPDATE client_question_answers SET seen = TRUE WHERE seen = FALSE`);
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to list questions" });
   }

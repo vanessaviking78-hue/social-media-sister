@@ -713,5 +713,6 @@ async function createClientQuestionTables(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+  await db.execute(sql`ALTER TABLE client_question_answers ADD COLUMN IF NOT EXISTS seen BOOLEAN NOT NULL DEFAULT FALSE`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS client_question_answers_question_idx ON client_question_answers (question_id, created_at DESC)`);
 }

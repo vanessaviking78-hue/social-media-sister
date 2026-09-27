@@ -720,6 +720,16 @@ border: "hover:border-pink-500/50",
 iconColor: "text-pink-400",
 external: true,
 },
+{
+href: "/clientquestion",
+group: "admin",
+icon: MessageSquareText,
+name: "Client Question",
+description: "One link, sent once to the client group chat. Ask a question, clients answer in a text box, every reply lands here under its heading.",
+color: "from-pink-500/20 to-pink-500/5",
+border: "hover:border-pink-500/50",
+iconColor: "text-pink-400",
+},
 ];
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -728,6 +738,7 @@ export default function Hub() {
 const [newCount, setNewCount] = useState(0);
 const [hwCount, setHwCount] = useState(0);
 const [reelCaptionCount, setReelCaptionCount] = useState(0);
+const [cqCount, setCqCount] = useState(0);
 const [activeGroup, setActiveGroup] = useState<"today" | "admin" | "content" | "carousel">("today");
 useEffect(() => {
 const pw = localStorage.getItem("cybersuite-pw") || "";
@@ -778,6 +789,20 @@ setReelCaptionCount(arr.filter((s: any) => s.status === "pending").length);
 loadReelCaptions();
 const id2 = setInterval(loadReelCaptions, 60000);
 return () => clearInterval(id2);
+}, []);
+
+useEffect(() => {
+const pw = localStorage.getItem("cybersuite-pw") || "";
+if (!pw) return;
+const loadCq = () => {
+fetch(`${BASE}/api/client-questions/unseen-count`, { headers: { "x-app-password": pw, "Authorization": "Bearer " + pw } })
+.then((r) => (r.ok ? r.json() : { count: 0 }))
+.then((d) => setCqCount(Number(d.count) || 0))
+.catch(() => {});
+};
+loadCq();
+const id3 = setInterval(loadCq, 60000);
+return () => clearInterval(id3);
 }, []);
 return (
 <div className="min-h-[100dvh] w-full bg-background">
@@ -835,7 +860,7 @@ activeGroup === tab.key
 
 {/* Filtered grid */}
 <div className="grid grid-cols-4 gap-4">
-{TOOLS.filter((tool) => tool.group === activeGroup).map((tool) => <ToolCard key={tool.href} tool={tool} badge={tool.href === "/submissions" ? newCount : tool.href === "/homework" ? hwCount : tool.href === "/reel-captioning" ? reelCaptionCount : 0} />)}
+{TOOLS.filter((tool) => tool.group === activeGroup).map((tool) => <ToolCard key={tool.href} tool={tool} badge={tool.href === "/submissions" ? newCount : tool.href === "/homework" ? hwCount : tool.href === "/reel-captioning" ? reelCaptionCount : tool.href === "/clientquestion" ? cqCount : 0} />)}
 </div>
 </main>
 

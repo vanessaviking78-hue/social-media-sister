@@ -930,6 +930,7 @@ export const clientQuestionAnswersTable = pgTable("client_question_answers", {
   questionId: integer("question_id").notNull().references(() => clientQuestionsTable.id, { onDelete: "cascade" }),
   answer: text("answer").notNull(),
   respondentName: text("respondent_name").notNull().default(""),
+  seen: boolean("seen").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 export type ClientQuestionAnswer = typeof clientQuestionAnswersTable.$inferSelect;
