@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { setFlipHandoff } from "@/lib/flip-handoff";
 import {
   ArrowLeft, FileText, Download, Loader2, CalendarClock, CheckCircle2, ImageIcon,
-  Sparkles, Palette, RotateCcw, Wand2, Trash2,
+  Sparkles, Palette, RotateCcw, Wand2, Trash2, Move,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -476,6 +476,14 @@ function prepareImage(file: File): Promise<Blob | null> {
 // Where a photo sits inside its frame, in percent (50, 50 is centred). Dragging changes it per slide.
 type PhotoPos = { x: number; y: number };
 
+// How far a headline (and its subtitle) has been nudged from its usual spot, in canvas pixels.
+type TextPos = { dx: number; dy: number };
+const ZERO_TEXT_POS: TextPos = { dx: 0, dy: 0 };
+
+// A photo is scaled up a bit past the bare minimum needed to cover its frame, so there's real
+// room either side to drag it around instead of it barely being able to move at all.
+const PHOTO_OVERSCAN = 1.45;
+
 // The frame a slide's photo fills, so a drag can be turned into a shift of the photo.
 function photoArea(kind: SlideKind, style: Style): { w: number; h: number } {
   if (kind !== "cover") return { w: W, h: H };
@@ -572,7 +580,7 @@ function drawPhotoIn(
   ctx: CanvasRenderingContext2D, bmp: ImageBitmap,
   x: number, y: number, w: number, h: number, pos: PhotoPos,
 ) {
-  const sc = Math.max(w / bmp.width, h / bmp.height);
+  const sc = Math.max(w / bmp.width, h / bmp.height) * PHOTO_OVERSCAN;
   const dw = bmp.width * sc;
   const dh = bmp.height * sc;
   const dx = x + (w - dw) * (pos.x / 100);
@@ -719,7 +727,7 @@ function applyCoverGradient(ctx: CanvasRenderingContext2D, style: Style, x: numb
 
 async function drawCoverMore(
   ctx: CanvasRenderingContext2D, spec: SlideSpec, photo: File | null, extras: (File | null)[],
-  style: Style, layout: CoverLayout, at: PhotoPos,
+  style: Style, layout: CoverLayout, at: PhotoPos, textAt: TextPos = ZERO_TEXT_POS,
 ) {
   const [hf, sf] = faces(style, layout);
   const head = style.cvCaps ? spec.text.toUpperCase() : spec.text;
@@ -751,7 +759,7 @@ async function drawCoverMore(
     const lh = Math.round(fit.size * factor);
     const top = where.top ?? Math.round((where.centre ?? H / 2) - (fit.lines.length * lh) / 2);
     setHead(fit.size);
-    return { bottom: drawLines(fit.lines, x, top, lh, align), size: fit.size };
+    return { bottom: drawLines(fit.lines, x + textAt.dx, top + textAt.dy, lh, align) - textAt.dy, size: fit.size };
   };
   const subtitle = (x: number, y: number, maxW: number, align: CanvasTextAlign) => {
     if (!sub) return y;
@@ -867,7 +875,7 @@ async function drawCoverMore(
         }
         setHead(size);
         ctx.textAlign = "center";
-        ctx.fillText(head, 0, phh / 2 - capH + Math.round((capH - size) / 2));
+        ctx.fillText(head, 0 + textAt.dx, phh / 2 - capH + Math.round((capH - size) / 2) + textAt.dy);
       });
       drawBinderClip(ctx, Math.round(W * 0.44), Math.round(H * 0.48 - phh / 2 - 60));
     } else if (layout === "sidebar") {
@@ -927,11 +935,12 @@ async function drawCoverMore(
 async function drawCover(
   ctx: CanvasRenderingContext2D, spec: SlideSpec, photo: File | null, style: Style,
   logo: HTMLImageElement | null, preset: ClientPreset | null, pos?: PhotoPos, extras: (File | null)[] = [],
+  textAt: TextPos = ZERO_TEXT_POS,
 ) {
   const layout = style.coverLayout;
   const at = pos ?? defaultPos("cover", style);
   if (MORE_LAYOUTS.has(layout)) {
-    await drawCoverMore(ctx, spec, photo, extras, style, layout, at);
+    await drawCoverMore(ctx, spec, photo, extras, style, layout, at, textAt);
     if (logo && style.showLogo && preset) drawLogo(ctx, logo, "top-right", preset.logoSize || 110);
     return;
   }
@@ -973,7 +982,7 @@ async function drawCover(
     const total = fit.lines.length * lh + (subLines.length ? 26 + subLines.length * subLineH : 0);
     let y = photoH + Math.round((bandH - total) / 2);
     setHead(fit.size);
-    y = drawLines(fit.lines, x, y, lh, "left") + 26;
+    y = drawLines(fit.lines, x + textAt.dx, y + textAt.dy, lh, "left") - textAt.dy + 26;
     if (subLines.length) { setSub(); drawLines(subLines, x, y, subLineH, "left"); }
   } else if (layout === "block") {
     const photoH = Math.round(H * (style.cvPhoto / 100));
@@ -988,7 +997,7 @@ async function drawCover(
     const blockH = H - photoH;
     const top = photoH + Math.round(blockH * 0.42 - (fit.lines.length * lh) / 2);
     setHead(fit.size);
-    drawLines(fit.lines, x, top, lh, "left");
+    drawLines(fit.lines, x + textAt.dx, top + textAt.dy, lh, "left");
     if (subtitle) {
       setSub();
       const subLines = balancedWrap(ctx, subtitle, maxW);
@@ -1010,7 +1019,7 @@ async function drawCover(
     const lh = lineH(fit.size);
     const top = Math.round(H * 0.255 - (fit.lines.length * lh) / 2);
     setHead(fit.size);
-    const bottom = drawLines(fit.lines, x0, top, lh, "left");
+    const bottom = drawLines(fit.lines, x0 + textAt.dx, top + textAt.dy, lh, "left") - textAt.dy;
     if (subtitle) {
       setSub();
       const subLines = balancedWrap(ctx, subtitle, maxW);
@@ -1029,7 +1038,7 @@ async function drawCover(
     const total = fit.lines.length * lh + (subLines.length ? 40 + subLines.length * subLineH : 0);
     let y = Math.round(H / 2 - total / 2);
     setHead(fit.size);
-    y = drawLines(fit.lines, W / 2, y, lh, "center") + 40;
+    y = drawLines(fit.lines, W / 2 + textAt.dx, y + textAt.dy, lh, "center") - textAt.dy + 40;
     if (subLines.length) { setSub(); drawLines(subLines, W / 2, y, subLineH, "center"); }
   } else if (layout === "behind") {
     // Option 7: flat colour, big heading, then the person cut out of their photo drawn on top so the heading sits behind them.
@@ -1042,7 +1051,7 @@ async function drawCover(
     const lh = lineH(fit.size);
     const top = Math.round((style.cvY / 100) * H - (fit.lines.length * lh) / 2);
     setHead(fit.size);
-    const bottom = drawLines(fit.lines, W / 2, top, lh, "center");
+    const bottom = drawLines(fit.lines, W / 2 + textAt.dx, top + textAt.dy, lh, "center") - textAt.dy;
     if (subtitle) {
       setSub();
       const subLines = balancedWrap(ctx, subtitle, Math.round(W * 0.4));
@@ -1085,7 +1094,7 @@ async function drawCover(
     let y = Math.round(layout === "serif" ? anchor - total : anchor - total / 2);
     if (style.shadow && layout === "centred") { ctx.shadowColor = "rgba(0,0,0,0.35)"; ctx.shadowBlur = 14; ctx.shadowOffsetY = 2; }
     setHead(fit.size);
-    y = drawLines(fit.lines, W / 2, y, lh, "center") + (layout === "serif" ? 22 : 30);
+    y = drawLines(fit.lines, W / 2 + textAt.dx, y + textAt.dy, lh, "center") - textAt.dy + (layout === "serif" ? 22 : 30);
     if (subLines.length) { setSub(); drawLines(subLines, W / 2, y, subLineH, "center"); }
     ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   }
@@ -1106,6 +1115,7 @@ async function renderSlide(
   scale: number,
   meta: RenderMeta = { index: 0, total: 1 },
   pos?: PhotoPos,
+  textPos?: TextPos,
 ): Promise<HTMLCanvasElement> {
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(W * scale);
@@ -1114,7 +1124,7 @@ async function renderSlide(
   ctx.scale(scale, scale);
 
   if (spec.kind === "cover") {
-    await drawCover(ctx, spec, photo, style, logo, preset, pos, meta.extras ?? []);
+    await drawCover(ctx, spec, photo, style, logo, preset, pos, meta.extras ?? [], textPos);
     return canvas;
   }
 
@@ -1629,11 +1639,17 @@ export default function Stylish() {
   // with a counter to refresh the buttons that depend on it.
   const focusRef = useRef<Record<string, PhotoPos>>({});
   const [, bumpFocus] = useState(0);
+  // Same idea, for how far a cover's headline has been nudged off its usual spot.
+  const textFocusRef = useRef<Record<string, TextPos>>({});
   const logoRef = useRef<HTMLImageElement | null>(null);
   const redrawSeq = useRef<Record<string, number>>({});
   const dragRef = useRef<{
     key: string; pi: number; si: number; startX: number; startY: number;
     start: PhotoPos; ox: number; oy: number; thumbScale: number; busy: boolean; pending: boolean;
+  } | null>(null);
+  const textDragRef = useRef<{
+    key: string; pi: number; si: number; startX: number; startY: number;
+    start: TextPos; thumbScale: number; busy: boolean; pending: boolean;
   } | null>(null);
 
   // -- which photo belongs to which slide ----------------------------------
@@ -1742,7 +1758,7 @@ export default function Stylish() {
           const specs = buildSlides(post.texts);
           const batch: Record<string, string> = {};
           for (let si = 0; si < specs.length; si++) {
-            const canvas = await renderSlide(specs[si], photoForRef.current(pi, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 0.3, { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoForRef.current(pi, post, k)) : undefined }, focusRef.current[`${post.id}:${si}`]);
+            const canvas = await renderSlide(specs[si], photoForRef.current(pi, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 0.3, { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoForRef.current(pi, post, k)) : undefined }, focusRef.current[`${post.id}:${si}`], textFocusRef.current[`${post.id}:${si}`]);
             batch[`${post.id}:${si}`] = canvas.toDataURL("image/jpeg", 0.75);
           }
           if (cancelled) return;
@@ -1761,27 +1777,32 @@ export default function Stylish() {
 
   // -- dragging a photo to the right spot -----------------------------------------
 
-  // Redraws just the slide being dragged, so the preview follows the pointer without waiting for every post.
+  // Redraws just the slide being dragged (photo or headline), so the preview follows the pointer
+  // without waiting for every post.
   const redrawOne = useCallback(async (post: Post, pi: number, si: number) => {
-    const d = dragRef.current;
     const key = `${post.id}:${si}`;
+    const active: { busy: boolean; pending: boolean } | null =
+      dragRef.current?.key === key ? dragRef.current
+      : textDragRef.current?.key === key ? textDragRef.current
+      : null;
     const run = async () => {
       const specs = buildSlides(post.texts);
       if (!specs[si]) return;
       const seq = (redrawSeq.current[key] = (redrawSeq.current[key] ?? 0) + 1);
       const canvas = await renderSlide(
         specs[si], photoFor(pi, post, si), styleForSlide(style, post, specs[si].kind), logoRef.current, preset, 0.3,
-        { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoFor(pi, post, k)) : undefined }, focusRef.current[key],
+        { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoFor(pi, post, k)) : undefined },
+        focusRef.current[key], textFocusRef.current[key],
       );
       if (redrawSeq.current[key] !== seq) return; // a newer change has been drawn since, keep that one
       setThumbs(prev => ({ ...prev, [key]: canvas.toDataURL("image/jpeg", 0.75) }));
     };
-    if (d && d.key === key) {
-      if (d.busy) { d.pending = true; return; }
-      d.busy = true;
+    if (active) {
+      if (active.busy) { active.pending = true; return; }
+      active.busy = true;
       try {
-        do { d.pending = false; await run(); } while (d.pending);
-      } finally { d.busy = false; }
+        do { active.pending = false; await run(); } while (active.pending);
+      } finally { active.busy = false; }
     } else {
       await run();
     }
@@ -1794,7 +1815,7 @@ export default function Stylish() {
     if (!photo || !dims) return;
     const slideStyle = styleForSlide(style, post, spec.kind);
     const area = photoArea(spec.kind, slideStyle);
-    const sc = Math.max(area.w / dims.w, area.h / dims.h);
+    const sc = Math.max(area.w / dims.w, area.h / dims.h) * PHOTO_OVERSCAN;
     const key = `${post.id}:${si}`;
     const rect = e.currentTarget.getBoundingClientRect();
     dragRef.current = {
@@ -1832,6 +1853,53 @@ export default function Stylish() {
     const next = { ...focusRef.current };
     delete next[`${post.id}:${si}`];
     focusRef.current = next;
+    bumpFocus(n => n + 1);
+    redrawOne(post, pi, si);
+  };
+
+  // -- dragging the headline (and subtitle) to a different spot on the cover -----------
+
+  const TEXT_DRAG_LIMIT = 340; // canvas px either side, so the words can move a long way but not off the slide
+
+  const startTextDrag = (e: ReactPointerEvent<HTMLDivElement>, post: Post, pi: number, si: number) => {
+    if (e.button !== 0) return;
+    const key = `${post.id}:${si}`;
+    const thumb = e.currentTarget.closest("[data-thumb]") as HTMLElement | null;
+    const rect = (thumb ?? e.currentTarget).getBoundingClientRect();
+    textDragRef.current = {
+      key, pi, si, startX: e.clientX, startY: e.clientY,
+      start: textFocusRef.current[key] ?? ZERO_TEXT_POS,
+      thumbScale: rect.width / W, busy: false, pending: false,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.stopPropagation();
+    e.preventDefault();
+  };
+
+  const moveTextDrag = (e: ReactPointerEvent<HTMLDivElement>, post: Post) => {
+    const d = textDragRef.current;
+    if (!d || d.key !== `${post.id}:${d.si}`) return;
+    const clamp = (v: number) => Math.min(TEXT_DRAG_LIMIT, Math.max(-TEXT_DRAG_LIMIT, v));
+    const dx = clamp(d.start.dx + (e.clientX - d.startX) / d.thumbScale);
+    const dy = clamp(d.start.dy + (e.clientY - d.startY) / d.thumbScale);
+    if (dx === d.start.dx && dy === d.start.dy && !textFocusRef.current[d.key]) return;
+    textFocusRef.current = { ...textFocusRef.current, [d.key]: { dx, dy } };
+    redrawOne(post, d.pi, d.si);
+    e.stopPropagation();
+  };
+
+  const endTextDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!textDragRef.current) return;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* already released */ }
+    textDragRef.current = null;
+    bumpFocus(n => n + 1);
+    e.stopPropagation();
+  };
+
+  const resetTextPos = (post: Post, pi: number, si: number) => {
+    const next = { ...textFocusRef.current };
+    delete next[`${post.id}:${si}`];
+    textFocusRef.current = next;
     bumpFocus(n => n + 1);
     redrawOne(post, pi, si);
   };
@@ -2706,9 +2774,12 @@ export default function Stylish() {
                           const thumb = thumbs[`${post.id}:${si}`];
                           const hasPhoto = !!photoFor(pi, post, si);
                           const moved = !!focusRef.current[`${post.id}:${si}`];
+                          const textMoved = !!textFocusRef.current[`${post.id}:${si}`];
+                          const isCover = spec.kind === "cover";
                           return (
                             <div
                               key={si}
+                              data-thumb
                               onPointerDown={e => startDrag(e, post, pi, si, spec)}
                               onPointerMove={e => moveDrag(e, post)}
                               onPointerUp={endDrag}
@@ -2725,9 +2796,32 @@ export default function Stylish() {
                                   <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                                 </div>
                               )}
+                              {isCover && (
+                                <div
+                                  onPointerDown={e => startTextDrag(e, post, pi, si)}
+                                  onPointerMove={e => moveTextDrag(e, post)}
+                                  onPointerUp={endTextDrag}
+                                  onPointerCancel={endTextDrag}
+                                  onDoubleClick={e => { e.stopPropagation(); resetTextPos(post, pi, si); }}
+                                  title="Drag to move the headline. Double click to put it back."
+                                  className="absolute top-1.5 left-1.5 flex items-center gap-0.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white/90 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing select-none"
+                                  style={{ touchAction: "none" }}
+                                >
+                                  <Move className="w-2.5 h-2.5" /> Aa
+                                </div>
+                              )}
                               <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 px-1.5 py-1 bg-gradient-to-t from-black/70 to-transparent">
                                 <span className="text-[10px] text-white/80 font-medium">{si + 1}</span>
                                 <span className="flex items-center gap-1.5">
+                                  {textMoved && (
+                                    <button
+                                      type="button"
+                                      onPointerDown={e => e.stopPropagation()}
+                                      onDoubleClick={e => e.stopPropagation()}
+                                      onClick={() => resetTextPos(post, pi, si)}
+                                      className="text-[9px] text-white/80 uppercase tracking-wider hover:text-white"
+                                    >reset text</button>
+                                  )}
                                   {moved && (
                                     <button
                                       type="button"
