@@ -1925,12 +1925,13 @@ export default function Stylish() {
     redrawOne({ ...post, ...patchColours }, pi, 0);
   };
 
-  // Puts one pair of text colours on every post's cover, and clears any colours set on single posts.
-  const changeAllText = (head: string, subtitleColour: string) => {
-    patch({ cvAll: true, cvAllColour: head, cvAllSubColour: subtitleColour });
-    setPosts(list => list.map(p => ({ ...p, coverColour: undefined, coverSubColour: undefined })));
+  // Puts one set of colours - headline, subtitle, and the block/band colour behind them - on
+  // every post's cover, and clears any colours set on single posts.
+  const changeAllText = (head: string, subtitleColour: string, blockColour: string, bandColour: string) => {
+    patch({ cvAll: true, cvAllColour: head, cvAllSubColour: subtitleColour, cvBlock: blockColour, cvBand: bandColour });
+    setPosts(list => list.map(p => ({ ...p, coverColour: undefined, coverSubColour: undefined, coverBlockColour: undefined, coverBandColour: undefined })));
     setCoverVersion(v => v + 1);
-    toast.success("Text colours changed on every cover");
+    toast.success("Colours changed on every cover");
   };
 
   const sameCovers = () => {
@@ -2881,9 +2882,9 @@ export default function Stylish() {
                             )}
                             <button
                               type="button"
-                              onClick={() => changeAllText(eff.cvColour, eff.cvSubColour)}
+                              onClick={() => changeAllText(eff.cvColour, eff.cvSubColour, eff.cvBlock, eff.cvBand)}
                               className="text-xs rounded-lg border border-sky-500/50 text-sky-400 hover:bg-sky-500/10 px-2.5 py-1.5"
-                              title="Use this post's headline and subtitle colours on every cover"
+                              title="Use this post's headline, subtitle and block/band colours on every cover"
                             >Change all</button>
                             {(post.coverColour || post.coverSubColour || post.coverBlockColour || post.coverBandColour) && (
                               <button
