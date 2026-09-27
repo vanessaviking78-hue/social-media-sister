@@ -913,3 +913,24 @@ export const engagingReelsTable = pgTable("engaging_reels", {
 });
 export type EngagingReel = typeof engagingReelsTable.$inferSelect;
 
+// One evergreen public link (/clientquestion) that always shows whichever
+// question is currently active. Vanessa sends the link once to a client
+// group chat and reuses it every time by asking a new question, which
+// replaces the previous one as "active".
+export const clientQuestionsTable = pgTable("client_questions", {
+  id: serial("id").primaryKey(),
+  question: text("question").notNull(),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type ClientQuestion = typeof clientQuestionsTable.$inferSelect;
+
+export const clientQuestionAnswersTable = pgTable("client_question_answers", {
+  id: serial("id").primaryKey(),
+  questionId: integer("question_id").notNull().references(() => clientQuestionsTable.id, { onDelete: "cascade" }),
+  answer: text("answer").notNull(),
+  respondentName: text("respondent_name").notNull().default(""),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type ClientQuestionAnswer = typeof clientQuestionAnswersTable.$inferSelect;
+

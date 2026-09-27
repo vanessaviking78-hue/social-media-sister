@@ -49,6 +49,7 @@ import AiPortraitStudio from "@/pages/ai-portrait-studio";
 import ComicPage from "@/pages/comic";
 import Onboard from "@/pages/onboard";
 import SubmitBeforeAfter from "@/pages/submit";
+import ClientQuestion from "@/pages/client-question";
 import BeforeAfterMaker from "@/pages/before-after";
 import Submissions from "@/pages/submissions";
 import OnboardChoosePage from "@/pages/onboard-choose-page";
@@ -223,6 +224,7 @@ function AppContent() {
   const [isApprove, approveParams] = useRoute("/approve/:token");
   const [isPortal, portalParams] = useRoute("/portal/:token");
   const [isSubmit, submitParams] = useRoute("/submit/:token");
+  const [isClientQuestion] = useRoute("/clientquestion");
   const [isShowcase, showcaseParams] = useRoute("/showcase/:token");
   const [isMetaOAuth] = useRoute("/oauth/meta/result");
   const [isCanvaOAuth] = useRoute("/oauth/canva/result");
@@ -267,6 +269,9 @@ function AppContent() {
   }
   if (isSubmit && submitParams?.token) {
     return <SubmitBeforeAfter token={submitParams.token} />;
+  }
+  if (isClientQuestion) {
+    return <ClientQuestion />;
   }
   if (isShowcase && showcaseParams?.token) {
     return <ShowcasePlayer token={showcaseParams.token} />;

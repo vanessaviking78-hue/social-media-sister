@@ -66,6 +66,7 @@ import engagingReelsRouter from "./engaging-reels";
 import competitorScoutRouter from "./competitor-scout";
 import igAuditRouter from "./ig-audit";
 import newsletterRouter from "./newsletter";
+import clientQuestionRouter from "./client-question";
 
 const router: IRouter = Router();
 
@@ -135,6 +136,7 @@ router.use(engagingReelsRouter);
 router.use(competitorScoutRouter);
 router.use(igAuditRouter);
 router.use(newsletterRouter);
+router.use(clientQuestionRouter);
 router.use(veoRouter);
 
 export default router;

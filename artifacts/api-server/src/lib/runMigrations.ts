@@ -48,6 +48,7 @@ await createBroadcastDraftsTable();
     await createCompetitorScoutReportsTable();
     await createIgAuditsTable();
     await addNewsletterColumnsAndTable();
+    await createClientQuestionTables();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -690,4 +691,27 @@ async function addNewsletterColumnsAndTable(): Promise<void> {
     )
   `);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS newsletters_preset_idx ON newsletters (preset_id, created_at DESC)`);
+}
+
+// The one evergreen /clientquestion link: whichever row has active = true is
+// the question the public page shows. Answers point back at their question.
+async function createClientQuestionTables(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS client_questions (
+      id SERIAL PRIMARY KEY,
+      question TEXT NOT NULL,
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS client_question_answers (
+      id SERIAL PRIMARY KEY,
+      question_id INTEGER NOT NULL REFERENCES client_questions(id) ON DELETE CASCADE,
+      answer TEXT NOT NULL,
+      respondent_name TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+  await db.execute(sql`CREATE INDEX IF NOT EXISTS client_question_answers_question_idx ON client_question_answers (question_id, created_at DESC)`);
 }
