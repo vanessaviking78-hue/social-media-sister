@@ -727,7 +727,7 @@ function applyCoverGradient(ctx: CanvasRenderingContext2D, style: Style, x: numb
 
 async function drawCoverMore(
   ctx: CanvasRenderingContext2D, spec: SlideSpec, photo: File | null, extras: (File | null)[],
-  style: Style, layout: CoverLayout, at: PhotoPos, textAt: TextPos = ZERO_TEXT_POS,
+  style: Style, layout: CoverLayout, at: PhotoPos, textAt: TextPos = ZERO_TEXT_POS, subTextAt: TextPos = ZERO_TEXT_POS,
 ) {
   const [hf, sf] = faces(style, layout);
   const head = style.cvCaps ? spec.text.toUpperCase() : spec.text;
@@ -764,7 +764,7 @@ async function drawCoverMore(
   const subtitle = (x: number, y: number, maxW: number, align: CanvasTextAlign) => {
     if (!sub) return y;
     setSub();
-    return drawLines(balancedWrap(ctx, sub, maxW), x, y, subLineH, align);
+    return drawLines(balancedWrap(ctx, sub, maxW), x + subTextAt.dx, y + subTextAt.dy, subLineH, align) - subTextAt.dy;
   };
   const shadowOn = () => { ctx.shadowColor = "rgba(0,0,0,0.25)"; ctx.shadowBlur = 26; ctx.shadowOffsetY = 12; };
   const shadowOff = () => { ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0; };
@@ -859,7 +859,7 @@ async function drawCoverMore(
         ctx.translate(Math.round(W * 0.42), Math.round(H * 0.79));
         ctx.rotate(-0.1);
         setSub();
-        drawLines(balancedWrap(ctx, sub, Math.round(W * 0.36)), 0, 0, subLineH, "left");
+        drawLines(balancedWrap(ctx, sub, Math.round(W * 0.36)), subTextAt.dx, subTextAt.dy, subLineH, "left");
         ctx.restore();
       }
       const pw = Math.round(W * 0.51), phh = Math.round(H * 0.47), capH = Math.round(phh * 0.2);
@@ -906,7 +906,7 @@ async function drawCoverMore(
       if (sub) {
         setSub();
         const ls = balancedWrap(ctx, sub, cw - 60);
-        drawLines(ls, px + cw / 2, Math.round(py + ch + ch / 2 - (ls.length * subLineH) / 2), subLineH, "center");
+        drawLines(ls, px + cw / 2 + subTextAt.dx, Math.round(py + ch + ch / 2 - (ls.length * subLineH) / 2) + subTextAt.dy, subLineH, "center");
       }
     } else if (layout === "layered") {
       // Option 16: photo at the back, a second photo in a print at the front, words on a card below it.
@@ -935,12 +935,12 @@ async function drawCoverMore(
 async function drawCover(
   ctx: CanvasRenderingContext2D, spec: SlideSpec, photo: File | null, style: Style,
   logo: HTMLImageElement | null, preset: ClientPreset | null, pos?: PhotoPos, extras: (File | null)[] = [],
-  textAt: TextPos = ZERO_TEXT_POS,
+  textAt: TextPos = ZERO_TEXT_POS, subTextAt: TextPos = ZERO_TEXT_POS,
 ) {
   const layout = style.coverLayout;
   const at = pos ?? defaultPos("cover", style);
   if (MORE_LAYOUTS.has(layout)) {
-    await drawCoverMore(ctx, spec, photo, extras, style, layout, at, textAt);
+    await drawCoverMore(ctx, spec, photo, extras, style, layout, at, textAt, subTextAt);
     if (logo && style.showLogo && preset) drawLogo(ctx, logo, "top-right", preset.logoSize || 110);
     return;
   }
@@ -983,7 +983,7 @@ async function drawCover(
     let y = photoH + Math.round((bandH - total) / 2);
     setHead(fit.size);
     y = drawLines(fit.lines, x + textAt.dx, y + textAt.dy, lh, "left") - textAt.dy + 26;
-    if (subLines.length) { setSub(); drawLines(subLines, x, y, subLineH, "left"); }
+    if (subLines.length) { setSub(); drawLines(subLines, x + subTextAt.dx, y + subTextAt.dy, subLineH, "left"); }
   } else if (layout === "block") {
     const photoH = Math.round(H * (style.cvPhoto / 100));
     ctx.fillStyle = style.cvBlock;
@@ -1001,7 +1001,7 @@ async function drawCover(
     if (subtitle) {
       setSub();
       const subLines = balancedWrap(ctx, subtitle, maxW);
-      drawLines(subLines, x + 12, H - 130 - subLines.length * subLineH, subLineH, "left");
+      drawLines(subLines, x + 12 + subTextAt.dx, H - 130 - subLines.length * subLineH + subTextAt.dy, subLineH, "left");
     }
   } else if (layout === "split") {
     const photoW = Math.round(W * (style.cvPhoto / 100));
@@ -1023,7 +1023,7 @@ async function drawCover(
     if (subtitle) {
       setSub();
       const subLines = balancedWrap(ctx, subtitle, maxW);
-      drawLines(subLines, x1, bottom + 110, subLineH, "right");
+      drawLines(subLines, x1 + subTextAt.dx, bottom + 110 + subTextAt.dy, subLineH, "right");
     }
   } else if (layout === "plain") {
     // Option 6: no photo. A flat colour with the headline and subheading centred.
@@ -1039,7 +1039,7 @@ async function drawCover(
     let y = Math.round(H / 2 - total / 2);
     setHead(fit.size);
     y = drawLines(fit.lines, W / 2 + textAt.dx, y + textAt.dy, lh, "center") - textAt.dy + 40;
-    if (subLines.length) { setSub(); drawLines(subLines, W / 2, y, subLineH, "center"); }
+    if (subLines.length) { setSub(); drawLines(subLines, W / 2 + subTextAt.dx, y + subTextAt.dy, subLineH, "center"); }
   } else if (layout === "behind") {
     // Option 7: flat colour, big heading, then the person cut out of their photo drawn on top so the heading sits behind them.
     ctx.fillStyle = style.cvBlock;
@@ -1055,7 +1055,7 @@ async function drawCover(
     if (subtitle) {
       setSub();
       const subLines = balancedWrap(ctx, subtitle, Math.round(W * 0.4));
-      drawLines(subLines, Math.round(W * 0.69), bottom + 100, subLineH, "center");
+      drawLines(subLines, Math.round(W * 0.69) + subTextAt.dx, bottom + 100 + subTextAt.dy, subLineH, "center");
     }
     if (cut) {
       drawPhotoIn(ctx, cut, 0, 0, W, H, at);
@@ -1095,7 +1095,7 @@ async function drawCover(
     if (style.shadow && layout === "centred") { ctx.shadowColor = "rgba(0,0,0,0.35)"; ctx.shadowBlur = 14; ctx.shadowOffsetY = 2; }
     setHead(fit.size);
     y = drawLines(fit.lines, W / 2 + textAt.dx, y + textAt.dy, lh, "center") - textAt.dy + (layout === "serif" ? 22 : 30);
-    if (subLines.length) { setSub(); drawLines(subLines, W / 2, y, subLineH, "center"); }
+    if (subLines.length) { setSub(); drawLines(subLines, W / 2 + subTextAt.dx, y + subTextAt.dy, subLineH, "center"); }
     ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
   }
 
@@ -1116,6 +1116,7 @@ async function renderSlide(
   meta: RenderMeta = { index: 0, total: 1 },
   pos?: PhotoPos,
   textPos?: TextPos,
+  subTextPos?: TextPos,
 ): Promise<HTMLCanvasElement> {
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(W * scale);
@@ -1124,7 +1125,7 @@ async function renderSlide(
   ctx.scale(scale, scale);
 
   if (spec.kind === "cover") {
-    await drawCover(ctx, spec, photo, style, logo, preset, pos, meta.extras ?? [], textPos);
+    await drawCover(ctx, spec, photo, style, logo, preset, pos, meta.extras ?? [], textPos, subTextPos);
     return canvas;
   }
 
@@ -1640,8 +1641,10 @@ export default function Stylish() {
   // with a counter to refresh the buttons that depend on it.
   const focusRef = useRef<Record<string, PhotoPos>>({});
   const [, bumpFocus] = useState(0);
-  // Same idea, for how far a cover's headline has been nudged off its usual spot.
+  // Same idea, for how far a cover's headline (and, separately, its subtitle) has been nudged
+  // off its usual spot.
   const textFocusRef = useRef<Record<string, TextPos>>({});
+  const subTextFocusRef = useRef<Record<string, TextPos>>({});
   const logoRef = useRef<HTMLImageElement | null>(null);
   const redrawSeq = useRef<Record<string, number>>({});
   const dragRef = useRef<{
@@ -1649,6 +1652,10 @@ export default function Stylish() {
     start: PhotoPos; ox: number; oy: number; thumbScale: number; busy: boolean; pending: boolean;
   } | null>(null);
   const textDragRef = useRef<{
+    key: string; pi: number; si: number; startX: number; startY: number;
+    start: TextPos; thumbScale: number; busy: boolean; pending: boolean;
+  } | null>(null);
+  const subTextDragRef = useRef<{
     key: string; pi: number; si: number; startX: number; startY: number;
     start: TextPos; thumbScale: number; busy: boolean; pending: boolean;
   } | null>(null);
@@ -1759,7 +1766,7 @@ export default function Stylish() {
           const specs = buildSlides(post.texts);
           const batch: Record<string, string> = {};
           for (let si = 0; si < specs.length; si++) {
-            const canvas = await renderSlide(specs[si], photoForRef.current(pi, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 0.3, { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoForRef.current(pi, post, k)) : undefined }, focusRef.current[`${post.id}:${si}`], textFocusRef.current[`${post.id}:${si}`]);
+            const canvas = await renderSlide(specs[si], photoForRef.current(pi, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 0.3, { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoForRef.current(pi, post, k)) : undefined }, focusRef.current[`${post.id}:${si}`], textFocusRef.current[`${post.id}:${si}`], subTextFocusRef.current[`${post.id}:${si}`]);
             batch[`${post.id}:${si}`] = canvas.toDataURL("image/jpeg", 0.75);
           }
           if (cancelled) return;
@@ -1778,13 +1785,14 @@ export default function Stylish() {
 
   // -- dragging a photo to the right spot -----------------------------------------
 
-  // Redraws just the slide being dragged (photo or headline), so the preview follows the pointer
-  // without waiting for every post.
+  // Redraws just the slide being dragged (photo, headline or subtitle), so the preview follows
+  // the pointer without waiting for every post.
   const redrawOne = useCallback(async (post: Post, pi: number, si: number) => {
     const key = `${post.id}:${si}`;
     const active: { busy: boolean; pending: boolean } | null =
       dragRef.current?.key === key ? dragRef.current
       : textDragRef.current?.key === key ? textDragRef.current
+      : subTextDragRef.current?.key === key ? subTextDragRef.current
       : null;
     const run = async () => {
       const specs = buildSlides(post.texts);
@@ -1793,7 +1801,7 @@ export default function Stylish() {
       const canvas = await renderSlide(
         specs[si], photoFor(pi, post, si), styleForSlide(style, post, specs[si].kind), logoRef.current, preset, 0.3,
         { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoFor(pi, post, k)) : undefined },
-        focusRef.current[key], textFocusRef.current[key],
+        focusRef.current[key], textFocusRef.current[key], subTextFocusRef.current[key],
       );
       if (redrawSeq.current[key] !== seq) return; // a newer change has been drawn since, keep that one
       setThumbs(prev => ({ ...prev, [key]: canvas.toDataURL("image/jpeg", 0.75) }));
@@ -1905,6 +1913,50 @@ export default function Stylish() {
     redrawOne(post, pi, si);
   };
 
+  // Same again, for the subtitle on its own - moves independently of the headline.
+  const startSubTextDrag = (e: ReactPointerEvent<HTMLDivElement>, post: Post, pi: number, si: number) => {
+    if (e.button !== 0) return;
+    const key = `${post.id}:${si}`;
+    const thumb = e.currentTarget.closest("[data-thumb]") as HTMLElement | null;
+    const rect = (thumb ?? e.currentTarget).getBoundingClientRect();
+    subTextDragRef.current = {
+      key, pi, si, startX: e.clientX, startY: e.clientY,
+      start: subTextFocusRef.current[key] ?? ZERO_TEXT_POS,
+      thumbScale: rect.width / W, busy: false, pending: false,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.stopPropagation();
+    e.preventDefault();
+  };
+
+  const moveSubTextDrag = (e: ReactPointerEvent<HTMLDivElement>, post: Post) => {
+    const d = subTextDragRef.current;
+    if (!d || d.key !== `${post.id}:${d.si}`) return;
+    const clamp = (v: number) => Math.min(TEXT_DRAG_LIMIT, Math.max(-TEXT_DRAG_LIMIT, v));
+    const dx = clamp(d.start.dx + (e.clientX - d.startX) / d.thumbScale);
+    const dy = clamp(d.start.dy + (e.clientY - d.startY) / d.thumbScale);
+    if (dx === d.start.dx && dy === d.start.dy && !subTextFocusRef.current[d.key]) return;
+    subTextFocusRef.current = { ...subTextFocusRef.current, [d.key]: { dx, dy } };
+    redrawOne(post, d.pi, d.si);
+    e.stopPropagation();
+  };
+
+  const endSubTextDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!subTextDragRef.current) return;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* already released */ }
+    subTextDragRef.current = null;
+    bumpFocus(n => n + 1);
+    e.stopPropagation();
+  };
+
+  const resetSubTextPos = (post: Post, pi: number, si: number) => {
+    const next = { ...subTextFocusRef.current };
+    delete next[`${post.id}:${si}`];
+    subTextFocusRef.current = next;
+    bumpFocus(n => n + 1);
+    redrawOne(post, pi, si);
+  };
+
   // -- choosing a cover for each post ----------------------------------------------
 
   const setCover = (post: Post, pi: number, cover: CoverLayout | undefined) => {
@@ -1932,6 +1984,21 @@ export default function Stylish() {
     setPosts(list => list.map(p => ({ ...p, coverColour: undefined, coverSubColour: undefined, coverBlockColour: undefined, coverBandColour: undefined })));
     setCoverVersion(v => v + 1);
     toast.success("Colours changed on every cover");
+  };
+
+  // Puts one block (or band) colour on every cover and clears any set on individual posts,
+  // without touching headline/subtitle colours.
+  const changeAllBlocks = (blockColour: string) => {
+    patch({ cvBlock: blockColour });
+    setPosts(list => list.map(p => ({ ...p, coverBlockColour: undefined })));
+    setCoverVersion(v => v + 1);
+    toast.success("Block colour changed on every cover");
+  };
+  const changeAllBands = (bandColour: string) => {
+    patch({ cvBand: bandColour });
+    setPosts(list => list.map(p => ({ ...p, coverBandColour: undefined })));
+    setCoverVersion(v => v + 1);
+    toast.success("Band colour changed on every cover");
   };
 
   const sameCovers = () => {
@@ -2555,10 +2622,26 @@ export default function Stylish() {
                 </>
               )}
               {BLOCK_LABEL[style.coverLayout] && (
-                <ColourField label={BLOCK_LABEL[style.coverLayout]!} value={style.cvBlock} onChange={v => patch({ cvBlock: v })} />
+                <div className="flex items-end gap-2 flex-wrap">
+                  <ColourField label={BLOCK_LABEL[style.coverLayout]!} value={style.cvBlock} onChange={v => patch({ cvBlock: v })} />
+                  <button
+                    type="button"
+                    onClick={() => changeAllBlocks(style.cvBlock)}
+                    className="text-xs rounded-lg border border-sky-500/50 text-sky-400 hover:bg-sky-500/10 px-2.5 py-1.5 mb-[3px]"
+                    title="Use this colour as the block colour on every cover, clearing any set on individual posts"
+                  >Change all blocks</button>
+                </div>
               )}
               {style.coverLayout === "split" && style.cvBandOn && (
-                <ColourField label="Bottom band colour" value={style.cvBand} onChange={v => patch({ cvBand: v })} />
+                <div className="flex items-end gap-2 flex-wrap">
+                  <ColourField label="Bottom band colour" value={style.cvBand} onChange={v => patch({ cvBand: v })} />
+                  <button
+                    type="button"
+                    onClick={() => changeAllBands(style.cvBand)}
+                    className="text-xs rounded-lg border border-sky-500/50 text-sky-400 hover:bg-sky-500/10 px-2.5 py-1.5 mb-[3px]"
+                    title="Use this colour as the band colour on every cover, clearing any set on individual posts"
+                  >Change all bands</button>
+                </div>
               )}
             </div>
           </section>
@@ -2779,6 +2862,7 @@ export default function Stylish() {
                           const hasPhoto = !!photoFor(pi, post, si);
                           const moved = !!focusRef.current[`${post.id}:${si}`];
                           const textMoved = !!textFocusRef.current[`${post.id}:${si}`];
+                          const subTextMoved = !!subTextFocusRef.current[`${post.id}:${si}`];
                           const isCover = spec.kind === "cover";
                           return (
                             <div
@@ -2814,6 +2898,20 @@ export default function Stylish() {
                                   <Move className="w-2.5 h-2.5" /> Aa
                                 </div>
                               )}
+                              {isCover && (
+                                <div
+                                  onPointerDown={e => startSubTextDrag(e, post, pi, si)}
+                                  onPointerMove={e => moveSubTextDrag(e, post)}
+                                  onPointerUp={endSubTextDrag}
+                                  onPointerCancel={endSubTextDrag}
+                                  onDoubleClick={e => { e.stopPropagation(); resetSubTextPos(post, pi, si); }}
+                                  title="Drag to move the subtitle. Double click to put it back."
+                                  className="absolute top-1.5 right-1.5 flex items-center gap-0.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white/90 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing select-none"
+                                  style={{ touchAction: "none" }}
+                                >
+                                  <Move className="w-2.5 h-2.5" /> aa
+                                </div>
+                              )}
                               <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 px-1.5 py-1 bg-gradient-to-t from-black/70 to-transparent">
                                 <span className="text-[10px] text-white/80 font-medium">{si + 1}</span>
                                 <span className="flex items-center gap-1.5">
@@ -2825,6 +2923,15 @@ export default function Stylish() {
                                       onClick={() => resetTextPos(post, pi, si)}
                                       className="text-[9px] text-white/80 uppercase tracking-wider hover:text-white"
                                     >reset text</button>
+                                  )}
+                                  {subTextMoved && (
+                                    <button
+                                      type="button"
+                                      onPointerDown={e => e.stopPropagation()}
+                                      onDoubleClick={e => e.stopPropagation()}
+                                      onClick={() => resetSubTextPos(post, pi, si)}
+                                      className="text-[9px] text-white/80 uppercase tracking-wider hover:text-white"
+                                    >reset subtitle</button>
                                   )}
                                   {moved && (
                                     <button
