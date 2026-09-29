@@ -462,6 +462,55 @@ const MAX_PHOTO_SIDE = 2400;
 const prepared = new Map<File, Promise<Blob | null>>();
 const photoDims = new Map<File, { w: number; h: number }>();
 
+// Face finding. Uses the browser's own detector when it has one, otherwise a small model that is
+// fetched once. Any failure just means the photo is left as it was.
+type FacePoint = { x: number; y: number };
+let faceDetectorPromise: Promise<((c: HTMLCanvasElement) => Promise<FacePoint | null>) | null> | null = null;
+
+function getFaceDetector() {
+  if (faceDetectorPromise) return faceDetectorPromise;
+  faceDetectorPromise = (async () => {
+    try {
+      const Native = (window as unknown as { FaceDetector?: new (o?: object) => { detect: (i: CanvasImageSource) => Promise<{ boundingBox: DOMRectReadOnly }[]> } }).FaceDetector;
+      if (Native) {
+        const d = new Native({ fastMode: true, maxDetectedFaces: 4 });
+        return async (c: HTMLCanvasElement) => {
+          const faces = await d.detect(c);
+          if (!faces.length) return null;
+          const b = faces.map(f => f.boundingBox).sort((a, z) => z.width * z.height - a.width * a.height)[0];
+          return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+        };
+      }
+      const base = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+      const mod = await import(/* @vite-ignore */ `${base}/vision_bundle.mjs`);
+      const fileset = await mod.FilesetResolver.forVisionTasks(`${base}/wasm`);
+      const det = await mod.FaceDetector.createFromOptions(fileset, {
+        baseOptions: { modelAssetPath: "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite" },
+        runningMode: "IMAGE",
+        minDetectionConfidence: 0.5,
+      });
+      return async (c: HTMLCanvasElement) => {
+        const res = det.detect(c);
+        const dets = (res?.detections ?? []) as { boundingBox?: { originX: number; originY: number; width: number; height: number } }[];
+        const boxes = dets.map(d => d.boundingBox).filter(Boolean) as { originX: number; originY: number; width: number; height: number }[];
+        if (!boxes.length) return null;
+        const b = boxes.sort((a, z) => z.width * z.height - a.width * a.height)[0];
+        return { x: b.originX + b.width / 2, y: b.originY + b.height / 2 };
+      };
+    } catch {
+      return null;
+    }
+  })();
+  return faceDetectorPromise;
+}
+
+async function findFace(canvas: HTMLCanvasElement): Promise<FacePoint | null> {
+  try {
+    const detect = await getFaceDetector();
+    return detect ? await detect(canvas) : null;
+  } catch { return null; }
+}
+
 function prepareImage(file: File): Promise<Blob | null> {
   const existing = prepared.get(file);
   if (existing) return existing;
@@ -477,8 +526,27 @@ function prepareImage(file: File): Promise<Blob | null> {
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(bmp, 0, 0, w, h);
       bmp.close();
-      photoDims.set(file, { w, h });
-      return await new Promise<Blob | null>(res => canvas.toBlob(b => res(b), "image/jpeg", 0.93));
+      // Find the face and trim the photo so it sits in the middle, a little above centre, so nobody
+      // has to drag every photo into place. Falls back to the untouched photo if no face is found.
+      const face = await findFace(canvas);
+      let out: HTMLCanvasElement = canvas;
+      let ow = w, oh = h;
+      if (face) {
+        let cx = 0, cy = 0, cw = w, ch = h;
+        const hw = Math.min(face.x, w - face.x);
+        if (Math.abs(face.x - w / 2) > w * 0.04 && hw * 2 >= w * 0.55) { cx = face.x - hw; cw = hw * 2; }
+        const maxH = Math.min(h, face.y / 0.4, (h - face.y) / 0.6);
+        if (maxH >= h * 0.6 && maxH < h * 0.98) { ch = maxH; cy = face.y - 0.4 * ch; }
+        if (cw !== w || ch !== h) {
+          cx = Math.round(cx); cy = Math.round(cy); cw = Math.round(cw); ch = Math.round(ch);
+          const c2 = document.createElement("canvas");
+          c2.width = cw; c2.height = ch;
+          c2.getContext("2d")!.drawImage(canvas, cx, cy, cw, ch, 0, 0, cw, ch);
+          out = c2; ow = cw; oh = ch;
+        }
+      }
+      photoDims.set(file, { w: ow, h: oh });
+      return await new Promise<Blob | null>(res => out.toBlob(b => res(b), "image/jpeg", 0.93));
     } catch {
       return null;
     }
