@@ -4,7 +4,7 @@ import { setFlipHandoff } from "@/lib/flip-handoff";
 import { takeStylishHandoff } from "@/lib/stylish-handoff";
 import {
   ArrowLeft, FileText, Download, Loader2, CalendarClock, CheckCircle2, ImageIcon,
-  Sparkles, Palette, RotateCcw, Wand2, Trash2, Move, ArrowUpDown,
+  Sparkles, Palette, RotateCcw, Wand2, Trash2, Move, ArrowUpDown, Film,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,7 @@ import { loadGoogleFonts, FONT_OPTIONS } from "@/lib/slide-utils";
 import { usePresets, type ClientPreset } from "@/lib/use-presets";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
+import { nthPostingSlot } from "@/lib/schedule";
 
 loadGoogleFonts();
 if (typeof document !== "undefined" && !document.getElementById("stylish-fonts")) {
@@ -1571,6 +1572,7 @@ export default function Stylish() {
   };
 
   const [tone, setTone] = useState("1");
+  const [area, setArea] = useState("");
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [customFonts, setCustomFonts] = useState<{ file: string; family: string }[]>([]);
   const [fontVersion, setFontVersion] = useState(0);
@@ -1637,6 +1639,7 @@ export default function Stylish() {
   const [scheduling, setScheduling] = useState<string | null>(null);
   const [captionAllBusy, setCaptionAllBusy] = useState(false);
   const [scheduleItems, setScheduleItems] = useState<SchedulePostPayload[] | null>(null);
+  const [scheduleMode, setScheduleMode] = useState<"carousel" | "reel">("carousel");
   const [sendingFlip, setSendingFlip] = useState(false);
 
   const imgInputRef = useRef<HTMLInputElement>(null);
@@ -1755,6 +1758,7 @@ export default function Stylish() {
       focusRef.current = {};
       parseCsv(new File([h.csv], h.csvName, { type: "text/csv" }));
       setPendingClient(h.clientName);
+      if (h.location) setArea(h.location);
       toast.success(`${h.clientName} pack loaded: ${h.files.length} photos and the CSV.`);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1766,6 +1770,7 @@ export default function Stylish() {
       presets.find(p => p.name.trim().toLowerCase() === n) ??
       (n.length >= 4 ? presets.find(p => { const pn = p.name.trim().toLowerCase(); return pn.length >= 4 && (pn.includes(n) || n.includes(pn)); }) : undefined);
     if (match) chooseClient(match.id);
+    else toast.info(`No saved Stylish client called ${pendingClient} yet. Pick a template, then set size, placement and fonts below and save it as a client.`);
     setPendingClient(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingClient, presetsLoading, presets]);
@@ -2160,10 +2165,10 @@ export default function Stylish() {
 
   // -- captions ----------------------------------------------------------------
 
-  const generateCaption = useCallback(async (post: Post): Promise<string | null> => {
+  const generateCaption = useCallback(async (post: Post, asReel = false): Promise<string | null> => {
     const specs = buildSlides(post.texts);
     const context =
-      `An Instagram carousel of ${specs.length} slides. The slide text, in order:\n` +
+      `${asReel ? `An Instagram reel that plays these ${specs.length} slides one after another, so the caption should make people stay to the end` : `An Instagram carousel of ${specs.length} slides`}. The slide text, in order:\n` +
       specs.map((s, i) => `${i + 1}. ${s.text}${s.sub ? ` (${s.sub})` : ""}`).join("\n") +
       `\nThe last slide is the call to action. Write a caption that adds something the slides do not already say, ` +
       `and finish with a friendly, low pressure invitation that fits the last slide. ` +
@@ -2173,7 +2178,7 @@ export default function Stylish() {
     const res = await fetch(`${BASE}/api/caption-generator/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tone, context, clinicName: preset?.name }),
+      body: JSON.stringify({ tone, context, clinicName: preset?.name, location: area.trim() || undefined }),
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.caption) throw new Error(data.error || "Caption generation failed");
@@ -2181,7 +2186,7 @@ export default function Stylish() {
     const footnote = preset?.captionFootnote?.trim();
     if (footnote && !caption.includes(footnote)) caption += `\n\n${footnote}`;
     return caption;
-  }, [tone, preset]);
+  }, [tone, preset, area]);
 
   const handleCaptionOne = async (post: Post) => {
     updatePost(post.id, { captionBusy: true });
@@ -2296,7 +2301,7 @@ export default function Stylish() {
     }
   };
 
-  const handleSchedule = async () => {
+  const handleSchedule = async (mode: "carousel" | "reel" = "carousel") => {
     if (!selectedPosts.length) { toast.error("Tick at least one post first"); return; }
     if (!preset) { toast.error("Choose a client first so I know whose account to schedule to"); return; }
     setScheduling("Starting");
@@ -2313,9 +2318,18 @@ export default function Stylish() {
         // holds a whole post (or several posts) of full size images in memory.
         const specs = buildSlides(post.texts);
         const urls: string[] = [];
+        const reelForm = new FormData();
         for (let si = 0; si < specs.length; si++) {
-          setScheduling(`Uploading post ${n} of ${selectedPosts.length} (slide ${si + 1} of ${specs.length})`);
+          setScheduling(`${mode === "reel" ? "Building reel" : "Uploading post"} ${n} of ${selectedPosts.length} (slide ${si + 1} of ${specs.length})`);
           const canvas = await renderSlide(specs[si], photoFor(pi, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 1, { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoFor(pi, post, k)) : undefined }, focusRef.current[`${post.id}:${si}`]);
+          if (mode === "reel") {
+            const blob: Blob | null = await new Promise(r => canvas.toBlob(r, "image/png"));
+            canvas.width = 0; canvas.height = 0;
+            if (!blob) throw new Error("Could not render a slide");
+            reelForm.append("slides", blob, `slide-${si + 1}.png`);
+            await tick();
+            continue;
+          }
           let dataUrl: string | null = canvas.toDataURL("image/png");
           canvas.width = 0; canvas.height = 0;
           const name = `stylish-${pi + 1}-slide-${si + 1}.png`;
@@ -2328,18 +2342,39 @@ export default function Stylish() {
           urls.push(...(got ?? []));
           await tick();
         }
+        let videoUrl: string | undefined;
+        if (mode === "reel") {
+          setScheduling(`Making reel ${n} of ${selectedPosts.length}`);
+          reelForm.append("secondsPerSlide", "2.5");
+          const rr = await fetch(`${BASE}/api/stylish-reel`, { method: "POST", body: reelForm });
+          const rd = await rr.json().catch(() => ({}));
+          if (!rr.ok || !rd.videoUrl) throw new Error(rd.error || "Could not make the reel");
+          videoUrl = rd.videoUrl as string;
+        }
+        // Captions are written here if a post does not have one yet, so nothing is scheduled blank.
+        let caption = post.caption.trim();
+        if (!caption) {
+          setScheduling(`Writing caption ${n} of ${selectedPosts.length}`);
+          try {
+            caption = (await generateCaption(post, mode === "reel")) ?? "";
+            if (caption) updatePost(post.id, { caption });
+          } catch { /* the caption can still be written in the schedule screen */ }
+        }
         items.push({
           title: `${buildSlides(post.texts)[0]?.text ?? `Post ${pi + 1}`} · ${preset.name}`,
-          caption: noDashes(post.caption.trim()),
-          imageUrls: urls,
+          caption: noDashes(caption),
+          ...(mode === "reel" ? { videoUrl } : { imageUrls: urls }),
         });
       }
-      // First post at the next 6.15pm, then one every other day (2880 minutes) at 6.15pm.
+      // First post on the next Monday, Wednesday, Friday or Sunday at 6.15pm, then one on each
+      // posting day after that (the schedule screen does the stepping).
       const start = new Date();
       start.setHours(18, 15, 0, 0);
       if (start.getTime() <= Date.now() + 5 * 60000) start.setDate(start.getDate() + 1);
-      start.setMinutes(start.getMinutes() - start.getTimezoneOffset());
-      setScheduleStart(start.toISOString().slice(0, 16));
+      const first = nthPostingSlot(start, 0);
+      first.setMinutes(first.getMinutes() - first.getTimezoneOffset());
+      setScheduleStart(first.toISOString().slice(0, 16));
+      setScheduleMode(mode);
       setScheduleItems(items);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed");
@@ -2911,6 +2946,12 @@ export default function Stylish() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
+                  <input
+                    value={area}
+                    onChange={e => setArea(e.target.value)}
+                    placeholder="Clinic area for local SEO, e.g. Harrogate, North Yorkshire"
+                    className="h-9 text-sm bg-muted/30 border border-border/40 rounded-md px-3 w-72"
+                  />
                   <Select value={tone} onValueChange={setTone}>
                     <SelectTrigger className="h-9 text-sm bg-muted/30 border-border/40 w-56"><SelectValue /></SelectTrigger>
                     <SelectContent>{TONES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
@@ -2926,8 +2967,11 @@ export default function Stylish() {
                     {sendingFlip ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <ImageIcon className="w-4 h-4 mr-1.5" />}
                     Send to Magazine Flip
                   </Button>
-                  <Button size="sm" onClick={handleSchedule} disabled={!!scheduling} className="bg-pink-600 hover:bg-pink-700 text-white">
+                  <Button size="sm" onClick={() => handleSchedule("carousel")} disabled={!!scheduling} className="bg-pink-600 hover:bg-pink-700 text-white" title="Schedules on Monday, Wednesday, Friday and Sunday">
                     {scheduling ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{scheduling}</> : <><CalendarClock className="w-4 h-4 mr-1.5" />Schedule</>}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => handleSchedule("reel")} disabled={!!scheduling} title="Turns each ticked post into a 1080x1440 reel, writes captions and schedules on Monday, Wednesday, Friday and Sunday. Tick 'trial reel' on the next screen if you want it as a trial.">
+                    <Film className="w-4 h-4 mr-1.5" />Make into reels
                   </Button>
                 </div>
               </div>
@@ -3227,12 +3271,11 @@ export default function Stylish() {
         <ScheduleModal
           presetId={preset.id}
           presetName={preset.name}
-          postType="carousel"
+          postType={scheduleMode}
           posts={scheduleItems}
           perPostCaptions
           initialScheduledAt={scheduleStart}
-          initialGapMinutes={2880}
-          keepClockTime
+          postingDays
           sourceTool="stylish"
           onClose={() => setScheduleItems(null)}
           onSaved={() => setScheduleItems(null)}

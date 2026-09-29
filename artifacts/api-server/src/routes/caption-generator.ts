@@ -37,11 +37,13 @@ WRITING RULES (non-negotiable)
 
 router.post("/caption-generator/generate", async (req: Request, res: Response) => {
   try {
-    const { tone, context, clinicName } = req.body as {
+    const { tone, context, clinicName, location } = req.body as {
       tone?: string;
       context?: string;
       clinicName?: string;
+      location?: string;
     };
+    const area = typeof location === "string" ? location.replace(/[\r\n]+/g, " ").trim().slice(0, 120) : "";
 
     if (!context || !context.trim()) {
       res.status(400).json({ error: "Context is required" });
@@ -56,6 +58,8 @@ router.post("/caption-generator/generate", async (req: Request, res: Response) =
 TONE: ${tonePrompt}
 
 ${clinicName ? `Clinic: ${clinicName}` : ""}
+${area ? `
+LOCAL SEO: the clinic is in ${area}. Make the caption strong for local search on Instagram and Facebook. Name ${area} naturally once or twice in the body, the way a local would say it, and use the treatment name in plain words a client would type into a search bar. End with one line of hashtags: a mix of 2 or 3 local ones (for example the town, the county or region, and the treatment plus the town as one tag) and 2 or 3 broader treatment tags. Never invent a street address, a postcode or a landmark, and only use the place names given here. Do not stuff keywords. It must still read like a person talking.` : ""}
 
 Write one caption for the post described below. Return plain text only, no JSON, no quote marks around it, no title.
 ${BASE_RULES}`;
