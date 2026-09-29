@@ -21,12 +21,14 @@ const TONES = [
 ];
 
 const pad = (n: number) => String(n).padStart(2, "0");
-const SLOTS = [
-  ...Array.from({ length: 8 }, (_, i) => ({ id: `ww-${pad(i + 1)}`, label: `Winter ${i + 1}` })),
-  ...Array.from({ length: 8 }, (_, i) => ({ id: `au-${pad(i + 1)}`, label: `Autumn ${i + 1}` })),
-];
+// Autumn and winter alternate, so the photos run autumn, winter, autumn, winter and so on.
+const SLOTS = Array.from({ length: 8 }, (_, i) => [
+  { id: `au-${pad(i + 1)}`, label: `Autumn ${i + 1}` },
+  { id: `ww-${pad(i + 1)}`, label: `Winter ${i + 1}` },
+]).flat();
 
-const ROW_GROUPS = ["Treatment", "Treatment", "Treatment", "Treatment", "Funny", "Funny", "Funny", "Funny", "Aesthetics", "Aesthetics", "Aesthetics", "Aesthetics", "Menopause and ageing", "Menopause and ageing", "Menopause and ageing", "Menopause and ageing"];
+// The pack repeats funny, treatment, things that, shareable four times.
+const ROW_GROUPS = Array.from({ length: 16 }, (_, i) => ["Funny", "Treatment", "Things that", "Shareable"][i % 4]);
 
 type CardStatus = "idle" | "generating" | "success" | "failed" | "rate-limited";
 type Card = { scenarioId: string; status: CardStatus; outputImageUrl?: string; failureReason?: string };
@@ -191,9 +193,10 @@ export default function ClientStylish() {
   };
 
   const slotFileName = (slotId: string, mime: string) => {
-    const slot = SLOTS.find(s => s.id === slotId)!;
+    const idx = SLOTS.findIndex(s => s.id === slotId);
     const ext = mime.includes("jpeg") ? "jpg" : mime.includes("webp") ? "webp" : "png";
-    return `${packName} Stylish ${slot.label}.${ext}`;
+    // The running number keeps autumn, winter, autumn, winter in order if the photos are uploaded again.
+    return `${packName} Stylish ${pad(idx + 1)} ${SLOTS[idx].label}.${ext}`;
   };
 
   const collectImages = async (): Promise<File[]> => {

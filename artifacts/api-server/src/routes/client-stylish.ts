@@ -121,6 +121,25 @@ async function readWebsite(website: string, treatments: string[]): Promise<strin
   return parts.join("\n\n").slice(0, MAX_SITE_CHARS);
 }
 
+// Words that must never reach a post: prescription only medicines and the claims wording
+// the ASA and MHRA object to. Checked in code as well as in the prompt.
+const BANNED_TERMS = /\b(botox|botulinum(?:\s+toxin)?|bocouture|azzalure|dysport|xeomin|vistabel|nuceiva|letybo|baby[\s-]?tox|tox|anti[\s-]?wrinkle|antiwrinkle|wrinkle[\s-]?relax\w*|ozempic|wegovy|mounjaro|saxenda|semaglutide|tirzepatide|liraglutide)\b/gi;
+
+// Swaps banned words for the compliant wording, so the model never sees them in its input.
+function neutralise(text: string): string {
+  return text.replace(BANNED_TERMS, "smoothing treatments").replace(/(smoothing treatments)[®™]/g, "$1");
+}
+
+function findBanned(rows: Row[]): string[] {
+  const hits = new Set<string>();
+  for (const r of rows) {
+    for (const k of ROW_KEYS) {
+      for (const m of r[k].match(BANNED_TERMS) ?? []) hits.add(m.toLowerCase());
+    }
+  }
+  return [...hits];
+}
+
 function clean(text: unknown): string {
   return String(text ?? "")
     .replace(/\s*[—–]\s*/g, ", ")
@@ -151,26 +170,34 @@ A Stylish carousel pack for one clinic: exactly 16 posts, each one a row of shor
 Each row has: headline, subtitle, text1, text2, text3, cta.
 The headline and subtitle read together as one line (headline is the punchy start, subtitle is the finish, for example headline "5 reasons" and subtitle "to always wear SPF"). text1 to text3 are the three follow on slides. Keep every cell short because it sits on a photo: headline up to 5 words, subtitle up to 8 words, each text up to 16 words, cta up to 8 words.
 
-THE 16 ROWS, IN THIS ORDER
-Rows 1 to 4: treatment posts. Cover the 3 treatments the clinic is promoting this month. Row 1, 2 and 3 take one treatment each, in the order given. Row 4 is a second, different angle on the first treatment. Use real details, names and wording from the website text. Never invent a treatment or a claim the website does not support.
-Rows 5 to 8: funny posts.
-Rows 9 to 12: posts about aesthetics.
-Rows 13 to 16: posts about menopause, growing old, and women being hotter than ever these days.
+THE 16 ROWS: FOUR KINDS OF POST, MIXED
+The pack is four kinds of post, four of each, repeating in this order so the feed always feels varied: funny, treatment, things that, shareable. So rows 1, 5, 9 and 13 are funny; rows 2, 6, 10 and 14 are treatment; rows 3, 7, 11 and 15 are "things that"; rows 4, 8, 12 and 16 are shareable.
+
+FUNNY (rows 1, 5, 9, 13): Made-up moments and observations that make her laugh out loud or snort at her phone. Recognisable, a bit cheeky, affectionate towards women over 35, the sort of post she tags a friend on. Fresh angles, not stock jokes.
+
+TREATMENT (rows 2, 6, 10, 14): Rows 2, 6 and 10 take the 3 treatments in the order given. Row 14 is a second, different angle on the first treatment. Use real details, names and wording from the website text, and never invent a treatment or a claim the website does not support. Do not write a list of benefits. Find an unexpected way in: a small human moment, a question she has been too shy to ask, a gentle myth to lay to rest, what a first consultation is actually like, a tiny story from the treatment room. Stealth sales: she should finish it feeling curious and comfortable, never sold to.
+
+THINGS THAT (rows 3, 7, 11, 15): Not about the clinic, treatments or skin at all. A relatable list she reads and instantly thinks "oh my god, yes" and comments on. The headline and subtitle read as the title (for example headline "Things Every", subtitle "90s Bathroom Had") and text 1 to 3 are three specific, funny, vivid items. Use nostalgia, life stages, family life, friendships, being a woman of a certain age, the small daily things nobody mentions. Make the items hyper specific, because the specific detail is what makes people comment "you forgot X". Use four completely different themes across the four rows.
+
+SHAREABLE (rows 4, 8, 12, 16): The post she sends to her sister or her best friend, or saves for a bad day. Say the thing every woman feels but nobody has quite put into words, or give a warm counterintuitive take, or a tiny honest confession, or a line worth screenshotting. Warm and emotional, about friendship, growing older, confidence, time, being seen. No selling. Never a stock quote line like "you are enough": it has to feel original, specific and true.
+
+ENGAGEMENT AND ORIGINALITY
+Everything is written to earn comments, saves, shares and tags. Think outside the box: every row needs an angle you would not see on another clinic's page. Never write the obvious post about the topic. If a line could appear on any clinic's feed, rewrite it.
 
 VOICE AND AUDIENCE
 Write in the first person, as the clinic owner speaking. UK spelling, no Americanisms. Never use em dashes or en dashes. Use commas, full stops or colons.
 Write for the consumer psychology of women over 35: stealth sales, high engagement, emotion, humour, affable. No boring medical education, make it fun.
-Humanise it. No AI patter, no "not X, not Y" constructions, no "Most clinics don't have an X problem, they have a Y problem", no rhetorical question openers, no TED talk rule of three. Never use the word "fluff". Be original, avoid stock lines seen all over the industry.
+Humanise it. No AI patter, no "not X, not Y" constructions, no "Most clinics don't have an X problem, they have a Y problem", no rhetorical question openers, no TED talk escalations. Never use the word "fluff". Be original, avoid stock lines seen all over the industry.
 Use the clinician notes for voice and any personal detail, if given.
 
 HOOKS (the most important part)
 The headline and subtitle together are the hook, and it has to stop a thumb mid scroll. Every hook must be funny, or stir a real feeling, or both: recognition ("that is so me"), nostalgia, a gentle laugh at ourselves, tenderness, pride, a little bit cheeky. A hook that only states a topic is not good enough. Make it specific and human rather than general. Warm, never shaming: never make the reader feel bad about her face, body or age, and laugh with her, not at her.
 
-COMPLIANCE (CAP Code, ASA and MHRA)
-Never name a prescription only medicine, including Botox, and never say "anti-wrinkle". Say facial aesthetics, smoothing treatments or injectable treatments. No guarantees, no before and after claims, no medical claims, no "safe", no superlatives like best or number one, no pressure, urgency or scarcity language. Frame treatments as a consultation and a possibility ("may help", "can support").
+COMPLIANCE (CAP Code, ASA and MHRA), NON NEGOTIABLE
+NEVER write the words Botox, botulinum, toxin brand names (Bocouture, Azzalure, Dysport, Xeomin, Vistabel and the like), "tox", "baby tox", "anti-wrinkle", "antiwrinkle" or "wrinkle relaxer", and never name any prescription only medicine (including weight loss injections such as Ozempic, Wegovy or Mounjaro), in any cell of any row. This applies even if the website or the treatment list uses those words: where they do, say "smoothing treatments" or "facial aesthetics" instead. No guarantees, no before and after claims, no medical claims, no "safe", no superlatives like best or number one, no pressure, urgency or scarcity language. Frame treatments as a consultation and a possibility ("may help", "can support").
 
 CTA
-Every cta is a strong, stealth sales friendly call to action, such as a warm invitation to book a consultation or send a message. Vary them across rows. Never pushy.
+Every cta is a strong, stealth sales friendly call to action, varied across the rows and never pushy. On treatment rows it warmly invites a consultation or a message. On funny, things that and shareable rows it asks for a comment, a share, a save or a tag ("Tag the friend who...", "Comment the one I forgot") and is worded so it also warmly draws her into the clinic's world (follow along, send a message, come and say hello).
 
 BANNED WORDS
 elevate, transform, unlock, journey, empower, revolutionise, game-changer, dive into, harness, leverage, delve, navigate, streamline, cutting-edge, holistic, synergy, bespoke, unleash, tapestry, landscape, realm, testament, seamless, effortless, next level, top-tier, spoiler alert, trust me.
@@ -228,7 +255,7 @@ router.post("/client-stylish/copy", upload.array("screenshots", 3), async (req: 
     const rawTreatments = body.treatments;
 
     const cleanTreatments = (Array.isArray(rawTreatments) ? rawTreatments : rawTreatments ? [rawTreatments] : [])
-      .map((t) => String(t ?? "").trim())
+      .map((t) => neutralise(String(t ?? "").trim()))
       .filter(Boolean)
       .slice(0, 3);
     if (!clientName.trim()) { res.status(400).json({ error: "Client name is required" }); return; }
@@ -241,7 +268,8 @@ router.post("/client-stylish/copy", upload.array("screenshots", 3), async (req: 
       readTopPostShots((req.files as Express.Multer.File[] | undefined) ?? []),
     ]);
     const siteFound = siteText.length > 200;
-    const topPosts = [shotText, pastedTop].filter(Boolean).join("\n").slice(0, 4000);
+    const safeSite = neutralise(siteText);
+    const topPosts = neutralise([shotText, pastedTop].filter(Boolean).join("\n")).slice(0, 4000);
     const topPostsCount = topPosts ? topPosts.split("\n").filter((l) => l.trim()).length : 0;
 
     const system = `You write copy for Vanessa Wormald's clients, UK aesthetic clinics.
@@ -254,16 +282,17 @@ Treatments to promote this month, in order:
 1. ${cleanTreatments[0]}
 2. ${cleanTreatments[1]}
 3. ${cleanTreatments[2]}
-${notes.trim() ? `Notes about the clinician: ${notes.trim()}\n` : ""}${topPosts ? `\nTOP PERFORMING POSTS, most engaged first:\n${topPosts}\n` : ""}
-${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${siteText}` : "The website could not be read. Keep the treatment posts general and do not state any specific detail, price or claim about the treatments."}`;
+${notes.trim() ? `Notes about the clinician: ${neutralise(notes.trim())}\n` : ""}${topPosts ? `\nTOP PERFORMING POSTS, most engaged first:\n${topPosts}\n` : ""}
+${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${safeSite}` : "The website could not be read. Keep the treatment posts general and do not state any specific detail, price or claim about the treatments."}`;
 
     let rows: Row[] = [];
-    for (let attempt = 0; attempt < 2 && rows.length !== 16; attempt++) {
+    let feedback = "";
+    for (let attempt = 0; attempt < 3; attempt++) {
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           { role: "system", content: system },
-          { role: "user", content: user },
+          { role: "user", content: user + feedback },
         ],
         response_format: { type: "json_object" },
         temperature: 0.9,
@@ -283,6 +312,25 @@ ${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${siteText
       } catch {
         rows = [];
       }
+      if (rows.length !== 16) {
+        feedback = "\n\nYour last answer did not have exactly 16 rows. Return exactly 16 rows.";
+        continue;
+      }
+      const hits = findBanned(rows);
+      if (!hits.length) break;
+      feedback = `\n\nYour last answer used banned compliance wording (${hits.join(", ")}). Rewrite all 16 rows without any of those words, using "smoothing treatments" or "facial aesthetics" where needed.`;
+    }
+
+    // Last line of defence: if a banned word still slipped through, swap it out in code.
+    if (rows.length === 16) {
+      rows = rows.map((r) => ({
+        headline: neutralise(r.headline),
+        subtitle: neutralise(r.subtitle),
+        text1: neutralise(r.text1),
+        text2: neutralise(r.text2),
+        text3: neutralise(r.text3),
+        cta: neutralise(r.cta),
+      }));
     }
 
     if (rows.length !== 16) {
