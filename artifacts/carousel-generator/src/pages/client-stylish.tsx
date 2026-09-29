@@ -356,31 +356,6 @@ export default function ClientStylish() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Their top performing posts <span className="text-muted-foreground font-normal">(optional)</span></Label>
-            <p className="text-xs text-muted-foreground">I pull their top 10 from their Instagram myself when the client is connected in your tools, so you do not need to add anything here. Only add screenshots or paste lines if you want to override that.</p>
-            <div className="flex flex-wrap items-center gap-2">
-              {shots.map((f, i) => (
-                <span key={i} className="inline-flex items-center gap-1 rounded-md border border-sky-500/40 bg-sky-500/5 px-2 py-1 text-xs">
-                  <span className="max-w-[140px] truncate">{f.name}</span>
-                  <button onClick={() => setShots(prev => prev.filter((_, j) => j !== i))} aria-label="Remove screenshot" className="text-muted-foreground hover:text-foreground"><X className="w-3 h-3" /></button>
-                </span>
-              ))}
-              {shots.length < 3 && (
-                <Button type="button" size="sm" variant="outline" onClick={() => shotRef.current?.click()}>
-                  <Upload className="w-3.5 h-3.5 mr-1.5" />Add screenshot
-                </Button>
-              )}
-            </div>
-            <input ref={shotRef} type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden"
-              onChange={e => {
-                const picked = Array.from(e.target.files ?? []).filter(f => f.type.startsWith("image/"));
-                setShots(prev => [...prev, ...picked].slice(0, 3));
-                e.target.value = "";
-              }} />
-            <Textarea value={topText} onChange={e => setTopText(e.target.value)} rows={4} placeholder="Or paste their best posts here, one per line, with the likes if you have them." />
-          </div>
-
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">About the clinician <span className="text-muted-foreground font-normal">(optional)</span></Label>
             <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="A few words on who they are, so the voice fits them." />
