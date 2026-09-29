@@ -855,7 +855,7 @@ export default function PresetsPage() {
                       />
                     </div>
                     <div className="space-y-3 rounded-xl border border-gray-800 p-3">
-                      <p className="text-xs font-semibold text-gray-300">Newsletter details</p>
+                      <p className="text-xs font-semibold text-gray-300">Client details: website, area and newsletter</p>
                       <div>
                         <Label className="text-xs text-gray-400">Booking link</Label>
                         <Input
