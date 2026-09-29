@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link, useLocation } from "wouter";
-import { ArrowLeft, Loader2, Upload, Check, AlertTriangle, Download, Palette, RotateCw, X } from "lucide-react";
+import { ArrowLeft, Loader2, Upload, Check, AlertTriangle, Download, Palette, RotateCw, X, Film } from "lucide-react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { toast } from "sonner";
@@ -213,11 +213,11 @@ export default function ClientStylish() {
     return files;
   };
 
-  const handleOpenInStylish = async () => {
+  const handleOpenInStylish = async (intent?: "reels") => {
     setBusy(true);
     try {
       const files = await collectImages();
-      const ok = await setStylishHandoff({ files, csv, csvName: `${packName} Stylish.csv`, clientName: clientName.trim(), location: area.trim() || undefined });
+      const ok = await setStylishHandoff({ files, csv, csvName: `${packName} Stylish.csv`, clientName: clientName.trim(), location: area.trim() || undefined, intent });
       if (!ok) throw new Error("Stylish could not be loaded from here, please download instead");
       setLocation("/stylish");
     } catch (e) {
@@ -480,9 +480,12 @@ export default function ClientStylish() {
               )}
 
               <div className="flex flex-wrap items-center gap-3">
-                <Button onClick={handleOpenInStylish} disabled={!packReady || busy}>
+                <Button onClick={() => handleOpenInStylish()} disabled={!packReady || busy}>
                   {busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Palette className="w-4 h-4 mr-2" />}
                   Open in Stylish
+                </Button>
+                <Button variant="outline" onClick={() => handleOpenInStylish("reels")} disabled={!packReady || busy} title="Loads the pack in Stylish, ready to turn into reels or send to Magazine Flip">
+                  <Film className="w-4 h-4 mr-2" />Open in Stylish and make reels
                 </Button>
                 <Button variant="outline" onClick={handleDownloadImages} disabled={doneCount === 0 || busy}>
                   <Download className="w-4 h-4 mr-2" />Download photos

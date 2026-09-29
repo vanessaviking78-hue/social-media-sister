@@ -1760,6 +1760,7 @@ export default function Stylish() {
       setPendingClient(h.clientName);
       if (h.location) setArea(h.location);
       toast.success(`${h.clientName} pack loaded: ${h.files.length} photos and the CSV.`);
+      if (h.intent === "reels") toast.message("Pick the look, tick the posts you want, then press Make into reels. Each post also has a Magazine Flip reel button above its caption.", { duration: 12000 });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
