@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect, useMemo, type PointerEvent as ReactPointerEvent } from "react";
 import { Link } from "wouter";
 import { setFlipHandoff } from "@/lib/flip-handoff";
+import { takeStylishHandoff } from "@/lib/stylish-handoff";
 import {
   ArrowLeft, FileText, Download, Loader2, CalendarClock, CheckCircle2, ImageIcon,
   Sparkles, Palette, RotateCcw, Wand2, Trash2, Move, ArrowUpDown,
@@ -1743,6 +1744,31 @@ export default function Stylish() {
   const downloadSample = () => {
     saveAs(new Blob([SAMPLE_CSV], { type: "text/csv;charset=utf-8" }), "stylish-sample.csv");
   };
+
+  // A pack made on the Client Stylish page (16 photos and the CSV) arrives here ready to style.
+  const [pendingClient, setPendingClient] = useState<string | null>(null);
+  useEffect(() => {
+    takeStylishHandoff().then(h => {
+      if (!h) return;
+      setImages(h.files);
+      setOverrides({});
+      focusRef.current = {};
+      parseCsv(new File([h.csv], h.csvName, { type: "text/csv" }));
+      setPendingClient(h.clientName);
+      toast.success(`${h.clientName} pack loaded: ${h.files.length} photos and the CSV.`);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    if (!pendingClient || presetsLoading) return;
+    const n = pendingClient.trim().toLowerCase();
+    const match =
+      presets.find(p => p.name.trim().toLowerCase() === n) ??
+      (n.length >= 4 ? presets.find(p => { const pn = p.name.trim().toLowerCase(); return pn.length >= 4 && (pn.includes(n) || n.includes(pn)); }) : undefined);
+    if (match) chooseClient(match.id);
+    setPendingClient(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingClient, presetsLoading, presets]);
 
   // -- live thumbnails -------------------------------------------------------
 
