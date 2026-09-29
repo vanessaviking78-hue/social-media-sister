@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
+import multer from "multer";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { CAPTION_TONE_PROMPTS } from "./caption-generator";
 import { validateHost } from "./aiPortrait";
@@ -8,6 +9,10 @@ import { validateHost } from "./aiPortrait";
 // made by the existing AI Photo Studio endpoints, so this route only does the copy.
 
 const router: IRouter = Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024, files: 3 },
+});
 
 const CSV_HEADER = ["headline", "subtitle", "text 1", "text 2", "text 3", "cta"];
 const ROW_KEYS = ["headline", "subtitle", "text1", "text2", "text3", "cta"] as const;
@@ -135,6 +140,11 @@ function buildCsv(rows: Row[]): string {
   return lines.join("\n");
 }
 
+const TOP_POSTS_RULES = `
+THE CLINIC'S TOP PERFORMING POSTS
+The user message lists this clinic's own best performing posts, most engaged first. These are proven winners with this audience. Before writing, work out what they have in common: the kind of hook, the subject matter, the feeling they trigger, how personal they are, how long they run. Then write all 16 rows in that same family: the same kind of hooks, angles and emotions, about fresh things.
+Never copy a top post or lightly reword it, every row must be new. Only echo a personal fact or credential (a career history, a number of years, a qualification) if it appears in the top posts or the clinician notes, and never invent one.`;
+
 const STRUCTURE_RULES = `
 WHAT YOU ARE WRITING
 A Stylish carousel pack for one clinic: exactly 16 posts, each one a row of short text that sits over photos.
@@ -153,6 +163,9 @@ Write for the consumer psychology of women over 35: stealth sales, high engageme
 Humanise it. No AI patter, no "not X, not Y" constructions, no "Most clinics don't have an X problem, they have a Y problem", no rhetorical question openers, no TED talk rule of three. Never use the word "fluff". Be original, avoid stock lines seen all over the industry.
 Use the clinician notes for voice and any personal detail, if given.
 
+HOOKS (the most important part)
+The headline and subtitle together are the hook, and it has to stop a thumb mid scroll. Every hook must be funny, or stir a real feeling, or both: recognition ("that is so me"), nostalgia, a gentle laugh at ourselves, tenderness, pride, a little bit cheeky. A hook that only states a topic is not good enough. Make it specific and human rather than general. Warm, never shaming: never make the reader feel bad about her face, body or age, and laugh with her, not at her.
+
 COMPLIANCE (CAP Code, ASA and MHRA)
 Never name a prescription only medicine, including Botox, and never say "anti-wrinkle". Say facial aesthetics, smoothing treatments or injectable treatments. No guarantees, no before and after claims, no medical claims, no "safe", no superlatives like best or number one, no pressure, urgency or scarcity language. Frame treatments as a consultation and a possibility ("may help", "can support").
 
@@ -166,39 +179,82 @@ OUTPUT
 Return only JSON in this exact shape, with exactly 16 objects in "rows":
 {"rows":[{"headline":"","subtitle":"","text1":"","text2":"","text3":"","cta":""}]}`;
 
-router.post("/client-stylish/copy", async (req: Request, res: Response) => {
+// Reads screenshots of a clinic's "Top performing posts" list into plain text.
+async function readTopPostShots(files: Express.Multer.File[]): Promise<string> {
+  const images = files.filter((f) => f.mimetype.startsWith("image/"));
+  if (!images.length) return "";
   try {
-    const { clientName, website, treatments, tone, notes } = req.body as {
-      clientName?: string;
-      website?: string;
-      treatments?: string[];
-      tone?: string;
-      notes?: string;
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: 'These are screenshots of a clinic\'s top performing social media posts. For every post you can see, write out its opening line exactly as shown, plus its likes and comments numbers if visible. Keep the order shown. Return only JSON: {"posts":[{"hook":"","likes":0,"comments":0}]}',
+            },
+            ...images.map((f) => ({
+              type: "image_url" as const,
+              image_url: { url: `data:${f.mimetype};base64,${f.buffer.toString("base64")}` },
+            })),
+          ],
+        },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0,
+      max_tokens: 1500,
+    });
+    const parsed = JSON.parse(completion.choices[0]?.message?.content ?? "{}") as {
+      posts?: { hook?: string; likes?: number; comments?: number }[];
     };
+    return (parsed.posts ?? [])
+      .filter((p) => p.hook?.trim())
+      .map((p, i) => `${i + 1}. ${clean(p.hook)} (${p.likes ?? "?"} likes, ${p.comments ?? "?"} comments)`)
+      .join("\n");
+  } catch {
+    return "";
+  }
+}
 
-    const cleanTreatments = (Array.isArray(treatments) ? treatments : [])
+router.post("/client-stylish/copy", upload.array("screenshots", 3), async (req: Request, res: Response) => {
+  try {
+    const body = req.body as Record<string, string | string[] | undefined>;
+    const clientName = String(body.clientName ?? "");
+    const website = String(body.website ?? "");
+    const tone = String(body.tone ?? "4");
+    const notes = String(body.notes ?? "");
+    const pastedTop = String(body.topPosts ?? "").trim();
+    const rawTreatments = body.treatments;
+
+    const cleanTreatments = (Array.isArray(rawTreatments) ? rawTreatments : rawTreatments ? [rawTreatments] : [])
       .map((t) => String(t ?? "").trim())
       .filter(Boolean)
       .slice(0, 3);
-    if (!clientName?.trim()) { res.status(400).json({ error: "Client name is required" }); return; }
-    if (!website?.trim()) { res.status(400).json({ error: "Website is required" }); return; }
+    if (!clientName.trim()) { res.status(400).json({ error: "Client name is required" }); return; }
+    if (!website.trim()) { res.status(400).json({ error: "Website is required" }); return; }
     if (cleanTreatments.length !== 3) { res.status(400).json({ error: "Please give me 3 treatments" }); return; }
 
-    const tonePrompt = CAPTION_TONE_PROMPTS[String(tone ?? "4")] ?? CAPTION_TONE_PROMPTS["4"];
-    const siteText = await readWebsite(website.trim(), cleanTreatments);
+    const tonePrompt = CAPTION_TONE_PROMPTS[tone] ?? CAPTION_TONE_PROMPTS["4"];
+    const [siteText, shotText] = await Promise.all([
+      readWebsite(website.trim(), cleanTreatments),
+      readTopPostShots((req.files as Express.Multer.File[] | undefined) ?? []),
+    ]);
     const siteFound = siteText.length > 200;
+    const topPosts = [shotText, pastedTop].filter(Boolean).join("\n").slice(0, 4000);
+    const topPostsCount = topPosts ? topPosts.split("\n").filter((l) => l.trim()).length : 0;
 
     const system = `You write copy for Vanessa Wormald's clients, UK aesthetic clinics.
 
 WRITING STYLE: ${tonePrompt}
-${STRUCTURE_RULES}`;
+${STRUCTURE_RULES}${topPosts ? `\n${TOP_POSTS_RULES}` : ""}`;
 
     const user = `Clinic: ${clientName.trim()}
 Treatments to promote this month, in order:
 1. ${cleanTreatments[0]}
 2. ${cleanTreatments[1]}
 3. ${cleanTreatments[2]}
-${notes?.trim() ? `Notes about the clinician: ${notes.trim()}\n` : ""}
+${notes.trim() ? `Notes about the clinician: ${notes.trim()}\n` : ""}${topPosts ? `\nTOP PERFORMING POSTS, most engaged first:\n${topPosts}\n` : ""}
 ${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${siteText}` : "The website could not be read. Keep the treatment posts general and do not state any specific detail, price or claim about the treatments."}`;
 
     let rows: Row[] = [];
@@ -234,7 +290,7 @@ ${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${siteText
       return;
     }
 
-    res.json({ rows, csv: buildCsv(rows), siteFound });
+    res.json({ rows, csv: buildCsv(rows), siteFound, topPostsCount });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Copy generation failed";
     req.log.error({ err }, "client-stylish/copy failed");
