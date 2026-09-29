@@ -75,6 +75,8 @@ type Style = {
   cvBlock: string;
   cvBand: string;
   cvBandOn: boolean;
+  cvBlockAll: string; // set by "Change all": this block colour wins on every cover option
+  cvBandAll: string;  // same for the bottom band
   cvPhoto: number;   // photo share of the slide, in percent
   cvFocus: number;   // where the photo is cropped, in percent
   cvY: number;       // vertical position, centred cover only
@@ -282,6 +284,8 @@ const DEFAULT_STYLE: Style = {
   cvAllColour: "#ffffff",
   cvAllSubColour: "#ffffff",
   cvBand: "#666666",
+  cvBlockAll: "",
+  cvBandAll: "",
   cvY: 58,
   cvScrim: 0,
   cvGradOn: false,
@@ -403,6 +407,12 @@ function styleForSlide(style: Style, post: Post, kind: SlideKind): Style {
   if (kind !== "cover") return style;
   let out = style;
   if (post.cover && post.cover !== style.coverLayout) out = { ...style, ...COVER_PRESETS[post.cover] } as Style;
+  // A picture block (such as leopard print) chosen for the whole set is kept on every cover option.
+  if (TEXTURES[style.cvBlock]) out = { ...out, cvBlock: style.cvBlock };
+  // "Change all" colours win over each cover option's own designed colours, so posts on their own
+  // option do not slip back to that option's white block or grey band.
+  if (style.cvBlockAll) out = { ...out, cvBlock: style.cvBlockAll };
+  if (style.cvBandAll) out = { ...out, cvBand: style.cvBandAll };
   if (style.cvAll) out = { ...out, cvColour: style.cvAllColour, cvSubColour: style.cvAllSubColour };
   if (post.coverColour) out = { ...out, cvColour: post.coverColour };
   if (post.coverSubColour) out = { ...out, cvSubColour: post.coverSubColour };
@@ -695,6 +705,29 @@ function drawPaperclip(ctx: CanvasRenderingContext2D, x: number, y: number) {
   ctx.restore();
 }
 
+// Picture fills for a cover's block colour. A block colour of one of these keys paints the picture
+// instead of a flat colour. The pictures live in the public/textures folder.
+const TEXTURES: Record<string, { label: string; file: string }> = {
+  "texture:leopard": { label: "Leopard print", file: "textures/leopard.jpg" },
+};
+const textureCache = new Map<string, HTMLImageElement>();
+function preloadTexture(value: string): Promise<void> {
+  const t = TEXTURES[value];
+  if (!t || textureCache.has(value)) return Promise.resolve();
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => { textureCache.set(value, img); resolve(); };
+    img.onerror = () => resolve();
+    img.src = `${import.meta.env.BASE_URL}${t.file}`;
+  });
+}
+// A flat colour, or the picture pattern when the value is a texture key that has loaded.
+function blockFill(ctx: CanvasRenderingContext2D, value: string): string | CanvasPattern {
+  const img = textureCache.get(value);
+  if (img) { const pat = ctx.createPattern(img, "repeat"); if (pat) return pat; }
+  return TEXTURES[value] ? "#8a6a3b" : value;
+}
+
 // Metallic cover text. A headline or subtitle colour of one of the METALLICS keys below paints
 // with a shine-sweep gradient instead of a flat colour.
 const METALLICS: Record<string, { label: string; stops: [number, string][] }> = {
@@ -754,7 +787,7 @@ async function drawCoverMore(
     if (b) opened.push(b);
     return b;
   };
-  const fill = (c: string) => { ctx.fillStyle = c; ctx.fillRect(0, 0, W, H); };
+  const fill = (c: string) => { ctx.fillStyle = blockFill(ctx, c); ctx.fillRect(0, 0, W, H); };
   const scrim = () => { if (style.cvScrim > 0) { ctx.fillStyle = `rgba(0,0,0,${style.cvScrim / 100})`; ctx.fillRect(0, 0, W, H); } };
   // Headline: from a top edge, or centred on a height.
   const heading = (x: number, where: { top?: number; centre?: number }, maxW: number, maxLines: number, align: CanvasTextAlign, factor = 0.96) => {
@@ -815,7 +848,7 @@ async function drawCoverMore(
         if (e) drawPhotoIn(ctx, e, sx + 22, gap + i * (ph + gap), sw - 44, ph, { x: 50, y: 50 });
       }
       const bx = sx + sw, by = Math.round(H * 0.68), bh = Math.round(H * 0.26);
-      ctx.fillStyle = style.cvBlock;
+      ctx.fillStyle = blockFill(ctx, style.cvBlock);
       ctx.fillRect(bx, by, W - bx, bh);
       const r = heading(bx + 50, { top: by + 44 }, W - bx - 100, 2, "left");
       subtitle(bx + 50, r.bottom + 14, W - bx - 100, "left");
@@ -889,7 +922,7 @@ async function drawCoverMore(
       if (b) drawPhotoIn(ctx, b, 0, 0, W, H, at);
       applyCoverGradient(ctx, style, 0, 0, W, H);
       const bx = Math.round(W * 0.07), bw = Math.round(W * (style.cvPhoto / 100));
-      ctx.fillStyle = style.cvBlock;
+      ctx.fillStyle = blockFill(ctx, style.cvBlock);
       ctx.fillRect(bx, 0, bw, H);
       const r = heading(bx + 34, { top: Math.round((style.cvY / 100) * H) }, bw - 68, 3, "left");
       subtitle(bx + 50, r.bottom + 50, bw - 100, "left");
@@ -900,7 +933,7 @@ async function drawCoverMore(
       if (b) drawPhotoIn(ctx, b, 0, 0, W, H, at);
       applyCoverGradient(ctx, style, 0, 0, W, H);
       const px = Math.round(W * 0.1), py = Math.round(H * 0.1), pw = Math.round(W * 0.8), ph = Math.round(H * 0.8);
-      ctx.fillStyle = style.cvBlock;
+      ctx.fillStyle = blockFill(ctx, style.cvBlock);
       ctx.fillRect(px, py, pw, ph);
       const cw = Math.round(pw / 2), ch = Math.round(ph / 2), m = 18;
       const e0 = await open(extras[0] ?? photo), e1 = await open(extras[1] ?? photo);
@@ -922,7 +955,7 @@ async function drawCoverMore(
       const front = await open(extras[0] ?? photo);
       const cardX = Math.round(W * 0.283), cardW = Math.round(W * 0.4), cardY = Math.round(H * 0.235), cardH = Math.round(H * 0.545);
       shadowOn();
-      ctx.fillStyle = style.cvBlock;
+      ctx.fillStyle = blockFill(ctx, style.cvBlock);
       ctx.fillRect(cardX, cardY, cardW, cardH);
       shadowOff();
       drawPolaroid(ctx, front, Math.round(W * 0.485), Math.round(H * 0.415), Math.round(W * 0.505), Math.round(H * 0.4), 0.03, "#f4f3f0", Math.round(W * 0.02), Math.round(H * 0.03));
@@ -975,7 +1008,7 @@ async function drawCover(
   if (layout === "band") {
     const photoH = Math.round(H * (style.cvPhoto / 100));
     const bandH = H - photoH;
-    ctx.fillStyle = style.cvBlock;
+    ctx.fillStyle = blockFill(ctx, style.cvBlock);
     ctx.fillRect(0, 0, W, H);
     if (bmp) drawPhotoIn(ctx, bmp, 0, 0, W, photoH, at);
     applyCoverGradient(ctx, style, 0, 0, W, photoH);
@@ -992,7 +1025,7 @@ async function drawCover(
     if (subLines.length) { setSub(); drawLines(subLines, x + subTextAt.dx, y + subTextAt.dy, subLineH, "left"); }
   } else if (layout === "block") {
     const photoH = Math.round(H * (style.cvPhoto / 100));
-    ctx.fillStyle = style.cvBlock;
+    ctx.fillStyle = blockFill(ctx, style.cvBlock);
     ctx.fillRect(0, 0, W, H);
     if (bmp) drawPhotoIn(ctx, bmp, 0, 0, W, photoH, at);
     applyCoverGradient(ctx, style, 0, 0, W, photoH);
@@ -1011,7 +1044,7 @@ async function drawCover(
     }
   } else if (layout === "split") {
     const photoW = Math.round(W * (style.cvPhoto / 100));
-    ctx.fillStyle = style.cvBlock;
+    ctx.fillStyle = blockFill(ctx, style.cvBlock);
     ctx.fillRect(0, 0, W, H);
     if (bmp) drawPhotoIn(ctx, bmp, 0, 0, photoW, H, at);
     applyCoverGradient(ctx, style, 0, 0, photoW, H);
@@ -1033,7 +1066,7 @@ async function drawCover(
     }
   } else if (layout === "plain") {
     // Option 6: no photo. A flat colour with the headline and subheading centred.
-    ctx.fillStyle = style.cvBlock;
+    ctx.fillStyle = blockFill(ctx, style.cvBlock);
     ctx.fillRect(0, 0, W, H);
     const maxW = W - 180;
     setSpacing(ctx, style.cvTracking);
@@ -1048,7 +1081,7 @@ async function drawCover(
     if (subLines.length) { setSub(); drawLines(subLines, W / 2 + subTextAt.dx, y + subTextAt.dy, subLineH, "center"); }
   } else if (layout === "behind") {
     // Option 7: flat colour, big heading, then the person cut out of their photo drawn on top so the heading sits behind them.
-    ctx.fillStyle = style.cvBlock;
+    ctx.fillStyle = blockFill(ctx, style.cvBlock);
     ctx.fillRect(0, 0, W, H);
     const cut = photo ? await getCutout(photo) : null;
     const maxW = W - 100;
@@ -1131,6 +1164,7 @@ async function renderSlide(
   canvas.height = Math.round(H * scale);
   const ctx = canvas.getContext("2d")!;
   ctx.scale(scale, scale);
+  await preloadTexture(style.cvBlock);
 
   if (spec.kind === "cover") {
     await drawCover(ctx, spec, photo, style, logo, preset, pos, meta.extras ?? [], textPos, subTextPos, headScale, subScale);
@@ -1486,7 +1520,7 @@ function CoverIcon({ k }: { k: CoverLayout }) {
   );
 }
 
-function ColourField({ label, value, onChange, metallic }: { label: string; value: string; onChange: (v: string) => void; metallic?: boolean }) {
+function ColourField({ label, value, onChange, metallic, textures }: { label: string; value: string; onChange: (v: string) => void; metallic?: boolean; textures?: boolean }) {
   const isMetallic = metallic && !!METALLICS[value];
   return (
     <div className="space-y-1.5">
@@ -1507,7 +1541,20 @@ function ColourField({ label, value, onChange, metallic }: { label: string; valu
           aria-label={`${label} picker`}
         />
         {isMetallic && <span className="text-[10px] text-sky-400/90 whitespace-nowrap">using {METALLICS[value].label.toLowerCase()}</span>}
+        {textures && TEXTURES[value] && <span className="text-[10px] text-sky-400/90 whitespace-nowrap">using {TEXTURES[value].label.toLowerCase()}</span>}
       </div>
+      {textures && (
+        <div className="flex flex-wrap gap-1.5 max-w-[210px]">
+          {Object.entries(TEXTURES).map(([key, t]) => (
+            <button
+              key={key}
+              type="button" onClick={() => onChange(key)} title={t.label}
+              className={["w-6 h-6 rounded border shrink-0 bg-cover bg-center", value === key ? "border-sky-500 ring-1 ring-sky-500" : "border-border/40"].join(" ")}
+              style={{ backgroundImage: `url(${import.meta.env.BASE_URL}${t.file})` }}
+            />
+          ))}
+        </div>
+      )}
       {metallic && (
         <div className="flex flex-wrap gap-1.5 max-w-[210px]">
           {Object.entries(METALLICS).map(([key, m]) => (
@@ -1612,6 +1659,9 @@ export default function Stylish() {
     patch({
       ...fallback,
       ...saved,
+      ...(TEXTURES[style.cvBlock] ? { cvBlock: DEFAULT_STYLE.cvBlock } : {}),
+      // Tweaked Helen's cover block is leopard print, so it starts that way whenever she is chosen.
+      ...(/tweaked\s*helen/i.test(chosen?.name ?? "") ? { cvBlock: "texture:leopard" } : {}),
       clientCoverFont: chosen?.stylishCoverHeadlineFont || "",
       clientCoverSubFont: chosen?.stylishCoverSubtitleFont || "",
     });
@@ -2204,7 +2254,7 @@ export default function Stylish() {
   // Puts one set of colours - headline, subtitle, and the block/band colour behind them - on
   // every post's cover, and clears any colours set on single posts.
   const changeAllText = (head: string, subtitleColour: string, blockColour: string, bandColour: string) => {
-    patch({ cvAll: true, cvAllColour: head, cvAllSubColour: subtitleColour, cvBlock: blockColour, cvBand: bandColour });
+    patch({ cvAll: true, cvAllColour: head, cvAllSubColour: subtitleColour, cvBlock: blockColour, cvBand: bandColour, cvBlockAll: blockColour, cvBandAll: bandColour });
     setPosts(list => list.map(p => ({ ...p, coverColour: undefined, coverSubColour: undefined, coverBlockColour: undefined, coverBandColour: undefined })));
     setCoverVersion(v => v + 1);
     toast.success("Colours changed on every cover");
@@ -2213,13 +2263,13 @@ export default function Stylish() {
   // Puts one block (or band) colour on every cover and clears any set on individual posts,
   // without touching headline/subtitle colours.
   const changeAllBlocks = (blockColour: string) => {
-    patch({ cvBlock: blockColour });
+    patch({ cvBlock: blockColour, cvBlockAll: blockColour });
     setPosts(list => list.map(p => ({ ...p, coverBlockColour: undefined })));
     setCoverVersion(v => v + 1);
     toast.success("Block colour changed on every cover");
   };
   const changeAllBands = (bandColour: string) => {
-    patch({ cvBand: bandColour });
+    patch({ cvBand: bandColour, cvBandAll: bandColour });
     setPosts(list => list.map(p => ({ ...p, coverBandColour: undefined })));
     setCoverVersion(v => v + 1);
     toast.success("Band colour changed on every cover");
@@ -2571,6 +2621,24 @@ export default function Stylish() {
           </div>
 
           <section className="space-y-2">
+            <Label className="text-sm font-medium">Choose client name (business)</Label>
+            <Select value={presetId ? String(presetId) : ""} onValueChange={v => chooseClient(Number(v))}>
+              <SelectTrigger className="bg-muted/30 border-border/40">
+                <SelectValue placeholder={presetsLoading ? "Loading…" : "Choose a client"} />
+              </SelectTrigger>
+              <SelectContent>
+                {presets.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Needed for captions in their name, the logo and scheduling. Not needed to preview or download.
+            </p>
+            <Button variant="outline" size="sm" onClick={useClientLook} disabled={!preset} className="w-full">
+              <Palette className="w-4 h-4 mr-1.5" />Match this client's fonts and colours
+            </Button>
+          </section>
+
+          <section className="space-y-2">
             <Label className="text-sm font-medium">Photos</Label>
             <div
               onDrop={e => { e.preventDefault(); setImgDrag(false); handleImages(Array.from(e.dataTransfer.files)); }}
@@ -2678,24 +2746,6 @@ export default function Stylish() {
             <button onClick={downloadSample} className="text-xs text-sky-400 hover:underline">Download a sample CSV</button>
           </section>
 
-          <section className="space-y-2">
-            <Label className="text-sm font-medium">Client</Label>
-            <Select value={presetId ? String(presetId) : ""} onValueChange={v => chooseClient(Number(v))}>
-              <SelectTrigger className="bg-muted/30 border-border/40">
-                <SelectValue placeholder={presetsLoading ? "Loading…" : "Choose a client"} />
-              </SelectTrigger>
-              <SelectContent>
-                {presets.map(p => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              Needed for captions in their name, the logo and scheduling. Not needed to preview or download.
-            </p>
-            <Button variant="outline" size="sm" onClick={useClientLook} disabled={!preset} className="w-full">
-              <Palette className="w-4 h-4 mr-1.5" />Match this client's fonts and colours
-            </Button>
-          </section>
-
           <section className="space-y-2 border-t border-border/30 pt-5">
             <Label className="text-sm font-medium">Client fonts</Label>
             <p className="text-xs text-muted-foreground leading-relaxed">
@@ -2750,7 +2800,7 @@ export default function Stylish() {
               {COVER_ORDER.map((k, i) => (
                 <button
                   key={k} type="button"
-                  onClick={() => patch(COVER_PRESETS[k])}
+                  onClick={() => patch(TEXTURES[style.cvBlock] ? { ...COVER_PRESETS[k], cvBlock: style.cvBlock } : COVER_PRESETS[k])}
                   className={["rounded-lg border p-1.5 flex flex-col items-center gap-1 transition-colors", style.coverLayout === k ? "border-sky-500 bg-sky-500/10" : "border-border/40 hover:border-border/70"].join(" ")}
                   aria-label={`Cover option ${i + 1}`}
                 >
@@ -2935,7 +2985,7 @@ export default function Stylish() {
               )}
               {BLOCK_LABEL[style.coverLayout] && (
                 <div className="flex items-end gap-2 flex-wrap">
-                  <ColourField label={BLOCK_LABEL[style.coverLayout]!} value={style.cvBlock} onChange={v => patch({ cvBlock: v })} />
+                  <ColourField label={BLOCK_LABEL[style.coverLayout]!} value={style.cvBlock} textures onChange={v => patch({ cvBlock: v })} />
                   <button
                     type="button"
                     onClick={() => changeAllBlocks(style.cvBlock)}
@@ -3105,7 +3155,7 @@ export default function Stylish() {
                     Write all captions
                   </Button>
                   <Button size="sm" variant="outline" onClick={handleDownload} disabled={!!exporting}>
-                    {exporting ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{exporting}</> : <><Download className="w-4 h-4 mr-1.5" />Download ZIP</>}
+                    {exporting ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{exporting}</> : <><Download className="w-4 h-4 mr-1.5" />Download all images</>}
                   </Button>
                   <Button size="sm" variant="outline" onClick={handleSendToFlip} disabled={sendingFlip || !!scheduling} title="Sends slide 1 of each ticked post to Magazine Flip">
                     {sendingFlip ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <ImageIcon className="w-4 h-4 mr-1.5" />}
@@ -3335,7 +3385,7 @@ export default function Stylish() {
                             <div className="w-56"><ColourField label="Cover headline" value={eff.cvColour} onChange={v => setCoverColours(post, pi, { coverColour: v })} metallic /></div>
                             <div className="w-56"><ColourField label="Cover subtitle" value={eff.cvSubColour} onChange={v => setCoverColours(post, pi, { coverSubColour: v })} metallic /></div>
                             {BLOCK_LABEL[eff.coverLayout] && (
-                              <div className="w-56"><ColourField label={BLOCK_LABEL[eff.coverLayout]!} value={eff.cvBlock} onChange={v => setCoverColours(post, pi, { coverBlockColour: v })} /></div>
+                              <div className="w-56"><ColourField label={BLOCK_LABEL[eff.coverLayout]!} value={eff.cvBlock} textures onChange={v => setCoverColours(post, pi, { coverBlockColour: v })} /></div>
                             )}
                             {eff.coverLayout === "split" && eff.cvBandOn && (
                               <div className="w-56"><ColourField label="Bottom band colour" value={eff.cvBand} onChange={v => setCoverColours(post, pi, { coverBandColour: v })} /></div>

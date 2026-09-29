@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { CalendarClock, Music, AlertTriangle, CheckCircle2, Loader2, Instagram, Facebook } from "lucide-react";
+import { CalendarClock, Music, AlertTriangle, CheckCircle2, Loader2, Instagram, Facebook, Download } from "lucide-react";
+import { downloadAllImages, type DownloadItem } from "@/lib/download-images";
 import { nextOpenMWFSlots, nthPostingSlot, shortTagForBookedPost } from "@/lib/schedule";
 import { useBookedDays } from "@/lib/use-booked-days";
 import { nameBucketOffsetMinutes } from "@/lib/broadcast-stagger";
@@ -75,6 +76,13 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
   const [caption, setCaption] = useState(() => posts[0]?.caption || "");
   const [saving, setSaving] = useState(false);
   const [isTrial, setIsTrial] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const pad2 = (n: number) => String(n + 1).padStart(2, "0");
+  const downloadItems: DownloadItem[] = [
+    ...posts.flatMap((p, i) => (p.imageUrls ?? []).map((u, k) => ({ name: `post-${pad2(i)}-slide-${k + 1}`, url: u }))),
+    ...posts.flatMap((p, i) => (p.videoUrl ? [{ name: `post-${pad2(i)}-reel`, url: p.videoUrl }] : [])),
+    ...(companionStories ?? []).map((st, i) => ({ name: `story-${pad2(i)}`, url: st.imageUrl })),
+  ];
   const [gapMinutes, setGapMinutes] = useState(String(initialGapMinutes ?? 60));
   const [activePresetId, setActivePresetId] = useState<number | null>(presetId);
   const [platforms, setPlatforms] = useState<Set<Platform>>(new Set(["instagram"]));
@@ -568,6 +576,26 @@ const staggeredAt = (() => {
           )}
         </div>
         <div className="p-6 pt-0 flex gap-3 justify-end">
+          {downloadItems.length > 0 && (
+            <Button
+              variant="outline"
+              disabled={downloading}
+              onClick={async () => {
+                setDownloading(true);
+                try {
+                  const n = await downloadAllImages(downloadItems, `${(presetName || "posts").replace(/[^a-z0-9]+/gi, "-")}-all-images`);
+                  toast.success(`${n} file${n === 1 ? "" : "s"} downloaded`);
+                } catch (e: any) {
+                  toast.error(e?.message || "Download failed");
+                } finally {
+                  setDownloading(false);
+                }
+              }}
+              className="mr-auto border-zinc-700 text-zinc-200"
+            >
+              {downloading ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Download className="w-4 h-4 mr-1.5" />}Download all images
+            </Button>
+          )}
           <Button variant="ghost" onClick={onClose} className="text-zinc-400 hover:text-white">
             Cancel
           </Button>

@@ -511,7 +511,7 @@ export default function ClientStylish() {
                   <Film className="w-4 h-4 mr-2" />Open in Stylish and make reels
                 </Button>
                 <Button variant="outline" onClick={handleDownloadImages} disabled={doneCount === 0 || busy}>
-                  <Download className="w-4 h-4 mr-2" />Download photos
+                  <Download className="w-4 h-4 mr-2" />Download all images
                 </Button>
                 <Button variant="outline" onClick={handleDownloadCsv} disabled={!csv}>
                   <Download className="w-4 h-4 mr-2" />Download CSV

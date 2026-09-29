@@ -7,6 +7,7 @@ import { takeFlipHandoff } from "@/lib/flip-handoff";
 import { ScheduleModal } from "@/components/schedule-modal";
 import { usePresets } from "@/lib/use-presets";
 import { nthPostingSlot } from "@/lib/schedule";
+import { downloadAllImages } from "@/lib/download-images";
 import { coverToCanvas, loadImageFromFile } from "@/lib/advent-door";
 import {
   MAG_W,
@@ -406,6 +407,21 @@ export default function Magazine() {
                 className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-200 hover:text-white text-sm disabled:opacity-40"
               >
                 <Play size={14} /> Replay
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    const blobs = await Promise.all(slots.map((s) => new Promise<Blob | null>((res) => s!.canvas.toBlob((b) => res(b), "image/png"))));
+                    const items = blobs.map((b, i) => ({ name: `${fileName.trim() || "magazine-flip"}-page-${String(i + 1).padStart(2, "0")}`, blob: b! })).filter((x) => x.blob);
+                    await downloadAllImages(items, `${fileName.trim() || "magazine-flip"}-images`);
+                  } catch (e: any) {
+                    toast.error(e?.message || "Download failed");
+                  }
+                }}
+                disabled={!ready}
+                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-200 hover:text-white text-sm disabled:opacity-40"
+              >
+                <Download size={14} /> Download all images
               </button>
               <button
                 onClick={makeVideo}
