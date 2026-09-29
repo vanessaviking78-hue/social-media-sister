@@ -3,6 +3,8 @@ import multer from "multer";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { CAPTION_TONE_PROMPTS } from "./caption-generator";
 import { validateHost } from "./aiPortrait";
+import { db } from "@workspace/db";
+import { clientPresetsTable } from "@workspace/db/schema";
 
 // Client Stylish pack: writes the 16 row Stylish CSV for one clinic from its website,
 // the 3 treatments being promoted this month and a chosen writing style. The images are
@@ -206,6 +208,42 @@ OUTPUT
 Return only JSON in this exact shape, with exactly 16 objects in "rows":
 {"rows":[{"headline":"","subtitle":"","text1":"","text2":"","text3":"","cta":""}]}`;
 
+// Pulls a client's own top 10 posts straight from their connected Instagram account, so nobody
+// has to screenshot anything. Finds the client by name in the saved client list, reads their recent
+// posts and ranks them by likes plus twice the comments. Returns "" when the client is not
+// connected or Instagram does not answer, and the copy is written without it.
+async function fetchInstagramTopPosts(clientName: string): Promise<string> {
+  try {
+    const n = clientName.trim().toLowerCase();
+    if (!n) return "";
+    const presets = await db.select().from(clientPresetsTable);
+    const match =
+      presets.find((p) => p.name.trim().toLowerCase() === n) ??
+      (n.length >= 4 ? presets.find((p) => { const pn = p.name.trim().toLowerCase(); return pn.length >= 4 && (pn.includes(n) || n.includes(pn)); }) : undefined);
+    if (!match?.metaInstagramAccountId || !match.metaPageAccessToken) return "";
+    type Media = { caption?: string; like_count?: number; comments_count?: number };
+    const all: Media[] = [];
+    let url: string | null =
+      `https://graph.facebook.com/v19.0/${match.metaInstagramAccountId}/media?fields=caption,like_count,comments_count,timestamp&limit=50&access_token=${encodeURIComponent(match.metaPageAccessToken)}`;
+    for (let page = 0; page < 2 && url; page++) {
+      const r: globalThis.Response = await fetch(url);
+      if (!r.ok) break;
+      const d = (await r.json()) as { data?: Media[]; paging?: { next?: string } };
+      all.push(...(d.data ?? []));
+      url = d.paging?.next ?? null;
+    }
+    const ranked = all
+      .filter((m) => (m.caption ?? "").trim())
+      .map((m) => ({ hook: (m.caption ?? "").split(/\r?\n/).map((l) => l.trim()).find(Boolean) ?? "", likes: m.like_count ?? 0, comments: m.comments_count ?? 0 }))
+      .filter((m) => m.hook)
+      .sort((a, b) => (b.likes + b.comments * 2) - (a.likes + a.comments * 2))
+      .slice(0, 10);
+    return ranked.map((m, i) => `${i + 1}. ${m.hook.slice(0, 160)} (${m.likes} likes, ${m.comments} comments)`).join("\n");
+  } catch {
+    return "";
+  }
+}
+
 // Reads screenshots of a clinic's "Top performing posts" list into plain text.
 async function readTopPostShots(files: Express.Multer.File[]): Promise<string> {
   const images = files.filter((f) => f.mimetype.startsWith("image/"));
@@ -263,13 +301,17 @@ router.post("/client-stylish/copy", upload.array("screenshots", 3), async (req: 
     if (cleanTreatments.length !== 3) { res.status(400).json({ error: "Please give me 3 treatments" }); return; }
 
     const tonePrompt = CAPTION_TONE_PROMPTS[tone] ?? CAPTION_TONE_PROMPTS["4"];
-    const [siteText, shotText] = await Promise.all([
+    const [siteText, shotText, igTop] = await Promise.all([
       readWebsite(website.trim(), cleanTreatments),
       readTopPostShots((req.files as Express.Multer.File[] | undefined) ?? []),
+      fetchInstagramTopPosts(clientName),
     ]);
     const siteFound = siteText.length > 200;
     const safeSite = neutralise(siteText);
-    const topPosts = neutralise([shotText, pastedTop].filter(Boolean).join("\n")).slice(0, 4000);
+    // Anything supplied by hand wins. Otherwise the client's own Instagram is used.
+    const manualTop = [shotText, pastedTop].filter(Boolean).join("\n");
+    const topPostsSource = manualTop ? "supplied" : igTop ? "instagram" : "none";
+    const topPosts = neutralise(manualTop || igTop).slice(0, 4000);
     const topPostsCount = topPosts ? topPosts.split("\n").filter((l) => l.trim()).length : 0;
 
     const system = `You write copy for Vanessa Wormald's clients, UK aesthetic clinics.
@@ -338,7 +380,7 @@ ${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${safeSite
       return;
     }
 
-    res.json({ rows, csv: buildCsv(rows), siteFound, topPostsCount });
+    res.json({ rows, csv: buildCsv(rows), siteFound, topPostsCount, topPostsSource });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Copy generation failed";
     req.log.error({ err }, "client-stylish/copy failed");

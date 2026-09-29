@@ -51,6 +51,7 @@ export default function ClientStylish() {
   const [topText, setTopText] = useState("");
   const [shots, setShots] = useState<File[]>([]);
   const [topCount, setTopCount] = useState(0);
+  const [topSource, setTopSource] = useState("none");
   const shotRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
 
@@ -132,12 +133,13 @@ export default function ClientStylish() {
       fd.append("topPosts", topText);
       shots.forEach(f => fd.append("screenshots", f));
       const r = await fetch(`${BASE}api/client-stylish/copy`, { method: "POST", body: fd });
-      const data = (await r.json()) as { rows?: CopyRow[]; csv?: string; siteFound?: boolean; topPostsCount?: number; error?: string };
+      const data = (await r.json()) as { rows?: CopyRow[]; csv?: string; siteFound?: boolean; topPostsCount?: number; topPostsSource?: string; error?: string };
       if (!r.ok || !data.rows || !data.csv) throw new Error(data.error || "The copy did not come back");
       setRows(data.rows);
       setCsv(data.csv);
       setSiteFound(data.siteFound !== false);
       setTopCount(data.topPostsCount ?? 0);
+      setTopSource(data.topPostsSource ?? "none");
       setCopyState("done");
     } catch (e) {
       setCopyError(e instanceof Error ? e.message : "The copy did not come back");
@@ -341,8 +343,8 @@ export default function ClientStylish() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Their top performing posts <span className="text-muted-foreground font-normal">(recommended)</span></Label>
-            <p className="text-xs text-muted-foreground">Screenshot their top 10 from Insights, or paste the opening lines. I write the 16 posts in the same family as the winners.</p>
+            <Label className="text-sm font-medium">Their top performing posts <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <p className="text-xs text-muted-foreground">I pull their top 10 from their Instagram myself when the client is connected in your tools, so you do not need to add anything here. Only add screenshots or paste lines if you want to override that.</p>
             <div className="flex flex-wrap items-center gap-2">
               {shots.map((f, i) => (
                 <span key={i} className="inline-flex items-center gap-1 rounded-md border border-sky-500/40 bg-sky-500/5 px-2 py-1 text-xs">
@@ -401,7 +403,7 @@ export default function ClientStylish() {
                   {copyState === "error" && <AlertTriangle className="w-4 h-4 text-destructive" />}
                   <span>
                     {copyState === "writing" && "Writing the 16 posts"}
-                    {copyState === "done" && (topCount > 0 ? `16 posts written, modelled on ${topCount} top posts` : "16 posts written")}
+                    {copyState === "done" && (topCount > 0 ? `16 posts written, modelled on ${topCount} top posts${topSource === "instagram" ? " from their Instagram" : ""}` : "16 posts written, but I could not reach their Instagram, so it is not modelled on their top posts")}
                     {copyState === "error" && copyError}
                   </span>
                   {copyState === "error" && (
