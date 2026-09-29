@@ -45,6 +45,10 @@ export default function ClientStylish() {
   const [treatments, setTreatments] = useState(["", "", ""]);
   const [tone, setTone] = useState("");
   const [notes, setNotes] = useState("");
+  const [topText, setTopText] = useState("");
+  const [shots, setShots] = useState<File[]>([]);
+  const [topCount, setTopCount] = useState(0);
+  const shotRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
 
   const [started, setStarted] = useState(false);
@@ -116,22 +120,27 @@ export default function ClientStylish() {
     setCopyState("writing");
     setCopyError("");
     try {
-      const r = await fetch(`${BASE}api/client-stylish/copy`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientName, website, treatments, tone, notes }),
-      });
-      const data = (await r.json()) as { rows?: CopyRow[]; csv?: string; siteFound?: boolean; error?: string };
+      const fd = new FormData();
+      fd.append("clientName", clientName.trim());
+      fd.append("website", website.trim());
+      treatments.forEach(t => fd.append("treatments", t.trim()));
+      fd.append("tone", tone);
+      fd.append("notes", notes);
+      fd.append("topPosts", topText);
+      shots.forEach(f => fd.append("screenshots", f));
+      const r = await fetch(`${BASE}api/client-stylish/copy`, { method: "POST", body: fd });
+      const data = (await r.json()) as { rows?: CopyRow[]; csv?: string; siteFound?: boolean; topPostsCount?: number; error?: string };
       if (!r.ok || !data.rows || !data.csv) throw new Error(data.error || "The copy did not come back");
       setRows(data.rows);
       setCsv(data.csv);
       setSiteFound(data.siteFound !== false);
+      setTopCount(data.topPostsCount ?? 0);
       setCopyState("done");
     } catch (e) {
       setCopyError(e instanceof Error ? e.message : "The copy did not come back");
       setCopyState("error");
     }
-  }, [clientName, website, treatments, tone, notes]);
+  }, [clientName, website, treatments, tone, notes, topText, shots]);
 
   const canStart =
     clientName.trim() && website.trim() && photo && treatments.every(t => t.trim()) && tone && !busy;
@@ -323,6 +332,31 @@ export default function ClientStylish() {
             </div>
           </div>
 
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Their top performing posts <span className="text-muted-foreground font-normal">(recommended)</span></Label>
+            <p className="text-xs text-muted-foreground">Screenshot their top 10 from Insights, or paste the opening lines. I write the 16 posts in the same family as the winners.</p>
+            <div className="flex flex-wrap items-center gap-2">
+              {shots.map((f, i) => (
+                <span key={i} className="inline-flex items-center gap-1 rounded-md border border-sky-500/40 bg-sky-500/5 px-2 py-1 text-xs">
+                  <span className="max-w-[140px] truncate">{f.name}</span>
+                  <button onClick={() => setShots(prev => prev.filter((_, j) => j !== i))} aria-label="Remove screenshot" className="text-muted-foreground hover:text-foreground"><X className="w-3 h-3" /></button>
+                </span>
+              ))}
+              {shots.length < 3 && (
+                <Button type="button" size="sm" variant="outline" onClick={() => shotRef.current?.click()}>
+                  <Upload className="w-3.5 h-3.5 mr-1.5" />Add screenshot
+                </Button>
+              )}
+            </div>
+            <input ref={shotRef} type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden"
+              onChange={e => {
+                const picked = Array.from(e.target.files ?? []).filter(f => f.type.startsWith("image/"));
+                setShots(prev => [...prev, ...picked].slice(0, 3));
+                e.target.value = "";
+              }} />
+            <Textarea value={topText} onChange={e => setTopText(e.target.value)} rows={4} placeholder="Or paste their best posts here, one per line, with the likes if you have them." />
+          </div>
+
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">About the clinician <span className="text-muted-foreground font-normal">(optional)</span></Label>
             <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="A few words on who they are, so the voice fits them." />
@@ -359,7 +393,7 @@ export default function ClientStylish() {
                   {copyState === "error" && <AlertTriangle className="w-4 h-4 text-destructive" />}
                   <span>
                     {copyState === "writing" && "Writing the 16 posts"}
-                    {copyState === "done" && "16 posts written"}
+                    {copyState === "done" && (topCount > 0 ? `16 posts written, modelled on ${topCount} top posts` : "16 posts written")}
                     {copyState === "error" && copyError}
                   </span>
                   {copyState === "error" && (
