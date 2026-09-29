@@ -679,6 +679,8 @@ async function addNewsletterColumnsAndTable(): Promise<void> {
   await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS booking_link text`);
   await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS newsletter_name text`);
   await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS clinic_address text`);
+  await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS website_url text`);
+  await db.execute(sql`ALTER TABLE client_presets ADD COLUMN IF NOT EXISTS seo_area text`);
   await db.execute(sql`
     CREATE TABLE IF NOT EXISTS newsletters (
       id SERIAL PRIMARY KEY,

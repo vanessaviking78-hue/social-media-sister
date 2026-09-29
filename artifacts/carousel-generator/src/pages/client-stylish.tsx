@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { setStylishHandoff } from "@/lib/stylish-handoff";
+import { usePresets } from "@/lib/use-presets";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -50,6 +51,16 @@ export default function ClientStylish() {
   const [notes, setNotes] = useState("");
   const [topText, setTopText] = useState("");
   const [shots, setShots] = useState<File[]>([]);
+  const { presets } = usePresets();
+  // Picking a saved client fills in the website and area saved on their preset, so nothing is typed twice.
+  useEffect(() => {
+    const n = clientName.trim().toLowerCase();
+    if (!n) return;
+    const m = presets.find(p => p.name.trim().toLowerCase() === n);
+    if (!m) return;
+    if (m.websiteUrl?.trim()) setWebsite(w => w.trim() ? w : m.websiteUrl!.trim());
+    if (m.seoArea?.trim()) setArea(a => a.trim() ? a : m.seoArea!.trim());
+  }, [clientName, presets]);
   const [topCount, setTopCount] = useState(0);
   const [topSource, setTopSource] = useState("none");
   const shotRef = useRef<HTMLInputElement>(null);
@@ -63,6 +74,7 @@ export default function ClientStylish() {
   const [rows, setRows] = useState<CopyRow[]>([]);
   const [csv, setCsv] = useState("");
   const [siteFound, setSiteFound] = useState(true);
+  const [siteReason, setSiteReason] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [jobIds, setJobIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -133,11 +145,12 @@ export default function ClientStylish() {
       fd.append("topPosts", topText);
       shots.forEach(f => fd.append("screenshots", f));
       const r = await fetch(`${BASE}api/client-stylish/copy`, { method: "POST", body: fd });
-      const data = (await r.json()) as { rows?: CopyRow[]; csv?: string; siteFound?: boolean; topPostsCount?: number; topPostsSource?: string; error?: string };
+      const data = (await r.json()) as { rows?: CopyRow[]; csv?: string; siteFound?: boolean; siteReason?: string | null; topPostsCount?: number; topPostsSource?: string; error?: string };
       if (!r.ok || !data.rows || !data.csv) throw new Error(data.error || "The copy did not come back");
       setRows(data.rows);
       setCsv(data.csv);
       setSiteFound(data.siteFound !== false);
+      setSiteReason(data.siteReason ?? null);
       setTopCount(data.topPostsCount ?? 0);
       setTopSource(data.topPostsSource ?? "none");
       setCopyState("done");
@@ -279,7 +292,8 @@ export default function ClientStylish() {
 
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Client</Label>
-            <Input value={clientName} onChange={e => setClientName(e.target.value)} placeholder="e.g. Teviot Dental Face" disabled={started && busy} />
+            <Input value={clientName} onChange={e => setClientName(e.target.value)} list="client-names" placeholder="e.g. Teviot Dental Face" disabled={started && busy} />
+            <datalist id="client-names">{presets.map(p => <option key={p.id} value={p.name} />)}</datalist>
           </div>
 
           <div className="space-y-1.5">
@@ -414,7 +428,11 @@ export default function ClientStylish() {
 
               {copyState === "done" && !siteFound && (
                 <div className="rounded-md border border-yellow-500/40 bg-yellow-500/5 p-3 text-sm text-yellow-200/90">
-                  I could not read that website, so the treatment posts are general. Check the address and press Try the copy again if you want details from the site.
+                  {siteReason === "blocked" && "Their website refused to let me read it (many hosts block automated visitors), so the treatment posts are general. Add anything specific in the clinician notes."}
+                  {siteReason === "notfound" && "That address gave a page not found, so the treatment posts are general. Check the website on their client details."}
+                  {siteReason === "empty" && "Their site loads its words in the browser, so there was almost nothing for me to read. The treatment posts are general. Add specifics in the clinician notes."}
+                  {siteReason === "unsafe" && "I am not allowed to read that address. Check the website on their client details."}
+                  {siteReason !== "blocked" && siteReason !== "notfound" && siteReason !== "empty" && siteReason !== "unsafe" && "I could not reach that website, so the treatment posts are general. Check the address and press Try the copy again if you want details from the site."}
                 </div>
               )}
 

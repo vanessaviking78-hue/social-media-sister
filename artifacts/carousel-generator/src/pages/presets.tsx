@@ -482,6 +482,8 @@ export default function PresetsPage() {
         bookingLink: editData.bookingLink?.trim() || null,
         newsletterName: editData.newsletterName?.trim() || null,
         clinicAddress: editData.clinicAddress?.trim() || null,
+        websiteUrl: editData.websiteUrl?.trim() || null,
+        seoArea: editData.seoArea?.trim() || null,
       });
       toast.success("Preset updated");
       cancelEdit();
@@ -870,6 +872,24 @@ export default function PresetsPage() {
                           value={editData.newsletterName || ""}
                           onChange={(e) => setEditData((d) => ({ ...d, newsletterName: e.target.value || null }))}
                           placeholder="The Skin Edit"
+                          className="bg-gray-900 border-gray-700 text-white mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-400">Website (Client Stylish reads this automatically)</Label>
+                        <Input
+                          value={editData.websiteUrl || ""}
+                          onChange={(e) => setEditData((d) => ({ ...d, websiteUrl: e.target.value || null }))}
+                          placeholder="www.theirclinic.co.uk"
+                          className="bg-gray-900 border-gray-700 text-white mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-gray-400">Clinic area (local SEO in captions)</Label>
+                        <Input
+                          value={editData.seoArea || ""}
+                          onChange={(e) => setEditData((d) => ({ ...d, seoArea: e.target.value || null }))}
+                          placeholder="Harrogate, North Yorkshire"
                           className="bg-gray-900 border-gray-700 text-white mt-1"
                         />
                       </div>

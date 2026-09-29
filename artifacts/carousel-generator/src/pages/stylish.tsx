@@ -1590,6 +1590,11 @@ export default function Stylish() {
 
   const [presetId, setPresetId] = useState<number | null>(null);
   const preset = presets.find(p => p.id === presetId) ?? null;
+  // The client's saved area fills the SEO box for captions, unless one has been typed already.
+  useEffect(() => {
+    const saved = preset?.seoArea?.trim();
+    if (saved) setArea(cur => cur.trim() ? cur : saved);
+  }, [preset?.id, preset?.seoArea]);
 
   // Each client remembers the per-option cover fonts chosen for them (browser only —
   // these are the "Headline font (option N)" pickers, not the client's own cover fonts

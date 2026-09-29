@@ -41,11 +41,33 @@ function htmlToText(html: string): string {
     .trim();
 }
 
-async function fetchPage(rawUrl: string): Promise<{ html: string; finalUrl: string } | null> {
+type SiteDiag = { reason?: "blocked" | "notfound" | "unreachable" | "notweb" | "unsafe" | "empty" };
+
+// The title, description and structured data in a page's head. Sites built in the browser (Wix,
+// Squarespace, many React sites) often have almost no body text but still put this in the head.
+function headBits(html: string): string {
+  const out: string[] = [];
+  const title = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1];
+  if (title) out.push(`TITLE: ${title.trim()}`);
+  for (const m of html.matchAll(/<meta[^>]+(?:name|property)=["'](?:description|og:description|og:title)["'][^>]*>/gi)) {
+    const c = m[0].match(/content=["']([^"']+)["']/i)?.[1];
+    if (c) out.push(c.trim());
+  }
+  for (const m of html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)) {
+    try {
+      const j = JSON.stringify(JSON.parse(m[1]));
+      out.push(j.slice(0, 1500));
+    } catch { /* ignore bad JSON */ }
+  }
+  return out.join("\n");
+}
+
+async function fetchPage(rawUrl: string, diag?: SiteDiag): Promise<{ html: string; finalUrl: string } | null> {
   let current: URL;
   try {
     current = new URL(rawUrl);
   } catch {
+    if (diag) diag.reason = "unreachable";
     return null;
   }
   const controller = new AbortController();
@@ -53,11 +75,15 @@ async function fetchPage(rawUrl: string): Promise<{ html: string; finalUrl: stri
   try {
     for (let hop = 0; hop < 5; hop++) {
       if (current.protocol !== "https:" && current.protocol !== "http:") return null;
-      await validateHost(current.hostname);
+      try { await validateHost(current.hostname); } catch { if (diag) diag.reason = "unsafe"; return null; }
       const r = await fetch(current.href, {
         signal: controller.signal,
         redirect: "manual",
-        headers: { "User-Agent": "Mozilla/5.0 (compatible; CyberSuite/1.0)", Accept: "text/html" },
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+          Accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "en-GB,en;q=0.9",
+        },
       });
       if (r.status >= 300 && r.status < 400) {
         const loc = r.headers.get("location");
@@ -65,14 +91,18 @@ async function fetchPage(rawUrl: string): Promise<{ html: string; finalUrl: stri
         current = new URL(loc, current.href);
         continue;
       }
-      if (!r.ok) return null;
-      if (!(r.headers.get("content-type") ?? "").includes("text/html")) return null;
+      if (!r.ok) {
+        if (diag) diag.reason = r.status === 404 || r.status === 410 ? "notfound" : r.status === 401 || r.status === 403 || r.status === 429 || r.status === 503 ? "blocked" : "unreachable";
+        return null;
+      }
+      if (!(r.headers.get("content-type") ?? "").includes("text/html")) { if (diag) diag.reason = "notweb"; return null; }
       const buf = await r.arrayBuffer();
       if (buf.byteLength > MAX_PAGE_BYTES) return null;
       return { html: Buffer.from(buf).toString("utf8"), finalUrl: current.href };
     }
     return null;
   } catch {
+    if (diag && !diag.reason) diag.reason = "unreachable";
     return null;
   } finally {
     clearTimeout(timer);
@@ -111,16 +141,29 @@ function pickTreatmentLinks(html: string, baseUrl: string, treatments: string[])
   return scored.sort((a, b) => b.score - a.score).slice(0, 3).map((s) => s.url);
 }
 
-async function readWebsite(website: string, treatments: string[]): Promise<string> {
+async function readWebsite(website: string, treatments: string[], diag?: SiteDiag): Promise<string> {
   const start = /^https?:\/\//i.test(website) ? website : `https://${website}`;
-  const home = await fetchPage(start);
-  if (!home) return "";
-  const parts = [`PAGE: ${home.finalUrl}\n${htmlToText(home.html)}`];
-  for (const link of pickTreatmentLinks(home.html, home.finalUrl, treatments)) {
-    const page = await fetchPage(link);
-    if (page) parts.push(`PAGE: ${page.finalUrl}\n${htmlToText(page.html)}`);
+  let home = await fetchPage(start, diag);
+  if (!home) {
+    // Some sites only answer on the other spelling, with or without www.
+    try {
+      const u = new URL(start);
+      u.hostname = u.hostname.startsWith("www.") ? u.hostname.slice(4) : `www.${u.hostname}`;
+      const retry: SiteDiag = {};
+      home = await fetchPage(u.href, retry);
+      if (home && diag) delete diag.reason;
+    } catch { /* keep the first reason */ }
   }
-  return parts.join("\n\n").slice(0, MAX_SITE_CHARS);
+  if (!home) return "";
+  const page = (h: { html: string; finalUrl: string }) => `PAGE: ${h.finalUrl}\n${headBits(h.html)}\n${htmlToText(h.html)}`;
+  const parts = [page(home)];
+  for (const link of pickTreatmentLinks(home.html, home.finalUrl, treatments)) {
+    const sub = await fetchPage(link);
+    if (sub) parts.push(page(sub));
+  }
+  const text = parts.join("\n\n").slice(0, MAX_SITE_CHARS);
+  if (text.length <= 200 && diag) diag.reason = "empty";
+  return text;
 }
 
 // Words that must never reach a post: prescription only medicines and the claims wording
@@ -286,7 +329,7 @@ router.post("/client-stylish/copy", upload.array("screenshots", 3), async (req: 
   try {
     const body = req.body as Record<string, string | string[] | undefined>;
     const clientName = String(body.clientName ?? "");
-    const website = String(body.website ?? "");
+    let website = String(body.website ?? "");
     const tone = String(body.tone ?? "4");
     const notes = String(body.notes ?? "");
     const pastedTop = String(body.topPosts ?? "").trim();
@@ -297,12 +340,20 @@ router.post("/client-stylish/copy", upload.array("screenshots", 3), async (req: 
       .filter(Boolean)
       .slice(0, 3);
     if (!clientName.trim()) { res.status(400).json({ error: "Client name is required" }); return; }
+    if (!website.trim()) {
+      // Falls back to the website saved on the client's preset.
+      const n = clientName.trim().toLowerCase();
+      const presets = await db.select().from(clientPresetsTable);
+      const m = presets.find((p) => p.name.trim().toLowerCase() === n);
+      website = m?.websiteUrl?.trim() ?? "";
+    }
     if (!website.trim()) { res.status(400).json({ error: "Website is required" }); return; }
     if (cleanTreatments.length !== 3) { res.status(400).json({ error: "Please give me 3 treatments" }); return; }
 
     const tonePrompt = CAPTION_TONE_PROMPTS[tone] ?? CAPTION_TONE_PROMPTS["4"];
+    const siteDiag: SiteDiag = {};
     const [siteText, shotText, igTop] = await Promise.all([
-      readWebsite(website.trim(), cleanTreatments),
+      readWebsite(website.trim(), cleanTreatments, siteDiag),
       readTopPostShots((req.files as Express.Multer.File[] | undefined) ?? []),
       fetchInstagramTopPosts(clientName),
     ]);
@@ -380,7 +431,7 @@ ${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${safeSite
       return;
     }
 
-    res.json({ rows, csv: buildCsv(rows), siteFound, topPostsCount, topPostsSource });
+    res.json({ rows, csv: buildCsv(rows), siteFound, siteReason: siteFound ? null : (siteDiag.reason ?? "unreachable"), topPostsCount, topPostsSource });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Copy generation failed";
     req.log.error({ err }, "client-stylish/copy failed");

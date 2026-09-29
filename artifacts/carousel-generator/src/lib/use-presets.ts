@@ -65,6 +65,8 @@ export interface ClientPreset {
   bookingLink?: string | null;
   newsletterName?: string | null;
   clinicAddress?: string | null;
+  websiteUrl?: string | null;
+  seoArea?: string | null;
   stylishCoverHeadlineFont?: string | null;
   stylishCoverSubtitleFont?: string | null;
 }
@@ -169,7 +171,7 @@ export function usePresets() {
     logoUrl?: string | null,
     captionFootnote?: string,
     metaFields?: { metaPageAccessToken?: string | null; metaFacebookPageId?: string | null; metaFacebookPageName?: string | null; metaInstagramAccountId?: string | null; metaInstagramUsername?: string | null },
-    extra?: { defaultPostTime?: string; defaultFirstCommentCarousel?: string | null; defaultFirstCommentSingle?: string | null; defaultFirstCommentReel?: string | null; voiceStyle?: string; targetAudience?: string | null; contentPillars?: string | null; brandNotes?: string | null;  clientPhotoUrl?: string | null; portalWelcomeMessage?: string | null; bookingLink?: string | null; newsletterName?: string | null; clinicAddress?: string | null;},
+    extra?: { defaultPostTime?: string; defaultFirstCommentCarousel?: string | null; defaultFirstCommentSingle?: string | null; defaultFirstCommentReel?: string | null; voiceStyle?: string; targetAudience?: string | null; contentPillars?: string | null; brandNotes?: string | null;  clientPhotoUrl?: string | null; portalWelcomeMessage?: string | null; bookingLink?: string | null; newsletterName?: string | null; clinicAddress?: string | null; websiteUrl?: string | null; seoArea?: string | null;},
   ) => {
     const body = {
       name,

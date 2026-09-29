@@ -49,6 +49,8 @@ export const clientPresetsTable = pgTable("client_presets", {
   bookingLink: text("booking_link"),
   newsletterName: text("newsletter_name"),
   clinicAddress: text("clinic_address"),
+  websiteUrl: text("website_url"),
+  seoArea: text("seo_area"),
   stylishCoverHeadlineFont: text("stylish_cover_headline_font"),
   stylishCoverSubtitleFont: text("stylish_cover_subtitle_font"),
   completedReels: text("completed_reels").notNull().default("{}"),
