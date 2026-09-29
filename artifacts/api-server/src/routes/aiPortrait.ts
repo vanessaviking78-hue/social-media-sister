@@ -75,7 +75,7 @@ const PRIVATE_IP_PATTERNS = [
   /^fe80:/i,
 ];
 
-async function validateHost(host: string): Promise<void> {
+export async function validateHost(host: string): Promise<void> {
   const h = host.toLowerCase();
   if (h === "localhost" || h === "metadata.google.internal") {
     throw new Error("URL points to a private or reserved address");
