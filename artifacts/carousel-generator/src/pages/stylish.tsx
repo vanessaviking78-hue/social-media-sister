@@ -701,6 +701,7 @@ function fitHeading(
 // because it takes several seconds the first time.
 const cutoutBlobs = new WeakMap<File, Promise<Blob | null>>();
 let cutoutQueue: Promise<unknown> = Promise.resolve();
+let cutoutFailedNoted = false;
 let cutoutsWaiting = 0;
 
 function cutoutBlob(file: File): Promise<Blob | null> {
@@ -715,8 +716,13 @@ function cutoutBlob(file: File): Promise<Blob | null> {
       if (!src) return null;
       const { removeBackground } = await import("@imgly/background-removal");
       return await removeBackground(src, { model: "isnet", output: { format: "image/png", quality: 0.95 } });
-    } catch {
-      toast.error("Could not cut the person out of a photo, so I kept the whole photo");
+    } catch (err) {
+      console.warn("Cutout failed, using the whole photo", err);
+      // Say it once per session at most, quietly, so a batch of photos does not spam the screen.
+      if (!cutoutFailedNoted) {
+        cutoutFailedNoted = true;
+        toast.message("The cut out effect is not available right now, so those covers use the whole photo", { duration: 4000 });
+      }
       return null;
     } finally {
       cutoutsWaiting--;
