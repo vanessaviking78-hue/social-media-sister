@@ -46,6 +46,7 @@ export default function ClientStylish() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [treatments, setTreatments] = useState(["", "", ""]);
   const [tone, setTone] = useState("");
+  const [area, setArea] = useState("");
   const [notes, setNotes] = useState("");
   const [topText, setTopText] = useState("");
   const [shots, setShots] = useState<File[]>([]);
@@ -216,7 +217,7 @@ export default function ClientStylish() {
     setBusy(true);
     try {
       const files = await collectImages();
-      const ok = await setStylishHandoff({ files, csv, csvName: `${packName} Stylish.csv`, clientName: clientName.trim() });
+      const ok = await setStylishHandoff({ files, csv, csvName: `${packName} Stylish.csv`, clientName: clientName.trim(), location: area.trim() || undefined });
       if (!ok) throw new Error("Stylish could not be loaded from here, please download instead");
       setLocation("/stylish");
     } catch (e) {
@@ -283,6 +284,10 @@ export default function ClientStylish() {
             <Label className="text-sm font-medium">Website</Label>
             <Input value={website} onChange={e => setWebsite(e.target.value)} placeholder="www.theirclinic.co.uk" disabled={started && busy} />
             <p className="text-xs text-muted-foreground">The treatment posts take their details from here.</p>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Clinic area <span className="text-muted-foreground font-normal">(for local SEO in the captions)</span></Label>
+            <Input value={area} onChange={e => setArea(e.target.value)} placeholder="e.g. Harrogate, North Yorkshire" disabled={started && busy} />
           </div>
 
           <div className="space-y-1.5">

@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { CalendarClock, Music, AlertTriangle, CheckCircle2, Loader2, Instagram, Facebook } from "lucide-react";
-import { nextOpenMWFSlots, shortTagForBookedPost } from "@/lib/schedule";
+import { nextOpenMWFSlots, nthPostingSlot, shortTagForBookedPost } from "@/lib/schedule";
 import { useBookedDays } from "@/lib/use-booked-days";
 import { nameBucketOffsetMinutes } from "@/lib/broadcast-stagger";
 
@@ -48,6 +48,8 @@ type Props = {
   initialGapMinutes?: number;
   /** When the gap is whole days, keep the same time on the clock each day, even when the clocks change. */
   keepClockTime?: boolean;
+  /** Post only on Monday, Wednesday, Friday and Sunday, one post per posting day, same time each day. */
+  postingDays?: boolean;
 };
 
 function defaultScheduledAt() {
@@ -65,7 +67,7 @@ function dateKey(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt, sourceTool, perPostCaptions, initialGapMinutes, keepClockTime }: Props) {
+export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt, sourceTool, perPostCaptions, initialGapMinutes, keepClockTime, postingDays }: Props) {
   const [scheduledAt, setScheduledAt] = useState(() => initialScheduledAt || defaultScheduledAt());
   const [notes, setNotes] = useState("");
   const [caption, setCaption] = useState(() => posts[0]?.caption || "");
@@ -201,6 +203,7 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
           const post = posts[i];
           const nameOffsetMin = broadcastMode ? nameBucketOffsetMinutes(presets?.find((p) => p.id === targetPresetId)?.name ?? "") : 0;
 const staggeredAt = (() => {
+            if (postingDays) return new Date(nthPostingSlot(new Date(scheduledAt), i).getTime() + nameOffsetMin * 60000).toISOString();
             if (keepClockTime && gap > 0 && gap % 1440 === 0) {
               const d = new Date(scheduledAt);
               d.setDate(d.getDate() + i * (gap / 1440));
@@ -370,7 +373,13 @@ const staggeredAt = (() => {
             </div>
           )}
 
-          {isBulk && (
+          {isBulk && postingDays && (
+            <p className="text-xs text-zinc-400">
+              Posts go out on Mondays, Wednesdays, Fridays and Sundays, one per day, at the same time each day. The first one lands on the first of those days on or after the date above{broadcastMode ? " (per client)" : ""}.
+            </p>
+          )}
+
+          {isBulk && !postingDays && (
             <div>
               <Label className="text-zinc-300 text-sm mb-1.5 block">Minutes between posts</Label>
               <Input

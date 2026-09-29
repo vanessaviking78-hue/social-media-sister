@@ -65,6 +65,19 @@ export function nextOpenMWFSlots(bookedDates: Set<string>, count: number, time: 
   return out;
 }
 
+// The i-th posting slot counting from `start`: snaps forward to the first Monday, Wednesday, Friday
+// or Sunday on or after the start date, then steps through those days keeping the same clock time.
+export function nthPostingSlot(start: Date, i: number): Date {
+  const d = new Date(start);
+  while (!(MWF_DAYS as number[]).includes(d.getDay())) d.setDate(d.getDate() + 1);
+  let left = i;
+  while (left > 0) {
+    d.setDate(d.getDate() + 1);
+    if ((MWF_DAYS as number[]).includes(d.getDay())) left--;
+  }
+  return d;
+}
+
 // Convenience: just the single next open Mon/Wed/Fri slot, as an ISO datetime.
 export function nextOpenMWFSlotISO(bookedDates: Set<string>, time: string = POST_TIME): string {
   const [day] = nextOpenMWFSlots(bookedDates, 1, time);
