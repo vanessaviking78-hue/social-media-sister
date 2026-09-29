@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link, useLocation } from "wouter";
-import { ArrowLeft, Loader2, Upload, Check, AlertTriangle, Download, Palette, RotateCw, X, Film } from "lucide-react";
+import { ArrowLeft, Loader2, Upload, Check, AlertTriangle, Download, Palette, RotateCw, X, Film, Sparkles } from "lucide-react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { toast } from "sonner";
@@ -213,7 +213,7 @@ export default function ClientStylish() {
     return files;
   };
 
-  const handleOpenInStylish = async (intent?: "reels") => {
+  const handleOpenInStylish = async (intent?: "reels" | "auto") => {
     setBusy(true);
     try {
       const files = await collectImages();
@@ -483,6 +483,9 @@ export default function ClientStylish() {
                 <Button onClick={() => handleOpenInStylish()} disabled={!packReady || busy}>
                   {busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Palette className="w-4 h-4 mr-2" />}
                   Open in Stylish
+                </Button>
+                <Button variant="outline" onClick={() => handleOpenInStylish("auto")} disabled={!packReady || busy} title="Loads the pack in Stylish, writes the captions and the 7am story questions, and takes you to the schedule screen for one check">
+                  <Sparkles className="w-4 h-4 mr-2" />Posts and stories in one go
                 </Button>
                 <Button variant="outline" onClick={() => handleOpenInStylish("reels")} disabled={!packReady || busy} title="Loads the pack in Stylish, ready to turn into reels or send to Magazine Flip">
                   <Film className="w-4 h-4 mr-2" />Open in Stylish and make reels

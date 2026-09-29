@@ -40,6 +40,9 @@ RULES
 - Never mention Botox, anti wrinkle, injectable prescription medicines, weight loss medicines or any brand of them. Never make a promise about results.
 - Write as the clinician or clinic owner speaking, first person if a pronoun is needed. UK spelling. No em dashes or en dashes. Do not use the word fluff. No hashtags, no emojis.
 - Never use the construction "it is not X, it is Y" and do not open with "Ever wondered".
+- Built to get replies. It must be answerable in under five seconds with no thinking, and it should make people feel a little bit seen, or a little bit nosy, or want to defend their answer.
+- Rotate through these shapes so no two neighbours match: this or that with two very different options, finish the sentence, a harmless confession ("what is your..."), a friendly hot take people will agree or argue with, rate it out of 10, one word only, a guess, a would you rather.
+- Use the picture in the reader's head, not treatment jargon: everyday moments, small vanities, Sunday night, the school run, the mirror, the group chat.
 - Each of the questions must be different in shape from the others.${place ? `\n- The clinic is in ${place}. In about one question in four, work the place in naturally, only if it fits.` : ""}${clinicName ? `\nClinic: ${clinicName}` : ""}
 ${extra}
 Return JSON: {"questions": ["...", ...]} with exactly ${posts.length} questions in the same order as the posts.`,

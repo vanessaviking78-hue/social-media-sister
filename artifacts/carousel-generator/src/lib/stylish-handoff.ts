@@ -1,14 +1,14 @@
 // Passes a finished Client Stylish pack (the 16 photos and the CSV) from the Client Stylish
 // page into Stylish. Stored in a small IndexedDB store so it survives the page change and
 // works if Stylish opens in a new tab.
-export type StylishHandoff = { files: File[]; csv: string; csvName: string; clientName: string; location?: string; intent?: "reels" };
+export type StylishHandoff = { files: File[]; csv: string; csvName: string; clientName: string; location?: string; intent?: "reels" | "auto" };
 type StoredHandoff = {
   images: { name: string; type: string; blob: Blob }[];
   csv: string;
   csvName: string;
   clientName: string;
   location?: string;
-  intent?: "reels";
+  intent?: "reels" | "auto";
 };
 
 const DB_NAME = "client-stylish-handoff";

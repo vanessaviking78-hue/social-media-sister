@@ -1815,6 +1815,7 @@ export default function Stylish() {
 
   // A pack made on the Client Stylish page (16 photos and the CSV) arrives here ready to style.
   const [pendingClient, setPendingClient] = useState<string | null>(null);
+  const autoRunRef = useRef(false);
   useEffect(() => {
     takeStylishHandoff().then(h => {
       if (!h) return;
@@ -1825,6 +1826,7 @@ export default function Stylish() {
       setPendingClient(h.clientName);
       if (h.location) setArea(h.location);
       toast.success(`${h.clientName} pack loaded: ${h.files.length} photos and the CSV.`);
+      if (h.intent === "auto") autoRunRef.current = true;
       if (h.intent === "reels") toast.message("Pick the look, tick the posts you want, then press Make into reels. Each post also has a Magazine Flip reel button above its caption.", { duration: 12000 });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1840,6 +1842,19 @@ export default function Stylish() {
     setPendingClient(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingClient, presetsLoading, presets]);
+
+  // "Posts and stories in one go" from Client Stylish: once the pack, the client's look and the
+  // photos are all in, write the captions, make the stories and open the schedule screen. It stops
+  // there so nothing is booked until it has been checked.
+  useEffect(() => {
+    if (!autoRunRef.current || pendingClient || presetsLoading) return;
+    if (!posts.length || !images.length) return;
+    autoRunRef.current = false;
+    if (!preset) { toast.error("Pick the client above first, then press Schedule. I need to know whose account to use."); return; }
+    setPosts(l => l.map(p => ({ ...p, selected: true })));
+    setTimeout(() => { void handleScheduleRef.current("carousel"); }, 1500);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingClient, presetsLoading, posts.length, images.length, preset]);
 
   // -- live thumbnails -------------------------------------------------------
 
@@ -2503,6 +2518,9 @@ export default function Stylish() {
       setScheduling(null);
     }
   };
+
+  const handleScheduleRef = useRef(handleSchedule);
+  handleScheduleRef.current = handleSchedule;
 
   const useClientLook = () => {
     if (!preset) { toast.error("Choose a client first"); return; }
