@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Upload, Download, Play, X, Loader2, Plus } from "lucide-react";
+import { ArrowLeft, Upload, Download, Play, X, Loader2, Plus, CalendarClock, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { MagazineIcon } from "@/components/magazine-icon";
 import { takeFlipHandoff } from "@/lib/flip-handoff";
+import { ScheduleModal } from "@/components/schedule-modal";
+import { usePresets } from "@/lib/use-presets";
+import { nthPostingSlot } from "@/lib/schedule";
 import { coverToCanvas, loadImageFromFile } from "@/lib/advent-door";
 import {
   MAG_W,
@@ -91,6 +94,17 @@ export default function Magazine() {
   const [progress, setProgress] = useState<number | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [fileName, setFileName] = useState("");
+  const { presets } = usePresets();
+  const blobRef = useRef<Blob | null>(null);
+  const [clientName, setClientName] = useState("");
+  const [caption, setCaption] = useState("");
+  const [area, setArea] = useState("");
+  const [postTitle, setPostTitle] = useState("");
+  const [captionBusy, setCaptionBusy] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [scheduleVideo, setScheduleVideo] = useState<string | null>(null);
+  const [scheduleStart, setScheduleStart] = useState<string | undefined>(undefined);
+  const matchedPreset = presets.find((p) => clientName.trim() && p.name.trim().toLowerCase() === clientName.trim().toLowerCase()) ?? null;
   const previewRef = useRef<HTMLCanvasElement>(null);
   const startRef = useRef<number>(performance.now());
 
@@ -194,6 +208,10 @@ export default function Magazine() {
       }));
       const clean = h.clientName.trim().replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "-");
       setFileName(`${clean || "Client"}-Preview`);
+      setClientName(h.clientName || "");
+      if (h.caption) setCaption(h.caption);
+      if (h.location) setArea(h.location);
+      if (h.title) setPostTitle(h.title);
       startRef.current = performance.now();
       if (h.images.length < MAG_MIN_PAGES) toast.message(`Only ${h.images.length} cover${h.images.length === 1 ? "" : "s"} came across. Magazine Flip needs at least ${MAG_MIN_PAGES}, so add the rest here.`);
     })();
@@ -233,6 +251,7 @@ export default function Magazine() {
         slots.map((s) => s!.canvas),
         setProgress
       );
+      blobRef.current = blob;
       const url = URL.createObjectURL(blob);
       setVideoUrl(url);
       const a = document.createElement("a");
@@ -246,6 +265,52 @@ export default function Magazine() {
       toast.error(e?.message || "The video would not build, try again");
     } finally {
       setProgress(null);
+    }
+  }
+
+  async function writeCaption() {
+    setCaptionBusy(true);
+    try {
+      const r = await fetch(`${import.meta.env.BASE_URL}api/caption-generator/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tone: "1",
+          context: `An Instagram reel that plays a magazine style page turn through ${slots.length} pages${postTitle ? `, opening with "${postTitle}"` : ""}. Write the caption in the first person, as the clinician or clinic owner. Use UK spelling. Never use em dashes or en dashes.`,
+          clinicName: clientName || undefined,
+          location: area.trim() || undefined,
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.caption) throw new Error(d.error || "Caption failed");
+      setCaption(String(d.caption).replace(/[\u2013\u2014]/g, ","));
+    } catch (e: any) {
+      toast.error(e?.message || "Caption failed");
+    } finally {
+      setCaptionBusy(false);
+    }
+  }
+
+  async function prepareSchedule() {
+    if (!blobRef.current) return;
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("video", blobRef.current, "magazine-flip.mp4");
+      const r = await fetch(`${import.meta.env.BASE_URL}api/stylish-reel/upload`, { method: "POST", body: fd });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.videoUrl) throw new Error(d.error || "Could not upload the video");
+      const start = new Date();
+      start.setHours(18, 15, 0, 0);
+      if (start.getTime() <= Date.now() + 5 * 60000) start.setDate(start.getDate() + 1);
+      const first = nthPostingSlot(start, 0);
+      first.setMinutes(first.getMinutes() - first.getTimezoneOffset());
+      setScheduleStart(first.toISOString().slice(0, 16));
+      setScheduleVideo(d.videoUrl as string);
+    } catch (e: any) {
+      toast.error(e?.message || "Could not upload the video");
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -359,6 +424,33 @@ export default function Magazine() {
               </button>
             </div>
             {videoUrl && (
+              <div className="max-w-sm mx-auto lg:max-w-none space-y-2 rounded-lg border border-zinc-800 p-3">
+                <p className="text-sm text-zinc-200 font-medium">Share it as a reel or a trial reel</p>
+                <input
+                  value={area}
+                  onChange={(e) => setArea(e.target.value)}
+                  placeholder="Clinic area for local SEO, e.g. Harrogate"
+                  className="w-full rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white"
+                />
+                <textarea
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  rows={5}
+                  placeholder="Caption"
+                  className="w-full rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white"
+                />
+                <div className="flex gap-2">
+                  <button onClick={writeCaption} disabled={captionBusy} className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-200 hover:text-white text-sm disabled:opacity-40">
+                    {captionBusy ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />} Write caption
+                  </button>
+                  <button onClick={prepareSchedule} disabled={uploading} className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-pink-600 hover:bg-pink-500 text-white text-sm font-semibold disabled:opacity-40">
+                    {uploading ? <><Loader2 size={14} className="animate-spin" /> Uploading</> : <><CalendarClock size={14} /> Schedule as reel</>}
+                  </button>
+                </div>
+                <p className="text-xs text-zinc-500">Goes out on Monday, Wednesday, Friday or Sunday. Tick trial reel on the next screen if you want it as a trial.</p>
+              </div>
+            )}
+            {videoUrl && (
               <p className="text-xs text-zinc-500 max-w-sm mx-auto lg:max-w-none">
                 Didn't download?{" "}
                 <a href={videoUrl} download={`${fileName.trim() || "magazine-flip"}.mp4`} className="text-fuchsia-400 underline">
@@ -371,9 +463,24 @@ export default function Magazine() {
         </div>
 
         <p className="text-xs text-zinc-600 mt-8">
-          Everything happens in your browser, so nothing is uploaded. Chrome or Edge gives the quickest export.
+          The video is built in your browser and only uploaded if you choose to schedule it. Chrome or Edge gives the quickest export.
         </p>
       </div>
+      {scheduleVideo && (
+        <ScheduleModal
+          presetId={matchedPreset?.id ?? null}
+          presetName={matchedPreset?.name}
+          postType="reel"
+          posts={[{ title: `${postTitle || fileName || "Magazine Flip"}${clientName ? ` · ${clientName}` : ""}`, caption: caption.trim(), videoUrl: scheduleVideo }]}
+          perPostCaptions
+          initialScheduledAt={scheduleStart}
+          postingDays
+          sourceTool="magazine-flip"
+          onClose={() => setScheduleVideo(null)}
+          onSaved={() => setScheduleVideo(null)}
+          presets={presets.map((p) => ({ id: p.id, name: p.name }))}
+        />
+      )}
     </div>
   );
 }

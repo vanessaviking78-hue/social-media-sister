@@ -77,4 +77,24 @@ router.post("/stylish-reel", upload.array("slides", 12), async (req, res) => {
   }
 });
 
+// Stores a finished MP4 made in the browser (Magazine Flip) so it can be scheduled as a reel.
+const uploadVideo = multer({ storage: multer.memoryStorage(), limits: { fileSize: 60 * 1024 * 1024, files: 1 } });
+router.post("/stylish-reel/upload", uploadVideo.single("video"), async (req, res) => {
+  const f = req.file;
+  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+  if (!f) { res.status(400).json({ error: "No video received" }); return; }
+  if (!bucketId) { res.status(500).json({ error: "Object storage not configured" }); return; }
+  try {
+    const objectPath = `stylish-reels/${uuidv4()}.mp4`;
+    await objectStorageClient.bucket(bucketId).file(objectPath).save(f.buffer, {
+      contentType: "video/mp4",
+      metadata: { cacheControl: "public, max-age=31536000" },
+    });
+    res.json({ videoUrl: `/api/media/${objectPath}` });
+  } catch (err) {
+    logger.error({ err }, "stylish-reel upload failed");
+    res.status(500).json({ error: "Could not store the video" });
+  }
+});
+
 export default router;

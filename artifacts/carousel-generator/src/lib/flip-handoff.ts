@@ -2,8 +2,8 @@
 // Stylish stays open behind it - the ticked posts and the Schedule button are still right there
 // when you come back. The handoff itself travels as a few blobs in a small IndexedDB store
 // (shared by every tab on the site), not in memory, since a new tab starts with a blank slate.
-export type FlipHandoff = { canvases: HTMLCanvasElement[]; clientName: string };
-type StoredHandoff = { blobs: Blob[]; clientName: string };
+export type FlipHandoff = { canvases: HTMLCanvasElement[]; clientName: string; caption?: string; location?: string; title?: string };
+type StoredHandoff = { blobs: Blob[]; clientName: string; caption?: string; location?: string; title?: string };
 
 const DB_NAME = "stylish-flip-handoff";
 const STORE = "handoff";
@@ -34,7 +34,7 @@ export async function setFlipHandoff(h: FlipHandoff): Promise<void> {
   await new Promise<void>(resolve => {
     try {
       const tx = db.transaction(STORE, "readwrite");
-      tx.objectStore(STORE).put({ blobs, clientName: h.clientName } as StoredHandoff, KEY);
+      tx.objectStore(STORE).put({ blobs, clientName: h.clientName, caption: h.caption, location: h.location, title: h.title } as StoredHandoff, KEY);
       tx.oncomplete = () => resolve();
       tx.onerror = () => resolve();
     } catch { resolve(); }
@@ -43,7 +43,7 @@ export async function setFlipHandoff(h: FlipHandoff): Promise<void> {
 
 // Turns the stored blobs back into ready-to-draw images, keyed by object URL so the caller can
 // revoke them once it's done loading.
-export async function takeFlipHandoff(): Promise<{ images: HTMLImageElement[]; clientName: string } | null> {
+export async function takeFlipHandoff(): Promise<{ images: HTMLImageElement[]; clientName: string; caption?: string; location?: string; title?: string } | null> {
   const db = await openDb();
   if (!db) return null;
   const stored = await new Promise<StoredHandoff | null>(resolve => {
@@ -63,5 +63,5 @@ export async function takeFlipHandoff(): Promise<{ images: HTMLImageElement[]; c
     img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Image load failed")); };
     img.src = url;
   })));
-  return { images, clientName: stored.clientName };
+  return { images, clientName: stored.clientName, caption: stored.caption, location: stored.location, title: stored.title };
 }

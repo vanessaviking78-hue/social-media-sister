@@ -2301,6 +2301,25 @@ export default function Stylish() {
     }
   };
 
+  // One post's own slides go to Magazine Flip as its pages, with the caption and area travelling
+  // too, so it can be shared from there as a reel or a trial reel.
+  const handleSendPostToFlip = async (post: Post) => {
+    setSendingFlip(true);
+    try {
+      await warmAll();
+      const logo = style.showLogo ? await loadLogo(preset) : null;
+      const pi = posts.indexOf(post);
+      const canvases = await renderPostCanvases(pi, post, logo);
+      if (canvases.length < 4) { toast.error("Magazine Flip needs at least 4 slides in a post"); return; }
+      await setFlipHandoff({ canvases: canvases.slice(0, 16), clientName: preset?.name || "", caption: post.caption.trim() || undefined, location: area.trim() || undefined, title: buildSlides(post.texts)[0]?.text });
+      window.open("/magazine", "_blank", "noopener");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not send to Magazine Flip");
+    } finally {
+      setSendingFlip(false);
+    }
+  };
+
   const handleSchedule = async (mode: "carousel" | "reel" = "carousel") => {
     if (!selectedPosts.length) { toast.error("Tick at least one post first"); return; }
     if (!preset) { toast.error("Choose a client first so I know whose account to schedule to"); return; }
@@ -3231,10 +3250,15 @@ export default function Stylish() {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <Label className="text-xs text-muted-foreground">Caption</Label>
-                          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => handleCaptionOne(post)} disabled={post.captionBusy}>
-                            {post.captionBusy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />}
-                            {post.caption ? "Write another" : "Write caption"}
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => handleSendPostToFlip(post)} disabled={sendingFlip || !!scheduling} title="Sends this post to Magazine Flip so you can share it as a reel or a trial reel">
+                              <Film className="w-3.5 h-3.5 mr-1" />Magazine Flip reel
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => handleCaptionOne(post)} disabled={post.captionBusy}>
+                              {post.captionBusy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />}
+                              {post.caption ? "Write another" : "Write caption"}
+                            </Button>
+                          </div>
                         </div>
                         <textarea
                           value={post.caption} rows={5}
