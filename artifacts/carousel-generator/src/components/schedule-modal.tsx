@@ -50,6 +50,8 @@ type Props = {
   keepClockTime?: boolean;
   /** Post only on Monday, Wednesday, Friday and Sunday, one post per posting day, same time each day. */
   postingDays?: boolean;
+  /** One story per post (same order), booked for 7am on the same day as that post. */
+  companionStories?: { imageUrl: string; title: string }[];
 };
 
 function defaultScheduledAt() {
@@ -67,7 +69,7 @@ function dateKey(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt, sourceTool, perPostCaptions, initialGapMinutes, keepClockTime, postingDays }: Props) {
+export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt, sourceTool, perPostCaptions, initialGapMinutes, keepClockTime, postingDays, companionStories }: Props) {
   const [scheduledAt, setScheduledAt] = useState(() => initialScheduledAt || defaultScheduledAt());
   const [notes, setNotes] = useState("");
   const [caption, setCaption] = useState(() => posts[0]?.caption || "");
@@ -228,13 +230,34 @@ const staggeredAt = (() => {
             throw new Error(err.error || "Failed to schedule post");
           }
           scheduledCount++;
+          const story = companionStories?.[i];
+          if (story) {
+            const at = new Date(staggeredAt);
+            at.setHours(7, 0, 0, 0);
+            const sr = await fetch(`${BASE}/api/scheduler/posts`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                postType: "story",
+                content: { caption: "", title: `${story.title} (story)`, platforms: ["instagram"], imageUrls: [story.imageUrl], sourceTool: sourceTool || post.sourceTool },
+                scheduledAt: at.toISOString(),
+                isTrial: false,
+                notes,
+                presetId: targetPresetId,
+              }),
+            });
+            if (!sr.ok) {
+              const err = await sr.json().catch(() => ({ error: "Failed" }));
+              throw new Error(`Post ${i + 1} is booked but its story was not: ${err.error || "Failed to schedule story"}`);
+            }
+          }
         }
       }
       const clientCount = targetPresetIds.length;
       toast.success(
         broadcastMode
           ? `${scheduledCount} post${scheduledCount === 1 ? "" : "s"} scheduled across ${clientCount} client${clientCount === 1 ? "" : "s"}`
-          : (scheduledCount === 1 ? "Post scheduled" : `${scheduledCount} posts scheduled`)
+          : (scheduledCount === 1 ? "Post scheduled" : `${scheduledCount} posts scheduled`) + (companionStories?.length ? `, with a 7am story for each` : "")
       );
       onSaved?.();
       onClose();
@@ -370,6 +393,17 @@ const staggeredAt = (() => {
                 })}
               </div>
               <p className="text-[11px] text-zinc-500 mt-1.5">Green means free. Booked days show what's already going out that day, tap to use it anyway.</p>
+            </div>
+          )}
+
+          {companionStories && companionStories.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-xs text-zinc-400">A story goes out at 7am on the same day as each post. Check them here before you book.</p>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {companionStories.map((st, k) => (
+                  <img key={k} src={st.imageUrl.startsWith("/") ? `${BASE}${st.imageUrl}` : st.imageUrl} alt={`Story ${k + 1}`} className="h-40 w-auto rounded-md border border-zinc-700 shrink-0" />
+                ))}
+              </div>
             </div>
           )}
 

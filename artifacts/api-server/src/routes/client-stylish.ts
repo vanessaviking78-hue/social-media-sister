@@ -123,10 +123,10 @@ async function readWebsite(website: string, treatments: string[]): Promise<strin
 
 // Words that must never reach a post: prescription only medicines and the claims wording
 // the ASA and MHRA object to. Checked in code as well as in the prompt.
-const BANNED_TERMS = /\b(botox|botulinum(?:\s+toxin)?|bocouture|azzalure|dysport|xeomin|vistabel|nuceiva|letybo|baby[\s-]?tox|tox|anti[\s-]?wrinkle|antiwrinkle|wrinkle[\s-]?relax\w*|ozempic|wegovy|mounjaro|saxenda|semaglutide|tirzepatide|liraglutide)\b/gi;
+export const BANNED_TERMS = /\b(botox|botulinum(?:\s+toxin)?|bocouture|azzalure|dysport|xeomin|vistabel|nuceiva|letybo|baby[\s-]?tox|tox|anti[\s-]?wrinkle|antiwrinkle|wrinkle[\s-]?relax\w*|ozempic|wegovy|mounjaro|saxenda|semaglutide|tirzepatide|liraglutide)\b/gi;
 
 // Swaps banned words for the compliant wording, so the model never sees them in its input.
-function neutralise(text: string): string {
+export function neutralise(text: string): string {
   return text.replace(BANNED_TERMS, "smoothing treatments").replace(/(smoothing treatments)[®™]/g, "$1");
 }
 
@@ -140,7 +140,7 @@ function findBanned(rows: Row[]): string[] {
   return [...hits];
 }
 
-function clean(text: unknown): string {
+export function clean(text: unknown): string {
   return String(text ?? "")
     .replace(/\s*[—–]\s*/g, ", ")
     .replace(/,\s*,/g, ",")

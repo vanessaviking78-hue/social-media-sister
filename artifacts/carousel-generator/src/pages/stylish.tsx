@@ -1312,6 +1312,69 @@ async function uploadPngs(dataUrls: string[], names: string[]): Promise<string[]
 
 const tick = () => new Promise<void>(r => setTimeout(r, 0));
 
+// 1080 x 1920 story: the post's cover photo, a dark layer so the words read, the question in
+// bold across the top and a "reply below" line under it. Kept clear of the top 250px and bottom
+// 340px, which Instagram covers with its own buttons.
+async function renderStory(question: string, photo: File | null, style: Style, preset: ClientPreset | null): Promise<HTMLCanvasElement> {
+  const SW = 1080, SH = 1920;
+  const c = document.createElement("canvas");
+  c.width = SW; c.height = SH;
+  const ctx = c.getContext("2d")!;
+  const accent = preset?.accentColor || "#e11d74";
+  ctx.fillStyle = "#1c1c1c";
+  ctx.fillRect(0, 0, SW, SH);
+  if (photo) {
+    const b = await prepareImage(photo);
+    const bmp = b ? await createImageBitmap(b) : null;
+    if (bmp) {
+      const sc = Math.max(SW / bmp.width, SH / bmp.height);
+      const dw = bmp.width * sc, dh = bmp.height * sc;
+      ctx.drawImage(bmp, (SW - dw) / 2, (SH - dh) / 2, dw, dh);
+      bmp.close();
+    }
+  }
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  ctx.fillRect(0, 0, SW, SH);
+  const g = ctx.createLinearGradient(0, 0, 0, 1000);
+  g.addColorStop(0, "rgba(0,0,0,0.7)");
+  g.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, SW, 1000);
+
+  const family = style.displayFont;
+  const text = question.toUpperCase();
+  let size = 128;
+  let lines: string[] = [];
+  for (; size >= 72; size -= 6) {
+    await document.fonts.load(`900 ${size}px ${family}`).catch(() => undefined);
+    ctx.font = `900 ${size}px ${family}`;
+    lines = wrapText(ctx, text, 900);
+    if (lines.length <= 5) break;
+  }
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = "#ffffff";
+  ctx.shadowColor = "rgba(0,0,0,0.55)";
+  ctx.shadowBlur = 18;
+  const lh = Math.round(size * 1.08);
+  let y = 300;
+  for (const line of lines) { ctx.fillText(line, SW / 2, y); y += lh; }
+  ctx.shadowBlur = 0;
+
+  const pillText = "REPLY BELOW WITH YOUR ANSWER";
+  await document.fonts.load(`800 46px ${family}`).catch(() => undefined);
+  ctx.font = `800 46px ${family}`;
+  const pw = ctx.measureText(pillText).width + 90, ph = 96, px = (SW - pw) / 2, py = y + 40;
+  ctx.fillStyle = accent;
+  ctx.beginPath();
+  ctx.roundRect(px, py, pw, ph, ph / 2);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.textBaseline = "middle";
+  ctx.fillText(pillText, SW / 2, py + ph / 2 + 2);
+  return c;
+}
+
 function makeId() {
   return Math.random().toString(36).slice(2, 10);
 }
@@ -1640,6 +1703,8 @@ export default function Stylish() {
   const [captionAllBusy, setCaptionAllBusy] = useState(false);
   const [scheduleItems, setScheduleItems] = useState<SchedulePostPayload[] | null>(null);
   const [scheduleMode, setScheduleMode] = useState<"carousel" | "reel">("carousel");
+  const [withStories, setWithStories] = useState(true);
+  const [scheduleStories, setScheduleStories] = useState<{ imageUrl: string; title: string }[] | undefined>(undefined);
   const [sendingFlip, setSendingFlip] = useState(false);
 
   const imgInputRef = useRef<HTMLInputElement>(null);
@@ -2386,6 +2451,42 @@ export default function Stylish() {
           ...(mode === "reel" ? { videoUrl } : { imageUrls: urls }),
         });
       }
+      // A story for each post, asking a question about it. It goes out at 7am on the post's day.
+      let stories: { imageUrl: string; title: string }[] | undefined;
+      if (withStories) {
+        setScheduling("Writing the story questions");
+        const qr = await fetch(`${BASE}/api/stylish-story/questions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tone: "3",
+            area: area.trim() || undefined,
+            clinicName: preset.name,
+            posts: selectedPosts.map(p => ({ slides: buildSlides(p.texts).map(s => s.text) })),
+          }),
+        });
+        const qd = await qr.json().catch(() => ({}));
+        if (!qr.ok || !Array.isArray(qd.questions)) throw new Error(qd.error || "Could not write the story questions");
+        stories = [];
+        for (let k = 0; k < selectedPosts.length; k++) {
+          const post = selectedPosts[k];
+          const pi = posts.indexOf(post);
+          setScheduling(`Making story ${k + 1} of ${selectedPosts.length}`);
+          const canvas = await renderStory(String(qd.questions[k]), photoFor(pi, post, 0), style, preset);
+          let dataUrl: string | null = canvas.toDataURL("image/png");
+          canvas.width = 0; canvas.height = 0;
+          let got: string[] | null = null;
+          for (let attempt = 0; attempt < 3 && !got; attempt++) {
+            try { got = await uploadPngs([dataUrl], [`stylish-${pi + 1}-story.png`]); }
+            catch (e) { if (attempt === 2) throw e; await new Promise(r => setTimeout(r, 1500 * (attempt + 1))); }
+          }
+          dataUrl = null;
+          if (!got?.[0]) throw new Error("A story would not upload");
+          stories.push({ imageUrl: got[0], title: `${buildSlides(post.texts)[0]?.text ?? `Post ${pi + 1}`} · ${preset.name}` });
+          await tick();
+        }
+      }
+      setScheduleStories(stories);
       // First post on the next Monday, Wednesday, Friday or Sunday at 6.15pm, then one on each
       // posting day after that (the schedule screen does the stepping).
       const start = new Date();
@@ -2987,6 +3088,10 @@ export default function Stylish() {
                     {sendingFlip ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <ImageIcon className="w-4 h-4 mr-1.5" />}
                     Send to Magazine Flip
                   </Button>
+                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer" title="Adds a story to each post with a bold question about it, booked for 7am on the post's day">
+                    <input type="checkbox" checked={withStories} onChange={e => setWithStories(e.target.checked)} />
+                    Add a 7am story to each post
+                  </label>
                   <Button size="sm" onClick={() => handleSchedule("carousel")} disabled={!!scheduling} className="bg-pink-600 hover:bg-pink-700 text-white" title="Schedules on Monday, Wednesday, Friday and Sunday">
                     {scheduling ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{scheduling}</> : <><CalendarClock className="w-4 h-4 mr-1.5" />Schedule</>}
                   </Button>
@@ -3301,6 +3406,7 @@ export default function Stylish() {
           perPostCaptions
           initialScheduledAt={scheduleStart}
           postingDays
+          companionStories={scheduleStories}
           sourceTool="stylish"
           onClose={() => setScheduleItems(null)}
           onSaved={() => setScheduleItems(null)}
