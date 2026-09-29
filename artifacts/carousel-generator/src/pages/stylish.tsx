@@ -110,6 +110,7 @@ type Style = {
   arrow: boolean;
   rule: boolean;
   showLogo: boolean;
+  logoScale: number; // multiplier on the client's saved logo size
 };
 
 const INTER_TIGHT = "'Inter Tight', sans-serif";
@@ -294,6 +295,7 @@ const DEFAULT_STYLE: Style = {
   cvGradOpacity: 45,
   background: "#8a8a8a",
   showLogo: false,
+  logoScale: 1.35,
 } as Style;
 
 // Vanessa never wants em dashes (or spaced en dashes) in captions.
@@ -978,7 +980,7 @@ async function drawCover(
   const at = pos ?? defaultPos("cover", style);
   if (MORE_LAYOUTS.has(layout)) {
     await drawCoverMore(ctx, spec, photo, extras, style, layout, at, textAt, subTextAt, headScale, subScale);
-    if (logo && style.showLogo && preset) drawLogo(ctx, logo, "top-right", preset.logoSize || 110);
+    if (logo && style.showLogo && preset) drawLogo(ctx, logo, "top-right", (preset.logoSize || 110) * (style.logoScale ?? 1.35));
     return;
   }
   const bmp = photo && layout !== "plain" && layout !== "behind" ? await (async () => {
@@ -1141,7 +1143,7 @@ async function drawCover(
   bmp?.close();
   setSpacing(ctx, 0);
   if (logo && style.showLogo && preset) {
-    drawLogo(ctx, logo, "top-right", preset.logoSize || 110);
+    drawLogo(ctx, logo, "top-right", (preset.logoSize || 110) * (style.logoScale ?? 1.35));
   }
 }
 
@@ -1297,7 +1299,7 @@ async function renderSlide(
   }
 
   if (logo && style.showLogo && preset) {
-    drawLogo(ctx, logo, "top-right", preset.logoSize || 110);
+    drawLogo(ctx, logo, "top-right", (preset.logoSize || 110) * (style.logoScale ?? 1.35));
   }
   return canvas;
 }
@@ -1317,6 +1319,8 @@ async function warmFonts(style: Style) {
     document.fonts.load(`${style.textItalic ? "italic " : ""}${style.textWeight} ${style.bodySize}px ${style.displayFont}`),
     document.fonts.load(`italic ${style.textWeight} ${style.ctaSize}px ${style.displayFont}`),
     document.fonts.load(`400 22px ${style.fontFamily}`),
+    ...(style.clientCoverFont ? [document.fonts.load(`${style.cvWeight} ${style.cvSize}px ${style.clientCoverFont}`)] : []),
+    ...(style.clientCoverSubFont ? [document.fonts.load(`${style.cvSubWeight} ${style.cvSubSize}px ${style.clientCoverSubFont}`)] : []),
   ]);
 }
 
@@ -1439,6 +1443,8 @@ const fontFaceRegistry = new Map<string, FontFace[]>();
 
 async function registerFont(fileName: string, data: ArrayBuffer): Promise<string | null> {
   try {
+    for (const old of fontFaceRegistry.get(fileName) ?? []) document.fonts.delete(old);
+    fontFaceRegistry.delete(fileName);
     const info = parseFontFile(fileName);
     const faces: FontFace[] = [];
     for (const fam of new Set([info.family, info.compact])) {
@@ -3111,6 +3117,13 @@ export default function Stylish() {
               <input type="checkbox" checked={style.showLogo} onChange={e => patch({ showLogo: e.target.checked })} className="accent-sky-500" />
               Client logo (all slides)
             </label>
+            {style.showLogo && (
+              <label className="block text-sm space-y-1">
+                <span className="text-muted-foreground">Logo size ({Math.round((style.logoScale ?? 1.35) * 100)}%)</span>
+                <input type="range" min={50} max={300} step={5} value={Math.round((style.logoScale ?? 1.35) * 100)}
+                  onChange={e => patch({ logoScale: Number(e.target.value) / 100 })} className="w-full accent-sky-500" />
+              </label>
+            )}
           </section>
 
           <section className="space-y-3 border-t border-border/30 pt-5">
