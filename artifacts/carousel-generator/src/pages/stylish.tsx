@@ -44,7 +44,7 @@ const STYLE_STORAGE_KEY = "stylish-style-v4";
 type CoverLayout = "band" | "centred" | "block" | "split" | "serif" | "plain" | "behind"
   | "fullbleed" | "blur" | "strip" | "diagonal" | "behind2" | "polaroid" | "sidebar" | "frame" | "layered"
   // The "October 26" set: each is a scene photo (made in AI Photo Studio) with the words placed on it. The number is the pin's number.
-  | "oct3" | "oct4" | "oct7" | "oct12" | "oct14" | "oct16";
+  | "oct3" | "oct4" | "oct6" | "oct7" | "oct12" | "oct13" | "oct14" | "oct16" | "oct18";
 
 type Style = {
   // Slide 1 (cover)
@@ -132,7 +132,7 @@ const COVER_WANTS: Record<CoverLayout, string[]> = {
   plain: [],
   behind: [],
   fullbleed: [], blur: [], strip: [], diagonal: [], behind2: [], polaroid: [], sidebar: [], frame: [], layered: [],
-  oct3: [], oct4: [], oct7: [], oct12: [], oct14: [], oct16: [],
+  oct3: [], oct4: [], oct6: [], oct7: [], oct12: [], oct13: [], oct14: [], oct16: [], oct18: [],
 };
 
 // Each cover layout brings its own type, colours and proportions. Everything can be changed afterwards.
@@ -218,6 +218,18 @@ const COVER_PRESETS: Record<CoverLayout, Partial<Style>> = {
   oct14: {
     coverLayout: "oct14", cvWeight: 400, cvSubWeight: 400, cvCaps: false, cvSubCaps: false, cvTracking: 0, cvSubTracking: 3,
     cvSize: 190, cvSubSize: 34, cvScrim: 0, cvColour: "#141414", cvSubColour: "#141414",
+  },
+  oct6: {
+    coverLayout: "oct6", cvWeight: 400, cvSubWeight: 400, cvCaps: false, cvSubCaps: false, cvTracking: 0, cvSubTracking: 3,
+    cvSize: 110, cvSubSize: 34, cvScrim: 0, cvColour: "#ffffff", cvSubColour: "#ffffff",
+  },
+  oct13: {
+    coverLayout: "oct13", cvFont: F_INSTRUMENT, cvSubFont: F_INSTRUMENT, cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: true, cvTracking: 0, cvSubTracking: 8,
+    cvSize: 260, cvSubSize: 40, cvScrim: 0, cvColour: "#ffffff", cvSubColour: "#ffffff",
+  },
+  oct18: {
+    coverLayout: "oct18", cvFont: F_INSTRUMENT, cvSubFont: F_INSTRUMENT, cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: true, cvTracking: 0, cvSubTracking: 6,
+    cvSize: 300, cvSubSize: 34, cvScrim: 0, cvColour: "#ffffff", cvSubColour: "#ffffff",
   },
   oct16: {
     coverLayout: "oct16", cvWeight: 400, cvSubWeight: 400, cvCaps: false, cvSubCaps: false, cvTracking: 0, cvSubTracking: 3,
@@ -412,10 +424,11 @@ function buildSlides(texts: string[]): SlideSpec[] {
 const COVER_ORDER: CoverLayout[] = ["band", "centred", "split", "plain", "behind", "fullbleed", "blur", "strip", "sidebar", "frame"];
 
 // The "October 26" set. Each look is named by its number on the Pinterest board.
-const OCT_ORDER: CoverLayout[] = ["oct3", "oct4", "oct7", "oct12", "oct14", "oct16"];
+const OCT_ORDER: CoverLayout[] = ["oct3", "oct4", "oct6", "oct7", "oct12", "oct13", "oct14", "oct16", "oct18"];
 const OCT_LAYOUTS = new Set<CoverLayout>(OCT_ORDER);
 const OCT_NAMES: Partial<Record<CoverLayout, string>> = {
   oct3: "Poster on the pavement", oct4: "Poster on the wall", oct7: "Shhh lips", oct12: "Newspaper on a chair", oct14: "Black heels", oct16: "Glove and card",
+  oct6: "Black and white portrait", oct13: "Magazine cover", oct18: "Big serif lettering",
 };
 const OCT_HELP: Partial<Record<CoverLayout, string>> = {
   oct3: "Black heels standing on a poster. The headline goes on the poster. Use the shared heels photo.",
@@ -424,6 +437,9 @@ const OCT_HELP: Partial<Record<CoverLayout, string>> = {
   oct12: "The clinician behind a newspaper on a cafe chair, black and white, headline on the newspaper.",
   oct14: "Glossy black heels in black and white, one big headline on the left.",
   oct16: "A gloved hand holding a card, headline on the card.",
+  oct6: "A black and white portrait of the clinician with one headline across the bottom.",
+  oct13: "A magazine cover over a photo of the client. Headline: MASTHEAD | SECOND HEADLINE. Subtitle: the small line. OCTOBER 2026 sits under the masthead.",
+  oct18: "One huge serif headline across the photo, used for a treatment name.",
 };
 
 // The name of each cover's colour block, for the colour picker. Covers not listed have no block.
@@ -1123,10 +1139,14 @@ type OctLook = {
   maxLines: number;
   subAtBottom?: boolean;
   ink?: string;                          // fixed headline colour when the picture is light
+  mono?: boolean;                        // turn the picture black and white
 };
 const OCT_LOOKS: Partial<Record<CoverLayout, OctLook>> = {
   oct3: { fit: "cover", box: [130, 960, 820, 340], brand: true, glow: false, align: "center", maxLines: 3 },
   oct4: { fit: "cover", box: [290, 610, 500, 500], brand: true, glow: false, align: "center", maxLines: 4, subAtBottom: true },
+  oct6: { fit: "cover", box: [90, 1000, 900, 340], brand: false, glow: true, align: "center", maxLines: 4, mono: true },
+  oct13: { fit: "cover", box: [0, 0, 0, 0], brand: false, glow: false, align: "center", maxLines: 1 },
+  oct18: { fit: "cover", box: [30, 380, 1020, 620], brand: false, glow: true, align: "center", maxLines: 2 },
   oct7: { fit: "cover", box: [90, 1120, 900, 240], brand: false, glow: true, align: "center", maxLines: 2 },
   oct12: { fit: "cover", box: [270, 280, 560, 330], brand: false, glow: true, align: "center", maxLines: 3 },
   oct14: { fit: "extend", box: [50, 330, 560, 560], brand: false, glow: true, ink: "#111111", align: "left", maxLines: 4 },
@@ -1150,7 +1170,9 @@ async function drawCoverOct(
       const z = Math.min(3, Math.max(1, pos?.z ?? 1));
       const sc = Math.max(W / bmp.width, H / bmp.height) * z;
       const dw = bmp.width * sc, dh = bmp.height * sc;
+      if (look.mono) (ctx as CanvasRenderingContext2D & { filter?: string }).filter = "grayscale(1) contrast(1.05)";
       ctx.drawImage(bmp, (W - dw) * ((pos?.x ?? 50) / 100), (H - dh) * ((pos?.y ?? 50) / 100), dw, dh);
+      (ctx as CanvasRenderingContext2D & { filter?: string }).filter = "none";
     } else {
       // A square scene on a tall slide: the picture keeps its full width, and its top and bottom edges are smeared outwards.
       const sc = W / bmp.width;
@@ -1175,6 +1197,48 @@ async function drawCoverOct(
       ctx.drawImage(bmp, (W - dw) * ((pos?.x ?? 50) / 100), py, dw, dh2);
     }
     bmp.close();
+  }
+
+  if (layout === "oct13") {
+    // Magazine cover: MASTHEAD | SECOND HEADLINE in the headline, the small line in the subtitle.
+    const parts = spec.text.split("|").map(x => x.trim());
+    const mast = (style.cvCaps ? parts[0].toUpperCase() : parts[0]) || "";
+    const second = parts[1] ?? "";
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,0.35)"; ctx.shadowBlur = 24;
+    ctx.fillStyle = style.cvColour; ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    setSpacing(ctx, style.cvTracking);
+    let msz = Math.round(style.cvSize * headScale);
+    ctx.font = `${style.cvWeight} ${msz}px ${hf}`;
+    while (msz > 60 && ctx.measureText(mast).width > 940) { msz -= 6; ctx.font = `${style.cvWeight} ${msz}px ${hf}`; }
+    const my = 70 + Math.round(msz * 0.85) + textAt.dy;
+    ctx.fillText(mast, W / 2 + textAt.dx, my);
+    setSpacing(ctx, 12);
+    ctx.font = `400 34px ${sf}`;
+    ctx.fillText("OCTOBER 2026", W / 2 + textAt.dx, my + 58);
+    if (second) {
+      setSpacing(ctx, 0);
+      ctx.textAlign = "left";
+      let ssz = Math.round(style.cvSize * 0.7 * headScale);
+      ctx.font = `italic ${style.cvWeight} ${ssz}px ${hf}`;
+      const sx = 70 + subTextAt.dx;
+      while (ssz > 50 && ctx.measureText(second).width > 800) { ssz -= 6; ctx.font = `italic ${style.cvWeight} ${ssz}px ${hf}`; }
+      ctx.fillText(second, sx, 1010 + subTextAt.dy);
+      if (spec.sub) {
+        setSpacing(ctx, style.cvSubTracking);
+        ctx.font = `${style.cvSubWeight} ${Math.round(style.cvSubSize * subScale)}px ${sf}`;
+        ctx.fillStyle = style.cvSubColour;
+        ctx.fillText(style.cvSubCaps ? spec.sub.toUpperCase() : spec.sub, sx, 1010 + 70 + subTextAt.dy);
+      }
+    } else if (spec.sub) {
+      setSpacing(ctx, style.cvSubTracking);
+      ctx.font = `${style.cvSubWeight} ${Math.round(style.cvSubSize * subScale)}px ${sf}`;
+      ctx.fillStyle = style.cvSubColour; ctx.textAlign = "left";
+      ctx.fillText(style.cvSubCaps ? spec.sub.toUpperCase() : spec.sub, 70 + subTextAt.dx, 1090 + subTextAt.dy);
+    }
+    ctx.restore();
+    setSpacing(ctx, 0);
+    return;
   }
 
   const brand = (preset?.accentColor || "").trim();
