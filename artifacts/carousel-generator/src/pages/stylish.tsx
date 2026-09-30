@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import Papa from "papaparse";
@@ -1571,6 +1571,19 @@ function parseFontFile(fileName: string): FontInfo {
   return { family: spaced, compact: spaced.replace(/\s+/g, ""), weight, italic };
 }
 
+type FontOption = { label: string; value: string; group?: string };
+// Font list rows, with a small heading above each named group (Envato headings, Envato subtitles, Your fonts).
+function fontItems(options: FontOption[]) {
+  const out: React.ReactNode[] = [];
+  let last: string | undefined;
+  for (const f of options) {
+    if (f.group && f.group !== last) out.push(<SelectLabel key={`g-${f.group}`} className="text-[10px] uppercase tracking-wide text-muted-foreground">{f.group}</SelectLabel>);
+    last = f.group;
+    out.push(<SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>);
+  }
+  return out;
+}
+
 const fontFaceRegistry = new Map<string, FontFace[]>();
 
 async function registerFont(fileName: string, data: ArrayBuffer): Promise<string | null> {
@@ -1885,9 +1898,21 @@ export default function Stylish() {
   };
 
   const customFamilies = [...new Set(customFonts.map(f => f.family))];
-  const customOptions = customFamilies.map(fam => ({ label: `${fam} (yours)`, value: `'${fam}', sans-serif` }));
-  const coverFontOptions = [...customOptions, ...COVER_FONTS];
-  const slideFontOptions = [...customOptions, { label: "Instrument Serif", value: F_INSTRUMENT }, ...FONT_OPTIONS];
+  // Fonts bought from Envato get their own sections, headings and subtitles, at the top of every font list.
+  const envatoGroup = (fam: string) => {
+    const n = fam.toLowerCase().replace(/[^a-z]/g, "");
+    if (/annyra|syora|avoraty|ragitras|brylliant/.test(n)) return "Envato fonts: headings";
+    if (/geonnix|enchantedlove|justsans/.test(n)) return "Envato fonts: subtitles";
+    return "";
+  };
+  const customOptions: FontOption[] = customFamilies
+    .map(fam => {
+      const group = envatoGroup(fam);
+      return { label: group ? fam : `${fam} (yours)`, value: `'${fam}', sans-serif`, group: group || "Your fonts" };
+    })
+    .sort((a, b) => a.group.localeCompare(b.group) || a.label.localeCompare(b.label));
+  const coverFontOptions: FontOption[] = [...customOptions, ...COVER_FONTS];
+  const slideFontOptions: FontOption[] = [...customOptions, { label: "Instrument Serif", value: F_INSTRUMENT }, ...FONT_OPTIONS];
   const norm = (t: string) => t.toLowerCase().replace(/\s+/g, "");
   const missingFonts = COVER_WANTS[style.coverLayout].filter(w => !customFamilies.some(c => norm(c) === norm(w)));
   const [rendering, setRendering] = useState(false);
@@ -2911,9 +2936,7 @@ export default function Stylish() {
                 <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
                   <SelectItem value="__none">Use each cover's own font</SelectItem>
-                  {coverFontOptions.map(f => (
-                    <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
-                  ))}
+                  {fontItems(coverFontOptions)}
                 </SelectContent>
               </Select>
             </div>
@@ -2930,9 +2953,7 @@ export default function Stylish() {
                 <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
                   <SelectItem value="__none">Use each cover's own font</SelectItem>
-                  {coverFontOptions.map(f => (
-                    <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
-                  ))}
+                  {fontItems(coverFontOptions)}
                 </SelectContent>
               </Select>
             </div>
@@ -3014,9 +3035,7 @@ export default function Stylish() {
               <Select value={coverDefaultFaces(style, style.coverLayout)[0]} onValueChange={v => setFace(0, v)}>
                 <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
-                  {coverFontOptions.map(f => (
-                    <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
-                  ))}
+                  {fontItems(coverFontOptions)}
                 </SelectContent>
               </Select>
             </div>
@@ -3025,9 +3044,7 @@ export default function Stylish() {
               <Select value={coverDefaultFaces(style, style.coverLayout)[1]} onValueChange={v => setFace(1, v)}>
                 <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
-                  {coverFontOptions.map(f => (
-                    <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
-                  ))}
+                  {fontItems(coverFontOptions)}
                 </SelectContent>
               </Select>
             </div>
@@ -3174,9 +3191,7 @@ export default function Stylish() {
               <Select value={style.displayFont} onValueChange={v => patch({ displayFont: v })}>
                 <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
-                  {slideFontOptions.map(f => (
-                    <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
-                  ))}
+                  {fontItems(slideFontOptions)}
                 </SelectContent>
               </Select>
             </div>
@@ -3185,9 +3200,7 @@ export default function Stylish() {
               <Select value={style.fontFamily} onValueChange={v => patch({ fontFamily: v })}>
                 <SelectTrigger className="bg-muted/30 border-border/40 h-8"><SelectValue /></SelectTrigger>
                 <SelectContent className="max-h-72">
-                  {slideFontOptions.map(f => (
-                    <SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>
-                  ))}
+                  {fontItems(slideFontOptions)}
                 </SelectContent>
               </Select>
             </div>
