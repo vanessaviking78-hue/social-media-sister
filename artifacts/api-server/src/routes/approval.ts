@@ -19,12 +19,13 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
 
 router.post("/approval/batches", requireAuth, async (req, res) => {
   try {
-    const { name, clientName, presetId, imageUrls, expiryDays } = req.body as {
+    const { name, clientName, presetId, imageUrls, expiryDays, alreadyApproved } = req.body as {
       name: string;
       clientName?: string;
       presetId?: number;
       imageUrls: string[];
       expiryDays?: number;
+      alreadyApproved?: boolean; // photos filed straight into the client's library, no client sign off needed
     };
 
     if (!name || !imageUrls?.length) {
@@ -40,14 +41,14 @@ router.post("/approval/batches", requireAuth, async (req, res) => {
       presetId: presetId || null,
       token,
       expiresAt,
-      status: "pending",
+      status: alreadyApproved ? "reviewed" : "pending",
     }).returning();
 
     const images = await db.insert(approvalImagesTable).values(
       imageUrls.map((url) => ({
         batchId: batch.id,
         imageUrl: url,
-        status: "pending",
+        status: alreadyApproved ? "approved" : "pending",
         clientNote: "",
       }))
     ).returning();

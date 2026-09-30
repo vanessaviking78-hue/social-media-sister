@@ -1465,6 +1465,41 @@ async function saveToClientLibrary(files: LibraryFile[]) {
   } catch { /* silent */ }
 }
 
+// The client's own photos are filed in their library the first time they are used, so they can be
+// picked again next time under "Add approved photos". Photos already saved are skipped.
+async function savePhotosToClientLibrary(files: File[], clientName: string) {
+  if (!clientName) return;
+  const key = `stylish-saved-photos:${clientName.toLowerCase()}`;
+  let seen: string[] = [];
+  try { seen = JSON.parse(localStorage.getItem(key) || "[]"); } catch { /* ignore */ }
+  const sig = (f: File) => `${f.name}:${f.size}:${f.lastModified}`;
+  const fresh = files.filter(f => !/^approved-/.test(f.name) && !seen.includes(sig(f)));
+  if (!fresh.length) return;
+  try {
+    const dataUrls: string[] = [];
+    for (const f of fresh) {
+      const bmp = await createImageBitmap(f);
+      const sc = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc);
+      c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
+      bmp.close();
+      dataUrls.push(c.toDataURL("image/jpeg", 0.9));
+    }
+    const urls = await uploadPngs(dataUrls, fresh.map((f, i) => `photo-${Date.now()}-${i + 1}.jpg`));
+    const pw = localStorage.getItem("cybersuite-pw") || "";
+    const r = await fetch(`${BASE}/api/approval/batches`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-app-password": pw, Authorization: `Bearer ${pw}` },
+      body: JSON.stringify({ name: `Stylish photos ${new Date().toLocaleDateString("en-GB")}`, clientName, imageUrls: urls, alreadyApproved: true }),
+    });
+    if (r.ok) {
+      try { localStorage.setItem(key, JSON.stringify([...seen, ...fresh.map(sig)].slice(-2000))); } catch { /* ignore */ }
+      toast.success(`Saved ${fresh.length} photo${fresh.length !== 1 ? "s" : ""} to ${clientName}'s library`);
+    }
+  } catch { /* never blocks the main job */ }
+}
+
 const blobToDataUrl = (b: Blob) => new Promise<string>((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.onerror = rej; fr.readAsDataURL(b); });
 
 const tick = () => new Promise<void>(r => setTimeout(r, 0));
@@ -2541,6 +2576,7 @@ export default function Stylish() {
           } catch { /* skip this one */ }
         }
         await saveToClientLibrary(filed);
+        await savePhotosToClientLibrary(images, preset.name);
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Export failed");
@@ -2698,6 +2734,7 @@ export default function Stylish() {
         }
       }
       setScheduleStories(stories);
+      void savePhotosToClientLibrary(images, preset.name);
       void saveToClientLibrary([
         ...items.map((it, k) => ({
           clientName: preset.name, postType: (mode === "reel" ? "reel" : "carousel") as "reel" | "carousel", caption: it.caption,
