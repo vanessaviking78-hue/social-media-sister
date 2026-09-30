@@ -75,7 +75,20 @@ async function fetchPage(rawUrl: string, diag?: SiteDiag): Promise<{ html: strin
   try {
     for (let hop = 0; hop < 5; hop++) {
       if (current.protocol !== "https:" && current.protocol !== "http:") return null;
-      try { await validateHost(current.hostname); } catch { if (diag) diag.reason = "unsafe"; return null; }
+      try {
+        try { await validateHost(current.hostname); }
+        catch (e) {
+          // A hiccup looking the name up is worth one more go. Only a private address is really unsafe.
+          const m = e instanceof Error ? e.message : "";
+          if (m.includes("private") || m.includes("reserved")) throw e;
+          await new Promise(r => setTimeout(r, 400));
+          await validateHost(current.hostname);
+        }
+      } catch (e) {
+        const m = e instanceof Error ? e.message : "";
+        if (diag) diag.reason = m.includes("private") || m.includes("reserved") ? "unsafe" : "unreachable";
+        return null;
+      }
       const r = await fetch(current.href, {
         signal: controller.signal,
         redirect: "manual",
@@ -142,7 +155,8 @@ function pickTreatmentLinks(html: string, baseUrl: string, treatments: string[])
 }
 
 async function readWebsite(website: string, treatments: string[], diag?: SiteDiag): Promise<string> {
-  const start = /^https?:\/\//i.test(website) ? website : `https://${website}`;
+  const site = website.trim().split(/\s+/)[0].replace(/[,;]+$/, "");
+  const start = /^https?:\/\//i.test(site) ? site : `https://${site}`;
   let home = await fetchPage(start, diag);
   if (!home) {
     // Some sites only answer on the other spelling, with or without www.
