@@ -1248,7 +1248,7 @@ async function drawCoverOct(
     setSpacing(ctx, style.cvTracking);
     let msz = Math.round(style.cvSize * headScale);
     ctx.font = `${style.cvWeight} ${msz}px ${hf}`;
-    while (msz > 60 && ctx.measureText(mast).width > 940) { msz -= 6; ctx.font = `${style.cvWeight} ${msz}px ${hf}`; }
+    while (msz > 24 && ctx.measureText(mast).width > 940) { msz -= 6; ctx.font = `${style.cvWeight} ${msz}px ${hf}`; }
     const my = 70 + Math.round(msz * 0.85) + textAt.dy;
     ctx.fillText(mast, W / 2 + textAt.dx, my);
     setSpacing(ctx, 12);
