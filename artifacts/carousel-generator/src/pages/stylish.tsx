@@ -2343,7 +2343,7 @@ export default function Stylish() {
     warmFonts({ ...style, ...COVER_PRESETS[cover ?? style.coverLayout] } as Style).then(() => redrawOne({ ...post, cover }, pi, 0));
   };
 
-  // Gives every post a different cover option, going round all sixteen in turn.
+  // Gives every post a different cover option, going round all the options in turn.
   const mixCovers = () => {
     setPosts(list => list.map((p, i) => ({ ...p, cover: COVER_ORDER[i % COVER_ORDER.length] })));
     setCoverVersion(v => v + 1);
@@ -2855,7 +2855,7 @@ export default function Stylish() {
             <p className="text-xs text-muted-foreground leading-relaxed">
               Their own headline and subtitle font, bought and added here or under "Your fonts" below. Once set,
               these save straight to this client's profile — not just this browser — and show on the cover of
-              every post, whichever of the 16 cover options that post uses. Everything else about each cover,
+              every post, whichever cover option that post uses. Everything else about each cover,
               and every other slide, stays as it is.
             </p>
             <div className="space-y-1.5">
