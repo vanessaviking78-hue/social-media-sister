@@ -380,7 +380,8 @@ function buildSlides(texts: string[]): SlideSpec[] {
   return out;
 }
 
-const COVER_ORDER: CoverLayout[] = ["band", "centred", "block", "split", "serif", "plain", "behind", "fullbleed", "blur", "strip", "diagonal", "behind2", "polaroid", "sidebar", "frame", "layered"];
+// Block, serif, diagonal, behind 2, polaroid and layered were retired. Their drawing code is left in place, but they are no longer offered.
+const COVER_ORDER: CoverLayout[] = ["band", "centred", "split", "plain", "behind", "fullbleed", "blur", "strip", "sidebar", "frame"];
 
 // The name of each cover's colour block, for the colour picker. Covers not listed have no block.
 const BLOCK_LABEL: Partial<Record<CoverLayout, string>> = {
@@ -1761,6 +1762,7 @@ export default function Stylish() {
     patch({
       ...fallback,
       ...saved,
+      ...(saved.coverLayout && !COVER_ORDER.includes(saved.coverLayout) ? COVER_PRESETS.band : {}),
       ...(TEXTURES[style.cvBlock] ? { cvBlock: DEFAULT_STYLE.cvBlock } : {}),
       // Tweaked Helen's cover block is leopard print, so it starts that way whenever she is chosen.
       ...(/tweaked\s*helen/i.test(chosen?.name ?? "") ? { cvBlock: "texture:leopard" } : {}),
