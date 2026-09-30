@@ -77,6 +77,8 @@ type Style = {
   cvBlock: string;
   cvBand: string;
   cvBandOn: boolean;
+  cvCurve?: number;   // bend the headline: above 0 arches it up, below 0 makes a smile (October 26 covers)
+  cvLeading?: number; // line spacing as a multiple of the text size (October 26 covers)
   cvBlockAll: string; // set by "Change all": this block colour wins on every cover option
   cvBandAll: string;  // same for the bottom band
   cvPhoto: number;   // photo share of the slide, in percent
@@ -353,6 +355,9 @@ type Post = {
   coverSubColour?: string; // and its subtitle colour
   coverBlockColour?: string; // its band or block colour (band, block and split covers)
   coverBandColour?: string;  // and the split cover's bottom band
+  coverCurve?: number;     // this post's headline curve, letter spacing and line spacing on slide 1
+  coverTracking?: number;
+  coverLeading?: number;
   coverFont?: string;      // this post's own headline font on slide 1. Empty follows the client's font.
   coverSubFont?: string;   // and its subtitle font
 };
@@ -478,6 +483,9 @@ function styleForSlide(style: Style, post: Post, kind: SlideKind): Style {
   if (style.cvBlockAll) out = { ...out, cvBlock: style.cvBlockAll };
   if (style.cvBandAll) out = { ...out, cvBand: style.cvBandAll };
   if (style.cvAll) out = { ...out, cvColour: style.cvAllColour, cvSubColour: style.cvAllSubColour };
+  if (post.coverCurve !== undefined) out = { ...out, cvCurve: post.coverCurve };
+  if (post.coverTracking !== undefined) out = { ...out, cvTracking: post.coverTracking };
+  if (post.coverLeading !== undefined) out = { ...out, cvLeading: post.coverLeading };
   if (post.coverFont) out = { ...out, clientCoverFont: post.coverFont };
   if (post.coverSubFont) out = { ...out, clientCoverSubFont: post.coverSubFont };
   if (post.coverColour) out = { ...out, cvColour: post.coverColour };
@@ -668,6 +676,32 @@ async function loadLogo(preset: ClientPreset | null): Promise<HTMLImageElement |
 function setSpacing(ctx: CanvasRenderingContext2D, px: number) {
   const c = ctx as CanvasRenderingContext2D & { letterSpacing?: string };
   if ("letterSpacing" in c) c.letterSpacing = `${px}px`;
+}
+
+// One line of words bent along an arc. curve is -100 to 100: above 0 arches it up, below 0 makes a smile.
+function drawCurvedLine(ctx: CanvasRenderingContext2D, text: string, cx: number, y: number, curve: number, tracking: number) {
+  const chars = [...text];
+  setSpacing(ctx, 0);
+  const widths = chars.map(c => ctx.measureText(c).width + tracking);
+  const total = widths.reduce((a, b) => a + b, 0) - tracking;
+  const span = (Math.abs(curve) / 100) * 1.5; // radians the whole line covers, at most about 86 degrees
+  const R = total / span;
+  const up = curve > 0;
+  ctx.save();
+  ctx.textAlign = "center";
+  let pos = -total / 2;
+  chars.forEach((ch, i) => {
+    const mid = pos + (widths[i] - tracking) / 2;
+    pos += widths[i];
+    const a = mid / R;
+    const dy = R * (1 - Math.cos(a));
+    ctx.save();
+    ctx.translate(cx + R * Math.sin(a), up ? y + dy : y - dy);
+    ctx.rotate(up ? a : -a);
+    ctx.fillText(ch, 0, 0);
+    ctx.restore();
+  });
+  ctx.restore();
 }
 
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
@@ -1257,9 +1291,9 @@ async function drawCoverOct(
     let fit = fitHeading(ctx, text, face, bw, style.cvSize * headScale, look.maxLines);
     for (let sz = style.cvSize * headScale; sz >= 30; sz -= 6) {
       fit = fitHeading(ctx, text, face, bw, sz, look.maxLines);
-      if (fit.lines.length * fit.size * 1.02 <= bh) break;
+      if (fit.lines.length * fit.size * (style.cvLeading ?? 1.02) <= bh) break;
     }
-    const lh = Math.round(fit.size * 1.02);
+    const lh = Math.round(fit.size * (style.cvLeading ?? 1.02));
     ctx.textBaseline = "top";
     ctx.textAlign = look.align;
     ctx.font = face(fit.size);
@@ -1267,7 +1301,19 @@ async function drawCoverOct(
     if (look.glow) { ctx.shadowColor = "rgba(255,255,255,0.85)"; ctx.shadowBlur = 18; }
     const x = look.align === "left" ? bx : look.align === "right" ? bx + bw : bx + bw / 2;
     let y = by + Math.round((bh - fit.lines.length * lh) / 2);
-    for (const l of fit.lines) { ctx.fillText(l, x + textAt.dx, y + textAt.dy); y += lh; }
+    const curve = style.cvCurve ?? 0;
+    for (const l of fit.lines) {
+      if (Math.abs(curve) >= 2) {
+        ctx.textBaseline = "alphabetic";
+        const lineX = look.align === "left" ? x + ctx.measureText(l).width / 2 : look.align === "right" ? x - ctx.measureText(l).width / 2 : x;
+        drawCurvedLine(ctx, l, lineX + textAt.dx, y + fit.size * 0.8 + textAt.dy, curve, style.cvTracking);
+        ctx.textBaseline = "top";
+        setSpacing(ctx, style.cvTracking);
+      } else {
+        ctx.fillText(l, x + textAt.dx, y + textAt.dy);
+      }
+      y += lh;
+    }
     ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
   }
   if (look.subAtBottom && spec.sub) {
@@ -2645,6 +2691,12 @@ export default function Stylish() {
     redrawOne({ ...post, ...patchFonts }, pi, 0);
   };
 
+  // Curve, letter spacing and line spacing for one post's headline.
+  const setCoverText = (post: Post, pi: number, patchText: Partial<Pick<Post, "coverCurve" | "coverTracking" | "coverLeading">>) => {
+    updatePost(post.id, patchText);
+    redrawOne({ ...post, ...patchText }, pi, 0);
+  };
+
   // Uses one font on every cover in this batch and clears the fonts set on single posts.
   // It is not saved to the client; the Client fonts section above does that.
   const changeAllFonts = (which: "head" | "sub", font: string) => {
@@ -3846,6 +3898,29 @@ export default function Stylish() {
                                 >Change all</button>
                               </div>
                             </div>
+                            {OCT_LAYOUTS.has(eff.coverLayout) && (
+                              <div className="w-full grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-2">
+                                {([
+                                  { label: "Curve", key: "coverCurve" as const, val: eff.cvCurve ?? 0, min: -100, max: 100, step: 5, fmt: (v: number) => (v === 0 ? "straight" : v > 0 ? `arch ${v}` : `smile ${-v}`) },
+                                  { label: "Letter spacing", key: "coverTracking" as const, val: eff.cvTracking, min: -6, max: 40, step: 1, fmt: (v: number) => `${v}px` },
+                                  { label: "Line spacing", key: "coverLeading" as const, val: eff.cvLeading ?? 1.02, min: 0.7, max: 1.8, step: 0.02, fmt: (v: number) => v.toFixed(2) },
+                                ]).map(c => (
+                                  <div key={c.key}>
+                                    <label className="text-xs font-medium text-muted-foreground block mb-1">{c.label} ({c.fmt(c.val)})</label>
+                                    <input
+                                      type="range" min={c.min} max={c.max} step={c.step} value={c.val} className="w-full"
+                                      aria-label={`${c.label} for the headline on post ${pi + 1}`}
+                                      onChange={e => setCoverText(post, pi, { [c.key]: Number(e.target.value) })}
+                                    />
+                                  </div>
+                                ))}
+                                {(post.coverCurve !== undefined || post.coverTracking !== undefined || post.coverLeading !== undefined) && (
+                                  <button type="button" className="text-xs text-muted-foreground underline hover:text-foreground text-left"
+                                    onClick={() => setCoverText(post, pi, { coverCurve: undefined, coverTracking: undefined, coverLeading: undefined })}
+                                  >Put the text shape back</button>
+                                )}
+                              </div>
+                            )}
                             <div className="w-56"><ColourField label="Cover headline" value={eff.cvColour} onChange={v => setCoverColours(post, pi, { coverColour: v })} metallic /></div>
                             <div className="w-56"><ColourField label="Cover subtitle" value={eff.cvSubColour} onChange={v => setCoverColours(post, pi, { coverSubColour: v })} metallic /></div>
                             {OCT_LAYOUTS.has(eff.coverLayout) && (() => {
