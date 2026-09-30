@@ -1121,14 +1121,15 @@ type OctLook = {
   align: CanvasTextAlign;
   maxLines: number;
   subAtBottom?: boolean;
+  ink?: string;                          // fixed headline colour when the picture is light
 };
 const OCT_LOOKS: Partial<Record<CoverLayout, OctLook>> = {
   oct3: { fit: "cover", box: [110, 150, 860, 500], brand: true, glow: false, align: "center", maxLines: 3 },
   oct4: { fit: "cover", box: [290, 610, 500, 500], brand: true, glow: false, align: "center", maxLines: 4, subAtBottom: true },
   oct7: { fit: "cover", box: [90, 1120, 900, 240], brand: false, glow: true, align: "center", maxLines: 2 },
   oct12: { fit: "cover", box: [270, 280, 560, 330], brand: false, glow: true, align: "center", maxLines: 3 },
-  oct14: { fit: "extend", box: [60, 380, 520, 480], brand: false, glow: false, align: "left", maxLines: 4 },
-  oct16: { fit: "extend", box: [225, 575, 340, 200], brand: false, glow: false, align: "center", maxLines: 3 },
+  oct14: { fit: "extend", box: [50, 330, 560, 560], brand: false, glow: true, ink: "#111111", align: "left", maxLines: 4 },
+  oct16: { fit: "extend", box: [285, 415, 360, 250], brand: false, glow: false, align: "center", maxLines: 3 },
 };
 
 async function drawCoverOct(
@@ -1153,6 +1154,16 @@ async function drawCoverOct(
       const dh = bmp.height * sc;
       const y0 = Math.round((H - dh) / 2);
       const slice = Math.max(2, Math.round(bmp.height * 0.01));
+      const avg = (sy: number) => {
+        const c = document.createElement("canvas"); c.width = 1; c.height = 1;
+        const g = c.getContext("2d");
+        if (!g) return "#d9d9d9";
+        g.drawImage(bmp!, 0, sy, bmp!.width, slice, 0, 0, 1, 1);
+        const d = g.getImageData(0, 0, 1, 1).data;
+        return `rgb(${d[0]},${d[1]},${d[2]})`;
+      };
+      ctx.fillStyle = avg(0); ctx.fillRect(0, 0, W, y0 + 2);
+      ctx.fillStyle = avg(bmp.height - slice); ctx.fillRect(0, y0 + dh - 2, W, H - (y0 + dh) + 2);
       ctx.save();
       (ctx as CanvasRenderingContext2D & { filter?: string }).filter = "blur(36px)";
       ctx.drawImage(bmp, 0, 0, bmp.width, slice, -60, -60, W + 120, y0 + 60 + 40);
@@ -1164,7 +1175,7 @@ async function drawCoverOct(
   }
 
   const brand = (preset?.accentColor || "").trim();
-  const headColour = look.brand && /^#[0-9a-f]{6}$/i.test(brand) ? brand : style.cvColour;
+  const headColour = look.ink ?? (look.brand && /^#[0-9a-f]{6}$/i.test(brand) ? brand : style.cvColour);
   const text = style.cvCaps ? spec.text.toUpperCase() : spec.text;
   if (text) {
     const [bx, by, bw, bh] = look.box;
