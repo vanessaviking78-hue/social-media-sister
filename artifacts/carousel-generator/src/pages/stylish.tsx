@@ -353,6 +353,8 @@ type Post = {
   coverSubColour?: string; // and its subtitle colour
   coverBlockColour?: string; // its band or block colour (band, block and split covers)
   coverBandColour?: string;  // and the split cover's bottom band
+  coverFont?: string;      // this post's own headline font on slide 1. Empty follows the client's font.
+  coverSubFont?: string;   // and its subtitle font
 };
 
 type SlideKind = "cover" | "body" | "cta";
@@ -476,6 +478,8 @@ function styleForSlide(style: Style, post: Post, kind: SlideKind): Style {
   if (style.cvBlockAll) out = { ...out, cvBlock: style.cvBlockAll };
   if (style.cvBandAll) out = { ...out, cvBand: style.cvBandAll };
   if (style.cvAll) out = { ...out, cvColour: style.cvAllColour, cvSubColour: style.cvAllSubColour };
+  if (post.coverFont) out = { ...out, clientCoverFont: post.coverFont };
+  if (post.coverSubFont) out = { ...out, clientCoverSubFont: post.coverSubFont };
   if (post.coverColour) out = { ...out, cvColour: post.coverColour };
   if (post.coverSubColour) out = { ...out, cvSubColour: post.coverSubColour };
   if (post.coverBlockColour) out = { ...out, cvBlock: post.coverBlockColour };
@@ -2635,6 +2639,21 @@ export default function Stylish() {
     redrawOne({ ...post, ...patchColours }, pi, 0);
   };
 
+  // A font picked for one post's cover. Empty follows the client's font again.
+  const setCoverFonts = (post: Post, pi: number, patchFonts: Partial<Pick<Post, "coverFont" | "coverSubFont">>) => {
+    updatePost(post.id, patchFonts);
+    redrawOne({ ...post, ...patchFonts }, pi, 0);
+  };
+
+  // Uses one font on every cover in this batch and clears the fonts set on single posts.
+  // It is not saved to the client; the Client fonts section above does that.
+  const changeAllFonts = (which: "head" | "sub", font: string) => {
+    patch(which === "head" ? { clientCoverFont: font } : { clientCoverSubFont: font });
+    setPosts(list => list.map(p => ({ ...p, ...(which === "head" ? { coverFont: undefined } : { coverSubFont: undefined }) })));
+    setCoverVersion(v => v + 1);
+    toast.success(which === "head" ? "Headline font changed on every cover" : "Subtitle font changed on every cover");
+  };
+
   // Puts one set of colours - headline, subtitle, and the block/band colour behind them - on
   // every post's cover, and clears any colours set on single posts.
   const changeAllText = (head: string, subtitleColour: string, blockColour: string, bandColour: string) => {
@@ -2660,7 +2679,7 @@ export default function Stylish() {
   };
 
   const sameCovers = () => {
-    setPosts(list => list.map(p => ({ ...p, cover: undefined, coverColour: undefined, coverSubColour: undefined, coverBlockColour: undefined, coverBandColour: undefined })));
+    setPosts(list => list.map(p => ({ ...p, cover: undefined, coverColour: undefined, coverSubColour: undefined, coverBlockColour: undefined, coverBandColour: undefined, coverFont: undefined, coverSubFont: undefined })));
     setCoverVersion(v => v + 1);
   };
 
@@ -3791,6 +3810,42 @@ export default function Stylish() {
                         const eff = styleForSlide(style, post, "cover");
                         return (
                           <div className="flex items-end gap-x-6 gap-y-2 flex-wrap">
+                            <div className="w-56 space-y-1">
+                              <Label className="text-xs text-muted-foreground">Cover headline font</Label>
+                              <div className="flex gap-1.5">
+                                <Select value={post.coverFont || "__same"} onValueChange={v => setCoverFonts(post, pi, { coverFont: v === "__same" ? undefined : v })}>
+                                  <SelectTrigger className="bg-muted/30 border-border/40 h-8 flex-1"><SelectValue /></SelectTrigger>
+                                  <SelectContent className="max-h-72">
+                                    <SelectItem value="__same">Same as the rest</SelectItem>
+                                    {fontItems(coverFontOptions)}
+                                  </SelectContent>
+                                </Select>
+                                <button
+                                  type="button" disabled={!(post.coverFont || eff.clientCoverFont)}
+                                  onClick={() => changeAllFonts("head", post.coverFont || eff.clientCoverFont)}
+                                  className="text-xs rounded-lg border border-sky-500/50 text-sky-400 hover:bg-sky-500/10 px-2 disabled:opacity-40"
+                                  title="Use this headline font on every cover"
+                                >Change all</button>
+                              </div>
+                            </div>
+                            <div className="w-56 space-y-1">
+                              <Label className="text-xs text-muted-foreground">Cover subtitle font</Label>
+                              <div className="flex gap-1.5">
+                                <Select value={post.coverSubFont || "__same"} onValueChange={v => setCoverFonts(post, pi, { coverSubFont: v === "__same" ? undefined : v })}>
+                                  <SelectTrigger className="bg-muted/30 border-border/40 h-8 flex-1"><SelectValue /></SelectTrigger>
+                                  <SelectContent className="max-h-72">
+                                    <SelectItem value="__same">Same as the rest</SelectItem>
+                                    {fontItems(coverFontOptions)}
+                                  </SelectContent>
+                                </Select>
+                                <button
+                                  type="button" disabled={!(post.coverSubFont || eff.clientCoverSubFont)}
+                                  onClick={() => changeAllFonts("sub", post.coverSubFont || eff.clientCoverSubFont)}
+                                  className="text-xs rounded-lg border border-sky-500/50 text-sky-400 hover:bg-sky-500/10 px-2 disabled:opacity-40"
+                                  title="Use this subtitle font on every cover"
+                                >Change all</button>
+                              </div>
+                            </div>
                             <div className="w-56"><ColourField label="Cover headline" value={eff.cvColour} onChange={v => setCoverColours(post, pi, { coverColour: v })} metallic /></div>
                             <div className="w-56"><ColourField label="Cover subtitle" value={eff.cvSubColour} onChange={v => setCoverColours(post, pi, { coverSubColour: v })} metallic /></div>
                             {OCT_LAYOUTS.has(eff.coverLayout) && (() => {
