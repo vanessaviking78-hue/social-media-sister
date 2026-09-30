@@ -608,7 +608,7 @@ function prepareImage(file: File): Promise<Blob | null> {
       const ctx = canvas.getContext("2d")!;
       ctx.drawImage(bmp, 0, 0, w, h);
       bmp.close();
-      // Find the face and trim the photo so it sits in the middle, a little above centre, so nobody
+      // Find the face and trim the photo so the face sits in the middle of the slide, so nobody
       // has to drag every photo into place. Falls back to the untouched photo if no face is found.
       const face = await findFace(canvas);
       let out: HTMLCanvasElement = canvas;
@@ -617,8 +617,8 @@ function prepareImage(file: File): Promise<Blob | null> {
         let cx = 0, cy = 0, cw = w, ch = h;
         const hw = Math.min(face.x, w - face.x);
         if (Math.abs(face.x - w / 2) > w * 0.04 && hw * 2 >= w * 0.55) { cx = face.x - hw; cw = hw * 2; }
-        const maxH = Math.min(h, face.y / 0.4, (h - face.y) / 0.6);
-        if (maxH >= h * 0.6 && maxH < h * 0.98) { ch = maxH; cy = face.y - 0.4 * ch; }
+        const maxH = Math.min(h, face.y / 0.48, (h - face.y) / 0.52);
+        if (maxH >= h * 0.5 && maxH < h * 0.98) { ch = maxH; cy = face.y - 0.48 * ch; }
         if (cw !== w || ch !== h) {
           cx = Math.round(cx); cy = Math.round(cy); cw = Math.round(cw); ch = Math.round(ch);
           const c2 = document.createElement("canvas");
