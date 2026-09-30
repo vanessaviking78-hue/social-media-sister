@@ -3458,7 +3458,7 @@ export default function Stylish() {
                 {OCT_ORDER.map(k => (
                   <button
                     key={k} type="button"
-                    onClick={() => patch(COVER_PRESETS[k])}
+                    onClick={() => { patch(COVER_PRESETS[k]); if (!posts.length) toast.message(`October 26 No. ${k.replace("oct", "")} chosen. Add your photos and your CSV and every post will use it. You can change it per post after that.`); }}
                     className={["rounded-lg border px-1.5 py-2 text-left transition-colors", style.coverLayout === k ? "border-sky-500 bg-sky-500/10" : "border-border/40 hover:border-border/70"].join(" ")}
                     aria-label={`October 26 cover ${OCT_NAMES[k]}`}
                   >
