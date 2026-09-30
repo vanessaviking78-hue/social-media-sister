@@ -410,7 +410,7 @@ const INJECTOR_COLLECTION_PRESETS: PhotoStudioPreset[] = [
   { id: "ic-321", name: "Art Deco - Glamour Close Up", hasColour: false },
   { id: "ic-401", name: "Leopard - Reception Smile", hasColour: false },
   { id: "ic-402", name: "Leopard - Holding Tablet", hasColour: false },
-  { id: "ic-403", name: "Leopard - Open Coat Over Scrubs", hasColour: false },
+  { id: "ic-403", name: "Leopard - Scrubs", hasColour: false },
   { id: "ic-404", name: "Leopard - Laughing Candid", hasColour: false },
   { id: "ic-405", name: "Leopard - Arms Folded Doorway", hasColour: false },
   { id: "ic-406", name: "Leopard - Sitting on Stool", hasColour: false },

@@ -20,14 +20,6 @@ Professional, warm, approachable expression.
 
 export const AI_PORTRAIT_SCENARIOS: AiScenario[] = [
   {
-    id: "clinical-white-coat",
-    name: "White Coat Consultation",
-    category: "clinical",
-    promptTemplate: `A professional portrait of the person from the reference photo wearing a clean white medical coat over a {scrubColor} top, standing or seated in a modern, softly lit clinical consultation room with neutral walls. ${SAFETY_CONSTRAINTS}`,
-    hasScrubColor: true,
-    hasOutfitStyle: false,
-  },
-  {
     id: "clinical-blue-scrubs",
     name: "Scrubs — Clinical Setting",
     category: "clinical",
@@ -2864,9 +2856,9 @@ export const INJECTOR_COLLECTION_PRESETS: PhotoStudioPreset[] = [
   },
   {
     id: "ic-403",
-    name: "Leopard - Open Coat Over Scrubs",
+    name: "Leopard - Scrubs",
     hasColour: false,
-    promptTemplate: `An ultra-realistic professional portrait of the person from the reference photo wearing leopard print scrubs under an open clean clinical coat, with hot pink decor accents softly blurred behind. Bright even lighting, confident expression. Medium shot waist up. Natural skin texture, realistic leopard pattern. Same facial features as reference photo.`,
+    promptTemplate: `An ultra-realistic professional portrait of the person from the reference photo wearing leopard print scrubs, no coat, with hot pink decor accents softly blurred behind. Bright even lighting, confident expression. Medium shot waist up. Natural skin texture, realistic leopard pattern. Same facial features as reference photo.`,
   },
   {
     id: "ic-404",

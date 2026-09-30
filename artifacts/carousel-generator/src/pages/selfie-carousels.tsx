@@ -25,7 +25,7 @@ type OutfitGroup = { label: string; scenarioIds: string[]; outfitStyle?: string;
 const OUTFIT_GROUPS: OutfitGroup[] = [
   {
     label: "Scrubs",
-    scenarioIds: ["clinical-white-coat", "clinical-blue-scrubs", "clinical-treatment-room"],
+    scenarioIds: ["clinical-blue-scrubs", "clinical-treatment-room", "clinical-reception"],
     useScrubColor: true,
   },
   {
