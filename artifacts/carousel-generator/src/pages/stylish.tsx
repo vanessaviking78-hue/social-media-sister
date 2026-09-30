@@ -1154,21 +1154,18 @@ async function drawCoverOct(
       const dh = bmp.height * sc;
       const y0 = Math.round((H - dh) / 2);
       const slice = Math.max(2, Math.round(bmp.height * 0.01));
-      const avg = (sy: number) => {
-        const c = document.createElement("canvas"); c.width = 1; c.height = 1;
+      // Flat colour above and below the picture (the most common shade along that edge), no gradient or blur.
+      const edge = (sy: number) => {
+        const c = document.createElement("canvas"); c.width = 32; c.height = 1;
         const g = c.getContext("2d");
         if (!g) return "#d9d9d9";
-        g.drawImage(bmp!, 0, sy, bmp!.width, slice, 0, 0, 1, 1);
-        const d = g.getImageData(0, 0, 1, 1).data;
-        return `rgb(${d[0]},${d[1]},${d[2]})`;
+        g.drawImage(bmp!, 0, sy, bmp!.width, slice, 0, 0, 32, 1);
+        const d = g.getImageData(0, 0, 32, 1).data;
+        const med = (o: number) => { const v: number[] = []; for (let i = 0; i < 32; i++) v.push(d[i * 4 + o]); v.sort((x, y) => x - y); return v[16]; };
+        return `rgb(${med(0)},${med(1)},${med(2)})`;
       };
-      ctx.fillStyle = avg(0); ctx.fillRect(0, 0, W, y0 + 2);
-      ctx.fillStyle = avg(bmp.height - slice); ctx.fillRect(0, y0 + dh - 2, W, H - (y0 + dh) + 2);
-      ctx.save();
-      (ctx as CanvasRenderingContext2D & { filter?: string }).filter = "blur(36px)";
-      ctx.drawImage(bmp, 0, 0, bmp.width, slice, -60, -60, W + 120, y0 + 60 + 40);
-      ctx.drawImage(bmp, 0, bmp.height - slice, bmp.width, slice, -60, y0 + dh - 40, W + 120, H - (y0 + dh) + 60 + 40);
-      ctx.restore();
+      ctx.fillStyle = edge(0); ctx.fillRect(0, 0, W, y0 + 1);
+      ctx.fillStyle = edge(bmp.height - slice); ctx.fillRect(0, y0 + dh - 1, W, H - (y0 + dh) + 1);
       ctx.drawImage(bmp, 0, y0, W, dh);
     }
     bmp.close();
