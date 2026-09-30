@@ -78,6 +78,7 @@ type Style = {
   cvBlock: string;
   cvBand: string;
   cvBandOn: boolean;
+  cvSpot?: string; // spot colour for the recolourable picture covers. Empty uses the client's brand colour.
   cvAlts?: Record<number, number>; // which letters use the font's curly alternates: letter position to alternate number
   cvCurve?: number;   // bend the headline: above 0 arches it up, below 0 makes a smile (October 26 covers)
   cvLeading?: number; // line spacing as a multiple of the text size (October 26 covers)
@@ -357,6 +358,7 @@ type Post = {
   coverSubColour?: string; // and its subtitle colour
   coverBlockColour?: string; // its band or block colour (band, block and split covers)
   coverBandColour?: string;  // and the split cover's bottom band
+  coverSpot?: string;      // this post's spot colour for the recolourable picture (heels, lips, glove)
   coverAlts?: Record<number, number>; // curly letters, by position in the headline
   coverCaps?: boolean;     // this post's capitals switch. Empty follows the cover's own.
   coverCurve?: number;     // this post's headline curve, letter spacing and line spacing on slide 1
@@ -487,6 +489,7 @@ function styleForSlide(style: Style, post: Post, kind: SlideKind): Style {
   if (style.cvBlockAll) out = { ...out, cvBlock: style.cvBlockAll };
   if (style.cvBandAll) out = { ...out, cvBand: style.cvBandAll };
   if (style.cvAll) out = { ...out, cvColour: style.cvAllColour, cvSubColour: style.cvAllSubColour };
+  if (post.coverSpot) out = { ...out, cvSpot: post.coverSpot };
   if (post.coverAlts) out = { ...out, cvAlts: post.coverAlts };
   if (post.coverCaps !== undefined) out = { ...out, cvCaps: post.coverCaps };
   if (post.coverCurve !== undefined) out = { ...out, cvCurve: post.coverCurve };
@@ -1272,17 +1275,57 @@ type OctLook = {
   subAtBottom?: boolean;
   ink?: string;                          // fixed headline colour when the picture is light
   mono?: boolean;                        // turn the picture black and white
+  recolour?: boolean;                    // the picture's one strong colour (made in teal) is swapped for the spot colour
 };
+
+// Swap the strong teal in a picture for another colour. Neutral greys, blacks, whites and the red nails stay as they are.
+const SPOT_SOURCE_HUE = 174;
+function recolourSpot(ctx: CanvasRenderingContext2D, hex: string) {
+  const m = /^#?([0-9a-f]{6})$/i.exec((hex || "").trim());
+  if (!m) return;
+  const n = parseInt(m[1], 16);
+  const tr = ((n >> 16) & 255) / 255, tg = ((n >> 8) & 255) / 255, tb = (n & 255) / 255;
+  const toHsl = (r: number, g: number, b: number): [number, number, number] => {
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn, l = (mx + mn) / 2;
+    if (d === 0) return [0, 0, l];
+    const s = d / (1 - Math.abs(2 * l - 1));
+    let h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h *= 60; if (h < 0) h += 360;
+    return [h, s, l];
+  };
+  const [th, ts, tl] = toHsl(tr, tg, tb);
+  const srcS = 0.556, srcL = 0.388;
+  const sScale = ts / srcS, lShift = (tl - srcL) * 0.7;
+  const fromHsl = (h: number, s: number, l: number): [number, number, number] => {
+    const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), mm = l - c / 2;
+    const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x];
+    return [(r + mm) * 255, (g + mm) * 255, (b + mm) * 255];
+  };
+  const img = ctx.getImageData(0, 0, W, H);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const [h, s, l] = toHsl(d[i] / 255, d[i + 1] / 255, d[i + 2] / 255);
+    if (s < 0.12) continue;
+    let diff = Math.abs(h - SPOT_SOURCE_HUE); if (diff > 180) diff = 360 - diff;
+    if (diff > 45) continue;
+    const w = diff < 25 ? 1 : 1 - (diff - 25) / 20; // soft edge so shiny highlights blend
+    const ns = Math.min(1, Math.max(0, s * sScale));
+    const nl = Math.min(0.97, Math.max(0.03, l + lShift));
+    const [r, g, b] = fromHsl(th, ns, nl);
+    d[i] = d[i] + (r - d[i]) * w; d[i + 1] = d[i + 1] + (g - d[i + 1]) * w; d[i + 2] = d[i + 2] + (b - d[i + 2]) * w;
+  }
+  ctx.putImageData(img, 0, 0);
+}
 const OCT_LOOKS: Partial<Record<CoverLayout, OctLook>> = {
-  oct3: { fit: "cover", box: [130, 960, 820, 340], brand: true, glow: false, align: "center", maxLines: 3 },
+  oct3: { fit: "cover", box: [130, 960, 820, 340], recolour: true, brand: true, glow: false, align: "center", maxLines: 3 },
   oct4: { fit: "cover", box: [290, 610, 500, 500], brand: true, glow: false, align: "center", maxLines: 4, subAtBottom: true },
   oct6: { fit: "cover", box: [90, 1000, 900, 340], brand: false, glow: true, align: "center", maxLines: 4, mono: true },
   oct13: { fit: "cover", box: [0, 0, 0, 0], brand: false, glow: false, align: "center", maxLines: 1 },
   oct18: { fit: "cover", box: [30, 380, 1020, 620], brand: false, glow: true, align: "center", maxLines: 2 },
-  oct7: { fit: "cover", box: [90, 1120, 900, 240], brand: false, glow: true, align: "center", maxLines: 2 },
+  oct7: { fit: "cover", box: [90, 1120, 900, 240], recolour: true, brand: false, glow: true, align: "center", maxLines: 2 },
   oct12: { fit: "cover", box: [270, 280, 560, 330], brand: false, glow: true, align: "center", maxLines: 3 },
-  oct14: { fit: "extend", box: [50, 330, 560, 560], brand: false, glow: true, ink: "#111111", align: "left", maxLines: 4 },
-  oct16: { fit: "extend", box: [285, 415, 360, 250], brand: false, glow: false, align: "center", maxLines: 3 },
+  oct14: { fit: "extend", box: [50, 330, 560, 560], recolour: true, brand: false, glow: true, ink: "#111111", align: "left", maxLines: 4 },
+  oct16: { fit: "extend", box: [285, 415, 360, 250], recolour: true, brand: false, glow: false, align: "center", maxLines: 3 },
 };
 
 async function drawCoverOct(
@@ -1329,6 +1372,10 @@ async function drawCoverOct(
       ctx.drawImage(bmp, (W - dw) * ((pos?.x ?? 50) / 100), py, dw, dh2);
     }
     bmp.close();
+    if (look.recolour) {
+      const spot = (style.cvSpot || preset?.accentColor || "").trim();
+      if (/^#?[0-9a-f]{6}$/i.test(spot) && !/^#?2c9a8f$/i.test(spot)) recolourSpot(ctx, spot);
+    }
   }
 
   if (layout === "oct13") {
@@ -2788,7 +2835,7 @@ export default function Stylish() {
   };
 
   // Colour picked for one post's cover text. Empty puts it back to the option's own colour.
-  const setCoverColours = (post: Post, pi: number, patchColours: Partial<Pick<Post, "coverColour" | "coverSubColour" | "coverBlockColour" | "coverBandColour">>) => {
+  const setCoverColours = (post: Post, pi: number, patchColours: Partial<Pick<Post, "coverColour" | "coverSubColour" | "coverBlockColour" | "coverBandColour" | "coverSpot">>) => {
     updatePost(post.id, patchColours);
     redrawOne({ ...post, ...patchColours }, pi, 0);
   };
@@ -4124,6 +4171,12 @@ export default function Stylish() {
                                 </div>
                               );
                             })()}
+                            {OCT_LOOKS[eff.coverLayout]?.recolour && (
+                              <div className="w-56">
+                                <ColourField label="Spot colour in the picture" value={eff.cvSpot || preset?.accentColor || "#2c9a8f"} onChange={v => setCoverColours(post, pi, { coverSpot: v })} />
+                                <div className="text-[10px] text-muted-foreground mt-0.5">Starts as the clinic colour. Pick another to recolour the shoes, lips or glove.</div>
+                              </div>
+                            )}
                             {BLOCK_LABEL[eff.coverLayout] && (
                               <div className="w-56"><ColourField label={BLOCK_LABEL[eff.coverLayout]!} value={eff.cvBlock} textures onChange={v => setCoverColours(post, pi, { coverBlockColour: v })} /></div>
                             )}
@@ -4136,10 +4189,10 @@ export default function Stylish() {
                               className="text-xs rounded-lg border border-sky-500/50 text-sky-400 hover:bg-sky-500/10 px-2.5 py-1.5"
                               title="Use this post's headline, subtitle and block/band colours on every cover"
                             >Change all</button>
-                            {(post.coverColour || post.coverSubColour || post.coverBlockColour || post.coverBandColour) && (
+                            {(post.coverColour || post.coverSubColour || post.coverBlockColour || post.coverBandColour || post.coverSpot) && (
                               <button
                                 type="button"
-                                onClick={() => setCoverColours(post, pi, { coverColour: undefined, coverSubColour: undefined, coverBlockColour: undefined, coverBandColour: undefined })}
+                                onClick={() => setCoverColours(post, pi, { coverColour: undefined, coverSubColour: undefined, coverBlockColour: undefined, coverBandColour: undefined, coverSpot: undefined })}
                                 className="text-xs text-muted-foreground underline hover:text-foreground pb-1"
                               >Put the colours back</button>
                             )}
