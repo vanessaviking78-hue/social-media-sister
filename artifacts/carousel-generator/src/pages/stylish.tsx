@@ -42,7 +42,9 @@ const STYLE_STORAGE_KEY = "stylish-style-v4";
 // ---------------------------------------------------------------------------
 
 type CoverLayout = "band" | "centred" | "block" | "split" | "serif" | "plain" | "behind"
-  | "fullbleed" | "blur" | "strip" | "diagonal" | "behind2" | "polaroid" | "sidebar" | "frame" | "layered";
+  | "fullbleed" | "blur" | "strip" | "diagonal" | "behind2" | "polaroid" | "sidebar" | "frame" | "layered"
+  // The "October 26" set: each is a scene photo (made in AI Photo Studio) with the words placed on it. The number is the pin's number.
+  | "oct3" | "oct4" | "oct7" | "oct12" | "oct14" | "oct16";
 
 type Style = {
   // Slide 1 (cover)
@@ -130,6 +132,7 @@ const COVER_WANTS: Record<CoverLayout, string[]> = {
   plain: [],
   behind: [],
   fullbleed: [], blur: [], strip: [], diagonal: [], behind2: [], polaroid: [], sidebar: [], frame: [], layered: [],
+  oct3: [], oct4: [], oct7: [], oct12: [], oct14: [], oct16: [],
 };
 
 // Each cover layout brings its own type, colours and proportions. Everything can be changed afterwards.
@@ -194,6 +197,31 @@ const COVER_PRESETS: Record<CoverLayout, Partial<Style>> = {
   layered: {
     coverLayout: "layered", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: true, cvTracking: 0, cvSubTracking: 1,
     cvSize: 92, cvSubSize: 30, cvScrim: 8, cvColour: "#1c1c1c", cvSubColour: "#1c1c1c", cvBlock: "#ececec",
+  },
+  // October 26. Text colours here are only starting points; the client's brand colour is used where a look calls for it.
+  oct3: {
+    coverLayout: "oct3", cvWeight: 400, cvSubWeight: 400, cvCaps: false, cvSubCaps: false, cvTracking: 0, cvSubTracking: 3,
+    cvSize: 150, cvSubSize: 34, cvScrim: 0, cvColour: "#1a1a1a", cvSubColour: "#1a1a1a",
+  },
+  oct4: {
+    coverLayout: "oct4", cvWeight: 400, cvSubWeight: 400, cvCaps: false, cvSubCaps: true, cvTracking: 0, cvSubTracking: 4,
+    cvSize: 120, cvSubSize: 34, cvScrim: 0, cvColour: "#1a1a1a", cvSubColour: "#ffffff",
+  },
+  oct7: {
+    coverLayout: "oct7", cvWeight: 400, cvSubWeight: 400, cvCaps: false, cvSubCaps: false, cvTracking: 0, cvSubTracking: 3,
+    cvSize: 150, cvSubSize: 34, cvScrim: 0, cvColour: "#141414", cvSubColour: "#141414",
+  },
+  oct12: {
+    coverLayout: "oct12", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: false, cvTracking: 0, cvSubTracking: 3,
+    cvSize: 110, cvSubSize: 34, cvScrim: 0, cvColour: "#0d0d0d", cvSubColour: "#0d0d0d",
+  },
+  oct14: {
+    coverLayout: "oct14", cvWeight: 400, cvSubWeight: 400, cvCaps: false, cvSubCaps: false, cvTracking: 0, cvSubTracking: 3,
+    cvSize: 190, cvSubSize: 34, cvScrim: 0, cvColour: "#141414", cvSubColour: "#141414",
+  },
+  oct16: {
+    coverLayout: "oct16", cvWeight: 400, cvSubWeight: 400, cvCaps: false, cvSubCaps: false, cvTracking: 0, cvSubTracking: 3,
+    cvSize: 70, cvSubSize: 34, cvScrim: 0, cvColour: "#ffffff", cvSubColour: "#ffffff",
   },
   behind: {
     coverLayout: "behind", cvWeight: 400, cvSubWeight: 400,
@@ -382,6 +410,21 @@ function buildSlides(texts: string[]): SlideSpec[] {
 
 // Block, serif, diagonal, behind 2, polaroid and layered were retired. Their drawing code is left in place, but they are no longer offered.
 const COVER_ORDER: CoverLayout[] = ["band", "centred", "split", "plain", "behind", "fullbleed", "blur", "strip", "sidebar", "frame"];
+
+// The "October 26" set. Each look is named by its number on the Pinterest board.
+const OCT_ORDER: CoverLayout[] = ["oct3", "oct4", "oct7", "oct12", "oct14", "oct16"];
+const OCT_LAYOUTS = new Set<CoverLayout>(OCT_ORDER);
+const OCT_NAMES: Partial<Record<CoverLayout, string>> = {
+  oct3: "Poster on the pavement", oct4: "Poster on the wall", oct7: "Shhh lips", oct12: "Newspaper on a chair", oct14: "Black heels", oct16: "Glove and card",
+};
+const OCT_HELP: Partial<Record<CoverLayout, string>> = {
+  oct3: "Black heels standing on a poster. The headline goes on the poster. Use the shared heels photo.",
+  oct4: "The clinician holding a poster, headline on the poster and the clinic name along the bottom.",
+  oct7: "Lips with a finger held to them in the brand colour, headline across the bottom.",
+  oct12: "The clinician behind a newspaper on a cafe chair, black and white, headline on the newspaper.",
+  oct14: "Glossy black heels in black and white, one big headline on the left.",
+  oct16: "A gloved hand holding a card, headline on the card.",
+};
 
 // The name of each cover's colour block, for the colour picker. Covers not listed have no block.
 const BLOCK_LABEL: Partial<Record<CoverLayout, string>> = {
@@ -1068,6 +1111,95 @@ async function drawCoverMore(
   }
 }
 
+// The "October 26" covers. The slide 1 photo is a finished scene (made in AI Photo Studio) that is never
+// re-cropped around a face; the words are placed on the part of the scene built to carry them.
+type OctLook = {
+  fit: "cover" | "extend";
+  box: [number, number, number, number]; // x, y, width, height in slide pixels
+  brand: boolean;                        // headline in the client's brand colour
+  glow: boolean;                         // soft light halo so the words read over a busy picture
+  align: CanvasTextAlign;
+  maxLines: number;
+  subAtBottom?: boolean;
+};
+const OCT_LOOKS: Partial<Record<CoverLayout, OctLook>> = {
+  oct3: { fit: "cover", box: [110, 150, 860, 500], brand: true, glow: false, align: "center", maxLines: 3 },
+  oct4: { fit: "cover", box: [290, 610, 500, 500], brand: true, glow: false, align: "center", maxLines: 4, subAtBottom: true },
+  oct7: { fit: "cover", box: [90, 1120, 900, 240], brand: false, glow: true, align: "center", maxLines: 2 },
+  oct12: { fit: "cover", box: [270, 280, 560, 330], brand: false, glow: true, align: "center", maxLines: 3 },
+  oct14: { fit: "extend", box: [60, 380, 520, 480], brand: false, glow: false, align: "left", maxLines: 4 },
+  oct16: { fit: "extend", box: [225, 575, 340, 200], brand: false, glow: false, align: "center", maxLines: 3 },
+};
+
+async function drawCoverOct(
+  ctx: CanvasRenderingContext2D, spec: SlideSpec, photo: File | null, style: Style, layout: CoverLayout,
+  preset: ClientPreset | null, textAt: TextPos, subTextAt: TextPos, headScale: number, subScale: number,
+) {
+  const look = OCT_LOOKS[layout];
+  if (!look) return;
+  const [hf, sf] = faces(style, layout);
+  ctx.fillStyle = "#d9d9d9";
+  ctx.fillRect(0, 0, W, H);
+  let bmp: ImageBitmap | null = null;
+  try { bmp = photo ? await createImageBitmap(photo) : null; } catch { bmp = null; }
+  if (bmp) {
+    if (look.fit === "cover") {
+      const sc = Math.max(W / bmp.width, H / bmp.height);
+      const dw = bmp.width * sc, dh = bmp.height * sc;
+      ctx.drawImage(bmp, (W - dw) / 2, (H - dh) / 2, dw, dh);
+    } else {
+      // A square scene on a tall slide: the picture keeps its full width, and its top and bottom edges are smeared outwards.
+      const sc = W / bmp.width;
+      const dh = bmp.height * sc;
+      const y0 = Math.round((H - dh) / 2);
+      const slice = Math.max(2, Math.round(bmp.height * 0.01));
+      ctx.save();
+      (ctx as CanvasRenderingContext2D & { filter?: string }).filter = "blur(36px)";
+      ctx.drawImage(bmp, 0, 0, bmp.width, slice, -60, -60, W + 120, y0 + 60 + 40);
+      ctx.drawImage(bmp, 0, bmp.height - slice, bmp.width, slice, -60, y0 + dh - 40, W + 120, H - (y0 + dh) + 60 + 40);
+      ctx.restore();
+      ctx.drawImage(bmp, 0, y0, W, dh);
+    }
+    bmp.close();
+  }
+
+  const brand = (preset?.accentColor || "").trim();
+  const headColour = look.brand && /^#[0-9a-f]{6}$/i.test(brand) ? brand : style.cvColour;
+  const text = style.cvCaps ? spec.text.toUpperCase() : spec.text;
+  if (text) {
+    const [bx, by, bw, bh] = look.box;
+    const face = (sz: number) => `${style.cvWeight} ${sz}px ${hf}`;
+    setSpacing(ctx, style.cvTracking);
+    let fit = fitHeading(ctx, text, face, bw, style.cvSize * headScale, look.maxLines);
+    for (let sz = style.cvSize * headScale; sz >= 30; sz -= 6) {
+      fit = fitHeading(ctx, text, face, bw, sz, look.maxLines);
+      if (fit.lines.length * fit.size * 1.02 <= bh) break;
+    }
+    const lh = Math.round(fit.size * 1.02);
+    ctx.textBaseline = "top";
+    ctx.textAlign = look.align;
+    ctx.font = face(fit.size);
+    ctx.fillStyle = headColour;
+    if (look.glow) { ctx.shadowColor = "rgba(255,255,255,0.85)"; ctx.shadowBlur = 18; }
+    const x = look.align === "left" ? bx : look.align === "right" ? bx + bw : bx + bw / 2;
+    let y = by + Math.round((bh - fit.lines.length * lh) / 2);
+    for (const l of fit.lines) { ctx.fillText(l, x + textAt.dx, y + textAt.dy); y += lh; }
+    ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
+  }
+  if (look.subAtBottom && spec.sub) {
+    const sub = style.cvSubCaps ? spec.sub.toUpperCase() : spec.sub;
+    const size = Math.round(style.cvSubSize * subScale);
+    ctx.font = `${style.cvSubWeight} ${size}px ${sf}`;
+    setSpacing(ctx, style.cvSubTracking);
+    ctx.fillStyle = style.cvSubColour;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    ctx.shadowColor = "rgba(0,0,0,0.45)"; ctx.shadowBlur = 14;
+    ctx.fillText(sub, W / 2 + subTextAt.dx, H - 90 + subTextAt.dy);
+    ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
+  }
+}
+
 async function drawCover(
   ctx: CanvasRenderingContext2D, spec: SlideSpec, photo: File | null, style: Style,
   logo: HTMLImageElement | null, preset: ClientPreset | null, pos?: PhotoPos, extras: (File | null)[] = [],
@@ -1075,6 +1207,11 @@ async function drawCover(
 ) {
   const layout = style.coverLayout;
   const at = pos ?? defaultPos("cover", style);
+  if (OCT_LAYOUTS.has(layout)) {
+    await drawCoverOct(ctx, spec, photo, style, layout, preset, textAt, subTextAt, headScale, subScale);
+    if (logo && style.showLogo && preset) drawLogo(ctx, logo, "top-right", (preset.logoSize || 110) * (style.logoScale ?? 1.35));
+    return;
+  }
   if (MORE_LAYOUTS.has(layout)) {
     await drawCoverMore(ctx, spec, photo, extras, style, layout, at, textAt, subTextAt, headScale, subScale);
     if (logo && style.showLogo && preset) drawLogo(ctx, logo, "top-right", (preset.logoSize || 110) * (style.logoScale ?? 1.35));
@@ -2974,7 +3111,24 @@ export default function Stylish() {
                 </button>
               ))}
             </div>
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">October 26</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {OCT_ORDER.map(k => (
+                  <button
+                    key={k} type="button"
+                    onClick={() => patch(COVER_PRESETS[k])}
+                    className={["rounded-lg border px-1.5 py-2 text-left transition-colors", style.coverLayout === k ? "border-sky-500 bg-sky-500/10" : "border-border/40 hover:border-border/70"].join(" ")}
+                    aria-label={`October 26 cover ${OCT_NAMES[k]}`}
+                  >
+                    <span className="block text-[10px] text-muted-foreground">No. {k.replace("oct", "")}</span>
+                    <span className="block text-[11px] leading-tight">{OCT_NAMES[k]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
+              {OCT_HELP[style.coverLayout]}
               {style.coverLayout === "band" && "Photo fills the slide with a thick colour band along the bottom."}
               {style.coverLayout === "centred" && "Full photo with the headline and subtitle centred in the middle."}
               {style.coverLayout === "block" && "Photo across the top with a big bold headline on a colour block."}
@@ -3539,6 +3693,14 @@ export default function Stylish() {
                             <span className="scale-[0.6] origin-left -mr-3.5"><CoverIcon k={k} /></span>
                             <span className="text-[11px] text-muted-foreground pr-1">{ci + 1}</span>
                           </button>
+                        ))}
+                        {OCT_ORDER.map(k => (
+                          <button
+                            key={k} type="button" onClick={() => setCover(post, pi, k)}
+                            title={`October 26: ${OCT_NAMES[k]}`}
+                            aria-label={`October 26 cover ${OCT_NAMES[k]} for post ${pi + 1}`}
+                            className={["rounded-lg border px-1.5 py-1 text-[11px] transition-colors", post.cover === k ? "border-sky-500 bg-sky-500/10 text-foreground" : "border-border/40 text-muted-foreground hover:border-border/70"].join(" ")}
+                          >Oct {k.replace("oct", "")}</button>
                         ))}
                       </div>
 
