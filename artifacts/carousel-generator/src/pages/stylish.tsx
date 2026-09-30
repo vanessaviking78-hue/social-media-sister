@@ -1175,7 +1175,9 @@ async function drawCoverOct(
   }
 
   const brand = (preset?.accentColor || "").trim();
-  const headColour = look.ink ?? (look.brand && /^#[0-9a-f]{6}$/i.test(brand) ? brand : style.cvColour);
+  // White is the untouched default, so the cover supplies its own colour; any colour she picks always wins.
+  const picked = !/^#?f{6}$/i.test((style.cvColour || "").trim());
+  const headColour = picked ? style.cvColour : (look.ink ?? (look.brand && /^#[0-9a-f]{6}$/i.test(brand) ? brand : style.cvColour));
   const text = style.cvCaps ? spec.text.toUpperCase() : spec.text;
   if (text) {
     const [bx, by, bw, bh] = look.box;
