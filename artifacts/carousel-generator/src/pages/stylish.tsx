@@ -715,7 +715,15 @@ function cutoutBlob(file: File): Promise<Blob | null> {
       const src = await prepareImage(file);
       if (!src) return null;
       const { removeBackground } = await import("@imgly/background-removal");
-      return await removeBackground(src, { model: "isnet", output: { format: "image/png", quality: 0.95 } });
+      // Big photos can run the browser out of memory, so the cut-out works from a smaller copy.
+      const small = await shrinkBlob(src, 1500);
+      const opts = { model: "isnet" as const, output: { format: "image/png" as const, quality: 0.95 } };
+      try {
+        return await removeBackground(small, opts);
+      } catch (first) {
+        console.warn("Cutout first try failed, retrying on the processor", first);
+        return await removeBackground(small, { ...opts, device: "cpu" as const });
+      }
     } catch (err) {
       console.warn("Cutout failed, using the whole photo", err);
       // Say it once per session at most, quietly, so a batch of photos does not spam the screen.
@@ -732,6 +740,20 @@ function cutoutBlob(file: File): Promise<Blob | null> {
   cutoutQueue = job.catch(() => null);
   cutoutBlobs.set(file, job);
   return job;
+}
+
+async function shrinkBlob(blob: Blob, maxSide: number): Promise<Blob> {
+  try {
+    const bmp = await createImageBitmap(blob);
+    const sc = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+    if (sc >= 1) { bmp.close(); return blob; }
+    const c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * sc); c.height = Math.round(bmp.height * sc);
+    c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
+    bmp.close();
+    const out = await new Promise<Blob | null>(res => c.toBlob(b => res(b), "image/jpeg", 0.92));
+    return out ?? blob;
+  } catch { return blob; }
 }
 
 async function getCutout(file: File): Promise<ImageBitmap | null> {
