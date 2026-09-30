@@ -1445,6 +1445,28 @@ async function uploadPngs(dataUrls: string[], names: string[]): Promise<string[]
   return urls;
 }
 
+// Every finished post is also filed in the client's library so it can be reused later. This never
+// blocks or breaks the main job: if it fails, the download or schedule carries on as normal.
+type LibraryFile = { clientName: string; postType: "carousel" | "reel" | "story"; caption: string; urls: string[]; videoUrl?: string; title: string };
+async function saveToClientLibrary(files: LibraryFile[]) {
+  const items = files.filter(f => f.clientName && (f.urls.length || f.videoUrl)).map(f => ({
+    clientName: f.clientName,
+    postType: f.postType,
+    caption: f.caption,
+    mediaUrl: f.videoUrl ?? f.urls[0],
+    mediaUrls: f.videoUrl ? null : f.urls,
+    thumbnailUrl: f.urls[0] ?? null,
+    metadata: { source: "stylish", title: f.title },
+  }));
+  if (!items.length) return;
+  try {
+    const r = await fetch(`${BASE}/api/library/bulk`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items }) });
+    if (r.ok) toast.success(`Saved ${items.length} to ${files[0].clientName}'s library`);
+  } catch { /* silent */ }
+}
+
+const blobToDataUrl = (b: Blob) => new Promise<string>((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result)); fr.onerror = rej; fr.readAsDataURL(b); });
+
 const tick = () => new Promise<void>(r => setTimeout(r, 0));
 
 // 1080 x 1920 story: the post's cover photo, a dark layer so the words read, the question in
@@ -2485,6 +2507,7 @@ export default function Stylish() {
       const logo = style.showLogo ? await loadLogo(preset) : null;
       const zip = new JSZip();
       const captionRows: string[][] = [["post", "caption"]];
+      const forLibrary: { title: string; caption: string; blobs: Blob[] }[] = [];
       let n = 0;
       for (const post of selectedPosts) {
         n++;
@@ -2492,10 +2515,12 @@ export default function Stylish() {
         setExporting(`Rendering post ${n} of ${selectedPosts.length}`);
         const canvases = await renderPostCanvases(pi, post, logo);
         const folder = `post-${String(pi + 1).padStart(2, "0")}`;
+        const postBlobs: Blob[] = [];
         for (let si = 0; si < canvases.length; si++) {
           const blob = await new Promise<Blob | null>(res => canvases[si].toBlob(b => res(b), "image/png"));
-          if (blob) zip.file(`${folder}/slide-${si + 1}.png`, blob);
+          if (blob) { zip.file(`${folder}/slide-${si + 1}.png`, blob); postBlobs.push(blob); }
         }
+        forLibrary.push({ title: buildSlides(post.texts)[0]?.text ?? `Post ${pi + 1}`, caption: noDashes(post.caption.trim()), blobs: postBlobs });
         if (post.caption.trim()) zip.file(`${folder}/caption.txt`, noDashes(post.caption.trim()));
         captionRows.push([folder, noDashes(post.caption.trim())]);
         await tick();
@@ -2505,6 +2530,18 @@ export default function Stylish() {
       const blob = await zip.generateAsync({ type: "blob" });
       saveAs(blob, `stylish-${Date.now()}.zip`);
       toast.success(`${selectedPosts.length} post${selectedPosts.length !== 1 ? "s" : ""} downloaded at 1080 x 1440`);
+      if (preset?.name) {
+        setExporting("Saving to the client library");
+        const filed: LibraryFile[] = [];
+        for (let k = 0; k < forLibrary.length; k++) {
+          const f = forLibrary[k];
+          try {
+            const urls = await uploadPngs(await Promise.all(f.blobs.map(blobToDataUrl)), f.blobs.map((_, j) => `stylish-${Date.now()}-${k + 1}-${j + 1}.png`));
+            filed.push({ clientName: preset.name, postType: "carousel", caption: f.caption, urls, title: f.title });
+          } catch { /* skip this one */ }
+        }
+        await saveToClientLibrary(filed);
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Export failed");
     } finally {
@@ -2661,6 +2698,13 @@ export default function Stylish() {
         }
       }
       setScheduleStories(stories);
+      void saveToClientLibrary([
+        ...items.map((it, k) => ({
+          clientName: preset.name, postType: (mode === "reel" ? "reel" : "carousel") as "reel" | "carousel", caption: it.caption,
+          urls: it.imageUrls ?? [], videoUrl: it.videoUrl, title: buildSlides(selectedPosts[k].texts)[0]?.text ?? `Post ${k + 1}`,
+        })),
+        ...(stories ?? []).map(st => ({ clientName: preset.name, postType: "story" as const, caption: "", urls: [st.imageUrl], title: st.title })),
+      ]);
       // First post on the next Monday, Wednesday, Friday or Sunday at 6.15pm, then one on each
       // posting day after that (the schedule screen does the stepping).
       const start = new Date();
