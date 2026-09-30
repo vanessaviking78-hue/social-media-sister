@@ -21,6 +21,7 @@ import { usePresets, type ClientPreset } from "@/lib/use-presets";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { nthPostingSlot } from "@/lib/schedule";
+import opentype from "opentype.js";
 
 loadGoogleFonts();
 if (typeof document !== "undefined" && !document.getElementById("stylish-fonts")) {
@@ -77,6 +78,7 @@ type Style = {
   cvBlock: string;
   cvBand: string;
   cvBandOn: boolean;
+  cvAlts?: Record<number, number>; // which letters use the font's curly alternates: letter position to alternate number
   cvCurve?: number;   // bend the headline: above 0 arches it up, below 0 makes a smile (October 26 covers)
   cvLeading?: number; // line spacing as a multiple of the text size (October 26 covers)
   cvBlockAll: string; // set by "Change all": this block colour wins on every cover option
@@ -355,6 +357,8 @@ type Post = {
   coverSubColour?: string; // and its subtitle colour
   coverBlockColour?: string; // its band or block colour (band, block and split covers)
   coverBandColour?: string;  // and the split cover's bottom band
+  coverAlts?: Record<number, number>; // curly letters, by position in the headline
+  coverCaps?: boolean;     // this post's capitals switch. Empty follows the cover's own.
   coverCurve?: number;     // this post's headline curve, letter spacing and line spacing on slide 1
   coverTracking?: number;
   coverLeading?: number;
@@ -483,6 +487,8 @@ function styleForSlide(style: Style, post: Post, kind: SlideKind): Style {
   if (style.cvBlockAll) out = { ...out, cvBlock: style.cvBlockAll };
   if (style.cvBandAll) out = { ...out, cvBand: style.cvBandAll };
   if (style.cvAll) out = { ...out, cvColour: style.cvAllColour, cvSubColour: style.cvAllSubColour };
+  if (post.coverAlts) out = { ...out, cvAlts: post.coverAlts };
+  if (post.coverCaps !== undefined) out = { ...out, cvCaps: post.coverCaps };
   if (post.coverCurve !== undefined) out = { ...out, cvCurve: post.coverCurve };
   if (post.coverTracking !== undefined) out = { ...out, cvTracking: post.coverTracking };
   if (post.coverLeading !== undefined) out = { ...out, cvLeading: post.coverLeading };
@@ -676,6 +682,94 @@ async function loadLogo(preset: ClientPreset | null): Promise<HTMLImageElement |
 function setSpacing(ctx: CanvasRenderingContext2D, px: number) {
   const c = ctx as CanvasRenderingContext2D & { letterSpacing?: string };
   if ("letterSpacing" in c) c.letterSpacing = `${px}px`;
+}
+
+
+// -- curly letters ----------------------------------------------------------------------------
+// Many fonts hold spare letter shapes (swashes, stylistic sets) that a canvas cannot switch on by itself.
+// The uploaded font file is read here, and the chosen letters are drawn from those alternates.
+const fontBytes = new Map<string, ArrayBuffer>(); // lower case family name to the uploaded font file
+const otCache = new Map<string, { font: opentype.Font; alts: Map<number, number[]> } | null>();
+
+function cssFamilyKey(face: string): string {
+  const m = face.match(/^\s*['"]?([^'",]+)['"]?/);
+  return (m?.[1] ?? "").trim().toLowerCase();
+}
+
+function loadOtFont(face: string): { font: opentype.Font; alts: Map<number, number[]> } | null {
+  const key = cssFamilyKey(face);
+  if (otCache.has(key)) return otCache.get(key) ?? null;
+  const data = fontBytes.get(key);
+  if (!data) return null;
+  try {
+    const font = opentype.parse(data.slice(0));
+    const alts = new Map<number, number[]>();
+    for (const tag of ["salt", "swsh", "cswh", "ss01", "ss02", "ss03", "ss04", "ss05", "aalt"]) {
+      for (const script of [undefined, "latn"]) {
+        try {
+          const list = (font.substitution as unknown as { getFeature(f: string, s?: string): { sub: number; by: number | number[] }[] | undefined }).getFeature(tag, script) ?? [];
+          for (const it of list) {
+            const bys = Array.isArray(it.by) ? it.by : [it.by];
+            const cur = alts.get(it.sub) ?? [];
+            for (const b of bys) if (b !== it.sub && !cur.includes(b)) cur.push(b);
+            alts.set(it.sub, cur);
+          }
+        } catch { /* this feature is not in the font */ }
+      }
+    }
+    const out = { font, alts };
+    otCache.set(key, out);
+    return out;
+  } catch {
+    otCache.set(key, null);
+    return null;
+  }
+}
+
+// How many curly versions this font has for one letter.
+function altCount(face: string, ch: string): number {
+  const f = loadOtFont(face);
+  if (!f) return 0;
+  return f.alts.get(f.font.charToGlyph(ch).index)?.length ?? 0;
+}
+
+// One line drawn from the font's own letter shapes, using the chosen alternates. Optionally bent along an arc.
+function drawGlyphLine(
+  ctx: CanvasRenderingContext2D, ot: { font: opentype.Font; alts: Map<number, number[]> }, line: string, startIdx: number,
+  choice: Record<number, number>, cx: number, baseline: number, size: number, tracking: number, curve: number, fill: string,
+) {
+  const chars = [...line];
+  const glyphs = chars.map((ch, i) => {
+    const base = ot.font.charToGlyph(ch);
+    const list = ot.alts.get(base.index) ?? [];
+    const pick = choice[startIdx + i] ?? 0;
+    return pick > 0 && list[pick - 1] !== undefined ? ot.font.glyphs.get(list[pick - 1]) : base;
+  });
+  const scale = size / ot.font.unitsPerEm;
+  const adv = glyphs.map(g => (g.advanceWidth ?? 0) * scale + tracking);
+  const total = adv.reduce((a, b) => a + b, 0) - tracking;
+  const span = (Math.abs(curve) / 100) * 1.5;
+  const R = span > 0.01 ? total / span : 0;
+  const up = curve > 0;
+  let pos = -total / 2;
+  glyphs.forEach((g, i) => {
+    const w = adv[i] - tracking;
+    const mid = pos + w / 2;
+    pos += adv[i];
+    ctx.save();
+    if (R > 0) {
+      const a = mid / R;
+      const dy = R * (1 - Math.cos(a));
+      ctx.translate(cx + R * Math.sin(a), up ? baseline + dy : baseline - dy);
+      ctx.rotate(up ? a : -a);
+      const path = g.getPath(-w / 2, 0, size);
+      path.fill = fill; path.draw(ctx);
+    } else {
+      const path = g.getPath(cx + mid - w / 2, baseline, size);
+      path.fill = fill; path.draw(ctx);
+    }
+    ctx.restore();
+  });
 }
 
 // One line of words bent along an arc. curve is -100 to 100: above 0 arches it up, below 0 makes a smile.
@@ -1302,8 +1396,17 @@ async function drawCoverOct(
     const x = look.align === "left" ? bx : look.align === "right" ? bx + bw : bx + bw / 2;
     let y = by + Math.round((bh - fit.lines.length * lh) / 2);
     const curve = style.cvCurve ?? 0;
+    const altChoice = style.cvAlts && Object.values(style.cvAlts).some(v => v > 0) ? style.cvAlts : null;
+    const ot = altChoice ? loadOtFont(hf) : null;
+    let cursor = 0;
     for (const l of fit.lines) {
-      if (Math.abs(curve) >= 2) {
+      const at = text.indexOf(l, cursor);
+      const lineStart = at >= 0 ? at : cursor;
+      cursor = lineStart + l.length;
+      if (ot && altChoice) {
+        const lineX = look.align === "left" ? x + ctx.measureText(l).width / 2 : look.align === "right" ? x - ctx.measureText(l).width / 2 : x;
+        drawGlyphLine(ctx, ot, l, lineStart, altChoice, lineX + textAt.dx, y + fit.size * 0.8 + textAt.dy, fit.size, style.cvTracking, Math.abs(curve) >= 2 ? curve : 0, headColour);
+      } else if (Math.abs(curve) >= 2) {
         ctx.textBaseline = "alphabetic";
         const lineX = look.align === "left" ? x + ctx.measureText(l).width / 2 : look.align === "right" ? x - ctx.measureText(l).width / 2 : x;
         drawCurvedLine(ctx, l, lineX + textAt.dx, y + fit.size * 0.8 + textAt.dy, curve, style.cvTracking);
@@ -1866,6 +1969,11 @@ async function registerFont(fileName: string, data: ArrayBuffer): Promise<string
       faces.push(face);
     }
     fontFaceRegistry.set(fileName, faces);
+    for (const fam of new Set([info.family, info.compact])) {
+      const key = fam.toLowerCase();
+      if (!info.italic || !fontBytes.has(key)) fontBytes.set(key, data.slice(0));
+      otCache.delete(key);
+    }
     return info.family;
   } catch {
     return null;
@@ -2697,6 +2805,26 @@ export default function Stylish() {
     redrawOne({ ...post, ...patchText }, pi, 0);
   };
 
+  // Curly letters: each click on a letter moves it to the font's next alternate, then back to the plain letter.
+  const cycleLetter = (post: Post, pi: number, index: number, count: number) => {
+    const cur = { ...(post.coverAlts ?? {}) };
+    const next = ((cur[index] ?? 0) + 1) % (count + 1);
+    if (next === 0) delete cur[index]; else cur[index] = next;
+    const value = Object.keys(cur).length ? cur : undefined;
+    updatePost(post.id, { coverAlts: value });
+    redrawOne({ ...post, coverAlts: value }, pi, 0);
+  };
+
+  const setCoverCaps = (post: Post, pi: number, caps: boolean | undefined) => {
+    updatePost(post.id, { coverCaps: caps });
+    redrawOne({ ...post, coverCaps: caps }, pi, 0);
+  };
+  const changeAllCaps = (caps: boolean) => {
+    setPosts(list => list.map(p => ({ ...p, coverCaps: caps })));
+    setCoverVersion(v => v + 1);
+    toast.success(caps ? "Capitals on every headline" : "Capitals off on every headline");
+  };
+
   // Uses one font on every cover in this batch and clears the fonts set on single posts.
   // It is not saved to the client; the Client fonts section above does that.
   const changeAllFonts = (which: "head" | "sub", font: string) => {
@@ -2731,7 +2859,7 @@ export default function Stylish() {
   };
 
   const sameCovers = () => {
-    setPosts(list => list.map(p => ({ ...p, cover: undefined, coverColour: undefined, coverSubColour: undefined, coverBlockColour: undefined, coverBandColour: undefined, coverFont: undefined, coverSubFont: undefined })));
+    setPosts(list => list.map(p => ({ ...p, cover: undefined, coverColour: undefined, coverSubColour: undefined, coverBlockColour: undefined, coverBandColour: undefined, coverFont: undefined, coverSubFont: undefined, coverAlts: undefined, coverCaps: undefined, coverCurve: undefined, coverTracking: undefined, coverLeading: undefined })));
     setCoverVersion(v => v + 1);
   };
 
@@ -3914,6 +4042,58 @@ export default function Stylish() {
                                     />
                                   </div>
                                 ))}
+                                <div className="sm:col-span-3 flex items-center gap-2 flex-wrap">
+                                  <button
+                                    type="button" aria-pressed={eff.cvCaps}
+                                    onClick={() => setCoverCaps(post, pi, !eff.cvCaps)}
+                                    className={["text-xs rounded-lg border px-2.5 py-1.5", eff.cvCaps ? "border-sky-500 bg-sky-500/10 text-foreground" : "border-border/40 text-muted-foreground hover:border-border/70"].join(" ")}
+                                    title="Capitals on or off for this headline"
+                                  >CAPS LOCK</button>
+                                  <button
+                                    type="button" onClick={() => changeAllCaps(!!eff.cvCaps)}
+                                    className="text-xs rounded-lg border border-sky-500/50 text-sky-400 hover:bg-sky-500/10 px-2.5 py-1.5"
+                                    title="Use this capitals setting on every headline"
+                                  >Change all</button>
+                                </div>
+                                {(() => {
+                                  const headFace = faces(eff, eff.coverLayout)[0];
+                                  const raw = post.texts[0] ?? "";
+                                  const letters = [...raw];
+                                  const any = letters.some(ch => /\S/.test(ch) && altCount(headFace, ch) > 0);
+                                  return (
+                                    <details className="sm:col-span-3 text-sm">
+                                      <summary className="cursor-pointer text-xs text-muted-foreground">Curly letters</summary>
+                                      {!any ? (
+                                        <p className="text-xs text-muted-foreground mt-1">This font has no curly alternates for these letters. Fonts you have uploaded, such as Felgine, Bedross, Charnoir, Hatcher and Peany Timer, usually do.</p>
+                                      ) : (
+                                        <div className="mt-1.5">
+                                          <p className="text-xs text-muted-foreground mb-1">Click a letter to swap it for the font's curly version. Click again for the next one, and again to go back.</p>
+                                          <div className="flex flex-wrap gap-1">
+                                            {letters.map((ch, i) => {
+                                              if (!/\S/.test(ch)) return <span key={i} className="w-3" />;
+                                              const n = altCount(headFace, ch);
+                                              const cur = post.coverAlts?.[i] ?? 0;
+                                              return (
+                                                <button
+                                                  key={i} type="button" disabled={n === 0}
+                                                  onClick={() => cycleLetter(post, pi, i, n)}
+                                                  className={["min-w-7 h-8 px-1 rounded border text-base leading-none", n === 0 ? "border-border/20 text-muted-foreground/40" : cur > 0 ? "border-sky-500 bg-sky-500/15 text-foreground" : "border-border/50 text-foreground hover:border-sky-500/60"].join(" ")}
+                                                  title={n === 0 ? "No curly version" : cur > 0 ? `Curly version ${cur} of ${n}` : `${n} curly ${n === 1 ? "version" : "versions"}`}
+                                                  style={{ fontFamily: headFace }}
+                                                >{ch}</button>
+                                              );
+                                            })}
+                                          </div>
+                                          {post.coverAlts && (
+                                            <button type="button" className="text-xs text-muted-foreground underline hover:text-foreground mt-1.5"
+                                              onClick={() => { updatePost(post.id, { coverAlts: undefined }); redrawOne({ ...post, coverAlts: undefined }, pi, 0); }}
+                                            >Put every letter back</button>
+                                          )}
+                                        </div>
+                                      )}
+                                    </details>
+                                  );
+                                })()}
                                 {(post.coverCurve !== undefined || post.coverTracking !== undefined || post.coverLeading !== undefined) && (
                                   <button type="button" className="text-xs text-muted-foreground underline hover:text-foreground text-left"
                                     onClick={() => setCoverText(post, pi, { coverCurve: undefined, coverTracking: undefined, coverLeading: undefined })}
