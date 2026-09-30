@@ -1,7 +1,7 @@
 // Passes a finished Client Stylish pack (the 16 photos and the CSV) from the Client Stylish
 // page into Stylish. Stored in a small IndexedDB store so it survives the page change and
 // works if Stylish opens in a new tab.
-export type StylishHandoff = { files: File[]; csv: string; csvName: string; clientName: string; location?: string; intent?: "reels" | "auto" };
+export type StylishHandoff = { files: File[]; csv: string; csvName: string; clientName: string; location?: string; intent?: "reels" | "auto"; october?: boolean; spot?: string };
 type StoredHandoff = {
   images: { name: string; type: string; blob: Blob }[];
   csv: string;
@@ -9,6 +9,8 @@ type StoredHandoff = {
   clientName: string;
   location?: string;
   intent?: "reels" | "auto";
+  october?: boolean;
+  spot?: string;
 };
 
 const DB_NAME = "client-stylish-handoff";
@@ -37,6 +39,8 @@ export async function setStylishHandoff(h: StylishHandoff): Promise<boolean> {
     clientName: h.clientName,
     location: h.location,
     intent: h.intent,
+    october: h.october,
+    spot: h.spot,
   };
   return new Promise<boolean>(resolve => {
     try {
@@ -68,5 +72,7 @@ export async function takeStylishHandoff(): Promise<StylishHandoff | null> {
     clientName: stored.clientName,
     location: stored.location,
     intent: stored.intent,
+    october: stored.october,
+    spot: stored.spot,
   };
 }

@@ -2457,6 +2457,17 @@ export default function Stylish() {
   // A pack made on the Client Stylish page (16 photos and the CSV) arrives here ready to style.
   const [pendingClient, setPendingClient] = useState<string | null>(null);
   const autoRunRef = useRef(false);
+  const octoberRef = useRef<{ spot?: string } | null>(null);
+  // A pack sent with "Use the October 26 covers" gets one October cover per post, once the posts are read.
+  useEffect(() => {
+    if (!octoberRef.current || !posts.length || pendingClient) return;
+    const o = octoberRef.current;
+    octoberRef.current = null;
+    const order: CoverLayout[] = ["oct13", "oct6", "oct18", "oct4", "oct12", "oct3", "oct14", "oct7", "oct16"];
+    setPosts(l => l.map((p, i) => ({ ...p, cover: order[i % order.length], coverSpot: o.spot && /^#?[0-9a-f]{6}$/i.test(o.spot) ? (o.spot.startsWith("#") ? o.spot : `#${o.spot}`) : p.coverSpot })));
+    toast.success("October 26 covers added, one per post. Change any of them from that post's cover options.");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts.length, pendingClient]);
   useEffect(() => {
     takeStylishHandoff().then(h => {
       if (!h) return;
@@ -2467,6 +2478,7 @@ export default function Stylish() {
       setPendingClient(h.clientName);
       if (h.location) setArea(h.location);
       toast.success(`${h.clientName} pack loaded: ${h.files.length} photos and the CSV.`);
+      if (h.october) { octoberRef.current = { spot: h.spot }; }
       if (h.intent === "auto") autoRunRef.current = true;
       if (h.intent === "reels") toast.message("Pick the look, tick the posts you want, then press Make into reels. Each post also has a Magazine Flip reel button above its caption.", { duration: 12000 });
     });

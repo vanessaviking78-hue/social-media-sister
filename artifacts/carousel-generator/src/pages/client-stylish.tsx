@@ -43,6 +43,8 @@ export default function ClientStylish() {
 
   const [clientName, setClientName] = useState("");
   const [website, setWebsite] = useState("");
+  const [october, setOctober] = useState(false);
+  const [spot, setSpot] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [treatments, setTreatments] = useState(["", "", ""]);
@@ -232,7 +234,7 @@ export default function ClientStylish() {
     setBusy(true);
     try {
       const files = await collectImages();
-      const ok = await setStylishHandoff({ files, csv, csvName: `${packName} Stylish.csv`, clientName: clientName.trim(), location: area.trim() || undefined, intent });
+      const ok = await setStylishHandoff({ files, csv, csvName: `${packName} Stylish.csv`, clientName: clientName.trim(), location: area.trim() || undefined, intent, october, spot: spot.trim() || undefined });
       if (!ok) throw new Error("Stylish could not be loaded from here, please download instead");
       setLocation("/stylish");
     } catch (e) {
@@ -473,6 +475,20 @@ export default function ClientStylish() {
                   </div>
                 </div>
               )}
+
+              <div className="rounded-lg border p-3 space-y-2">
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input type="checkbox" checked={october} onChange={e => setOctober(e.target.checked)} />
+                  Use the October 26 covers
+                </label>
+                <p className="text-xs text-muted-foreground">Each post gets one of the October 26 covers in the clinic's colour and fonts, ready to check in Stylish. Slides 2 to 5 stay in the usual Stylish look.</p>
+                {october && (
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs">Spot colour (optional, blank uses the clinic colour)</Label>
+                    <Input className="w-32 h-8" value={spot} onChange={e => setSpot(e.target.value)} placeholder="#2c9a8f" />
+                  </div>
+                )}
+              </div>
 
               <div className="flex flex-wrap items-center gap-3">
                 <Button onClick={() => handleOpenInStylish()} disabled={!packReady || busy}>
