@@ -505,6 +505,7 @@ function planReusedPhotos(pool: File[], slideCounts: number[]): File[][] {
 const MAX_PHOTO_SIDE = 2400;
 const prepared = new Map<File, Promise<Blob | null>>();
 const photoDims = new Map<File, { w: number; h: number }>();
+const octDims = new Map<File, { w: number; h: number }>(); // raw size of the photos used as October 26 covers
 
 // Face finding. Uses the browser's own detector when it has one, otherwise a small model that is
 // fetched once. Any failure just means the photo is left as it was.
@@ -600,7 +601,7 @@ function prepareImage(file: File): Promise<Blob | null> {
 }
 
 // Where a photo sits inside its frame, in percent (50, 50 is centred). Dragging changes it per slide.
-type PhotoPos = { x: number; y: number };
+type PhotoPos = { x: number; y: number; z?: number }; // z = zoom, 1 to 3 (October 26 covers)
 
 // How far a headline (and its subtitle) has been nudged from its usual spot, in canvas pixels.
 type TextPos = { dx: number; dy: number };
@@ -1134,7 +1135,7 @@ const OCT_LOOKS: Partial<Record<CoverLayout, OctLook>> = {
 
 async function drawCoverOct(
   ctx: CanvasRenderingContext2D, spec: SlideSpec, photo: File | null, style: Style, layout: CoverLayout,
-  preset: ClientPreset | null, textAt: TextPos, subTextAt: TextPos, headScale: number, subScale: number,
+  preset: ClientPreset | null, textAt: TextPos, subTextAt: TextPos, headScale: number, subScale: number, pos?: PhotoPos,
 ) {
   const look = OCT_LOOKS[layout];
   if (!look) return;
@@ -1143,11 +1144,13 @@ async function drawCoverOct(
   ctx.fillRect(0, 0, W, H);
   let bmp: ImageBitmap | null = null;
   try { bmp = photo ? await createImageBitmap(photo) : null; } catch { bmp = null; }
+  if (bmp && photo) octDims.set(photo, { w: bmp.width, h: bmp.height });
   if (bmp) {
     if (look.fit === "cover") {
-      const sc = Math.max(W / bmp.width, H / bmp.height);
+      const z = Math.min(3, Math.max(1, pos?.z ?? 1));
+      const sc = Math.max(W / bmp.width, H / bmp.height) * z;
       const dw = bmp.width * sc, dh = bmp.height * sc;
-      ctx.drawImage(bmp, (W - dw) / 2, (H - dh) / 2, dw, dh);
+      ctx.drawImage(bmp, (W - dw) * ((pos?.x ?? 50) / 100), (H - dh) * ((pos?.y ?? 50) / 100), dw, dh);
     } else {
       // A square scene on a tall slide: the picture keeps its full width, and its top and bottom edges are smeared outwards.
       const sc = W / bmp.width;
@@ -1166,7 +1169,10 @@ async function drawCoverOct(
       };
       ctx.fillStyle = edge(0); ctx.fillRect(0, 0, W, y0 + 1);
       ctx.fillStyle = edge(bmp.height - slice); ctx.fillRect(0, y0 + dh - 1, W, H - (y0 + dh) + 1);
-      ctx.drawImage(bmp, 0, y0, W, dh);
+      const z = Math.min(3, Math.max(1, pos?.z ?? 1));
+      const dw = W * z, dh2 = dh * z;
+      const py = dh2 >= H ? (H - dh2) * ((pos?.y ?? 50) / 100) : y0 + (dh - dh2) / 2;
+      ctx.drawImage(bmp, (W - dw) * ((pos?.x ?? 50) / 100), py, dw, dh2);
     }
     bmp.close();
   }
@@ -1218,7 +1224,7 @@ async function drawCover(
   const layout = style.coverLayout;
   const at = pos ?? defaultPos("cover", style);
   if (OCT_LAYOUTS.has(layout)) {
-    await drawCoverOct(ctx, spec, photo, style, layout, preset, textAt, subTextAt, headScale, subScale);
+    await drawCoverOct(ctx, spec, photo, style, layout, preset, textAt, subTextAt, headScale, subScale, pos);
     if (logo && style.showLogo && preset) drawLogo(ctx, logo, "top-right", (preset.logoSize || 110) * (style.logoScale ?? 1.35));
     return;
   }
@@ -2317,17 +2323,20 @@ export default function Stylish() {
   const startDrag = (e: ReactPointerEvent<HTMLDivElement>, post: Post, pi: number, si: number, spec: SlideSpec) => {
     if (e.button !== 0) return;
     const photo = photoFor(pi, post, si);
-    const dims = photo ? photoDims.get(photo) : undefined;
-    if (!photo || !dims) return;
     const slideStyle = styleForSlide(style, post, spec.kind);
+    const dims = photo ? (spec.kind === "cover" && OCT_LAYOUTS.has(slideStyle.coverLayout) ? octDims.get(photo) : photoDims.get(photo)) : undefined;
+    if (!photo || !dims) return;
     const area = photoArea(spec.kind, slideStyle);
-    const sc = Math.max(area.w / dims.w, area.h / dims.h) * PHOTO_OVERSCAN;
     const key = `${post.id}:${si}`;
+    const isOct = spec.kind === "cover" && OCT_LAYOUTS.has(slideStyle.coverLayout);
+    const oz = Math.min(3, Math.max(1, focusRef.current[key]?.z ?? 1));
+    const octBase = OCT_LOOKS[slideStyle.coverLayout]?.fit === "extend" ? W / dims.w : Math.max(W / dims.w, H / dims.h);
+    const sc = isOct ? octBase * oz : Math.max(area.w / dims.w, area.h / dims.h) * PHOTO_OVERSCAN;
     const rect = e.currentTarget.getBoundingClientRect();
     dragRef.current = {
       key, pi, si, startX: e.clientX, startY: e.clientY,
       start: focusRef.current[key] ?? defaultPos(spec.kind, slideStyle),
-      ox: dims.w * sc - area.w, oy: dims.h * sc - area.h,
+      ox: isOct ? dims.w * sc - W : dims.w * sc - area.w, oy: isOct ? dims.h * sc - H : dims.h * sc - area.h,
       thumbScale: rect.width / W, busy: false, pending: false,
     };
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -2344,7 +2353,7 @@ export default function Stylish() {
     const x = d.ox > 1 ? clamp(d.start.x - (dx / d.ox) * 100) : d.start.x;
     const y = d.oy > 1 ? clamp(d.start.y - (dy / d.oy) * 100) : d.start.y;
     if (x === d.start.x && y === d.start.y && !focusRef.current[d.key]) return;
-    focusRef.current = { ...focusRef.current, [d.key]: { x, y } };
+    focusRef.current = { ...focusRef.current, [d.key]: { x, y, z: focusRef.current[d.key]?.z } };
     redrawOne(post, d.pi, d.si);
   };
 
@@ -3720,6 +3729,27 @@ export default function Stylish() {
                           <div className="flex items-end gap-x-6 gap-y-2 flex-wrap">
                             <div className="w-56"><ColourField label="Cover headline" value={eff.cvColour} onChange={v => setCoverColours(post, pi, { coverColour: v })} metallic /></div>
                             <div className="w-56"><ColourField label="Cover subtitle" value={eff.cvSubColour} onChange={v => setCoverColours(post, pi, { coverSubColour: v })} metallic /></div>
+                            {OCT_LAYOUTS.has(eff.coverLayout) && (() => {
+                              const key = `${post.id}:0`;
+                              const cur = focusRef.current[key];
+                              return (
+                                <div className="w-56">
+                                  <label className="text-xs font-medium text-muted-foreground block mb-1">Zoom photo ({Math.round((cur?.z ?? 1) * 100)}%)</label>
+                                  <input
+                                    type="range" min={100} max={300} step={5} value={Math.round((cur?.z ?? 1) * 100)}
+                                    aria-label={`Zoom the cover photo for post ${pi + 1}`}
+                                    className="w-full"
+                                    onChange={e => {
+                                      const z = Number(e.target.value) / 100;
+                                      focusRef.current = { ...focusRef.current, [key]: { x: cur?.x ?? 50, y: cur?.y ?? 50, z } };
+                                      bumpFocus(n => n + 1);
+                                      redrawOne(post, pi, 0);
+                                    }}
+                                  />
+                                  <div className="text-[10px] text-muted-foreground mt-0.5">Drag the photo to move it. Double click to reset.</div>
+                                </div>
+                              );
+                            })()}
                             {BLOCK_LABEL[eff.coverLayout] && (
                               <div className="w-56"><ColourField label={BLOCK_LABEL[eff.coverLayout]!} value={eff.cvBlock} textures onChange={v => setCoverColours(post, pi, { coverBlockColour: v })} /></div>
                             )}
