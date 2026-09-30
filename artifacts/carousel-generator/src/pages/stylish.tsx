@@ -1125,7 +1125,7 @@ type OctLook = {
   ink?: string;                          // fixed headline colour when the picture is light
 };
 const OCT_LOOKS: Partial<Record<CoverLayout, OctLook>> = {
-  oct3: { fit: "cover", box: [130, 850, 820, 400], brand: true, glow: false, align: "center", maxLines: 3 },
+  oct3: { fit: "cover", box: [130, 960, 820, 340], brand: true, glow: false, align: "center", maxLines: 3 },
   oct4: { fit: "cover", box: [290, 610, 500, 500], brand: true, glow: false, align: "center", maxLines: 4, subAtBottom: true },
   oct7: { fit: "cover", box: [90, 1120, 900, 240], brand: false, glow: true, align: "center", maxLines: 2 },
   oct12: { fit: "cover", box: [270, 280, 560, 330], brand: false, glow: true, align: "center", maxLines: 3 },
