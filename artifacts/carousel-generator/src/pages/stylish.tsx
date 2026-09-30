@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
-  Select, SelectContent, SelectItem, SelectLabel, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import Papa from "papaparse";
@@ -1577,7 +1577,7 @@ function fontItems(options: FontOption[]) {
   const out: React.ReactNode[] = [];
   let last: string | undefined;
   for (const f of options) {
-    if (f.group && f.group !== last) out.push(<SelectLabel key={`g-${f.group}`} className="text-[10px] uppercase tracking-wide text-muted-foreground">{f.group}</SelectLabel>);
+    if (f.group && f.group !== last) out.push(<div key={`g-${f.group}`} className="px-2 pt-2 pb-1 text-[10px] uppercase tracking-wide text-muted-foreground">{f.group}</div>);
     last = f.group;
     out.push(<SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>);
   }
