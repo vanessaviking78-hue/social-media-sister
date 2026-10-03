@@ -45,7 +45,7 @@ const STYLE_STORAGE_KEY = "stylish-style-v4";
 type CoverLayout = "band" | "centred" | "block" | "split" | "serif" | "plain" | "behind"
   | "fullbleed" | "blur" | "strip" | "diagonal" | "behind2" | "polaroid" | "sidebar" | "frame" | "layered"
   // The "October 26" set: each is a scene photo (made in AI Photo Studio) with the words placed on it. The number is the pin's number.
-  | "oct2" | "oct5" | "oct10" | "oct15" | "oct3" | "oct4" | "oct6" | "oct7" | "oct12" | "oct13" | "oct14" | "oct16" | "oct18";
+  | "oct1" | "oct8" | "oct9" | "oct11" | "oct17" | "oct2" | "oct5" | "oct10" | "oct15" | "oct3" | "oct4" | "oct6" | "oct7" | "oct12" | "oct13" | "oct14" | "oct16" | "oct18";
 
 type Style = {
   // Slide 1 (cover)
@@ -78,6 +78,8 @@ type Style = {
   cvBlock: string;
   cvBand: string;
   cvBandOn: boolean;
+  cvTowel?: boolean; // October 26 No. 17: a towel on the head
+  cvShades?: boolean; // October 26 No. 17: sunglasses
   cvSpot?: string; // spot colour for the recolourable picture covers. Empty uses the client's brand colour.
   cvAlts?: Record<number, number>; // which letters use the font's curly alternates: letter position to alternate number
   cvCurve?: number;   // bend the headline: above 0 arches it up, below 0 makes a smile (October 26 covers)
@@ -137,7 +139,7 @@ const COVER_WANTS: Record<CoverLayout, string[]> = {
   plain: [],
   behind: [],
   fullbleed: [], blur: [], strip: [], diagonal: [], behind2: [], polaroid: [], sidebar: [], frame: [], layered: [],
-  oct2: [], oct5: [], oct10: [], oct15: [], oct3: [], oct4: [], oct6: [], oct7: [], oct12: [], oct13: [], oct14: [], oct16: [], oct18: [],
+  oct1: [], oct8: [], oct9: [], oct11: [], oct17: [], oct2: [], oct5: [], oct10: [], oct15: [], oct3: [], oct4: [], oct6: [], oct7: [], oct12: [], oct13: [], oct14: [], oct16: [], oct18: [],
 };
 
 // Each cover layout brings its own type, colours and proportions. Everything can be changed afterwards.
@@ -204,6 +206,26 @@ const COVER_PRESETS: Record<CoverLayout, Partial<Style>> = {
     cvSize: 92, cvSubSize: 30, cvScrim: 8, cvColour: "#1c1c1c", cvSubColour: "#1c1c1c", cvBlock: "#ececec",
   },
   // October 26. Text colours here are only starting points; the client's brand colour is used where a look calls for it.
+  oct1: {
+    coverLayout: "oct1", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: true, cvTracking: 0, cvSubTracking: 6,
+    cvSize: 100, cvSubSize: 28, cvScrim: 0, cvColour: "#ffffff", cvSubColour: "#141414",
+  },
+  oct8: {
+    coverLayout: "oct8", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: true, cvTracking: 0, cvSubTracking: 6,
+    cvSize: 110, cvSubSize: 30, cvScrim: 0, cvColour: "#ffffff", cvSubColour: "#141414",
+  },
+  oct9: {
+    coverLayout: "oct9", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: false, cvTracking: 0, cvSubTracking: 3,
+    cvSize: 120, cvSubSize: 30, cvScrim: 0, cvColour: "#ffffff", cvSubColour: "#141414",
+  },
+  oct11: {
+    coverLayout: "oct11", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: true, cvTracking: 0, cvSubTracking: 8,
+    cvSize: 150, cvSubSize: 32, cvScrim: 0, cvColour: "#ffffff", cvSubColour: "#141414",
+  },
+  oct17: {
+    coverLayout: "oct17", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: false, cvTracking: 0, cvSubTracking: 3,
+    cvSize: 100, cvSubSize: 30, cvScrim: 0, cvColour: "#ffffff", cvSubColour: "#141414",
+  },
   oct2: {
     coverLayout: "oct2", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: false, cvTracking: 0, cvSubTracking: 3,
     cvSize: 150, cvSubSize: 34, cvScrim: 0, cvColour: "#ffffff", cvSubColour: "#ffffff",
@@ -374,6 +396,8 @@ type Post = {
   coverSubColour?: string; // and its subtitle colour
   coverBlockColour?: string; // its band or block colour (band, block and split covers)
   coverBandColour?: string;  // and the split cover's bottom band
+  coverTowel?: boolean;    // No. 17: towel on the head
+  coverShades?: boolean;   // No. 17: sunglasses
   coverSpot?: string;      // this post's spot colour for the recolourable picture (heels, lips, glove)
   coverAlts?: Record<number, number>; // curly letters, by position in the headline
   coverCaps?: boolean;     // this post's capitals switch. Empty follows the cover's own.
@@ -453,11 +477,11 @@ function buildSlides(texts: string[]): SlideSpec[] {
 const COVER_ORDER: CoverLayout[] = ["band", "centred", "split", "plain", "behind", "fullbleed", "blur", "strip", "sidebar", "frame"];
 
 // The "October 26" set. Each look is named by its number on the Pinterest board.
-const OCT_ORDER: CoverLayout[] = ["oct2", "oct3", "oct4", "oct5", "oct6", "oct7", "oct10", "oct12", "oct13", "oct14", "oct15", "oct16", "oct18"];
+const OCT_ORDER: CoverLayout[] = ["oct1", "oct2", "oct3", "oct4", "oct5", "oct6", "oct7", "oct8", "oct9", "oct10", "oct11", "oct12", "oct13", "oct14", "oct15", "oct16", "oct17", "oct18"];
 const OCT_LAYOUTS = new Set<CoverLayout>(OCT_ORDER);
 const OCT_NAMES: Partial<Record<CoverLayout, string>> = {
   oct3: "Poster on the pavement", oct4: "Poster on the wall", oct7: "Shhh lips", oct12: "Newspaper on a chair", oct14: "Black heels", oct16: "Glove and card",
-  oct2: "Escalator advert", oct5: "Three newspapers", oct10: "Peeping through blinds", oct15: "Stack of books", oct6: "Black and white portrait", oct13: "Magazine cover", oct18: "Big serif lettering",
+  oct1: "Newspaper over the face", oct8: "Retro badge", oct9: "Yellow jumper newspaper", oct11: "Street poster", oct17: "Better late than ugly", oct2: "Escalator advert", oct5: "Three newspapers", oct10: "Peeping through blinds", oct15: "Stack of books", oct6: "Black and white portrait", oct13: "Magazine cover", oct18: "Big serif lettering",
 };
 const OCT_HELP: Partial<Record<CoverLayout, string>> = {
   oct3: "Black heels standing on a poster. The headline goes on the poster. Use the shared heels photo.",
@@ -469,6 +493,11 @@ const OCT_HELP: Partial<Record<CoverLayout, string>> = {
   oct6: "A black and white portrait of the clinician with one headline across the bottom.",
   oct13: "A magazine cover over a photo of the client. Headline: MASTHEAD | SECOND HEADLINE. Subtitle: the small line. OCTOBER 2026 sits under the masthead.",
   oct18: "One huge serif headline across the photo, used for a treatment name.",
+  oct1: "The clinician peeping over a newspaper in the clinic colour. Headline: Book your consultation at the clinic. Subtitle: the tiny masthead (Aesthetics news). Move the photo so the eyes sit above the paper.",
+  oct8: "A retro badge: the photo turned into a flat illustration in the clinic colour. Headline on top, subtitle below, TODAY on the ribbon.",
+  oct9: "Black and white photo with the dress and shoes in the clinic colour and a big newspaper held in front. Headline on the paper, subtitle small beneath it.",
+  oct11: "A street poster: the photo with the shoes in the clinic colour. Headline: HEADING 1 | HEADING 2. Subtitle along the bottom.",
+  oct17: "A panelled wall in the clinic colours, the clinician in an arch holding a newspaper. Headline on the paper, subtitle as the text beneath it. Tick Towel or Sunglasses below for the full look.",
   oct2: "Two photo frames beside a colour strip, the headline running up the strip. The second frame uses the post's second photo.",
   oct5: "Three newspapers over a winter photo. Headline: HEADLINE 1 | HEADLINE 2 | HEADLINE 3. Subtitle: SUBTITLE 1 | SUBTITLE 2 (small Breaking news style lines).",
   oct10: "A black and white portrait seen through blinds in the clinic colour, headline in the bottom third.",
@@ -510,6 +539,8 @@ function styleForSlide(style: Style, post: Post, kind: SlideKind): Style {
   if (style.cvBandAll) out = { ...out, cvBand: style.cvBandAll };
   if (style.cvAll) out = { ...out, cvColour: style.cvAllColour, cvSubColour: style.cvAllSubColour };
   if (post.coverSpot) out = { ...out, cvSpot: post.coverSpot };
+  if (post.coverTowel !== undefined) out = { ...out, cvTowel: post.coverTowel };
+  if (post.coverShades !== undefined) out = { ...out, cvShades: post.coverShades };
   if (post.coverAlts) out = { ...out, cvAlts: post.coverAlts };
   if (post.coverCaps !== undefined) out = { ...out, cvCaps: post.coverCaps };
   if (post.coverCurve !== undefined) out = { ...out, cvCurve: post.coverCurve };
@@ -1295,8 +1326,23 @@ type OctLook = {
   subAtBottom?: boolean;
   ink?: string;                          // fixed headline colour when the picture is light
   mono?: boolean;                        // turn the picture black and white
+  skipPhoto?: boolean;                   // the cover places the photo itself
   recolour?: boolean;                    // the picture's one strong colour (made in teal) is swapped for the spot colour
 };
+
+// Draws a photo to fill a frame, with the zoom and drag position, clipped to that frame.
+async function drawFileIn(ctx: CanvasRenderingContext2D, file: File, x: number, y: number, w: number, h: number, pos?: PhotoPos) {
+  try {
+    const b = await createImageBitmap(file);
+    const z = Math.min(3, Math.max(1, pos?.z ?? 1));
+    const sc = Math.max(w / b.width, h / b.height) * z;
+    const dw = b.width * sc, dh = b.height * sc;
+    ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    ctx.drawImage(b, x + (w - dw) * ((pos?.x ?? 50) / 100), y + (h - dh) * ((pos?.y ?? 50) / 100), dw, dh);
+    ctx.restore(); b.close();
+    return true;
+  } catch { return false; }
+}
 
 // Swap the strong teal in a picture for another colour. Neutral greys, blacks, whites and the red nails stay as they are.
 const SPOT_SOURCE_HUE = 174;
@@ -1337,6 +1383,11 @@ function recolourSpot(ctx: CanvasRenderingContext2D, hex: string) {
   ctx.putImageData(img, 0, 0);
 }
 const OCT_LOOKS: Partial<Record<CoverLayout, OctLook>> = {
+  oct1: { fit: "cover", box: [0, 0, 0, 0], brand: false, glow: false, align: "center", maxLines: 1 },
+  oct8: { fit: "cover", box: [0, 0, 0, 0], brand: false, glow: false, align: "center", maxLines: 1, skipPhoto: true },
+  oct9: { fit: "cover", box: [0, 0, 0, 0], brand: false, glow: false, align: "center", maxLines: 1, mono: true },
+  oct11: { fit: "cover", box: [0, 0, 0, 0], brand: false, glow: false, align: "center", maxLines: 1, skipPhoto: true },
+  oct17: { fit: "cover", box: [0, 0, 0, 0], brand: false, glow: false, align: "center", maxLines: 1, skipPhoto: true },
   oct2: { fit: "cover", box: [0, 0, 0, 0], brand: false, glow: false, align: "center", maxLines: 1 },
   oct5: { fit: "cover", box: [0, 0, 0, 0], brand: false, glow: false, align: "center", maxLines: 1 },
   oct10: { fit: "cover", box: [90, 1010, 900, 330], brand: false, glow: false, align: "center", maxLines: 3, mono: true },
@@ -1364,6 +1415,7 @@ async function drawCoverOct(
   let bmp: ImageBitmap | null = null;
   try { bmp = photo ? await createImageBitmap(photo) : null; } catch { bmp = null; }
   if (bmp && photo) octDims.set(photo, { w: bmp.width, h: bmp.height });
+  if (bmp && look.skipPhoto) { bmp.close(); bmp = null; }
   if (bmp) {
     if (look.fit === "cover") {
       const z = Math.min(3, Math.max(1, pos?.z ?? 1));
@@ -1590,6 +1642,194 @@ async function drawCoverOct(
         ctx.fillStyle = "rgba(0,0,0,0.28)"; ctx.fillRect(0, y0 + bar - 5, W, 5);
       }
     }
+  }
+
+
+  // ---- covers drawn from the client's own photo: newspaper over the face, retro badge, yellow jumper, street poster, better late than ugly ----
+  const fitDraw = (txt: string, cx: number, top: number, maxW: number, maxH: number, startSize: number, maxLines: number, align: CanvasTextAlign, colour: string, italic = false, lead = 1.04) => {
+    const face = (sz: number) => `${italic ? "italic " : ""}${style.cvWeight} ${sz}px ${hf}`;
+    setSpacing(ctx, style.cvTracking);
+    let fit = fitHeading(ctx, txt, face, maxW, startSize, maxLines);
+    for (let sz = startSize; sz >= 24; sz -= 4) { fit = fitHeading(ctx, txt, face, maxW, sz, maxLines); if (fit.lines.length * fit.size * lead <= maxH) break; }
+    ctx.font = face(fit.size); ctx.fillStyle = colour; ctx.textAlign = align; ctx.textBaseline = "top";
+    let yy = top;
+    for (const l of fit.lines) { ctx.fillText(l, cx, yy); yy += fit.size * lead; }
+    return yy;
+  };
+  const smallDraw = (txt: string, cx: number, y: number, size: number, colour: string, align: CanvasTextAlign = "center") => {
+    ctx.font = `${style.cvSubWeight} ${size}px ${sf}`; setSpacing(ctx, style.cvSubTracking);
+    ctx.fillStyle = colour; ctx.textAlign = align; ctx.textBaseline = "alphabetic";
+    ctx.fillText(style.cvSubCaps ? txt.toUpperCase() : txt, cx, y);
+  };
+  const tintBand = (y0: number, y1: number, x0: number, x1: number, colour: string) => {
+    // Gives a band of the picture (shoes, dress) the clinic colour while keeping its light and shade.
+    ctx.save();
+    ctx.beginPath(); ctx.rect(x0, y0, x1 - x0, y1 - y0); ctx.clip();
+    ctx.globalCompositeOperation = "color";
+    const g = ctx.createLinearGradient(0, y0, 0, y1);
+    g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(0.35, colour); g.addColorStop(1, colour);
+    ctx.fillStyle = g; ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+    ctx.restore();
+  };
+  const inkOr = (d: string) => (pickedInk ? style.cvColour : d);
+
+  if (layout === "oct1") {
+    // A newspaper held up so only the top half of the face peeps over it.
+    const sub = (spec.sub || "").trim() || "Aesthetics news";
+    ctx.save();
+    ctx.translate(W / 2 + textAt.dx, 800 + textAt.dy); ctx.rotate(-0.025);
+    const pw = 960, top = 0, ph = 900;
+    ctx.shadowColor = "rgba(0,0,0,0.4)"; ctx.shadowBlur = 30; ctx.shadowOffsetY = -6;
+    ctx.fillStyle = mixHex(brandHex, "#ffffff", 0.12); ctx.fillRect(-pw / 2, top, pw, ph);
+    ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(-pw / 2 + 40, top + 34, pw - 80, 3);
+    smallDraw(sub, 0, top + 72, Math.max(18, Math.round(style.cvSubSize * 0.7 * subScale)), "rgba(0,0,0,0.75)");
+    ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(-pw / 2 + 40, top + 92, pw - 80, 3);
+    fitDraw(capsT(spec.text), 0, top + 120, pw - 120, 360, Math.round(style.cvSize * headScale), 4, "center", inkOr("#161616"));
+    // small pictures cut from the same photo, and tiny lines of text
+    if (photo) {
+      try {
+        const b = await createImageBitmap(photo);
+        const crops: [number, number][] = [[0.5, 0.3], [0.5, 0.55], [0.5, 0.8]];
+        for (let i = 0; i < 3; i++) {
+          const cw = 270, chh = 190, cx0 = -pw / 2 + 60 + i * (cw + 30), cy0 = top + 520;
+          const sc = Math.max(cw / b.width, chh / b.height) * 1.6;
+          const dw = b.width * sc, dh = b.height * sc;
+          ctx.save(); ctx.beginPath(); ctx.rect(cx0, cy0, cw, chh); ctx.clip();
+          ctx.filter = "grayscale(1) contrast(1.1)";
+          ctx.drawImage(b, cx0 + (cw - dw) * crops[i][0], cy0 + (chh - dh) * crops[i][1], dw, dh);
+          ctx.restore();
+          ctx.fillStyle = "rgba(0,0,0,0.25)";
+          for (let k = 0; k < 3; k++) ctx.fillRect(cx0, cy0 + chh + 14 + k * 14, cw - k * 50, 4);
+        }
+        ctx.filter = "none"; b.close();
+      } catch { /* pictures are optional */ }
+    }
+    ctx.restore();
+    setSpacing(ctx, 0);
+    return;
+  }
+
+  if (layout === "oct8") {
+    // Retro badge: the photo turned into a flat, posterised illustration in the clinic colour.
+    ctx.fillStyle = "#f4ecdc"; ctx.fillRect(0, 0, W, H);
+    const R = 360, cx = W / 2 + textAt.dx, cy = 790 + textAt.dy;
+    const off = document.createElement("canvas"); off.width = R * 2; off.height = R * 2;
+    const og = off.getContext("2d");
+    if (og && photo) {
+      await drawFileIn(og, photo, 0, 0, R * 2, R * 2, pos);
+      const id = og.getImageData(0, 0, R * 2, R * 2); const d = id.data;
+      const pal = [mixHex(brandHex, "#000000", 0.6), mixHex(brandHex, "#000000", 0.15), mixHex(brandHex, "#ffffff", 0.5), "rgb(244,236,220)"].map(c => (c.match(/\d+/g) || ["0", "0", "0"]).map(Number));
+      for (let i = 0; i < d.length; i += 4) {
+        const l = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 255;
+        const k = l < 0.25 ? 0 : l < 0.5 ? 1 : l < 0.78 ? 2 : 3;
+        d[i] = pal[k][0]; d[i + 1] = pal[k][1]; d[i + 2] = pal[k][2]; d[i + 3] = 255;
+      }
+      og.putImageData(id, 0, 0);
+    }
+    ctx.fillStyle = mixHex(brandHex, "#000000", 0.15);
+    ctx.beginPath(); ctx.arc(cx, cy, R + 38, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#f4ecdc"; ctx.beginPath(); ctx.arc(cx, cy, R + 20, 0, Math.PI * 2); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.clip();
+    ctx.fillStyle = mixHex(brandHex, "#ffffff", 0.5); ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+    ctx.drawImage(off, cx - R, cy - R);
+    ctx.restore();
+    ctx.strokeStyle = mixHex(brandHex, "#000000", 0.6); ctx.lineWidth = 6; ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
+    // ribbon
+    ctx.fillStyle = mixHex(brandHex, "#000000", 0.15); ctx.fillRect(cx - 250, cy + R - 40, 500, 86);
+    smallDraw("TODAY", cx, cy + R + 22, Math.round(style.cvSubSize * 1.6 * subScale), "#f4ecdc");
+    fitDraw(capsT(spec.text), W / 2, 90, 900, 280, Math.round(style.cvSize * headScale), 2, "center", inkOr(mixHex(brandHex, "#000000", 0.5)));
+    if (spec.sub) smallDraw(spec.sub, W / 2, 1340 + subTextAt.dy, Math.round(style.cvSubSize * 1.3 * subScale), mixHex(brandHex, "#000000", 0.5));
+    setSpacing(ctx, 0);
+    return;
+  }
+
+  if (layout === "oct9") {
+    // Black and white photo, her dress and shoes in the clinic colour, and a big newspaper held in front.
+    tintBand(930, H, 0, W, brandHex);
+    ctx.save();
+    ctx.translate(W / 2 + textAt.dx, 800 + textAt.dy); ctx.rotate(0.03);
+    const pw = 800, ph = 440;
+    ctx.shadowColor = "rgba(0,0,0,0.45)"; ctx.shadowBlur = 28; ctx.shadowOffsetY = 12;
+    ctx.fillStyle = "#f5f0e4"; ctx.fillRect(-pw / 2, -ph / 2, pw, ph);
+    ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(-pw / 2 + 30, -ph / 2 + 26, pw - 60, 4);
+    fitDraw(capsT(spec.text), 0, -ph / 2 + 50, pw - 80, ph - 160, Math.round(style.cvSize * headScale), 3, "center", inkOr("#141414"));
+    if (spec.sub) smallDraw(spec.sub, 0, ph / 2 - 36, Math.round(style.cvSubSize * 0.9 * subScale), "#333333");
+    ctx.restore();
+    setSpacing(ctx, 0);
+    return;
+  }
+
+  if (layout === "oct11") {
+    // Street poster: headline 1 and 2 on the paper above, the photo below with the shoes in the spot colour.
+    ctx.fillStyle = "#efe8dc"; ctx.fillRect(0, 0, W, H);
+    const parts = spec.text.split("|").map(x => x.trim());
+    const px = 60, py = 420, pw = W - 120, ph = 900;
+    if (photo) await drawFileIn(ctx, photo, px, py, pw, ph, pos);
+    tintBand(py + ph - 190, py + ph, px, px + pw, brandHex);
+    ctx.strokeStyle = "#111"; ctx.lineWidth = 4; ctx.strokeRect(px, py, pw, ph);
+    const endY = fitDraw(capsT(parts[0] || ""), W / 2 + textAt.dx, 60 + textAt.dy, 940, 200, Math.round(style.cvSize * headScale), 2, "center", inkOr("#111111"));
+    if (parts[1]) fitDraw(parts[1], W / 2 + textAt.dx, Math.max(endY, 250) + 6 + textAt.dy, 940, 110, Math.round(style.cvSize * 0.5 * headScale), 1, "center", inkOr("#111111"), true);
+    if (spec.sub) smallDraw(spec.sub, W / 2 + subTextAt.dx, 1390 + subTextAt.dy, Math.round(style.cvSubSize * subScale), "#111111");
+    setSpacing(ctx, 0);
+    return;
+  }
+
+  if (layout === "oct17") {
+    // Panelled wall in the clinic colours, the clinician in an arch holding a newspaper, with towel and sunglasses as options.
+    const strip = 60;
+    for (let x0 = 0, i = 0; x0 < W; x0 += strip, i++) {
+      ctx.fillStyle = mixHex(brandHex, i % 2 ? "#ffffff" : "#000000", i % 2 ? 0.25 : 0.12); ctx.fillRect(x0, 0, strip, H);
+      ctx.fillStyle = "rgba(0,0,0,0.22)"; ctx.fillRect(x0, 0, 4, H);
+    }
+    const ax = 150, ay = 90, aw = 780, ah = 1000;
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(ax, ay + ah); ctx.lineTo(ax, ay + aw / 2); ctx.arc(ax + aw / 2, ay + aw / 2, aw / 2, Math.PI, 0); ctx.lineTo(ax + aw, ay + ah); ctx.closePath();
+    ctx.shadowColor = "rgba(0,0,0,0.4)"; ctx.shadowBlur = 30; ctx.fillStyle = "#e9e1d2"; ctx.fill();
+    ctx.shadowColor = "transparent"; ctx.shadowBlur = 0;
+    ctx.clip();
+    const fr = document.createElement("canvas"); fr.width = aw; fr.height = ah;
+    const fg = fr.getContext("2d");
+    if (fg && photo) { await drawFileIn(fg, photo, 0, 0, aw, ah, pos); ctx.drawImage(fr, ax, ay); }
+    ctx.restore();
+    // towel and sunglasses, placed from the face if one is found
+    if (style.cvTowel || style.cvShades) {
+      let fx = aw / 2, fy = ah * 0.3;
+      try { if (fg && photo) { const f = await findFace(fr); if (f) { fx = f.x; fy = f.y; } } } catch { /* use the default spot */ }
+      const hx = ax + fx, hy = ay + fy, hw = aw * 0.34;
+      if (style.cvTowel) {
+        ctx.fillStyle = "#fbfaf7"; ctx.beginPath(); ctx.ellipse(hx, hy - hw * 0.78, hw * 0.78, hw * 0.46, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = brandHex; ctx.fillRect(hx - hw * 0.7, hy - hw * 0.8, hw * 1.4, 10);
+        ctx.fillRect(hx - hw * 0.62, hy - hw * 0.62, hw * 1.24, 10);
+      }
+      if (style.cvShades) {
+        ctx.fillStyle = "#111"; const sy = hy - hw * 0.1, sw = hw * 0.62, sh = hw * 0.4;
+        ctx.beginPath(); ctx.roundRect(hx - hw * 0.08 - sw, sy, sw, sh, 14); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(hx + hw * 0.08, sy, sw, sh, 14); ctx.fill();
+        ctx.fillRect(hx - hw * 0.1, sy + 8, hw * 0.2, 8);
+        ctx.fillStyle = "rgba(255,255,255,0.25)"; ctx.fillRect(hx - hw * 0.08 - sw + 14, sy + 8, sw * 0.4, 6);
+      }
+    }
+    // newspaper held at the bottom, headline 1 and text 1
+    ctx.save();
+    ctx.translate(W / 2 + textAt.dx, 1100 + textAt.dy); ctx.rotate(-0.02);
+    const pw = 760, ph = 420;
+    ctx.shadowColor = "rgba(0,0,0,0.45)"; ctx.shadowBlur = 26; ctx.shadowOffsetY = 10;
+    ctx.fillStyle = "#f5f0e4"; ctx.fillRect(-pw / 2, -ph / 2, pw, ph);
+    ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+    ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(-pw / 2 + 30, -ph / 2 + 24, pw - 60, 4);
+    const endY = fitDraw(capsT(spec.text), 0, -ph / 2 + 46, pw - 80, 190, Math.round(style.cvSize * headScale), 2, "center", inkOr("#141414"));
+    if (spec.sub) {
+      ctx.fillStyle = "#333333"; ctx.textAlign = "center"; ctx.textBaseline = "top";
+      ctx.font = `${style.cvSubWeight} ${Math.round(style.cvSubSize * 0.85 * subScale)}px ${sf}`; setSpacing(ctx, style.cvSubTracking);
+      const words = spec.sub.split(/\s+/); let line = ""; let yy = endY + 14; const lh = Math.round(style.cvSubSize * 1.2 * subScale);
+      for (const w of words) { const t = line ? line + " " + w : w; if (ctx.measureText(t).width > pw - 100 && line) { ctx.fillText(line, 0, yy); yy += lh; line = w; } else line = t; }
+      if (line && yy < ph / 2 - 20) ctx.fillText(line, 0, yy);
+    }
+    ctx.restore();
+    setSpacing(ctx, 0);
+    return;
   }
 
   const brand = (preset?.accentColor || "").trim();
@@ -2635,7 +2875,7 @@ export default function Stylish() {
     if (!octoberRef.current || !posts.length || pendingClient) return;
     const o = octoberRef.current;
     octoberRef.current = null;
-    const order: CoverLayout[] = ["oct13", "oct6", "oct18", "oct4", "oct12", "oct10", "oct3", "oct14", "oct7", "oct16"];
+    const order: CoverLayout[] = ["oct13", "oct1", "oct6", "oct9", "oct18", "oct17", "oct4", "oct8", "oct12", "oct11", "oct10", "oct3", "oct14", "oct7", "oct16"];
     setPosts(l => l.map((p, i) => ({ ...p, cover: order[i % order.length], coverSpot: o.spot && /^#?[0-9a-f]{6}$/i.test(o.spot) ? (o.spot.startsWith("#") ? o.spot : `#${o.spot}`) : p.coverSpot })));
     toast.success("October 26 covers added, one per post. Change any of them from that post's cover options.");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -4359,6 +4599,12 @@ export default function Stylish() {
                               <div className="w-56">
                                 <ColourField label="Spot colour in the picture" value={eff.cvSpot || preset?.accentColor || "#2c9a8f"} onChange={v => setCoverColours(post, pi, { coverSpot: v })} />
                                 <div className="text-[10px] text-muted-foreground mt-0.5">Starts as the clinic colour. Pick another to recolour the shoes, lips or glove.</div>
+                              </div>
+                            )}
+                            {eff.coverLayout === "oct17" && (
+                              <div className="flex gap-4 items-center text-xs">
+                                <label className="flex items-center gap-1.5"><input type="checkbox" checked={!!eff.cvTowel} onChange={e => { updatePost(post.id, { coverTowel: e.target.checked }); redrawOne({ ...post, coverTowel: e.target.checked }, pi, 0); }} />Towel on head</label>
+                                <label className="flex items-center gap-1.5"><input type="checkbox" checked={!!eff.cvShades} onChange={e => { updatePost(post.id, { coverShades: e.target.checked }); redrawOne({ ...post, coverShades: e.target.checked }, pi, 0); }} />Sunglasses</label>
                               </div>
                             )}
                             {BLOCK_LABEL[eff.coverLayout] && (
