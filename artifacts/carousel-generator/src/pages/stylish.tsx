@@ -78,6 +78,7 @@ type Style = {
   cvBlock: string;
   cvBand: string;
   cvBandOn: boolean;
+  cvPunch?: number; // October 26: how much contrast and colour the photo gets, 0 to 100 (40 when empty)
   cvTowel?: boolean; // October 26 No. 17: a towel on the head
   cvShades?: boolean; // October 26 No. 17: sunglasses
   cvSpot?: string; // spot colour for the recolourable picture covers. Empty uses the client's brand colour.
@@ -396,6 +397,7 @@ type Post = {
   coverSubColour?: string; // and its subtitle colour
   coverBlockColour?: string; // its band or block colour (band, block and split covers)
   coverBandColour?: string;  // and the split cover's bottom band
+  coverPunch?: number;     // October 26: contrast and colour boost on the photo
   coverTowel?: boolean;    // No. 17: towel on the head
   coverShades?: boolean;   // No. 17: sunglasses
   coverSpot?: string;      // this post's spot colour for the recolourable picture (heels, lips, glove)
@@ -539,6 +541,7 @@ function styleForSlide(style: Style, post: Post, kind: SlideKind): Style {
   if (style.cvBandAll) out = { ...out, cvBand: style.cvBandAll };
   if (style.cvAll) out = { ...out, cvColour: style.cvAllColour, cvSubColour: style.cvAllSubColour };
   if (post.coverSpot) out = { ...out, cvSpot: post.coverSpot };
+  if (post.coverPunch !== undefined) out = { ...out, cvPunch: post.coverPunch };
   if (post.coverTowel !== undefined) out = { ...out, cvTowel: post.coverTowel };
   if (post.coverShades !== undefined) out = { ...out, cvShades: post.coverShades };
   if (post.coverAlts) out = { ...out, cvAlts: post.coverAlts };
@@ -1331,13 +1334,18 @@ type OctLook = {
 };
 
 // Draws a photo to fill a frame, with the zoom and drag position, clipped to that frame.
-async function drawFileIn(ctx: CanvasRenderingContext2D, file: File, x: number, y: number, w: number, h: number, pos?: PhotoPos) {
+function punchFilter(punch: number | undefined, mono = false) {
+  const p = Math.min(100, Math.max(0, punch ?? 40)) / 100;
+  return mono ? `grayscale(1) contrast(${1 + 0.55 * p})` : `contrast(${1 + 0.3 * p}) saturate(${1 + 0.55 * p})`;
+}
+async function drawFileIn(ctx: CanvasRenderingContext2D, file: File, x: number, y: number, w: number, h: number, pos?: PhotoPos, filter = "none") {
   try {
     const b = await createImageBitmap(file);
     const z = Math.min(3, Math.max(1, pos?.z ?? 1));
     const sc = Math.max(w / b.width, h / b.height) * z;
     const dw = b.width * sc, dh = b.height * sc;
     ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+    (ctx as CanvasRenderingContext2D & { filter?: string }).filter = filter;
     ctx.drawImage(b, x + (w - dw) * ((pos?.x ?? 50) / 100), y + (h - dh) * ((pos?.y ?? 50) / 100), dw, dh);
     ctx.restore(); b.close();
     return true;
@@ -1421,7 +1429,7 @@ async function drawCoverOct(
       const z = Math.min(3, Math.max(1, pos?.z ?? 1));
       const sc = Math.max(W / bmp.width, H / bmp.height) * z;
       const dw = bmp.width * sc, dh = bmp.height * sc;
-      if (look.mono) (ctx as CanvasRenderingContext2D & { filter?: string }).filter = "grayscale(1) contrast(1.05)";
+      (ctx as CanvasRenderingContext2D & { filter?: string }).filter = punchFilter(style.cvPunch, !!look.mono);
       ctx.drawImage(bmp, (W - dw) * ((pos?.x ?? 50) / 100), (H - dh) * ((pos?.y ?? 50) / 100), dw, dh);
       (ctx as CanvasRenderingContext2D & { filter?: string }).filter = "none";
     } else {
@@ -1445,7 +1453,9 @@ async function drawCoverOct(
       const z = Math.min(3, Math.max(1, pos?.z ?? 1));
       const dw = W * z, dh2 = dh * z;
       const py = dh2 >= H ? (H - dh2) * ((pos?.y ?? 50) / 100) : y0 + (dh - dh2) / 2;
+      (ctx as CanvasRenderingContext2D & { filter?: string }).filter = punchFilter(style.cvPunch);
       ctx.drawImage(bmp, (W - dw) * ((pos?.x ?? 50) / 100), py, dw, dh2);
+      (ctx as CanvasRenderingContext2D & { filter?: string }).filter = "none";
     }
     bmp.close();
     if (look.recolour) {
@@ -1609,6 +1619,7 @@ async function drawCoverOct(
           const dw = b.width * sc, dh = b.height * sc;
           const px = (pos?.x ?? 50) / 100, py = i === 1 && !second ? 0.85 : (pos?.y ?? 50) / 100;
           ctx.save(); ctx.beginPath(); ctx.rect(fx, fy, fw, fh); ctx.clip();
+          (ctx as CanvasRenderingContext2D & { filter?: string }).filter = punchFilter(style.cvPunch);
           ctx.drawImage(b, fx + (fw - dw) * px, fy + (fh - dh) * py, dw, dh);
           ctx.restore(); b.close();
         } catch { /* leave the grey frame */ }
@@ -1766,7 +1777,7 @@ async function drawCoverOct(
     ctx.fillStyle = "#efe8dc"; ctx.fillRect(0, 0, W, H);
     const parts = spec.text.split("|").map(x => x.trim());
     const px = 60, py = 420, pw = W - 120, ph = 900;
-    if (photo) await drawFileIn(ctx, photo, px, py, pw, ph, pos);
+    if (photo) await drawFileIn(ctx, photo, px, py, pw, ph, pos, punchFilter(style.cvPunch));
     tintBand(py + ph - 190, py + ph, px, px + pw, brandHex);
     ctx.strokeStyle = "#111"; ctx.lineWidth = 4; ctx.strokeRect(px, py, pw, ph);
     const endY = fitDraw(capsT(parts[0] || ""), W / 2 + textAt.dx, 60 + textAt.dy, 940, 200, Math.round(style.cvSize * headScale), 2, "center", inkOr("#111111"));
@@ -1791,7 +1802,7 @@ async function drawCoverOct(
     ctx.clip();
     const fr = document.createElement("canvas"); fr.width = aw; fr.height = ah;
     const fg = fr.getContext("2d");
-    if (fg && photo) { await drawFileIn(fg, photo, 0, 0, aw, ah, pos); ctx.drawImage(fr, ax, ay); }
+    if (fg && photo) { await drawFileIn(fg, photo, 0, 0, aw, ah, pos, punchFilter(style.cvPunch)); ctx.drawImage(fr, ax, ay); }
     ctx.restore();
     // towel and sunglasses, placed from the face if one is found
     if (style.cvTowel || style.cvShades) {
@@ -4592,6 +4603,13 @@ export default function Stylish() {
                                     }}
                                   />
                                   <div className="text-[10px] text-muted-foreground mt-0.5">Drag the photo to move it. Double click to reset.</div>
+                                  <label className="text-xs font-medium text-muted-foreground block mt-2 mb-1">Punch: contrast and colour ({post.coverPunch ?? 40})</label>
+                                  <input
+                                    type="range" min={0} max={100} step={5} value={post.coverPunch ?? 40}
+                                    aria-label={`Photo punch for post ${pi + 1}`}
+                                    className="w-full"
+                                    onChange={e => { const v = Number(e.target.value); updatePost(post.id, { coverPunch: v }); redrawOne({ ...post, coverPunch: v }, pi, 0); }}
+                                  />
                                 </div>
                               );
                             })()}

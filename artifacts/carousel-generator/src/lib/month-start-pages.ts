@@ -25,7 +25,7 @@ export type MonthBrand = {
 };
 
 export type PhotoAdjust = { zoom: number; panX: number; panY: number };
-export const DEFAULT_ADJUST: PhotoAdjust = { zoom: 1, panX: 0, panY: 0 };
+export const DEFAULT_ADJUST: PhotoAdjust = { zoom: 1.25, panX: 0, panY: 0 };
 
 export type PhotoHit = {
   page: number;
