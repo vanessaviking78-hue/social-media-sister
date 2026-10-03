@@ -1687,9 +1687,12 @@ async function drawCoverOct(
   if (layout === "oct1") {
     // A newspaper held up so only the top half of the face peeps over it.
     const sub = (spec.sub || "").trim() || "Aesthetics news";
+    let paperTop = 760;
+    try { const cv = ctx.canvas; const f = await findFace(cv); if (f) paperTop = Math.round(f.y / (cv.width / W) + 12); } catch { /* keep the usual height */ }
+    paperTop = Math.min(680, Math.max(430, paperTop));
     ctx.save();
-    ctx.translate(W / 2 + textAt.dx, 800 + textAt.dy); ctx.rotate(-0.025);
-    const pw = 960, top = 0, ph = 900;
+    ctx.translate(W / 2 + textAt.dx, paperTop + textAt.dy); ctx.rotate(-0.025);
+    const pw = 960, top = 0, ph = H - paperTop + 120;
     ctx.shadowColor = "rgba(0,0,0,0.4)"; ctx.shadowBlur = 30; ctx.shadowOffsetY = -6;
     ctx.fillStyle = mixHex(brandHex, "#ffffff", 0.12); ctx.fillRect(-pw / 2, top, pw, ph);
     ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
@@ -1703,7 +1706,7 @@ async function drawCoverOct(
         const b = await createImageBitmap(photo);
         const crops: [number, number][] = [[0.5, 0.3], [0.5, 0.55], [0.5, 0.8]];
         for (let i = 0; i < 3; i++) {
-          const cw = 270, chh = 190, cx0 = -pw / 2 + 60 + i * (cw + 30), cy0 = top + 520;
+          const cw = 270, chh = 190, cx0 = -pw / 2 + 60 + i * (cw + 30), cy0 = Math.max(top + 470, H - paperTop - 330);
           const sc = Math.max(cw / b.width, chh / b.height) * 1.6;
           const dw = b.width * sc, dh = b.height * sc;
           ctx.save(); ctx.beginPath(); ctx.rect(cx0, cy0, cw, chh); ctx.clip();
@@ -1728,12 +1731,28 @@ async function drawCoverOct(
     const off = document.createElement("canvas"); off.width = R * 2; off.height = R * 2;
     const og = off.getContext("2d");
     if (og && photo) {
-      await drawFileIn(og, photo, 0, 0, R * 2, R * 2, pos);
+      try {
+        const b = await createImageBitmap(photo);
+        let fcx = b.width / 2, fcy = b.height * 0.25;
+        try {
+          const t = document.createElement("canvas"); const ts = Math.min(1, 640 / Math.max(b.width, b.height));
+          t.width = Math.round(b.width * ts); t.height = Math.round(b.height * ts); t.getContext("2d")!.drawImage(b, 0, 0, t.width, t.height);
+          const f = await findFace(t); if (f) { fcx = f.x / ts; fcy = f.y / ts; }
+        } catch { /* use the top middle */ }
+        const z = Math.min(3, Math.max(1, pos?.z ?? 1));
+        const side = Math.min(b.width, b.height) * 0.6 / z;
+        let sx = fcx - side / 2 + (((pos?.x ?? 50) - 50) / 100) * side, sy = fcy - side * 0.42 + (((pos?.y ?? 50) - 50) / 100) * side;
+        sx = Math.max(0, Math.min(b.width - side, sx)); sy = Math.max(0, Math.min(b.height - side, sy));
+        og.drawImage(b, sx, sy, side, side, 0, 0, R * 2, R * 2); b.close();
+      } catch { /* leave the circle plain */ }
       const id = og.getImageData(0, 0, R * 2, R * 2); const d = id.data;
-      const pal = [mixHex(brandHex, "#000000", 0.6), mixHex(brandHex, "#000000", 0.15), mixHex(brandHex, "#ffffff", 0.5), "rgb(244,236,220)"].map(c => (c.match(/\d+/g) || ["0", "0", "0"]).map(Number));
-      for (let i = 0; i < d.length; i += 4) {
-        const l = (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 255;
-        const k = l < 0.25 ? 0 : l < 0.5 ? 1 : l < 0.78 ? 2 : 3;
+      const lum = new Float32Array(d.length / 4); const hist = new Uint32Array(256);
+      for (let i = 0, j = 0; i < d.length; i += 4, j++) { lum[j] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; hist[Math.min(255, Math.round(lum[j]))]++; }
+      const cut = (q: number) => { let acc = 0; const tot = lum.length * q; for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= tot) return v; } return 255; };
+      const t1 = cut(0.28), t2 = cut(0.55), t3 = cut(0.82);
+      const pal = [mixHex(brandHex, "#000000", 0.72), brandHex, mixHex(brandHex, "#ffffff", 0.55), "rgb(244,236,220)"].map(c => (c.match(/\d+/g) || ["0", "0", "0"]).map(Number));
+      for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+        const l = lum[j]; const k = l < t1 ? 0 : l < t2 ? 1 : l < t3 ? 2 : 3;
         d[i] = pal[k][0]; d[i + 1] = pal[k][1]; d[i + 2] = pal[k][2]; d[i + 3] = 255;
       }
       og.putImageData(id, 0, 0);
@@ -1760,12 +1779,12 @@ async function drawCoverOct(
     tintBand(930, H, 0, W, brandHex);
     ctx.save();
     ctx.translate(W / 2 + textAt.dx, 800 + textAt.dy); ctx.rotate(0.03);
-    const pw = 800, ph = 440;
+    const pw = 820, ph = 400;
     ctx.shadowColor = "rgba(0,0,0,0.45)"; ctx.shadowBlur = 28; ctx.shadowOffsetY = 12;
     ctx.fillStyle = "#f5f0e4"; ctx.fillRect(-pw / 2, -ph / 2, pw, ph);
     ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(-pw / 2 + 30, -ph / 2 + 26, pw - 60, 4);
-    fitDraw(capsT(spec.text), 0, -ph / 2 + 50, pw - 80, ph - 160, Math.round(style.cvSize * headScale), 3, "center", inkOr("#141414"));
+    fitDraw(capsT(spec.text), 0, -ph / 2 + 56, pw - 70, ph - 140, Math.round(style.cvSize * 1.7 * headScale), 3, "center", inkOr("#141414"));
     if (spec.sub) smallDraw(spec.sub, 0, ph / 2 - 36, Math.round(style.cvSubSize * 0.9 * subScale), "#333333");
     ctx.restore();
     setSpacing(ctx, 0);
@@ -1774,15 +1793,15 @@ async function drawCoverOct(
 
   if (layout === "oct11") {
     // Street poster: headline 1 and 2 on the paper above, the photo below with the shoes in the spot colour.
-    ctx.fillStyle = "#efe8dc"; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = brandHex; ctx.fillRect(0, 0, W, H);
     const parts = spec.text.split("|").map(x => x.trim());
     const px = 60, py = 420, pw = W - 120, ph = 900;
     if (photo) await drawFileIn(ctx, photo, px, py, pw, ph, pos, punchFilter(style.cvPunch));
     tintBand(py + ph - 190, py + ph, px, px + pw, brandHex);
-    ctx.strokeStyle = "#111"; ctx.lineWidth = 4; ctx.strokeRect(px, py, pw, ph);
-    const endY = fitDraw(capsT(parts[0] || ""), W / 2 + textAt.dx, 60 + textAt.dy, 940, 200, Math.round(style.cvSize * headScale), 2, "center", inkOr("#111111"));
-    if (parts[1]) fitDraw(parts[1], W / 2 + textAt.dx, Math.max(endY, 250) + 6 + textAt.dy, 940, 110, Math.round(style.cvSize * 0.5 * headScale), 1, "center", inkOr("#111111"), true);
-    if (spec.sub) smallDraw(spec.sub, W / 2 + subTextAt.dx, 1390 + subTextAt.dy, Math.round(style.cvSubSize * subScale), "#111111");
+    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 14; ctx.strokeRect(px, py, pw, ph);
+    const endY = fitDraw(capsT(parts[0] || ""), W / 2 + textAt.dx, 60 + textAt.dy, 940, 200, Math.round(style.cvSize * headScale), 2, "center", inkOr("#ffffff"));
+    if (parts[1]) fitDraw(parts[1], W / 2 + textAt.dx, Math.max(endY, 250) + 6 + textAt.dy, 940, 110, Math.round(style.cvSize * 0.5 * headScale), 1, "center", inkOr("#ffffff"), true);
+    if (spec.sub) smallDraw(spec.sub, W / 2 + subTextAt.dx, 1390 + subTextAt.dy, Math.round(style.cvSubSize * subScale), "#ffffff");
     setSpacing(ctx, 0);
     return;
   }
