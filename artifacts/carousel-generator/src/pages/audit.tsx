@@ -430,7 +430,6 @@ export default function AuditPage() {
                 <p className="text-sm text-muted-foreground">No write-up yet. Pick a style and hit "Write it again".</p>
               )}
             </section>
-            </div>
 
             {/* Breakdown */}
             <section className="space-y-3">
@@ -507,8 +506,9 @@ export default function AuditPage() {
                 <PostList title="Weakest posts" posts={current.metrics.bottomPosts} />
               </div>
             </section>
+            </div>
 
-            {/* Notes */}
+            {/* Notes (kept out of the saved document, these are your own private call notes) */}
             <section className="space-y-2">
               <h2 className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">Your notes</h2>
               <textarea
