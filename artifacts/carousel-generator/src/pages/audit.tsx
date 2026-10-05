@@ -369,53 +369,53 @@ export default function AuditPage() {
           <div className="space-y-8">
             <div ref={exportRef} className="space-y-8">
             {/* Score */}
-            <section className="rounded-2xl border border-border/40 bg-card/30 p-6 flex flex-wrap items-center gap-6">
-              <div className="text-center">
-                <div className={`text-6xl font-bold ${scoreColour(headlineScore)}`}>{headlineScore}</div>
-                <div className="text-xs text-muted-foreground">out of 100</div>
+            <section className="rounded-2xl border border-border/40 bg-card/30 p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-6">
+              <div className="text-center sm:text-left">
+                <div className={`text-7xl sm:text-6xl font-bold ${scoreColour(headlineScore)}`}>{headlineScore}</div>
+                <div className="text-sm text-muted-foreground">out of 100</div>
               </div>
               <div className="flex-1 min-w-[200px]">
-                <p className="text-lg font-semibold">{current.display_name || `@${current.handle}`}</p>
-                <a href={`https://instagram.com/${current.handle}`} target="_blank" rel="noreferrer" className="text-sm text-amber-400 hover:underline inline-flex items-center gap-1">
-                  @{current.handle} <ExternalLink className="w-3 h-3" />
+                <p className="text-2xl sm:text-lg font-semibold">{current.display_name || `@${current.handle}`}</p>
+                <a href={`https://instagram.com/${current.handle}`} target="_blank" rel="noreferrer" className="text-base sm:text-sm text-amber-400 hover:underline inline-flex items-center gap-1">
+                  @{current.handle} <ExternalLink className="w-4 h-4 sm:w-3 sm:h-3" />
                 </a>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-base sm:text-sm text-muted-foreground mt-1">
                   {current.followers.toLocaleString("en-GB")} followers · {scoreLabel(headlineScore)} · audited {fmtDate(current.created_at)}
                 </p>
                 {previousScore !== null && (
-                  <p className={`text-sm mt-1 inline-flex items-center gap-1 ${headlineScore >= previousScore ? "text-emerald-400" : "text-red-400"}`}>
+                  <p className={`text-base sm:text-sm mt-1 inline-flex items-center gap-1 ${headlineScore >= previousScore ? "text-emerald-400" : "text-red-400"}`}>
                     {headlineScore >= previousScore ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
                     {headlineScore - previousScore >= 0 ? "+" : ""}{headlineScore - previousScore} since the last audit ({previousScore})
                   </p>
                 )}
               </div>
               <div>
-                <label className="text-xs text-muted-foreground block">Status</label>
-                <select value={current.tag} onChange={(e) => patch({ tag: e.target.value })} className="mt-1 px-3 py-1.5 rounded-lg bg-card border border-border/40 text-sm capitalize">
+                <label className="text-sm sm:text-xs text-muted-foreground block">Status</label>
+                <select value={current.tag} onChange={(e) => patch({ tag: e.target.value })} className="mt-1 px-3 py-2 sm:py-1.5 rounded-lg bg-card border border-border/40 text-base sm:text-sm capitalize w-full sm:w-auto">
                   {TAGS.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
             </section>
 
             {/* Sales write-up */}
-            <section className="rounded-2xl border border-amber-600/40 bg-amber-950/10 p-5 space-y-4">
+            <section className="rounded-2xl border border-amber-600/40 bg-amber-950/10 p-4 sm:p-5 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-xs uppercase tracking-wide text-amber-400 font-semibold">Ready to send</h2>
-                <div className="flex flex-wrap items-center gap-2">
-                  <select value={style} onChange={(e) => setStyle(e.target.value)} className="px-3 py-1.5 rounded-lg bg-card border border-border/40 text-xs">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                  <select value={style} onChange={(e) => setStyle(e.target.value)} className="px-3 py-2 sm:py-1.5 rounded-lg bg-card border border-border/40 text-sm sm:text-xs flex-1 sm:flex-none min-w-[140px]">
                     {STYLES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
-                  <button onClick={rewrite} disabled={rewriting} className="px-3 py-1.5 rounded-full border border-amber-500/50 text-amber-300 text-xs font-medium hover:bg-amber-500/10 flex items-center gap-1.5 disabled:opacity-40">
-                    {rewriting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />} Write it again
+                  <button onClick={rewrite} disabled={rewriting} className="px-3 py-2 sm:py-1.5 rounded-full border border-amber-500/50 text-amber-300 text-sm sm:text-xs font-medium hover:bg-amber-500/10 flex items-center gap-1.5 disabled:opacity-40">
+                    {rewriting ? <Loader2 className="w-4 h-4 sm:w-3.5 sm:h-3.5 animate-spin" /> : <RefreshCw className="w-4 h-4 sm:w-3.5 sm:h-3.5" />} Write it again
                   </button>
                   {current.sales_html && (
-                    <button onClick={saveAsDoc} className="px-3 py-1.5 rounded-full border border-amber-500/50 text-amber-300 text-xs font-medium hover:bg-amber-500/10 flex items-center gap-1.5">
-                      <Download className="w-3.5 h-3.5" /> Save
+                    <button onClick={saveAsDoc} className="px-3 py-2 sm:py-1.5 rounded-full border border-amber-500/50 text-amber-300 text-sm sm:text-xs font-medium hover:bg-amber-500/10 flex items-center gap-1.5">
+                      <Download className="w-4 h-4 sm:w-3.5 sm:h-3.5" /> Save
                     </button>
                   )}
                   {current.sales_html && (
-                    <button onClick={copySales} className="px-3 py-1.5 rounded-full bg-amber-500 text-black text-xs font-semibold hover:bg-amber-400 flex items-center gap-1.5">
-                      <Copy className="w-3.5 h-3.5" /> Copy
+                    <button onClick={copySales} className="px-3 py-2 sm:py-1.5 rounded-full bg-amber-500 text-black text-sm sm:text-xs font-semibold hover:bg-amber-400 flex items-center gap-1.5">
+                      <Copy className="w-4 h-4 sm:w-3.5 sm:h-3.5" /> Copy
                     </button>
                   )}
                 </div>
@@ -423,7 +423,7 @@ export default function AuditPage() {
               {current.sales_html ? (
                 <div
                   ref={salesRef}
-                  className="prose prose-invert max-w-none prose-h2:text-base prose-h2:font-semibold prose-h2:mt-5 prose-h2:mb-1"
+                  className="prose prose-invert prose-lg max-w-none leading-relaxed prose-p:my-3 prose-h2:text-xl prose-h2:font-semibold prose-h2:mt-6 prose-h2:mb-2"
                   dangerouslySetInnerHTML={{ __html: current.sales_html }}
                 />
               ) : (
@@ -438,14 +438,14 @@ export default function AuditPage() {
               <div className="space-y-2">
                 {current.breakdown.map((b) => (
                   <div key={b.key} className="rounded-xl border border-border/40 bg-card/30 p-4">
-                    <div className="flex items-center justify-between text-sm font-semibold">
+                    <div className="flex items-center justify-between text-base sm:text-sm font-semibold">
                       <span>{b.label}</span>
                       <span>{b.score} / {b.max}</span>
                     </div>
-                    <div className="h-2 rounded-full bg-border/40 mt-2 overflow-hidden">
+                    <div className="h-2.5 sm:h-2 rounded-full bg-border/40 mt-2 overflow-hidden">
                       <div className={`h-full ${barColour(b.score / b.max)}`} style={{ width: `${Math.round((b.score / b.max) * 100)}%` }} />
                     </div>
-                    <p className="text-xs text-muted-foreground mt-2">{b.note}</p>
+                    <p className="text-sm sm:text-xs text-muted-foreground mt-2">{b.note}</p>
                   </div>
                 ))}
               </div>
