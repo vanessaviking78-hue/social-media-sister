@@ -363,6 +363,7 @@ export default function ClientStylish() {
             <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="A few words on who they are, so the voice fits them." />
           </div>
 
+          <div className="sticky bottom-0 z-10 -mx-1 space-y-2 bg-background px-1 pb-2 pt-3 border-t border-border/40">
           <Button onClick={handleStart} disabled={!canStart} className="w-full">
             {busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Palette className="w-4 h-4 mr-2" />}
             {started ? "Start again" : "Make the pack"}
@@ -370,6 +371,7 @@ export default function ClientStylish() {
           {!canStart && !busy && (
             <p className="text-xs text-muted-foreground">I need the client, website, photo, all 3 treatments and a writing style.</p>
           )}
+          </div>
         </aside>
 
         {/* ------------------------------ right: the pack ------------------------------ */}
