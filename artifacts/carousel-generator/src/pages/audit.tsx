@@ -247,14 +247,20 @@ export default function AuditPage() {
     if (!current?.sales_html || !exportRef.current) return;
     const tid = toast.loading("Putting your document together…");
     try {
-      await loadScript("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js");
+      await loadScript("https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js");
       await loadScript("https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js");
-      const html2canvas = (window as any).html2canvas;
+      const htmlToImage = (window as any).htmlToImage;
       const jsPDFLib = (window as any).jspdf?.jsPDF;
-      if (!html2canvas || !jsPDFLib) throw new Error("Couldn't load the save tools, try again in a moment.");
-      const bg = getComputedStyle(document.body).backgroundColor || "#09090b";
+      if (!htmlToImage || !jsPDFLib) throw new Error("Couldn't load the save tools, try again in a moment.");
+      // html-to-image renders through the browser's own SVG engine rather than
+      // re-parsing CSS by hand, so it copes with modern colour functions like
+      // oklch/oklab that newer Tailwind builds use (html2canvas can't read those).
       const scale = 2;
-      const canvas = await html2canvas(exportRef.current, { backgroundColor: bg, scale, useCORS: true });
+      const canvas = await htmlToImage.toCanvas(exportRef.current, {
+        pixelRatio: scale,
+        backgroundColor: "#09090b",
+        cacheBust: true,
+      });
       const imgData = canvas.toDataURL("image/png");
       const w = canvas.width / scale;
       const h = canvas.height / scale;
