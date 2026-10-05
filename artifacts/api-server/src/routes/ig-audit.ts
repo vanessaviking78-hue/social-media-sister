@@ -126,6 +126,13 @@ async function fetchViaApify(handle: string, token: string): Promise<{ profile: 
     throw Object.assign(new Error("The scraper had a wobble. Give it a minute and try again."), { status: 502 });
   }
   const item = Array.isArray(data) ? data[0] : null;
+  if (item?.isRestrictedProfile) {
+    // Instagram itself is age-gating this profile's posts from anyone who isn't logged in, this shows up a lot
+    // on aesthetics/clinic accounts. It's not a typo and not us losing the account, Instagram just won't hand
+    // over the posts to a logged-out scraper. There's no reliable fix on our end for this one.
+    logger.warn({ handle, reason: item.restrictionReason }, "ig-audit: Instagram age-restricted this profile to the scraper");
+    throw Object.assign(new Error(`Instagram's put an age restriction on ${handle}'s posts, so the scraper can't see them. This isn't a spelling issue, it's Instagram blocking logged-out access to that account.`), { status: 422 });
+  }
   if (!item || item.error || !item.username) {
     logger.warn({ handle, itemCount: Array.isArray(data) ? data.length : null, item }, "ig-audit: scraper returned no usable profile");
     throw Object.assign(new Error("I couldn't find that account. Check the handle is spelled exactly right."), { status: 404 });
