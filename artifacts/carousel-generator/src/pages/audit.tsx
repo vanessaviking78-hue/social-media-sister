@@ -36,6 +36,8 @@ type Audit = ListItem & {
   flags: Flag[];
   sales_html: string;
   salesFailed?: boolean;
+  status?: string;
+  error_message?: string;
 };
 type Insights = {
   accounts: number;
@@ -143,18 +145,39 @@ export default function AuditPage() {
         headers: authHeaders(),
         body: JSON.stringify({ handle, style, contactName, tag }),
       });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || "Audit failed");
-      setCurrent(d);
-      setTab("audit");
-      if (d.salesFailed) toast.warning("Audit's done but the write-up didn't come back. Hit 'Write it again'.", { id: tid });
-      else toast.success("Audit's ready.", { id: tid });
-      loadHistory();
-      loadInsights();
+      const started = await r.json();
+      if (!r.ok) throw new Error(started.error || "Audit failed");
+      // The scrape plus write-up can take well over a minute, longer than the page can hold one
+      // request open for, so the server starts it in the background and we poll for the result
+      // instead of waiting on a single long fetch (that's what was throwing the "<!DOCTYPE" error).
+      await pollUntilReady(started.id, tid);
     } catch (e: any) {
       toast.error(e?.message || "Audit failed", { id: tid });
     } finally {
       setRunning(false);
+    }
+  }
+
+  async function pollUntilReady(id: number, tid: string | number) {
+    const deadline = Date.now() + 3 * 60 * 1000; // generous ceiling, the job itself should land well before this
+    while (true) {
+      await new Promise((resolve) => setTimeout(resolve, 2500));
+      const r = await fetch(`${BASE}/api/ig-audit/${id}`, { headers: authHeaders() });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Audit failed");
+      if (d.status === "failed") throw new Error(d.error_message || "Audit failed");
+      if (d.status === "ready") {
+        setCurrent(d);
+        setTab("audit");
+        if (!d.sales_html) toast.warning("Audit's done but the write-up didn't come back. Hit 'Write it again'.", { id: tid });
+        else toast.success("Audit's ready.", { id: tid });
+        loadHistory();
+        loadInsights();
+        return;
+      }
+      if (Date.now() > deadline) {
+        throw new Error("This is taking longer than usual. Give it another minute and check History, it may still land.");
+      }
     }
   }
 
