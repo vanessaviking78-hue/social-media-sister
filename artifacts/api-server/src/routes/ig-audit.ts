@@ -127,6 +127,7 @@ async function fetchViaApify(handle: string, token: string): Promise<{ profile: 
   }
   const item = Array.isArray(data) ? data[0] : null;
   if (!item || item.error || !item.username) {
+    logger.warn({ handle, itemCount: Array.isArray(data) ? data.length : null, item }, "ig-audit: scraper returned no usable profile");
     throw Object.assign(new Error("I couldn't find that account. Check the handle is spelled exactly right."), { status: 404 });
   }
   if (item.private === true) {
