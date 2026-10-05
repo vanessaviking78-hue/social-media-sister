@@ -505,6 +505,10 @@ async function createIgAuditsTable(): Promise<void> {
     )
   `);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS ig_audits_handle_idx ON ig_audits (handle, created_at DESC)`);
+  // status: 'running' while the scrape + write-up happen in the background, 'ready' once done, 'failed' if it blew up.
+  // Lets the run endpoint reply immediately instead of holding the connection open, which was timing out through the Netlify proxy on slower scrapes.
+  await db.execute(sql`ALTER TABLE ig_audits ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'ready'`);
+  await db.execute(sql`ALTER TABLE ig_audits ADD COLUMN IF NOT EXISTS error_message TEXT NOT NULL DEFAULT ''`);
 }
 
 async function createClientNewsTable(): Promise<void> {
