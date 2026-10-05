@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leave Vanessa a Review | The Cyber Suite</title>
+<meta name="description" content="Tell me how I did. Tick a few boxes, add a heartfelt paragraph and I will turn it into a review.">
+<style>
+  :root{
+    --bg:#000000; --ink:#ffffff; --pink:#ff2e93; --pink-dark:#d9127a;
+    --blush:#2a0a1a; --line:#3b2431; --card:#0f0f0f; --muted:#c7c0c5; --gold:#ff2e93; --off:#3a3a3a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Helvetica Neue",Arial,system-ui,sans-serif;line-height:1.55}
+  .wrap{max-width:760px;margin:0 auto;padding:32px 16px 72px}
+  h1{font-size:clamp(2.1rem,7vw,3.4rem);line-height:1.05;margin:10px 0 14px;color:#fff;font-weight:900;letter-spacing:-.02em}
+  h1 em{color:var(--pink);font-style:normal}
+  h2{font-size:1.25rem;margin:0 0 4px}
+  .lede{font-size:1.15rem;color:var(--muted);margin:0 0 28px}
+  .tag{display:inline-block;background:var(--pink);color:#000;padding:4px 12px;border-radius:99px;font:600 .8rem/1.4 system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase}
+  fieldset{border:0;margin:0 0 18px;padding:20px;background:var(--card);border:1px solid var(--line);border-radius:16px}
+  legend{padding:0;float:left;width:100%}
+  .sub{clear:both;margin:0 0 12px;color:var(--muted);font-size:.95rem}
+  .stars{display:flex;flex-direction:row-reverse;justify-content:flex-end;gap:2px;margin:6px 0 10px}
+  .stars input{position:absolute;opacity:0;width:1px;height:1px}
+  .stars label{font-size:2.4rem;line-height:1;color:var(--off);cursor:pointer;padding:0 2px;transition:transform .1s}
+  .stars label:hover{transform:scale(1.12)}
+  .stars input:checked ~ label,.stars label:hover,.stars label:hover ~ label{color:var(--gold)}
+  .stars input:focus-visible + label{outline:3px solid var(--pink);outline-offset:2px;border-radius:6px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{position:relative}
+  .chip input{position:absolute;opacity:0}
+  .chip span{display:inline-block;padding:8px 14px;border:1.5px solid var(--line);border-radius:99px;font:.92rem system-ui,sans-serif;cursor:pointer;background:#000;color:#fff}
+  .chip input:checked + span{background:var(--pink);border-color:var(--pink);color:#000;font-weight:700}
+  .chip input:focus-visible + span{outline:3px solid var(--pink);outline-offset:2px}
+  label.f{display:block;font:600 .9rem system-ui,sans-serif;margin:0 0 6px}
+  input[type=text],input[type=email],textarea{width:100%;padding:12px 14px;font:1rem system-ui,sans-serif;border:1.5px solid var(--line);border-radius:12px;background:#000;color:#fff}
+  textarea{min-height:190px;resize:vertical;font-family:inherit;font-size:1.05rem}
+  input:focus,textarea:focus{outline:3px solid var(--pink);outline-offset:1px;border-color:var(--pink)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:560px){.row{grid-template-columns:1fr}}
+  .consent{display:flex;gap:10px;align-items:flex-start;font:.92rem system-ui,sans-serif;color:var(--muted);margin:6px 0 20px}
+  .consent input{margin-top:4px;width:18px;height:18px;accent-color:var(--pink)}
+  button.go{background:var(--pink);color:#000;border:0;border-radius:99px;padding:16px 32px;font:700 1.05rem system-ui,sans-serif;cursor:pointer;width:100%}
+  button.go:hover{background:#fff}
+  button.go:disabled{opacity:.6;cursor:wait}
+  .err{color:#ff7ab8;font:.92rem system-ui,sans-serif;margin:10px 0 0;min-height:1.2em}
+  .hp{position:absolute;left:-9999px}
+  #thanks{display:none}
+  #thanks h1{margin-top:0}
+  .preview{margin:24px 0;text-align:center}
+  .preview canvas{max-width:100%;height:auto;border-radius:16px;box-shadow:0 0 0 2px var(--pink),0 10px 40px rgba(255,46,147,.25)}
+  .textcopy{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;white-space:pre-wrap;font-size:1rem}
+  .btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+  .btns button{flex:1;min-width:150px;background:#000;border:1.5px solid var(--pink);color:#fff;border-radius:99px;padding:12px 18px;font:600 .95rem system-ui,sans-serif;cursor:pointer}
+  .btns button:hover{background:var(--pink);color:#000}
+  .count{font:.85rem system-ui,sans-serif;color:var(--muted);text-align:right;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div id="formview">
+  <span class="tag">Be nice. Be honest. Mostly be nice.</span>
+  <h1>Go on then, tell me <em>how I did.</em></h1>
+  <p class="lede">Tick a few boxes, give me some stars and pour your heart out in the big empty box at the bottom. I will turn it into a proper review, and I promise to read every word with a cup of tea in my hand.</p>
+
+  <form id="rf" novalidate>
+    <div class="hp"><label>Leave this blank <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+
+    <div id="cats"></div>
+
+    <fieldset>
+      <legend><h2>6. Your heartfelt paragraph</h2></legend>
+      <p class="sub">This is your moment. Tell me what working together has been like. The good, the funny, the bit where I sent you a voice note at 11pm. Fill your heartfelt paragraph in here.</p>
+      <textarea id="heart" name="heart" maxlength="1500" placeholder="Fill your heartfelt paragraph in here..." required></textarea>
+      <div class="count"><span id="cnt">0</span> / 1500</div>
+    </fieldset>
+
+    <fieldset>
+      <legend><h2>And who are you?</h2></legend>
+      <p class="sub">So I know who to thank (and who to send biscuits to).</p>
+      <div class="row">
+        <div><label class="f" for="name">Your name</label><input type="text" id="name" name="name" required autocomplete="name"></div>
+        <div><label class="f" for="clinic">Your clinic or business</label><input type="text" id="clinic" name="clinic" autocomplete="organization"></div>
+      </div>
+      <div style="margin-top:14px"><label class="f" for="email">Your email (optional, so I can say thank you)</label><input type="email" id="email" name="email" autocomplete="email"></div>
+    </fieldset>
+
+    <label class="consent"><input type="checkbox" id="consent" required> <span>I am happy for Vanessa to share this review on her website and social media.</span></label>
+
+    <button class="go" type="submit" id="go">Make my review</button>
+    <p class="err" id="err" role="alert"></p>
+  </form>
+</div>
+
+<div id="thanks">
+  <span class="tag">Sent. I may be having a little cry.</span>
+  <h1>Thank you, you <em>absolute star.</em></h1>
+  <p class="lede">Your review has landed in my inbox. Here is how it looks. Feel free to save the picture or copy the words and pop them on your own socials too.</p>
+  <div class="preview"><canvas id="cv" width="1080" height="1350"></canvas></div>
+  <div class="textcopy" id="txt"></div>
+  <div class="btns">
+    <button type="button" id="dl">Save the picture</button>
+    <button type="button" id="cp">Copy the words</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+(function(){
+  var CATS = [
+    {k:"compliance", n:"1. My compliance knowledge", q:"How did I do on keeping you on the right side of the rules?",
+     chips:["Kept me on the right side of the ASA","Explained the rules in plain English","Stopped me posting something I would have regretted","Made compliance feel less scary"],
+     lines:{hi:"Her compliance knowledge is second to none",mid:"Her compliance knowledge is solid",lo:"Her compliance knowledge is still growing on me"}},
+    {k:"creativity", n:"2. My creativity", q:"Were the ideas fresh, or did they look like everyone else's?",
+     chips:["Ideas I had never seen before","Made my posts look like me","Turned boring treatments into fun content","Never ran out of ideas"],
+     lines:{hi:"Her creativity is properly brilliant",mid:"She is a creative one",lo:"She has some creative sparks"}},
+    {k:"outside", n:"3. My thinking outside the box", q:"Did I take you somewhere you would not have gone on your own?",
+     chips:["Got me out of my comfort zone","Suggested things no other agency would","Made me laugh and think at the same time","Saw angles I had completely missed"],
+     lines:{hi:"She thinks so far outside the box that the box is a distant memory",mid:"She thinks outside the box nicely",lo:"She has started nudging me outside the box"}},
+    {k:"newthings", n:"4. My trying new things", q:"Am I bold enough to test something new with your page?",
+     chips:["Always testing something new","Brave enough to try it first","Kept us ahead of the trends","Explained why we were trying it"],
+     lines:{hi:"She is always trying something new, and it works",mid:"She is happy to try new things",lo:"She is warming up to trying new things"}},
+    {k:"patients", n:"5. What my patients say about my socials", q:"What are your patients saying about the content since we started?",
+     chips:["Patients have mentioned the posts in clinic","New enquiries have mentioned seeing us online","Patients say the page feels like us","Followers are actually engaging"],
+     lines:{hi:"My patients keep telling me how much they love what we post",mid:"My patients have noticed the difference in our socials",lo:"My patients are starting to notice our socials"}}
+  ];
+  var LABELS = ["","Oh dear","Room to grow","Very good","Brilliant","Absolutely outstanding"];
+  var box = document.getElementById("cats");
+
+  CATS.forEach(function(c){
+    var fs = document.createElement("fieldset");
+    var html = '<legend><h2>'+c.n+'</h2></legend><p class="sub">'+c.q+'</p>';
+    html += '<div class="stars" role="radiogroup" aria-label="'+c.n+'">';
+    for(var i=5;i>=1;i--){
+      html += '<input type="radio" name="r_'+c.k+'" id="r_'+c.k+i+'" value="'+i+'"><label for="r_'+c.k+i+'" title="'+i+' out of 5" aria-label="'+i+' out of 5">★</label>';
+    }
+    html += '</div><div class="sub" id="l_'+c.k+'" style="min-height:1.4em;margin:0 0 10px;color:#ff2e93;font-weight:700"></div>';
+    html += '<div class="chips">';
+    c.chips.forEach(function(t,ix){
+      html += '<label class="chip"><input type="checkbox" name="t_'+c.k+'" value="'+ix+'"><span>'+t+'</span></label>';
+    });
+    html += '</div>';
+    fs.innerHTML = html;
+    box.appendChild(fs);
+    fs.addEventListener("change", function(e){
+      if(e.target.name==="r_"+c.k){ document.getElementById("l_"+c.k).textContent = LABELS[e.target.value]; }
+    });
+  });
+
+  var heart = document.getElementById("heart"), cnt = document.getElementById("cnt");
+  heart.addEventListener("input", function(){ cnt.textContent = heart.value.length; });
+
+  function tier(n){ return n>=5 ? "hi" : (n>=4 ? "mid" : "lo"); }
+
+  function collect(){
+    var d = {ratings:{}, ticks:{}};
+    CATS.forEach(function(c){
+      var r = document.querySelector('input[name="r_'+c.k+'"]:checked');
+      d.ratings[c.k] = r ? parseInt(r.value,10) : 0;
+      d.ticks[c.k] = Array.prototype.map.call(document.querySelectorAll('input[name="t_'+c.k+'"]:checked'), function(x){ return c.chips[parseInt(x.value,10)]; });
+    });
+    d.heart = heart.value.trim();
+    d.name = document.getElementById("name").value.trim();
+    d.clinic = document.getElementById("clinic").value.trim();
+    d.email = document.getElementById("email").value.trim();
+    var sum = 0; CATS.forEach(function(c){ sum += d.ratings[c.k]; });
+    d.average = Math.round((sum/CATS.length)*10)/10;
+    return d;
+  }
+
+  function buildReview(d){
+    var paras = [];
+    var opener = d.average>=4.8 ? "I have worked with Vanessa and I would give her ten stars if the form let me." :
+                 d.average>=4.2 ? "Working with Vanessa has been one of the best decisions I have made for my business." :
+                 d.average>=3.5 ? "Working with Vanessa has made a real difference to how we show up online." :
+                 "Working with Vanessa has been a learning curve, and an honest one.";
+    paras.push(opener);
+    var bits = CATS.map(function(c){
+      var line = c.lines[tier(d.ratings[c.k])] + " (" + d.ratings[c.k] + "/5).";
+      var t = d.ticks[c.k];
+      if(t.length){
+        var pick = t.slice(0,2).map(function(s,ix){ return ix ? s.charAt(0).toLowerCase()+s.slice(1) : s; });
+        line += " " + pick.join(", and ") + ".";
+      }
+      return line;
+    });
+    paras.push(bits.join(" "));
+    paras.push("“" + d.heart + "”");
+    var sign = d.name + (d.clinic ? ", " + d.clinic : "");
+    return {text: paras.join("\n\n") + "\n\nReview by " + sign, paras: paras, sign: sign};
+  }
+
+  function wrap(ctx, text, x, y, maxW, lh, maxLines){
+    var words = text.split(/\s+/), line = "", lines = [];
+    words.forEach(function(w){
+      var test = line ? line+" "+w : w;
+      if(ctx.measureText(test).width > maxW && line){ lines.push(line); line = w; } else { line = test; }
+    });
+    if(line) lines.push(line);
+    if(maxLines && lines.length>maxLines){ lines = lines.slice(0,maxLines); lines[maxLines-1] = lines[maxLines-1].replace(/\s*\S*$/,"") + "..."; }
+    lines.forEach(function(l,i){ ctx.fillText(l, x, y + i*lh); });
+    return y + lines.length*lh;
+  }
+
+  function drawStars(ctx, cx, y, n, size){
+    var total = 5*size + 4*10, x = cx - total/2;
+    for(var i=0;i<5;i++){
+      ctx.fillStyle = (i < Math.round(n)) ? "#ff2e93" : "#3a3a3a";
+      ctx.font = size+"px Georgia"; ctx.textAlign = "left";
+      ctx.fillText("★", x + i*(size+10), y);
+    }
+    ctx.textAlign = "left";
+  }
+
+  function drawCard(d, rev){
+    var cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+    ctx.clearRect(0,0,1080,1350);
+    ctx.fillStyle = "#000000"; ctx.fillRect(0,0,1080,1350);
+    ctx.fillStyle = "#ff2e93"; ctx.fillRect(0,0,1080,18); ctx.fillRect(0,1332,1080,18);
+    ctx.fillStyle = "#2a0a1a"; ctx.beginPath(); ctx.arc(960,150,190,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = "#ff2e93"; ctx.font = "bold 26px Arial"; ctx.textAlign = "center";
+    ctx.fillText("A CLIENT REVIEW FOR VANESSA WORMALD", 540, 100);
+    drawStars(ctx, 540, 215, d.average, 72);
+    ctx.fillStyle = "#ffffff"; ctx.font = "900 46px Arial"; ctx.textAlign = "center";
+    ctx.fillText(d.average.toFixed(1) + " out of 5", 540, 290);
+
+    // category bars
+    ctx.textAlign = "left"; ctx.font = "26px Arial";
+    var y = 360;
+    CATS.forEach(function(c){
+      var short = {compliance:"Compliance knowledge",creativity:"Creativity",outside:"Thinking outside the box",newthings:"Trying new things",patients:"Patient feedback on socials"}[c.k];
+      ctx.fillStyle = "#ffffff"; ctx.fillText(short, 90, y);
+      ctx.fillStyle = "#2a2a2a"; ctx.fillRect(560, y-22, 320, 18);
+      ctx.fillStyle = "#ff2e93"; ctx.fillRect(560, y-22, 320*(d.ratings[c.k]/5), 18);
+      ctx.fillStyle = "#c7c0c5"; ctx.fillText(d.ratings[c.k]+"/5", 905, y);
+      y += 52;
+    });
+
+    // quote
+    ctx.fillStyle = "#ff2e93"; ctx.font = "bold 150px Georgia"; ctx.fillText("“", 80, 690);
+    var size = 38, quote = d.heart;
+    ctx.fillStyle = "#ffffff";
+    if(quote.length > 520) size = 32;
+    if(quote.length > 800) size = 28;
+    ctx.font = "italic "+size+"px Georgia";
+    var lh = Math.round(size*1.42);
+    var maxLines = Math.floor((1210-720)/lh);
+    var end = wrap(ctx, quote, 100, 740, 880, lh, maxLines);
+
+    ctx.fillStyle = "#ffffff"; ctx.font = "900 36px Arial";
+    ctx.fillText(rev.sign, 100, 1265);
+    ctx.fillStyle = "#c7c0c5"; ctx.font = "22px Arial"; ctx.textAlign = "right";
+    ctx.fillText("thecybersuite.com", 980, 1300);
+    ctx.textAlign = "left";
+  }
+
+  var form = document.getElementById("rf"), err = document.getElementById("err"), go = document.getElementById("go");
+  var last = null;
+
+  form.addEventListener("submit", function(e){
+    e.preventDefault(); err.textContent = "";
+    var d = collect();
+    if(form.website.value){ return; }
+    for(var i=0;i<CATS.length;i++){ if(!d.ratings[CATS[i].k]){ err.textContent = "Please give me stars for: " + CATS[i].n.replace(/^\d\.\s*/,"") + ". Even a sulky 3 counts."; return; } }
+    if(d.heart.length < 20){ err.textContent = "Your heartfelt paragraph looks a bit shy. Give me a few more words."; return; }
+    if(!d.name){ err.textContent = "I need your name, love, or it is just an anonymous letter."; return; }
+    if(!document.getElementById("consent").checked){ err.textContent = "Please tick the box to say I can share your review."; return; }
+
+    var rev = buildReview(d);
+    drawCard(d, rev);
+    var png = document.getElementById("cv").toDataURL("image/png");
+    go.disabled = true; go.textContent = "Sending...";
+
+    fetch("/api/client-reviews", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        name:d.name, clinic:d.clinic, email:d.email, average:d.average,
+        ratings:d.ratings, ticks:d.ticks, heart:d.heart,
+        reviewText:rev.text, image:png, website:form.website.value
+      })
+    }).then(function(r){ return r.json().then(function(j){ return {ok:r.ok, j:j}; }); })
+    .then(function(res){
+      if(!res.ok){ throw new Error(res.j && res.j.error || "Something went wrong"); }
+      last = {png:png, text:rev.text};
+      document.getElementById("txt").textContent = rev.text;
+      document.getElementById("formview").style.display = "none";
+      document.getElementById("thanks").style.display = "block";
+      window.scrollTo(0,0);
+    }).catch(function(x){
+      err.textContent = "That did not send: " + x.message + ". Your words are still here, so have another go.";
+      go.disabled = false; go.textContent = "Make my review";
+    });
+  });
+
+  document.getElementById("dl").addEventListener("click", function(){
+    if(!last) return;
+    var a = document.createElement("a"); a.href = last.png; a.download = "my-review-for-vanessa.png"; a.click();
+  });
+  document.getElementById("cp").addEventListener("click", function(){
+    if(!last) return;
+    var b = this;
+    (navigator.clipboard ? navigator.clipboard.writeText(last.text) : Promise.reject()).then(function(){ b.textContent = "Copied"; }, function(){ b.textContent = "Select the text above and copy it"; });
+  });
+})();
+</script>
+</body>
+</html>

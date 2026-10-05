@@ -155,7 +155,7 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
               }}
             />
             {error && (
-              <p style={{ color: "#ff6b6b", fontSize: "14px", margin: 0, fontFamily: "inherit", fontWeight: 700 }}>
+              <p style={{ color: "#ff6b6b", fontSize: "18px", margin: 0, fontFamily: "inherit", fontWeight: 700 }}>
                 Wrong password. Try again.
               </p>
             )}
@@ -167,7 +167,7 @@ function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
                 border: "none",
                 borderRadius: "8px",
                 padding: "12px 36px",
-                fontSize: "15px",
+                fontSize: "18px",
                 fontWeight: 900,
                 letterSpacing: "0.12em",
                 textTransform: "uppercase",
@@ -285,28 +285,28 @@ function WaitlistModal({ onClose }: { onClose: () => void }) {
           <div style={{ textAlign:"center",padding:"16px 0" }}>
             <div style={{ fontSize:"32px",marginBottom:"16px" }}>â</div>
             <h3 style={{ color:TEXT,fontSize:"22px",fontWeight:700,marginBottom:"10px" }}>You're on the list.</h3>
-            <p style={{ color:TEXT_MUTED,fontSize:"15px",lineHeight:1.6 }}>We'll be in touch. Good things take a moment.</p>
-            <button onClick={onClose} style={{ marginTop:"28px",background:BORDER,color:TEXT,border:"none",borderRadius:"8px",padding:"12px 28px",fontSize:"14px",cursor:"pointer",fontFamily:"inherit" }}>Close</button>
+            <p style={{ color:TEXT_MUTED,fontSize:"18px",lineHeight:1.6 }}>We'll be in touch. Good things take a moment.</p>
+            <button onClick={onClose} style={{ marginTop:"28px",background:BORDER,color:TEXT,border:"none",borderRadius:"8px",padding:"12px 28px",fontSize:"18px",cursor:"pointer",fontFamily:"inherit" }}>Close</button>
           </div>
         ) : (
           <>
             <h3 style={{ color:TEXT,fontSize:"22px",fontWeight:700,marginBottom:"6px" }}>Join the waitlist</h3>
-            <p style={{ color:TEXT_MUTED,fontSize:"14px",lineHeight:1.6,marginBottom:"28px" }}>We're onboarding practices one by one. Tell us a bit about your clinic and we'll reach out when we're ready for you.</p>
+            <p style={{ color:TEXT_MUTED,fontSize:"18px",lineHeight:1.6,marginBottom:"28px" }}>We're onboarding practices one by one. Tell us a bit about your clinic and we'll reach out when we're ready for you.</p>
             <form onSubmit={submit} style={{ display:"flex",flexDirection:"column",gap:"16px" }}>
               <div>
-                <label style={{ display:"block",fontSize:"12px",color:TEXT_MUTED,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:"8px" }}>Clinic name</label>
-                <input type="text" required placeholder="Your clinic or practice name" value={form.clinic} onChange={(e) => setForm(f => ({...f,clinic:e.target.value}))} style={{ width:"100%",background:BG,border:`1px solid ${BORDER}`,borderRadius:"8px",padding:"12px 14px",color:TEXT,fontSize:"15px",fontFamily:"inherit",outline:"none",boxSizing:"border-box" }} />
+                <label style={{ display:"block",fontSize:"18px",color:TEXT_MUTED,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:"8px" }}>Clinic name</label>
+                <input type="text" required placeholder="Your clinic or practice name" value={form.clinic} onChange={(e) => setForm(f => ({...f,clinic:e.target.value}))} style={{ width:"100%",background:BG,border:`1px solid ${BORDER}`,borderRadius:"8px",padding:"12px 14px",color:TEXT,fontSize:"18px",fontFamily:"inherit",outline:"none",boxSizing:"border-box" }} />
               </div>
               <div>
-                <label style={{ display:"block",fontSize:"12px",color:TEXT_MUTED,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:"8px" }}>Email address</label>
-                <input type="email" required placeholder="you@yourclinic.com" value={form.email} onChange={(e) => setForm(f => ({...f,email:e.target.value}))} style={{ width:"100%",background:BG,border:`1px solid ${BORDER}`,borderRadius:"8px",padding:"12px 14px",color:TEXT,fontSize:"15px",fontFamily:"inherit",outline:"none",boxSizing:"border-box" }} />
+                <label style={{ display:"block",fontSize:"18px",color:TEXT_MUTED,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:"8px" }}>Email address</label>
+                <input type="email" required placeholder="you@yourclinic.com" value={form.email} onChange={(e) => setForm(f => ({...f,email:e.target.value}))} style={{ width:"100%",background:BG,border:`1px solid ${BORDER}`,borderRadius:"8px",padding:"12px 14px",color:TEXT,fontSize:"18px",fontFamily:"inherit",outline:"none",boxSizing:"border-box" }} />
               </div>
               <div>
-                <label style={{ display:"block",fontSize:"12px",color:TEXT_MUTED,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:"8px" }}>Anything else? <span style={{ textTransform:"none",opacity:0.6 }}>(optional)</span></label>
-                <textarea rows={3} placeholder="How many clients do you manage?" value={form.note} onChange={(e) => setForm(f => ({...f,note:e.target.value}))} style={{ width:"100%",background:BG,border:`1px solid ${BORDER}`,borderRadius:"8px",padding:"12px 14px",color:TEXT,fontSize:"14px",fontFamily:"inherit",outline:"none",resize:"none",boxSizing:"border-box" }} />
+                <label style={{ display:"block",fontSize:"18px",color:TEXT_MUTED,letterSpacing:"0.08em",textTransform:"uppercase",marginBottom:"8px" }}>Anything else? <span style={{ textTransform:"none",opacity:0.6 }}>(optional)</span></label>
+                <textarea rows={3} placeholder="How many clients do you manage?" value={form.note} onChange={(e) => setForm(f => ({...f,note:e.target.value}))} style={{ width:"100%",background:BG,border:`1px solid ${BORDER}`,borderRadius:"8px",padding:"12px 14px",color:TEXT,fontSize:"18px",fontFamily:"inherit",outline:"none",resize:"none",boxSizing:"border-box" }} />
               </div>
-              {status === "error" && <p style={{ color:"#e07070",fontSize:"13px" }}>Something went wrong. Try again.</p>}
-              <button type="submit" disabled={status === "loading"} style={{ background:RG,color:"#fff",border:"none",borderRadius:"8px",padding:"14px",fontSize:"15px",fontWeight:700,cursor:status==="loading"?"not-allowed":"pointer",fontFamily:"inherit",opacity:status==="loading"?0.7:1,letterSpacing:"0.02em" }}>
+              {status === "error" && <p style={{ color:"#e07070",fontSize:"18px" }}>Something went wrong. Try again.</p>}
+              <button type="submit" disabled={status === "loading"} style={{ background:RG,color:"#fff",border:"none",borderRadius:"8px",padding:"14px",fontSize:"18px",fontWeight:700,cursor:status==="loading"?"not-allowed":"pointer",fontFamily:"inherit",opacity:status==="loading"?0.7:1,letterSpacing:"0.02em" }}>
                 {status === "loading" ? "Sendingâ¦" : "Join the waitlist"}
               </button>
             </form>
@@ -346,9 +346,9 @@ export default function Splash() {
       <style>{`
         * { box-sizing:border-box;margin:0;padding:0; }
         ::selection { background:rgba(196,147,127,0.3); }
-        .rg-btn { background:${RG};color:#fff;border:none;border-radius:8px;padding:14px 32px;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.02em;transition:background 200ms,transform 150ms;display:inline-block;text-decoration:none; }
+        .rg-btn { background:${RG};color:#fff;border:none;border-radius:8px;padding:14px 32px;font-size:18px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:0.02em;transition:background 200ms,transform 150ms;display:inline-block;text-decoration:none; }
         .rg-btn:hover { background:${RG_LIGHT};transform:translateY(-1px); }
-        .ghost-btn { background:transparent;color:${TEXT};border:1px solid ${BORDER};border-radius:8px;padding:13px 28px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:0.02em;transition:border-color 200ms,color 200ms;display:inline-block;text-decoration:none; }
+        .ghost-btn { background:transparent;color:${TEXT};border:1px solid ${BORDER};border-radius:8px;padding:13px 28px;font-size:18px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:0.02em;transition:border-color 200ms,color 200ms;display:inline-block;text-decoration:none; }
         .ghost-btn:hover { border-color:${BORDER_RG};color:${RG_LIGHT}; }
         .feature-card { background:${BG_CARD};border:1px solid ${BORDER};border-radius:14px;padding:32px 28px;transition:border-color 250ms,transform 250ms; }
         .feature-card:hover { border-color:${BORDER_RG};transform:translateY(-2px); }
@@ -365,8 +365,8 @@ export default function Splash() {
         <div className="nav-inner" style={{ maxWidth:"1100px",margin:"0 auto",padding:"0 40px",height:"64px",display:"flex",alignItems:"center",justifyContent:"space-between" }}>
           <img src="/sms-logo.png" alt="The CyberSuite" style={{ height:"32px",width:"auto",objectFit:"contain" }} />
           <div style={{ display:"flex",alignItems:"center",gap:"16px" }}>
-            <button onClick={() => setModalOpen(true)} style={{ background:"none",border:"none",cursor:"pointer",color:TEXT_MUTED,fontSize:"14px",fontFamily:"inherit",fontWeight:500,padding:"8px 0",transition:"color 200ms" }} onMouseEnter={e=>(e.currentTarget.style.color=TEXT)} onMouseLeave={e=>(e.currentTarget.style.color=TEXT_MUTED)}>Join waitlist</button>
-            <Link href="/hub" className="ghost-btn" style={{ fontSize:"14px",padding:"9px 22px" }}>Log in</Link>
+            <button onClick={() => setModalOpen(true)} style={{ background:"none",border:"none",cursor:"pointer",color:TEXT_MUTED,fontSize:"18px",fontFamily:"inherit",fontWeight:500,padding:"8px 0",transition:"color 200ms" }} onMouseEnter={e=>(e.currentTarget.style.color=TEXT)} onMouseLeave={e=>(e.currentTarget.style.color=TEXT_MUTED)}>Join waitlist</button>
+            <Link href="/hub" className="ghost-btn" style={{ fontSize:"18px",padding:"9px 22px" }}>Log in</Link>
           </div>
         </div>
       </nav>
@@ -388,7 +388,7 @@ export default function Splash() {
       <section style={{ padding:"100px 0 80px" }}>
         <div className="section-inner" style={{ maxWidth:"1100px",margin:"0 auto",padding:"0 40px" }}>
           <div style={{ marginBottom:"64px" }}>
-            <p style={{ fontSize:"12px",letterSpacing:"0.16em",textTransform:"uppercase",color:RG,fontWeight:600,marginBottom:"16px" }}>How it works</p>
+            <p style={{ fontSize:"18px",letterSpacing:"0.16em",textTransform:"uppercase",color:RG,fontWeight:600,marginBottom:"16px" }}>How it works</p>
             <h2 style={{ fontSize:"clamp(28px,4vw,42px)",fontWeight:800,color:TEXT,letterSpacing:"-0.02em",lineHeight:1.15,maxWidth:"500px" }}>Everything in one place. Nothing left out.</h2>
           </div>
           <div className="features-grid" style={{ display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:"20px" }}>
@@ -396,7 +396,7 @@ export default function Splash() {
               <div key={title} className="feature-card">
                 <div style={{ marginBottom:"20px" }}><Icon /></div>
                 <h3 style={{ fontSize:"18px",fontWeight:700,color:TEXT,marginBottom:"10px",letterSpacing:"-0.01em" }}>{title}</h3>
-                <p style={{ fontSize:"15px",color:TEXT_MUTED,lineHeight:1.65 }}>{desc}</p>
+                <p style={{ fontSize:"18px",color:TEXT_MUTED,lineHeight:1.65 }}>{desc}</p>
               </div>
             ))}
           </div>
@@ -407,7 +407,7 @@ export default function Splash() {
         <div className="section-inner" style={{ maxWidth:"780px",margin:"0 auto",padding:"0 40px",textAlign:"center" }}>
           <div style={{ width:"40px",height:"2px",background:RG,margin:"0 auto 36px",borderRadius:"2px" }} />
           <blockquote style={{ fontSize:"clamp(20px,3vw,28px)",fontWeight:700,color:TEXT,lineHeight:1.45,letterSpacing:"-0.01em",marginBottom:"32px" }}>"I used to spend an entire day every week just making content. Now I do it in 90 minutes and it looks better than anything I made by hand."</blockquote>
-          <p style={{ fontSize:"14px",color:TEXT_MUTED,letterSpacing:"0.06em",textTransform:"uppercase",fontWeight:600 }}>Social media manager, aesthetic clinic group</p>
+          <p style={{ fontSize:"18px",color:TEXT_MUTED,letterSpacing:"0.06em",textTransform:"uppercase",fontWeight:600 }}>Social media manager, aesthetic clinic group</p>
         </div>
       </section>
 
@@ -415,22 +415,22 @@ export default function Splash() {
         <div className="section-inner" style={{ maxWidth:"1100px",margin:"0 auto",padding:"0 40px",textAlign:"center" }}>
           <div style={{ background:BG_CARD,border:`1px solid ${BORDER_RG}`,borderRadius:"20px",padding:"72px 40px",position:"relative",overflow:"hidden" }}>
             <div style={{ position:"absolute",top:"-60px",left:"50%",transform:"translateX(-50%)",width:"600px",height:"300px",background:"radial-gradient(ellipse at center,rgba(196,147,127,0.07) 0%,transparent 70%)",pointerEvents:"none" }} />
-            <p style={{ fontSize:"12px",letterSpacing:"0.16em",textTransform:"uppercase",color:RG,fontWeight:600,marginBottom:"20px" }}>Get early access</p>
+            <p style={{ fontSize:"18px",letterSpacing:"0.16em",textTransform:"uppercase",color:RG,fontWeight:600,marginBottom:"20px" }}>Get early access</p>
             <h2 style={{ fontSize:"clamp(28px,4vw,44px)",fontWeight:800,color:TEXT,letterSpacing:"-0.02em",lineHeight:1.15,marginBottom:"18px" }}>Ready to get your Sundays back?</h2>
-            <p style={{ fontSize:"17px",color:TEXT_MUTED,marginBottom:"40px",lineHeight:1.6,maxWidth:"460px",margin:"0 auto 40px" }}>We're onboarding practices one at a time. Join the list and we'll reach out when we're ready for you.</p>
-            <button onClick={() => setModalOpen(true)} className="rg-btn" style={{ fontSize:"16px",padding:"16px 40px" }}>Join the waitlist</button>
+            <p style={{ fontSize:"18px",color:TEXT_MUTED,marginBottom:"40px",lineHeight:1.6,maxWidth:"460px",margin:"0 auto 40px" }}>We're onboarding practices one at a time. Join the list and we'll reach out when we're ready for you.</p>
+            <button onClick={() => setModalOpen(true)} className="rg-btn" style={{ fontSize:"18px",padding:"16px 40px" }}>Join the waitlist</button>
           </div>
         </div>
       </section>
 
       <footer style={{ borderTop:`1px solid ${BORDER}`,padding:"36px 0" }}>
         <div className="section-inner" style={{ maxWidth:"1100px",margin:"0 auto",padding:"0 40px",display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"16px" }}>
-          <p style={{ fontSize:"13px",color:TEXT_FAINT }}>Â© {new Date().getFullYear()} Social Media Sister Â· The CyberSuite</p>
+          <p style={{ fontSize:"18px",color:TEXT_FAINT }}>Â© {new Date().getFullYear()} Social Media Sister Â· The CyberSuite</p>
           <div style={{ display:"flex",gap:"24px",alignItems:"center" }}>
-            <Link href="/privacy" style={{ fontSize:"13px",color:TEXT_FAINT,textDecoration:"none" }}>Privacy</Link>
-            <Link href="/terms" style={{ fontSize:"13px",color:TEXT_FAINT,textDecoration:"none" }}>Terms</Link>
-            <Link href="/data-deletion" style={{ fontSize:"13px",color:TEXT_FAINT,textDecoration:"none" }}>Data Deletion</Link>
-            <Link href="/hub" style={{ fontSize:"13px",color:TEXT_MUTED,textDecoration:"none" }}>Log in</Link>
+            <Link href="/privacy" style={{ fontSize:"18px",color:TEXT_FAINT,textDecoration:"none" }}>Privacy</Link>
+            <Link href="/terms" style={{ fontSize:"18px",color:TEXT_FAINT,textDecoration:"none" }}>Terms</Link>
+            <Link href="/data-deletion" style={{ fontSize:"18px",color:TEXT_FAINT,textDecoration:"none" }}>Data Deletion</Link>
+            <Link href="/hub" style={{ fontSize:"18px",color:TEXT_MUTED,textDecoration:"none" }}>Log in</Link>
           </div>
         </div>
       </footer>

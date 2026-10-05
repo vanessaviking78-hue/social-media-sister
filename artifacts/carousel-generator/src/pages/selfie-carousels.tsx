@@ -466,9 +466,9 @@ export default function SelfieCarousels() {
                         )}
                       </div>
                       <div className="p-2 flex items-center justify-between gap-1">
-                        <span className="text-[11px] text-muted-foreground truncate">{row.status === "error" ? (row.error || "Failed") : row.status}</span>
+                        <span className="text-[18px] text-muted-foreground truncate">{row.status === "error" ? (row.error || "Failed") : row.status}</span>
                         {row.status === "done" && row.resultUrl && (
-                          <ExportToCanvaButton imageUrl={row.resultUrl} name={`${client?.name || "carousel"}-selfie-carousel`} size="sm" variant="ghost" className="shrink-0 px-1.5 h-6 text-[11px]" label="Canva" />
+                          <ExportToCanvaButton imageUrl={row.resultUrl} name={`${client?.name || "carousel"}-selfie-carousel`} size="sm" variant="ghost" className="shrink-0 px-1.5 h-6 text-[18px]" label="Canva" />
                         )}
                       </div>
                     </div>

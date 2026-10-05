@@ -477,7 +477,7 @@ function SlideField({ label, value, multiline, accent }: {
 
   return (
     <div>
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-1">{label}</p>
+      <p className="text-[18px] font-semibold uppercase tracking-wider text-muted-foreground/60 mb-1">{label}</p>
       <div
         className={`group relative rounded-lg px-3 py-2.5 text-sm cursor-pointer border transition-colors hover:border-pink-500/30 ${
           accent
@@ -492,7 +492,7 @@ function SlideField({ label, value, multiline, accent }: {
         ) : (
           <p>{value}</p>
         )}
-        <span className="absolute top-2 right-2 text-[10px] text-muted-foreground/0 group-hover:text-muted-foreground/50 transition-colors">copy</span>
+        <span className="absolute top-2 right-2 text-[18px] text-muted-foreground/0 group-hover:text-muted-foreground/50 transition-colors">copy</span>
       </div>
     </div>
   );

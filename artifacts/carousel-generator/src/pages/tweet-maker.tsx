@@ -553,7 +553,7 @@ export default function TweetMaker() {
             <input ref={bgFileRef} type="file" accept="image/*" multiple className="hidden"
               onChange={(e) => { if (e.target.files?.length) loadBgFiles(Array.from(e.target.files)); e.target.value = ""; }} />
             {rows.length > 0 && bgImages.length > 0 && bgImages.length < rows.length && (
-              <p className="text-[11px] text-amber-500">{bgImages.length} photo{bgImages.length !== 1 ? "s" : ""} for {rows.length} rows, the last photo repeats for the remaining {rows.length - bgImages.length}.</p>
+              <p className="text-[18px] text-amber-500">{bgImages.length} photo{bgImages.length !== 1 ? "s" : ""} for {rows.length} rows, the last photo repeats for the remaining {rows.length - bgImages.length}.</p>
             )}
           </section>
 

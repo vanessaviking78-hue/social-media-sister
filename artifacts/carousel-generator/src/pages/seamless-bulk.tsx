@@ -43,13 +43,13 @@ return (
 <div
 key={key}
 title={booked ? `Already booked: ${bookings.map((b) => `${b.label}${b.count > 1 ? ` x${b.count}` : ""}`).join(", ")}` : "Free — nothing scheduled yet"}
-className={`flex flex-col items-center justify-center shrink-0 w-11 h-13 py-1 rounded-md border text-[11px] font-medium ${
+className={`flex flex-col items-center justify-center shrink-0 w-11 h-13 py-1 rounded-md border text-[18px] font-medium ${
 booked ? "bg-card/60 border-border/50 text-muted-foreground" : "bg-card/30 border-emerald-600/40 text-emerald-400"
 }`}
 >
 <span>{d.toLocaleDateString("en-GB", { weekday: "short" })}</span>
 <span>{d.getDate()}</span>
-{booked && <span className="text-[8px] leading-none mt-0.5">{tagText}</span>}
+{booked && <span className="text-[18px] leading-none mt-0.5">{tagText}</span>}
 </div>
 );
 })}
@@ -588,7 +588,7 @@ onClose={() => setEditId(null)}
 {c.slideUrls.map((du, si) => (
 <div key={si} className="relative">
 <img src={du} alt={`slide ${si + 1}`} className="w-full rounded-lg object-cover border border-white/10" style={{ aspectRatio: "3/4" }} />
-<span className="absolute top-1.5 left-1.5 text-[10px] bg-black/60 text-white/80 rounded px-1.5 py-0.5">Slide {si + 1}</span>
+<span className="absolute top-1.5 left-1.5 text-[18px] bg-black/60 text-white/80 rounded px-1.5 py-0.5">Slide {si + 1}</span>
 </div>
 ))}
 </div>

@@ -306,7 +306,7 @@ const staggeredAt = (() => {
                 <button
                   type="button"
                   onClick={toggleBroadcastMode}
-                  className="text-[11px] text-pink-400 hover:text-pink-300 font-medium"
+                  className="text-[18px] text-pink-400 hover:text-pink-300 font-medium"
                 >
                   {broadcastMode ? "Switch to single client" : "Send to multiple clients"}
                 </button>
@@ -330,8 +330,8 @@ const staggeredAt = (() => {
                   <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-700/60">
                     <span className="text-xs text-zinc-400">{selectedPresetIds.size} of {presets!.length} selected</span>
                     <div className="flex gap-2">
-                      <button type="button" onClick={selectAllPresets} className="text-[11px] text-pink-400 hover:text-pink-300">Select all</button>
-                      <button type="button" onClick={selectNonePresets} className="text-[11px] text-zinc-500 hover:text-zinc-300">Clear</button>
+                      <button type="button" onClick={selectAllPresets} className="text-[18px] text-pink-400 hover:text-pink-300">Select all</button>
+                      <button type="button" onClick={selectNonePresets} className="text-[18px] text-zinc-500 hover:text-zinc-300">Clear</button>
                     </div>
                   </div>
                   <div className="max-h-48 overflow-y-auto divide-y divide-zinc-700/30">
@@ -350,7 +350,7 @@ const staggeredAt = (() => {
                 </div>
               )}
               {broadcastMode && (
-                <p className="text-[11px] text-zinc-500 mt-1.5">
+                <p className="text-[18px] text-zinc-500 mt-1.5">
                   Same content, same date, sent to every client ticked above, each lands in its own queue in the Scheduler. Posts are staggered a few minutes apart by client name (A-F, G-M, N-S, T-Z) so they do not all hit Facebook at once, you can still drag any of them to a different date individually afterwards.
                 </p>
               )}
@@ -385,7 +385,7 @@ const staggeredAt = (() => {
                       type="button"
                       onClick={() => pickDay(d)}
                       title={booked ? `Already booked: ${bookings.map((b) => `${b.label}${b.count > 1 ? ` x${b.count}` : ""}`).join(", ")}` : "Free — nothing scheduled yet"}
-                      className={`flex flex-col items-center justify-center shrink-0 w-11 h-13 py-1 rounded-md border text-[11px] font-medium transition-all ${
+                      className={`flex flex-col items-center justify-center shrink-0 w-11 h-13 py-1 rounded-md border text-[18px] font-medium transition-all ${
                         isSelectedDay
                           ? "bg-pink-600/30 border-pink-500 text-pink-200"
                           : booked
@@ -395,12 +395,12 @@ const staggeredAt = (() => {
                     >
                       <span>{d.toLocaleDateString("en-GB", { weekday: "short" })}</span>
                       <span>{d.getDate()}</span>
-                      {booked && <span className="text-[8px] leading-none mt-0.5 text-zinc-400">{tagText}</span>}
+                      {booked && <span className="text-[18px] leading-none mt-0.5 text-zinc-400">{tagText}</span>}
                     </button>
                   );
                 })}
               </div>
-              <p className="text-[11px] text-zinc-500 mt-1.5">Green means free. Booked days show what's already going out that day, tap to use it anyway.</p>
+              <p className="text-[18px] text-zinc-500 mt-1.5">Green means free. Booked days show what's already going out that day, tap to use it anyway.</p>
             </div>
           )}
 
@@ -465,7 +465,7 @@ const staggeredAt = (() => {
           {!broadcastMode && activePresetId !== null && (
             <div className="rounded-lg border border-zinc-700/60 bg-zinc-800/50 overflow-hidden">
               <div className="px-3 py-2 border-b border-zinc-700/40 flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Posting to</span>
+                <span className="text-[18px] font-semibold text-zinc-400 uppercase tracking-wider">Posting to</span>
                 {accountLoading && <Loader2 className="w-3 h-3 text-zinc-500 animate-spin" />}
               </div>
               <div className="divide-y divide-zinc-700/30">

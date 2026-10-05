@@ -373,7 +373,7 @@ export default function PresetSelector({
                   <div className="flex-1">
                     <span className="text-sm text-gray-200">{p.name}</span>
                     {p.logoUrl && (
-                      <span className="text-[10px] text-gray-500 ml-2">has logo</span>
+                      <span className="text-[18px] text-gray-500 ml-2">has logo</span>
                     )}
                   </div>
                   <button

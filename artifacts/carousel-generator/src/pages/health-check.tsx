@@ -117,7 +117,7 @@ export default function HealthCheck() {
                   <div className="sm:w-48 shrink-0">
                     <p className="text-sm font-semibold">{a.clientName}</p>
                     {a.pendingCount > 0 && (
-                      <p className="text-[11px] text-muted-foreground mt-0.5">{a.pendingCount} queued</p>
+                      <p className="text-[18px] text-muted-foreground mt-0.5">{a.pendingCount} queued</p>
                     )}
                   </div>
                   <div className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium sm:w-44 shrink-0 ${meta.pill}`}>
@@ -143,7 +143,7 @@ export default function HealthCheck() {
         )}
 
         {checkedAt && !loading && (
-          <p className="text-[11px] text-muted-foreground text-center mt-4">
+          <p className="text-[18px] text-muted-foreground text-center mt-4">
             Checked {new Date(checkedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
           </p>
         )}

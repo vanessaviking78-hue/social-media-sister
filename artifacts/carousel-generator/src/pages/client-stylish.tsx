@@ -431,7 +431,7 @@ export default function ClientStylish() {
                             <Loader2 className={`w-4 h-4 text-muted-foreground ${c?.status === "generating" ? "animate-spin" : "opacity-40"}`} />
                           )}
                         </div>
-                        <p className="text-[10px] text-center text-muted-foreground">{s.label}</p>
+                        <p className="text-[18px] text-center text-muted-foreground">{s.label}</p>
                       </div>
                     );
                   })}

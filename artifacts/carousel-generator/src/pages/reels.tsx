@@ -1228,7 +1228,7 @@ export default function Reels() {
                   <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full bg-[#E91976]" />
                 )}
                 {icon(isActive)}
-                <span className="text-[9px] font-semibold tracking-wide uppercase" style={{ color: isActive ? "#E91976" : "#52525b" }}>
+                <span className="text-[18px] font-semibold tracking-wide uppercase" style={{ color: isActive ? "#E91976" : "#52525b" }}>
                   {label}
                 </span>
               </button>
@@ -1469,7 +1469,7 @@ export default function Reels() {
                                   key={m}
                                   onClick={(e) => { e.stopPropagation(); toggleSlideMode(idx, m); }}
                                   title={title}
-                                  className={`text-[10px] px-2 py-1 rounded transition-colors ${slide.mode === m ? "bg-pink-600/80 text-white" : "text-white/30 border border-white/15 hover:border-white/30"}`}
+                                  className={`text-[18px] px-2 py-1 rounded transition-colors ${slide.mode === m ? "bg-pink-600/80 text-white" : "text-white/30 border border-white/15 hover:border-white/30"}`}
                                 >
                                   {label}
                                 </button>
@@ -2262,7 +2262,7 @@ export default function Reels() {
               </div>
             </div>
             <div className="flex flex-col items-center gap-2 w-full">
-              <p className="text-[10px] text-zinc-600">Slide {displayIdx + 1} / {slides.length} · 9:16 · {(slides.length * slideDurationSec).toFixed(0)}s{selectedTrack ? ` · ${selectedTrack.name}` : ""}</p>
+              <p className="text-[18px] text-zinc-600">Slide {displayIdx + 1} / {slides.length} · 9:16 · {(slides.length * slideDurationSec).toFixed(0)}s{selectedTrack ? ` · ${selectedTrack.name}` : ""}</p>
               <button onClick={() => { setIsPlaying((p) => !p); setPreviewIdx(0); }}
                 className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300 border border-zinc-700/50 hover:border-zinc-500 rounded-lg px-3 py-1.5 transition-colors">
                 {isPlaying ? <><Square className="w-3 h-3" />Stop</> : <><Play className="w-3 h-3" />Play</>}

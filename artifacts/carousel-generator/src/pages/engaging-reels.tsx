@@ -386,7 +386,7 @@ export default function EngagingReels() {
  onChange={(e) => setVideoCount(e.target.files?.length || 0)}
  className="text-xs text-gray-400 file:mr-2 file:rounded-full file:border-0 file:bg-pink-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-pink-700 hover:file:bg-pink-200"
  />
- {videoCount > 0 && <p className="text-[11px] text-muted-foreground mt-1">{videoCount} video{videoCount === 1 ? "" : "s"} selected</p>}
+ {videoCount > 0 && <p className="text-[18px] text-muted-foreground mt-1">{videoCount} video{videoCount === 1 ? "" : "s"} selected</p>}
  </div>
  <div>
  <label className="block text-xs text-muted-foreground mb-1.5">CSV (text1, text2, text3)</label>
@@ -397,7 +397,7 @@ export default function EngagingReels() {
  onChange={(e) => setCsvName(e.target.files?.[0]?.name || "")}
  className="text-xs text-gray-400 file:mr-2 file:rounded-full file:border-0 file:bg-pink-100 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-pink-700 hover:file:bg-pink-200"
  />
- {csvName && <p className="text-[11px] text-muted-foreground mt-1">{csvName}</p>}
+ {csvName && <p className="text-[18px] text-muted-foreground mt-1">{csvName}</p>}
  </div>
  </div>
  {uploadError && <p className="text-xs text-red-400">{uploadError}</p>}
@@ -559,7 +559,7 @@ export default function EngagingReels() {
  </div>
  {isPositioning && (
  <div className="flex flex-wrap items-center gap-2 -mt-1">
- <p className="text-[11px] text-muted-foreground flex-1 min-w-[160px]">
+ <p className="text-[18px] text-muted-foreground flex-1 min-w-[160px]">
  Drag a box to move it, drag its pink corner handle to resize the box and its text.
  </p>
  <button

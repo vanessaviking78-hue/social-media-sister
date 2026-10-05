@@ -215,7 +215,7 @@ function PhotoStrip({ piece, onDelete, onMove, onOpenAdd }: {
         <div key={photo.url + i} className="flex flex-col items-center gap-1">
           <div className="relative">
             <img src={photo.url} alt="" className="h-16 w-16 object-cover rounded-lg border border-emerald-500/40" />
-            <span className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center">{i + 1}</span>
+            <span className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-emerald-500 text-white text-[18px] font-bold flex items-center justify-center">{i + 1}</span>
             <button
               onClick={() => onDelete(i)}
               disabled={piece.photos.length <= 2}
@@ -226,8 +226,8 @@ function PhotoStrip({ piece, onDelete, onMove, onOpenAdd }: {
             </button>
           </div>
           <div className="flex gap-1">
-            <button onClick={() => onMove(i, -1)} disabled={i === 0} title="Move to an earlier slide" className="text-[11px] leading-none px-1.5 py-0.5 rounded border border-emerald-500/30 disabled:opacity-20 disabled:cursor-not-allowed hover:bg-emerald-500/10">‹</button>
-            <button onClick={() => onMove(i, 1)} disabled={i === piece.photos.length - 1} title="Move to a later slide" className="text-[11px] leading-none px-1.5 py-0.5 rounded border border-emerald-500/30 disabled:opacity-20 disabled:cursor-not-allowed hover:bg-emerald-500/10">›</button>
+            <button onClick={() => onMove(i, -1)} disabled={i === 0} title="Move to an earlier slide" className="text-[18px] leading-none px-1.5 py-0.5 rounded border border-emerald-500/30 disabled:opacity-20 disabled:cursor-not-allowed hover:bg-emerald-500/10">‹</button>
+            <button onClick={() => onMove(i, 1)} disabled={i === piece.photos.length - 1} title="Move to a later slide" className="text-[18px] leading-none px-1.5 py-0.5 rounded border border-emerald-500/30 disabled:opacity-20 disabled:cursor-not-allowed hover:bg-emerald-500/10">›</button>
           </div>
         </div>
       ))}
@@ -567,7 +567,7 @@ export default function SeamlessCaroBuilder() {
                   {photos.map((p, i) => (
                     <div key={p.url} className="relative">
                       <img src={p.url} alt="" className="h-20 w-20 object-cover rounded-lg border border-emerald-500/40" />
-                      <span className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center">{i + 1}</span>
+                      <span className="absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-emerald-500 text-white text-[18px] font-bold flex items-center justify-center">{i + 1}</span>
                       <button onClick={() => removePhoto(p.url)} className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-black/70 flex items-center justify-center hover:bg-black/90">
                         <X className="w-3 h-3 text-white" />
                       </button>
@@ -662,7 +662,7 @@ export default function SeamlessCaroBuilder() {
                     )}
                   </div>
                   <div className="p-2 flex items-center justify-between">
-                    <span className="text-[11px] text-muted-foreground truncate">{row.status === "error" ? (row.error || "Failed") : row.status}</span>
+                    <span className="text-[18px] text-muted-foreground truncate">{row.status === "error" ? (row.error || "Failed") : row.status}</span>
                     {row.status === "done" && (
                       <button onClick={() => downloadOne(row)} className="p-1 hover:bg-white/10 rounded"><Download className="w-3.5 h-3.5" /></button>
                     )}

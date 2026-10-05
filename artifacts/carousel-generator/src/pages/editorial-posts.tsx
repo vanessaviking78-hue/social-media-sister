@@ -788,7 +788,7 @@ export default function EditorialPosts() {
                       </p>
                       <div className="w-full max-h-28 overflow-y-auto space-y-0.5 text-left">
                         {photoFiles.map((f, i) => (
-                          <p key={i} className="text-[11px] text-muted-foreground truncate px-1">
+                          <p key={i} className="text-[18px] text-muted-foreground truncate px-1">
                             <span className="text-amber-500/70 font-mono mr-1">{String(i + 1).padStart(2, "0")}.</span>
                             {f.name}
                           </p>
@@ -1098,7 +1098,7 @@ export default function EditorialPosts() {
                             </div>
                           )}
                           <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-1.5 py-1 bg-gradient-to-t from-black/70 to-transparent">
-                            <span className="text-[10px] text-white/70 font-medium">{si + 1}</span>
+                            <span className="text-[18px] text-white/70 font-medium">{si + 1}</span>
                           </div>
                         </div>
                       );

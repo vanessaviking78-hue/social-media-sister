@@ -111,7 +111,7 @@ export default function VanessaChat() {
               </div>
               <div>
                 <p className="font-semibold text-sm text-primary-foreground">Vanessa</p>
-                <p className="text-[11px] text-primary-foreground/70">The CyberSuite™ AI</p>
+                <p className="text-[18px] text-primary-foreground/70">The CyberSuite™ AI</p>
               </div>
             </div>
             <button onClick={() => setOpen(false)} className="text-primary-foreground/70 hover:text-primary-foreground transition-colors p-1">
@@ -128,7 +128,7 @@ export default function VanessaChat() {
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wider">Quick questions</p>
+                  <p className="text-[18px] text-muted-foreground font-medium uppercase tracking-wider">Quick questions</p>
                   {QUICK_QUESTIONS.map((q) => (
                     <button
                       key={q}
