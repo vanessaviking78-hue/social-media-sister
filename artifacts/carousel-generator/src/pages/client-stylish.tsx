@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { setStylishHandoff } from "@/lib/stylish-handoff";
 import { usePresets } from "@/lib/use-presets";
 import { authHeaders } from "@/lib/use-approval";
+import ApprovedImagesPicker from "@/components/approved-images-picker";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -47,6 +48,10 @@ export default function ClientStylish() {
   const [october, setOctober] = useState(false);
   const [spot, setSpot] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
+  // Option to skip the photoshoot and use photos already in the client's approved images.
+  const [useApproved, setUseApproved] = useState(false);
+  const [approvedFiles, setApprovedFiles] = useState<File[]>([]);
+  const [fromApproved, setFromApproved] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [treatments, setTreatments] = useState(["", "", ""]);
   const [tone, setTone] = useState("");
@@ -164,23 +169,34 @@ export default function ClientStylish() {
   }, [clientName, website, treatments, tone, notes, topText, shots]);
 
   const canStart =
-    clientName.trim() && website.trim() && photo && treatments.every(t => t.trim()) && tone && !busy;
+    clientName.trim() && website.trim() && (useApproved ? approvedFiles.length > 0 : photo) && treatments.every(t => t.trim()) && tone && !busy;
 
   const handleStart = async () => {
-    if (!canStart || !photo) return;
+    if (!canStart || (!useApproved && !photo)) return;
     setBusy(true);
     setStarted(true);
     setPackName(safeName(clientName));
     setRows([]);
     setCsv("");
     setJobIds([]);
+    setFromApproved(useApproved);
+    if (useApproved) {
+      // No photoshoot: the chosen approved images fill the slots in the order they were picked.
+      setCards(Object.fromEntries(SLOTS.map((s, i) => [s.id, approvedFiles[i]
+        ? { scenarioId: s.id, status: "success" as CardStatus, outputImageUrl: URL.createObjectURL(approvedFiles[i]) }
+        : { scenarioId: s.id, status: "idle" as CardStatus }])));
+      setJobIds(["approved"]);
+      void writeCopy();
+      setBusy(false);
+      return;
+    }
     setCards(Object.fromEntries(SLOTS.map(s => [s.id, { scenarioId: s.id, status: "idle" as CardStatus }])));
     // The copy writes while the photos are being made.
     void writeCopy();
     try {
       setStage("Uploading the photo");
       const fd = new FormData();
-      fd.append("photo", photo);
+      fd.append("photo", photo as File);
       fd.append("clientName", clientName.trim());
       const up = await fetch(`${BASE}api/ai-portrait/source`, { method: "POST", body: fd });
       const row = (await up.json()) as { id?: number; error?: string };
@@ -199,7 +215,8 @@ export default function ClientStylish() {
   const failedIds = SLOTS.filter(s => cards[s.id]?.status === "failed").map(s => s.id);
   const doneCount = SLOTS.filter(s => cards[s.id]?.status === "success").length;
   const photosRunning = !!jobId || busy;
-  const photosFinished = started && !busy && !jobId && jobIds.length > 0 && doneCount + failedIds.length === 20;
+  const totalPhotos = fromApproved ? Math.min(approvedFiles.length, SLOTS.length) : SLOTS.length;
+  const photosFinished = started && !busy && !jobId && jobIds.length > 0 && doneCount + failedIds.length === totalPhotos;
   const packReady = photosFinished && copyState === "done" && doneCount > 0;
 
   // Every finished photo is filed straight into the client's approved images, once each, with no
@@ -233,9 +250,9 @@ export default function ClientStylish() {
   }, [cards, clientName, packName]);
 
   useEffect(() => {
-    if (!started || jobId) return;
+    if (!started || jobId || fromApproved) return;
     void saveNew();
-  }, [started, jobId, cards, saveNew]);
+  }, [started, jobId, cards, saveNew, fromApproved]);
 
   const sendAllToCanva = async () => {
     setBusy(true);
@@ -278,6 +295,8 @@ export default function ClientStylish() {
   const slotFileName = (slotId: string, mime: string) => {
     const idx = SLOTS.findIndex(s => s.id === slotId);
     const ext = mime.includes("jpeg") ? "jpg" : mime.includes("webp") ? "webp" : "png";
+    // The approved- start tells Stylish these are already in the client's library, so it does not file them twice.
+    if (fromApproved) return `approved-${pad(idx + 1)}-${packName}.${ext}`;
     // The running number keeps autumn, winter, autumn, winter in order if the photos are uploaded again.
     return `${packName} Stylish ${pad(idx + 1)} ${SLOTS[idx].label}.${ext}`;
   };
@@ -373,6 +392,45 @@ export default function ClientStylish() {
             <Input value={area} onChange={e => setArea(e.target.value)} placeholder="e.g. Harrogate, North Yorkshire" disabled={started && busy} />
           </div>
 
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Photos</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setUseApproved(false)} className={`rounded-md border px-3 py-2 text-sm text-left transition-colors ${!useApproved ? "border-sky-500/60 bg-sky-500/10" : "border-border/40 hover:border-border/70"}`}>
+                Make new photos<span className="block text-xs text-muted-foreground">20 autumn and winter photos from one picture</span>
+              </button>
+              <button type="button" onClick={() => setUseApproved(true)} className={`rounded-md border px-3 py-2 text-sm text-left transition-colors ${useApproved ? "border-sky-500/60 bg-sky-500/10" : "border-border/40 hover:border-border/70"}`}>
+                Use approved images<span className="block text-xs text-muted-foreground">Skip the photoshoot</span>
+              </button>
+            </div>
+            {useApproved && (
+              <div className="space-y-2">
+                <ApprovedImagesPicker
+                  clientName={clientName.trim()}
+                  mode="multi"
+                  skipBackgroundRemoval
+                  large
+                  label="Choose approved images"
+                  onAddImages={(files) => setApprovedFiles(prev => [...prev, ...files].slice(0, SLOTS.length))}
+                />
+                {approvedFiles.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-muted-foreground">{approvedFiles.length} chosen, up to 20. They go in the order you picked them, one per post.</p>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {approvedFiles.map((f, i) => (
+                        <div key={`${f.name}-${i}`} className="relative aspect-[3/4] rounded overflow-hidden border border-border/30">
+                          <img src={URL.createObjectURL(f)} alt="" className="w-full h-full object-cover" />
+                          <button type="button" onClick={() => setApprovedFiles(prev => prev.filter((_, k) => k !== i))} className="absolute top-0.5 right-0.5 rounded bg-black/70 p-0.5 text-white"><X className="w-3 h-3" /></button>
+                        </div>
+                      ))}
+                    </div>
+                    <button type="button" onClick={() => setApprovedFiles([])} className="text-xs text-muted-foreground underline">Clear them all</button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {!useApproved && (
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Clinician photo</Label>
             <div
@@ -403,6 +461,7 @@ export default function ClientStylish() {
             <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden"
               onChange={e => { if (e.target.files) handlePhotoFiles(e.target.files); e.target.value = ""; }} />
           </div>
+          )}
 
           <div className="space-y-2">
             <Label className="text-sm font-medium">3 treatments to promote this month</Label>
@@ -434,7 +493,7 @@ export default function ClientStylish() {
             {started ? "Start again" : "Make the pack"}
           </Button>
           {!canStart && !busy && (
-            <p className="text-xs text-muted-foreground">I need the client, website, photo, all 3 treatments and a writing style.</p>
+            <p className="text-xs text-muted-foreground">I need the client, website, photos, all 3 treatments and a writing style.</p>
           )}
           </div>
         </aside>
@@ -452,7 +511,7 @@ export default function ClientStylish() {
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2 text-sm">
                   {photosRunning || busy ? <Loader2 className="w-4 h-4 animate-spin text-sky-400" /> : <Check className="w-4 h-4 text-sky-400" />}
-                  <span>{stage && !photosFinished ? stage : `Photos: ${doneCount} of 20 made`}</span>
+                  <span>{stage && !photosFinished ? stage : fromApproved ? `Using ${doneCount} approved photos` : `Photos: ${doneCount} of 20 made`}</span>
                 </div>
                 <span className="text-border/60">·</span>
                 <div className="flex items-center gap-2 text-sm">
@@ -486,7 +545,7 @@ export default function ClientStylish() {
                   <Button onClick={handleDownloadImages} disabled={doneCount === 0 || busy}>
                     <Download className="w-4 h-4 mr-2" />Download all
                   </Button>
-                  <Button variant="outline" onClick={sendAllToCanva} disabled={doneCount === 0 || busy}>
+                  <Button variant="outline" onClick={sendAllToCanva} disabled={doneCount === 0 || busy || fromApproved} title={fromApproved ? "Approved images can be sent to Canva from the approved images screen" : undefined}>
                     <Upload className="w-4 h-4 mr-2" />Share to Canva
                   </Button>
                   <Button variant="outline" onClick={handleDownloadCsv} disabled={!csv || copyState === "writing"}>
@@ -496,7 +555,7 @@ export default function ClientStylish() {
                     {copyState === "writing" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCw className="w-4 h-4 mr-2" />}Rerun CSV
                   </Button>
                   <span className="text-xs text-muted-foreground">
-                    {saveFailed ? "The save to approved images did not go through, I will try again as photos finish." : savedCount > 0 ? `${savedCount} saved to their approved images` : "Photos save to their approved images as they finish."}
+                    {fromApproved ? "These came from their approved images, so nothing new to save." : saveFailed ? "The save to approved images did not go through, I will try again as photos finish." : savedCount > 0 ? `${savedCount} saved to their approved images` : "Photos save to their approved images as they finish."}
                   </span>
                 </div>
                 <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3">
