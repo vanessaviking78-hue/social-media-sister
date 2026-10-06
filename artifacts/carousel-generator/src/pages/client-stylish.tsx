@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { setStylishHandoff } from "@/lib/stylish-handoff";
 import { usePresets } from "@/lib/use-presets";
+import { authHeaders } from "@/lib/use-approval";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -200,6 +201,70 @@ export default function ClientStylish() {
   const photosRunning = !!jobId || busy;
   const photosFinished = started && !busy && !jobId && jobIds.length > 0 && doneCount + failedIds.length === 20;
   const packReady = photosFinished && copyState === "done" && doneCount > 0;
+
+  // Every finished photo is filed straight into the client's approved images, once each, with no
+  // button to press. Reruns of failed photos are picked up the same way.
+  const savedIds = useRef<Set<string>>(new Set());
+  const [savedCount, setSavedCount] = useState(0);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const saveNew = useCallback(async () => {
+    const fresh = SLOTS.filter(s => cards[s.id]?.status === "success" && cards[s.id]?.outputImageUrl && !savedIds.current.has(s.id));
+    if (!fresh.length || !clientName.trim()) return;
+    fresh.forEach(s => savedIds.current.add(s.id));
+    try {
+      const r = await fetch(`${BASE}api/approval/batches`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({
+          name: `${packName || safeName(clientName)} Autumn and Winter ${new Date().toLocaleDateString("en-GB")}`,
+          clientName: clientName.trim(),
+          imageUrls: fresh.map(s => cards[s.id]!.outputImageUrl!),
+          alreadyApproved: true,
+        }),
+      });
+      if (!r.ok) throw new Error("save failed");
+      setSavedCount(n => n + fresh.length);
+      setSaveFailed(false);
+      toast.success(`Saved ${fresh.length} photo${fresh.length !== 1 ? "s" : ""} to ${clientName.trim()}'s approved images`);
+    } catch {
+      fresh.forEach(s => savedIds.current.delete(s.id));
+      setSaveFailed(true);
+    }
+  }, [cards, clientName, packName]);
+
+  useEffect(() => {
+    if (!started || jobId) return;
+    void saveNew();
+  }, [started, jobId, cards, saveNew]);
+
+  const sendAllToCanva = async () => {
+    setBusy(true);
+    const t = toast.loading("Sending the photos to Canva");
+    try {
+      const st = await fetch(`${BASE}api/canva/status`);
+      const sd = (await st.json()) as { connected?: boolean };
+      if (!sd.connected) throw new Error("Canva is not connected yet. Connect it from the Canva button in the AI Photo Studio first.");
+      let n = 0;
+      for (const slot of SLOTS) {
+        const c = cards[slot.id];
+        if (c?.status !== "success" || !c.outputImageUrl) continue;
+        const url = c.outputImageUrl.startsWith("http") ? c.outputImageUrl : `${window.location.origin}${c.outputImageUrl}`;
+        const r = await fetch(`${BASE}api/canva/upload`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ imageUrl: url, name: `${packName} Stylish ${pad(SLOTS.indexOf(slot) + 1)} ${slot.label}` }),
+        });
+        if (!r.ok) throw new Error(`${slot.label} would not go to Canva`);
+        n++;
+        toast.loading(`Sent ${n} of ${doneCount} to Canva`, { id: t });
+      }
+      toast.success(`${n} photos sent to Canva, look in your uploads`, { id: t });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Canva did not take them", { id: t });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const rerunFailed = async () => {
     if (!failedIds.length) return;
@@ -417,6 +482,17 @@ export default function ClientStylish() {
 
               <div>
                 <h3 className="text-sm font-semibold mb-3">Photos</h3>
+                <div className="flex flex-wrap items-center gap-3 mb-3">
+                  <Button onClick={handleDownloadImages} disabled={doneCount === 0 || busy}>
+                    <Download className="w-4 h-4 mr-2" />Download all
+                  </Button>
+                  <Button variant="outline" onClick={sendAllToCanva} disabled={doneCount === 0 || busy}>
+                    <Upload className="w-4 h-4 mr-2" />Share to Canva
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    {saveFailed ? "The save to approved images did not go through, I will try again as photos finish." : savedCount > 0 ? `${savedCount} saved to their approved images` : "Photos save to their approved images as they finish."}
+                  </span>
+                </div>
                 <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3">
                   {SLOTS.map(s => {
                     const c = cards[s.id];
