@@ -1338,6 +1338,15 @@ function punchFilter(punch: number | undefined, mono = false) {
   const p = Math.min(100, Math.max(0, punch ?? 75)) / 100;
   return mono ? `grayscale(1) contrast(${1 + 0.8 * p}) brightness(${1 - 0.04 * p})` : `contrast(${1 + 0.45 * p}) saturate(${1 + 0.7 * p}) brightness(${1 - 0.03 * p})`;
 }
+// Applies a CSS-style filter to a canvas after it has been drawn (so the backdrop is recoloured before contrast can crush it to black).
+function filterCanvas(c: HTMLCanvasElement, filter: string): HTMLCanvasElement {
+  if (!filter || filter === "none") return c;
+  const o = document.createElement("canvas"); o.width = c.width; o.height = c.height;
+  const g = o.getContext("2d"); if (!g) return c;
+  (g as CanvasRenderingContext2D & { filter?: string }).filter = filter;
+  g.drawImage(c, 0, 0);
+  return o;
+}
 // Unsharp-style sharpen so photos look crisp rather than soft.
 function sharpenCanvas(c: HTMLCanvasElement, amount = 0.8) {
   const w = c.width, h = c.height;
@@ -1428,12 +1437,12 @@ async function drawFileIn(ctx: CanvasRenderingContext2D, file: File, x: number, 
     const t = document.createElement("canvas"); t.width = tw; t.height = th;
     const tg = t.getContext("2d");
     if (!tg) { b.close(); return false; }
-    (tg as CanvasRenderingContext2D & { filter?: string }).filter = filter;
     tg.drawImage(b, (w - dw) * ((pos?.x ?? 50) / 100), (h - dh) * ((pos?.y ?? 50) / 100), dw, dh);
     tintBackdrop(t, octBackdrop, filter.includes("grayscale") && !!octBackdrop);
-    sharpenCanvas(t, 0.7);
+    const tf = filterCanvas(t, filter);
+    sharpenCanvas(tf, 0.7);
     ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
-    ctx.drawImage(t, x, y, w, h);
+    ctx.drawImage(tf, x, y, w, h);
     ctx.restore(); b.close();
     return true;
   } catch { return false; }
@@ -1520,11 +1529,11 @@ async function drawCoverOct(
       const tc = document.createElement("canvas"); tc.width = W; tc.height = H;
       const tg = tc.getContext("2d");
       if (tg) {
-        (tg as CanvasRenderingContext2D & { filter?: string }).filter = punchFilter(style.cvPunch, false);
         tg.drawImage(bmp, (W - dw) * ((pos?.x ?? 50) / 100), (H - dh) * ((pos?.y ?? 50) / 100), dw, dh);
         tintBackdrop(tc, octBackdrop, !!look.mono);
-        sharpenCanvas(tc, 0.7);
-        ctx.drawImage(tc, 0, 0);
+        const tf = filterCanvas(tc, punchFilter(style.cvPunch, false));
+        sharpenCanvas(tf, 0.7);
+        ctx.drawImage(tf, 0, 0);
       }
     } else {
       // A square scene on a tall slide: the picture keeps its full width, and its top and bottom edges are smeared outwards.
