@@ -189,11 +189,14 @@ export function neutralise(text: string): string {
   return text.replace(BANNED_TERMS, "smoothing treatments").replace(/(smoothing treatments)[®™]/g, "$1");
 }
 
+const DAY_WORDS = /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|weekend|mondays|fridays|sundays|saturdays)\b/gi;
+
 function findBanned(rows: Row[]): string[] {
   const hits = new Set<string>();
   for (const r of rows) {
     for (const k of ROW_KEYS) {
       for (const m of r[k].match(BANNED_TERMS) ?? []) hits.add(m.toLowerCase());
+      for (const m of r[k].match(DAY_WORDS) ?? []) hits.add(m.toLowerCase());
     }
   }
   return [...hits];
@@ -252,6 +255,9 @@ THINGS THAT (rows 3, 8, 13, 18): Titles in the style of "Things I hate about the
 SHAREABLE (rows 4, 9, 14, 19): The post she sends to her sister or her best friend, or saves for a bad day. Empowering and emotional: say the thing every woman feels but nobody has quite put into words, give a warm counterintuitive take, a tiny honest confession, or a line worth screenshotting. About friendship, growing older, confidence, time, being seen, mothers and daughters, the woman she used to be. It should make her feel something in her chest. No selling. Never a stock quote line like "you are enough": it has to feel original, specific and true.
 
 MIX (rows 5, 10, 15, 20): One of each, in this order: row 5 menopause (warm, funny, validating, no medical claims, no advice on hormones or medicines), row 10 skincare (a fun, useful, surprising idea she can use tonight, no medical education), row 15 growing older (the joy, the oddness and the freedom of it), row 20 a "did you know" fun fact (a genuinely interesting, true and checkable general fact about skin, ageing, beauty history or the body, with no claims about any treatment and no statistics you are not certain of). Keep all of it light, human and surprising.
+
+NO DAYS, DATES OR TIMING
+These posts are scheduled for any day of the week, so never name a day of the week or a weekday ritual (no Monday, Friday, Sunday, weekend, "Friday feeling", "Sunday scaries", "Thursday night"), never name a date, month or season, and never say "today", "tonight", "this week" or "this morning". Write evergreen. The one exception is the Halloween rows, which may mention Halloween itself.
 
 ENGAGEMENT AND ORIGINALITY
 Everything is written to earn comments, saves, shares and tags. Think outside the box: every row needs an angle you would not see on another clinic's page. Never write the obvious post about the topic. If a line could appear on any clinic's feed, rewrite it.
@@ -441,7 +447,7 @@ ${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${safeSite
       }
       const hits = findBanned(rows);
       if (!hits.length) break;
-      feedback = `\n\nYour last answer used banned compliance wording (${hits.join(", ")}). Rewrite all ${expected} rows without any of those words, using "smoothing treatments" or "facial aesthetics" where needed.`;
+      feedback = `\n\nYour last answer used banned wording (${hits.join(", ")}). Rewrite all ${expected} rows without any of those words. Never name a day of the week or the weekend. Where a compliance word is the problem, use "smoothing treatments" or "facial aesthetics".`;
     }
 
     // Last line of defence: if a banned word still slipped through, swap it out in code.
