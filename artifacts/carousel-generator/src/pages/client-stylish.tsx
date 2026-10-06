@@ -23,13 +23,13 @@ const TONES = [
 
 const pad = (n: number) => String(n).padStart(2, "0");
 // Autumn and winter alternate, so the photos run autumn, winter, autumn, winter and so on.
-const SLOTS = Array.from({ length: 8 }, (_, i) => [
+const SLOTS = Array.from({ length: 10 }, (_, i) => [
   { id: `au-${pad(i + 1)}`, label: `Autumn ${i + 1}` },
   { id: `ww-${pad(i + 1)}`, label: `Winter ${i + 1}` },
 ]).flat();
 
-// The pack repeats funny, treatment, things that, shareable four times.
-const ROW_GROUPS = Array.from({ length: 16 }, (_, i) => ["Funny", "Treatment", "Things that", "Shareable"][i % 4]);
+// The pack repeats treatment, funny, things that, shareable, mix four times.
+const ROW_GROUPS = Array.from({ length: 20 }, (_, i) => ["Treatment", "Funny", "Things that", "Shareable", "Mix"][i % 5]);
 
 type CardStatus = "idle" | "generating" | "success" | "failed" | "rate-limited";
 type Card = { scenarioId: string; status: CardStatus; outputImageUrl?: string; failureReason?: string };
@@ -92,7 +92,7 @@ export default function ClientStylish() {
     return () => URL.revokeObjectURL(url);
   }, [photo]);
 
-  // Polls the photo job and folds its cards into the 16 slots.
+  // Polls the photo job and folds its cards into the 20 slots.
   useEffect(() => {
     if (!jobId) return;
     const timer = setInterval(async () => {
@@ -185,7 +185,7 @@ export default function ClientStylish() {
       const row = (await up.json()) as { id?: number; error?: string };
       if (!up.ok || !row.id) throw new Error(row.error || "The photo did not upload");
       sourcePhotoId.current = row.id;
-      setStage("Making the 16 photos");
+      setStage("Making the 20 photos");
       await startPhotoJob(SLOTS.map(s => s.id));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Something went wrong");
@@ -198,7 +198,7 @@ export default function ClientStylish() {
   const failedIds = SLOTS.filter(s => cards[s.id]?.status === "failed").map(s => s.id);
   const doneCount = SLOTS.filter(s => cards[s.id]?.status === "success").length;
   const photosRunning = !!jobId || busy;
-  const photosFinished = started && !busy && !jobId && jobIds.length > 0 && doneCount + failedIds.length === 16;
+  const photosFinished = started && !busy && !jobId && jobIds.length > 0 && doneCount + failedIds.length === 20;
   const packReady = photosFinished && copyState === "done" && doneCount > 0;
 
   const rerunFailed = async () => {
@@ -288,7 +288,7 @@ export default function ClientStylish() {
           <div>
             <h2 className="text-2xl font-bold mb-1">Client Stylish</h2>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              One click for a whole client pack. I make the 16 photos (8 Winter Woolies, 8 Autumn) and write the 16 row CSV, then it all drops straight into Stylish.
+              One click for a whole client pack. I make the 20 photos (10 Winter Woolies, 10 Autumn) and write the 20 row CSV, then it all drops straight into Stylish.
             </p>
           </div>
 
@@ -387,7 +387,7 @@ export default function ClientStylish() {
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2 text-sm">
                   {photosRunning || busy ? <Loader2 className="w-4 h-4 animate-spin text-sky-400" /> : <Check className="w-4 h-4 text-sky-400" />}
-                  <span>{stage && !photosFinished ? stage : `Photos: ${doneCount} of 16 made`}</span>
+                  <span>{stage && !photosFinished ? stage : `Photos: ${doneCount} of 20 made`}</span>
                 </div>
                 <span className="text-border/60">·</span>
                 <div className="flex items-center gap-2 text-sm">
@@ -395,8 +395,8 @@ export default function ClientStylish() {
                   {copyState === "done" && <Check className="w-4 h-4 text-sky-400" />}
                   {copyState === "error" && <AlertTriangle className="w-4 h-4 text-destructive" />}
                   <span>
-                    {copyState === "writing" && "Writing the 16 posts"}
-                    {copyState === "done" && (topCount > 0 ? `16 posts written, modelled on ${topCount} top posts${topSource === "instagram" ? " from their Instagram" : ""}` : "16 posts written, but I could not reach their Instagram, so it is not modelled on their top posts")}
+                    {copyState === "writing" && "Writing the 20 posts"}
+                    {copyState === "done" && (topCount > 0 ? `20 posts written, modelled on ${topCount} top posts${topSource === "instagram" ? " from their Instagram" : ""}` : "20 posts written, but I could not reach their Instagram, so it is not modelled on their top posts")}
                     {copyState === "error" && copyError}
                   </span>
                   {copyState === "error" && (
@@ -444,9 +444,9 @@ export default function ClientStylish() {
                 )}
               </div>
 
-              {rows.length === 16 && (
+              {rows.length === 20 && (
                 <div>
-                  <h3 className="text-sm font-semibold mb-3">The 16 posts</h3>
+                  <h3 className="text-sm font-semibold mb-3">The 20 posts</h3>
                   <div className="rounded-lg border border-border/30 overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead className="bg-muted/30 text-muted-foreground">

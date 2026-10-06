@@ -220,25 +220,27 @@ function buildCsv(rows: Row[]): string {
 
 const TOP_POSTS_RULES = `
 THE CLINIC'S TOP PERFORMING POSTS
-The user message lists this clinic's own best performing posts, most engaged first. These are proven winners with this audience. Before writing, work out what they have in common: the kind of hook, the subject matter, the feeling they trigger, how personal they are, how long they run. Then write all 16 rows in that same family: the same kind of hooks, angles and emotions, about fresh things.
+The user message lists this clinic's own best performing posts, most engaged first. These are proven winners with this audience. Before writing, work out what they have in common: the kind of hook, the subject matter, the feeling they trigger, how personal they are, how long they run. Then write all 20 rows in that same family: the same kind of hooks, angles and emotions, about fresh things.
 Never copy a top post or lightly reword it, every row must be new. Only echo a personal fact or credential (a career history, a number of years, a qualification) if it appears in the top posts or the clinician notes, and never invent one.`;
 
 const STRUCTURE_RULES = `
 WHAT YOU ARE WRITING
-A Stylish carousel pack for one clinic: exactly 16 posts, each one a row of short text that sits over photos.
+A Stylish carousel pack for one clinic: exactly 20 posts, each one a row of short text that sits over photos.
 Each row has: headline, subtitle, text1, text2, text3, cta.
 The headline and subtitle read together as one line (headline is the punchy start, subtitle is the finish, for example headline "5 reasons" and subtitle "to always wear SPF"). text1 to text3 are the three follow on slides. Keep every cell short because it sits on a photo: headline up to 5 words, subtitle up to 8 words, each text up to 16 words, cta up to 8 words.
 
-THE 16 ROWS: FOUR KINDS OF POST, MIXED
-The pack is four kinds of post, four of each, repeating in this order so the feed always feels varied: funny, treatment, things that, shareable. So rows 1, 5, 9 and 13 are funny; rows 2, 6, 10 and 14 are treatment; rows 3, 7, 11 and 15 are "things that"; rows 4, 8, 12 and 16 are shareable.
+THE 20 ROWS: FIVE KINDS OF POST, MIXED
+The pack is five kinds of post, four of each, repeating in this order so the feed always feels varied: treatment, funny, things that, shareable, mix. So rows 1, 6, 11 and 16 are treatment; rows 2, 7, 12 and 17 are funny; rows 3, 8, 13 and 18 are things that; rows 4, 9, 14 and 19 are shareable; rows 5, 10, 15 and 20 are mix.
 
-FUNNY (rows 1, 5, 9, 13): Made-up moments and observations that make her laugh out loud or snort at her phone. Recognisable, a bit cheeky, affectionate towards women over 35, the sort of post she tags a friend on. Fresh angles, not stock jokes.
+TREATMENT (rows 1, 6, 11, 16): Rows 1, 6 and 11 take the 3 treatments in the order given. Row 16 is a second, different angle on the first treatment. Use real details, names and wording from the website text, and never invent a treatment or a claim the website does not support. Do not write a list of benefits. Find an unexpected way in: a small human moment, a question she has been too shy to ask, a gentle myth to lay to rest, what a first consultation is actually like, a tiny story from the treatment room. Stealth sales: she should finish it feeling curious and comfortable, never sold to.
 
-TREATMENT (rows 2, 6, 10, 14): Rows 2, 6 and 10 take the 3 treatments in the order given. Row 14 is a second, different angle on the first treatment. Use real details, names and wording from the website text, and never invent a treatment or a claim the website does not support. Do not write a list of benefits. Find an unexpected way in: a small human moment, a question she has been too shy to ask, a gentle myth to lay to rest, what a first consultation is actually like, a tiny story from the treatment room. Stealth sales: she should finish it feeling curious and comfortable, never sold to.
+FUNNY (rows 2, 7, 12, 17): Really nostalgic and really funny, written for UK women over 35 who grew up in the 70s, 80s and 90s. Hyper specific British memories she can smell and hear: the Argos catalogue and the tiny pencil, Impulse body spray, wet play, the school disco, Tammy Girl, dial up internet, a mixtape with a pause button, Sunday trading, a Pot Noodle in halls, crimping tongs, Saturday morning telly, a Mini Milk on the beach in a cagoule. Do not just reuse these examples, find fresh and surprising ones. The kind of post that has her laughing out loud and messaging her school friend. Affectionate, a bit cheeky, never mean. Each of the four rows uses a completely different era or theme.
 
-THINGS THAT (rows 3, 7, 11, 15): Not about the clinic, treatments or skin at all. A relatable list she reads and instantly thinks "oh my god, yes" and comments on. The headline and subtitle read as the title (for example headline "Things Every", subtitle "90s Bathroom Had") and text 1 to 3 are three specific, funny, vivid items. Use nostalgia, life stages, family life, friendships, being a woman of a certain age, the small daily things nobody mentions. Make the items hyper specific, because the specific detail is what makes people comment "you forgot X". Use four completely different themes across the four rows.
+THINGS THAT (rows 3, 8, 13, 18): Titles in the style of "Things I hate about the industry", "Things my patients have taught me", "Things I wish someone had told me before my first consultation", "Things I have stopped apologising for". The headline and subtitle read as the title and text 1 to 3 are three specific, honest, vivid items, written in the first person as the clinic owner. Affable, a little cheeky, outside the box, with real insight into what happens in a clinic room and what women actually say. Compliant and warm, never bitter about colleagues or competitors, never naming anyone. Use four completely different "things that" titles across the four rows.
 
-SHAREABLE (rows 4, 8, 12, 16): The post she sends to her sister or her best friend, or saves for a bad day. Say the thing every woman feels but nobody has quite put into words, or give a warm counterintuitive take, or a tiny honest confession, or a line worth screenshotting. Warm and emotional, about friendship, growing older, confidence, time, being seen. No selling. Never a stock quote line like "you are enough": it has to feel original, specific and true.
+SHAREABLE (rows 4, 9, 14, 19): The post she sends to her sister or her best friend, or saves for a bad day. Empowering and emotional: say the thing every woman feels but nobody has quite put into words, give a warm counterintuitive take, a tiny honest confession, or a line worth screenshotting. About friendship, growing older, confidence, time, being seen, mothers and daughters, the woman she used to be. It should make her feel something in her chest. No selling. Never a stock quote line like "you are enough": it has to feel original, specific and true.
+
+MIX (rows 5, 10, 15, 20): One of each, in this order: row 5 menopause (warm, funny, validating, no medical claims, no advice on hormones or medicines), row 10 skincare (a fun, useful, surprising idea she can use tonight, no medical education), row 15 growing older (the joy, the oddness and the freedom of it), row 20 a "did you know" fun fact (a genuinely interesting, true and checkable general fact about skin, ageing, beauty history or the body, with no claims about any treatment and no statistics you are not certain of). Keep all of it light, human and surprising.
 
 ENGAGEMENT AND ORIGINALITY
 Everything is written to earn comments, saves, shares and tags. Think outside the box: every row needs an angle you would not see on another clinic's page. Never write the obvious post about the topic. If a line could appear on any clinic's feed, rewrite it.
@@ -246,7 +248,7 @@ Everything is written to earn comments, saves, shares and tags. Think outside th
 VOICE AND AUDIENCE
 Write in the first person, as the clinic owner speaking. UK spelling, no Americanisms. Never use em dashes or en dashes. Use commas, full stops or colons.
 Write for the consumer psychology of women over 35: stealth sales, high engagement, emotion, humour, affable. No boring medical education, make it fun.
-Humanise it. No AI patter, no "not X, not Y" constructions, no "Most clinics don't have an X problem, they have a Y problem", no rhetorical question openers, no TED talk escalations. Never use the word "fluff". Be original, avoid stock lines seen all over the industry.
+Humanise it. No AI patter. Never use negative parallelism in any form: no "not X, not Y", no "it is not X, it is Y", no "not just X but Y", no "less X, more Y", no "no X, no Y, just Z". State the positive point directly. No "not X, not Y" constructions, no "Most clinics don't have an X problem, they have a Y problem", no rhetorical question openers, no TED talk escalations. Never use the words fluff, faff or fuss. Be original, avoid stock lines seen all over the industry.
 Use the clinician notes for voice and any personal detail, if given.
 
 HOOKS (the most important part)
@@ -259,10 +261,10 @@ CTA
 Every cta is a strong, stealth sales friendly call to action, varied across the rows and never pushy. On treatment rows it warmly invites a consultation or a message. On funny, things that and shareable rows it asks for a comment, a share, a save or a tag ("Tag the friend who...", "Comment the one I forgot") and is worded so it also warmly draws her into the clinic's world (follow along, send a message, come and say hello).
 
 BANNED WORDS
-elevate, transform, unlock, journey, empower, revolutionise, game-changer, dive into, harness, leverage, delve, navigate, streamline, cutting-edge, holistic, synergy, bespoke, unleash, tapestry, landscape, realm, testament, seamless, effortless, next level, top-tier, spoiler alert, trust me.
+fluff, faff, fuss, elevate, transform, unlock, journey, empower, revolutionise, game-changer, dive into, harness, leverage, delve, navigate, streamline, cutting-edge, holistic, synergy, bespoke, unleash, tapestry, landscape, realm, testament, seamless, effortless, next level, top-tier, spoiler alert, trust me.
 
 OUTPUT
-Return only JSON in this exact shape, with exactly 16 objects in "rows":
+Return only JSON in this exact shape, with exactly 20 objects in "rows":
 {"rows":[{"headline":"","subtitle":"","text1":"","text2":"","text3":"","cta":""}]}`;
 
 // Pulls a client's own top 10 posts straight from their connected Instagram account, so nobody
@@ -403,7 +405,7 @@ ${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${safeSite
         ],
         response_format: { type: "json_object" },
         temperature: 0.9,
-        max_tokens: 4000,
+        max_tokens: 6500,
       });
       const raw = completion.choices[0]?.message?.content ?? "";
       try {
@@ -419,17 +421,17 @@ ${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${safeSite
       } catch {
         rows = [];
       }
-      if (rows.length !== 16) {
-        feedback = "\n\nYour last answer did not have exactly 16 rows. Return exactly 16 rows.";
+      if (rows.length !== 20) {
+        feedback = "\n\nYour last answer did not have exactly 20 rows. Return exactly 20 rows.";
         continue;
       }
       const hits = findBanned(rows);
       if (!hits.length) break;
-      feedback = `\n\nYour last answer used banned compliance wording (${hits.join(", ")}). Rewrite all 16 rows without any of those words, using "smoothing treatments" or "facial aesthetics" where needed.`;
+      feedback = `\n\nYour last answer used banned compliance wording (${hits.join(", ")}). Rewrite all 20 rows without any of those words, using "smoothing treatments" or "facial aesthetics" where needed.`;
     }
 
     // Last line of defence: if a banned word still slipped through, swap it out in code.
-    if (rows.length === 16) {
+    if (rows.length === 20) {
       rows = rows.map((r) => ({
         headline: neutralise(r.headline),
         subtitle: neutralise(r.subtitle),
@@ -440,8 +442,8 @@ ${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${safeSite
       }));
     }
 
-    if (rows.length !== 16) {
-      res.status(502).json({ error: "The copy did not come back as 16 rows. Please try again." });
+    if (rows.length !== 20) {
+      res.status(502).json({ error: "The copy did not come back as 20 rows. Please try again." });
       return;
     }
 
