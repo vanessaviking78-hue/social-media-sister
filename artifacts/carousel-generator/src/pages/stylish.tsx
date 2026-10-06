@@ -1377,16 +1377,44 @@ function tintBackdrop(c: HTMLCanvasElement, hex: string | null, mono = false) {
     return [(r + mm) * 255, (g + mm) * 255, (b + mm) * 255];
   };
   const g = c.getContext("2d"); if (!g) return;
-  const img = g.getImageData(0, 0, c.width, c.height), d = img.data;
-  for (let i = 0; i < d.length; i += 4) {
-    const [h, s, l] = hsl(d[i] / 255, d[i + 1] / 255, d[i + 2] / 255);
-    const hueOk = h >= 185 && h <= 265;
-    const w = hueOk ? Math.min(1, Math.max(0, (s - 0.1) / 0.2)) * (h < 200 ? (h - 185) / 15 : h > 250 ? (265 - h) / 15 : 1) : 0;
-    const nl = Math.min(0.7, l * 1.15 + tl * 0.55);
-    const [r, gg, b] = rgb(th, Math.max(0.35, Math.min(1, ts * 0.95)), nl);
-    let br = d[i], bg = d[i + 1], bb = d[i + 2];
-    if (mono) { const y = 0.299 * br + 0.587 * bg + 0.114 * bb; const v = Math.max(0, Math.min(255, y + (y - 128) * 0.5)); br = bg = bb = v; }
-    d[i] = br + (r - br) * w; d[i + 1] = bg + (gg - bg) * w; d[i + 2] = bb + (b - bb) * w;
+  const cw = c.width, ch = c.height;
+  const img = g.getImageData(0, 0, cw, ch), d = img.data;
+  const CELL = 4, gw = Math.ceil(cw / CELL), gh = Math.ceil(ch / CELL);
+  const frac = new Float32Array(gw * gh);
+  const ws = new Float32Array(cw * ch);
+  for (let y = 0, j = 0; y < ch; y++) {
+    for (let x = 0; x < cw; x++, j++) {
+      const i = j * 4;
+      const [h, s, l] = hsl(d[i] / 255, d[i + 1] / 255, d[i + 2] / 255);
+      const hueOk = h >= 185 && h <= 265;
+      const w = hueOk ? Math.min(1, Math.max(0, (s - 0.1) / 0.2)) * (h < 200 ? (h - 185) / 15 : h > 250 ? (265 - h) / 15 : 1) : 0;
+      ws[j] = w;
+      if (w > 0.5) frac[Math.floor(y / CELL) * gw + Math.floor(x / CELL)] += 1 / (CELL * CELL);
+      void l;
+    }
+  }
+  // Very dark specks inside the backdrop (shadow noise) are filled too, but never the dress, which is surrounded by non-backdrop pixels.
+  const near = (gx: number, gy: number) => {
+    let t = 0, n = 0;
+    for (let yy = -1; yy <= 1; yy++) for (let xx = -1; xx <= 1; xx++) {
+      const ax = gx + xx, ay = gy + yy; if (ax < 0 || ay < 0 || ax >= gw || ay >= gh) continue;
+      t += frac[ay * gw + ax]; n++;
+    }
+    return n ? t / n : 0;
+  };
+  for (let y = 0, j = 0; y < ch; y++) {
+    for (let x = 0; x < cw; x++, j++) {
+      const i = j * 4;
+      let w = ws[j];
+      const [, , l] = hsl(d[i] / 255, d[i + 1] / 255, d[i + 2] / 255);
+      if (w < 1 && l < 0.16 && near(Math.floor(x / CELL), Math.floor(y / CELL)) > 0.62) w = 1;
+      if (w <= 0 && !mono) continue;
+      const nl = Math.min(0.7, l * 1.15 + tl * 0.55);
+      const [r, gg, b] = rgb(th, Math.max(0.35, Math.min(1, ts * 0.95)), nl);
+      let br = d[i], bg = d[i + 1], bb = d[i + 2];
+      if (mono) { const yv = 0.299 * br + 0.587 * bg + 0.114 * bb; const v = Math.max(0, Math.min(255, yv + (yv - 128) * 0.5)); br = bg = bb = v; }
+      d[i] = br + (r - br) * w; d[i + 1] = bg + (gg - bg) * w; d[i + 2] = bb + (b - bb) * w;
+    }
   }
   g.putImageData(img, 0, 0);
 }
