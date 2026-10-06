@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Link, useLocation } from "wouter";
 import { ArrowLeft, Loader2, Upload, Check, AlertTriangle, Download, Palette, RotateCw, X, Film, Sparkles } from "lucide-react";
 import JSZip from "jszip";
@@ -80,15 +80,28 @@ export default function ClientStylish() {
   const [topText, setTopText] = useState("");
   const [shots, setShots] = useState<File[]>([]);
   const { presets } = usePresets();
-  // Picking a saved client fills in the website and area saved on their preset, so nothing is typed twice.
-  useEffect(() => {
+  // Picking a saved client always brings forward their website, area and brand colour from their profile,
+  // replacing whatever the previous client had. Typing a different website afterwards is still allowed.
+  const matchedPreset = useMemo(() => {
     const n = clientName.trim().toLowerCase();
-    if (!n) return;
-    const m = presets.find(p => p.name.trim().toLowerCase() === n);
-    if (!m) return;
-    if (m.websiteUrl?.trim()) setWebsite(w => w.trim() ? w : m.websiteUrl!.trim());
-    if (m.seoArea?.trim()) setArea(a => a.trim() ? a : m.seoArea!.trim());
+    if (!n) return null;
+    return presets.find(p => p.name.trim().toLowerCase() === n)
+      ?? (n.length >= 4 ? presets.find(p => { const pn = p.name.trim().toLowerCase(); return pn.length >= 4 && (pn.includes(n) || n.includes(pn)); }) : undefined)
+      ?? null;
   }, [clientName, presets]);
+  const lastPresetId = useRef<number | null>(null);
+  useEffect(() => {
+    if (!matchedPreset) { lastPresetId.current = null; return; }
+    if (lastPresetId.current === matchedPreset.id) return;
+    lastPresetId.current = matchedPreset.id;
+    setWebsite(matchedPreset.websiteUrl?.trim() ?? "");
+    setArea(matchedPreset.seoArea?.trim() ?? "");
+    setSpot(/^#?[0-9a-f]{6}$/i.test((matchedPreset.accentColor ?? "").trim()) ? (matchedPreset.accentColor.startsWith("#") ? matchedPreset.accentColor : `#${matchedPreset.accentColor}`) : "");
+  }, [matchedPreset]);
+  const brandSwatches = matchedPreset
+    ? Array.from(new Set([matchedPreset.accentColor, matchedPreset.pageColor, matchedPreset.overlayColor, matchedPreset.cornerColor]
+        .map(c => (c ?? "").trim()).filter(c => /^#?[0-9a-f]{6}$/i.test(c)).map(c => (c.startsWith("#") ? c : `#${c}`).toLowerCase())))
+    : [];
   const [topCount, setTopCount] = useState(0);
   const [topSource, setTopSource] = useState("none");
   const shotRef = useRef<HTMLInputElement>(null);
@@ -409,11 +422,23 @@ export default function ClientStylish() {
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Website</Label>
             <Input value={website} onChange={e => setWebsite(e.target.value)} placeholder="www.theirclinic.co.uk" disabled={started && busy} />
-            <p className="text-xs text-muted-foreground">The treatment posts take their details from here.</p>
+            <p className="text-xs text-muted-foreground">{matchedPreset?.websiteUrl ? "Brought forward from their client profile. " : ""}The treatment posts take their details from here.</p>
           </div>
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Clinic area <span className="text-muted-foreground font-normal">(for local SEO in the captions)</span></Label>
             <Input value={area} onChange={e => setArea(e.target.value)} placeholder="e.g. Harrogate, North Yorkshire" disabled={started && busy} />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Brand colour</Label>
+            <div className="flex items-center gap-2">
+              <span className="h-8 w-8 rounded-md border border-border/50 shrink-0" style={{ background: /^#?[0-9a-f]{6}$/i.test(spot.trim()) ? (spot.trim().startsWith("#") ? spot.trim() : `#${spot.trim()}`) : "transparent" }} />
+              <Input className="h-8 w-32" value={spot} onChange={e => setSpot(e.target.value)} placeholder="#2c9a8f" />
+              {brandSwatches.map(c => (
+                <button key={c} type="button" title={c} onClick={() => setSpot(c)} className="h-6 w-6 rounded-full border border-border/50" style={{ background: c }} />
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">{matchedPreset ? "Brought forward from their client profile. Tap another swatch or type a hex to change it." : "Pick a saved client and their colour appears here."} It colours the October 26 covers.</p>
           </div>
 
           <div className="space-y-2">
@@ -674,7 +699,7 @@ export default function ClientStylish() {
                 <p className="text-xs text-muted-foreground">Each post gets one of the October 26 covers in the clinic's colour and fonts, ready to check in Stylish. Slides 2 to 5 stay in the usual Stylish look.</p>
                 {october && (
                   <div className="flex items-center gap-2">
-                    <Label className="text-xs">Spot colour (optional, blank uses the clinic colour)</Label>
+                    <Label className="text-xs">Spot colour (from their brand colour above)</Label>
                     <Input className="w-32 h-8" value={spot} onChange={e => setSpot(e.target.value)} placeholder="#2c9a8f" />
                   </div>
                 )}
