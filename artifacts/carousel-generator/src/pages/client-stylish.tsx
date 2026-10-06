@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { ArrowLeft, Loader2, Upload, Check, AlertTriangle, Download, Palette, RotateCw, X, Film, Sparkles } from "lucide-react";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -52,7 +52,6 @@ type CopyState = "idle" | "writing" | "done" | "error";
 const safeName = (s: string) => s.replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ").trim();
 
 export default function ClientStylish() {
-  const [, setLocation] = useLocation();
 
   const [clientName, setClientName] = useState("");
   const [website, setWebsite] = useState("");
@@ -74,6 +73,8 @@ export default function ClientStylish() {
   const uploadedSet = useRef<WeakSet<File>>(new WeakSet());
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [treatments, setTreatments] = useState(["", "", ""]);
+  const [siteTreatments, setSiteTreatments] = useState<string[]>([]);
+  const [loadingTreatments, setLoadingTreatments] = useState(false);
   const [tone, setTone] = useState("");
   const [area, setArea] = useState("");
   const [notes, setNotes] = useState("");
@@ -228,6 +229,31 @@ export default function ClientStylish() {
       setCopyState("error");
     }
   }, [clientName, website, treatments, tone, notes, topText, shots]);
+
+  // Reads the clinic's own website for the treatments it offers, so each treatment box can drop down a list.
+  // The list is remembered per website so it is instant the next time.
+  useEffect(() => {
+    const w = website.trim();
+    setSiteTreatments([]);
+    if (!/\.[a-z]{2,}/i.test(w)) return;
+    const key = `client-stylish-treatments:${w.toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "")}`;
+    try { const c = JSON.parse(localStorage.getItem(key) ?? "null"); if (Array.isArray(c) && c.length) { setSiteTreatments(c); return; } } catch { /* ignore */ }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      setLoadingTreatments(true);
+      try {
+        const r = await fetch(`${BASE}api/client-stylish/treatments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ website: w }) });
+        const txt = await r.text();
+        const d = JSON.parse(txt) as { treatments?: string[] };
+        if (!cancelled && Array.isArray(d.treatments)) {
+          setSiteTreatments(d.treatments);
+          if (d.treatments.length) { try { localStorage.setItem(key, JSON.stringify(d.treatments)); } catch { /* ignore */ } }
+        }
+      } catch { /* the boxes still accept typing */ }
+      finally { if (!cancelled) setLoadingTreatments(false); }
+    }, 900);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [website]);
 
   const canStart =
     clientName.trim() && website.trim() && (useApproved ? approvedFiles.length > 0 : photo) && treatments.every(t => t.trim()) && tone && !busy;
@@ -384,7 +410,9 @@ export default function ClientStylish() {
       const files = await collectImages();
       const ok = await setStylishHandoff({ files, csv, csvName: `${packName} Stylish.csv`, clientName: clientName.trim(), location: area.trim() || undefined, intent, october, spot: spot.trim() || undefined });
       if (!ok) throw new Error("Stylish could not be loaded from here, please download instead");
-      setLocation("/stylish");
+      // Opens Stylish in its own tab so this page, with the photos and CSV, stays open to use again
+      // (for example once as posts, then again as reels or with stories).
+      window.open(`${BASE}stylish`, "_blank");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not open Stylish");
     } finally {
@@ -550,8 +578,12 @@ export default function ClientStylish() {
           <div className="space-y-2">
             <Label className="text-sm font-medium">3 treatments to promote this month</Label>
             {treatments.map((t, i) => (
-              <Input key={i} value={t} onChange={e => setTreatments(prev => prev.map((x, j) => (j === i ? e.target.value : x)))} placeholder={`Treatment ${i + 1}`} />
+              <Input key={i} value={t} list="site-treatments" onChange={e => setTreatments(prev => prev.map((x, j) => (j === i ? e.target.value : x)))} placeholder={siteTreatments.length ? `Treatment ${i + 1} (click for their list, or type your own)` : `Treatment ${i + 1}`} />
             ))}
+            <datalist id="site-treatments">{siteTreatments.map(t => <option key={t} value={t} />)}</datalist>
+            <p className="text-xs text-muted-foreground">
+              {loadingTreatments ? "Reading their website for treatments…" : siteTreatments.length ? `${siteTreatments.length} treatments found on their website. Click a box to choose from the list, or type your own.` : website.trim() ? "No treatment list found on their website, so type them in." : "Add their website and their treatments will appear here to choose from."}
+            </p>
           </div>
 
           <div className="space-y-2">

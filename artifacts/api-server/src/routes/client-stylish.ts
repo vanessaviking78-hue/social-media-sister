@@ -503,6 +503,60 @@ function section(from: string, to: string): string {
   return a >= 0 ? STRUCTURE_RULES.slice(a, b >= 0 ? b : undefined).trim() : "";
 }
 
+// Lists the treatments a clinic offers, read from the links on its own website, for the treatment dropdowns.
+router.post("/client-stylish/treatments", async (req: Request, res: Response) => {
+  try {
+    const website = typeof req.body?.website === "string" ? req.body.website.trim() : "";
+    if (!website) { res.status(400).json({ error: "website required" }); return; }
+    const site = website.split(/\s+/)[0].replace(/[,;]+$/, "");
+    const start = /^https?:\/\//i.test(site) ? site : `https://${site}`;
+    const diag: SiteDiag = {} as SiteDiag;
+    const home = await fetchPage(start, diag);
+    if (!home) { res.json({ treatments: [], reason: diag.reason ?? "unreachable" }); return; }
+    const collect = (html: string, baseUrl: string) => {
+      const base = new URL(baseUrl);
+      const out: { text: string; path: string }[] = [];
+      const re = /<a\s[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(html))) {
+        let u: URL;
+        try { u = new URL(m[1], base); } catch { continue; }
+        if (u.hostname !== base.hostname) continue;
+        const text = m[2].replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+        if (!text || text.length > 60) continue;
+        out.push({ text, path: u.pathname });
+      }
+      return out;
+    };
+    let links = collect(home.html, home.finalUrl);
+    // Follow the main treatments or services page too, where the full list usually lives.
+    const index = links.find(l => /^\/(treatments?|services?|our-treatments?|what-we-offer)\/?$/i.test(l.path));
+    if (index) {
+      const page = await fetchPage(new URL(index.path, home.finalUrl).href);
+      if (page) links = links.concat(collect(page.html, page.finalUrl));
+    }
+    const seen = new Set<string>();
+    const lines = links.filter(l => { const k = `${l.text}|${l.path}`; if (seen.has(k)) return false; seen.add(k); return true; })
+      .slice(0, 220).map(l => `${l.text} (${l.path})`).join("\n");
+    if (!lines) { res.json({ treatments: [], reason: "nothing found" }); return; }
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      temperature: 0,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: "You are given the link texts and paths found on an aesthetics, dental or skin clinic website. Return JSON {\"treatments\": [..]} listing only the actual treatments, procedures or services the clinic offers to patients, as short names (for example Dermal Fillers, Skin Boosters, Facials). Leave out navigation, contact, pricing, blog, about, team, booking, legal and shop links. Remove duplicates. Use the clinic's own wording, tidied to Title Case. Never name prescription-only medicines: if the site lists one, use a neutral name such as Smoothing Treatments. Maximum 40." },
+        { role: "user", content: lines },
+      ],
+    });
+    const parsed = JSON.parse(completion.choices[0]?.message?.content ?? "{}") as { treatments?: unknown };
+    const list = Array.isArray(parsed.treatments) ? parsed.treatments.filter((t): t is string => typeof t === "string").map(t => t.trim()).filter(Boolean).slice(0, 40) : [];
+    res.json({ treatments: list });
+  } catch (err) {
+    req.log?.error({ err }, "client-stylish: treatments error");
+    res.json({ treatments: [], reason: "failed" });
+  }
+});
+
 router.post("/client-stylish/csv", async (req: Request, res: Response) => {
   try {
     const body = req.body as { clientName?: string; website?: string; tone?: string; notes?: string; treatmentTopics?: string[]; restBrief?: string; restCount?: number };
