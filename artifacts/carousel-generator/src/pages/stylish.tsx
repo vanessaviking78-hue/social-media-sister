@@ -1786,7 +1786,7 @@ async function drawCoverOct(
     ctx.fillStyle = mixHex(brandHex, "#ffffff", 0.12); ctx.fillRect(-pw / 2, top, pw, ph);
     ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(-pw / 2 + 40, top + 34, pw - 80, 3);
-    smallDraw(sub, 0, top + 72, Math.max(18, Math.round(style.cvSubSize * 0.7 * subScale)), "rgba(0,0,0,0.75)");
+    smallDraw(sub, subTextAt.dx, top + 72 + subTextAt.dy, Math.max(18, Math.round(style.cvSubSize * 0.7 * subScale)), "rgba(0,0,0,0.75)");
     ctx.fillStyle = "rgba(0,0,0,0.55)"; ctx.fillRect(-pw / 2 + 40, top + 92, pw - 80, 3);
     fitDraw(capsT(spec.text), 0, top + 120, pw - 120, 360, Math.round(style.cvSize * headScale), 4, "center", inkOr("#161616"));
     // small pictures cut from the same photo, and tiny lines of text
@@ -1860,8 +1860,8 @@ async function drawCoverOct(
     // ribbon
     ctx.fillStyle = mixHex(brandHex, "#000000", 0.15); ctx.fillRect(cx - 250, cy + R - 40, 500, 86);
     smallDraw("TODAY", cx, cy + R + 22, Math.round(style.cvSubSize * 1.6 * subScale), "#f4ecdc");
-    fitDraw(capsT(spec.text), W / 2, 90, 900, 280, Math.round(style.cvSize * headScale), 2, "center", inkOr(mixHex(brandHex, "#000000", 0.5)));
-    if (spec.sub) smallDraw(spec.sub, W / 2, 1340 + subTextAt.dy, Math.round(style.cvSubSize * 1.3 * subScale), mixHex(brandHex, "#000000", 0.5));
+    fitDraw(capsT(spec.text), W / 2 + textAt.dx, 90 + textAt.dy, 900, 280, Math.round(style.cvSize * headScale), 2, "center", inkOr(mixHex(brandHex, "#000000", 0.5)));
+    if (spec.sub) smallDraw(spec.sub, W / 2 + subTextAt.dx, 1340 + subTextAt.dy, Math.round(style.cvSubSize * 1.3 * subScale), mixHex(brandHex, "#000000", 0.5));
     setSpacing(ctx, 0);
     return;
   }
@@ -1877,7 +1877,7 @@ async function drawCoverOct(
     ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
     ctx.fillStyle = "rgba(0,0,0,0.5)"; ctx.fillRect(-pw / 2 + 30, -ph / 2 + 26, pw - 60, 4);
     fitDraw(capsT(spec.text), 0, -ph / 2 + 56, pw - 70, ph - 140, Math.round(style.cvSize * 1.7 * headScale), 3, "center", inkOr("#141414"));
-    if (spec.sub) smallDraw(spec.sub, 0, ph / 2 - 36, Math.round(style.cvSubSize * 0.9 * subScale), "#333333");
+    if (spec.sub) smallDraw(spec.sub, subTextAt.dx, ph / 2 - 36 + subTextAt.dy, Math.round(style.cvSubSize * 0.9 * subScale), "#333333");
     ctx.restore();
     setSpacing(ctx, 0);
     return;
@@ -1945,9 +1945,9 @@ async function drawCoverOct(
     if (spec.sub) {
       ctx.fillStyle = "#333333"; ctx.textAlign = "center"; ctx.textBaseline = "top";
       ctx.font = `${style.cvSubWeight} ${Math.round(style.cvSubSize * 0.85 * subScale)}px ${sf}`; setSpacing(ctx, style.cvSubTracking);
-      const words = spec.sub.split(/\s+/); let line = ""; let yy = endY + 14; const lh = Math.round(style.cvSubSize * 1.2 * subScale);
-      for (const w of words) { const t = line ? line + " " + w : w; if (ctx.measureText(t).width > pw - 100 && line) { ctx.fillText(line, 0, yy); yy += lh; line = w; } else line = t; }
-      if (line && yy < ph / 2 - 20) ctx.fillText(line, 0, yy);
+      const words = spec.sub.split(/\s+/); let line = ""; let yy = endY + 14 + subTextAt.dy; const lh = Math.round(style.cvSubSize * 1.2 * subScale);
+      for (const w of words) { const t = line ? line + " " + w : w; if (ctx.measureText(t).width > pw - 100 && line) { ctx.fillText(line, subTextAt.dx, yy); yy += lh; line = w; } else line = t; }
+      if (line && yy < ph / 2 + 200) ctx.fillText(line, subTextAt.dx, yy);
     }
     ctx.restore();
     setSpacing(ctx, 0);
@@ -4460,7 +4460,7 @@ export default function Stylish() {
                                   onPointerCancel={endTextDrag}
                                   onDoubleClick={e => { e.stopPropagation(); resetTextPos(post, pi, si); }}
                                   title="Drag to move the headline. Double click to put it back."
-                                  className="absolute top-1.5 left-1.5 flex items-center gap-0.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[18px] font-semibold uppercase tracking-wider text-white/90 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing select-none"
+                                  className="absolute top-1.5 left-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[18px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-grab active:cursor-grabbing select-none"
                                   style={{ touchAction: "none" }}
                                 >
                                   <Move className="w-2.5 h-2.5" /> Aa
@@ -4474,7 +4474,7 @@ export default function Stylish() {
                                   onPointerCancel={endTextResize}
                                   onDoubleClick={e => { e.stopPropagation(); resetTextScale(post, pi, si); }}
                                   title="Drag up or down to resize the headline. Double click to put it back."
-                                  className="absolute top-7 left-1.5 flex items-center rounded-md bg-black/55 p-0.5 text-white/90 opacity-0 group-hover:opacity-100 cursor-ns-resize select-none"
+                                  className="absolute top-7 left-1.5 flex items-center rounded-md bg-black/65 p-0.5 text-white opacity-90 group-hover:opacity-100 cursor-ns-resize select-none"
                                   style={{ touchAction: "none" }}
                                 >
                                   <ArrowUpDown className="w-2.5 h-2.5" />
@@ -4488,7 +4488,7 @@ export default function Stylish() {
                                   onPointerCancel={endSubTextDrag}
                                   onDoubleClick={e => { e.stopPropagation(); resetSubTextPos(post, pi, si); }}
                                   title="Drag to move the subtitle. Double click to put it back."
-                                  className="absolute top-1.5 right-1.5 flex items-center gap-0.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[18px] font-semibold uppercase tracking-wider text-white/90 opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing select-none"
+                                  className="absolute top-1.5 right-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[18px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-grab active:cursor-grabbing select-none"
                                   style={{ touchAction: "none" }}
                                 >
                                   <Move className="w-2.5 h-2.5" /> aa
@@ -4502,7 +4502,7 @@ export default function Stylish() {
                                   onPointerCancel={endSubTextResize}
                                   onDoubleClick={e => { e.stopPropagation(); resetSubTextScale(post, pi, si); }}
                                   title="Drag up or down to resize the subtitle. Double click to put it back."
-                                  className="absolute top-7 right-1.5 flex items-center rounded-md bg-black/55 p-0.5 text-white/90 opacity-0 group-hover:opacity-100 cursor-ns-resize select-none"
+                                  className="absolute top-7 right-1.5 flex items-center rounded-md bg-black/65 p-0.5 text-white opacity-90 group-hover:opacity-100 cursor-ns-resize select-none"
                                   style={{ touchAction: "none" }}
                                 >
                                   <ArrowUpDown className="w-2.5 h-2.5" />
