@@ -1388,9 +1388,9 @@ function tintBackdrop(c: HTMLCanvasElement, hex: string | null, mono = false) {
       const [h, s, l] = hsl(d[i] / 255, d[i + 1] / 255, d[i + 2] / 255);
       const hueOk = h >= 185 && h <= 265;
       const w = hueOk ? Math.min(1, Math.max(0, (s - 0.1) / 0.2)) * (h < 200 ? (h - 185) / 15 : h > 250 ? (265 - h) / 15 : 1) : 0;
-      ws[j] = w;
+      const bl = d[i + 2] - d[i];
+      ws[j] = w === 0 && l < 0.2 && bl >= 8 && d[i + 2] >= d[i + 1] ? Math.min(1, (bl - 6) / 14) : w;
       if (w > 0.5) frac[Math.floor(y / CELL) * gw + Math.floor(x / CELL)] += 1 / (CELL * CELL);
-      void l;
     }
   }
   // Very dark specks inside the backdrop (shadow noise) are filled too, but never the dress, which is surrounded by non-backdrop pixels.
