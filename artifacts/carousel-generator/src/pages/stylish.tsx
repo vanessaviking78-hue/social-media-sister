@@ -2887,6 +2887,11 @@ export default function Stylish() {
   const missingFonts = COVER_WANTS[style.coverLayout].filter(w => !customFamilies.some(c => norm(c) === norm(w)));
   const [rendering, setRendering] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
+  const [animating, setAnimating] = useState<string | null>(null);
+  const [animateCovers, setAnimateCovers] = useState<boolean>(() => {
+    try { return localStorage.getItem("stylish-animate-covers") === "1"; } catch { return false; }
+  });
+  useEffect(() => { try { localStorage.setItem("stylish-animate-covers", animateCovers ? "1" : "0"); } catch { /* ignore */ } }, [animateCovers]);
   const [scheduleStart, setScheduleStart] = useState<string | undefined>(undefined);
   const [scheduling, setScheduling] = useState<string | null>(null);
   const [captionAllBusy, setCaptionAllBusy] = useState(false);
@@ -3664,6 +3669,87 @@ export default function Stylish() {
       toast.error(err instanceof Error ? err.message : "Export failed");
     } finally {
       setExporting(null);
+    }
+  };
+
+  // -- animated covers (optional shine sweep) ---------------------------------
+
+  // Records a soft diagonal band of light gliding across a finished cover, then has the server turn
+  // the clip into a proper MP4. The still covers and everything else are untouched.
+  const recordShine = (base: HTMLCanvasElement): Promise<Blob> => new Promise((resolve, reject) => {
+    const W = base.width, H = base.height;
+    const out = document.createElement("canvas");
+    out.width = W; out.height = H;
+    const ctx = out.getContext("2d");
+    if (!ctx || typeof MediaRecorder === "undefined") { reject(new Error("This browser cannot record video, try Chrome")); return; }
+    const stream = out.captureStream(30);
+    const mime = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4"].find(m => MediaRecorder.isTypeSupported(m)) ?? "";
+    const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8_000_000 } : { videoBitsPerSecond: 8_000_000 });
+    const chunks: Blob[] = [];
+    rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    rec.onerror = () => reject(new Error("Recording failed"));
+    rec.onstop = () => resolve(new Blob(chunks, { type: rec.mimeType || "video/webm" }));
+    const TOTAL = 3200, FROM = 500, TO = 2300;
+    const start = performance.now();
+    const frame = () => {
+      const t = performance.now() - start;
+      ctx.clearRect(0, 0, W, H);
+      ctx.drawImage(base, 0, 0);
+      if (t >= FROM && t <= TO) {
+        const p = (t - FROM) / (TO - FROM);
+        const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+        const bandW = W * 0.42;
+        const x = -bandW + e * (W + bandW * 2);
+        ctx.save();
+        ctx.translate(x, 0);
+        const g = ctx.createLinearGradient(-bandW / 2, 0, bandW / 2, 0);
+        g.addColorStop(0, "rgba(255,255,255,0)");
+        g.addColorStop(0.5, "rgba(255,255,255,0.38)");
+        g.addColorStop(1, "rgba(255,255,255,0)");
+        ctx.fillStyle = g;
+        ctx.transform(1, 0, -0.35, 1, 0, 0);
+        ctx.fillRect(-bandW / 2 - H * 0.35, 0, bandW + H * 0.7, H);
+        ctx.restore();
+      }
+      if (t < TOTAL) requestAnimationFrame(frame);
+      else rec.stop();
+    };
+    rec.start();
+    requestAnimationFrame(frame);
+  });
+
+  const handleAnimateCovers = async () => {
+    if (!selectedPosts.length) { toast.error("Tick at least one post first"); return; }
+    setAnimating("Starting");
+    try {
+      await warmAll();
+      const logo = style.showLogo ? await loadLogo(preset) : null;
+      const zip = new JSZip();
+      let n = 0;
+      let single: { name: string; blob: Blob } | null = null;
+      for (const post of selectedPosts) {
+        n++;
+        const pi = posts.indexOf(post);
+        const specs = buildSlides(post.texts);
+        setAnimating(`Cover ${n} of ${selectedPosts.length}`);
+        const base = await renderSlide(specs[0], photoFor(pi, post, 0), styleForSlide(style, post, specs[0].kind), logo, preset, 1, { index: 0, total: specs.length, extras: [1, 2, 3].map(k => photoFor(pi, post, k)) }, focusRef.current[`${post.id}:0`], textFocusRef.current[`${post.id}:0`], subTextFocusRef.current[`${post.id}:0`], textScaleRef.current[`${post.id}:0`], subTextScaleRef.current[`${post.id}:0`]);
+        const clip = await recordShine(base);
+        const fd = new FormData();
+        fd.append("video", clip, "cover.webm");
+        const r = await fetch(`${BASE}/api/stylish-reel/convert`, { method: "POST", body: fd });
+        if (!r.ok) throw new Error("Could not convert the clip");
+        const mp4 = await r.blob();
+        const name = `post-${String(pi + 1).padStart(2, "0")}-cover-shine.mp4`;
+        zip.file(name, mp4);
+        single = { name, blob: mp4 };
+      }
+      if (selectedPosts.length === 1 && single) saveAs(single.blob, single.name);
+      else saveAs(await zip.generateAsync({ type: "blob" }), `stylish-animated-covers-${Date.now()}.zip`);
+      toast.success(`${selectedPosts.length} animated cover${selectedPosts.length !== 1 ? "s" : ""} downloaded`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not make the animated covers");
+    } finally {
+      setAnimating(null);
     }
   };
 
@@ -4458,6 +4544,15 @@ export default function Stylish() {
                   <Button size="sm" variant="outline" onClick={handleDownload} disabled={!!exporting}>
                     {exporting ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{exporting}</> : <><Download className="w-4 h-4 mr-1.5" />Download all images</>}
                   </Button>
+                  <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer" title="Off by default. Switch on to get a button that downloads each ticked cover as a short video with a soft shine sweeping across it. Your normal images are not changed.">
+                    <input type="checkbox" checked={animateCovers} onChange={e => setAnimateCovers(e.target.checked)} />
+                    Animate covers (shine sweep)
+                  </label>
+                  {animateCovers && (
+                    <Button size="sm" variant="outline" onClick={handleAnimateCovers} disabled={!!animating || !!exporting}>
+                      {animating ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{animating}</> : <><Film className="w-4 h-4 mr-1.5" />Download animated covers</>}
+                    </Button>
+                  )}
                   <Button size="sm" variant="outline" onClick={handleSendToFlip} disabled={sendingFlip || !!scheduling} title="Sends slide 1 of each ticked post to Magazine Flip">
                     {sendingFlip ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <ImageIcon className="w-4 h-4 mr-1.5" />}
                     Send to Magazine Flip

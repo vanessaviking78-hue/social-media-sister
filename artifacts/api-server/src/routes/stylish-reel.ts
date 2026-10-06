@@ -97,4 +97,33 @@ router.post("/stylish-reel/upload", uploadVideo.single("video"), async (req, res
   }
 });
 
+// Turns a short clip recorded in the browser (WebM from MediaRecorder) into a proper H.264 MP4
+// with a silent audio track, and sends it straight back for download. Nothing is stored.
+router.post("/stylish-reel/convert", uploadVideo.single("video"), async (req, res) => {
+  const f = req.file;
+  if (!f) { res.status(400).json({ error: "No video received" }); return; }
+  const dir = await mkdtemp(join(tmpdir(), "stylish-convert-"));
+  try {
+    const inPath = join(dir, "in.webm");
+    const outPath = join(dir, "out.mp4");
+    await writeFile(inPath, f.buffer);
+    await runFfmpeg([
+      "-i", inPath,
+      "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+      "-vf", "scale=1080:1440:force_original_aspect_ratio=decrease,pad=1080:1440:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p",
+      "-map", "0:v:0", "-map", "1:a:0",
+      "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "30", "-movflags", "+faststart",
+      "-c:a", "aac", "-b:a", "96k", "-shortest", "-y", outPath,
+    ]);
+    const buf = await readFile(outPath);
+    res.setHeader("Content-Type", "video/mp4");
+    res.send(buf);
+  } catch (err) {
+    logger.error({ err }, "stylish-reel convert failed");
+    res.status(500).json({ error: "Could not convert the clip" });
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
+});
+
 export default router;
