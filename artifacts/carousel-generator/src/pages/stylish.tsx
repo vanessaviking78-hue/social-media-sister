@@ -912,7 +912,7 @@ function drawPhotoIn(
   ctx: CanvasRenderingContext2D, bmp: ImageBitmap,
   x: number, y: number, w: number, h: number, pos: PhotoPos,
 ) {
-  const sc = Math.max(w / bmp.width, h / bmp.height) * PHOTO_OVERSCAN;
+  const sc = Math.max(w / bmp.width, h / bmp.height) * PHOTO_OVERSCAN * Math.min(3, Math.max(1, pos.z ?? 1));
   const dw = bmp.width * sc;
   const dh = bmp.height * sc;
   const dx = x + (w - dw) * (pos.x / 100);
@@ -3154,7 +3154,7 @@ export default function Stylish() {
     const isOct = spec.kind === "cover" && OCT_LAYOUTS.has(slideStyle.coverLayout);
     const oz = Math.min(3, Math.max(1, focusRef.current[key]?.z ?? 1));
     const octBase = OCT_LOOKS[slideStyle.coverLayout]?.fit === "extend" ? W / dims.w : Math.max(W / dims.w, H / dims.h);
-    const sc = isOct ? octBase * oz : Math.max(area.w / dims.w, area.h / dims.h) * PHOTO_OVERSCAN;
+    const sc = isOct ? octBase * oz : Math.max(area.w / dims.w, area.h / dims.h) * PHOTO_OVERSCAN * oz;
     const rect = e.currentTarget.getBoundingClientRect();
     dragRef.current = {
       key, pi, si, startX: e.clientX, startY: e.clientY,
@@ -3286,6 +3286,41 @@ export default function Stylish() {
     const nextScale = { ...subTextScaleRef.current }; delete nextScale[key]; subTextScaleRef.current = nextScale;
     bumpFocus(n => n + 1);
     redrawOne(post, pi, si);
+  };
+
+  // -- zooming the cover photo from the thumbnail ---------------------------------------
+
+  const photoZoomRef = useRef<{ key: string; pi: number; si: number; startY: number; start: number; thumbScale: number } | null>(null);
+
+  const startPhotoZoom = (e: ReactPointerEvent<HTMLDivElement>, post: Post, pi: number, si: number) => {
+    if (e.button !== 0) return;
+    const key = `${post.id}:${si}`;
+    const thumb = e.currentTarget.closest("[data-thumb]") as HTMLElement | null;
+    const rect = (thumb ?? e.currentTarget).getBoundingClientRect();
+    photoZoomRef.current = { key, pi, si, startY: e.clientY, start: focusRef.current[key]?.z ?? 1, thumbScale: rect.width / W };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.stopPropagation();
+    e.preventDefault();
+  };
+
+  const movePhotoZoom = (e: ReactPointerEvent<HTMLDivElement>, post: Post) => {
+    const d = photoZoomRef.current;
+    if (!d || d.key !== `${post.id}:${d.si}`) return;
+    // Drag up to zoom in, down to zoom out.
+    const z = Math.min(3, Math.max(1, d.start - (e.clientY - d.startY) / (d.thumbScale * 450)));
+    const cur = focusRef.current[d.key];
+    const dp = defaultPos("cover", styleForSlide(style, post, "cover"));
+    focusRef.current = { ...focusRef.current, [d.key]: { x: cur?.x ?? dp.x, y: cur?.y ?? dp.y, z } };
+    redrawOne(post, d.pi, d.si);
+    e.stopPropagation();
+  };
+
+  const endPhotoZoom = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (!photoZoomRef.current) return;
+    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch { /* already released */ }
+    photoZoomRef.current = null;
+    bumpFocus(n => n + 1);
+    e.stopPropagation();
   };
 
   // -- resizing the headline and subtitle ------------------------------------------
@@ -4482,10 +4517,10 @@ export default function Stylish() {
                                   onPointerCancel={endTextResize}
                                   onDoubleClick={e => { e.stopPropagation(); resetTextScale(post, pi, si); }}
                                   title="Drag up or down to resize the headline. Double click to put it back."
-                                  className="absolute top-7 left-1.5 flex items-center rounded-md bg-black/65 p-0.5 text-white opacity-90 group-hover:opacity-100 cursor-ns-resize select-none"
+                                  className="absolute top-7 left-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[18px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-ns-resize select-none"
                                   style={{ touchAction: "none" }}
                                 >
-                                  <ArrowUpDown className="w-2.5 h-2.5" />
+                                  <ArrowUpDown className="w-2.5 h-2.5" /> size
                                 </div>
                               )}
                               {isCover && (
@@ -4510,10 +4545,24 @@ export default function Stylish() {
                                   onPointerCancel={endSubTextResize}
                                   onDoubleClick={e => { e.stopPropagation(); resetSubTextScale(post, pi, si); }}
                                   title="Drag up or down to resize the subtitle. Double click to put it back."
-                                  className="absolute top-7 right-1.5 flex items-center rounded-md bg-black/65 p-0.5 text-white opacity-90 group-hover:opacity-100 cursor-ns-resize select-none"
+                                  className="absolute top-7 right-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[18px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-ns-resize select-none"
                                   style={{ touchAction: "none" }}
                                 >
-                                  <ArrowUpDown className="w-2.5 h-2.5" />
+                                  <ArrowUpDown className="w-2.5 h-2.5" /> size
+                                </div>
+                              )}
+                              {isCover && hasPhoto && (
+                                <div
+                                  onPointerDown={e => startPhotoZoom(e, post, pi, si)}
+                                  onPointerMove={e => movePhotoZoom(e, post)}
+                                  onPointerUp={endPhotoZoom}
+                                  onPointerCancel={endPhotoZoom}
+                                  onDoubleClick={e => { e.stopPropagation(); const next = { ...focusRef.current }; const cur = next[`${post.id}:${si}`]; if (cur) next[`${post.id}:${si}`] = { x: cur.x, y: cur.y }; focusRef.current = next; bumpFocus(n => n + 1); redrawOne(post, pi, si); }}
+                                  title="Drag up to zoom the photo in, down to zoom out. Double click to put the size back."
+                                  className="absolute bottom-8 right-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[18px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-ns-resize select-none"
+                                  style={{ touchAction: "none" }}
+                                >
+                                  <ArrowUpDown className="w-2.5 h-2.5" /> photo
                                 </div>
                               )}
                               <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 px-1.5 py-1 bg-gradient-to-t from-black/70 to-transparent">
