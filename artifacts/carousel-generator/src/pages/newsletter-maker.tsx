@@ -610,7 +610,7 @@ export default function NewsletterMaker() {
             <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-3">
               <div className="flex items-center justify-between">
                 <label className="text-xs uppercase tracking-widest text-zinc-500">Five things to talk about</label>
-                <span className="text-[11px] text-zinc-600">Leave any blank and it'll pick a seasonal one</span>
+                <span className="text-[18px] text-zinc-600">Leave any blank and it'll pick a seasonal one</span>
               </div>
               {SLOT_META.map((m, i) => (
                 <div key={m.slot}>
@@ -635,7 +635,7 @@ export default function NewsletterMaker() {
                   placeholder="e.g. Complimentary skin consultation with any facial booked in November"
                   className="mt-1 w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm placeholder:text-zinc-600 resize-none"
                 />
-                <p className="text-[11px] text-zinc-600 mt-1">Woven quietly into section 5. Never on a prescription-only treatment.</p>
+                <p className="text-[18px] text-zinc-600 mt-1">Woven quietly into section 5. Never on a prescription-only treatment.</p>
               </div>
               <div>
                 <label className="text-xs uppercase tracking-widest text-zinc-500">Link for this issue (optional)</label>
@@ -670,7 +670,7 @@ export default function NewsletterMaker() {
                   />
                   {signatureUrl && (
                     <div className="bg-white rounded-lg px-3 py-1 flex items-center gap-2">
-                      <span className="text-[11px] italic text-zinc-500">With love,</span>
+                      <span className="text-[18px] italic text-zinc-500">With love,</span>
                       <img src={signatureUrl} alt="Signature preview" className="h-8 w-auto" />
                     </div>
                   )}
@@ -685,7 +685,7 @@ export default function NewsletterMaker() {
                 placeholder={DEFAULT_THANKS}
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-sm placeholder:text-zinc-600"
               />
-              <p className="text-[11px] text-zinc-600">Upload the clinician's photo each issue. The name is written in Caveat handwriting, and the AI's closing line becomes a P.S. underneath.</p>
+              <p className="text-[18px] text-zinc-600">Upload the clinician's photo each issue. The name is written in Caveat handwriting, and the AI's closing line becomes a P.S. underneath.</p>
             </section>
 
             <button
@@ -763,7 +763,7 @@ export default function NewsletterMaker() {
                 <section className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-6">
                   <div>
                     <p className="text-xs uppercase tracking-widest text-zinc-500 mb-1">Hello</p>
-                    <AutoText value={content.intro} onChange={(v) => setContent((c) => (c ? { ...c, intro: v } : c))} className="text-[15px] italic text-zinc-200" />
+                    <AutoText value={content.intro} onChange={(v) => setContent((c) => (c ? { ...c, intro: v } : c))} className="text-[18px] italic text-zinc-200" />
                   </div>
                   {content.sections.map((s, i) => (
                     <div key={s.slot} className="border-t border-zinc-800 pt-5">
@@ -814,7 +814,7 @@ export default function NewsletterMaker() {
                     </button>
                     {building && <span className="text-xs text-zinc-500 flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Updating preview</span>}
                   </div>
-                  <p className="text-[11px] text-zinc-500">
+                  <p className="text-[18px] text-zinc-500">
                     The PDF is for approval and for printing at reception, the button and QR code both go to{" "}
                     {bookingUrl ? <span className="text-zinc-300">{bookingUrl}</span> : <span className="text-amber-300">no booking link yet</span>}. The HTML is for the clinic's email platform, its unsubscribe link uses Mailchimp's *|UNSUB|* tag.
                   </p>

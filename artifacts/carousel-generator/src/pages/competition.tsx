@@ -21,7 +21,7 @@ export default function Competition() {
           background: #ff2d78;
           font-family: 'League Spartan', sans-serif;
           font-weight: 700;
-          font-size: 14px;
+          font-size: 18px;
           line-height: 1.5;
           color: #000000;
           padding: 10px 14px;
@@ -40,12 +40,12 @@ export default function Competition() {
         .enter-box p {
           font-family: 'League Spartan', sans-serif;
           font-weight: 700;
-          font-size: 13px;
+          font-size: 18px;
           line-height: 1.7;
           color: #000000;
         }
         .enter-step {
-          font-size: 13px;
+          font-size: 18px;
           font-weight: 700;
           color: #000000;
           padding: 3px 0;
@@ -90,7 +90,7 @@ export default function Competition() {
         <div style={{
           fontFamily: "'League Spartan', sans-serif",
           fontWeight: 300,
-          fontSize: "11px",
+          fontSize: "18px",
           letterSpacing: "6px",
           color: "#ff2d78",
           textTransform: "uppercase",
@@ -172,11 +172,11 @@ export default function Competition() {
             <ul style={{ listStyle: "none", marginBottom: "28px", padding: 0 }}>
               <li className="prize-item">
                 <span>Full Content Day + Podcast Capture</span>
-                <span style={{ fontWeight: 700, fontSize: "13px", whiteSpace: "nowrap" }}>worth £1,500</span>
+                <span style={{ fontWeight: 700, fontSize: "18px", whiteSpace: "nowrap" }}>worth £1,500</span>
               </li>
               <li className="prize-item">
                 <span>6 Month Done-For-You Social Media</span>
-                <span style={{ fontWeight: 700, fontSize: "13px", whiteSpace: "nowrap" }}>worth £3,500</span>
+                <span style={{ fontWeight: 700, fontSize: "18px", whiteSpace: "nowrap" }}>worth £3,500</span>
               </li>
             </ul>
 
@@ -190,7 +190,7 @@ export default function Competition() {
               </p>
               <p style={{
                 fontWeight: 700,
-                fontSize: "12px",
+                fontSize: "18px",
                 letterSpacing: "1px",
                 color: "#000000",
                 marginTop: "14px",
@@ -209,7 +209,7 @@ export default function Competition() {
             <p style={{
               fontFamily: "'League Spartan', sans-serif",
               fontWeight: 300,
-              fontSize: "10px",
+              fontSize: "18px",
               color: "rgba(255,255,255,0.35)",
               lineHeight: 1.6,
               letterSpacing: "0.3px",
@@ -241,7 +241,7 @@ export default function Competition() {
           <div style={{
             fontFamily: "'League Spartan', sans-serif",
             fontWeight: 300,
-            fontSize: "11px",
+            fontSize: "18px",
             letterSpacing: "3px",
             color: "#ff2d78",
             textTransform: "uppercase",

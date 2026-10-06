@@ -194,7 +194,7 @@ export default function ShowcaseBuilder() {
                       <>
                         <img src={slot.preview} alt="" className="w-full h-full object-cover" />
                         {slot.uploading && (
-                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-[10px] text-white/70">…</div>
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-[18px] text-white/70">…</div>
                         )}
                         {!slot.uploading && (
                           <button

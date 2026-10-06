@@ -220,7 +220,7 @@ export function SendForApprovalModal({
                       <p className="text-xs text-zinc-300 truncate">
                         {c.caption ? c.caption.slice(0, 60) + (c.caption.length > 60 ? "…" : "") : "No caption"}
                       </p>
-                      <p className="text-[10px] text-zinc-500 mt-0.5">{c.imageUrls.length} slide{c.imageUrls.length !== 1 ? "s" : ""}</p>
+                      <p className="text-[18px] text-zinc-500 mt-0.5">{c.imageUrls.length} slide{c.imageUrls.length !== 1 ? "s" : ""}</p>
                     </div>
                   </div>
                 ))}

@@ -274,7 +274,7 @@ function SlidePreviewModal({ item, onClose, onUpdateBlocks }: { item: Item; onCl
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="space-y-2">
               <canvas ref={canvasRefs[i]} width={162} height={216} className="w-full rounded-lg border border-white/10 bg-black" />
-              <p className="text-[11px] text-muted-foreground text-center">{SLIDE_LABELS[i]}</p>
+              <p className="text-[18px] text-muted-foreground text-center">{SLIDE_LABELS[i]}</p>
             </div>
           ))}
         </div>
@@ -300,7 +300,7 @@ function SlidePreviewModal({ item, onClose, onUpdateBlocks }: { item: Item; onCl
             <input value={blocks.cta} onChange={(e) => setField("cta", e.target.value)} className="w-full bg-white/5 border border-border/50 rounded-md px-2 py-1.5 text-sm" />
           </div>
         </div>
-        <p className="text-[11px] text-muted-foreground">This is a close preview, not pixel-perfect — actual burn-in happens when you cut and schedule.</p>
+        <p className="text-[18px] text-muted-foreground">This is a close preview, not pixel-perfect — actual burn-in happens when you cut and schedule.</p>
         <div className="flex justify-end pt-2">
           <Button onClick={onClose}>Done</Button>
         </div>

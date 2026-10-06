@@ -202,13 +202,13 @@ export default function BannerTool() {
                     <div className="bg-zinc-950 border border-zinc-800 rounded-xl overflow-hidden w-32">
                       <img src={t.dataUrl} alt={t.label} className="w-full aspect-[3/4] object-cover" />
                       <div className="p-2 space-y-1.5">
-                        <p className="text-[11px] text-zinc-400 flex items-center gap-1">
-                          <span className="w-4 h-4 rounded-full bg-cyan-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">{t.postOrder}</span>
+                        <p className="text-[18px] text-zinc-400 flex items-center gap-1">
+                          <span className="w-4 h-4 rounded-full bg-cyan-500 text-white text-[18px] font-bold flex items-center justify-center shrink-0">{t.postOrder}</span>
                           {t.label}
                         </p>
                         <button
                           onClick={() => downloadDataUrl(t.dataUrl, `banner-post${t.postOrder}-${t.label.toLowerCase().replace(" ", "-")}.png`)}
-                          className="w-full flex items-center justify-center gap-1 py-1 rounded-md bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white text-[11px]"
+                          className="w-full flex items-center justify-center gap-1 py-1 rounded-md bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white text-[18px]"
                       >
                         <Download size={11} /> Save
                       </button>

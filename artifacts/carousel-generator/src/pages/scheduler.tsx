@@ -130,7 +130,7 @@ function FeedCard({ post, draggable, onDragStart, onDelete }: { post: ScheduledP
         </div>
       )}
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-1 py-0.5">
-        <p className="text-[9px] text-white/90 truncate leading-tight">{post.clientName}</p>
+        <p className="text-[18px] text-white/90 truncate leading-tight">{post.clientName}</p>
       </div>
       {post.status === "published" && (
         <span className="absolute top-0.5 right-0.5 bg-emerald-500/90 rounded-full p-0.5 group-hover:opacity-0 transition-opacity">
@@ -776,7 +776,7 @@ export default function Scheduler() {
             <div className="rounded-xl border border-zinc-800 overflow-hidden">
               <div className="grid grid-cols-7 bg-zinc-900">
                 {WEEKDAY_LABELS.map((d) => (
-                  <div key={d} className="px-2 py-2 text-center text-[11px] font-medium text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
+                  <div key={d} className="px-2 py-2 text-center text-[18px] font-medium text-zinc-500 uppercase tracking-wider border-b border-zinc-800">
                     {d}
                   </div>
                 ))}
@@ -797,10 +797,10 @@ export default function Scheduler() {
                       } ${isDragTarget ? "bg-pink-500/10 ring-1 ring-pink-500/40 ring-inset" : ""}`}
                     >
                       <div className="flex items-center justify-between mb-1 px-0.5">
-                        <span className={`text-[11px] font-medium ${isToday ? "bg-pink-600 text-white w-5 h-5 rounded-full flex items-center justify-center" : "text-zinc-500"}`}>
+                        <span className={`text-[18px] font-medium ${isToday ? "bg-pink-600 text-white w-5 h-5 rounded-full flex items-center justify-center" : "text-zinc-500"}`}>
                           {day.day}
                         </span>
-                        {dayPosts.length > 0 && <span className="text-[9px] text-zinc-500">{dayPosts.length}</span>}
+                        {dayPosts.length > 0 && <span className="text-[18px] text-zinc-500">{dayPosts.length}</span>}
                       </div>
                       {/* Blank when nothing is queued for this day — that's the point, so gaps are obvious at a glance. */}
                       {dayPosts.length > 0 && (
@@ -817,7 +817,7 @@ export default function Scheduler() {
                         </div>
                       )}
                       {dayPosts.length > 6 && (
-                        <p className="text-[9px] text-zinc-500 mt-1">+{dayPosts.length - 6} more</p>
+                        <p className="text-[18px] text-zinc-500 mt-1">+{dayPosts.length - 6} more</p>
                       )}
                     </div>
                   );

@@ -124,7 +124,7 @@ export default function Analytics() {
                       <XAxis dataKey="period" stroke="#888" fontSize={11} />
                       <YAxis stroke="#888" fontSize={11} />
                       <Tooltip
-                        contentStyle={{ backgroundColor: "#1a1a2e", border: "1px solid #333", borderRadius: "8px", fontSize: "12px" }}
+                        contentStyle={{ backgroundColor: "#1a1a2e", border: "1px solid #333", borderRadius: "8px", fontSize: "18px" }}
                         labelStyle={{ color: "#fff" }}
                       />
                       <Bar dataKey="posts" name="Posts" fill="#ec4899" radius={[4, 4, 0, 0]} />
@@ -162,11 +162,11 @@ export default function Analytics() {
                         ))}
                       </Pie>
                       <Tooltip
-                        contentStyle={{ backgroundColor: "#1a1a2e", border: "1px solid #333", borderRadius: "8px", fontSize: "12px" }}
+                        contentStyle={{ backgroundColor: "#1a1a2e", border: "1px solid #333", borderRadius: "8px", fontSize: "18px" }}
                         formatter={(value: number, name: string) => [`${value} actions`, name]}
                       />
                       <Legend
-                        wrapperStyle={{ fontSize: "12px" }}
+                        wrapperStyle={{ fontSize: "18px" }}
                         formatter={(value) => <span style={{ color: "#ccc" }}>{value}</span>}
                       />
                     </RPieChart>
@@ -192,14 +192,14 @@ export default function Analytics() {
                         <div>
                           <span className="font-medium text-sm">{client.clientName}</span>
                           <div className="flex gap-3 mt-1">
-                            <span className="text-[11px] text-muted-foreground">{client.posts} posts</span>
-                            <span className="text-[11px] text-muted-foreground">{client.generated} generated</span>
-                            <span className="text-[11px] text-muted-foreground">{client.downloaded} downloaded</span>
+                            <span className="text-[18px] text-muted-foreground">{client.posts} posts</span>
+                            <span className="text-[18px] text-muted-foreground">{client.generated} generated</span>
+                            <span className="text-[18px] text-muted-foreground">{client.downloaded} downloaded</span>
                           </div>
                         </div>
                         <div className="text-right">
                           <span className="text-lg font-bold text-pink-400">{client.total}</span>
-                          <div className="text-[10px] text-muted-foreground">actions</div>
+                          <div className="text-[18px] text-muted-foreground">actions</div>
                         </div>
                       </div>
                     ))}
@@ -230,7 +230,7 @@ export default function Analytics() {
                         </div>
                         <div className="text-right">
                           <span className="text-xs text-muted-foreground">{item.postCount} posts</span>
-                          <div className="text-[10px] text-muted-foreground">{formatDate(item.createdAt)}</div>
+                          <div className="text-[18px] text-muted-foreground">{formatDate(item.createdAt)}</div>
                         </div>
                       </div>
                     ))}
@@ -325,7 +325,7 @@ function PostTimePredictor({ data }: { data: PostTimeHeatmap | null }) {
           <div className="space-y-1.5">
             {data.timeBands.map((b) => (
               <div key={b.label} className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground w-32 truncate">{b.label}</span>
+                <span className="text-[18px] text-muted-foreground w-32 truncate">{b.label}</span>
                 <div className="flex-1 h-2 rounded-full bg-muted/30 overflow-hidden">
                   <div className="h-full rounded-full bg-orange-400/70 transition-all" style={{ width: `${(b.count / maxBand) * 100}%` }} />
                 </div>

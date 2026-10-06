@@ -66,7 +66,7 @@ function PhotoSlot({
       >
         <X size={12} />
       </button>
-      <p className="absolute bottom-0 inset-x-0 px-2 py-1 text-[10px] text-zinc-300 bg-black/60 truncate">
+      <p className="absolute bottom-0 inset-x-0 px-2 py-1 text-[18px] text-zinc-300 bg-black/60 truncate">
         {n}. {label}
       </p>
     </div>
@@ -89,7 +89,7 @@ function PhotoSlot({
         }}
       />
       <Upload className="mb-1.5 text-zinc-600" size={18} />
-      <p className="text-[11px] font-medium text-zinc-300">
+      <p className="text-[18px] font-medium text-zinc-300">
         {n}. {label}
       </p>
     </label>
@@ -113,7 +113,7 @@ function Field({
     "w-full rounded-lg bg-zinc-900 border border-zinc-800 focus:border-fuchsia-500 outline-none px-3 py-2 text-sm text-white placeholder:text-zinc-600";
   return (
     <label className="block">
-      <span className="block text-[11px] uppercase tracking-widest text-zinc-500 mb-1">{label}</span>
+      <span className="block text-[18px] uppercase tracking-widest text-zinc-500 mb-1">{label}</span>
       {rows ? (
         <textarea rows={rows} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={cls} />
       ) : (
@@ -367,11 +367,11 @@ export default function MagazineMaker() {
               <Field label="Clinic name" value={clinicName} onChange={setClinicName} placeholder="e.g. Aspyre Aesthetics" />
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
-                  <span className="block text-[11px] uppercase tracking-widest text-zinc-500 mb-1">Brand colour</span>
+                  <span className="block text-[18px] uppercase tracking-widest text-zinc-500 mb-1">Brand colour</span>
                   <input type="color" value={colour} onChange={(e) => setColour(e.target.value)} className="w-full h-10 rounded-lg bg-zinc-900 border border-zinc-800 cursor-pointer" />
                 </label>
                 <label className="block">
-                  <span className="block text-[11px] uppercase tracking-widest text-zinc-500 mb-1">Highlight colour</span>
+                  <span className="block text-[18px] uppercase tracking-widest text-zinc-500 mb-1">Highlight colour</span>
                   <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} className="w-full h-10 rounded-lg bg-zinc-900 border border-zinc-800 cursor-pointer" />
                 </label>
               </div>
@@ -487,12 +487,12 @@ export default function MagazineMaker() {
                 className="w-full max-w-sm aspect-[3/4] rounded-lg border border-zinc-800 bg-zinc-900"
                 aria-label="Large page preview. Drag a photo to move it, scroll to zoom."
               />
-              <p className="text-[11px] text-zinc-500 mt-1.5">
+              <p className="text-[18px] text-zinc-500 mt-1.5">
                 Drag a photo to slide it about inside its frame. Scroll over it, or use the slider, to zoom in.
               </p>
               {selected !== null && photos[selected] && (
                 <div className="mt-2 flex items-center gap-3 max-w-sm">
-                  <span className="text-[11px] text-zinc-400 shrink-0">{PHOTO_LABELS[selected]}</span>
+                  <span className="text-[18px] text-zinc-400 shrink-0">{PHOTO_LABELS[selected]}</span>
                   <input
                     type="range"
                     min={1}
@@ -505,7 +505,7 @@ export default function MagazineMaker() {
                   />
                   <button
                     onClick={() => updateAdjust(selected, () => ({ ...DEFAULT_ADJUST }))}
-                    className="text-[11px] text-fuchsia-400 underline shrink-0"
+                    className="text-[18px] text-fuchsia-400 underline shrink-0"
                   >
                     Reset
                   </button>
@@ -535,7 +535,7 @@ export default function MagazineMaker() {
               >
                 <Download size={15} /> Download all 4 pages (PNG)
               </button>
-              <p className="text-[11px] text-zinc-500 mt-1.5">
+              <p className="text-[18px] text-zinc-500 mt-1.5">
                 They download in order, 1 to 4. Your browser may ask to allow several downloads, say yes. Then add them in that order on the{" "}
                 <Link href="/magazine" className="text-fuchsia-400 underline">
                   Magazine Flip

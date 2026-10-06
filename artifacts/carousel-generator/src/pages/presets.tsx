@@ -1046,7 +1046,7 @@ export default function PresetsPage() {
                     </div>
                     <div className="space-y-3 border-t border-gray-800 pt-3">
                       <p className="text-xs text-gray-500 font-medium uppercase tracking-widest">Default First Comments</p>
-                      <p className="text-[11px] text-gray-500 -mt-2">Add a few options, one per line. We'll post a random one each time so it never repeats word for word.</p>
+                      <p className="text-[18px] text-gray-500 -mt-2">Add a few options, one per line. We'll post a random one each time so it never repeats word for word.</p>
                       <div>
                         <Label className="text-xs text-gray-400">Carousel default</Label>
                         <textarea
@@ -1096,7 +1096,7 @@ export default function PresetsPage() {
                         ) : (
                           <div className="w-14 h-14 rounded-xl bg-amber-950/40 border border-amber-500/40 flex flex-col items-center justify-center shrink-0 gap-0.5" title="No logo uploaded yet">
                             <ImageOff className="w-5 h-5 text-amber-400" />
-                            <span className="text-amber-400 text-[9px] font-semibold uppercase tracking-wide leading-none">No logo</span>
+                            <span className="text-amber-400 text-[18px] font-semibold uppercase tracking-wide leading-none">No logo</span>
                           </div>
                         )}
                         <h3 className="text-lg font-semibold text-white">{preset.name}</h3>

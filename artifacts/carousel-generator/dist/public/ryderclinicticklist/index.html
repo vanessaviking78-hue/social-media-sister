@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="theme-color" content="#faf7f3">
+<title>Approved Content List</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  :root{
+    --bg:#faf7f3;
+    --surface:#ffffff;
+    --ink:#241c30;
+    --grey:#726b78;
+    --line:#e5ddd1;
+    --purple:#6b3fa0;
+    --purple-deep:#4b2c74;
+    --gold:#a9865a;
+  }
+
+  *{box-sizing:border-box;}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight:500;
+    line-height:1.55;
+  }
+  ::selection{background:var(--purple); color:#ffffff;}
+  :focus-visible{outline:2px solid var(--purple); outline-offset:2px;}
+
+  .wrap{max-width:760px; margin:0 auto; padding:0 20px 110px;}
+
+  header.top{
+    padding:40px 0 28px;
+    border-bottom:1px solid var(--line);
+    margin-bottom:26px;
+    text-align:center;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--gold);
+    margin:0 0 14px;
+  }
+  h1{
+    font-family:'Playfair Display', 'Inter', serif;
+    font-weight:600;
+    font-size:clamp(30px,6vw,44px);
+    line-height:1.08;
+    letter-spacing:-.01em;
+    margin:0 0 14px;
+    text-wrap:balance;
+    color:var(--purple-deep);
+  }
+  .lede{
+    max-width:54ch;
+    margin:0 auto;
+    color:var(--grey);
+    font-weight:500;
+    font-size:15px;
+  }
+
+  .statusbar{
+    position:sticky; top:0; z-index:5;
+    background:var(--bg);
+    border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:16px;
+    padding:12px 0;
+    margin:0 0 30px;
+  }
+  .wrap > .statusbar{margin-left:-20px; margin-right:-20px; padding-left:20px; padding-right:20px;}
+  .count{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-variant-numeric: tabular-nums;
+    font-size:13px;
+    color:var(--grey);
+    white-space:nowrap;
+  }
+  .count b{color:var(--ink); font-weight:700;}
+  .jumpnav{
+    display:flex; gap:6px; overflow-x:auto; flex:1;
+    scrollbar-width:none;
+  }
+  .jumpnav::-webkit-scrollbar{display:none;}
+  .jumpnav a{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:11px;
+    letter-spacing:.03em;
+    text-decoration:none;
+    color:var(--grey);
+    border:1.5px solid var(--line);
+    border-radius:100px;
+    padding:5px 12px;
+    white-space:nowrap;
+    transition:border-color .15s, color .15s;
+    background:var(--surface);
+  }
+  .jumpnav a:hover{border-color:var(--purple); color:var(--purple);}
+  .synced{
+    display:flex; align-items:center; gap:6px;
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:10.5px;
+    color:var(--grey);
+    white-space:nowrap;
+  }
+  .dot{width:6px; height:6px; border-radius:50%; background:var(--purple); flex:none;}
+  .dot.off{background:var(--line);}
+
+  section.group{margin-bottom:44px; scroll-margin-top:76px;}
+  .group-head{
+    display:flex; align-items:baseline; gap:12px;
+    margin-bottom:4px;
+  }
+  .group-head h2{
+    font-family:'Playfair Display', 'Inter', serif;
+    font-weight:600;
+    font-size:22px;
+    letter-spacing:-.005em;
+    margin:0;
+    color:var(--purple-deep);
+  }
+  .group-head .tally{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:11px;
+    color:var(--grey);
+    font-variant-numeric: tabular-nums;
+  }
+  .group-sub{
+    font-size:13px;
+    font-weight:500;
+    color:var(--grey);
+    margin:0 0 16px;
+  }
+
+  .bar{height:2px; border-radius:2px; margin:10px 0 18px; background:var(--gold);}
+
+  ul.list{list-style:none; margin:0; padding:0; border-top:1px solid var(--line);}
+  .row{
+    border-bottom:1px solid var(--line);
+    overflow:hidden;
+    max-height:80px;
+    transition:max-height .32s ease, opacity .28s ease, padding .32s ease;
+  }
+  .row.leaving{
+    max-height:0;
+    opacity:0;
+    pointer-events:none;
+  }
+  .row label{
+    display:flex; align-items:flex-start; gap:14px;
+    padding:14px 4px;
+    cursor:pointer;
+  }
+  .box{
+    flex:none;
+    width:21px; height:21px; margin-top:2px;
+    border:2px solid var(--grey);
+    border-radius:5px;
+    background:var(--surface);
+    position:relative;
+    transition:border-color .15s, background .15s;
+  }
+  .row input{position:absolute; opacity:0; width:21px; height:21px; margin:0; cursor:pointer;}
+  .box svg{
+    position:absolute; inset:0; margin:auto;
+    width:13px; height:13px;
+    opacity:0; transform:scale(.6);
+    transition:opacity .1s, transform .1s;
+  }
+  .row input:checked ~ .box{background:var(--purple); border-color:var(--purple);}
+  .row input:checked ~ .box svg{opacity:1; transform:scale(1);}
+  .row input:focus-visible ~ .box{outline:2px solid var(--purple); outline-offset:2px;}
+
+  .title{font-size:15.5px; font-weight:500; color:var(--ink);}
+  .row:hover{background:var(--surface);}
+
+  footer.foot{
+    margin-top:50px;
+    padding-top:26px;
+    border-top:1px solid var(--line);
+    text-align:center;
+  }
+  footer.foot p{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--grey);
+    margin:0;
+  }
+
+  .empty-state{
+    display:none;
+    text-align:center;
+    padding:60px 20px;
+    color:var(--grey);
+    font-weight:500;
+  }
+  .empty-state h2{
+    font-family:'Playfair Display', 'Inter', serif;
+    font-weight:600;
+    color:var(--purple-deep);
+    font-size:26px;
+    margin:0 0 10px;
+  }
+
+  .toast{
+    position:fixed;
+    left:50%;
+    bottom:26px;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--purple-deep);
+    color:#ffffff;
+    font-weight:600;
+    font-size:13.5px;
+    padding:12px 16px;
+    border-radius:10px;
+    display:flex; align-items:center; gap:14px;
+    box-shadow:0 10px 30px rgba(36,28,48,.28);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s, transform .2s;
+    z-index:20;
+    max-width:calc(100vw - 40px);
+  }
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0); pointer-events:auto;}
+  .toast button{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:700;
+    font-size:12px;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    background:none;
+    border:none;
+    color:#d7c3f1;
+    cursor:pointer;
+    padding:0;
+    white-space:nowrap;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="top">
+    <p class="eyebrow">The Ryder Clinic &middot; Content pipeline</p>
+    <h1>Approved Content List</h1>
+    <p class="lede">Every hook below is greenlit for tone and claims. Tick it off once it's written and live, and it clears itself off the list.</p>
+  </header>
+
+  <div class="statusbar">
+    <span class="count"><b id="countNum">0</b> written of <b id="totalNum">0</b></span>
+    <nav class="jumpnav">
+      <a href="#g-shilpa">Dr Shilpa</a>
+      <a href="#g-trust">Trust</a>
+      <a href="#g-moments">Change</a>
+      <a href="#g-laser">Laser</a>
+      <a href="#g-tighten">Rejuvenation</a>
+      <a href="#g-skin">Skin</a>
+      <a href="#g-scars">Scars & veins</a>
+      <a href="#g-mens">Men's health</a>
+      <a href="#g-booking">Booking</a>
+    </nav>
+    <span class="synced"><span class="dot off" id="syncDot"></span><span id="syncLabel">connecting</span></span>
+  </div>
+
+  <main id="groups"></main>
+
+  <div class="empty-state" id="emptyState">
+    <h2>All caught up.</h2>
+    <p>Every approved hook has been written. Send over more when you're ready.</p>
+  </div>
+
+  <footer class="foot">
+    <p>Curated by Social Media Sister</p>
+  </footer>
+
+</div>
+
+<div class="toast" id="toast">
+  <span id="toastText">Marked as written</span>
+  <button id="toastUndo" type="button">Undo</button>
+</div>
+
+<script>
+(function(){
+  var ITEMS = [
+    ["shilpa", "I was a GP for eight years before I ever picked up a laser."],
+    ["shilpa", "Every patient I see still gets treated like they're on my NHS list, because to me, they are."],
+    ["shilpa", "I didn't become a doctor to sell treatments. I became one to listen properly."],
+    ["shilpa", "The thing nobody tells you about being a GP is how much of it is just paying attention."],
+    ["shilpa", "I trained in nutrition after medicine because skin never lies about what's going on underneath."],
+    ["shilpa", "My patients don't need a beauty therapist. They need someone who understands why their skin is doing this."],
+    ["shilpa", "I still remember the first patient who cried in my consultation room, not from pain, from relief."],
+    ["shilpa", "Eight years on the wards taught me more about skin than any course ever could."],
+    ["shilpa", "I ask questions most clinics never bother with, because the answer changes everything."],
+    ["shilpa", "Before I'm anyone's aesthetic doctor, I'm still their GP."],
+
+    ["trust", "This isn't a beauty room. It's a clinic, and that's not a marketing line."],
+    ["trust", "I say no more often than I say yes, and that's exactly why patients trust me."],
+    ["trust", "If a treatment isn't right for your skin, I'll tell you before you've even asked the price."],
+    ["trust", "Every consultation starts with your history, not your wish list."],
+    ["trust", "Safety isn't the boring bit of my job. It's the whole point of it."],
+    ["trust", "I trained for years before I was allowed near a single laser."],
+    ["trust", "You should always know exactly why a treatment is being done, not just what it costs."],
+    ["trust", "A proper consultation takes longer than you'd think, and that's deliberate."],
+
+    ["moments", "There's a particular silence when someone looks in the mirror and doesn't flinch."],
+    ["moments", "Confidence doesn't always arrive loudly. Sometimes it's just someone standing a little straighter."],
+    ["moments", "I've watched people stop covering their face with their hair, and that's the real result."],
+    ["moments", "Nobody tells you how much skin can affect the way you speak to people."],
+    ["moments", "The most common thing my patients say isn't 'I look younger.' It's 'I feel like myself again.'"],
+    ["moments", "Some of my patients have hidden their skin for years before they ever sit in that chair."],
+    ["moments", "What changes isn't just the skin. It's how someone walks into a room afterwards."],
+    ["moments", "I've seen grown adults well up over something as simple as clear skin."],
+
+    ["laser", "The women who come to me have usually tried everything else first."],
+    ["laser", "Permanent hair removal isn't vanity, it's giving someone back their mornings."],
+    ["laser", "I treat every skin type differently, because no two patients respond the same way."],
+    ["laser", "Men ask me about this as often as women do, they just ask more quietly."],
+    ["laser", "Shaving every single day for years is exhausting, and I understand why patients want it to stop."],
+    ["laser", "This is one of the treatments where patients genuinely say it changed their daily life, not just their skin."],
+    ["laser", "If you've been let down by hair removal before, the problem was usually the equipment, not you."],
+    ["laser", "I still get patients asking if this actually works for their skin tone. It does, and I'll explain why."],
+
+    ["tighten", "Ageing well doesn't mean chasing your twenties, it means feeling settled in the skin you have now."],
+    ["tighten", "I don't use the words anti-ageing, because that's not what this is about."],
+    ["tighten", "Skin tightening without surgery sounds too good to be true, so let me explain the science."],
+    ["tighten", "The patients who ask about this aren't chasing perfection, they're chasing comfort in photographs."],
+    ["tighten", "There's a difference between skin that looks done and skin that simply looks well, and I aim for the second."],
+    ["tighten", "Rejuvenation isn't about erasing your face, it's about giving it back some of its ease."],
+    ["tighten", "I always explain what's happening beneath the surface, not just what you'll see in the mirror."],
+    ["tighten", "This is often the treatment patients are most nervous about, and the one they regret waiting so long for."],
+
+    ["skin", "Adult acne is one of the loneliest skin conditions I treat, because people assume you should have grown out of it."],
+    ["skin", "Rosacea gets dismissed as just a bit of redness, and I've never once agreed with that."],
+    ["skin", "I've had patients tell me they stopped socialising because of their skin, and that stays with me."],
+    ["skin", "Pigmentation isn't just cosmetic. For a lot of my patients, it's the thing they see first every morning."],
+    ["skin", "Nobody chooses acne, and nobody should be made to feel like they did."],
+    ["skin", "I treat the condition, not just the appearance of it, and that changes the outcome."],
+    ["skin", "Sun damage and pigmentation take years to appear and can take real patience to treat properly, I'll always be honest about that."],
+    ["skin", "The relief on a patient's face when their rosacea finally calms down is one of my favourite parts of this job."],
+
+    ["scars", "A scar can carry years of memory with it, and I never forget that when I'm treating one."],
+    ["scars", "Thread veins are so common, yet so many patients feel embarrassed even asking about them."],
+    ["scars", "I treat venous lake lesions with the same care I'd give any other medical concern, because that's exactly what they are."],
+    ["scars", "Fungal nail infections are more common than people admit, and far more treatable than most think."],
+    ["scars", "Some scars are decades old by the time a patient finally asks me about them."],
+    ["scars", "I always explain what's actually happening in the skin or nail before we talk about treatment."],
+
+    ["mens", "Men rarely say the word tired to their GP. They just live with it for years."],
+    ["mens", "Low testosterone gets brushed off as just getting older, and I don't accept that as an answer."],
+    ["mens", "I've had men apologise for even bringing this up, as if their own health needed permission."],
+    ["mens", "Fatigue, low mood, low drive, these aren't things to just tolerate into your forties and beyond."],
+    ["mens", "Testosterone replacement isn't about chasing youth, it's about a man feeling like himself again."],
+    ["mens", "I always start with proper bloods, not assumptions, before we talk about any treatment."],
+    ["mens", "Men's health gets so little airtime compared to women's, and that silence has a cost."],
+    ["mens", "The men who come to me have often been struggling quietly for a long time before they ask for help."],
+    ["mens", "This is a conversation I take as seriously as any other medical consultation, because it is one."],
+    ["mens", "If you've felt like a lesser version of yourself for a while now, that's worth a proper conversation with me."],
+
+    ["booking", "If your skin has been bothering you for longer than you'd like to admit, book a consultation with me and let's talk it through properly."],
+    ["booking", "I'd rather spend twenty minutes understanding your skin than five minutes selling you a treatment."],
+    ["booking", "Whatever the concern, from acne to scarring to pigmentation, a proper consultation is where I start with every patient."],
+    ["booking", "If you've been putting off asking a doctor about this, that consultation is exactly what I'm here for."]
+  ];
+
+  var GROUPS = [
+    {cat:"shilpa", id:"g-shilpa", title:"Dr Shilpa", sub:"The person behind the doctor."},
+    {cat:"trust", id:"g-trust", title:"Trust & safety", sub:"Why a medical setting is the whole point."},
+    {cat:"moments", id:"g-moments", title:"The quiet moments of change", sub:"What actually changes for a patient."},
+    {cat:"laser", id:"g-laser", title:"Laser hair removal", sub:"Giving people back their mornings."},
+    {cat:"tighten", id:"g-tighten", title:"Skin tightening & rejuvenation", sub:"Ageing well, told honestly."},
+    {cat:"skin", id:"g-skin", title:"Acne, rosacea & pigmentation", sub:"Conditions, not just complexion."},
+    {cat:"scars", id:"g-scars", title:"Scars, veins & other conditions", sub:"Treated with real medical care."},
+    {cat:"mens", id:"g-mens", title:"Men's health & testosterone", sub:"A conversation that deserves airtime."},
+    {cat:"booking", id:"g-booking", title:"Booking a consultation", sub:"Where every patient starts."}
+  ];
+
+  var checkSvg = '<svg viewBox="0 0 12 12" fill="none"><path d="M2 6.2L4.8 9 10 3" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+  var groupsEl = document.getElementById('groups');
+  var byIndex = {};
+  var totalItems = ITEMS.length;
+
+  GROUPS.forEach(function(g){
+    var items = [];
+    ITEMS.forEach(function(it, idx){ if(it[0] === g.cat) items.push({idx:idx, text:it[1]}); });
+
+    var section = document.createElement('section');
+    section.className = 'group';
+    section.id = g.id;
+    section.dataset.cat = g.cat;
+
+    var head = document.createElement('div');
+    head.className = 'group-head';
+    head.innerHTML = '<h2>'+g.title+'</h2><span class="tally"><span class="remaining-tally">'+items.length+'</span> outstanding</span>';
+    section.appendChild(head);
+
+    var sub = document.createElement('p');
+    sub.className = 'group-sub';
+    sub.textContent = g.sub;
+    section.appendChild(sub);
+
+    var bar = document.createElement('div');
+    bar.className = 'bar';
+    section.appendChild(bar);
+
+    var ul = document.createElement('ul');
+    ul.className = 'list';
+
+    items.forEach(function(item){
+      var li = document.createElement('li');
+      li.className = 'row';
+      var label = document.createElement('label');
+
+      var input = document.createElement('input');
+      input.type = 'checkbox';
+      input.dataset.idx = item.idx;
+
+      var box = document.createElement('span');
+      box.className = 'box';
+      box.innerHTML = checkSvg;
+
+      var title = document.createElement('span');
+      title.className = 'title';
+      title.textContent = item.text;
+
+      label.appendChild(input);
+      label.appendChild(box);
+      label.appendChild(title);
+      li.appendChild(label);
+      ul.appendChild(li);
+
+      byIndex[item.idx] = {row:li, input:input, cat:g.cat, text:item.text};
+    });
+
+    section.appendChild(ul);
+    groupsEl.appendChild(section);
+  });
+
+  var countNum = document.getElementById('countNum');
+  var totalNum = document.getElementById('totalNum');
+  var syncDot = document.getElementById('syncDot');
+  var syncLabel = document.getElementById('syncLabel');
+  var emptyState = document.getElementById('emptyState');
+  var toast = document.getElementById('toast');
+  var toastText = document.getElementById('toastText');
+  var toastUndo = document.getElementById('toastUndo');
+
+  totalNum.textContent = totalItems;
+
+  var state = {};
+  var toastTimer = null;
+
+  function updateTallies(){
+    var writtenCount = 0;
+    var remaining = {};
+    GROUPS.forEach(function(g){ remaining[g.cat] = 0; });
+
+    Object.keys(byIndex).forEach(function(idxStr){
+      var idx = Number(idxStr);
+      var entry = byIndex[idx];
+      var done = !!state[idx];
+      if(done) writtenCount++; else remaining[entry.cat]++;
+    });
+
+    GROUPS.forEach(function(g){
+      var el = document.querySelector('#'+g.id+' .remaining-tally');
+      if(el) el.textContent = remaining[g.cat];
+      var section = document.getElementById(g.id);
+      if(section) section.style.display = remaining[g.cat] === 0 ? 'none' : '';
+    });
+
+    countNum.textContent = writtenCount;
+    emptyState.style.display = (writtenCount === totalItems) ? 'block' : 'none';
+  }
+
+  function applyState(next, animate){
+    Object.keys(byIndex).forEach(function(idxStr){
+      var idx = Number(idxStr);
+      var entry = byIndex[idx];
+      var wasDone = !!state[idx];
+      var isDone = !!next[idx];
+      if(isDone !== wasDone){
+        if(isDone){
+          if(animate) entry.row.classList.add('leaving');
+          else entry.row.style.display = 'none';
+        } else {
+          entry.row.classList.remove('leaving');
+          entry.row.style.display = '';
+          entry.input.checked = false;
+        }
+      }
+    });
+    state = next;
+    updateTallies();
+  }
+
+  function showToast(text, onUndo){
+    toastText.textContent = text;
+    toast.classList.add('show');
+    if(toastTimer) clearTimeout(toastTimer);
+    toastUndo.onclick = function(){
+      if(onUndo) onUndo();
+      toast.classList.remove('show');
+      if(toastTimer) clearTimeout(toastTimer);
+    };
+    toastTimer = setTimeout(function(){ toast.classList.remove('show'); }, 5000);
+  }
+
+  var LIST_ID = 'ryder-clinic-approved';
+  var API = '/api/content-ticklist/' + LIST_ID;
+  var pollTimer = null;
+  var writeQueue = Promise.resolve();
+
+  function writeState(idx, val){
+    writeQueue = writeQueue.then(function(){
+      return fetch(API, {
+        method: 'PATCH',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({key:String(idx), value: val})
+      }).then(function(r){
+        if(!r.ok) throw new Error('bad response');
+        syncDot.classList.remove('off');
+        syncLabel.textContent = 'saved & shared';
+      }).catch(function(){
+        syncDot.classList.add('off');
+        syncLabel.textContent = 'not saved, try again in a moment';
+      });
+    });
+  }
+
+  groupsEl.addEventListener('change', function(e){
+    var input = e.target;
+    if(!input || input.type !== 'checkbox') return;
+    var idx = Number(input.dataset.idx);
+
+    if(input.checked){
+      var next = Object.assign({}, state);
+      next[idx] = true;
+      applyState(next, true);
+      writeState(idx, true);
+      showToast('Marked as written', function(){
+        var restore = Object.assign({}, state);
+        delete restore[idx];
+        applyState(restore, false);
+        writeState(idx, false);
+      });
+    } else {
+      var next2 = Object.assign({}, state);
+      delete next2[idx];
+      applyState(next2, false);
+      writeState(idx, false);
+    }
+  });
+
+  updateTallies();
+
+  function fetchState(){
+    return fetch(API, {cache:'no-store'})
+      .then(function(r){ if(!r.ok) throw new Error('bad response'); return r.json(); })
+      .then(function(data){
+        syncDot.classList.remove('off');
+        syncLabel.textContent = 'saved & shared';
+        var raw = (data && data.state) || {};
+        var next = {};
+        Object.keys(raw).forEach(function(k){
+          if(raw[k]) next[Number(k)] = true;
+        });
+        applyState(next, false);
+      })
+      .catch(function(){
+        syncDot.classList.add('off');
+        syncLabel.textContent = 'sync paused';
+      });
+  }
+
+  function connect(){
+    fetchState();
+    if(pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(fetchState, 6000);
+  }
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible') fetchState();
+  });
+  connect();
+
+})();
+</script>
+</body>
+</html>
+

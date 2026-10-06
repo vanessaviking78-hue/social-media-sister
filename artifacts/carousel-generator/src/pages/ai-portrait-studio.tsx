@@ -1079,7 +1079,7 @@ export default function AiPortraitStudio() {
               <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Load a saved prompt…" /></SelectTrigger>
               <SelectContent>
                 {customPrompts.filter((p) => p.name.startsWith("Homework Shots")).length > 0 && (
-                  <SelectItem value="__homework_shots_header" disabled className="text-[10px] uppercase tracking-wide opacity-60">Homework Shots</SelectItem>
+                  <SelectItem value="__homework_shots_header" disabled className="text-[18px] uppercase tracking-wide opacity-60">Homework Shots</SelectItem>
                 )}
                 {customPrompts.filter((p) => p.name.startsWith("Homework Shots")).map((p) => (
                   <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
@@ -1116,10 +1116,10 @@ export default function AiPortraitStudio() {
             <div className="flex flex-col gap-2">
               {customPrompts.filter((p) => p.name.startsWith("Homework Shots")).length > 0 && (
                 <div className="flex flex-col gap-1">
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">Homework Shots</span>
+                  <span className="text-[18px] uppercase tracking-wide text-muted-foreground/70">Homework Shots</span>
                   <div className="flex flex-wrap gap-1.5">
                     {customPrompts.filter((p) => p.name.startsWith("Homework Shots")).map((p) => (
-                      <span key={p.id} className="inline-flex items-center gap-1 text-[10px] bg-white/5 border border-border/40 rounded-full px-2 py-1 text-muted-foreground">
+                      <span key={p.id} className="inline-flex items-center gap-1 text-[18px] bg-white/5 border border-border/40 rounded-full px-2 py-1 text-muted-foreground">
                         {p.name}
                         <button onClick={() => handleDeletePrompt(p.id)} className="hover:text-red-400"><X className="w-3 h-3" /></button>
                       </span>
@@ -1130,7 +1130,7 @@ export default function AiPortraitStudio() {
               {customPrompts.filter((p) => !p.name.startsWith("Homework Shots")).length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {customPrompts.filter((p) => !p.name.startsWith("Homework Shots")).map((p) => (
-                    <span key={p.id} className="inline-flex items-center gap-1 text-[10px] bg-white/5 border border-border/40 rounded-full px-2 py-1 text-muted-foreground">
+                    <span key={p.id} className="inline-flex items-center gap-1 text-[18px] bg-white/5 border border-border/40 rounded-full px-2 py-1 text-muted-foreground">
                       {p.name}
                       <button onClick={() => handleDeletePrompt(p.id)} className="hover:text-red-400"><X className="w-3 h-3" /></button>
                     </span>
@@ -1197,19 +1197,19 @@ export default function AiPortraitStudio() {
                         <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => downloadReel(mj.videoUrl!)}
-                            className="flex-1 flex items-center justify-center gap-1 text-[10px] h-6 rounded border border-border/40 text-muted-foreground hover:text-foreground transition-colors"
+                            className="flex-1 flex items-center justify-center gap-1 text-[18px] h-6 rounded border border-border/40 text-muted-foreground hover:text-foreground transition-colors"
                           >
                             <Download className="w-3 h-3" /> Download
                           </button>
                           {mj.libraryId ? (
-                            <span className="flex-1 text-[9px] text-green-500 flex items-center justify-center gap-0.5 shrink-0">
+                            <span className="flex-1 text-[18px] text-green-500 flex items-center justify-center gap-0.5 shrink-0">
                               <Check className="w-3 h-3" /> Saved
                             </span>
                           ) : (
                             <button
                               onClick={() => saveReelToLibrary(pid)}
                               disabled={savingReel === pid}
-                              className="flex-1 flex items-center justify-center gap-1 text-[10px] h-6 rounded border border-green-500/40 text-green-400 hover:bg-green-950/30 transition-colors disabled:opacity-50"
+                              className="flex-1 flex items-center justify-center gap-1 text-[18px] h-6 rounded border border-green-500/40 text-green-400 hover:bg-green-950/30 transition-colors disabled:opacity-50"
                             >
                               {savingReel === pid ? <Loader2 className="w-3 h-3 animate-spin" /> : <BookImage className="w-3 h-3" />} Save to library
                             </button>
@@ -1219,8 +1219,8 @@ export default function AiPortraitStudio() {
                     ) : isActive ? (
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] text-muted-foreground truncate">{mj.message}</span>
-                          <span className="text-[10px] text-muted-foreground ml-1 shrink-0">{Math.round(mj.progress * 100)}%</span>
+                          <span className="text-[18px] text-muted-foreground truncate">{mj.message}</span>
+                          <span className="text-[18px] text-muted-foreground ml-1 shrink-0">{Math.round(mj.progress * 100)}%</span>
                         </div>
                         <div className="h-1 rounded-full bg-muted/30 overflow-hidden">
                           <div className="h-full bg-primary/70 transition-all duration-500 rounded-full" style={{ width: `${Math.round(mj.progress * 100)}%` }} />
@@ -1228,9 +1228,9 @@ export default function AiPortraitStudio() {
                       </div>
                     ) : mj?.status === "failed" ? (
                       <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] text-red-400 truncate flex-1">{mj.error ?? "Failed"}</span>
+                        <span className="text-[18px] text-red-400 truncate flex-1">{mj.error ?? "Failed"}</span>
                         <button
-                          className="text-[10px] text-muted-foreground hover:text-foreground shrink-0"
+                          className="text-[18px] text-muted-foreground hover:text-foreground shrink-0"
                           onClick={() => setMotionJobMap(prev => { const n = { ...prev }; delete n[pid]; return n; })}
                         >
                           Retry
@@ -1377,7 +1377,7 @@ export default function AiPortraitStudio() {
               />
               <div className="w-6 h-6 rounded-md border border-border/40 flex-shrink-0" style={{ backgroundColor: globalBgColour || "transparent" }} />
             </div>
-            <p className="text-[10px] text-muted-foreground">Leave blank to use each preset's own backdrop. Set a colour here to force a flat, solid background on every image in this batch.</p>
+            <p className="text-[18px] text-muted-foreground">Leave blank to use each preset's own backdrop. Set a colour here to force a flat, solid background on every image in this batch.</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -1492,7 +1492,7 @@ export default function AiPortraitStudio() {
 
             {activeSection === "new" && (
 <>
-<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">New Portraits</p>
+<p className="text-[18px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">New Portraits</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
               {NEW_PORTRAITS_PRESETS.map((preset) => {
@@ -1516,7 +1516,7 @@ export default function AiPortraitStudio() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium leading-snug">{preset.name}</p>
                         {preset.hasColour && (
-                          <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                          <Badge variant="outline" className="mt-1 text-[18px] px-1.5 py-0 border-violet-500/30 text-violet-400">
                             scrubs colour
                           </Badge>
                         )}
@@ -1544,7 +1544,7 @@ export default function AiPortraitStudio() {
 
 {activeSection === "july" && (
 <>
-<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">July 2nd Shoot</p>
+<p className="text-[18px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">July 2nd Shoot</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
               {JULY_2ND_SHOOT_PRESETS.map((preset) => {
@@ -1568,7 +1568,7 @@ export default function AiPortraitStudio() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium leading-snug">{preset.name}</p>
                         {preset.hasColour && (
-                          <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                          <Badge variant="outline" className="mt-1 text-[18px] px-1.5 py-0 border-violet-500/30 text-violet-400">
                             scrubs colour
                           </Badge>
                         )}
@@ -1596,7 +1596,7 @@ export default function AiPortraitStudio() {
 
 {activeSection === "classy" && (
 <>
-<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">CLASSY CORPORATE</p>
+<p className="text-[18px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">CLASSY CORPORATE</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
               {CLASSY_CORPORATE_PRESETS.map((preset) => {
@@ -1620,7 +1620,7 @@ export default function AiPortraitStudio() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium leading-snug">{preset.name}</p>
                         {preset.hasColour && (
-                          <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                          <Badge variant="outline" className="mt-1 text-[18px] px-1.5 py-0 border-violet-500/30 text-violet-400">
                             scrubs colour
                           </Badge>
                         )}
@@ -1649,7 +1649,7 @@ export default function AiPortraitStudio() {
 
 {activeSection === "winter" && (
 <>
-<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">WINTER WOOLIES</p>
+<p className="text-[18px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">WINTER WOOLIES</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
               {WINTER_WOOLIES_PRESETS.map((preset) => {
@@ -1673,7 +1673,7 @@ export default function AiPortraitStudio() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium leading-snug">{preset.name}</p>
                         {preset.hasColour && (
-                          <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                          <Badge variant="outline" className="mt-1 text-[18px] px-1.5 py-0 border-violet-500/30 text-violet-400">
                             scrubs colour
                           </Badge>
                         )}
@@ -1701,7 +1701,7 @@ export default function AiPortraitStudio() {
 
 {activeSection === "autumn" && (
 <>
-<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">AUTUMN</p>
+<p className="text-[18px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">AUTUMN</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
               {AUTUMN_PRESETS.map((preset) => {
@@ -1725,7 +1725,7 @@ export default function AiPortraitStudio() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium leading-snug">{preset.name}</p>
                         {preset.hasColour && (
-                          <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                          <Badge variant="outline" className="mt-1 text-[18px] px-1.5 py-0 border-violet-500/30 text-violet-400">
                             scrubs colour
                           </Badge>
                         )}
@@ -1753,7 +1753,7 @@ export default function AiPortraitStudio() {
 
 {activeSection === "casual" && (
 <>
-<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">CASUAL</p>
+<p className="text-[18px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">CASUAL</p>
 <p className="text-xs text-muted-foreground mb-3">Every shot is set in a hot pink office. Pick the outfit below, all in black.</p>
 
             <div className="mb-4 rounded-lg border border-pink-500/30 bg-pink-500/5 p-3">
@@ -1767,7 +1767,7 @@ export default function AiPortraitStudio() {
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
-              <p className="text-[11px] text-muted-foreground/70 mt-1.5">Tick a shot to change the outfit for that one picture only.</p>
+              <p className="text-[18px] text-muted-foreground/70 mt-1.5">Tick a shot to change the outfit for that one picture only.</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
@@ -1817,7 +1817,7 @@ export default function AiPortraitStudio() {
 
 {activeSection === "photo" && (
 <>
-<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">Women — Photo Studio</p>
+<p className="text-[18px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">Women — Photo Studio</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
               {PHOTO_STUDIO_PRESETS.map((preset) => {
@@ -1841,7 +1841,7 @@ export default function AiPortraitStudio() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium leading-snug">{preset.name}</p>
                         {preset.hasColour && (
-                          <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                          <Badge variant="outline" className="mt-1 text-[18px] px-1.5 py-0 border-violet-500/30 text-violet-400">
                             scrubs colour
                           </Badge>
                         )}
@@ -1872,7 +1872,7 @@ export default function AiPortraitStudio() {
 {/* ── Injector Collection ── */}
             <div className="mt-6 border-t border-border/20 pt-5">
               <div className="flex items-center justify-between mb-1">
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium">Injector Collection</p>
+                <p className="text-[18px] uppercase tracking-widest text-muted-foreground/50 font-medium">Injector Collection</p>
                 <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={() => deselectCategory(INJECTOR_COLLECTION_PRESETS.map((p) => p.id))}>Clear all</button>
               </div>
               <p className="text-xs text-muted-foreground mb-4">100 presets across 10 categories. Select up to 30 per generation run.</p>
@@ -1888,7 +1888,7 @@ export default function AiPortraitStudio() {
                         <span className="text-xs font-medium text-foreground/70">{cat.label}</span>
                         <div className="flex gap-2">
                           <button
-                            className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                            className="text-[18px] text-muted-foreground hover:text-foreground transition-colors"
                             onClick={() => allCatSelected ? deselectCategory(cat.presetIds) : selectCategory(cat.presetIds)}
                           >
                             {allCatSelected ? "None" : noneCatSelected ? "All" : "All"}
@@ -1917,7 +1917,7 @@ export default function AiPortraitStudio() {
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium leading-snug">{preset.name}</p>
                                   {preset.hasColour && (
-                                    <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                                    <Badge variant="outline" className="mt-1 text-[18px] px-1.5 py-0 border-violet-500/30 text-violet-400">
                                       scrubs colour
                                     </Badge>
                                   )}
@@ -1950,7 +1950,7 @@ export default function AiPortraitStudio() {
 {activeSection === "homework" && (
 <>
 <div className="flex items-center justify-between mb-2">
-  <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium">Homework Shots</p>
+  <p className="text-[18px] uppercase tracking-widest text-muted-foreground/50 font-medium">Homework Shots</p>
   <div className="flex items-center gap-3">
     <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={() => selectCategory(HOMEWORK_SHOTS_PRESETS.map((p) => p.id))}>Select all</button>
     <button className="text-xs text-muted-foreground hover:text-foreground transition-colors" onClick={() => deselectCategory(HOMEWORK_SHOTS_PRESETS.map((p) => p.id))}>Clear all</button>
@@ -1958,7 +1958,7 @@ export default function AiPortraitStudio() {
 </div>
 <div className="flex flex-wrap items-end gap-2 mb-3 p-2 rounded-lg border border-border/30 bg-muted/10">
   <div className="flex-1 min-w-[140px]">
-    <label className="block text-[10px] uppercase tracking-wide text-muted-foreground/60 mb-1">Background colour (all 20)</label>
+    <label className="block text-[18px] uppercase tracking-wide text-muted-foreground/60 mb-1">Background colour (all 20)</label>
     <input
       type="text"
       value={bulkBackdropColour}
@@ -1968,7 +1968,7 @@ export default function AiPortraitStudio() {
     />
   </div>
   <div className="flex-1 min-w-[140px]">
-    <label className="block text-[10px] uppercase tracking-wide text-muted-foreground/60 mb-1">Scrubs colour (all 20)</label>
+    <label className="block text-[18px] uppercase tracking-wide text-muted-foreground/60 mb-1">Scrubs colour (all 20)</label>
     <input
       type="text"
       value={bulkScrubColour}
@@ -2019,7 +2019,7 @@ export default function AiPortraitStudio() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium leading-snug">{preset.name}</p>
                         {preset.hasColour && (
-                          <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                          <Badge variant="outline" className="mt-1 text-[18px] px-1.5 py-0 border-violet-500/30 text-violet-400">
                             background colour
                           </Badge>
                         )}
@@ -2034,7 +2034,7 @@ export default function AiPortraitStudio() {
                             />
                           </div>
                         )}
-                        <Badge variant="outline" className="mt-1 ml-1 text-[10px] px-1.5 py-0 border-fuchsia-500/30 text-fuchsia-400">
+                        <Badge variant="outline" className="mt-1 ml-1 text-[18px] px-1.5 py-0 border-fuchsia-500/30 text-fuchsia-400">
                           scrubs colour
                         </Badge>
                         {isSelected && (
@@ -2079,7 +2079,7 @@ export default function AiPortraitStudio() {
                           <span className="text-xs font-medium text-foreground/70">{cat.label}</span>
                           <div className="flex gap-2">
                             <button
-                              className="text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+                              className="text-[18px] text-muted-foreground hover:text-foreground transition-colors"
                               onClick={() => cat.ids.every((id) => selectedPresets.has(id)) ? deselectCategory(cat.ids) : selectCategory(cat.ids)}
                             >
                               {cat.ids.every((id) => selectedPresets.has(id)) ? "None" : "All"}
@@ -2135,7 +2135,7 @@ export default function AiPortraitStudio() {
                                     <p className="text-sm font-medium leading-snug">{preset.name}</p>
                                     {preset.hasColour && (
                                       <div className="flex items-center gap-1.5 mt-1">
-                                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                                        <Badge variant="outline" className="text-[18px] px-1.5 py-0 border-violet-500/30 text-violet-400">
                                           scrubs colour
                                         </Badge>
                                         <div className="w-3 h-3 rounded-sm border border-border/40 flex-shrink-0" style={{ backgroundColor: menScrubColor }} />
@@ -2245,17 +2245,17 @@ export default function AiPortraitStudio() {
                         ) : card.status === "generating" || card.status === "idle" ? (
                           <div className="flex flex-col items-center gap-2 text-muted-foreground/50">
                             <Loader2 className="w-6 h-6 animate-spin" />
-                            <span className="text-[10px]">Generating…</span>
+                            <span className="text-[18px]">Generating…</span>
                           </div>
                         ) : card.status === "rate-limited" ? (
                           <div className="flex flex-col items-center gap-2 text-amber-400/70">
                             <Clock className="w-6 h-6" />
-                            <span className="text-[10px]">Rate limited — waiting</span>
+                            <span className="text-[18px]">Rate limited — waiting</span>
                           </div>
                         ) : (
                           <div className="flex flex-col items-center gap-2 text-red-400/70 px-3 text-center">
                             <AlertCircle className="w-6 h-6" />
-                            <span className="text-[10px] leading-snug">{card.failureReason ?? "Generation failed"}</span>
+                            <span className="text-[18px] leading-snug">{card.failureReason ?? "Generation failed"}</span>
                           </div>
                         )}
                       </div>
@@ -2273,7 +2273,7 @@ export default function AiPortraitStudio() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="flex-1 text-[10px] h-6 px-1"
+                                  className="flex-1 text-[18px] h-6 px-1"
                                   onClick={() => handleDownload(card)}
                                 >
                                   <Download className="w-3 h-3 mr-1" />
@@ -2283,7 +2283,7 @@ export default function AiPortraitStudio() {
                                   imageUrl={card.outputImageUrl}
                                   name={presetName(card.scenarioId)}
                                   size="sm"
-                                  className="flex-1 text-[10px] h-6 px-1"
+                                  className="flex-1 text-[18px] h-6 px-1"
                                   label="Canva"
                                 />
                                 <Popover
@@ -2291,7 +2291,7 @@ export default function AiPortraitStudio() {
                                   onOpenChange={(o) => setSavePopoverOpen(o ? pid : null)}
                                 >
                                   <PopoverTrigger asChild>
-                                    <Button size="sm" variant="outline" className="flex-1 text-[10px] h-6 px-1">
+                                    <Button size="sm" variant="outline" className="flex-1 text-[18px] h-6 px-1">
                                       <BookImage className="w-3 h-3 mr-1" />
                                       Save
                                     </Button>
@@ -2334,19 +2334,19 @@ export default function AiPortraitStudio() {
                                     <div className="flex items-center gap-1.5">
                                       <button
                                         onClick={() => downloadReel(mj.videoUrl!)}
-                                        className="flex-1 flex items-center justify-center gap-1 text-[10px] h-6 rounded border border-border/40 text-muted-foreground hover:text-foreground transition-colors"
+                                        className="flex-1 flex items-center justify-center gap-1 text-[18px] h-6 rounded border border-border/40 text-muted-foreground hover:text-foreground transition-colors"
                                       >
                                         <Download className="w-3 h-3" /> Download
                                       </button>
                                       {mj.libraryId ? (
-                                        <span className="flex-1 text-[9px] text-green-500 flex items-center justify-center gap-0.5 shrink-0">
+                                        <span className="flex-1 text-[18px] text-green-500 flex items-center justify-center gap-0.5 shrink-0">
                                           <Check className="w-3 h-3" /> Saved
                                         </span>
                                       ) : (
                                         <button
                                           onClick={() => saveReelToLibrary(pid)}
                                           disabled={savingReel === pid}
-                                          className="flex-1 flex items-center justify-center gap-1 text-[10px] h-6 rounded border border-green-500/40 text-green-400 hover:bg-green-950/30 transition-colors disabled:opacity-50"
+                                          className="flex-1 flex items-center justify-center gap-1 text-[18px] h-6 rounded border border-green-500/40 text-green-400 hover:bg-green-950/30 transition-colors disabled:opacity-50"
                                         >
                                           {savingReel === pid ? <Loader2 className="w-3 h-3 animate-spin" /> : <BookImage className="w-3 h-3" />} Save to library
                                         </button>
@@ -2356,8 +2356,8 @@ export default function AiPortraitStudio() {
                                 ) : isActive ? (
                                   <div>
                                     <div className="flex items-center justify-between mb-1">
-                                      <span className="text-[10px] text-muted-foreground truncate">{mj.message}</span>
-                                      <span className="text-[10px] text-muted-foreground ml-1 shrink-0">{Math.round(mj.progress * 100)}%</span>
+                                      <span className="text-[18px] text-muted-foreground truncate">{mj.message}</span>
+                                      <span className="text-[18px] text-muted-foreground ml-1 shrink-0">{Math.round(mj.progress * 100)}%</span>
                                     </div>
                                     <div className="h-1 rounded-full bg-muted/30 overflow-hidden">
                                       <div
@@ -2368,9 +2368,9 @@ export default function AiPortraitStudio() {
                                   </div>
                                 ) : mj?.status === "failed" ? (
                                   <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] text-red-400 truncate flex-1">{mj.error ?? "Failed"}</span>
+                                    <span className="text-[18px] text-red-400 truncate flex-1">{mj.error ?? "Failed"}</span>
                                     <button
-                                      className="text-[10px] text-muted-foreground hover:text-foreground shrink-0"
+                                      className="text-[18px] text-muted-foreground hover:text-foreground shrink-0"
                                       onClick={() => setMotionJobMap(prev => { const n = { ...prev }; delete n[pid]; return n; })}
                                     >
                                       Retry
@@ -2382,7 +2382,7 @@ export default function AiPortraitStudio() {
                                       value={motionSelection[pid] ?? "cinematic-drift"}
                                       onValueChange={(v) => setMotionSelection(prev => ({ ...prev, [pid]: v }))}
                                     >
-                                      <SelectTrigger className="h-6 text-[10px]">
+                                      <SelectTrigger className="h-6 text-[18px]">
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
@@ -2394,7 +2394,7 @@ export default function AiPortraitStudio() {
                                     <div className="flex gap-1">
                                       <Button
                                         size="sm"
-                                        className="flex-1 text-[10px] h-6 px-1"
+                                        className="flex-1 text-[18px] h-6 px-1"
                                         onClick={() => handleAnimate(card, motionSelection[pid] ?? "cinematic-drift")}
                                       >
                                         Generate
@@ -2402,7 +2402,7 @@ export default function AiPortraitStudio() {
                                       <Button
                                         size="sm"
                                         variant="ghost"
-                                        className="text-[10px] h-6 px-1"
+                                        className="text-[18px] h-6 px-1"
                                         onClick={() => setMotionPickerOpen(null)}
                                       >
                                         Cancel
@@ -2413,7 +2413,7 @@ export default function AiPortraitStudio() {
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    className="w-full text-[10px] h-6 px-1"
+                                    className="w-full text-[18px] h-6 px-1"
                                     onClick={() => setMotionPickerOpen(pid)}
                                   >
                                     <Film className="w-3 h-3 mr-1" /> Motion Reel

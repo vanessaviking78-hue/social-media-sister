@@ -169,7 +169,7 @@ export default function Brand() {
                 Social Media Sister
               </span>
             </div>
-            <p className="text-[10px] text-zinc-600 text-center py-1.5 bg-zinc-900">Preview</p>
+            <p className="text-[18px] text-zinc-600 text-center py-1.5 bg-zinc-900">Preview</p>
           </div>
         </section>
 

@@ -518,7 +518,7 @@ export default function Calendar() {
                       {day.day}
                     </span>
                     {day.isCurrentMonth && dayPosts.length > 0 && (
-                      <span className="text-[10px] text-muted-foreground">{dayPosts.length}</span>
+                      <span className="text-[18px] text-muted-foreground">{dayPosts.length}</span>
                     )}
                   </div>
                   <div className="space-y-1">
@@ -532,15 +532,15 @@ export default function Calendar() {
                         onDragStart={(e) => { if (isSched) return; e.stopPropagation(); handleDragStart(e, post.id); }}
                         onClick={(e) => { e.stopPropagation(); if (!isSched) openEdit(post); }}
                         title={isSched ? "Already scheduled to go out" : undefined}
-                        className={`group rounded px-1.5 py-1 text-[11px] leading-tight transition-all ${isSched ? "cursor-default opacity-95" : "cursor-pointer hover:ring-1 hover:ring-white/20"}`}
+                        className={`group rounded px-1.5 py-1 text-[18px] leading-tight transition-all ${isSched ? "cursor-default opacity-95" : "cursor-pointer hover:ring-1 hover:ring-white/20"}`}
                         style={{ backgroundColor: post.color + "22", borderLeft: `3px solid ${post.color}` }}
                       >
                         {confirmingDelete ? (
                           <div className="flex items-center justify-between gap-1">
-                            <span className="text-[10px] text-foreground/80">Delete?</span>
+                            <span className="text-[18px] text-foreground/80">Delete?</span>
                             <div className="flex items-center gap-1">
-                              <button onClick={(e) => { e.stopPropagation(); handleDeleteScheduled(post.id); }} className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/80 text-white hover:bg-red-500">Yes</button>
-                              <button onClick={(e) => { e.stopPropagation(); setDeleteSchedConfirmId(null); }} className="text-[9px] px-1.5 py-0.5 rounded bg-white/10 text-muted-foreground hover:bg-white/20">No</button>
+                              <button onClick={(e) => { e.stopPropagation(); handleDeleteScheduled(post.id); }} className="text-[18px] px-1.5 py-0.5 rounded bg-red-500/80 text-white hover:bg-red-500">Yes</button>
+                              <button onClick={(e) => { e.stopPropagation(); setDeleteSchedConfirmId(null); }} className="text-[18px] px-1.5 py-0.5 rounded bg-white/10 text-muted-foreground hover:bg-white/20">No</button>
                             </div>
                           </div>
                         ) : (
@@ -562,9 +562,9 @@ export default function Calendar() {
                           )}
                         </div>
                         <div className="flex items-center gap-1 ml-4 mt-0.5">
-                          <span className="text-[9px] px-1 py-px rounded bg-white/10 text-muted-foreground">{getPostTypeBadge(post.postType)}</span>
-                          {isSched && <span className="text-[9px] px-1 py-px rounded bg-cyan-400/20 text-cyan-300">Scheduled</span>}
-                          {post.clientName && <span className="text-[10px] text-muted-foreground truncate">{post.clientName}</span>}
+                          <span className="text-[18px] px-1 py-px rounded bg-white/10 text-muted-foreground">{getPostTypeBadge(post.postType)}</span>
+                          {isSched && <span className="text-[18px] px-1 py-px rounded bg-cyan-400/20 text-cyan-300">Scheduled</span>}
+                          {post.clientName && <span className="text-[18px] text-muted-foreground truncate">{post.clientName}</span>}
                         </div>
                         </>
                         )}
@@ -575,14 +575,14 @@ export default function Calendar() {
                       expandedDay === day.date ? (
                         <button
                           onClick={(e) => { e.stopPropagation(); setExpandedDay(null); }}
-                          className="text-[10px] text-pink-400 hover:text-pink-300 text-center w-full cursor-pointer"
+                          className="text-[18px] text-pink-400 hover:text-pink-300 text-center w-full cursor-pointer"
                         >
                           Show less
                         </button>
                       ) : (
                         <button
                           onClick={(e) => { e.stopPropagation(); setExpandedDay(day.date); }}
-                          className="text-[10px] text-pink-400 hover:text-pink-300 text-center w-full cursor-pointer"
+                          className="text-[18px] text-pink-400 hover:text-pink-300 text-center w-full cursor-pointer"
                         >
                           +{dayPosts.length - 3} more
                         </button>
@@ -637,10 +637,10 @@ export default function Calendar() {
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className="text-[10px] px-1 py-px rounded bg-pink-500/20 text-pink-400 uppercase tracking-wide font-medium">
+                        <span className="text-[18px] px-1 py-px rounded bg-pink-500/20 text-pink-400 uppercase tracking-wide font-medium">
                           {item.postType}
                         </span>
-                        <span className="text-[10px] text-muted-foreground truncate">{item.clientName}</span>
+                        <span className="text-[18px] text-muted-foreground truncate">{item.clientName}</span>
                       </div>
                       <p className="text-xs text-foreground/80 line-clamp-2 leading-snug">{item.caption || "No caption"}</p>
                     </div>

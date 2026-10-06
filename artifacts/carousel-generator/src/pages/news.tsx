@@ -147,7 +147,7 @@ export default function News() {
                   {items.map((item) => (
                     <div key={item.id} className="rounded-xl border border-border/40 p-4 flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-[18px] text-muted-foreground">
                           {new Date(item.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
                         </p>
                         <p className="font-medium text-sm mt-0.5">{item.title}</p>

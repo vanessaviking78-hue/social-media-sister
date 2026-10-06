@@ -142,7 +142,7 @@ export default function CsvCreator() {
             placeholder="e.g. www.theirclinic.co.uk"
             className="bg-zinc-900 border-white/10 text-sm placeholder:text-zinc-600"
           />
-          <p className="text-[11px] text-zinc-600 mt-1.5">We'll pull a bit of context from it to keep facts right.</p>
+          <p className="text-[18px] text-zinc-600 mt-1.5">We'll pull a bit of context from it to keep facts right.</p>
         </div>
 
         <div>
@@ -177,9 +177,9 @@ export default function CsvCreator() {
             <div className="flex flex-col gap-4 max-h-[60vh] overflow-y-auto pr-1">
               {posts.map((post, idx) => (
                 <div key={idx} className="border border-white/8 rounded-lg p-4 flex flex-col gap-2 bg-white/[0.02]">
-                  <p className="text-[11px] font-semibold text-zinc-500">Post {idx + 1}</p>
+                  <p className="text-[18px] font-semibold text-zinc-500">Post {idx + 1}</p>
                   <div>
-                    <Label className="text-[11px] text-zinc-500 mb-1 block">Hook (slide 1)</Label>
+                    <Label className="text-[18px] text-zinc-500 mb-1 block">Hook (slide 1)</Label>
                     <Textarea
                       value={post.hook}
                       onChange={(e) => updatePost(idx, { hook: e.target.value })}
@@ -187,7 +187,7 @@ export default function CsvCreator() {
                     />
                   </div>
                   <div>
-                    <Label className="text-[11px] text-zinc-500 mb-1 block">Body (slide 2)</Label>
+                    <Label className="text-[18px] text-zinc-500 mb-1 block">Body (slide 2)</Label>
                     <Textarea
                       value={post.body1}
                       onChange={(e) => updatePost(idx, { body1: e.target.value })}
@@ -195,7 +195,7 @@ export default function CsvCreator() {
                     />
                   </div>
                   <div>
-                    <Label className="text-[11px] text-zinc-500 mb-1 block">Body (slide 3)</Label>
+                    <Label className="text-[18px] text-zinc-500 mb-1 block">Body (slide 3)</Label>
                     <Textarea
                       value={post.body2}
                       onChange={(e) => updatePost(idx, { body2: e.target.value })}
@@ -203,7 +203,7 @@ export default function CsvCreator() {
                     />
                   </div>
                   <div>
-                    <Label className="text-[11px] text-zinc-500 mb-1 block">CTA (slide 4)</Label>
+                    <Label className="text-[18px] text-zinc-500 mb-1 block">CTA (slide 4)</Label>
                     <Textarea
                       value={post.cta}
                       onChange={(e) => updatePost(idx, { cta: e.target.value })}
@@ -222,7 +222,7 @@ export default function CsvCreator() {
             >
               <Download className="w-4 h-4 mr-2" />Download CSV ({posts.length} posts)
             </Button>
-            <p className="text-[11px] text-zinc-600 text-center">
+            <p className="text-[18px] text-zinc-600 text-center">
               Drops straight into Bulk Carousel Creator, headers are hook, body1, body2, cta.
             </p>
           </div>

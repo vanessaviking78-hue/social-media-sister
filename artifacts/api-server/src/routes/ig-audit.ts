@@ -68,6 +68,8 @@ type AuditRow = {
   flags: Flag[];
   posts: any[];
   sales_html: string;
+  status: string;
+  error_message: string;
   created_at: string;
 };
 
@@ -124,7 +126,15 @@ async function fetchViaApify(handle: string, token: string): Promise<{ profile: 
     throw Object.assign(new Error("The scraper had a wobble. Give it a minute and try again."), { status: 502 });
   }
   const item = Array.isArray(data) ? data[0] : null;
+  if (item?.isRestrictedProfile) {
+    // Instagram itself is age-gating this profile's posts from anyone who isn't logged in, this shows up a lot
+    // on aesthetics/clinic accounts. It's not a typo and not us losing the account, Instagram just won't hand
+    // over the posts to a logged-out scraper. There's no reliable fix on our end for this one.
+    logger.warn({ handle, reason: item.restrictionReason }, "ig-audit: Instagram age-restricted this profile to the scraper");
+    throw Object.assign(new Error(`Instagram's put an age restriction on ${handle}'s posts, so the scraper can't see them. This isn't a spelling issue, it's Instagram blocking logged-out access to that account.`), { status: 422 });
+  }
   if (!item || item.error || !item.username) {
+    logger.warn({ handle, itemCount: Array.isArray(data) ? data.length : null, item }, "ig-audit: scraper returned no usable profile");
     throw Object.assign(new Error("I couldn't find that account. Check the handle is spelled exactly right."), { status: 404 });
   }
   if (item.private === true) {
@@ -522,13 +532,13 @@ OUTPUT: clean semantic HTML only (h2, p, strong, ul, li). No inline styles, no h
 // ---------------------------------------------------------------------------
 const rowsOf = (r: unknown) => ((r as { rows?: any[] }).rows ?? []) as any[];
 
-const LIST_COLS = sql`id, handle, display_name, followers, score, tag, created_at`;
-const FULL_COLS = sql`id, handle, display_name, followers, score, tag, notes, style, contact_name, profile, breakdown, metrics, flags, posts, sales_html, created_at`;
+const LIST_COLS = sql`id, handle, display_name, followers, score, tag, status, created_at`;
+const FULL_COLS = sql`id, handle, display_name, followers, score, tag, notes, style, contact_name, profile, breakdown, metrics, flags, posts, sales_html, status, error_message, created_at`;
 
-// GET /api/ig-audit  -> history list
+// GET /api/ig-audit  -> history list (running/failed ones are only visible by opening them directly, while being polled)
 router.get("/ig-audit", async (_req, res) => {
   try {
-    const result = await db.execute(sql`SELECT ${LIST_COLS} FROM ig_audits ORDER BY created_at DESC LIMIT 300`);
+    const result = await db.execute(sql`SELECT ${LIST_COLS} FROM ig_audits WHERE status = 'ready' ORDER BY created_at DESC LIMIT 300`);
     res.json({ audits: rowsOf(result) });
   } catch (err) {
     logger.error({ err }, "Failed to list ig audits");
@@ -541,7 +551,7 @@ router.get("/ig-audit/insights", async (_req, res) => {
   try {
     const result = await db.execute(sql`
       SELECT DISTINCT ON (handle) handle, score, breakdown, metrics, created_at
-      FROM ig_audits ORDER BY handle, created_at DESC
+      FROM ig_audits WHERE status = 'ready' ORDER BY handle, created_at DESC
     `);
     const latest = rowsOf(result);
     if (!latest.length) return res.json({ accounts: 0 });
@@ -627,6 +637,10 @@ router.delete("/ig-audit/:id", async (req, res) => {
 });
 
 // POST /api/ig-audit/run { handle, style?, contactName?, tag? }
+// The scrape can take up to 90s and the write-up adds more on top, which was longer than Netlify's
+// proxy will hold a request open, so the browser got Netlify's own timeout page back instead of JSON.
+// Fix: reply the moment a placeholder row exists, do the slow work in the background, and let the
+// page poll GET /ig-audit/:id (see openAndPoll on the frontend) until status flips off "running".
 router.post("/ig-audit/run", async (req, res) => {
   try {
     const handle = cleanHandle(String(req.body?.handle || ""));
@@ -638,6 +652,27 @@ router.post("/ig-audit/run", async (req, res) => {
       return res.status(400).json({ error: "That doesn't look like an Instagram handle. Try it without spaces, like clinicname_aesthetics." });
     }
 
+    const placeholder = await db.execute(sql`
+      INSERT INTO ig_audits (handle, display_name, tag, style, contact_name, status)
+      VALUES (${handle}, ${handle}, ${tag}, ${style}, ${contactName}, 'running')
+      RETURNING ${FULL_COLS}
+    `);
+    const row = rowsOf(placeholder)[0];
+    res.json(row);
+
+    // Fire and forget: the response above has already gone out, this carries on after.
+    runAuditJob(row.id, handle, style, contactName, tag).catch((err) => {
+      logger.error({ err, handle }, "ig-audit: background job crashed");
+    });
+  } catch (err: any) {
+    const status = err?.status || 500;
+    if (status === 500) logger.error({ err }, "Failed to start ig audit");
+    res.status(status).json({ error: err?.message || "Audit failed" });
+  }
+});
+
+async function runAuditJob(id: number, handle: string, style: string, contactName: string, tag: string): Promise<void> {
+  try {
     const { profile, media } = await fetchInstagram(handle);
     const { score, breakdown, metrics, flags } = analyse(profile, media);
 
@@ -649,22 +684,21 @@ router.post("/ig-audit/run", async (req, res) => {
     }
 
     const posts = metrics.topPosts; // kept small on purpose, full set not stored
-    const insert = await db.execute(sql`
-      INSERT INTO ig_audits (handle, display_name, followers, score, tag, style, contact_name, profile, breakdown, metrics, flags, posts, sales_html)
-      VALUES (
-        ${profile.username}, ${profile.name}, ${profile.followers}, ${score}, ${tag}, ${style}, ${contactName},
-        ${JSON.stringify(profile)}::jsonb, ${JSON.stringify(breakdown)}::jsonb, ${JSON.stringify(metrics)}::jsonb,
-        ${JSON.stringify(flags)}::jsonb, ${JSON.stringify(posts)}::jsonb, ${salesHtml}
-      )
-      RETURNING ${FULL_COLS}
+    await db.execute(sql`
+      UPDATE ig_audits SET
+        display_name = ${profile.name}, followers = ${profile.followers}, score = ${score},
+        profile = ${JSON.stringify(profile)}::jsonb, breakdown = ${JSON.stringify(breakdown)}::jsonb,
+        metrics = ${JSON.stringify(metrics)}::jsonb, flags = ${JSON.stringify(flags)}::jsonb,
+        posts = ${JSON.stringify(posts)}::jsonb, sales_html = ${salesHtml}, status = 'ready'
+      WHERE id = ${id}
     `);
-    res.json({ ...rowsOf(insert)[0], salesFailed: !salesHtml });
   } catch (err: any) {
-    const status = err?.status || 500;
-    if (status === 500) logger.error({ err }, "Failed to run ig audit");
-    res.status(status).json({ error: err?.message || "Audit failed" });
+    logger.error({ err, handle }, "Failed to run ig audit");
+    await db.execute(sql`
+      UPDATE ig_audits SET status = 'failed', error_message = ${String(err?.message || "Audit failed")} WHERE id = ${id}
+    `);
   }
-});
+}
 
 // POST /api/ig-audit/:id/sales { style, contactName? } -> rewrite the prospect write-up in another style
 router.post("/ig-audit/:id/sales", async (req, res) => {
