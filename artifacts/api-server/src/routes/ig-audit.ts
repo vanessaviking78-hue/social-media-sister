@@ -223,7 +223,6 @@ const CLAIM_RULES: { re: RegExp; category: string; severity: "high" | "medium" }
   { re: /\b(painless|risk[- ]free|no (risk|side effects?))\b/i, category: "Safety or pain claim", severity: "high" },
   { re: /\bsafe\b/i, category: "The word 'safe' used as a claim", severity: "medium" },
   { re: /\banti[- ]?wrinkle\b/i, category: "Efficacy claim ('anti-wrinkle')", severity: "medium" },
-  { re: /\b(best|no\.? ?1|number one|#1|leading|top[- ]rated|award[- ]winning)\b/i, category: "Superlative", severity: "medium" },
   { re: /\b(no downtime|instant results?|overnight results?)\b/i, category: "Results or downtime claim", severity: "medium" },
 ];
 
@@ -278,16 +277,23 @@ function formatOf(m: Media): "reel" | "carousel" | "image" | "video" | "other" {
 function analyse(profile: Profile, media: Media[]) {
   const now = Date.now();
   const DAY = 86400000;
-  const dated = media.filter((m) => m.timestamp).map((m) => ({ ...m, t: new Date(m.timestamp as string).getTime() })).sort((a, b) => b.t - a.t);
+  const allDated = media.filter((m) => m.timestamp).map((m) => ({ ...m, t: new Date(m.timestamp as string).getTime() })).sort((a, b) => b.t - a.t);
 
-  // Consistency
-  const recent = dated.filter((m) => now - m.t <= 60 * DAY);
+  // Score against the last month only, old posts from a year or two back aren't relevant to how the
+  // page is doing now. If someone's gone quiet and there's nothing in the last 30 days, fall back to
+  // whatever we've got so the audit still has something to say rather than coming back empty.
+  const lastMonth = allDated.filter((m) => now - m.t <= 30 * DAY);
+  const dated = lastMonth.length ? lastMonth : allDated;
+
+  // Consistency (daysSinceLast and longestGap use the full history, so a quiet patch still shows up
+  // even when the last-30-days window above is empty)
+  const recent = allDated.filter((m) => now - m.t <= 60 * DAY);
   const spanDays = dated.length > 1 ? Math.max(1, (dated[0].t - dated[dated.length - 1].t) / DAY) : 0;
   // Scraped samples only hold the latest handful of posts, so measure frequency across the span they cover
   const perWeek = dated.length > 0 && dated.length <= 15 && spanDays > 0 ? ((dated.length - 1) / spanDays) * 7 : recent.length / (60 / 7);
-  const daysSinceLast = dated.length ? Math.floor((now - dated[0].t) / DAY) : null;
+  const daysSinceLast = allDated.length ? Math.floor((now - allDated[0].t) / DAY) : null;
   let longestGap = 0;
-  for (let i = 0; i < dated.length - 1; i++) longestGap = Math.max(longestGap, Math.floor((dated[i].t - dated[i + 1].t) / DAY));
+  for (let i = 0; i < allDated.length - 1; i++) longestGap = Math.max(longestGap, Math.floor((allDated[i].t - allDated[i + 1].t) / DAY));
 
   let consistencyRatio = perWeek >= 3 ? 1 : perWeek >= 2 ? 0.85 : perWeek >= 1 ? 0.6 : perWeek >= 0.5 ? 0.3 : 0.1;
   if (daysSinceLast !== null && daysSinceLast > 21) consistencyRatio *= 0.5;
@@ -379,7 +385,7 @@ function analyse(profile: Profile, media: Media[]) {
     },
     {
       key: "consistency", label: "Posting consistency", max: 20, score: round1(consistencyRatio * 20),
-      note: `${round1(perWeek)} posts a week${daysSinceLast !== null ? `, last post ${daysSinceLast} day${daysSinceLast === 1 ? "" : "s"} ago` : ""}${longestGap > 21 ? `, longest gap ${longestGap} days` : ""}.`,
+      note: `${round1(perWeek)} posts a week${daysSinceLast !== null ? `, last post ${daysSinceLast} day${daysSinceLast === 1 ? "" : "s"} ago` : ""}${longestGap > 21 ? `, longest gap ${longestGap} days` : ""}.${lastMonth.length === 0 && allDated.length ? " Nothing posted in the last 30 days, so the rest of this audit is scored off the most recent posts available instead." : ""}`,
     },
     {
       key: "engagement", label: "Engagement", max: 25, score: round1(erRatio * 25),
@@ -397,7 +403,7 @@ function analyse(profile: Profile, media: Media[]) {
     },
     {
       key: "compliance", label: "Compliance", max: 10, score: round1(compRatio * 10),
-      note: flags.length ? `${high} high and ${med} medium wording flags across the last ${dated.length} posts.` : "Nothing obvious flagged in the captions.",
+      note: flags.length ? `${high} high and ${med} medium wording flags across the last ${dated.length} post${dated.length === 1 ? "" : "s"}.` : "Nothing obvious flagged in the captions.",
     },
   ];
   const score = Math.round(breakdown.reduce((s, b) => s + b.score, 0));
