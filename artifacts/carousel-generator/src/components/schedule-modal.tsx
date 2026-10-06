@@ -296,7 +296,7 @@ const staggeredAt = (() => {
           <CalendarClock className="w-5 h-5 text-pink-400 shrink-0" />
           <div>
             <h2 className="text-lg font-semibold text-white">Schedule for later</h2>
-            <p className="text-sm text-zinc-400 mt-0.5">{label}{countLabel}</p>
+            <p className="text-sm text-zinc-400 mt-0.5">{label}{countLabel}{posts.some(p => p.coverVideoUrl) ? `, ${posts.filter(p => p.coverVideoUrl).length} with an animated cover on Instagram` : ""}</p>
           </div>
         </div>
         <div className="p-6 space-y-4">
