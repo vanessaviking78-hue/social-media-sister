@@ -1357,7 +1357,7 @@ function sharpenCanvas(c: HTMLCanvasElement, amount = 0.8) {
 }
 // Studio backdrops are often a dark blue. This swaps blue-ish pixels for the client's brand colour (lifted), so the cover looks like their brand.
 let octBackdrop: string | null = null;
-function tintBackdrop(c: HTMLCanvasElement, hex: string | null) {
+function tintBackdrop(c: HTMLCanvasElement, hex: string | null, mono = false) {
   const m = hex ? /^#?([0-9a-f]{6})$/i.exec(hex.trim()) : null;
   if (!m) return;
   const n = parseInt(m[1], 16);
@@ -1380,11 +1380,13 @@ function tintBackdrop(c: HTMLCanvasElement, hex: string | null) {
   const img = g.getImageData(0, 0, c.width, c.height), d = img.data;
   for (let i = 0; i < d.length; i += 4) {
     const [h, s, l] = hsl(d[i] / 255, d[i + 1] / 255, d[i + 2] / 255);
-    if (s < 0.22 || h < 185 || h > 265) continue;
-    const w = Math.min(1, (s - 0.22) / 0.2) * (h < 200 ? (h - 185) / 15 : h > 250 ? (265 - h) / 15 : 1);
+    const hueOk = h >= 185 && h <= 265;
+    const w = hueOk ? Math.min(1, Math.max(0, (s - 0.1) / 0.2)) * (h < 200 ? (h - 185) / 15 : h > 250 ? (265 - h) / 15 : 1) : 0;
     const nl = Math.min(0.7, l * 1.15 + tl * 0.55);
     const [r, gg, b] = rgb(th, Math.max(0.35, Math.min(1, ts * 0.95)), nl);
-    d[i] += (r - d[i]) * w; d[i + 1] += (gg - d[i + 1]) * w; d[i + 2] += (b - d[i + 2]) * w;
+    let br = d[i], bg = d[i + 1], bb = d[i + 2];
+    if (mono) { const y = 0.299 * br + 0.587 * bg + 0.114 * bb; const v = Math.max(0, Math.min(255, y + (y - 128) * 0.5)); br = bg = bb = v; }
+    d[i] = br + (r - br) * w; d[i + 1] = bg + (gg - bg) * w; d[i + 2] = bb + (b - bb) * w;
   }
   g.putImageData(img, 0, 0);
 }
@@ -1400,7 +1402,7 @@ async function drawFileIn(ctx: CanvasRenderingContext2D, file: File, x: number, 
     if (!tg) { b.close(); return false; }
     (tg as CanvasRenderingContext2D & { filter?: string }).filter = filter;
     tg.drawImage(b, (w - dw) * ((pos?.x ?? 50) / 100), (h - dh) * ((pos?.y ?? 50) / 100), dw, dh);
-    tintBackdrop(t, octBackdrop);
+    tintBackdrop(t, octBackdrop, filter.includes("grayscale") && !!octBackdrop);
     sharpenCanvas(t, 0.7);
     ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
     ctx.drawImage(t, x, y, w, h);
@@ -1490,9 +1492,9 @@ async function drawCoverOct(
       const tc = document.createElement("canvas"); tc.width = W; tc.height = H;
       const tg = tc.getContext("2d");
       if (tg) {
-        (tg as CanvasRenderingContext2D & { filter?: string }).filter = punchFilter(style.cvPunch, !!look.mono);
+        (tg as CanvasRenderingContext2D & { filter?: string }).filter = punchFilter(style.cvPunch, false);
         tg.drawImage(bmp, (W - dw) * ((pos?.x ?? 50) / 100), (H - dh) * ((pos?.y ?? 50) / 100), dw, dh);
-        tintBackdrop(tc, octBackdrop);
+        tintBackdrop(tc, octBackdrop, !!look.mono);
         sharpenCanvas(tc, 0.7);
         ctx.drawImage(tc, 0, 0);
       }
@@ -1807,9 +1809,10 @@ async function drawCoverOct(
         const side = Math.min(b.width, b.height) * 0.6 / z;
         let sx = fcx - side / 2 + (((pos?.x ?? 50) - 50) / 100) * side, sy = fcy - side * 0.42 + (((pos?.y ?? 50) - 50) / 100) * side;
         sx = Math.max(0, Math.min(b.width - side, sx)); sy = Math.max(0, Math.min(b.height - side, sy));
-        (og as CanvasRenderingContext2D & { filter?: string }).filter = "blur(3px) contrast(1.2)";
+        (og as CanvasRenderingContext2D & { filter?: string }).filter = "blur(5px) contrast(1.2)";
         og.drawImage(b, sx, sy, side, side, 0, 0, R * 2, R * 2); b.close();
         (og as CanvasRenderingContext2D & { filter?: string }).filter = "none";
+        tintBackdrop(off, octBackdrop);
       } catch { /* leave the circle plain */ }
       const id = og.getImageData(0, 0, R * 2, R * 2); const d = id.data;
       const lum = new Float32Array(d.length / 4); const hist = new Uint32Array(256);
