@@ -2266,11 +2266,19 @@ async function renderSlide(
   setSpacing(ctx, style.letterSpacing);
 
   const isCta = spec.kind === "cta";
-  const size = isCta ? style.ctaSize : style.bodySize;
-  const f = `${isCta && editorial ? "italic " : style.textItalic ? "italic " : ""}${style.textWeight} ${size}px ${display}`;
+  let size = isCta ? style.ctaSize : style.bodySize;
+  let f = `${isCta && editorial ? "italic " : style.textItalic ? "italic " : ""}${style.textWeight} ${size}px ${display}`;
   ctx.font = f;
+  let bodyLines = balancedWrap(ctx, up(spec.text), maxW - (left ? 40 : 30));
+  // Longer passages shrink a little until they fit comfortably, so a three sentence slide never runs off the photo.
+  while (size > 40 && bodyLines.length * Math.round(size * style.lineHeight) > H * 0.6) {
+    size -= 4;
+    f = `${isCta && editorial ? "italic " : style.textItalic ? "italic " : ""}${style.textWeight} ${size}px ${display}`;
+    ctx.font = f;
+    bodyLines = balancedWrap(ctx, up(spec.text), maxW - (left ? 40 : 30));
+  }
   blocks.push({
-    lines: balancedWrap(ctx, up(spec.text), maxW - (left ? 40 : 30)), font: f,
+    lines: bodyLines, font: f,
     lineH: Math.round(size * style.lineHeight),
     colour: isCta ? style.ctaColour : style.bodyColour, gapBefore: 0, spacing: style.letterSpacing,
   });
