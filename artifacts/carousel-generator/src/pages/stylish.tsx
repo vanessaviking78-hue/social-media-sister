@@ -2536,7 +2536,7 @@ function fontItems(options: FontOption[]) {
   const out: React.ReactNode[] = [];
   let last: string | undefined;
   for (const f of options) {
-    if (f.group && f.group !== last) out.push(<div key={`g-${f.group}`} className="px-2 pt-2 pb-1 text-[18px] uppercase tracking-wide text-muted-foreground">{f.group}</div>);
+    if (f.group && f.group !== last) out.push(<div key={`g-${f.group}`} className="px-2 pt-2 pb-1 text-[10px] uppercase tracking-wide text-muted-foreground">{f.group}</div>);
     last = f.group;
     out.push(<SelectItem key={f.value} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>);
   }
@@ -2655,8 +2655,8 @@ function ColourField({ label, value, onChange, metallic, textures }: { label: st
           className="w-8 h-7 rounded border border-border/40 bg-transparent cursor-pointer p-0"
           aria-label={`${label} picker`}
         />
-        {isMetallic && <span className="text-[18px] text-sky-400/90 whitespace-nowrap">using {METALLICS[value].label.toLowerCase()}</span>}
-        {textures && TEXTURES[value] && <span className="text-[18px] text-sky-400/90 whitespace-nowrap">using {TEXTURES[value].label.toLowerCase()}</span>}
+        {isMetallic && <span className="text-[10px] text-sky-400/90 whitespace-nowrap">using {METALLICS[value].label.toLowerCase()}</span>}
+        {textures && TEXTURES[value] && <span className="text-[10px] text-sky-400/90 whitespace-nowrap">using {TEXTURES[value].label.toLowerCase()}</span>}
       </div>
       {textures && (
         <div className="flex flex-wrap gap-1.5 max-w-[210px]">
@@ -2693,7 +2693,7 @@ function SliderField({
     <div className="space-y-1">
       <div className="flex items-center justify-between">
         <Label className="text-xs text-muted-foreground">{label}</Label>
-        <span className="text-[18px] font-mono text-foreground/70">{value}{suffix}</span>
+        <span className="text-[11px] font-mono text-foreground/70">{value}{suffix}</span>
       </div>
       <input
         type="range" min={min} max={max} step={step} value={value}
@@ -4240,12 +4240,12 @@ export default function Stylish() {
                   aria-label={`Cover option ${i + 1}`}
                 >
                   <CoverIcon k={k} />
-                  <span className="text-[18px] text-muted-foreground">Option {i + 1}</span>
+                  <span className="text-[10px] text-muted-foreground">Option {i + 1}</span>
                 </button>
               ))}
             </div>
             <div className="space-y-1.5">
-              <p className="text-[18px] font-semibold uppercase tracking-wide text-muted-foreground">October 26</p>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">October 26</p>
               <div className="grid grid-cols-3 gap-1.5">
                 {OCT_ORDER.map(k => (
                   <button
@@ -4254,8 +4254,8 @@ export default function Stylish() {
                     className={["rounded-lg border px-1.5 py-2 text-left transition-colors", style.coverLayout === k ? "border-sky-500 bg-sky-500/10" : "border-border/40 hover:border-border/70"].join(" ")}
                     aria-label={`October 26 cover ${OCT_NAMES[k]}`}
                   >
-                    <span className="block text-[18px] text-muted-foreground">No. {k.replace("oct", "")}</span>
-                    <span className="block text-[18px] leading-tight">{OCT_NAMES[k]}</span>
+                    <span className="block text-[10px] text-muted-foreground">No. {k.replace("oct", "")}</span>
+                    <span className="block text-[11px] leading-tight">{OCT_NAMES[k]}</span>
                   </button>
                 ))}
               </div>
@@ -4296,14 +4296,14 @@ export default function Stylish() {
                 onChange={e => { const f = Array.from(e.target.files ?? []); if (f.length) addFonts(f); e.target.value = ""; }}
               />
               {customFonts.length === 0 ? (
-                <p className="text-[18px] text-muted-foreground leading-relaxed">
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
                   Add .otf, .ttf or .woff2 files, for example Helvetica Now Display, Breul Grotesk, Now or Evolventa. Add each weight you use (regular and bold).
                   They stay in this browser on this computer and are not uploaded anywhere.
                 </p>
               ) : (
                 <ul className="space-y-1">
                   {customFonts.map(f => (
-                    <li key={f.file} className="flex items-center justify-between gap-2 text-[18px]">
+                    <li key={f.file} className="flex items-center justify-between gap-2 text-[11px]">
                       <span className="truncate" style={{ fontFamily: `'${f.family}', sans-serif` }}>{f.file}</span>
                       <button type="button" onClick={() => removeFont(f.file)} className="text-muted-foreground hover:text-destructive shrink-0">remove</button>
                     </li>
@@ -4681,7 +4681,7 @@ export default function Stylish() {
                         />
                         <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Post {pi + 1}</span>
                         <span className="text-sm text-foreground/80 truncate">{post.texts[0]}</span>
-                        <span className="ml-auto text-[18px] text-muted-foreground shrink-0">{specs.length} slides</span>
+                        <span className="ml-auto text-[11px] text-muted-foreground shrink-0">{specs.length} slides</span>
                         {confirmDelete === post.id ? (
                           <span className="flex items-center gap-2 text-xs shrink-0">
                             <span className="text-muted-foreground">Delete post {pi + 1}?</span>
@@ -4737,7 +4737,7 @@ export default function Stylish() {
                                   onPointerCancel={endTextDrag}
                                   onDoubleClick={e => { e.stopPropagation(); resetTextPos(post, pi, si); }}
                                   title="Drag to move the headline. Double click to put it back."
-                                  className="absolute top-1.5 left-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[18px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-grab active:cursor-grabbing select-none"
+                                  className="absolute top-1.5 left-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-grab active:cursor-grabbing select-none"
                                   style={{ touchAction: "none" }}
                                 >
                                   <Move className="w-2.5 h-2.5" /> Aa
@@ -4765,7 +4765,7 @@ export default function Stylish() {
                                   onPointerCancel={endSubTextDrag}
                                   onDoubleClick={e => { e.stopPropagation(); resetSubTextPos(post, pi, si); }}
                                   title="Drag to move the subtitle. Double click to put it back."
-                                  className="absolute top-1.5 right-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[18px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-grab active:cursor-grabbing select-none"
+                                  className="absolute top-1.5 right-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-grab active:cursor-grabbing select-none"
                                   style={{ touchAction: "none" }}
                                 >
                                   <Move className="w-2.5 h-2.5" /> aa
@@ -4800,7 +4800,7 @@ export default function Stylish() {
                                 </div>
                               )}
                               <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 px-1.5 py-1 bg-gradient-to-t from-black/70 to-transparent">
-                                <span className="text-[18px] text-white/80 font-medium">{si + 1}</span>
+                                <span className="text-[10px] text-white/80 font-medium">{si + 1}</span>
                                 <span className="flex items-center gap-1.5">
                                   {textMoved && (
                                     <button
@@ -4808,7 +4808,7 @@ export default function Stylish() {
                                       onPointerDown={e => e.stopPropagation()}
                                       onDoubleClick={e => e.stopPropagation()}
                                       onClick={() => resetTextPos(post, pi, si)}
-                                      className="text-[18px] text-white/80 uppercase tracking-wider hover:text-white"
+                                      className="text-[9px] text-white/80 uppercase tracking-wider hover:text-white"
                                     >reset text</button>
                                   )}
                                   {subTextMoved && (
@@ -4817,7 +4817,7 @@ export default function Stylish() {
                                       onPointerDown={e => e.stopPropagation()}
                                       onDoubleClick={e => e.stopPropagation()}
                                       onClick={() => resetSubTextPos(post, pi, si)}
-                                      className="text-[18px] text-white/80 uppercase tracking-wider hover:text-white"
+                                      className="text-[9px] text-white/80 uppercase tracking-wider hover:text-white"
                                     >reset subtitle</button>
                                   )}
                                   {moved && (
@@ -4826,7 +4826,7 @@ export default function Stylish() {
                                       onPointerDown={e => e.stopPropagation()}
                                       onDoubleClick={e => e.stopPropagation()}
                                       onClick={() => resetPos(post, pi, si)}
-                                      className="text-[18px] text-white/80 uppercase tracking-wider hover:text-white"
+                                      className="text-[9px] text-white/80 uppercase tracking-wider hover:text-white"
                                     >reset</button>
                                   )}
                                   <button
@@ -4834,7 +4834,7 @@ export default function Stylish() {
                                     onPointerDown={e => e.stopPropagation()}
                                     onDoubleClick={e => e.stopPropagation()}
                                     onClick={() => { replaceTarget.current = `${post.id}:${si}`; replaceInputRef.current?.click(); }}
-                                    className="text-[18px] text-white/80 uppercase tracking-wider hover:text-white"
+                                    className="text-[9px] text-white/80 uppercase tracking-wider hover:text-white"
                                   >swap</button>
                                 </span>
                               </div>
@@ -4847,7 +4847,7 @@ export default function Stylish() {
                         <span className="text-xs text-muted-foreground mr-1">Cover</span>
                         <button
                           type="button" onClick={() => setCover(post, pi, undefined)}
-                          className={["rounded-lg border px-2.5 py-1.5 text-[18px] transition-colors", !post.cover ? "border-sky-500 bg-sky-500/10 text-foreground" : "border-border/40 text-muted-foreground hover:border-border/70"].join(" ")}
+                          className={["rounded-lg border px-2.5 py-1.5 text-[11px] transition-colors", !post.cover ? "border-sky-500 bg-sky-500/10 text-foreground" : "border-border/40 text-muted-foreground hover:border-border/70"].join(" ")}
                         >Main choice</button>
                         {COVER_ORDER.map((k, ci) => (
                           <button
@@ -4857,7 +4857,7 @@ export default function Stylish() {
                             className={["rounded-lg border p-1 flex items-center gap-1.5 transition-colors", post.cover === k ? "border-sky-500 bg-sky-500/10" : "border-border/40 hover:border-border/70"].join(" ")}
                           >
                             <span className="scale-[0.6] origin-left -mr-3.5"><CoverIcon k={k} /></span>
-                            <span className="text-[18px] text-muted-foreground pr-1">{ci + 1}</span>
+                            <span className="text-[11px] text-muted-foreground pr-1">{ci + 1}</span>
                           </button>
                         ))}
                         {OCT_ORDER.map(k => (
@@ -4865,7 +4865,7 @@ export default function Stylish() {
                             key={k} type="button" onClick={() => setCover(post, pi, k)}
                             title={`October 26: ${OCT_NAMES[k]}`}
                             aria-label={`October 26 cover ${OCT_NAMES[k]} for post ${pi + 1}`}
-                            className={["rounded-lg border px-1.5 py-1 text-[18px] transition-colors", post.cover === k ? "border-sky-500 bg-sky-500/10 text-foreground" : "border-border/40 text-muted-foreground hover:border-border/70"].join(" ")}
+                            className={["rounded-lg border px-1.5 py-1 text-[11px] transition-colors", post.cover === k ? "border-sky-500 bg-sky-500/10 text-foreground" : "border-border/40 text-muted-foreground hover:border-border/70"].join(" ")}
                           >Oct {k.replace("oct", "")}</button>
                         ))}
                       </div>
@@ -5004,7 +5004,7 @@ export default function Stylish() {
                                       redrawOne(post, pi, 0);
                                     }}
                                   />
-                                  <div className="text-[18px] text-muted-foreground mt-0.5">Drag the photo to move it. Double click to reset.</div>
+                                  <div className="text-[10px] text-muted-foreground mt-0.5">Drag the photo to move it. Double click to reset.</div>
                                   <label className="text-xs font-medium text-muted-foreground block mt-2 mb-1">Punch: contrast and colour ({post.coverPunch ?? 75})</label>
                                   <input
                                     type="range" min={0} max={100} step={5} value={post.coverPunch ?? 75}
@@ -5018,7 +5018,7 @@ export default function Stylish() {
                             {OCT_LOOKS[eff.coverLayout]?.recolour && (
                               <div className="w-56">
                                 <ColourField label="Spot colour in the picture" value={eff.cvSpot || preset?.accentColor || "#2c9a8f"} onChange={v => setCoverColours(post, pi, { coverSpot: v })} />
-                                <div className="text-[18px] text-muted-foreground mt-0.5">Starts as the clinic colour. Pick another to recolour the shoes, lips or glove.</div>
+                                <div className="text-[10px] text-muted-foreground mt-0.5">Starts as the clinic colour. Pick another to recolour the shoes, lips or glove.</div>
                               </div>
                             )}
                             {eff.coverLayout === "oct17" && (
@@ -5057,7 +5057,7 @@ export default function Stylish() {
                             const label = ci === 0 ? "Headline" : ci === 1 ? "Subtitle" : ci === post.texts.length - 1 ? "CTA" : `Text ${ci - 1}`;
                             return (
                               <div key={ci} className="space-y-1">
-                                <Label className="text-[18px] text-muted-foreground">{label}</Label>
+                                <Label className="text-[11px] text-muted-foreground">{label}</Label>
                                 <textarea
                                   value={t} rows={2}
                                   onChange={e => setText(post.id, ci, e.target.value)}

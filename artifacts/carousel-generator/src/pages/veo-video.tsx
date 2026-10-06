@@ -305,7 +305,7 @@ export default function VeoVideo() {
                 </button>
               ))}
             </div>
-            <p className="text-[18px] text-zinc-500 mt-1.5">Veo only generates 4, 6 or 8 second clips.</p>
+            <p className="text-[11px] text-zinc-500 mt-1.5">Veo only generates 4, 6 or 8 second clips.</p>
           </div>
 
           <Button
@@ -348,7 +348,7 @@ export default function VeoVideo() {
 
               <div className="border-t border-white/10 pt-4">
                 <h2 className="text-sm font-semibold text-zinc-200 mb-3">Trial reel</h2>
-                <p className="text-[18px] text-zinc-500 mb-2.5">
+                <p className="text-[11px] text-zinc-500 mb-2.5">
                   Posts privately to one client's Instagram straight away, for you or them to review before it graduates to a real published Reel.
                 </p>
                 <div className="flex gap-2">
@@ -372,7 +372,7 @@ export default function VeoVideo() {
                   </Button>
                 </div>
                 {!caption.trim() && (
-                  <p className="text-[18px] text-zinc-600 mt-1.5">Write a caption below first, it's shared with the trial reel and broadcast.</p>
+                  <p className="text-[11px] text-zinc-600 mt-1.5">Write a caption below first, it's shared with the trial reel and broadcast.</p>
                 )}
               </div>
 
@@ -383,12 +383,12 @@ export default function VeoVideo() {
                   <div>
                     <div className="flex items-center justify-between mb-1.5">
                       <Label className="text-xs text-zinc-500">Clients</Label>
-                      <span className="text-[18px] text-zinc-500">{selectedPresetIds.size} of {presets.length} selected</span>
+                      <span className="text-[11px] text-zinc-500">{selectedPresetIds.size} of {presets.length} selected</span>
                     </div>
                     <div className="border border-white/10 rounded-md bg-zinc-900">
                       <div className="flex items-center justify-end gap-2 px-3 py-2 border-b border-white/10">
-                        <button type="button" onClick={() => setSelectedPresetIds(new Set(presets.map((p) => p.id)))} className="text-[18px] text-orange-400 hover:text-orange-300">Select all</button>
-                        <button type="button" onClick={() => setSelectedPresetIds(new Set())} className="text-[18px] text-zinc-500 hover:text-zinc-300">Clear</button>
+                        <button type="button" onClick={() => setSelectedPresetIds(new Set(presets.map((p) => p.id)))} className="text-[11px] text-orange-400 hover:text-orange-300">Select all</button>
+                        <button type="button" onClick={() => setSelectedPresetIds(new Set())} className="text-[11px] text-zinc-500 hover:text-zinc-300">Clear</button>
                       </div>
                       <div className="max-h-48 overflow-y-auto divide-y divide-white/5">
                         {presetsLoading && <p className="text-xs text-zinc-500 px-3 py-2">Loading clients...</p>}
@@ -445,7 +445,7 @@ export default function VeoVideo() {
                     ))}
                   </div>
 
-                  <p className="text-[18px] text-zinc-500">
+                  <p className="text-[11px] text-zinc-500">
                     Broadcast sends it straight to every client ticked above at the date and time set, staggered a few minutes apart by client name so they don't all post at once. Save to Waiting Room parks it with no date attached, pick a slot for each client later from the Scheduler.
                   </p>
 

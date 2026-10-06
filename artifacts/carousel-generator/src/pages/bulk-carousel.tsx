@@ -908,7 +908,7 @@ export function SlideEditorModal({ item, preset, logoImg, heroWordColor, globalF
                   )}
 
                   {!isEditing && (
-                    <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[18px] uppercase tracking-widest text-white/40 whitespace-nowrap pointer-events-none">
+                    <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] uppercase tracking-widest text-white/40 whitespace-nowrap pointer-events-none">
                       {st.label}
                     </span>
                   )}
@@ -1066,7 +1066,7 @@ export function SlideLayerEditorModal({
             </div>
             {bgImg && (
               <div className="flex items-center gap-2">
-                <span className="text-[18px] text-zinc-500 w-14">Opacity</span>
+                <span className="text-[10px] text-zinc-500 w-14">Opacity</span>
                 <input
                   type="range"
                   min={0}
@@ -1099,7 +1099,7 @@ export function SlideLayerEditorModal({
             />
             {overlay && (
               <div className="flex items-center gap-2 mt-2">
-                <span className="text-[18px] text-zinc-500 w-14">Opacity</span>
+                <span className="text-[10px] text-zinc-500 w-14">Opacity</span>
                 <input
                   type="range"
                   min={0}
@@ -1110,7 +1110,7 @@ export function SlideLayerEditorModal({
                 />
               </div>
             )}
-            <p className="text-[18px] text-zinc-500 mt-1">Drag the photo to reposition it, pull the pink dot to resize.</p>
+            <p className="text-[10px] text-zinc-500 mt-1">Drag the photo to reposition it, pull the pink dot to resize.</p>
           </div>
         </div>
 
@@ -1211,7 +1211,7 @@ function SlideSlot({
   useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
   return (
     <div className="w-28 space-y-1">
-      <div className="text-[18px] text-muted-foreground">Slide {slideNum}</div>
+      <div className="text-[10px] text-muted-foreground">Slide {slideNum}</div>
       <div
         className="relative aspect-[3/4] rounded-md border border-border/40 bg-muted/20 overflow-hidden flex items-center justify-center cursor-pointer hover:border-violet-500/60"
         onClick={() => inputRef.current?.click()}
@@ -2307,7 +2307,7 @@ async function openBankForMany(selectedItems: any[]) {
                     onClick={() => setLayerEditorTarget({ itemId: item.id, slideIndex: si })}
                   >
                     <img src={du} alt={`slide ${si + 1}`} className="w-full rounded object-cover" style={{ aspectRatio: "3/4" }} />
-                    <span className="absolute inset-0 rounded bg-black/0 group-hover:bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[18px] font-semibold text-white text-center px-1">
+                    <span className="absolute inset-0 rounded bg-black/0 group-hover:bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-[10px] font-semibold text-white text-center px-1">
                       {item.slideImgs?.[si] ? "Edit background/photo" : "Add background/photo"}
                     </span>
                   </button>
@@ -2716,7 +2716,7 @@ async function openBankForMany(selectedItems: any[]) {
                             <button
                               type="button"
                               onClick={() => setExpandedSlideRow((cur) => (cur === i ? null : i))}
-                              className="text-[18px] text-violet-400 hover:text-violet-300 underline whitespace-nowrap"
+                              className="text-[11px] text-violet-400 hover:text-violet-300 underline whitespace-nowrap"
                             >
                               {(slideFiles[i] ?? []).filter(Boolean).length}/{slideCountForRow(row)} slides
                             </button>
@@ -2728,7 +2728,7 @@ async function openBankForMany(selectedItems: any[]) {
                           <select
                             value={rowMode[i] ?? "bg-only"}
                             onChange={(e) => setRowMode((prev) => { const next = [...prev]; next[i] = e.target.value as "bg-only" | "bg-overlay" | "approved-as-bg"; return next; })}
-                            className="bg-transparent border border-border/40 rounded px-1 py-0.5 text-[18px] max-w-[120px]"
+                            className="bg-transparent border border-border/40 rounded px-1 py-0.5 text-[11px] max-w-[120px]"
                           >
                             <option value="bg-only">Background only</option>
                             <option value="bg-overlay">+ overlay</option>
@@ -2738,7 +2738,7 @@ async function openBankForMany(selectedItems: any[]) {
                             <button
                               type="button"
                               onClick={() => setRowImageModalIndex(i)}
-                              className="block mx-auto mt-1 text-[18px] text-violet-400 hover:text-violet-300 underline"
+                              className="block mx-auto mt-1 text-[10px] text-violet-400 hover:text-violet-300 underline"
                             >
                               {rowMode[i] === "bg-overlay" ? (rowOverlayFile[i] ? "Edit overlay" : "Add overlay photo") : "Pick photo"}
                             </button>
@@ -2756,7 +2756,7 @@ async function openBankForMany(selectedItems: any[]) {
                               <button
                                 type="button"
                                 onClick={() => setRowBgColor((prev) => { const next = [...prev]; next[i] = null; return next; })}
-                                className="text-[18px] text-muted-foreground hover:text-red-400"
+                                className="text-[10px] text-muted-foreground hover:text-red-400"
                               >
                                 reset
                               </button>

@@ -740,7 +740,7 @@ export default function Library() {
                           imageUrl={(item.mediaUrl || item.mediaUrls?.[0]) ?? undefined}
                           name={item.caption?.slice(0, 60) || "Library image"}
                           size="sm"
-                          className="text-[18px] h-6 px-1.5"
+                          className="text-[10px] h-6 px-1.5"
                           label="Canva"
                         />
                       )}

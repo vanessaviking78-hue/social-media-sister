@@ -445,7 +445,7 @@ export default function VideoOverlay() {
 
           {/* Video upload */}
           <div className="space-y-2">
-            <h2 className="text-[18px] font-semibold text-white/40 uppercase tracking-widest">Video</h2>
+            <h2 className="text-[10px] font-semibold text-white/40 uppercase tracking-widest">Video</h2>
             <label className="flex flex-col items-center justify-center gap-2 cursor-pointer text-xs text-white/40 hover:text-white/70 border border-dashed border-white/20 rounded-xl p-5 transition-colors hover:border-pink-500/40">
               <Upload className="w-5 h-5" />
               <span className="text-center leading-snug">
@@ -453,7 +453,7 @@ export default function VideoOverlay() {
                   ? videoFile.name.length > 28 ? videoFile.name.slice(0, 28) + "…" : videoFile.name
                   : "Click to upload video"}
               </span>
-              <span className="text-[18px] text-white/20">MP4 · MOV · WebM</span>
+              <span className="text-[10px] text-white/20">MP4 · MOV · WebM</span>
               <input
                 type="file"
                 accept="video/*"
@@ -468,7 +468,7 @@ export default function VideoOverlay() {
 
           {/* AI generate */}
           <div className="space-y-3 border-t border-white/10 pt-4">
-            <h2 className="text-[18px] font-semibold text-white/40 uppercase tracking-widest">AI Text</h2>
+            <h2 className="text-[10px] font-semibold text-white/40 uppercase tracking-widest">AI Text</h2>
 
             <div className="space-y-1.5">
               <Label className="text-xs text-white/50">Segments</Label>
@@ -519,10 +519,10 @@ export default function VideoOverlay() {
 
           {/* Text segments */}
           <div className="space-y-2 border-t border-white/10 pt-4">
-            <h2 className="text-[18px] font-semibold text-white/40 uppercase tracking-widest">Text Segments</h2>
+            <h2 className="text-[10px] font-semibold text-white/40 uppercase tracking-widest">Text Segments</h2>
             {segments.slice(0, segmentCount).map((seg, i) => (
               <div key={i} className="space-y-0.5">
-                <Label className="text-[18px] text-white/25">Segment {i + 1}</Label>
+                <Label className="text-[10px] text-white/25">Segment {i + 1}</Label>
                 <textarea
                   value={seg}
                   onChange={(e) => setSegments((prev) => prev.map((s, idx) => idx === i ? e.target.value : s))}
@@ -548,7 +548,7 @@ export default function VideoOverlay() {
                 <><Download className="w-3.5 h-3.5 mr-2" />Export Video</>
               )}
             </Button>
-            <p className="text-[18px] text-white/20 text-center">
+            <p className="text-[10px] text-white/20 text-center">
               Exports as WebM · plays in real time during recording
             </p>
           </div>
@@ -556,7 +556,7 @@ export default function VideoOverlay() {
           {/* Instagram posting */}
           {igPresets.length > 0 && (
             <div className="border-t border-white/10 pt-4 space-y-2.5">
-              <div className="flex items-center gap-1.5 text-[18px] font-semibold text-white/40 uppercase tracking-widest">
+              <div className="flex items-center gap-1.5 text-[10px] font-semibold text-white/40 uppercase tracking-widest">
                 <Film className="w-3.5 h-3.5" /> Post to Instagram
               </div>
               <Select value={igPresetId} onValueChange={setIgPresetId}>
@@ -571,11 +571,11 @@ export default function VideoOverlay() {
               </Select>
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[18px] text-white/40">Caption</span>
+                  <span className="text-[10px] text-white/40">Caption</span>
                   <button
                     onClick={handleGenerateCaption}
                     disabled={generatingCaption}
-                    className="flex items-center gap-1 text-[18px] text-pink-400 hover:text-pink-300 disabled:opacity-40 transition-colors"
+                    className="flex items-center gap-1 text-[10px] text-pink-400 hover:text-pink-300 disabled:opacity-40 transition-colors"
                   >
                     {generatingCaption
                       ? <><Loader2 className="w-2.5 h-2.5 animate-spin" />Generating…</>
@@ -619,8 +619,8 @@ export default function VideoOverlay() {
               >
                 {scheduleRendering ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CalendarClock className="w-3 h-3 mr-1.5" />Schedule for later</>}
               </Button>
-              {igPushing && <p className="text-[18px] text-white/40 text-center">{igPushProgress}</p>}
-              <p className="text-[18px] text-white/20 text-center">Trial = private test · graduate when ready</p>
+              {igPushing && <p className="text-[10px] text-white/40 text-center">{igPushProgress}</p>}
+              <p className="text-[10px] text-white/20 text-center">Trial = private test · graduate when ready</p>
             </div>
           )}
         </div>
@@ -660,7 +660,7 @@ export default function VideoOverlay() {
             )}
           </div>
 
-          <p className="text-[18px] text-white/20 text-center max-w-[200px]">
+          <p className="text-[10px] text-white/20 text-center max-w-[200px]">
             Preview plays live with the typewriter effect over your video
           </p>
 
@@ -678,7 +678,7 @@ export default function VideoOverlay() {
 
         {/* ── RIGHT: style ── */}
         <div className="w-64 border-l border-white/10 flex flex-col overflow-y-auto p-4 gap-4 shrink-0">
-          <h2 className="text-[18px] font-semibold text-white/40 uppercase tracking-widest">Style</h2>
+          <h2 className="text-[10px] font-semibold text-white/40 uppercase tracking-widest">Style</h2>
 
           <div className="space-y-1.5">
             <Label className="text-xs text-white/50">Font</Label>
@@ -755,12 +755,12 @@ export default function VideoOverlay() {
               value={[Math.round(typewriterFill * 100)]}
               onValueChange={([v]) => setTypewriterFill(v / 100)}
             />
-            <p className="text-[18px] text-white/20">Lower = text types out faster</p>
+            <p className="text-[10px] text-white/20">Lower = text types out faster</p>
           </div>
 
           <div className="border-t border-white/10 pt-3 space-y-2 mt-auto">
-            <h2 className="text-[18px] font-semibold text-white/40 uppercase tracking-widest">How it works</h2>
-            <ol className="space-y-1.5 text-[18px] text-white/30 list-decimal list-inside leading-relaxed">
+            <h2 className="text-[10px] font-semibold text-white/40 uppercase tracking-widest">How it works</h2>
+            <ol className="space-y-1.5 text-[11px] text-white/30 list-decimal list-inside leading-relaxed">
               <li>Upload your video</li>
               <li>Enter a topic, generate text</li>
               <li>Edit segments if needed</li>

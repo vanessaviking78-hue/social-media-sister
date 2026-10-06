@@ -1069,7 +1069,7 @@ export default function SingleImage() {
                   <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full bg-[#E91976]" />
                 )}
                 {icon(isActive)}
-                <span className="text-[18px] font-semibold tracking-wide uppercase" style={{ color: isActive ? "#E91976" : "#52525b" }}>
+                <span className="text-[9px] font-semibold tracking-wide uppercase" style={{ color: isActive ? "#E91976" : "#52525b" }}>
                   {label}
                 </span>
               </button>
@@ -1138,11 +1138,11 @@ export default function SingleImage() {
                       onBodyChange={setSubheadingFont}
                     />
                     <div className="pt-2 border-t border-zinc-800/60 space-y-1.5">
-                      <p className="text-[18px] text-zinc-600 uppercase tracking-wider">Current heading</p>
+                      <p className="text-[10px] text-zinc-600 uppercase tracking-wider">Current heading</p>
                       <p className="text-xs text-zinc-300 font-medium truncate">{selectedFontLabel}</p>
-                      <p className="text-[18px] text-zinc-600 uppercase tracking-wider pt-1">Current body</p>
+                      <p className="text-[10px] text-zinc-600 uppercase tracking-wider pt-1">Current body</p>
                       <p className="text-xs text-zinc-300 font-medium truncate">{selectedSubheadingFontLabel}</p>
-                      <p className="text-[18px] text-zinc-600 uppercase tracking-wider pt-1">Font size</p>
+                      <p className="text-[10px] text-zinc-600 uppercase tracking-wider pt-1">Font size</p>
                       <p className="text-xs text-zinc-300 font-medium">{fontSize}px — set in Step 2</p>
                     </div>
                   </div>

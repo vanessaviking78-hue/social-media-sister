@@ -170,7 +170,7 @@ export default function ClientBank() {
                   <p className="text-xs text-muted-foreground truncate max-w-md">
                     {c.title || c.caption || "No caption yet"}
                   </p>
-                  <p className="text-[18px] text-muted-foreground/70 mt-0.5">
+                  <p className="text-[11px] text-muted-foreground/70 mt-0.5">
                     {post.postType}{c.imageUrls ? ` · ${c.imageUrls.length} slide${c.imageUrls.length !== 1 ? "s" : ""}` : ""}
                   </p>
                 </div>

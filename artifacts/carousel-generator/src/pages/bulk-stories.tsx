@@ -504,7 +504,7 @@ export default function BulkStories() {
 
           {hook && (
             <div className="flex flex-col gap-1.5">
-              <p className="text-[18px] text-zinc-500">Hook (tweak it here if you like)</p>
+              <p className="text-[11px] text-zinc-500">Hook (tweak it here if you like)</p>
               <textarea
                 value={hook}
                 onChange={(e) => setHook(e.target.value)}
@@ -561,7 +561,7 @@ export default function BulkStories() {
           <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">4. When and how it looks</p>
           <div className="grid grid-cols-2 gap-4">
             <label className="flex flex-col gap-1.5">
-              <span className="text-[18px] text-zinc-500 flex items-center gap-1"><CalendarDays size={11} /> First story</span>
+              <span className="text-[11px] text-zinc-500 flex items-center gap-1"><CalendarDays size={11} /> First story</span>
               <input
                 type="date"
                 value={startDate}
@@ -571,7 +571,7 @@ export default function BulkStories() {
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-[18px] text-zinc-500 flex items-center gap-1"><Clock size={11} /> Time each day</span>
+              <span className="text-[11px] text-zinc-500 flex items-center gap-1"><Clock size={11} /> Time each day</span>
               <input
                 type="time"
                 value={time}
@@ -589,11 +589,11 @@ export default function BulkStories() {
           {showHook && (
             <div className="grid grid-cols-2 gap-4">
               <label className="flex flex-col gap-1.5">
-                <span className="text-[18px] text-zinc-500">Text size ({fontSize})</span>
+                <span className="text-[11px] text-zinc-500">Text size ({fontSize})</span>
                 <input type="range" min={56} max={160} step={4} value={fontSize} onChange={(e) => setFontSize(Number(e.target.value))} className="accent-pink-500" />
               </label>
               <div className="flex flex-col gap-1.5">
-                <span className="text-[18px] text-zinc-500">Position</span>
+                <span className="text-[11px] text-zinc-500">Position</span>
                 <div className="flex gap-1">
                   {(["top", "middle", "bottom"] as TextPos[]).map((p) => (
                     <button
@@ -633,7 +633,7 @@ export default function BulkStories() {
                       <button onClick={() => moveImage(i, i + 1)} disabled={i === images.length - 1} className="px-2 py-0.5 text-xs rounded bg-black/70 disabled:opacity-30">→</button>
                     </div>
                   </div>
-                  <p className="text-[18px] text-zinc-400 text-center leading-tight">
+                  <p className="text-[11px] text-zinc-400 text-center leading-tight">
                     {niceDate(slots[i])}<br /><span className="text-zinc-600">{niceTime(slots[i])}</span>
                   </p>
                 </div>

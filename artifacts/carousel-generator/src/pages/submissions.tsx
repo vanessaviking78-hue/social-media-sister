@@ -135,16 +135,16 @@ export default function Submissions() {
                       return (
                       <div key={lab} className="relative bg-zinc-900">
                         <img src={url as string} alt={lab as string} className="w-full h-56 object-cover" />
-                        <span className="absolute top-2 left-2 text-[18px] uppercase tracking-wide bg-black/60 px-2 py-0.5 rounded-full">{lab}</span>
+                        <span className="absolute top-2 left-2 text-[10px] uppercase tracking-wide bg-black/60 px-2 py-0.5 rounded-full">{lab}</span>
                         <button
                           onClick={() => sendToCanva(s, lab as string, url as string)}
                           disabled={busy}
-                          className="absolute bottom-2 left-2 flex items-center gap-1 text-[18px] bg-black/60 hover:bg-black/80 px-2 py-0.5 rounded-full text-violet-300"
+                          className="absolute bottom-2 left-2 flex items-center gap-1 text-[10px] bg-black/60 hover:bg-black/80 px-2 py-0.5 rounded-full text-violet-300"
                         >
                           {busy ? <Loader2 className="w-2.5 h-2.5 animate-spin" /> : done ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Send className="w-2.5 h-2.5" />}
                           Canva
                         </button>
-                        <a href={url as string} download className="absolute bottom-2 right-2 text-[18px] bg-black/60 hover:bg-black/80 px-2 py-0.5 rounded-full">Download</a>
+                        <a href={url as string} download className="absolute bottom-2 right-2 text-[10px] bg-black/60 hover:bg-black/80 px-2 py-0.5 rounded-full">Download</a>
                       </div>
                       );
                     })}

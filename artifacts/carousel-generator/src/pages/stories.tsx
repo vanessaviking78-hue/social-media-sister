@@ -856,7 +856,7 @@ export default function Stories() {
               >
                 {isActive && <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full bg-[#E91976]" />}
                 {icon(isActive)}
-                <span className="text-[18px] font-semibold tracking-wide uppercase" style={{ color: isActive ? "#E91976" : "#52525b" }}>
+                <span className="text-[9px] font-semibold tracking-wide uppercase" style={{ color: isActive ? "#E91976" : "#52525b" }}>
                   {label}
                 </span>
               </button>
@@ -949,7 +949,7 @@ export default function Stories() {
                                 <X className="w-3 h-3 text-white" />
                               </button>
                               <div className="absolute bottom-1 left-0 right-0 flex justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span className="text-[18px] text-white/80 bg-black/50 rounded px-1">drag to reorder</span>
+                                <span className="text-[9px] text-white/80 bg-black/50 rounded px-1">drag to reorder</span>
                               </div>
                             </div>
                           ))}
@@ -1121,14 +1121,14 @@ export default function Stories() {
                           <div className="grid grid-cols-2 gap-1">
                             {LOGO_POSITIONS.map((p) => (
                               <button key={p.value} onClick={() => setLogoPosition(p.value)}
-                                className={`py-1 rounded text-[18px] font-semibold transition-all ${logoPosition === p.value ? "bg-[#E91976] text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}>
+                                className={`py-1 rounded text-[10px] font-semibold transition-all ${logoPosition === p.value ? "bg-[#E91976] text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}>
                                 {p.label}
                               </button>
                             ))}
                           </div>
                           <div className="flex items-center justify-between">
-                            <p className="text-[18px] text-zinc-500">Logo size</p>
-                            <span className="text-[18px] text-zinc-300 tabular-nums">{logoSize}px</span>
+                            <p className="text-[10px] text-zinc-500">Logo size</p>
+                            <span className="text-[10px] text-zinc-300 tabular-nums">{logoSize}px</span>
                           </div>
                           <Slider value={[logoSize]} onValueChange={(v) => setLogoSize(v[0])} min={40} max={200} step={10} />
                         </div>
@@ -1151,15 +1151,15 @@ export default function Stories() {
                     {heroEnabled && (
                       <div className="space-y-3 pt-2 border-t border-zinc-800/60">
                         <div className="space-y-1">
-                          <p className="text-[18px] text-zinc-500 uppercase tracking-wider">Lead-in text</p>
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Lead-in text</p>
                           <Input value={heroLeadIn} onChange={(e) => setHeroLeadIn(e.target.value)} placeholder="This week I'm talking about" className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
                         </div>
                         <div className="space-y-1">
-                          <p className="text-[18px] text-zinc-500 uppercase tracking-wider">Hero word</p>
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Hero word</p>
                           <Input value={heroWord} onChange={(e) => setHeroWord(e.target.value)} placeholder="BOTOX" className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
                         </div>
                         <div className="space-y-1">
-                          <p className="text-[18px] text-zinc-500 uppercase tracking-wider">Hero font</p>
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Hero font</p>
                           <Select value={heroWordFont} onValueChange={setHeroWordFont}>
                             <SelectTrigger className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200"><SelectValue /></SelectTrigger>
                             <SelectContent className="max-h-60">{FONT_OPTIONS.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent>
@@ -1167,20 +1167,20 @@ export default function Stories() {
                         </div>
                         <div className="flex gap-3">
                           <div className="flex items-center gap-1.5 flex-1">
-                            <p className="text-[18px] text-zinc-500">Lead-in</p>
+                            <p className="text-[10px] text-zinc-500">Lead-in</p>
                             <input type="color" value={heroLeadInColor} onChange={(e) => setHeroLeadInColor(e.target.value)} className="w-7 h-7 rounded cursor-pointer border border-zinc-700/50 bg-transparent" />
                           </div>
                           <div className="flex items-center gap-1.5 flex-1">
-                            <p className="text-[18px] text-zinc-500">Word</p>
+                            <p className="text-[10px] text-zinc-500">Word</p>
                             <input type="color" value={heroWordColor} onChange={(e) => setHeroWordColor(e.target.value)} className="w-7 h-7 rounded cursor-pointer border border-zinc-700/50 bg-transparent" />
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <p className="text-[18px] text-zinc-500 uppercase tracking-wider">Position</p>
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Position</p>
                           <div className="grid grid-cols-3 gap-1">
                             {(["top", "middle", "bottom"] as const).map((pos) => (
                               <button key={pos} onClick={() => setHeroVerticalPosition(pos)}
-                                className={`py-1 rounded text-[18px] font-semibold capitalize transition-all ${heroVerticalPosition === pos ? "bg-[#E91976] text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}>
+                                className={`py-1 rounded text-[10px] font-semibold capitalize transition-all ${heroVerticalPosition === pos ? "bg-[#E91976] text-white" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"}`}>
                                 {pos}
                               </button>
                             ))}
@@ -1188,8 +1188,8 @@ export default function Stories() {
                         </div>
                         <div className="space-y-1">
                           <div className="flex items-center justify-between">
-                            <p className="text-[18px] text-zinc-500 uppercase tracking-wider">Spacing</p>
-                            <span className="text-[18px] text-zinc-300 tabular-nums">{heroSpacing}px</span>
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Spacing</p>
+                            <span className="text-[10px] text-zinc-300 tabular-nums">{heroSpacing}px</span>
                           </div>
                           <Slider value={[heroSpacing]} onValueChange={([v]) => setHeroSpacing(v)} min={0} max={80} step={4} />
                         </div>
@@ -1231,7 +1231,7 @@ export default function Stories() {
                           >
                             <div className={`mb-1 ${isActive ? "text-pink-400" : "text-zinc-400"}`}>{icon}</div>
                             <p className="text-xs font-semibold text-zinc-200">{label}</p>
-                            <p className="text-[18px] text-zinc-500 mt-0.5">{desc}</p>
+                            <p className="text-[10px] text-zinc-500 mt-0.5">{desc}</p>
                           </button>
                         );
                       })}
@@ -1240,16 +1240,16 @@ export default function Stories() {
                     {stickerConfig?.type === "poll" && (
                       <div className="space-y-3 pt-2 border-t border-zinc-800/60">
                         <div className="space-y-1">
-                          <p className="text-[18px] text-zinc-500 uppercase tracking-wider">Question</p>
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Question</p>
                           <Input value={stickerConfig.question} onChange={(e) => setStickerConfig({ ...stickerConfig, question: e.target.value })} placeholder="Which do you prefer?" className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
                         </div>
                         <div className="grid grid-cols-2 gap-2">
                           <div className="space-y-1">
-                            <p className="text-[18px] text-zinc-500 uppercase tracking-wider">Option A</p>
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Option A</p>
                             <Input value={stickerConfig.optionA} onChange={(e) => setStickerConfig({ ...stickerConfig, optionA: e.target.value })} placeholder="Option A" className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
                           </div>
                           <div className="space-y-1">
-                            <p className="text-[18px] text-zinc-500 uppercase tracking-wider">Option B</p>
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Option B</p>
                             <Input value={stickerConfig.optionB} onChange={(e) => setStickerConfig({ ...stickerConfig, optionB: e.target.value })} placeholder="Option B" className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
                           </div>
                         </div>
@@ -1258,7 +1258,7 @@ export default function Stories() {
 
                     {stickerConfig?.type === "question" && (
                       <div className="space-y-1 pt-2 border-t border-zinc-800/60">
-                        <p className="text-[18px] text-zinc-500 uppercase tracking-wider">Prompt text</p>
+                        <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Prompt text</p>
                         <Input value={stickerConfig.prompt} onChange={(e) => setStickerConfig({ ...stickerConfig, prompt: e.target.value })} placeholder="Ask me anything" className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
                       </div>
                     )}
@@ -1266,11 +1266,11 @@ export default function Stories() {
                     {stickerConfig?.type === "countdown" && (
                       <div className="space-y-3 pt-2 border-t border-zinc-800/60">
                         <div className="space-y-1">
-                          <p className="text-[18px] text-zinc-500 uppercase tracking-wider">Event name</p>
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Event name</p>
                           <Input value={stickerConfig.eventName} onChange={(e) => setStickerConfig({ ...stickerConfig, eventName: e.target.value })} placeholder="Coming soon" className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
                         </div>
                         <div className="space-y-1">
-                          <p className="text-[18px] text-zinc-500 uppercase tracking-wider">End date &amp; time</p>
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">End date &amp; time</p>
                           <Input type="datetime-local" value={stickerConfig.endDate} onChange={(e) => setStickerConfig({ ...stickerConfig, endDate: e.target.value })} className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
                         </div>
                       </div>
@@ -1279,11 +1279,11 @@ export default function Stories() {
                     {stickerConfig?.type === "link" && (
                       <div className="space-y-3 pt-2 border-t border-zinc-800/60">
                         <div className="space-y-1">
-                          <p className="text-[18px] text-zinc-500 uppercase tracking-wider">URL</p>
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">URL</p>
                           <Input value={stickerConfig.url} onChange={(e) => setStickerConfig({ ...stickerConfig, url: e.target.value })} placeholder="https://example.com" className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
                         </div>
                         <div className="space-y-1">
-                          <p className="text-[18px] text-zinc-500 uppercase tracking-wider">Display text</p>
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider">Display text</p>
                           <Input value={stickerConfig.displayText} onChange={(e) => setStickerConfig({ ...stickerConfig, displayText: e.target.value })} placeholder="Learn more" className="h-8 text-xs bg-zinc-800/60 border-zinc-700/50 text-zinc-200" />
                         </div>
                       </div>
@@ -1291,7 +1291,7 @@ export default function Stories() {
 
                     {stickerConfig && (
                       <div className="space-y-2 pt-2 border-t border-zinc-800/60">
-                        <p className="text-[18px] text-zinc-500 leading-relaxed">Drag the sticker in the right preview to position it, then click Refresh to re-bake.</p>
+                        <p className="text-[10px] text-zinc-500 leading-relaxed">Drag the sticker in the right preview to position it, then click Refresh to re-bake.</p>
                         <button
                           onClick={() => setStickerConfig(null)}
                           className="w-full py-1.5 rounded text-xs font-semibold text-red-400 hover:bg-red-900/20 transition-colors border border-red-900/30"
@@ -1302,8 +1302,8 @@ export default function Stories() {
                     )}
 
                     <div className="mt-2 rounded-xl border border-amber-500/20 bg-amber-950/20 p-3 space-y-1">
-                      <p className="text-[18px] font-semibold text-amber-400 uppercase tracking-wider">Visual overlay only</p>
-                      <p className="text-[18px] text-amber-200/70 leading-relaxed">The Instagram API does not support native tappable stickers on scheduled posts. These elements are baked into the image as graphics. To add real interactive stickers, open the story in Instagram after posting and add them manually.</p>
+                      <p className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider">Visual overlay only</p>
+                      <p className="text-[10px] text-amber-200/70 leading-relaxed">The Instagram API does not support native tappable stickers on scheduled posts. These elements are baked into the image as graphics. To add real interactive stickers, open the story in Instagram after posting and add them manually.</p>
                     </div>
                   </div>
                 )}
@@ -1332,7 +1332,7 @@ export default function Stories() {
                           </div>
                           <span className="text-xs text-zinc-300">{num}. {label}</span>
                           {key === "content" && questions.length > 0 && (
-                            <span className="ml-auto text-[18px] text-zinc-500 tabular-nums">{questions.length}q</span>
+                            <span className="ml-auto text-[10px] text-zinc-500 tabular-nums">{questions.length}q</span>
                           )}
                         </button>
                       ))}
@@ -1517,7 +1517,7 @@ export default function Stories() {
                           Interactive Sticker
                         </h3>
                         {stickerConfig && (
-                          <button onClick={() => setStickerConfig(null)} className="text-[18px] text-zinc-500 hover:text-red-400 transition-colors">Remove</button>
+                          <button onClick={() => setStickerConfig(null)} className="text-[10px] text-zinc-500 hover:text-red-400 transition-colors">Remove</button>
                         )}
                       </div>
                       <p className="text-xs text-zinc-500">Bakes into every exported frame. Drag to reposition in the right preview.</p>
@@ -1542,16 +1542,16 @@ export default function Stories() {
                       {stickerConfig?.type === "poll" && (
                         <div className="space-y-3 pt-1">
                           <div>
-                            <p className="text-[18px] text-zinc-500 uppercase tracking-wider mb-1">Question</p>
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Question</p>
                             <input value={stickerConfig.question} onChange={(e) => setStickerConfig({ ...stickerConfig, question: e.target.value })} placeholder="Which do you prefer?" className="w-full h-8 rounded-lg border border-zinc-700/50 bg-zinc-800/60 px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-pink-500/50" />
                           </div>
                           <div className="grid grid-cols-2 gap-2">
                             <div>
-                              <p className="text-[18px] text-zinc-500 uppercase tracking-wider mb-1">Option A</p>
+                              <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Option A</p>
                               <input value={stickerConfig.optionA} onChange={(e) => setStickerConfig({ ...stickerConfig, optionA: e.target.value })} placeholder="Option A" className="w-full h-8 rounded-lg border border-zinc-700/50 bg-zinc-800/60 px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-pink-500/50" />
                             </div>
                             <div>
-                              <p className="text-[18px] text-zinc-500 uppercase tracking-wider mb-1">Option B</p>
+                              <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Option B</p>
                               <input value={stickerConfig.optionB} onChange={(e) => setStickerConfig({ ...stickerConfig, optionB: e.target.value })} placeholder="Option B" className="w-full h-8 rounded-lg border border-zinc-700/50 bg-zinc-800/60 px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-pink-500/50" />
                             </div>
                           </div>
@@ -1559,18 +1559,18 @@ export default function Stories() {
                       )}
                       {stickerConfig?.type === "question" && (
                         <div className="pt-1">
-                          <p className="text-[18px] text-zinc-500 uppercase tracking-wider mb-1">Prompt text</p>
+                          <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Prompt text</p>
                           <input value={stickerConfig.prompt} onChange={(e) => setStickerConfig({ ...stickerConfig, prompt: e.target.value })} placeholder="Ask me anything" className="w-full h-8 rounded-lg border border-zinc-700/50 bg-zinc-800/60 px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-pink-500/50" />
                         </div>
                       )}
                       {stickerConfig?.type === "countdown" && (
                         <div className="space-y-2 pt-1">
                           <div>
-                            <p className="text-[18px] text-zinc-500 uppercase tracking-wider mb-1">Event name</p>
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Event name</p>
                             <input value={stickerConfig.eventName} onChange={(e) => setStickerConfig({ ...stickerConfig, eventName: e.target.value })} placeholder="Coming soon" className="w-full h-8 rounded-lg border border-zinc-700/50 bg-zinc-800/60 px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-pink-500/50" />
                           </div>
                           <div>
-                            <p className="text-[18px] text-zinc-500 uppercase tracking-wider mb-1">End date &amp; time</p>
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">End date &amp; time</p>
                             <input type="datetime-local" value={stickerConfig.endDate} onChange={(e) => setStickerConfig({ ...stickerConfig, endDate: e.target.value })} className="w-full h-8 rounded-lg border border-zinc-700/50 bg-zinc-800/60 px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-pink-500/50" />
                           </div>
                         </div>
@@ -1578,11 +1578,11 @@ export default function Stories() {
                       {stickerConfig?.type === "link" && (
                         <div className="space-y-2 pt-1">
                           <div>
-                            <p className="text-[18px] text-zinc-500 uppercase tracking-wider mb-1">URL</p>
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">URL</p>
                             <input value={stickerConfig.url} onChange={(e) => setStickerConfig({ ...stickerConfig, url: e.target.value })} placeholder="https://example.com" className="w-full h-8 rounded-lg border border-zinc-700/50 bg-zinc-800/60 px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-pink-500/50" />
                           </div>
                           <div>
-                            <p className="text-[18px] text-zinc-500 uppercase tracking-wider mb-1">Display text</p>
+                            <p className="text-[10px] text-zinc-500 uppercase tracking-wider mb-1">Display text</p>
                             <input value={stickerConfig.displayText} onChange={(e) => setStickerConfig({ ...stickerConfig, displayText: e.target.value })} placeholder="Learn more" className="w-full h-8 rounded-lg border border-zinc-700/50 bg-zinc-800/60 px-2.5 text-xs text-zinc-200 focus:outline-none focus:border-pink-500/50" />
                           </div>
                         </div>
@@ -1705,9 +1705,9 @@ export default function Stories() {
                           <div key={i} className="group relative rounded-xl overflow-hidden border border-border/30 bg-card">
                             <img src={p} alt={`Story ${i + 1}`} className="w-full aspect-[9/16] object-cover" />
                             <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-2.5">
-                              <p className="text-[18px] text-white/80 line-clamp-2">{questions[i]}</p>
+                              <p className="text-[10px] text-white/80 line-clamp-2">{questions[i]}</p>
                             </div>
-                            <div className="absolute top-2 left-2 bg-black/60 text-white text-[18px] px-1.5 py-0.5 rounded-full tabular-nums">{i + 1}</div>
+                            <div className="absolute top-2 left-2 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded-full tabular-nums">{i + 1}</div>
                           </div>
                         ))}
                       </div>
@@ -1732,7 +1732,7 @@ export default function Stories() {
 
           {/* Right sticky story preview */}
           <div className="w-[200px] shrink-0 border-l border-zinc-800/60 bg-[#0f0f0f] flex flex-col items-center justify-start py-5 px-3 gap-3 overflow-y-auto">
-            <p className="text-[18px] font-semibold uppercase tracking-widest text-zinc-600 self-start">Preview</p>
+            <p className="text-[9px] font-semibold uppercase tracking-widest text-zinc-600 self-start">Preview</p>
             {previews.length > 0 ? (
               <>
                 <div
@@ -1781,20 +1781,20 @@ export default function Stories() {
                       {stickerConfig.type === "poll" && (
                         <div className="bg-white rounded-2xl shadow-xl overflow-hidden" style={{ width: 136 }}>
                           <div className="px-2.5 pt-2 pb-1">
-                            <p className="text-center text-[18px] text-gray-400 font-semibold uppercase tracking-wider">POLL</p>
-                            <p className="text-center text-[18px] font-bold text-gray-800 leading-tight mt-0.5 line-clamp-2">{stickerConfig.question}</p>
+                            <p className="text-center text-[7px] text-gray-400 font-semibold uppercase tracking-wider">POLL</p>
+                            <p className="text-center text-[10px] font-bold text-gray-800 leading-tight mt-0.5 line-clamp-2">{stickerConfig.question}</p>
                           </div>
                           <div className="flex gap-1 px-2 pb-2">
-                            <div className="flex-1 rounded-xl bg-pink-50 border border-pink-300 py-1 text-center text-[18px] font-bold text-pink-600 truncate px-1">{stickerConfig.optionA || "A"}</div>
-                            <div className="flex-1 rounded-xl bg-purple-50 border border-purple-300 py-1 text-center text-[18px] font-bold text-purple-600 truncate px-1">{stickerConfig.optionB || "B"}</div>
+                            <div className="flex-1 rounded-xl bg-pink-50 border border-pink-300 py-1 text-center text-[8px] font-bold text-pink-600 truncate px-1">{stickerConfig.optionA || "A"}</div>
+                            <div className="flex-1 rounded-xl bg-purple-50 border border-purple-300 py-1 text-center text-[8px] font-bold text-purple-600 truncate px-1">{stickerConfig.optionB || "B"}</div>
                           </div>
                         </div>
                       )}
                       {stickerConfig.type === "question" && (
                         <div className="rounded-2xl shadow-xl overflow-hidden" style={{ width: 132, background: "#fffbdc" }}>
                           <div className="px-2.5 py-2">
-                            <p className="text-[18px] text-amber-500 font-semibold uppercase tracking-wider">ASK ME A QUESTION</p>
-                            <p className="text-[18px] font-bold text-amber-900 mt-0.5 line-clamp-2">{stickerConfig.prompt}</p>
+                            <p className="text-[7px] text-amber-500 font-semibold uppercase tracking-wider">ASK ME A QUESTION</p>
+                            <p className="text-[10px] font-bold text-amber-900 mt-0.5 line-clamp-2">{stickerConfig.prompt}</p>
                             <div className="mt-1.5 h-3 rounded-full bg-amber-200/60" />
                           </div>
                         </div>
@@ -1809,12 +1809,12 @@ export default function Stories() {
                         ];
                         return (
                           <div className="rounded-2xl shadow-xl text-center" style={{ width: 136, background: "rgba(10,10,20,0.95)", borderTop: "3px solid #E91976" }}>
-                            <p className="text-[18px] font-semibold text-white pt-2 px-2 truncate">{stickerConfig.eventName}</p>
+                            <p className="text-[9px] font-semibold text-white pt-2 px-2 truncate">{stickerConfig.eventName}</p>
                             <div className="flex justify-center gap-1.5 px-2 py-2">
                               {parts.map((p) => (
                                 <div key={p.l} className="flex flex-col items-center">
-                                  <span className="text-[18px] font-black text-[#E91976] tabular-nums leading-none">{p.v}</span>
-                                  <span className="text-[18px] text-zinc-500">{p.l}</span>
+                                  <span className="text-[14px] font-black text-[#E91976] tabular-nums leading-none">{p.v}</span>
+                                  <span className="text-[7px] text-zinc-500">{p.l}</span>
                                 </div>
                               ))}
                             </div>
@@ -1824,7 +1824,7 @@ export default function Stories() {
                       {stickerConfig.type === "link" && (
                         <div className="bg-white rounded-full shadow-xl flex items-center gap-1.5 px-3 py-1.5" style={{ maxWidth: 136 }}>
                           <Link2 className="w-3 h-3 text-gray-500 shrink-0" />
-                          <span className="text-[18px] font-semibold text-gray-700 truncate">{stickerConfig.displayText || stickerConfig.url || "Link"}</span>
+                          <span className="text-[9px] font-semibold text-gray-700 truncate">{stickerConfig.displayText || stickerConfig.url || "Link"}</span>
                         </div>
                       )}
                     </div>
@@ -1833,16 +1833,16 @@ export default function Stories() {
                     <button onClick={() => setPreviewIdx(Math.max(0, previewIdx - 1))} disabled={previewIdx === 0} className="text-white disabled:opacity-30 transition-opacity">
                       <ChevronLeft className="w-3.5 h-3.5" />
                     </button>
-                    <span className="text-[18px] text-white font-medium tabular-nums">{previewIdx + 1}/{previews.length}</span>
+                    <span className="text-[10px] text-white font-medium tabular-nums">{previewIdx + 1}/{previews.length}</span>
                     <button onClick={() => setPreviewIdx(Math.min(previews.length - 1, previewIdx + 1))} disabled={previewIdx >= previews.length - 1} className="text-white disabled:opacity-30 transition-opacity">
                       <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
                 {questions[previewIdx] && (
-                  <p className="text-[18px] text-zinc-500 text-center leading-relaxed line-clamp-3">{questions[previewIdx]}</p>
+                  <p className="text-[10px] text-zinc-500 text-center leading-relaxed line-clamp-3">{questions[previewIdx]}</p>
                 )}
-                <button onClick={renderPreviews} className="text-[18px] text-zinc-600 hover:text-zinc-400 transition-colors flex items-center gap-1 mt-1">
+                <button onClick={renderPreviews} className="text-[9px] text-zinc-600 hover:text-zinc-400 transition-colors flex items-center gap-1 mt-1">
                   <Sparkles className="w-3 h-3" /> Refresh
                 </button>
               </>
@@ -1850,7 +1850,7 @@ export default function Stories() {
               <div className="w-full flex flex-col items-center justify-center" style={{ aspectRatio: "9/16" }}>
                 <div className="w-full h-full rounded-lg border border-dashed border-zinc-800 flex flex-col items-center justify-center gap-2 text-zinc-700">
                   <BookOpen className="w-8 h-8 opacity-30" />
-                  <p className="text-[18px] text-center px-2">Add questions and move to Design to preview</p>
+                  <p className="text-[9px] text-center px-2">Add questions and move to Design to preview</p>
                 </div>
               </div>
             )}

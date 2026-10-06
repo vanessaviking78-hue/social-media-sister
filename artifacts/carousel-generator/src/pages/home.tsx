@@ -1288,7 +1288,7 @@ export default function Home() {
                   <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full bg-[#E91976]" />
                 )}
                 {icon(isActive)}
-                <span className="text-[18px] font-semibold tracking-wide uppercase" style={{ color: isActive ? "#E91976" : "#52525b" }}>
+                <span className="text-[9px] font-semibold tracking-wide uppercase" style={{ color: isActive ? "#E91976" : "#52525b" }}>
                   {label}
                 </span>
               </button>
@@ -1540,7 +1540,7 @@ export default function Home() {
                       </div>
                       <div className="mt-2 rounded-xl border border-pink-500/20 bg-pink-500/5 p-3 space-y-2">
                         <p className="text-xs font-medium flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-pink-400" /> Generate a cover from your headline</p>
-                        <p className="text-[18px] text-muted-foreground">A clean, on-brand background with no people. Type the headline and it makes a matching image.</p>
+                        <p className="text-[11px] text-muted-foreground">A clean, on-brand background with no people. Type the headline and it makes a matching image.</p>
                         <div className="flex gap-2">
                           <input
                             value={genCoverPrompt}
@@ -1563,7 +1563,7 @@ export default function Home() {
                           {coverPhotos.map((file, i) => (
                             <div key={i} className="relative aspect-square rounded-xl overflow-hidden group bg-accent cursor-pointer ring-2 ring-pink-500/40">
                               <img src={URL.createObjectURL(file)} alt="cover preview" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[18px] text-center py-0.5 font-semibold">SLIDE 1</div>
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[8px] text-center py-0.5 font-semibold">SLIDE 1</div>
                               <button onClick={(e) => { e.stopPropagation(); removeCoverPhoto(i); }} className="absolute top-1 right-1 p-0.5 bg-black/60 hover:bg-black/90 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3" /></button>
                             </div>
                           ))}
@@ -2773,7 +2773,7 @@ export default function Home() {
                                   <div key={slide.slideIndex} className="relative rounded-2xl overflow-hidden shadow-md hover:shadow-[0_0_24px_hsl(var(--primary)/0.15)] transition-shadow duration-300" style={{ aspectRatio: "4/5" }} data-testid={`slide-card-${slide.slideIndex}`}>
                                     <img src={slide.imageUrl} alt={`Carousel ${slide.groupIndex} slide ${slide.groupPosition}`} className="absolute inset-0 w-full h-full object-cover" style={{ opacity: isCoverImg || isCover ? 1 : 0.5 }} />
                                     {isCoverImg && (
-                                      <div className="absolute top-1 left-1 bg-pink-500/90 text-white text-[18px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide">Cover</div>
+                                      <div className="absolute top-1 left-1 bg-pink-500/90 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide">Cover</div>
                                     )}
                                     {logoPreviewUrl && !isCoverImg && (() => {
                                       const posStyle: React.CSSProperties = { position: "absolute" };

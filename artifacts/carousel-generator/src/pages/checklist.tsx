@@ -129,7 +129,7 @@ export default function Checklist() {
                       <td className="px-4 py-3 sticky left-0 bg-zinc-950 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{r.clientName}</span>
-                          <span className={`text-[18px] px-1.5 py-0.5 rounded-full border ${allDone ? "bg-green-900/30 text-green-400 border-green-700/40" : "bg-zinc-800 text-zinc-400 border-zinc-700"}`}>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ${allDone ? "bg-green-900/30 text-green-400 border-green-700/40" : "bg-zinc-800 text-zinc-400 border-zinc-700"}`}>
                             {doneCount}/{FIELDS.length}
                           </span>
                         </div>

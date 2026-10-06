@@ -337,7 +337,7 @@ export default function MemeGenerator() {
             <Button onClick={scheduleMeme} disabled={scheduling || !photo} className="w-full">
               {scheduling ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <CalendarClock className="w-4 h-4 mr-1.5" />} Schedule to post
             </Button>
-            <p className="text-[18px] text-muted-foreground">Posts itself to Instagram for this client at the chosen time.</p>
+            <p className="text-[11px] text-muted-foreground">Posts itself to Instagram for this client at the chosen time.</p>
           </div>
           <p className="text-xs text-muted-foreground text-center">Portrait 1080 x 1440, ready for the grid.</p>
         </div>
