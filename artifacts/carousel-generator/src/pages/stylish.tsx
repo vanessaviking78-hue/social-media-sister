@@ -1389,7 +1389,7 @@ function tintBackdrop(c: HTMLCanvasElement, hex: string | null, mono = false) {
       const hueOk = h >= 185 && h <= 265;
       const w = hueOk ? Math.min(1, Math.max(0, (s - 0.1) / 0.2)) * (h < 200 ? (h - 185) / 15 : h > 250 ? (265 - h) / 15 : 1) : 0;
       const bl = d[i + 2] - d[i];
-      ws[j] = w === 0 && l < 0.2 && bl >= 8 && d[i + 2] >= d[i + 1] ? Math.min(1, (bl - 6) / 14) : w;
+      ws[j] = w < 1 && l < 0.2 && bl >= 4 && d[i + 2] >= d[i + 1] ? Math.max(w, Math.min(1, (bl - 3) / 9)) : w;
       if (w > 0.5) frac[Math.floor(y / CELL) * gw + Math.floor(x / CELL)] += 1 / (CELL * CELL);
     }
   }
