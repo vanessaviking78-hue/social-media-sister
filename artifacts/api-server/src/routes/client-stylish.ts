@@ -223,6 +223,17 @@ THE CLINIC'S TOP PERFORMING POSTS
 The user message lists this clinic's own best performing posts, most engaged first. These are proven winners with this audience. Before writing, work out what they have in common: the kind of hook, the subject matter, the feeling they trigger, how personal they are, how long they run. Then write all 20 rows in that same family: the same kind of hooks, angles and emotions, about fresh things.
 Never copy a top post or lightly reword it, every row must be new. Only echo a personal fact or credential (a career history, a number of years, a qualification) if it appears in the top posts or the clinician notes, and never invent one.`;
 
+const HALLOWEEN_IDEAS: Record<string, { title: string; brief: string }> = {
+  "hl-01": { title: "Ghost stories from the treatment room", brief: "Funny, gently spooky stories about things people have put on their faces (three retinols at once, a kitchen table facial, a mystery serum from a Facebook group). Ends warmly on why a proper consultation matters. Never name a real product, person or competitor." },
+  "hl-02": { title: "Halloween 1992", brief: "Pure nostalgia for UK women over 35: a bin bag costume, Woolworths face paint that stained for a week, an Elnett cloud, a pointed hat from Tammy Girl. Hyper specific, affectionate and funny." },
+  "hl-03": { title: "Things scarier than Halloween", brief: "A 'things that' list: the 3am hot flush, a front camera in bad light, a group chat that has gone quiet. Warm, funny, never body shaming." },
+  "hl-04": { title: "Which Halloween film is your perimenopause?", brief: "Each slide matches a film to a menopause moment with a one line joke (for example Night Sweats on Elm Street, The Fog, Poltergeist for the thermostat). Warm, validating, no medical advice, no mention of hormones or medicines." },
+  "hl-05": { title: "The witch's cauldron", brief: "Reading a skincare label like a spell book: three ingredient names that sound like curses, with what each does in plain, light English. Fun, no medical claims, no brands." },
+  "hl-06": { title: "Carve the pumpkin with a plan", brief: "Nobody carves a pumpkin without a plan, so here is what to bring to a first consultation. A stealth sell: she finishes it feeling curious and comfortable." },
+  "hl-07": { title: "Sheet mask Sunday looks like Scream", brief: "The picture of you in a face mask opening the door to the delivery driver. Pure relatable humour about Sunday night routines." },
+  "hl-08": { title: "The face behind the costume", brief: "Emotional and shareable: the Halloweens she dressed as someone else, and the one where she was happy as herself. Original and specific, never a stock quote." },
+};
+
 const STRUCTURE_RULES = `
 WHAT YOU ARE WRITING
 A Stylish carousel pack for one clinic: exactly 20 posts, each one a row of short text that sits over photos.
@@ -366,6 +377,9 @@ router.post("/client-stylish/copy", upload.array("screenshots", 3), async (req: 
     if (!website.trim()) { res.status(400).json({ error: "Website is required" }); return; }
     if (cleanTreatments.length !== 3) { res.status(400).json({ error: "Please give me 3 treatments" }); return; }
 
+    const rawHall = body.halloween;
+    const hallIds = (Array.isArray(rawHall) ? rawHall : rawHall ? [rawHall] : []).map(String).filter((h, i, a) => HALLOWEEN_IDEAS[h] && a.indexOf(h) === i).slice(0, 3);
+    const expected = 20 + hallIds.length;
     const tonePrompt = CAPTION_TONE_PROMPTS[tone] ?? CAPTION_TONE_PROMPTS["4"];
     const siteDiag: SiteDiag = {};
     const [siteText, shotText, igTop] = await Promise.all([
@@ -384,7 +398,7 @@ router.post("/client-stylish/copy", upload.array("screenshots", 3), async (req: 
     const system = `You write copy for Vanessa Wormald's clients, UK aesthetic clinics.
 
 WRITING STYLE: ${tonePrompt}
-${STRUCTURE_RULES}${topPosts ? `\n${TOP_POSTS_RULES}` : ""}`;
+${hallIds.length ? STRUCTURE_RULES.replace(/exactly 20 (posts|objects)/g, `exactly ${expected} $1`) + `\n\nHALLOWEEN ROWS: after the 20 rows above, add ${hallIds.length} extra Halloween rows (rows 21 to ${expected}), in this order. Same format, same rules, same voice, still ending ideas with a comment, share, save or tag call to action. Make each one clever, industry relevant and outside the box.\n${hallIds.map((h, i) => `Row ${21 + i}: "${HALLOWEEN_IDEAS[h].title}". ${HALLOWEEN_IDEAS[h].brief}`).join("\n")}` : STRUCTURE_RULES}${topPosts ? `\n${TOP_POSTS_RULES}` : ""}`;
 
     const user = `Clinic: ${clientName.trim()}
 Treatments to promote this month, in order:
@@ -405,7 +419,7 @@ ${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${safeSite
         ],
         response_format: { type: "json_object" },
         temperature: 0.9,
-        max_tokens: 6500,
+        max_tokens: 7500,
       });
       const raw = completion.choices[0]?.message?.content ?? "";
       try {
@@ -421,17 +435,17 @@ ${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${safeSite
       } catch {
         rows = [];
       }
-      if (rows.length !== 20) {
-        feedback = "\n\nYour last answer did not have exactly 20 rows. Return exactly 20 rows.";
+      if (rows.length !== expected) {
+        feedback = `\n\nYour last answer did not have exactly ${expected} rows. Return exactly ${expected} rows.`;
         continue;
       }
       const hits = findBanned(rows);
       if (!hits.length) break;
-      feedback = `\n\nYour last answer used banned compliance wording (${hits.join(", ")}). Rewrite all 20 rows without any of those words, using "smoothing treatments" or "facial aesthetics" where needed.`;
+      feedback = `\n\nYour last answer used banned compliance wording (${hits.join(", ")}). Rewrite all ${expected} rows without any of those words, using "smoothing treatments" or "facial aesthetics" where needed.`;
     }
 
     // Last line of defence: if a banned word still slipped through, swap it out in code.
-    if (rows.length === 20) {
+    if (rows.length === expected) {
       rows = rows.map((r) => ({
         headline: neutralise(r.headline),
         subtitle: neutralise(r.subtitle),
@@ -442,8 +456,8 @@ ${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${safeSite
       }));
     }
 
-    if (rows.length !== 20) {
-      res.status(502).json({ error: "The copy did not come back as 20 rows. Please try again." });
+    if (rows.length !== expected) {
+      res.status(502).json({ error: `The copy did not come back as ${expected} rows. Please try again.` });
       return;
     }
 

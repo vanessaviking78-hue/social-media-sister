@@ -25,13 +25,24 @@ const TONES = [
 
 const pad = (n: number) => String(n).padStart(2, "0");
 // Autumn and winter alternate, so the photos run autumn, winter, autumn, winter and so on.
-const SLOTS = Array.from({ length: 10 }, (_, i) => [
+// The eight Halloween ideas. Up to three can be added to a pack, each with its own photo preset.
+const HALLOWEEN_IDEAS = [
+  { id: "hl-01", title: "Ghost stories from the treatment room" },
+  { id: "hl-02", title: "Halloween 1992" },
+  { id: "hl-03", title: "Things scarier than Halloween" },
+  { id: "hl-04", title: "Which Halloween film is your perimenopause?" },
+  { id: "hl-05", title: "The witch's cauldron (reading a skincare label)" },
+  { id: "hl-06", title: "Carve the pumpkin with a plan (first consultation)" },
+  { id: "hl-07", title: "Sheet mask Sunday looks like Scream" },
+  { id: "hl-08", title: "The face behind the costume" },
+];
+const BASE_SLOTS = Array.from({ length: 10 }, (_, i) => [
   { id: `au-${pad(i + 1)}`, label: `Autumn ${i + 1}` },
   { id: `ww-${pad(i + 1)}`, label: `Winter ${i + 1}` },
 ]).flat();
 
 // The pack repeats treatment, funny, things that, shareable, mix four times.
-const ROW_GROUPS = Array.from({ length: 20 }, (_, i) => ["Treatment", "Funny", "Things that", "Shareable", "Mix"][i % 5]);
+const ROW_GROUPS = Array.from({ length: 23 }, (_, i) => i >= 20 ? "Halloween" : ["Treatment", "Funny", "Things that", "Shareable", "Mix"][i % 5]);
 
 type CardStatus = "idle" | "generating" | "success" | "failed" | "rate-limited";
 type Card = { scenarioId: string; status: CardStatus; outputImageUrl?: string; failureReason?: string };
@@ -49,6 +60,12 @@ export default function ClientStylish() {
   const [spot, setSpot] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   // Option to skip the photoshoot and use photos already in the client's approved images.
+  // Halloween posts picked for this pack (up to 3). packHalloween is what the running pack was made with.
+  const [halloweenPick, setHalloweenPick] = useState<string[]>([]);
+  const [packHalloween, setPackHalloween] = useState<string[]>([]);
+  const hallRef = useRef<string[]>([]);
+  const slots = [...BASE_SLOTS, ...packHalloween.map(id => ({ id, label: `Halloween ${HALLOWEEN_IDEAS.findIndex(h => h.id === id) + 1}` }))];
+  const expected = 20 + packHalloween.length;
   const [useApproved, setUseApproved] = useState(false);
   const [approvedFiles, setApprovedFiles] = useState<File[]>([]);
   const [fromApproved, setFromApproved] = useState(false);
@@ -149,6 +166,7 @@ export default function ClientStylish() {
       fd.append("website", website.trim());
       treatments.forEach(t => fd.append("treatments", t.trim()));
       fd.append("tone", tone);
+      hallRef.current.forEach(h => fd.append("halloween", h));
       fd.append("notes", notes);
       fd.append("topPosts", topText);
       shots.forEach(f => fd.append("screenshots", f));
@@ -179,10 +197,12 @@ export default function ClientStylish() {
     setRows([]);
     setCsv("");
     setJobIds([]);
+    hallRef.current = halloweenPick;
+    setPackHalloween(halloweenPick);
     setFromApproved(useApproved);
     if (useApproved) {
       // No photoshoot: the chosen approved images fill the slots in the order they were picked.
-      setCards(Object.fromEntries(SLOTS.map((s, i) => [s.id, approvedFiles[i]
+      setCards(Object.fromEntries([...BASE_SLOTS, ...halloweenPick.map(id => ({ id }))].map((s, i) => [s.id, approvedFiles[i]
         ? { scenarioId: s.id, status: "success" as CardStatus, outputImageUrl: URL.createObjectURL(approvedFiles[i]) }
         : { scenarioId: s.id, status: "idle" as CardStatus }])));
       setJobIds(["approved"]);
@@ -190,7 +210,7 @@ export default function ClientStylish() {
       setBusy(false);
       return;
     }
-    setCards(Object.fromEntries(SLOTS.map(s => [s.id, { scenarioId: s.id, status: "idle" as CardStatus }])));
+    setCards(Object.fromEntries([...BASE_SLOTS, ...halloweenPick.map(id => ({ id }))].map(s => [s.id, { scenarioId: s.id, status: "idle" as CardStatus }])));
     // The copy writes while the photos are being made.
     void writeCopy();
     try {
@@ -202,8 +222,8 @@ export default function ClientStylish() {
       const row = (await up.json()) as { id?: number; error?: string };
       if (!up.ok || !row.id) throw new Error(row.error || "The photo did not upload");
       sourcePhotoId.current = row.id;
-      setStage("Making the 20 photos");
-      await startPhotoJob(SLOTS.map(s => s.id));
+      setStage(`Making the ${20 + halloweenPick.length} photos`);
+      await startPhotoJob([...BASE_SLOTS, ...halloweenPick.map(id => ({ id }))].map(s => s.id));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Something went wrong");
       setStage("");
@@ -212,10 +232,10 @@ export default function ClientStylish() {
     }
   };
 
-  const failedIds = SLOTS.filter(s => cards[s.id]?.status === "failed").map(s => s.id);
-  const doneCount = SLOTS.filter(s => cards[s.id]?.status === "success").length;
+  const failedIds = slots.filter(s => cards[s.id]?.status === "failed").map(s => s.id);
+  const doneCount = slots.filter(s => cards[s.id]?.status === "success").length;
   const photosRunning = !!jobId || busy;
-  const totalPhotos = fromApproved ? Math.min(approvedFiles.length, SLOTS.length) : SLOTS.length;
+  const totalPhotos = fromApproved ? Math.min(approvedFiles.length, slots.length) : slots.length;
   const photosFinished = started && !busy && !jobId && jobIds.length > 0 && doneCount + failedIds.length === totalPhotos;
   const packReady = photosFinished && copyState === "done" && doneCount > 0;
 
@@ -225,7 +245,7 @@ export default function ClientStylish() {
   const [savedCount, setSavedCount] = useState(0);
   const [saveFailed, setSaveFailed] = useState(false);
   const saveNew = useCallback(async () => {
-    const fresh = SLOTS.filter(s => cards[s.id]?.status === "success" && cards[s.id]?.outputImageUrl && !savedIds.current.has(s.id));
+    const fresh = slots.filter(s => cards[s.id]?.status === "success" && cards[s.id]?.outputImageUrl && !savedIds.current.has(s.id));
     if (!fresh.length || !clientName.trim()) return;
     fresh.forEach(s => savedIds.current.add(s.id));
     try {
@@ -262,14 +282,14 @@ export default function ClientStylish() {
       const sd = (await st.json()) as { connected?: boolean };
       if (!sd.connected) throw new Error("Canva is not connected yet. Connect it from the Canva button in the AI Photo Studio first.");
       let n = 0;
-      for (const slot of SLOTS) {
+      for (const slot of slots) {
         const c = cards[slot.id];
         if (c?.status !== "success" || !c.outputImageUrl) continue;
         const url = c.outputImageUrl.startsWith("http") ? c.outputImageUrl : `${window.location.origin}${c.outputImageUrl}`;
         const r = await fetch(`${BASE}api/canva/upload`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ imageUrl: url, name: `${packName} Stylish ${pad(SLOTS.indexOf(slot) + 1)} ${slot.label}` }),
+          body: JSON.stringify({ imageUrl: url, name: `${packName} Stylish ${pad(slots.indexOf(slot) + 1)} ${slot.label}` }),
         });
         if (!r.ok) throw new Error(`${slot.label} would not go to Canva`);
         n++;
@@ -293,17 +313,17 @@ export default function ClientStylish() {
   };
 
   const slotFileName = (slotId: string, mime: string) => {
-    const idx = SLOTS.findIndex(s => s.id === slotId);
+    const idx = slots.findIndex(s => s.id === slotId);
     const ext = mime.includes("jpeg") ? "jpg" : mime.includes("webp") ? "webp" : "png";
     // The approved- start tells Stylish these are already in the client's library, so it does not file them twice.
     if (fromApproved) return `approved-${pad(idx + 1)}-${packName}.${ext}`;
     // The running number keeps autumn, winter, autumn, winter in order if the photos are uploaded again.
-    return `${packName} Stylish ${pad(idx + 1)} ${SLOTS[idx].label}.${ext}`;
+    return `${packName} Stylish ${pad(idx + 1)} ${slots[idx].label}.${ext}`;
   };
 
   const collectImages = async (): Promise<File[]> => {
     const files: File[] = [];
-    for (const slot of SLOTS) {
+    for (const slot of slots) {
       const c = cards[slot.id];
       if (c?.status !== "success" || !c.outputImageUrl) continue;
       const r = await fetch(c.outputImageUrl);
@@ -410,7 +430,7 @@ export default function ClientStylish() {
                   skipBackgroundRemoval
                   large
                   label="Choose approved images"
-                  onAddImages={(files) => setApprovedFiles(prev => [...prev, ...files].slice(0, SLOTS.length))}
+                  onAddImages={(files) => setApprovedFiles(prev => [...prev, ...files].slice(0, 20 + halloweenPick.length))}
                 />
                 {approvedFiles.length > 0 && (
                   <div className="space-y-1.5">
@@ -471,6 +491,24 @@ export default function ClientStylish() {
           </div>
 
           <div className="space-y-2">
+            <Label className="text-sm font-medium">Halloween posts <span className="text-muted-foreground font-normal">(optional, pick up to 3)</span></Label>
+            <div className="space-y-1.5">
+              {HALLOWEEN_IDEAS.map(h => {
+                const on = halloweenPick.includes(h.id);
+                const full = !on && halloweenPick.length >= 3;
+                return (
+                  <label key={h.id} className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${on ? "border-orange-500/60 bg-orange-500/10" : "border-border/40"} ${full ? "opacity-40" : "cursor-pointer hover:border-border/70"}`}>
+                    <input type="checkbox" checked={on} disabled={full} className="accent-orange-500"
+                      onChange={() => setHalloweenPick(prev => on ? prev.filter(x => x !== h.id) : [...prev, h.id])} />
+                    {h.title}
+                  </label>
+                );
+              })}
+            </div>
+            {halloweenPick.length > 0 && <p className="text-xs text-muted-foreground">Each one gets its own Halloween photo and is written in the clinic's style, as posts 21 onwards.</p>}
+          </div>
+
+          <div className="space-y-2">
             <Label className="text-sm font-medium">Writing style</Label>
             <div className="space-y-1.5">
               {TONES.map(t => (
@@ -511,7 +549,7 @@ export default function ClientStylish() {
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2 text-sm">
                   {photosRunning || busy ? <Loader2 className="w-4 h-4 animate-spin text-sky-400" /> : <Check className="w-4 h-4 text-sky-400" />}
-                  <span>{stage && !photosFinished ? stage : fromApproved ? `Using ${doneCount} approved photos` : `Photos: ${doneCount} of 20 made`}</span>
+                  <span>{stage && !photosFinished ? stage : fromApproved ? `Using ${doneCount} approved photos` : `Photos: ${doneCount} of ${expected} made`}</span>
                 </div>
                 <span className="text-border/60">·</span>
                 <div className="flex items-center gap-2 text-sm">
@@ -519,8 +557,8 @@ export default function ClientStylish() {
                   {copyState === "done" && <Check className="w-4 h-4 text-sky-400" />}
                   {copyState === "error" && <AlertTriangle className="w-4 h-4 text-destructive" />}
                   <span>
-                    {copyState === "writing" && "Writing the 20 posts"}
-                    {copyState === "done" && (topCount > 0 ? `20 posts written, modelled on ${topCount} top posts${topSource === "instagram" ? " from their Instagram" : ""}` : "20 posts written, but I could not reach their Instagram, so it is not modelled on their top posts")}
+                    {copyState === "writing" && `Writing the ${expected} posts`}
+                    {copyState === "done" && (topCount > 0 ? `${expected} posts written, modelled on ${topCount} top posts${topSource === "instagram" ? " from their Instagram" : ""}` : `${expected} posts written, but I could not reach their Instagram, so it is not modelled on their top posts`)}
                     {copyState === "error" && copyError}
                   </span>
                   {copyState === "error" && (
@@ -551,7 +589,7 @@ export default function ClientStylish() {
                   <Button variant="outline" onClick={handleDownloadCsv} disabled={!csv || copyState === "writing"}>
                     <Download className="w-4 h-4 mr-2" />Download CSV
                   </Button>
-                  <Button variant="outline" onClick={writeCopy} disabled={copyState === "writing" || busy} title="Writes a brand new set of 20 posts, replacing the current ones">
+                  <Button variant="outline" onClick={writeCopy} disabled={copyState === "writing" || busy} title="Writes a brand new set of posts, replacing the current ones">
                     {copyState === "writing" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCw className="w-4 h-4 mr-2" />}Rerun CSV
                   </Button>
                   <span className="text-xs text-muted-foreground">
@@ -559,7 +597,7 @@ export default function ClientStylish() {
                   </span>
                 </div>
                 <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-3">
-                  {SLOTS.map(s => {
+                  {slots.map(s => {
                     const c = cards[s.id];
                     return (
                       <div key={s.id} className="space-y-1">
@@ -585,9 +623,9 @@ export default function ClientStylish() {
                 )}
               </div>
 
-              {rows.length === 20 && (
+              {rows.length === expected && (
                 <div>
-                  <h3 className="text-sm font-semibold mb-3">The 20 posts</h3>
+                  <h3 className="text-sm font-semibold mb-3">The {expected} posts</h3>
                   <div className="rounded-lg border border-border/30 overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead className="bg-muted/30 text-muted-foreground">
