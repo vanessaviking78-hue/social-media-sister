@@ -369,7 +369,31 @@ async function readTopPostShots(files: Express.Multer.File[]): Promise<string> {
   }
 }
 
+type CopyJob = { status: "running" | "done" | "error"; code?: number; body?: unknown; at: number };
+const copyJobs = new Map<string, CopyJob>();
+setInterval(() => { const cut = Date.now() - 30 * 60_000; for (const [k, v] of copyJobs) if (v.at < cut) copyJobs.delete(k); }, 10 * 60_000).unref?.();
+
+router.get("/client-stylish/copy/:jobId", (req: Request, res: Response) => {
+  const job = copyJobs.get(String(req.params["jobId"]));
+  if (!job) { res.status(404).json({ error: "Job not found" }); return; }
+  if (job.status === "running") { res.json({ status: "running" }); return; }
+  res.json({ status: job.status, code: job.code ?? 200, ...(job.body as object) });
+});
+
 router.post("/client-stylish/copy", upload.array("screenshots", 3), async (req: Request, res: Response) => {
+  // The pack takes longer than the 28 seconds the website allows a single request, so it is written as a
+  // job: the answer comes straight back with a job id and the page checks on it until the copy is ready.
+  let out: { status: (c: number) => any; json: (b: unknown) => void } = res;
+  if (String((req.body as Record<string, unknown> | undefined)?.async ?? "") === "1") {
+    const jobId = `cs_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    copyJobs.set(jobId, { status: "running", at: Date.now() });
+    res.status(202).json({ jobId });
+    let code = 200;
+    out = {
+      status(c: number) { code = c; return this; },
+      json(b: unknown) { copyJobs.set(jobId, { status: code >= 400 ? "error" : "done", code, body: b, at: Date.now() }); },
+    };
+  }
   try {
     const body = req.body as Record<string, string | string[] | undefined>;
     const clientName = String(body.clientName ?? "");
@@ -383,7 +407,7 @@ router.post("/client-stylish/copy", upload.array("screenshots", 3), async (req: 
       .map((t) => neutralise(String(t ?? "").trim()))
       .filter(Boolean)
       .slice(0, 3);
-    if (!clientName.trim()) { res.status(400).json({ error: "Client name is required" }); return; }
+    if (!clientName.trim()) { out.status(400).json({ error: "Client name is required" }); return; }
     if (!website.trim()) {
       // Falls back to the website saved on the client's preset.
       const n = clientName.trim().toLowerCase();
@@ -391,8 +415,8 @@ router.post("/client-stylish/copy", upload.array("screenshots", 3), async (req: 
       const m = presets.find((p) => p.name.trim().toLowerCase() === n);
       website = m?.websiteUrl?.trim() ?? "";
     }
-    if (!website.trim()) { res.status(400).json({ error: "Website is required" }); return; }
-    if (cleanTreatments.length !== 3) { res.status(400).json({ error: "Please give me 3 treatments" }); return; }
+    if (!website.trim()) { out.status(400).json({ error: "Website is required" }); return; }
+    if (cleanTreatments.length !== 3) { out.status(400).json({ error: "Please give me 3 treatments" }); return; }
 
     const rawHall = body.halloween;
     const hallIds = (Array.isArray(rawHall) ? rawHall : rawHall ? [rawHall] : []).map(String).filter((h, i, a) => HALLOWEEN_IDEAS[h] && a.indexOf(h) === i).slice(0, 3);
@@ -480,15 +504,15 @@ ${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${safeSite
     }
 
     if (rows.length !== expected) {
-      res.status(502).json({ error: `The copy did not come back as ${expected} rows. Please try again.` });
+      out.status(502).json({ error: `The copy did not come back as ${expected} rows. Please try again.` });
       return;
     }
 
-    res.json({ rows, csv: buildCsv(rows), siteFound, siteReason: siteFound ? null : (siteDiag.reason ?? "unreachable"), topPostsCount, topPostsSource });
+    out.json({ rows, csv: buildCsv(rows), siteFound, siteReason: siteFound ? null : (siteDiag.reason ?? "unreachable"), topPostsCount, topPostsSource });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Copy generation failed";
     req.log.error({ err }, "client-stylish/copy failed");
-    res.status(500).json({ error: msg });
+    out.status(500).json({ error: msg });
   }
 });
 

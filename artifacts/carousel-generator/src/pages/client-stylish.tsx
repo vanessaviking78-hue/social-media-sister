@@ -202,21 +202,41 @@ export default function ClientStylish() {
       fd.append("notes", notes);
       fd.append("topPosts", topText);
       shots.forEach(f => fd.append("screenshots", f));
-      // If the server is restarting it answers with a web page instead of the copy, so wait and try again.
-      let r: Response | null = null;
+      // The copy is written as a job (it takes longer than one web request is allowed), then checked on until it is ready.
+      fd.append("async", "1");
       let data: any = null;
-      for (let attempt = 0; attempt < 4; attempt++) {
+      for (let attempt = 0; attempt < 3 && !data; attempt++) {
+        let jobId = "";
         try {
-          r = await fetch(`${BASE}api/client-stylish/copy`, { method: "POST", body: fd });
-          const txt = await r.text();
-          try { data = JSON.parse(txt); } catch { data = null; }
-          if (data) break;
-        } catch { /* network blip, try again */ }
-        await new Promise(res => setTimeout(res, 8000));
+          const r0 = await fetch(`${BASE}api/client-stylish/copy`, { method: "POST", body: fd });
+          const d0 = JSON.parse(await r0.text()) as { jobId?: string; error?: string };
+          if (!d0.jobId) throw new Error(d0.error || "The copy did not start");
+          jobId = d0.jobId;
+        } catch (e) {
+          if (attempt === 2) throw e;
+          await new Promise(res => setTimeout(res, 6000));
+          continue;
+        }
+        const until = Date.now() + 6 * 60_000;
+        while (Date.now() < until) {
+          await new Promise(res => setTimeout(res, 2500));
+          try {
+            const r1 = await fetch(`${BASE}api/client-stylish/copy/${jobId}`);
+            if (r1.status === 404) break; // the server restarted and forgot it, start it again
+            const d1 = JSON.parse(await r1.text());
+            if (d1.status === "running") continue;
+            if (d1.status === "error") throw new Error(d1.error || "The copy did not come back");
+            data = d1;
+            break;
+          } catch (e) {
+            if (e instanceof SyntaxError || (e instanceof TypeError)) continue; // a blip or a restart page, keep checking
+            throw e;
+          }
+        }
       }
-      if (!r || !data) throw new Error("The server was busy updating. Press Try the copy again in a minute");
+      if (!data) throw new Error("The copy did not come back. Press Try the copy again");
       data = data as { rows?: CopyRow[]; csv?: string; siteFound?: boolean; siteReason?: string | null; topPostsCount?: number; topPostsSource?: string; error?: string };
-      if (!r.ok || !data.rows || !data.csv) throw new Error(data.error || "The copy did not come back");
+      if (!data.rows || !data.csv) throw new Error(data.error || "The copy did not come back");
       setRows(data.rows);
       setCsv(data.csv);
       setSiteFound(data.siteFound !== false);
