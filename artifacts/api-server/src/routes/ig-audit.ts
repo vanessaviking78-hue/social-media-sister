@@ -345,7 +345,10 @@ function analyse(profile: Profile, media: Media[]) {
 
   // Profile
   const bio = profile.biography || "";
-  const bioCta = /\b(book|dm|message|call|email|enquire|link|whatsapp|consult)/i.test(bio);
+  // A clear route to book counts whether it's spelled out in the bio text itself, or the profile's own
+  // link is obviously a booking link (Fresha, Treatwell, Calendly, GetTimely etc all say so in the URL).
+  const websiteIsBookingLink = /\b(book|booking|schedule|appointment|consult|calendly|fresha|treatwell|gettimely|timely|setmore|acuity)/i.test(profile.website || "");
+  const bioCta = websiteIsBookingLink || /\b(book|dm|message|call|email|enquire|link|whatsapp|consult)/i.test(bio);
   const profilePoints = (bio ? 5 : 0) + (bio.length >= 60 ? 3 : 0) + (bioCta ? 4 : 0) + (profile.website ? 3 : 0);
 
   // Compliance
