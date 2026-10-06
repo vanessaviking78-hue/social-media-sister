@@ -69,6 +69,9 @@ export default function ClientStylish() {
   const [useApproved, setUseApproved] = useState(false);
   const [approvedFiles, setApprovedFiles] = useState<File[]>([]);
   const [fromApproved, setFromApproved] = useState(false);
+  const uploadRef = useRef<HTMLInputElement>(null);
+  // Photos uploaded from the computer are filed into the client's library by Stylish, approved ones are not filed twice.
+  const uploadedSet = useRef<WeakSet<File>>(new WeakSet());
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [treatments, setTreatments] = useState(["", "", ""]);
   const [tone, setTone] = useState("");
@@ -316,7 +319,8 @@ export default function ClientStylish() {
     const idx = slots.findIndex(s => s.id === slotId);
     const ext = mime.includes("jpeg") ? "jpg" : mime.includes("webp") ? "webp" : "png";
     // The approved- start tells Stylish these are already in the client's library, so it does not file them twice.
-    if (fromApproved) return `approved-${pad(idx + 1)}-${packName}.${ext}`;
+    if (fromApproved && !uploadedSet.current.has(approvedFiles[idx])) return `approved-${pad(idx + 1)}-${packName}.${ext}`;
+    if (fromApproved) return `${packName} Stylish ${pad(idx + 1)} photo.${ext}`;
     // The running number keeps autumn, winter, autumn, winter in order if the photos are uploaded again.
     return `${packName} Stylish ${pad(idx + 1)} ${slots[idx].label}.${ext}`;
   };
@@ -419,7 +423,7 @@ export default function ClientStylish() {
                 Make new photos<span className="block text-xs text-muted-foreground">20 autumn and winter photos from one picture</span>
               </button>
               <button type="button" onClick={() => setUseApproved(true)} className={`rounded-md border px-3 py-2 text-sm text-left transition-colors ${useApproved ? "border-sky-500/60 bg-sky-500/10" : "border-border/40 hover:border-border/70"}`}>
-                Use approved images<span className="block text-xs text-muted-foreground">Skip the photoshoot</span>
+                Use my own photos<span className="block text-xs text-muted-foreground">Approved images or upload</span>
               </button>
             </div>
             {useApproved && (
@@ -432,6 +436,11 @@ export default function ClientStylish() {
                   label="Choose approved images"
                   onAddImages={(files) => setApprovedFiles(prev => [...prev, ...files].slice(0, 20 + halloweenPick.length))}
                 />
+                <input ref={uploadRef} type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden"
+                  onChange={e => { const f = Array.from(e.target.files ?? []).filter(x => x.type.startsWith("image/")); f.forEach(x => uploadedSet.current.add(x)); if (f.length) setApprovedFiles(prev => [...prev, ...f].slice(0, 20 + halloweenPick.length)); e.target.value = ""; }} />
+                <Button type="button" variant="outline" size="sm" className="w-full" onClick={() => uploadRef.current?.click()}>
+                  <Upload className="w-3.5 h-3.5 mr-1.5" />Upload photos from my computer
+                </Button>
                 {approvedFiles.length > 0 && (
                   <div className="space-y-1.5">
                     <p className="text-xs text-muted-foreground">{approvedFiles.length} chosen, up to 20. They go in the order you picked them, one per post.</p>

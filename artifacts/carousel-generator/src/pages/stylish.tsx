@@ -2741,6 +2741,12 @@ export default function Stylish() {
   const [images, setImages] = useState<File[]>([]);
   const [perPost, setPerPost] = useState(5);
   const [reusePhotos, setReusePhotos] = useState(true);
+  // How big the slide previews are on screen. Remembered for next time.
+  const [thumbW, setThumbW] = useState<number>(() => {
+    try { const v = Number(localStorage.getItem("stylish-thumb-width")); if (v >= 170 && v <= 760) return v; } catch { /* ignore */ }
+    return 420;
+  });
+  useEffect(() => { try { localStorage.setItem("stylish-thumb-width", String(thumbW)); } catch { /* ignore */ } }, [thumbW]);
   const [coverVersion, setCoverVersion] = useState(0);
   const [overrides, setOverrides] = useState<Record<string, File>>({});
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -3089,8 +3095,8 @@ export default function Stylish() {
           const batch: Record<string, string> = {};
           for (let si = 0; si < specs.length; si++) {
             const tk = `${post.id}:${si}`;
-            const canvas = await renderSlide(specs[si], photoForRef.current(pi, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 0.3, { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoForRef.current(pi, post, k)) : undefined }, focusRef.current[tk], textFocusRef.current[tk], subTextFocusRef.current[tk], textScaleRef.current[tk], subTextScaleRef.current[tk]);
-            batch[`${post.id}:${si}`] = canvas.toDataURL("image/jpeg", 0.75);
+            const canvas = await renderSlide(specs[si], photoForRef.current(pi, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 0.5, { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoForRef.current(pi, post, k)) : undefined }, focusRef.current[tk], textFocusRef.current[tk], subTextFocusRef.current[tk], textScaleRef.current[tk], subTextScaleRef.current[tk]);
+            batch[`${post.id}:${si}`] = canvas.toDataURL("image/jpeg", 0.82);
           }
           if (cancelled) return;
           setThumbs(prev => ({ ...prev, ...batch }));
@@ -3124,13 +3130,13 @@ export default function Stylish() {
       if (!specs[si]) return;
       const seq = (redrawSeq.current[key] = (redrawSeq.current[key] ?? 0) + 1);
       const canvas = await renderSlide(
-        specs[si], photoFor(pi, post, si), styleForSlide(style, post, specs[si].kind), logoRef.current, preset, 0.3,
+        specs[si], photoFor(pi, post, si), styleForSlide(style, post, specs[si].kind), logoRef.current, preset, 0.5,
         { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoFor(pi, post, k)) : undefined },
         focusRef.current[key], textFocusRef.current[key], subTextFocusRef.current[key],
         textScaleRef.current[key], subTextScaleRef.current[key],
       );
       if (redrawSeq.current[key] !== seq) return; // a newer change has been drawn since, keep that one
-      setThumbs(prev => ({ ...prev, [key]: canvas.toDataURL("image/jpeg", 0.75) }));
+      setThumbs(prev => ({ ...prev, [key]: canvas.toDataURL("image/jpeg", 0.82) }));
     };
     if (active) {
       if (active.busy) { active.pending = true; return; }
@@ -4374,6 +4380,11 @@ export default function Stylish() {
                   <p className="text-xs text-muted-foreground">
                     Slides export at 1080 x 1440. Drag any photo to move it, double click to put it back.{rendering && " Refreshing previews…"}
                   </p>
+                  <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                    Slide size
+                    <input type="range" min={170} max={760} step={10} value={thumbW} onChange={e => setThumbW(Number(e.target.value))} className="w-56" aria-label="Slide preview size" />
+                    <span>{thumbW}px</span>
+                  </label>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <input
@@ -4467,7 +4478,7 @@ export default function Stylish() {
                         )}
                       </div>
 
-                      <div className="flex gap-3 overflow-x-auto pb-1">
+                      <div className="flex flex-wrap gap-3 pb-1">
                         {specs.map((spec, si) => {
                           const thumb = thumbs[`${post.id}:${si}`];
                           const hasPhoto = !!photoFor(pi, post, si);
@@ -4486,7 +4497,7 @@ export default function Stylish() {
                               onDoubleClick={() => resetPos(post, pi, si)}
                               title={hasPhoto ? "Drag to move the photo. Double click to put it back." : undefined}
                               className={["relative rounded-lg overflow-hidden border border-border/30 shrink-0 group select-none", hasPhoto ? "cursor-grab active:cursor-grabbing" : ""].join(" ")}
-                              style={{ width: 170, touchAction: hasPhoto ? "none" : undefined }}
+                              style={{ width: thumbW, maxWidth: "100%", touchAction: hasPhoto ? "none" : undefined }}
                             >
                               {thumb ? (
                                 <img src={thumb} alt={`Post ${pi + 1}, slide ${si + 1}`} className="w-full block pointer-events-none" style={{ aspectRatio: `${W}/${H}` }} draggable={false} />
