@@ -489,6 +489,12 @@ export default function ClientStylish() {
                   <Button variant="outline" onClick={sendAllToCanva} disabled={doneCount === 0 || busy}>
                     <Upload className="w-4 h-4 mr-2" />Share to Canva
                   </Button>
+                  <Button variant="outline" onClick={handleDownloadCsv} disabled={!csv || copyState === "writing"}>
+                    <Download className="w-4 h-4 mr-2" />Download CSV
+                  </Button>
+                  <Button variant="outline" onClick={writeCopy} disabled={copyState === "writing" || busy} title="Writes a brand new set of 20 posts, replacing the current ones">
+                    {copyState === "writing" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RotateCw className="w-4 h-4 mr-2" />}Rerun CSV
+                  </Button>
                   <span className="text-xs text-muted-foreground">
                     {saveFailed ? "The save to approved images did not go through, I will try again as photos finish." : savedCount > 0 ? `${savedCount} saved to their approved images` : "Photos save to their approved images as they finish."}
                   </span>
