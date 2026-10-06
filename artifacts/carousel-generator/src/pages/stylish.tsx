@@ -78,7 +78,7 @@ type Style = {
   cvBlock: string;
   cvBand: string;
   cvBandOn: boolean;
-  cvPunch?: number; // October 26: how much contrast and colour the photo gets, 0 to 100 (40 when empty)
+  cvPunch?: number; // October 26: how much contrast and colour the photo gets, 0 to 100 (75 when empty)
   cvTowel?: boolean; // October 26 No. 17: a towel on the head
   cvShades?: boolean; // October 26 No. 17: sunglasses
   cvSpot?: string; // spot colour for the recolourable picture covers. Empty uses the client's brand colour.
@@ -1335,8 +1335,25 @@ type OctLook = {
 
 // Draws a photo to fill a frame, with the zoom and drag position, clipped to that frame.
 function punchFilter(punch: number | undefined, mono = false) {
-  const p = Math.min(100, Math.max(0, punch ?? 40)) / 100;
-  return mono ? `grayscale(1) contrast(${1 + 0.55 * p})` : `contrast(${1 + 0.3 * p}) saturate(${1 + 0.55 * p})`;
+  const p = Math.min(100, Math.max(0, punch ?? 75)) / 100;
+  return mono ? `grayscale(1) contrast(${1 + 0.8 * p}) brightness(${1 - 0.04 * p})` : `contrast(${1 + 0.45 * p}) saturate(${1 + 0.7 * p}) brightness(${1 - 0.03 * p})`;
+}
+// Unsharp-style sharpen so photos look crisp rather than soft.
+function sharpenCanvas(c: HTMLCanvasElement, amount = 0.8) {
+  const w = c.width, h = c.height;
+  if (w < 3 || h < 3) return;
+  const g = c.getContext("2d"); if (!g) return;
+  const src = g.getImageData(0, 0, w, h), d = src.data, o = new Uint8ClampedArray(d);
+  const a = amount, cen = 1 + 4 * a;
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const i = (y * w + x) * 4;
+      for (let k = 0; k < 3; k++) {
+        o[i + k] = cen * d[i + k] - a * (d[i - 4 + k] + d[i + 4 + k] + d[i - w * 4 + k] + d[i + w * 4 + k]);
+      }
+    }
+  }
+  src.data.set(o); g.putImageData(src, 0, 0);
 }
 async function drawFileIn(ctx: CanvasRenderingContext2D, file: File, x: number, y: number, w: number, h: number, pos?: PhotoPos, filter = "none") {
   try {
@@ -1344,9 +1361,15 @@ async function drawFileIn(ctx: CanvasRenderingContext2D, file: File, x: number, 
     const z = Math.min(3, Math.max(1, pos?.z ?? 1));
     const sc = Math.max(w / b.width, h / b.height) * z;
     const dw = b.width * sc, dh = b.height * sc;
+    const tw = Math.max(1, Math.round(w)), th = Math.max(1, Math.round(h));
+    const t = document.createElement("canvas"); t.width = tw; t.height = th;
+    const tg = t.getContext("2d");
+    if (!tg) { b.close(); return false; }
+    (tg as CanvasRenderingContext2D & { filter?: string }).filter = filter;
+    tg.drawImage(b, (w - dw) * ((pos?.x ?? 50) / 100), (h - dh) * ((pos?.y ?? 50) / 100), dw, dh);
+    sharpenCanvas(t, 0.7);
     ctx.save(); ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
-    (ctx as CanvasRenderingContext2D & { filter?: string }).filter = filter;
-    ctx.drawImage(b, x + (w - dw) * ((pos?.x ?? 50) / 100), y + (h - dh) * ((pos?.y ?? 50) / 100), dw, dh);
+    ctx.drawImage(t, x, y, w, h);
     ctx.restore(); b.close();
     return true;
   } catch { return false; }
@@ -1429,9 +1452,14 @@ async function drawCoverOct(
       const z = Math.min(3, Math.max(1, pos?.z ?? 1));
       const sc = Math.max(W / bmp.width, H / bmp.height) * z;
       const dw = bmp.width * sc, dh = bmp.height * sc;
-      (ctx as CanvasRenderingContext2D & { filter?: string }).filter = punchFilter(style.cvPunch, !!look.mono);
-      ctx.drawImage(bmp, (W - dw) * ((pos?.x ?? 50) / 100), (H - dh) * ((pos?.y ?? 50) / 100), dw, dh);
-      (ctx as CanvasRenderingContext2D & { filter?: string }).filter = "none";
+      const tc = document.createElement("canvas"); tc.width = W; tc.height = H;
+      const tg = tc.getContext("2d");
+      if (tg) {
+        (tg as CanvasRenderingContext2D & { filter?: string }).filter = punchFilter(style.cvPunch, !!look.mono);
+        tg.drawImage(bmp, (W - dw) * ((pos?.x ?? 50) / 100), (H - dh) * ((pos?.y ?? 50) / 100), dw, dh);
+        sharpenCanvas(tc, 0.7);
+        ctx.drawImage(tc, 0, 0);
+      }
     } else {
       // A square scene on a tall slide: the picture keeps its full width, and its top and bottom edges are smeared outwards.
       const sc = W / bmp.width;
@@ -4622,9 +4650,9 @@ export default function Stylish() {
                                     }}
                                   />
                                   <div className="text-[10px] text-muted-foreground mt-0.5">Drag the photo to move it. Double click to reset.</div>
-                                  <label className="text-xs font-medium text-muted-foreground block mt-2 mb-1">Punch: contrast and colour ({post.coverPunch ?? 40})</label>
+                                  <label className="text-xs font-medium text-muted-foreground block mt-2 mb-1">Punch: contrast and colour ({post.coverPunch ?? 75})</label>
                                   <input
-                                    type="range" min={0} max={100} step={5} value={post.coverPunch ?? 40}
+                                    type="range" min={0} max={100} step={5} value={post.coverPunch ?? 75}
                                     aria-label={`Photo punch for post ${pi + 1}`}
                                     className="w-full"
                                     onChange={e => { const v = Number(e.target.value); updatePost(post.id, { coverPunch: v }); redrawOne({ ...post, coverPunch: v }, pi, 0); }}
