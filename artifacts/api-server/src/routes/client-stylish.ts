@@ -191,6 +191,11 @@ export function neutralise(text: string): string {
 
 const DAY_WORDS = /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|weekend|mondays|fridays|sundays|saturdays)\b/gi;
 
+const FIRST_PERSON = /\b(i|i'm|i've|i'd|i'll|my|me|mine|myself|we|we're|our)\b/i;
+function rowsWithoutFirstPerson(rows: Row[]): number[] {
+  return rows.map((r, i) => (FIRST_PERSON.test(`${r.headline} ${r.subtitle} ${r.text1} ${r.text2} ${r.text3}`) ? 0 : i + 1)).filter(Boolean);
+}
+
 function findBanned(rows: Row[]): string[] {
   const hits = new Set<string>();
   for (const r of rows) {
@@ -255,6 +260,9 @@ THINGS THAT (rows 3, 8, 13, 18): Titles in the style of "Things I hate about the
 SHAREABLE (rows 4, 9, 14, 19): The post she sends to her sister or her best friend, or saves for a bad day. Empowering and emotional: say the thing every woman feels but nobody has quite put into words, give a warm counterintuitive take, a tiny honest confession, or a line worth screenshotting. About friendship, growing older, confidence, time, being seen, mothers and daughters, the woman she used to be. It should make her feel something in her chest. No selling. Never a stock quote line like "you are enough": it has to feel original, specific and true.
 
 MIX (rows 5, 10, 15, 20): One of each, in this order: row 5 menopause (warm, funny, validating, no medical claims, no advice on hormones or medicines), row 10 skincare (a fun, useful, surprising idea she can use tonight, no medical education), row 15 growing older (the joy, the oddness and the freedom of it), row 20 a "did you know" fun fact (a genuinely interesting, true and checkable general fact about skin, ageing, beauty history or the body, with no claims about any treatment and no statistics you are not certain of). Keep all of it light, human and surprising.
+
+FIRST PERSON, EVERY SINGLE ROW
+Every row is written in the first person, as the person behind the page speaking to her: I, me, my, I'm, I've, I'd. This includes the funny, nostalgic, things that, shareable and mix rows, not just the treatment rows. Text1, text2 and text3 each carry a personal voice (what I saw, what I said, what I remember, what I think). Never write about "the clinic", "the team", "clients", "women" or "she" from a distance when "I" or "my" works. Never second person lecturing. Use "you" only to talk warmly to her.
 
 MAKE IT SCROLL WORTHY (the most important rule)
 Each carousel is a tiny story she cannot stop swiping. Slide 1 (headline and subtitle) opens a curiosity gap or promises a laugh. Text1 gives her the first beat and ends on a hook that makes her swipe (an unfinished thought, a surprise coming, a "wait for the next one"). Text2 raises the stakes, adds the funniest or most vivid detail, or turns the corner. Text3 is the payoff: the biggest laugh, the line that gives her a lump in her throat, or the "oh my god, me" moment. Then the cta lands warmly. Never summarise a slide in one flat line. Every slide must earn the swipe with a specific, vivid detail (a smell, a brand of crisps, a name of a TV programme, a thing someone said, an exact time of night), a joke that builds, or a feeling she recognises. Vary the rhythm: a long sentence then a short one. Write the way a funny friend tells a story on the sofa, with asides in brackets and the odd cheeky tangent. It has to be properly entertaining: if a slide would not make her smile, snort or feel something, rewrite it.
@@ -449,7 +457,12 @@ ${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${safeSite
         continue;
       }
       const hits = findBanned(rows);
-      if (!hits.length) break;
+      const noI = rowsWithoutFirstPerson(rows);
+      if (!hits.length && !noI.length) break;
+      if (!hits.length && noI.length) {
+        feedback = `\n\nRows ${noI.join(", ")} are not in the first person. Rewrite all ${expected} rows so every row is spoken as I, me and my.`;
+        continue;
+      }
       feedback = `\n\nYour last answer used banned wording (${hits.join(", ")}). Rewrite all ${expected} rows without any of those words. Never name a day of the week or the weekend. Where a compliance word is the problem, use "smoothing treatments" or "facial aesthetics".`;
     }
 
