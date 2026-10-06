@@ -2711,6 +2711,29 @@ function SliderField({
 const CLIENT_FONTS_KEY = "stylish-client-fonts-v1";
 const CLIENT_FONT_KEYS = ["cvFont", "cvSubFont", "plainFont", "plainSubFont", "behindFont", "behindSubFont", "displayFont", "lf"] as const;
 
+// One frame of the shine sweep: the finished cover with a soft diagonal band of light at time t (ms).
+const SHINE_TOTAL = 3200, SHINE_FROM = 500, SHINE_TO = 2300;
+function drawShineFrame(ctx: CanvasRenderingContext2D, base: HTMLCanvasElement, t: number) {
+  const W = base.width, H = base.height;
+  ctx.clearRect(0, 0, W, H);
+  ctx.drawImage(base, 0, 0);
+  if (t < SHINE_FROM || t > SHINE_TO) return;
+  const p = (t - SHINE_FROM) / (SHINE_TO - SHINE_FROM);
+  const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+  const bandW = W * 0.42;
+  const x = -bandW + e * (W + bandW * 2);
+  ctx.save();
+  ctx.translate(x, 0);
+  const g = ctx.createLinearGradient(-bandW / 2, 0, bandW / 2, 0);
+  g.addColorStop(0, "rgba(255,255,255,0)");
+  g.addColorStop(0.5, "rgba(255,255,255,0.38)");
+  g.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = g;
+  ctx.transform(1, 0, -0.35, 1, 0, 0);
+  ctx.fillRect(-bandW / 2 - H * 0.35, 0, bandW + H * 0.7, H);
+  ctx.restore();
+}
+
 export default function Stylish() {
   const { presets, loading: presetsLoading, updatePresetCoverFonts } = usePresets();
 
@@ -3676,10 +3699,9 @@ export default function Stylish() {
 
   // Records a soft diagonal band of light gliding across a finished cover, then has the server turn
   // the clip into a proper MP4. The still covers and everything else are untouched.
-  const recordShine = (base: HTMLCanvasElement): Promise<Blob> => new Promise((resolve, reject) => {
-    const W = base.width, H = base.height;
+  const recordShineOnce = (base: HTMLCanvasElement): Promise<Blob> => new Promise((resolve, reject) => {
     const out = document.createElement("canvas");
-    out.width = W; out.height = H;
+    out.width = base.width; out.height = base.height;
     const ctx = out.getContext("2d");
     if (!ctx || typeof MediaRecorder === "undefined") { reject(new Error("This browser cannot record video, try Chrome")); return; }
     const stream = out.captureStream(30);
@@ -3689,34 +3711,59 @@ export default function Stylish() {
     rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
     rec.onerror = () => reject(new Error("Recording failed"));
     rec.onstop = () => resolve(new Blob(chunks, { type: rec.mimeType || "video/webm" }));
-    const TOTAL = 3200, FROM = 500, TO = 2300;
     const start = performance.now();
-    const frame = () => {
+    // A timer drives the frames (not the screen refresh), so a tab that is not in front still records.
+    drawShineFrame(ctx, base, 0);
+    rec.start(250);
+    const timer = setInterval(() => {
       const t = performance.now() - start;
-      ctx.clearRect(0, 0, W, H);
-      ctx.drawImage(base, 0, 0);
-      if (t >= FROM && t <= TO) {
-        const p = (t - FROM) / (TO - FROM);
-        const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
-        const bandW = W * 0.42;
-        const x = -bandW + e * (W + bandW * 2);
-        ctx.save();
-        ctx.translate(x, 0);
-        const g = ctx.createLinearGradient(-bandW / 2, 0, bandW / 2, 0);
-        g.addColorStop(0, "rgba(255,255,255,0)");
-        g.addColorStop(0.5, "rgba(255,255,255,0.38)");
-        g.addColorStop(1, "rgba(255,255,255,0)");
-        ctx.fillStyle = g;
-        ctx.transform(1, 0, -0.35, 1, 0, 0);
-        ctx.fillRect(-bandW / 2 - H * 0.35, 0, bandW + H * 0.7, H);
-        ctx.restore();
-      }
-      if (t < TOTAL) requestAnimationFrame(frame);
-      else rec.stop();
-    };
-    rec.start();
-    requestAnimationFrame(frame);
+      drawShineFrame(ctx, base, Math.min(t, SHINE_TOTAL));
+      if (t >= SHINE_TOTAL) { clearInterval(timer); rec.stop(); }
+    }, 33);
   });
+
+  // Records the shine, and tries again if the clip comes back empty.
+  const recordShine = async (base: HTMLCanvasElement): Promise<Blob> => {
+    let last: Blob | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      last = await recordShineOnce(base);
+      if (last.size > 20_000) return last;
+    }
+    throw new Error("The cover recording came back empty");
+  };
+
+  // Plays the shine over one post's cover on screen, looping, so it can be checked before scheduling.
+  const [shinePreview, setShinePreview] = useState<{ canvas: HTMLCanvasElement; title: string } | null>(null);
+  const shineCanvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    if (!shinePreview) return;
+    const view = shineCanvasRef.current;
+    const ctx = view?.getContext("2d");
+    if (!view || !ctx) return;
+    view.width = shinePreview.canvas.width; view.height = shinePreview.canvas.height;
+    let raf = 0;
+    const t0 = performance.now();
+    const loop = () => {
+      const t = (performance.now() - t0) % (SHINE_TOTAL + 600);
+      drawShineFrame(ctx, shinePreview.canvas, Math.min(t, SHINE_TOTAL));
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [shinePreview]);
+  const handlePreviewShine = async (post: Post) => {
+    try {
+      await warmAll();
+      const logo = style.showLogo ? await loadLogo(preset) : null;
+      const pi = posts.indexOf(post);
+      const specs = buildSlides(post.texts);
+      const k = `${post.id}:0`;
+      const base = await renderSlide(specs[0], photoFor(pi, post, 0), styleForSlide(style, post, specs[0].kind), logo, preset, 0.5, { index: 0, total: specs.length, extras: [1, 2, 3].map(x => photoFor(pi, post, x)) }, focusRef.current[k], textFocusRef.current[k], subTextFocusRef.current[k], textScaleRef.current[k], subTextScaleRef.current[k]);
+      setShinePreview({ canvas: base, title: specs[0]?.text ?? `Post ${pi + 1}` });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not make the preview");
+    }
+  };
 
   const handleAnimateCovers = async () => {
     if (!selectedPosts.length) { toast.error("Tick at least one post first"); return; }
@@ -5018,6 +5065,11 @@ export default function Stylish() {
                         <div className="flex items-center justify-between">
                           <Label className="text-xs text-muted-foreground">Caption</Label>
                           <div className="flex items-center gap-1">
+                            {animateCovers && (
+                              <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => handlePreviewShine(post)} title="Plays the shine sweep over this post's cover">
+                                <Sparkles className="w-3.5 h-3.5 mr-1" />Preview shine
+                              </Button>
+                            )}
                             <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => handleSendPostToFlip(post)} disabled={sendingFlip || !!scheduling} title="Sends this post to Magazine Flip so you can share it as a reel or a trial reel">
                               <Film className="w-3.5 h-3.5 mr-1" />Magazine Flip reel
                             </Button>
@@ -5058,6 +5110,12 @@ export default function Stylish() {
         }}
       />
 
+      {shinePreview && (
+        <div className="fixed inset-0 z-[100] bg-black/80 flex flex-col items-center justify-center gap-3 p-4" onClick={() => setShinePreview(null)}>
+          <canvas ref={shineCanvasRef} className="rounded-lg shadow-2xl max-h-[80vh] w-auto" style={{ aspectRatio: "3 / 4" }} />
+          <p className="text-sm text-zinc-300">Shine preview: {shinePreview.title}. Click anywhere to close.</p>
+        </div>
+      )}
       {scheduleItems && preset && (
         <ScheduleModal
           presetId={preset.id}
