@@ -1131,11 +1131,11 @@ export default function Reels() {
 
   return (
     <div className="h-[100dvh] bg-[#0a0a0f] text-white flex flex-col overflow-hidden">
-      <header className="border-b border-white/10 px-6 py-3 flex items-center gap-4 shrink-0">
+      <header className="border-b border-white/10 px-3 md:px-6 py-3 flex items-center gap-4 shrink-0">
         <div className="flex items-center gap-3 flex-shrink-0">
           <img src="/sms-logo.png" alt="Social Media Sister" className="h-8 w-auto object-contain" />
         </div>
-        <div className="flex items-center gap-2 ml-4 flex-wrap">
+        <div className="flex items-center gap-2 ml-2 md:ml-4 min-w-0 overflow-x-auto md:flex-wrap md:overflow-visible [&>*]:shrink-0">
           <Link href="/hub"><Button variant="ghost" size="sm" className="text-muted-foreground"><ImagePlus className="w-4 h-4 mr-2" />Carousel</Button></Link>
           <Link href="/single-image"><Button variant="ghost" size="sm" className="text-muted-foreground"><ImageIcon className="w-4 h-4 mr-2" />Single Image</Button></Link>
           <Link href="/stories"><Button variant="ghost" size="sm" className="text-muted-foreground"><BookOpen className="w-4 h-4 mr-2" />Stories</Button></Link>
@@ -1152,7 +1152,7 @@ export default function Reels() {
       </header>
 
       {/* ── Body row ── */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="relative flex flex-1 min-h-0 overflow-hidden">
 
         {/* ── Left Rail (60px) ── */}
         <div style={{ width: 60, minWidth: 60 }} className="flex flex-col items-center py-3 gap-0.5 bg-[#0f0f0f] border-r border-zinc-800/60 shrink-0 z-10">
@@ -1236,6 +1236,7 @@ export default function Reels() {
           })}
         </div>
 
+        {activeTool && <div className="md:hidden absolute inset-0 z-[5] bg-black/50" onClick={() => setActiveTool(null)} aria-hidden="true" />}
         {/* ── Slide-out Panel (260px) ── */}
         <div
           style={{
@@ -1243,7 +1244,7 @@ export default function Reels() {
             minWidth: activeTool ? 260 : 0,
             transition: "width 180ms cubic-bezier(0.4,0,0.2,1), min-width 180ms cubic-bezier(0.4,0,0.2,1)",
           }}
-          className="bg-[#161616] border-r border-zinc-800/60 flex flex-col shrink-0 overflow-hidden z-10"
+          className="bg-[#161616] border-r border-zinc-800/60 flex flex-col shrink-0 overflow-hidden z-10 max-md:absolute max-md:left-[60px] max-md:inset-y-0 max-md:shadow-2xl"
         >
           {activeTool && (
             <>

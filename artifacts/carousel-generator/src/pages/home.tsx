@@ -1124,12 +1124,12 @@ export default function Home() {
   return (
     <div className="h-[100dvh] w-full flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-4 px-6 md:px-10 flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-4 px-3 md:px-6 md:px-10 flex items-center justify-between">
         <div className="flex items-center gap-3 flex-shrink-0">
           <Link href="/hub"><img src="/sms-logo.png" alt="Social Media Sister" className="h-8 w-auto object-contain cursor-pointer hover:opacity-80 transition-opacity" /></Link>
           <Link href="/hub"><Button variant="outline" size="sm" className="text-muted-foreground border-border/40 text-xs">← All Tools</Button></Link>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0 overflow-x-auto pl-3 [&>*]:shrink-0">
           <Link href="/single-image">
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <ImagePlus className="w-4 h-4 mr-2" />
@@ -1212,7 +1212,7 @@ export default function Home() {
       </header>
 
       {/* ── Body: Rail | Panel | Editing area | Live preview ── */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="relative flex flex-1 min-h-0 overflow-hidden">
 
         {/* ── Left Rail (60px) ── */}
         <div style={{ width: 60, minWidth: 60 }} className="flex flex-col items-center py-3 gap-0.5 bg-[#0f0f0f] border-r border-zinc-800/60 shrink-0 z-10">
@@ -1296,6 +1296,7 @@ export default function Home() {
           })}
         </div>
 
+        {activeTool && <div className="md:hidden absolute inset-0 z-[5] bg-black/50" onClick={() => setActiveTool(null)} aria-hidden="true" />}
         {/* ── Slide-out Panel (260px) ── */}
         <div
           style={{
@@ -1303,7 +1304,7 @@ export default function Home() {
             minWidth: activeTool ? 260 : 0,
             transition: "width 180ms cubic-bezier(0.4,0,0.2,1), min-width 180ms cubic-bezier(0.4,0,0.2,1)",
           }}
-          className="bg-[#161616] border-r border-zinc-800/60 flex flex-col shrink-0 overflow-hidden z-10"
+          className="bg-[#161616] border-r border-zinc-800/60 flex flex-col shrink-0 overflow-hidden z-10 max-md:absolute max-md:left-[60px] max-md:inset-y-0 max-md:shadow-2xl"
         >
           {activeTool && (
             <>

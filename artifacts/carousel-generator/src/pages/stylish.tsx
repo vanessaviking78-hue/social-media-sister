@@ -4751,7 +4751,7 @@ export default function Stylish() {
                                   onPointerCancel={endTextResize}
                                   onDoubleClick={e => { e.stopPropagation(); resetTextScale(post, pi, si); }}
                                   title="Drag up or down to resize the headline. Double click to put it back."
-                                  className="absolute top-7 left-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[18px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-ns-resize select-none"
+                                  className="absolute top-7 left-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-ns-resize select-none"
                                   style={{ touchAction: "none" }}
                                 >
                                   <ArrowUpDown className="w-2.5 h-2.5" /> size
@@ -4779,7 +4779,7 @@ export default function Stylish() {
                                   onPointerCancel={endSubTextResize}
                                   onDoubleClick={e => { e.stopPropagation(); resetSubTextScale(post, pi, si); }}
                                   title="Drag up or down to resize the subtitle. Double click to put it back."
-                                  className="absolute top-7 right-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[18px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-ns-resize select-none"
+                                  className="absolute top-7 right-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-ns-resize select-none"
                                   style={{ touchAction: "none" }}
                                 >
                                   <ArrowUpDown className="w-2.5 h-2.5" /> size
@@ -4793,7 +4793,7 @@ export default function Stylish() {
                                   onPointerCancel={endPhotoZoom}
                                   onDoubleClick={e => { e.stopPropagation(); const next = { ...focusRef.current }; const cur = next[`${post.id}:${si}`]; if (cur) next[`${post.id}:${si}`] = { x: cur.x, y: cur.y }; focusRef.current = next; bumpFocus(n => n + 1); redrawOne(post, pi, si); }}
                                   title="Drag up to zoom the photo in, down to zoom out. Double click to put the size back."
-                                  className="absolute bottom-8 right-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[18px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-ns-resize select-none"
+                                  className="absolute bottom-8 right-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-ns-resize select-none"
                                   style={{ touchAction: "none" }}
                                 >
                                   <ArrowUpDown className="w-2.5 h-2.5" /> photo

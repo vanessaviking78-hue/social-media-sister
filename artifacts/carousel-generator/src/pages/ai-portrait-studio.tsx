@@ -1765,7 +1765,7 @@ export default function AiPortraitStudio() {
 
 {activeSection === "halloween" && (
 <>
-<p className="text-[18px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">HALLOWEEN</p>
+<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">HALLOWEEN</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
               {HALLOWEEN_PRESETS.map((preset) => {
@@ -1789,7 +1789,7 @@ export default function AiPortraitStudio() {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium leading-snug">{preset.name}</p>
                         {preset.hasColour && (
-                          <Badge variant="outline" className="mt-1 text-[18px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                          <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
                             scrubs colour
                           </Badge>
                         )}

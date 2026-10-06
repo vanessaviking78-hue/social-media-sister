@@ -823,12 +823,12 @@ export default function Stories() {
   return (
     <div className="h-[100dvh] w-full flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-3 px-6 flex items-center justify-between shrink-0">
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-3 px-3 md:px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3 flex-shrink-0">
           <img src="/sms-logo.png" alt="Social Media Sister" className="h-8 w-auto object-contain" />
           <Badge variant="secondary" className="bg-pink-500/15 text-pink-400 border border-pink-500/20 text-xs">Stories</Badge>
         </div>
-        <div className="flex items-center gap-1 flex-wrap">
+        <div className="flex items-center gap-1 min-w-0 overflow-x-auto pl-3 md:flex-wrap md:overflow-visible [&>*]:shrink-0">
           <Link href="/hub"><Button variant="ghost" size="sm" className="text-muted-foreground h-8 text-xs"><Layers className="w-3.5 h-3.5 mr-1.5" />Carousel</Button></Link>
           <Link href="/single-image"><Button variant="ghost" size="sm" className="text-muted-foreground h-8 text-xs"><ImagePlus className="w-3.5 h-3.5 mr-1.5" />Single Image</Button></Link>
           <Link href="/reels"><Button variant="ghost" size="sm" className="text-muted-foreground h-8 text-xs"><Film className="w-3.5 h-3.5 mr-1.5" />Reels</Button></Link>
@@ -841,7 +841,7 @@ export default function Stories() {
       </header>
 
       {/* Body */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="relative flex flex-1 min-h-0 overflow-hidden">
 
         {/* Left Rail (60px) */}
         <div style={{ width: 60, minWidth: 60 }} className="flex flex-col items-center py-3 gap-0.5 bg-[#0f0f0f] border-r border-zinc-800/60 shrink-0 z-10">
@@ -864,6 +864,7 @@ export default function Stories() {
           })}
         </div>
 
+        {activeTool && <div className="md:hidden absolute inset-0 z-[5] bg-black/50" onClick={() => setActiveTool(null)} aria-hidden="true" />}
         {/* Slide-out Panel (260px) */}
         <div
           style={{
@@ -871,7 +872,7 @@ export default function Stories() {
             minWidth: activeTool ? 260 : 0,
             transition: "width 180ms cubic-bezier(0.4,0,0.2,1), min-width 180ms cubic-bezier(0.4,0,0.2,1)",
           }}
-          className="bg-[#161616] border-r border-zinc-800/60 flex flex-col shrink-0 overflow-hidden z-10"
+          className="bg-[#161616] border-r border-zinc-800/60 flex flex-col shrink-0 overflow-hidden z-10 max-md:absolute max-md:left-[60px] max-md:inset-y-0 max-md:shadow-2xl"
         >
           {activeTool && (
             <>
