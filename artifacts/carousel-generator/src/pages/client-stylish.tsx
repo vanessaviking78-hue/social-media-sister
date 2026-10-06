@@ -132,11 +132,26 @@ export default function ClientStylish() {
   }, [photo]);
 
   // Polls the photo job and folds its cards into the 20 slots.
+  const cardsRef = useRef<Record<string, Card>>({});
+  useEffect(() => { cardsRef.current = cards; }, [cards]);
+  const restartsRef = useRef(0);
   useEffect(() => {
     if (!jobId) return;
     const timer = setInterval(async () => {
       try {
         const r = await fetch(`${BASE}api/ai-portrait/jobs/${jobId}/status`);
+        if (r.status === 404) {
+          // The server restarted and forgot this job (it happens whenever the site is updated mid run).
+          // Start the photos that are still missing again, instead of waiting for ever.
+          clearInterval(timer);
+          const missing = Object.values(cardsRef.current).filter(c => c.status !== "success" && c.status !== "failed" || c.status === "failed" && !c.outputImageUrl).map(c => c.scenarioId);
+          if (missing.length && restartsRef.current < 4) {
+            restartsRef.current++;
+            toast.message(`The server restarted, so I am carrying on with the ${missing.length} photos still to make`);
+            try { await startPhotoJob(missing); } catch { setJobId(null); }
+          } else setJobId(null);
+          return;
+        }
         if (!r.ok) return;
         const data = (await r.json()) as { cards: Card[] };
         setCards(prev => {
@@ -149,7 +164,7 @@ export default function ClientStylish() {
       } catch { /* try again on the next tick */ }
     }, 2000);
     return () => clearInterval(timer);
-  }, [jobId]);
+  }, [jobId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const startPhotoJob = useCallback(async (ids: string[]) => {
     if (!sourcePhotoId.current) return;
@@ -186,8 +201,20 @@ export default function ClientStylish() {
       fd.append("notes", notes);
       fd.append("topPosts", topText);
       shots.forEach(f => fd.append("screenshots", f));
-      const r = await fetch(`${BASE}api/client-stylish/copy`, { method: "POST", body: fd });
-      const data = (await r.json()) as { rows?: CopyRow[]; csv?: string; siteFound?: boolean; siteReason?: string | null; topPostsCount?: number; topPostsSource?: string; error?: string };
+      // If the server is restarting it answers with a web page instead of the copy, so wait and try again.
+      let r: Response | null = null;
+      let data: any = null;
+      for (let attempt = 0; attempt < 4; attempt++) {
+        try {
+          r = await fetch(`${BASE}api/client-stylish/copy`, { method: "POST", body: fd });
+          const txt = await r.text();
+          try { data = JSON.parse(txt); } catch { data = null; }
+          if (data) break;
+        } catch { /* network blip, try again */ }
+        await new Promise(res => setTimeout(res, 8000));
+      }
+      if (!r || !data) throw new Error("The server was busy updating. Press Try the copy again in a minute");
+      data = data as { rows?: CopyRow[]; csv?: string; siteFound?: boolean; siteReason?: string | null; topPostsCount?: number; topPostsSource?: string; error?: string };
       if (!r.ok || !data.rows || !data.csv) throw new Error(data.error || "The copy did not come back");
       setRows(data.rows);
       setCsv(data.csv);
