@@ -727,4 +727,65 @@ router.post("/ig-audit/:id/sales", async (req, res) => {
   }
 });
 
+// POST /api/ig-audit/manual { handle, style?, contactName?, tag?, profile: {...}, media: [...] }
+// For accounts Instagram's age-walled from the scraper (see fetchViaApify above). Someone views the
+// profile themselves, logged in, and pastes in the numbers, this runs the same scoring and write-up
+// as an automatic audit and saves it the same way, so it shows up in History looking identical.
+router.post("/ig-audit/manual", async (req, res) => {
+  try {
+    const handle = cleanHandle(String(req.body?.handle || ""));
+    const style = String(req.body?.style || "northern");
+    const contactName = String(req.body?.contactName || "").trim().slice(0, 60);
+    const tag = ["prospect", "client", "won", "lost"].includes(req.body?.tag) ? req.body.tag : "prospect";
+    if (!handle) return res.status(400).json({ error: "Need a handle." });
+
+    const p = req.body?.profile || {};
+    const profile: Profile = {
+      username: handle,
+      name: String(p.name || handle),
+      biography: String(p.biography || ""),
+      website: String(p.website || ""),
+      followers: Math.max(0, Math.round(Number(p.followers) || 0)),
+      following: Math.max(0, Math.round(Number(p.following) || 0)),
+      mediaCount: Math.max(0, Math.round(Number(p.mediaCount) || 0)),
+      picture: "",
+    };
+    const mediaInput = Array.isArray(req.body?.media) ? req.body.media : [];
+    const media: Media[] = mediaInput.slice(0, 50).map((m: any, i: number) => ({
+      id: String(m.id ?? i),
+      caption: String(m.caption || ""),
+      like_count: typeof m.like_count === "number" && m.like_count >= 0 ? m.like_count : undefined,
+      comments_count: typeof m.comments_count === "number" && m.comments_count >= 0 ? m.comments_count : 0,
+      media_type: m.media_type || "IMAGE",
+      media_product_type: m.media_product_type || undefined,
+      timestamp: m.timestamp,
+      permalink: m.permalink || undefined,
+    }));
+    if (!media.length) return res.status(400).json({ error: "Need at least a few posts (caption, likes, comments, date) to score this." });
+
+    const { score, breakdown, metrics, flags } = analyse(profile, media);
+    let salesHtml = "";
+    try {
+      salesHtml = await writeSales({ profile, score, breakdown, metrics, flags }, style, contactName, tag);
+    } catch (err) {
+      logger.error({ err, handle }, "ig-audit: manual sales write-up failed, saving audit without it");
+    }
+    const posts = metrics.topPosts;
+
+    const inserted = await db.execute(sql`
+      INSERT INTO ig_audits (handle, display_name, followers, score, tag, style, contact_name, profile, breakdown, metrics, flags, posts, sales_html, status)
+      VALUES (
+        ${handle}, ${profile.name}, ${profile.followers}, ${score}, ${tag}, ${style}, ${contactName},
+        ${JSON.stringify(profile)}::jsonb, ${JSON.stringify(breakdown)}::jsonb, ${JSON.stringify(metrics)}::jsonb,
+        ${JSON.stringify(flags)}::jsonb, ${JSON.stringify(posts)}::jsonb, ${salesHtml}, 'ready'
+      )
+      RETURNING ${FULL_COLS}
+    `);
+    res.json(rowsOf(inserted)[0]);
+  } catch (err: any) {
+    logger.error({ err }, "Failed to save manual ig audit");
+    res.status(500).json({ error: err?.message || "Failed to save that audit." });
+  }
+});
+
 export default router;
