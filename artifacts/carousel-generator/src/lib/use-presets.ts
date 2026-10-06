@@ -222,5 +222,31 @@ export function usePresets() {
     await fetchPresets();
   }, [fetchPresets]);
 
-  return { presets, loading, fetchPresets, savePreset, updatePreset, updatePresetCoverFonts, deletePreset, uploadLogo };
+  // Remembers a website against the client, so it comes forward next time without typing it again.
+  const updatePresetWebsite = useCallback(async (id: number, websiteUrl: string | null) => {
+    const resp = await fetch(`${import.meta.env.BASE_URL}api/presets/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ websiteUrl: websiteUrl?.trim() || null }),
+    });
+    if (!resp.ok) {
+      const data = await resp.json().catch(() => ({}));
+      throw new Error(data.error || "Failed to save the website");
+    }
+    const data = await resp.json();
+    setPresets(list => list.map(p => (p.id === id ? (data.preset as ClientPreset) : p)));
+    return data.preset as ClientPreset;
+  }, []);
+
+  return { presets, loading, fetchPresets, savePreset, updatePreset, updatePresetCoverFonts, updatePresetWebsite, deletePreset, uploadLogo };
+}
+
+// The website for a client: the one saved on their profile, otherwise the first web address found in their
+// caption footnote (that is where most clients already have it).
+export function presetWebsite(p?: { websiteUrl?: string | null; captionFootnote?: string | null } | null): string {
+  if (!p) return "";
+  const saved = p.websiteUrl?.trim();
+  if (saved) return saved;
+  const m = (p.captionFootnote ?? "").match(/(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.(?:co\.uk|com|uk|org|net|clinic|health|beauty)(?:\/[^\s,;)]*)?/i);
+  return m ? m[0].replace(/[.,;:)]+$/, "") : "";
 }

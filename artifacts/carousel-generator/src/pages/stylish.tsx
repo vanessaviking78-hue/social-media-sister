@@ -17,7 +17,7 @@ import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { readFileAsText } from "@/lib/csv-format";
 import { loadGoogleFonts, FONT_OPTIONS } from "@/lib/slide-utils";
-import { usePresets, type ClientPreset } from "@/lib/use-presets";
+import { usePresets, presetWebsite, type ClientPreset } from "@/lib/use-presets";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { nthPostingSlot } from "@/lib/schedule";
@@ -3019,7 +3019,7 @@ export default function Stylish() {
       const r = await fetch(`${BASE}/api/client-stylish/csv`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientName: preset.name, website: preset.websiteUrl ?? "", tone, treatmentTopics: csvTopics, restBrief: csvRest, restCount: csvRestCount }),
+        body: JSON.stringify({ clientName: preset.name, website: presetWebsite(preset), tone, treatmentTopics: csvTopics, restBrief: csvRest, restCount: csvRestCount }),
       });
       const d = (await r.json()) as { csv?: string; error?: string; rows?: unknown[] };
       if (!r.ok || !d.csv) throw new Error(d.error || "The CSV did not come back");
@@ -3843,6 +3843,25 @@ export default function Stylish() {
           await tick();
         }
         let videoUrl: string | undefined;
+        let coverVideoUrl: string | undefined;
+        if (mode === "carousel" && animateCovers) {
+          // The cover is recorded with the shine sweep and stored. Instagram gets it in place of the still
+          // first slide. If anything goes wrong the post simply keeps its still cover.
+          setScheduling(`Animating cover ${n} of ${selectedPosts.length}`);
+          try {
+            const base = await renderSlide(specs[0], photoFor(pi, post, 0), styleForSlide(style, post, specs[0].kind), logo, preset, 1, { index: 0, total: specs.length, extras: [1, 2, 3].map(k => photoFor(pi, post, k)) }, focusRef.current[`${post.id}:0`], textFocusRef.current[`${post.id}:0`], subTextFocusRef.current[`${post.id}:0`], textScaleRef.current[`${post.id}:0`], subTextScaleRef.current[`${post.id}:0`]);
+            const clip = await recordShine(base);
+            const fd = new FormData();
+            fd.append("video", clip, "cover.webm");
+            fd.append("store", "1");
+            const cr = await fetch(`${BASE}/api/stylish-reel/convert`, { method: "POST", body: fd });
+            const cd = await cr.json().catch(() => ({}));
+            if (cr.ok && cd.videoUrl) coverVideoUrl = cd.videoUrl as string;
+            else throw new Error(cd.error || "convert failed");
+          } catch (e) {
+            toast.error(`Cover ${n} could not be animated, so it keeps its still image`);
+          }
+        }
         if (mode === "reel") {
           setScheduling(`Making reel ${n} of ${selectedPosts.length}`);
           reelForm.append("secondsPerSlide", "2.5");
@@ -3863,7 +3882,7 @@ export default function Stylish() {
         items.push({
           title: `${buildSlides(post.texts)[0]?.text ?? `Post ${pi + 1}`} · ${preset.name}`,
           caption: noDashes(caption),
-          ...(mode === "reel" ? { videoUrl } : { imageUrls: urls }),
+          ...(mode === "reel" ? { videoUrl } : { imageUrls: urls, ...(coverVideoUrl ? { coverVideoUrl } : {}) }),
         });
       }
       // A story for each post, asking a question about it. It goes out at 7am on the post's day.

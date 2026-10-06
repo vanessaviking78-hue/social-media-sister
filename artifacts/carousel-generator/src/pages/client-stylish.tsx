@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { setStylishHandoff } from "@/lib/stylish-handoff";
-import { usePresets } from "@/lib/use-presets";
+import { usePresets, presetWebsite } from "@/lib/use-presets";
 import { authHeaders } from "@/lib/use-approval";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 
@@ -79,7 +79,7 @@ export default function ClientStylish() {
   const [notes, setNotes] = useState("");
   const [topText, setTopText] = useState("");
   const [shots, setShots] = useState<File[]>([]);
-  const { presets } = usePresets();
+  const { presets, updatePresetWebsite } = usePresets();
   // Picking a saved client always brings forward their website, area and brand colour from their profile,
   // replacing whatever the previous client had. Typing a different website afterwards is still allowed.
   const matchedPreset = useMemo(() => {
@@ -94,7 +94,7 @@ export default function ClientStylish() {
     if (!matchedPreset) { lastPresetId.current = null; return; }
     if (lastPresetId.current === matchedPreset.id) return;
     lastPresetId.current = matchedPreset.id;
-    setWebsite(matchedPreset.websiteUrl?.trim() ?? "");
+    setWebsite(presetWebsite(matchedPreset));
     setArea(matchedPreset.seoArea?.trim() ?? "");
     setSpot(/^#?[0-9a-f]{6}$/i.test((matchedPreset.accentColor ?? "").trim()) ? (matchedPreset.accentColor.startsWith("#") ? matchedPreset.accentColor : `#${matchedPreset.accentColor}`) : "");
   }, [matchedPreset]);
@@ -421,8 +421,11 @@ export default function ClientStylish() {
 
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Website</Label>
-            <Input value={website} onChange={e => setWebsite(e.target.value)} placeholder="www.theirclinic.co.uk" disabled={started && busy} />
-            <p className="text-xs text-muted-foreground">{matchedPreset?.websiteUrl ? "Brought forward from their client profile. " : ""}The treatment posts take their details from here.</p>
+            <Input value={website} onChange={e => setWebsite(e.target.value)} onBlur={() => {
+              const w = website.trim();
+              if (matchedPreset && w && w !== (matchedPreset.websiteUrl ?? "").trim()) updatePresetWebsite(matchedPreset.id, w).catch(() => {});
+            }} placeholder="www.theirclinic.co.uk" disabled={started && busy} />
+            <p className="text-xs text-muted-foreground">{matchedPreset && presetWebsite(matchedPreset) ? "Brought forward from their client profile. " : ""}{matchedPreset ? "Anything you type here is remembered for this client. " : ""}The treatment posts take their details from here.</p>
           </div>
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Clinic area <span className="text-muted-foreground font-normal">(for local SEO in the captions)</span></Label>

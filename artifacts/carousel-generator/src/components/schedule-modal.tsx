@@ -17,6 +17,7 @@ export type SchedulePostPayload = {
   caption: string;
   imageUrls?: string[];
   videoUrl?: string;
+  coverVideoUrl?: string;
   musicTrack?: { trackId: number; name: string; artist: string; durationMs: number; url: string } | null;
   firstComment?: string;
   platforms?: string[];
@@ -224,6 +225,7 @@ const staggeredAt = (() => {
           const content: SchedulePostPayload = { caption: (perPostCaptions ? (post.caption ?? "") : caption).trim(), title: post.title, platforms: platformList };
           if (isReel && post.videoUrl) content.videoUrl = post.videoUrl;
           if (!isReel && post.imageUrls) content.imageUrls = post.imageUrls;
+          if (!isReel && post.coverVideoUrl) content.coverVideoUrl = post.coverVideoUrl;
           if (post.musicTrack) content.musicTrack = post.musicTrack;
           if (post.firstComment) content.firstComment = post.firstComment;
           if (sourceTool || post.sourceTool) content.sourceTool = sourceTool || post.sourceTool;

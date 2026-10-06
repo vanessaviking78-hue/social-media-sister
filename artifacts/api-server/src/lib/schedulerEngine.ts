@@ -93,13 +93,27 @@ async function createCarouselContainer(
     return { ok: res.ok && !!data.id, id: data.id, message: data?.error?.message };
 }
 
-async function postCarouselToIG(igId: string, token: string, imageUrls: string[], caption: string, audioName?: string): Promise<string> {
+async function postCarouselToIG(igId: string, token: string, imageUrls: string[], caption: string, audioName?: string, coverVideoUrl?: string): Promise<string> {
     if (imageUrls.length === 1) {
           const id = await igUpload(igId, token, imageUrls[0], false, caption, audioName);
           return igPublish(igId, token, id);
     }
     const childIds: string[] = [];
-    for (const url of imageUrls) childIds.push(await igUpload(igId, token, url, true));
+    for (let i = 0; i < imageUrls.length; i++) {
+      // An animated cover (video) replaces the still first slide on Instagram only. If Instagram
+      // refuses or fails to process the video, the still image goes in instead so the post is never lost.
+      if (i === 0 && coverVideoUrl) {
+        try {
+          const vid = await igUploadVideoForCarousel(igId, token, coverVideoUrl);
+          await waitForIgContainerReady(vid, token);
+          childIds.push(vid);
+          continue;
+        } catch (err) {
+          logger.warn({ err, igId }, "Animated cover failed on Instagram - using the still cover instead");
+        }
+      }
+      childIds.push(await igUpload(igId, token, imageUrls[i], true));
+    }
 
     let data = await createCarouselContainer(igId, token, childIds, caption, audioName);
     if (!data.ok && audioName && (data.message || "").toLowerCase().includes("invalid parameter")) {
@@ -405,7 +419,7 @@ async function igPostComment(igMediaId: string, token: string, commentText: stri
   }
 }
 
-type PostContent = { imageUrls?: string[]; videoUrl?: string; videoUrls?: string[]; caption: string; title: string; firstComment?: string; musicTrack?: { name: string; artist: string } | null; platforms?: string[] };
+type PostContent = { imageUrls?: string[]; coverVideoUrl?: string; videoUrl?: string; videoUrls?: string[]; caption: string; title: string; firstComment?: string; musicTrack?: { name: string; artist: string } | null; platforms?: string[] };
 
 async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, preset: typeof clientPresetsTable.$inferSelect): Promise<{ igPostId?: string; fbPostId?: string }> {
   const token = preset.metaPageAccessToken;
@@ -528,7 +542,7 @@ async function fireMetaRail(post: typeof scheduledPostsTable.$inferSelect, prese
 
   if (igId && wantIG) {
     try {
-      result.igPostId = await postCarouselToIG(igId, token, content.imageUrls, caption, audioName);
+      result.igPostId = await postCarouselToIG(igId, token, content.imageUrls, caption, audioName, content.coverVideoUrl);
       const firstCommentText = content.firstComment?.trim();
       if (firstCommentText && result.igPostId) {
         setTimeout(() => {

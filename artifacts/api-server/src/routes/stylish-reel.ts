@@ -116,6 +116,16 @@ router.post("/stylish-reel/convert", uploadVideo.single("video"), async (req, re
       "-c:a", "aac", "-b:a", "96k", "-shortest", "-y", outPath,
     ]);
     const buf = await readFile(outPath);
+    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+    if (req.body?.store === "1" && bucketId) {
+      const objectPath = `stylish-reels/${uuidv4()}.mp4`;
+      await objectStorageClient.bucket(bucketId).file(objectPath).save(buf, {
+        contentType: "video/mp4",
+        metadata: { cacheControl: "public, max-age=31536000" },
+      });
+      res.json({ videoUrl: `/api/media/${objectPath}` });
+      return;
+    }
     res.setHeader("Content-Type", "video/mp4");
     res.send(buf);
   } catch (err) {
