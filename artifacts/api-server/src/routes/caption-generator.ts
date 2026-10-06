@@ -38,6 +38,21 @@ WRITING RULES (non-negotiable)
 - EVERY caption ends with one short, genuine question that relates to that post and invites a comment (for example a question about her own memory, her own experience or her own opinion on what the post is about). The question is the very last line, with nothing after it.
 - Humanise everything. Write like a real woman in her own voice, with specific details, small asides and the odd imperfect sentence. No AI patter, no neat summing up line, no tidy moral at the end.`;
 
+
+export const isRyder = (name?: string) => /ryder/i.test(name ?? "");
+
+export const RYDER_TONE = `THE RYDER CLINIC VOICE, ALWAYS: extremely professional language. Polished, measured, courteous and precise, the way a respected consultant writes to a patient she cares about. No jokes, no japes, no puns, no slang, no sarcasm, no cheekiness, no emojis, no exclamation marks. Emotionally intelligent and genuinely affable: warm, gracious, reassuring and human, with real feeling in the details (a patient's quiet moment of confidence, the trust built in a consultation, the dignity of feeling like yourself). Evoke emotion through sincerity and specific, tender observation, never through humour.`;
+
+// The Ryder Clinic is always written in a very professional, emotive and affable voice, with no humour.
+export function captionVoice(clinicName: string | undefined, tonePrompt: string): { tonePrompt: string; rules: string } {
+  if (!isRyder(clinicName)) return { tonePrompt, rules: BASE_RULES };
+  const rules = BASE_RULES
+    .replace(/- Keep it informal and colloquial[^\n]*/, "- Write in very professional, polished language. Warm, gracious and affable, never chatty, never jokey, no slang, no banter, no humour of any kind. Emotion comes from sincerity and specific, tender detail.")
+    .replace(/- Use contractions naturally[^\n]*/, "- Prefer full forms over contractions where it reads more polished.")
+    .replace(/- No exclamation marks[^\n]*/, "- No exclamation marks and no emojis.");
+  return { tonePrompt: RYDER_TONE, rules };
+}
+
 router.post("/caption-generator/generate", async (req: Request, res: Response) => {
   try {
     const { tone, context, clinicName, location } = req.body as {
@@ -54,7 +69,8 @@ router.post("/caption-generator/generate", async (req: Request, res: Response) =
     }
 
     const toneKey = String(tone ?? "2");
-    const tonePrompt = CAPTION_TONE_PROMPTS[toneKey] ?? CAPTION_TONE_PROMPTS["2"];
+    const voice = captionVoice(clinicName, CAPTION_TONE_PROMPTS[toneKey] ?? CAPTION_TONE_PROMPTS["2"]);
+    const tonePrompt = voice.tonePrompt;
 
     const systemPrompt = `You write a single Instagram/Facebook caption for an aesthetics clinic post.
 
@@ -65,7 +81,7 @@ ${area ? `
 LOCAL SEO: the clinic is in ${area}. Make the caption strong for local search on Instagram and Facebook. Name ${area} naturally once or twice in the body, the way a local would say it, and use the treatment name in plain words a client would type into a search bar. End with one line of hashtags: a mix of 2 or 3 local ones (for example the town, the county or region, and the treatment plus the town as one tag) and 2 or 3 broader treatment tags. Never invent a street address, a postcode or a landmark, and only use the place names given here. Do not stuff keywords. It must still read like a person talking.` : ""}
 
 Write one caption for the post described below. Return plain text only, no JSON, no quote marks around it, no title.
-${BASE_RULES}`;
+${voice.rules}`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -105,7 +121,8 @@ router.post("/caption-generator/from-image", async (req: Request, res: Response)
     }
 
     const toneKey = String(tone ?? "2");
-    const tonePrompt = CAPTION_TONE_PROMPTS[toneKey] ?? CAPTION_TONE_PROMPTS["2"];
+    const voice = captionVoice(clinicName, CAPTION_TONE_PROMPTS[toneKey] ?? CAPTION_TONE_PROMPTS["2"]);
+    const tonePrompt = voice.tonePrompt;
 
     const systemPrompt = `You write a single Instagram/Facebook caption for an aesthetics clinic post. You will be shown an image, which may be a branded quote card, a photo, or a graphic with text on it. First read any words in the image carefully. If it is a quote card, base the caption on that quote, do not just repeat it verbatim, write a caption that captures its meaning in your own words unless the quote itself is short enough to use directly.
 
@@ -114,7 +131,7 @@ TONE: ${tonePrompt}
 ${clinicName ? `Clinic: ${clinicName}` : ""}
 
 Write one caption for this image. Return plain text only, no JSON, no quote marks around it, no title.
-${BASE_RULES}`;
+${voice.rules}`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",

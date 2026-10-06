@@ -2998,6 +2998,36 @@ export default function Stylish() {
     });
   }, []);
 
+  // -- write the CSV for me ---------------------------------------------------------------
+  const [csvTopics, setCsvTopics] = useState<string[]>(["", "", "", ""]);
+  const [csvRest, setCsvRest] = useState("");
+  const [csvRestCount, setCsvRestCount] = useState(16);
+  const [csvWriting, setCsvWriting] = useState(false);
+  const [csvText, setCsvText] = useState("");
+
+  const writeCsv = async () => {
+    if (!preset?.name) { toast.error("Choose the client first"); return; }
+    if (!csvTopics.some(t => t.trim())) { toast.error("Tell me what the treatment posts are about"); return; }
+    setCsvWriting(true);
+    const t = toast.loading("Writing the CSV");
+    try {
+      const r = await fetch(`${BASE}/api/client-stylish/csv`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientName: preset.name, website: preset.websiteUrl ?? "", tone, treatmentTopics: csvTopics, restBrief: csvRest, restCount: csvRestCount }),
+      });
+      const d = (await r.json()) as { csv?: string; error?: string; rows?: unknown[] };
+      if (!r.ok || !d.csv) throw new Error(d.error || "The CSV did not come back");
+      setCsvText(d.csv);
+      parseCsv(new File([d.csv], `${preset.name} Stylish.csv`, { type: "text/csv" }));
+      toast.success(`${d.rows?.length ?? ""} posts written and loaded`, { id: t });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "The CSV did not come back", { id: t });
+    } finally {
+      setCsvWriting(false);
+    }
+  };
+
   const downloadSample = () => {
     saveAs(new Blob([SAMPLE_CSV], { type: "text/csv;charset=utf-8" }), "stylish-sample.csv");
   };
@@ -3938,6 +3968,30 @@ export default function Stylish() {
                 </span>
               </span>
             </label>
+          </section>
+
+          <section className="space-y-2 rounded-lg border border-border/40 p-3">
+            <Label className="text-sm font-medium">Write my CSV for me</Label>
+            <p className="text-xs text-muted-foreground leading-relaxed">Tell me what the 4 treatment posts are about and what the rest should be, and I will write it in the writing style chosen above the posts. The Ryder Clinic is always written very professionally, warmly and with feeling, for the slides and the captions.</p>
+            {csvTopics.map((t, i) => (
+              <input key={i} value={t} onChange={e => setCsvTopics(prev => prev.map((x, j) => (j === i ? e.target.value : x)))}
+                placeholder={`Treatment post ${i + 1}: what is it about?`}
+                className="h-9 w-full text-sm bg-muted/30 border border-border/40 rounded-md px-3" />
+            ))}
+            <textarea value={csvRest} onChange={e => setCsvRest(e.target.value)} rows={3}
+              placeholder="What should the rest of the posts be? For example: 4 about menopause, 4 shareable and emotional, 4 skincare tips, 4 about what to expect at a consultation."
+              className="w-full text-sm bg-muted/30 border border-border/40 rounded-md px-3 py-2" />
+            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+              Other posts
+              <input type="number" min={0} max={40} value={csvRestCount} onChange={e => setCsvRestCount(Number(e.target.value))} className="h-8 w-20 text-sm bg-muted/30 border border-border/40 rounded-md px-2" />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={writeCsv} disabled={csvWriting}>
+                {csvWriting ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Wand2 className="w-4 h-4 mr-1.5" />}
+                {csvText ? "Rerun the CSV" : "Write the CSV"}
+              </Button>
+              {csvText && <Button size="sm" variant="outline" onClick={() => saveAs(new Blob([csvText], { type: "text/csv;charset=utf-8" }), `${preset?.name ?? "Stylish"} Stylish.csv`)}>Download CSV</Button>}
+            </div>
           </section>
 
           <section className="space-y-2">

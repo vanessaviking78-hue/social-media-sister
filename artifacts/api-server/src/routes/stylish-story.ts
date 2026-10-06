@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
-import { CAPTION_TONE_PROMPTS } from "./caption-generator";
+import { CAPTION_TONE_PROMPTS, RYDER_TONE, isRyder } from "./caption-generator";
 import { BANNED_TERMS, neutralise, clean } from "./client-stylish";
 
 // One short question per post, written to sit in bold across a story that goes out on the same
@@ -14,7 +14,7 @@ router.post("/stylish-story/questions", async (req, res) => {
   try {
     const { tone, posts, area, clinicName } = req.body as { tone?: string; posts?: PostIn[]; area?: string; clinicName?: string };
     if (!Array.isArray(posts) || !posts.length || posts.length > 30) { res.status(400).json({ error: "Send between 1 and 30 posts" }); return; }
-    const tonePrompt = CAPTION_TONE_PROMPTS[String(tone ?? "3")] ?? CAPTION_TONE_PROMPTS["3"];
+    const tonePrompt = isRyder(clinicName) ? RYDER_TONE : (CAPTION_TONE_PROMPTS[String(tone ?? "3")] ?? CAPTION_TONE_PROMPTS["3"]);
     const listing = posts
       .map((p, i) => `${i + 1}. ${neutralise((p.slides ?? []).filter(Boolean).join(" | "))}`)
       .join("\n");

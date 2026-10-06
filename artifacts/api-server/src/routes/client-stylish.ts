@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import multer from "multer";
 import { openai } from "@workspace/integrations-openai-ai-server";
-import { CAPTION_TONE_PROMPTS } from "./caption-generator";
+import { CAPTION_TONE_PROMPTS, RYDER_TONE, isRyder } from "./caption-generator";
 import { validateHost } from "./aiPortrait";
 import { db } from "@workspace/db";
 import { clientPresetsTable } from "@workspace/db/schema";
@@ -397,7 +397,8 @@ router.post("/client-stylish/copy", upload.array("screenshots", 3), async (req: 
     const rawHall = body.halloween;
     const hallIds = (Array.isArray(rawHall) ? rawHall : rawHall ? [rawHall] : []).map(String).filter((h, i, a) => HALLOWEEN_IDEAS[h] && a.indexOf(h) === i).slice(0, 3);
     const expected = 20 + hallIds.length;
-    const tonePrompt = CAPTION_TONE_PROMPTS[tone] ?? CAPTION_TONE_PROMPTS["4"];
+    const ryderPack = isRyder(clientName);
+    const tonePrompt = ryderPack ? RYDER_TONE : (CAPTION_TONE_PROMPTS[tone] ?? CAPTION_TONE_PROMPTS["4"]);
     const siteDiag: SiteDiag = {};
     const [siteText, shotText, igTop] = await Promise.all([
       readWebsite(website.trim(), cleanTreatments, siteDiag),
@@ -415,7 +416,7 @@ router.post("/client-stylish/copy", upload.array("screenshots", 3), async (req: 
     const system = `You write copy for Vanessa Wormald's clients, UK aesthetic clinics.
 
 WRITING STYLE: ${tonePrompt}
-${hallIds.length ? STRUCTURE_RULES.replace(/exactly 20 (posts|objects)/g, `exactly ${expected} $1`) + `\n\nHALLOWEEN ROWS: after the 20 rows above, add ${hallIds.length} extra Halloween rows (rows 21 to ${expected}), in this order. Same format, same rules, same voice, still ending ideas with a comment, share, save or tag call to action. Make each one clever, industry relevant and outside the box.\n${hallIds.map((h, i) => `Row ${21 + i}: "${HALLOWEEN_IDEAS[h].title}". ${HALLOWEEN_IDEAS[h].brief}`).join("\n")}` : STRUCTURE_RULES}${topPosts ? `\n${TOP_POSTS_RULES}` : ""}`;
+${ryderPack ? "THE RYDER CLINIC: write every row in the professional, emotive, affable voice above. Wherever the rules below ask for funny, cheeky or nostalgic comedy, write sincere, warm, emotionally rich posts instead, with no humour or japes at all.\n" : ""}${hallIds.length ? STRUCTURE_RULES.replace(/exactly 20 (posts|objects)/g, `exactly ${expected} $1`) + `\n\nHALLOWEEN ROWS: after the 20 rows above, add ${hallIds.length} extra Halloween rows (rows 21 to ${expected}), in this order. Same format, same rules, same voice, still ending ideas with a comment, share, save or tag call to action. Make each one clever, industry relevant and outside the box.\n${hallIds.map((h, i) => `Row ${21 + i}: "${HALLOWEEN_IDEAS[h].title}". ${HALLOWEEN_IDEAS[h].brief}`).join("\n")}` : STRUCTURE_RULES}${topPosts ? `\n${TOP_POSTS_RULES}` : ""}`;
 
     const user = `Clinic: ${clientName.trim()}
 Treatments to promote this month, in order:
@@ -487,6 +488,107 @@ ${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${safeSite
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Copy generation failed";
     req.log.error({ err }, "client-stylish/copy failed");
+    res.status(500).json({ error: msg });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Write-my-CSV for the Stylish tool: she says what the 4 treatment posts are about and what the rest
+// should be, and the rows come back ready to load. The Ryder Clinic is always written in a very
+// professional, emotive and affable voice, with no humour, for the slides and for the captions.
+// ---------------------------------------------------------------------------
+function section(from: string, to: string): string {
+  const a = STRUCTURE_RULES.indexOf(from);
+  const b = STRUCTURE_RULES.indexOf(to, a + 1);
+  return a >= 0 ? STRUCTURE_RULES.slice(a, b >= 0 ? b : undefined).trim() : "";
+}
+
+router.post("/client-stylish/csv", async (req: Request, res: Response) => {
+  try {
+    const body = req.body as { clientName?: string; website?: string; tone?: string; notes?: string; treatmentTopics?: string[]; restBrief?: string; restCount?: number };
+    const clientName = String(body.clientName ?? "").trim();
+    if (!clientName) { res.status(400).json({ error: "Please choose the client first" }); return; }
+    const topics = (Array.isArray(body.treatmentTopics) ? body.treatmentTopics : []).map((t) => neutralise(String(t ?? "").trim())).filter(Boolean).slice(0, 4);
+    if (topics.length < 1) { res.status(400).json({ error: "Tell me what the treatment posts are about" }); return; }
+    const restCount = Math.min(40, Math.max(0, Math.round(Number(body.restCount ?? 16))));
+    const restBrief = neutralise(String(body.restBrief ?? "").trim()).slice(0, 2000);
+    const ryder = isRyder(clientName);
+    const tonePrompt = ryder ? RYDER_TONE : (CAPTION_TONE_PROMPTS[String(body.tone ?? "4")] ?? CAPTION_TONE_PROMPTS["4"]);
+    const notes = neutralise(String(body.notes ?? "").trim()).slice(0, 1500);
+    const total = topics.length + restCount;
+
+    let siteText = "";
+    const website = String(body.website ?? "").trim();
+    if (website) {
+      try { siteText = neutralise(await readWebsite(website, topics, {})); } catch { siteText = ""; }
+    }
+
+    const common = [
+      section("FIRST PERSON, EVERY SINGLE ROW", "MAKE IT SCROLL WORTHY"),
+      ryder
+        ? `MAKE IT SCROLL WORTHY, THE RYDER WAY
+Each carousel is a short, absorbing story she wants to finish. Slide 1 (headline and subtitle) opens with a sincere, emotionally resonant line that draws her in. Text1, text2 and text3 are each 2 or 3 short, graceful sentences of 20 to 32 words, never a single line. Text1 sets the scene with a specific, humane detail and ends on a thought that invites the swipe. Text2 deepens the feeling or the insight. Text3 is the moment of reassurance or the quietly moving payoff. The cta lands warmly. No humour at all. Vary the rhythm between longer and shorter sentences. Be specific and tender rather than general.`
+        : section("MAKE IT SCROLL WORTHY", "NO DAYS, DATES OR TIMING"),
+      section("NO DAYS, DATES OR TIMING", "ENGAGEMENT AND ORIGINALITY"),
+      section("COMPLIANCE (CAP Code", "CTA"),
+      section("CTA", "BANNED WORDS"),
+      section("BANNED WORDS", "OUTPUT"),
+    ].filter(Boolean).join("\n\n");
+
+    const system = `You write copy for Vanessa Wormald's clients, UK aesthetic clinics.
+
+WRITING STYLE: ${tonePrompt}
+
+WHAT YOU ARE WRITING
+A Stylish carousel pack for one clinic: exactly ${total} posts, each one a row of short text that sits over photos. Each row has: headline, subtitle, text1, text2, text3, cta. The headline and subtitle read together as one line (headline is the start, subtitle is the finish). Headline up to 5 words, subtitle up to 8 words, cta up to 8 words, each of text1 to text3 is 2 or 3 short sentences of 20 to 32 words.
+
+THE ${total} ROWS
+${topics.length} treatment posts and ${restCount} other posts. Spread the treatment posts evenly through the list so the feed stays varied, never bunched together.
+TREATMENT POSTS: one for each of these topics, in this order:
+${topics.map((t, i) => `${i + 1}. ${t}`).join("\n")}
+Use real details and wording from the website text if given, and never invent a treatment or a claim. Do not write a list of benefits. Find a human way in: a small moment, a question she has been too shy to ask, what a consultation is actually like. Stealth sales: she should finish feeling curious and comfortable, never sold to.
+${restCount ? `OTHER POSTS (${restCount}): ${restBrief || "A varied mix of emotional, shareable, informative and engaging posts for women over 35 that suit the clinic."}
+Follow that brief exactly for the number and kind of posts it describes. Where it does not say, vary the angles so no two posts feel alike.` : ""}
+
+${common}
+
+${ryder ? "Because this is The Ryder Clinic, any instruction above that asks for humour, cheekiness, nostalgia jokes or comedy is replaced by sincere warmth and emotion. Never joke." : ""}
+
+OUTPUT
+Return only JSON in this exact shape, with exactly ${total} objects in "rows":
+{"rows":[{"headline":"","subtitle":"","text1":"","text2":"","text3":"","cta":""}]}`;
+
+    const user = `Clinic: ${clientName}
+${notes ? `Notes about the clinic and clinician: ${notes}\n` : ""}${siteText ? `WEBSITE TEXT:\n${siteText.slice(0, 6000)}` : "No website text was available, keep treatment details general."}`;
+
+    let rows: Row[] = [];
+    let feedback = "";
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "system", content: system }, { role: "user", content: user + feedback }],
+        response_format: { type: "json_object" },
+        temperature: ryder ? 0.7 : 0.9,
+        max_tokens: 9000,
+      });
+      try {
+        const parsed = JSON.parse(completion.choices[0]?.message?.content ?? "") as { rows?: Partial<Row>[] };
+        rows = (parsed.rows ?? []).map((r) => ({ headline: clean(r.headline), subtitle: clean(r.subtitle), text1: clean(r.text1), text2: clean(r.text2), text3: clean(r.text3), cta: clean(r.cta) }));
+      } catch { rows = []; }
+      if (rows.length !== total) { feedback = `\n\nYour last answer did not have exactly ${total} rows. Return exactly ${total} rows.`; continue; }
+      const hits = findBanned(rows);
+      const noI = rowsWithoutFirstPerson(rows);
+      if (!hits.length && !noI.length) break;
+      feedback = hits.length
+        ? `\n\nYour last answer used banned wording (${hits.join(", ")}). Rewrite all ${total} rows without any of those words. Never name a day of the week.`
+        : `\n\nRows ${noI.join(", ")} are not in the first person. Rewrite all ${total} rows so every row is spoken as I, me and my.`;
+    }
+    if (rows.length !== total) { res.status(502).json({ error: `The copy did not come back as ${total} rows. Please try again.` }); return; }
+    rows = rows.map((r) => ({ headline: neutralise(r.headline), subtitle: neutralise(r.subtitle), text1: neutralise(r.text1), text2: neutralise(r.text2), text3: neutralise(r.text3), cta: neutralise(r.cta) }));
+    res.json({ rows, csv: buildCsv(rows), ryder });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "CSV writing failed";
+    req.log.error({ err }, "client-stylish/csv failed");
     res.status(500).json({ error: msg });
   }
 });
