@@ -894,6 +894,57 @@ export const WINTER_WOOLIES_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
+export const HALLOWEEN_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "hl-01",
+    name: "Ghost Stories Candlelit Treatment Room",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo seated at a candlelit table in a dim, cosy treatment room, holding a mug in both hands, a small ghost shaped candle holder beside her. Chunky knit jumper, soft amber glow, a knowing look. Closed mouth smile, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "hl-02",
+    name: "Halloween 1992 Witch Hat",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in a retro 1990s kitchen wearing a tilted black pointed witch hat and a black cardigan, holding a battered plastic pumpkin bucket. Direct flash photography with a nostalgic film look, a cheeky smirk. Closed mouth smile, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "hl-03",
+    name: "Hot Flush Handheld Fan",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo holding a little handheld fan, her cardigan slipping off one shoulder, eyes wide in mock horror. A glowing carved pumpkin in the background, moody dim warm light. Closed mouth smile, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "hl-04",
+    name: "Horror Film Sofa Popcorn",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo curled up on a sofa under a blanket with a bowl of popcorn, the glow of a television on her face, peeking through her fingers with wide eyes. Closed mouth smile, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "hl-05",
+    name: "Witch's Cauldron Skincare",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in a black jumper stirring a copper cauldron filled with skincare bottles and dried herbs, candles and a little mist around her, a playful expression. Closed mouth smile, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "hl-06",
+    name: "Pumpkin Carving With A Plan",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo at a wooden table with a half carved pumpkin, a sketch in a notebook and a pen behind her ear, carving tools laid out, a focused and amused expression. Closed mouth smile, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "hl-07",
+    name: "Sheet Mask Sunday Door",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in a fluffy dressing gown wearing a white sheet mask, opening a front door and holding a bowl of sweets, eyes wide and surprised, warm hallway light and a pumpkin on the step. Closed mouth smile, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "hl-08",
+    name: "Face Behind The Costume",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo holding a lace masquerade mask lowered at her side, soft golden window light, a tender and genuine expression, autumn tones. Closed mouth smile, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+];
+
 export const AUTUMN_PRESETS: PhotoStudioPreset[] = [
   {
     id: "au-01",
