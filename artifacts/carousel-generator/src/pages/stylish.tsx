@@ -2888,6 +2888,8 @@ export default function Stylish() {
   const [rendering, setRendering] = useState(false);
   const [exporting, setExporting] = useState<string | null>(null);
   const [animating, setAnimating] = useState<string | null>(null);
+  // Closing the scheduling window only hides it, so a stray click never throws away a finished upload.
+  const [scheduleOpen, setScheduleOpen] = useState(false);
   const [animateCovers, setAnimateCovers] = useState<boolean>(() => {
     try { return localStorage.getItem("stylish-animate-covers") === "1"; } catch { return false; }
   });
@@ -3932,6 +3934,7 @@ export default function Stylish() {
       setScheduleStart(first.toISOString().slice(0, 16));
       setScheduleMode(mode);
       setScheduleItems(items);
+      setScheduleOpen(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed");
     } finally {
@@ -4583,6 +4586,11 @@ export default function Stylish() {
                   <Button size="sm" onClick={() => handleSchedule("carousel")} disabled={!!scheduling} className="bg-pink-600 hover:bg-pink-700 text-white" title="Schedules on Monday, Wednesday, Friday and Sunday">
                     {scheduling ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{scheduling}</> : <><CalendarClock className="w-4 h-4 mr-1.5" />Schedule</>}
                   </Button>
+                  {scheduleItems && !scheduleOpen && (
+                    <Button size="sm" onClick={() => setScheduleOpen(true)} className="bg-emerald-600 hover:bg-emerald-700 text-white" title="Your upload is finished. This reopens the window where you pick the dates and press Schedule">
+                      <CalendarClock className="w-4 h-4 mr-1.5" />Reopen scheduling window ({scheduleItems.length} ready)
+                    </Button>
+                  )}
                   <Button size="sm" variant="outline" onClick={() => handleSchedule("reel")} disabled={!!scheduling} title="Turns each ticked post into a 1080x1440 reel, writes captions and schedules on Monday, Wednesday, Friday and Sunday. Tick 'trial reel' on the next screen if you want it as a trial.">
                     <Film className="w-4 h-4 mr-1.5" />Make into reels
                   </Button>
@@ -5058,7 +5066,7 @@ export default function Stylish() {
         }}
       />
 
-      {scheduleItems && preset && (
+      {scheduleItems && scheduleOpen && preset && (
         <ScheduleModal
           presetId={preset.id}
           presetName={preset.name}
@@ -5069,8 +5077,8 @@ export default function Stylish() {
           postingDays
           companionStories={scheduleStories}
           sourceTool="stylish"
-          onClose={() => setScheduleItems(null)}
-          onSaved={() => setScheduleItems(null)}
+          onClose={() => setScheduleOpen(false)}
+          onSaved={() => { setScheduleItems(null); setScheduleOpen(false); }}
           presets={presets.map(p => ({ id: p.id, name: p.name }))}
         />
       )}
