@@ -310,8 +310,8 @@ const LOOK_EDITORIAL: Partial<Style> = {
   overlay: 0,
   scrim: 64,
   shadow: false,
-  frame: true,
-  counter: true,
+  frame: false,
+  counter: false,
   brandMark: true,
   arrow: true,
   rule: true,
@@ -2745,7 +2745,15 @@ export default function Stylish() {
   const [style, setStyle] = useState<Style>(() => {
     try {
       const raw = localStorage.getItem(STYLE_STORAGE_KEY);
-      if (raw) return { ...DEFAULT_STYLE, ...JSON.parse(raw) };
+      if (raw) {
+        const saved = { ...DEFAULT_STYLE, ...JSON.parse(raw) };
+        // The border and the page numbers on the extra slides are off for everyone. Switch them back on from the style panel if you want them.
+        if (!localStorage.getItem("stylish-no-frame-counter")) {
+          localStorage.setItem("stylish-no-frame-counter", "1");
+          return { ...saved, frame: false, counter: false };
+        }
+        return saved;
+      }
     } catch { /* storage can be blocked, defaults are fine */ }
     return DEFAULT_STYLE;
   });
