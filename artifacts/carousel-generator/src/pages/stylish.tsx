@@ -2784,6 +2784,9 @@ export default function Stylish() {
   });
   useEffect(() => { try { localStorage.setItem("stylish-thumb-width", String(thumbW)); } catch { /* ignore */ } }, [thumbW]);
   const [coverVersion, setCoverVersion] = useState(0);
+  // Which posts are in the schedule screen now, and which have been scheduled from it.
+  const [scheduleIds, setScheduleIds] = useState<string[]>([]);
+  const [scheduledIds, setScheduledIds] = useState<string[]>([]);
   const [overrides, setOverrides] = useState<Record<string, File>>({});
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [csvName, setCsvName] = useState<string | null>(null);
@@ -3911,8 +3914,9 @@ export default function Stylish() {
     }
   };
 
-  const handleSchedule = async (mode: "carousel" | "reel" = "carousel") => {
-    if (!selectedPosts.length) { toast.error("Tick at least one post first"); return; }
+  const handleSchedule = async (mode: "carousel" | "reel" = "carousel", only?: Post) => {
+    const targets = only ? [only] : selectedPosts;
+    if (!targets.length) { toast.error("Tick at least one post first"); return; }
     if (!preset) { toast.error("Choose a client first so I know whose account to schedule to"); return; }
     setScheduling("Starting");
     try {
@@ -3920,17 +3924,17 @@ export default function Stylish() {
       const logo = style.showLogo ? await loadLogo(preset) : null;
       const items: SchedulePostPayload[] = [];
       let n = 0;
-      for (const post of selectedPosts) {
+      for (const post of targets) {
         n++;
         const pi = posts.indexOf(post);
-        setScheduling(`Uploading post ${n} of ${selectedPosts.length}`);
+        setScheduling(`Uploading post ${n} of ${targets.length}`);
         // One slide at a time: render, upload, then free the canvas straight away so the tab never
         // holds a whole post (or several posts) of full size images in memory.
         const specs = buildSlides(post.texts);
         const urls: string[] = [];
         const reelForm = new FormData();
         for (let si = 0; si < specs.length; si++) {
-          setScheduling(`${mode === "reel" ? "Building reel" : "Uploading post"} ${n} of ${selectedPosts.length} (slide ${si + 1} of ${specs.length})`);
+          setScheduling(`${mode === "reel" ? "Building reel" : "Uploading post"} ${n} of ${targets.length} (slide ${si + 1} of ${specs.length})`);
           const canvas = await renderSlide(specs[si], photoFor(pi, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 1, { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoFor(pi, post, k)) : undefined }, focusRef.current[`${post.id}:${si}`]);
           if (mode === "reel") {
             const blob: Blob | null = await new Promise(r => canvas.toBlob(r, "image/png"));
@@ -3957,7 +3961,7 @@ export default function Stylish() {
         if (mode === "carousel" && animateCovers) {
           // The cover is recorded with the shine sweep and stored. Instagram gets it in place of the still
           // first slide. If anything goes wrong the post simply keeps its still cover.
-          setScheduling(`Animating cover ${n} of ${selectedPosts.length}`);
+          setScheduling(`Animating cover ${n} of ${targets.length}`);
           try {
             const base = await renderSlide(specs[0], photoFor(pi, post, 0), styleForSlide(style, post, specs[0].kind), logo, preset, 1, { index: 0, total: specs.length, extras: [1, 2, 3].map(k => photoFor(pi, post, k)) }, focusRef.current[`${post.id}:0`], textFocusRef.current[`${post.id}:0`], subTextFocusRef.current[`${post.id}:0`], textScaleRef.current[`${post.id}:0`], subTextScaleRef.current[`${post.id}:0`]);
             const clip = await recordShine(base);
@@ -3973,7 +3977,7 @@ export default function Stylish() {
           }
         }
         if (mode === "reel") {
-          setScheduling(`Making reel ${n} of ${selectedPosts.length}`);
+          setScheduling(`Making reel ${n} of ${targets.length}`);
           reelForm.append("secondsPerSlide", "2.5");
           const rr = await fetch(`${BASE}/api/stylish-reel`, { method: "POST", body: reelForm });
           const rd = await rr.json().catch(() => ({}));
@@ -3983,7 +3987,7 @@ export default function Stylish() {
         // Captions are written here if a post does not have one yet, so nothing is scheduled blank.
         let caption = post.caption.trim();
         if (!caption) {
-          setScheduling(`Writing caption ${n} of ${selectedPosts.length}`);
+          setScheduling(`Writing caption ${n} of ${targets.length}`);
           try {
             caption = (await generateCaption(post, mode === "reel")) ?? "";
             if (caption) updatePost(post.id, { caption });
@@ -4007,16 +4011,16 @@ export default function Stylish() {
             tone: "3",
             area: area.trim() || undefined,
             clinicName: preset.name,
-            posts: selectedPosts.map(p => ({ slides: buildSlides(p.texts).map(s => s.text) })),
+            posts: targets.map(p => ({ slides: buildSlides(p.texts).map(s => s.text) })),
           }),
         });
         const qd = await qr.json().catch(() => ({}));
         if (!qr.ok || !Array.isArray(qd.questions)) throw new Error(qd.error || "Could not write the story questions");
         stories = [];
-        for (let k = 0; k < selectedPosts.length; k++) {
-          const post = selectedPosts[k];
+        for (let k = 0; k < targets.length; k++) {
+          const post = targets[k];
           const pi = posts.indexOf(post);
-          setScheduling(`Making story ${k + 1} of ${selectedPosts.length}`);
+          setScheduling(`Making story ${k + 1} of ${targets.length}`);
           const storyPhoto = photoFor(pi, post, 0);
           const canvas = await renderStory(String(qd.questions[k]), storyPhoto, style, preset);
           const box = (canvas as HTMLCanvasElement & { __box?: StoryBox }).__box;
@@ -4046,6 +4050,7 @@ export default function Stylish() {
       setScheduleStart(first.toISOString().slice(0, 16));
       setScheduleMode(mode);
       setScheduleItems(items);
+      setScheduleIds(targets.map(p => p.id));
       setScheduleOpen(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed");
@@ -4747,6 +4752,18 @@ export default function Stylish() {
                         <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Post {pi + 1}</span>
                         <span className="text-sm text-foreground/80 truncate">{post.texts[0]}</span>
                         <span className="ml-auto text-[11px] text-muted-foreground shrink-0">{specs.length} slides</span>
+                        <span className={["text-[10px] font-semibold uppercase tracking-wide rounded-full px-2 py-0.5 shrink-0", scheduledIds.includes(post.id) ? "bg-emerald-500/15 text-emerald-400" : "bg-amber-500/15 text-amber-400"].join(" ")}>
+                          {scheduledIds.includes(post.id) ? "Scheduled" : "Not scheduled"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleSchedule("carousel", post)}
+                          disabled={!!scheduling}
+                          className="shrink-0 rounded-md bg-pink-600 hover:bg-pink-700 disabled:opacity-50 text-white text-[11px] font-medium px-2.5 py-1"
+                          title="Make the slides, caption and story for this post only, then open the schedule screen. Nothing is booked until you confirm there."
+                        >
+                          Schedule this post
+                        </button>
                         {confirmDelete === post.id ? (
                           <span className="flex items-center gap-2 text-xs shrink-0">
                             <span className="text-muted-foreground">Delete post {pi + 1}?</span>
@@ -5202,7 +5219,7 @@ export default function Stylish() {
           onMoveStoryText={moveStoryText}
           sourceTool="stylish"
           onClose={() => setScheduleOpen(false)}
-          onSaved={() => { setScheduleItems(null); setScheduleOpen(false); }}
+          onSaved={() => { setScheduledIds(l => Array.from(new Set([...l, ...scheduleIds]))); setScheduleItems(null); setScheduleOpen(false); }}
           presets={presets.map(p => ({ id: p.id, name: p.name }))}
         />
       )}
