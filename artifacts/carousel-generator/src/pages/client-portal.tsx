@@ -944,7 +944,7 @@ export default function ClientPortal({ token }: { token: string }) {
     >
       {TAB_ICON[id]}
       <span>{label}</span>
-      {badge ? <span className="text-[18px] px-1.5 py-0.5 rounded-full bg-white/20 text-white">{badge}</span> : null}
+      {badge ? <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-white/20 text-white">{badge}</span> : null}
     </button>
   );
   const DoneCard = ({ onAgain, label }: { onAgain: () => void; label: string }) => (
@@ -1773,10 +1773,10 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
                   <div key={s.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-4 py-4">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-medium text-white capitalize">{(s.treatment || "before and after").toLowerCase()}</span>
-                      <span className={`ml-auto text-[18px] font-semibold px-2 py-0.5 rounded-full ${s.status === "complete" ? "bg-green-950/40 text-green-400 border border-green-800/40" : "bg-amber-950/30 text-amber-300 border border-amber-800/40"}`}>{s.status === "complete" ? "Used in your content" : "Waiting with Vanessa"}</span>
+                      <span className={`ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full ${s.status === "complete" ? "bg-green-950/40 text-green-400 border border-green-800/40" : "bg-amber-950/30 text-amber-300 border border-amber-800/40"}`}>{s.status === "complete" ? "Used in your content" : "Waiting with Vanessa"}</span>
                     </div>
                     {s.story && <p className="text-xs text-zinc-400 whitespace-pre-wrap line-clamp-3">{s.story}</p>}
-                    <p className="text-[18px] text-zinc-600 mt-2">{new Date(s.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
+                    <p className="text-[11px] text-zinc-600 mt-2">{new Date(s.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</p>
                   </div>
                 ))}
               </div>

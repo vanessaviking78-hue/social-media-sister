@@ -48,7 +48,7 @@ function UploadSlot({
           >
             <X size={14} />
           </button>
-          <p className="absolute bottom-0 inset-x-0 px-3 py-1.5 text-[18px] text-zinc-300 bg-black/55 truncate">{slot.name}</p>
+          <p className="absolute bottom-0 inset-x-0 px-3 py-1.5 text-[11px] text-zinc-300 bg-black/55 truncate">{slot.name}</p>
         </div>
       ) : (
         <label

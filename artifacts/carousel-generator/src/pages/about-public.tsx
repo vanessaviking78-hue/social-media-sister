@@ -11,7 +11,7 @@ export default function AboutPublic() {
   return (
     <div style={{ background: BG, minHeight: "100vh", color: WHITE, fontFamily: "'League Spartan','Helvetica Neue',sans-serif", overflowX: "hidden" }}>
       <div style={{ maxWidth: "1000px", margin: "0 auto", padding: "80px 32px 120px" }}>
-        <Link href="/" style={{ color: RG, fontSize: "18px", fontWeight: 600, textDecoration: "none", letterSpacing: "0.02em" }}>← Home</Link>
+        <Link href="/" style={{ color: RG, fontSize: "16px", fontWeight: 600, textDecoration: "none", letterSpacing: "0.02em" }}>← Home</Link>
 
         <h1 style={{ ...H, fontSize: "clamp(40px,6vw,76px)", marginTop: "40px" }}>
           The CyberSuite: the toolkit I built to run aesthetic clinics better than anyone else can

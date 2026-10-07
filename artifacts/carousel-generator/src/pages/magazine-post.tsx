@@ -91,7 +91,7 @@ function Field({
     "w-full rounded-lg bg-zinc-900 border border-zinc-800 focus:border-fuchsia-500 outline-none px-3 py-2 text-sm text-white placeholder:text-zinc-600";
   return (
     <label className="block">
-      <span className="block text-[18px] uppercase tracking-widest text-zinc-500 mb-1">{label}</span>
+      <span className="block text-[11px] uppercase tracking-widest text-zinc-500 mb-1">{label}</span>
       {rows ? (
         <textarea rows={rows} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={cls} />
       ) : (
@@ -474,7 +474,7 @@ export default function MagazinePost() {
             <section className="space-y-3">
               <p className="text-xs uppercase tracking-widest text-zinc-500">1. The client</p>
               <label className="block">
-                <span className="block text-[18px] uppercase tracking-widest text-zinc-500 mb-1">Choose a client (fills in their name and colours)</span>
+                <span className="block text-[11px] uppercase tracking-widest text-zinc-500 mb-1">Choose a client (fills in their name and colours)</span>
                 <select
                   value={presetId ?? ""}
                   onChange={(e) => pickClient(e.target.value ? Number(e.target.value) : null)}
@@ -491,18 +491,18 @@ export default function MagazinePost() {
               <Field label="Clinic name" value={clinicName} onChange={setClinicName} placeholder="e.g. Aspyre Aesthetics" />
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
-                  <span className="block text-[18px] uppercase tracking-widest text-zinc-500 mb-1">Brand colour</span>
+                  <span className="block text-[11px] uppercase tracking-widest text-zinc-500 mb-1">Brand colour</span>
                   <input type="color" value={colour} onChange={(e) => setColour(e.target.value)} className="w-full h-10 rounded-lg bg-zinc-900 border border-zinc-800 cursor-pointer" />
                 </label>
                 <label className="block">
-                  <span className="block text-[18px] uppercase tracking-widest text-zinc-500 mb-1">Highlight colour</span>
+                  <span className="block text-[11px] uppercase tracking-widest text-zinc-500 mb-1">Highlight colour</span>
                   <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} className="w-full h-10 rounded-lg bg-zinc-900 border border-zinc-800 cursor-pointer" />
                 </label>
               </div>
               <Field label="Website, phone or handle (last page footer, optional)" value={contact} onChange={setContact} placeholder="www.yourclinic.co.uk" />
               <Field label="Booking link (QR code on the last page, optional)" value={qrLink} onChange={setQrLink} placeholder="https://yourclinic.co.uk/book" />
               {qrLink.trim() && !normaliseQrUrl(qrLink) && (
-                <p className="text-[18px] text-amber-300">That doesn't look like a web link, so no QR code will show. Try something like www.yourclinic.co.uk/book</p>
+                <p className="text-[11px] text-amber-300">That doesn't look like a web link, so no QR code will show. Try something like www.yourclinic.co.uk/book</p>
               )}
             </section>
 
@@ -531,11 +531,11 @@ export default function MagazinePost() {
                   />
                   <Upload className="mb-1.5 text-zinc-600" size={20} />
                   <p className="text-sm font-medium text-zinc-300">Drop your photos here, or tap to choose</p>
-                  <p className="text-[18px] text-zinc-500 mt-1">The first is the cover and the last is the full photo page. The rest are shared across the inside pages.</p>
+                  <p className="text-[11px] text-zinc-500 mt-1">The first is the cover and the last is the full photo page. The rest are shared across the inside pages.</p>
                 </label>
               )}
               <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
-                <p className="text-[18px] uppercase tracking-widest text-zinc-500 mb-2">
+                <p className="text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
                   Photo shapes needed <span className="normal-case tracking-normal text-zinc-600">(V = vertical, H = horizontal)</span>
                 </p>
                 <div className="flex flex-wrap gap-1.5">
@@ -553,7 +553,7 @@ export default function MagazinePost() {
                     );
                   })}
                 </div>
-                <p className="text-[18px] text-zinc-500 mt-2">
+                <p className="text-[11px] text-zinc-500 mt-2">
                   With more photos the order shifts a little, so this updates as you add them. Squarish photos work as either.
                 </p>
               </div>
@@ -567,7 +567,7 @@ export default function MagazinePost() {
                         const ok = p.shape === need;
                         return (
                           <span
-                            className={`absolute top-1.5 left-1.5 rounded px-1.5 py-0.5 text-[18px] font-bold ${
+                            className={`absolute top-1.5 left-1.5 rounded px-1.5 py-0.5 text-[10px] font-bold ${
                               ok ? "bg-black/65 text-white" : "bg-amber-500 text-black"
                             }`}
                             title={ok ? `Right shape (${need})` : `This one is ${p.shape === "H" ? "horizontal" : "vertical"} but this spot wants ${need === "H" ? "horizontal" : "vertical"}`}
@@ -586,7 +586,7 @@ export default function MagazinePost() {
                       >
                         <X size={12} />
                       </button>
-                      <div className="absolute bottom-0 inset-x-0 flex items-center justify-between px-1 py-1 text-[18px] text-zinc-200 bg-black/65">
+                      <div className="absolute bottom-0 inset-x-0 flex items-center justify-between px-1 py-1 text-[10px] text-zinc-200 bg-black/65">
                         <button onClick={() => movePhoto(i, -1)} disabled={i === 0} className="p-0.5 disabled:opacity-30" aria-label="Move earlier">
                           <ChevronLeft size={12} />
                         </button>
@@ -679,10 +679,10 @@ export default function MagazinePost() {
                 className="w-full max-w-sm aspect-[3/4] rounded-lg border border-zinc-800 bg-zinc-900"
                 aria-label="Large page preview. Drag a photo to move it, scroll to zoom."
               />
-              <p className="text-[18px] text-zinc-500 mt-1.5">Drag a photo to slide it about inside its frame. Scroll over it, or use the slider, to zoom in.</p>
+              <p className="text-[11px] text-zinc-500 mt-1.5">Drag a photo to slide it about inside its frame. Scroll over it, or use the slider, to zoom in.</p>
               {selected !== null && photos[selected] && (
                 <div className="mt-2 flex items-center gap-3 max-w-sm">
-                  <span className="text-[18px] text-zinc-400 shrink-0">Photo {selected + 1}</span>
+                  <span className="text-[11px] text-zinc-400 shrink-0">Photo {selected + 1}</span>
                   <input
                     type="range"
                     min={1}
@@ -693,7 +693,7 @@ export default function MagazinePost() {
                     className="flex-1 accent-fuchsia-500"
                     aria-label="Zoom"
                   />
-                  <button onClick={() => updateAdjust(selected, () => ({ ...DEFAULT_ADJUST }))} className="text-[18px] text-fuchsia-400 underline shrink-0">
+                  <button onClick={() => updateAdjust(selected, () => ({ ...DEFAULT_ADJUST }))} className="text-[11px] text-fuchsia-400 underline shrink-0">
                     Reset
                   </button>
                 </div>
@@ -756,7 +756,7 @@ export default function MagazinePost() {
                   <Download size={15} /> Download all 5 pages
                 </button>
               </div>
-              <p className="text-[18px] text-zinc-500 mt-1.5">
+              <p className="text-[11px] text-zinc-500 mt-1.5">
                 Scheduling sends the 5 pages as one carousel with the caption below, and you choose the day and time next. Downloads come in order, 1 to 5.
               </p>
             </div>

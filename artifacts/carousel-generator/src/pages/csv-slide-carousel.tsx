@@ -297,11 +297,11 @@ function SlideListRow({ slide, index }: { slide: SlideData; index: number }) {
     <div className="flex items-start gap-3 px-4 py-2.5">
       <span className="text-xs text-muted-foreground w-5 shrink-0 text-right pt-0.5">{index + 1}</span>
       {slide.isHero ? (
-        <span className="text-[18px] font-semibold uppercase tracking-widest bg-sky-500/20 text-sky-400 border border-sky-500/30 rounded px-1.5 py-0.5 shrink-0 mt-0.5">
+        <span className="text-[9px] font-semibold uppercase tracking-widest bg-sky-500/20 text-sky-400 border border-sky-500/30 rounded px-1.5 py-0.5 shrink-0 mt-0.5">
           Hero
         </span>
       ) : (
-        <span className="text-[18px] font-semibold uppercase tracking-widest bg-muted/40 text-muted-foreground rounded px-1.5 py-0.5 shrink-0 mt-0.5">
+        <span className="text-[9px] font-semibold uppercase tracking-widest bg-muted/40 text-muted-foreground rounded px-1.5 py-0.5 shrink-0 mt-0.5">
           Body
         </span>
       )}
@@ -593,7 +593,7 @@ export default function CsvSlideCarousel() {
                       </p>
                       <div className="w-full max-h-28 overflow-y-auto space-y-0.5 text-left">
                         {bgPhotoFiles.map((f, i) => (
-                          <p key={i} className="text-[18px] text-muted-foreground truncate px-1">
+                          <p key={i} className="text-[11px] text-muted-foreground truncate px-1">
                             <span className="text-amber-500/70 font-mono mr-1">{String(i + 1).padStart(2, "0")}.</span>
                             {f.name}
                           </p>
@@ -831,7 +831,7 @@ export default function CsvSlideCarousel() {
                 onChange={e => setLineSpacing(Number(e.target.value))}
                 className="flex-1 accent-sky-500"
               />
-              <span className="text-[18px] text-muted-foreground/60 shrink-0">Slide 1 only</span>
+              <span className="text-[11px] text-muted-foreground/60 shrink-0">Slide 1 only</span>
             </div>
 
             <div className="space-y-8">
@@ -845,7 +845,7 @@ export default function CsvSlideCarousel() {
                         Carousel {ci + 1} of {totalCarousels}
                       </span>
                       <div className="h-px flex-1 bg-border/30" />
-                      <span className="text-[18px] text-muted-foreground/60">
+                      <span className="text-[11px] text-muted-foreground/60">
                         {group.length} slide{group.length !== 1 ? "s" : ""}
                       </span>
                     </div>
@@ -876,9 +876,9 @@ export default function CsvSlideCarousel() {
                               </div>
                             )}
                             <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-1.5 py-1 bg-gradient-to-t from-black/70 to-transparent">
-                              <span className="text-[18px] text-white/70 font-medium">{si + 1}</span>
+                              <span className="text-[10px] text-white/70 font-medium">{si + 1}</span>
                               {slide.isHero && (
-                                <span className="text-[18px] bg-sky-600 text-white px-1 py-0.5 rounded font-semibold uppercase tracking-wider">
+                                <span className="text-[8px] bg-sky-600 text-white px-1 py-0.5 rounded font-semibold uppercase tracking-wider">
                                   Hero
                                 </span>
                               )}

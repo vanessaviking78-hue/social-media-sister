@@ -905,12 +905,12 @@ export default function SingleImage() {
 
   return (
     <div className="h-[100dvh] w-full flex flex-col overflow-hidden">
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-4 px-6 md:px-10 flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-4 px-3 md:px-6 md:px-10 flex items-center justify-between">
         <div className="flex items-center gap-3 flex-shrink-0">
           <img src="/sms-logo.png" alt="Social Media Sister" className="h-8 w-auto object-contain" />
           <Badge variant="secondary" className="bg-accent text-xs">Single Image</Badge>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0 overflow-x-auto pl-3 [&>*]:shrink-0">
           <Link href="/hub">
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <ArrowLeftRight className="w-4 h-4 mr-2" />
@@ -993,7 +993,7 @@ export default function SingleImage() {
       </header>
 
       {/* ── Body: Rail | Panel | Editing area | Live preview ── */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="relative flex flex-1 min-h-0 overflow-hidden">
 
         {/* ── Left Rail (60px) ── */}
         <div style={{ width: 60, minWidth: 60 }} className="flex flex-col items-center py-3 gap-0.5 bg-[#0f0f0f] border-r border-zinc-800/60 shrink-0 z-10">
@@ -1069,7 +1069,7 @@ export default function SingleImage() {
                   <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full bg-[#E91976]" />
                 )}
                 {icon(isActive)}
-                <span className="text-[18px] font-semibold tracking-wide uppercase" style={{ color: isActive ? "#E91976" : "#52525b" }}>
+                <span className="text-[9px] font-semibold tracking-wide uppercase" style={{ color: isActive ? "#E91976" : "#52525b" }}>
                   {label}
                 </span>
               </button>
@@ -1077,6 +1077,7 @@ export default function SingleImage() {
           })}
         </div>
 
+        {activeTool && <div className="md:hidden absolute inset-0 z-[5] bg-black/50" onClick={() => setActiveTool(null)} aria-hidden="true" />}
         {/* ── Slide-out Panel (260px) ── */}
         <div
           style={{
@@ -1084,7 +1085,7 @@ export default function SingleImage() {
             minWidth: activeTool ? 260 : 0,
             transition: "width 180ms cubic-bezier(0.4,0,0.2,1), min-width 180ms cubic-bezier(0.4,0,0.2,1)",
           }}
-          className="bg-[#161616] border-r border-zinc-800/60 flex flex-col shrink-0 overflow-hidden z-10"
+          className="bg-[#161616] border-r border-zinc-800/60 flex flex-col shrink-0 overflow-hidden z-10 max-md:absolute max-md:left-[60px] max-md:inset-y-0 max-md:shadow-2xl"
         >
           {activeTool && (
             <>
@@ -1138,11 +1139,11 @@ export default function SingleImage() {
                       onBodyChange={setSubheadingFont}
                     />
                     <div className="pt-2 border-t border-zinc-800/60 space-y-1.5">
-                      <p className="text-[18px] text-zinc-600 uppercase tracking-wider">Current heading</p>
+                      <p className="text-[10px] text-zinc-600 uppercase tracking-wider">Current heading</p>
                       <p className="text-xs text-zinc-300 font-medium truncate">{selectedFontLabel}</p>
-                      <p className="text-[18px] text-zinc-600 uppercase tracking-wider pt-1">Current body</p>
+                      <p className="text-[10px] text-zinc-600 uppercase tracking-wider pt-1">Current body</p>
                       <p className="text-xs text-zinc-300 font-medium truncate">{selectedSubheadingFontLabel}</p>
-                      <p className="text-[18px] text-zinc-600 uppercase tracking-wider pt-1">Font size</p>
+                      <p className="text-[10px] text-zinc-600 uppercase tracking-wider pt-1">Font size</p>
                       <p className="text-xs text-zinc-300 font-medium">{fontSize}px — set in Step 2</p>
                     </div>
                   </div>

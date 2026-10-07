@@ -1124,12 +1124,12 @@ export default function Home() {
   return (
     <div className="h-[100dvh] w-full flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-4 px-6 md:px-10 flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-border/30 py-4 px-3 md:px-6 md:px-10 flex items-center justify-between">
         <div className="flex items-center gap-3 flex-shrink-0">
           <Link href="/hub"><img src="/sms-logo.png" alt="Social Media Sister" className="h-8 w-auto object-contain cursor-pointer hover:opacity-80 transition-opacity" /></Link>
           <Link href="/hub"><Button variant="outline" size="sm" className="text-muted-foreground border-border/40 text-xs">← All Tools</Button></Link>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0 overflow-x-auto pl-3 [&>*]:shrink-0">
           <Link href="/single-image">
             <Button variant="ghost" size="sm" className="text-muted-foreground">
               <ImagePlus className="w-4 h-4 mr-2" />
@@ -1212,7 +1212,7 @@ export default function Home() {
       </header>
 
       {/* ── Body: Rail | Panel | Editing area | Live preview ── */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      <div className="relative flex flex-1 min-h-0 overflow-hidden">
 
         {/* ── Left Rail (60px) ── */}
         <div style={{ width: 60, minWidth: 60 }} className="flex flex-col items-center py-3 gap-0.5 bg-[#0f0f0f] border-r border-zinc-800/60 shrink-0 z-10">
@@ -1288,7 +1288,7 @@ export default function Home() {
                   <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r-full bg-[#E91976]" />
                 )}
                 {icon(isActive)}
-                <span className="text-[18px] font-semibold tracking-wide uppercase" style={{ color: isActive ? "#E91976" : "#52525b" }}>
+                <span className="text-[9px] font-semibold tracking-wide uppercase" style={{ color: isActive ? "#E91976" : "#52525b" }}>
                   {label}
                 </span>
               </button>
@@ -1296,6 +1296,7 @@ export default function Home() {
           })}
         </div>
 
+        {activeTool && <div className="md:hidden absolute inset-0 z-[5] bg-black/50" onClick={() => setActiveTool(null)} aria-hidden="true" />}
         {/* ── Slide-out Panel (260px) ── */}
         <div
           style={{
@@ -1303,7 +1304,7 @@ export default function Home() {
             minWidth: activeTool ? 260 : 0,
             transition: "width 180ms cubic-bezier(0.4,0,0.2,1), min-width 180ms cubic-bezier(0.4,0,0.2,1)",
           }}
-          className="bg-[#161616] border-r border-zinc-800/60 flex flex-col shrink-0 overflow-hidden z-10"
+          className="bg-[#161616] border-r border-zinc-800/60 flex flex-col shrink-0 overflow-hidden z-10 max-md:absolute max-md:left-[60px] max-md:inset-y-0 max-md:shadow-2xl"
         >
           {activeTool && (
             <>
@@ -1540,7 +1541,7 @@ export default function Home() {
                       </div>
                       <div className="mt-2 rounded-xl border border-pink-500/20 bg-pink-500/5 p-3 space-y-2">
                         <p className="text-xs font-medium flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5 text-pink-400" /> Generate a cover from your headline</p>
-                        <p className="text-[18px] text-muted-foreground">A clean, on-brand background with no people. Type the headline and it makes a matching image.</p>
+                        <p className="text-[11px] text-muted-foreground">A clean, on-brand background with no people. Type the headline and it makes a matching image.</p>
                         <div className="flex gap-2">
                           <input
                             value={genCoverPrompt}
@@ -1563,7 +1564,7 @@ export default function Home() {
                           {coverPhotos.map((file, i) => (
                             <div key={i} className="relative aspect-square rounded-xl overflow-hidden group bg-accent cursor-pointer ring-2 ring-pink-500/40">
                               <img src={URL.createObjectURL(file)} alt="cover preview" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[18px] text-center py-0.5 font-semibold">SLIDE 1</div>
+                              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[8px] text-center py-0.5 font-semibold">SLIDE 1</div>
                               <button onClick={(e) => { e.stopPropagation(); removeCoverPhoto(i); }} className="absolute top-1 right-1 p-0.5 bg-black/60 hover:bg-black/90 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3" /></button>
                             </div>
                           ))}
@@ -2773,7 +2774,7 @@ export default function Home() {
                                   <div key={slide.slideIndex} className="relative rounded-2xl overflow-hidden shadow-md hover:shadow-[0_0_24px_hsl(var(--primary)/0.15)] transition-shadow duration-300" style={{ aspectRatio: "4/5" }} data-testid={`slide-card-${slide.slideIndex}`}>
                                     <img src={slide.imageUrl} alt={`Carousel ${slide.groupIndex} slide ${slide.groupPosition}`} className="absolute inset-0 w-full h-full object-cover" style={{ opacity: isCoverImg || isCover ? 1 : 0.5 }} />
                                     {isCoverImg && (
-                                      <div className="absolute top-1 left-1 bg-pink-500/90 text-white text-[18px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide">Cover</div>
+                                      <div className="absolute top-1 left-1 bg-pink-500/90 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wide">Cover</div>
                                     )}
                                     {logoPreviewUrl && !isCoverImg && (() => {
                                       const posStyle: React.CSSProperties = { position: "absolute" };

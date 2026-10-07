@@ -54,7 +54,7 @@ function UploadSlot({
           >
             <X size={14} />
           </button>
-          <p className="absolute bottom-0 inset-x-0 px-3 py-1.5 text-[18px] text-zinc-300 bg-black/55 truncate">{slot.name}</p>
+          <p className="absolute bottom-0 inset-x-0 px-3 py-1.5 text-[11px] text-zinc-300 bg-black/55 truncate">{slot.name}</p>
         </div>
       ) : (
         <label
@@ -83,7 +83,7 @@ function UploadSlot({
           />
           <Upload className="mb-2 text-zinc-600" size={24} />
           <p className="font-medium text-sm">Drop an image or click</p>
-          <p className="text-[18px] text-zinc-500 mt-1">{hint}</p>
+          <p className="text-[11px] text-zinc-500 mt-1">{hint}</p>
         </label>
       )}
     </div>
@@ -392,7 +392,7 @@ export default function Magazine() {
               )}
             </div>
             <div className="max-w-sm mx-auto lg:max-w-none space-y-1">
-              <label className="text-[18px] uppercase tracking-widest text-zinc-500">File name</label>
+              <label className="text-[11px] uppercase tracking-widest text-zinc-500">File name</label>
               <input
                 value={fileName}
                 onChange={(e) => setFileName(e.target.value)}

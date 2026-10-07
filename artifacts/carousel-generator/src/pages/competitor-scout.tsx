@@ -295,12 +295,12 @@ ${finalizeReportHtml(report.report_html)}
                     <p className="font-semibold text-sm flex items-center gap-2">
                       {r.clinic_name}
                       {r.status === "processing" && (
-                        <span className="inline-flex items-center gap-1 text-[18px] font-normal text-amber-400">
+                        <span className="inline-flex items-center gap-1 text-[11px] font-normal text-amber-400">
                           <Loader2 className="w-3 h-3 animate-spin" /> researching…
                         </span>
                       )}
                       {r.status === "failed" && (
-                        <span className="text-[18px] font-normal text-red-400">didn't finish</span>
+                        <span className="text-[11px] font-normal text-red-400">didn't finish</span>
                       )}
                     </p>
                     <p className="text-xs text-muted-foreground">{r.postcode} · {new Date(r.created_at).toLocaleDateString("en-GB")}</p>

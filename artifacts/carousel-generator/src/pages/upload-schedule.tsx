@@ -744,7 +744,7 @@ export default function UploadSchedule() {
                 />
                 <div className="absolute top-2 left-2 bg-black/70 rounded-full px-2 py-1 flex items-center gap-1">
                   <Film size={11} className="text-pink-400" />
-                  <span className="text-[18px] text-white font-medium">{images[0].file.name.slice(0, 24)}</span>
+                  <span className="text-[11px] text-white font-medium">{images[0].file.name.slice(0, 24)}</span>
                 </div>
                 <button
                   onClick={() => removeImage(0)}
@@ -781,7 +781,7 @@ export default function UploadSchedule() {
                     >
                       <X size={12} className="text-white" />
                     </button>
-                    <div className="absolute bottom-1 left-1 bg-black/60 rounded px-1.5 py-0.5 text-[18px] text-white font-medium">
+                    <div className="absolute bottom-1 left-1 bg-black/60 rounded px-1.5 py-0.5 text-[10px] text-white font-medium">
                       {idx + 1}
                     </div>
                   </div>
@@ -789,7 +789,7 @@ export default function UploadSchedule() {
               </div>
             )}
             {hasVideo && images.length > 1 && (
-              <p className="text-[18px] text-zinc-500 mb-2">
+              <p className="text-[11px] text-zinc-500 mb-2">
                 {images.length} clips will post together as a video carousel. Drag thumbnails to reorder.
               </p>
             )}
@@ -825,7 +825,7 @@ export default function UploadSchedule() {
                     >
                       <X size={12} className="text-white" />
                     </button>
-                    <div className="absolute bottom-1 left-1 bg-black/60 rounded px-1.5 py-0.5 text-[18px] text-white font-medium">
+                    <div className="absolute bottom-1 left-1 bg-black/60 rounded px-1.5 py-0.5 text-[10px] text-white font-medium">
                       {idx + 1}
                     </div>
                   </div>
@@ -848,7 +848,7 @@ export default function UploadSchedule() {
               </button>
             )}
             {bulkMode && (
-              <p className="text-[18px] text-zinc-500 mb-2">
+              <p className="text-[11px] text-zinc-500 mb-2">
                 Each image becomes its own single-image post with the same caption. Set the date and time for each one below.
               </p>
             )}
@@ -869,7 +869,7 @@ export default function UploadSchedule() {
             )}
 
             {animateSlides && (
-              <p className="text-[18px] text-zinc-500 mb-2">
+              <p className="text-[11px] text-zinc-500 mb-2">
                 Slides will crossfade at 3s each and be stitched into a single video reel.
                 Drag thumbnails to reorder.
               </p>
@@ -951,7 +951,7 @@ export default function UploadSchedule() {
                   ))}
                 </div>
                 {hasVideo && postType !== "reel" && (
-                  <p className="text-[18px] text-amber-400/80 mt-1.5">Video posts are best scheduled as Reels.</p>
+                  <p className="text-[11px] text-amber-400/80 mt-1.5">Video posts are best scheduled as Reels.</p>
                 )}
               </div>
               )}
@@ -960,7 +960,7 @@ export default function UploadSchedule() {
                 <div className="flex items-center justify-between rounded-lg border border-white/10 bg-zinc-900 px-3 py-2.5">
                   <div>
                     <p className="text-sm font-medium text-zinc-200">Trial Reel</p>
-                    <p className="text-[18px] text-zinc-500">Posts privately for testing — only shown to non-followers until you graduate it in Instagram.</p>
+                    <p className="text-[11px] text-zinc-500">Posts privately for testing — only shown to non-followers until you graduate it in Instagram.</p>
                   </div>
                   <button
                     type="button"
@@ -976,7 +976,7 @@ export default function UploadSchedule() {
                 <div className="rounded-lg border border-white/10 bg-zinc-900 px-3 py-3 flex flex-col gap-2.5">
                   <div>
                     <p className="text-sm font-medium text-zinc-200">Add music</p>
-                    <p className="text-[18px] text-zinc-500">Upload a track you've downloaded (e.g. from Pixabay) and it'll be baked into the video before it's scheduled.</p>
+                    <p className="text-[11px] text-zinc-500">Upload a track you've downloaded (e.g. from Pixabay) and it'll be baked into the video before it's scheduled.</p>
                   </div>
                   {!musicFile ? (
                     <label className="flex items-center justify-center gap-2 rounded-lg border border-dashed border-white/15 py-2.5 text-sm text-zinc-400 hover:border-pink-500/50 hover:text-pink-300 cursor-pointer transition-colors">
@@ -1002,7 +1002,7 @@ export default function UploadSchedule() {
                         </button>
                       </div>
                       <div>
-                        <Label className="text-[18px] text-zinc-500 mb-1 block">Start point in track (seconds)</Label>
+                        <Label className="text-[11px] text-zinc-500 mb-1 block">Start point in track (seconds)</Label>
                         <Input
                           type="number"
                           min={0}
@@ -1032,13 +1032,13 @@ export default function UploadSchedule() {
                         }`}
                       >
                         {d === "1080x1440" ? "1080 × 1440" : "1080 × 1920"}
-                        <span className="block text-[18px] font-normal mt-0.5 opacity-70">
+                        <span className="block text-[10px] font-normal mt-0.5 opacity-70">
                           {d === "1080x1440" ? "Portrait Feed" : "Story / Reel"}
                         </span>
                       </button>
                     ))}
                   </div>
-                  <p className="text-[18px] text-zinc-600 mt-1.5">
+                  <p className="text-[11px] text-zinc-600 mt-1.5">
                     Export your Canva design at this size before uploading.
                   </p>
                 </div>
@@ -1051,7 +1051,7 @@ export default function UploadSchedule() {
                   <button
                     type="button"
                     onClick={() => { setBroadcastMode((v) => !v); setSelectedPresetIds(new Set()); }}
-                    className="text-[18px] text-pink-400 hover:text-pink-300 font-medium"
+                    className="text-[11px] text-pink-400 hover:text-pink-300 font-medium"
                   >
                     {broadcastMode ? "Switch to single client" : "Send to multiple clients"}
                   </button>
@@ -1078,8 +1078,8 @@ export default function UploadSchedule() {
                     <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
                       <span className="text-xs text-zinc-500">{selectedPresetIds.size} of {presets.length} selected</span>
                       <div className="flex gap-2">
-                        <button type="button" onClick={() => setSelectedPresetIds(new Set(presets.map((p) => p.id)))} className="text-[18px] text-pink-400 hover:text-pink-300">Select all</button>
-                        <button type="button" onClick={() => setSelectedPresetIds(new Set())} className="text-[18px] text-zinc-500 hover:text-zinc-300">Clear</button>
+                        <button type="button" onClick={() => setSelectedPresetIds(new Set(presets.map((p) => p.id)))} className="text-[11px] text-pink-400 hover:text-pink-300">Select all</button>
+                        <button type="button" onClick={() => setSelectedPresetIds(new Set())} className="text-[11px] text-zinc-500 hover:text-zinc-300">Clear</button>
                       </div>
                     </div>
                     <div className="max-h-48 overflow-y-auto divide-y divide-white/5">
@@ -1098,7 +1098,7 @@ export default function UploadSchedule() {
                   </div>
                 )}
                 {broadcastMode && (
-                  <p className="text-[18px] text-zinc-500 mt-1.5">
+                  <p className="text-[11px] text-zinc-500 mt-1.5">
                     Same content, same date, sent to every client ticked above, each lands in its own queue in the Scheduler. Posts are staggered a few minutes apart by client name (A-F, G-M, N-S, T-Z) so they do not all hit Facebook at once.</p>
                 )}
               </div>
@@ -1139,7 +1139,7 @@ export default function UploadSchedule() {
                       return (
                         <div key={img.localUrl} className="flex items-center gap-2 bg-zinc-900 border border-white/10 rounded-lg p-2">
                           <img src={img.localUrl} alt={`Post ${idx + 1}`} className="w-9 h-9 rounded object-cover shrink-0" />
-                          <span className="text-[18px] text-zinc-500 w-4 shrink-0">{idx + 1}</span>
+                          <span className="text-[11px] text-zinc-500 w-4 shrink-0">{idx + 1}</span>
                           <Input
                             type="date"
                             value={slot.date}
@@ -1181,7 +1181,7 @@ export default function UploadSchedule() {
                     );
                   })}
                 </div>
-                <p className="text-[18px] text-zinc-600 mt-1.5">
+                <p className="text-[11px] text-zinc-600 mt-1.5">
                   Posting fires via the client's connected Meta account.
                 </p>
               </div>
@@ -1197,7 +1197,7 @@ export default function UploadSchedule() {
                       <Sparkles size={13} className="text-pink-400" />
                       <p className="text-xs font-semibold tracking-widest uppercase text-zinc-400">Interactive Sticker</p>
                       {stickerType !== "none" && (
-                        <span className="px-1.5 py-0.5 rounded text-[18px] bg-pink-600/20 text-pink-300 border border-pink-500/30">
+                        <span className="px-1.5 py-0.5 rounded text-[10px] bg-pink-600/20 text-pink-300 border border-pink-500/30">
                           {stickerType === "poll" ? "Poll" : stickerType === "quiz" ? "Quiz" : "Q&A"}
                         </span>
                       )}
@@ -1298,7 +1298,7 @@ export default function UploadSchedule() {
                         </div>
                       )}
 
-                      <p className="text-[18px] text-zinc-600">
+                      <p className="text-[11px] text-zinc-600">
                         Instagram applies the sticker at publish time. It cannot be previewed in the app.
                       </p>
                     </div>

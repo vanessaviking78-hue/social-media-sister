@@ -915,7 +915,7 @@ export default function AboutMePage() {
             {selectedType === "text" && selectedBlock && (
               <div className="space-y-3 p-3 border border-pink-500/30 bg-pink-500/5 rounded-xl">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[18px] uppercase tracking-widest text-pink-400">Selected Text Block</Label>
+                  <Label className="text-[10px] uppercase tracking-widest text-pink-400">Selected Text Block</Label>
                   <button onClick={() => removeTextBlock(selectedBlock.id)}
                     className="text-white/30 hover:text-red-400 transition-colors p-0.5">
                     <Trash2 className="w-3.5 h-3.5" />
@@ -923,7 +923,7 @@ export default function AboutMePage() {
                 </div>
 
                 <div className="space-y-1">
-                  <span className="text-[18px] text-white/40 uppercase tracking-widest">Font</span>
+                  <span className="text-[10px] text-white/40 uppercase tracking-widest">Font</span>
                   <select value={selectedBlock.fontFamily} onChange={e => updateBlockProp(selectedBlock.id, "fontFamily", e.target.value)}
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-pink-500/40 transition-colors">
                     {FONTS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
@@ -932,8 +932,8 @@ export default function AboutMePage() {
 
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-[18px] text-white/40 uppercase tracking-widest">Size</span>
-                    <span className="text-[18px] font-mono text-white/30">{selectedBlock.fontSize}px</span>
+                    <span className="text-[10px] text-white/40 uppercase tracking-widest">Size</span>
+                    <span className="text-[10px] font-mono text-white/30">{selectedBlock.fontSize}px</span>
                   </div>
                   <input type="range" min={12} max={80} step={2} value={selectedBlock.fontSize}
                     onChange={e => updateBlockProp(selectedBlock.id, "fontSize", Number(e.target.value))}
@@ -941,7 +941,7 @@ export default function AboutMePage() {
                 </div>
 
                 <div className="flex items-center gap-2.5">
-                  <span className="text-[18px] text-white/40 uppercase tracking-widest shrink-0">Text colour</span>
+                  <span className="text-[10px] text-white/40 uppercase tracking-widest shrink-0">Text colour</span>
                   <label className="relative w-7 h-7 rounded-md overflow-hidden cursor-pointer border border-white/20 shrink-0">
                     <input type="color" value={selectedBlock.fontColor} onChange={e => updateBlockProp(selectedBlock.id, "fontColor", e.target.value)}
                       className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
@@ -952,7 +952,7 @@ export default function AboutMePage() {
 
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[18px] text-white/40 uppercase tracking-widest">Background box</span>
+                    <span className="text-[10px] text-white/40 uppercase tracking-widest">Background box</span>
                     <button onClick={() => updateBlockProp(selectedBlock.id, "bgEnabled", !selectedBlock.bgEnabled)}
                       className={`relative w-9 h-5 rounded-full border transition-colors ${selectedBlock.bgEnabled ? "bg-pink-600 border-pink-500" : "bg-white/10 border-white/20"}`}>
                       <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${selectedBlock.bgEnabled ? "left-[18px]" : "left-0.5"}`} />
@@ -970,8 +970,8 @@ export default function AboutMePage() {
                       </div>
                       <div className="space-y-1">
                         <div className="flex items-center justify-between">
-                          <span className="text-[18px] text-white/30 uppercase tracking-widest">Opacity</span>
-                          <span className="text-[18px] font-mono text-white/30">{selectedBlock.bgOpacity}%</span>
+                          <span className="text-[10px] text-white/30 uppercase tracking-widest">Opacity</span>
+                          <span className="text-[10px] font-mono text-white/30">{selectedBlock.bgOpacity}%</span>
                         </div>
                         <input type="range" min={5} max={100} step={5} value={selectedBlock.bgOpacity}
                           onChange={e => updateBlockProp(selectedBlock.id, "bgOpacity", Number(e.target.value))}
@@ -987,13 +987,13 @@ export default function AboutMePage() {
             {selectedType === "doodle" && selectedDoodle && (
               <div className="space-y-3 p-3 border border-violet-500/30 bg-violet-500/5 rounded-xl">
                 <div className="flex items-center justify-between">
-                  <Label className="text-[18px] uppercase tracking-widest text-violet-400">Selected Doodle</Label>
+                  <Label className="text-[10px] uppercase tracking-widest text-violet-400">Selected Doodle</Label>
                   <button onClick={() => removeDoodle(selectedDoodle.id)} className="text-white/30 hover:text-red-400 transition-colors p-0.5">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
                 <div className="flex items-center gap-2.5">
-                  <span className="text-[18px] text-white/40 uppercase tracking-widest shrink-0">Stroke colour</span>
+                  <span className="text-[10px] text-white/40 uppercase tracking-widest shrink-0">Stroke colour</span>
                   <label className="relative w-7 h-7 rounded-md overflow-hidden cursor-pointer border border-white/20 shrink-0">
                     <input type="color" value={selectedDoodle.color} onChange={e => updateDoodleColor(selectedDoodle.id, e.target.value)}
                       className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
@@ -1001,13 +1001,13 @@ export default function AboutMePage() {
                   </label>
                   <span className="text-xs font-mono text-white/30">{selectedDoodle.color}</span>
                 </div>
-                <p className="text-[18px] text-white/25">Drag to reposition. Resize with corner handles.</p>
+                <p className="text-[10px] text-white/25">Drag to reposition. Resize with corner handles.</p>
               </div>
             )}
 
             {/* Photo */}
             <div className="space-y-2">
-              <Label className="text-[18px] uppercase tracking-widest text-white/40">Photo</Label>
+              <Label className="text-[10px] uppercase tracking-widest text-white/40">Photo</Label>
               <div onDrop={handleDrop} onDragOver={e => e.preventDefault()}
                 onClick={() => !bgRemoving && fileInputRef.current?.click()}
                 className="border-2 border-dashed border-white/15 hover:border-pink-500/40 rounded-xl p-4 cursor-pointer transition-colors">
@@ -1021,14 +1021,14 @@ export default function AboutMePage() {
                     <img src={subjectUrl || photoUrl} className="h-14 object-contain rounded" alt="Preview" />
                     <div>
                       <p className="text-xs text-white/60">{cutoutUrl && !useOriginal ? "Background removed" : "Original photo"}</p>
-                      <p className="text-[18px] text-white/30">Click to change</p>
+                      <p className="text-[10px] text-white/30">Click to change</p>
                     </div>
                   </div>
                 ) : (
                   <div className="py-3 text-center space-y-1.5">
                     <Upload className="w-6 h-6 text-white/30 mx-auto" />
                     <p className="text-xs text-white/40">Drag &amp; drop or click</p>
-                    <p className="text-[18px] text-pink-400/60">Background removed automatically</p>
+                    <p className="text-[10px] text-pink-400/60">Background removed automatically</p>
                   </div>
                 )}
               </div>
@@ -1036,7 +1036,7 @@ export default function AboutMePage() {
                 onChange={e => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); e.target.value = ""; }} />
               {cutoutUrl && (
                 <button onClick={() => setUseOriginal(p => !p)}
-                  className={`w-full py-1.5 text-[18px] rounded-lg border transition-colors ${useOriginal ? "border-white/15 text-white/35 bg-white/5" : "border-pink-500/40 text-pink-400 bg-pink-500/10"}`}>
+                  className={`w-full py-1.5 text-[11px] rounded-lg border transition-colors ${useOriginal ? "border-white/15 text-white/35 bg-white/5" : "border-pink-500/40 text-pink-400 bg-pink-500/10"}`}>
                   {useOriginal ? "Showing: Original" : "Showing: Background removed"}
                 </button>
               )}
@@ -1044,11 +1044,11 @@ export default function AboutMePage() {
 
             {/* Background */}
             <div className="space-y-2">
-              <Label className="text-[18px] uppercase tracking-widest text-white/40">Background</Label>
+              <Label className="text-[10px] uppercase tracking-widest text-white/40">Background</Label>
               <div className="flex rounded-lg overflow-hidden border border-white/10">
                 {(["photo", "colour"] as const).map(t => (
                   <button key={t} onClick={() => setBgType(t)}
-                    className={`flex-1 py-1.5 text-[18px] uppercase tracking-wide font-medium transition-colors ${bgType === t ? "bg-pink-600 text-white" : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/70"}`}>
+                    className={`flex-1 py-1.5 text-[10px] uppercase tracking-wide font-medium transition-colors ${bgType === t ? "bg-pink-600 text-white" : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/70"}`}>
                     {t === "photo" ? "Full bleed photo" : "Brand colour"}
                   </button>
                 ))}
@@ -1056,8 +1056,8 @@ export default function AboutMePage() {
               {bgType === "photo" && (
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-[18px] text-white/30 uppercase tracking-widest">Overlay darkness</span>
-                    <span className="text-[18px] font-mono text-white/30">{overlayOpacity}%</span>
+                    <span className="text-[10px] text-white/30 uppercase tracking-widest">Overlay darkness</span>
+                    <span className="text-[10px] font-mono text-white/30">{overlayOpacity}%</span>
                   </div>
                   <input type="range" min={0} max={80} step={5} value={overlayOpacity}
                     onChange={e => setOverlayOpacity(Number(e.target.value))}
@@ -1087,19 +1087,19 @@ export default function AboutMePage() {
             {/* Text Blocks */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-[18px] uppercase tracking-widest text-white/40">Text Blocks</Label>
-                <button onClick={addTextBlock} className="text-[18px] text-pink-400/70 hover:text-pink-400 transition-colors flex items-center gap-1">
+                <Label className="text-[10px] uppercase tracking-widest text-white/40">Text Blocks</Label>
+                <button onClick={addTextBlock} className="text-[10px] text-pink-400/70 hover:text-pink-400 transition-colors flex items-center gap-1">
                   <Plus className="w-3 h-3" />Add
                 </button>
               </div>
-              <p className="text-[18px] text-white/25">Click a block to select it. Double-click on canvas to edit text.</p>
+              <p className="text-[10px] text-white/25">Click a block to select it. Double-click on canvas to edit text.</p>
               <div className="space-y-1">
                 {textBlocks.map(b => (
                   <button key={b.id} onClick={() => selectTextBlock(b.id)}
                     className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-left transition-colors ${selectedId === b.id ? "bg-pink-500/20 border border-pink-500/40" : "bg-white/5 border border-transparent hover:bg-white/10"}`}>
                     <Type className="w-3.5 h-3.5 text-white/40 shrink-0" />
                     <span className="text-xs truncate text-white/80">{b.text || "(empty)"}</span>
-                    <span className="ml-auto text-[18px] text-white/30 shrink-0">{b.fontFamily.split(" ")[0]}</span>
+                    <span className="ml-auto text-[10px] text-white/30 shrink-0">{b.fontFamily.split(" ")[0]}</span>
                   </button>
                 ))}
               </div>
@@ -1107,14 +1107,14 @@ export default function AboutMePage() {
 
             {/* Logo */}
             <div className="space-y-2">
-              <Label className="text-[18px] uppercase tracking-widest text-white/40">Logo</Label>
+              <Label className="text-[10px] uppercase tracking-widest text-white/40">Logo</Label>
               {logoUrl ? (
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-3 p-2 rounded-xl border border-white/10 bg-white/5">
                     <img src={logoUrl} alt="Logo" className="h-10 w-10 object-contain rounded" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs text-white/60">Logo loaded</p>
-                      <p className="text-[18px] text-white/30">Drag to reposition on canvas</p>
+                      <p className="text-[10px] text-white/30">Drag to reposition on canvas</p>
                     </div>
                     <button onClick={removeLogo} className="text-white/30 hover:text-red-400 transition-colors shrink-0">
                       <X className="w-3.5 h-3.5" />
@@ -1122,7 +1122,7 @@ export default function AboutMePage() {
                   </div>
                   {selectedPresetId && logoUrl !== selectedPreset?.logoUrl && (
                     <button onClick={saveLogoToPreset}
-                      className="w-full py-1 text-[18px] text-pink-400/70 hover:text-pink-400 border border-pink-500/20 hover:border-pink-500/40 rounded-lg transition-colors">
+                      className="w-full py-1 text-[10px] text-pink-400/70 hover:text-pink-400 border border-pink-500/20 hover:border-pink-500/40 rounded-lg transition-colors">
                       Save logo to preset
                     </button>
                   )}
@@ -1135,8 +1135,8 @@ export default function AboutMePage() {
                   ) : (
                     <>
                       <Upload className="w-5 h-5 text-white/30 mx-auto mb-1" />
-                      <p className="text-[18px] text-white/40">Upload logo</p>
-                      {selectedPreset?.logoUrl && <p className="text-[18px] text-pink-400/60 mt-0.5">Auto-loaded from preset</p>}
+                      <p className="text-[10px] text-white/40">Upload logo</p>
+                      {selectedPreset?.logoUrl && <p className="text-[10px] text-pink-400/60 mt-0.5">Auto-loaded from preset</p>}
                     </>
                   )}
                 </div>
@@ -1147,8 +1147,8 @@ export default function AboutMePage() {
 
             {/* Doodle Library */}
             <div className="space-y-2">
-              <Label className="text-[18px] uppercase tracking-widest text-white/40">Doodle Library</Label>
-              <p className="text-[18px] text-white/25">Click to add. Drag to reposition, resize with handles.</p>
+              <Label className="text-[10px] uppercase tracking-widest text-white/40">Doodle Library</Label>
+              <p className="text-[10px] text-white/25">Click to add. Drag to reposition, resize with handles.</p>
               <div className="grid grid-cols-3 gap-1.5">
                 {DOODLES.map(d => (
                   <button key={d.id} onClick={() => addDoodle(d)}
@@ -1156,7 +1156,7 @@ export default function AboutMePage() {
                     {/* Inline SVG preview */}
                     <div className="w-9 h-9 flex items-center justify-center"
                       dangerouslySetInnerHTML={{ __html: d.svg.replace('<svg ', '<svg class="w-full h-full" ') }} />
-                    <span className="text-[18px] text-white/30 leading-none">{d.label}</span>
+                    <span className="text-[9px] text-white/30 leading-none">{d.label}</span>
                   </button>
                 ))}
               </div>
@@ -1164,7 +1164,7 @@ export default function AboutMePage() {
               {/* Active doodles list */}
               {doodles.length > 0 && (
                 <div className="space-y-1 mt-2">
-                  <p className="text-[18px] text-white/30 uppercase tracking-widest">On canvas</p>
+                  <p className="text-[10px] text-white/30 uppercase tracking-widest">On canvas</p>
                   {doodles.map(d => (
                     <button key={d.id} onClick={() => selectDoodle(d.id)}
                       className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg transition-colors ${selectedId === d.id ? "bg-violet-500/20 border border-violet-500/40" : "bg-white/5 border border-transparent hover:bg-white/10"}`}>
@@ -1178,10 +1178,10 @@ export default function AboutMePage() {
 
             {/* Stickers */}
             <div className="space-y-2 border-t border-white/8 pt-4">
-              <Label className="text-[18px] uppercase tracking-widest text-white/40">Stickers</Label>
-              <p className="text-[18px] text-white/25">Upload PNG stickers from Canva. Click to add. Drag to reposition, resize with handles.</p>
+              <Label className="text-[10px] uppercase tracking-widest text-white/40">Stickers</Label>
+              <p className="text-[10px] text-white/25">Upload PNG stickers from Canva. Click to add. Drag to reposition, resize with handles.</p>
               <button onClick={() => stickerInputRef.current?.click()} disabled={stickerUploading}
-                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-white/20 hover:border-pink-500/50 hover:bg-pink-500/5 active:scale-95 transition-all text-[18px] text-white/40 hover:text-white/70 disabled:opacity-50 disabled:cursor-wait">
+                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg border border-dashed border-white/20 hover:border-pink-500/50 hover:bg-pink-500/5 active:scale-95 transition-all text-[10px] text-white/40 hover:text-white/70 disabled:opacity-50 disabled:cursor-wait">
                 {stickerUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
                 {stickerUploading ? "Saving…" : "Upload Stickers"}
               </button>
@@ -1192,7 +1192,7 @@ export default function AboutMePage() {
                       <button onClick={() => addStickerToCanvas(item)}
                         className="w-full h-full flex flex-col items-center justify-center gap-1 rounded-lg border border-white/10 hover:border-violet-500/50 hover:bg-violet-500/10 active:scale-95 transition-all p-1.5 overflow-hidden">
                         <img src={item.url} alt={item.name} className="w-9 h-9 object-contain" />
-                        <span className="text-[18px] text-white/30 leading-none truncate w-full text-center">{item.name}</span>
+                        <span className="text-[9px] text-white/30 leading-none truncate w-full text-center">{item.name}</span>
                       </button>
                       <button onClick={() => removeStickerFromLibrary(item.id)}
                         className="absolute top-0.5 right-0.5 p-0.5 rounded bg-black/60 text-white/40 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1204,7 +1204,7 @@ export default function AboutMePage() {
               )}
               {stickerInstances.length > 0 && (
                 <div className="space-y-1 mt-1">
-                  <p className="text-[18px] text-white/30 uppercase tracking-widest">On canvas</p>
+                  <p className="text-[10px] text-white/30 uppercase tracking-widest">On canvas</p>
                   {stickerInstances.map(s => {
                     const libItem = stickerLibrary.find(l => l.id === s.libraryId);
                     return (
@@ -1228,11 +1228,11 @@ export default function AboutMePage() {
             {/* Format + Client */}
             <div className="space-y-3 border-t border-white/8 pt-4">
               <div className="space-y-1.5">
-                <Label className="text-[18px] uppercase tracking-widest text-white/40">Format</Label>
+                <Label className="text-[10px] uppercase tracking-widest text-white/40">Format</Label>
                 <div className="flex rounded-lg overflow-hidden border border-white/10">
                   {(["post", "story"] as const).map(f => (
                     <button key={f} onClick={() => setFormat(f)}
-                      className={`flex-1 py-1.5 text-[18px] uppercase tracking-wide font-medium transition-colors ${format === f ? "bg-pink-600 text-white" : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/70"}`}>
+                      className={`flex-1 py-1.5 text-[10px] uppercase tracking-wide font-medium transition-colors ${format === f ? "bg-pink-600 text-white" : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/70"}`}>
                       {f === "post" ? "Post 4:5" : "Story 9:16"}
                     </button>
                   ))}
@@ -1240,14 +1240,14 @@ export default function AboutMePage() {
               </div>
               {presets.length > 0 && (
                 <div className="space-y-1.5">
-                  <Label className="text-[18px] uppercase tracking-widest text-white/40">Client</Label>
+                  <Label className="text-[10px] uppercase tracking-widest text-white/40">Client</Label>
                   <select value={selectedPresetId ?? ""} onChange={e => setSelectedPresetId(e.target.value ? Number(e.target.value) : null)}
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-pink-500/50 transition-colors">
                     <option value="">No client</option>
                     {presets.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                   {selectedPreset && (
-                    <p className="text-[18px] text-white/30">Logo auto-loads from preset if available.</p>
+                    <p className="text-[10px] text-white/30">Logo auto-loads from preset if available.</p>
                   )}
                 </div>
               )}
@@ -1260,7 +1260,7 @@ export default function AboutMePage() {
         <main className="flex-1 flex items-center justify-center bg-[#080808] overflow-auto p-8">
           <div className="flex flex-col items-center gap-3">
             <canvas ref={canvasElRef} className="rounded-xl shadow-2xl shadow-black/60" />
-            <p className="text-[18px] text-white/20 uppercase tracking-widest">
+            <p className="text-[10px] text-white/20 uppercase tracking-widest">
               {format === "post" ? "1080 × 1440" : "1080 × 1920"} · Click to select · Double-click text to edit
             </p>
           </div>

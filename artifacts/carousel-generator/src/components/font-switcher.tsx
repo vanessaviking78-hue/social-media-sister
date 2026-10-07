@@ -67,7 +67,7 @@ export function FontSwitcher({ headingFont, onHeadingChange, onBodyChange }: Fon
                 >
                   {preset.fontName}
                 </span>
-                <span className="text-[18px] text-zinc-500 mt-0.5 uppercase tracking-wider">{preset.role}</span>
+                <span className="text-[10px] text-zinc-500 mt-0.5 uppercase tracking-wider">{preset.role}</span>
               </div>
               {isActive && (
                 <span className="ml-2 shrink-0 w-1.5 h-1.5 rounded-full bg-[#E91976]" />

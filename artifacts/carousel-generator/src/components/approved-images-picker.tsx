@@ -255,7 +255,7 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
                     />
                   </div>
                   <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1.5 py-0.5">
-                    <p className="text-[18px] text-white truncate">{img.clientName} · {img.batchName}</p>
+                    <p className="text-[10px] text-white truncate">{img.clientName} · {img.batchName}</p>
                   </div>
                 </div>
               );

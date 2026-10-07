@@ -113,7 +113,7 @@ function PhotoSlot({
       >
         <X size={12} />
       </button>
-      <p className="absolute bottom-0 inset-x-0 px-2 py-1 text-[18px] text-zinc-300 bg-black/60 truncate">
+      <p className="absolute bottom-0 inset-x-0 px-2 py-1 text-[10px] text-zinc-300 bg-black/60 truncate">
         {n}. {label}
       </p>
     </div>
@@ -136,7 +136,7 @@ function PhotoSlot({
         }}
       />
       <Upload className="mb-1.5 text-zinc-600" size={18} />
-      <p className="text-[18px] font-medium text-zinc-300">
+      <p className="text-[11px] font-medium text-zinc-300">
         {n}. {label}
       </p>
     </label>
@@ -519,7 +519,7 @@ export default function MonthStart() {
               <p className="text-xs uppercase tracking-widest text-zinc-500">1. The clinic and the issue</p>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
-                  <span className="block text-[18px] uppercase tracking-widest text-zinc-500">Clinic</span>
+                  <span className="block text-[11px] uppercase tracking-widest text-zinc-500">Clinic</span>
                   <select
                     value={presetId}
                     onChange={(e) => setPresetId(e.target.value ? Number(e.target.value) : "")}
@@ -534,7 +534,7 @@ export default function MonthStart() {
                   </select>
                 </label>
                 <label className="block">
-                  <span className="block text-[18px] uppercase tracking-widest text-zinc-500">Issue</span>
+                  <span className="block text-[11px] uppercase tracking-widest text-zinc-500">Issue</span>
                   <select value={monthLabel} onChange={(e) => setMonthLabel(e.target.value)} className={inputCls}>
                     {[...new Set([monthLabel, ...months])].map((m) => (
                       <option key={m}>{m}</option>
@@ -544,7 +544,7 @@ export default function MonthStart() {
               </div>
               {preset && (
                 <label className="flex items-center gap-3">
-                  <span className="text-[18px] uppercase tracking-widest text-zinc-500">Colour for this issue</span>
+                  <span className="text-[11px] uppercase tracking-widest text-zinc-500">Colour for this issue</span>
                   <input
                     type="color"
                     value={brand.accent}
@@ -606,7 +606,7 @@ export default function MonthStart() {
                 </div>
               ))}
               <label className="block">
-                <span className="block text-[18px] uppercase tracking-widest text-zinc-500">Offer (optional)</span>
+                <span className="block text-[11px] uppercase tracking-widest text-zinc-500">Offer (optional)</span>
                 <textarea
                   rows={2}
                   value={offer}
@@ -616,7 +616,7 @@ export default function MonthStart() {
                 />
               </label>
               <label className="block">
-                <span className="block text-[18px] uppercase tracking-widest text-zinc-500">Link for this issue (optional)</span>
+                <span className="block text-[11px] uppercase tracking-widest text-zinc-500">Link for this issue (optional)</span>
                 <input
                   value={linkOverride}
                   onChange={(e) => setLinkOverride(e.target.value)}
@@ -639,7 +639,7 @@ export default function MonthStart() {
                   </>
                 )}
               </button>
-              <p className="text-[18px] text-zinc-500">
+              <p className="text-[11px] text-zinc-500">
                 It writes in the clinic's saved voice and runs the same compliance check as the newsletter. The issue is also saved to that clinic's newsletter history.
               </p>
             </section>
@@ -706,7 +706,7 @@ export default function MonthStart() {
 
                 {content.sections.map((s, i) => (
                   <div key={s.slot} className="space-y-1.5">
-                    <p className="text-[18px] uppercase tracking-widest text-amber-400 font-semibold">
+                    <p className="text-[11px] uppercase tracking-widest text-amber-400 font-semibold">
                       {i + 1}. {s.label}
                     </p>
                     <AutoText value={s.heading} onChange={(v) => updateSection(i, { heading: v })} rows={1} className="font-semibold" />
@@ -714,7 +714,7 @@ export default function MonthStart() {
                   </div>
                 ))}
                 <div className="space-y-1.5">
-                  <p className="text-[18px] uppercase tracking-widest text-amber-400 font-semibold">Button words</p>
+                  <p className="text-[11px] uppercase tracking-widest text-amber-400 font-semibold">Button words</p>
                   <AutoText value={content.ctaText} onChange={(v) => setContent((c) => (c ? { ...c, ctaText: v } : c))} rows={1} />
                 </div>
               </section>
@@ -757,12 +757,12 @@ export default function MonthStart() {
                 className="w-full max-w-sm aspect-[3/4] rounded-lg border border-zinc-800 bg-zinc-900"
                 aria-label="Large page preview. Drag a photo to move it, scroll to zoom."
               />
-              <p className="text-[18px] text-zinc-500 mt-1.5">
+              <p className="text-[11px] text-zinc-500 mt-1.5">
                 Drag a photo to slide it about inside its frame. Scroll over it, or use the slider, to zoom in.
               </p>
               {selected !== null && photos[selected] && (
                 <div className="mt-2 flex items-center gap-3 max-w-sm">
-                  <span className="text-[18px] text-zinc-400 shrink-0">{PHOTO_LABELS[selected]}</span>
+                  <span className="text-[11px] text-zinc-400 shrink-0">{PHOTO_LABELS[selected]}</span>
                   <input
                     type="range"
                     min={1}
@@ -775,7 +775,7 @@ export default function MonthStart() {
                   />
                   <button
                     onClick={() => updateAdjust(selected, () => ({ ...DEFAULT_ADJUST }))}
-                    className="text-[18px] text-amber-400 underline shrink-0"
+                    className="text-[11px] text-amber-400 underline shrink-0"
                   >
                     Reset
                   </button>
@@ -833,7 +833,7 @@ export default function MonthStart() {
                   )}
                 </button>
               </div>
-              <p className="text-[18px] text-zinc-500 mt-1.5 max-w-xs">1080 x 1440, 12 seconds. Chrome or Edge gives the quickest export.</p>
+              <p className="text-[11px] text-zinc-500 mt-1.5 max-w-xs">1080 x 1440, 12 seconds. Chrome or Edge gives the quickest export.</p>
             </div>
           </div>
         </div>

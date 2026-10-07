@@ -193,7 +193,7 @@ function NewsView({ news }: { news: PreviewNewsItem[] }) {
             key={item.id}
             className="border border-zinc-100 rounded-lg p-5 bg-white"
           >
-            <p className="text-[18px] text-zinc-400 mb-1.5">{dateStr}</p>
+            <p className="text-[11px] text-zinc-400 mb-1.5">{dateStr}</p>
             <h3 className="font-semibold text-zinc-900 text-base leading-snug">
               {item.title}
             </h3>
@@ -257,7 +257,7 @@ function GridCell({ post }: { post: PreviewPost }) {
         />
       ) : (
         <div className="w-full h-full bg-gradient-to-br from-zinc-100 to-zinc-200 flex items-center justify-center">
-          <span className="text-[18px] font-medium text-zinc-400 uppercase tracking-widest">
+          <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-widest">
             {post.postType}
           </span>
         </div>
@@ -272,7 +272,7 @@ function GridCell({ post }: { post: PreviewPost }) {
         <p className="text-white font-medium text-sm leading-tight">{dateStr}</p>
         <p className="text-white/65 text-xs">{timeStr}</p>
         {post.status === "published" && (
-          <span className="mt-1.5 text-[18px] bg-emerald-500/80 text-white px-2 py-0.5 rounded-full font-medium tracking-wide uppercase">
+          <span className="mt-1.5 text-[9px] bg-emerald-500/80 text-white px-2 py-0.5 rounded-full font-medium tracking-wide uppercase">
             Posted
           </span>
         )}
@@ -361,7 +361,7 @@ function CalendarView({
         {DAY_LABELS.map((d) => (
           <div
             key={d}
-            className="text-center text-[18px] font-medium text-zinc-400 py-1.5"
+            className="text-center text-[11px] font-medium text-zinc-400 py-1.5"
           >
             {d}
           </div>
@@ -390,7 +390,7 @@ function CalendarView({
               }`}
             >
               <p
-                className={`text-[18px] font-semibold mb-1 leading-none ${
+                className={`text-[11px] font-semibold mb-1 leading-none ${
                   isToday
                     ? "text-pink-500"
                     : hasPosts
@@ -420,14 +420,14 @@ function CalendarView({
                       key={p.id}
                       className="aspect-square w-full rounded bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center"
                     >
-                      <span className="text-[18px] text-pink-500 font-medium uppercase">
+                      <span className="text-[7px] text-pink-500 font-medium uppercase">
                         {p.postType.slice(0, 1)}
                       </span>
                     </div>
                   )
                 )}
                 {dayPosts.length > 2 && (
-                  <p className="text-[18px] text-zinc-400 text-center mt-0.5">
+                  <p className="text-[8px] text-zinc-400 text-center mt-0.5">
                     +{dayPosts.length - 2}
                   </p>
                 )}
