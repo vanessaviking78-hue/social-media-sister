@@ -343,9 +343,37 @@ const LOOK_CLASSIC: Partial<Style> = {
   rule: false,
 };
 
+// Slides 2 onwards: Montserrat in capitals, centred, in the bottom third, smaller than before. The last slide is a little bigger.
+const LOOK_BOTTOM: Partial<Style> = {
+  layout: "classic",
+  fontFamily: "'Montserrat', sans-serif",
+  displayFont: "'Montserrat', sans-serif",
+  textWeight: 500,
+  textItalic: false,
+  bodySize: 50,
+  ctaSize: 62,
+  bodyColour: "#ffffff",
+  ctaColour: "#ffffff",
+  lineColour: "#ffffff",
+  uppercase: true,
+  letterSpacing: 1,
+  lineHeight: 1.25,
+  align: "centre",
+  bodyY: 83,
+  overlay: 8,
+  scrim: 45,
+  shadow: true,
+  frame: false,
+  counter: false,
+  brandMark: false,
+  arrow: false,
+  rule: false,
+};
+
 const DEFAULT_STYLE: Style = {
   ...COVER_PRESETS.band,
   ...LOOK_EDITORIAL,
+  ...LOOK_BOTTOM,
   plainFont: "'Cormorant Garamond', serif",
   plainSubFont: "'Montserrat', sans-serif",
   behindFont: "'Anton', sans-serif",
@@ -2782,11 +2810,22 @@ export default function Stylish() {
       if (raw) {
         const saved = { ...DEFAULT_STYLE, ...JSON.parse(raw) };
         // The border and the page numbers on the extra slides are off for everyone. Switch them back on from the style panel if you want them.
+        let out = saved;
         if (!localStorage.getItem("stylish-no-frame-counter")) {
           localStorage.setItem("stylish-no-frame-counter", "1");
-          return { ...saved, frame: false, counter: false };
+          out = { ...out, frame: false, counter: false };
         }
-        return saved;
+        // One time: slides 2 onwards go back to Montserrat capitals, centred, low in the picture. A client's own saved slide font is cleared too.
+        if (!localStorage.getItem("stylish-bottom-montserrat")) {
+          localStorage.setItem("stylish-bottom-montserrat", "1");
+          try {
+            const all = JSON.parse(localStorage.getItem(CLIENT_FONTS_KEY) || "{}");
+            for (const k of Object.keys(all)) delete all[k].displayFont;
+            localStorage.setItem(CLIENT_FONTS_KEY, JSON.stringify(all));
+          } catch { /* fine */ }
+          out = { ...out, ...LOOK_BOTTOM };
+        }
+        return out;
       }
     } catch { /* storage can be blocked, defaults are fine */ }
     return DEFAULT_STYLE;
