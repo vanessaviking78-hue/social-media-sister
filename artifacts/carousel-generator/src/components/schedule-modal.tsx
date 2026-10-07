@@ -53,8 +53,55 @@ type Props = {
   /** Post only on Monday, Wednesday, Friday and Sunday, one post per posting day, same time each day. */
   postingDays?: boolean;
   /** One story per post (same order), booked for 7am on the same day as that post. */
-  companionStories?: { imageUrl: string; title: string }[];
+  companionStories?: { imageUrl: string; title: string; box?: { top: number; bottom: number; left: number; width: number }; offset?: { dx: number; dy: number } }[];
+  /** Called when the words on a story are dragged to a new spot (offset in story pixels, 1080 x 1920). */
+  onMoveStoryText?: (index: number, dx: number, dy: number) => Promise<void>;
 };
+
+// One story with a draggable box over its words. Drop it where you want the text and the story is drawn again.
+function StoryDragPreview({ st, index, onMove }: { st: NonNullable<Props["companionStories"]>[number]; index: number; onMove?: (index: number, dx: number, dy: number) => Promise<void> }) {
+  const wrap = useRef<HTMLDivElement>(null);
+  const [live, setLive] = useState<{ dx: number; dy: number } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const start = useRef<{ x: number; y: number } | null>(null);
+  const base = st.offset ?? { dx: 0, dy: 0 };
+  const box = st.box;
+  const src = st.imageUrl.startsWith("/") ? `${BASE}${st.imageUrl}` : st.imageUrl;
+  const W = 150; // displayed width in px, so 1080 story pixels = 150px
+  const k = 1080 / W;
+  const cur = live ?? { dx: 0, dy: 0 };
+  return (
+    <div ref={wrap} className="relative shrink-0 select-none touch-none" style={{ width: W, height: W * 16 / 9 }}>
+      <img src={src} alt={`Story ${index + 1}`} draggable={false} className="w-full h-full rounded-md border border-zinc-700 object-cover" />
+      {box && onMove && (
+        <div
+          title="Drag the words to move them"
+          onPointerDown={(e) => { if (busy) return; (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); start.current = { x: e.clientX, y: e.clientY }; setLive({ dx: 0, dy: 0 }); }}
+          onPointerMove={(e) => { if (!start.current) return; setLive({ dx: (e.clientX - start.current.x) * k, dy: (e.clientY - start.current.y) * k }); }}
+          onPointerUp={async () => {
+            if (!start.current) return;
+            const d = live ?? { dx: 0, dy: 0 };
+            start.current = null;
+            if (Math.abs(d.dx) < 6 && Math.abs(d.dy) < 6) { setLive(null); return; }
+            setBusy(true);
+            try { await onMove(index, base.dx + d.dx, base.dy + d.dy); }
+            catch (err) { toast.error(err instanceof Error ? err.message : "Could not move the words"); }
+            finally { setLive(null); setBusy(false); }
+          }}
+          className={`absolute border-2 border-dashed ${live ? "border-pink-400 bg-pink-400/15" : "border-white/60 hover:border-pink-400"} rounded cursor-grab active:cursor-grabbing`}
+          style={{
+            left: `${(box.left * 100)}%`,
+            width: `${box.width * 100}%`,
+            top: `${box.top * 100}%`,
+            height: `${(box.bottom - box.top) * 100}%`,
+            transform: `translate(${cur.dx / k}px, ${cur.dy / k}px)`,
+          }}
+        />
+      )}
+      {busy && <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-md"><Loader2 className="h-5 w-5 animate-spin text-white" /></div>}
+    </div>
+  );
+}
 
 function defaultScheduledAt() {
   const d = new Date();
@@ -71,7 +118,7 @@ function dateKey(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt, sourceTool, perPostCaptions, initialGapMinutes, keepClockTime, postingDays, companionStories }: Props) {
+export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt, sourceTool, perPostCaptions, initialGapMinutes, keepClockTime, postingDays, companionStories, onMoveStoryText }: Props) {
   const [scheduledAt, setScheduledAt] = useState(() => initialScheduledAt || defaultScheduledAt());
   const [notes, setNotes] = useState("");
   const [caption, setCaption] = useState(() => posts[0]?.caption || "");
@@ -408,10 +455,10 @@ const staggeredAt = (() => {
 
           {companionStories && companionStories.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-xs text-zinc-400">A story goes out at 7am on the same day as each post. Check them here before you book.</p>
+              <p className="text-xs text-zinc-400">A story goes out at 7am on the same day as each post. Check them here before you book. Drag the dashed box to move the words.</p>
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {companionStories.map((st, k) => (
-                  <img key={k} src={st.imageUrl.startsWith("/") ? `${BASE}${st.imageUrl}` : st.imageUrl} alt={`Story ${k + 1}`} className="h-40 w-auto rounded-md border border-zinc-700 shrink-0" />
+                  <StoryDragPreview key={k} st={st} index={k} onMove={onMoveStoryText} />
                 ))}
               </div>
             </div>

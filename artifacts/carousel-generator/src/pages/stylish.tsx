@@ -2444,8 +2444,9 @@ const tick = () => new Promise<void>(r => setTimeout(r, 0));
 // 1080 x 1920 story: the post's cover photo, a dark layer so the words read, the question in
 // bold across the top and a "reply below" line under it. Kept clear of the top 250px and bottom
 // 340px, which Instagram covers with its own buttons.
-async function renderStory(question: string, photo: File | null, style: Style, preset: ClientPreset | null): Promise<HTMLCanvasElement> {
+async function renderStory(question: string, photo: File | null, style: Style, preset: ClientPreset | null, off: { dx: number; dy: number } = { dx: 0, dy: 0 }): Promise<HTMLCanvasElement> {
   const SW = 1080, SH = 1920;
+  const OX = off.dx, OY = off.dy;
   const c = document.createElement("canvas");
   c.width = SW; c.height = SH;
   const ctx = c.getContext("2d")!;
@@ -2486,23 +2487,27 @@ async function renderStory(question: string, photo: File | null, style: Style, p
   ctx.shadowColor = "rgba(0,0,0,0.55)";
   ctx.shadowBlur = 18;
   const lh = Math.round(size * 1.08);
-  let y = 300;
-  for (const line of lines) { ctx.fillText(line, SW / 2, y); y += lh; }
+  const boxTop = 300 + OY;
+  let y = boxTop;
+  for (const line of lines) { ctx.fillText(line, SW / 2 + OX, y); y += lh; }
   ctx.shadowBlur = 0;
 
   const pillText = "REPLY BELOW WITH YOUR ANSWER";
   await document.fonts.load(`800 46px ${family}`).catch(() => undefined);
   ctx.font = `800 46px ${family}`;
-  const pw = ctx.measureText(pillText).width + 90, ph = 96, px = (SW - pw) / 2, py = y + 40;
+  const pw = ctx.measureText(pillText).width + 90, ph = 96, px = (SW - pw) / 2 + OX, py = y + 40;
   ctx.fillStyle = accent;
   ctx.beginPath();
   ctx.roundRect(px, py, pw, ph, ph / 2);
   ctx.fill();
   ctx.fillStyle = "#ffffff";
   ctx.textBaseline = "middle";
-  ctx.fillText(pillText, SW / 2, py + ph / 2 + 2);
+  ctx.fillText(pillText, SW / 2 + OX, py + ph / 2 + 2);
+  (c as HTMLCanvasElement & { __box?: StoryBox }).__box = { top: boxTop / SH, bottom: (py + ph) / SH, left: (SW / 2 - 470 + OX) / SW, width: 940 / SW };
   return c;
 }
+
+type StoryBox = { top: number; bottom: number; left: number; width: number };
 
 function makeId() {
   return Math.random().toString(36).slice(2, 10);
@@ -2923,7 +2928,27 @@ export default function Stylish() {
   const [scheduleItems, setScheduleItems] = useState<SchedulePostPayload[] | null>(null);
   const [scheduleMode, setScheduleMode] = useState<"carousel" | "reel">("carousel");
   const [withStories, setWithStories] = useState(true);
-  const [scheduleStories, setScheduleStories] = useState<{ imageUrl: string; title: string }[] | undefined>(undefined);
+  const [scheduleStories, setScheduleStories] = useState<{ imageUrl: string; title: string; box?: StoryBox; offset?: { dx: number; dy: number } }[] | undefined>(undefined);
+  const storySrcRef = useRef<{ question: string; photo: File | null; style: Style; preset: ClientPreset | null; pi: number; dx: number; dy: number }[]>([]);
+  // Drag the words on a story to a new spot: draw it again with the new offset and swap the picture.
+  const moveStoryText = async (k: number, dx: number, dy: number) => {
+    const src = storySrcRef.current[k];
+    if (!src) return;
+    const cdx = Math.max(-90, Math.min(90, Math.round(dx)));
+    const cdy = Math.max(-200, Math.min(1000, Math.round(dy)));
+    const canvas = await renderStory(src.question, src.photo, src.style, src.preset, { dx: cdx, dy: cdy });
+    const box = (canvas as HTMLCanvasElement & { __box?: StoryBox }).__box;
+    const dataUrl = canvas.toDataURL("image/png");
+    canvas.width = 0; canvas.height = 0;
+    let got: string[] | null = null;
+    for (let attempt = 0; attempt < 3 && !got; attempt++) {
+      try { got = await uploadPngs([dataUrl], [`stylish-${src.pi + 1}-story.png`]); }
+      catch (e) { if (attempt === 2) throw e; await new Promise(r => setTimeout(r, 1500 * (attempt + 1))); }
+    }
+    if (!got?.[0]) throw new Error("The story would not upload");
+    src.dx = cdx; src.dy = cdy;
+    setScheduleStories(prev => prev?.map((st, i) => i === k ? { ...st, imageUrl: got![0], box, offset: { dx: cdx, dy: cdy } } : st));
+  };
   const [sendingFlip, setSendingFlip] = useState(false);
 
   const imgInputRef = useRef<HTMLInputElement>(null);
@@ -3952,7 +3977,8 @@ export default function Stylish() {
         });
       }
       // A story for each post, asking a question about it. It goes out at 7am on the post's day.
-      let stories: { imageUrl: string; title: string }[] | undefined;
+      let stories: { imageUrl: string; title: string; box?: StoryBox; offset?: { dx: number; dy: number } }[] | undefined;
+      storySrcRef.current = [];
       if (withStories) {
         setScheduling("Writing the story questions");
         const qr = await fetch(`${BASE}/api/stylish-story/questions`, {
@@ -3972,7 +3998,10 @@ export default function Stylish() {
           const post = selectedPosts[k];
           const pi = posts.indexOf(post);
           setScheduling(`Making story ${k + 1} of ${selectedPosts.length}`);
-          const canvas = await renderStory(String(qd.questions[k]), photoFor(pi, post, 0), style, preset);
+          const storyPhoto = photoFor(pi, post, 0);
+          const canvas = await renderStory(String(qd.questions[k]), storyPhoto, style, preset);
+          const box = (canvas as HTMLCanvasElement & { __box?: StoryBox }).__box;
+          storySrcRef.current[k] = { question: String(qd.questions[k]), photo: storyPhoto, style, preset, pi, dx: 0, dy: 0 };
           let dataUrl: string | null = canvas.toDataURL("image/png");
           canvas.width = 0; canvas.height = 0;
           let got: string[] | null = null;
@@ -3982,7 +4011,7 @@ export default function Stylish() {
           }
           dataUrl = null;
           if (!got?.[0]) throw new Error("A story would not upload");
-          stories.push({ imageUrl: got[0], title: `${buildSlides(post.texts)[0]?.text ?? `Post ${pi + 1}`} · ${preset.name}` });
+          stories.push({ imageUrl: got[0], title: `${buildSlides(post.texts)[0]?.text ?? `Post ${pi + 1}`} · ${preset.name}`, box, offset: { dx: 0, dy: 0 } });
           await tick();
         }
       }
@@ -5151,6 +5180,7 @@ export default function Stylish() {
           initialScheduledAt={scheduleStart}
           postingDays
           companionStories={scheduleStories}
+          onMoveStoryText={moveStoryText}
           sourceTool="stylish"
           onClose={() => setScheduleOpen(false)}
           onSaved={() => { setScheduleItems(null); setScheduleOpen(false); }}
