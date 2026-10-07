@@ -425,6 +425,8 @@ export default function ClientStylish() {
   };
 
   const handleOpenInStylish = async (intent?: "reels" | "auto") => {
+    // The new tab has to be opened straight away, while the click is still fresh, or the browser blocks it.
+    const tab = window.open("", "_blank");
     setBusy(true);
     try {
       const files = await collectImages();
@@ -432,8 +434,10 @@ export default function ClientStylish() {
       if (!ok) throw new Error("Stylish could not be loaded from here, please download instead");
       // Opens Stylish in its own tab so this page, with the photos and CSV, stays open to use again
       // (for example once as posts, then again as reels or with stories).
-      window.open(`${BASE}stylish`, "_blank");
+      if (tab && !tab.closed) tab.location.href = `${BASE}stylish`;
+      else window.location.href = `${BASE}stylish`;
     } catch (e) {
+      if (tab && !tab.closed) tab.close();
       toast.error(e instanceof Error ? e.message : "Could not open Stylish");
     } finally {
       setBusy(false);
