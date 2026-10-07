@@ -2794,7 +2794,7 @@ export default function Stylish() {
     try { return JSON.parse(localStorage.getItem(CLIENT_FONTS_KEY) || "{}") as Record<string, Partial<Style>>; } catch { return {}; }
   };
   const chooseClient = (id: number) => {
-    const saved = clientFonts()[String(id)];
+    const saved = clientFonts()[String(id)] ?? {};
     const chosen = presets.find(p => p.id === id);
     setPresetId(id);
     // A client with no fonts saved yet starts from the defaults, not whichever fonts the
@@ -2803,7 +2803,7 @@ export default function Stylish() {
     patch({
       ...fallback,
       ...saved,
-      ...(saved.coverLayout && !COVER_ORDER.includes(saved.coverLayout) ? COVER_PRESETS.band : {}),
+      ...(saved?.coverLayout && !COVER_ORDER.includes(saved.coverLayout) && !OCT_LAYOUTS.has(saved.coverLayout) ? COVER_PRESETS.band : {}),
       ...(TEXTURES[style.cvBlock] ? { cvBlock: DEFAULT_STYLE.cvBlock } : {}),
       // Tweaked Helen's cover block is leopard print, so it starts that way whenever she is chosen.
       ...(/tweaked\s*helen/i.test(chosen?.name ?? "") ? { cvBlock: "texture:leopard" } : {}),
