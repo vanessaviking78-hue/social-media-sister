@@ -3611,6 +3611,16 @@ export default function Stylish() {
     toast.success("Band colour changed on every cover");
   };
 
+  // Choosing a cover in the left hand list is for the whole batch. Packs from Client Stylish give each post
+  // its own cover, which used to win over the list, so nothing seemed to change. Clear those first.
+  const chooseMainCover = (k: CoverLayout) => {
+    patch(TEXTURES[style.cvBlock] ? { ...COVER_PRESETS[k], cvBlock: style.cvBlock } : COVER_PRESETS[k]);
+    if (posts.some(p => p.cover)) {
+      setPosts(list => list.map(p => ({ ...p, cover: undefined })));
+      setCoverVersion(v => v + 1);
+    }
+  };
+
   const sameCovers = () => {
     setPosts(list => list.map(p => ({ ...p, cover: undefined, coverColour: undefined, coverSubColour: undefined, coverBlockColour: undefined, coverBandColour: undefined, coverFont: undefined, coverSubFont: undefined, coverAlts: undefined, coverCaps: undefined, coverCurve: undefined, coverTracking: undefined, coverLeading: undefined })));
     setCoverVersion(v => v + 1);
@@ -4290,7 +4300,7 @@ export default function Stylish() {
               {COVER_ORDER.map((k, i) => (
                 <button
                   key={k} type="button"
-                  onClick={() => patch(TEXTURES[style.cvBlock] ? { ...COVER_PRESETS[k], cvBlock: style.cvBlock } : COVER_PRESETS[k])}
+                  onClick={() => chooseMainCover(k)}
                   className={["rounded-lg border p-1.5 flex flex-col items-center gap-1 transition-colors", style.coverLayout === k ? "border-sky-500 bg-sky-500/10" : "border-border/40 hover:border-border/70"].join(" ")}
                   aria-label={`Cover option ${i + 1}`}
                 >
@@ -4305,7 +4315,7 @@ export default function Stylish() {
                 {OCT_ORDER.map(k => (
                   <button
                     key={k} type="button"
-                    onClick={() => { patch(COVER_PRESETS[k]); if (!posts.length) toast.message(`October 26 No. ${k.replace("oct", "")} chosen. Add your photos and your CSV and every post will use it. You can change it per post after that.`); }}
+                    onClick={() => { chooseMainCover(k); if (!posts.length) toast.message(`October 26 No. ${k.replace("oct", "")} chosen. Add your photos and your CSV and every post will use it. You can change it per post after that.`); }}
                     className={["rounded-lg border px-1.5 py-2 text-left transition-colors", style.coverLayout === k ? "border-sky-500 bg-sky-500/10" : "border-border/40 hover:border-border/70"].join(" ")}
                     aria-label={`October 26 cover ${OCT_NAMES[k]}`}
                   >

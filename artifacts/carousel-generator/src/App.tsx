@@ -86,6 +86,7 @@ import BulkStories from "@/pages/bulk-stories";
 import CsvSlideCarousel from "@/pages/csv-slide-carousel";
 import Stylish from "@/pages/stylish";
 import ClientStylish from "@/pages/client-stylish";
+import GettingToKnowYou from "@/pages/getting-to-know-you";
 import EditorialPosts from "@/pages/editorial-posts";
 import ContentPreview from "@/pages/content-preview";
 import ClientBankView from "@/pages/client-bank-view";
@@ -183,6 +184,7 @@ function ProtectedRouter() {
       <Route path="/csv-slide-carousel" component={CsvSlideCarousel} />
       <Route path="/stylish" component={Stylish} />
       <Route path="/client-stylish" component={ClientStylish} />
+      <Route path="/getting-to-know-you" component={GettingToKnowYou} />
       <Route path="/editorial-posts" component={EditorialPosts} />
       <Route path="/preview" component={PreviewIndex} />
       <Route path="/settings" component={Settings} />
