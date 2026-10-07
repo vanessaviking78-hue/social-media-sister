@@ -53,17 +53,19 @@ type Props = {
   /** Post only on Monday, Wednesday, Friday and Sunday, one post per posting day, same time each day. */
   postingDays?: boolean;
   /** One story per post (same order), booked for 7am on the same day as that post. */
-  companionStories?: { imageUrl: string; title: string; box?: { top: number; bottom: number; left: number; width: number }; offset?: { dx: number; dy: number } }[];
+  companionStories?: { imageUrl: string; title: string; box?: { top: number; bottom: number; left: number; width: number }; offset?: { dx: number; dy: number }; question?: string }[];
   /** Called when the words on a story are dragged to a new spot (offset in story pixels, 1080 x 1920). */
-  onMoveStoryText?: (index: number, dx: number, dy: number) => Promise<void>;
+  onMoveStoryText?: (index: number, dx: number, dy: number, question?: string) => Promise<void>;
 };
 
 // One story with a draggable box over its words. Drop it where you want the text and the story is drawn again.
-function StoryDragPreview({ st, index, onMove }: { st: NonNullable<Props["companionStories"]>[number]; index: number; onMove?: (index: number, dx: number, dy: number) => Promise<void> }) {
+function StoryDragPreview({ st, index, onMove }: { st: NonNullable<Props["companionStories"]>[number]; index: number; onMove?: (index: number, dx: number, dy: number, question?: string) => Promise<void> }) {
   const wrap = useRef<HTMLDivElement>(null);
   const [live, setLive] = useState<{ dx: number; dy: number } | null>(null);
   const [busy, setBusy] = useState(false);
   const start = useRef<{ x: number; y: number } | null>(null);
+  const [q, setQ] = useState(st.question ?? "");
+  useEffect(() => { setQ(st.question ?? ""); }, [st.question]);
   const base = st.offset ?? { dx: 0, dy: 0 };
   const box = st.box;
   const src = st.imageUrl.startsWith("/") ? `${BASE}${st.imageUrl}` : st.imageUrl;
@@ -71,7 +73,8 @@ function StoryDragPreview({ st, index, onMove }: { st: NonNullable<Props["compan
   const k = 1080 / W;
   const cur = live ?? { dx: 0, dy: 0 };
   return (
-    <div ref={wrap} className="relative shrink-0 select-none touch-none" style={{ width: W, height: W * 16 / 9 }}>
+    <div ref={wrap} className="relative shrink-0 select-none touch-none" style={{ width: W }}>
+      <div className="relative" style={{ width: W, height: W * 16 / 9 }}>
       <img src={src} alt={`Story ${index + 1}`} draggable={false} className="w-full h-full rounded-md border border-zinc-700 object-cover" />
       {box && onMove && (
         <div
@@ -99,6 +102,23 @@ function StoryDragPreview({ st, index, onMove }: { st: NonNullable<Props["compan
         />
       )}
       {busy && <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-md"><Loader2 className="h-5 w-5 animate-spin text-white" /></div>}
+      </div>
+      {onMove && st.question !== undefined && (
+        <textarea
+          value={q}
+          rows={3}
+          onChange={(e) => setQ(e.target.value)}
+          onBlur={async () => {
+            if (busy || !q.trim() || q.trim() === (st.question ?? "").trim()) return;
+            setBusy(true);
+            try { await onMove(index, base.dx, base.dy, q); }
+            catch (err) { toast.error(err instanceof Error ? err.message : "Could not change the words"); }
+            finally { setBusy(false); }
+          }}
+          className="mt-1 w-full rounded-md bg-zinc-800 border border-zinc-700 text-white text-[11px] p-1.5 resize-none"
+          style={{ touchAction: "auto" }}
+        />
+      )}
     </div>
   );
 }

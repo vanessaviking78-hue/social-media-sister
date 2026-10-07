@@ -2928,12 +2928,13 @@ export default function Stylish() {
   const [scheduleItems, setScheduleItems] = useState<SchedulePostPayload[] | null>(null);
   const [scheduleMode, setScheduleMode] = useState<"carousel" | "reel">("carousel");
   const [withStories, setWithStories] = useState(true);
-  const [scheduleStories, setScheduleStories] = useState<{ imageUrl: string; title: string; box?: StoryBox; offset?: { dx: number; dy: number } }[] | undefined>(undefined);
+  const [scheduleStories, setScheduleStories] = useState<{ imageUrl: string; title: string; box?: StoryBox; offset?: { dx: number; dy: number }; question?: string }[] | undefined>(undefined);
   const storySrcRef = useRef<{ question: string; photo: File | null; style: Style; preset: ClientPreset | null; pi: number; dx: number; dy: number }[]>([]);
   // Drag the words on a story to a new spot: draw it again with the new offset and swap the picture.
-  const moveStoryText = async (k: number, dx: number, dy: number) => {
+  const moveStoryText = async (k: number, dx: number, dy: number, newQuestion?: string) => {
     const src = storySrcRef.current[k];
     if (!src) return;
+    if (newQuestion !== undefined && newQuestion.trim()) src.question = newQuestion.trim();
     const cdx = Math.max(-90, Math.min(90, Math.round(dx)));
     const cdy = Math.max(-200, Math.min(1000, Math.round(dy)));
     const canvas = await renderStory(src.question, src.photo, src.style, src.preset, { dx: cdx, dy: cdy });
@@ -2947,7 +2948,7 @@ export default function Stylish() {
     }
     if (!got?.[0]) throw new Error("The story would not upload");
     src.dx = cdx; src.dy = cdy;
-    setScheduleStories(prev => prev?.map((st, i) => i === k ? { ...st, imageUrl: got![0], box, offset: { dx: cdx, dy: cdy } } : st));
+    setScheduleStories(prev => prev?.map((st, i) => i === k ? { ...st, imageUrl: got![0], box, offset: { dx: cdx, dy: cdy }, question: src.question } : st));
   };
   const [sendingFlip, setSendingFlip] = useState(false);
 
@@ -3977,7 +3978,7 @@ export default function Stylish() {
         });
       }
       // A story for each post, asking a question about it. It goes out at 7am on the post's day.
-      let stories: { imageUrl: string; title: string; box?: StoryBox; offset?: { dx: number; dy: number } }[] | undefined;
+      let stories: { imageUrl: string; title: string; box?: StoryBox; offset?: { dx: number; dy: number }; question?: string }[] | undefined;
       storySrcRef.current = [];
       if (withStories) {
         setScheduling("Writing the story questions");
@@ -4011,7 +4012,7 @@ export default function Stylish() {
           }
           dataUrl = null;
           if (!got?.[0]) throw new Error("A story would not upload");
-          stories.push({ imageUrl: got[0], title: `${buildSlides(post.texts)[0]?.text ?? `Post ${pi + 1}`} · ${preset.name}`, box, offset: { dx: 0, dy: 0 } });
+          stories.push({ imageUrl: got[0], title: `${buildSlides(post.texts)[0]?.text ?? `Post ${pi + 1}`} · ${preset.name}`, box, offset: { dx: 0, dy: 0 }, question: String(qd.questions[k]) });
           await tick();
         }
       }
