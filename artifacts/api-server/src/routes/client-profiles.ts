@@ -63,7 +63,7 @@ router.put("/client-profiles/:name", async (req, res) => {
     const body = (req.body ?? {}) as { answers?: Record<string, unknown>; photoUrl?: string | null };
     const answers: Record<string, string> = {};
     for (const [k, v] of Object.entries(body.answers ?? {})) {
-      if (typeof v === "string" && k.length < 60) answers[k] = v.slice(0, 4000);
+      if (typeof v === "string" && k.length < 60) answers[k] = v.slice(0, k === "reviewImages" ? 20000 : 4000);
     }
     const photo = typeof body.photoUrl === "string" && body.photoUrl ? body.photoUrl : null;
     await db.execute(sql`

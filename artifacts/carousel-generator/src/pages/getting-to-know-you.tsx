@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Loader2, Upload, Check } from "lucide-react";
+import { ArrowLeft, Loader2, Upload, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +45,10 @@ export default function GettingToKnowYou() {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploadingReviews, setUploadingReviews] = useState(false);
+  // Screenshots of the client's reviews. Their wording shapes the copy, so they are kept with the profile.
+  const reviewUrls: string[] = useMemo(() => { try { const v = JSON.parse(answers.reviewImages || "[]"); return Array.isArray(v) ? v.filter((x: unknown) => typeof x === "string") : []; } catch { return []; } }, [answers.reviewImages]);
+  const setReviewUrls = (urls: string[]) => setAnswers(a => ({ ...a, reviewImages: JSON.stringify(urls) }));
   const [saved, setSaved] = useState<{ name: string; filled: number }[]>([]);
 
   const name = (client || typed).trim();
@@ -86,6 +90,28 @@ export default function GettingToKnowYou() {
       toast.success("Guide photo added. Press Save to keep it.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "The photo did not upload");
+    }
+  };
+
+  const addReviews = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setUploadingReviews(true);
+    try {
+      const got: string[] = [];
+      const list = Array.from(files);
+      for (let i = 0; i < list.length; i += 3) {
+        const images = await Promise.all(list.slice(i, i + 3).map(async (f, j) => ({ name: `${name || "client"}-review-${Date.now()}-${i + j}.png`, base64: await shrink(f, 1400) })));
+        const r = await fetch(`${BASE}api/content/upload-image`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ images }) });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(d.error || "A review image did not upload");
+        got.push(...(d.results ?? []).map((x: { url: string }) => x.url));
+      }
+      setReviewUrls([...reviewUrls, ...got]);
+      toast.success(`${got.length} review image${got.length === 1 ? "" : "s"} added. Press Save to keep ${got.length === 1 ? "it" : "them"}.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "A review image did not upload");
+    } finally {
+      setUploadingReviews(false);
     }
   };
 
@@ -153,6 +179,23 @@ export default function GettingToKnowYou() {
                     : <Input value={answers[q.id] ?? ""} onChange={e => setAnswers(a => ({ ...a, [q.id]: e.target.value }))} />}
                 </div>
               ))}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Review screenshots</Label>
+              <p className="text-xs text-muted-foreground">Add screenshots of their best reviews from Google, Facebook or Instagram. Their words and the phrases patients use shape the copy.</p>
+              <div className="flex flex-wrap gap-3">
+                {reviewUrls.map(u => (
+                  <div key={u} className="relative">
+                    <img src={u} alt="Review" className="h-28 w-auto max-w-[180px] rounded-lg object-cover border border-border" />
+                    <button type="button" onClick={() => setReviewUrls(reviewUrls.filter(x => x !== u))} className="absolute -top-2 -right-2 rounded-full bg-background border border-border p-0.5 hover:text-red-400" aria-label="Remove review image"><X className="h-3.5 w-3.5" /></button>
+                  </div>
+                ))}
+                <label className="h-28 w-28 rounded-lg border border-dashed border-border grid place-items-center text-xs text-muted-foreground cursor-pointer hover:bg-muted/40 text-center px-2">
+                  {uploadingReviews ? <Loader2 className="h-4 w-4 animate-spin" /> : <span className="flex flex-col items-center gap-1"><Upload className="h-4 w-4" />Add review images</span>}
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={e => { void addReviews(e.target.files); e.target.value = ""; }} />
+                </label>
+              </div>
             </div>
 
             <Button onClick={save} disabled={saving} className="gap-2">
