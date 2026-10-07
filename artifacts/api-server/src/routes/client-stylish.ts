@@ -582,12 +582,24 @@ router.post("/client-stylish/treatments", async (req: Request, res: Response) =>
 });
 
 router.post("/client-stylish/csv", async (req: Request, res: Response) => {
+  // Written as a job, like the pack copy, so the website's 28 second limit cannot cut it off.
+  let out: { status: (c: number) => any; json: (b: unknown) => void } = res;
+  if ((req.body as Record<string, unknown> | undefined)?.async === "1" || (req.body as Record<string, unknown> | undefined)?.async === 1) {
+    const jobId = `cv_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    copyJobs.set(jobId, { status: "running", at: Date.now() });
+    res.status(202).json({ jobId });
+    let code = 200;
+    out = {
+      status(c: number) { code = c; return this; },
+      json(b: unknown) { copyJobs.set(jobId, { status: code >= 400 ? "error" : "done", code, body: b, at: Date.now() }); },
+    };
+  }
   try {
     const body = req.body as { clientName?: string; website?: string; tone?: string; notes?: string; treatmentTopics?: string[]; restBrief?: string; restCount?: number };
     const clientName = String(body.clientName ?? "").trim();
-    if (!clientName) { res.status(400).json({ error: "Please choose the client first" }); return; }
+    if (!clientName) { out.status(400).json({ error: "Please choose the client first" }); return; }
     const topics = (Array.isArray(body.treatmentTopics) ? body.treatmentTopics : []).map((t) => neutralise(String(t ?? "").trim())).filter(Boolean).slice(0, 4);
-    if (topics.length < 1) { res.status(400).json({ error: "Tell me what the treatment posts are about" }); return; }
+    if (topics.length < 1) { out.status(400).json({ error: "Tell me what the treatment posts are about" }); return; }
     const restCount = Math.min(40, Math.max(0, Math.round(Number(body.restCount ?? 16))));
     const restBrief = neutralise(String(body.restBrief ?? "").trim()).slice(0, 2000);
     const ryder = isRyder(clientName);
@@ -661,13 +673,13 @@ ${notes ? `Notes about the clinic and clinician: ${notes}\n` : ""}${siteText ? `
         ? `\n\nYour last answer used banned wording (${hits.join(", ")}). Rewrite all ${total} rows without any of those words. Never name a day of the week.`
         : `\n\nRows ${noI.join(", ")} are not in the first person. Rewrite all ${total} rows so every row is spoken as I, me and my.`;
     }
-    if (rows.length !== total) { res.status(502).json({ error: `The copy did not come back as ${total} rows. Please try again.` }); return; }
+    if (rows.length !== total) { out.status(502).json({ error: `The copy did not come back as ${total} rows. Please try again.` }); return; }
     rows = rows.map((r) => ({ headline: neutralise(r.headline), subtitle: neutralise(r.subtitle), text1: neutralise(r.text1), text2: neutralise(r.text2), text3: neutralise(r.text3), cta: neutralise(r.cta) }));
-    res.json({ rows, csv: buildCsv(rows), ryder });
+    out.json({ rows, csv: buildCsv(rows), ryder });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "CSV writing failed";
     req.log.error({ err }, "client-stylish/csv failed");
-    res.status(500).json({ error: msg });
+    out.status(500).json({ error: msg });
   }
 });
 

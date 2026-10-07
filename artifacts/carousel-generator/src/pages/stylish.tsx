@@ -3041,13 +3041,30 @@ export default function Stylish() {
     setCsvWriting(true);
     const t = toast.loading("Writing the CSV");
     try {
-      const r = await fetch(`${BASE}/api/client-stylish/csv`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientName: preset.name, website: presetWebsite(preset), tone, treatmentTopics: csvTopics, restBrief: csvRest, restCount: csvRestCount }),
-      });
-      const d = (await r.json()) as { csv?: string; error?: string; rows?: unknown[] };
-      if (!r.ok || !d.csv) throw new Error(d.error || "The CSV did not come back");
+      type CsvReply = { csv?: string; error?: string; rows?: unknown[]; jobId?: string; status?: string };
+      const readJson = async (r: Response): Promise<CsvReply | null> => {
+        try { return (await r.json()) as CsvReply; } catch { return null; }
+      };
+      const payload = JSON.stringify({ clientName: preset.name, website: presetWebsite(preset), tone, treatmentTopics: csvTopics, restBrief: csvRest, restCount: csvRestCount, async: "1" });
+      let d: CsvReply | null = null;
+      // The server can be restarting after an update, so a web page instead of an answer means try again.
+      for (let attempt = 0; attempt < 4 && !d?.csv; attempt++) {
+        if (attempt) await new Promise(res => setTimeout(res, 8000));
+        const start = await readJson(await fetch(`${BASE}/api/client-stylish/csv`, { method: "POST", headers: { "Content-Type": "application/json" }, body: payload }));
+        if (!start?.jobId) { d = start; if (start?.error) break; continue; }
+        const until = Date.now() + 4 * 60_000;
+        while (Date.now() < until) {
+          await new Promise(res => setTimeout(res, 3000));
+          const pr = await fetch(`${BASE}/api/client-stylish/copy/${start.jobId}`);
+          if (pr.status === 404) break; // the server restarted and lost the job
+          const pd = await readJson(pr);
+          if (!pd || pd.status === "running") continue;
+          d = pd;
+          break;
+        }
+        if (d?.csv || d?.error) break;
+      }
+      if (!d?.csv) throw new Error(d?.error || "The server was busy updating. Give it a minute and press Write my CSV again.");
       setCsvText(d.csv);
       parseCsv(new File([d.csv], `${preset.name} Stylish.csv`, { type: "text/csv" }));
       toast.success(`${d.rows?.length ?? ""} posts written and loaded`, { id: t });
