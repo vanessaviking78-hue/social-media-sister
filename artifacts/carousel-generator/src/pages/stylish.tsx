@@ -1493,6 +1493,40 @@ const OCT_LOOKS: Partial<Record<CoverLayout, OctLook>> = {
   oct16: { fit: "extend", box: [285, 415, 360, 250], recolour: true, brand: false, glow: false, align: "center", maxLines: 3 },
 };
 
+
+// A little burst of confetti for every post that gets scheduled. No library, just a canvas that removes itself.
+function burstConfetti() {
+  try {
+    const c = document.createElement("canvas");
+    c.style.cssText = "position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9999";
+    c.width = window.innerWidth; c.height = window.innerHeight;
+    document.body.appendChild(c);
+    const g = c.getContext("2d");
+    if (!g) { c.remove(); return; }
+    const cols = ["#ec4899", "#f59e0b", "#10b981", "#38bdf8", "#a78bfa", "#fde047"];
+    const bits = Array.from({ length: 140 }, () => ({
+      x: c.width / 2 + (Math.random() - 0.5) * 200, y: c.height * 0.6,
+      vx: (Math.random() - 0.5) * 16, vy: -Math.random() * 18 - 6,
+      s: 6 + Math.random() * 7, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4,
+      col: cols[Math.floor(Math.random() * cols.length)],
+    }));
+    const t0 = performance.now();
+    const step = (t: number) => {
+      const age = t - t0;
+      g.clearRect(0, 0, c.width, c.height);
+      for (const b of bits) {
+        b.vy += 0.45; b.x += b.vx; b.y += b.vy; b.r += b.vr;
+        g.save(); g.translate(b.x, b.y); g.rotate(b.r);
+        g.globalAlpha = Math.max(0, 1 - age / 2200);
+        g.fillStyle = b.col; g.fillRect(-b.s / 2, -b.s / 4, b.s, b.s / 2);
+        g.restore();
+      }
+      if (age < 2200) requestAnimationFrame(step); else c.remove();
+    };
+    requestAnimationFrame(step);
+  } catch { /* the party is optional */ }
+}
+
 async function drawCoverOct(
   ctx: CanvasRenderingContext2D, spec: SlideSpec, photo: File | null, style: Style, layout: CoverLayout,
   preset: ClientPreset | null, textAt: TextPos, subTextAt: TextPos, headScale: number, subScale: number, pos?: PhotoPos, second?: File | null,
@@ -5219,7 +5253,14 @@ export default function Stylish() {
           onMoveStoryText={moveStoryText}
           sourceTool="stylish"
           onClose={() => setScheduleOpen(false)}
-          onSaved={() => { setScheduledIds(l => Array.from(new Set([...l, ...scheduleIds]))); setScheduleItems(null); setScheduleOpen(false); }}
+          onSaved={() => {
+            const done = Array.from(new Set([...scheduledIds, ...scheduleIds]));
+            setScheduledIds(done);
+            setScheduleItems(null); setScheduleOpen(false);
+            burstConfetti();
+            const left = posts.length - done.length;
+            toast.success(left <= 0 ? `All ${posts.length} posts scheduled. Go and have a brew, you have earned it!` : `Scheduled! ${done.length} of ${posts.length} done${left === 1 ? ", just one to go" : `, ${left} to go`}.`, { duration: 6000 });
+          }}
           presets={presets.map(p => ({ id: p.id, name: p.name }))}
         />
       )}
