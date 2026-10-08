@@ -507,7 +507,8 @@ function buildSlides(texts: string[]): SlideSpec[] {
 const COVER_ORDER: CoverLayout[] = ["band", "centred", "split", "plain", "behind", "fullbleed", "blur", "strip", "sidebar", "frame"];
 
 // The "October 26" set. Each look is named by its number on the Pinterest board.
-const OCT_ORDER: CoverLayout[] = ["oct1", "oct2", "oct3", "oct4", "oct5", "oct6", "oct7", "oct8", "oct9", "oct10", "oct11", "oct12", "oct13", "oct14", "oct15", "oct16", "oct17", "oct18"];
+// No. 1 (newspaper over the face) and No. 3 (poster on the pavement) were removed; their drawing code is left in place but they are no longer offered.
+const OCT_ORDER: CoverLayout[] = ["oct2", "oct4", "oct5", "oct6", "oct7", "oct8", "oct9", "oct10", "oct11", "oct12", "oct13", "oct14", "oct15", "oct16", "oct17", "oct18"];
 const OCT_LAYOUTS = new Set<CoverLayout>(OCT_ORDER);
 const OCT_NAMES: Partial<Record<CoverLayout, string>> = {
   oct3: "Poster on the pavement", oct4: "Poster on the wall", oct7: "Shhh lips", oct12: "Newspaper on a chair", oct14: "Black heels", oct16: "Glove and card",
@@ -2856,6 +2857,11 @@ export default function Stylish() {
     return 420;
   });
   useEffect(() => { try { localStorage.setItem("stylish-thumb-width", String(thumbW)); } catch { /* ignore */ } }, [thumbW]);
+  // When on, every slide of a post shares one row so the whole post is visible without scrolling.
+  const [fitRow, setFitRow] = useState<boolean>(() => {
+    try { return localStorage.getItem("stylish-fit-row") !== "0"; } catch { return true; }
+  });
+  useEffect(() => { try { localStorage.setItem("stylish-fit-row", fitRow ? "1" : "0"); } catch { /* ignore */ } }, [fitRow]);
   const [coverVersion, setCoverVersion] = useState(0);
   // Which posts are in the schedule screen now, and which have been scheduled from it.
   const [scheduleIds, setScheduleIds] = useState<string[]>([]);
@@ -3198,7 +3204,7 @@ export default function Stylish() {
     if (!octoberRef.current || !posts.length || pendingClient) return;
     const o = octoberRef.current;
     octoberRef.current = null;
-    const order: CoverLayout[] = ["oct13", "oct1", "oct6", "oct9", "oct18", "oct17", "oct4", "oct8", "oct12", "oct11", "oct10", "oct3", "oct14", "oct7", "oct16"];
+    const order: CoverLayout[] = ["oct13", "oct6", "oct9", "oct18", "oct17", "oct4", "oct8", "oct12", "oct11", "oct10", "oct14", "oct7", "oct16"];
     setPosts(l => l.map((p, i) => ({ ...p, cover: order[i % order.length], coverSpot: o.spot && /^#?[0-9a-f]{6}$/i.test(o.spot) ? (o.spot.startsWith("#") ? o.spot : `#${o.spot}`) : p.coverSpot })));
     toast.success("October 26 covers added, one per post. Change any of them from that post's cover options.");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -4167,7 +4173,7 @@ export default function Stylish() {
         <h1 className="font-semibold text-sm">Stylish</h1>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8 grid gap-8 lg:grid-cols-[340px_1fr]">
+      <main className="max-w-[1900px] mx-auto px-4 py-8 grid gap-8 lg:grid-cols-[300px_minmax(0,1fr)]">
 
         {/* ------------------------------ left: setup and style ------------------------------ */}
         <aside className="space-y-6 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto pr-1">
@@ -4732,7 +4738,11 @@ export default function Stylish() {
                   <p className="text-xs text-muted-foreground">
                     Slides export at 1080 x 1440. Drag any photo to move it, double click to put it back.{rendering && " Refreshing previews…"}
                   </p>
-                  <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                  <label className="mt-2 flex items-center gap-2 text-xs text-foreground font-semibold">
+                    <input type="checkbox" checked={fitRow} onChange={e => setFitRow(e.target.checked)} />
+                    Show all slides of a post side by side
+                  </label>
+                  <label className={["mt-2 flex items-center gap-2 text-xs text-muted-foreground", fitRow ? "opacity-40" : ""].join(" ")}>
                     Slide size
                     <input type="range" min={170} max={760} step={10} value={thumbW} onChange={e => setThumbW(Number(e.target.value))} className="w-56" aria-label="Slide preview size" />
                     <span>{thumbW}px</span>
@@ -4856,7 +4866,10 @@ export default function Stylish() {
                         )}
                       </div>
 
-                      <div className="flex flex-wrap gap-3 pb-1">
+                      <div
+                        className={fitRow ? "grid gap-2 pb-1" : "flex flex-wrap gap-3 pb-1"}
+                        style={fitRow ? { gridTemplateColumns: `repeat(${specs.length}, minmax(0, 1fr))` } : undefined}
+                      >
                         {specs.map((spec, si) => {
                           const thumb = thumbs[`${post.id}:${si}`];
                           const hasPhoto = !!photoFor(pi, post, si);
@@ -4875,7 +4888,7 @@ export default function Stylish() {
                               onDoubleClick={() => resetPos(post, pi, si)}
                               title={hasPhoto ? "Drag to move the photo. Double click to put it back." : undefined}
                               className={["relative rounded-lg overflow-hidden border border-border/30 shrink-0 group select-none", hasPhoto ? "cursor-grab active:cursor-grabbing" : ""].join(" ")}
-                              style={{ width: thumbW, maxWidth: "100%", touchAction: hasPhoto ? "none" : undefined }}
+                              style={{ width: fitRow ? "100%" : thumbW, maxWidth: "100%", touchAction: hasPhoto ? "none" : undefined }}
                             >
                               {thumb ? (
                                 <img src={thumb} alt={`Post ${pi + 1}, slide ${si + 1}`} className="w-full block pointer-events-none" style={{ aspectRatio: `${W}/${H}` }} draggable={false} />
@@ -4885,6 +4898,8 @@ export default function Stylish() {
                                 </div>
                               )}
                               {isCover && (
+                                <div className="flex flex-wrap gap-1.5 p-1.5 bg-neutral-900" title="Drag a button to move or resize. Double click a button to put it back.">
+                              {isCover && (
                                 <div
                                   onPointerDown={e => startTextDrag(e, post, pi, si)}
                                   onPointerMove={e => moveTextDrag(e, post)}
@@ -4892,10 +4907,10 @@ export default function Stylish() {
                                   onPointerCancel={endTextDrag}
                                   onDoubleClick={e => { e.stopPropagation(); resetTextPos(post, pi, si); }}
                                   title="Drag to move the headline. Double click to put it back."
-                                  className="absolute top-1.5 left-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-grab active:cursor-grabbing select-none"
+                                  className="flex items-center gap-1 rounded-md bg-pink-600 hover:bg-pink-500 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow cursor-grab active:cursor-grabbing select-none"
                                   style={{ touchAction: "none" }}
                                 >
-                                  <Move className="w-2.5 h-2.5" /> Aa
+                                  <Move className="w-3.5 h-3.5" /> Move headline
                                 </div>
                               )}
                               {isCover && (
@@ -4906,10 +4921,10 @@ export default function Stylish() {
                                   onPointerCancel={endTextResize}
                                   onDoubleClick={e => { e.stopPropagation(); resetTextScale(post, pi, si); }}
                                   title="Drag up or down to resize the headline. Double click to put it back."
-                                  className="absolute top-7 left-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-ns-resize select-none"
+                                  className="flex items-center gap-1 rounded-md bg-pink-600 hover:bg-pink-500 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow cursor-ns-resize select-none"
                                   style={{ touchAction: "none" }}
                                 >
-                                  <ArrowUpDown className="w-2.5 h-2.5" /> size
+                                  <ArrowUpDown className="w-3.5 h-3.5" /> Headline size
                                 </div>
                               )}
                               {isCover && (
@@ -4920,10 +4935,10 @@ export default function Stylish() {
                                   onPointerCancel={endSubTextDrag}
                                   onDoubleClick={e => { e.stopPropagation(); resetSubTextPos(post, pi, si); }}
                                   title="Drag to move the subtitle. Double click to put it back."
-                                  className="absolute top-1.5 right-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-grab active:cursor-grabbing select-none"
+                                  className="flex items-center gap-1 rounded-md bg-pink-600 hover:bg-pink-500 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow cursor-grab active:cursor-grabbing select-none"
                                   style={{ touchAction: "none" }}
                                 >
-                                  <Move className="w-2.5 h-2.5" /> aa
+                                  <Move className="w-3.5 h-3.5" /> Move subtitle
                                 </div>
                               )}
                               {isCover && (
@@ -4934,10 +4949,10 @@ export default function Stylish() {
                                   onPointerCancel={endSubTextResize}
                                   onDoubleClick={e => { e.stopPropagation(); resetSubTextScale(post, pi, si); }}
                                   title="Drag up or down to resize the subtitle. Double click to put it back."
-                                  className="absolute top-7 right-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-ns-resize select-none"
+                                  className="flex items-center gap-1 rounded-md bg-pink-600 hover:bg-pink-500 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow cursor-ns-resize select-none"
                                   style={{ touchAction: "none" }}
                                 >
-                                  <ArrowUpDown className="w-2.5 h-2.5" /> size
+                                  <ArrowUpDown className="w-3.5 h-3.5" /> Subtitle size
                                 </div>
                               )}
                               {isCover && hasPhoto && (
@@ -4948,10 +4963,12 @@ export default function Stylish() {
                                   onPointerCancel={endPhotoZoom}
                                   onDoubleClick={e => { e.stopPropagation(); const next = { ...focusRef.current }; const cur = next[`${post.id}:${si}`]; if (cur) next[`${post.id}:${si}`] = { x: cur.x, y: cur.y }; focusRef.current = next; bumpFocus(n => n + 1); redrawOne(post, pi, si); }}
                                   title="Drag up to zoom the photo in, down to zoom out. Double click to put the size back."
-                                  className="absolute bottom-8 right-1.5 flex items-center gap-0.5 rounded-md bg-black/65 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white opacity-90 group-hover:opacity-100 cursor-ns-resize select-none"
+                                  className="flex items-center gap-1 rounded-md bg-pink-600 hover:bg-pink-500 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow cursor-ns-resize select-none"
                                   style={{ touchAction: "none" }}
                                 >
-                                  <ArrowUpDown className="w-2.5 h-2.5" /> photo
+                                  <ArrowUpDown className="w-3.5 h-3.5" /> Zoom photo
+                                </div>
+                              )}
                                 </div>
                               )}
                               <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 px-1.5 py-1 bg-gradient-to-t from-black/70 to-transparent">
@@ -5174,6 +5191,12 @@ export default function Stylish() {
                               <div className="w-56">
                                 <ColourField label="Spot colour in the picture" value={eff.cvSpot || preset?.accentColor || "#2c9a8f"} onChange={v => setCoverColours(post, pi, { coverSpot: v })} />
                                 <div className="text-[10px] text-muted-foreground mt-0.5">Starts as the clinic colour. Pick another to recolour the shoes, lips or glove.</div>
+                              </div>
+                            )}
+                            {eff.coverLayout === "oct2" && (
+                              <div className="w-56">
+                                <ColourField label="Block colour" value={eff.cvSpot || preset?.accentColor || "#2c9a8f"} onChange={v => setCoverColours(post, pi, { coverSpot: v })} />
+                                <div className="text-[10px] text-muted-foreground mt-0.5">The colour strip and the background around the photos. Starts as the clinic colour.</div>
                               </div>
                             )}
                             {eff.coverLayout === "oct17" && (
