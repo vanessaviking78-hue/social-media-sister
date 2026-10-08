@@ -109,6 +109,22 @@ function postThumb(post: ScheduledPost): string | null {
   return null;
 }
 
+function hoverInfo(post: ScheduledPost, draggable: boolean): string {
+  const d = new Date(post.scheduledAt);
+  const when = isNaN(d.getTime()) ? "" : `${d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} at ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+  const cap = (post.content?.caption || "").replace(/\s+/g, " ").trim();
+  const status = post.status === "published" ? "Posted" : post.status === "failed" ? "Failed" : post.status === "draft" ? "Draft" : post.status === "processing" ? "Posting now" : post.status === "cancelled" ? "Cancelled" : "Scheduled";
+  const kind = post.postType === "reel" ? "Reel" : post.postType === "video_carousel" ? "Video carousel" : "Carousel";
+  return [
+    post.clientName,
+    `Topic: ${post.content?.title || "Untitled"}`,
+    when ? `When: ${when}` : "",
+    `${kind} · ${status}`,
+    cap ? `Caption: ${cap.slice(0, 140)}${cap.length > 140 ? "..." : ""}` : "",
+    draggable ? "" : "(already posted or in progress)",
+  ].filter(Boolean).join("\n");
+}
+
 // A single draggable/droppable card in the Preview Feed grid and the Client
 // Grid. onDelete is optional so other, non-interactive uses of this card
 // (there are none right now, but might be later) don't have to wire one up.
@@ -119,7 +135,7 @@ function FeedCard({ post, draggable, onDragStart, onDelete }: { post: ScheduledP
     <div
       draggable={draggable}
       onDragStart={draggable ? onDragStart : undefined}
-      title={`${post.clientName} — ${post.content.title || "Untitled"}${draggable ? "" : " (already posted or in progress)"}`}
+      title={hoverInfo(post, draggable)}
       className={`group relative rounded-md overflow-hidden border border-zinc-700/60 aspect-square ${draggable ? "cursor-grab active:cursor-grabbing" : "cursor-default opacity-80"}`}
     >
       {thumb ? (
