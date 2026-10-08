@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "wouter";
 import { ArrowLeft, Upload, Download, Sparkles, X, Loader2, Move } from "lucide-react";
 import { toast } from "sonner";
+import { TOPIC_BOXES } from "@/lib/topic-boxes";
 import { MagazineIcon } from "@/components/magazine-icon";
 import { coverToCanvas, loadImageFromFile } from "@/lib/advent-door";
 import {
@@ -122,23 +123,6 @@ function Field({
     </label>
   );
 }
-
-// Topics Vanessa ticks instead of typing. Ticking one fills that topic's box, and she can still type her own.
-const TOPIC_BOXES = [
-  "Menopause",
-  "Gen X being strong women",
-  "Nostalgia",
-  "Safety in aesthetics",
-  "Things I love about helping women feel confident",
-  "Women over 50 being hotter than ever",
-  "Women taking time for themselves",
-  "Keeping fit after 40",
-  "Menopause and histamine levels",
-  "Being happy in your own skin",
-  "Autumn skin",
-  "SPF",
-  "Chemical peels",
-];
 
 export default function MagazineMaker() {
   const [clinicName, setClinicName] = useState("");

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
 import { ArrowLeft, Upload, Download, Sparkles, X, Loader2, Move, CalendarClock, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { TOPIC_BOXES } from "@/lib/topic-boxes";
 import { MagazineIcon } from "@/components/magazine-icon";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { usePresets } from "@/lib/use-presets";
@@ -736,6 +737,20 @@ export default function MagazinePost() {
             <section className="space-y-3">
               <p className="text-xs uppercase tracking-widest text-zinc-500">3. The treatment and reply word for post {cur + 1}</p>
               <Field label="Treatment (becomes the magazine title)" value={treatment} onChange={setTreatment} placeholder="e.g. Polynucleotides" />
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label={`Tick a topic for post ${cur + 1}`}>
+                {TOPIC_BOXES.map((tp) => {
+                  const on = treatment.trim().toLowerCase() === tp.toLowerCase();
+                  return (
+                    <label
+                      key={tp}
+                      className={["flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs cursor-pointer select-none transition-colors", on ? "border-pink-500 bg-pink-500/15 text-white" : "border-zinc-700 text-zinc-400 hover:border-zinc-500"].join(" ")}
+                    >
+                      <input type="checkbox" checked={on} onChange={() => setTreatment(on ? "" : tp)} />
+                      {tp}
+                    </label>
+                  );
+                })}
+              </div>
               <Field label="Reply word people comment" value={replyWord} onChange={setReplyWord} placeholder="e.g. GLOW" />
             </section>
 
