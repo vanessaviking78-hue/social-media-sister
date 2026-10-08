@@ -78,6 +78,28 @@ export function nthPostingSlot(start: Date, i: number): Date {
   return d;
 }
 
+// Alternating weekend slots, two a week: Saturday 9am, then Sunday 7pm, then the next Saturday 9am.
+// Returns the i-th such slot at or after `start` (a minute of grace, so a start that already sits
+// exactly on a slot counts as that slot).
+export function nthWeekendSlot(start: Date, i: number): Date {
+  const day = new Date(start);
+  day.setHours(0, 0, 0, 0);
+  let left = i;
+  for (let guard = 0; guard < 4000; guard++) {
+    const dow = day.getDay();
+    if (dow === WEEKDAY.SAT || dow === WEEKDAY.SUN) {
+      const slot = new Date(day);
+      slot.setHours(dow === WEEKDAY.SAT ? 9 : 19, 0, 0, 0);
+      if (slot.getTime() >= start.getTime() - 60000) {
+        if (left === 0) return slot;
+        left--;
+      }
+    }
+    day.setDate(day.getDate() + 1);
+  }
+  return new Date(start);
+}
+
 // Convenience: just the single next open Mon/Wed/Fri slot, as an ISO datetime.
 export function nextOpenMWFSlotISO(bookedDates: Set<string>, time: string = POST_TIME): string {
   const [day] = nextOpenMWFSlots(bookedDates, 1, time);

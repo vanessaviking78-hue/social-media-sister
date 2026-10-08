@@ -112,21 +112,26 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): st
   return lines;
 }
 
-type SlotKey = "sun7pm" | "sat9am";
-const SLOT_LABEL: Record<SlotKey, string> = { sun7pm: "Sunday 7pm", sat9am: "Saturday 9am" };
+type SlotKey = "sun7pm" | "sat9am" | "both";
+const SLOT_LABEL: Record<SlotKey, string> = { sun7pm: "Sunday 7pm", sat9am: "Saturday 9am", both: "Both, twice a week" };
 
-// The next Sunday 7pm or Saturday 9am, as a local "YYYY-MM-DDTHH:mm" string, which is the
+// The first slot for the chosen option, as a local "YYYY-MM-DDTHH:mm" string, which is the
 // format the schedule screen expects. Always in the future, never today if the time has gone.
+// "both" starts on whichever of Saturday 9am or Sunday 7pm comes round first.
 function nextSlotLocal(slot: SlotKey): string {
-  const day = slot === "sun7pm" ? 0 : 6;
-  const hh = slot === "sun7pm" ? 19 : 9;
-  const d = new Date();
-  d.setHours(hh, 0, 0, 0);
-  let add = (day - d.getDay() + 7) % 7;
-  if (add === 0 && d.getTime() <= Date.now() + 5 * 60000) add = 7;
-  d.setDate(d.getDate() + add);
   const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(hh)}:00`;
+  const next = (day: number, hh: number): Date => {
+    const d = new Date();
+    d.setHours(hh, 0, 0, 0);
+    let add = (day - d.getDay() + 7) % 7;
+    if (add === 0 && d.getTime() <= Date.now() + 5 * 60000) add = 7;
+    d.setDate(d.getDate() + add);
+    return d;
+  };
+  const sat = next(6, 9);
+  const sun = next(0, 19);
+  const d = slot === "sat9am" ? sat : slot === "sun7pm" ? sun : (sat.getTime() <= sun.getTime() ? sat : sun);
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:00`;
 }
 
 // No em dashes or spaced en dashes in any caption.
@@ -149,6 +154,7 @@ export default function TweetMaker() {
   const [scheduleItems, setScheduleItems] = useState<SchedulePostPayload[] | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [scheduleStart, setScheduleStart] = useState<string | undefined>(undefined);
+  const [scheduledSlot, setScheduledSlot] = useState<SlotKey>("sun7pm");
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const profileFileRef = useRef<HTMLInputElement>(null);
@@ -555,6 +561,7 @@ export default function TweetMaker() {
         });
       }
       setScheduleStart(nextSlotLocal(slot));
+      setScheduledSlot(slot);
       setScheduleItems(items);
       setScheduleOpen(true);
     } catch (e: any) {
@@ -707,7 +714,7 @@ export default function TweetMaker() {
           </div>
           <div className="rounded-xl border border-border/30 p-3 space-y-2">
             <p className="text-xs font-medium">Schedule to {clientName ? `${clientName}'s` : "the client's"} page</p>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {(Object.keys(SLOT_LABEL) as SlotKey[]).map((k) => (
                 <button
                   key={k}
@@ -719,7 +726,12 @@ export default function TweetMaker() {
                 </button>
               ))}
             </div>
-            <p className="text-[11px] text-muted-foreground">First tweet goes out on the next {SLOT_LABEL[slot]}, then one each week at the same time. You confirm the dates on the next screen before anything is booked.</p>
+            <p className="text-[11px] text-muted-foreground">
+              {slot === "both"
+                ? "Two a week, alternating Saturday 9am and Sunday 7pm, starting with whichever comes first."
+                : `First tweet goes out on the next ${SLOT_LABEL[slot]}, then one each week at the same time.`}{" "}
+              You confirm the dates on the next screen before anything is booked.
+            </p>
             <div className="flex gap-2">
               <Button onClick={scheduleBatch} disabled={!!scheduling || !rows.length} className="flex-1">
                 {scheduling ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{scheduling}</> : <><CalendarClock className="w-4 h-4 mr-1.5" />Schedule the batch</>}
@@ -744,6 +756,7 @@ export default function TweetMaker() {
           initialScheduledAt={scheduleStart}
           initialGapMinutes={10080}
           keepClockTime
+          weekendSlots={scheduledSlot === "both"}
           sourceTool="tweet-maker"
           onClose={() => setScheduleOpen(false)}
           onSaved={() => {

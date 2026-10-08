@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { CalendarClock, Music, AlertTriangle, CheckCircle2, Loader2, Instagram, Facebook, Download } from "lucide-react";
 import { downloadAllImages, type DownloadItem } from "@/lib/download-images";
-import { nextOpenMWFSlots, nthPostingSlot, shortTagForBookedPost } from "@/lib/schedule";
+import { nextOpenMWFSlots, nthPostingSlot, nthWeekendSlot, shortTagForBookedPost } from "@/lib/schedule";
 import { useBookedDays } from "@/lib/use-booked-days";
 import { nameBucketOffsetMinutes } from "@/lib/broadcast-stagger";
 
@@ -52,6 +52,8 @@ type Props = {
   keepClockTime?: boolean;
   /** Post only on Monday, Wednesday, Friday and Sunday, one post per posting day, same time each day. */
   postingDays?: boolean;
+  /** Two posts a week, alternating Saturday 9am and Sunday 7pm, starting from the first of those on or after the date chosen. */
+  weekendSlots?: boolean;
   /** One story per post (same order), booked for 7am on the same day as that post. */
   companionStories?: { imageUrl: string; title: string; box?: { top: number; bottom: number; left: number; width: number }; offset?: { dx: number; dy: number }; question?: string }[];
   /** Called when the words on a story are dragged to a new spot (offset in story pixels, 1080 x 1920). */
@@ -138,7 +140,7 @@ function dateKey(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt, sourceTool, perPostCaptions, initialGapMinutes, keepClockTime, postingDays, companionStories, onMoveStoryText }: Props) {
+export function ScheduleModal({ presetId, presetName, postType, posts, onClose, onSaved, presets, initialScheduledAt, sourceTool, perPostCaptions, initialGapMinutes, keepClockTime, postingDays, weekendSlots, companionStories, onMoveStoryText }: Props) {
   const [scheduledAt, setScheduledAt] = useState(() => initialScheduledAt || defaultScheduledAt());
   const [notes, setNotes] = useState("");
   const [caption, setCaption] = useState(() => posts[0]?.caption || "");
@@ -281,6 +283,7 @@ export function ScheduleModal({ presetId, presetName, postType, posts, onClose, 
           const post = posts[i];
           const nameOffsetMin = broadcastMode ? nameBucketOffsetMinutes(presets?.find((p) => p.id === targetPresetId)?.name ?? "") : 0;
 const staggeredAt = (() => {
+            if (weekendSlots) return new Date(nthWeekendSlot(new Date(scheduledAt), i).getTime() + nameOffsetMin * 60000).toISOString();
             if (postingDays) return new Date(nthPostingSlot(new Date(scheduledAt), i).getTime() + nameOffsetMin * 60000).toISOString();
             if (keepClockTime && gap > 0 && gap % 1440 === 0) {
               const d = new Date(scheduledAt);
@@ -484,13 +487,19 @@ const staggeredAt = (() => {
             </div>
           )}
 
-          {isBulk && postingDays && (
+          {isBulk && weekendSlots && (
+            <p className="text-xs text-zinc-400">
+              Posts go out twice a week, alternating Saturday at 9am and Sunday at 7pm. The first one lands on the first of those slots on or after the date above{broadcastMode ? " (per client)" : ""}.
+            </p>
+          )}
+
+          {isBulk && postingDays && !weekendSlots && (
             <p className="text-xs text-zinc-400">
               Posts go out on Mondays, Wednesdays, Fridays and Sundays, one per day, at the same time each day. The first one lands on the first of those days on or after the date above{broadcastMode ? " (per client)" : ""}.
             </p>
           )}
 
-          {isBulk && !postingDays && (
+          {isBulk && !postingDays && !weekendSlots && (
             <div>
               <Label className="text-zinc-300 text-sm mb-1.5 block">Minutes between posts</Label>
               <Input
