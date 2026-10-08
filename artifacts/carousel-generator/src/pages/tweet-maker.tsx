@@ -33,6 +33,8 @@ type TweetRow = {
 function loadImg(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    // Remote images must be requested with CORS or they taint the canvas and block export.
+    if (!src.startsWith("blob:") && !src.startsWith("data:")) img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = reject;
     img.src = src;
