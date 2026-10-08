@@ -2504,8 +2504,7 @@ async function savePhotosToClientLibrary(files: File[], clientName: string) {
 const tick = () => new Promise<void>(r => setTimeout(r, 0));
 
 // 1080 x 1920 story: the post's cover photo, a dark layer so the words read, the question in
-// bold across the top and a "reply below" line under it. Kept clear of the top 250px and bottom
-// 340px, which Instagram covers with its own buttons.
+// bold in the bottom third with a "reply below" line under it, sized so every word fits on screen.
 async function renderStory(question: string, photo: File | null, style: Style, preset: ClientPreset | null, off: { dx: number; dy: number } = { dx: 0, dy: 0 }): Promise<HTMLCanvasElement> {
   const SW = 1080, SH = 1920;
   const OX = off.dx, OY = off.dy;
@@ -2527,21 +2526,27 @@ async function renderStory(question: string, photo: File | null, style: Style, p
   }
   ctx.fillStyle = "rgba(0,0,0,0.28)";
   ctx.fillRect(0, 0, SW, SH);
-  const g = ctx.createLinearGradient(0, 0, 0, 1000);
-  g.addColorStop(0, "rgba(0,0,0,0.7)");
-  g.addColorStop(1, "rgba(0,0,0,0)");
+  const g = ctx.createLinearGradient(0, 1000, 0, SH);
+  g.addColorStop(0, "rgba(0,0,0,0)");
+  g.addColorStop(0.45, "rgba(0,0,0,0.6)");
+  g.addColorStop(1, "rgba(0,0,0,0.75)");
   ctx.fillStyle = g;
-  ctx.fillRect(0, 0, SW, 1000);
+  ctx.fillRect(0, 1000, SW, SH - 1000);
 
+  // Everything sits in the bottom third (from y 1280), ending above Instagram's reply bar.
   const family = style.displayFont;
   const text = question.toUpperCase();
-  let size = 128;
+  const MAXW = 900, PILL_H = 84, GAP = 28;
+  const blockBottom = 1650;
+  const maxTextH = blockBottom - 1290 - PILL_H - GAP;
+  let size = 96;
   let lines: string[] = [];
-  for (; size >= 72; size -= 6) {
+  for (; size >= 40; size -= 4) {
     await document.fonts.load(`900 ${size}px ${family}`).catch(() => undefined);
     ctx.font = `900 ${size}px ${family}`;
-    lines = wrapText(ctx, text, 900);
-    if (lines.length <= 5) break;
+    lines = wrapText(ctx, text, MAXW);
+    const widest = Math.max(...lines.map(l => ctx.measureText(l).width));
+    if (lines.length * Math.round(size * 1.08) <= maxTextH && widest <= MAXW) break;
   }
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
@@ -2549,23 +2554,26 @@ async function renderStory(question: string, photo: File | null, style: Style, p
   ctx.shadowColor = "rgba(0,0,0,0.55)";
   ctx.shadowBlur = 18;
   const lh = Math.round(size * 1.08);
-  const boxTop = 300 + OY;
+  const totalH = lines.length * lh + GAP + PILL_H;
+  const OYc = Math.max(-(blockBottom - totalH - 120), Math.min(OY, SH - 60 - blockBottom));
+  const OXc = Math.max(-60, Math.min(OX, 60));
+  const boxTop = blockBottom - totalH + OYc;
   let y = boxTop;
-  for (const line of lines) { ctx.fillText(line, SW / 2 + OX, y); y += lh; }
+  for (const line of lines) { ctx.fillText(line, SW / 2 + OXc, y); y += lh; }
   ctx.shadowBlur = 0;
 
   const pillText = "REPLY BELOW WITH YOUR ANSWER";
   await document.fonts.load(`800 46px ${family}`).catch(() => undefined);
   ctx.font = `800 46px ${family}`;
-  const pw = ctx.measureText(pillText).width + 90, ph = 96, px = (SW - pw) / 2 + OX, py = y + 40;
+  const pw = Math.min(ctx.measureText(pillText).width + 90, 960), ph = PILL_H, px = (SW - pw) / 2 + OXc, py = y + GAP;
   ctx.fillStyle = accent;
   ctx.beginPath();
   ctx.roundRect(px, py, pw, ph, ph / 2);
   ctx.fill();
   ctx.fillStyle = "#ffffff";
   ctx.textBaseline = "middle";
-  ctx.fillText(pillText, SW / 2 + OX, py + ph / 2 + 2);
-  (c as HTMLCanvasElement & { __box?: StoryBox }).__box = { top: boxTop / SH, bottom: (py + ph) / SH, left: (SW / 2 - 470 + OX) / SW, width: 940 / SW };
+  ctx.fillText(pillText, SW / 2 + OXc, py + ph / 2 + 2);
+  (c as HTMLCanvasElement & { __box?: StoryBox }).__box = { top: boxTop / SH, bottom: (py + ph) / SH, left: (SW / 2 - 470 + OXc) / SW, width: 940 / SW };
   return c;
 }
 
