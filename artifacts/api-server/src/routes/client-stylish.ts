@@ -3,6 +3,7 @@ import multer from "multer";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { CAPTION_TONE_PROMPTS, RYDER_TONE, isRyder } from "./caption-generator";
 import { validateHost } from "./aiPortrait";
+import { clientProfileContext } from "./client-profiles";
 import { db } from "@workspace/db";
 import { clientPresetsTable } from "@workspace/db/schema";
 
@@ -437,9 +438,10 @@ router.post("/client-stylish/copy", upload.array("screenshots", 3), async (req: 
     const topPosts = neutralise(manualTop || igTop).slice(0, 4000);
     const topPostsCount = topPosts ? topPosts.split("\n").filter((l) => l.trim()).length : 0;
 
+    const profileCtx = await clientProfileContext(clientName);
     const system = `You write copy for Vanessa Wormald's clients, UK aesthetic clinics.
 
-WRITING STYLE: ${tonePrompt}
+WRITING STYLE: ${tonePrompt}${profileCtx}
 ${ryderPack ? "THE RYDER CLINIC: write every row in the professional, emotive, affable voice above. Wherever the rules below ask for funny, cheeky or nostalgic comedy, write sincere, warm, emotionally rich posts instead, with no humour or japes at all.\n" : ""}${hallIds.length ? STRUCTURE_RULES.replace(/exactly 20 (posts|objects)/g, `exactly ${expected} $1`) + `\n\nHALLOWEEN ROWS: after the 20 rows above, add ${hallIds.length} extra Halloween rows (rows 21 to ${expected}), in this order. Same format, same rules, same voice, still ending ideas with a comment, share, save or tag call to action. Make each one clever, industry relevant and outside the box.\n${hallIds.map((h, i) => `Row ${21 + i}: "${HALLOWEEN_IDEAS[h].title}". ${HALLOWEEN_IDEAS[h].brief}`).join("\n")}` : STRUCTURE_RULES}${topPosts ? `\n${TOP_POSTS_RULES}` : ""}`;
 
     const user = `Clinic: ${clientName.trim()}
@@ -625,9 +627,10 @@ Each carousel is a short, absorbing story she wants to finish. Slide 1 (headline
       section("BANNED WORDS", "OUTPUT"),
     ].filter(Boolean).join("\n\n");
 
+    const profileCtx = await clientProfileContext(clientName);
     const system = `You write copy for Vanessa Wormald's clients, UK aesthetic clinics.
 
-WRITING STYLE: ${tonePrompt}
+WRITING STYLE: ${tonePrompt}${profileCtx}
 
 WHAT YOU ARE WRITING
 A Stylish carousel pack for one clinic: exactly ${total} posts, each one a row of short text that sits over photos. Each row has: headline, subtitle, text1, text2, text3, cta. The headline and subtitle read together as one line (headline is the start, subtitle is the finish). Headline up to 5 words, subtitle up to 8 words, cta up to 8 words, each of text1 to text3 is 2 or 3 short sentences of 20 to 32 words.

@@ -1,3 +1,4 @@
+import { clientProfileContext } from "../client-profiles";
 import { Router, type IRouter } from "express";
 import multer from "multer";
 import { openai } from "@workspace/integrations-openai-ai-server";
@@ -201,7 +202,7 @@ router.post("/content/generate", async (req, res) => {
 
     const systemPrompt = `${CONTENT_SYSTEM}
 
-You are generating carousel post content for a ${industry} business.${clientName ? ` Client: "${clientName}".` : ""} Write in a ${tone} tone.${buildPersonalityContext(targetAudience, contentPillars, brandNotes, voiceStyle)}
+You are generating carousel post content for a ${industry} business.${clientName ? ` Client: "${clientName}".` : ""} Write in a ${tone} tone.${buildPersonalityContext(targetAudience, contentPillars, brandNotes, voiceStyle)}${await clientProfileContext(clientName)}
 
 Slide structure — follow this exactly:
 - Slide 1 is the HOOK. Under 10 words. Sounds like something a real person would actually say. Quiet, specific, honest. Not a marketing line. No banned openers. No generic "Are you tired of..." or "It's time to..." — follow the GOOD hook patterns in the voice rules above.
@@ -301,7 +302,7 @@ router.post("/content/generate-single", async (req, res) => {
 
     const systemPrompt = `${CONTENT_SYSTEM}
 
-You are generating short text overlays for single-image Instagram posts for a ${industry} business.${clientName ? ` Client: "${clientName}".` : ""} Write in a ${tone} tone.${buildPersonalityContext(targetAudience, contentPillars, brandNotes, singleVoiceStyle)}
+You are generating short text overlays for single-image Instagram posts for a ${industry} business.${clientName ? ` Client: "${clientName}".` : ""} Write in a ${tone} tone.${buildPersonalityContext(targetAudience, contentPillars, brandNotes, singleVoiceStyle)}${await clientProfileContext(clientName)}
 
 Rules:
 - Each text is a standalone image overlay — under 12 words, readable at a glance
@@ -379,7 +380,7 @@ router.post("/content/captions", async (req, res) => {
 
     const systemPrompt = `${voicePrompt}
 
-You are now generating Instagram/social media captions for ${postsLabel}.${clientName ? ` You are creating content for "${clientName}".` : ""} The industry is: ${industry || "aesthetics"}.${buildPersonalityContext(targetAudience, contentPillars, brandNotes)}
+You are now generating Instagram/social media captions for ${postsLabel}.${clientName ? ` You are creating content for "${clientName}".` : ""} The industry is: ${industry || "aesthetics"}.${buildPersonalityContext(targetAudience, contentPillars, brandNotes)}${await clientProfileContext(clientName)}
 
 You will receive the ${isSingle ? "overlay text" : "slide text"} for each ${postLabel}. Write a caption for each one that:
 - Opens with a strong first line (this shows as the preview before "...more") - make it curiosity-driven or benefit-led, in the voice style above
@@ -551,7 +552,7 @@ router.post("/content/generate-story-questions", async (req, res) => {
 
     const systemPrompt = `${VANESSA_SYSTEM}
 
-You are now generating Instagram Story engagement questions. Write in a ${tone} tone of voice.${clientName ? ` You are creating content for "${clientName}".` : ""} The industry is: ${industry}.${buildPersonalityContext(targetAudience, contentPillars, brandNotes, storyVoiceStyle)}
+You are now generating Instagram Story engagement questions. Write in a ${tone} tone of voice.${clientName ? ` You are creating content for "${clientName}".` : ""} The industry is: ${industry}.${buildPersonalityContext(targetAudience, contentPillars, brandNotes, storyVoiceStyle)}${await clientProfileContext(clientName)}
 
 Generate exactly ${count} engagement questions for Instagram Stories.
 

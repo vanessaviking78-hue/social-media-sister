@@ -87,6 +87,7 @@ import CsvSlideCarousel from "@/pages/csv-slide-carousel";
 import Stylish from "@/pages/stylish";
 import ClientStylish from "@/pages/client-stylish";
 import GettingToKnowYou from "@/pages/getting-to-know-you";
+import KnowMePublic from "@/pages/know-me-public";
 import EditorialPosts from "@/pages/editorial-posts";
 import ContentPreview from "@/pages/content-preview";
 import ClientBankView from "@/pages/client-bank-view";
@@ -227,6 +228,7 @@ function AppContent() {
   const [isClientApproval, clientApprovalParams] = useRoute("/client-approval/:token");
   const [isApprove, approveParams] = useRoute("/approve/:token");
   const [isPortal, portalParams] = useRoute("/portal/:token");
+  const [isKnowMe, knowMeParams] = useRoute("/know-me/:token");
   const [isSubmit, submitParams] = useRoute("/submit/:token");
   const [isClientQuestion] = useRoute("/clientquestion");
   const [isShowcase, showcaseParams] = useRoute("/showcase/:token");
@@ -267,6 +269,9 @@ function AppContent() {
   }
   if (isGoogleOAuth) {
     return <GoogleOAuthResult />;
+  }
+  if (isKnowMe && knowMeParams?.token) {
+    return <KnowMePublic token={knowMeParams.token} />;
   }
   if (isPortal && portalParams?.token) {
     return <ClientPortal token={portalParams.token} />;

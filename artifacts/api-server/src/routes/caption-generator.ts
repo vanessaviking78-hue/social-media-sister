@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
+import { clientProfileContext } from "./client-profiles";
 
 const router: IRouter = Router();
 
@@ -72,9 +73,10 @@ router.post("/caption-generator/generate", async (req: Request, res: Response) =
     const voice = captionVoice(clinicName, CAPTION_TONE_PROMPTS[toneKey] ?? CAPTION_TONE_PROMPTS["2"]);
     const tonePrompt = voice.tonePrompt;
 
+    const profileCtx = await clientProfileContext(clinicName);
     const systemPrompt = `You write a single Instagram/Facebook caption for an aesthetics clinic post.
 
-TONE: ${tonePrompt}
+TONE: ${tonePrompt}${profileCtx}
 
 ${clinicName ? `Clinic: ${clinicName}` : ""}
 ${area ? `

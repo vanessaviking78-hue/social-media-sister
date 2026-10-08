@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Loader2, Upload, Check, X } from "lucide-react";
+import { ArrowLeft, Loader2, Upload, Check, X, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { usePresets } from "@/lib/use-presets";
 const BASE = import.meta.env.BASE_URL;
 
 // The questions I ask about each client, so their photos, covers, stories and captions all sound like them.
-const QUESTIONS: { id: string; label: string; hint: string; long?: boolean }[] = [
+export const QUESTIONS: { id: string; label: string; hint: string; long?: boolean }[] = [
   { id: "who", label: "Clinician name and clinic town", hint: "Who is in the photos, and where are they based?" },
   { id: "words", label: "Three words for their personality", hint: "Warm, dry, glamorous, straight talking..." },
   { id: "adore", label: "What do patients adore about them?", hint: "The thing people say in reviews.", long: true },
@@ -27,7 +27,7 @@ const QUESTIONS: { id: string; label: string; hint: string; long?: boolean }[] =
 ];
 
 // Keeps the guide photo to a sensible size before it is saved.
-async function shrink(file: File, max = 1600): Promise<string> {
+export async function shrink(file: File, max = 1600): Promise<string> {
   const bmp = await createImageBitmap(file);
   const sc = Math.min(1, max / Math.max(bmp.width, bmp.height));
   const c = document.createElement("canvas");
@@ -46,6 +46,7 @@ export default function GettingToKnowYou() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingReviews, setUploadingReviews] = useState(false);
+  const [linking, setLinking] = useState(false);
   // Screenshots of the client's reviews. Their wording shapes the copy, so they are kept with the profile.
   const reviewUrls: string[] = useMemo(() => { try { const v = JSON.parse(answers.reviewImages || "[]"); return Array.isArray(v) ? v.filter((x: unknown) => typeof x === "string") : []; } catch { return []; } }, [answers.reviewImages]);
   const setReviewUrls = (urls: string[]) => setAnswers(a => ({ ...a, reviewImages: JSON.stringify(urls) }));
@@ -112,6 +113,25 @@ export default function GettingToKnowYou() {
       toast.error(e instanceof Error ? e.message : "A review image did not upload");
     } finally {
       setUploadingReviews(false);
+    }
+  };
+
+  // Gives this client their own link to fill the form in themselves. The same link is reused every time.
+  const copyLink = async () => {
+    if (!name) { toast.error("Pick or type a client first."); return; }
+    setLinking(true);
+    try {
+      const r = await fetch(`${BASE}api/client-profiles/${encodeURIComponent(name)}/link`, { method: "POST" });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.token) throw new Error(d.error || "Could not make the link");
+      const url = `${window.location.origin}${BASE}know-me/${d.token}`.replace(/([^:]\/)\/+/g, "$1");
+      try { await navigator.clipboard.writeText(url); toast.success(`Link for ${name} copied. Send it to them and their answers will appear here.`, { duration: 8000 }); }
+      catch { window.prompt("Copy this link and send it to your client", url); }
+      void refreshList();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not make the link");
+    } finally {
+      setLinking(false);
     }
   };
 
@@ -198,9 +218,14 @@ export default function GettingToKnowYou() {
               </div>
             </div>
 
-            <Button onClick={save} disabled={saving} className="gap-2">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Save {name}
-            </Button>
+            <div className="flex flex-wrap gap-3">
+              <Button onClick={save} disabled={saving} className="gap-2">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />} Save {name}
+              </Button>
+              <Button variant="outline" onClick={copyLink} disabled={linking} className="gap-2">
+                {linking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />} Copy their link to fill it in
+              </Button>
+            </div>
           </>
         )}
 

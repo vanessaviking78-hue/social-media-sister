@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
+import { clientProfileContext } from "./client-profiles";
 import { CAPTION_TONE_PROMPTS, RYDER_TONE, isRyder } from "./caption-generator";
 import { BANNED_TERMS, neutralise, clean } from "./client-stylish";
 
@@ -18,6 +19,7 @@ router.post("/stylish-story/questions", async (req, res) => {
     const listing = posts
       .map((p, i) => `${i + 1}. ${neutralise((p.slides ?? []).filter(Boolean).join(" | "))}`)
       .join("\n");
+    const profileCtx = await clientProfileContext(clinicName);
     const place = String(area ?? "").replace(/[\r\n]+/g, " ").trim().slice(0, 120);
 
     const run = async (extra: string) => {
@@ -31,7 +33,7 @@ router.post("/stylish-story/questions", async (req, res) => {
             role: "system",
             content: `You write the bold question that sits across an Instagram story for an aesthetics clinic. Each story goes out the same morning as a feed post and is about the same thing, so followers reply to the story with their answer.
 
-TONE: ${tonePrompt}
+TONE: ${tonePrompt}${profileCtx}
 
 RULES
 - One question per post, 12 words at most, easy to answer in a word or a sentence, and you want to answer it straight away.
