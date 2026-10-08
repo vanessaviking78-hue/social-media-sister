@@ -229,6 +229,7 @@ function AppContent() {
   const [isApprove, approveParams] = useRoute("/approve/:token");
   const [isPortal, portalParams] = useRoute("/portal/:token");
   const [isKnowMe, knowMeParams] = useRoute("/know-me/:token");
+  const [isKnowMeShared] = useRoute("/know-me");
   const [isSubmit, submitParams] = useRoute("/submit/:token");
   const [isClientQuestion] = useRoute("/clientquestion");
   const [isShowcase, showcaseParams] = useRoute("/showcase/:token");
@@ -269,6 +270,9 @@ function AppContent() {
   }
   if (isGoogleOAuth) {
     return <GoogleOAuthResult />;
+  }
+  if (isKnowMeShared) {
+    return <KnowMePublic />;
   }
   if (isKnowMe && knowMeParams?.token) {
     return <KnowMePublic token={knowMeParams.token} />;

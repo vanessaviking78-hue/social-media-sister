@@ -10,16 +10,18 @@ import { QUESTIONS, shrink } from "@/pages/getting-to-know-you";
 const BASE = import.meta.env.BASE_URL;
 
 // The page a client opens from their own link. Their answers are kept on their profile and used for every hook and caption written for them.
-export default function KnowMePublic({ token }: { token: string }) {
+export default function KnowMePublic({ token }: { token?: string }) {
   const [clientName, setClientName] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-  const [state, setState] = useState<"loading" | "ready" | "invalid">("loading");
+  const [state, setState] = useState<"loading" | "ready" | "invalid">(token ? "loading" : "ready");
+  const [sent, setSent] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [busyUpload, setBusyUpload] = useState(false);
 
   useEffect(() => {
+    if (!token) return;
     fetch(`${BASE}api/know-me/${encodeURIComponent(token)}`)
       .then(async r => { if (!r.ok) throw new Error("invalid"); return r.json(); })
       .then(d => { setClientName(d.profile.clientName); setAnswers(d.profile.answers ?? {}); setPhotoUrl(d.profile.photoUrl ?? null); setState("ready"); })
@@ -58,11 +60,15 @@ export default function KnowMePublic({ token }: { token: string }) {
   };
 
   const save = async () => {
+    if (!token && clientName.trim().length < 2) { toast.error("Please tell me which clinic you are first."); return; }
     setSaving(true);
     try {
-      const r = await fetch(`${BASE}api/know-me/${encodeURIComponent(token)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ answers, photoUrl }) });
+      const r = token
+        ? await fetch(`${BASE}api/know-me/${encodeURIComponent(token)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ answers, photoUrl }) })
+        : await fetch(`${BASE}api/know-me-submit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clinicName: clientName, answers, photoUrl }) });
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "Could not save");
       setSaved(true);
+      if (!token) setSent(true);
       toast.success("Saved. Thank you, that really helps.");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not save");
@@ -74,14 +80,32 @@ export default function KnowMePublic({ token }: { token: string }) {
   if (state === "loading") return <div className="min-h-screen grid place-items-center bg-background text-foreground"><Loader2 className="h-6 w-6 animate-spin" /></div>;
   if (state === "invalid") return <div className="min-h-screen grid place-items-center bg-background text-foreground px-6 text-center"><p>This link does not look right. Please ask Vanessa to send it again.</p></div>;
 
+  if (sent) return (
+    <div className="min-h-screen grid place-items-center bg-background text-foreground px-6 text-center">
+      <div className="max-w-md space-y-3">
+        <Heart className="h-8 w-8 text-pink-400 mx-auto" />
+        <h1 className="text-2xl font-semibold">Thank you, that is perfect</h1>
+        <p className="text-sm text-muted-foreground leading-relaxed">I have everything I need to make your posts sound like you. If you think of anything else, just open the same link and send it again.</p>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="mx-auto max-w-2xl px-4 py-10 space-y-8">
         <div className="space-y-2">
           <p className="text-xs uppercase tracking-widest text-pink-400 flex items-center gap-1.5"><Heart className="h-3.5 w-3.5" /> Social Media Sister</p>
-          <h1 className="text-3xl font-semibold">Let me get to know {clientName}</h1>
+          <h1 className="text-3xl font-semibold">{token ? `Let me get to know ${clientName}` : "Let me get to know you"}</h1>
           <p className="text-sm text-muted-foreground leading-relaxed">The more of you I put into your posts, the more they sound like you. Answer in your own words, as chatty as you like. There are no wrong answers and you can come back and change anything whenever you want.</p>
         </div>
+
+        {!token && (
+          <div className="space-y-1">
+            <Label>Your clinic name</Label>
+            <p className="text-xs text-muted-foreground">Exactly as you use it on Instagram, so I put your answers on the right page.</p>
+            <Input value={clientName} onChange={e => { setSaved(false); setClientName(e.target.value); }} placeholder="e.g. Glow Aesthetics" />
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label>A photo of you</Label>

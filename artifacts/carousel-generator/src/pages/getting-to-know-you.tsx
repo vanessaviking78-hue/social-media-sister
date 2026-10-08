@@ -47,6 +47,30 @@ export default function GettingToKnowYou() {
   const [saving, setSaving] = useState(false);
   const [uploadingReviews, setUploadingReviews] = useState(false);
   const [linking, setLinking] = useState(false);
+  type Sub = { id: number; typedName: string; matchedName: string | null; answers: Record<string, string>; photoUrl: string | null; createdAt: string };
+  const [subs, setSubs] = useState<Sub[]>([]);
+  const [subPick, setSubPick] = useState<Record<number, string>>({});
+  const loadSubs = async () => {
+    try { const r = await fetch(`${BASE}api/client-profile-submissions`); const d = await r.json(); setSubs(d.submissions ?? []); } catch { /* nothing waiting */ }
+  };
+  useEffect(() => { void loadSubs(); }, []);
+  const copyShared = async () => {
+    const url = `${window.location.origin}${BASE}know-me`.replace(/([^:]\/)\/+/g, "$1");
+    try { await navigator.clipboard.writeText(url); toast.success("The one link for every client is copied. Send it to anyone.", { duration: 8000 }); }
+    catch { window.prompt("Copy this link and send it to your clients", url); }
+  };
+  const acceptSub = async (s: Sub) => {
+    const to = subPick[s.id] || s.matchedName || "";
+    if (!to) { toast.error("Choose which client this belongs to first."); return; }
+    const r = await fetch(`${BASE}api/client-profile-submissions/${s.id}/accept`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ clientName: to }) });
+    if (!r.ok) { toast.error("Could not save that one"); return; }
+    toast.success(`Saved onto ${to}.`);
+    void loadSubs(); void refreshList();
+  };
+  const dismissSub = async (s: Sub) => {
+    await fetch(`${BASE}api/client-profile-submissions/${s.id}/dismiss`, { method: "POST" });
+    void loadSubs();
+  };
   // Screenshots of the client's reviews. Their wording shapes the copy, so they are kept with the profile.
   const reviewUrls: string[] = useMemo(() => { try { const v = JSON.parse(answers.reviewImages || "[]"); return Array.isArray(v) ? v.filter((x: unknown) => typeof x === "string") : []; } catch { return []; } }, [answers.reviewImages]);
   const setReviewUrls = (urls: string[]) => setAnswers(a => ({ ...a, reviewImages: JSON.stringify(urls) }));
@@ -160,6 +184,31 @@ export default function GettingToKnowYou() {
         <div>
           <h1 className="text-2xl font-semibold">Getting to know you</h1>
           <p className="text-sm text-muted-foreground mt-1">One profile per client: a guide photo and the answers that make them who they are. Every shoot, cover, story and caption starts from this.</p>
+        </div>
+
+        <div className="rounded-xl border border-border/50 bg-muted/10 p-4 space-y-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Button onClick={copyShared} className="gap-2 bg-pink-600 hover:bg-pink-700 text-white"><Link2 className="h-4 w-4" /> Copy the one link for every client</Button>
+            <span className="text-xs text-muted-foreground">They type their clinic name and fill it in. Answers land on the matching client, or wait below for me to check.</span>
+          </div>
+          {subs.length > 0 && (
+            <div className="space-y-3 pt-2 border-t border-border/40">
+              <p className="text-sm font-medium">Waiting for you ({subs.length})</p>
+              {subs.map(s => (
+                <div key={s.id} className="rounded-lg border border-border/50 p-3 space-y-2">
+                  <p className="text-sm"><span className="font-medium">{s.typedName}</span> <span className="text-muted-foreground">sent {Object.values(s.answers).filter(v => v.trim()).length} answers{s.matchedName ? `, looks like ${s.matchedName}, who already has a profile` : ", I could not match the name"}</span></p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <select value={subPick[s.id] ?? s.matchedName ?? ""} onChange={e => setSubPick(p => ({ ...p, [s.id]: e.target.value }))} className="rounded-md border border-border bg-background px-2 py-1 text-sm">
+                      <option value="">Choose the client</option>
+                      {options.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                    <Button size="sm" onClick={() => acceptSub(s)}>Save onto them</Button>
+                    <Button size="sm" variant="ghost" onClick={() => dismissSub(s)}>Dismiss</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">
