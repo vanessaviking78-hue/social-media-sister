@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Upload, Loader2, Download, ShieldCheck, RefreshCcw, FileSpreadsheet, Images, ImageOff } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, Download, ShieldCheck, RefreshCcw, FileSpreadsheet, Images, ImageOff, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import ApprovedImagesPicker from "@/components/approved-images-picker";
+import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { usePresets } from "@/lib/use-presets";
 import Papa from "papaparse";
 import { readFileAsText, stripSlideCsvTitleRow } from "@/lib/csv-format";
@@ -110,6 +112,27 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxW: number): st
   return lines;
 }
 
+type SlotKey = "sun7pm" | "sat9am";
+const SLOT_LABEL: Record<SlotKey, string> = { sun7pm: "Sunday 7pm", sat9am: "Saturday 9am" };
+
+// The next Sunday 7pm or Saturday 9am, as a local "YYYY-MM-DDTHH:mm" string, which is the
+// format the schedule screen expects. Always in the future, never today if the time has gone.
+function nextSlotLocal(slot: SlotKey): string {
+  const day = slot === "sun7pm" ? 0 : 6;
+  const hh = slot === "sun7pm" ? 19 : 9;
+  const d = new Date();
+  d.setHours(hh, 0, 0, 0);
+  let add = (day - d.getDay() + 7) % 7;
+  if (add === 0 && d.getTime() <= Date.now() + 5 * 60000) add = 7;
+  d.setDate(d.getDate() + add);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(hh)}:00`;
+}
+
+// No em dashes or spaced en dashes in any caption.
+const noDashes = (t: string) =>
+  t.replace(/(\d)–(\d)/g, "$1-$2").replace(/\s*[—–]\s*/g, ", ").replace(/,\s*,/g, ",");
+
 export default function TweetMaker() {
   const { presets } = usePresets();
   const [clientName, setClientName] = useState("");
@@ -121,6 +144,11 @@ export default function TweetMaker() {
   const [saving, setSaving] = useState(false);
   const [savingAll, setSavingAll] = useState(false);
   const [zipping, setZipping] = useState(false);
+  const [slot, setSlot] = useState<SlotKey>("sun7pm");
+  const [scheduling, setScheduling] = useState<string | null>(null);
+  const [scheduleItems, setScheduleItems] = useState<SchedulePostPayload[] | null>(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleStart, setScheduleStart] = useState<string | undefined>(undefined);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const profileFileRef = useRef<HTMLInputElement>(null);
@@ -303,29 +331,12 @@ export default function TweetMaker() {
       ctx.fillStyle = "#0f1419";
       ctx.font = "700 32px Arial, Helvetica, sans-serif";
       const quoteMaxW = cardW - pad * 2;
-      const quoteLines = wrapText(ctx, (row.quote || "QUOTE THAT I WILL INCLUDE ON THE .CSV").toUpperCase(), quoteMaxW);
+      const quoteLines = wrapText(ctx, row.quote || "Your quote from the CSV will appear here.", quoteMaxW);
       let qy = cy + 130;
       for (const line of quoteLines) {
         ctx.fillText(line, cardX + pad, qy);
         qy += 40;
       }
-
-      // Decorative upload badge (matches the reference template)
-      const badgeY = qy + 30;
-      const badgeX = cardX + cardW / 2;
-      ctx.fillStyle = "#e0417a";
-      ctx.beginPath();
-      ctx.arc(badgeX, badgeY, 22, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 2.5;
-      ctx.beginPath();
-      ctx.moveTo(badgeX, badgeY + 8);
-      ctx.lineTo(badgeX, badgeY - 8);
-      ctx.moveTo(badgeX - 6, badgeY - 3);
-      ctx.lineTo(badgeX, badgeY - 9);
-      ctx.lineTo(badgeX + 6, badgeY - 3);
-      ctx.stroke();
 
       // Divider
       const dividerY = cardY + cardH - 82;
@@ -481,6 +492,78 @@ export default function TweetMaker() {
     }
   };
 
+  // Renders every tweet, uploads it, writes a caption for it, then opens the schedule screen with
+  // the first post on the chosen slot and one post a week on that same slot after it. Nothing is
+  // booked until the person confirms on that screen.
+  const scheduleBatch = async () => {
+    if (!rows.length) { toast.error("Load a CSV first"); return; }
+    if (!selectedPreset) { toast.error("Pick a client first so I know whose page to schedule to"); return; }
+    setScheduling("Starting");
+    try {
+      const offscreen = document.createElement("canvas");
+      const items: SchedulePostPayload[] = [];
+      for (let i = 0; i < rows.length; i++) {
+        setScheduling(`Uploading tweet ${i + 1} of ${rows.length}`);
+        render(offscreen, i);
+        const dataUrl = offscreen.toDataURL("image/png");
+        let url = "";
+        for (let attempt = 0; attempt < 3 && !url; attempt++) {
+          try {
+            const up = await fetch(`${BASE}/api/content/upload-image`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ images: [{ name: `tweet-${i + 1}-${Date.now()}.png`, base64: dataUrl }] }),
+            });
+            if (!up.ok) throw new Error("Image upload failed");
+            const { results } = await up.json() as { results: { url: string }[] };
+            url = results[0]?.url ?? "";
+            if (!url) throw new Error("No image URL returned");
+          } catch (e) {
+            if (attempt === 2) throw e;
+            await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+          }
+        }
+        setScheduling(`Writing caption ${i + 1} of ${rows.length}`);
+        let caption = "";
+        try {
+          const res = await fetch(`${BASE}/api/caption-generator/generate`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              tone: "1",
+              clinicName: selectedPreset.name,
+              context:
+                `An Instagram single image post. The image is a tweet style graphic that says: "${rows[i].quote}"\n` +
+                `Write a short, warm, funny caption that adds something the graphic does not already say. ` +
+                `Write it as the social media manager for an aesthetics clinic speaking directly to the reader, never as a clinician. ` +
+                `Make no medical claims and no promises about results. ` +
+                `Use UK spelling, no hashtags, and never use em dashes or en dashes. ` +
+                `Finish with a question that relates to the post.`,
+            }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.caption) {
+            caption = noDashes(String(data.caption));
+            const footnote = selectedPreset.captionFootnote?.trim();
+            if (footnote && !caption.includes(footnote)) caption += `\n\n${footnote}`;
+          }
+        } catch { /* falls back to the quote below, and it can be edited on the schedule screen */ }
+        items.push({
+          title: `${rows[i].quote.slice(0, 60)} · ${selectedPreset.name}`,
+          caption: caption || noDashes(rows[i].quote),
+          imageUrls: [url],
+        });
+      }
+      setScheduleStart(nextSlotLocal(slot));
+      setScheduleItems(items);
+      setScheduleOpen(true);
+    } catch (e: any) {
+      toast.error(e?.message || "Could not get the batch ready to schedule");
+    } finally {
+      setScheduling(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border/30 px-6 py-4 flex items-center gap-3">
@@ -520,6 +603,14 @@ export default function TweetMaker() {
             </div>
             <input ref={profileFileRef} type="file" accept="image/*" className="hidden"
               onChange={(e) => { if (e.target.files?.[0]) loadProfilePhoto(e.target.files[0]); e.target.value = ""; }} />
+            <ApprovedImagesPicker
+              clientName={clientName}
+              mode="single"
+              skipBackgroundRemoval
+              large
+              label="Use an approved photo as the profile photo"
+              onAddImages={(files) => { if (files[0]) loadProfilePhoto(files[0]); }}
+            />
           </section>
 
           <section className="space-y-2">
@@ -552,6 +643,14 @@ export default function TweetMaker() {
             </div>
             <input ref={bgFileRef} type="file" accept="image/*" multiple className="hidden"
               onChange={(e) => { if (e.target.files?.length) loadBgFiles(Array.from(e.target.files)); e.target.value = ""; }} />
+            <ApprovedImagesPicker
+              clientName={clientName}
+              mode="multi"
+              skipBackgroundRemoval
+              large
+              label="Use approved photos as the backgrounds"
+              onAddImages={(files) => { if (files.length) loadBgFiles(files); }}
+            />
             {rows.length > 0 && bgImages.length > 0 && bgImages.length < rows.length && (
               <p className="text-[11px] text-amber-500">{bgImages.length} photo{bgImages.length !== 1 ? "s" : ""} for {rows.length} rows, the last photo repeats for the remaining {rows.length - bgImages.length}.</p>
             )}
@@ -606,9 +705,55 @@ export default function TweetMaker() {
               </Button>
             </div>
           </div>
+          <div className="rounded-xl border border-border/30 p-3 space-y-2">
+            <p className="text-xs font-medium">Schedule to {clientName ? `${clientName}'s` : "the client's"} page</p>
+            <div className="flex gap-2">
+              {(Object.keys(SLOT_LABEL) as SlotKey[]).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setSlot(k)}
+                  className={`flex-1 rounded-lg border px-3 py-2 text-sm transition-colors ${slot === k ? "border-primary/60 bg-primary/10 text-foreground" : "border-border/30 text-muted-foreground hover:text-foreground"}`}
+                >
+                  {SLOT_LABEL[k]}
+                </button>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground">First tweet goes out on the next {SLOT_LABEL[slot]}, then one each week at the same time. You confirm the dates on the next screen before anything is booked.</p>
+            <div className="flex gap-2">
+              <Button onClick={scheduleBatch} disabled={!!scheduling || !rows.length} className="flex-1">
+                {scheduling ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{scheduling}</> : <><CalendarClock className="w-4 h-4 mr-1.5" />Schedule the batch</>}
+              </Button>
+              {scheduleItems && !scheduleOpen && (
+                <Button variant="outline" onClick={() => setScheduleOpen(true)} className="shrink-0">
+                  Reopen ({scheduleItems.length} ready)
+                </Button>
+              )}
+            </div>
+          </div>
           <p className="text-xs text-muted-foreground text-center">Portrait 1080 x 1440, ready for the grid.</p>
         </div>
       </div>
+      {scheduleOpen && scheduleItems && selectedPreset && (
+        <ScheduleModal
+          presetId={selectedPreset.id}
+          presetName={selectedPreset.name}
+          postType="single-image"
+          posts={scheduleItems}
+          perPostCaptions
+          initialScheduledAt={scheduleStart}
+          initialGapMinutes={10080}
+          keepClockTime
+          sourceTool="tweet-maker"
+          onClose={() => setScheduleOpen(false)}
+          onSaved={() => {
+            setScheduleItems(null);
+            setScheduleOpen(false);
+            toast.success(`${scheduleItems.length} tweet${scheduleItems.length !== 1 ? "s" : ""} scheduled to ${selectedPreset.name}'s page`);
+          }}
+          presets={presets.map((p) => ({ id: p.id, name: p.name }))}
+        />
+      )}
     </div>
   );
 }
