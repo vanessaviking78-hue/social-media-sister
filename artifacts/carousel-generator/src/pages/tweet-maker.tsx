@@ -30,6 +30,15 @@ type TweetRow = {
   caption: string;
 };
 
+const CONFETTI_COLOURS = ["#ec4899", "#f59e0b", "#a855f7", "#22c55e", "#3b82f6", "#facc15", "#f43f5e"];
+const CONFETTI = Array.from({ length: 70 }, (_, i) => ({
+  left: (i * 37) % 100,
+  size: 6 + ((i * 7) % 9),
+  dur: 2.8 + ((i * 13) % 20) / 10,
+  delay: ((i * 11) % 30) / 10,
+  colour: CONFETTI_COLOURS[i % CONFETTI_COLOURS.length],
+}));
+
 function loadImg(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -175,6 +184,7 @@ export default function TweetMaker() {
   const [scheduling, setScheduling] = useState<string | null>(null);
   const [scheduleItems, setScheduleItems] = useState<SchedulePostPayload[] | null>(null);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [celebrate, setCelebrate] = useState<{ count: number; client: string } | null>(null);
   const [scheduleStart, setScheduleStart] = useState<string | undefined>(undefined);
   const [scheduledSlot, setScheduledSlot] = useState<SlotKey>("sun7pm");
   const [scheduleStories, setScheduleStories] = useState<{ imageUrl: string; title: string }[] | undefined>(undefined);
@@ -933,12 +943,56 @@ export default function TweetMaker() {
           sourceTool="tweet-maker"
           onClose={() => setScheduleOpen(false)}
           onSaved={() => {
+            setCelebrate({ count: scheduleItems.length, client: selectedPreset.name });
             setScheduleItems(null);
             setScheduleOpen(false);
-            toast.success(`${scheduleItems.length} tweet${scheduleItems.length !== 1 ? "s" : ""} scheduled to ${selectedPreset.name}'s page, each with a 7am story`);
           }}
           presets={presets.map((p) => ({ id: p.id, name: p.name }))}
         />
+      )}
+      {celebrate && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm px-4"
+          onClick={() => setCelebrate(null)}
+        >
+          <style>{`
+            @keyframes tm-fall { 0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; } 100% { transform: translateY(110vh) rotate(720deg); opacity: 0.9; } }
+            @keyframes tm-pop { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
+            @keyframes tm-pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+          `}</style>
+          {CONFETTI.map((c, i) => (
+            <span
+              key={i}
+              className="pointer-events-none fixed top-0 block"
+              style={{
+                left: `${c.left}%`,
+                width: c.size,
+                height: c.size * 1.6,
+                background: c.colour,
+                borderRadius: 2,
+                animation: `tm-fall ${c.dur}s linear ${c.delay}s infinite`,
+              }}
+            />
+          ))}
+          <div
+            className="relative max-w-md w-full rounded-3xl bg-gradient-to-br from-pink-500 via-fuchsia-500 to-amber-400 p-1 shadow-2xl"
+            style={{ animation: "tm-pop 0.6s ease-out both" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="rounded-[22px] bg-background px-8 py-10 text-center space-y-4">
+              <div className="text-6xl" style={{ animation: "tm-pulse 1.4s ease-in-out infinite" }}>🎉</div>
+              <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Done and dusted</p>
+              <h2 className="text-5xl font-extrabold bg-gradient-to-r from-pink-500 to-amber-500 bg-clip-text text-transparent">
+                {celebrate.count} scheduled!
+              </h2>
+              <p className="text-base">
+                {celebrate.client} is sorted. {celebrate.count} tweet{celebrate.count !== 1 ? "s" : ""} and {celebrate.count} stor{celebrate.count !== 1 ? "ies" : "y"} lined up and waiting.
+              </p>
+              <p className="text-sm text-muted-foreground">Go and put the kettle on. You earned it.</p>
+              <Button onClick={() => setCelebrate(null)} className="w-full">Brilliant, thank you</Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
