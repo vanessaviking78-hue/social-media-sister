@@ -3635,7 +3635,10 @@ export default function Stylish() {
 
   // Gives every post a different cover option, going round all the options in turn.
   const mixCovers = () => {
-    setPosts(list => list.map((p, i) => ({ ...p, cover: ALL_COVERS[i % ALL_COVERS.length] })));
+    // A fresh shuffle each press, so every post gets a different cover and the spread changes every time.
+    const deck = [...ALL_COVERS];
+    for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
+    setPosts(list => list.map((p, i) => ({ ...p, cover: deck[i % deck.length] })));
     setCoverVersion(v => v + 1);
   };
 
