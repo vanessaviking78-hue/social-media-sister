@@ -35,8 +35,15 @@ export const EMPTY_COPY: MagazineCopy = {
   cta: { headline: "", body: "" },
 };
 
-export const SERIF = 'Georgia, "Times New Roman", serif';
-export const SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+export const DEFAULT_SERIF = 'Georgia, "Times New Roman", serif';
+export const DEFAULT_SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+// Live bindings: the page tools can swap these for any font already on the system, and every page drawn afterwards uses them.
+export let SERIF = DEFAULT_SERIF;
+export let SANS = DEFAULT_SANS;
+export function setMagazineFonts(serif?: string, sans?: string) {
+  SERIF = serif || DEFAULT_SERIF;
+  SANS = sans || DEFAULT_SANS;
+}
 export const CREAM = "#f6f0e6";
 export const INK = "#1d1a1a";
 

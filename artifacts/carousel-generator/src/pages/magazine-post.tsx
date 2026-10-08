@@ -6,7 +6,8 @@ import { MagazineIcon } from "@/components/magazine-icon";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { usePresets } from "@/lib/use-presets";
 import { loadImageFromFile } from "@/lib/advent-door";
-import { getPhotoHits, DEFAULT_ADJUST, PAGE_W, PAGE_H, type PhotoAdjust, type MagazineBrand } from "@/lib/magazine-pages";
+import { getPhotoHits, DEFAULT_ADJUST, PAGE_W, PAGE_H, setMagazineFonts, type PhotoAdjust, type MagazineBrand } from "@/lib/magazine-pages";
+import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
 import {
   EMPTY_POST_COPY,
   PAGE_NAMES,
@@ -44,6 +45,10 @@ function thumbOf(c: HTMLCanvasElement): string {
   t.getContext("2d")!.drawImage(c, 0, 0, t.width, t.height);
   return t.toDataURL("image/jpeg", 0.7);
 }
+
+const POST_COUNT = 4;
+type Draft = { treatment: string; replyWord: string; photos: Photo[]; copy: MagazinePostCopy };
+const blankDraft = (): Draft => ({ treatment: "", replyWord: "", photos: [], copy: EMPTY_POST_COPY });
 
 const STYLES = [
   { key: "1", label: "Northern grit", hint: "Straight talking, warm, dry" },
@@ -110,12 +115,27 @@ export default function MagazinePost() {
   const [contact, setContact] = useState("");
   const [qrLink, setQrLink] = useState("");
   const [qrReady, setQrReady] = useState(typeof window !== "undefined" && !!(window as any).qrcode);
-  const [treatment, setTreatment] = useState("");
-  const [replyWord, setReplyWord] = useState("");
+  // Four posts are made side by side. The client, colours, fonts and voice are shared; everything else belongs to one post.
+  const [drafts, setDrafts] = useState<Draft[]>(() => Array.from({ length: POST_COUNT }, blankDraft));
+  const [cur, setCur] = useState(0);
+  const curRef = useRef(0);
+  curRef.current = cur;
   const [style, setStyle] = useState<string | null>(null);
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  const [copy, setCopy] = useState<MagazinePostCopy>(EMPTY_POST_COPY);
+  const [serifFont, setSerifFont] = useState("");
+  const [sansFont, setSansFont] = useState("");
+  const [fontTick, setFontTick] = useState(0);
+  const [redrawTick, setRedrawTick] = useState(0);
   const [writing, setWriting] = useState(false);
+  const { treatment, replyWord, photos, copy } = drafts[cur];
+  function patchDraft(i: number, fn: (d: Draft) => Draft) {
+    setDrafts((prev) => prev.map((x, j) => (j === i ? fn(x) : x)));
+  }
+  const setTreatment = (v: string) => patchDraft(curRef.current, (x) => ({ ...x, treatment: v }));
+  const setReplyWord = (v: string) => patchDraft(curRef.current, (x) => ({ ...x, replyWord: v }));
+  const setPhotos = (u: Photo[] | ((prev: Photo[]) => Photo[])) =>
+    patchDraft(curRef.current, (x) => ({ ...x, photos: typeof u === "function" ? u(x.photos) : u }));
+  const setCopy = (u: MagazinePostCopy | ((prev: MagazinePostCopy) => MagazinePostCopy)) =>
+    patchDraft(curRef.current, (x) => ({ ...x, copy: typeof u === "function" ? u(x.copy) : u }));
   const [preparing, setPreparing] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [schedulePosts, setSchedulePosts] = useState<SchedulePostPayload[]>([]);
@@ -125,6 +145,15 @@ export default function MagazinePost() {
   const pagesRef = useRef<HTMLCanvasElement[]>([]);
   const bigRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<{ slot: number; x: number; y: number; inv: DOMMatrix; slackX: number; slackY: number } | null>(null);
+
+  useEffect(() => { loadGoogleFonts(); }, []);
+
+  // Picking a font waits for it to arrive, then redraws the pages in it.
+  function chooseFont(which: "serif" | "sans", value: string) {
+    if (which === "serif") setSerifFont(value); else setSansFont(value);
+    if (!value) { setFontTick((t) => t + 1); return; }
+    Promise.allSettled([400, 600, 700, 800].map((w) => document.fonts.load(`${w} 40px ${value}`))).then(() => setFontTick((t) => t + 1));
+  }
 
   // The QR encoder loads from jsDelivr once; pages redraw when it arrives.
   useEffect(() => {
@@ -200,17 +229,23 @@ export default function MagazinePost() {
     setSelected(null);
   }
 
+  // All five pages of one post, drawn in the chosen fonts.
+  function pagesForDraft(dd: Draft): HTMLCanvasElement[] {
+    setMagazineFonts(serifFont, sansFont);
+    const canvases: (CanvasImageSource | null)[] = dd.photos.map((p) => p.canvas);
+    while (canvases.length < MIN_PHOTOS) canvases.push(null);
+    const drawCopy: MagazinePostCopy = {
+      ...dd.copy,
+      cover: { ...dd.copy.cover, title: dd.copy.cover.title || dd.treatment.trim() },
+      cta: { ...dd.copy.cta, word: dd.copy.cta.word || dd.replyWord.trim() },
+    };
+    return drawAllPostPages(brand, drawCopy, canvases, dd.photos.map((p) => p.adjust));
+  }
+
   // Redraw the five pages a moment after anything changes.
   useEffect(() => {
     const id = setTimeout(() => {
-      const canvases: (CanvasImageSource | null)[] = photos.map((p) => p.canvas);
-      while (canvases.length < MIN_PHOTOS) canvases.push(null);
-      const drawCopy: MagazinePostCopy = {
-        ...copy,
-        cover: { ...copy.cover, title: copy.cover.title || treatment.trim() },
-        cta: { ...copy.cta, word: copy.cta.word || replyWord.trim() },
-      };
-      const pages = drawAllPostPages(brand, drawCopy, canvases, photos.map((p) => p.adjust));
+      const pages = pagesForDraft(drafts[cur]);
       pagesRef.current = pages;
       const big = bigRef.current;
       if (big && pages[activePage]) {
@@ -228,7 +263,7 @@ export default function MagazinePost() {
     }, 30);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clinicName, colour, accent, contact, qrLink, qrReady, copy, photos, activePage, treatment, replyWord]);
+  }, [clinicName, colour, accent, contact, qrLink, qrReady, drafts, cur, activePage, serifFont, sansFont, fontTick, redrawTick]);
 
   function hitAt(e: { clientX: number; clientY: number }) {
     const big = bigRef.current;
@@ -250,6 +285,13 @@ export default function MagazinePost() {
     if (!hit) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     setSelected(hit.h.slot);
+    // A photo that already fills its frame exactly has nowhere to go, so it zooms in a touch and can then be dragged.
+    const ph = photos[hit.h.slot];
+    if (ph && hit.h.slackX <= 0 && hit.h.slackY <= 0 && ph.adjust.zoom <= 1) {
+      updateAdjust(hit.h.slot, (a) => ({ ...a, zoom: 1.2 }));
+      toast.message("Zoomed in a little so this photo can move. Drag again.");
+      return;
+    }
     dragRef.current = { slot: hit.h.slot, x: hit.px, y: hit.py, inv: hit.h.inv, slackX: hit.h.slackX, slackY: hit.h.slackY };
   }
 
@@ -299,32 +341,46 @@ export default function MagazinePost() {
     return () => el.removeEventListener("wheel", fn);
   }, []);
 
-  async function writeCopy() {
-    if (!treatment.trim()) {
-      toast.error("Add the treatment first");
-      return;
-    }
-    if (!replyWord.trim()) {
-      toast.error("Add the reply word first, the one people comment");
-      return;
-    }
-    if (!style) {
-      toast.error("Pick a voice first");
-      return;
-    }
-    setWriting(true);
+  // Writes the pages for one post. Returns true when it worked.
+  async function writeOne(i: number): Promise<boolean> {
+    const dd = drafts[i];
+    if (!dd.treatment.trim()) { toast.error(`Post ${i + 1}: add the treatment first`); return false; }
+    if (!dd.replyWord.trim()) { toast.error(`Post ${i + 1}: add the reply word first, the one people comment`); return false; }
+    if (!style) { toast.error("Pick a voice first"); return false; }
     try {
       const r = await fetch(`${BASE}/api/magazine-post/copy`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clinicName: clinicName.trim(), treatment: treatment.trim(), replyWord: replyWord.trim(), style }),
+        body: JSON.stringify({ clinicName: clinicName.trim(), treatment: dd.treatment.trim(), replyWord: dd.replyWord.trim(), style }),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || "The copy would not write, try again");
-      setCopy(data as MagazinePostCopy);
-      toast.success("Written. Have a read and change anything you like");
+      patchDraft(i, (x) => ({ ...x, copy: data as MagazinePostCopy }));
+      return true;
     } catch (e: any) {
-      toast.error(e?.message || "The copy would not write, try again");
+      toast.error(`Post ${i + 1}: ${e?.message || "The copy would not write, try again"}`);
+      return false;
+    }
+  }
+
+  async function writeCopy() {
+    setWriting(true);
+    try {
+      if (await writeOne(cur)) toast.success("Written. Have a read and change anything you like");
+    } finally {
+      setWriting(false);
+    }
+  }
+
+  async function writeAll() {
+    if (!style) { toast.error("Pick a voice first"); return; }
+    const todo = drafts.map((x, i) => i).filter((i) => drafts[i].treatment.trim() && drafts[i].replyWord.trim());
+    if (!todo.length) { toast.error("Add a treatment and reply word to at least one post first"); return; }
+    setWriting(true);
+    try {
+      const results = await Promise.all(todo.map((i) => writeOne(i)));
+      const ok = results.filter(Boolean).length;
+      if (ok) toast.success(`${ok} ${ok === 1 ? "post" : "posts"} written. Have a read and change anything you like`);
     } finally {
       setWriting(false);
     }
@@ -361,44 +417,57 @@ export default function MagazinePost() {
   const hasCopy = !!copy.cover.title && !!copy.pages[0].headline;
   const enoughPhotos = photos.length >= MIN_PHOTOS;
 
-  function slugName() {
-    return (treatment.trim() || "magazine-post").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  function slugOf(dd: Draft, i: number) {
+    const base = (dd.treatment.trim() || "magazine-post").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    return `${i + 1}-${base}`;
   }
 
+  // Why a post is not ready yet, or an empty string when it is.
+  function problemWith(dd: Draft): string {
+    if (dd.photos.length < MIN_PHOTOS) return `needs at least ${MIN_PHOTOS} photos`;
+    if (!(dd.copy.cover.title && dd.copy.pages[0].headline)) return "needs its pages written";
+    if (fields.flatMap((f) => scanText(getAt(dd.copy, f.path), f.where, f.path)).some(isBlocking)) return "has compliance flags to sort out";
+    return "";
+  }
+  const readyIdx = drafts.map((dd, i) => i).filter((i) => !problemWith(drafts[i]));
+
   function guardReady(): boolean {
-    if (!enoughPhotos) {
-      toast.error(`Add at least ${MIN_PHOTOS} photos first`);
-      return false;
-    }
-    if (!hasCopy) {
-      toast.error("Write the pages first");
-      return false;
-    }
-    if (blocking.length) {
-      toast.error("There are compliance flags to sort out first, they're listed under the pages");
+    const why = problemWith(drafts[cur]);
+    if (why) {
+      toast.error(`Post ${cur + 1} ${why}`);
       return false;
     }
     return true;
   }
 
+  async function saveCanvas(c: HTMLCanvasElement, name: string) {
+    const blob: Blob | null = await new Promise((res) => c.toBlob(res, "image/png"));
+    if (!blob) return;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    await new Promise((r) => setTimeout(r, 350));
+  }
+
+  async function downloadPosts(indices: number[]) {
+    if (!indices.length) { toast.error("Nothing is ready yet"); return; }
+    for (const i of indices) {
+      const pages = pagesForDraft(drafts[i]);
+      const slug = slugOf(drafts[i], i);
+      for (let k = 0; k < pages.length; k++) await saveCanvas(pages[k], `${slug}-${k + 1}-${PAGE_NAMES[k]}.png`);
+    }
+    setRedrawTick((t) => t + 1);
+    toast.success(`${indices.length * 5} pages downloaded, in order`);
+  }
+
   async function downloadAll() {
     if (!guardReady()) return;
-    const pages = pagesRef.current;
-    const slug = slugName();
-    for (let i = 0; i < pages.length; i++) {
-      const blob: Blob | null = await new Promise((res) => pages[i].toBlob(res, "image/png"));
-      if (!blob) continue;
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${slug}-${i + 1}-${PAGE_NAMES[i]}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
-      await new Promise((r) => setTimeout(r, 350));
-    }
-    toast.success("5 pages downloaded, in order");
+    await downloadPosts([cur]);
   }
 
   async function uploadPage(canvas: HTMLCanvasElement, name: string): Promise<string> {
@@ -418,32 +487,41 @@ export default function MagazinePost() {
     return url;
   }
 
-  async function scheduleToClient() {
-    if (!guardReady()) return;
+  async function scheduleDrafts(indices: number[]) {
+    if (!indices.length) { toast.error("Nothing is ready yet"); return; }
     if (presetId === null) {
       toast.error("Choose the client first");
       return;
     }
     setPreparing(true);
-    const tid = toast.loading("Getting the 5 pages ready");
+    const tid = toast.loading("Getting the pages ready");
     try {
-      const pages = pagesRef.current;
-      const slug = slugName();
-      const urls: string[] = [];
-      for (let i = 0; i < pages.length; i++) {
-        toast.loading(`Uploading page ${i + 1} of ${pages.length}`, { id: tid });
-        urls.push(await uploadPage(pages[i], `${slug}-${i + 1}-${PAGE_NAMES[i]}-${Date.now()}.jpg`));
+      const out: SchedulePostPayload[] = [];
+      for (const i of indices) {
+        const dd = drafts[i];
+        const pages = pagesForDraft(dd);
+        const slug = slugOf(dd, i);
+        const urls: string[] = [];
+        for (let k = 0; k < pages.length; k++) {
+          toast.loading(`Post ${i + 1}: uploading page ${k + 1} of ${pages.length}`, { id: tid });
+          urls.push(await uploadPage(pages[k], `${slug}-${k + 1}-${PAGE_NAMES[k]}-${Date.now()}.jpg`));
+        }
+        out.push({ title: `${dd.treatment.trim()} magazine post`, caption: dd.copy.caption, imageUrls: urls, sourceTool: "Magazine Post" });
       }
       toast.dismiss(tid);
-      setSchedulePosts([
-        { title: `${treatment.trim()} magazine post`, caption: copy.caption, imageUrls: urls, sourceTool: "Magazine Post" },
-      ]);
+      setSchedulePosts(out);
       setScheduleOpen(true);
     } catch (e: any) {
       toast.error(e?.message || "Couldn't prepare the pages", { id: tid });
     } finally {
+      setRedrawTick((t) => t + 1);
       setPreparing(false);
     }
+  }
+
+  async function scheduleToClient() {
+    if (!guardReady()) return;
+    await scheduleDrafts([cur]);
   }
 
   const set = (path: string) => (v: string) => setCopy((c) => setAt(c, path, v));
@@ -463,7 +541,7 @@ export default function MagazinePost() {
               <MagazineIcon className="w-6 h-6 text-fuchsia-400" /> Magazine Post
             </h1>
             <p className="text-zinc-400 text-sm mt-0.5">
-              Add 5 to 10 photos and a treatment. The treatment becomes the title, then come a page of fun facts, a page headed This is for you if, a page headed Helps most with, and the last page is a full photo asking people to comment your reply word.
+              Make up to 4 posts at once. For each one add 5 to 10 photos and a treatment. The treatment becomes the title, then come a page of fun facts, a page headed This is for you if, a page headed Helps most with, and the last page is a full photo asking people to comment your reply word.
             </p>
           </div>
         </div>
@@ -504,11 +582,62 @@ export default function MagazinePost() {
               {qrLink.trim() && !normaliseQrUrl(qrLink) && (
                 <p className="text-[11px] text-amber-300">That doesn't look like a web link, so no QR code will show. Try something like www.yourclinic.co.uk/book</p>
               )}
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="block text-[11px] uppercase tracking-widest text-zinc-500 mb-1">Headline font</span>
+                  <select
+                    value={serifFont}
+                    onChange={(e) => chooseFont("serif", e.target.value)}
+                    className="w-full rounded-lg bg-zinc-900 border border-zinc-800 focus:border-fuchsia-500 outline-none px-3 py-2 text-sm text-white"
+                  >
+                    <option value="">Standard</option>
+                    {FONT_OPTIONS.map((f) => (
+                      <option key={f.label} value={f.value}>{f.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="block text-[11px] uppercase tracking-widest text-zinc-500 mb-1">Small text font</span>
+                  <select
+                    value={sansFont}
+                    onChange={(e) => chooseFont("sans", e.target.value)}
+                    className="w-full rounded-lg bg-zinc-900 border border-zinc-800 focus:border-fuchsia-500 outline-none px-3 py-2 text-sm text-white"
+                  >
+                    <option value="">Standard</option>
+                    {FONT_OPTIONS.map((f) => (
+                      <option key={f.label} value={f.value}>{f.label}</option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <p className="text-[11px] text-zinc-500">Fonts apply to all 4 posts.</p>
+            </section>
+
+            <section className="space-y-3">
+              <p className="text-xs uppercase tracking-widest text-zinc-500">Your 4 posts</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {drafts.map((dd, i) => {
+                  const why = problemWith(dd);
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => { setCur(i); setSelected(null); }}
+                      aria-pressed={cur === i}
+                      className={`text-left rounded-xl border px-3 py-2 transition-colors ${cur === i ? "border-fuchsia-500 bg-fuchsia-500/10" : "border-zinc-800 bg-zinc-900 hover:border-fuchsia-500/50"}`}
+                    >
+                      <span className="block text-sm font-semibold">Post {i + 1}</span>
+                      <span className="block text-[11px] text-zinc-400 truncate">{dd.treatment.trim() || "Empty"}</span>
+                      <span className={`block text-[10px] mt-0.5 ${why ? "text-zinc-500" : "text-emerald-400"}`}>{why ? (dd.photos.length ? why : "no photos yet") : "Ready"}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </section>
 
             <section className="space-y-3">
               <p className="text-xs uppercase tracking-widest text-zinc-500">
-                2. Photos ({photos.length} of {MAX_PHOTOS}, at least {MIN_PHOTOS})
+                2. Photos for post {cur + 1} ({photos.length} of {MAX_PHOTOS}, at least {MIN_PHOTOS})
               </p>
               {photos.length < MAX_PHOTOS && (
                 <label
@@ -605,7 +734,7 @@ export default function MagazinePost() {
             </section>
 
             <section className="space-y-3">
-              <p className="text-xs uppercase tracking-widest text-zinc-500">3. The treatment and reply word</p>
+              <p className="text-xs uppercase tracking-widest text-zinc-500">3. The treatment and reply word for post {cur + 1}</p>
               <Field label="Treatment (becomes the magazine title)" value={treatment} onChange={setTreatment} placeholder="e.g. Polynucleotides" />
               <Field label="Reply word people comment" value={replyWord} onChange={setReplyWord} placeholder="e.g. GLOW" />
             </section>
@@ -638,9 +767,16 @@ export default function MagazinePost() {
                   </>
                 ) : (
                   <>
-                    <Sparkles size={16} /> {hasCopy ? "Write it again" : "Write my pages"}
+                    <Sparkles size={16} /> {copy.cover.title && copy.pages[0].headline ? `Write post ${cur + 1} again` : `Write post ${cur + 1}`}
                   </>
                 )}
+              </button>
+              <button
+                onClick={writeAll}
+                disabled={writing}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-pink-600 hover:bg-pink-500 text-white text-sm font-semibold disabled:opacity-50"
+              >
+                <Sparkles size={16} /> Write all 4 posts at once
               </button>
             </section>
           </div>
@@ -701,7 +837,7 @@ export default function MagazinePost() {
             </div>
 
             <div>
-              <p className="text-xs uppercase tracking-widest text-zinc-500 mb-2">Your 5 pages</p>
+              <p className="text-xs uppercase tracking-widest text-zinc-500 mb-2">Your 5 pages for post {cur + 1}</p>
               <div className="grid grid-cols-5 gap-2">
                 {PAGE_NAMES.map((name, i) => (
                   <canvas
@@ -747,13 +883,27 @@ export default function MagazinePost() {
                   className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-sm font-semibold disabled:opacity-50"
                 >
                   {preparing ? <Loader2 size={15} className="animate-spin" /> : <CalendarClock size={15} />}
-                  {selectedClient ? `Schedule to ${selectedClient.name}` : "Schedule to a client"}
+                  {selectedClient ? `Schedule post ${cur + 1} to ${selectedClient.name}` : `Schedule post ${cur + 1} to a client`}
                 </button>
                 <button
                   onClick={downloadAll}
                   className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-100 hover:text-white text-sm font-semibold"
                 >
-                  <Download size={15} /> Download all 5 pages
+                  <Download size={15} /> Download post {cur + 1} (5 pages)
+                </button>
+                <button
+                  onClick={() => scheduleDrafts(readyIdx)}
+                  disabled={preparing || !readyIdx.length}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-pink-600 hover:bg-pink-500 text-white text-sm font-semibold disabled:opacity-50"
+                >
+                  <CalendarClock size={15} /> Schedule all ready ({readyIdx.length})
+                </button>
+                <button
+                  onClick={() => downloadPosts(readyIdx)}
+                  disabled={!readyIdx.length}
+                  className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-100 hover:text-white text-sm font-semibold disabled:opacity-50"
+                >
+                  <Download size={15} /> Download all ready ({readyIdx.length})
                 </button>
               </div>
               <p className="text-[11px] text-zinc-500 mt-1.5">
