@@ -513,7 +513,7 @@ const COVER_ORDER: CoverLayout[] = ["centred", "fullbleed", "blur", "strip"];
 
 // The "October 26" set. Each look is named by its number on the Pinterest board.
 // No. 1 (newspaper over the face) and No. 3 (poster on the pavement) were removed; their drawing code is left in place but they are no longer offered.
-const OCT_ORDER: CoverLayout[] = ["oct2", "oct4", "oct6", "oct8", "oct11", "oct12", "oct13", "oct15", "oct17", "oct18"];
+const OCT_ORDER: CoverLayout[] = ["oct2", "oct4", "oct6", "oct11", "oct12", "oct13", "oct15", "oct17", "oct18"];
 const OCT_LAYOUTS = new Set<CoverLayout>(OCT_ORDER);
 // Every cover on offer, one after the other. New posts take these in turn so nobody has to pick, and any post can still be changed by hand.
 const ALL_COVERS: CoverLayout[] = [...COVER_ORDER, ...OCT_ORDER];
@@ -3203,7 +3203,7 @@ export default function Stylish() {
     if (!octoberRef.current || !posts.length || pendingClient) return;
     const o = octoberRef.current;
     octoberRef.current = null;
-    const order: CoverLayout[] = ["oct13", "oct6", "oct18", "oct17", "oct4", "oct8", "oct12", "oct11"];
+    const order: CoverLayout[] = ["oct13", "oct6", "oct18", "oct17", "oct4", "oct12", "oct11"];
     setPosts(l => l.map((p, i) => ({ ...p, cover: order[i % order.length], coverSpot: o.spot && /^#?[0-9a-f]{6}$/i.test(o.spot) ? (o.spot.startsWith("#") ? o.spot : `#${o.spot}`) : p.coverSpot })));
     toast.success("October 26 covers added, one per post. Change any of them from that post's cover options.");
     // eslint-disable-next-line react-hooks/exhaustive-deps
