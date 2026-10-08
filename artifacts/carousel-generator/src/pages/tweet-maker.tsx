@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Upload, Loader2, Download, ShieldCheck, RefreshCcw, FileSpreadsheet, Images, ImageOff, CalendarClock } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, Download, ShieldCheck, RefreshCcw, FileSpreadsheet, Images, ImageOff, CalendarClock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
@@ -22,6 +23,11 @@ type TweetRow = {
   quote: string;
   bgUrl: string;
   stats: { comments: number; likes: number; shares: number };
+  /** Where the card has been dragged to, in canvas pixels away from its default spot. */
+  dx: number;
+  dy: number;
+  /** The Instagram caption for this tweet, written on the caption step and editable. */
+  caption: string;
 };
 
 function loadImg(src: string): Promise<HTMLImageElement> {
@@ -135,6 +141,19 @@ function nextSlotLocal(slot: SlotKey): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:00`;
 }
 
+// The different asks the captions rotate through. Each one is a tag or a share, phrased so it
+// feels like a friend nudging a friend rather than a robot asking for engagement.
+const CTA_ASKS = [
+  "tag the friend who would say this exact thing",
+  "send this to the one person who will relate the most",
+  "share it with someone who needs a laugh today",
+  "tag your partner in crime, the one who has lived through this with you",
+  "tag the group chat legend who is always the first to understand",
+  "share it to your story and tag whoever sprang to mind",
+  "tag a woman who is doing all of this and still looks incredible",
+  "send it to the friend who always gets it, and tell them why you thought of them",
+];
+
 // No em dashes or spaced en dashes in any caption.
 const noDashes = (t: string) =>
   t.replace(/(\d)–(\d)/g, "$1-$2").replace(/\s*[—–]\s*/g, ", ").replace(/,\s*,/g, ",");
@@ -200,6 +219,9 @@ export default function TweetMaker() {
               quote: (cols[2] ?? "").trim(),
               bgUrl: "",
               stats: randomStats(),
+              dx: 0,
+              dy: 0,
+              caption: "",
             };
           })
           .filter((r) => r.name || r.quote);
@@ -256,6 +278,8 @@ export default function TweetMaker() {
     }
 
     if (row) {
+      ctx.save();
+      ctx.translate(row.dx || 0, row.dy || 0);
       // Card
       const cardX = W * 0.09;
       const cardW = W * 0.82;
@@ -376,6 +400,7 @@ export default function TweetMaker() {
       const rtX = cardX + pad + 370;
       drawRetweetIcon(ctx, rtX, statsY, 26);
       ctx.fillText(formatCount(row.stats.shares), rtX + 28, statsY + 8);
+      ctx.restore();
     }
 
     // Clinic logo, pulled from the preset, same placement convention as the
@@ -403,6 +428,111 @@ export default function TweetMaker() {
   const shuffleStats = () => {
     setRows((prev) => prev.map((r, i) => (i === selectedIndex ? { ...r, stats: randomStats() } : r)));
   };
+
+  // ---- Dragging the tweet card on the preview ----
+  // The card sits at a fixed default spot. Dragging it changes this tweet's offset, which the
+  // renderer applies to the post and to its story, so what you see is what gets posted.
+  const CARD = { x: W * 0.09, w: W * 0.82, y: H * 0.235, h: H * 0.45 };
+  const dragRef = useRef<{ startX: number; startY: number; baseDx: number; baseDy: number } | null>(null);
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+  const canvasPoint = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    const scale = W / r.width;
+    return { x: (e.clientX - r.left) * scale, y: (e.clientY - r.top) * scale };
+  };
+  const overCard = (pt: { x: number; y: number }, row: TweetRow) =>
+    pt.x >= CARD.x + row.dx && pt.x <= CARD.x + row.dx + CARD.w && pt.y >= CARD.y + row.dy && pt.y <= CARD.y + row.dy + CARD.h;
+  const onCardPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const row = rows[selectedIndex];
+    if (!row) return;
+    const pt = canvasPoint(e);
+    if (!overCard(pt, row)) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.currentTarget.style.cursor = "grabbing";
+    dragRef.current = { startX: pt.x, startY: pt.y, baseDx: row.dx, baseDy: row.dy };
+  };
+  const onCardPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    const pt = canvasPoint(e);
+    const d = dragRef.current;
+    if (!d) {
+      const row = rows[selectedIndex];
+      e.currentTarget.style.cursor = row && overCard(pt, row) ? "grab" : "default";
+      return;
+    }
+    const dx = clamp(d.baseDx + pt.x - d.startX, -CARD.x, W - CARD.x - CARD.w);
+    const dy = clamp(d.baseDy + pt.y - d.startY, -CARD.y, H - CARD.y - CARD.h);
+    setRows((prev) => prev.map((r, i) => (i === selectedIndex ? { ...r, dx, dy } : r)));
+  };
+  const onCardPointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    dragRef.current = null;
+    e.currentTarget.style.cursor = "grab";
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+  const resetPosition = () => setRows((prev) => prev.map((r, i) => (i === selectedIndex ? { ...r, dx: 0, dy: 0 } : r)));
+  const applyPositionToAll = () => {
+    const src = rows[selectedIndex];
+    if (!src) return;
+    setRows((prev) => prev.map((r) => ({ ...r, dx: src.dx, dy: src.dy })));
+    toast.success("Card position copied to every tweet");
+  };
+
+  // ---- Captions, written before anything is scheduled ----
+  const [captioning, setCaptioning] = useState<string | null>(null);
+  const captionFor = async (quote: string, askIndex: number): Promise<string> => {
+    if (!selectedPreset) throw new Error("Pick a client first");
+    // A different way of asking for the tag or the share on each tweet, so a run of posts never repeats itself.
+    const ask = CTA_ASKS[((askIndex % CTA_ASKS.length) + CTA_ASKS.length) % CTA_ASKS.length];
+    const res = await fetch(`${BASE}/api/caption-generator/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tone: "1",
+        clinicName: selectedPreset.name,
+        context:
+          `An Instagram single image post. The image is a tweet style graphic that says: "${quote}"\n` +
+          `Write a short, warm, funny caption that adds something the graphic does not already say. ` +
+          `Write it as the social media manager for an aesthetics clinic speaking directly to the reader, never as a clinician. ` +
+          `Make no medical claims and no promises about results. ` +
+          `Use UK spelling, no hashtags, and never use em dashes or en dashes. ` +
+          `The caption needs one strong, friendly call to action that gets the reader to tag or share, worded in your own natural way along these lines: ${ask}. ` +
+          `Make that call to action the heart of the caption, not an afterthought, and do not copy the wording above word for word. ` +
+          `Finish the whole caption with one question that relates to the post.`,
+      }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.caption) throw new Error(data.error || "Caption generation failed");
+    let caption = noDashes(String(data.caption));
+    const footnote = selectedPreset.captionFootnote?.trim();
+    if (footnote && !caption.includes(footnote)) caption += `\n\n${footnote}`;
+    return caption;
+  };
+  const setCaption = (index: number, caption: string) =>
+    setRows((prev) => prev.map((r, i) => (i === index ? { ...r, caption } : r)));
+  // Fills in every tweet that has no caption yet, so anything already written or edited is left alone.
+  const generateAllCaptions = async () => {
+    if (!selectedPreset) { toast.error("Pick a client first so the captions are written in their name"); return; }
+    const todo = rows.map((r, i) => ({ r, i })).filter(({ r }) => !r.caption.trim());
+    if (!todo.length) { toast.success("Every tweet already has a caption"); return; }
+    let done = 0;
+    let failed = 0;
+    for (const { r, i } of todo) {
+      setCaptioning(`Writing caption ${done + failed + 1} of ${todo.length}`);
+      try { setCaption(i, await captionFor(r.quote, i)); done++; } catch { failed++; }
+    }
+    setCaptioning(null);
+    if (failed) toast.error(`${failed} caption${failed !== 1 ? "s" : ""} did not come through. Press Generate captions again to retry them.`);
+    else toast.success(`${done} caption${done !== 1 ? "s" : ""} written. Have a read, you can edit any of them.`);
+  };
+  const rewriteCaption = async () => {
+    const row = rows[selectedIndex];
+    if (!row) return;
+    setCaptioning("Rewriting");
+    try { setCaption(selectedIndex, await captionFor(row.quote, selectedIndex + 1 + Math.floor(Math.random() * CTA_ASKS.length))); }
+    catch (e: any) { toast.error(e?.message || "Could not rewrite that caption"); }
+    finally { setCaptioning(null); }
+  };
+  const captionsReady = rows.filter((r) => r.caption.trim()).length;
+  const allCaptioned = rows.length > 0 && captionsReady === rows.length;
 
   const canvasToBlob = (canvas: HTMLCanvasElement): Promise<Blob> =>
     new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/png"));
@@ -511,6 +641,8 @@ export default function TweetMaker() {
   const scheduleBatch = async () => {
     if (!rows.length) { toast.error("Load a CSV first"); return; }
     if (!selectedPreset) { toast.error("Pick a client first so I know whose page to schedule to"); return; }
+    const missing = rows.findIndex((r) => !r.caption.trim());
+    if (missing !== -1) { toast.error(`Tweet ${missing + 1} needs a caption first. Press Generate captions above.`); return; }
     setScheduling("Starting");
     try {
       const offscreen = document.createElement("canvas");
@@ -545,33 +677,8 @@ export default function TweetMaker() {
         setScheduling(`Making story ${i + 1} of ${rows.length}`);
         render(offscreen, i, STORY_H);
         const storyUrl = await uploadPng(offscreen.toDataURL("image/png"), `tweet-${i + 1}-story-${Date.now()}.png`);
-        setScheduling(`Writing caption ${i + 1} of ${rows.length}`);
-        let caption = "";
-        try {
-          const res = await fetch(`${BASE}/api/caption-generator/generate`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              tone: "1",
-              clinicName: selectedPreset.name,
-              context:
-                `An Instagram single image post. The image is a tweet style graphic that says: "${rows[i].quote}"\n` +
-                `Write a short, warm, funny caption that adds something the graphic does not already say. ` +
-                `Write it as the social media manager for an aesthetics clinic speaking directly to the reader, never as a clinician. ` +
-                `Make no medical claims and no promises about results. ` +
-                `Use UK spelling, no hashtags, and never use em dashes or en dashes. ` +
-                `Finish with a question that relates to the post.`,
-            }),
-          });
-          const data = await res.json().catch(() => ({}));
-          if (res.ok && data.caption) {
-            caption = noDashes(String(data.caption));
-            const footnote = selectedPreset.captionFootnote?.trim();
-            if (footnote && !caption.includes(footnote)) caption += `\n\n${footnote}`;
-          }
-        } catch { /* falls back to the quote below, and it can be edited on the schedule screen */ }
         const title = `${rows[i].quote.slice(0, 60)} · ${selectedPreset.name}`;
-        items.push({ title, caption: caption || noDashes(rows[i].quote), imageUrls: [url] });
+        items.push({ title, caption: rows[i].caption.trim(), imageUrls: [url] });
         stories.push({ imageUrl: storyUrl, title });
       }
       setScheduleStories(stories);
@@ -702,7 +809,24 @@ export default function TweetMaker() {
             </div>
           ) : (
             <div className="rounded-xl overflow-hidden border border-border/30 bg-black/20">
-              <canvas ref={canvasRef} className="w-full block" style={{ aspectRatio: "3 / 4" }} />
+              <canvas
+                ref={canvasRef}
+                className="w-full block"
+                style={{ aspectRatio: "3 / 4", touchAction: "none", cursor: "grab" }}
+                onPointerDown={onCardPointerDown}
+                onPointerMove={onCardPointerMove}
+                onPointerUp={onCardPointerUp}
+                onPointerCancel={onCardPointerUp}
+              />
+            </div>
+          )}
+          {rows.length > 0 && (
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-[11px] text-muted-foreground">Drag the tweet to move it. The story follows the same spot.</p>
+              <div className="flex gap-3 shrink-0">
+                <button type="button" onClick={resetPosition} className="text-[11px] text-muted-foreground underline hover:text-foreground">Reset</button>
+                <button type="button" onClick={applyPositionToAll} className="text-[11px] text-muted-foreground underline hover:text-foreground">Use this position for all</button>
+              </div>
             </div>
           )}
           <div className="flex gap-2">
@@ -728,6 +852,34 @@ export default function TweetMaker() {
             </div>
           </div>
           <div className="rounded-xl border border-border/30 p-3 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-medium">Captions</p>
+              <p className="text-[11px] text-muted-foreground">{captionsReady} of {rows.length} ready</p>
+            </div>
+            <Button onClick={generateAllCaptions} disabled={!!captioning || !rows.length || !selectedPreset} className="w-full">
+              {captioning ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{captioning}</> : <><Sparkles className="w-4 h-4 mr-1.5" />Generate captions</>}
+            </Button>
+            <p className="text-[11px] text-muted-foreground">Each caption asks readers to tag or share, worded differently every time, and ends with a question.</p>
+            {!selectedPreset && rows.length > 0 && (
+              <p className="text-[11px] text-amber-500">Pick a client in step 1 so the captions are written in their name.</p>
+            )}
+            {rows[selectedIndex] && (
+              <div className="space-y-1.5">
+                <p className="text-[11px] text-muted-foreground">Caption for the tweet you are previewing. Edit it however you like.</p>
+                <Textarea
+                  value={rows[selectedIndex].caption}
+                  onChange={(e) => setCaption(selectedIndex, e.target.value)}
+                  placeholder="Press Generate captions, or write your own here."
+                  rows={6}
+                  className="text-sm"
+                />
+                <button type="button" onClick={rewriteCaption} disabled={!!captioning || !selectedPreset} className="text-[11px] text-muted-foreground underline hover:text-foreground disabled:opacity-50">
+                  Rewrite this one
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="rounded-xl border border-border/30 p-3 space-y-2">
             <p className="text-xs font-medium">Schedule to {clientName ? `${clientName}'s` : "the client's"} page</p>
             <div className="grid grid-cols-3 gap-2">
               {(Object.keys(SLOT_LABEL) as SlotKey[]).map((k) => (
@@ -747,8 +899,11 @@ export default function TweetMaker() {
                 : `First tweet goes out on the next ${SLOT_LABEL[slot]}, then one each week at the same time.`}{" "}
               Every tweet also goes out as a story at 7am that day. You confirm the dates on the next screen before anything is booked.
             </p>
+            {rows.length > 0 && !allCaptioned && (
+              <p className="text-[11px] text-amber-500">Generate the captions above first. Scheduling opens once every tweet has one.</p>
+            )}
             <div className="flex gap-2">
-              <Button onClick={scheduleBatch} disabled={!!scheduling || !rows.length} className="flex-1">
+              <Button onClick={scheduleBatch} disabled={!!scheduling || !allCaptioned} className="flex-1">
                 {scheduling ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{scheduling}</> : <><CalendarClock className="w-4 h-4 mr-1.5" />Schedule the batch</>}
               </Button>
               {scheduleItems && !scheduleOpen && (
