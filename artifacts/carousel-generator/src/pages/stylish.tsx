@@ -371,7 +371,7 @@ const LOOK_BOTTOM: Partial<Style> = {
 };
 
 const DEFAULT_STYLE: Style = {
-  ...COVER_PRESETS.band,
+  ...COVER_PRESETS.centred,
   ...LOOK_EDITORIAL,
   ...LOOK_BOTTOM,
   plainFont: "'Cormorant Garamond', serif",
@@ -504,12 +504,14 @@ function buildSlides(texts: string[]): SlideSpec[] {
 }
 
 // Block, serif, diagonal, behind 2, polaroid and layered were retired. Their drawing code is left in place, but they are no longer offered.
-const COVER_ORDER: CoverLayout[] = ["band", "centred", "split", "plain", "behind", "fullbleed", "blur", "strip", "sidebar", "frame"];
+const COVER_ORDER: CoverLayout[] = ["centred", "fullbleed", "blur", "strip"];
 
 // The "October 26" set. Each look is named by its number on the Pinterest board.
 // No. 1 (newspaper over the face) and No. 3 (poster on the pavement) were removed; their drawing code is left in place but they are no longer offered.
-const OCT_ORDER: CoverLayout[] = ["oct2", "oct4", "oct5", "oct6", "oct7", "oct8", "oct9", "oct10", "oct11", "oct12", "oct13", "oct14", "oct15", "oct16", "oct17", "oct18"];
+const OCT_ORDER: CoverLayout[] = ["oct2", "oct4", "oct6", "oct7", "oct8", "oct11", "oct12", "oct13", "oct14", "oct15", "oct16", "oct17", "oct18"];
 const OCT_LAYOUTS = new Set<CoverLayout>(OCT_ORDER);
+// Every cover on offer, one after the other. New posts take these in turn so nobody has to pick, and any post can still be changed by hand.
+const ALL_COVERS: CoverLayout[] = [...COVER_ORDER, ...OCT_ORDER];
 const OCT_NAMES: Partial<Record<CoverLayout, string>> = {
   oct3: "Poster on the pavement", oct4: "Poster on the wall", oct7: "Shhh lips", oct12: "Newspaper on a chair", oct14: "Black heels", oct16: "Glove and card",
   oct1: "Newspaper over the face", oct8: "Retro badge", oct9: "Yellow jumper newspaper", oct11: "Street poster", oct17: "Better late than ugly", oct2: "Escalator advert", oct5: "Three newspapers", oct10: "Peeping through blinds", oct15: "Stack of books", oct6: "Black and white portrait", oct13: "Magazine cover", oct18: "Big serif lettering",
@@ -2898,7 +2900,7 @@ export default function Stylish() {
     patch({
       ...fallback,
       ...saved,
-      ...(saved?.coverLayout && !COVER_ORDER.includes(saved.coverLayout) && !OCT_LAYOUTS.has(saved.coverLayout) ? COVER_PRESETS.band : {}),
+      ...(saved?.coverLayout && !COVER_ORDER.includes(saved.coverLayout) && !OCT_LAYOUTS.has(saved.coverLayout) ? COVER_PRESETS.centred : {}),
       ...(TEXTURES[style.cvBlock] ? { cvBlock: DEFAULT_STYLE.cvBlock } : {}),
       // Tweaked Helen's cover block is leopard print, so it starts that way whenever she is chosen.
       ...(/tweaked\s*helen/i.test(chosen?.name ?? "") ? { cvBlock: "texture:leopard" } : {}),
@@ -3132,7 +3134,7 @@ export default function Stylish() {
           const parsed: Post[] = rows
             .map(r => Array.from({ length: cols }, (_, i) => (r[i] ?? "").trim()))
             .filter(t => t.some(Boolean))
-            .map((texts, i) => ({ id: makeId(), texts, caption: "", captionBusy: false, selected: true, cover: COVER_ORDER[i % COVER_ORDER.length] }));
+            .map((texts, i) => ({ id: makeId(), texts, caption: "", captionBusy: false, selected: true, cover: ALL_COVERS[i % ALL_COVERS.length] }));
           if (!parsed.length) { setCsvError("No rows with text were found"); return; }
           setPosts(parsed);
           setCsvName(file.name);
@@ -3204,7 +3206,7 @@ export default function Stylish() {
     if (!octoberRef.current || !posts.length || pendingClient) return;
     const o = octoberRef.current;
     octoberRef.current = null;
-    const order: CoverLayout[] = ["oct13", "oct6", "oct9", "oct18", "oct17", "oct4", "oct8", "oct12", "oct11", "oct10", "oct14", "oct7", "oct16"];
+    const order: CoverLayout[] = ["oct13", "oct6", "oct18", "oct17", "oct4", "oct8", "oct12", "oct11", "oct14", "oct7", "oct16"];
     setPosts(l => l.map((p, i) => ({ ...p, cover: order[i % order.length], coverSpot: o.spot && /^#?[0-9a-f]{6}$/i.test(o.spot) ? (o.spot.startsWith("#") ? o.spot : `#${o.spot}`) : p.coverSpot })));
     toast.success("October 26 covers added, one per post. Change any of them from that post's cover options.");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3618,7 +3620,7 @@ export default function Stylish() {
 
   // Gives every post a different cover option, going round all the options in turn.
   const mixCovers = () => {
-    setPosts(list => list.map((p, i) => ({ ...p, cover: COVER_ORDER[i % COVER_ORDER.length] })));
+    setPosts(list => list.map((p, i) => ({ ...p, cover: ALL_COVERS[i % ALL_COVERS.length] })));
     setCoverVersion(v => v + 1);
   };
 
