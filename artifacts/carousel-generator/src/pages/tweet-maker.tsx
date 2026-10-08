@@ -14,6 +14,7 @@ import JSZip from "jszip";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const W = 1080;
 const H = 1440;
+const STORY_H = 1920;
 
 type TweetRow = {
   name: string;
@@ -155,6 +156,7 @@ export default function TweetMaker() {
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [scheduleStart, setScheduleStart] = useState<string | undefined>(undefined);
   const [scheduledSlot, setScheduledSlot] = useState<SlotKey>("sun7pm");
+  const [scheduleStories, setScheduleStories] = useState<{ imageUrl: string; title: string }[] | undefined>(undefined);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const profileFileRef = useRef<HTMLInputElement>(null);
@@ -230,23 +232,26 @@ export default function TweetMaker() {
     return bgImages[i] ?? bgImages[bgImages.length - 1];
   }, [bgImages]);
 
-  const render = useCallback((canvas: HTMLCanvasElement | null, rowIndex: number) => {
+  // `height` is 1440 for the grid post and 1920 for a story. The card stays the same size and the
+  // photo simply fills the taller frame, so the story looks like the post, not a stretched copy.
+  const render = useCallback((canvas: HTMLCanvasElement | null, rowIndex: number, height: number = H) => {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    const isStory = height !== H;
     canvas.width = W;
-    canvas.height = H;
+    canvas.height = height;
     const row = rows[rowIndex];
 
     // Background
     const bg = bgForIndex(rowIndex);
     ctx.fillStyle = "#dfe7e6";
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillRect(0, 0, W, height);
     if (bg) {
       const ar = bg.width / bg.height;
-      let dw = W, dh = H, dx = 0, dy = 0;
-      if (ar > W / H) { dh = H; dw = H * ar; dx = (W - dw) / 2; }
-      else { dw = W; dh = W / ar; dy = (H - dh) / 2; }
+      let dw = W, dh = height, dx = 0, dy = 0;
+      if (ar > W / height) { dh = height; dw = height * ar; dx = (W - dw) / 2; }
+      else { dw = W; dh = W / ar; dy = (height - dh) / 2; }
       ctx.drawImage(bg, dx, dy, dw, dh);
     }
 
@@ -254,8 +259,8 @@ export default function TweetMaker() {
       // Card
       const cardX = W * 0.09;
       const cardW = W * 0.82;
-      const cardY = H * 0.235;
       const cardH = H * 0.45;
+      const cardY = isStory ? height / 2 - cardH / 2 - 40 : H * 0.235;
       ctx.save();
       ctx.shadowColor = "rgba(0,0,0,0.18)";
       ctx.shadowBlur = 30;
@@ -377,14 +382,16 @@ export default function TweetMaker() {
     // other carousel tools use.
     if (logoImg && logoImg.complete && logoImg.naturalWidth > 0 && selectedPreset) {
       const margin = 40;
+      // Stories keep the logo clear of the Instagram buttons at the top and the reply bar at the bottom.
+      const vMargin = isStory ? 220 : margin;
       const logoSize = selectedPreset.logoSize || 120;
       const ar = logoImg.width / logoImg.height;
       const logoW = Math.round(logoSize * ar);
       const logoH = logoSize;
-      let lx = W - logoW - margin, ly = margin;
+      let lx = W - logoW - margin, ly = vMargin;
       const pos = selectedPreset.logoPosition;
-      if (pos === "bottom-left") { lx = margin; ly = H - logoH - margin; }
-      else if (pos === "bottom-right") { lx = W - logoW - margin; ly = H - logoH - margin; }
+      if (pos === "bottom-left") { lx = margin; ly = height - logoH - vMargin; }
+      else if (pos === "bottom-right") { lx = W - logoW - margin; ly = height - logoH - vMargin; }
       ctx.drawImage(logoImg, lx, ly, logoW, logoH);
     }
   }, [rows, bgForIndex, profilePhoto, logoImg, selectedPreset]);
@@ -508,17 +515,16 @@ export default function TweetMaker() {
     try {
       const offscreen = document.createElement("canvas");
       const items: SchedulePostPayload[] = [];
-      for (let i = 0; i < rows.length; i++) {
-        setScheduling(`Uploading tweet ${i + 1} of ${rows.length}`);
-        render(offscreen, i);
-        const dataUrl = offscreen.toDataURL("image/png");
+      const stories: { imageUrl: string; title: string }[] = [];
+      // Uploads one image, trying up to three times so a wobbly connection does not lose the batch.
+      const uploadPng = async (dataUrl: string, name: string): Promise<string> => {
         let url = "";
         for (let attempt = 0; attempt < 3 && !url; attempt++) {
           try {
             const up = await fetch(`${BASE}/api/content/upload-image`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ images: [{ name: `tweet-${i + 1}-${Date.now()}.png`, base64: dataUrl }] }),
+              body: JSON.stringify({ images: [{ name, base64: dataUrl }] }),
             });
             if (!up.ok) throw new Error("Image upload failed");
             const { results } = await up.json() as { results: { url: string }[] };
@@ -529,6 +535,16 @@ export default function TweetMaker() {
             await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
           }
         }
+        return url;
+      };
+      for (let i = 0; i < rows.length; i++) {
+        setScheduling(`Uploading tweet ${i + 1} of ${rows.length}`);
+        render(offscreen, i);
+        const url = await uploadPng(offscreen.toDataURL("image/png"), `tweet-${i + 1}-${Date.now()}.png`);
+        // The same tweet as a story, 1080 x 1920, so every post also goes out as a story.
+        setScheduling(`Making story ${i + 1} of ${rows.length}`);
+        render(offscreen, i, STORY_H);
+        const storyUrl = await uploadPng(offscreen.toDataURL("image/png"), `tweet-${i + 1}-story-${Date.now()}.png`);
         setScheduling(`Writing caption ${i + 1} of ${rows.length}`);
         let caption = "";
         try {
@@ -554,12 +570,11 @@ export default function TweetMaker() {
             if (footnote && !caption.includes(footnote)) caption += `\n\n${footnote}`;
           }
         } catch { /* falls back to the quote below, and it can be edited on the schedule screen */ }
-        items.push({
-          title: `${rows[i].quote.slice(0, 60)} · ${selectedPreset.name}`,
-          caption: caption || noDashes(rows[i].quote),
-          imageUrls: [url],
-        });
+        const title = `${rows[i].quote.slice(0, 60)} · ${selectedPreset.name}`;
+        items.push({ title, caption: caption || noDashes(rows[i].quote), imageUrls: [url] });
+        stories.push({ imageUrl: storyUrl, title });
       }
+      setScheduleStories(stories);
       setScheduleStart(nextSlotLocal(slot));
       setScheduledSlot(slot);
       setScheduleItems(items);
@@ -730,7 +745,7 @@ export default function TweetMaker() {
               {slot === "both"
                 ? "Two a week, alternating Saturday 9am and Sunday 7pm, starting with whichever comes first."
                 : `First tweet goes out on the next ${SLOT_LABEL[slot]}, then one each week at the same time.`}{" "}
-              You confirm the dates on the next screen before anything is booked.
+              Every tweet also goes out as a story at 7am that day. You confirm the dates on the next screen before anything is booked.
             </p>
             <div className="flex gap-2">
               <Button onClick={scheduleBatch} disabled={!!scheduling || !rows.length} className="flex-1">
@@ -757,12 +772,13 @@ export default function TweetMaker() {
           initialGapMinutes={10080}
           keepClockTime
           weekendSlots={scheduledSlot === "both"}
+          companionStories={scheduleStories}
           sourceTool="tweet-maker"
           onClose={() => setScheduleOpen(false)}
           onSaved={() => {
             setScheduleItems(null);
             setScheduleOpen(false);
-            toast.success(`${scheduleItems.length} tweet${scheduleItems.length !== 1 ? "s" : ""} scheduled to ${selectedPreset.name}'s page`);
+            toast.success(`${scheduleItems.length} tweet${scheduleItems.length !== 1 ? "s" : ""} scheduled to ${selectedPreset.name}'s page, each with a 7am story`);
           }}
           presets={presets.map((p) => ({ id: p.id, name: p.name }))}
         />
