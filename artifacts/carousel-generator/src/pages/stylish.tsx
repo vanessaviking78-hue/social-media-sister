@@ -436,10 +436,14 @@ type Post = {
   coverLeading?: number;
   coverFont?: string;      // this post's own headline font on slide 1. Empty follows the client's font.
   coverSubFont?: string;   // and its subtitle font
+  slideOpts?: SlideTextOpts; // alignment and font for the words on slides 2 onwards
 };
 
 type SlideKind = "cover" | "body" | "cta";
-type SlideSpec = { kind: SlideKind; text: string; sub: string };
+type TextAlign3 = "left" | "centre" | "right";
+type SlideSpec = { kind: SlideKind; text: string; sub: string; src?: number; align?: TextAlign3; font?: string };
+// Per slide choices for the words on slides 2 onwards, by slide number.
+type SlideTextOpts = Record<number, { align?: TextAlign3; font?: string }>;
 
 const COVER_FONTS = [
   { label: "Inter Tight", value: INTER_TIGHT },
@@ -491,14 +495,15 @@ const SAMPLE_CSV = [
 // CSV to slides
 // ---------------------------------------------------------------------------
 
-function buildSlides(texts: string[]): SlideSpec[] {
+function buildSlides(texts: string[], opts?: SlideTextOpts): SlideSpec[] {
   const t = texts.map(x => (x ?? "").trim());
   const out: SlideSpec[] = [];
-  if (t[0]) out.push({ kind: "cover", text: t[0], sub: t[1] ?? "" });
+  if (t[0]) out.push({ kind: "cover", text: t[0], sub: t[1] ?? "", src: 0 });
   const last = t.length >= 3 ? t.length - 1 : -1;
   for (let i = 2; i < t.length; i++) {
     if (!t[i]) continue;
-    out.push({ kind: i === last ? "cta" : "body", text: t[i], sub: "" });
+    const o = opts?.[out.length];
+    out.push({ kind: i === last ? "cta" : "body", text: t[i], sub: "", src: i, align: o?.align, font: o?.font });
   }
   return out;
 }
@@ -2306,25 +2311,28 @@ async function renderSlide(
   }
 
   const editorial = style.layout === "editorial";
-  const left = style.align === "left";
+  const alignNow: TextAlign3 = spec.align ?? (style.align === "left" ? "left" : "centre");
+  const left = alignNow === "left";
+  const right = alignNow === "right";
   const M = 92;
-  const x = left ? M : W / 2;
+  const tdx = textPos?.dx ?? 0, tdy = textPos?.dy ?? 0;
+  const x = (left ? M : right ? W - M : W / 2) + tdx;
   const maxW = W - M * 2;
   const up = (t: string) => (style.uppercase ? t.toUpperCase() : t);
-  const display = style.displayFont;
+  const display = spec.font || style.displayFont;
   const blocks: Block[] = [];
 
-  ctx.textAlign = left ? "left" : "center";
+  ctx.textAlign = left ? "left" : right ? "right" : "center";
   ctx.textBaseline = "top";
   setSpacing(ctx, style.letterSpacing);
 
   const isCta = spec.kind === "cta";
-  let size = isCta ? style.ctaSize : style.bodySize;
+  let size = Math.round((isCta ? style.ctaSize : style.bodySize) * (headScale ?? 1));
   let f = `${isCta && editorial ? "italic " : style.textItalic ? "italic " : ""}${style.textWeight} ${size}px ${display}`;
   ctx.font = f;
   let bodyLines = balancedWrap(ctx, up(spec.text), maxW - (left ? 40 : 30));
   // Longer passages shrink a little until they fit comfortably, so a three sentence slide never runs off the photo.
-  while (size > 40 && bodyLines.length * Math.round(size * style.lineHeight) > H * 0.6) {
+  while (size > 24 && bodyLines.length * Math.round(size * style.lineHeight) > H * 0.6) {
     size -= 4;
     f = `${isCta && editorial ? "italic " : style.textItalic ? "italic " : ""}${style.textWeight} ${size}px ${display}`;
     ctx.font = f;
@@ -2339,7 +2347,7 @@ async function renderSlide(
   const total = blocks.reduce((sum, b) => sum + b.gapBefore + b.lines.length * b.lineH, 0);
   const anchor = (style.bodyY / 100) * H;
   // Editorial text hangs from a fixed bottom edge; classic text is centred on the anchor.
-  let y = Math.round(editorial ? anchor - total : anchor - total / 2);
+  let y = Math.round(editorial ? anchor - total : anchor - total / 2) + tdy;
   const blockTop = y;
 
   if (style.shadow) {
@@ -2366,8 +2374,9 @@ async function renderSlide(
     ctx.globalAlpha = 0.9;
     ctx.beginPath();
     const ry = blockTop - 40;
-    if (left) { ctx.moveTo(M, ry); ctx.lineTo(M + 96, ry); }
-    else { ctx.moveTo(W / 2 - 48, ry); ctx.lineTo(W / 2 + 48, ry); }
+    if (left) { ctx.moveTo(M + tdx, ry); ctx.lineTo(M + 96 + tdx, ry); }
+    else if (right) { ctx.moveTo(W - M - 96 + tdx, ry); ctx.lineTo(W - M + tdx, ry); }
+    else { ctx.moveTo(W / 2 - 48 + tdx, ry); ctx.lineTo(W / 2 + 48 + tdx, ry); }
     ctx.stroke();
     ctx.globalAlpha = 1;
   }
@@ -3071,7 +3080,7 @@ export default function Stylish() {
 
   // -- which photo belongs to which slide ----------------------------------
 
-  const slideCounts = useMemo(() => posts.map(p => buildSlides(p.texts).length), [posts]);
+  const slideCounts = useMemo(() => posts.map(p => buildSlides(p.texts, p.slideOpts).length), [posts]);
   const shortOfPhotos = images.length > 0 && images.length < posts.reduce((sum, _p, i) => sum + Math.max(perPost, slideCounts[i] ?? 0), 0);
   const reusing = reusePhotos && shortOfPhotos;
   const reusePlan = useMemo(
@@ -3274,7 +3283,7 @@ export default function Stylish() {
         for (let pi = 0; pi < postsRef.current.length; pi++) {
           if (cancelled) return;
           const post = postsRef.current[pi];
-          const specs = buildSlides(post.texts);
+          const specs = buildSlides(post.texts, post.slideOpts);
           const batch: Record<string, string> = {};
           for (let si = 0; si < specs.length; si++) {
             const tk = `${post.id}:${si}`;
@@ -3309,7 +3318,7 @@ export default function Stylish() {
       : subTextResizeRef.current?.key === key ? subTextResizeRef.current
       : null;
     const run = async () => {
-      const specs = buildSlides(post.texts);
+      const specs = buildSlides(post.texts, post.slideOpts);
       if (!specs[si]) return;
       const seq = (redrawSeq.current[key] = (redrawSeq.current[key] ?? 0) + 1);
       const canvas = await renderSlide(
@@ -3557,6 +3566,24 @@ export default function Stylish() {
     redrawOne(post, pi, si);
   };
 
+  // Alignment, font and words for one of slides 2 onwards.
+  const setSlideOpt = (post: Post, pi: number, si: number, patchOpt: { align?: TextAlign3; font?: string }) => {
+    const slideOpts: SlideTextOpts = { ...(post.slideOpts ?? {}), [si]: { ...(post.slideOpts?.[si] ?? {}), ...patchOpt } };
+    updatePost(post.id, { slideOpts });
+    redrawOne({ ...post, slideOpts }, pi, si);
+  };
+  const setSlideFont = (post: Post, pi: number, si: number, font: string) => {
+    const go = () => setSlideOpt(post, pi, si, { font: font || undefined });
+    if (!font) { go(); return; }
+    Promise.allSettled([`${style.textWeight} 60px ${font}`, `italic ${style.textWeight} 60px ${font}`].map(f => document.fonts.load(f))).then(go);
+  };
+  const setSlideWords = (post: Post, pi: number, si: number, src: number, value: string) => {
+    if (!value.trim()) return; // an empty box would drop the slide, so keep the old words
+    const texts = post.texts.map((t, i) => (i === src ? value : t));
+    updatePost(post.id, { texts });
+    redrawOne({ ...post, texts }, pi, si);
+  };
+
   // Same again, for the subtitle's own size.
   const startSubTextResize = (e: ReactPointerEvent<HTMLDivElement>, post: Post, pi: number, si: number) => {
     if (e.button !== 0) return;
@@ -3728,7 +3755,7 @@ export default function Stylish() {
   // -- captions ----------------------------------------------------------------
 
   const generateCaption = useCallback(async (post: Post, asReel = false): Promise<string | null> => {
-    const specs = buildSlides(post.texts);
+    const specs = buildSlides(post.texts, post.slideOpts);
     const context =
       `${asReel ? `An Instagram reel that plays these ${specs.length} slides one after another, so the caption should make people stay to the end` : `An Instagram carousel of ${specs.length} slides`}. The slide text, in order:\n` +
       specs.map((s, i) => `${i + 1}. ${s.text}${s.sub ? ` (${s.sub})` : ""}`).join("\n") +
@@ -3791,10 +3818,10 @@ export default function Stylish() {
   // -- export ------------------------------------------------------------------
 
   const renderPostCanvases = async (postIndex: number, post: Post, logo: HTMLImageElement | null) => {
-    const specs = buildSlides(post.texts);
+    const specs = buildSlides(post.texts, post.slideOpts);
     const out: HTMLCanvasElement[] = [];
     for (let si = 0; si < specs.length; si++) {
-      out.push(await renderSlide(specs[si], photoFor(postIndex, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 1, { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoFor(postIndex, post, k)) : undefined }, focusRef.current[`${post.id}:${si}`]));
+      out.push(await renderSlide(specs[si], photoFor(postIndex, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 1, { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoFor(postIndex, post, k)) : undefined }, focusRef.current[`${post.id}:${si}`], textFocusRef.current[`${post.id}:${si}`], subTextFocusRef.current[`${post.id}:${si}`], textScaleRef.current[`${post.id}:${si}`], subTextScaleRef.current[`${post.id}:${si}`]));
     }
     return out;
   };
@@ -3899,7 +3926,7 @@ export default function Stylish() {
       await warmAll();
       const logo = style.showLogo ? await loadLogo(preset) : null;
       const pi = posts.indexOf(post);
-      const specs = buildSlides(post.texts);
+      const specs = buildSlides(post.texts, post.slideOpts);
       const k = `${post.id}:0`;
       const base = await renderSlide(specs[0], photoFor(pi, post, 0), styleForSlide(style, post, specs[0].kind), logo, preset, 0.5, { index: 0, total: specs.length, extras: [1, 2, 3].map(x => photoFor(pi, post, x)) }, focusRef.current[k], textFocusRef.current[k], subTextFocusRef.current[k], textScaleRef.current[k], subTextScaleRef.current[k]);
       setShinePreview({ canvas: base, title: specs[0]?.text ?? `Post ${pi + 1}` });
@@ -3920,7 +3947,7 @@ export default function Stylish() {
       for (const post of selectedPosts) {
         n++;
         const pi = posts.indexOf(post);
-        const specs = buildSlides(post.texts);
+        const specs = buildSlides(post.texts, post.slideOpts);
         setAnimating(`Cover ${n} of ${selectedPosts.length}`);
         const base = await renderSlide(specs[0], photoFor(pi, post, 0), styleForSlide(style, post, specs[0].kind), logo, preset, 1, { index: 0, total: specs.length, extras: [1, 2, 3].map(k => photoFor(pi, post, k)) }, focusRef.current[`${post.id}:0`], textFocusRef.current[`${post.id}:0`], subTextFocusRef.current[`${post.id}:0`], textScaleRef.current[`${post.id}:0`], subTextScaleRef.current[`${post.id}:0`]);
         const clip = await recordShine(base);
@@ -3956,7 +3983,7 @@ export default function Stylish() {
       const canvases: HTMLCanvasElement[] = [];
       for (const post of chosen) {
         const pi = posts.indexOf(post);
-        const specs = buildSlides(post.texts);
+        const specs = buildSlides(post.texts, post.slideOpts);
         canvases.push(await renderSlide(specs[0], photoFor(pi, post, 0), styleForSlide(style, post, specs[0].kind), logo, preset, 1, { index: 0, total: specs.length, extras: [1, 2, 3].map(k => photoFor(pi, post, k)) }, focusRef.current[`${post.id}:0`]));
         await tick();
       }
@@ -3982,7 +4009,7 @@ export default function Stylish() {
       const pi = posts.indexOf(post);
       const canvases = await renderPostCanvases(pi, post, logo);
       if (canvases.length < 4) { toast.error("Magazine Flip needs at least 4 slides in a post"); return; }
-      await setFlipHandoff({ canvases: canvases.slice(0, 16), clientName: preset?.name || "", caption: post.caption.trim() || undefined, location: area.trim() || undefined, title: buildSlides(post.texts)[0]?.text });
+      await setFlipHandoff({ canvases: canvases.slice(0, 16), clientName: preset?.name || "", caption: post.caption.trim() || undefined, location: area.trim() || undefined, title: buildSlides(post.texts, post.slideOpts)[0]?.text });
       window.open("/magazine", "_blank", "noopener");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not send to Magazine Flip");
@@ -4007,12 +4034,12 @@ export default function Stylish() {
         setScheduling(`Uploading post ${n} of ${targets.length}`);
         // One slide at a time: render, upload, then free the canvas straight away so the tab never
         // holds a whole post (or several posts) of full size images in memory.
-        const specs = buildSlides(post.texts);
+        const specs = buildSlides(post.texts, post.slideOpts);
         const urls: string[] = [];
         const reelForm = new FormData();
         for (let si = 0; si < specs.length; si++) {
           setScheduling(`${mode === "reel" ? "Building reel" : "Uploading post"} ${n} of ${targets.length} (slide ${si + 1} of ${specs.length})`);
-          const canvas = await renderSlide(specs[si], photoFor(pi, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 1, { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoFor(pi, post, k)) : undefined }, focusRef.current[`${post.id}:${si}`]);
+          const canvas = await renderSlide(specs[si], photoFor(pi, post, si), styleForSlide(style, post, specs[si].kind), logo, preset, 1, { index: si, total: specs.length, extras: si === 0 ? [1, 2, 3].map(k => photoFor(pi, post, k)) : undefined }, focusRef.current[`${post.id}:${si}`], textFocusRef.current[`${post.id}:${si}`], subTextFocusRef.current[`${post.id}:${si}`], textScaleRef.current[`${post.id}:${si}`], subTextScaleRef.current[`${post.id}:${si}`]);
           if (mode === "reel") {
             const blob: Blob | null = await new Promise(r => canvas.toBlob(r, "image/png"));
             canvas.width = 0; canvas.height = 0;
@@ -4071,7 +4098,7 @@ export default function Stylish() {
           } catch { /* the caption can still be written in the schedule screen */ }
         }
         items.push({
-          title: `${buildSlides(post.texts)[0]?.text ?? `Post ${pi + 1}`} · ${preset.name}`,
+          title: `${buildSlides(post.texts, post.slideOpts)[0]?.text ?? `Post ${pi + 1}`} · ${preset.name}`,
           caption: noDashes(caption),
           ...(mode === "reel" ? { videoUrl } : { imageUrls: urls, ...(coverVideoUrl ? { coverVideoUrl } : {}) }),
         });
@@ -4088,7 +4115,7 @@ export default function Stylish() {
             tone: "3",
             area: area.trim() || undefined,
             clinicName: preset.name,
-            posts: targets.map(p => ({ slides: buildSlides(p.texts).map(s => s.text) })),
+            posts: targets.map(p => ({ slides: buildSlides(p.texts, p.slideOpts).map(s => s.text) })),
           }),
         });
         const qd = await qr.json().catch(() => ({}));
@@ -4111,7 +4138,7 @@ export default function Stylish() {
           }
           dataUrl = null;
           if (!got?.[0]) throw new Error("A story would not upload");
-          stories.push({ imageUrl: got[0], title: `${buildSlides(post.texts)[0]?.text ?? `Post ${pi + 1}`} · ${preset.name}`, box, offset: { dx: 0, dy: 0 }, question: String(qd.questions[k]) });
+          stories.push({ imageUrl: got[0], title: `${buildSlides(post.texts, post.slideOpts)[0]?.text ?? `Post ${pi + 1}`} · ${preset.name}`, box, offset: { dx: 0, dy: 0 }, question: String(qd.questions[k]) });
           await tick();
         }
       }
@@ -4831,7 +4858,7 @@ export default function Stylish() {
 
               <div className="space-y-5">
                 {posts.map((post, pi) => {
-                  const specs = buildSlides(post.texts);
+                  const specs = buildSlides(post.texts, post.slideOpts);
                   return (
                     <div key={post.id} className={["rounded-xl border p-4 space-y-4", post.selected ? "border-border/50 bg-muted/10" : "border-border/20 opacity-60"].join(" ")}>
                       <div className="flex items-center gap-3">
@@ -4977,6 +5004,67 @@ export default function Stylish() {
                                   <ArrowUpDown className="w-3.5 h-3.5" /> Zoom photo
                                 </div>
                               )}
+                                </div>
+                              )}
+                              {!isCover && spec.src !== undefined && (
+                                <div
+                                  className="p-1.5 bg-neutral-900 space-y-1.5"
+                                  onPointerDown={e => e.stopPropagation()}
+                                  onDoubleClick={e => e.stopPropagation()}
+                                >
+                                  <div className="flex flex-wrap gap-1.5">
+                                    <div
+                                      onPointerDown={e => startTextDrag(e, post, pi, si)}
+                                      onPointerMove={e => moveTextDrag(e, post)}
+                                      onPointerUp={endTextDrag}
+                                      onPointerCancel={endTextDrag}
+                                      onDoubleClick={e => { e.stopPropagation(); resetTextPos(post, pi, si); }}
+                                      title="Drag to move the words. Double click to put them back."
+                                      className="flex items-center gap-1 rounded-md bg-pink-600 hover:bg-pink-500 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow cursor-grab active:cursor-grabbing select-none"
+                                      style={{ touchAction: "none" }}
+                                    >
+                                      <Move className="w-3.5 h-3.5" /> Move text
+                                    </div>
+                                    <div
+                                      onPointerDown={e => startTextResize(e, post, pi, si)}
+                                      onPointerMove={e => moveTextResize(e, post)}
+                                      onPointerUp={endTextResize}
+                                      onPointerCancel={endTextResize}
+                                      onDoubleClick={e => { e.stopPropagation(); resetTextScale(post, pi, si); }}
+                                      title="Drag up or down to resize the words. Double click to put them back."
+                                      className="flex items-center gap-1 rounded-md bg-pink-600 hover:bg-pink-500 px-2.5 py-1.5 text-[11px] font-semibold text-white shadow cursor-ns-resize select-none"
+                                      style={{ touchAction: "none" }}
+                                    >
+                                      <ArrowUpDown className="w-3.5 h-3.5" /> Text size
+                                    </div>
+                                    {(["left", "centre", "right"] as const).map(a => {
+                                      const on = (spec.align ?? (style.align === "left" ? "left" : "centre")) === a;
+                                      return (
+                                        <button
+                                          key={a} type="button"
+                                          onClick={() => setSlideOpt(post, pi, si, { align: a })}
+                                          className={["rounded-md px-2.5 py-1.5 text-[11px] font-semibold shadow capitalize", on ? "bg-sky-500 text-white" : "bg-neutral-700 text-neutral-100 hover:bg-neutral-600"].join(" ")}
+                                          title={`Put the words ${a === "centre" ? "in the centre" : "on the " + a}`}
+                                        >{a}</button>
+                                      );
+                                    })}
+                                  </div>
+                                  <select
+                                    value={spec.font || ""}
+                                    onChange={e => setSlideFont(post, pi, si, e.target.value)}
+                                    className="w-full rounded-md bg-neutral-800 text-neutral-100 text-[11px] px-2 py-1.5 border border-neutral-600"
+                                    aria-label={`Font for slide ${si + 1}`}
+                                  >
+                                    <option value="">Font: same as the rest</option>
+                                    {slideFontOptions.map(f => <option key={f.label} value={f.value}>{f.label}</option>)}
+                                  </select>
+                                  <textarea
+                                    value={post.texts[spec.src] ?? ""}
+                                    onChange={e => setSlideWords(post, pi, si, spec.src!, e.target.value)}
+                                    rows={3}
+                                    className="w-full rounded-md bg-neutral-800 text-neutral-100 text-[11px] px-2 py-1.5 border border-neutral-600"
+                                    aria-label={`Words on slide ${si + 1}`}
+                                  />
                                 </div>
                               )}
                               <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 px-1.5 py-1 bg-gradient-to-t from-black/70 to-transparent">
