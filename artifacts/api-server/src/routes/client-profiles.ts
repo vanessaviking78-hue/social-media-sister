@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { db } from "@workspace/db";
 import { clientPresetsTable } from "@workspace/db/schema";
+import { notifySubmission } from "../lib/notify";
 
 // "Getting to know you": one profile per client, keyed by the client name. The answers and the
 // guide photo are kept so every shoot, cover and caption can start from who the client really is.
@@ -188,9 +189,15 @@ router.put("/know-me/:token", async (req, res) => {
       UPDATE client_profiles
       SET answers_json = ${JSON.stringify(answers)}, photo_url = COALESCE(${photo}, photo_url), updated_at = NOW()
       WHERE share_token = ${req.params.token}
-      RETURNING id
+      RETURNING id, client_name
     `);
     if (!r.rows.length) { res.status(404).json({ error: "This link is not valid" }); return; }
+    const filled = Object.entries(answers).filter(([k, v]) => k !== "reviewImages" && v.trim()).length;
+    void notifySubmission({
+      clientName: String((r.rows[0] as { client_name: string }).client_name),
+      kind: "Getting to know you form",
+      story: `${filled} answers${photo ? ", a guide photo" : ""}. Saved onto their profile.`,
+    }).catch(() => undefined);
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : "Could not save" });
@@ -255,6 +262,13 @@ router.post("/know-me-submit", async (req, res) => {
       INSERT INTO client_profile_submissions (typed_name, matched_name, answers_json, photo_url, status)
       VALUES (${typed}, ${matched}, ${JSON.stringify(answers)}, ${photo}, ${status})
     `);
+    const filled = Object.entries(answers).filter(([k, v]) => k !== "reviewImages" && v.trim()).length;
+    void notifySubmission({
+      clientName: matched ?? typed,
+      kind: "Getting to know you form",
+      submitterName: matched && matched !== typed ? typed : undefined,
+      story: `${filled} answers${photo ? ", a guide photo" : ""}. ${status === "applied" ? "Saved straight onto their profile." : "Waiting for you to check it in Getting to know you."}`,
+    }).catch(() => undefined);
     res.json({ ok: true });
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : "Could not save" });

@@ -79,13 +79,14 @@ export async function notifySubmission(opts: {
   const client = opts.clientName || "A client";
   const kind = (opts.kind || "something").trim() || "something";
   const who = opts.submitterName ? ` (from ${opts.submitterName})` : "";
-  const subject = `New ${kind} from ${client}`;
+  const subject = kind === "Getting to know you form" ? `${client} filled in Getting to know you` : `New ${kind} from ${client}`;
+  const isProfile = kind === "Getting to know you form";
   const lines = [
-    `${client} just sent you a ${kind} through their portal${who}.`,
+    isProfile ? `${client} just filled in the Getting to know you form${who}.` : `${client} just sent you a ${kind} through their portal${who}.`,
     "",
-    opts.story ? `They said: ${opts.story}` : "",
+    opts.story ? (isProfile ? opts.story : `They said: ${opts.story}`) : "",
     "",
-    "Open your Before & After Inbox to see it.",
+    isProfile ? "Open Getting to know you on the Hub to see their answers." : "Open your Before & After Inbox to see it.",
     "",
     "The CyberSuite",
   ].filter(Boolean);
