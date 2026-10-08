@@ -508,7 +508,7 @@ const COVER_ORDER: CoverLayout[] = ["centred", "fullbleed", "blur", "strip"];
 
 // The "October 26" set. Each look is named by its number on the Pinterest board.
 // No. 1 (newspaper over the face) and No. 3 (poster on the pavement) were removed; their drawing code is left in place but they are no longer offered.
-const OCT_ORDER: CoverLayout[] = ["oct2", "oct4", "oct6", "oct7", "oct8", "oct11", "oct12", "oct13", "oct14", "oct15", "oct16", "oct17", "oct18"];
+const OCT_ORDER: CoverLayout[] = ["oct2", "oct4", "oct6", "oct8", "oct11", "oct12", "oct13", "oct15", "oct17", "oct18"];
 const OCT_LAYOUTS = new Set<CoverLayout>(OCT_ORDER);
 // Every cover on offer, one after the other. New posts take these in turn so nobody has to pick, and any post can still be changed by hand.
 const ALL_COVERS: CoverLayout[] = [...COVER_ORDER, ...OCT_ORDER];
@@ -701,9 +701,9 @@ function prepareImage(file: File): Promise<Blob | null> {
       if (face) {
         let cx = 0, cy = 0, cw = w, ch = h;
         const hw = Math.min(face.x, w - face.x);
-        if (Math.abs(face.x - w / 2) > w * 0.04 && hw * 2 >= w * 0.55) { cx = face.x - hw; cw = hw * 2; }
+        if (Math.abs(face.x - w / 2) > w * 0.02 && hw * 2 >= w * 0.4) { cx = face.x - hw; cw = hw * 2; }
         const maxH = Math.min(h, face.y / 0.48, (h - face.y) / 0.52);
-        if (maxH >= h * 0.5 && maxH < h * 0.98) { ch = maxH; cy = face.y - 0.48 * ch; }
+        if (maxH >= h * 0.4 && maxH < h * 0.99) { ch = maxH; cy = face.y - 0.48 * ch; }
         if (cw !== w || ch !== h) {
           cx = Math.round(cx); cy = Math.round(cy); cw = Math.round(cw); ch = Math.round(ch);
           const c2 = document.createElement("canvas");
@@ -3206,7 +3206,7 @@ export default function Stylish() {
     if (!octoberRef.current || !posts.length || pendingClient) return;
     const o = octoberRef.current;
     octoberRef.current = null;
-    const order: CoverLayout[] = ["oct13", "oct6", "oct18", "oct17", "oct4", "oct8", "oct12", "oct11", "oct14", "oct7", "oct16"];
+    const order: CoverLayout[] = ["oct13", "oct6", "oct18", "oct17", "oct4", "oct8", "oct12", "oct11"];
     setPosts(l => l.map((p, i) => ({ ...p, cover: order[i % order.length], coverSpot: o.spot && /^#?[0-9a-f]{6}$/i.test(o.spot) ? (o.spot.startsWith("#") ? o.spot : `#${o.spot}`) : p.coverSpot })));
     toast.success("October 26 covers added, one per post. Change any of them from that post's cover options.");
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3687,6 +3687,14 @@ export default function Stylish() {
     setPosts(list => list.map(p => ({ ...p, coverBlockColour: undefined })));
     setCoverVersion(v => v + 1);
     toast.success("Block colour changed on every cover");
+  };
+  // One block colour on every post at once. Covers with a colour strip take it as their block, and the October covers take it as their main colour.
+  const blockAllTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const changeAllBlockColours = (hex: string) => {
+    setPosts(list => list.map(p => ({ ...p, coverBlockColour: hex, coverSpot: hex })));
+    patch({ cvBlock: hex, cvBlockAll: hex });
+    setCoverVersion(v => v + 1);
+    toast.success("Block colour changed on every post");
   };
   const changeAllBands = (bandColour: string) => {
     patch({ cvBand: bandColour, cvBandAll: bandColour });
@@ -4805,6 +4813,16 @@ export default function Stylish() {
                 <span className="text-border/60">|</span>
                 <button className="text-sky-400 hover:underline" onClick={mixCovers}>Give each post a different cover</button>
                 <button className="text-sky-400 hover:underline" onClick={sameCovers}>Same cover on every post</button>
+                <span className="text-border/60">|</span>
+                <label className="flex items-center gap-1.5">
+                  Block colour on every post
+                  <input
+                    type="color" aria-label="Block colour for every post"
+                    defaultValue={/^#[0-9a-f]{6}$/i.test(preset?.accentColor || "") ? preset!.accentColor : "#2c9a8f"}
+                    onChange={e => { const v = e.target.value; if (blockAllTimer.current) clearTimeout(blockAllTimer.current); blockAllTimer.current = setTimeout(() => changeAllBlockColours(v), 400); }}
+                    className="h-6 w-8 rounded border border-border/40 bg-transparent cursor-pointer"
+                  />
+                </label>
               </div>
 
               {images.length > 0 && images.length !== expectedImages && (
@@ -5195,10 +5213,10 @@ export default function Stylish() {
                                 <div className="text-[10px] text-muted-foreground mt-0.5">Starts as the clinic colour. Pick another to recolour the shoes, lips or glove.</div>
                               </div>
                             )}
-                            {eff.coverLayout === "oct2" && (
+                            {OCT_LAYOUTS.has(eff.coverLayout) && (
                               <div className="w-56">
                                 <ColourField label="Block colour" value={eff.cvSpot || preset?.accentColor || "#2c9a8f"} onChange={v => setCoverColours(post, pi, { coverSpot: v })} />
-                                <div className="text-[10px] text-muted-foreground mt-0.5">The colour strip and the background around the photos. Starts as the clinic colour.</div>
+                                <div className="text-[10px] text-muted-foreground mt-0.5">The colour on this cover. Starts as the clinic colour.</div>
                               </div>
                             )}
                             {eff.coverLayout === "oct17" && (
@@ -5209,6 +5227,18 @@ export default function Stylish() {
                             )}
                             {BLOCK_LABEL[eff.coverLayout] && (
                               <div className="w-56"><ColourField label={BLOCK_LABEL[eff.coverLayout]!} value={eff.cvBlock} textures onChange={v => setCoverColours(post, pi, { coverBlockColour: v })} /></div>
+                            )}
+                            {(BLOCK_LABEL[eff.coverLayout] || OCT_LAYOUTS.has(eff.coverLayout)) && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const hex = OCT_LAYOUTS.has(eff.coverLayout) ? (eff.cvSpot || preset?.accentColor || "#2c9a8f") : eff.cvBlock;
+                                  if (/^#?[0-9a-f]{6}$/i.test(String(hex))) changeAllBlockColours(String(hex).startsWith("#") ? String(hex) : `#${hex}`);
+                                  else toast.error("Pick a plain colour first, not a pattern");
+                                }}
+                                className="text-xs rounded-lg border border-pink-500/60 text-pink-400 hover:bg-pink-500/10 px-2.5 py-1.5"
+                                title="Use this post's block colour on every post"
+                              >Block colour on all posts</button>
                             )}
                             {eff.coverLayout === "split" && eff.cvBandOn && (
                               <div className="w-56"><ColourField label="Bottom band colour" value={eff.cvBand} onChange={v => setCoverColours(post, pi, { coverBandColour: v })} /></div>

@@ -123,6 +123,23 @@ function Field({
   );
 }
 
+// Topics Vanessa ticks instead of typing. Ticking one fills that topic's box, and she can still type her own.
+const TOPIC_BOXES = [
+  "Menopause",
+  "Gen X being strong women",
+  "Nostalgia",
+  "Safety in aesthetics",
+  "Things I love about helping women feel confident",
+  "Women over 50 being hotter than ever",
+  "Women taking time for themselves",
+  "Keeping fit after 40",
+  "Menopause and histamine levels",
+  "Being happy in your own skin",
+  "Autumn skin",
+  "SPF",
+  "Chemical peels",
+];
+
 export default function MagazineMaker() {
   const [clinicName, setClinicName] = useState("");
   const [colour, setColour] = useState("#4a1942");
@@ -406,13 +423,31 @@ export default function MagazineMaker() {
             <section className="space-y-3">
               <p className="text-xs uppercase tracking-widest text-zinc-500">3. Three topics</p>
               {topics.map((t, i) => (
-                <Field
-                  key={i}
-                  label={i === 0 ? "Topic 1 (page 2 feature)" : i === 1 ? "Topic 2 (page 3, top)" : "Topic 3 (page 3, bottom)"}
-                  value={t}
-                  onChange={(v) => setTopics((prev) => prev.map((x, j) => (j === i ? v : x)))}
-                  placeholder={i === 0 ? "e.g. skin boosters for tired skin" : i === 1 ? "e.g. what happens at a first consultation" : "e.g. why I say no to some treatments"}
-                />
+                <div key={i} className="space-y-2">
+                  <Field
+                    label={i === 0 ? "Topic 1 (page 2 feature)" : i === 1 ? "Topic 2 (page 3, top)" : "Topic 3 (page 3, bottom)"}
+                    value={t}
+                    onChange={(v) => setTopics((prev) => prev.map((x, j) => (j === i ? v : x)))}
+                    placeholder={i === 0 ? "e.g. skin boosters for tired skin" : i === 1 ? "e.g. what happens at a first consultation" : "e.g. why I say no to some treatments"}
+                  />
+                  <div className="flex flex-wrap gap-1.5" role="group" aria-label={`Tick a topic for topic ${i + 1}`}>
+                    {TOPIC_BOXES.map((tp) => {
+                      const on = t.trim().toLowerCase() === tp.toLowerCase();
+                      return (
+                        <label
+                          key={tp}
+                          className={["flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs cursor-pointer select-none transition-colors", on ? "border-pink-500 bg-pink-500/15 text-white" : "border-zinc-700 text-zinc-400 hover:border-zinc-500"].join(" ")}
+                        >
+                          <input
+                            type="checkbox" checked={on}
+                            onChange={() => setTopics((prev) => prev.map((x, j) => (j === i ? (on ? "" : tp) : x)))}
+                          />
+                          {tp}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
               ))}
             </section>
 
