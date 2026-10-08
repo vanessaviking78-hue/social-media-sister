@@ -527,7 +527,7 @@ const OCT_HELP: Partial<Record<CoverLayout, string>> = {
   oct13: "A magazine cover over a photo of the client. Headline: MASTHEAD | SECOND HEADLINE. Subtitle: the small line. OCTOBER 2026 sits under the masthead.",
   oct18: "One huge serif headline across the photo, used for a treatment name.",
   oct1: "The clinician peeping over a newspaper in the clinic colour. Headline: Book your consultation at the clinic. Subtitle: the tiny masthead (Aesthetics news). Move the photo so the eyes sit above the paper.",
-  oct8: "A retro badge: the photo turned into a flat illustration in the clinic colour. Headline on top, subtitle below, TODAY on the ribbon.",
+  oct8: "A retro badge: your photo in a round badge framed in the clinic colour. Headline on top, subtitle below, TODAY on the ribbon.",
   oct9: "Black and white photo with the dress and shoes in the clinic colour and a big newspaper held in front. Headline on the paper, subtitle small beneath it.",
   oct11: "A street poster: the photo with the shoes in the clinic colour. Headline: HEADING 1 | HEADING 2. Subtitle along the bottom.",
   oct17: "A panelled wall in the clinic colours, the clinician in an arch holding a newspaper. Headline on the paper, subtitle as the text beneath it. Tick Towel or Sunglasses below for the full look.",
@@ -1879,7 +1879,7 @@ async function drawCoverOct(
   }
 
   if (layout === "oct8") {
-    // Retro badge: the photo turned into a flat, posterised illustration in the clinic colour.
+    // Retro badge: the real photo in a round badge with the clinic colour framing it.
     ctx.fillStyle = "#f4ecdc"; ctx.fillRect(0, 0, W, H);
     const R = 360, cx = W / 2 + textAt.dx, cy = 790 + textAt.dy;
     const off = document.createElement("canvas"); off.width = R * 2; off.height = R * 2;
@@ -1897,22 +1897,10 @@ async function drawCoverOct(
         const side = Math.min(b.width, b.height) * 0.6 / z;
         let sx = fcx - side / 2 + (((pos?.x ?? 50) - 50) / 100) * side, sy = fcy - side * 0.42 + (((pos?.y ?? 50) - 50) / 100) * side;
         sx = Math.max(0, Math.min(b.width - side, sx)); sy = Math.max(0, Math.min(b.height - side, sy));
-        (og as CanvasRenderingContext2D & { filter?: string }).filter = "blur(5px) contrast(1.2)";
+        (og as CanvasRenderingContext2D & { filter?: string }).filter = punchFilter(style.cvPunch);
         og.drawImage(b, sx, sy, side, side, 0, 0, R * 2, R * 2); b.close();
         (og as CanvasRenderingContext2D & { filter?: string }).filter = "none";
-        tintBackdrop(off, octBackdrop);
       } catch { /* leave the circle plain */ }
-      const id = og.getImageData(0, 0, R * 2, R * 2); const d = id.data;
-      const lum = new Float32Array(d.length / 4); const hist = new Uint32Array(256);
-      for (let i = 0, j = 0; i < d.length; i += 4, j++) { lum[j] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; hist[Math.min(255, Math.round(lum[j]))]++; }
-      const cut = (q: number) => { let acc = 0; const tot = lum.length * q; for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= tot) return v; } return 255; };
-      const t1 = cut(0.28), t2 = cut(0.55), t3 = cut(0.82);
-      const pal = [mixHex(brandHex, "#000000", 0.72), brandHex, mixHex(brandHex, "#ffffff", 0.55), "rgb(244,236,220)"].map(c => (c.match(/\d+/g) || ["0", "0", "0"]).map(Number));
-      for (let i = 0, j = 0; i < d.length; i += 4, j++) {
-        const l = lum[j]; const k = l < t1 ? 0 : l < t2 ? 1 : l < t3 ? 2 : 3;
-        d[i] = pal[k][0]; d[i + 1] = pal[k][1]; d[i + 2] = pal[k][2]; d[i + 3] = 255;
-      }
-      og.putImageData(id, 0, 0);
     }
     ctx.fillStyle = mixHex(brandHex, "#000000", 0.15);
     ctx.beginPath(); ctx.arc(cx, cy, R + 38, 0, Math.PI * 2); ctx.fill();
