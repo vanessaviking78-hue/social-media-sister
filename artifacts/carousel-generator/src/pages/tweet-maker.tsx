@@ -376,7 +376,7 @@ export default function TweetMaker() {
 
       // Quote / body
       ctx.fillStyle = "#0f1419";
-      ctx.font = "700 32px Arial, Helvetica, sans-serif";
+      ctx.font = "400 33px Arial, Helvetica, sans-serif";
       const quoteMaxW = cardW - pad * 2;
       const quoteLines = wrapText(ctx, row.quote || "Your quote from the CSV will appear here.", quoteMaxW);
       let qy = cy + 130;
