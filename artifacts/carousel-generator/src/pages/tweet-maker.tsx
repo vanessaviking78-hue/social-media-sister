@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Upload, Loader2, Download, ShieldCheck, RefreshCcw, FileSpreadsheet, Images, ImageOff, CalendarClock, Sparkles } from "lucide-react";
+import { ArrowLeft, Upload, Loader2, Download, ShieldCheck, RefreshCcw, FileSpreadsheet, Images, ImageOff, CalendarClock, Sparkles, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -598,6 +598,15 @@ export default function TweetMaker() {
     e.currentTarget.style.cursor = "grab";
     if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId);
   };
+  // Removes a tweet you do not like. Photos and videos line up with the rows in order, so the ones after it move up one.
+  const deleteRow = (index: number) => {
+    setRows((prev) => prev.filter((_, i) => i !== index));
+    setSelectedIndex((cur) => {
+      const next = index < cur ? cur - 1 : cur;
+      return Math.max(0, Math.min(next, rows.length - 2));
+    });
+    toast.success("Tweet deleted");
+  };
   const resetPosition = () => setRows((prev) => prev.map((r, i) => (i === selectedIndex ? { ...r, dx: 0, dy: 0 } : r)));
   const applyPositionToAll = () => {
     const src = rows[selectedIndex];
@@ -1018,11 +1027,21 @@ export default function TweetMaker() {
               <h2 className="font-semibold text-base">5. Pick a row to preview</h2>
               <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
                 {rows.map((r, i) => (
-                  <button key={i} onClick={() => setSelectedIndex(i)}
-                    className={`w-full text-left text-sm rounded-lg px-3 py-2 border transition-colors ${selectedIndex === i ? "border-primary/50 bg-primary/5 text-foreground" : "border-border/30 text-muted-foreground hover:text-foreground"}`}>
-                    <span className="font-medium">{r.name || "(no name)"}</span>
-                    <span className="text-xs opacity-70"> @{r.handle || "handle"} — {r.quote.slice(0, 40)}{r.quote.length > 40 ? "…" : ""}</span>
-                  </button>
+                  <div key={i} className="flex gap-1.5">
+                    <button onClick={() => setSelectedIndex(i)}
+                      className={`flex-1 min-w-0 text-left text-sm rounded-lg px-3 py-2 border transition-colors ${selectedIndex === i ? "border-primary/50 bg-primary/5 text-foreground" : "border-border/30 text-muted-foreground hover:text-foreground"}`}>
+                      <span className="text-xs opacity-60">{i + 1}. </span>
+                      <span className="text-xs opacity-80">{r.quote.slice(0, 70)}{r.quote.length > 70 ? "..." : ""}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deleteRow(i)}
+                      title="Delete this tweet"
+                      className="shrink-0 rounded-lg border border-border/30 px-2.5 text-muted-foreground hover:text-red-500 hover:border-red-500/40 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 ))}
               </div>
             </section>
@@ -1060,6 +1079,9 @@ export default function TweetMaker() {
           <div className="flex gap-2">
             <Button variant="outline" onClick={shuffleStats} disabled={!rows.length} className="shrink-0">
               <RefreshCcw className="w-4 h-4 mr-1.5" /> Shuffle stats
+            </Button>
+            <Button variant="outline" onClick={() => deleteRow(selectedIndex)} disabled={!rows.length} className="text-red-500 hover:text-red-500">
+              <Trash2 className="w-4 h-4 mr-1.5" /> Delete
             </Button>
             <Button variant="outline" onClick={download} disabled={!rows.length} className="flex-1">
               <Download className="w-4 h-4 mr-1.5" /> Download this one
