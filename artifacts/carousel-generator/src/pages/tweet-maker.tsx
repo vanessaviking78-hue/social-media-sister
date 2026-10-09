@@ -30,6 +30,14 @@ type TweetRow = {
   caption: string;
 };
 
+const PERSONALITIES: { key: string; tone: string; label: string; brief: string }[] = [
+  { key: "grit", tone: "1", label: "1. Northern grit Vanessa", brief: "direct, warm and honest, plain words, like chatting to your best mate over a brew" },
+  { key: "story", tone: "2", label: "2. Springsteen storytelling, whimsical", brief: "vivid, story led, a little wistful and whimsical, painting a small scene" },
+  { key: "dawn", tone: "3", label: "3. Dawn French, funny and blunt", brief: "genuinely funny, blunt, self-deprecating and warm, never cruel" },
+  { key: "pro", tone: "4", label: "4. Professional but with personality", brief: "polished and professional but with real personality and warmth, never stiff" },
+  { key: "feral", tone: "5", label: "5. Feral, savage, sarcastic", brief: "dry, blunt, a bit unhinged and sarcastic, short punchy sentences, never cruel to anyone" },
+];
+
 const CONFETTI_COLOURS = ["#ec4899", "#f59e0b", "#a855f7", "#22c55e", "#3b82f6", "#facc15", "#f43f5e"];
 const CONFETTI = Array.from({ length: 70 }, (_, i) => ({
   left: (i * 37) % 100,
@@ -490,20 +498,26 @@ export default function TweetMaker() {
 
   // ---- Captions, written before anything is scheduled ----
   const [captioning, setCaptioning] = useState<string | null>(null);
+  // Used when there is no client picked: the person chooses the voice the captions are written in.
+  const [personality, setPersonality] = useState("");
+  const chosenPersonality = PERSONALITIES.find((p) => p.key === personality) ?? null;
+  const canCaption = !!selectedPreset || !!chosenPersonality;
   const captionFor = async (quote: string, askIndex: number): Promise<string> => {
-    if (!selectedPreset) throw new Error("Pick a client first");
+    if (!selectedPreset && !chosenPersonality) throw new Error("Choose a personality first");
     // A different way of asking for the tag or the share on each tweet, so a run of posts never repeats itself.
     const ask = CTA_ASKS[((askIndex % CTA_ASKS.length) + CTA_ASKS.length) % CTA_ASKS.length];
     const res = await fetch(`${BASE}/api/caption-generator/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        tone: "1",
-        clinicName: selectedPreset.name,
+        tone: selectedPreset ? "1" : chosenPersonality!.tone,
+        clinicName: selectedPreset?.name,
         context:
           `An Instagram single image post. The image is a tweet style graphic that says: "${quote}"\n` +
-          `Write a short, warm, funny caption that adds something the graphic does not already say. ` +
-          `Write it as the social media manager for an aesthetics clinic speaking directly to the reader, never as a clinician. ` +
+          `Write a short caption that adds something the graphic does not already say. ` +
+          (selectedPreset
+            ? `Make it warm and funny. Write it as the social media manager for an aesthetics clinic speaking directly to the reader, never as a clinician. `
+            : `Write it in this voice: ${chosenPersonality!.brief}. Write as the person behind the account speaking directly to the reader. `) +
           `Make no medical claims and no promises about results. ` +
           `Use UK spelling, no hashtags, and never use em dashes or en dashes. ` +
           `The caption needs one strong, friendly call to action that gets the reader to tag or share, worded in your own natural way along these lines: ${ask}. ` +
@@ -514,7 +528,7 @@ export default function TweetMaker() {
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.caption) throw new Error(data.error || "Caption generation failed");
     let caption = noDashes(String(data.caption));
-    const footnote = selectedPreset.captionFootnote?.trim();
+    const footnote = selectedPreset?.captionFootnote?.trim();
     if (footnote && !caption.includes(footnote)) caption += `\n\n${footnote}`;
     return caption;
   };
@@ -522,7 +536,7 @@ export default function TweetMaker() {
     setRows((prev) => prev.map((r, i) => (i === index ? { ...r, caption } : r)));
   // Fills in every tweet that has no caption yet, so anything already written or edited is left alone.
   const generateAllCaptions = async () => {
-    if (!selectedPreset) { toast.error("Pick a client first so the captions are written in their name"); return; }
+    if (!canCaption) { toast.error("Pick a client, or choose a personality, so I know how to write the captions"); return; }
     const todo = rows.map((r, i) => ({ r, i })).filter(({ r }) => !r.caption.trim());
     if (!todo.length) { toast.success("Every tweet already has a caption"); return; }
     let done = 0;
@@ -652,7 +666,6 @@ export default function TweetMaker() {
   // booked until the person confirms on that screen.
   const scheduleBatch = async () => {
     if (!rows.length) { toast.error("Load a CSV first"); return; }
-    if (!selectedPreset) { toast.error("Pick a client first so I know whose page to schedule to"); return; }
     const missing = rows.findIndex((r) => !r.caption.trim());
     if (missing !== -1) { toast.error(`Tweet ${missing + 1} needs a caption first. Press Generate captions above.`); return; }
     setScheduling("Starting");
@@ -689,7 +702,7 @@ export default function TweetMaker() {
         setScheduling(`Making story ${i + 1} of ${rows.length}`);
         render(offscreen, i, STORY_H);
         const storyUrl = await uploadPng(offscreen.toDataURL("image/png"), `tweet-${i + 1}-story-${Date.now()}.png`);
-        const title = `${rows[i].quote.slice(0, 60)} · ${selectedPreset.name}`;
+        const title = `${rows[i].quote.slice(0, 60)} · ${selectedPreset?.name ?? (rows[i].name || "tweet")}`;
         items.push({ title, caption: rows[i].caption.trim(), imageUrls: [url] });
         stories.push({ imageUrl: storyUrl, title });
       }
@@ -868,12 +881,20 @@ export default function TweetMaker() {
               <p className="text-xs font-medium">Captions</p>
               <p className="text-[11px] text-muted-foreground">{captionsReady} of {rows.length} ready</p>
             </div>
-            <Button onClick={generateAllCaptions} disabled={!!captioning || !rows.length || !selectedPreset} className="w-full">
+            <Button onClick={generateAllCaptions} disabled={!!captioning || !rows.length || !canCaption} className="w-full">
               {captioning ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{captioning}</> : <><Sparkles className="w-4 h-4 mr-1.5" />Generate captions</>}
             </Button>
             <p className="text-[11px] text-muted-foreground">Each caption asks readers to tag or share, worded differently every time, and ends with a question.</p>
-            {!selectedPreset && rows.length > 0 && (
-              <p className="text-[11px] text-amber-500">Pick a client in step 1 so the captions are written in their name.</p>
+            {!selectedPreset && (
+              <div className="space-y-1">
+                <p className="text-[11px] text-muted-foreground">No client picked, so what personality should these captions be written in?</p>
+                <Select value={personality} onValueChange={setPersonality}>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Choose a personality" /></SelectTrigger>
+                  <SelectContent>
+                    {PERSONALITIES.map((p) => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
             {rows[selectedIndex] && (
               <div className="space-y-1.5">
@@ -885,14 +906,14 @@ export default function TweetMaker() {
                   rows={6}
                   className="text-sm"
                 />
-                <button type="button" onClick={rewriteCaption} disabled={!!captioning || !selectedPreset} className="text-[11px] text-muted-foreground underline hover:text-foreground disabled:opacity-50">
+                <button type="button" onClick={rewriteCaption} disabled={!!captioning || !canCaption} className="text-[11px] text-muted-foreground underline hover:text-foreground disabled:opacity-50">
                   Rewrite this one
                 </button>
               </div>
             )}
           </div>
           <div className="rounded-xl border border-border/30 p-3 space-y-2">
-            <p className="text-xs font-medium">Schedule to {clientName ? `${clientName}'s` : "the client's"} page</p>
+            <p className="text-xs font-medium">{clientName ? `Schedule to ${clientName}'s page` : "Schedule (you pick the page on the next screen)"}</p>
             <div className="grid grid-cols-3 gap-2">
               {(Object.keys(SLOT_LABEL) as SlotKey[]).map((k) => (
                 <button
@@ -928,10 +949,10 @@ export default function TweetMaker() {
           <p className="text-xs text-muted-foreground text-center">Portrait 1080 x 1440, ready for the grid.</p>
         </div>
       </div>
-      {scheduleOpen && scheduleItems && selectedPreset && (
+      {scheduleOpen && scheduleItems && (
         <ScheduleModal
-          presetId={selectedPreset.id}
-          presetName={selectedPreset.name}
+          presetId={selectedPreset?.id ?? null}
+          presetName={selectedPreset?.name}
           postType="single-image"
           posts={scheduleItems}
           perPostCaptions
@@ -943,7 +964,7 @@ export default function TweetMaker() {
           sourceTool="tweet-maker"
           onClose={() => setScheduleOpen(false)}
           onSaved={() => {
-            setCelebrate({ count: scheduleItems.length, client: selectedPreset.name });
+            setCelebrate({ count: scheduleItems.length, client: selectedPreset?.name ?? "Your page" });
             setScheduleItems(null);
             setScheduleOpen(false);
           }}
