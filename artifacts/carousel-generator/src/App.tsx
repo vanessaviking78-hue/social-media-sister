@@ -14,6 +14,7 @@ import NotFound from "@/pages/not-found";
 import NinetyNineClub from "@/pages/ninety-nine-club";
 import PublicRants from "@/pages/rants-feed";
 import Coffee from "@/pages/coffee";
+import FreeCall from "@/pages/freecall";
 import DailyFocus from "@/pages/daily-focus";
 import Hub from "@/pages/hub";
 import Home from "@/pages/home";
@@ -254,6 +255,7 @@ function AppContent() {
     const [isNinetyNineClub] = useRoute("/99club");
     const [isPublicRants] = useRoute("/rants");
     const [isCoffee] = useRoute("/coffee");
+    const [isFreeCall] = useRoute("/freecall");
   const [isFounderWelcome] = useRoute("/founder-welcome");
   const [isTrialBundle] = useRoute("/trialbundle");
   const [isContentPreview, contentPreviewParams] = useRoute("/preview/:clientSlug");
@@ -351,6 +353,9 @@ function AppContent() {
     }
     if (isCoffee) {
           return <Coffee />;
+    }
+    if (isFreeCall) {
+          return <FreeCall />;
     }
   if (isFounderWelcome) {
     return <FounderWelcome />;
