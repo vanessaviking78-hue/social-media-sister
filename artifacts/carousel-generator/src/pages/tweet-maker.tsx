@@ -29,6 +29,9 @@ type TweetRow = {
   dy: number;
   /** The Instagram caption for this tweet, written on the caption step and editable. */
   caption: string;
+  // A photo or video picked for just this tweet: a position in the uploaded list, or a photo uploaded for this one.
+  bgPick?: number;
+  bgOwn?: HTMLImageElement;
 };
 
 const PERSONALITIES: { key: string; tone: string; label: string; brief: string }[] = [
@@ -300,13 +303,25 @@ export default function TweetMaker() {
   // rows the last one repeats for whatever's left, same pattern as the other
   // bulk tools in the app.
   const bgForIndex = useCallback((i: number): HTMLImageElement | HTMLVideoElement | null => {
+    const row = rows[i];
     if (reelMode) {
       if (!bgVideos.length) return null;
+      if (row?.bgPick != null && bgVideos[row.bgPick]) return bgVideos[row.bgPick];
       return bgVideos[i] ?? bgVideos[bgVideos.length - 1];
     }
+    if (row?.bgOwn) return row.bgOwn;
     if (!bgImages.length) return null;
+    if (row?.bgPick != null && bgImages[row.bgPick]) return bgImages[row.bgPick];
     return bgImages[i] ?? bgImages[bgImages.length - 1];
-  }, [bgImages, bgVideos, reelMode]);
+  }, [rows, bgImages, bgVideos, reelMode]);
+
+  const setRowBg = (index: number, patch: { bgPick?: number; bgOwn?: HTMLImageElement }) =>
+    setRows((prev) => prev.map((r, i) => (i === index ? { ...r, bgPick: undefined, bgOwn: undefined, ...patch } : r)));
+  const uploadOwnPhoto = (index: number, file: File) => {
+    if (!file.type.startsWith("image/")) { toast.error("Please choose an image"); return; }
+    loadImg(URL.createObjectURL(file)).then((img) => setRowBg(index, { bgOwn: img })).catch(() => toast.error("Could not load that image"));
+  };
+  const ownPhotoRef = useRef<HTMLInputElement>(null);
 
   // `height` is 1440 for the grid post and 1920 for a story. The card stays the same size and the
   // photo simply fills the taller frame, so the story looks like the post, not a stretched copy.
@@ -1104,6 +1119,38 @@ export default function TweetMaker() {
               </Button>
             </div>
           </div>
+          {rows[selectedIndex] && (
+            <div className="rounded-xl border border-border/30 p-3 space-y-2">
+              <p className="text-xs font-medium">{reelMode ? "Video" : "Photo"} for tweet {selectedIndex + 1}</p>
+              <p className="text-[11px] text-muted-foreground">Pick which {reelMode ? "video" : "photo"} sits behind this tweet. Untouched tweets keep going in upload order.</p>
+              <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => setRowBg(selectedIndex, {})}
+                  className={`h-16 px-3 rounded-lg border text-xs ${rows[selectedIndex].bgPick == null && !rows[selectedIndex].bgOwn ? "border-primary bg-primary/10 font-medium" : "border-border/40 text-muted-foreground"}`}>
+                  Automatic
+                </button>
+                {!reelMode && bgImages.map((img, k) => (
+                  <button key={k} type="button" onClick={() => setRowBg(selectedIndex, { bgPick: k })} title={`Photo ${k + 1}`}
+                    className={`h-16 w-16 rounded-lg overflow-hidden border-2 ${rows[selectedIndex].bgPick === k && !rows[selectedIndex].bgOwn ? "border-primary" : "border-transparent"}`}>
+                    <img src={img.src} alt={`Photo ${k + 1}`} className="h-full w-full object-cover" />
+                  </button>
+                ))}
+                {reelMode && bgVideos.map((_, k) => (
+                  <button key={k} type="button" onClick={() => setRowBg(selectedIndex, { bgPick: k })}
+                    className={`h-16 px-3 rounded-lg border text-xs ${rows[selectedIndex].bgPick === k ? "border-primary bg-primary/10 font-medium" : "border-border/40 text-muted-foreground"}`}>
+                    Video {k + 1}
+                  </button>
+                ))}
+                {!reelMode && (
+                  <button type="button" onClick={() => ownPhotoRef.current?.click()}
+                    className={`h-16 px-3 rounded-lg border border-dashed text-xs ${rows[selectedIndex].bgOwn ? "border-primary bg-primary/10 font-medium" : "border-border/40 text-muted-foreground"}`}>
+                    {rows[selectedIndex].bgOwn ? "Own photo added. Change" : "Upload one for this tweet"}
+                  </button>
+                )}
+              </div>
+              <input ref={ownPhotoRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => { if (e.target.files?.[0]) uploadOwnPhoto(selectedIndex, e.target.files[0]); e.target.value = ""; }} />
+            </div>
+          )}
           <div className="rounded-xl border border-border/30 p-3 space-y-2">
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs font-medium">Captions</p>
