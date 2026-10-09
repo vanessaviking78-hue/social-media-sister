@@ -627,6 +627,37 @@ export default function TweetMaker() {
     }
   };
 
+  // One ZIP with every tweet, its story version and a captions file, handy for posts that are not going through the scheduler.
+  const [packing, setPacking] = useState(false);
+  const downloadPack = async () => {
+    if (!rows.length) { toast.error("Load a CSV first"); return; }
+    setPacking(true);
+    try {
+      const zip = new JSZip();
+      const offscreen = document.createElement("canvas");
+      const pad = (n: number) => String(n + 1).padStart(2, "0");
+      let captionsText = "";
+      for (let i = 0; i < rows.length; i++) {
+        render(offscreen, i);
+        zip.file(`posts/tweet-${pad(i)}.png`, await canvasToBlob(offscreen));
+        render(offscreen, i, STORY_H);
+        zip.file(`stories/story-${pad(i)}.png`, await canvasToBlob(offscreen));
+        captionsText += `TWEET ${pad(i)}\n${rows[i].caption.trim() || "(no caption yet)"}\n\n----------\n\n`;
+      }
+      zip.file("captions.txt", captionsText);
+      const content = await zip.generateAsync({ type: "blob" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(content);
+      a.download = `tweet-pack-${Date.now()}.zip`;
+      a.click();
+      toast.success(`Downloaded ${rows.length} posts, ${rows.length} stories and the captions`);
+    } catch (e: any) {
+      toast.error(e?.message || "Couldn't build the pack");
+    } finally {
+      setPacking(false);
+    }
+  };
+
   const saveAllToLibrary = async () => {
     if (!rows.length) { toast.error("Load a CSV first"); return; }
     if (!clientName.trim()) { toast.error("Pick a client first"); return; }
@@ -867,6 +898,9 @@ export default function TweetMaker() {
           </div>
           <div className="rounded-xl border border-border/30 p-3 space-y-2">
             <p className="text-xs font-medium">Whole batch</p>
+            <Button onClick={downloadPack} disabled={packing || !rows.length} className="w-full">
+              {packing ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Download className="w-4 h-4 mr-1.5" />} Download everything (posts, stories and captions)
+            </Button>
             <div className="flex gap-2">
               <Button variant="outline" onClick={downloadAll} disabled={zipping || !rows.length} className="flex-1">
                 {zipping ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Download className="w-4 h-4 mr-1.5" />} Download all as ZIP
