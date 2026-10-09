@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { ArrowLeft, Upload, Loader2, Download, ShieldCheck, RefreshCcw, FileSpreadsheet, Images, ImageOff, CalendarClock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
@@ -186,6 +187,9 @@ export default function TweetMaker() {
   const [bgImages, setBgImages] = useState<HTMLImageElement[]>([]);
   // Reel mode: a short video sits behind each tweet instead of a photo.
   const [reelMode, setReelMode] = useState(false);
+  // For non clients: a name and @handle typed here replace whatever the CSV says, on every tweet.
+  const [nameOverride, setNameOverride] = useState("");
+  const [handleOverride, setHandleOverride] = useState("");
   const [bgVideos, setBgVideos] = useState<HTMLVideoElement[]>([]);
   const bgVideoFileRef = useRef<HTMLInputElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -313,7 +317,10 @@ export default function TweetMaker() {
     const isStory = height !== H;
     canvas.width = W;
     canvas.height = height;
-    const row = rows[rowIndex];
+    const baseRow = rows[rowIndex];
+    const row = baseRow
+      ? { ...baseRow, name: nameOverride.trim() || baseRow.name, handle: handleOverride.trim().replace(/^@/, "") || baseRow.handle }
+      : baseRow;
 
     // Background
     const bg = overlayOnly ? null : bgForIndex(rowIndex);
@@ -475,7 +482,7 @@ export default function TweetMaker() {
       else if (pos === "bottom-right") { lx = W - logoW - margin; ly = height - logoH - vMargin; }
       ctx.drawImage(logoImg, lx, ly, logoW, logoH);
     }
-  }, [rows, bgForIndex, profilePhoto, logoImg, selectedPreset]);
+  }, [rows, bgForIndex, profilePhoto, logoImg, selectedPreset, nameOverride, handleOverride]);
 
   // Plays the row's video once with the tweet card over it and records the result (1080 x 1920).
   // Frames are drawn by a timer, so it keeps going even if the tab is not in front.
@@ -895,6 +902,14 @@ export default function TweetMaker() {
                 {presets.map((p) => <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>)}
               </SelectContent>
             </Select>
+            <div className="rounded-lg border border-border/30 p-3 space-y-2">
+              <p className="text-xs font-medium">Not a client? Type the name and @ here</p>
+              <p className="text-[11px] text-muted-foreground">Whatever you type here goes on every tweet and replaces the name and handle in the CSV. Leave both empty to use the CSV.</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Input value={nameOverride} onChange={(e) => setNameOverride(e.target.value)} placeholder="Name" className="h-9 text-sm" />
+                <Input value={handleOverride} onChange={(e) => setHandleOverride(e.target.value)} placeholder="@handle" className="h-9 text-sm" />
+              </div>
+            </div>
           </section>
 
           <section className="space-y-2">
