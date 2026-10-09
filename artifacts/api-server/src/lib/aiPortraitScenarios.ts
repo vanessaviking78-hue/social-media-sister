@@ -892,6 +892,12 @@ export const WINTER_WOOLIES_PRESETS: PhotoStudioPreset[] = [
     hasColour: false,
     promptTemplate: `Full length portrait of a woman from the reference photo seated on a herringbone sofa, hands resting gently in her lap, warm glowing smile. Brown ribbed jumper dress, knee-high boots, soft warm interior light and cosy cushions around her. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
   },
+  {
+    id: "ww-21",
+    name: "Winter Walk",
+    hasColour: false,
+    promptTemplate: `Full length candid lifestyle photograph of a woman from the reference photo walking towards the camera along a tree lined park path covered in fallen golden and orange autumn leaves. Warm low sunlight filters through the trees, background softly blurred with shallow depth of field. She wears a black luxury coat, a black scarf and black leather gloves. No hat. One gloved hand rests gently at her hair, the other holds a phone against her chest, a tan leather crossbody bag on her shoulder. Hair falls naturally over one shoulder, calm downward glance, relaxed natural expression. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
 ];
 
 export const HALLOWEEN_PRESETS: PhotoStudioPreset[] = [

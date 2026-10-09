@@ -131,6 +131,7 @@ const WINTER_WOOLIES_PRESETS: PhotoStudioPreset[] = [
   { id: "ww-18", name: "Black Chunky Waiting Area", hasColour: false },
   { id: "ww-19", name: "Cream Off-Shoulder Velvet Armchair", hasColour: false },
   { id: "ww-20", name: "Brown Jumper Dress Herringbone Sofa", hasColour: false },
+  { id: "ww-21", name: "Winter Walk", hasColour: false },
 ];
 
 const HALLOWEEN_PRESETS: PhotoStudioPreset[] = [
