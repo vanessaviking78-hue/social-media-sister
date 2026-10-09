@@ -184,6 +184,10 @@ export default function TweetMaker() {
   const [logoImg, setLogoImg] = useState<HTMLImageElement | null>(null);
   const [rows, setRows] = useState<TweetRow[]>([]);
   const [bgImages, setBgImages] = useState<HTMLImageElement[]>([]);
+  // Reel mode: a short video sits behind each tweet instead of a photo.
+  const [reelMode, setReelMode] = useState(false);
+  const [bgVideos, setBgVideos] = useState<HTMLVideoElement[]>([]);
+  const bgVideoFileRef = useRef<HTMLInputElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [savingAll, setSavingAll] = useState(false);
@@ -266,17 +270,43 @@ export default function TweetMaker() {
     }
   };
 
+  const loadBgVideos = async (files: File[]) => {
+    const vids = files.filter((f) => f.type.startsWith("video/"));
+    if (!vids.length) { toast.error("Please choose video files"); return; }
+    try {
+      const loaded = await Promise.all(vids.map((f) => new Promise<HTMLVideoElement>((resolve, reject) => {
+        const v = document.createElement("video");
+        v.muted = true;
+        v.playsInline = true;
+        v.preload = "auto";
+        v.onloadeddata = () => { v.currentTime = 0.05; };
+        v.onseeked = () => { v.onseeked = null; resolve(v); };
+        v.onerror = () => reject(new Error("bad video"));
+        v.src = URL.createObjectURL(f);
+      })));
+      setBgVideos(loaded);
+      const long = loaded.find((v) => v.duration > 15);
+      toast.success(`${loaded.length} background video${loaded.length !== 1 ? "s" : ""} loaded${long ? ". One is over 15 seconds, so I will only use its first 15." : ""}`);
+    } catch {
+      toast.error("Some of those videos couldn't be loaded. MP4 or MOV from your phone works best.");
+    }
+  };
+
   // Backgrounds are matched to rows in order; if there are fewer photos than
   // rows the last one repeats for whatever's left, same pattern as the other
   // bulk tools in the app.
-  const bgForIndex = useCallback((i: number): HTMLImageElement | null => {
+  const bgForIndex = useCallback((i: number): HTMLImageElement | HTMLVideoElement | null => {
+    if (reelMode) {
+      if (!bgVideos.length) return null;
+      return bgVideos[i] ?? bgVideos[bgVideos.length - 1];
+    }
     if (!bgImages.length) return null;
     return bgImages[i] ?? bgImages[bgImages.length - 1];
-  }, [bgImages]);
+  }, [bgImages, bgVideos, reelMode]);
 
   // `height` is 1440 for the grid post and 1920 for a story. The card stays the same size and the
   // photo simply fills the taller frame, so the story looks like the post, not a stretched copy.
-  const render = useCallback((canvas: HTMLCanvasElement | null, rowIndex: number, height: number = H) => {
+  const render = useCallback((canvas: HTMLCanvasElement | null, rowIndex: number, height: number = H, overlayOnly = false) => {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -286,11 +316,17 @@ export default function TweetMaker() {
     const row = rows[rowIndex];
 
     // Background
-    const bg = bgForIndex(rowIndex);
-    ctx.fillStyle = "#dfe7e6";
-    ctx.fillRect(0, 0, W, height);
+    const bg = overlayOnly ? null : bgForIndex(rowIndex);
+    if (overlayOnly) {
+      ctx.clearRect(0, 0, W, height);
+    } else {
+      ctx.fillStyle = "#dfe7e6";
+      ctx.fillRect(0, 0, W, height);
+    }
     if (bg) {
-      const ar = bg.width / bg.height;
+      const bw = bg instanceof HTMLVideoElement ? bg.videoWidth : bg.width;
+      const bh = bg instanceof HTMLVideoElement ? bg.videoHeight : bg.height;
+      const ar = bw / bh;
       let dw = W, dh = height, dx = 0, dy = 0;
       if (ar > W / height) { dh = height; dw = height * ar; dx = (W - dw) / 2; }
       else { dw = W; dh = W / ar; dy = (height - dh) / 2; }
@@ -440,6 +476,73 @@ export default function TweetMaker() {
       ctx.drawImage(logoImg, lx, ly, logoW, logoH);
     }
   }, [rows, bgForIndex, profilePhoto, logoImg, selectedPreset]);
+
+  // Plays the row's video once with the tweet card over it and records the result (1080 x 1920).
+  // Frames are drawn by a timer, so it keeps going even if the tab is not in front.
+  const recordReelOnce = (rowIndex: number): Promise<Blob> => new Promise((resolve, reject) => {
+    const video = bgForIndex(rowIndex);
+    if (!(video instanceof HTMLVideoElement)) { reject(new Error("No background video for this tweet")); return; }
+    if (typeof MediaRecorder === "undefined") { reject(new Error("This browser cannot record video, try Chrome")); return; }
+    const overlay = document.createElement("canvas");
+    render(overlay, rowIndex, STORY_H, true);
+    const out = document.createElement("canvas");
+    out.width = W; out.height = STORY_H;
+    const ctx = out.getContext("2d");
+    if (!ctx) { reject(new Error("Could not start recording")); return; }
+    const drawFrame = () => {
+      const ar = video.videoWidth / video.videoHeight;
+      let dw = W, dh = STORY_H, dx = 0, dy = 0;
+      if (ar > W / STORY_H) { dh = STORY_H; dw = STORY_H * ar; dx = (W - dw) / 2; }
+      else { dw = W; dh = W / ar; dy = (STORY_H - dh) / 2; }
+      ctx.fillStyle = "#dfe7e6";
+      ctx.fillRect(0, 0, W, STORY_H);
+      ctx.drawImage(video, dx, dy, dw, dh);
+      ctx.drawImage(overlay, 0, 0);
+    };
+    const stream = out.captureStream(30);
+    const mime = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm", "video/mp4"].find((m) => MediaRecorder.isTypeSupported(m)) ?? "";
+    const rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 8_000_000 } : { videoBitsPerSecond: 8_000_000 });
+    const chunks: Blob[] = [];
+    rec.ondataavailable = (e) => { if (e.data.size) chunks.push(e.data); };
+    rec.onerror = () => reject(new Error("Recording failed"));
+    rec.onstop = () => { video.pause(); video.onended = null; video.currentTime = 0.05; resolve(new Blob(chunks, { type: rec.mimeType || "video/webm" })); };
+    const maxMs = Math.min(video.duration || 5, 15) * 1000;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const finish = () => { if (timer) clearInterval(timer); if (rec.state !== "inactive") rec.stop(); };
+    video.onended = finish;
+    video.currentTime = 0;
+    video.play().then(() => {
+      drawFrame();
+      rec.start(250);
+      const t0 = performance.now();
+      timer = setInterval(() => {
+        drawFrame();
+        if (performance.now() - t0 >= maxMs + 300) finish();
+      }, 33);
+    }).catch(() => reject(new Error("The browser would not play that video")));
+  });
+  const recordReel = async (rowIndex: number): Promise<Blob> => {
+    let last: Blob | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      last = await recordReelOnce(rowIndex);
+      if (last.size > 20_000) return last;
+    }
+    throw new Error(`The reel for tweet ${rowIndex + 1} came back empty`);
+  };
+  // The server turns the browser recording into a proper MP4. store=true keeps it for scheduling.
+  const convertReel = async (clip: Blob, store: boolean): Promise<{ videoUrl?: string; blob?: Blob }> => {
+    const fd = new FormData();
+    fd.append("video", clip, "reel.webm");
+    fd.append("height", "1920");
+    if (store) fd.append("store", "1");
+    const res = await fetch(`${BASE}/api/stylish-reel/convert`, { method: "POST", body: fd });
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.error || "Could not convert the reel");
+    }
+    if (store) { const d = await res.json(); if (!d.videoUrl) throw new Error("No reel URL returned"); return { videoUrl: d.videoUrl as string }; }
+    return { blob: await res.blob() };
+  };
 
   useEffect(() => {
     render(canvasRef.current, selectedIndex);
@@ -638,8 +741,16 @@ export default function TweetMaker() {
       const pad = (n: number) => String(n + 1).padStart(2, "0");
       let captionsText = "";
       for (let i = 0; i < rows.length; i++) {
-        render(offscreen, i);
-        zip.file(`posts/tweet-${pad(i)}.png`, await canvasToBlob(offscreen));
+        if (reelMode) {
+          setPacking(true);
+          toast.message(`Recording reel ${i + 1} of ${rows.length}. Keep this tab open.`);
+          const clip = await recordReel(i);
+          const mp4 = await convertReel(clip, false);
+          if (mp4.blob) zip.file(`reels/reel-${pad(i)}.mp4`, mp4.blob);
+        } else {
+          render(offscreen, i);
+          zip.file(`posts/tweet-${pad(i)}.png`, await canvasToBlob(offscreen));
+        }
         render(offscreen, i, STORY_H);
         zip.file(`stories/story-${pad(i)}.png`, await canvasToBlob(offscreen));
         captionsText += `TWEET ${pad(i)}\n${rows[i].caption.trim() || "(no caption yet)"}\n\n----------\n\n`;
@@ -699,6 +810,7 @@ export default function TweetMaker() {
     if (!rows.length) { toast.error("Load a CSV first"); return; }
     const missing = rows.findIndex((r) => !r.caption.trim());
     if (missing !== -1) { toast.error(`Tweet ${missing + 1} needs a caption first. Press Generate captions above.`); return; }
+    if (reelMode && !bgVideos.length) { toast.error("Upload your background video first"); return; }
     setScheduling("Starting");
     try {
       const offscreen = document.createElement("canvas");
@@ -726,15 +838,26 @@ export default function TweetMaker() {
         return url;
       };
       for (let i = 0; i < rows.length; i++) {
-        setScheduling(`Uploading tweet ${i + 1} of ${rows.length}`);
-        render(offscreen, i);
-        const url = await uploadPng(offscreen.toDataURL("image/png"), `tweet-${i + 1}-${Date.now()}.png`);
+        let url = "";
+        let reelUrl = "";
+        if (reelMode) {
+          setScheduling(`Recording reel ${i + 1} of ${rows.length}. Keep this tab open`);
+          const clip = await recordReel(i);
+          setScheduling(`Making reel ${i + 1} of ${rows.length} into an MP4`);
+          reelUrl = (await convertReel(clip, true)).videoUrl ?? "";
+        } else {
+          setScheduling(`Uploading tweet ${i + 1} of ${rows.length}`);
+          render(offscreen, i);
+          url = await uploadPng(offscreen.toDataURL("image/png"), `tweet-${i + 1}-${Date.now()}.png`);
+        }
         // The same tweet as a story, 1080 x 1920, so every post also goes out as a story.
         setScheduling(`Making story ${i + 1} of ${rows.length}`);
         render(offscreen, i, STORY_H);
         const storyUrl = await uploadPng(offscreen.toDataURL("image/png"), `tweet-${i + 1}-story-${Date.now()}.png`);
         const title = `${rows[i].quote.slice(0, 60)} · ${selectedPreset?.name ?? (rows[i].name || "tweet")}`;
-        items.push({ title, caption: rows[i].caption.trim(), imageUrls: [url] });
+        items.push(reelMode
+          ? { title, caption: rows[i].caption.trim(), videoUrl: reelUrl }
+          : { title, caption: rows[i].caption.trim(), imageUrls: [url] });
         stories.push({ imageUrl: storyUrl, title });
       }
       setScheduleStories(stories);
@@ -815,7 +938,39 @@ export default function TweetMaker() {
           </section>
 
           <section className="space-y-2">
-            <h2 className="font-semibold text-base">4. Background photos</h2>
+            <h2 className="font-semibold text-base">4. Background {reelMode ? "video" : "photos"}</h2>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setReelMode(false)}
+                className={`rounded-lg border px-3 py-2 text-sm ${!reelMode ? "border-primary bg-primary/10 font-medium" : "border-border/40 text-muted-foreground"}`}>
+                Photo posts
+              </button>
+              <button type="button" onClick={() => setReelMode(true)}
+                className={`rounded-lg border px-3 py-2 text-sm ${reelMode ? "border-primary bg-primary/10 font-medium" : "border-border/40 text-muted-foreground"}`}>
+                Reels (video background)
+              </button>
+            </div>
+            {reelMode && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Upload one short video per row (about 5 seconds), in the same order as the CSV. Upload just one and it is used behind every tweet. The tweet sits on top, the reel comes out at 1080 x 1920 and has no sound, so add music when you schedule.</p>
+                <div
+                  onClick={() => bgVideoFileRef.current?.click()}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => { e.preventDefault(); if (e.dataTransfer.files.length) loadBgVideos(Array.from(e.dataTransfer.files)); }}
+                  className="border-2 border-dashed border-border/40 hover:border-border/70 rounded-xl p-5 flex items-center gap-3 cursor-pointer transition-colors"
+                >
+                  <Images className="w-5 h-5 text-muted-foreground shrink-0" />
+                  <p className="text-sm text-muted-foreground">{bgVideos.length ? `${bgVideos.length} video${bgVideos.length !== 1 ? "s" : ""} loaded. Click to replace.` : "Click or drop background videos"}</p>
+                </div>
+                <input ref={bgVideoFileRef} type="file" accept="video/*" multiple className="hidden"
+                  onChange={(e) => { if (e.target.files?.length) loadBgVideos(Array.from(e.target.files)); e.target.value = ""; }} />
+                {rows.length > 0 && bgVideos.length > 0 && bgVideos.length < rows.length && (
+                  <p className="text-[11px] text-amber-500">{bgVideos.length} video{bgVideos.length !== 1 ? "s" : ""} for {rows.length} rows, the last one repeats for the rest.</p>
+                )}
+                <p className="text-[11px] text-muted-foreground">Making reels records each one in real time, so 20 tweets of 5 seconds takes a few minutes. Keep this tab open while it works.</p>
+              </div>
+            )}
+            {!reelMode && (
+              <div className="space-y-2">
             <p className="text-xs text-muted-foreground">Upload one per row, in the same order as the CSV. Add fewer than rows and the last one repeats.</p>
             <div
               onClick={() => bgFileRef.current?.click()}
@@ -838,6 +993,8 @@ export default function TweetMaker() {
             />
             {rows.length > 0 && bgImages.length > 0 && bgImages.length < rows.length && (
               <p className="text-[11px] text-amber-500">{bgImages.length} photo{bgImages.length !== 1 ? "s" : ""} for {rows.length} rows, the last photo repeats for the remaining {rows.length - bgImages.length}.</p>
+            )}
+              </div>
             )}
           </section>
 
@@ -980,14 +1137,14 @@ export default function TweetMaker() {
               )}
             </div>
           </div>
-          <p className="text-xs text-muted-foreground text-center">Portrait 1080 x 1440, ready for the grid.</p>
+          <p className="text-xs text-muted-foreground text-center">{reelMode ? "Reel 1080 x 1920, full screen." : "Portrait 1080 x 1440, ready for the grid."}</p>
         </div>
       </div>
       {scheduleOpen && scheduleItems && (
         <ScheduleModal
           presetId={selectedPreset?.id ?? null}
           presetName={selectedPreset?.name}
-          postType="single-image"
+          postType={reelMode ? "reel" : "single-image"}
           posts={scheduleItems}
           perPostCaptions
           initialScheduledAt={scheduleStart}

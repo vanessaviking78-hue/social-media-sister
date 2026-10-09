@@ -107,10 +107,12 @@ router.post("/stylish-reel/convert", uploadVideo.single("video"), async (req, re
     const inPath = join(dir, "in.webm");
     const outPath = join(dir, "out.mp4");
     await writeFile(inPath, f.buffer);
+    // 1440 is the grid shape, 1920 is full screen reel / story shape.
+    const outH = req.body?.height === "1920" ? 1920 : 1440;
     await runFfmpeg([
       "-i", inPath,
       "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
-      "-vf", "scale=1080:1440:force_original_aspect_ratio=decrease,pad=1080:1440:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p",
+      "-vf", `scale=1080:${outH}:force_original_aspect_ratio=decrease,pad=1080:${outH}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p`,
       "-map", "0:v:0", "-map", "1:a:0",
       "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "30", "-movflags", "+faststart",
       "-c:a", "aac", "-b:a", "96k", "-shortest", "-y", outPath,
