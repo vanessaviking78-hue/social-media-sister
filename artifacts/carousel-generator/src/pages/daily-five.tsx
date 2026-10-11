@@ -4,6 +4,7 @@ const BASE = import.meta.env.BASE_URL || "/";
 const API = `${BASE}api/daily-five`;
 const SESSION_KEY = "dailyfive_session";
 const STAN_URL = (import.meta.env.VITE_DAILY_FIVE_STAN_URL as string | undefined) || "";
+const TASTER_KEY = "dailyfive_taster";
 
 type Task = { id: string; cat: string; text: string };
 type State = { day: string; tasks: Task[]; ticked: string[]; streak: number; full: boolean };
@@ -16,6 +17,23 @@ const MESSAGES = [
   "Four. Do not stop now, you absolute legend.",
   "All five done! Go and have a biscuit.",
 ];
+
+type TasterSave = { day: string; ticked: string[] };
+function getTaster(): TasterSave | null {
+  try {
+    const raw = localStorage.getItem(TASTER_KEY);
+    return raw ? (JSON.parse(raw) as TasterSave) : null;
+  } catch {
+    return null;
+  }
+}
+function saveTaster(v: TasterSave) {
+  try {
+    localStorage.setItem(TASTER_KEY, JSON.stringify(v));
+  } catch {
+    /* private mode, carry on */
+  }
+}
 
 function getSession(): string {
   try {
@@ -68,7 +86,7 @@ const CSS = `
 `;
 
 export default function DailyFive() {
-  const [status, setStatus] = useState<"loading" | "login" | "sent" | "inactive" | "app">("loading");
+  const [status, setStatus] = useState<"loading" | "login" | "sent" | "inactive" | "app" | "taster" | "tasterEnded">("loading");
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -145,6 +163,33 @@ export default function DailyFive() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const token = params.get("token");
+    const taster = params.get("taster");
+    if (taster) {
+      (async () => {
+        try {
+          const r = await fetch(`${API}/taster?code=${encodeURIComponent(taster)}`);
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            setError(data.error || "This taster link is not valid any more");
+            setStatus("login");
+            return;
+          }
+          const saved = getTaster();
+          if (saved && saved.day !== data.day) {
+            setStatus("tasterEnded");
+            return;
+          }
+          const ticked = saved && saved.day === data.day ? saved.ticked : [];
+          saveTaster({ day: data.day, ticked });
+          setState({ day: data.day, tasks: data.tasks, ticked, streak: 0, full: ticked.length >= data.tasks.length });
+          setStatus("taster");
+        } catch {
+          setError("Could not reach the server. Check your signal and refresh.");
+          setStatus("login");
+        }
+      })();
+      return;
+    }
     if (!token) {
       void load();
       return;
@@ -201,6 +246,13 @@ export default function DailyFive() {
     if (!state) return;
     const isDone = state.ticked.includes(task.id);
     const optimistic = isDone ? state.ticked.filter((i) => i !== task.id) : [...state.ticked, task.id];
+    if (status === "taster") {
+      const full = optimistic.length >= state.tasks.length;
+      setState({ ...state, ticked: optimistic, full });
+      saveTaster({ day: state.day, ticked: optimistic });
+      if (full && !state.full) confetti();
+      return;
+    }
     setState({ ...state, ticked: optimistic });
     try {
       const r = await fetch(`${API}/tick`, {
@@ -276,6 +328,17 @@ export default function DailyFive() {
           </div>
         )}
 
+        {status === "tasterEnded" && (
+          <div className="panel">
+            <p>Your free day has been and gone. Hope the confetti was worth it. Fancy a new five every morning?</p>
+            {STAN_URL ? (
+              <a className="btn" href={STAN_URL}>
+                Join for £9 a month
+              </a>
+            ) : null}
+          </div>
+        )}
+
         {status === "inactive" && (
           <div className="panel">
             <p>This email does not have an active Daily Five membership right now.</p>
@@ -290,8 +353,15 @@ export default function DailyFive() {
           </div>
         )}
 
-        {status === "app" && state && (
+        {(status === "app" || status === "taster") && state && (
           <>
+            {status === "taster" && (
+              <div className="panel" style={{ marginTop: 0, marginBottom: 16 }}>
+                <p style={{ margin: 0 }}>
+                  This is your free taster, today only. Tick all five and see what happens.
+                </p>
+              </div>
+            )}
             <div className="bar">
               <div className="pill">
                 <b>{state.streak}</b>
@@ -320,9 +390,19 @@ export default function DailyFive() {
             <div className="msg">{MESSAGES[Math.min(state.ticked.length, MESSAGES.length - 1)]}</div>
             <div className="foot">
               New five at midnight. No, you cannot have them early.
-              <div>
-                <button onClick={signOut}>Sign out</button>
-              </div>
+              {status === "taster" ? (
+                STAN_URL ? (
+                  <div style={{ marginTop: 14 }}>
+                    <a className="btn" href={STAN_URL}>
+                      Want one every day? Join for £9 a month
+                    </a>
+                  </div>
+                ) : null
+              ) : (
+                <div>
+                  <button onClick={signOut}>Sign out</button>
+                </div>
+              )}
             </div>
           </>
         )}

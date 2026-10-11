@@ -317,6 +317,20 @@ router.get("/daily-five/me", requireMember, async (req: AuthedRequest, res: Resp
   }
 });
 
+// A shareable taster link: today's five for anyone holding the code, nothing saved on the server.
+// Change DAILY_FIVE_TASTER_CODE in Railway to retire an old link and make a new one.
+const TASTER_CODE = process.env.DAILY_FIVE_TASTER_CODE || "2c5599ade6";
+
+router.get("/daily-five/taster", (req: Request, res: Response) => {
+  const code = typeof req.query.code === "string" ? req.query.code : "";
+  if (!secretMatches(code, TASTER_CODE)) {
+    res.status(404).json({ error: "This taster link is not valid any more" });
+    return;
+  }
+  const day = londonToday();
+  res.json({ day, tasks: tasksFor(day) });
+});
+
 router.post("/daily-five/tick", requireMember, async (req: AuthedRequest, res: Response) => {
   try {
     const email = req.memberEmail!;
