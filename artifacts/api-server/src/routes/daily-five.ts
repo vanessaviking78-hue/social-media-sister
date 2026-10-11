@@ -221,7 +221,10 @@ router.post("/daily-five/login", async (req: Request, res: Response) => {
     const found = rowsOf<{ active: boolean }>(
       await db.execute(sql`SELECT active FROM daily_five_members WHERE email = ${email}`),
     )[0];
-    if (!found || !found.active) return reply();
+    if (!found || !found.active) {
+      console.log("[daily-five] login asked for a non member email, no link sent");
+      return reply();
+    }
 
     const token = newToken();
     await db.execute(sql`
@@ -245,8 +248,10 @@ router.post("/daily-five/login", async (req: Request, res: Response) => {
         ].join("\n"),
       });
     }
+    console.log(`[daily-five] login link ${transporter ? "sent" : "NOT sent, SMTP not configured"}`);
     return reply();
-  } catch {
+  } catch (err) {
+    console.error("[daily-five] login failed:", err instanceof Error ? err.message : err);
     return reply();
   }
 });
