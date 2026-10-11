@@ -123,6 +123,7 @@ import EngagingReels from "@/pages/engaging-reels";
 import ReelsChallengeAdmin from "@/pages/reels-challenge-admin";
 import BonusContent from "@/pages/bonus-content";
 import ClientBank from "@/pages/client-bank";
+import DailyFive from "@/pages/daily-five";
 
 const queryClient = new QueryClient();
 
@@ -256,6 +257,7 @@ function AppContent() {
     const [isPublicRants] = useRoute("/rants");
     const [isCoffee] = useRoute("/coffee");
     const [isFreeCall] = useRoute("/freecall");
+    const [isDailyFive] = useRoute("/dailytasks");
   const [isFounderWelcome] = useRoute("/founder-welcome");
   const [isTrialBundle] = useRoute("/trialbundle");
   const [isContentPreview, contentPreviewParams] = useRoute("/preview/:clientSlug");
@@ -356,6 +358,9 @@ function AppContent() {
     }
     if (isFreeCall) {
           return <FreeCall />;
+    }
+    if (isDailyFive) {
+          return <DailyFive />;
     }
   if (isFounderWelcome) {
     return <FounderWelcome />;
