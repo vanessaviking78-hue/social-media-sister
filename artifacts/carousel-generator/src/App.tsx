@@ -124,6 +124,7 @@ import ReelsChallengeAdmin from "@/pages/reels-challenge-admin";
 import BonusContent from "@/pages/bonus-content";
 import ClientBank from "@/pages/client-bank";
 import DailyFive from "@/pages/daily-five";
+import InjectorReels from "@/pages/injector-reels";
 
 const queryClient = new QueryClient();
 
@@ -205,6 +206,7 @@ function ProtectedRouter() {
       <Route path="/adventcalendar" component={AdventCalendar} />
       <Route path="/about-me-studio" component={AboutMeStudio} />
       <Route path="/tweet-maker" component={TweetMaker} />
+      <Route path="/injectorreels" component={InjectorReels} />
       <Route path="/revenue-ideas" component={RevenueIdeas} />
       <Route path="/competitor" component={CompetitorScout} />
       <Route path="/audit" component={AuditPage} />
