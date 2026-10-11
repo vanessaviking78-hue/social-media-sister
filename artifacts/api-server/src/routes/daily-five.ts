@@ -201,6 +201,12 @@ router.post("/daily-five/webhook/cancel", requireWebhookSecret, async (req: Requ
 
 // ---------- sign in by emailed link ----------
 
+// Owner and test addresses that always get in, whatever Stan says. Set DAILY_FIVE_OWNER_EMAILS to change.
+const OWNER_EMAILS = (process.env.DAILY_FIVE_OWNER_EMAILS || "vanessa@thecybersuite.com,vanessaviking78@gmail.com")
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
 const lastLoginAsk = new Map<string, number>();
 
 router.post("/daily-five/login", async (req: Request, res: Response) => {
@@ -221,8 +227,13 @@ router.post("/daily-five/login", async (req: Request, res: Response) => {
     const found = rowsOf<{ active: boolean }>(
       await db.execute(sql`SELECT active FROM daily_five_members WHERE email = ${email}`),
     )[0];
-    if (!found || !found.active) {
-      console.log("[daily-five] login asked for a non member email, no link sent");
+    if (OWNER_EMAILS.includes(email)) {
+      await db.execute(sql`
+        INSERT INTO daily_five_members (email, active) VALUES (${email}, TRUE)
+        ON CONFLICT (email) DO UPDATE SET active = TRUE, cancelled_at = NULL
+      `);
+    } else if (!found || !found.active) {
+      console.log(`[daily-five] login asked by non member ${email.slice(0, 3)}***${email.slice(email.indexOf("@"))}, no link sent`);
       return reply();
     }
 
