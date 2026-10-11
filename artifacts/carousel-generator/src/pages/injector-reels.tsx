@@ -108,6 +108,11 @@ export default function InjectorReels() {
         </div>
 
         <p className="text-sm text-muted-foreground">{section.description}</p>
+        <p className="text-xs text-muted-foreground/80 rounded-lg border border-border/40 px-3 py-2">
+          <b>How to read the tags:</b> Seen, Handy, Giggle and Glimpse are the four Social Media Sister pillars. S, K and M stand
+          for Same (relatable), Know (expertise) and Me (personal), and every hook uses at least two. Each hook also passes the
+          Sister Test: Simple, Specific, Shareable.
+        </p>
 
         <div className="flex flex-wrap gap-2">
           {(["all", "todo", "filmed", "posted"] as const).map((f) => (
