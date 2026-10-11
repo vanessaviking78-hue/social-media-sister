@@ -333,7 +333,7 @@ export default function DailyFive() {
             <p>Your free day has been and gone. Hope the confetti was worth it. Fancy a new five every morning?</p>
             {STAN_URL ? (
               <a className="btn" href={STAN_URL}>
-                Join for £9 a month
+                Join for £7 a month
               </a>
             ) : null}
           </div>
@@ -344,7 +344,7 @@ export default function DailyFive() {
             <p>This email does not have an active Daily Five membership right now.</p>
             {STAN_URL ? (
               <a className="btn" href={STAN_URL}>
-                Join for £9 a month
+                Join for £7 a month
               </a>
             ) : null}
             <div className="foot">
@@ -394,7 +394,7 @@ export default function DailyFive() {
                 STAN_URL ? (
                   <div style={{ marginTop: 14 }}>
                     <a className="btn" href={STAN_URL}>
-                      Want one every day? Join for £9 a month
+                      Want one every day? Join for £7 a month
                     </a>
                   </div>
                 ) : null
