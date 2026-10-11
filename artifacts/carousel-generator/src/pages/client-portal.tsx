@@ -930,7 +930,6 @@ export default function ClientPortal({ token }: { token: string }) {
   const inputCls = "w-full rounded-xl bg-zinc-900 border border-zinc-800 px-4 py-3 text-sm text-white outline-none focus:border-pink-600";
     const accent = data.accentColor || "#ec4899";
   const sendBtn = "w-full rounded-full bg-[var(--accent)] hover:brightness-110 disabled:opacity-60 text-white font-semibold py-3.5 flex items-center justify-center gap-2";
-  const isMadameWax = (data.clientName || "").toLowerCase().includes("madame wax");
   const isRyderClinic = (data.clientName || "").toLowerCase().includes("ryder");
 
   const TabBtn = ({ id, label, badge }: { id: Tab; label: string; badge?: number }) => (
@@ -989,18 +988,6 @@ className="absolute bottom-10 flex flex-col items-center gap-1.5 text-zinc-500 h
 </div>
 </div>
 <div className="max-w-3xl mx-auto px-4 pb-3 flex flex-wrap gap-2">
-          {isMadameWax && (
-            <a
-              href="/madamewaxticklist"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-extrabold transition-colors text-white hover:brightness-110"
-              style={{ backgroundColor: "#22b8ab" }}
-            >
-              <ClipboardList className="w-4 h-4" />
-              <span>Content List</span>
-            </a>
-          )}
           {isRyderClinic && (
             <a
               href="/ryderclinicticklist"

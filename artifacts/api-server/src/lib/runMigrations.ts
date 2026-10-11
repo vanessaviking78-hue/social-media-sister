@@ -50,6 +50,7 @@ await createBroadcastDraftsTable();
     await addNewsletterColumnsAndTable();
     await createClientQuestionTables();
     await addStylishCoverFontColumns();
+    await createContentTicklistsTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -729,4 +730,16 @@ async function createClientQuestionTables(): Promise<void> {
   `);
   await db.execute(sql`ALTER TABLE client_question_answers ADD COLUMN IF NOT EXISTS seen BOOLEAN NOT NULL DEFAULT FALSE`);
   await db.execute(sql`CREATE INDEX IF NOT EXISTS client_question_answers_question_idx ON client_question_answers (question_id, created_at DESC)`);
+}
+
+// Shared tick lists (Ryder Clinic content list). Created here because the
+// schema sync step is switched off on deploy.
+async function createContentTicklistsTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS content_ticklists (
+      id text PRIMARY KEY,
+      state json NOT NULL DEFAULT '{}',
+      updated_at timestamp NOT NULL DEFAULT now()
+    )
+  `);
 }
