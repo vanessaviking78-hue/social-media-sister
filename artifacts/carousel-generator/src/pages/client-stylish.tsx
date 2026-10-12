@@ -474,7 +474,7 @@ export default function ClientStylish() {
     setBusy(true);
     try {
       const files = await collectImages();
-      const ok = await setStylishHandoff({ files, csv, csvName: `${packName} Stylish.csv`, clientName: clientName.trim(), location: area.trim() || undefined, intent, october, spot: spot.trim() || undefined });
+      const ok = await setStylishHandoff({ files, csv, csvName: `${packName} Stylish.csv`, clientName: clientName.trim(), location: area.trim() || undefined, intent, october });
       if (!ok) throw new Error("Stylish could not be loaded from here, please download instead");
       // Opens Stylish in its own tab so this page, with the photos and CSV, stays open to use again
       // (for example once as posts, then again as reels or with stories).
@@ -840,12 +840,6 @@ export default function ClientStylish() {
                   Use the October 26 covers
                 </label>
                 <p className="text-xs text-muted-foreground">Each post gets one of the October 26 covers in the clinic's colour and fonts, ready to check in Stylish. Slides 2 to 5 stay in the usual Stylish look.</p>
-                {october && (
-                  <div className="flex items-center gap-2">
-                    <Label className="text-xs">Spot colour (from their brand colour above)</Label>
-                    <Input className="w-32 h-8" value={spot} onChange={e => setSpot(e.target.value)} placeholder="#2c9a8f" />
-                  </div>
-                )}
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
