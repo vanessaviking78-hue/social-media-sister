@@ -1843,10 +1843,153 @@ export const RANDOM_PROMPT_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
+// ─── MIX folder ───────────────────────────────────────────────────────────
+// 16 images in four sets of four: clinical black scrubs, jeans and a luxury
+// shirt, a seasonal set (month and style picked at generation time) and an
+// all black jumper and jeans set.
+const MIX_SUFFIX = `Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm or orange colour cast. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`;
+
+export const MIX_SEASONAL_IDS = ["mx-09", "mx-10", "mx-11", "mx-12"];
+
+export const MIX_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+export const MIX_STYLES: { value: string; label: string }[] = [
+  { value: "luxe", label: "Luxe" },
+  { value: "everyday", label: "Everyday" },
+  { value: "coffee shop", label: "Coffee shop" },
+  { value: "desk typing", label: "Desk typing" },
+  { value: "speaking to a patient", label: "Speaking to a patient (a woman aged 50)" },
+];
+
+const MIX_SEASON_DETAILS: Record<string, { season: string; scene: string; outfit: string }> = {
+  winter: {
+    season: "winter",
+    scene: "Cold, crisp winter feel. Soft low winter daylight, bare branches or frost visible through a window, a cosy layered mood.",
+    outfit: "a chunky knit jumper or wool coat in rich neutral tones, with a scarf if it suits the scene",
+  },
+  spring: {
+    season: "spring",
+    scene: "Fresh spring feel. Soft bright daylight, blossom, daffodils or tulips in view, a light and optimistic mood.",
+    outfit: "a light knit or tailored blazer in soft fresh tones, lightweight layers",
+  },
+  summer: {
+    season: "summer",
+    scene: "Bright summer feel. Warm clear daylight, greenery and open windows or sunshine in view, an easy relaxed mood.",
+    outfit: "a lightweight linen shirt or breathable summer dress in light clean tones",
+  },
+  autumn: {
+    season: "autumn",
+    scene: "Autumn feel. Soft low golden daylight, copper and russet leaves or seasonal foliage in view, a cosy grounded mood.",
+    outfit: "a soft knit jumper or tailored coat in rich autumn tones such as camel, deep green or burgundy",
+  },
+};
+
+const MIX_MONTH_TO_SEASON: Record<string, keyof typeof MIX_SEASON_DETAILS> = {
+  january: "winter", february: "winter", march: "spring", april: "spring", may: "spring",
+  june: "summer", july: "summer", august: "summer", september: "autumn", october: "autumn",
+  november: "autumn", december: "winter",
+};
+
+const MIX_STYLE_SCENES: Record<string, string> = {
+  "luxe": "The setting is luxe: a high end interior with marble, polished finishes, soft velvet furnishings and elegant styling. She looks polished, expensive and effortlessly confident.",
+  "everyday": "The setting is everyday: a real, relaxed, lived in home or high street moment. Natural, unstaged and approachable, comfortable styling.",
+  "coffee shop": "The setting is a stylish independent coffee shop: warm interior, a latte or flat white in front of her, softly blurred cafe background.",
+  "desk typing": "The setting is a tidy desk: she is typing on a laptop, engaged and focused, with a notebook and a drink beside her.",
+  "speaking to a patient": "The setting is a calm, welcoming consultation room. She is speaking warmly to a patient, a woman aged around 50, who is seated opposite and listening. The patient is a separate person with her own face, and only the main woman must match the reference photo. Both look relaxed, kind and engaged.",
+};
+
+function mixSeasonText(month?: string, style?: string): { styleText: string; seasonText: string; outfitText: string } {
+  const monthName = (month || "").trim();
+  const seasonKey = MIX_MONTH_TO_SEASON[monthName.toLowerCase()] ?? "autumn";
+  const detail = MIX_SEASON_DETAILS[seasonKey];
+  const styleKey = (style || "").trim().toLowerCase();
+  const styleText = MIX_STYLE_SCENES[styleKey] ?? MIX_STYLE_SCENES["luxe"];
+  return {
+    styleText,
+    seasonText: `It is ${monthName || "autumn"} in the UK, so the scene clearly reads as ${detail.season}. ${detail.scene}`,
+    outfitText: `She is dressed for the season in ${detail.outfit}.`,
+  };
+}
+
+export const MIX_PRESETS: PhotoStudioPreset[] = [
+  // Set 1: clinical, always black scrubs
+  {
+    id: "mx-01", name: "Clinical Standing Wide", hasColour: false,
+    promptTemplate: `A woman from the reference photo standing in a bright, clean clinical treatment room, waist-up wide shot, hands relaxed in front of her, warm professional smile. She is wearing fitted black medical scrubs, entirely black. Clinical background with a treatment couch, white walls and soft clinical lighting. ${MIX_SUFFIX}`,
+  },
+  {
+    id: "mx-02", name: "Clinical Seated Stool", hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a clinic stool beside a treatment couch, body turned slightly to camera, calm and welcoming. She is wearing fitted black medical scrubs, entirely black. Clean clinical background, white cabinetry, soft natural window light. ${MIX_SUFFIX}`,
+  },
+  {
+    id: "mx-03", name: "Clinical Corridor Walk", hasColour: false,
+    promptTemplate: `A woman from the reference photo walking along a bright, clean clinic corridor towards the camera, holding a tablet, mid stride and smiling. She is wearing fitted black medical scrubs, entirely black. Clinical background with white walls and clean flooring, softly blurred. ${MIX_SUFFIX}`,
+  },
+  {
+    id: "mx-04", name: "Clinical Close Crop", hasColour: false,
+    promptTemplate: `A woman from the reference photo in a head and shoulders close crop, direct friendly gaze to camera. She is wearing fitted black medical scrubs, entirely black. Softly blurred clinical background, bright clean even lighting. ${MIX_SUFFIX}`,
+  },
+  // Set 2: jeans and a luxury shirt
+  {
+    id: "mx-05", name: "Jeans and Silk Shirt Standing", hasColour: false,
+    promptTemplate: `A woman from the reference photo standing in a bright modern interior, three-quarter length shot, easy confident stance, natural smile. She is wearing well fitted dark blue straight leg jeans and a luxury silk shirt with a relaxed open collar. Minimal fine gold jewellery. ${MIX_SUFFIX}`,
+  },
+  {
+    id: "mx-06", name: "Jeans and Silk Shirt Armchair", hasColour: false,
+    promptTemplate: `A woman from the reference photo seated in a velvet armchair, legs crossed, relaxed and smiling at camera. She is wearing well fitted dark blue straight leg jeans and a luxury silk shirt. Elegant lounge interior with soft natural window light. ${MIX_SUFFIX}`,
+  },
+  {
+    id: "mx-07", name: "Jeans and Silk Shirt Desk Lean", hasColour: false,
+    promptTemplate: `A woman from the reference photo leaning against the edge of a styled desk, arms relaxed, mid laugh. She is wearing well fitted dark blue straight leg jeans and a luxury silk shirt with sleeves gently rolled. Bright refined workspace background, softly blurred. ${MIX_SUFFIX}`,
+  },
+  {
+    id: "mx-08", name: "Jeans and Silk Shirt Close Crop", hasColour: false,
+    promptTemplate: `A woman from the reference photo in a head and shoulders close crop, warm direct gaze, wearing a luxury silk shirt with a soft open collar and fine gold jewellery. Clean softly blurred neutral interior background, soft natural light. ${MIX_SUFFIX}`,
+  },
+  // Set 3: seasonal, month and style chosen at generation time
+  {
+    id: "mx-09", name: "Seasonal Wide Scene", hasColour: false,
+    promptTemplate: `A woman from the reference photo, full scene wide shot showing the whole setting around her, relaxed natural pose. [MIX STYLE] [MIX SEASON] [MIX OUTFIT] ${MIX_SUFFIX}`,
+  },
+  {
+    id: "mx-10", name: "Seasonal Waist Up", hasColour: false,
+    promptTemplate: `A woman from the reference photo, waist-up shot, caught naturally in the moment, looking towards the camera with a warm expression. [MIX STYLE] [MIX SEASON] [MIX OUTFIT] ${MIX_SUFFIX}`,
+  },
+  {
+    id: "mx-11", name: "Seasonal Candid Side Angle", hasColour: false,
+    promptTemplate: `A woman from the reference photo, candid shot from a slight side angle, not looking at the camera, absorbed in what she is doing. [MIX STYLE] [MIX SEASON] [MIX OUTFIT] ${MIX_SUFFIX}`,
+  },
+  {
+    id: "mx-12", name: "Seasonal Close Crop", hasColour: false,
+    promptTemplate: `A woman from the reference photo, head and shoulders close crop, direct friendly gaze, soft depth of field. [MIX STYLE] [MIX SEASON] [MIX OUTFIT] ${MIX_SUFFIX}`,
+  },
+  // Set 4: black jumper, black jeans, luxury
+  {
+    id: "mx-13", name: "Black Jumper Standing", hasColour: false,
+    promptTemplate: `A woman from the reference photo standing in an elegant modern interior, three-quarter length shot, confident and relaxed. She is wearing a luxury black cashmere jumper and black jeans, entirely black, with minimal fine gold jewellery. Refined neutral background, soft natural light. ${MIX_SUFFIX}`,
+  },
+  {
+    id: "mx-14", name: "Black Jumper Sofa", hasColour: false,
+    promptTemplate: `A woman from the reference photo seated on a cream sofa, one arm resting along the back, relaxed and smiling. She is wearing a luxury black cashmere jumper and black jeans, entirely black. Luxury lounge interior, soft window light. ${MIX_SUFFIX}`,
+  },
+  {
+    id: "mx-15", name: "Black Jumper Walking", hasColour: false,
+    promptTemplate: `A woman from the reference photo walking towards the camera along a bright, elegant hallway, mid stride and smiling. She is wearing a luxury black cashmere jumper and black jeans, entirely black. Softly blurred refined interior background. ${MIX_SUFFIX}`,
+  },
+  {
+    id: "mx-16", name: "Black Jumper Close Crop", hasColour: false,
+    promptTemplate: `A woman from the reference photo in a head and shoulders close crop, warm direct gaze, wearing a luxury black cashmere jumper with fine gold jewellery. Soft neutral blurred background, soft natural light. ${MIX_SUFFIX}`,
+  },
+];
+
 const DEFAULT_CASUAL_OUTFIT = "a fitted black t-shirt";
 
-export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: string, aspectRatio = "3:4", vars?: { colour?: string; name?: string; skills?: string; knownAs?: string; hairColour?: string; number?: string; numberColour?: string; word?: string; wordColour?: string; outfit?: string; studioColour?: string; scrubColour?: string; customText?: string; monochrome?: boolean }): string {
+export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: string, aspectRatio = "3:4", vars?: { colour?: string; name?: string; skills?: string; knownAs?: string; hairColour?: string; number?: string; numberColour?: string; word?: string; wordColour?: string; outfit?: string; studioColour?: string; scrubColour?: string; customText?: string; monochrome?: boolean; month?: string; mixStyle?: string }): string {
   let prompt = preset.promptTemplate;
+  if (MIX_SEASONAL_IDS.includes(preset.id)) {
+    const mix = mixSeasonText(vars?.month, vars?.mixStyle);
+    prompt = prompt.replace("[MIX STYLE]", mix.styleText).replace("[MIX SEASON]", mix.seasonText).replace("[MIX OUTFIT]", mix.outfitText);
+  }
   if (preset.hasCustomText && vars?.customText?.trim()) {
     prompt = `${vars.customText.trim()}\n\nMaintain their exact facial features, skin tone, body shape, and likeness from the reference photo. Must look physically believable and naturally photographed, not CGI or illustrated, natural imperfections, realistic depth, tactile textures, subtle sensor grain, true to life reflections and lighting.`;
   }

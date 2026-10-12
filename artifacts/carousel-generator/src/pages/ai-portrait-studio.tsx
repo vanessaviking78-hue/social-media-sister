@@ -538,7 +538,61 @@ const MEN_SCRUBS_IDS  = ["cs-01","cs-02","cs-03","cs-04","cs-05","cs-06","cs-07"
 
 
 
-const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...TWEAKED_PRESETS, ...AUTUMN_PRESETS, ...HALLOWEEN_PRESETS, ...CASUAL_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
+// MIX folder: four sets of four. The seasonal set uses the month and style picked on the tab.
+const MIX_GROUPS: { label: string; note: string; presets: PhotoStudioPreset[] }[] = [
+  {
+    label: "Clinical",
+    note: "Always black scrubs, clinical background.",
+    presets: [
+      { id: "mx-01", name: "Clinical Standing Wide", hasColour: false },
+      { id: "mx-02", name: "Clinical Seated Stool", hasColour: false },
+      { id: "mx-03", name: "Clinical Corridor Walk", hasColour: false },
+      { id: "mx-04", name: "Clinical Close Crop", hasColour: false },
+    ],
+  },
+  {
+    label: "Jeans and luxury shirt",
+    note: "Dark blue jeans and a luxury silk shirt.",
+    presets: [
+      { id: "mx-05", name: "Jeans and Silk Shirt Standing", hasColour: false },
+      { id: "mx-06", name: "Jeans and Silk Shirt Armchair", hasColour: false },
+      { id: "mx-07", name: "Jeans and Silk Shirt Desk Lean", hasColour: false },
+      { id: "mx-08", name: "Jeans and Silk Shirt Close Crop", hasColour: false },
+    ],
+  },
+  {
+    label: "Seasonal",
+    note: "Pick a month and a style. The scene and outfit follow the season.",
+    presets: [
+      { id: "mx-09", name: "Seasonal Wide Scene", hasColour: false },
+      { id: "mx-10", name: "Seasonal Waist Up", hasColour: false },
+      { id: "mx-11", name: "Seasonal Candid Side Angle", hasColour: false },
+      { id: "mx-12", name: "Seasonal Close Crop", hasColour: false },
+    ],
+  },
+  {
+    label: "Black jumper, black jeans",
+    note: "Luxury black cashmere jumper and black jeans.",
+    presets: [
+      { id: "mx-13", name: "Black Jumper Standing", hasColour: false },
+      { id: "mx-14", name: "Black Jumper Sofa", hasColour: false },
+      { id: "mx-15", name: "Black Jumper Walking", hasColour: false },
+      { id: "mx-16", name: "Black Jumper Close Crop", hasColour: false },
+    ],
+  },
+];
+const MIX_PRESETS: PhotoStudioPreset[] = MIX_GROUPS.flatMap((g) => g.presets);
+const MIX_SEASONAL_IDS = ["mx-09", "mx-10", "mx-11", "mx-12"];
+const MIX_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MIX_STYLES: { value: string; label: string }[] = [
+  { value: "luxe", label: "Luxe" },
+  { value: "everyday", label: "Everyday" },
+  { value: "coffee shop", label: "Coffee shop" },
+  { value: "desk typing", label: "Desk typing" },
+  { value: "speaking to a patient", label: "Speaking to a patient (a woman aged 50)" },
+];
+
+const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...TWEAKED_PRESETS, ...AUTUMN_PRESETS, ...HALLOWEEN_PRESETS, ...CASUAL_PRESETS, ...MIX_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
 const findPreset = (id: string) => ALL_PRESETS.find((p) => p.id === id);
 
 const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
@@ -736,7 +790,10 @@ export default function AiPortraitStudio() {
   };
 
   const [activeGender, setActiveGender]   = useState<"women" | "men">("women");
-  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "tweaked" | "autumn" | "halloween" | "casual">("new");
+  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "tweaked" | "autumn" | "halloween" | "casual" | "mix">("new");
+  const [mixSelected, setMixSelected] = useState<Set<string>>(new Set(MIX_PRESETS.map((p) => p.id)));
+  const [mixMonth, setMixMonth] = useState(MIX_MONTHS[new Date().getMonth()]);
+  const [mixStyle, setMixStyle] = useState(MIX_STYLES[0].value);
   const [menScrubColor, setMenScrubColor] = useState("#453761");
 
   const selectAll = () => {
@@ -814,12 +871,13 @@ export default function AiPortraitStudio() {
   // ── Generate ───────────────────────────────────────────────────────────────
   const MAX_PER_JOB = 30;
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (overrideIds?: string[]) => {
+    const ids = overrideIds ?? Array.from(selectedPresets);
     if (!sourcePhoto)          { toast.error("Upload a reference photo first"); return; }
-    if (selectedPresets.size === 0) { toast.error("Select at least one preset"); return; }
-    if (selectedPresets.size > MAX_PER_JOB) { toast.error(`Select ${MAX_PER_JOB} or fewer presets per run (${selectedPresets.size} selected)`); return; }
+    if (ids.length === 0) { toast.error("Select at least one preset"); return; }
+    if (ids.length > MAX_PER_JOB) { toast.error(`Select ${MAX_PER_JOB} or fewer presets per run (${ids.length} selected)`); return; }
 
-    const scenarios = Array.from(selectedPresets).map((id) => {
+    const scenarios = ids.map((id) => {
       const preset = findPreset(id);
       const scenario: any = {
         id,
@@ -832,6 +890,7 @@ export default function AiPortraitStudio() {
         ...(id === "ps-word-hold" ? { promptVars: wordVars } : {}),
         ...(id === "ps-custom" ? { promptVars: { customText: customPromptText } } : {}),
                   ...(preset?.hasName || preset?.hasHairColour ? { promptVars: { name: presetNames[id], hairColour: presetHairColours[id] } } : {}),
+        ...(MIX_SEASONAL_IDS.includes(id) ? { promptVars: { month: mixMonth, mixStyle } } : {}),
         ...(preset?.hasOutfit ? { outfitStyle: presetOutfits[id] || casualOutfit, promptVars: { outfit: presetOutfits[id] || casualOutfit } } : {}),
         ...(id.startsWith("hw-") ? { scrubColor: presetScrubColours[id]?.trim() || "black", promptVars: { colour: presetColours[id]?.trim() || "white", scrubColour: presetScrubColours[id]?.trim() || "black" } } : {}),
       };
@@ -1506,6 +1565,7 @@ export default function AiPortraitStudio() {
                 { key: "autumn", label: "AUTUMN" },
                 { key: "halloween", label: "HALLOWEEN" },
                 { key: "casual", label: "CASUAL" },
+                { key: "mix", label: "Mix" },
               ].map((tab) => (
                 <button
                   key={tab.key}
@@ -1936,6 +1996,103 @@ export default function AiPortraitStudio() {
 </>
 )}
 
+{activeSection === "mix" && (
+<>
+<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">MIX</p>
+<p className="text-xs text-muted-foreground mb-3">16 images in four sets of four. Everything is ticked to start with, untick anything you do not want, then use the Mix button below.</p>
+
+            <div className="mb-4 rounded-lg border border-pink-500/30 bg-pink-500/5 p-3">
+              <p className="text-xs font-medium mb-2">Seasonal set</p>
+              <div className="flex flex-wrap gap-3">
+                <div>
+                  <label className="block text-[11px] text-muted-foreground mb-1">Month</label>
+                  <select
+                    value={mixMonth}
+                    onChange={(e) => setMixMonth(e.target.value)}
+                    className="w-40 text-xs bg-background border border-border/50 rounded px-2 py-1.5 focus:outline-none focus:border-pink-500/50"
+                  >
+                    {MIX_MONTHS.map((m) => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] text-muted-foreground mb-1">Style</label>
+                  <select
+                    value={mixStyle}
+                    onChange={(e) => setMixStyle(e.target.value)}
+                    className="w-72 text-xs bg-background border border-border/50 rounded px-2 py-1.5 focus:outline-none focus:border-pink-500/50"
+                  >
+                    {MIX_STYLES.map((st) => (
+                      <option key={st.value} value={st.value}>{st.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {MIX_GROUPS.map((group) => (
+              <div key={group.label} className="mb-4">
+                <p className="text-xs font-medium">{group.label}</p>
+                <p className="text-[11px] text-muted-foreground/70 mb-2">{group.note}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2">
+                  {group.presets.map((preset) => {
+                    const isSelected = mixSelected.has(preset.id);
+                    return (
+                      <div
+                        key={preset.id}
+                        className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
+                          isSelected
+                            ? "border-violet-500/70 bg-violet-500/10"
+                            : "border-border/30 hover:border-border/60 hover:bg-muted/20"
+                        }`}
+                        onClick={() => setMixSelected((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(preset.id)) next.delete(preset.id); else next.add(preset.id);
+                          return next;
+                        })}
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                            isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
+                          }`}>
+                            {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                          </div>
+                          <p className="text-sm font-medium leading-snug">{preset.name}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            <div className="mt-2 flex items-center gap-3 flex-wrap">
+              <Button
+                onClick={() => handleGenerate(MIX_PRESETS.filter((p) => mixSelected.has(p.id)).map((p) => p.id))}
+                disabled={generating || mixSelected.size === 0 || !sourcePhoto}
+                className="bg-pink-600 hover:bg-pink-700 text-white"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {progressLabel}
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Generate the Mix ({mixSelected.size})
+                  </>
+                )}
+              </Button>
+              {!sourcePhoto && (
+                <p className="text-xs text-muted-foreground">Upload a reference photo to continue</p>
+              )}
+            </div>
+
+</>
+)}
+
 {activeSection === "photo" && (
 <>
 <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">Women — Photo Studio</p>
@@ -2278,7 +2435,7 @@ export default function AiPortraitStudio() {
             {/* Generate button */}
             <div className="mt-4 flex items-center gap-3 flex-wrap">
               <Button
-                onClick={handleGenerate}
+                onClick={() => handleGenerate()}
                 disabled={generating || selectedPresets.size === 0 || !sourcePhoto}
                 className="bg-violet-600 hover:bg-violet-700 text-white"
               >
