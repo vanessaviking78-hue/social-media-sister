@@ -12,6 +12,8 @@ import { setStylishHandoff } from "@/lib/stylish-handoff";
 import { usePresets, presetWebsite } from "@/lib/use-presets";
 import { authHeaders } from "@/lib/use-approval";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
+import HookBankPicker from "@/components/hook-bank-picker";
+import { HOOKS, SEASON_WINDOWS, packStarts, isoDate, parseIso, hookTiming, hooksForRequest, fmtDate, type RequestHook } from "@/lib/hook-bank";
 
 const BASE = import.meta.env.BASE_URL;
 
@@ -63,7 +65,13 @@ export default function ClientStylish() {
   const [halloweenPick, setHalloweenPick] = useState<string[]>([]);
   const [packHalloween, setPackHalloween] = useState<string[]>([]);
   const hallRef = useRef<string[]>([]);
-  const slots = [...BASE_SLOTS, ...packHalloween.map(id => ({ id, label: `Halloween ${HALLOWEEN_IDEAS.findIndex(h => h.id === id) + 1}` }))];
+  // Hooks picked from the hook bank, and the Monday the pack will start posting on.
+  const [hookPick, setHookPick] = useState<string[]>([]);
+  const [hookStart, setHookStart] = useState(() => isoDate(packStarts()[0]));
+  const hooksRef = useRef<RequestHook[]>([]);
+  // The dates each seasonal post in the running pack must go out between.
+  const [packWindows, setPackWindows] = useState<{ row: number; season: string; from?: Date; to?: Date }[]>([]);
+  const slots =[...BASE_SLOTS, ...packHalloween.map(id => ({ id, label: `Halloween ${HALLOWEEN_IDEAS.findIndex(h => h.id === id) + 1}` }))];
   const expected = 20 + packHalloween.length;
   const [useApproved, setUseApproved] = useState(false);
   const [approvedFiles, setApprovedFiles] = useState<File[]>([]);
@@ -99,6 +107,33 @@ export default function ClientStylish() {
     setArea(matchedPreset.seoArea?.trim() ?? "");
     setSpot(/^#?[0-9a-f]{6}$/i.test((matchedPreset.accentColor ?? "").trim()) ? (matchedPreset.accentColor.startsWith("#") ? matchedPreset.accentColor : `#${matchedPreset.accentColor}`) : "");
   }, [matchedPreset]);
+
+  // Hook picks are remembered for each saved client, so coming back to a client finds their hooks ticked.
+  const hookKey = matchedPreset ? matchedPreset.name.trim().toLowerCase() : "";
+  useEffect(() => {
+    if (!hookKey) return;
+    try {
+      const saved = JSON.parse(localStorage.getItem(`client-stylish-hooks:${hookKey}`) ?? "[]");
+      if (!Array.isArray(saved) || !saved.length) return;
+      const s = parseIso(hookStart);
+      setHookPick(saved.filter((c: unknown): c is string => typeof c === "string").filter(c => {
+        const h = HOOKS.find(x => x.code === c);
+        return !!h && (!s || hookTiming(h, s).ok);
+      }));
+    } catch { /* ignore */ }
+  }, [hookKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const changeHooks = (codes: string[]) => {
+    setHookPick(codes);
+    if (hookKey) { try { localStorage.setItem(`client-stylish-hooks:${hookKey}`, JSON.stringify(codes)); } catch { /* ignore */ } }
+  };
+  const changeHookStart = (iso: string) => {
+    setHookStart(iso);
+    const s = parseIso(iso);
+    if (!s) return;
+    // Seasonal hooks that no longer fit the new dates are taken out, so they cannot be scheduled in the wrong month.
+    const keep = hookPick.filter(c => { const h = HOOKS.find(x => x.code === c); return !h || hookTiming(h, s).ok; });
+    if (keep.length !== hookPick.length) { changeHooks(keep); toast.message("I took out the seasonal hooks that do not fit those dates"); }
+  };
   const brandSwatches = matchedPreset
     ? Array.from(new Set([matchedPreset.accentColor, matchedPreset.pageColor, matchedPreset.overlayColor, matchedPreset.cornerColor]
         .map(c => (c ?? "").trim()).filter(c => /^#?[0-9a-f]{6}$/i.test(c)).map(c => (c.startsWith("#") ? c : `#${c}`).toLowerCase())))
@@ -199,6 +234,7 @@ export default function ClientStylish() {
       treatments.forEach(t => fd.append("treatments", t.trim()));
       fd.append("tone", tone);
       hallRef.current.forEach(h => fd.append("halloween", h));
+      if (hooksRef.current.length) fd.append("hooks", JSON.stringify(hooksRef.current));
       fd.append("notes", notes);
       fd.append("topPosts", topText);
       shots.forEach(f => fd.append("screenshots", f));
@@ -288,6 +324,14 @@ export default function ClientStylish() {
     setJobIds([]);
     hallRef.current = halloweenPick;
     setPackHalloween(halloweenPick);
+    // The hooks are fixed for this pack at the moment it starts, with each treatment slot filled in.
+    hooksRef.current = hooksForRequest(hookPick, treatments);
+    const packStart = parseIso(hookStart);
+    setPackWindows(hooksRef.current.filter(h => h.season).map(h => {
+      const hk = HOOKS.find(x => x.code === h.code);
+      const t = hk && packStart ? hookTiming(hk, packStart) : { ok: true as boolean, from: undefined, to: undefined };
+      return { row: h.row, season: SEASON_WINDOWS[h.season as "Halloween" | "Bonfire" | "Christmas"].label, from: t.from, to: t.to };
+    }));
     setFromApproved(useApproved);
     if (useApproved) {
       // No photoshoot: the chosen approved images fill the slots in the order they were picked.
@@ -628,6 +672,8 @@ export default function ClientStylish() {
             {halloweenPick.length > 0 && <p className="text-xs text-muted-foreground">Each one gets its own Halloween photo and is written in the clinic's style, as posts 21 onwards.</p>}
           </div>
 
+          <HookBankPicker picked={hookPick} onChange={changeHooks} startDate={hookStart} onStartDate={changeHookStart} />
+
           <div className="space-y-2">
             <Label className="text-sm font-medium">Writing style</Label>
             <div className="space-y-1.5">
@@ -686,6 +732,17 @@ export default function ClientStylish() {
                   )}
                 </div>
               </div>
+
+              {copyState === "done" && packWindows.length > 0 && (
+                <div className="space-y-1 rounded-md border border-orange-500/40 bg-orange-500/5 p-3 text-sm text-orange-200/90">
+                  <p className="font-medium">Seasonal posts: schedule these inside their dates</p>
+                  {packWindows.map(w => (
+                    <p key={w.row}>
+                      Post {w.row}, {w.season}{w.from && w.to ? `: post between ${fmtDate(w.from)} and ${fmtDate(w.to)}` : ""}
+                    </p>
+                  ))}
+                </div>
+              )}
 
               {copyState === "done" && !siteFound && (
                 <div className="rounded-md border border-yellow-500/40 bg-yellow-500/5 p-3 text-sm text-yellow-200/90">
