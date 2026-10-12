@@ -197,15 +197,47 @@ function rowsWithoutFirstPerson(rows: Row[]): number[] {
   return rows.map((r, i) => (FIRST_PERSON.test(`${r.headline} ${r.subtitle} ${r.text1} ${r.text2} ${r.text3}`) ? 0 : i + 1)).filter(Boolean);
 }
 
-function findBanned(rows: Row[]): string[] {
+// allowedDays holds day words that appear inside a hook Vanessa chose herself, so those stay.
+function findBanned(rows: Row[], allowedDays: Set<string> = new Set()): string[] {
   const hits = new Set<string>();
   for (const r of rows) {
     for (const k of ROW_KEYS) {
       for (const m of r[k].match(BANNED_TERMS) ?? []) hits.add(m.toLowerCase());
-      for (const m of r[k].match(DAY_WORDS) ?? []) hits.add(m.toLowerCase());
+      for (const m of r[k].match(DAY_WORDS) ?? []) if (!allowedDays.has(m.toLowerCase())) hits.add(m.toLowerCase());
     }
   }
   return [...hits];
+}
+
+// The Hook Bank: slide 1 hooks Vanessa picked for this clinic, one per row of the pack.
+type BankHook = { row: number; text: string; season: string };
+function parseBankHooks(raw: unknown): BankHook[] {
+  try {
+    const arr = JSON.parse(String(Array.isArray(raw) ? raw[0] : raw ?? "[]"));
+    if (!Array.isArray(arr)) return [];
+    const seen = new Set<number>();
+    const out: BankHook[] = [];
+    for (const h of arr as Record<string, unknown>[]) {
+      const row = Number(h?.row);
+      const text = neutralise(clean(h?.text)).slice(0, 300);
+      if (!Number.isInteger(row) || row < 1 || row > 20 || seen.has(row) || !text) continue;
+      seen.add(row);
+      out.push({ row, text, season: typeof h?.season === "string" ? h.season.slice(0, 20) : "" });
+    }
+    return out.sort((a, b) => a.row - b.row);
+  } catch {
+    return [];
+  }
+}
+
+function hookRules(hooks: BankHook[], dental: boolean, ryder: boolean): string {
+  if (!hooks.length) return "";
+  return `
+
+CHOSEN HOOKS (Vanessa wrote these herself, they win over every other rule about slide 1)
+These rows already have their slide 1. For each row below, the headline and subtitle together must carry the hook in her exact words: split it at a natural pause, headline first (up to 7 words), subtitle the rest (up to 16 words). Do not reword, soften, shorten or add to the hook.
+${hooks.map((h) => `Row ${h.row}: "${h.text}"${h.season ? ` (${h.season} post: keep that occasion running through every slide of this row, and this row may name it)` : ""}`).join("\n")}
+Then write text1, text2, text3 and the cta so they carry on from the hook like a friend chatting on the sofa with one woman who has followed along for years: warm, personable, a little daft, never professional or brochure like, never lecturing. Each slide picks up straight from the one before and pays off the hook. Use everyday things she will recognise (the kettle, the diary, the school run, the supermarket, the telly). Never invent a story about a real person: no "a patient once told me", no "a client said", no made up moment from the clinic, no quotes from anyone. Share observations, opinions and shared everyday moments only. These rows are exempt from the rule about not naming days, seasons or occasions, but only for the words that appear in their own hook. Every other rule still applies: first person, UK spelling, no dashes, no negative parallelism, compliance and the banned words.${dental ? " This is a dental practice: if a hook mentions aesthetics, injectors or a face clinic, change only those words to dentistry wording and keep the rest." : ""}${ryder ? " The Ryder Clinic: keep her hook words exactly, but write the slides after it in the warm, sincere voice with no jokes." : ""}`;
 }
 
 export function clean(text: unknown): string {
@@ -430,6 +462,8 @@ router.post("/client-stylish/copy", upload.array("screenshots", 3), async (req: 
     const rawHall = body.halloween;
     const hallIds = (Array.isArray(rawHall) ? rawHall : rawHall ? [rawHall] : []).map(String).filter((h, i, a) => HALLOWEEN_IDEAS[h] && a.indexOf(h) === i).slice(0, 3);
     const expected = 20 + hallIds.length;
+    const bankHooks = parseBankHooks(body.hooks);
+    const hookDays = new Set((bankHooks.map((h) => h.text.match(DAY_WORDS) ?? []).flat()).map((d) => d.toLowerCase()));
     const ryderPack = isRyder(clientName);
     const tonePrompt = ryderPack ? RYDER_TONE : (CAPTION_TONE_PROMPTS[tone] ?? CAPTION_TONE_PROMPTS["4"]);
     const siteDiag: SiteDiag = {};
@@ -452,7 +486,7 @@ router.post("/client-stylish/copy", upload.array("screenshots", 3), async (req: 
 WRITING STYLE: ${tonePrompt}${profileCtx}
 ${packKind(clientName)}${HOOK_RULES}
 ${PERSONAL_RULES}
-${ryderPack ? "THE RYDER CLINIC: write every row in the professional, emotive, affable voice above. Wherever the rules below ask for funny, cheeky or nostalgic comedy, write sincere, warm, emotionally rich posts instead, with no humour or japes at all.\n" : ""}${hallIds.length ? STRUCTURE_RULES.replace(/exactly 20 (posts|objects)/g, `exactly ${expected} $1`) + `\n\nHALLOWEEN ROWS: after the 20 rows above, add ${hallIds.length} extra Halloween rows (rows 21 to ${expected}), in this order. Same format, same rules, same voice, still ending ideas with a comment, share, save or tag call to action. Make each one clever, industry relevant and outside the box.\n${hallIds.map((h, i) => `Row ${21 + i}: "${HALLOWEEN_IDEAS[h].title}". ${HALLOWEEN_IDEAS[h].brief}`).join("\n")}` : STRUCTURE_RULES}${topPosts ? `\n${TOP_POSTS_RULES}` : ""}`;
+${ryderPack ? "THE RYDER CLINIC: write every row in the professional, emotive, affable voice above. Wherever the rules below ask for funny, cheeky or nostalgic comedy, write sincere, warm, emotionally rich posts instead, with no humour or japes at all.\n" : ""}${hallIds.length ? STRUCTURE_RULES.replace(/exactly 20 (posts|objects)/g, `exactly ${expected} $1`) + `\n\nHALLOWEEN ROWS: after the 20 rows above, add ${hallIds.length} extra Halloween rows (rows 21 to ${expected}), in this order. Same format, same rules, same voice, still ending ideas with a comment, share, save or tag call to action. Make each one clever, industry relevant and outside the box.\n${hallIds.map((h, i) => `Row ${21 + i}: "${HALLOWEEN_IDEAS[h].title}". ${HALLOWEEN_IDEAS[h].brief}`).join("\n")}` : STRUCTURE_RULES}${topPosts ? `\n${TOP_POSTS_RULES}` : ""}${hookRules(bankHooks, isDental(clientName), ryderPack)}`;
 
     const user = `Clinic: ${clientName.trim()}
 Treatments to promote this month, in order:
@@ -493,7 +527,7 @@ ${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${safeSite
         feedback = `\n\nYour last answer did not have exactly ${expected} rows. Return exactly ${expected} rows.`;
         continue;
       }
-      const hits = findBanned(rows);
+      const hits = findBanned(rows, hookDays);
       const noI = rowsWithoutFirstPerson(rows);
       if (!hits.length && !noI.length) break;
       if (!hits.length && noI.length) {
