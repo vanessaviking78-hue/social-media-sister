@@ -17,6 +17,7 @@ import JSZip from "jszip";
 import { saveAs } from "file-saver";
 import { readFileAsText } from "@/lib/csv-format";
 import { loadGoogleFonts, FONT_OPTIONS } from "@/lib/slide-utils";
+import { syncSharedFonts } from "@/lib/shared-fonts";
 import { usePresets, presetWebsite, type ClientPreset } from "@/lib/use-presets";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
@@ -2971,6 +2972,7 @@ export default function Stylish() {
     if (added.length) {
       setCustomFonts(list => [...list.filter(x => !added.some(a => a.file === x.file)), ...added]);
       setFontVersion(v => v + 1);
+      void syncSharedFonts(); // so every other tool gets this font too
       toast.success(`Added ${[...new Set(added.map(a => a.family))].join(", ")}`);
     }
     return added;
@@ -2990,6 +2992,7 @@ export default function Stylish() {
     await fontDbDelete(file);
     setCustomFonts(list => list.filter(x => x.file !== file));
     setFontVersion(v => v + 1);
+    void syncSharedFonts();
   };
 
   const customFamilies = [...new Set(customFonts.map(f => f.family))];
@@ -3007,7 +3010,7 @@ export default function Stylish() {
     })
     .sort((a, b) => a.group.localeCompare(b.group) || a.label.localeCompare(b.label));
   const coverFontOptions: FontOption[] = [...customOptions, ...COVER_FONTS];
-  const slideFontOptions: FontOption[] = [...customOptions, { label: "Instrument Serif", value: F_INSTRUMENT }, ...FONT_OPTIONS];
+  const slideFontOptions: FontOption[] = [...customOptions, { label: "Instrument Serif", value: F_INSTRUMENT }, ...FONT_OPTIONS.filter(f => !(f as { custom?: boolean }).custom)];
   const norm = (t: string) => t.toLowerCase().replace(/\s+/g, "");
   const missingFonts = COVER_WANTS[style.coverLayout].filter(w => !customFamilies.some(c => norm(c) === norm(w)));
   const [rendering, setRendering] = useState(false);
