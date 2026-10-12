@@ -236,6 +236,22 @@ export type ScheduledPostType = typeof SCHEDULED_POST_TYPES[number];
 export const RAIL_STATUSES = ["pending", "success", "failed", "skipped"] as const;
 export type RailStatus = typeof RAIL_STATUSES[number];
 
+// Tags a parked draft as part of a Yet to post bundle (for example the 4 week MIX
+// bundle): which week and day it belongs to, what kind of post it is, and whether
+// Vanessa has approved it. A post, its story and its reel share one slotKey.
+export const YET_TO_POST_DAYS = ["Mon", "Wed", "Fri", "Sun"] as const;
+export const YET_TO_POST_KINDS = ["treatment", "wont-will", "nostalgia", "tweet"] as const;
+export const YET_TO_POST_FORMATS = ["post", "story", "reel"] as const;
+export type YetToPostMeta = {
+  bundle: string;
+  week: number;
+  day: (typeof YET_TO_POST_DAYS)[number];
+  kind: (typeof YET_TO_POST_KINDS)[number];
+  format: (typeof YET_TO_POST_FORMATS)[number];
+  slotKey: string;
+  approved?: boolean;
+};
+
 export const scheduledPostsTable = pgTable("scheduled_posts", {
   id: serial("id").primaryKey(),
   presetId: integer("preset_id").notNull(),
@@ -249,6 +265,9 @@ export const scheduledPostsTable = pgTable("scheduled_posts", {
     platforms?: string[];
     firstComment?: string;
     musicTrack?: { name: string; artist: string } | null;
+    sourceTool?: string;
+    question?: string;
+    yetToPost?: YetToPostMeta;
   }>(),
   scheduledAt: timestamp("scheduled_at", { withTimezone: true }).notNull(),
   status: text("status").notNull().default("pending"),

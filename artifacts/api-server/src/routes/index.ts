@@ -72,6 +72,7 @@ import competitorScoutRouter from "./competitor-scout";
 import igAuditRouter from "./ig-audit";
 import newsletterRouter from "./newsletter";
 import clientQuestionRouter from "./client-question";
+import yetToPostRouter from "./yet-to-post";
 
 const router: IRouter = Router();
 
@@ -147,6 +148,7 @@ router.use(competitorScoutRouter);
 router.use(igAuditRouter);
 router.use(newsletterRouter);
 router.use(clientQuestionRouter);
+router.use(yetToPostRouter);
 router.use(veoRouter);
 
 export default router;

@@ -1,11 +1,21 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck, Grid3x3, Mail, Star, Heart, CalendarCheck } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck, Grid3x3, Mail, Star, Heart, CalendarCheck, PackageOpen } from "lucide-react";
 import { LogOut } from "lucide-react";
 import { AdventCalendarIcon } from "@/components/advent-icon";
 import { MagazineIcon } from "@/components/magazine-icon";
 
 const TOOLS = [
+{
+href: "/yet-to-post",
+group: "today",
+icon: PackageOpen,
+name: "Yet to post",
+description: "Finished bundles waiting for you, one place per client: 16 posts with their stories and reels. Tweak the words, tick Approve, then schedule. Nothing goes out until you say so.",
+color: "from-fuchsia-500/20 to-fuchsia-500/5",
+border: "hover:border-fuchsia-500/50",
+iconColor: "text-fuchsia-400",
+},
 {
 href: "/daily-focus",
 group: "today",
