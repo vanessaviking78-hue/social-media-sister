@@ -46,19 +46,19 @@ Generate 4 content pieces in this exact JSON structure (no extra text, no markdo
       {"heading": "value point 4", "body": "specific fact or insight"},
       {"heading": "cta slide heading", "body": "warm unhurried invitation — no urgency, no DM us NOW"}
     ],
-    "caption": "80-150 words, 3-5 hashtags before the last line, last line must be: Comment [WORD] for more info"
+    "caption": "80-150 words, personal and warm, ending with a closing question that includes a Comment [WORD] invitation, then on its own final line exactly 5 area based hashtags"
   },
   "aboutMe": {
     "intro": "2-3 sentences from the clinic owner's perspective. First person. Warm, real, no patter.",
-    "caption": "80-150 words, 3-5 hashtags before the last line, last line must be: Comment [WORD] for more info"
+    "caption": "80-150 words, personal and warm, ending with a closing question that includes a Comment [WORD] invitation, then on its own final line exactly 5 area based hashtags"
   },
   "reel": {
     "script": "3-4 short punchy lines for video overlay text. Each line under 8 words. Lines separated by | characters.",
-    "caption": "80-150 words, 3-5 hashtags before the last line, last line must be: Comment [WORD] for more info"
+    "caption": "80-150 words, personal and warm, ending with a closing question that includes a Comment [WORD] invitation, then on its own final line exactly 5 area based hashtags"
   },
   "seamless": {
     "tagline": "one powerful 3-7 word tagline for a seamless panoramic carousel",
-    "caption": "80-150 words, 3-5 hashtags before the last line, last line must be: Comment [WORD] for more info"
+    "caption": "80-150 words, personal and warm, ending with a closing question that includes a Comment [WORD] invitation, then on its own final line exactly 5 area based hashtags"
   }
 }
 

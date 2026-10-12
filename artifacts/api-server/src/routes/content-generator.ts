@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
+import { HOUSE_RULES } from "../lib/houseRules";
 
 const router: IRouter = Router();
 
@@ -14,7 +15,7 @@ const TONE_PROMPTS: Record<string, string> = {
 
 const BASE_RULES = `
 COMPLIANCE (non-negotiable, every single post)
-- NEVER name Botox, anti-wrinkle injections, or any prescription-only medicine by name. Use: "facial aesthetics", "smoothing treatments", "injectable treatments", "facial rejuvenation".
+- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and send her to the clinic website for treatment details.
 - Never use the word "safe" in advertising claims.
 - No medical claims. No guaranteed results. No before/after that implies certainty.
 - No pressure tactics. No urgency language.
@@ -27,7 +28,8 @@ WRITING RULES (non-negotiable)
 - BANNED words: elevate, transform, unlock, journey, empower, revolutionise, game-changer, dive into, harness, leverage, delve, navigate, streamline, cutting-edge, holistic, synergy, bespoke
 - BANNED hook openers: "Are you tired of", "It's time to", "What if we told you", "Picture this", "Imagine a world", "In today's world"
 - Use contractions naturally: you're, it's, don't, we're, that's.
-- British English throughout. "colour" not "color". "practitioner" not "provider". "clinic" not "office".`;
+- British English throughout. "colour" not "color". "practitioner" not "provider". "clinic" not "office".
+${HOUSE_RULES}`;
 
 type GeneratedPost = {
   title: string;

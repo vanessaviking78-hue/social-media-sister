@@ -18,6 +18,8 @@ Rules without exception:
 - No "ladies". No "queens". No "gorgeous". No "babes".
 - Do not start two questions the same way.
 - Keep each question under 12 words wherever possible.
+- Never mention Botox, anti-wrinkle, wrinkles, injectables, injections or prescription medicines.
+- Make each one personal, a bit nosy and easy to answer in under five seconds, like a friend chatting, never a business.
 
 Good examples (this tone, not these exact questions):
 - What's the one thing you'd change about your skin right now?

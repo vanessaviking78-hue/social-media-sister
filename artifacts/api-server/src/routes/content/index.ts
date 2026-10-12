@@ -1,4 +1,5 @@
 import { clientProfileContext } from "../client-profiles";
+import { HOUSE_RULES, HASHTAG_RULE, DENTAL_RULES, isDental } from "../../lib/houseRules";
 import { Router, type IRouter } from "express";
 import multer from "multer";
 import { openai } from "@workspace/integrations-openai-ai-server";
@@ -16,7 +17,7 @@ const audioUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize
 function getVoiceSystemPrompt(voiceStyle: string): string {
   const base = `
 COMPLIANCE (always, without exception)
-- NEVER name Botox, anti-wrinkle injections, or any prescription-only medicine by name. Use: "facial aesthetics", "smoothing treatments", "injectable treatments", "facial rejuvenation".
+- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and send her to the clinic website for treatment details.
 - Never use the word "safe" in advertising claims.
 - No medical claims. No guaranteed results. No before/after that implies certainty.
 - No pressure tactics. No urgency language.
@@ -29,7 +30,8 @@ STRICT RULES (all voices)
 - Use contractions naturally: you're, it's, don't, we're, that's.
 - BANNED words: elevate, transform, unlock, journey, empower, revolutionise, game-changer, dive into, harness, leverage, delve, navigate, streamline, cutting-edge, holistic, synergy, bespoke, unleash, tapestry, landscape, realm, testament, boasts, nestled, seamless, effortless, next level, top-tier, being honest, the truth is, at the end of the day, when it comes to, look no further, say goodbye to, buckle up, spoiler alert, trust me, make no mistake
 - BANNED openers: "In today's world", "In the ever-changing landscape", "Are you ready to", "Picture this", "Imagine a world", "Are you tired of", "It is time to", "What if we told you", "In a world where"
-- Do not use the construction where it is not about X, it is about Y, or any rule of three escalation that sounds like a TED talk. Do not open with a rhetorical question. Say the thing plainly, the way you would actually say it to someone face to face. If a sentence could have been written by a chatbot, delete it.`;
+- Do not use the construction where it is not about X, it is about Y, or any rule of three escalation that sounds like a TED talk. Do not open with a rhetorical question. Say the thing plainly, the way you would actually say it to someone face to face. If a sentence could have been written by a chatbot, delete it.
+${HOUSE_RULES}`;
 
   if (voiceStyle === "whimsical") {
     return `You are a social media content writer. Write in the literary style of a skilled memoir-writer's prose: romantic, narrative, observational, soulful. Sentences build slowly toward something real. Small ordinary moments made large. Unhurried. First person. The kind of writing where a routine treatment becomes a meditation on time, care, and the quiet things we do for ourselves. No sentimentality. No cheese. Just honest feeling, rendered carefully.
@@ -110,12 +112,13 @@ STRICT WRITING RULES
 - BANNED openers: "In today's world", "In the ever-changing landscape", "Are you ready to", "Picture this", "Imagine a world"
 
 COMPLIANCE (always, without exception)
-- NEVER name Botox, anti-wrinkle injections, or any prescription-only medicine by name. Use: "facial aesthetics", "smoothing treatments", "injectable treatments", "facial rejuvenation".
+- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and send her to the clinic website for treatment details.
 - Never use the word "safe" in advertising claims.
 - No medical claims. No guaranteed results. No before/after that implies certainty.
 - No pressure tactics. No urgency language.
 - No superlatives: best, number one, guaranteed.
-- Frame everything as consultation and possibility, not outcome. Use "may help", "can improve" not "will fix", "cures", "guaranteed".`;
+- Frame everything as consultation and possibility, not outcome. Use "may help", "can improve" not "will fix", "cures", "guaranteed".
+${HOUSE_RULES}`;
 
 const CONTENT_SYSTEM = `You are a social media content writer with a specific, non-negotiable voice. Read this carefully — this is not optional guidance, it is how you must write every single time.
 
@@ -167,12 +170,13 @@ STRICT WRITING RULES
 - BANNED openers: "In today's world", "In the ever-changing landscape", "Are you ready to", "Picture this", "Imagine a world"
 
 COMPLIANCE (always, without exception)
-- NEVER name Botox, anti-wrinkle injections, or any prescription-only medicine by name. Use: "facial aesthetics", "smoothing treatments", "injectable treatments", "facial rejuvenation".
+- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and send her to the clinic website for treatment details.
 - Never use the word "safe" in advertising claims.
 - No medical claims. No guaranteed results. No before/after that implies certainty.
 - No pressure tactics. No urgency language.
 - No superlatives: best, number one, guaranteed.
-- Frame everything as consultation and possibility, not outcome. Use "may help", "can improve" not "will fix", "cures", "guaranteed".`;
+- Frame everything as consultation and possibility, not outcome. Use "may help", "can improve" not "will fix", "cures", "guaranteed".
+${HOUSE_RULES}`;
 
 router.post("/content/generate", async (req, res) => {
   try {
@@ -389,8 +393,9 @@ You will receive the ${isSingle ? "overlay text" : "slide text"} for each ${post
 - Is MHRA/ASA compliant - no medical claims, no guaranteed results, no pressure tactics
 - Includes 1-2 relevant emojis naturally woven in (not emoji spam)
 - NEVER use em dashes or en dashes, use hyphens or commas instead
-- Include 3-5 relevant hashtags BEFORE the final CTA line
-- The VERY LAST LINE of every caption MUST be a fun CTA in this exact format: "Comment [WORD] for more info" where [WORD] is a single fun, playful, uppercase word that relates to the content of that specific post. For example: "Comment GLOW for more info", "Comment POUT for more info", "Comment FRESH for more info". The word should be different and creative for each caption. Nothing comes after this line.
+- The caption finishes with a closing question that relates to the post. Where a keyword invite fits, fold it into the question, for example "Fancy a nosy? Comment GLOW and I will send you the details". The keyword is a single fun uppercase word, different for each caption.
+- ${HASHTAG_RULE}
+${isDental(clientName) ? DENTAL_RULES : ""}
 ${extraInstructions ? `\nAdditional instructions: ${extraInstructions}` : ""}
 
 IMPORTANT: Output ONLY a valid JSON array with no markdown formatting, no code fences, no extra text. Each element should be a string containing the full caption. Return exactly ${count} captions.`;
@@ -1143,7 +1148,7 @@ router.post("/content/ba-caption", async (req, res) => {
       model: "gpt-5.2",
       max_completion_tokens: 800,
       messages: [
-        { role: "system", content: `${voicePrompt}\n\nYou write warm, story-led Instagram captions for an aesthetics clinic${clientName ? ` (${clientName})` : ""} to sit alongside a before-and-after photo. Tell it as a short story: set the scene, how the client felt beforehand, what they had done, and how they felt after. Keep it human and specific, roughly 80 to 140 words. Be MHRA and ASA compliant: no medical claims, no guaranteed results, no pressure tactics. Use hyphens, never em dashes. Weave in one or two emojis naturally. Put 3 to 5 relevant hashtags on the final line. Output only the caption text, nothing else.` },
+        { role: "system", content: `${voicePrompt}\n\nYou write warm, story-led Instagram captions for an aesthetics clinic${clientName ? ` (${clientName})` : ""} to sit alongside a before-and-after photo. Tell it as a short story: set the scene, how the client felt beforehand, what they had done, and how they felt after. Keep it human and specific, roughly 80 to 140 words. Be MHRA and ASA compliant: no medical claims, no guaranteed results, no pressure tactics. Use hyphens, never em dashes. Weave in one or two emojis naturally. Finish with a question that relates to the story, then on its own final line exactly 5 relevant area based hashtags. Never mention Botox, anti-wrinkle, wrinkles, injectables or prescription medicines, and send readers to my website for treatment details. Output only the caption text, nothing else.` },
         { role: "user", content: `Treatment: ${treatment || "(not given)"}\nBack story from the clinic: ${backStory || "(not given)"}` },
       ],
     });
