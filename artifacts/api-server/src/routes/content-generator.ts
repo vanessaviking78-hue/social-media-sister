@@ -15,7 +15,7 @@ const TONE_PROMPTS: Record<string, string> = {
 
 const BASE_RULES = `
 COMPLIANCE (non-negotiable, every single post)
-- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and send her to the clinic website for treatment details.
+- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and send her to the clinic website for treatment details (or invite a message if there is no website).
 - Never use the word "safe" in advertising claims.
 - No medical claims. No guaranteed results. No before/after that implies certainty.
 - No pressure tactics. No urgency language.

@@ -17,7 +17,7 @@ const audioUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize
 function getVoiceSystemPrompt(voiceStyle: string): string {
   const base = `
 COMPLIANCE (always, without exception)
-- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and, only on a treatment post, send her to the clinic website for treatment details.
+- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and, only on a treatment post, send her to the clinic website for treatment details (or invite a message if there is no website).
 - Never use the word "safe" in advertising claims.
 - No medical claims. No guaranteed results. No before/after that implies certainty.
 - No pressure tactics. No urgency language.
@@ -112,7 +112,7 @@ STRICT WRITING RULES
 - BANNED openers: "In today's world", "In the ever-changing landscape", "Are you ready to", "Picture this", "Imagine a world"
 
 COMPLIANCE (always, without exception)
-- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and, only on a treatment post, send her to the clinic website for treatment details.
+- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and, only on a treatment post, send her to the clinic website for treatment details (or invite a message if there is no website).
 - Never use the word "safe" in advertising claims.
 - No medical claims. No guaranteed results. No before/after that implies certainty.
 - No pressure tactics. No urgency language.
@@ -170,7 +170,7 @@ STRICT WRITING RULES
 - BANNED openers: "In today's world", "In the ever-changing landscape", "Are you ready to", "Picture this", "Imagine a world"
 
 COMPLIANCE (always, without exception)
-- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and, only on a treatment post, send her to the clinic website for treatment details.
+- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and, only on a treatment post, send her to the clinic website for treatment details (or invite a message if there is no website).
 - Never use the word "safe" in advertising claims.
 - No medical claims. No guaranteed results. No before/after that implies certainty.
 - No pressure tactics. No urgency language.
