@@ -320,6 +320,15 @@ Write for the consumer psychology of women over 35: stealth sales, high engageme
 Humanise it. No AI patter. Never use negative parallelism in any form: no "not X, not Y", no "it is not X, it is Y", no "not just X but Y", no "less X, more Y", no "no X, no Y, just Z". State the positive point directly. No "not X, not Y" constructions, no "Most clinics don't have an X problem, they have a Y problem", no rhetorical question openers, no TED talk escalations. Never use the words fluff, faff or fuss. Be original, avoid stock lines seen all over the industry.
 Use the clinician notes for voice and any personal detail, if given.
 
+THE SOCIAL MEDIA SISTER TECHNIQUE (apply it to every row, never name it in the copy)
+Every post sits in one of four pillars, and the pillar decides how slide 1 and the slides after it are built.
+HELPFUL (the treatment rows, and the "things that" rows when they teach): quick, friendly know how she can use straight away, never a lecture. Hook shapes: "3 questions I always want her to ask in a consultation", "What I wish more women knew about [topic] before booking", "My favourite way to [get the result she wants] without [the thing she fears]", "3 things I would never do as someone who [shares her goal]". Give her a numbered, swipeable payoff across text1, text2 and text3.
+HUMOUR (the funny and nostalgic rows): relatable clinic and everyday moments that earn saves, comments and tags. Hook shapes: "POV: ...", "When ...", "Me when ...", "That moment when ...". Build the joke slide by slide to a proper laugh on text3.
+HEARD (the shareable rows, and any row about a worry or a quiet struggle): validate her. Hook shapes: "To the woman who ...", "If you have been secretly [doing the thing she does when she is unsure], this is for you", "The quiet worry nobody mentions about [topic]". Say the thing she feels but never says out loud, then be warm about it. Never shame her.
+HAPPENINGS (the mix rows and any row about my work or my day): honest glimpses of life behind the page in my own voice, from what I am doing, noticing or thinking. Never invent a client, a patient story, a result or a quote. Only things I could say truthfully about myself.
+Unpopular opinion hooks ("Unpopular opinion from someone who [credibility]: stop [common habit] if you want [outcome]") are allowed on helpful rows, as long as they stay kind and make no medical claim.
+Keep every pillar inside the compliance rules below: no treatment claims, no prescription talk, no before and after, and treatment detail goes to my website.
+
 HOOKS (the most important part)
 The headline and subtitle together are the hook, and it has to stop a thumb mid scroll. Every hook must be funny, or stir a real feeling, or both: recognition ("that is so me"), nostalgia, a gentle laugh at ourselves, tenderness, pride, a little bit cheeky. A hook that only states a topic is not good enough. Make it specific and human rather than general. Warm, never shaming: never make the reader feel bad about her face, body or age, and laugh with her, not at her.
 
