@@ -195,29 +195,36 @@ export default function Magazine() {
 
   // Covers sent over from Stylish (in its own tab, so Stylish itself stays open) fill the pages
   // in order and name the file Clientname-Preview.
+  const [queueLeft, setQueueLeft] = useState(0);
+  const [queuePos, setQueuePos] = useState<{ position: number; total: number } | null>(null);
+  const applyHandoff = useCallback(async (): Promise<boolean> => {
+    const h = await takeFlipHandoff();
+    if (!h || !h.images.length) return false;
+    const n = Math.min(MAG_MAX_PAGES, Math.max(MAG_MIN_PAGES, h.images.length));
+    setSlots(Array.from({ length: n }, (_, i) => {
+      const img = h.images[i];
+      if (!img) return null;
+      const canvas = coverToCanvas(img);
+      return { canvas, thumb: canvas.toDataURL("image/jpeg", 0.7), name: `Slide ${i + 1}` };
+    }));
+    const clean = h.clientName.trim().replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "-");
+    setFileName(h.total && h.total > 1 ? `${clean || "Client"}-Post-${String(h.position ?? 1).padStart(2, "0")}` : `${clean || "Client"}-Preview`);
+    setClientName(h.clientName || "");
+    setCaption(h.caption || "");
+    setArea(h.location || "");
+    setPostTitle(h.title || "");
+    setVideoUrl(null);
+    setQueueLeft(h.remaining);
+    setQueuePos(h.total && h.total > 1 ? { position: h.position ?? 1, total: h.total } : null);
+    startRef.current = performance.now();
+    if (h.images.length < MAG_MIN_PAGES) toast.message(`Only ${h.images.length} slide${h.images.length === 1 ? "" : "s"} came across. Magazine Flip needs at least ${MAG_MIN_PAGES}, so add the rest here.`);
+    return true;
+  }, []);
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      const h = await takeFlipHandoff();
-      if (cancelled || !h || !h.images.length) return;
-      const n = Math.min(MAG_MAX_PAGES, Math.max(MAG_MIN_PAGES, h.images.length));
-      setSlots(Array.from({ length: n }, (_, i) => {
-        const img = h.images[i];
-        if (!img) return null;
-        const canvas = coverToCanvas(img);
-        return { canvas, thumb: canvas.toDataURL("image/jpeg", 0.7), name: `Cover ${i + 1}` };
-      }));
-      const clean = h.clientName.trim().replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, "-");
-      setFileName(`${clean || "Client"}-Preview`);
-      setClientName(h.clientName || "");
-      if (h.caption) setCaption(h.caption);
-      if (h.location) setArea(h.location);
-      if (h.title) setPostTitle(h.title);
-      startRef.current = performance.now();
-      if (h.images.length < MAG_MIN_PAGES) toast.message(`Only ${h.images.length} cover${h.images.length === 1 ? "" : "s"} came across. Magazine Flip needs at least ${MAG_MIN_PAGES}, so add the rest here.`);
-    })();
+    (async () => { if (!cancelled) await applyHandoff(); })();
     return () => { cancelled = true; };
-  }, []);
+  }, [applyHandoff]);
 
   // Live preview: plays the same frames the MP4 will use, then loops after a pause.
   useEffect(() => {
@@ -400,6 +407,18 @@ export default function Magazine() {
                 className="w-full rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-white"
               />
             </div>
+            {queuePos && (
+              <div className="flex items-center justify-between gap-2 max-w-sm mx-auto lg:max-w-none rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-2 text-sm text-zinc-200">
+                <span>Post {queuePos.position} of {queuePos.total}</span>
+                <button
+                  onClick={() => { void applyHandoff(); }}
+                  disabled={queueLeft === 0}
+                  className="px-3 py-1 rounded-md bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-xs font-semibold disabled:opacity-40"
+                >
+                  {queueLeft === 0 ? "That was the last post" : `Next post (${queueLeft} to go)`}
+                </button>
+              </div>
+            )}
             <div className="flex gap-2 max-w-sm mx-auto lg:max-w-none">
               <button
                 onClick={() => (startRef.current = performance.now())}

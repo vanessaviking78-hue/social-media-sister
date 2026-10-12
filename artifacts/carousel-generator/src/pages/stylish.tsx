@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect, useMemo, type PointerEvent as ReactPointerEvent } from "react";
 import { Link } from "wouter";
-import { setFlipHandoff } from "@/lib/flip-handoff";
+import { setFlipHandoff, setFlipQueue } from "@/lib/flip-handoff";
 import { takeStylishHandoff } from "@/lib/stylish-handoff";
 import {
   ArrowLeft, FileText, Download, Loader2, CalendarClock, CheckCircle2, ImageIcon,
@@ -3985,25 +3985,26 @@ export default function Stylish() {
 
   // -- scheduling --------------------------------------------------------------
 
-  // Sends slide 1 of each ticked post (up to five) to Magazine Flip, named Clientname-Preview there.
+  // Sends every ticked post to Magazine Flip as its own flip: each post's own slides become the pages
+  // of one magazine. Magazine Flip opens the first post and offers "Next post" for the rest.
   const handleSendToFlip = async () => {
     if (!selectedPosts.length) { toast.error("Tick at least one post first"); return; }
     setSendingFlip(true);
     try {
       await warmAll();
       const logo = style.showLogo ? await loadLogo(preset) : null;
-      const chosen = selectedPosts.slice(0, 16);
-      const canvases: HTMLCanvasElement[] = [];
-      for (const post of chosen) {
+      const items: { canvases: HTMLCanvasElement[]; clientName: string; caption?: string; location?: string; title?: string }[] = [];
+      let skipped = 0;
+      for (const post of selectedPosts) {
         const pi = posts.indexOf(post);
-        const specs = buildSlides(post.texts, post.slideOpts);
-        canvases.push(await renderSlide(specs[0], photoFor(pi, post, 0), styleForSlide(style, post, specs[0].kind), logo, preset, 1, { index: 0, total: specs.length, extras: [1, 2, 3].map(k => photoFor(pi, post, k)) }, focusRef.current[`${post.id}:0`]));
+        const canvases = await renderPostCanvases(pi, post, logo);
+        if (canvases.length < 4) { skipped++; continue; }
+        items.push({ canvases: canvases.slice(0, 16), clientName: preset?.name || "", caption: post.caption.trim() || undefined, location: area.trim() || undefined, title: buildSlides(post.texts, post.slideOpts)[0]?.text });
         await tick();
       }
-      await setFlipHandoff({ canvases, clientName: preset?.name || "" });
-      if (selectedPosts.length > 16) toast.message(`Magazine Flip holds 16 pages, so I sent the first 16 of your ${selectedPosts.length} ticked posts`);
-      // Opens in its own tab rather than navigating away, so this page - ticks, captions, the
-      // Schedule button - is exactly as she left it when she comes back to it.
+      if (!items.length) { toast.error("Magazine Flip needs at least 4 slides in a post"); return; }
+      await setFlipQueue(items);
+      toast.message(`${items.length} post${items.length === 1 ? "" : "s"} sent, one Magazine Flip each${skipped ? `. I left out ${skipped} with fewer than 4 slides` : ""}. Use "Next post" over there to move on.`);
       window.open("/magazine", "_blank", "noopener");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not send to Magazine Flip");
@@ -4813,7 +4814,7 @@ export default function Stylish() {
                       {animating ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{animating}</> : <><Film className="w-4 h-4 mr-1.5" />Download animated covers</>}
                     </Button>
                   )}
-                  <Button size="sm" variant="outline" onClick={handleSendToFlip} disabled={sendingFlip || !!scheduling} title="Sends slide 1 of each ticked post to Magazine Flip">
+                  <Button size="sm" variant="outline" onClick={handleSendToFlip} disabled={sendingFlip || !!scheduling} title="Sends each ticked post to Magazine Flip as its own flip, using that post's own slides">
                     {sendingFlip ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <ImageIcon className="w-4 h-4 mr-1.5" />}
                     Send to Magazine Flip
                   </Button>
