@@ -79,7 +79,7 @@ type Style = {
   cvBlock: string;
   cvBand: string;
   cvBandOn: boolean;
-  cvPunch?: number; // October 26: how much contrast and colour the photo gets, 0 to 100 (75 when empty)
+  cvPunch?: number; // October 26: how much contrast and colour the photo gets, 0 to 100 (0 when empty, so photos stay as they are)
   cvTowel?: boolean; // October 26 No. 17: a towel on the head
   cvShades?: boolean; // October 26 No. 17: sunglasses
   cvSpot?: string; // spot colour for the recolourable picture covers. Empty uses the client's brand colour.
@@ -130,6 +130,7 @@ const F_HELV = "'Helvetica Now Display', 'Inter Tight', sans-serif";
 const F_NOW = "'Now', 'Poppins', sans-serif";
 const F_EVOLVENTA = "'Evolventa', 'Montserrat', sans-serif";
 const F_INSTRUMENT = "'Instrument Serif', serif";
+const F_MONT = "'Montserrat', sans-serif";
 
 // Fonts each cover is designed around. If a font is not free to bundle, the person adds their own copy.
 const COVER_WANTS: Record<CoverLayout, string[]> = {
@@ -147,22 +148,22 @@ const COVER_WANTS: Record<CoverLayout, string[]> = {
 // Each cover layout brings its own type, colours and proportions. Everything can be changed afterwards.
 const COVER_PRESETS: Record<CoverLayout, Partial<Style>> = {
   band: {
-    coverLayout: "band", cvFont: F_BREUL, cvSubFont: F_BREUL, cvWeight: 700, cvSubWeight: 400,
+    coverLayout: "band", cvFont: F_BREUL, cvSubFont: F_MONT, cvWeight: 700, cvSubWeight: 400,
     cvCaps: true, cvSubCaps: true, cvTracking: -2, cvSubTracking: 4, cvSize: 150, cvSubSize: 30, cvScrim: 0,
     cvColour: "#000000", cvSubColour: "#000000", cvBlock: "#faf9f5", cvBandOn: false, cvPhoto: 74, cvFocus: 30,
   },
   centred: {
-    coverLayout: "centred", cvFont: F_EVOLVENTA, cvSubFont: "'Montserrat', sans-serif", cvWeight: 700, cvSubWeight: 400,
+    coverLayout: "centred", cvFont: F_EVOLVENTA, cvSubFont: F_MONT, cvWeight: 700, cvSubWeight: 400,
     cvCaps: true, cvSubCaps: true, cvTracking: 1, cvSubTracking: 2, cvSize: 170, cvSubSize: 46, cvScrim: 0,
     cvColour: "#38b6ff", cvSubColour: "#ffffff", cvPhoto: 100, cvFocus: 50, cvY: 58,
   },
   block: {
-    coverLayout: "block", cvFont: F_HELV, cvSubFont: F_HELV, cvWeight: 700, cvSubWeight: 400,
+    coverLayout: "block", cvFont: F_HELV, cvSubFont: F_MONT, cvWeight: 700, cvSubWeight: 400,
     cvCaps: true, cvSubCaps: true, cvTracking: -6, cvSubTracking: 1, cvSize: 300, cvSubSize: 32, cvScrim: 0,
     cvColour: "#000000", cvSubColour: "#000000", cvBlock: "#e4e2dd", cvBandOn: false, cvPhoto: 38, cvFocus: 35,
   },
   split: {
-    coverLayout: "split", cvFont: F_NOW, cvSubFont: F_NOW, cvWeight: 700, cvSubWeight: 400,
+    coverLayout: "split", cvFont: F_NOW, cvSubFont: F_MONT, cvWeight: 700, cvSubWeight: 400,
     cvCaps: true, cvSubCaps: false, cvTracking: 0, cvSubTracking: 0, cvSize: 120, cvSubSize: 46, cvScrim: 0,
     cvColour: "#000000", cvSubColour: "#000000", cvBlock: "#ffffff", cvBand: "#666666", cvBandOn: true, cvPhoto: 47.5, cvFocus: 50,
   },
@@ -269,11 +270,11 @@ const COVER_PRESETS: Record<CoverLayout, Partial<Style>> = {
     cvSize: 110, cvSubSize: 34, cvScrim: 0, cvColour: "#ffffff", cvSubColour: "#ffffff",
   },
   oct13: {
-    coverLayout: "oct13", cvFont: F_INSTRUMENT, cvSubFont: F_INSTRUMENT, cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: true, cvTracking: 0, cvSubTracking: 8,
+    coverLayout: "oct13", cvFont: F_INSTRUMENT, cvSubFont: F_MONT, cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: true, cvTracking: 0, cvSubTracking: 8,
     cvSize: 260, cvSubSize: 40, cvScrim: 0, cvColour: "#ffffff", cvSubColour: "#ffffff",
   },
   oct18: {
-    coverLayout: "oct18", cvFont: F_INSTRUMENT, cvSubFont: F_INSTRUMENT, cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: true, cvTracking: 0, cvSubTracking: 6,
+    coverLayout: "oct18", cvFont: F_INSTRUMENT, cvSubFont: F_MONT, cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: true, cvTracking: 0, cvSubTracking: 6,
     cvSize: 300, cvSubSize: 34, cvScrim: 0, cvColour: "#ffffff", cvSubColour: "#ffffff",
   },
   oct16: {
@@ -286,7 +287,7 @@ const COVER_PRESETS: Record<CoverLayout, Partial<Style>> = {
     cvColour: "#1c1c1c", cvSubColour: "#1c1c1c", cvBlock: "#efefef", cvY: 31,
   },
   serif: {
-    coverLayout: "serif", cvFont: F_INSTRUMENT, cvSubFont: F_INSTRUMENT, cvWeight: 400, cvSubWeight: 400,
+    coverLayout: "serif", cvFont: F_INSTRUMENT, cvSubFont: F_MONT, cvWeight: 400, cvSubWeight: 400,
     cvCaps: true, cvSubCaps: false, cvTracking: -4, cvSubTracking: -2, cvSize: 170, cvSubSize: 66, cvScrim: 62,
     cvColour: "#ffffff", cvSubColour: "#ffffff", cvPhoto: 100, cvFocus: 50, cvY: 90,
   },
@@ -378,17 +379,17 @@ const DEFAULT_STYLE: Style = {
   plainFont: "'Cormorant Garamond', serif",
   plainSubFont: "'Montserrat', sans-serif",
   behindFont: "'Anton', sans-serif",
-  behindSubFont: "'Inter Tight', sans-serif",
+  behindSubFont: F_MONT,
   lf: {
-    fullbleed: { h: "'Bebas Neue', sans-serif", s: "'Playfair Display', serif" },
-    blur: { h: "'Instrument Serif', serif", s: "'Inter Tight', sans-serif" },
-    strip: { h: "'Bebas Neue', sans-serif", s: "'Poppins', sans-serif" },
-    diagonal: { h: "'Jost', sans-serif", s: "'Jost', sans-serif" },
-    behind2: { h: "'Anton', sans-serif", s: "'Montserrat', sans-serif" },
-    polaroid: { h: "'DM Serif Display', serif", s: "'Inter Tight', sans-serif" },
-    sidebar: { h: "'DM Serif Display', serif", s: "'Inter Tight', sans-serif" },
-    frame: { h: "'Playfair Display', serif", s: "'Playfair Display', serif" },
-    layered: { h: "'Anton', sans-serif", s: "'Inter Tight', sans-serif" },
+    fullbleed: { h: "'Bebas Neue', sans-serif", s: F_MONT },
+    blur: { h: "'Instrument Serif', serif", s: F_MONT },
+    strip: { h: "'Bebas Neue', sans-serif", s: F_MONT },
+    diagonal: { h: "'Jost', sans-serif", s: F_MONT },
+    behind2: { h: "'Anton', sans-serif", s: F_MONT },
+    polaroid: { h: "'DM Serif Display', serif", s: F_MONT },
+    sidebar: { h: "'DM Serif Display', serif", s: F_MONT },
+    frame: { h: "'Playfair Display', serif", s: F_MONT },
+    layered: { h: "'Anton', sans-serif", s: F_MONT },
   },
   clientCoverFont: "",
   clientCoverSubFont: "",
@@ -530,7 +531,7 @@ const OCT_HELP: Partial<Record<CoverLayout, string>> = {
   oct14: "Glossy black heels in black and white, one big headline on the left.",
   oct16: "A gloved hand holding a card, headline on the card.",
   oct6: "A black and white portrait of the clinician with one headline across the bottom.",
-  oct13: "A magazine cover over a photo of the client. Headline: MASTHEAD | SECOND HEADLINE. Subtitle: the small line. OCTOBER 2026 sits under the masthead.",
+  oct13: "A magazine cover over a photo of the client. Headline: MASTHEAD | SECOND HEADLINE. Subtitle: the small line.",
   oct18: "One huge serif headline across the photo, used for a treatment name.",
   oct1: "The clinician peeping over a newspaper in the clinic colour. Headline: Book your consultation at the clinic. Subtitle: the tiny masthead (Aesthetics news). Move the photo so the eyes sit above the paper.",
   oct8: "A retro badge: your photo in a round badge framed in the clinic colour. Headline on top, subtitle below, TODAY on the ribbon.",
@@ -1372,7 +1373,8 @@ type OctLook = {
 
 // Draws a photo to fill a frame, with the zoom and drag position, clipped to that frame.
 function punchFilter(punch: number | undefined, mono = false) {
-  const p = Math.min(100, Math.max(0, punch ?? 75)) / 100;
+  // Photos stay exactly as they were taken unless a post's own punch slider is moved.
+  const p = Math.min(100, Math.max(0, punch ?? 0)) / 100;
   return mono ? `grayscale(1) contrast(${1 + 0.8 * p}) brightness(${1 - 0.04 * p})` : `contrast(${1 + 0.45 * p}) saturate(${1 + 0.7 * p}) brightness(${1 - 0.03 * p})`;
 }
 // Applies a CSS-style filter to a canvas after it has been drawn (so the backdrop is recoloured before contrast can crush it to black).
@@ -1638,9 +1640,6 @@ async function drawCoverOct(
     while (msz > 24 && ctx.measureText(mast).width > 940) { msz -= 6; ctx.font = `${style.cvWeight} ${msz}px ${hf}`; }
     const my = 70 + Math.round(msz * 0.85) + textAt.dy;
     ctx.fillText(mast, W / 2 + textAt.dx, my);
-    setSpacing(ctx, 12);
-    ctx.font = `400 34px ${sf}`;
-    ctx.fillText("OCTOBER 2026", W / 2 + textAt.dx, my + 58);
     if (second) {
       setSpacing(ctx, 0);
       ctx.textAlign = "left";

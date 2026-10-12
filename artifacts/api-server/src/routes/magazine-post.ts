@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { STYLE_PROMPTS, RULES, clean } from "./magazine-maker";
+import { clinicNoun } from "./caption-generator";
 import { scanText, applySwap } from "../lib/newsletterCompliance";
 
 const router: IRouter = Router();
@@ -43,7 +44,7 @@ router.post("/magazine-post/copy", async (req: Request, res: Response) => {
     const stylePrompt = STYLE_PROMPTS[String(style ?? "1")] ?? STYLE_PROMPTS["1"];
     const clinic = (clinicName ?? "").trim() || "the clinic";
 
-    const systemPrompt = `You write the copy for a 5 page social media magazine post for an aesthetics clinic, ${clinic}, all about ONE treatment: "${treat}". It is a swipe carousel, so every piece of copy must be short enough to read in a couple of seconds.
+    const systemPrompt = `You write the copy for a 5 page social media magazine post for a ${clinicNoun(clinicName)}, ${clinic}, all about ONE treatment: "${treat}". It is a swipe carousel, so every piece of copy must be short enough to read in a couple of seconds.
 
 VOICE: ${stylePrompt}
 

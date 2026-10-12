@@ -1,7 +1,8 @@
 export function getVoiceSystemPrompt(voiceStyle: string): string {
   const base = `
 COMPLIANCE (always, without exception)
-- NEVER name Botox, anti-wrinkle injections, or any prescription-only medicine by name. Use: "facial aesthetics", "smoothing treatments", "injectable treatments", "facial rejuvenation".
+- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the person and how she feels, and name a treatment only in plain everyday words when it is not a prescription-only medicine.
+- Always send readers to the clinic website for treatment details. Never state prices, doses or treatment specifics in the post itself.
 - Never use the word "safe" in advertising claims.
 - No medical claims. No guaranteed results. No before/after that implies certainty.
 - No pressure tactics. No urgency language.

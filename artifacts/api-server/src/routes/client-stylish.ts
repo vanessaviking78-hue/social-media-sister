@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import multer from "multer";
 import { openai } from "@workspace/integrations-openai-ai-server";
-import { CAPTION_TONE_PROMPTS, RYDER_TONE, isRyder } from "./caption-generator";
+import { CAPTION_TONE_PROMPTS, RYDER_TONE, isRyder, HOOK_RULES, DENTAL_RULES, isDental } from "./caption-generator";
 import { validateHost } from "./aiPortrait";
 import { clientProfileContext } from "./client-profiles";
 import { db } from "@workspace/db";
@@ -183,11 +183,11 @@ async function readWebsite(website: string, treatments: string[], diag?: SiteDia
 
 // Words that must never reach a post: prescription only medicines and the claims wording
 // the ASA and MHRA object to. Checked in code as well as in the prompt.
-export const BANNED_TERMS = /\b(botox|botulinum(?:\s+toxin)?|bocouture|azzalure|dysport|xeomin|vistabel|nuceiva|letybo|baby[\s-]?tox|tox|anti[\s-]?wrinkle|antiwrinkle|wrinkle[\s-]?relax\w*|ozempic|wegovy|mounjaro|saxenda|semaglutide|tirzepatide|liraglutide)\b/gi;
+export const BANNED_TERMS = /\b(botox|botulinum(?:\s+toxin)?|bocouture|azzalure|dysport|xeomin|vistabel|nuceiva|letybo|baby[\s-]?tox|tox|anti[\s-]?wrinkle|antiwrinkle|wrinkle[\s-]?relax\w*|wrinkles?|injectables?|injections?|jabs?|prescription(?:[\s-]only)?|ozempic|wegovy|mounjaro|saxenda|semaglutide|tirzepatide|liraglutide)\b/gi;
 
 // Swaps banned words for the compliant wording, so the model never sees them in its input.
 export function neutralise(text: string): string {
-  return text.replace(BANNED_TERMS, "smoothing treatments").replace(/(smoothing treatments)[®™]/g, "$1");
+  return text.replace(BANNED_TERMS, "skin treatments").replace(/(skin treatments)[®™]/g, "$1");
 }
 
 const DAY_WORDS = /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|weekend|mondays|fridays|sundays|saturdays)\b/gi;
@@ -243,6 +243,14 @@ const HALLOWEEN_IDEAS: Record<string, { title: string; brief: string }> = {
   "hl-08": { title: "The face behind the costume", brief: "Emotional and shareable: the Halloweens she dressed as someone else, and the one where she was happy as herself. Original and specific, never a stock quote." },
 };
 
+const PERSONAL_RULES = `PERSONAL, NEVER LIKE A BUSINESS
+Every row reads like the person behind the page chatting to one woman who has followed her for years, never like a clinic advertising itself. Small, believable personal details (the kettle, the diary, a quiet Tuesday, something a patient once said, never invented results, names or numbers) make her feel she knows me. Build that warm, two way friendship so she wants to answer, share, save or tag. Every cta invites a reply or a share as well as a visit.`;
+
+const DENTAL_PACK = `${DENTAL_RULES}
+Where a row asks for menopause, skincare or anything about faces, give it a dental angle instead (dry mouth, gum health, a nervous patient, a hygiene routine, the first filling, the school run and the tooth fairy). Treatment rows cover dental treatments from the website.`;
+
+const packKind = (clientName: string) => (isDental(clientName) ? `${DENTAL_PACK}\n` : "");
+
 const STRUCTURE_RULES = `
 WHAT YOU ARE WRITING
 A Stylish carousel pack for one clinic: exactly 20 posts, each one a row of short text that sits over photos.
@@ -284,10 +292,10 @@ HOOKS (the most important part)
 The headline and subtitle together are the hook, and it has to stop a thumb mid scroll. Every hook must be funny, or stir a real feeling, or both: recognition ("that is so me"), nostalgia, a gentle laugh at ourselves, tenderness, pride, a little bit cheeky. A hook that only states a topic is not good enough. Make it specific and human rather than general. Warm, never shaming: never make the reader feel bad about her face, body or age, and laugh with her, not at her.
 
 COMPLIANCE (CAP Code, ASA and MHRA), NON NEGOTIABLE
-NEVER write the words Botox, botulinum, toxin brand names (Bocouture, Azzalure, Dysport, Xeomin, Vistabel and the like), "tox", "baby tox", "anti-wrinkle", "antiwrinkle" or "wrinkle relaxer", and never name any prescription only medicine (including weight loss injections such as Ozempic, Wegovy or Mounjaro), in any cell of any row. This applies even if the website or the treatment list uses those words: where they do, say "smoothing treatments" or "facial aesthetics" instead. No guarantees, no before and after claims, no medical claims, no "safe", no superlatives like best or number one, no pressure, urgency or scarcity language. Frame treatments as a consultation and a possibility ("may help", "can support").
+NEVER mention Botox, botulinum, toxin brand names (Bocouture, Azzalure, Dysport, Xeomin, Vistabel and the like), "tox", "baby tox", "anti-wrinkle", "antiwrinkle", "wrinkle relaxer", wrinkles, lines, injectables, injections, jabs or prescription anything, and never name any prescription only medicine (including weight loss injections such as Ozempic, Wegovy or Mounjaro), in any cell of any row. This applies even if the website or the treatment list uses those words: write about the woman, how she feels and the clinic, and say "skin treatments" where a treatment must be named in general terms. Treatment details always live on my website: treatment rows point her to the website for the details and never state prices, doses or specifics themselves. No guarantees, no before and after claims, no medical claims, no "safe", no superlatives like best or number one, no pressure, urgency or scarcity language. Frame treatments as a consultation and a possibility ("may help", "can support").
 
 CTA
-Every cta is a strong, stealth sales friendly call to action, varied across the rows and never pushy. On treatment rows it warmly invites a consultation or a message. On funny, things that and shareable rows it asks for a comment, a share, a save or a tag ("Tag the friend who...", "Comment the one I forgot") and is worded so it also warmly draws her into the clinic's world (follow along, send a message, come and say hello).
+Every cta is a strong, stealth sales friendly call to action, varied across the rows and never pushy. On treatment rows it warmly invites a consultation or a message and sends her to my website for the treatment details. On funny, things that and shareable rows it asks for a comment, a share, a save or a tag ("Tag the friend who...", "Comment the one I forgot") and is worded so it also warmly draws her into the clinic's world (follow along, send a message, come and say hello).
 
 BANNED WORDS
 fluff, faff, fuss, elevate, transform, unlock, journey, empower, revolutionise, game-changer, dive into, harness, leverage, delve, navigate, streamline, cutting-edge, holistic, synergy, bespoke, unleash, tapestry, landscape, realm, testament, seamless, effortless, next level, top-tier, spoiler alert, trust me.
@@ -439,9 +447,11 @@ router.post("/client-stylish/copy", upload.array("screenshots", 3), async (req: 
     const topPostsCount = topPosts ? topPosts.split("\n").filter((l) => l.trim()).length : 0;
 
     const profileCtx = await clientProfileContext(clientName);
-    const system = `You write copy for Vanessa Wormald's clients, UK aesthetic clinics.
+    const system = `You write copy for Vanessa Wormald's clients, ${isDental(clientName) ? "UK dental practices" : "UK aesthetic clinics"}.
 
 WRITING STYLE: ${tonePrompt}${profileCtx}
+${packKind(clientName)}${HOOK_RULES}
+${PERSONAL_RULES}
 ${ryderPack ? "THE RYDER CLINIC: write every row in the professional, emotive, affable voice above. Wherever the rules below ask for funny, cheeky or nostalgic comedy, write sincere, warm, emotionally rich posts instead, with no humour or japes at all.\n" : ""}${hallIds.length ? STRUCTURE_RULES.replace(/exactly 20 (posts|objects)/g, `exactly ${expected} $1`) + `\n\nHALLOWEEN ROWS: after the 20 rows above, add ${hallIds.length} extra Halloween rows (rows 21 to ${expected}), in this order. Same format, same rules, same voice, still ending ideas with a comment, share, save or tag call to action. Make each one clever, industry relevant and outside the box.\n${hallIds.map((h, i) => `Row ${21 + i}: "${HALLOWEEN_IDEAS[h].title}". ${HALLOWEEN_IDEAS[h].brief}`).join("\n")}` : STRUCTURE_RULES}${topPosts ? `\n${TOP_POSTS_RULES}` : ""}`;
 
     const user = `Clinic: ${clientName.trim()}
@@ -490,7 +500,7 @@ ${siteFound ? `WEBSITE TEXT (take treatment details from here only):\n${safeSite
         feedback = `\n\nRows ${noI.join(", ")} are not in the first person. Rewrite all ${expected} rows so every row is spoken as I, me and my.`;
         continue;
       }
-      feedback = `\n\nYour last answer used banned wording (${hits.join(", ")}). Rewrite all ${expected} rows without any of those words. Never name a day of the week or the weekend. Where a compliance word is the problem, use "smoothing treatments" or "facial aesthetics".`;
+      feedback = `\n\nYour last answer used banned wording (${hits.join(", ")}). Rewrite all ${expected} rows without any of those words. Never name a day of the week or the weekend. Where a compliance word is the problem, write "skin treatments" or leave the treatment unnamed and point her to my website.`;
     }
 
     // Last line of defence: if a banned word still slipped through, swap it out in code.
@@ -628,9 +638,11 @@ Each carousel is a short, absorbing story she wants to finish. Slide 1 (headline
     ].filter(Boolean).join("\n\n");
 
     const profileCtx = await clientProfileContext(clientName);
-    const system = `You write copy for Vanessa Wormald's clients, UK aesthetic clinics.
+    const system = `You write copy for Vanessa Wormald's clients, ${isDental(clientName) ? "UK dental practices" : "UK aesthetic clinics"}.
 
 WRITING STYLE: ${tonePrompt}${profileCtx}
+${packKind(clientName)}${HOOK_RULES}
+${PERSONAL_RULES}
 
 WHAT YOU ARE WRITING
 A Stylish carousel pack for one clinic: exactly ${total} posts, each one a row of short text that sits over photos. Each row has: headline, subtitle, text1, text2, text3, cta. The headline and subtitle read together as one line (headline is the start, subtitle is the finish). Headline up to 5 words, subtitle up to 8 words, cta up to 8 words, each of text1 to text3 is 2 or 3 short sentences of 20 to 32 words.

@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { clientProfileContext } from "./client-profiles";
-import { CAPTION_TONE_PROMPTS, RYDER_TONE, isRyder } from "./caption-generator";
+import { CAPTION_TONE_PROMPTS, RYDER_TONE, isRyder, clinicNoun, isDental } from "./caption-generator";
 import { BANNED_TERMS, neutralise, clean } from "./client-stylish";
 
 // One short question per post, written to sit in bold across a story that goes out on the same
@@ -31,7 +31,7 @@ router.post("/stylish-story/questions", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: `You write the bold question that sits across an Instagram story for an aesthetics clinic. Each story goes out the same morning as a feed post and is about the same thing, so followers reply to the story with their answer.
+            content: `You write the bold question that sits across an Instagram story for a ${clinicNoun(clinicName)}. Each story goes out the same morning as a feed post and is about the same thing, so followers reply to the story with their answer.
 
 TONE: ${tonePrompt}${profileCtx}
 
@@ -39,7 +39,8 @@ RULES
 - One question per post, 12 words at most, easy to answer in a word or a sentence, and you want to answer it straight away.
 - It must connect to the post it belongs to, but must not give the post away. It should make people curious about the post.
 - Funny or emotion evoking. Everyday, relatable and a little cheeky. Never a medical education question.
-- Never mention Botox, anti wrinkle, injectable prescription medicines, weight loss medicines or any brand of them. Never make a promise about results.
+- Never mention Botox, anti wrinkle, wrinkles, injectables, injections, prescription medicines, weight loss medicines or any brand of them. Never make a promise about results.${isDental(clinicName) ? "\n- This is a dental practice: keep every question about teeth, smiles, check-ups and everyday life, never faces, skin or aesthetics." : ""}
+- Make it personal and a bit nosy, like me chatting to a friend, never like a business.
 - Write as the clinician or clinic owner speaking, first person if a pronoun is needed. UK spelling. No em dashes or en dashes. Do not use the word fluff. No hashtags, no emojis.
 - Never use the construction "it is not X, it is Y" and do not open with "Ever wondered".
 - Built to get replies. It must be answerable in under five seconds with no thinking, and it should make people feel a little bit seen, or a little bit nosy, or want to defend their answer.
