@@ -1,15 +1,16 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { clientProfileContext } from "./client-profiles";
+import { HOUSE_VOICE } from "../lib/houseRules";
 
 const router: IRouter = Router();
 
 export const CAPTION_TONE_PROMPTS: Record<string, string> = {
-  "1": "Write like a no-nonsense northern woman — direct, warm, working-class honest. Plain words. Real talk. No fluff, no poetry, no corporate speak. Like talking to your best mate over a brew.",
-  "2": "Write like a poetic storyteller — vivid, character-led, a little wistful. Paint scenes. Use unexpected metaphors. Let the emotion sit in the detail rather than the statement.",
-  "3": "Write like a funny, sharp woman in her 40s-50s who has earned the right to say what she thinks. Self-deprecating, warm, genuinely funny. Never cruel. Always honest.",
-  "4": "Write like a warm medical expert who happens to also be a real human being. Authoritative but approachable. Evidence-led but never cold.",
-  "5": "Write in a feral, savage, sarcastic voice. Dry, blunt, a bit unhinged, laughing at the industry not at the patient. Short punchy sentences. Never cruel to patients, always on the side of proper, qualified care.",
+  "1": HOUSE_VOICE,
+  "2": HOUSE_VOICE,
+  "3": HOUSE_VOICE,
+  "4": HOUSE_VOICE,
+  "5": HOUSE_VOICE,
 };
 
 export const HOOK_RULES = `HOOKS (the first line of every caption, slide 1 headline and on-screen opener)

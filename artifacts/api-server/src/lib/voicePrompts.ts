@@ -1,6 +1,7 @@
-import { HOUSE_RULES } from "./houseRules";
+import { HOUSE_RULES, HOUSE_VOICE } from "./houseRules";
 
-export function getVoiceSystemPrompt(voiceStyle: string): string {
+export function getVoiceSystemPrompt(_chosenStyle: string): string {
+  const voiceStyle: string = "house";
   const base = `
 COMPLIANCE (always, without exception)
 - NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the person and how she feels, and name a treatment only in plain everyday words when it is not a prescription-only medicine.
@@ -25,6 +26,10 @@ STEALTH SALES (always, every post)
 - The call to action should read like a natural next sentence in conversation, not a marketing tag. Prefer specific, low pressure invites: come and ask, message me if you are curious, mention it next time you are in.
 - The sell should be felt more than seen. If a reader has to notice they are being sold to, it has failed.
 ${HOUSE_RULES}`;
+
+  if (voiceStyle === "house") {
+    return `You are a social media content writer.\n\n${HOUSE_VOICE}${base}`;
+  }
 
   if (voiceStyle === "whimsical") {
     return `You are a social media content writer. Write in the literary style of a skilled memoir-writer's prose: romantic, narrative, observational, soulful. Sentences build slowly toward something real. Small ordinary moments made large. Unhurried. First person. The kind of writing where a routine treatment becomes a meditation on time, care, and the quiet things we do for ourselves. No sentimentality. No cheese. Just honest feeling, rendered carefully.

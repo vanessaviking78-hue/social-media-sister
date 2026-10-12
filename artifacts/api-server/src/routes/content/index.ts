@@ -1,5 +1,5 @@
 import { clientProfileContext } from "../client-profiles";
-import { HOUSE_RULES, HASHTAG_RULE, DENTAL_RULES, isDental } from "../../lib/houseRules";
+import { HOUSE_RULES, HOUSE_VOICE, HASHTAG_RULE, DENTAL_RULES, isDental } from "../../lib/houseRules";
 import { Router, type IRouter } from "express";
 import multer from "multer";
 import { openai } from "@workspace/integrations-openai-ai-server";
@@ -14,7 +14,8 @@ import { join } from "path";
 const videoUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 300 * 1024 * 1024 } });
 const audioUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 30 * 1024 * 1024 } });
 
-function getVoiceSystemPrompt(voiceStyle: string): string {
+function getVoiceSystemPrompt(_chosenStyle: string): string {
+  const voiceStyle: string = "house";
   const base = `
 COMPLIANCE (always, without exception)
 - NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and, only on a treatment post, send her to the clinic website for treatment details (or invite a message if there is no website).
@@ -32,6 +33,10 @@ STRICT RULES (all voices)
 - BANNED openers: "In today's world", "In the ever-changing landscape", "Are you ready to", "Picture this", "Imagine a world", "Are you tired of", "It is time to", "What if we told you", "In a world where"
 - Do not use the construction where it is not about X, it is about Y, or any rule of three escalation that sounds like a TED talk. Do not open with a rhetorical question. Say the thing plainly, the way you would actually say it to someone face to face. If a sentence could have been written by a chatbot, delete it.
 ${HOUSE_RULES}`;
+
+  if (voiceStyle === "house") {
+    return `You are a social media content writer.\n\n${HOUSE_VOICE}${base}`;
+  }
 
   if (voiceStyle === "whimsical") {
     return `You are a social media content writer. Write in the literary style of a skilled memoir-writer's prose: romantic, narrative, observational, soulful. Sentences build slowly toward something real. Small ordinary moments made large. Unhurried. First person. The kind of writing where a routine treatment becomes a meditation on time, care, and the quiet things we do for ourselves. No sentimentality. No cheese. Just honest feeling, rendered carefully.

@@ -1,16 +1,17 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOOK_RULES } from "./caption-generator";
+import { HOUSE_VOICE } from "../lib/houseRules";
 
 const router: IRouter = Router();
 
 // The five voices Vanessa writes in. The key is what the front end sends.
 export const STYLE_PROMPTS: Record<string, string> = {
-  "1": "Northern grit, Vanessa style. A no-nonsense northern woman, direct, warm and honest, with a dry sense of humour. Plain words, short sentences, real talk, like putting the world to rights over a brew. Never posh, never corporate.",
-  "2": "Storytelling with a whimsical streak, in the manner of Bruce Springsteen. Small human scenes, a specific street, a specific morning, a person you can picture. Big-hearted, a little wistful, a bit of wonder in ordinary things. Never quote or mention lyrics or songs.",
-  "3": "Funny and blunt, in the manner of Dawn French. Warm, self-deprecating, quick and daft, says the quiet bit out loud and gets away with it. Never cruel, always affable.",
-  "4": "Professional but with personality. Polished and credible, still clearly a real person with opinions and a sense of humour. Warm, confident, never stiff.",
-  "5": "Feral, savage and sarcastic. Sharp, cheeky, wickedly dry, roasts the nonsense of the industry without ever being cruel to the reader. Still affable underneath.",
+  "1": HOUSE_VOICE,
+  "2": HOUSE_VOICE,
+  "3": HOUSE_VOICE,
+  "4": HOUSE_VOICE,
+  "5": HOUSE_VOICE,
 };
 
 export const RULES = `
