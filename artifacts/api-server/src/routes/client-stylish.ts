@@ -276,7 +276,7 @@ const HALLOWEEN_IDEAS: Record<string, { title: string; brief: string }> = {
 };
 
 const PERSONAL_RULES = `PERSONAL, NEVER LIKE A BUSINESS
-Every row reads like the person behind the page chatting to one woman who has followed her for years, never like a clinic advertising itself. Small, believable personal details (the kettle, the diary, a quiet Tuesday, something a patient once said, never invented results, names or numbers) make her feel she knows me. Build that warm, two way friendship so she wants to answer, share, save or tag. Every cta invites a reply or a share as well as a visit.`;
+Every row reads like the person behind the page chatting to one woman who has followed her for years, never like a clinic advertising itself. Small, believable personal details (the kettle, the diary, a quiet Tuesday, something a patient once said, never invented results, names or numbers) make her feel she knows me. Build that warm, two way friendship so she wants to answer, share, save or tag. Every cta invites a reply or a share as well as a visit. Every cta carries a reply word written as "Comment WORD" or "Message me WORD". Use the clinic's own reply word if the notes give one, otherwise a fun single uppercase word that relates to that post, different on each row.`;
 
 const DENTAL_PACK = `${DENTAL_RULES}
 Where a row asks for menopause, skincare or anything about faces, give it a dental angle instead (dry mouth, gum health, a nervous patient, a hygiene routine, the first filling, the school run and the tooth fairy). Treatment rows cover dental treatments from the website.`;

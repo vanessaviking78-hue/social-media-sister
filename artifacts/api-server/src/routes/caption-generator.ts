@@ -19,7 +19,7 @@ export const HOOK_RULES = `HOOKS (the first line of every caption, slide 1 headl
 
 export const DENTAL_RULES = `THIS IS A DENTAL PRACTICE, NOT AN AESTHETICS CLINIC
 - Write about dentistry: check-ups, hygiene, whitening, straightening, restorations, nervous patients, children and families, smiles. Never mention aesthetics, skin, injectables or facial treatments.
-- Dental advertising standards: no guaranteed results, no before and after promises, no pressure, no superlatives. Send readers to the practice website for treatment details.`;
+- Dental advertising standards: no guaranteed results, no before and after promises, no pressure, no superlatives. On treatment posts only, send readers to the practice website for treatment details.`;
 
 export const isDental = (name?: string) => /castle|dental|dentist|orthodont/i.test(name ?? "");
 export const clinicNoun = (name?: string) => (isDental(name) ? "dental practice" : "aesthetics clinic");
@@ -27,7 +27,8 @@ export const clinicNoun = (name?: string) => (isDental(name) ? "dental practice"
 export const BASE_RULES = `
 COMPLIANCE (non-negotiable, every single caption)
 - NEVER mention Botox, anti-wrinkle anything, wrinkles, lines or any prescription-only medicine, and never hint at one with words such as injectable, jab, needle, dose or prescription. Write about the woman, how she feels and the clinic. Name a treatment only in plain everyday words and only when it is not a prescription-only medicine (facials, peels, skin treatments, HIFU, skin boosters, lip treatments).
-- ALWAYS send readers to the clinic website for treatment details, in one natural line (for example "all the treatment details are on my website, link in bio"). Never list prices, doses or treatment specifics in the caption itself.
+- Only when the post is about a treatment, send readers to the clinic website for treatment details, in one natural line (for example "all the treatment details are on my website, link in bio"). Do not mention the website on any other post. Never list prices, doses or treatment specifics in the caption itself.
+- Every caption carries a reply word, written inside the closing question as "Comment WORD" (for example "Fancy a nosy? Comment GLOW and I will send you the details"). WORD is one uppercase word. Use the clinic's own reply word if one is given in the notes, otherwise choose a fun, single uppercase word that relates to that post, different for each post.
 - Never use the word "safe" in advertising claims.
 - No medical claims. No guaranteed results. No before/after that implies certainty.
 - No pressure tactics. No urgency language.

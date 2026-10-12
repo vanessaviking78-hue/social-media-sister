@@ -17,7 +17,7 @@ const audioUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize
 function getVoiceSystemPrompt(voiceStyle: string): string {
   const base = `
 COMPLIANCE (always, without exception)
-- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and send her to the clinic website for treatment details.
+- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and, only on a treatment post, send her to the clinic website for treatment details.
 - Never use the word "safe" in advertising claims.
 - No medical claims. No guaranteed results. No before/after that implies certainty.
 - No pressure tactics. No urgency language.
@@ -112,7 +112,7 @@ STRICT WRITING RULES
 - BANNED openers: "In today's world", "In the ever-changing landscape", "Are you ready to", "Picture this", "Imagine a world"
 
 COMPLIANCE (always, without exception)
-- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and send her to the clinic website for treatment details.
+- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and, only on a treatment post, send her to the clinic website for treatment details.
 - Never use the word "safe" in advertising claims.
 - No medical claims. No guaranteed results. No before/after that implies certainty.
 - No pressure tactics. No urgency language.
@@ -170,7 +170,7 @@ STRICT WRITING RULES
 - BANNED openers: "In today's world", "In the ever-changing landscape", "Are you ready to", "Picture this", "Imagine a world"
 
 COMPLIANCE (always, without exception)
-- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and send her to the clinic website for treatment details.
+- NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman and how she feels, and, only on a treatment post, send her to the clinic website for treatment details.
 - Never use the word "safe" in advertising claims.
 - No medical claims. No guaranteed results. No before/after that implies certainty.
 - No pressure tactics. No urgency language.
@@ -393,7 +393,7 @@ You will receive the ${isSingle ? "overlay text" : "slide text"} for each ${post
 - Is MHRA/ASA compliant - no medical claims, no guaranteed results, no pressure tactics
 - Includes 1-2 relevant emojis naturally woven in (not emoji spam)
 - NEVER use em dashes or en dashes, use hyphens or commas instead
-- The caption finishes with a closing question that relates to the post. Where a keyword invite fits, fold it into the question, for example "Fancy a nosy? Comment GLOW and I will send you the details". The keyword is a single fun uppercase word, different for each caption.
+- The caption finishes with a closing question that relates to the post. Always fold a reply word into the question, for example "Fancy a nosy? Comment GLOW and I will send you the details". The reply word is a single fun uppercase word that relates to that post, different for each caption.
 - ${HASHTAG_RULE}
 ${isDental(clientName) ? DENTAL_RULES : ""}
 ${extraInstructions ? `\nAdditional instructions: ${extraInstructions}` : ""}
@@ -1148,7 +1148,7 @@ router.post("/content/ba-caption", async (req, res) => {
       model: "gpt-5.2",
       max_completion_tokens: 800,
       messages: [
-        { role: "system", content: `${voicePrompt}\n\nYou write warm, story-led Instagram captions for an aesthetics clinic${clientName ? ` (${clientName})` : ""} to sit alongside a before-and-after photo. Tell it as a short story: set the scene, how the client felt beforehand, what they had done, and how they felt after. Keep it human and specific, roughly 80 to 140 words. Be MHRA and ASA compliant: no medical claims, no guaranteed results, no pressure tactics. Use hyphens, never em dashes. Weave in one or two emojis naturally. Finish with a question that relates to the story, then on its own final line exactly 5 relevant area based hashtags. Never mention Botox, anti-wrinkle, wrinkles, injectables or prescription medicines, and send readers to my website for treatment details. Output only the caption text, nothing else.` },
+        { role: "system", content: `${voicePrompt}\n\nYou write warm, story-led Instagram captions for an aesthetics clinic${clientName ? ` (${clientName})` : ""} to sit alongside a before-and-after photo. Tell it as a short story: set the scene, how the client felt beforehand, what they had done, and how they felt after. Keep it human and specific, roughly 80 to 140 words. Be MHRA and ASA compliant: no medical claims, no guaranteed results, no pressure tactics. Use hyphens, never em dashes. Weave in one or two emojis naturally. Finish with a question that relates to the story, then on its own final line exactly 5 relevant area based hashtags. Never mention Botox, anti-wrinkle, wrinkles, injectables or prescription medicines, and, only if this is a treatment story, send readers to my website for treatment details. Output only the caption text, nothing else.` },
         { role: "user", content: `Treatment: ${treatment || "(not given)"}\nBack story from the clinic: ${backStory || "(not given)"}` },
       ],
     });
