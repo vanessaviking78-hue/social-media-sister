@@ -144,6 +144,25 @@ const HALLOWEEN_PRESETS: PhotoStudioPreset[] = [
   { id: "hl-08", name: "Face Behind The Costume", hasColour: false },
 ];
 
+const TWEAKED_PRESETS: PhotoStudioPreset[] = [
+  { id: "tw-01", name: "Brew And Blanket", hasColour: false },
+  { id: "tw-02", name: "Pumpkin Patch Queen", hasColour: false },
+  { id: "tw-03", name: "Leopard Armchair Boss", hasColour: false },
+  { id: "tw-04", name: "Kitchen Island Chat", hasColour: false },
+  { id: "tw-05", name: "Doorstep Dolly", hasColour: false },
+  { id: "tw-06", name: "Cosy Window Seat", hasColour: false },
+  { id: "tw-07", name: "Walk And Talk", hasColour: false },
+  { id: "tw-08", name: "Pumpkin Carving Chaos", hasColour: false },
+  { id: "tw-09", name: "Fireside Glow", hasColour: false },
+  { id: "tw-10", name: "Sofa Selfie Energy", hasColour: false },
+  { id: "tw-11", name: "Market Day Mood", hasColour: false },
+  { id: "tw-12", name: "Bedtime Brew", hasColour: false },
+  { id: "tw-13", name: "Garden Gate Glamour", hasColour: false },
+  { id: "tw-14", name: "The Baking Moment", hasColour: false },
+  { id: "tw-15", name: "Reading Nook Rebel", hasColour: false },
+  { id: "tw-16", name: "Last Light Lounge", hasColour: false },
+];
+
 const AUTUMN_PRESETS: PhotoStudioPreset[] = [
   { id: "au-01", name: "Cream Jumper Candle Table", hasColour: false },
   { id: "au-02", name: "Grey Jumper Pumpkin Hold", hasColour: false },
@@ -519,7 +538,7 @@ const MEN_SCRUBS_IDS  = ["cs-01","cs-02","cs-03","cs-04","cs-05","cs-06","cs-07"
 
 
 
-const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...AUTUMN_PRESETS, ...HALLOWEEN_PRESETS, ...CASUAL_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
+const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...TWEAKED_PRESETS, ...AUTUMN_PRESETS, ...HALLOWEEN_PRESETS, ...CASUAL_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
 const findPreset = (id: string) => ALL_PRESETS.find((p) => p.id === id);
 
 const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
@@ -717,7 +736,7 @@ export default function AiPortraitStudio() {
   };
 
   const [activeGender, setActiveGender]   = useState<"women" | "men">("women");
-  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "autumn" | "halloween" | "casual">("new");
+  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "tweaked" | "autumn" | "halloween" | "casual">("new");
   const [menScrubColor, setMenScrubColor] = useState("#453761");
 
   const selectAll = () => {
@@ -1483,6 +1502,7 @@ export default function AiPortraitStudio() {
                 { key: "homework", label: "Homework Shots" },
                 { key: "classy", label: "CLASSY CORPORATE" },
                 { key: "winter", label: "WINTER WOOLIES" },
+                { key: "tweaked", label: "TWEAKED" },
                 { key: "autumn", label: "AUTUMN" },
                 { key: "halloween", label: "HALLOWEEN" },
                 { key: "casual", label: "CASUAL" },
@@ -1700,6 +1720,43 @@ export default function AiPortraitStudio() {
                             />
                           </div>
                         )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+
+</>
+)}
+
+{activeSection === "tweaked" && (
+<>
+<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">TWEAKED</p>
+<p className="text-xs text-muted-foreground mb-3">Leopard print home furnishings, hot pink pumpkins and leaves, and jumpers in black, hot pink, leopard print or white.</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+              {TWEAKED_PRESETS.map((preset) => {
+                const isSelected = selectedPresets.has(preset.id);
+                return (
+                  <div
+                    key={preset.id}
+                    className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
+                      isSelected
+                        ? "border-violet-500/70 bg-violet-500/10"
+                        : "border-border/30 hover:border-border/60 hover:bg-muted/20"
+                    }`}
+                    onClick={() => togglePreset(preset.id)}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                        isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
+                      }`}>
+                        {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium leading-snug">{preset.name}</p>
                       </div>
                     </div>
                   </div>

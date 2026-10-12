@@ -1008,6 +1008,109 @@ export const AUTUMN_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
+const TWEAKED_SUFFIX = `Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`;
+
+// Tweaked: every home furnishing is leopard print, every pumpkin and leaf is
+// hot pink, and every jumper is black, hot pink, leopard print or white.
+export const TWEAKED_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "tw-01",
+    name: "Brew And Blanket",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo curled up on a sofa with a leopard print throw blanket, holding a steaming mug in both hands, a genuine laugh. Oversized black chunky knit jumper. Hot pink pumpkins stacked on the coffee table, a scatter of hot pink autumn leaves, soft golden window light, cosy lived-in living room, shallow depth of field. ${TWEAKED_SUFFIX}`,
+  },
+  {
+    id: "tw-02",
+    name: "Pumpkin Patch Queen",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing full length in a field of hot pink pumpkins, big cheeky grin. Hot pink knitted jumper and black jeans, hot pink autumn leaves drifting down around her, golden hour light, rich moody sky, magazine quality. ${TWEAKED_SUFFIX}`,
+  },
+  {
+    id: "tw-03",
+    name: "Leopard Armchair Boss",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo sitting like she owns the place in a leopard print velvet armchair, legs crossed, one eyebrow raised. Crisp white jumper. A small hot pink pumpkin on a side table, hot pink leaves in a glass vase, warm lamp light, dark moody walls, editorial portrait. ${TWEAKED_SUFFIX}`,
+  },
+  {
+    id: "tw-04",
+    name: "Kitchen Island Chat",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo leaning on a kitchen island with a leopard print tea towel over her shoulder, laughing mid sentence. Black jumper with the sleeves pushed up. Hot pink pumpkins in a wooden bowl, a hot pink leaf garland across the window, bright natural daylight, relaxed and warm. ${TWEAKED_SUFFIX}`,
+  },
+  {
+    id: "tw-05",
+    name: "Doorstep Dolly",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo standing on a front doorstep with her hands on her hips, big confident smile. Leopard print jumper. A leopard print doormat, a row of hot pink pumpkins up the steps, hot pink leaves scattered on the path, autumn dusk with fairy lights glowing, friendly neighbourhood feel. ${TWEAKED_SUFFIX}`,
+  },
+  {
+    id: "tw-06",
+    name: "Cosy Window Seat",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo sitting on a window seat with leopard print cushions, gazing out at the rain with a small smile. White fluffy jumper. Hot pink pumpkin candles on the sill, hot pink leaves pressed against the glass, silvery grey light, dreamy and calm. ${TWEAKED_SUFFIX}`,
+  },
+  {
+    id: "tw-07",
+    name: "Walk And Talk",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo walking along a tree lined path carrying a takeaway coffee, mid laugh, looking over her shoulder at the camera. Hot pink jumper and black trousers. Trees dripping with hot pink leaves, a carpet of hot pink leaves underfoot, crisp autumn light, lively and happy. ${TWEAKED_SUFFIX}`,
+  },
+  {
+    id: "tw-08",
+    name: "Pumpkin Carving Chaos",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo at a table covered in a leopard print tablecloth, carving a hot pink pumpkin with a delighted, slightly messy grin. Black jumper. More hot pink pumpkins around her, hot pink leaves scattered across the table, warm kitchen light, playful energy. ${TWEAKED_SUFFIX}`,
+  },
+  {
+    id: "tw-09",
+    name: "Fireside Glow",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo sitting on a leopard print rug in front of a log fire, hugging her knees and smiling softly. White chunky knit jumper. Hot pink pumpkins either side of the hearth, a garland of hot pink leaves along the mantelpiece, flickering orange firelight, intimate and cosy. ${TWEAKED_SUFFIX}`,
+  },
+  {
+    id: "tw-10",
+    name: "Sofa Selfie Energy",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo sprawled across a leopard print sofa, holding up her phone for a selfie with a cheeky wink. Hot pink jumper. Hot pink pumpkins on the shelves behind her, hot pink leaves tucked into a vase, bright modern living room, fun and social media friendly. ${TWEAKED_SUFFIX}`,
+  },
+  {
+    id: "tw-11",
+    name: "Market Day Mood",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo browsing an autumn market stall piled with hot pink pumpkins, holding a basket lined with leopard print fabric, big smile. Black jumper. Hot pink leaves strung overhead, soft overcast daylight, a bustling background gently blurred. ${TWEAKED_SUFFIX}`,
+  },
+  {
+    id: "tw-12",
+    name: "Bedtime Brew",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo propped up on pillows in a bed with leopard print bedding, sipping tea with a contented sigh. White knitted jumper. A small hot pink pumpkin on the bedside table, hot pink leaves in a jar, warm lamp glow, relaxed and indulgent. ${TWEAKED_SUFFIX}`,
+  },
+  {
+    id: "tw-13",
+    name: "Garden Gate Glamour",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo leaning on a wooden garden gate, hair swept by the breeze, grinning at the camera. Leopard print jumper and black jeans. Hot pink pumpkins lined along the fence, a tree behind her covered in hot pink leaves, soft late afternoon sun, windswept and lovely. ${TWEAKED_SUFFIX}`,
+  },
+  {
+    id: "tw-14",
+    name: "The Baking Moment",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo in a bright kitchen holding up a tray of freshly baked pumpkin spiced biscuits, flour on her cheek and a proud smile. Black jumper. Leopard print oven gloves, a leopard print apron hanging on a hook, hot pink pumpkins and hot pink leaves decorating the worktop, warm and homely. ${TWEAKED_SUFFIX}`,
+  },
+  {
+    id: "tw-15",
+    name: "Reading Nook Rebel",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo tucked into a reading corner with a leopard print beanbag and matching cushions, a book open on her lap and a mischievous look at the camera. Hot pink jumper. Hot pink pumpkins stacked as a side table, hot pink leaf bunting overhead, soft lamp light, quirky and charming. ${TWEAKED_SUFFIX}`,
+  },
+  {
+    id: "tw-16",
+    name: "Last Light Lounge",
+    hasColour: false,
+    promptTemplate: `A woman from the reference photo lounging on a leopard print chaise longue at dusk, a glass of something fizzy in hand, looking straight to camera with a knowing smile. White jumper. Hot pink pumpkins glowing with tealights, hot pink leaves scattered on the floor, twinkling lights behind, rich warm shadows, confident and a little bit cheeky. ${TWEAKED_SUFFIX}`,
+  },
+];
+
 export const CASUAL_PRESETS: PhotoStudioPreset[] = [
   {
     id: "ca-01",
