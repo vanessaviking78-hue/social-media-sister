@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
-import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck, Grid3x3, Mail, Star, Heart, CalendarCheck, PackageOpen } from "lucide-react";
+import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck, Grid3x3, Mail, Star, Heart, CalendarCheck, PackageOpen, BatteryCharging } from "lucide-react";
 import { LogOut } from "lucide-react";
 import { AdventCalendarIcon } from "@/components/advent-icon";
 import { MagazineIcon } from "@/components/magazine-icon";
@@ -25,6 +25,16 @@ description: "Your 12 for today: 2 personal, 10 client, picked live by who has g
 color: "from-pink-500/20 to-pink-500/5",
 border: "hover:border-pink-500/50",
 iconColor: "text-pink-400",
+},
+{
+href: "/four-weeks",
+group: "today",
+icon: BatteryCharging,
+name: "4 Weeks",
+description: "Pick a client and watch four battery bars fill as Monday, Wednesday, Friday and Sunday content get scheduled. When all four are full, it tells you the date the work is complete until.",
+color: "from-emerald-500/20 to-emerald-500/5",
+border: "hover:border-emerald-500/50",
+iconColor: "text-emerald-400",
 },
 {
 href: "/today",
