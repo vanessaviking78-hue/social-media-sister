@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "wouter";
 import { ArrowLeft, BatteryCharging, Play, CheckCircle2, Loader2, PartyPopper, RefreshCcw } from "lucide-react";
 import { usePresets } from "@/lib/use-presets";
+import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -41,7 +42,7 @@ function Battery({ filled, total }: { filled: number; total: number }) {
 }
 
 export default function FourWeeks() {
-  const { presets } = usePresets();
+  const { presets, updatePresetCoverFonts } = usePresets();
   const [presetId, setPresetId] = useState<number | null>(null);
   const [data, setData] = useState<Result | null>(null);
   const [loading, setLoading] = useState(false);
@@ -49,6 +50,34 @@ export default function FourWeeks() {
   const [showDone, setShowDone] = useState(false);
   const [starting, setStarting] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
+
+  const [headFont, setHeadFont] = useState("");
+  const [subFont, setSubFont] = useState("");
+  const [savingFonts, setSavingFonts] = useState(false);
+  const [fontsSaved, setFontsSaved] = useState(false);
+
+  useEffect(() => { try { loadGoogleFonts(); } catch { /* fonts only affect the preview */ } }, []);
+
+  useEffect(() => {
+    const p = presets.find((x) => x.id === presetId) as (typeof presets[number] & { stylishCoverHeadlineFont?: string | null; stylishCoverSubtitleFont?: string | null }) | undefined;
+    setHeadFont(p?.stylishCoverHeadlineFont || "");
+    setSubFont(p?.stylishCoverSubtitleFont || "");
+    setFontsSaved(false);
+  }, [presetId, presets]);
+
+  const saveFonts = async () => {
+    if (presetId == null) return;
+    setSavingFonts(true);
+    setError("");
+    try {
+      await updatePresetCoverFonts(presetId, headFont || null, subFont || null);
+      setFontsSaved(true);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSavingFonts(false);
+    }
+  };
 
   const runSkill = async (name: string) => {
     setStarting(true);
@@ -143,6 +172,48 @@ export default function FourWeeks() {
             >
               {starting || (startedAt && !data?.allDone) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
               {startedAt && !data?.allDone ? "Running" : "Run 4 weeks"}
+            </button>
+          </div>
+        )}
+
+        {presetId != null && clientName && (
+          <div className="space-y-3 rounded-xl border border-border/40 p-4">
+            <div>
+              <h2 className="text-sm font-semibold">Cover fonts</h2>
+              <p className="text-xs text-muted-foreground">Saved to {clientName}, so Stylish covers use them every time.</p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Headline font</label>
+                <select
+                  className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm"
+                  value={headFont}
+                  onChange={(e) => { setHeadFont(e.target.value); setFontsSaved(false); }}
+                >
+                  <option value="">Stylish default</option>
+                  {FONT_OPTIONS.map((f) => <option key={f.label} value={f.value}>{f.label}</option>)}
+                </select>
+                <p className="mt-2 text-xl" style={{ fontFamily: headFont || undefined }}>Why you will love this</p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">Subtitle font</label>
+                <select
+                  className="w-full rounded-lg border border-border/60 bg-background px-3 py-2 text-sm"
+                  value={subFont}
+                  onChange={(e) => { setSubFont(e.target.value); setFontsSaved(false); }}
+                >
+                  <option value="">Stylish default (Montserrat)</option>
+                  {FONT_OPTIONS.map((f) => <option key={f.label} value={f.value}>{f.label}</option>)}
+                </select>
+                <p className="mt-2 text-sm" style={{ fontFamily: subFont || undefined }}>A little line underneath it</p>
+              </div>
+            </div>
+            <button
+              onClick={saveFonts}
+              disabled={savingFonts}
+              className="rounded-lg border border-border/60 px-4 py-2 text-xs font-medium hover:bg-muted/50 disabled:opacity-50"
+            >
+              {savingFonts ? "Saving" : fontsSaved ? "Saved" : "Save fonts"}
             </button>
           </div>
         )}
