@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, BatteryCharging, CheckCircle2, Loader2, PartyPopper, RefreshCcw } from "lucide-react";
+import { ArrowLeft, BatteryCharging, Play, CheckCircle2, Loader2, PartyPopper, RefreshCcw } from "lucide-react";
 import { usePresets } from "@/lib/use-presets";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -47,6 +47,27 @@ export default function FourWeeks() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showDone, setShowDone] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+
+  const runSkill = async (name: string) => {
+    setStarting(true);
+    setError("");
+    try {
+      const r = await fetch(`${BASE}/api/four-weeks/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientName: name }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error || "Could not start the run");
+      setStartedAt(Date.now());
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setStarting(false);
+    }
+  };
 
   const load = useCallback(async (id: number) => {
     setLoading(true);
@@ -107,6 +128,24 @@ export default function FourWeeks() {
         </div>
 
         {error && <p className="text-sm text-red-400">{error}</p>}
+
+        {presetId != null && clientName && (
+          <div className="flex items-center justify-between rounded-xl border border-pink-500/40 bg-pink-500/5 p-4">
+            <p className="text-sm">
+              {startedAt && !data?.allDone
+                ? `Claude is working on ${clientName}. The batteries fill as posts are scheduled.`
+                : `Start the 4 weeks run for ${clientName}`}
+            </p>
+            <button
+              disabled={starting || (!!startedAt && !data?.allDone)}
+              onClick={() => runSkill(clientName)}
+              className="flex items-center gap-2 rounded-lg bg-pink-600 px-4 py-2 text-xs font-medium text-white hover:bg-pink-700 disabled:opacity-50"
+            >
+              {starting || (startedAt && !data?.allDone) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+              {startedAt && !data?.allDone ? "Running" : "Run 4 weeks"}
+            </button>
+          </div>
+        )}
 
         {presetId != null && data && (
           <>
