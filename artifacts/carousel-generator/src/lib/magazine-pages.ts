@@ -63,11 +63,48 @@ export function onColour(hex: string): string {
   return luminance(hex) > 0.42 ? INK : "#ffffff";
 }
 
+export type Metal = "gold" | "silver" | "copper";
+
+// The flat colour a metallic option sits on in the colour box, and the bands of light that make it look like metal.
+export const METAL_BASE: Record<Metal, string> = { gold: "#c9a24a", silver: "#b8bcc2", copper: "#b87333" };
+const METAL_STOPS: Record<Metal, [number, string][]> = {
+  gold: [[0, "#8a6416"], [0.2, "#e9cf7a"], [0.4, "#c9a24a"], [0.6, "#f6e7a8"], [0.8, "#b8902f"], [1, "#e2c46a"]],
+  silver: [[0, "#8d9299"], [0.2, "#e6e9ec"], [0.4, "#b8bcc2"], [0.6, "#f5f6f7"], [0.8, "#a3a8af"], [1, "#d9dce0"]],
+  copper: [[0, "#7a3f17"], [0.2, "#e09a62"], [0.4, "#b87333"], [0.6, "#f0b585"], [0.8, "#a25a27"], [1, "#d98d57"]],
+};
+
+// Any colour in this map is painted as a metallic gradient instead of a flat fill. The pages tool sets it before drawing.
+let metalMap: Record<string, Metal> = {};
+export function setMagazineMetals(map: Record<string, Metal | null | undefined>) {
+  metalMap = {};
+  for (const [hex, metal] of Object.entries(map)) if (metal) metalMap[hex.toLowerCase()] = metal;
+}
+
+function withMetals(ctx: CanvasRenderingContext2D) {
+  for (const prop of ["fillStyle", "strokeStyle"] as const) {
+    const native = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, prop);
+    if (!native || !native.set || !native.get) continue;
+    Object.defineProperty(ctx, prop, {
+      configurable: true,
+      get() { return native.get!.call(ctx); },
+      set(v: unknown) {
+        const metal = typeof v === "string" ? metalMap[v.toLowerCase()] : undefined;
+        if (!metal) { native.set!.call(ctx, v); return; }
+        const g = ctx.createLinearGradient(0, 0, PAGE_W, PAGE_H);
+        for (const [at, col] of METAL_STOPS[metal]) g.addColorStop(at, col);
+        native.set!.call(ctx, g);
+      },
+    });
+  }
+}
+
 export function newCanvas(): [HTMLCanvasElement, CanvasRenderingContext2D] {
   const c = document.createElement("canvas");
   c.width = PAGE_W;
   c.height = PAGE_H;
-  return [c, c.getContext("2d")!];
+  const ctx = c.getContext("2d")!;
+  withMetals(ctx);
+  return [c, ctx];
 }
 
 // How a photo sits inside its frame. zoom 1 fills the frame, panX/panY run from -1 to 1.

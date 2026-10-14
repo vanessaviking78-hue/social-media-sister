@@ -7,7 +7,7 @@ import { MagazineIcon } from "@/components/magazine-icon";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { usePresets } from "@/lib/use-presets";
 import { loadImageFromFile } from "@/lib/advent-door";
-import { getPhotoHits, DEFAULT_ADJUST, PAGE_W, PAGE_H, setMagazineFonts, type PhotoAdjust, type MagazineBrand } from "@/lib/magazine-pages";
+import { getPhotoHits, DEFAULT_ADJUST, PAGE_W, PAGE_H, setMagazineFonts, setMagazineMetals, METAL_BASE, type Metal, type PhotoAdjust, type MagazineBrand } from "@/lib/magazine-pages";
 import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
 import {
   EMPTY_POST_COPY,
@@ -107,12 +107,43 @@ function Field({
   );
 }
 
+const METAL_LOOK: Record<Metal, { label: string; css: string }> = {
+  gold: { label: "Gold", css: "linear-gradient(135deg,#8a6416,#e9cf7a,#c9a24a,#f6e7a8,#b8902f)" },
+  silver: { label: "Silver", css: "linear-gradient(135deg,#8d9299,#e6e9ec,#b8bcc2,#f5f6f7,#a3a8af)" },
+  copper: { label: "Copper", css: "linear-gradient(135deg,#7a3f17,#e09a62,#b87333,#f0b585,#a25a27)" },
+};
+
+function MetalRow({ active, onPick }: { active: Metal | null; onPick: (m: Metal) => void }) {
+  return (
+    <span className="mt-1.5 flex gap-1.5">
+      {(Object.keys(METAL_LOOK) as Metal[]).map((m) => (
+        <button
+          key={m}
+          type="button"
+          onClick={() => onPick(m)}
+          title={METAL_LOOK[m].label}
+          className={`flex-1 rounded-md border px-1 py-1 text-[10px] font-medium text-zinc-900 ${active === m ? "border-white" : "border-zinc-700"}`}
+          style={{ background: METAL_LOOK[m].css }}
+        >
+          {METAL_LOOK[m].label}
+        </button>
+      ))}
+    </span>
+  );
+}
+
 export default function MagazinePost() {
   const { presets } = usePresets();
   const [presetId, setPresetId] = useState<number | null>(null);
   const [clinicName, setClinicName] = useState("");
   const [colour, setColour] = useState("#4a1942");
   const [accent, setAccent] = useState("#f0b8a4");
+  const [colourMetal, setColourMetal] = useState<Metal | null>(null);
+  const [accentMetal, setAccentMetal] = useState<Metal | null>(null);
+  // Set during render so every page drawn afterwards (preview, download, schedule) uses the same finish.
+  setMagazineMetals({ [colour]: colourMetal, [accent]: accentMetal });
+  // Other magazine tools share the page drawing code, so leave it flat when this page closes.
+  useEffect(() => () => setMagazineMetals({}), []);
   const [contact, setContact] = useState("");
   const [qrLink, setQrLink] = useState("");
   const [qrReady, setQrReady] = useState(typeof window !== "undefined" && !!(window as any).qrcode);
@@ -182,8 +213,8 @@ export default function MagazinePost() {
     const p = presets.find((x) => x.id === id);
     if (!p) return;
     setClinicName(p.name);
-    if (isHex(p.pageColor)) setColour(p.pageColor.trim());
-    if (isHex(p.accentColor)) setAccent(p.accentColor.trim());
+    if (isHex(p.pageColor)) { setColour(p.pageColor.trim()); setColourMetal(null); }
+    if (isHex(p.accentColor)) { setAccent(p.accentColor.trim()); setAccentMetal(null); }
     setContact((p.bookingLink ?? "").toString());
     setQrLink((p.bookingLink ?? "").toString());
   }
@@ -571,11 +602,13 @@ export default function MagazinePost() {
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
                   <span className="block text-[11px] uppercase tracking-widest text-zinc-500 mb-1">Brand colour</span>
-                  <input type="color" value={colour} onChange={(e) => setColour(e.target.value)} className="w-full h-10 rounded-lg bg-zinc-900 border border-zinc-800 cursor-pointer" />
+                  <input type="color" value={colour} onChange={(e) => { setColour(e.target.value); setColourMetal(null); }} className="w-full h-10 rounded-lg bg-zinc-900 border border-zinc-800 cursor-pointer" />
+                  <MetalRow active={colourMetal} onPick={(m) => { setColour(METAL_BASE[m]); setColourMetal(m); }} />
                 </label>
                 <label className="block">
                   <span className="block text-[11px] uppercase tracking-widest text-zinc-500 mb-1">Highlight colour</span>
-                  <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} className="w-full h-10 rounded-lg bg-zinc-900 border border-zinc-800 cursor-pointer" />
+                  <input type="color" value={accent} onChange={(e) => { setAccent(e.target.value); setAccentMetal(null); }} className="w-full h-10 rounded-lg bg-zinc-900 border border-zinc-800 cursor-pointer" />
+                  <MetalRow active={accentMetal} onPick={(m) => { setAccent(METAL_BASE[m]); setAccentMetal(m); }} />
                 </label>
               </div>
               <Field label="Website, phone or handle (last page footer, optional)" value={contact} onChange={setContact} placeholder="www.yourclinic.co.uk" />
