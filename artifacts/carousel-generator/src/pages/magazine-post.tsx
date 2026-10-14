@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Upload, Download, Sparkles, X, Loader2, Move, CalendarClock, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Upload, Download, Sparkles, X, Loader2, Move, CalendarClock, ChevronLeft, ChevronRight, AlertTriangle, Play } from "lucide-react";
 import { toast } from "sonner";
 import { TOPIC_BOXES } from "@/lib/topic-boxes";
 import { MagazineIcon } from "@/components/magazine-icon";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { usePresets } from "@/lib/use-presets";
+import { setFlipHandoff } from "@/lib/flip-handoff";
 import { loadImageFromFile } from "@/lib/advent-door";
 import { getPhotoHits, DEFAULT_ADJUST, PAGE_W, PAGE_H, setMagazineFonts, setMagazineMetals, METAL_BASE, type Metal, type PhotoAdjust, type MagazineBrand } from "@/lib/magazine-pages";
 import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
@@ -486,6 +487,30 @@ export default function MagazinePost() {
     await new Promise((r) => setTimeout(r, 350));
   }
 
+  const [sendingFlip, setSendingFlip] = useState(false);
+
+  async function sendToFlip() {
+    const dd = drafts[cur];
+    if (!dd) return;
+    setSendingFlip(true);
+    try {
+      const pages = pagesForDraft(dd);
+      if (pages.length < 4) { toast.error("Magazine Flip needs at least 4 pages in a post"); return; }
+      await setFlipHandoff({
+        canvases: pages.slice(0, 16),
+        clientName: selectedClient?.name || clinicName.trim(),
+        caption: dd.copy.caption?.trim() || undefined,
+        title: dd.treatment.trim() ? `${dd.treatment.trim()} magazine post` : undefined,
+      });
+      // Opens in its own tab so this page, with all four posts, stays exactly as it is.
+      window.open("/magazine", "_blank", "noopener");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not send to Magazine Flip");
+    } finally {
+      setSendingFlip(false);
+    }
+  }
+
   async function downloadPosts(indices: number[]) {
     if (!indices.length) { toast.error("Nothing is ready yet"); return; }
     for (const i of indices) {
@@ -952,6 +977,13 @@ export default function MagazinePost() {
                   className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-zinc-800 border border-zinc-700 text-zinc-100 hover:text-white text-sm font-semibold disabled:opacity-50"
                 >
                   <Download size={15} /> Download all ready ({readyIdx.length})
+                </button>
+                <button
+                  onClick={sendToFlip}
+                  disabled={sendingFlip}
+                  className="sm:col-span-2 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-zinc-800 border border-fuchsia-500/60 text-zinc-100 hover:text-white text-sm font-semibold disabled:opacity-50"
+                >
+                  {sendingFlip ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />} Send post {cur + 1} to Magazine Flip
                 </button>
               </div>
               <p className="text-[11px] text-zinc-500 mt-1.5">

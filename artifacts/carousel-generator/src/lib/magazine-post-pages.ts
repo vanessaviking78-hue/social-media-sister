@@ -154,20 +154,6 @@ export function drawPostCover(brand: MagazineBrand, copy: MagazinePostCopy, phot
   });
   ctx.fillStyle = brand.accent;
   ctx.fillRect(PAGE_W / 2 - 60, 200, 120, 5);
-  block(ctx, brand.issue, {
-    x: PAGE_W / 2,
-    y: 224,
-    maxW: PAGE_W - 200,
-    maxLines: 1,
-    size: 26,
-    minSize: 20,
-    family: SANS,
-    weight: "600",
-    colour: "#ffffff",
-    align: "center",
-    upper: true,
-    tracking: 6,
-  });
 
   if (plan.cover[1] !== undefined) {
     const insetW = 280;
