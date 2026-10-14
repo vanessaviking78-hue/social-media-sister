@@ -71,38 +71,4 @@ router.get("/four-weeks", async (req, res) => {
   }
 });
 
-router.post("/four-weeks/run", async (req, res) => {
-  try {
-    const clientName = String(req.body?.clientName || "").trim();
-    if (!clientName) {
-      res.status(400).json({ error: "clientName is required" });
-      return;
-    }
-    const url = process.env.FOUR_WEEKS_FIRE_URL;
-    const token = process.env.FOUR_WEEKS_FIRE_TOKEN;
-    if (!url || !token) {
-      res.status(503).json({ error: "The run button is not connected yet. FOUR_WEEKS_FIRE_URL and FOUR_WEEKS_FIRE_TOKEN need adding in Railway." });
-      return;
-    }
-    const r = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json",
-        "anthropic-version": "2023-06-01",
-        "anthropic-beta": "experimental-cc-routine-2026-04-01",
-      },
-      body: JSON.stringify({ text: `Client: ${clientName}` }),
-    });
-    const body = await r.text();
-    if (!r.ok) {
-      res.status(502).json({ error: `Claude did not accept the job (${r.status}). ${body.slice(0, 200)}` });
-      return;
-    }
-    res.json({ ok: true });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message || "Failed to start the run" });
-  }
-});
-
 export default router;

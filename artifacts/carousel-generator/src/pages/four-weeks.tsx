@@ -48,7 +48,8 @@ export default function FourWeeks() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showDone, setShowDone] = useState(false);
-  const [starting, setStarting] = useState(false);
+  const [starting] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
 
   const [headFont, setHeadFont] = useState("");
@@ -80,21 +81,15 @@ export default function FourWeeks() {
   };
 
   const runSkill = async (name: string) => {
-    setStarting(true);
     setError("");
+    const command = `/skill-4weeks ${name}`;
     try {
-      const r = await fetch(`${BASE}/api/four-weeks/run`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientName: name }),
-      });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(d.error || "Could not start the run");
+      await navigator.clipboard.writeText(command);
+      setCopied(true);
       setStartedAt(Date.now());
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setStarting(false);
+      setTimeout(() => setCopied(false), 4000);
+    } catch {
+      setError(`Could not copy. Type this into Claude: ${command}`);
     }
   };
 
@@ -161,17 +156,19 @@ export default function FourWeeks() {
         {presetId != null && clientName && (
           <div className="flex items-center justify-between rounded-xl border border-pink-500/40 bg-pink-500/5 p-4">
             <p className="text-sm">
-              {startedAt && !data?.allDone
-                ? `Claude is working on ${clientName}. The batteries fill as posts are scheduled.`
+              {copied
+                ? `Copied. Now paste it into Claude and press enter. The batteries fill as posts are scheduled.`
+                : startedAt && !data?.allDone
+                ? `Run started for ${clientName}. The batteries fill as posts are scheduled.`
                 : `Start the 4 weeks run for ${clientName}`}
             </p>
             <button
-              disabled={starting || (!!startedAt && !data?.allDone)}
+              disabled={starting}
               onClick={() => runSkill(clientName)}
               className="flex items-center gap-2 rounded-lg bg-pink-600 px-4 py-2 text-xs font-medium text-white hover:bg-pink-700 disabled:opacity-50"
             >
-              {starting || (startedAt && !data?.allDone) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-              {startedAt && !data?.allDone ? "Running" : "Run 4 weeks"}
+              <Play className="h-3.5 w-3.5" />
+              {copied ? "Copied" : "Run 4 weeks"}
             </button>
           </div>
         )}
