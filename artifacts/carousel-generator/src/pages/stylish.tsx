@@ -23,6 +23,8 @@ import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { nthPostingSlot } from "@/lib/schedule";
 import opentype from "opentype.js";
+import HookBankPicker from "@/components/hook-bank-picker";
+import { packStarts, isoDate, pickedHookPayload } from "@/lib/hook-bank";
 
 loadGoogleFonts();
 if (typeof document !== "undefined" && !document.getElementById("stylish-fonts")) {
@@ -3157,6 +3159,8 @@ export default function Stylish() {
   const [csvTopics, setCsvTopics] = useState<string[]>(["", "", "", ""]);
   const [csvRest, setCsvRest] = useState("");
   const [csvRestCount, setCsvRestCount] = useState(16);
+  const [csvHookPick, setCsvHookPick] = useState<string[]>([]);
+  const [csvHookStart, setCsvHookStart] = useState(() => isoDate(packStarts()[0]));
   const [csvWriting, setCsvWriting] = useState(false);
   const [csvText, setCsvText] = useState("");
 
@@ -3170,7 +3174,7 @@ export default function Stylish() {
       const readJson = async (r: Response): Promise<CsvReply | null> => {
         try { return (await r.json()) as CsvReply; } catch { return null; }
       };
-      const payload = JSON.stringify({ clientName: preset.name, website: presetWebsite(preset), tone, treatmentTopics: csvTopics, restBrief: csvRest, restCount: csvRestCount, async: "1" });
+      const payload = JSON.stringify({ clientName: preset.name, website: presetWebsite(preset), tone, treatmentTopics: csvTopics, restBrief: csvRest, restCount: csvRestCount, hooks: pickedHookPayload(csvHookPick, csvTopics), async: "1" });
       let d: CsvReply | null = null;
       // The server can be restarting after an update, so a web page instead of an answer means try again.
       for (let attempt = 0; attempt < 4 && !d?.csv; attempt++) {
@@ -4323,6 +4327,7 @@ export default function Stylish() {
             <textarea value={csvRest} onChange={e => setCsvRest(e.target.value)} rows={3}
               placeholder="What should the rest of the posts be? For example: 4 about menopause, 4 shareable and emotional, 4 skincare tips, 4 about what to expect at a consultation."
               className="w-full text-sm bg-muted/30 border border-border/40 rounded-md px-3 py-2" />
+            <HookBankPicker picked={csvHookPick} onChange={setCsvHookPick} startDate={csvHookStart} onStartDate={setCsvHookStart} />
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               Other posts
               <input type="number" min={0} max={40} value={csvRestCount} onChange={e => setCsvRestCount(Number(e.target.value))} className="h-8 w-20 text-sm bg-muted/30 border border-border/40 rounded-md px-2" />

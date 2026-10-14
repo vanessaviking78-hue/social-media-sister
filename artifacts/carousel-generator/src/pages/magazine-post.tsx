@@ -24,6 +24,8 @@ import {
   setPostPageColours,
 } from "@/lib/magazine-post-pages";
 import { scanText, applySwap, isBlocking } from "@/lib/newsletter-compliance";
+import HookBankPicker from "@/components/hook-bank-picker";
+import { packStarts, isoDate, pickedHookPayload } from "@/lib/hook-bank";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -50,8 +52,8 @@ function thumbOf(c: HTMLCanvasElement): string {
 }
 
 const POST_COUNT = 4;
-type Draft = { treatment: string; replyWord: string; photos: Photo[]; copy: MagazinePostCopy };
-const blankDraft = (): Draft => ({ treatment: "", replyWord: "", photos: [], copy: EMPTY_POST_COPY });
+type Draft = { treatment: string; replyWord: string; photos: Photo[]; copy: MagazinePostCopy; hook: string[] };
+const blankDraft = (): Draft => ({ treatment: "", replyWord: "", photos: [], copy: EMPTY_POST_COPY, hook: [] });
 
 const STYLES = [
   { key: "1", label: "Northern grit", hint: "Straight talking, warm, dry" },
@@ -166,10 +168,13 @@ export default function MagazinePost() {
   const [redrawTick, setRedrawTick] = useState(0);
   const [writing, setWriting] = useState(false);
   const { treatment, replyWord, photos, copy } = drafts[cur];
+  const hookPick = drafts[cur].hook ?? [];
+  const [hookStart, setHookStart] = useState(() => isoDate(packStarts()[0]));
   function patchDraft(i: number, fn: (d: Draft) => Draft) {
     setDrafts((prev) => prev.map((x, j) => (j === i ? fn(x) : x)));
   }
   const setTreatment = (v: string) => patchDraft(curRef.current, (x) => ({ ...x, treatment: v }));
+  const setHook = (codes: string[]) => patchDraft(curRef.current, (x) => ({ ...x, hook: codes }));
   const setReplyWord = (v: string) => patchDraft(curRef.current, (x) => ({ ...x, replyWord: v }));
   const setPhotos = (u: Photo[] | ((prev: Photo[]) => Photo[])) =>
     patchDraft(curRef.current, (x) => ({ ...x, photos: typeof u === "function" ? u(x.photos) : u }));
@@ -387,10 +392,11 @@ export default function MagazinePost() {
     if (!dd.replyWord.trim()) { toast.error(`Post ${i + 1}: add the reply word first, the one people comment`); return false; }
     if (!style) { toast.error("Pick a voice first"); return false; }
     try {
+      const hook = pickedHookPayload(dd.hook ?? [], dd.treatment.trim())[0];
       const r = await fetch(`${BASE}/api/magazine-post/copy`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clinicName: clinicName.trim(), treatment: dd.treatment.trim(), replyWord: dd.replyWord.trim(), style }),
+        body: JSON.stringify({ clinicName: clinicName.trim(), treatment: dd.treatment.trim(), replyWord: dd.replyWord.trim(), style, hook: hook?.text, hookSeason: hook?.season }),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || "The copy would not write, try again");
@@ -839,6 +845,7 @@ export default function MagazinePost() {
                   );
                 })}
               </div>
+              <HookBankPicker single days={["Monday", "Any day"]} picked={hookPick} onChange={setHook} startDate={hookStart} onStartDate={setHookStart} />
               <Field label="Reply word people comment" value={replyWord} onChange={setReplyWord} placeholder="e.g. GLOW" />
             </section>
 

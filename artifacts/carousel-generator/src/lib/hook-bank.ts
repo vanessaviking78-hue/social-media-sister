@@ -156,3 +156,20 @@ export function hooksForRequest(picked: string[], treatments: string[]): Request
   }
   return out.sort((a, b) => a.row - b.row);
 }
+
+export type PickedHookPayload = { text: string; season: string; kind: "treatment" | "other" };
+
+// The hooks a writing tool sends to the server, in the order picked, with the treatment slot filled in.
+// "treatment" hooks are the Monday ones, the others can go on any post.
+export function pickedHookPayload(picked: string[], treatment: string | string[] = ""): PickedHookPayload[] {
+  const out: PickedHookPayload[] = [];
+  const list = (Array.isArray(treatment) ? treatment : [treatment]).map(t => t.trim()).filter(Boolean);
+  let n = 0;
+  for (const code of picked) {
+    const h = HOOKS.find(x => x.code === code);
+    if (!h) continue;
+    const kind = h.day === "Monday" || /\[treatment\]/i.test(h.text) ? "treatment" : "other";
+    out.push({ text: kind === "treatment" ? fillTreatment(h.text, list.length ? list[n++ % list.length] : "") : h.text, season: h.season ?? "", kind });
+  }
+  return out;
+}

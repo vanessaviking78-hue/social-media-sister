@@ -11,6 +11,9 @@ type Props = {
   onChange: (codes: string[]) => void;
   startDate: string;
   onStartDate: (iso: string) => void;
+  // For tools that write one post at a time: only one hook can be picked, and only the listed days are shown.
+  single?: boolean;
+  days?: string[];
 };
 
 const SEASON_STYLE: Record<string, string> = {
@@ -31,20 +34,22 @@ function HookText({ text }: { text: string }) {
   );
 }
 
-export default function HookBankPicker({ picked, onChange, startDate, onStartDate }: Props) {
+export default function HookBankPicker({ picked, onChange, startDate, onStartDate, single, days }: Props) {
+  const dayRows = days ? HOOK_DAYS.filter(d => days.includes(d.day)) : HOOK_DAYS;
   const [open, setOpen] = useState(false);
   const [dayFilter, setDayFilter] = useState<string>("All");
   const starts = useMemo(() => packStarts(), []);
   const start = parseIso(startDate) ?? starts[0];
 
   const toggle = (h: Hook) => {
+    if (single) { onChange(picked.includes(h.code) ? [] : [h.code]); return; }
     onChange(picked.includes(h.code) ? picked.filter(c => c !== h.code) : [...picked, h.code]);
   };
 
   return (
     <div className="space-y-2">
       <Label className="text-sm font-medium">
-        Hook bank <span className="text-muted-foreground font-normal">(optional, your own slide 1 hooks)</span>
+        Hook bank <span className="text-muted-foreground font-normal">({single ? "optional, pick one" : "optional, your own slide 1 hooks"})</span>
       </Label>
       <button
         type="button"
@@ -52,7 +57,7 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
         className="flex w-full items-center justify-between rounded-md border border-border/40 px-3 py-2 text-sm hover:border-border/70"
         aria-expanded={open}
       >
-        <span>{picked.length ? `${picked.length} hook${picked.length === 1 ? "" : "s"} picked` : "Choose hooks from the bank"}</span>
+        <span>{picked.length ? `${picked.length} hook${picked.length === 1 ? "" : "s"} picked` : single ? "Choose a hook from the bank" : "Choose hooks from the bank"}</span>
         <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 
@@ -78,7 +83,7 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
           </div>
 
           <div className="flex flex-wrap gap-1.5">
-            {["All", ...HOOK_DAYS.map(d => d.day)].map(d => (
+            {[...(dayRows.length > 1 ? ["All"] : []), ...dayRows.map(d => d.day)].map(d => (
               <button
                 key={d}
                 type="button"
@@ -96,18 +101,18 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
           </div>
 
           <div className="space-y-4">
-            {HOOK_DAYS.filter(d => dayFilter === "All" || dayFilter === d.day).map(d => {
+            {dayRows.filter(d => dayFilter === "All" || dayFilter === d.day || dayRows.length === 1).map(d => {
               const items = HOOKS.filter(h => h.day === d.day);
               const pickedHere = picked.filter(c => items.some(h => h.code === c)).length;
               return (
                 <div key={d.day} className="space-y-1.5">
                   <p className="text-xs font-semibold">
-                    {d.label} <span className="font-normal text-muted-foreground">({pickedHere} of {d.max} picked)</span>
+                    {d.label} {!single && <span className="font-normal text-muted-foreground">({pickedHere} of {d.max} picked)</span>}
                   </p>
                   {items.map(h => {
                     const on = picked.includes(h.code);
                     const t = hookTiming(h, start);
-                    const full = !on && pickedHere >= d.max;
+                    const full = !single && !on && pickedHere >= d.max;
                     const disabled = !on && (!t.ok || full);
                     return (
                       <label
@@ -137,7 +142,9 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Each hook becomes slide 1 of the matching post, in the order you pick them, and the slides after it are written to follow on in a chatty, friendly voice. Posts without a hook are written as usual.
+            {single
+              ? "Your hook becomes the opening of the post, word for word, and the rest is written to follow on in a chatty, friendly voice."
+              : "Each hook becomes slide 1 of the matching post, in the order you pick them, and the slides after it are written to follow on in a chatty, friendly voice. Posts without a hook are written as usual."}
           </p>
         </div>
       )}
