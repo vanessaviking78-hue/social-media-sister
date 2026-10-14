@@ -22,6 +22,14 @@ import {
   type PhotoAdjust,
 } from "@/lib/magazine-pages";
 
+// Inside page colours. The pages tool sets these before drawing; the defaults are the cream paper and near black text.
+let pageBg: string = CREAM;
+let pageInk: string = INK;
+export function setPostPageColours(bg?: string, ink?: string) {
+  pageBg = bg || CREAM;
+  pageInk = ink || INK;
+}
+
 export type FactItem = { label: string; text: string };
 export type FactPage = { kicker: string; headline: string; intro: string; facts: [FactItem, FactItem, FactItem] };
 
@@ -247,7 +255,7 @@ function photoBlock(ctx: CanvasRenderingContext2D, photos: (CanvasImageSource | 
 
 // Kicker, headline and intro shared by the three inside pages. Returns the y just below them.
 function insideHeader(ctx: CanvasRenderingContext2D, brand: MagazineBrand, page: { kicker: string; headline: string; intro: string }): number {
-  ctx.fillStyle = CREAM;
+  ctx.fillStyle = pageBg;
   ctx.fillRect(0, 0, PAGE_W, PAGE_H);
 
   ctx.fillStyle = brand.colour;
@@ -274,7 +282,7 @@ function insideHeader(ctx: CanvasRenderingContext2D, brand: MagazineBrand, page:
     minSize: 46,
     family: SERIF,
     weight: "bold",
-    colour: INK,
+    colour: pageInk,
     lineHeight: 1.06,
   });
   const iy = block(ctx, page.intro, {
@@ -338,13 +346,13 @@ export function drawFactPage(brand: MagazineBrand, page: FactPage, n: number, ph
       size: 29,
       minSize: 21,
       family: SANS,
-      colour: INK,
+      colour: pageInk,
       lineHeight: 1.36,
     });
     fy += 132;
   });
 
-  footer(ctx, brand, n, INK);
+  footer(ctx, brand, n, pageInk);
   return c;
 }
 
@@ -385,13 +393,13 @@ export function drawListPage(brand: MagazineBrand, page: ListPage, n: number, ph
       minSize: 22,
       family: SANS,
       weight: "600",
-      colour: INK,
+      colour: pageInk,
       lineHeight: 1.28,
     });
     ly += 96;
   }
 
-  footer(ctx, brand, n, INK);
+  footer(ctx, brand, n, pageInk);
   return c;
 }
 
@@ -425,7 +433,7 @@ function drawQrCard(ctx: CanvasRenderingContext2D, url: string, x: number, y: nu
   ctx.restore();
   const inner = size - pad * 2;
   const cell = inner / n;
-  ctx.fillStyle = INK;
+  ctx.fillStyle = pageInk;
   for (let r = 0; r < n; r++) {
     for (let c = 0; c < n; c++) {
       if (qr.isDark(r, c)) ctx.fillRect(Math.floor(x + pad + c * cell), Math.floor(y + pad + r * cell), Math.ceil(cell), Math.ceil(cell));

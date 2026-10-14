@@ -8,7 +8,7 @@ import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-m
 import { usePresets } from "@/lib/use-presets";
 import { setFlipHandoff } from "@/lib/flip-handoff";
 import { loadImageFromFile } from "@/lib/advent-door";
-import { getPhotoHits, DEFAULT_ADJUST, PAGE_W, PAGE_H, setMagazineFonts, setMagazineMetals, METAL_BASE, type Metal, type PhotoAdjust, type MagazineBrand } from "@/lib/magazine-pages";
+import { getPhotoHits, DEFAULT_ADJUST, PAGE_W, PAGE_H, setMagazineFonts, setMagazineMetals, onColour, METAL_BASE, type Metal, type PhotoAdjust, type MagazineBrand } from "@/lib/magazine-pages";
 import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
 import {
   EMPTY_POST_COPY,
@@ -21,6 +21,7 @@ import {
   photoShape,
   type MagazinePostCopy,
   type ListPage,
+  setPostPageColours,
 } from "@/lib/magazine-post-pages";
 import { scanText, applySwap, isBlocking } from "@/lib/newsletter-compliance";
 
@@ -139,6 +140,11 @@ export default function MagazinePost() {
   const [clinicName, setClinicName] = useState("");
   const [colour, setColour] = useState("#4a1942");
   const [accent, setAccent] = useState("#f0b8a4");
+  const [pageBgColour, setPageBgColour] = useState("#f6f0e6");
+  const [pageInkColour, setPageInkColour] = useState("#1d1a1a");
+  const [inkTouched, setInkTouched] = useState(false);
+  setPostPageColours(pageBgColour, pageInkColour);
+  useEffect(() => () => setPostPageColours(), []);
   const [colourMetal, setColourMetal] = useState<Metal | null>(null);
   const [accentMetal, setAccentMetal] = useState<Metal | null>(null);
   // Set during render so every page drawn afterwards (preview, download, schedule) uses the same finish.
@@ -296,7 +302,7 @@ export default function MagazinePost() {
     }, 30);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clinicName, colour, accent, contact, qrLink, qrReady, drafts, cur, activePage, serifFont, sansFont, fontTick, redrawTick]);
+  }, [clinicName, colour, accent, pageBgColour, pageInkColour, contact, qrLink, qrReady, drafts, cur, activePage, serifFont, sansFont, fontTick, redrawTick]);
 
   function hitAt(e: { clientX: number; clientY: number }) {
     const big = bigRef.current;
@@ -634,6 +640,30 @@ export default function MagazinePost() {
                   <span className="block text-[11px] uppercase tracking-widest text-zinc-500 mb-1">Highlight colour</span>
                   <input type="color" value={accent} onChange={(e) => { setAccent(e.target.value); setAccentMetal(null); }} className="w-full h-10 rounded-lg bg-zinc-900 border border-zinc-800 cursor-pointer" />
                   <MetalRow active={accentMetal} onPick={(m) => { setAccent(METAL_BASE[m]); setAccentMetal(m); }} />
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="block text-[11px] uppercase tracking-widest text-zinc-500 mb-1">Page background</span>
+                  <input
+                    type="color"
+                    value={pageBgColour}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      setPageBgColour(v);
+                      if (!inkTouched) setPageInkColour(onColour(v));
+                    }}
+                    className="w-full h-10 rounded-lg bg-zinc-900 border border-zinc-800 cursor-pointer"
+                  />
+                </label>
+                <label className="block">
+                  <span className="block text-[11px] uppercase tracking-widest text-zinc-500 mb-1">Page text colour</span>
+                  <input
+                    type="color"
+                    value={pageInkColour}
+                    onChange={(e) => { setPageInkColour(e.target.value); setInkTouched(true); }}
+                    className="w-full h-10 rounded-lg bg-zinc-900 border border-zinc-800 cursor-pointer"
+                  />
                 </label>
               </div>
               <Field label="Website, phone or handle (last page footer, optional)" value={contact} onChange={setContact} placeholder="www.yourclinic.co.uk" />
