@@ -104,6 +104,7 @@ export default function Slideshow() {
   const [brief, setBrief] = useState("");
   const [caption, setCaption] = useState("");
   const [captioning, setCaptioning] = useState(false);
+  const [captionVoice, setCaptionVoice] = useState<"house" | "professional">("house");
 
   // Scheduling
   const [alsoStory, setAlsoStory] = useState(true);
@@ -268,7 +269,7 @@ export default function Slideshow() {
       const res = await fetch(`${BASE}/api/caption-generator/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tone: "1", context, clinicName: preset?.name, location: area.trim() || undefined }),
+        body: JSON.stringify({ tone: "1", context, clinicName: preset?.name, location: area.trim() || undefined, professional: captionVoice === "professional" }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.caption) throw new Error(data.error || "Caption generation failed");
@@ -519,6 +520,13 @@ export default function Slideshow() {
           <section className="space-y-2">
             <h2 className="font-semibold text-base">5. Caption</h2>
             <Textarea value={brief} onChange={(e) => setBrief(e.target.value)} rows={2} placeholder="A short brief, for example: new skin booster slots in November, I want it warm and a bit cheeky" />
+            <Select value={captionVoice} onValueChange={(v) => setCaptionVoice(v as "house" | "professional")}>
+              <SelectTrigger className="w-72 h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="house">House voice, warm and chatty</SelectItem>
+                <SelectItem value="professional">Super professional, polished and measured</SelectItem>
+              </SelectContent>
+            </Select>
             <Button type="button" variant="outline" onClick={generateCaption} disabled={captioning}>
               {captioning ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
               {caption ? "Rewrite caption" : "Generate caption"}

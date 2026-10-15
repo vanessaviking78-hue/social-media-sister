@@ -62,9 +62,9 @@ export const isRyder = (name?: string) => /ryder/i.test(name ?? "");
 export const RYDER_TONE = `THE RYDER CLINIC VOICE, ALWAYS: extremely professional language. Polished, measured, courteous and precise, the way a respected consultant writes to a patient she cares about. No jokes, no japes, no puns, no slang, no sarcasm, no cheekiness, no emojis, no exclamation marks. Emotionally intelligent and genuinely affable: warm, gracious, reassuring and human, with real feeling in the details (a patient's quiet moment of confidence, the trust built in a consultation, the dignity of feeling like yourself). Evoke emotion through sincerity and specific, tender observation, never through humour.`;
 
 // The Ryder Clinic is always written in a very professional, emotive and affable voice, with no humour.
-export function captionVoice(clinicName: string | undefined, tonePrompt: string): { tonePrompt: string; rules: string } {
+export function captionVoice(clinicName: string | undefined, tonePrompt: string, professional = false): { tonePrompt: string; rules: string } {
   const withKind = (r: string) => (isDental(clinicName) ? `${DENTAL_RULES}\n${r}` : r);
-  if (!isRyder(clinicName)) return { tonePrompt, rules: withKind(BASE_RULES) };
+  if (!isRyder(clinicName) && !professional) return { tonePrompt, rules: withKind(BASE_RULES) };
   const rules = BASE_RULES
     .replace(/- Keep it informal and colloquial[^\n]*/, "- Write in very professional, polished language. Warm, gracious and affable, never chatty, never jokey, no slang, no banter, no humour of any kind. Emotion comes from sincerity and specific, tender detail.")
     .replace(/- Use contractions naturally[^\n]*/, "- Prefer full forms over contractions where it reads more polished.")
@@ -74,11 +74,13 @@ export function captionVoice(clinicName: string | undefined, tonePrompt: string)
 
 router.post("/caption-generator/generate", async (req: Request, res: Response) => {
   try {
-    const { tone, context, clinicName, location } = req.body as {
+    const { tone, context, clinicName, location, professional } = req.body as {
       tone?: string;
       context?: string;
       clinicName?: string;
       location?: string;
+      /** Write this one caption in the very professional voice, as used for The Ryder Clinic. */
+      professional?: boolean;
     };
     const area = typeof location === "string" ? location.replace(/[\r\n]+/g, " ").trim().slice(0, 120) : "";
 
@@ -88,7 +90,7 @@ router.post("/caption-generator/generate", async (req: Request, res: Response) =
     }
 
     const toneKey = String(tone ?? "2");
-    const voice = captionVoice(clinicName, CAPTION_TONE_PROMPTS[toneKey] ?? CAPTION_TONE_PROMPTS["2"]);
+    const voice = captionVoice(clinicName, CAPTION_TONE_PROMPTS[toneKey] ?? CAPTION_TONE_PROMPTS["2"], professional === true);
     const tonePrompt = voice.tonePrompt;
 
     const profileCtx = await clientProfileContext(clinicName);
