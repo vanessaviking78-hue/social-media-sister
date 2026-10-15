@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="theme-color" content="#08080D">
+<title>Strategy &amp; Psychology Training — Clinic Content Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#08080D; --bg-panel:#100f16; --card:#151319;
+    --border:rgba(240,235,229,0.10);
+    --cream:#F0EBE5; --cream-dim:rgba(240,235,229,0.65); --cream-faint:rgba(240,235,229,0.38);
+    --pink:#FF1493; --tan:#C4937F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--bg); color:var(--cream);
+    font-family:'League Spartan','Helvetica Neue',sans-serif;
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  header{
+    position:sticky; top:0; z-index:10; background:rgba(8,8,13,0.92); backdrop-filter:blur(8px);
+    display:flex;justify-content:space-between;align-items:center;
+    padding:18px 24px;border-bottom:1px solid var(--border);
+  }
+  .logo{font-weight:800;font-size:18px;letter-spacing:-0.02em;}
+  .logo span{color:var(--pink);}
+  .back-link{
+    color:var(--cream-dim);font-size:13px;font-weight:700;text-decoration:none;
+    display:flex;align-items:center;gap:6px;
+  }
+  .back-link:hover{color:var(--pink);}
+
+  .intro{padding:50px 24px 30px;text-align:center;}
+  .eyebrow{
+    color:var(--tan);text-transform:uppercase;letter-spacing:0.14em;
+    font-size:13px;font-weight:700;margin-bottom:16px;
+  }
+  h1{font-weight:800;font-size:38px;letter-spacing:-0.02em;margin-bottom:14px;}
+  h1 .pink{color:var(--pink);}
+  .sub{color:var(--cream-dim);font-size:16px;max-width:600px;margin:0 auto;font-weight:500;}
+
+  .lessons{max-width:820px;margin:0 auto;padding:10px 24px 100px;}
+
+  .lesson-card{
+    background:var(--card);border:1px solid var(--border);border-radius:16px;
+    padding:32px;margin-bottom:22px;
+  }
+  .lesson-head{
+    display:flex;align-items:center;gap:14px;margin-bottom:20px;
+  }
+  .lesson-num{
+    flex-shrink:0;width:38px;height:38px;border-radius:10px;
+    background:rgba(255,20,147,0.12);color:var(--pink);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:15px;
+  }
+  .lesson-title{font-weight:800;font-size:21px;letter-spacing:-0.01em;}
+
+  .video-wrap{
+    position:relative;width:100%;padding-top:56.25%;
+    background:#000;border-radius:12px;overflow:hidden;margin-bottom:22px;
+    border:1px solid var(--border);
+  }
+  .video-wrap iframe,.video-wrap video{
+    position:absolute;top:0;left:0;width:100%;height:100%;border:0;
+  }
+  .video-empty{
+    border:1px dashed var(--border);border-radius:12px;
+    padding:28px;text-align:center;margin-bottom:22px;
+    color:var(--cream-faint);font-size:13px;font-weight:600;
+  }
+
+  .lesson-points{list-style:none;}
+  .lesson-points li{
+    position:relative;padding:10px 0 10px 26px;
+    color:var(--cream-dim);font-size:15.5px;font-weight:500;
+    border-bottom:1px solid var(--border);
+  }
+  .lesson-points li:last-child{border-bottom:none;}
+  .lesson-points li::before{
+    content:'';position:absolute;left:0;top:19px;width:7px;height:7px;
+    border-radius:2px;background:var(--pink);
+  }
+
+  @media (max-width:640px){
+    h1{font-size:28px;}
+    .lesson-card{padding:22px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Strategy &amp; <span>Psychology</span></div>
+  <a href="/cliniccontent" class="back-link">← Back to Hub</a>
+</header>
+
+<div class="intro">
+  <div class="eyebrow">Clinic Content Hub</div>
+  <h1>The <span class="pink">why</span> behind the content.</h1>
+  <p class="sub">Eight lessons on the psychology of what actually gets clinics booked. Read the points, or watch the video where one's been added.</p>
+</div>
+
+<div class="lessons" id="lessons"></div>
+
+<script>
+// To add a video to a lesson: paste a YouTube URL (any format) or a direct
+// video file URL (mp4/webm, e.g. hosted on Netlify alongside this page) into
+// the "video" field below. Leave it as an empty string for no video yet.
+const LESSONS = [
+  {
+    title: "Why People Stop Scrolling",
+    video: "",
+    points: [
+      "Hooks work because they open a loop the brain wants closed",
+      "Curiosity is a stronger driver than information",
+      "The first 1-2 seconds decide whether someone stays",
+      "Faces and eye contact in a thumbnail increase stop-rate",
+      "Text overlay should raise a question, not answer one",
+      "Specificity beats vagueness: \"the one thing\" outperforms \"some things\""
+    ]
+  },
+  {
+    title: "The Psychology of Trust",
+    video: "",
+    points: [
+      "Trust is built through consistency, not perfection",
+      "Admitting limitations builds more trust than claiming expertise",
+      "Patients trust practitioners who ask questions over those who assume",
+      "Social proof works, but overuse breeds suspicion",
+      "Transparency about risk increases perceived credibility, not the opposite",
+      "Trust compounds across multiple touchpoints, not a single post"
+    ]
+  },
+  {
+    title: "Why Patients Actually Book",
+    video: "",
+    points: [
+      "Booking decisions are emotional first, rational second",
+      "Fear of regret often outweighs fear of cost",
+      "Patients need permission, not persuasion",
+      "Removing friction (a clear next step) matters more than adding urgency",
+      "Testimonials work best when they describe feelings, not just results",
+      "A clear \"who this is for\" statement increases self-selection and bookings"
+    ]
+  },
+  {
+    title: "Content That Converts vs Content That Just Performs",
+    video: "",
+    points: [
+      "High engagement doesn't always mean high booking intent",
+      "Comments and shares build reach; DMs and saves build intent",
+      "Educational content builds authority; relatable content builds affinity; both are needed",
+      "CTAs should match the emotional temperature of the content",
+      "Overly salesy captions reduce trust faster than they build urgency"
+    ]
+  },
+  {
+    title: "Handling Objections Before They're Spoken",
+    video: "",
+    points: [
+      "Most patients research before ever contacting a clinic",
+      "If a common objection isn't addressed in content, it becomes a silent reason not to book",
+      "Objection-handling content should sound like reassurance, not defence",
+      "Naming a fear openly reduces its power",
+      "FAQs should live inside content, not just on a hidden page"
+    ]
+  },
+  {
+    title: "Consistency Beats Intensity",
+    video: "",
+    points: [
+      "Irregular high-effort content underperforms regular simple content",
+      "The algorithm rewards patterns it can predict",
+      "Burnout from overproducing kills consistency faster than underproducing ever does",
+      "A simple, repeatable content system beats constant reinvention",
+      "Batching content protects consistency during busy clinical weeks"
+    ]
+  },
+  {
+    title: "Writing in a Human Voice",
+    video: "",
+    points: [
+      "Corporate language creates distance; personal language creates connection",
+      "Long sentences slow readers down; short sentences create rhythm",
+      "Specific details are more memorable than generic claims",
+      "Humour and personality differentiate more than information alone ever will",
+      "Write like you're talking to one person, not a crowd"
+    ]
+  },
+  {
+    title: "The Psychology of Before and After Content",
+    video: "",
+    points: [
+      "Subtle results build more long-term trust than dramatic ones",
+      "Context (how someone feels) matters more than the visual alone",
+      "Overuse of dramatic transformations can create unrealistic expectations",
+      "Consent and comfort of the patient always come first",
+      "The story around the result often outperforms the result itself"
+    ]
+  }
+];
+
+function getYouTubeId(url){
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{6,})/);
+  return m ? m[1] : null;
+}
+
+function renderVideo(url){
+  if(!url) return '<div class="video-empty">Video coming soon</div>';
+  const ytId = getYouTubeId(url);
+  if(ytId){
+    return `<div class="video-wrap"><iframe src="https://www.youtube.com/embed/${ytId}" title="Lesson video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
+  }
+  return `<div class="video-wrap"><video controls preload="metadata" src="${url}"></video></div>`;
+}
+
+const container = document.getElementById('lessons');
+container.innerHTML = LESSONS.map((lesson, i) => `
+  <div class="lesson-card">
+    <div class="lesson-head">
+      <div class="lesson-num">${i + 1}</div>
+      <div class="lesson-title">${lesson.title}</div>
+    </div>
+    ${renderVideo(lesson.video)}
+    <ul class="lesson-points">
+      ${lesson.points.map(p => `<li>${p}</li>`).join('')}
+    </ul>
+  </div>
+`).join('');
+</script>
+</body>
+</html>

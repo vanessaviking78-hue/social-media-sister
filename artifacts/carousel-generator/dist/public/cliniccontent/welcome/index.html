@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="theme-color" content="#08080D">
+<title>You're In — Clinic Content Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#08080D; --card:#151319;
+    --border:rgba(240,235,229,0.10);
+    --cream:#F0EBE5; --cream-dim:rgba(240,235,229,0.65);
+    --pink:#FF1493; --tan:#C4937F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:var(--bg); color:var(--cream);
+    font-family:'League Spartan','Helvetica Neue',sans-serif;
+    line-height:1.5; -webkit-font-smoothing:antialiased;
+    padding:60px 24px 80px;
+  }
+  .wrap{max-width:640px;margin:0 auto;text-align:center;}
+  .eyebrow{color:var(--tan);text-transform:uppercase;letter-spacing:0.14em;font-size:13px;font-weight:700;margin-bottom:16px;}
+  h1{font-weight:800;font-size:38px;letter-spacing:-0.02em;margin-bottom:16px;}
+  h1 .pink{color:var(--pink);}
+  .sub{color:var(--cream-dim);font-size:16px;max-width:480px;margin:0 auto 48px;font-weight:500;}
+  .links{display:flex;flex-direction:column;gap:14px;text-align:left;}
+  .link-card{
+    background:var(--card);border:1px solid var(--border);border-radius:14px;
+    padding:22px 24px;text-decoration:none;color:var(--cream);
+    display:flex;justify-content:space-between;align-items:center;gap:16px;
+    transition:border-color .15s ease;
+  }
+  .link-card:hover{border-color:rgba(255,20,147,0.4);}
+  .link-title{font-weight:800;font-size:17px;margin-bottom:4px;}
+  .link-desc{color:var(--cream-dim);font-size:13px;font-weight:500;}
+  .arrow{color:var(--pink);font-size:22px;font-weight:800;flex-shrink:0;}
+  .signoff{margin-top:48px;color:var(--cream-dim);font-size:14px;font-weight:500;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">Clinic Content Hub</div>
+  <h1>You're <span class="pink">in.</span></h1>
+  <p class="sub">Everything's ready. Here's where to start, jump in wherever's most useful right now.</p>
+
+  <div class="links">
+    <a class="link-card" href="/cliniccontent/vault">
+      <div>
+        <div class="link-title">The Hook Vault</div>
+        <div class="link-desc">5,000+ hooks, sorted and ready to swipe</div>
+      </div>
+      <div class="arrow">→</div>
+    </a>
+    <a class="link-card" href="/cliniccontent/idea-bank">
+      <div>
+        <div class="link-title">The Idea Bank</div>
+        <div class="link-desc">Content ideas built round the real clinic calendar</div>
+      </div>
+      <div class="arrow">→</div>
+    </a>
+    <a class="link-card" href="/cliniccontent/training">
+      <div>
+        <div class="link-title">Strategy &amp; Psychology Training</div>
+        <div class="link-desc">Why some posts stop the scroll and others don't</div>
+      </div>
+      <div class="arrow">→</div>
+    </a>
+    <a class="link-card" href="https://www.facebook.com/groups/1357480216365903" target="_blank" rel="noopener">
+      <div>
+        <div class="link-title">The Facebook Community</div>
+        <div class="link-desc">Clinic owners doing exactly what you're doing</div>
+      </div>
+      <div class="arrow">→</div>
+    </a>
+  </div>
+
+  <p class="signoff">Any trouble at all, just message me directly, I'm right here.<br>Vanessa x</p>
+</div>
+</body>
+</html>
