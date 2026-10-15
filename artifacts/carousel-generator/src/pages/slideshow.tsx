@@ -4,13 +4,30 @@ import { ArrowLeft, Upload, Loader2, Download, Sparkles, CalendarClock, Trash2, 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import JSZip from "jszip";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { usePresets } from "@/lib/use-presets";
 import { loadGoogleFonts, FONT_OPTIONS } from "@/lib/slide-utils";
+import { addSharedFonts, syncSharedFonts, FONTS_CHANGED_EVENT, type SharedFontOption } from "@/lib/shared-fonts";
+
+type FontOpt = { label: string; value: string };
+
+// The fonts Stylish offers on its covers that are not in the main library. Loaded the same way Stylish loads them.
+const STYLISH_FONTS: FontOpt[] = [
+  { label: "Inter Tight", value: "'Inter Tight', sans-serif" },
+  { label: "Instrument Serif", value: "'Instrument Serif', serif" },
+  { label: "Jost", value: "'Jost', sans-serif" },
+];
+if (typeof document !== "undefined" && !document.getElementById("stylish-fonts")) {
+  const link = document.createElement("link");
+  link.id = "stylish-fonts";
+  link.rel = "stylesheet";
+  link.href = "https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800;900&family=Jost:wght@300;400;500;600&family=Poppins:wght@400;600;700;800&family=Instrument+Serif:ital@0;1&display=swap";
+  document.head.appendChild(link);
+}
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const W = 1080;
@@ -31,7 +48,6 @@ type Slide = {
 
 type GradientDir = "bottom" | "top" | "both" | "full";
 type TextPos = "top" | "middle" | "bottom";
-type FontOpt = { label: string; value: string };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 
@@ -71,12 +87,35 @@ function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number
   return out;
 }
 
+function FontList({ yours, library }: { yours: FontOpt[]; library: FontOpt[] }) {
+  return (
+    <SelectContent className="max-h-72">
+      {yours.length > 0 && (
+        <SelectGroup>
+          <SelectLabel>Your fonts (from Stylish and uploads)</SelectLabel>
+          {yours.map((f) => <SelectItem key={`y-${f.value}`} value={f.value}>{f.label}</SelectItem>)}
+        </SelectGroup>
+      )}
+      <SelectGroup>
+        <SelectLabel>Library fonts</SelectLabel>
+        {library.map((f) => <SelectItem key={`l-${f.value}`} value={f.value}>{f.label}</SelectItem>)}
+      </SelectGroup>
+    </SelectContent>
+  );
+}
+
 export default function Slideshow() {
   const { presets } = usePresets();
   const [clientName, setClientName] = useState("");
   const preset = presets.find((p) => p.name === clientName) ?? null;
   const [area, setArea] = useState("");
   useEffect(() => { setArea(preset?.seoArea?.trim() || ""); }, [preset?.id, preset?.seoArea]);
+  // Picking a client brings across their Stylish cover fonts: headline font for the front page, subtitle font for the other pages.
+  useEffect(() => {
+    if (preset?.stylishCoverHeadlineFont) setCoverFont(preset.stylishCoverHeadlineFont);
+    if (preset?.stylishCoverSubtitleFont) setBodyFont(preset.stylishCoverSubtitleFont);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preset?.id]);
 
   const [slides, setSlides] = useState<Slide[]>([]);
   const [selected, setSelected] = useState(0);
@@ -90,7 +129,6 @@ export default function Slideshow() {
   const [gradientStrength, setGradientStrength] = useState(70);
 
   // Fonts and text
-  const [customFonts, setCustomFonts] = useState<FontOpt[]>([]);
   const [coverFont, setCoverFont] = useState("'Playfair Display', serif");
   const [bodyFont, setBodyFont] = useState("'Montserrat', sans-serif");
   const [textColour, setTextColour] = useState("#ffffff");
@@ -98,7 +136,18 @@ export default function Slideshow() {
   const [coverSize, setCoverSize] = useState(110);
   const [bodySize, setBodySize] = useState(64);
   const [fontsReady, setFontsReady] = useState(0);
-  const fontOptions: FontOpt[] = [...customFonts, ...FONT_OPTIONS];
+  // Fonts uploaded or bought in Stylish (and any other tool) live in one shared library, so they are here too.
+  const shared = FONT_OPTIONS as SharedFontOption[];
+  // Each client's own cover fonts, as set in Stylish under "Client fonts", are offered too.
+  const clientFonts: FontOpt[] = [preset?.stylishCoverHeadlineFont, preset?.stylishCoverSubtitleFont]
+    .filter((v): v is string => !!v && !shared.some((x) => x.value === v))
+    .filter((v, i, a) => a.indexOf(v) === i)
+    .map((v) => ({ label: `${v.split(",")[0].replace(/['"]/g, "").trim()} (this client)`, value: v }));
+  const yourFonts: FontOpt[] = [...clientFonts, ...shared.filter((f) => f.custom)];
+  const libraryFonts: FontOpt[] = [
+    ...STYLISH_FONTS.filter((f) => !shared.some((x) => x.value === f.value)),
+    ...shared.filter((f) => !f.custom),
+  ];
 
   // Caption
   const [brief, setBrief] = useState("");
@@ -117,6 +166,13 @@ export default function Slideshow() {
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dragRef = useRef<{ x: number; y: number; fx: number; fy: number } | null>(null);
+
+  useEffect(() => {
+    const bump = () => setFontsReady((n) => n + 1);
+    window.addEventListener(FONTS_CHANGED_EVENT, bump);
+    void syncSharedFonts();
+    return () => window.removeEventListener(FONTS_CHANGED_EVENT, bump);
+  }, []);
 
   useEffect(() => {
     loadGoogleFonts();
@@ -240,17 +296,10 @@ export default function Slideshow() {
   const onPointerUp = () => { dragRef.current = null; };
 
   // ---- Fonts ----
-  const addCustomFont = async (file: File) => {
-    try {
-      const family = `Custom ${file.name.replace(/\.[^.]+$/, "").replace(/[^a-z0-9 ]/gi, " ").trim() || "Font"}`;
-      const face = new FontFace(family, await file.arrayBuffer());
-      await face.load();
-      document.fonts.add(face);
-      const opt = { label: `${family} (yours)`, value: `'${family}', sans-serif` };
-      setCustomFonts((prev) => [opt, ...prev]);
-      setFontsReady((n) => n + 1);
-      toast.success(`${family} is ready to pick`);
-    } catch { toast.error("That font file would not load. Try a .ttf, .otf or .woff file"); }
+  const addFontFiles = async (files: File[]) => {
+    const added = await addSharedFonts(files);
+    if (added.length) toast.success(`Added ${[...new Set(added)].join(", ")}. It is in Stylish too.`);
+    else toast.error("Those font files would not load. Try .ttf, .otf, .woff or .woff2 files");
   };
 
   // ---- Caption ----
@@ -453,21 +502,21 @@ export default function Slideshow() {
                 <label className="text-xs font-medium">Front page font</label>
                 <Select value={coverFont} onValueChange={setCoverFont}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent className="max-h-72">{fontOptions.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent>
+                  <FontList yours={yourFonts} library={libraryFonts} />
                 </Select>
               </div>
               <div className="space-y-1">
                 <label className="text-xs font-medium">Other pages font</label>
                 <Select value={bodyFont} onValueChange={setBodyFont}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent className="max-h-72">{fontOptions.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}</SelectContent>
+                  <FontList yours={yourFonts} library={libraryFonts} />
                 </Select>
               </div>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
-              <Button type="button" variant="outline" size="sm" onClick={() => fontFileRef.current?.click()}>Upload my own font</Button>
-              <input ref={fontFileRef} type="file" accept=".ttf,.otf,.woff,.woff2" className="hidden"
-                onChange={(e) => { if (e.target.files?.[0]) addCustomFont(e.target.files[0]); e.target.value = ""; }} />
+              <Button type="button" variant="outline" size="sm" onClick={() => fontFileRef.current?.click()}>Add font files</Button>
+              <input ref={fontFileRef} type="file" multiple accept=".ttf,.otf,.woff,.woff2" className="hidden"
+                onChange={(e) => { if (e.target.files?.length) addFontFiles(Array.from(e.target.files)); e.target.value = ""; }} />
               <label className="text-xs flex items-center gap-2">Text colour
                 <input type="color" value={textColour} onChange={(e) => setTextColour(e.target.value)} className="h-8 w-10 rounded border border-border/40 bg-transparent" />
               </label>

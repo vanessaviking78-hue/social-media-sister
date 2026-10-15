@@ -128,3 +128,20 @@ export function syncSharedFonts(): Promise<void> {
 export async function initSharedFonts(maxWaitMs = 1500): Promise<void> {
   await Promise.race([syncSharedFonts(), new Promise<void>(r => setTimeout(r, maxWaitMs))]);
 }
+
+// Save font files into the shared database (the same one Stylish uses), then register them,
+// so a font added in any tool appears in every tool. Returns the family names that were added.
+export async function addSharedFonts(files: File[]): Promise<string[]> {
+  const db = await openDb();
+  const added: string[] = [];
+  for (const f of files) {
+    if (!/\.(otf|ttf|woff2?)$/i.test(f.name)) continue;
+    const data = await f.arrayBuffer();
+    const fam = await registerFace(f.name, data);
+    if (!fam) continue;
+    added.push(fam);
+    if (db) { try { db.transaction(STORE, "readwrite").objectStore(STORE).put(data, f.name); } catch { /* usable this visit only */ } }
+  }
+  if (added.length) await syncSharedFonts();
+  return added;
+}
