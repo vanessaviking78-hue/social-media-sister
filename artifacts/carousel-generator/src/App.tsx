@@ -109,6 +109,7 @@ import Reports from "@/pages/reports";
 import BlogPublic from "@/pages/blog-public";
 import RantPublic from "@/pages/rant-public";
 import TweetMaker from "@/pages/tweet-maker";
+import Perfecter from "@/pages/perfecter";
 import Slideshow from "@/pages/slideshow";
 import RevenueIdeas from "@/pages/revenue-ideas";
 import CompetitorScout from "@/pages/competitor-scout";
@@ -211,6 +212,7 @@ function ProtectedRouter() {
       <Route path="/adventcalendar" component={AdventCalendar} />
       <Route path="/about-me-studio" component={AboutMeStudio} />
       <Route path="/tweet-maker" component={TweetMaker} />
+      <Route path="/perfect" component={Perfecter} />
       <Route path="/slideshow" component={Slideshow} />
       <Route path="/injectorreels" component={InjectorReels} />
       <Route path="/revenue-ideas" component={RevenueIdeas} />

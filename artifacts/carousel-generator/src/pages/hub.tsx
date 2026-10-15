@@ -4,6 +4,7 @@ import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageS
 import { LogOut } from "lucide-react";
 import { AdventCalendarIcon } from "@/components/advent-icon";
 import { MagazineIcon } from "@/components/magazine-icon";
+import { PerfecterIcon } from "@/components/perfecter-icon";
 
 const TOOLS = [
 {
@@ -458,6 +459,16 @@ description: "Upload photos, add a gradient and your own fonts, write the captio
 color: "from-amber-500/20 to-amber-500/5",
 border: "hover:border-amber-500/50",
 iconColor: "text-amber-400",
+},
+{
+href: "/perfect",
+group: "content",
+icon: PerfecterIcon,
+name: "Photo Perfecter",
+description: "Upload your clinic photos and get them back looking professionally done: clean backgrounds, no wall lines, richer colour. Then send them on to Stylish, Client Stylish, Tweet Maker or Magazine Style, or download the lot.",
+color: "from-rose-500/20 to-rose-500/5",
+border: "hover:border-rose-500/50",
+iconColor: "text-rose-400",
 },
 {
 href: "/tweet-maker",
