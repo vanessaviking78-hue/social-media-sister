@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getUsedHooks, clearUsedHooks } from "@/lib/hook-used";
 import { ChevronDown } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import {
@@ -14,6 +15,8 @@ type Props = {
   // For tools that write one post at a time: only one hook can be picked, and only the listed days are shown.
   single?: boolean;
   days?: string[];
+  // The client these hooks are for. Hooks already used for them are crossed out so nothing is posted twice.
+  client?: string;
 };
 
 const SEASON_STYLE: Record<string, string> = {
@@ -34,10 +37,12 @@ function HookText({ text }: { text: string }) {
   );
 }
 
-export default function HookBankPicker({ picked, onChange, startDate, onStartDate, single, days }: Props) {
+export default function HookBankPicker({ picked, onChange, startDate, onStartDate, single, days, client = "" }: Props) {
+  const [used, setUsed] = useState<string[]>([]);
   const dayRows = days ? HOOK_DAYS.filter(d => days.includes(d.day)) : HOOK_DAYS;
   const [open, setOpen] = useState(false);
   const [dayFilter, setDayFilter] = useState<string>("All");
+  useEffect(() => { setUsed(getUsedHooks(client)); }, [client, picked]);
   const starts = useMemo(() => packStarts(), []);
   const start = parseIso(startDate) ?? starts[0];
 
@@ -53,7 +58,7 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
       </Label>
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => { setUsed(getUsedHooks(client)); setOpen(o => !o); }}
         className="flex w-full items-center justify-between rounded-md border border-border/40 px-3 py-2 text-sm hover:border-border/70"
         aria-expanded={open}
       >
@@ -93,6 +98,11 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
                 {d}
               </button>
             ))}
+            {client.trim() && used.length > 0 && (
+              <button type="button" onClick={() => { clearUsedHooks(client); setUsed([]); }} className="rounded-full border border-border/40 px-3 py-1 text-xs text-muted-foreground hover:border-border/70">
+                Reset used for {client}
+              </button>
+            )}
             {picked.length > 0 && (
               <button type="button" onClick={() => onChange([])} className="rounded-full border border-border/40 px-3 py-1 text-xs text-muted-foreground hover:border-border/70">
                 Clear all
@@ -121,9 +131,10 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
                       >
                         <input type="checkbox" checked={on} disabled={disabled} onChange={() => toggle(h)} className="mt-1 accent-sky-500" />
                         <span className="min-w-0 space-y-0.5">
-                          <span className="block"><HookText text={h.text} /></span>
+                          <span className={`block ${used.includes(h.code) ? "line-through decoration-2" : ""}`}><HookText text={h.text} /></span>
                           <span className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
                             <span>{h.code}</span>
+                            {used.includes(h.code) && <span className="font-medium text-amber-400">already used for {client}</span>}
                             {h.season && (
                               <span className={SEASON_STYLE[h.season]}>
                                 {SEASON_WINDOWS[h.season].label}

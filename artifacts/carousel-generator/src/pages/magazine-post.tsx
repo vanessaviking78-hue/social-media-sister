@@ -25,6 +25,7 @@ import {
 } from "@/lib/magazine-post-pages";
 import { scanText, applySwap, isBlocking } from "@/lib/newsletter-compliance";
 import HookBankPicker from "@/components/hook-bank-picker";
+import { markHooksUsed } from "@/lib/hook-used";
 import { packStarts, isoDate, pickedHookPayload } from "@/lib/hook-bank";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -401,6 +402,7 @@ export default function MagazinePost() {
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || "The copy would not write, try again");
       patchDraft(i, (x) => ({ ...x, copy: data as MagazinePostCopy }));
+      markHooksUsed(clinicName, dd.hook ?? []);
       return true;
     } catch (e: any) {
       toast.error(`Post ${i + 1}: ${e?.message || "The copy would not write, try again"}`);
@@ -845,7 +847,7 @@ export default function MagazinePost() {
                   );
                 })}
               </div>
-              <HookBankPicker single days={["Monday", "Any day"]} picked={hookPick} onChange={setHook} startDate={hookStart} onStartDate={setHookStart} />
+              <HookBankPicker client={clinicName} single days={["Monday", "Any day"]} picked={hookPick} onChange={setHook} startDate={hookStart} onStartDate={setHookStart} />
               <Field label="Reply word people comment" value={replyWord} onChange={setReplyWord} placeholder="e.g. GLOW" />
             </section>
 

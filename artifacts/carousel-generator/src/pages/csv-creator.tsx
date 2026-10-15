@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { usePresets } from "@/lib/use-presets";
 import HookBankPicker from "@/components/hook-bank-picker";
+import { markHooksUsed } from "@/lib/hook-used";
 import { packStarts, isoDate, pickedHookPayload } from "@/lib/hook-bank";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -81,6 +82,7 @@ export default function CsvCreator() {
       const list: Post[] = Array.isArray(data.posts) ? data.posts : [];
       if (!list.length) throw new Error("Nothing came back, try again");
       setPosts(list);
+      markHooksUsed(selectedPreset?.name ?? "", hookPick);
       toast.success(`${list.length} carousels ready. Have a read through before you download.`, { id });
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Something went wrong", { id });
@@ -160,7 +162,7 @@ export default function CsvCreator() {
           />
         </div>
 
-        <HookBankPicker days={["Wednesday", "Friday", "Sunday", "Any day"]} picked={hookPick} onChange={setHookPick} startDate={hookStart} onStartDate={setHookStart} />
+        <HookBankPicker client={selectedPreset?.name ?? ""} days={["Wednesday", "Friday", "Sunday", "Any day"]} picked={hookPick} onChange={setHookPick} startDate={hookStart} onStartDate={setHookStart} />
 
         <Button
           onClick={handleGenerate}

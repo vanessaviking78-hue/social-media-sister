@@ -24,6 +24,7 @@ import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-m
 import { nthPostingSlot } from "@/lib/schedule";
 import opentype from "opentype.js";
 import HookBankPicker from "@/components/hook-bank-picker";
+import { markHooksUsed } from "@/lib/hook-used";
 import { packStarts, isoDate, pickedHookPayload } from "@/lib/hook-bank";
 
 loadGoogleFonts();
@@ -3195,6 +3196,7 @@ export default function Stylish() {
       }
       if (!d?.csv) throw new Error(d?.error || "The server was busy updating. Give it a minute and press Write my CSV again.");
       setCsvText(d.csv);
+      markHooksUsed(preset.name, csvHookPick);
       parseCsv(new File([d.csv], `${preset.name} Stylish.csv`, { type: "text/csv" }));
       toast.success(`${d.rows?.length ?? ""} posts written and loaded`, { id: t });
     } catch (e) {
@@ -4327,7 +4329,7 @@ export default function Stylish() {
             <textarea value={csvRest} onChange={e => setCsvRest(e.target.value)} rows={3}
               placeholder="What should the rest of the posts be? For example: 4 about menopause, 4 shareable and emotional, 4 skincare tips, 4 about what to expect at a consultation."
               className="w-full text-sm bg-muted/30 border border-border/40 rounded-md px-3 py-2" />
-            <HookBankPicker picked={csvHookPick} onChange={setCsvHookPick} startDate={csvHookStart} onStartDate={setCsvHookStart} />
+            <HookBankPicker client={preset?.name ?? ""} picked={csvHookPick} onChange={setCsvHookPick} startDate={csvHookStart} onStartDate={setCsvHookStart} />
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               Other posts
               <input type="number" min={0} max={40} value={csvRestCount} onChange={e => setCsvRestCount(Number(e.target.value))} className="h-8 w-20 text-sm bg-muted/30 border border-border/40 rounded-md px-2" />
