@@ -4,6 +4,7 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 import { CAPTION_TONE_PROMPTS, RYDER_TONE, isRyder, HOOK_RULES, DENTAL_RULES, isDental } from "./caption-generator";
 import { validateHost } from "./aiPortrait";
 import { clientProfileContext } from "./client-profiles";
+import { parsePickedHooks, followOnVoice, splitHook, type PickedHook } from "../lib/hookBank";
 import { db } from "@workspace/db";
 import { clientPresetsTable } from "@workspace/db/schema";
 
@@ -238,6 +239,17 @@ CHOSEN HOOKS (Vanessa wrote these herself, they win over every other rule about 
 These rows already have their slide 1. For each row below, the headline and subtitle together must carry the hook in her exact words: split it at a natural pause, headline first (up to 7 words), subtitle the rest (up to 16 words). Do not reword, soften, shorten or add to the hook.
 ${hooks.map((h) => `Row ${h.row}: "${h.text}"${h.season ? ` (${h.season} post: keep that occasion running through every slide of this row, and this row may name it)` : ""}`).join("\n")}
 Then write text1, text2, text3 and the cta so they carry on from the hook like a friend chatting on the sofa with one woman who has followed along for years: warm, personable, a little daft, never professional or brochure like, never lecturing. Each slide picks up straight from the one before and pays off the hook. Use everyday things she will recognise (the kettle, the diary, the school run, the supermarket, the telly). Never invent a story about a real person: no "a patient once told me", no "a client said", no made up moment from the clinic, no quotes from anyone. Share observations, opinions and shared everyday moments only. These rows are exempt from the rule about not naming days, seasons or occasions, but only for the words that appear in their own hook. Every other rule still applies: first person, UK spelling, no dashes, no negative parallelism, compliance and the banned words.${dental ? " This is a dental practice: if a hook mentions aesthetics, injectors or a face clinic, change only those words to dentistry wording and keep the rest." : ""}${ryder ? " The Ryder Clinic: keep her hook words exactly, but write the slides after it in the warm, sincere voice with no jokes." : ""}`;
+}
+
+// The Hook Bank for the "Write my CSV" tool, where the website sends the picked hooks without row numbers.
+// The model says which row each hook goes on, then the server puts her exact words in the headline and subtitle.
+function csvHookRules(hooks: PickedHook[], topics: string[], dental: boolean, ryder: boolean): string {
+  if (!hooks.length) return "";
+  return `
+
+CHOSEN HOOKS (Vanessa wrote these herself, they win over every other rule about slide 1)
+${hooks.map((h, i) => `Hook ${i + 1} (${h.kind === "treatment" ? "for a treatment post" : "for one of the other posts"}): "${h.text}"${h.season ? ` (${h.season} post: keep that occasion running through every slide of that row)` : ""}`).join("\n")}
+Give each hook to a different row, a treatment hook to a treatment post (${topics.join(", ")}) and the others to the other posts, and add "hook": the hook's number to that row (leave it out of rows without a hook). The server puts her exact words in that row's headline and subtitle, so write the headline and subtitle yourself as a close match, and write text1, text2, text3 and the cta so they follow on from the hook. ${followOnVoice({ dental, ryder })} These rows are exempt from the rule about not naming days, seasons or occasions, but only for the words in their own hook.`;
 }
 
 export function clean(text: unknown): string {
@@ -650,7 +662,7 @@ router.post("/client-stylish/csv", async (req: Request, res: Response) => {
     };
   }
   try {
-    const body = req.body as { clientName?: string; website?: string; tone?: string; notes?: string; treatmentTopics?: string[]; restBrief?: string; restCount?: number };
+    const body = req.body as { clientName?: string; website?: string; tone?: string; notes?: string; treatmentTopics?: string[]; restBrief?: string; restCount?: number; hooks?: unknown };
     const clientName = String(body.clientName ?? "").trim();
     if (!clientName) { out.status(400).json({ error: "Please choose the client first" }); return; }
     const topics = (Array.isArray(body.treatmentTopics) ? body.treatmentTopics : []).map((t) => neutralise(String(t ?? "").trim())).filter(Boolean).slice(0, 4);
@@ -661,6 +673,7 @@ router.post("/client-stylish/csv", async (req: Request, res: Response) => {
     const tonePrompt = ryder ? RYDER_TONE : (CAPTION_TONE_PROMPTS[String(body.tone ?? "4")] ?? CAPTION_TONE_PROMPTS["4"]);
     const notes = neutralise(String(body.notes ?? "").trim()).slice(0, 1500);
     const total = topics.length + restCount;
+    const pickedHooks = parsePickedHooks(body.hooks, (t) => neutralise(clean(t)), total);
 
     let siteText = "";
     const website = String(body.website ?? "").trim();
@@ -684,7 +697,7 @@ Each carousel is a short, absorbing story she wants to finish. Slide 1 (headline
     const system = `You write copy for Vanessa Wormald's clients, ${isDental(clientName) ? "UK dental practices" : "UK aesthetic clinics"}.
 
 WRITING STYLE: ${tonePrompt}${profileCtx}
-${packKind(clientName)}${HOOK_RULES}
+${packKind(clientName)}${HOOK_RULES}${csvHookRules(pickedHooks, topics, isDental(clientName), ryder)}
 ${PERSONAL_RULES}
 
 WHAT YOU ARE WRITING
@@ -704,13 +717,14 @@ ${ryder ? "Because this is The Ryder Clinic, any instruction above that asks for
 
 OUTPUT
 Return only JSON in this exact shape, with exactly ${total} objects in "rows":
-{"rows":[{"headline":"","subtitle":"","text1":"","text2":"","text3":"","cta":""}]}`;
+{"rows":[{"headline":"","subtitle":"","text1":"","text2":"","text3":"","cta":""${pickedHooks.length ? ',"hook":1' : ""}}]}`;
 
     const user = `Clinic: ${clientName}
 ${notes ? `Notes about the clinic and clinician: ${notes}\n` : ""}${siteText ? `WEBSITE TEXT:\n${siteText.slice(0, 6000)}` : "No website text was available, keep treatment details general."}`;
 
     let rows: Row[] = [];
     let feedback = "";
+    let hooksPlaced = 0;
     for (let attempt = 0; attempt < 3; attempt++) {
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -721,9 +735,21 @@ ${notes ? `Notes about the clinic and clinician: ${notes}\n` : ""}${siteText ? `
       });
       try {
         const parsed = JSON.parse(completion.choices[0]?.message?.content ?? "") as { rows?: Partial<Row>[] };
-        rows = (parsed.rows ?? []).map((r) => ({ headline: clean(r.headline), subtitle: clean(r.subtitle), text1: clean(r.text1), text2: clean(r.text2), text3: clean(r.text3), cta: clean(r.cta) }));
+        const placed = new Set<number>();
+        const withHooks = (parsed.rows ?? []).map((r0) => {
+          const r = r0 as Partial<Row> & { hook?: unknown };
+          const n = Number(r.hook);
+          const h = Number.isInteger(n) && !placed.has(n) ? pickedHooks[n - 1] : undefined;
+          if (!h) return r;
+          placed.add(n);
+          const parts = splitHook(h.text);
+          return { ...r, headline: parts.first, subtitle: parts.second };
+        });
+        hooksPlaced = placed.size;
+        rows = withHooks.map((r) => ({ headline: clean(r.headline), subtitle: clean(r.subtitle), text1: clean(r.text1), text2: clean(r.text2), text3: clean(r.text3), cta: clean(r.cta) }));
       } catch { rows = []; }
       if (rows.length !== total) { feedback = `\n\nYour last answer did not have exactly ${total} rows. Return exactly ${total} rows.`; continue; }
+      if (pickedHooks.length && hooksPlaced < pickedHooks.length) { feedback = `\n\nOnly ${hooksPlaced} of the ${pickedHooks.length} chosen hooks were given to a row. Give every hook to a different row using its number.`; continue; }
       const hits = findBanned(rows);
       const noI = rowsWithoutFirstPerson(rows);
       if (!hits.length && !noI.length) break;

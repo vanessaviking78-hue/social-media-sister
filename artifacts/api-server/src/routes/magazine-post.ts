@@ -3,6 +3,7 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 import { STYLE_PROMPTS, RULES, clean } from "./magazine-maker";
 import { clinicNoun } from "./caption-generator";
 import { scanText, applySwap } from "../lib/newsletterCompliance";
+import { followOnVoice, splitHook } from "../lib/hookBank";
 
 const router: IRouter = Router();
 
@@ -19,7 +20,8 @@ function tidy(text: string, max: number): string {
 
 router.post("/magazine-post/copy", async (req: Request, res: Response) => {
   try {
-    const { clinicName, treatment, replyWord, style } = req.body as {
+    const { clinicName, treatment, replyWord, style, hook } = req.body as {
+      hook?: string;
       clinicName?: string;
       treatment?: string;
       replyWord?: string;
@@ -43,19 +45,22 @@ router.post("/magazine-post/copy", async (req: Request, res: Response) => {
     const word = String(replyWord ?? "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 16);
     const stylePrompt = STYLE_PROMPTS[String(style ?? "1")] ?? STYLE_PROMPTS["1"];
     const clinic = (clinicName ?? "").trim() || "the clinic";
+    // A hook from the Hook Bank is used word for word: it fills the cover and opens the caption.
+    const hookText = tidy(String(hook ?? ""), 240);
+    const hookParts = hookText ? splitHook(hookText) : null;
 
     const systemPrompt = `You write the copy for a 5 page social media magazine post for a ${clinicNoun(clinicName)}, ${clinic}, all about ONE treatment: "${treat}". It is a swipe carousel, so every piece of copy must be short enough to read in a couple of seconds.
 
 VOICE: ${stylePrompt}
 
 THE PAGES
-1. Cover: the treatment name is the title (already decided, do not write it). You write a tiny kicker above it and a tagline below it.
+1. Cover: the treatment name is the title (already decided, do not write it). ${hookText ? `The hook "${hookText}" is already placed on the cover, so leave the cover blank and write nothing there.` : "You write a tiny kicker above it and a tagline below it."}
 2. Fun facts: a headline, a friendly intro line and three fun facts about ${treat}.
 3. "This is for you if...": five short lines describing the sort of person who might be curious about ${treat}, written as her own thoughts or situations she will recognise ("You look in the mirror and think, tired?"). Warm, funny, specific.
 4. "Helps most with...": five short lines naming the concerns or areas people most often come in asking about for ${treat}. Frame them as what people ask about or hope for, never as results.
 5. Last page: a photo with "If this interests you, comment ${word || "the reply word"}". You write one short, sly line to sit under it.
 Plus a caption for the post itself.
-
+${hookText ? `\nTHE HOOK\nThe post opens with this hook, which Vanessa wrote: "${hookText}". Do not change a word of it. The caption must start with the hook exactly as written. ${followOnVoice()}\n` : ""}
 FACTS AND CLAIMS
 - Only include things that are widely and generally accepted about ${treat}. No statistics, no percentages, no timings you are not certain of, no brand or product claims.
 - If you are not sure of a detail, say something general and honest instead, or say what a practitioner will talk through at the consultation.
@@ -69,7 +74,7 @@ Return JSON only, in exactly this shape and within these limits:
   "forYouIf": { "kicker": "max 3 words", "intro": "max 16 words", "items": ["max 12 words", "max 12 words", "max 12 words", "max 12 words", "max 12 words"] },
   "helpsMostWith": { "kicker": "max 3 words", "intro": "max 16 words", "items": ["max 10 words", "max 10 words", "max 10 words", "max 10 words", "max 10 words"] },
   "cta": { "line": "max 12 words, a warm sly nudge to comment, no pressure" },
-  "caption": "max 70 words. Opens with a hook, ends by inviting her to comment ${word || "the reply word"} so the details can be sent over. No hashtags."
+  "caption": "max 70 words. ${hookText ? "Starts with the hook word for word, then carries on from it," : "Opens with a hook,"} ends by inviting her to comment ${word || "the reply word"} so the details can be sent over. No hashtags."
 }
 ${RULES}`;
 
@@ -113,13 +118,17 @@ ${RULES}`;
 
     res.json({
       cover: {
-        kicker: tidy(j?.cover?.kicker ?? "", 30),
+        kicker: hookParts ? hookParts.first : tidy(j?.cover?.kicker ?? "", 30),
         title: treat,
-        tagline: tidy(j?.cover?.tagline ?? "", 80),
+        tagline: hookParts ? hookParts.second : tidy(j?.cover?.tagline ?? "", 80),
       },
       pages: [factPage(j?.funFacts), listPage(j?.forYouIf, "This is for you if...", 100), listPage(j?.helpsMostWith, "Helps most with...", 85)],
       cta: { lead: "If this interests you", word, line: tidy(j?.cta?.line ?? "", 100) },
-      caption: tidy(j?.caption ?? "", 600),
+      caption: (() => {
+        let cap = tidy(j?.caption ?? "", 600);
+        if (hookText && !cap.toLowerCase().startsWith(hookText.toLowerCase().slice(0, 30))) cap = `${hookText} ${cap}`;
+        return cap;
+      })(),
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Magazine post copy failed";

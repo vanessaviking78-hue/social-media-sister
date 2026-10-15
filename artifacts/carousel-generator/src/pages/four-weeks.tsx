@@ -3,6 +3,8 @@ import { Link } from "wouter";
 import { ArrowLeft, BatteryCharging, Play, CheckCircle2, Loader2, PartyPopper, RefreshCcw } from "lucide-react";
 import { usePresets } from "@/lib/use-presets";
 import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
+import HookBankPicker from "@/components/hook-bank-picker";
+import { packStarts, isoDate } from "@/lib/hook-bank";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -51,6 +53,8 @@ export default function FourWeeks() {
   const [starting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [hookLook, setHookLook] = useState<string[]>([]);
+  const [hookStart, setHookStart] = useState(() => isoDate(packStarts()[0]));
 
   const [headFont, setHeadFont] = useState("");
   const [subFont, setSubFont] = useState("");
@@ -244,6 +248,11 @@ export default function FourWeeks() {
                   </div>
                 );
               })}
+            </div>
+
+            <div className="space-y-1 rounded-xl border border-border/40 p-4">
+              <p className="text-xs text-muted-foreground">Hooks for {clientName}. Any with a line through it have already been used for them. Pick them in the tool you are writing in (Magazine Post, Stylish, Tweet Maker, Bulk Carousel), they are crossed off there once used.</p>
+              <HookBankPicker client={clientName} picked={hookLook} onChange={setHookLook} startDate={hookStart} onStartDate={setHookStart} />
             </div>
           </>
         )}

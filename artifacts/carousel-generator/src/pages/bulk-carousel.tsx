@@ -17,6 +17,9 @@ import Papa from "papaparse";
 import { normalizeSlideCsvForHeaders, smartMapCsvHeaders } from "@/lib/csv-format";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
+import HookBankPicker from "@/components/hook-bank-picker";
+import { packStarts, isoDate, pickedHookPayload } from "@/lib/hook-bank";
+import { markHooksUsed } from "@/lib/hook-used";
 import { loadGoogleFonts, FONT_OPTIONS } from "@/lib/slide-utils";
 
 import { usePresets, type ClientPreset } from "@/lib/use-presets";
@@ -1461,6 +1464,16 @@ async function openBankForMany(selectedItems: any[]) {
 }
 
   const csvInputRef  = useRef<HTMLInputElement>(null);
+  const [hookPick, setHookPick] = useState<string[]>([]);
+  const [hookStart, setHookStart] = useState(() => isoDate(packStarts()[0]));
+  const applyHooks = () => {
+    const chosen = pickedHookPayload(hookPick);
+    if (!chosen.length || !csvRows.length) return;
+    setCsvRows(csvRows.map((r, i) => (chosen[i] ? { ...r, hook: chosen[i].text } : r)));
+    markHooksUsed(selectedPreset?.name ?? "", hookPick.slice(0, csvRows.length));
+    toast.success(`${Math.min(chosen.length, csvRows.length)} hook${chosen.length === 1 ? "" : "s"} put on slide 1, in the order you picked them`);
+    setHookPick([]);
+  };
   const coverInputRef = useRef<HTMLInputElement>(null);
 
   const { presets } = usePresets();
@@ -2501,6 +2514,12 @@ async function openBankForMany(selectedItems: any[]) {
           </div>
           <input ref={csvInputRef} type="file" accept=".csv" className="hidden" onChange={e => { if (e.target.files?.[0]) parseCsv(e.target.files[0]); e.target.value = ""; }} />
           {csvState !== null && csvState.error !== null && <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-4 py-2">{csvState.error}</p>}
+          <HookBankPicker client={selectedPreset?.name ?? ""} days={["Wednesday", "Friday", "Sunday", "Any day"]} picked={hookPick} onChange={setHookPick} startDate={hookStart} onStartDate={setHookStart} />
+          {hookPick.length > 0 && (
+            <button type="button" onClick={applyHooks} disabled={!csvRows.length} className="rounded-md border border-sky-500/60 bg-sky-500/10 px-3 py-2 text-sm disabled:opacity-40">
+              {csvRows.length ? `Put my ${hookPick.length} hook${hookPick.length === 1 ? "" : "s"} on slide 1 of the first ${Math.min(hookPick.length, csvRows.length)} post${Math.min(hookPick.length, csvRows.length) === 1 ? "" : "s"}` : "Load the CSV first, then put the hooks on slide 1"}
+            </button>
+          )}
         </section>
 
         {/* Step 3: Images */}

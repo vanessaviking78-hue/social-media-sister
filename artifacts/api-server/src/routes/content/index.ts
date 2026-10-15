@@ -95,6 +95,7 @@ function buildPersonalityContext(targetAudience?: string, contentPillars?: strin
   return `\n\nCLIENT PROFILE\n${parts.join("\n")}`;
 }
 
+import { parsePickedHooks, followOnVoice } from "../../lib/hookBank";
 const router: IRouter = Router();
 
 const VANESSA_SYSTEM = `You are Vanessa, the Social Media Sister AI — a social media strategist specialising in aesthetic clinics, dental practices, skin clinics, and wellness businesses. You have deep expertise in MHRA/ASA compliance, writing hooks and captions that convert, and social media strategy for clinics.
@@ -1177,7 +1178,8 @@ function stripHtmlForContext(html) {
 
 router.post("/content/csv-creator", async (req, res) => {
   try {
-    const { area, website, brief, clientName, voiceStyle, industry, count } = req.body as {
+    const { area, website, brief, clientName, voiceStyle, industry, count, hooks } = req.body as {
+      hooks?: unknown;
       area?: string;
       website?: string;
       brief?: string;
@@ -1193,6 +1195,7 @@ router.post("/content/csv-creator", async (req, res) => {
     }
 
     const postCount = Math.max(1, Math.min(Number(count) || 16, 20));
+    const pickedHooks = parsePickedHooks(hooks, (x) => x.replace(/\s*[—–]\s*/g, ", "), postCount);
 
     let siteContext = "";
     if ((website || "").trim()) {
@@ -1226,11 +1229,12 @@ ${siteContext ? `Here is some text pulled from the clinic's website, for context
 What Vanessa wants these posts to cover: ${brief}
 
 Each post has exactly 4 slides, follow this precisely for every single post:
-- hook: the opening slide. Under 10 words. Sounds like something a real person would actually say, quiet and specific, not a marketing line. Give it a local flavour where it fits naturally, mentioning ${area} only if it reads naturally, never forced, and don't do it in every single post.
+- hook: the opening slide.${pickedHooks.length ? " Posts 1 to " + pickedHooks.length + " use the chosen hooks below, so for those just write their number in the hook field and the server puts the exact words in. For every other post: under 10 words." : " Under 10 words."} Sounds like something a real person would actually say, quiet and specific, not a marketing line. Give it a local flavour where it fits naturally, mentioning ${area} only if it reads naturally, never forced, and don't do it in every single post.
 - body1: the first value slide. One idea, 1-3 short sentences, specific over general.
 - body2: the second value slide. A different idea to body1, one idea, 1-3 short sentences.
 - cta: a warm, unhurried invitation to get in touch or book a consultation. No urgency, no "DM us NOW".
 
+${pickedHooks.length ? `CHOSEN HOOKS (Vanessa wrote these herself, they win over every other rule about the opening slide)\n${pickedHooks.map((h, k) => `Post ${k + 1}: "${h.text}"`).join("\n")}\nFor those posts write body1, body2 and cta so they follow on from the hook. ${followOnVoice()}\n` : ""}
 Rules across the batch:
 - Write exactly ${postCount} posts, each one genuinely different: a different angle, a different hook structure, a different opening line. No two hooks should sound alike.
 - Between them, cover different facets of the brief rather than repeating the same point 16 times
@@ -1267,6 +1271,9 @@ Output ONLY a valid JSON object with a single key "posts", whose value is an arr
       body2: String(p?.body2 || "").trim(),
       cta: String(p?.cta || "").trim(),
     }));
+
+    // Her chosen hooks go on the first posts exactly as she wrote them.
+    pickedHooks.forEach((h, k) => { if (cleaned[k]) cleaned[k].hook = h.text; });
 
     if (!cleaned.length) {
       res.status(500).json({ error: "Nothing came back, try again" });

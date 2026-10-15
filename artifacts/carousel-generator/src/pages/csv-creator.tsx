@@ -8,6 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { usePresets } from "@/lib/use-presets";
+import HookBankPicker from "@/components/hook-bank-picker";
+import { markHooksUsed } from "@/lib/hook-used";
+import { packStarts, isoDate, pickedHookPayload } from "@/lib/hook-bank";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const POST_COUNT = 16;
@@ -45,6 +48,8 @@ export default function CsvCreator() {
   const [area, setArea] = useState("");
   const [website, setWebsite] = useState("");
   const [brief, setBrief] = useState("");
+  const [hookPick, setHookPick] = useState<string[]>([]);
+  const [hookStart, setHookStart] = useState(() => isoDate(packStarts()[0]));
   const [generating, setGenerating] = useState(false);
   const [posts, setPosts] = useState<Post[] | null>(null);
 
@@ -66,6 +71,7 @@ export default function CsvCreator() {
           clientName: selectedPreset?.name ?? "",
           voiceStyle: selectedPreset?.voiceStyle ?? "northern-grit",
           count: POST_COUNT,
+          hooks: pickedHookPayload(hookPick),
         }),
       });
       if (!res.ok) {
@@ -76,6 +82,7 @@ export default function CsvCreator() {
       const list: Post[] = Array.isArray(data.posts) ? data.posts : [];
       if (!list.length) throw new Error("Nothing came back, try again");
       setPosts(list);
+      markHooksUsed(selectedPreset?.name ?? "", hookPick);
       toast.success(`${list.length} carousels ready. Have a read through before you download.`, { id });
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Something went wrong", { id });
@@ -154,6 +161,8 @@ export default function CsvCreator() {
             className="min-h-[100px] resize-y text-sm bg-zinc-900 border-white/10 placeholder:text-zinc-600"
           />
         </div>
+
+        <HookBankPicker client={selectedPreset?.name ?? ""} days={["Wednesday", "Friday", "Sunday", "Any day"]} picked={hookPick} onChange={setHookPick} startDate={hookStart} onStartDate={setHookStart} />
 
         <Button
           onClick={handleGenerate}

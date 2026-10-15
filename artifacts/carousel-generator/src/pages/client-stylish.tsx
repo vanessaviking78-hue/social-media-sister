@@ -13,6 +13,7 @@ import { usePresets, presetWebsite } from "@/lib/use-presets";
 import { authHeaders } from "@/lib/use-approval";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 import HookBankPicker from "@/components/hook-bank-picker";
+import { markHooksUsed } from "@/lib/hook-used";
 import { HOOKS, SEASON_WINDOWS, packStarts, isoDate, parseIso, hookTiming, hooksForRequest, fmtDate, type RequestHook } from "@/lib/hook-bank";
 
 const BASE = import.meta.env.BASE_URL;
@@ -69,6 +70,8 @@ export default function ClientStylish() {
   const [hookPick, setHookPick] = useState<string[]>([]);
   const [hookStart, setHookStart] = useState(() => isoDate(packStarts()[0]));
   const hooksRef = useRef<RequestHook[]>([]);
+  const hookPickRef = useRef<string[]>([]);
+  hookPickRef.current = hookPick;
   // The dates each seasonal post in the running pack must go out between.
   const [packWindows, setPackWindows] = useState<{ row: number; season: string; from?: Date; to?: Date }[]>([]);
   const slots =[...BASE_SLOTS, ...packHalloween.map(id => ({ id, label: `Halloween ${HALLOWEEN_IDEAS.findIndex(h => h.id === id) + 1}` }))];
@@ -280,6 +283,7 @@ export default function ClientStylish() {
       setTopCount(data.topPostsCount ?? 0);
       setTopSource(data.topPostsSource ?? "none");
       setCopyState("done");
+      if (hookKey) markHooksUsed(hookKey, hookPickRef.current);
     } catch (e) {
       setCopyError(e instanceof Error ? e.message : "The copy did not come back");
       setCopyState("error");
@@ -672,7 +676,7 @@ export default function ClientStylish() {
             {halloweenPick.length > 0 && <p className="text-xs text-muted-foreground">Each one gets its own Halloween photo and is written in the clinic's style, as posts 21 onwards.</p>}
           </div>
 
-          <HookBankPicker picked={hookPick} onChange={changeHooks} startDate={hookStart} onStartDate={changeHookStart} />
+          <HookBankPicker client={hookKey} picked={hookPick} onChange={changeHooks} startDate={hookStart} onStartDate={changeHookStart} />
 
           <div className="space-y-2">
             <Label className="text-sm font-medium">Writing style</Label>

@@ -12,6 +12,9 @@ import { usePresets } from "@/lib/use-presets";
 import Papa from "papaparse";
 import { readFileAsText, stripSlideCsvTitleRow } from "@/lib/csv-format";
 import JSZip from "jszip";
+import HookBankPicker from "@/components/hook-bank-picker";
+import { packStarts, isoDate, pickedHookPayload } from "@/lib/hook-bank";
+import { markHooksUsed } from "@/lib/hook-used";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const W = 1080;
@@ -211,6 +214,8 @@ export default function TweetMaker() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const profileFileRef = useRef<HTMLInputElement>(null);
   const csvFileRef = useRef<HTMLInputElement>(null);
+  const [hookPick, setHookPick] = useState<string[]>([]);
+  const [hookStart, setHookStart] = useState(() => isoDate(packStarts()[0]));
   const bgFileRef = useRef<HTMLInputElement>(null);
 
   const selectedPreset = presets.find((p) => p.name === clientName) ?? null;
@@ -974,6 +979,19 @@ export default function TweetMaker() {
             </div>
             <input ref={csvFileRef} type="file" accept=".csv" className="hidden"
               onChange={(e) => { if (e.target.files?.[0]) parseCsv(e.target.files[0]); e.target.value = ""; }} />
+            <HookBankPicker client={clientName} days={["Sunday", "Any day"]} picked={hookPick} onChange={setHookPick} startDate={hookStart} onStartDate={setHookStart} />
+            {hookPick.length > 0 && (
+              <button type="button" disabled={!rows.length} className="rounded-md border border-sky-500/60 bg-sky-500/10 px-3 py-2 text-sm disabled:opacity-40"
+                onClick={() => {
+                  const chosen = pickedHookPayload(hookPick);
+                  setRows(rows.map((r, i) => (chosen[i] ? { ...r, quote: chosen[i].text } : r)));
+                  markHooksUsed(clientName, hookPick.slice(0, rows.length));
+                  toast.success("Hooks put on the first tweets, in the order you picked them");
+                  setHookPick([]);
+                }}>
+                {rows.length ? `Use my ${hookPick.length} hook${hookPick.length === 1 ? "" : "s"} as the first tweet${hookPick.length === 1 ? "" : "s"}` : "Load the CSV first, then use the hooks as tweets"}
+              </button>
+            )}
           </section>
 
           <section className="space-y-2">
