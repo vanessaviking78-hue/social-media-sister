@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#08080d">
+<title>Content Day Checklist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700&family=Anton&display=swap" rel="stylesheet">
+<style>
+  html{color-scheme:dark} body{margin:0}
+  ::selection{background:rgba(255,36,153,.4)}
+  :root{
+    --bg:#08080d; --card:#111118; --ink:#ffffff; --muted:#b8b8c2; --line:#24242e;
+    --accent:#ff2499; --accent-ink:#ffffff; --accent-soft:#3b1030;
+    --done:#ff2499; --h:#2f6fb5; --v:#d81a80; --warn-bg:#111118; --warn-line:#3b1030;
+    --field:#111118;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  body{background:var(--bg);color:var(--ink);font-family:"League Spartan",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:18px;line-height:1.4;padding-inline:16px;padding-block:20px 130px}
+  .wrap{max-width:880px;margin-inline:auto}
+  h1{font-family:Anton,Impact,"Arial Narrow",sans-serif;font-weight:400;font-size:44px;line-height:1.05;letter-spacing:.02em;text-transform:uppercase;color:#fff;margin:0 0 6px;text-wrap:balance}
+  h1::after{content:"";display:block;width:64px;height:5px;background:var(--accent);margin-top:10px;border-radius:3px}
+  .sub{color:var(--muted);font-size:16px;margin:0 0 18px}
+  .setup{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+  @media(max-width:560px){.setup{grid-template-columns:1fr}}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+  input[type=text],input[type=date]{width:100%;font:inherit;font-size:18px;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--field);color:var(--ink);min-height:52px}
+  input:focus-visible,button:focus-visible,.shot:focus-visible,h2:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;align-items:center}
+  button{font:inherit;font-size:16px;padding:12px 16px;min-height:48px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+  button.solid{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+  .recent{display:flex;gap:8px;flex-wrap:wrap}
+  .recent button{min-height:40px;font-size:14px;padding:8px 12px}
+  #warn{background:var(--warn-bg);border:1px solid var(--warn-line);border-radius:10px;padding:12px 14px;font-size:15px;margin:16px 0 0}
+  .filters{display:flex;gap:8px;margin:18px 0 14px;flex-wrap:wrap}
+  .chip[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+  section{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden}
+  section>h2{margin:0;padding:16px;font-family:Anton,Impact,"Arial Narrow",sans-serif;font-weight:400;font-size:24px;line-height:1.1;letter-spacing:.03em;text-transform:uppercase;color:#fff;display:flex;justify-content:space-between;gap:10px;align-items:center;cursor:pointer}
+  section>h2 small{font-family:"League Spartan",-apple-system,sans-serif;text-transform:none;letter-spacing:0;font-weight:500;color:var(--muted);font-size:15px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  section.full>h2 small{color:var(--done)}
+  .shots{border-top:1px solid var(--line)}
+  section.closed .shots{display:none}
+  .shot{display:flex;align-items:center;gap:14px;padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none;-webkit-user-select:none}
+  .shot:last-child{border-bottom:0}
+  .box{flex:0 0 34px;height:34px;border:2px solid var(--muted);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--accent-ink);background:transparent}
+  .shot.done .box{background:var(--done);border-color:var(--done)}
+  .shot.done .txt{color:var(--muted);text-decoration:line-through}
+  .num{color:var(--muted);font-size:14px;width:24px;text-align:right;flex:0 0 24px;font-variant-numeric:tabular-nums}
+  .txt{flex:1}
+  .tag{display:inline-block;font-size:12px;font-weight:700;color:#fff;border-radius:6px;padding:2px 7px;margin-left:6px;vertical-align:1px}
+  .tag.H{background:var(--h)} .tag.V{background:var(--v)}
+  .tag{color:#fff}
+  .note{color:var(--muted);font-size:15px;margin:16px 0}
+  .bottom{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom, 0px));z-index:5}
+  .bottom-in{max-width:880px;margin-inline:auto}
+  .count{display:flex;justify-content:space-between;gap:10px;font-size:15px;margin-bottom:8px}
+  .count strong{font-variant-numeric:tabular-nums}
+  .bar{height:10px;background:var(--accent-soft);border-radius:8px;overflow:hidden}
+  .bar>div{height:100%;width:0;background:var(--done);transition:width .25s}
+  .hide{display:none!important}
+  .confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:15px}
+  @media (prefers-reduced-motion:reduce){.bar>div{transition:none}}
+
+  body.client .setup,body.client .row,body.client #warn,body.client .bottom,body.client .box,body.client .filters{display:none}
+  body.client #clientnote{display:block}
+  #clientnote{display:none;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-size:16px;margin:0 0 18px}
+  body.client section>h2 small,body.client .note{display:none}
+  #intro{display:none;background:var(--card);border:1px solid var(--accent);border-radius:12px;padding:20px 20px 18px;margin:0 0 16px}
+  body.client #intro{display:block}
+  #intro h2{margin:0 0 10px;font-family:Anton,Impact,"Arial Narrow",sans-serif;font-weight:400;font-size:28px;letter-spacing:.03em;text-transform:uppercase;color:var(--accent);line-height:1.1}
+  #intro p{margin:0 0 12px;font-size:19px;line-height:1.45;max-width:62ch}
+  #intro p:last-child{margin-bottom:0;color:var(--muted);font-size:17px}
+  body.client .shot{cursor:default}
+  body.client{padding-block-end:24px}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <h1 id="title">Content Day</h1>
+  <p class="sub" id="subline">Enter the clinic and the date, then tick each shot off as I film it. Ticks save on this iPad for each clinic and date.</p>
+
+  <div id="intro">
+    <h2>Right, before you panic</h2>
+    <p>Bring every outfit you own. Change as many times as you like, because nobody has ever regretted having too many options on the day. Get your make up on, do your hair, then leave the nerves at the door.</p>
+    <p>Relax. You are in good hands, and you are going to enjoy this. I have watched plenty of people walk in swearing they hate being on camera and leave asking when I am back.</p>
+    <p>Want this every month, minus the outfit crisis? Ask me about keeping the content coming and I will sort it while you are mid change.</p>
+  </div>
+
+  <div id="clientnote">On the day I need signed consent from anyone appearing on camera. I only film needles, injectables or before and afters if you have approved them and the wording has been checked against the CAP Code. Some shots may change on the day to suit your space and your team.</div>
+
+  <div class="setup">
+    <div><label for="clinic">Clinic name</label><input id="clinic" type="text" placeholder="e.g. Church Street Clinic" autocomplete="off" enterkeyhint="done"></div>
+    <div><label for="date">Date</label><input id="date" type="date"></div>
+  </div>
+  <div class="row">
+    <div class="recent" id="recent"></div>
+  </div>
+  <div class="row">
+    <button id="reset" type="button">Clear ticks</button>
+    <span class="confirm hide" id="confirmBox">Clear every tick for this clinic and date?
+      <button id="yes" class="solid" type="button">Yes, clear</button>
+      <button id="no" type="button">Keep them</button>
+    </span>
+  </div>
+  <div id="warn">Before I film: signed consent from anyone on camera. No needles, injectables or before and afters unless the clinic has approved them and the wording has been checked against the CAP Code.</div>
+
+  <div class="filters" role="group" aria-label="Filter shots">
+    <button class="chip" type="button" data-f="all" aria-pressed="true">All</button>
+    <button class="chip" type="button" data-f="todo" aria-pressed="false">Still to do</button>
+    <button class="chip" type="button" data-f="H" aria-pressed="false">Horizontal (R50)</button>
+    <button class="chip" type="button" data-f="V" aria-pressed="false">Vertical (iPhone)</button>
+  </div>
+
+  <div id="list"></div>
+  <p class="note"><span class="tag H">H</span> horizontal on the R50 &nbsp; <span class="tag V">V</span> vertical on the iPhone. Clap at the start of every talking head take so the two cameras sync.</p>
+</div>
+
+<div class="bottom"><div class="bottom-in">
+  <div class="count"><span id="cname">Add a clinic name to begin</span><strong id="ctext">0 of 80</strong></div>
+  <div class="bar"><div id="fill"></div></div>
+</div></div>
+
+<script>
+const DATA = [
+ ["Arrival and exterior",[
+  ["Front door and signage, wide","H"],["Signage close up","V"],["Someone opening the door and welcoming the camera","V"],
+  ["The street approach, walking towards the clinic","V"],["Window display or door details","H"],["The open sign or appointment book being flipped","V"]]],
+ ["Reception and interiors",[
+  ["Reception desk, wide","H"],["Reception desk, vertical for stories","V"],["Waiting area, empty and tidy","H"],
+  ["Sofa or chairs with a hot drink and magazines","V"],["Corridor leading to the treatment room","H"],["The treatment room door opening","V"],
+  ["Treatment room, wide","H"],["Treatment room, close detail of the couch and lighting","V"]]],
+ ["Team portraits",[
+  ["Owner or lead clinician, posed and smiling","H"],["Same person, laughing candid","H"],["Same person, vertical portrait","V"],
+  ["Each team member, posed portrait","H"],["Each team member, laughing candid","V"],["Team in a line, walking towards the camera","H"],
+  ["Team huddle, heads together","H"],["Team with mugs, chatting","V"],["Owner and receptionist at the desk","H"],["Clinician in the treatment room in uniform","V"]]],
+ ["Talking heads and podcast style",[
+  ["Introduce yourself: name, role, how long in practice","HV"],["The question I hear most","HV"],["The myth I would bin tomorrow","HV"],
+  ["What I wish everyone knew before their first appointment","HV"],["The thing that surprises people","HV"],["What a consultation with me is really like","HV"],
+  ["Who this is for and who it isn't","HV"],["The mistake I see most","HV"],["My honest view on trends","HV"],
+  ["A 15 second hook line to camera, three takes","V"],["Sign off: book a consultation and come and say hello","HV"],["Reaction shots: nodding, listening, smiling","H"]]],
+ ["Podcast",[
+  ["Podcast set, wide, both chairs and mics in frame","H"],["Mic and headphones, close up","V"],["Host and guest sitting down, the first hello","H"],
+  ["Host introducing the episode to camera","HV"],["Guest introducing themselves","HV"],["Host asking the opening question, guest reacting","H"],
+  ["Guest mid answer, talking with their hands","H"],["Host listening, nodding and reacting","V"],["A proper laugh between host and guest","HV"],
+  ["Over the shoulder, host to guest","H"],["Guest's best one liner, repeated for clean audio","V"],["Host sign off: come and say hello","HV"]]],
+ ["Treatment room and equipment",[
+  ["Couch being dressed with fresh paper","V"],["Trolley laid out neatly, no sharps on show","H"],["Equipment being switched on, screen glowing","V"],
+  ["Machine or device, hero shot","H"],["Hands wiping down the surfaces","V"],["Gloves going on","V"],["Lamp or light being angled","H"],
+  ["Certificates and qualifications on the wall","H"],["Consultation notes and pen, clean and tidy","V"],["Tablet or consent form being filled in","V"],
+  ["Handwash at the sink","V"],["Room reset ready for the next person","H"]]],
+ ["Hands and process",[
+  ["Skin analysis with a device, no results shown","V"],["Cleanser being applied by a gloved hand","V"],["Facial massage or prep, close up","V"],
+  ["Mask or product being applied with a brush","V"],["Skincare being pumped or squeezed onto a palm","V"],["Clinician explaining something with hand gestures","H"],
+  ["Clinician and person in consultation, over the shoulder","H"],["Mirror moment: person looking at themselves","V"],["Aftercare sheet being handed over","V"],["The goodbye wave at the door","V"]]],
+ ["Products and retail",[
+  ["Product shelf, wide","H"],["Each hero product, styled and lit","H"],["Products in hand, label facing camera","V"],["Texture shot: cream, gel or serum swatch","V"],
+  ["Product being lined up on the vanity","V"],["Gift or voucher display","H"],["Price list or menu board","V"],["Packaging and bag being handed across the desk","V"]]],
+ ["Patient moments, with consent only",[
+  ["Person arriving and being greeted","V"],["Person chatting with the clinician, face turned away if not consented","H"],["Person laughing in the chair","V"],
+  ["Person leaving with a smile, from behind if not consented","V"],["Testimonial to camera, in their own words","HV"],["Hand-written thank you card or review on screen","V"]]],
+ ["Personality and behind the scenes",[
+  ["The kettle going on","V"],["Biscuits or cake on the counter","V"],["Clinic pet, plant or quirky object","V"],["Team having a laugh between appointments","V"],
+  ["The clinic playlist or radio, hand on the volume","V"],["Setting up my lights and backdrop, time lapse","V"],["A blooper: someone flubbing a line and laughing","V"],["The end of the day: lights off, door locked","HV"]]],
+ ["Reels: B roll, 20 clips",[
+  ["Kettle boiling and mugs lined up","V"],
+  ["The clinic door handle turning as I open up","V"],
+  ["Hands sanitising, close up","V"],
+  ["Fresh paper rolling down the couch","V"],
+  ["Treatment room lights clicking on","V"],
+  ["Skincare bottles lined up, labels facing out","V"],
+  ["Cream swirled on the back of a hand","V"],
+  ["Pen writing on consultation notes, no names showing","V"],
+  ["Appointment book pages flicking over","V"],
+  ["Feet walking down the corridor, low angle","V"],
+  ["Diffuser steam drifting through a lit room","V"],
+  ["Mirror reflection, blurred, walking past","V"],
+  ["Plants and flowers getting a quick tidy","V"],
+  ["Trolley laid out neatly, nothing sharp in shot","V"],
+  ["Gloves snapping on","V"],
+  ["Towels folded and stacked","V"],
+  ["Clinic sign catching the light","V"],
+  ["Coffee being poured, slow","V"],
+  ["Hands typing bookings, no client details on screen","V"],
+  ["Lights off and door locked at the end of the day","V"]]],
+ ["Reels: 60 seconds, consultations",[
+  ["What actually happens in a consultation, minus the mystery","V"],
+  ["Why I ask a hundred questions before I touch anything","V"],
+  ["The forms you rolled your eyes at and why they matter","V"],
+  ["What to do before you turn up (yes, it matters)","V"],
+  ["You do not have to book anything on the day. Genuinely.","V"],
+  ["The question I wish more people asked me","V"],
+  ["Turning up with a photo of someone else's face: let's talk","V"],
+  ["How long a consultation really takes and why I refuse to rush it","V"],
+  ["What I will say no to, and why you will thank me","V"],
+  ["Nervous about your first appointment? The honest walk through","V"]]],
+ ["Reels: 60 seconds, myths",[
+  ["The myth I would bin tomorrow","V"],
+  ["It will look obvious: let's talk about that","V"],
+  ["I am too young, I am too old: the age myth","V"],
+  ["Cheaper is the same thing: it isn't","V"],
+  ["It hurts too much: what I would tell a nervous friend","V"],
+  ["One session and I am sorted: no, and here is why","V"],
+  ["My skin is too sensitive for that: is it though?","V"],
+  ["The thing Instagram lied to you about","V"],
+  ["Everyone can tell: a gentle reality check","V"],
+  ["That's only for celebrities: no, it's for people with Tuesdays","V"]]],
+ ["Reels: 60 seconds, trust and safety",[
+  ["How to spot a proper clinic in 60 seconds","V"],
+  ["Questions to ask before you book anywhere","V"],
+  ["Why I check your history before we talk about treatment","V"],
+  ["What qualifications should be on the wall","V"],
+  ["Why I don't do prices in a DM","V"],
+  ["Why I turn people away, and why you should want that","V"],
+  ["What consent really means and why we do it properly","V"],
+  ["The red flags I would run from","V"],
+  ["What to do if something doesn't feel right afterwards","V"],
+  ["Why the clinic looks boring clean, and why that's the point","V"]]],
+ ["Reels: 60 seconds, aftercare",[
+  ["What to do (and not do) in the 24 hours after","V"],
+  ["The aftercare sheet you binned: go and get it back","V"],
+  ["Why results take time and I refuse to fake it","V"],
+  ["What normal looks like afterwards and when to ring me","V"],
+  ["Why you can't skip the follow up","V"],
+  ["Sun, sofa and skin: what I would do differently","V"],
+  ["Make up after a treatment: yes or no?","V"],
+  ["Why I will never promise you a result","V"],
+  ["What downtime really means, with honest examples","V"],
+  ["The one aftercare rule everyone breaks","V"]]],
+ ["Reels: 60 seconds, pricing and value",[
+  ["Why I'm not the cheapest and I'm fine with that","V"],
+  ["What you are actually paying for","V"],
+  ["How to budget for skin without selling a kidney","V"],
+  ["The cost of getting it wrong twice","V"],
+  ["Packages and plans: what I would actually recommend","V"],
+  ["Why a free consultation isn't always a bargain","V"],
+  ["What a good value clinic looks like","V"],
+  ["Why I don't do flash sales at 2am","V"],
+  ["How I decide if a treatment plan makes sense for you","V"],
+  ["Is it worth it? An honest answer, not a sales pitch","V"]]],
+ ["Reels: 60 seconds, behind the scenes",[
+  ["How I ended up doing this","V"],
+  ["A typical day, including lunch at 4pm","V"],
+  ["Meet the team: one sarcastic fact each","V"],
+  ["The most ridiculous question I've been asked (kindly)","V"],
+  ["What I would tell my younger self","V"],
+  ["The bit of my job nobody sees","V"],
+  ["Why I do this when I could do anything else","V"],
+  ["What we do when the day goes wrong","V"],
+  ["The thing I'm most proud of in this clinic","V"],
+  ["What I do on a day off (spoiler: not skin)","V"]]],
+ ["Reels: 60 seconds, skincare at home",[
+  ["The only skincare routine I would actually recommend","V"],
+  ["Sunscreen: the boring answer that works","V"],
+  ["The products you don't need","V"],
+  ["Why more products doesn't mean better skin","V"],
+  ["What I put on my own face","V"],
+  ["Cleanser: yes, there is a wrong way to use it","V"],
+  ["Reading a label without a degree","V"],
+  ["The habit wrecking your skin, and it's free to stop","V"],
+  ["How to shop for skincare without being sold to","V"],
+  ["What to do when your routine stops working","V"]]],
+ ["Reels: 60 seconds, confidence and stories",[
+  ["Why people really come in (it's rarely the reason they say)","V"],
+  ["Looking in the mirror and recognising yourself again","V"],
+  ["Someone who nearly cancelled and what happened (with their say so)","V"],
+  ["The compliment that means more than you look younger","V"],
+  ["Why looking well isn't vanity","V"],
+  ["The thing people say at the door on the way out","V"],
+  ["Feeling awkward about your skin: you're not the only one","V"],
+  ["What I say to someone who is embarrassed to ask","V"],
+  ["Wanting a change versus wanting to feel like yourself","V"],
+  ["Come in and say hello: what happens when you book a chat","V"]]]
+];
+
+const $ = id => document.getElementById(id);
+const store = {
+  get(k){ try{ return localStorage.getItem(k) }catch(e){ return null } },
+  set(k,v){ try{ localStorage.setItem(k,v) }catch(e){} }
+};
+let state = {}, closed = {}, filter = "all";
+const memory = {}; // fallback if storage is blocked
+
+function key(){
+  const c = $("clinic").value.trim().toLowerCase();
+  return c ? "cd:" + c + "|" + $("date").value : null;
+}
+function readJSON(k, fallback){
+  try{ const v = store.get(k); return v ? JSON.parse(v) : (memory[k] ?? fallback) }catch(e){ return memory[k] ?? fallback }
+}
+function writeJSON(k, v){ memory[k] = v; store.set(k, JSON.stringify(v)); }
+
+function load(){ const k = key(); state = k ? readJSON(k, {}) : {}; }
+function save(){
+  const k = key(); if(!k) return;
+  writeJSON(k, state);
+  let idx = readJSON("cd:index", []);
+  const entry = {k, clinic:$("clinic").value.trim(), date:$("date").value};
+  idx = idx.filter(x => x.k !== k); idx.unshift(entry); idx = idx.slice(0,12);
+  writeJSON("cd:index", idx);
+  writeJSON("cd:last", entry);
+  renderRecent();
+}
+function renderRecent(){
+  const idx = readJSON("cd:index", []);
+  const box = $("recent");
+  box.innerHTML = "";
+  idx.slice(0,5).forEach(x => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = x.clinic + (x.date ? " " + x.date.split("-").reverse().join("/") : "");
+    b.onclick = () => { $("clinic").value = x.clinic; $("date").value = x.date; load(); render(); };
+    box.appendChild(b);
+  });
+}
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;") }
+function render(){
+  let n = 0, done = 0, html = "";
+  DATA.forEach(([title, shots], si) => {
+    let sd = 0;
+    const items = shots.map(([t, f]) => {
+      n++;
+      const id = "s" + n, isDone = !!state[id];
+      if(isDone){ done++; sd++; }
+      const show = filter==="all" || (filter==="todo" && !isDone) || (filter!=="todo" && f.includes(filter));
+      const tags = f.split("").map(x=>`<span class="tag ${x}">${x}</span>`).join("");
+      return `<div class="shot ${isDone?"done":""} ${show?"":"hide"}" data-id="${id}" role="checkbox" aria-checked="${isDone}" tabindex="0">
+        <span class="num">${n}</span><span class="box">${isDone?"&#10003;":""}</span>
+        <span class="txt">${esc(t)}${tags}</span></div>`;
+    }).join("");
+    html += `<section class="${closed[si]?"closed":""} ${sd===shots.length?"full":""}" data-s="${si}">
+      <h2 tabindex="0">${title}<small>${sd} of ${shots.length}</small></h2><div class="shots">${items}</div></section>`;
+  });
+  $("list").innerHTML = html;
+  $("ctext").textContent = done + " of " + n;
+  document.querySelector('.chip[data-f="all"]').textContent = "All " + n;
+  $("fill").style.width = (done/n*100) + "%";
+  const c = $("clinic").value.trim();
+  $("cname").textContent = c ? (done===n ? c + ": all shots done" : c) : "Add a clinic name to begin";
+}
+function toggle(shot){
+  if(window.CLIENT_VIEW) return;
+  if(!key()){ $("clinic").focus(); return; }
+  const id = shot.dataset.id;
+  if(state[id]) delete state[id]; else state[id] = 1;
+  save();
+  const y = window.scrollY; render(); window.scrollTo(0, y);
+}
+$("list").addEventListener("click", e => {
+  const shot = e.target.closest(".shot");
+  if(shot){ toggle(shot); return; }
+  const h = e.target.closest("h2");
+  if(h){ const s = h.parentElement.dataset.s; closed[s] = !closed[s]; render(); }
+});
+$("list").addEventListener("keydown", e => {
+  if(e.key !== "Enter" && e.key !== " ") return;
+  const shot = e.target.closest(".shot"), h = e.target.closest("h2");
+  if(shot){ e.preventDefault(); toggle(shot); }
+  else if(h){ e.preventDefault(); h.click(); }
+});
+document.querySelectorAll(".chip").forEach(b => b.onclick = () => {
+  document.querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed","false"));
+  b.setAttribute("aria-pressed","true"); filter = b.dataset.f; render();
+});
+["clinic","date"].forEach(id => $(id).addEventListener("input", () => {
+  load(); render();
+  const k = key(); if(k) writeJSON("cd:last", {k, clinic:$("clinic").value.trim(), date:$("date").value});
+}));
+$("reset").onclick = () => { if(key()) $("confirmBox").classList.remove("hide"); };
+$("no").onclick = () => $("confirmBox").classList.add("hide");
+$("yes").onclick = () => { state = {}; save(); render(); $("confirmBox").classList.add("hide"); };
+
+
+(function(){
+  const q = new URLSearchParams(location.search);
+  if(q.get("view") === "client"){
+    document.body.classList.add("client");
+    const c = (q.get("clinic") || "").trim();
+    $("title").textContent = c ? "Your content day at " + c : "Your content day";
+    $("subline").textContent = "Here is everything I plan to film with you. H means I film it horizontally on the camera and V means vertically on my phone.";
+    document.title = "Your content day";
+    window.CLIENT_VIEW = true;
+  }
+})();
+
+(function(){
+  const t = new Date(), p = n => String(n).padStart(2,"0");
+  $("date").value = t.getFullYear()+"-"+p(t.getMonth()+1)+"-"+p(t.getDate());
+  const last = readJSON("cd:last", null);
+  if(last){ $("clinic").value = last.clinic; if(last.date) $("date").value = last.date; }
+  renderRecent(); load(); render();
+})();
+</script>
+
+</body>
+</html>
