@@ -78,22 +78,41 @@ router.post("/stylish-reel", upload.array("slides", 12), async (req, res) => {
 });
 
 // Stores a finished MP4 made in the browser (Magazine Flip) so it can be scheduled as a reel.
+// The browser's own MP4 has no audio track and an odd encoder profile, and Instagram can refuse it
+// ("Media upload has failed", error 2207076). So every flip is re-encoded here into a clean
+// 1080 x 1440 H.264 MP4 (yuv420p, 30fps, High profile) with a silent AAC track, then stored.
 const uploadVideo = multer({ storage: multer.memoryStorage(), limits: { fileSize: 60 * 1024 * 1024, files: 1 } });
 router.post("/stylish-reel/upload", uploadVideo.single("video"), async (req, res) => {
   const f = req.file;
   const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
   if (!f) { res.status(400).json({ error: "No video received" }); return; }
   if (!bucketId) { res.status(500).json({ error: "Object storage not configured" }); return; }
+  const dir = await mkdtemp(join(tmpdir(), "flip-upload-"));
   try {
+    const inPath = join(dir, "in.mp4");
+    const outPath = join(dir, "out.mp4");
+    await writeFile(inPath, f.buffer);
+    await runFfmpeg([
+      "-i", inPath,
+      "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+      "-vf", "scale=1080:1440:force_original_aspect_ratio=decrease,pad=1080:1440:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30,format=yuv420p",
+      "-map", "0:v:0", "-map", "1:a:0",
+      "-c:v", "libx264", "-profile:v", "high", "-level", "4.1", "-preset", "medium", "-crf", "18",
+      "-pix_fmt", "yuv420p", "-r", "30", "-movflags", "+faststart",
+      "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-shortest", "-y", outPath,
+    ]);
+    const buf = await readFile(outPath);
     const objectPath = `stylish-reels/${uuidv4()}.mp4`;
-    await objectStorageClient.bucket(bucketId).file(objectPath).save(f.buffer, {
+    await objectStorageClient.bucket(bucketId).file(objectPath).save(buf, {
       contentType: "video/mp4",
       metadata: { cacheControl: "public, max-age=31536000" },
     });
     res.json({ videoUrl: `/api/media/${objectPath}` });
   } catch (err) {
     logger.error({ err }, "stylish-reel upload failed");
-    res.status(500).json({ error: "Could not store the video" });
+    res.status(500).json({ error: "Could not prepare the video for Instagram" });
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
   }
 });
 
