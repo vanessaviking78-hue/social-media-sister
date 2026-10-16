@@ -17,6 +17,7 @@ import Coffee from "@/pages/coffee";
 import FreeCall from "@/pages/freecall";
 import DailyFocus from "@/pages/daily-focus";
 import FourWeeks from "@/pages/four-weeks";
+import NinetyDays from "@/pages/ninety-days";
 import YetToPost from "@/pages/yet-to-post";
 import Hub from "@/pages/hub";
 import Home from "@/pages/home";
@@ -150,6 +151,7 @@ function ProtectedRouter() {
       <Route path="/monthstart" component={MonthStart} />
       <Route path="/daily-focus" component={DailyFocus} />
       <Route path="/four-weeks" component={FourWeeks} />
+      <Route path="/ninety-days" component={NinetyDays} />
       <Route path="/yet-to-post" component={YetToPost} />
       <Route path="/carousel" component={Home} />
       <Route path="/single-image" component={SingleImage} />
