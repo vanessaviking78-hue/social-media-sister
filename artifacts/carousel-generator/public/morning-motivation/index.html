@@ -1,0 +1,983 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Morning Motivation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@300;400;500;600;700;800&family=Caveat:wght@700&family=Fredoka:wght@400;500;600;700&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#08080D;--card:#111118;--border:#1F1F28;--accent:#1A1A23;--muted:#B2B2BD;--pink:#FF2499;--pink-d:#F00080;--pink-l:#FF42A7}
+*{box-sizing:border-box;border-color:var(--border)}
+body{margin:0;font-family:'League Spartan',system-ui,sans-serif;background:var(--bg);color:#fff;-webkit-font-smoothing:antialiased}
+::selection{background:rgba(255,36,153,.3)}
+header{padding:16px 24px;border-bottom:1px solid rgba(31,31,40,.6);display:flex;align-items:center;gap:14px}
+header a{color:var(--muted);text-decoration:none;font-size:22px;line-height:1;transition:color .2s}
+header a:hover{color:#fff}
+h1{margin:0;font-size:18px;font-weight:700;line-height:1}
+.sub{margin:4px 0 0;font-size:12px;color:var(--muted)}
+.wrap{display:flex;flex-wrap:wrap;gap:32px;padding:32px 24px 70px;align-items:flex-start;max-width:1152px;margin:0 auto}
+.panel{flex:1 1 380px;max-width:640px}
+.stage{flex:1 1 320px;position:sticky;top:16px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+.card h2{margin:0 0 12px;font-size:16px;font-weight:600}
+.scenes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.scenes input{position:absolute;opacity:0;pointer-events:none}
+.scenes label{display:block;text-align:center;padding:12px 6px;border-radius:12px;border:2px solid var(--border);cursor:pointer;font-weight:500;line-height:1.25;transition:border-color .2s}
+.scenes label:hover{border-color:#3a3a48}
+.scenes label small{display:block;color:var(--muted);font-weight:400;font-size:12px}
+.scenes input:checked+label{border-color:var(--pink);background:rgba(255,36,153,.1)}
+textarea,select,input[type=text]{width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--accent);color:#fff}
+textarea:focus,select:focus,input[type=text]:focus{outline:2px solid rgba(255,36,153,.55);outline-offset:0}
+textarea{min-height:96px;resize:vertical}
+input::placeholder,textarea::placeholder{color:#7d7d8a}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.row>*{flex:0 0 auto}
+button{font:inherit;font-weight:600;font-size:14px;border:0;border-radius:10px;padding:10px 18px;cursor:pointer;background:var(--pink);color:#fff;transition:filter .2s}
+button:hover{filter:brightness(1.1)}
+button.alt{background:var(--border);color:#fff}
+button.shimmer{background:linear-gradient(90deg,#F00080,#FF42A7,#FF5CD6,#F00080);background-size:200% auto;animation:shimmer 3s linear infinite}
+button:disabled{opacity:.5;cursor:wait;animation:none}
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+.count{font-size:12px;color:var(--muted);margin-left:auto}
+.sw{display:flex;gap:8px;flex-wrap:wrap}
+.sw button{width:42px;height:42px;padding:0;border-radius:50%;border:3px solid var(--card);box-shadow:0 0 0 2px #3a3a48}
+.sw button:hover{box-shadow:0 0 0 2px var(--pink);filter:none}
+.cols{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 14px}
+.cols label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:500}
+input[type=color]{width:100%;height:38px;border:1px solid var(--border);border-radius:10px;padding:2px;background:var(--accent)}
+input[type=file]{font:inherit;font-size:13px;color:var(--muted)}
+input[type=file]::file-selector-button{font:inherit;font-weight:600;font-size:13px;border:0;border-radius:8px;padding:8px 14px;margin-right:10px;background:var(--border);color:#fff;cursor:pointer}
+input[type=checkbox],input[type=range]{accent-color:var(--pink)}
+input[type=range]{width:100%}
+.frame{position:relative;height:min(76vh,880px);aspect-ratio:9/16;background:#000;border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:0 16px 32px -4px rgba(0,0,0,.6)}
+canvas{width:100%;height:100%;display:block}
+.guides{position:absolute;inset:0;pointer-events:none;display:none}
+.guides.on{display:block}
+.guides i{position:absolute;left:0;right:0;background:rgba(255,36,153,.2);border:1px dashed rgba(255,36,153,.85)}
+.guides .top{top:0;height:13%}
+.guides .bot{bottom:0;height:18%}
+.note{font-size:12px;color:var(--muted);margin:8px 0 0;line-height:1.5}
+.btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.chk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+</style>
+</head>
+<body>
+<header>
+  <a href="/hub" aria-label="Back to the hub">&larr;</a>
+  <div>
+    <h1>Morning Motivation</h1>
+    <p class="sub">A little 5 to 10 second reel to start someone's day. Pick a scene, pick a message, add your logo, download.</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="panel">
+
+    <div class="card">
+      <h2>1. Pick your scene</h2>
+      <div class="scenes">
+        <input type="radio" name="scene" id="sc1" value="toast" checked><label for="sc1">Toast<small>5 seconds</small></label>
+        <input type="radio" name="scene" id="sc2" value="type"><label for="sc2">Typewriter<small>7 seconds</small></label>
+        <input type="radio" name="scene" id="sc3" value="skate"><label for="sc3">Roller boots<small>9 seconds</small></label>
+      </div>
+      <div id="toastOpts" style="margin-top:14px">
+        <p class="note" style="margin:0 0 8px">Toast look</p>
+        <div class="scenes" style="grid-template-columns:repeat(2,1fr)">
+          <input type="radio" name="tstyle" id="ts1" value="photo" checked><label for="ts1">Real photo<small>Looks like real life</small></label>
+          <input type="radio" name="tstyle" id="ts2" value="draw"><label for="ts2">Illustrated<small>Cartoon toaster</small></label>
+        </div>
+        <div id="photoOpts" style="margin-top:12px">
+          <div class="row" style="margin-top:0">
+            <button id="genPhoto" class="alt" type="button">Make me a toast photo</button>
+            <input type="file" id="photoFile" accept="image/*">
+          </div>
+          <p class="note" id="photoStatus">Use your own photo of plain toast, or let me make one. Until a photo is added you will see the illustrated toast.</p>
+          <div class="cols" style="margin-top:10px">
+            <label>Words up and down<input type="range" id="pY" min="15" max="85" value="48"></label>
+            <label>Words left and right<input type="range" id="pX" min="15" max="85" value="50"></label>
+            <label>Words size<input type="range" id="pS" min="40" max="180" value="100"></label>
+            <label>Tilt<input type="range" id="pR" min="-45" max="45" value="0"></label>
+          </div>
+          <div class="row"><button id="findToast" class="alt" type="button">Find the toast for me</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2. Choose your message</h2>
+      <label class="note" for="town" style="display:block;margin-bottom:6px">Town or area for the local messages (fills in when you pick a client)</label>
+      <input type="text" id="town" placeholder="e.g. Chester" style="margin-bottom:10px">
+      <select id="bank"></select>
+      <div class="row">
+        <button class="alt" id="shuffle" type="button">Surprise me</button>
+        <span class="count" id="count"></span>
+      </div>
+      <p class="note" style="margin-top:12px">Or write your own below (keep it short and punchy, 90 characters is the sweet spot).</p>
+      <textarea id="msg" maxlength="120"></textarea>
+    </div>
+
+    <div class="card">
+      <h2>3. Make it yours</h2>
+      <div class="sw" id="palettes"></div>
+      <div class="cols" style="margin-top:12px">
+        <label>Background<input type="color" id="cBg"></label>
+        <label>Main colour<input type="color" id="cAccent"></label>
+        <label>Pop colour<input type="color" id="cPop"></label>
+        <label>Text and outlines<input type="color" id="cInk"></label>
+        <label>Skin tone (skater)
+          <select id="skin">
+            <option value="#F3CDB0">Light</option>
+            <option value="#E0A97D" selected>Medium</option>
+            <option value="#C68B5E">Tan</option>
+            <option value="#8D5A3B">Deep</option>
+          </select>
+        </label>
+        <label>Hair (skater)
+          <select id="hair">
+            <option value="#3B2416" selected>Dark brown</option>
+            <option value="#1E1A1A">Black</option>
+            <option value="#9B3E22">Auburn</option>
+            <option value="#D9B05B">Blonde</option>
+            <option value="#C9C9CF">Silver</option>
+          </select>
+        </label>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <label class="chk"><input type="checkbox" id="showLogo" checked> Show logo</label>
+        <input type="file" id="logo" accept="image/*">
+      </div>
+      <div class="row">
+        <p class="note" id="logoNote" style="margin:8px 0 0">The client's own logo loads when you choose them in step 4. You can also upload one here.</p>
+        <input type="text" id="handle" placeholder="@yourclinic (optional, sits under the logo)">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4. Client and caption</h2>
+      <select id="client"><option value="">Loading your clients...</option></select>
+      <p class="note" id="clientNote" style="margin-top:6px"></p>
+      <div class="row">
+        <input type="text" id="replyWord" placeholder="Reply word (optional, for example GLOW)" style="max-width:300px">
+      </div>
+      <div class="row">
+        <button id="capBtn" type="button">Write my caption</button>
+        <span class="count" id="capStatus"></span>
+      </div>
+      <textarea id="caption" style="margin-top:12px;min-height:160px" placeholder="Your caption appears here. You can edit it before you schedule."></textarea>
+      <div class="row"><button class="alt" id="capCopy" type="button">Copy caption</button></div>
+    </div>
+
+    <div class="card">
+      <h2>5. Schedule</h2>
+      <div class="scenes">
+        <input type="radio" name="ptype" id="pt1" value="reel" checked><label for="pt1">Reel<small>Goes to the feed</small></label>
+        <input type="radio" name="ptype" id="pt2" value="trial"><label for="pt2">Trial reel<small>Non followers first</small></label>
+        <input type="radio" name="ptype" id="pt3" value="story"><label for="pt3">Story<small>Still of the last frame</small></label>
+      </div>
+      <div class="row">
+        <label style="font-size:12px;font-weight:500;display:flex;flex-direction:column;gap:4px">Date and time
+          <input type="datetime-local" id="when" style="font:inherit;font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--accent);color:#fff;color-scheme:dark">
+        </label>
+        <label class="chk" id="fbRow"><input type="checkbox" id="fb"> Also post the reel to Facebook</label>
+      </div>
+      <div class="row"><button id="sched" class="shimmer" type="button">Schedule it</button></div>
+      <p class="note" id="schedNote">The reel is recorded, uploaded and booked for you. Stories do not carry a caption, so none is sent.</p>
+    </div>
+
+    <div class="card">
+      <h2>6. Download</h2>
+      <div class="btns" style="justify-content:flex-start">
+        <button id="dl" class="shimmer" type="button">Download video</button>
+        <button class="alt" id="cover" type="button">Download cover image</button>
+      </div>
+      <p class="note" id="fmtNote">The video is silent, so you can add trending audio in Instagram. It records in real time, so it takes as long as the reel lasts.</p>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="frame">
+      <canvas id="cv" width="1080" height="1920"></canvas>
+      <div class="guides" id="guides"><i class="top"></i><i class="bot"></i></div>
+    </div>
+    <div class="btns">
+      <button class="alt" id="replay" type="button">Replay</button>
+      <label class="chk"><input type="checkbox" id="safe"> Show Instagram safe zones</label>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const W=1080,H=1920;
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const F_TOAST="'Caveat','Segoe Script',cursive";
+const F_TYPE="'Special Elite','Courier New',monospace";
+const F_SKATE="'Fredoka','Arial Rounded MT Bold',sans-serif";
+const DUR={toast:5,type:7,skate:9};
+
+const LOCAL=[
+"If you are in {town} and want a friendly, welcoming clinic... hi, I'm here.",
+"Hello {town}. Looking for a clinic that feels like a hug? I'm here.",
+"If you are in {town} and fancy a kind, honest chat about your skin, hi, I'm here.",
+"{town}, if you have been meaning to book a consultation, consider this your nudge. I'm here.",
+"If you are in {town} and you want a clinic that remembers your name, hi. I'm here.",
+"Local to {town}? Come for the consultation. Stay for the biscuits. I'm here.",
+"If you are in {town} and nervous about booking, hi, I'm here. Kettle's on.",
+"{town} lovelies, a friendly face and an honest opinion are waiting for you. I'm here.",
+"If you are in {town} and want to feel like yourself again, hi, I'm here.",
+"Searching for a clinic near {town}? Hi. I'm here, and I'm lovely.",
+"If you are in {town} and have never had a facial, hi, I'm here. Start gently.",
+"{town}, you deserve a clinic that listens. Hi, I'm here.",
+"If you are in {town} and want a no judgement consultation, hi, I'm here.",
+"Good morning {town}. Book the thing you keep thinking about. I'm here.",
+"If you are in {town} and the lips have been on your mind, hi, I'm here.",
+"If you are in {town} and want a friendly, welcoming clinic, I'm here. Come and say hi."
+];
+const MESSAGES=[
+"Life is short. Get the lips.",
+"Life is short. Book the facial.",
+"Wear the red lipstick. Then book the lips.",
+"Good morning, gorgeous. Your SPF is waiting by the kettle.",
+"Pout up, buttercup. It's a brand new day.",
+"Today's plan: drink the water, wear the SPF, book the glow up.",
+"Your skin barrier called. She would like a bit of kindness.",
+"Book the appointment you keep talking about. Your future self is already smiling.",
+"Rise and glow. The coffee can wait five minutes.",
+"Treat yourself like the luxury product you are.",
+"Self care goes in the diary. In pen.",
+"Be the woman who books the facial before she needs the facial.",
+"Glow first, coffee second. Okay, coffee first.",
+"A little glow goes a long way. A lot of glow goes even further.",
+"Lips, lashes and a long lunch. Priorities sorted.",
+"Your reflection says good morning. Say it back with a smile.",
+"Hydrate your skin and your soul. The water bottle is right there.",
+"Make your skin the main character today.",
+"Treat the skin you're in like the VIP it is.",
+"Ageing is a privilege. Looking fabulous while doing it is a hobby.",
+"You are the special occasion. Book the treatment.",
+"Cleanse. Tone. Moisturise. Conquer.",
+"Skincare is the one routine worth keeping.",
+"Pamper first, panic later.",
+"Fancy a little lip gloss and a lot of confidence?",
+"Nothing wrong with a facial on a Tuesday.",
+"Today I choose glowy skin and zero apologies.",
+"Go on, book the glow up. I'll wait.",
+"Moisturiser is a love language. Say it to your face.",
+"Be soft with your skin and fierce with your diary.",
+"You wake up, you glow up. Simple as that.",
+"Slap on the SPF and take on the world.",
+"Confidence looks gorgeous on you. So does a good facial.",
+"A fresh face and a fresh start. Monday approves.",
+"Lip balm in one hand, big plans in the other.",
+"Get the lips. Get the glow. Get the compliments you pretend not to love."
+];
+
+const PALETTES=[
+ {n:'Sunshine',bg:'#FBE3C8',accent:'#2E9C8E',ink:'#3A2A22',pop:'#F4B63F'},
+ {n:'Blush',bg:'#FBDDE0',accent:'#B0386B',ink:'#3B1F2B',pop:'#F6C453'},
+ {n:'Sage',bg:'#E4EBD6',accent:'#5B7F5A',ink:'#2F3B2C',pop:'#F2A65A'},
+ {n:'Navy',bg:'#F3ECDD',accent:'#1F3A5F',ink:'#23262B',pop:'#E7B64B'},
+ {n:'Lilac',bg:'#E9E1F5',accent:'#6C4AB6',ink:'#2B2140',pop:'#FFB3C7'}
+];
+
+const S={scene:'toast',msg:'',bg:'#FBE3C8',accent:'#2E9C8E',ink:'#3A2A22',pop:'#F4B63F',
+  skin:'#E0A97D',hair:'#3B2416',logoImg:null,showLogo:true,handle:'',toastStyle:'photo',photo:null,tx:.5,ty:.48,tsize:1,trot:0};
+let LOGO_LIGHT=false;
+
+/* ---------- helpers ---------- */
+const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+const seg=(t,a,b)=>clamp((t-a)/(b-a));
+const ease={
+  out:t=>1-Math.pow(1-t,3),
+  back:t=>{const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2);}
+};
+function hex2rgb(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+function toHex(r,g,b){return '#'+[r,g,b].map(v=>Math.round(clamp(v,0,255)).toString(16).padStart(2,'0')).join('');}
+function shade(h,amt){const [r,g,b]=hex2rgb(h);const m=amt<0?0:255,k=Math.abs(amt);return toHex(r+(m-r)*k,g+(m-g)*k,b+(m-b)*k);}
+function mix(a,b,k){const A=hex2rgb(a),B=hex2rgb(b);return toHex(A[0]+(B[0]-A[0])*k,A[1]+(B[1]-A[1])*k,A[2]+(B[2]-A[2])*k);}
+function lum(h){const [r,g,b]=hex2rgb(h);return (0.299*r+0.587*g+0.114*b)/255;}
+function circle(x,y,r){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
+function rr(x,y,w,h,r){r=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function frr(x,y,w,h,r){rr(x,y,w,h,r);ctx.fill();}
+function line(x1,y1,x2,y2,w,col){ctx.strokeStyle=col;ctx.lineWidth=w;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();}
+function star(x,y,r,col){ctx.fillStyle=col;ctx.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4-Math.PI/2,rad=i%2?r*0.28:r;ctx.lineTo(x+Math.cos(a)*rad,y+Math.sin(a)*rad);}ctx.closePath();ctx.fill();}
+
+let memo={};
+function cached(k,fn){if(!(k in memo))memo[k]=fn();return memo[k];}
+function wrap(text,font,maxW){
+  ctx.font=font;
+  const words=text.split(/\s+/).filter(Boolean),lines=[];let cur='';
+  for(const w of words){const test=cur?cur+' '+w:w;if(ctx.measureText(test).width>maxW&&cur){lines.push(cur);cur=w;}else cur=test;}
+  if(cur)lines.push(cur);return lines;
+}
+function fit(text,fam,weight,maxW,maxH,max,min,lh){
+  for(let s=max;s>=min;s-=2){const lines=wrap(text,`${weight} ${s}px ${fam}`,maxW);if(lines.length*s*lh<=maxH)return {size:s,lines};}
+  return {size:min,lines:wrap(text,`${weight} ${min}px ${fam}`,maxW)};
+}
+function msg(){return (S.msg||'').trim()||MESSAGES[0];}
+
+/* ---------- background and logo ---------- */
+const DOTS=Array.from({length:16},(_,i)=>({x:(i*229+90)%W,y:(i*387+260)%H,r:6+(i%3)*4,s:i}));
+function drawBG(t){
+  ctx.fillStyle=S.bg;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=shade(S.bg,-0.05);circle(160,520,280);circle(960,1380,340);
+  ctx.fillStyle=shade(S.bg,0.4);circle(900,520,150);circle(150,1500,190);
+  ctx.globalAlpha=0.55;
+  DOTS.forEach((d,i)=>{ctx.fillStyle=i%2?S.pop:S.accent;circle(d.x,d.y+Math.sin(t*1.4+d.s)*10,d.r);});
+  ctx.globalAlpha=1;
+}
+function drawLogo(){
+  if(!S.showLogo)return;
+  let y=190;
+  if(S.logoImg){
+    const im=S.logoImg,r=Math.min(440/im.width,170/im.height),w=im.width*r,h=im.height*r;
+    ctx.drawImage(im,(W-w)/2,y,w,h);y+=h+18;
+  }
+  if(S.handle){
+    ctx.font=`600 40px ${F_SKATE}`;ctx.fillStyle=LOGO_LIGHT?'#ffffff':S.ink;ctx.textAlign='center';ctx.textBaseline='alphabetic';
+    ctx.fillText(S.handle,W/2,y+34);
+  }
+}
+
+/* ---------- scene 1: toast ---------- */
+function toastPath(x,y,w,h){
+  ctx.beginPath();
+  ctx.moveTo(x+.1*w,y+h);ctx.lineTo(x+.1*w,y+.45*h);
+  ctx.bezierCurveTo(x-.05*w,y+.40*h,x-.02*w,y+.02*h,x+.30*w,y+.05*h);
+  ctx.bezierCurveTo(x+.42*w,y-.02*h,x+.58*w,y-.02*h,x+.70*w,y+.05*h);
+  ctx.bezierCurveTo(x+1.02*w,y+.02*h,x+1.05*w,y+.40*h,x+.90*w,y+.45*h);
+  ctx.lineTo(x+.9*w,y+h);ctx.closePath();
+}
+function rnd(i){const v=Math.sin(i*127.1+311.7)*43758.5453;return v-Math.floor(v);}
+function drawToast(x,y,w,h,k){
+  ctx.save();
+  // crust
+  toastPath(x,y,w,h);
+  const cg=ctx.createLinearGradient(x,y,x,y+h);
+  cg.addColorStop(0,mix('#C98A4B','#8A4E1E',k*.8));cg.addColorStop(1,mix('#B8742C','#6E3A12',k*.8));
+  ctx.fillStyle=cg;ctx.fill();
+  // crumb (the soft middle)
+  ctx.save();
+  ctx.translate(x+w/2,y+h/2);ctx.scale(.87,.89);ctx.translate(-(x+w/2),-(y+h/2));
+  toastPath(x,y,w,h);
+  const ig=ctx.createRadialGradient(x+w/2,y+h*.42,w*.06,x+w/2,y+h*.42,w*.62);
+  ig.addColorStop(0,mix('#FBEABF','#EBB862',k));
+  ig.addColorStop(.65,mix('#F4D590','#D78B36',k));
+  ig.addColorStop(1,mix('#E3B565','#A55418',k));
+  ctx.fillStyle=ig;ctx.fill();
+  ctx.save();ctx.clip();
+  // toasting blotches
+  for(let i=0;i<9;i++){
+    const bx=x+rnd(i+1)*w,by=y+rnd(i+20)*h,br=60+rnd(i+40)*90;
+    const bg=ctx.createRadialGradient(bx,by,0,bx,by,br);
+    bg.addColorStop(0,`rgba(140,64,12,${(.16*k).toFixed(3)})`);bg.addColorStop(1,'rgba(140,64,12,0)');
+    ctx.fillStyle=bg;ctx.fillRect(bx-br,by-br,br*2,br*2);
+  }
+  // air holes, dark and light
+  for(let i=0;i<170;i++){
+    const px=x+rnd(i*3+7)*w,py=y+rnd(i*3+8)*h,r=2+rnd(i*3+9)*7;
+    ctx.fillStyle=`rgba(120,60,14,${(.14+.2*rnd(i+300)).toFixed(3)})`;
+    ctx.beginPath();ctx.ellipse(px,py,r*1.25,r*.8,rnd(i)*3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,243,205,.28)';
+    ctx.beginPath();ctx.ellipse(px-r*.35,py-r*.3,r*.55,r*.3,rnd(i)*3,0,Math.PI*2);ctx.fill();
+  }
+  // darker toasted edge where crumb meets crust
+  toastPath(x,y,w,h);
+  ctx.lineWidth=34;ctx.lineJoin='round';
+  ctx.strokeStyle=`rgba(115,52,10,${(.14+.34*k).toFixed(3)})`;ctx.stroke();
+  ctx.restore();
+  ctx.restore();
+  // crust highlight and outer line
+  toastPath(x,y,w,h);ctx.lineWidth=4;ctx.strokeStyle='rgba(255,226,160,.35)';ctx.stroke();
+  ctx.restore();
+}
+function drawToaster(x,y,w,h,lever){
+  ctx.fillStyle=shade(S.accent,-.5);frr(x+70,y+h-20,110,40,14);frr(x+w-180,y+h-20,110,40,14);
+  ctx.fillStyle=S.accent;frr(x,y,w,h,80);
+  ctx.save();rr(x,y,w,h,80);ctx.clip();ctx.fillStyle=shade(S.accent,-.16);ctx.fillRect(x,y+h-120,w,120);ctx.restore();
+  ctx.fillStyle=shade(S.accent,.35);frr(x+40,y+46,w-80,24,12);
+  ctx.fillStyle=shade(S.accent,-.65);frr(x+90,y-6,w-180,34,17);
+  ctx.fillStyle=shade(S.accent,-.5);frr(x+w-110,y+80,26,150,13);
+  ctx.fillStyle=S.pop;circle(x+w-97,y+105+lever*85,28);
+  ctx.fillStyle=S.pop;circle(x+110,y+h-62,34);
+  ctx.fillStyle=shade(S.accent,-.5);circle(x+110,y+h-62,12);
+  line(x+110,y+h-62,x+128,y+h-80,6,shade(S.accent,-.5));
+  ctx.fillStyle=shade(S.accent,.25);frr(x+210,y+h-78,260,28,14);
+}
+function sceneToast(t){
+  const bodyTop=1260,bx=130,bw=820,bh=330,tw=640,th=720;
+  const topHidden=bodyTop+20,topUp=bodyTop-560;
+  const pop=ease.back(seg(t,0,0.6));
+  const rise=ease.back(seg(t,1.4,2.0));
+  const ty=topHidden+(topUp-topHidden)*rise;
+  const toasted=seg(t,2.0,3.3);
+  const lever=clamp(seg(t,0.6,0.9)-seg(t,1.4,1.5));
+  const shake=(t>0.9&&t<1.4)?Math.sin(t*70)*4:0;
+  ctx.save();
+  ctx.translate(W/2+shake,bodyTop+bh);ctx.scale(pop,pop);ctx.translate(-W/2,-(bodyTop+bh));
+  // toast with a little proud wiggle
+  const wt=t-3.6,rot=t>3.6?0.025*Math.sin(wt*9)*Math.exp(-wt*1.2):0;
+  ctx.save();ctx.translate(W/2,bodyTop);ctx.rotate(rot);ctx.translate(-W/2,-bodyTop);
+  drawToast(W/2-tw/2,ty,tw,th,toasted);
+  const lay=cached('toast|'+msg(),()=>fit(msg(),F_TOAST,700,410,330,72,30,1.12));
+  const a=seg(t,2.3,3.5),lh=lay.size*1.12,blockH=lay.lines.length*lh,cy=ty+th*0.36;
+  if(a>0){
+    ctx.save();
+    ctx.font=`700 ${lay.size}px ${F_TOAST}`;ctx.textAlign='center';ctx.textBaseline='middle';
+    const put=(fn)=>lay.lines.forEach((ln,i)=>fn(ln,W/2,cy-blockH/2+(i+.5)*lh));
+    // scorched halo
+    ctx.shadowColor=`rgba(70,28,6,${(.6*a).toFixed(3)})`;ctx.shadowBlur=20*a;
+    ctx.fillStyle=`rgba(70,28,6,${(.45*a).toFixed(3)})`;put((l,px,py)=>ctx.fillText(l,px,py));
+    ctx.shadowBlur=0;ctx.shadowColor='transparent';
+    // burnt letters, pressed into the toast so the crumb shows through
+    ctx.globalCompositeOperation='multiply';
+    ctx.globalAlpha=clamp(a*1.5);
+    ctx.fillStyle=mix('#FF9A3C','#35180A',clamp(a*1.3));
+    put((l,px,py)=>ctx.fillText(l,px,py));
+    ctx.globalCompositeOperation='source-over';
+    // glowing ember edge while it burns in
+    if(a<0.95){
+      ctx.globalAlpha=(1-a)*0.9;ctx.strokeStyle='#FFB347';ctx.lineWidth=2.5;ctx.lineJoin='round';
+      put((l,px,py)=>ctx.strokeText(l,px,py));
+    }
+    ctx.restore();
+  }
+  ctx.restore();
+  drawToaster(bx,bodyTop,bw,bh,lever);
+  ctx.restore();
+  // steam
+  const sa=seg(t,2.6,3.3);
+  if(sa>0){
+    for(let i=0;i<3;i++){
+      const pr=((t*0.45+i*0.33)%1),x0=W/2+(i-1)*150;
+      ctx.globalAlpha=0.55*sa*(1-pr);ctx.strokeStyle='#ffffff';ctx.lineWidth=14;ctx.lineCap='round';
+      ctx.beginPath();
+      for(let k=0;k<=12;k++){const yy=topUp-20-k*20-pr*60,xx=x0+Math.sin(k*0.7+t*3+i)*18;k?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);}
+      ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+  }
+  // sparkles
+  const sp=seg(t,1.7,2.7);
+  if(sp>0&&sp<1){
+    const sz=40*Math.sin(sp*Math.PI);
+    [[-370,-30],[360,20],[-310,220],[330,250],[40,-120]].forEach(p=>star(W/2+p[0],topUp+p[1],sz,S.pop));
+  }
+}
+
+/* ---------- scene 1b: toast from a real photo ---------- */
+function drawCover(im){const k=Math.max(W/im.width,H/im.height),w=im.width*k,h=im.height*k;ctx.drawImage(im,(W-w)/2,(H-h)/2,w,h);}
+function sceneToastPhoto(t){
+  const D=DUR.toast,push=1+0.07*seg(t,0,D);
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  ctx.save();
+  ctx.translate(W/2,H/2);ctx.scale(push,push);ctx.translate(-W/2,-H/2);
+  drawCover(S.photo);
+  const bw=560*S.tsize,bh=430*S.tsize;
+  const lay=cached('tphoto|'+msg()+'|'+S.tsize,()=>fit(msg(),F_TOAST,700,bw,bh,120,32,1.12));
+  const lh=lay.size*1.12,blockH=lay.lines.length*lh;
+  const total=lay.lines.reduce((a,l)=>a+l.length,0);
+  const p=seg(t,0.9,3.7),count=total*p,tail=Math.max(3,total*0.14),emberA=1-seg(t,3.7,4.5);
+  ctx.save();
+  ctx.translate(S.tx*W,S.ty*H);ctx.rotate(S.trot*Math.PI/180);
+  ctx.font=`700 ${lay.size}px ${F_TOAST}`;ctx.textBaseline='middle';ctx.textAlign='left';
+  const pieces=[];let used=0,edge=null;
+  lay.lines.forEach((ln,i)=>{
+    const lw=ctx.measureText(ln).width,x0=-lw/2,y=-blockH/2+(i+.5)*lh;
+    const k=Math.max(0,Math.min(ln.length,Math.floor(count-used)));
+    pieces.push({ln,x0,y,k,start:used});
+    if(k>0)edge={x:x0+ctx.measureText(ln.slice(0,k)).width,y};
+    used+=ln.length;
+  });
+  const parts=fn=>pieces.forEach(pc=>{if(pc.k>0)fn(pc.ln.slice(0,pc.k),pc.x0,pc.y,pc);});
+  // scorched halo
+  ctx.save();ctx.globalCompositeOperation='multiply';ctx.shadowColor='rgba(60,22,4,.75)';ctx.shadowBlur=24;
+  ctx.fillStyle='rgba(110,52,14,.55)';parts((s,x,y)=>ctx.fillText(s,x,y));ctx.restore();
+  // pressed in edge highlight
+  ctx.save();ctx.globalCompositeOperation='screen';ctx.fillStyle='rgba(255,236,200,.22)';parts((s,x,y)=>ctx.fillText(s,x+2,y+2));ctx.restore();
+  // the burnt letters, multiplied so the crumb shows through
+  ctx.save();ctx.globalCompositeOperation='multiply';ctx.fillStyle='#3a1a08';parts((s,x,y)=>ctx.fillText(s,x,y));ctx.restore();
+  // glowing ember on the freshest letters
+  ctx.save();ctx.globalCompositeOperation='screen';ctx.shadowColor='rgba(255,120,20,.9)';ctx.shadowBlur=18;
+  ctx.fillStyle='#FF8A1F';ctx.globalAlpha=0.85*(p<1?1:emberA);
+  pieces.forEach(pc=>{
+    if(pc.k<=0)return;
+    const a=Math.round(clamp(count-tail-pc.start,0,pc.k));
+    if(a<pc.k)ctx.fillText(pc.ln.slice(a,pc.k),pc.x0+ctx.measureText(pc.ln.slice(0,a)).width,pc.y);
+  });
+  ctx.restore();
+  // ember point and smoke
+  if(edge&&emberA>0){
+    ctx.save();ctx.globalCompositeOperation='screen';
+    const g=ctx.createRadialGradient(edge.x,edge.y,0,edge.x,edge.y,lay.size*0.7);
+    g.addColorStop(0,`rgba(255,150,50,${(.6*emberA).toFixed(3)})`);g.addColorStop(1,'rgba(255,150,50,0)');
+    ctx.fillStyle=g;ctx.fillRect(edge.x-lay.size,edge.y-lay.size,lay.size*2,lay.size*2);ctx.restore();
+    for(let i=0;i<7;i++){
+      const age=((t*0.9+i/7)%1),a=0.24*(1-age)*emberA,r=12+age*36;
+      const sx=edge.x+Math.sin(i*2.3+t*2.2)*16*(age+.3),sy=edge.y-24-age*180;
+      const sg=ctx.createRadialGradient(sx,sy,0,sx,sy,r);
+      sg.addColorStop(0,`rgba(255,255,255,${a.toFixed(3)})`);sg.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=sg;ctx.fillRect(sx-r,sy-r,r*2,r*2);
+    }
+  }
+  ctx.restore();
+  // soft vignette
+  const vg=ctx.createRadialGradient(W/2,H/2,H*0.25,W/2,H/2,H*0.7);
+  vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.35)');
+  ctx.fillStyle=vg;ctx.fillRect(-60,-60,W+120,H+120);
+  ctx.restore();
+  // dark band behind the logo so it always reads, then fade in from black
+  const sg2=ctx.createLinearGradient(0,0,0,420);sg2.addColorStop(0,'rgba(0,0,0,.4)');sg2.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=sg2;ctx.fillRect(0,0,W,420);
+  const fade=1-seg(t,0,0.5);if(fade>0){ctx.fillStyle=`rgba(0,0,0,${fade.toFixed(3)})`;ctx.fillRect(0,0,W,H);}
+}
+
+/* ---------- scene 2: typewriter ---------- */
+function sceneType(t){
+  const D=DUR.type,px=200,pw=680,platenY=1150,visH=730;
+  const slide=ease.out(seg(t,0,0.9)),ptop=platenY-visH*slide;
+  const lay=cached('type|'+msg(),()=>fit(msg(),F_TYPE,400,560,560,56,28,1.5));
+  const total=lay.lines.reduce((a,l)=>a+l.length,0);
+  const prog=seg(t,1.0,D-1.7),raw=total*prog,n=Math.floor(raw),frac=raw-n;
+  const typing=prog>0&&prog<1;
+  const jig=typing&&(n%2)?1.5:0;
+  // paper
+  ctx.save();ctx.translate(0,jig);
+  ctx.shadowColor='rgba(0,0,0,.2)';ctx.shadowBlur=26;ctx.shadowOffsetY=10;
+  ctx.fillStyle='#FFFDF6';frr(px,ptop,pw,visH+220,6);
+  ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  ctx.fillStyle=S.accent;ctx.fillRect(px,ptop,pw,12);
+  if(slide>=1){
+    ctx.font=`400 ${lay.size}px ${F_TYPE}`;ctx.textAlign='left';ctx.textBaseline='alphabetic';
+    ctx.fillStyle='#2b2623';
+    const lh=lay.size*1.5,y0=ptop+110+lay.size,x0=px+64;
+    let rem=n,curX=x0,curY=y0;
+    lay.lines.forEach((ln,i)=>{
+      const take=Math.min(rem,ln.length);
+      if(take>0)ctx.fillText(ln.slice(0,take),x0,y0+i*lh);
+      if(rem>=0&&rem<=ln.length&&(rem>0||i===0)){curX=x0+ctx.measureText(ln.slice(0,take)).width;curY=y0+i*lh;}
+      rem-=take;
+    });
+    if(t<D-0.4&&(typing||Math.floor(t*3)%2===0)){ctx.fillStyle=S.accent;ctx.fillRect(curX+2,curY-lay.size*0.78,lay.size*0.5,lay.size*0.95);}
+  }
+  ctx.restore();
+  // body
+  ctx.fillStyle=shade(S.accent,-.3);frr(130,platenY+60,820,440,70);
+  ctx.fillStyle=S.accent;frr(110,platenY+40,860,430,70);
+  ctx.fillStyle=shade(S.accent,.3);frr(160,platenY+70,760,18,9);
+  ctx.fillStyle=shade(S.accent,-.45);frr(400,platenY+100,280,46,23);
+  // platen and knobs
+  ctx.fillStyle='#2d2a2a';frr(150,platenY-12,780,72,36);
+  ctx.fillStyle='#4a4545';frr(170,platenY-4,740,14,7);
+  ctx.fillStyle=S.pop;circle(125,platenY+24,38);circle(955,platenY+24,38);
+  ctx.fillStyle=shade(S.pop,-.25);circle(125,platenY+24,15);circle(955,platenY+24,15);
+  line(125,platenY+24,66,platenY-44,14,'#2d2a2a');ctx.fillStyle=S.pop;circle(66,platenY-44,16);
+  // keys
+  const rows=['QWERTYUIO','ASDFGHJKL','ZXCVBNM,.'];
+  const pressed=typing&&frac<0.5?(n*7+3)%27:-1;
+  rows.forEach((row,r)=>{
+    [...row].forEach((ch,c)=>{
+      const idx=r*9+c,x=540+(c-4)*84,y=platenY+215+r*86,down=idx===pressed?8:0;
+      ctx.fillStyle=shade(S.accent,-.4);circle(x,y+10,34);
+      ctx.fillStyle=down?shade('#FFF6E6',-.1):'#FFF6E6';circle(x,y+down,34);
+      ctx.strokeStyle=S.ink;ctx.lineWidth=5;ctx.beginPath();ctx.arc(x,y+down,30,0,Math.PI*2);ctx.stroke();
+      ctx.font=`600 28px ${F_SKATE}`;ctx.fillStyle=S.ink;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(ch,x,y+down+1);
+    });
+  });
+  // ding
+  const d=seg(t,D-1.5,D-1.2);
+  if(d>0){
+    const sc=ease.back(d);
+    ctx.save();ctx.translate(905,1010);ctx.rotate(-0.18);ctx.scale(sc,sc);
+    ctx.font=`700 60px ${F_SKATE}`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=S.ink;
+    ctx.fillText('ding!',0,0);
+    ctx.restore();
+    for(let i=0;i<3;i++){const a=-0.9+i*0.5;line(905+Math.cos(a)*100,1010+Math.sin(a)*100-40,905+Math.cos(a)*140,1010+Math.sin(a)*140-40,8,S.pop);}
+  }
+}
+
+/* ---------- scene 3: roller boots ---------- */
+function ik(hx,hy,ax,ay,l1,l2){
+  const dx=ax-hx,dy=ay-hy;let d=Math.hypot(dx,dy);d=Math.min(d,l1+l2-0.01);
+  const a=Math.atan2(dy,dx),A=Math.acos(clamp((l1*l1+d*d-l2*l2)/(2*l1*d),-1,1)),ang=a-A;
+  return [hx+Math.cos(ang)*l1,hy+Math.sin(ang)*l1];
+}
+function skater(x,feet,s,t){
+  ctx.save();ctx.translate(x,feet);ctx.scale(s,s);ctx.lineJoin='round';ctx.lineCap='round';
+  const p=t*5.5,bob=Math.sin(p*2)*5,hipX=0,hipY=-180+bob,wr=x*0.06;
+  const headX=24,headY=-376+bob*0.8;
+  const legCol=S.ink;
+  function boot(ax,ay){
+    ctx.fillStyle=S.accent;frr(ax-30,ay-34,58,48,16);frr(ax-12,ay-6,62,32,16);
+    ctx.fillStyle=S.pop;frr(ax-30,ay-34,58,12,6);
+    ctx.fillStyle=S.ink;frr(ax-34,ay+20,104,9,4);
+    [ax-18,ax+44].forEach(wx=>{
+      ctx.fillStyle=S.pop;circle(wx,ay+36,15);ctx.fillStyle=S.ink;circle(wx,ay+36,5);
+      line(wx+Math.cos(wr)*10,ay+36+Math.sin(wr)*10,wx-Math.cos(wr)*10,ay+36-Math.sin(wr)*10,3,S.ink);
+    });
+  }
+  function leg(q){
+    const ax=62*Math.sin(q)+6,ay=-48-30*Math.max(0,Math.cos(q));
+    const k=ik(hipX,hipY,ax,ay,80,72);
+    line(hipX,hipY,k[0],k[1],34,legCol);line(k[0],k[1],ax,ay-6,28,legCol);
+    boot(ax,ay);
+  }
+  function arm(q){
+    const sx=12,sy=-300+bob,th=0.7*Math.sin(q),ex=sx+Math.sin(th)*56,ey=sy+Math.cos(th)*56;
+    const th2=th+0.9,fx=ex+Math.sin(th2)*50,fy=ey+Math.cos(th2)*50;
+    line(sx,sy,ex,ey,26,S.pop);line(ex,ey,fx,fy,20,S.skin);ctx.fillStyle=S.skin;circle(fx,fy,12);
+  }
+  // ponytail
+  const wv=Math.sin(p*2+1)*14,wv2=Math.cos(p*2)*12;
+  ctx.strokeStyle=S.hair;ctx.lineWidth=34;ctx.beginPath();ctx.moveTo(headX-22,headY-14);
+  ctx.quadraticCurveTo(headX-80,headY-40+wv,headX-124,headY+10+wv2);ctx.stroke();
+  arm(p+Math.PI);
+  leg(p+Math.PI);
+  // torso
+  ctx.fillStyle=S.pop;ctx.strokeStyle=S.pop;ctx.lineWidth=16;
+  ctx.beginPath();ctx.moveTo(-22,-316+bob);ctx.lineTo(42,-318+bob);ctx.lineTo(36,-178+bob);ctx.lineTo(-30,-178+bob);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle=shade(S.pop,-.18);ctx.fillRect(-30,-196+bob,66,14);
+  ctx.fillStyle=S.skin;frr(headX-14,-340+bob,26,34,8);
+  leg(p);
+  arm(p);
+  // head
+  ctx.fillStyle=S.skin;circle(headX,headY,40);
+  ctx.fillStyle=S.hair;ctx.beginPath();ctx.arc(headX,headY,43,Math.PI*0.88,Math.PI*2.1);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(headX-40,headY-8);ctx.quadraticCurveTo(headX+10,headY-56,headX+43,headY-14);ctx.quadraticCurveTo(headX+18,headY-30,headX-6,headY-22);ctx.closePath();ctx.fill();
+  ctx.strokeStyle=S.accent;ctx.lineWidth=10;ctx.beginPath();ctx.arc(headX,headY,41,Math.PI*1.15,Math.PI*1.7);ctx.stroke();
+  ctx.fillStyle=S.pop;circle(headX-24,headY-14,12);
+  ctx.fillStyle=S.ink;circle(headX+16,headY-2,4.5);
+  ctx.strokeStyle=S.ink;ctx.lineWidth=4;ctx.beginPath();ctx.arc(headX+12,headY+10,13,0.15*Math.PI,0.85*Math.PI);ctx.stroke();
+  ctx.fillStyle='rgba(255,110,110,.35)';circle(headX+26,headY+12,8);
+  ctx.restore();
+}
+function sceneSkate(t){
+  const D=DUR.skate;
+  const lay=cached('skate|'+msg(),()=>fit(msg(),F_SKATE,600,880,700,92,44,1.25));
+  const n=lay.lines.length,rowH=Math.min(400,1150/n),s=Math.min(1,rowH*0.92/420);
+  const top0=470+(1150-rowH*n)/2,rt=(D-1.1)/n;
+  const txtCol=lum(S.accent)>0.62?S.ink:'#FFFDF7';
+  ctx.font=`600 ${lay.size}px ${F_SKATE}`;
+  for(let i=0;i<n;i++){
+    const feet=top0+rowH*(i+1)-24,ts=0.3+i*rt,te=ts+rt*0.9,k=seg(t,ts,te);
+    const sx=-240*s+(W+480*s)*k;
+    // floor
+    ctx.globalAlpha=.8;line(90,feet+4,W-90,feet+4,6,shade(S.bg,-.12));ctx.globalAlpha=1;
+    // ribbon and words, revealed behind the skater
+    const clipX=k>=1?W:(t>ts?Math.max(0,sx-60*s):0);
+    if(clipX>0){
+      ctx.save();ctx.beginPath();ctx.rect(0,feet-rowH,clipX,rowH+40);ctx.clip();
+      ctx.font=`600 ${lay.size}px ${F_SKATE}`;
+      const lw=ctx.measureText(lay.lines[i]).width,bandH=lay.size*1.45,cy=feet-110*s;
+      ctx.fillStyle=S.accent;frr((W-lw)/2-44,cy-bandH/2,lw+88,bandH,bandH/2);
+      ctx.fillStyle=txtCol;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(lay.lines[i],W/2,cy+lay.size*0.04);
+      ctx.restore();
+    }
+    if(k>0&&k<1){
+      for(let j=0;j<3;j++){
+        ctx.globalAlpha=.4;
+        line(sx-(330+j*20)*s,feet-(120+j*60)*s,sx-(190+j*40)*s,feet-(120+j*60)*s,8*s,S.accent);
+      }
+      ctx.globalAlpha=1;
+      skater(sx,feet,s,t);
+    }
+  }
+}
+
+/* ---------- render and playback ---------- */
+const scenes={toast:sceneToast,type:sceneType,skate:sceneSkate};
+function dur(){return DUR[S.scene];}
+function render(t){
+  ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,H);
+  ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.globalAlpha=1;
+  if(S.scene==='toast'&&S.toastStyle==='photo'&&S.photo){LOGO_LIGHT=true;sceneToastPhoto(t);drawLogo();LOGO_LIGHT=false;}
+  else{drawBG(t);drawLogo();scenes[S.scene](t);}
+}
+let raf=0,token=0;
+function play(opts){
+  opts=opts||{};cancelAnimationFrame(raf);
+  const my=++token,D=dur(),total=D+(opts.record?0.6:0.9),start=performance.now();
+  function step(now){
+    if(my!==token)return;
+    let t=(now-start)/1000;
+    if(t>=total){
+      if(opts.loop){t=t%total;}
+      else{render(D);if(opts.onEnd)opts.onEnd();return;}
+    }
+    render(Math.min(t,D));
+    raf=requestAnimationFrame(step);
+  }
+  raf=requestAnimationFrame(step);
+}
+let restartTimer=0;
+function restart(delay){clearTimeout(restartTimer);restartTimer=setTimeout(()=>play({loop:true}),delay||0);}
+
+/* ---------- ui ---------- */
+const $=id=>document.getElementById(id);
+const bank=$('bank'),msgBox=$('msg');
+const ALL=[].concat(LOCAL.map(t=>({t,local:true})),MESSAGES.map(t=>({t,local:false})));
+function town(){return $('town').value.trim();}
+function fill(t){return t.replace(/\{town\}/g,town()||'[your town]');}
+(function(){
+  const g1=document.createElement('optgroup');g1.label='Local to your clinic';
+  const g2=document.createElement('optgroup');g2.label='Motivation';
+  ALL.forEach((m,i)=>{const o=document.createElement('option');o.value=i;o.textContent=m.t.length>62?m.t.slice(0,60)+'...':m.t;(m.local?g1:g2).appendChild(o);});
+  bank.appendChild(g1);bank.appendChild(g2);
+})();
+let TPL=null;
+function setMsg(m,tpl){TPL=tpl||null;S.msg=m;msgBox.value=m;$('count').textContent=m.length+' characters';}
+function pick(i){const m=ALL[i];bank.value=i;setMsg(m.local?fill(m.t):m.t,m.local?m.t:null);}
+function applyTown(){if(TPL){setMsg(fill(TPL),TPL);restart();}else refreshLabels();}
+function refreshLabels(){}
+$('town').addEventListener('input',()=>{$('town').dataset.auto='0';applyTown();});
+bank.addEventListener('change',()=>{pick(bank.value);restart();});
+$('shuffle').addEventListener('click',()=>{
+  const pool=ALL.map((m,i)=>i).filter(i=>town()||!ALL[i].local);
+  const wantLocal=town()&&Math.random()<.5;
+  const sub=pool.filter(i=>ALL[i].local===!!wantLocal);
+  let i,n=0;do{i=sub[Math.floor(Math.random()*sub.length)];n++;}while(ALL[i].t===S.msg&&n<20);
+  pick(i);restart();
+});
+msgBox.addEventListener('input',()=>{TPL=null;S.msg=msgBox.value;$('count').textContent=S.msg.length+' characters';restart(300);});
+document.querySelectorAll('input[name=scene]').forEach(r=>r.addEventListener('change',()=>{S.scene=r.value;restart();}));
+
+const pal=$('palettes');
+PALETTES.forEach(p=>{
+  const b=document.createElement('button');b.type='button';b.title=p.n;
+  b.style.background=`linear-gradient(135deg,${p.bg} 50%,${p.accent} 50%)`;
+  b.addEventListener('click',()=>{S.bg=p.bg;S.accent=p.accent;S.ink=p.ink;S.pop=p.pop;syncColours();restart();});
+  pal.appendChild(b);
+});
+function syncColours(){$('cBg').value=S.bg;$('cAccent').value=S.accent;$('cPop').value=S.pop;$('cInk').value=S.ink;}
+[['cBg','bg'],['cAccent','accent'],['cPop','pop'],['cInk','ink']].forEach(([id,key])=>$(id).addEventListener('input',e=>{S[key]=e.target.value;restart(150);}));
+$('skin').addEventListener('change',e=>{S.skin=e.target.value;restart();});
+$('hair').addEventListener('change',e=>{S.hair=e.target.value;restart();});
+$('showLogo').addEventListener('change',e=>{S.showLogo=e.target.checked;restart();});
+$('handle').addEventListener('input',e=>{S.handle=e.target.value.trim();restart(300);});
+$('logo').addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{const im=new Image();im.onload=()=>{S.logoImg=im;$('logoNote').textContent='Your uploaded logo is on the reel.';restart();};im.src=rd.result;};
+  rd.readAsDataURL(f);
+});
+$('replay').addEventListener('click',()=>play({loop:true}));
+$('safe').addEventListener('change',e=>$('guides').classList.toggle('on',e.target.checked));
+
+$('cover').addEventListener('click',()=>{
+  render(dur());
+  cv.toBlob(b=>save(b,`morning-motivation-${S.scene}-cover.png`),'image/png');
+  restart(1200);
+});
+function save(blob,name){
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
+}
+async function recordVideo(){
+  if(!window.MediaRecorder||!cv.captureStream)throw new Error('This browser cannot record video. Please use Chrome, Edge or Safari on a computer.');
+  const types=['video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp9','video/webm'];
+  const mime=types.find(t=>MediaRecorder.isTypeSupported(t))||'';
+  const rec=new MediaRecorder(cv.captureStream(30),mime?{mimeType:mime,videoBitsPerSecond:8000000}:{videoBitsPerSecond:8000000});
+  const chunks=[];rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+  const done=new Promise(r=>{rec.onstop=r;});
+  render(0);rec.start();
+  play({record:true,onEnd:()=>setTimeout(()=>rec.stop(),200)});
+  await done;
+  const type=rec.mimeType||mime||'video/webm';
+  return {blob:new Blob(chunks,{type}),ext:type.includes('mp4')?'mp4':'webm'};
+}
+$('dl').addEventListener('click',async()=>{
+  const btn=$('dl');btn.disabled=true;const old=btn.textContent;btn.textContent='Recording...';
+  try{
+    const {blob,ext}=await recordVideo();
+    save(blob,`morning-motivation-${S.scene}.${ext}`);
+    $('fmtNote').textContent=ext==='mp4'
+      ?'Saved as an MP4, ready to upload to Instagram. The video is silent so you can add trending audio.'
+      :'Saved as a WEBM file because this browser cannot make MP4s. Use Chrome or Safari for an MP4, or convert it before uploading.';
+  }catch(e){alert(e.message||'Recording failed');}
+  btn.disabled=false;btn.textContent=old;restart(600);
+});
+
+/* ---------- real photo toast controls ---------- */
+function syncToastOpts(){
+  $('toastOpts').style.display=S.scene==='toast'?'block':'none';
+  $('photoOpts').style.display=S.toastStyle==='photo'?'block':'none';
+}
+document.querySelectorAll('input[name=scene]').forEach(r=>r.addEventListener('change',syncToastOpts));
+document.querySelectorAll('input[name=tstyle]').forEach(r=>r.addEventListener('change',()=>{S.toastStyle=r.value;syncToastOpts();restart();}));
+syncToastOpts();
+function holdFrame(){token++;cancelAnimationFrame(raf);render(dur());restart(1500);}
+[['pX','tx',v=>v/100],['pY','ty',v=>v/100],['pS','tsize',v=>v/100],['pR','trot',v=>v]].forEach(([id,key,f])=>$(id).addEventListener('input',e=>{S[key]=f(Number(e.target.value));holdFrame();}));
+function setPhoto(src){
+  const im=new Image();
+  im.onload=()=>{S.photo=im;$('photoStatus').textContent='Photo added. Move the words with the sliders, or press Find the toast.';findToast(true);restart();};
+  im.onerror=()=>{$('photoStatus').textContent='That photo would not open. Try a JPG or PNG.';};
+  im.src=src;
+}
+$('photoFile').addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  const rd=new FileReader();rd.onload=()=>setPhoto(rd.result);rd.readAsDataURL(f);
+});
+let variantNo=Math.floor(Math.random()*4);
+$('genPhoto').addEventListener('click',async()=>{
+  const btn=$('genPhoto');btn.disabled=true;$('photoStatus').textContent='Making your toast photo. This takes about 20 seconds...';
+  try{
+    const r=await fetch(BASE+'/api/morning-motivation/toast-photo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({variant:variantNo++%4})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||!d.image)throw new Error(d.error||'The photo maker is not reachable here');
+    setPhoto(d.image);
+  }catch(e){$('photoStatus').textContent=(e.message||'Could not make a photo')+'. You can still upload your own photo.';}
+  btn.disabled=false;
+});
+// A best guess at where the toast is: golden brown pixels near the middle of the frame.
+function findToast(quiet){
+  if(!S.photo)return;
+  const sw=108,sh=192,c=document.createElement('canvas');c.width=sw;c.height=sh;
+  const x=c.getContext('2d',{willReadFrequently:true});
+  const k=Math.max(sw/S.photo.width,sh/S.photo.height),w=S.photo.width*k,h=S.photo.height*k;
+  x.drawImage(S.photo,(sw-w)/2,(sh-h)/2,w,h);
+  const d=x.getImageData(0,0,sw,sh).data;let n=0,sx=0,sy=0;
+  for(let j=0;j<sh;j++)for(let i=0;i<sw;i++){
+    const o=(j*sw+i)*4,r=d[o]/255,g=d[o+1]/255,b=d[o+2]/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),v=mx,sat=mx?(mx-mn)/mx:0;
+    let hu=0;if(mx!==mn){if(mx===r)hu=((g-b)/(mx-mn))%6;else if(mx===g)hu=(b-r)/(mx-mn)+2;else hu=(r-g)/(mx-mn)+4;hu*=60;if(hu<0)hu+=360;}
+    const dx=i/sw-.5,dy=j/sh-.5;
+    if(hu>=20&&hu<=48&&sat>.28&&v>.38&&v<.97&&Math.abs(dx)<.42&&Math.abs(dy)<.36){n++;sx+=i;sy+=j;}
+  }
+  if(n<sw*sh*0.03){if(!quiet)$('photoStatus').textContent='I could not spot the toast. Use the sliders to put the words where you want them.';return;}
+  S.tx=sx/n/sw;S.ty=sy/n/sh;
+  const side=Math.sqrt(n)*(W/sw);S.tsize=clamp(side*0.62/560,.5,1.6);S.trot=0;
+  $('pX').value=Math.round(S.tx*100);$('pY').value=Math.round(S.ty*100);$('pS').value=Math.round(S.tsize*100);$('pR').value=0;
+  holdFrame();
+}
+$('findToast').addEventListener('click',()=>findToast(false));
+
+/* ---------- client, caption and schedule (uses the same system as the rest of the tools) ---------- */
+const ON_SITE=/thecybersuite\.com$/i.test(location.hostname)||location.hostname==='localhost';
+const BASE=ON_SITE?'':'https://workspaceapi-server-production-0f0d.up.railway.app';
+const FALLBACK_CLIENTS=['Social Media Sister','Eva Garcia Aesthetics','AD Aesthetics','Aspyre Aesthetics','The Church Street Clinic','Teviot Dental Face','Highcroft Aesthetics','Madame Wax','Madame Skin','Fresher Faces','CT Aesthetics','Tweaked by Helen','Pura Aesthetics','Cantik Aesthetics','Castle Clinic','The Ryder Clinic'];
+let presets=[];
+const clientSel=$('client');
+function fillClients(list,live){
+  presets=list;
+  clientSel.innerHTML='<option value="">Choose a client</option>'+list.map(p=>`<option value="${p.key}">${String(p.name).replace(/</g,'&lt;')}</option>`).join('');
+  $('clientNote').textContent=live?'Your live client list is loaded, so you can write captions and schedule.':'Showing your usual clients so you can write captions. To schedule, open this page on thecybersuite.com where your live client list loads.';
+}
+fillClients(FALLBACK_CLIENTS.map((n,i)=>({key:'f'+i,name:n,fallback:true})),false);
+fetch(BASE+'/api/presets').then(r=>{if(!r.ok)throw new Error();return r.json();}).then(d=>{
+  const list=((d&&d.presets)||[]).map(p=>({key:String(p.id),id:p.id,name:p.name,seoArea:p.seoArea,logoUrl:p.logoUrl}));
+  if(list.length)fillClients(list,true);
+}).catch(()=>{});
+function preset(){return presets.find(p=>p.key===clientSel.value)||null;}
+
+async function loadClientLogo(p){
+  const note=$('logoNote');
+  try{
+    const abs=/^(https?:|data:|blob:)/i.test(p.logoUrl)?p.logoUrl:BASE+(p.logoUrl.charAt(0)==='/'?'':'/')+p.logoUrl;
+    const r=await fetch(abs);if(!r.ok)throw new Error('x');
+    const url=URL.createObjectURL(await r.blob());
+    await new Promise((ok,no)=>{const im=new Image();im.onload=()=>{S.logoImg=im;ok();};im.onerror=no;im.src=url;});
+    S.showLogo=true;$('showLogo').checked=true;
+    note.textContent=p.name+"'s logo is on the reel.";restart();
+  }catch(e){note.textContent="I could not load "+p.name+"'s logo from here, so please upload it above.";}
+}
+clientSel.addEventListener('change',()=>{
+  const p=preset();if(!p)return;
+  if(p.seoArea&&!$('town').value.trim()||$('town').dataset.auto==='1'){if(p.seoArea){$('town').value=p.seoArea;$('town').dataset.auto='1';applyTown();}}
+  if(p.logoUrl)loadClientLogo(p);
+  else $('logoNote').textContent=p.fallback?"Upload "+p.name+"'s logo above. It loads by itself when this runs on thecybersuite.com.":"No logo saved for "+p.name+" yet, so please upload it above.";
+});
+function ptype(){const r=document.querySelector('input[name=ptype]:checked');return r?r.value:'reel';}
+function syncPtype(){const t=ptype();$('fbRow').style.display=t==='reel'?'flex':'none';}
+document.querySelectorAll('input[name=ptype]').forEach(r=>r.addEventListener('change',syncPtype));syncPtype();
+(function(){const d=new Date();d.setDate(d.getDate()+1);d.setHours(7,0,0,0);const z=n=>String(n).padStart(2,'0');
+  $('when').value=`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`;})();
+
+const SCENE_WORDS={toast:'words burnt into a slice of toast as it pops out of a toaster',type:'words typed out on a vintage typewriter',skate:'words trailing behind a woman gliding past on roller boots'};
+$('capBtn').addEventListener('click',async()=>{
+  const p=preset(),t=ptype(),reply=($('replyWord').value||'').trim().replace(/[^A-Za-z0-9]/g,'').toUpperCase();
+  const kind=t==='story'?'Instagram story':(t==='trial'?'Instagram trial reel':'Instagram reel');
+  const manager=p&&/social media sister/i.test(p.name);
+  const voice=manager
+    ?'Write it as the social media manager for an aesthetics clinic speaking directly to the reader, never as a clinician. '
+    :'Write it as the clinician or owner of the clinic, in the first person, posting this themselves. ';
+  const context=`An ${kind}. It is a short, silent morning motivation animation showing ${SCENE_WORDS[S.scene]}. The message on screen says: "${msg()}". `+
+    `Write a short caption that adds something the video does not already say. Make it warm, funny and affable, for women over 35. `+voice+
+    `Make no medical claims and no promises about results. Use UK spelling and never use em dashes or en dashes. `+
+    (reply?`Use the reply word ${reply} in the closing question, written as "Comment ${reply}". `:'')+
+    `Finish with one question that relates to the post.`;
+  const btn=$('capBtn');btn.disabled=true;$('capStatus').textContent='Writing...';
+  try{
+    const r=await fetch(BASE+'/api/caption-generator/generate',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({tone:'1',clinicName:p?p.name:undefined,location:p&&p.seoArea?p.seoArea:undefined,context})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||!d.caption)throw new Error(d.error||'The caption writer is not reachable here');
+    $('caption').value=d.caption;$('capStatus').textContent='Done. Edit it if you like.';
+  }catch(e){$('capStatus').textContent=e.message||'Could not write a caption';}
+  btn.disabled=false;
+});
+$('capCopy').addEventListener('click',()=>{
+  const v=$('caption').value;if(!v)return;
+  (navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(()=>{$('capStatus').textContent='Copied.';}).catch(()=>{$('caption').select();document.execCommand('copy');$('capStatus').textContent='Copied.';});
+});
+
+async function postJson(url,body){
+  const r=await fetch(BASE+url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||'Request failed');
+  return d;
+}
+function schedNote(m,bad){const n=$('schedNote');n.textContent=m;n.style.color=bad?'#ff6b8a':'';}
+$('sched').addEventListener('click',async()=>{
+  const p=preset(),t=ptype(),caption=$('caption').value.trim(),when=$('when').value;
+  if(!p){schedNote('Pick a client first.',true);return;}
+  if(p.fallback){schedNote('To schedule, open this page on thecybersuite.com so your live client list loads. Captions work from here.',true);return;}
+  if(t!=='story'&&!caption){schedNote('Write or paste a caption first. Stories are the only post that can go without one.',true);return;}
+  if(!when){schedNote('Pick a date and time.',true);return;}
+  const at=new Date(when);if(at.getTime()<=Date.now()){schedNote('Pick a time in the future.',true);return;}
+  const btn=$('sched');btn.disabled=true;
+  try{
+    const title='Morning motivation';let postType,content,isTrial=false;
+    if(t==='story'){
+      schedNote('Saving the story image...');
+      render(dur());
+      const up=await postJson('/api/content/upload-image',{images:[{name:`morning-motivation-${Date.now()}.png`,base64:cv.toDataURL('image/png')}]});
+      const url=up.results&&up.results[0]&&up.results[0].url;if(!url)throw new Error('The image did not upload');
+      postType='story';content={caption:'',title:title+' (story)',platforms:['instagram'],imageUrls:[url],sourceTool:'morning-motivation'};
+    }else{
+      schedNote('Recording the reel, this takes about '+dur()+' seconds...');
+      const {blob,ext}=await recordVideo();
+      if(ext!=='mp4')throw new Error('This browser makes WEBM files and Instagram needs an MP4. Please schedule from Chrome or Safari on a computer.');
+      schedNote('Uploading the reel...');
+      const form=new FormData();form.append('video',blob,`morning-motivation-${Date.now()}.mp4`);
+      const r=await fetch(BASE+'/api/content/upload-video',{method:'POST',body:form});
+      const up=await r.json().catch(()=>({}));
+      if(!r.ok)throw new Error(up.error||'The video did not upload');
+      const videoUrl=up.proxyUrl||up.url;if(!videoUrl)throw new Error('The video did not upload');
+      postType='reel';isTrial=t==='trial';
+      const platforms=(t==='reel'&&$('fb').checked)?['instagram','facebook']:['instagram'];
+      content={caption,title,platforms,videoUrl,sourceTool:'morning-motivation'};
+    }
+    schedNote('Booking it in...');
+    await postJson('/api/scheduler/posts',{presetId:p.id,postType,content,scheduledAt:at.toISOString(),isTrial,notes:''});
+    schedNote('Scheduled for '+at.toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' as a '+(t==='story'?'story':(t==='trial'?'trial reel':'reel'))+' for '+p.name+'.');
+  }catch(e){schedNote(e.message||'Scheduling failed',true);}
+  btn.disabled=false;restart(600);
+});
+
+/* ---------- start ---------- */
+syncColours();
+pick(LOCAL.length);
+render(DUR.toast);
+Promise.all([
+  document.fonts.load("700 40px Caveat"),
+  document.fonts.load("400 40px 'Special Elite'"),
+  document.fonts.load("600 40px Fredoka")
+]).catch(()=>{}).then(()=>{memo={};play({loop:true});});
+setTimeout(()=>{if(!raf)play({loop:true});},2500);
+})();
+</script>
+</body>
+</html>

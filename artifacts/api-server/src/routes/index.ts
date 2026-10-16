@@ -76,10 +76,12 @@ import igAuditRouter from "./ig-audit";
 import newsletterRouter from "./newsletter";
 import clientQuestionRouter from "./client-question";
 import yetToPostRouter from "./yet-to-post";
+import toastPhotoRouter from "./toast-photo";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(toastPhotoRouter);
 router.use(magazineMakerRouter);
 router.use(magazinePostRouter);
 router.use(accountHealthRouter);
