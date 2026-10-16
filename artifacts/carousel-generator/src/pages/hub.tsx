@@ -813,7 +813,7 @@ external: true,
 },
 {
 href: "/morning-motivation",
-group: "admin",
+group: "content",
 icon: Sun,
 name: "Morning Motivation",
 description: "A silent reel in seconds. Your message burnt onto toast, typed on a typewriter or trailing behind a woman on roller boots, with the client's logo, a caption and scheduling built in.",

@@ -6,7 +6,7 @@
 <title>Morning Motivation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@300;400;500;600;700;800&family=Caveat:wght@700&family=Fredoka:wght@400;500;600;700&family=Special+Elite&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@300;400;500;600;700;800&family=Caveat:wght@700&family=Fredoka:wght@400;500;600;700&family=Special+Elite&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#08080D;--card:#111118;--border:#1F1F28;--accent:#1A1A23;--muted:#B2B2BD;--pink:#FF2499;--pink-d:#F00080;--pink-l:#FF42A7}
 *{box-sizing:border-box;border-color:var(--border)}
@@ -477,42 +477,97 @@ function sceneToast(t){
 
 /* ---------- scene 1b: toast from a real photo ---------- */
 function drawCover(im){const iw=im.videoWidth||im.width,ih=im.videoHeight||im.height,k=Math.max(W/iw,H/ih),w=iw*k,h=ih*k;ctx.drawImage(im,(W-w)/2,(H-h)/2,w,h);}
-function drawBurn(t,t0,t1){
-  const bw=560*S.tsize,bh=430*S.tsize;
-  const lay=cached('tphoto|'+msg()+'|'+S.tsize,()=>fit(msg(),F_TOAST,700,bw,bh,120,32,1.12));
-  const lh=lay.size*1.12,blockH=lay.lines.length*lh;
+const F_BURN="'Nunito','Fredoka','Arial Rounded MT Bold','Arial',sans-serif";
+function noiseField(w,h,seed){
+  let st=seed>>>0;const rnd=()=>(st=(st*1664525+1013904223)>>>0)/4294967296;
+  const mk=cell=>{const gw=Math.ceil(w/cell)+3,gh=Math.ceil(h/cell)+3,g=new Float32Array(gw*gh);for(let i=0;i<g.length;i++)g[i]=rnd();return{gw,cell,g};};
+  const A=mk(7),B=mk(2.5);
+  const smp=(N,x,y)=>{const fx=x/N.cell,fy=y/N.cell,ix=fx|0,iy=fy|0,tx=fx-ix,ty=fy-iy,a=N.g[iy*N.gw+ix],b=N.g[iy*N.gw+ix+1],c=N.g[(iy+1)*N.gw+ix],d=N.g[(iy+1)*N.gw+ix+1];return(a*(1-tx)+b*tx)*(1-ty)+(c*(1-tx)+d*tx)*ty;};
+  const out=new Float32Array(w*h);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)out[y*w+x]=smp(A,x,y)*0.6+smp(B,x,y)*0.4;
+  return out;
+}
+function boxBlur(src,w,h,r,passes){
+  let a=Float32Array.from(src),b=new Float32Array(src.length);
+  for(let p=0;p<passes;p++){
+    for(let y=0;y<h;y++){let sum=0;const o=y*w;
+      for(let x=-r;x<=r;x++)sum+=a[o+Math.min(w-1,Math.max(0,x))];
+      for(let x=0;x<w;x++){b[o+x]=sum/(2*r+1);sum+=a[o+Math.min(w-1,x+r+1)]-a[o+Math.max(0,x-r)];}}
+    for(let x=0;x<w;x++){let sum=0;
+      for(let y=-r;y<=r;y++)sum+=b[Math.min(h-1,Math.max(0,y))*w+x];
+      for(let y=0;y<h;y++){a[y*w+x]=sum/(2*r+1);sum+=b[Math.min(h-1,y+r+1)*w+x]-b[Math.max(0,y-r)*w+x];}}
+  }
+  return a;
+}
+const sstep=(a,b,v)=>{const t=clamp((v-a)/(b-a));return t*t*(3-2*t);};
+// Builds the burnt lettering once per message: ragged charred edges, a dark core, a browned scorch around it.
+function buildBurnMask(lay,lh){
+  const pad=70,blockH=lay.lines.length*lh;
+  const m=document.createElement('canvas').getContext('2d');m.font=`700 ${lay.size}px ${F_BURN}`;
+  const maxW=Math.max(...lay.lines.map(l=>m.measureText(l).width));
+  const mw=Math.ceil(maxW+pad*2),mh=Math.ceil(blockH+pad*2);
+  const c0=document.createElement('canvas');c0.width=mw;c0.height=mh;
+  const x0c=c0.getContext('2d',{willReadFrequently:true});
+  x0c.font=`700 ${lay.size}px ${F_BURN}`;x0c.textBaseline='middle';x0c.textAlign='left';x0c.fillStyle='#fff';
+  lay.lines.forEach((ln,i)=>{const lw=x0c.measureText(ln).width;x0c.fillText(ln,mw/2-lw/2,mh/2-blockH/2+(i+.5)*lh);});
+  const px=x0c.getImageData(0,0,mw,mh).data,n=mw*mh,al=new Float32Array(n);
+  for(let i=0;i<n;i++)al[i]=px[i*4+3]/255;
+  const core=boxBlur(al,mw,mh,2,2),halo=boxBlur(al,mw,mh,Math.max(8,Math.round(lay.size*.14)),3),nz=noiseField(mw,mh,91+lay.size);
+  const mkc=()=>{const c=document.createElement('canvas');c.width=mw;c.height=mh;return c;};
+  const cH=mkc(),cC=mkc(),cE=mkc();
+  const iH=cH.getContext('2d').createImageData(mw,mh),iC=cC.getContext('2d').createImageData(mw,mh),iE=cE.getContext('2d').createImageData(mw,mh);
+  for(let i=0;i<n;i++){
+    const r=core[i]+(nz[i]-.5)*.5,e=sstep(.26,.74,r);
+    const hh=clamp(halo[i]*1.6)*(1-e)*.45*(0.6+0.4*nz[i]);
+    const t=sstep(.5,.98,e*(0.78+0.3*nz[i])),o=i*4;
+    iC.data[o]=165+(92-165)*t;iC.data[o+1]=96+(42-96)*t;iC.data[o+2]=42+(14-42)*t;iC.data[o+3]=e*(170+55*t);
+    iH.data[o]=110;iH.data[o+1]=52;iH.data[o+2]=14;iH.data[o+3]=hh*255;
+    iE.data[o]=255;iE.data[o+1]=140;iE.data[o+2]=40;iE.data[o+3]=e*255;
+  }
+  cH.getContext('2d').putImageData(iH,0,0);cC.getContext('2d').putImageData(iC,0,0);cE.getContext('2d').putImageData(iE,0,0);
+  return{cH,cC,cE,mw,mh};
+}
+function drawBurn(t,t0,t1,o){
+  o=o||{};const mt=o.lower?msg().toLowerCase():msg(),LH=1.28;
+  const bw=560*S.tsize,bh=430*S.tsize,fr=document.fonts&&document.fonts.check?document.fonts.check("700 40px Nunito"):1;
+  const lay=cached('tburn|'+mt+'|'+S.tsize+'|'+fr,()=>fit(mt,F_BURN,700,bw,bh,120,28,LH));
+  const lh=lay.size*LH,blockH=lay.lines.length*lh;
+  const mk=cached('tmask|'+mt+'|'+S.tsize+'|'+fr,()=>buildBurnMask(lay,lh));
   const total=lay.lines.reduce((a,l)=>a+l.length,0);
-  const p=seg(t,t0,t1),count=total*p,tail=Math.max(3,total*0.14),emberA=1-seg(t,t1,t1+0.8);
+  const p=seg(t,t0,t1),count=total*p,tail=Math.max(3,total*0.14),emberA=o.ember?1-seg(t,o.ember[0],o.ember[1]):1-seg(t,t1,t1+0.8);
   ctx.save();
-  ctx.translate(S.tx*W,S.ty*H);ctx.rotate(S.trot*Math.PI/180);
-  ctx.font=`700 ${lay.size}px ${F_TOAST}`;ctx.textBaseline='middle';ctx.textAlign='left';
+  if(o.alpha!=null)ctx.globalAlpha=o.alpha;
+  ctx.translate(S.tx*W+(o.dx||0),S.ty*H+(o.dy||0));ctx.rotate((S.trot+(o.drot||0))*Math.PI/180);if(o.k)ctx.scale(o.k,o.k);
+  ctx.font=`700 ${lay.size}px ${F_BURN}`;ctx.textBaseline='middle';ctx.textAlign='left';
   const pieces=[];let used=0,edge=null;
   lay.lines.forEach((ln,i)=>{
     const lw=ctx.measureText(ln).width,x0=-lw/2,y=-blockH/2+(i+.5)*lh;
     const k=Math.max(0,Math.min(ln.length,Math.floor(count-used)));
-    pieces.push({ln,x0,y,k,start:used});
+    pieces.push({ln,x0,y,k,start:used,lw});
     if(k>0)edge={x:x0+ctx.measureText(ln.slice(0,k)).width,y};
     used+=ln.length;
   });
-  const parts=fn=>pieces.forEach(pc=>{if(pc.k>0)fn(pc.ln.slice(0,pc.k),pc.x0,pc.y,pc);});
-  // scorched halo
-  ctx.save();ctx.globalCompositeOperation='multiply';ctx.shadowColor='rgba(60,22,4,.75)';ctx.shadowBlur=24;
-  ctx.fillStyle='rgba(110,52,14,.55)';parts((s,x,y)=>ctx.fillText(s,x,y));ctx.restore();
-  // pressed in edge highlight
-  ctx.save();ctx.globalCompositeOperation='screen';ctx.fillStyle='rgba(255,236,200,.22)';parts((s,x,y)=>ctx.fillText(s,x+2,y+2));ctx.restore();
-  // the burnt letters, multiplied so the crumb shows through
-  ctx.save();ctx.globalCompositeOperation='multiply';ctx.fillStyle='#3a1a08';parts((s,x,y)=>ctx.fillText(s,x,y));ctx.restore();
+  const ox=-mk.mw/2,oy=-mk.mh/2;
+  const clipDraw=(cnv,pc,from,to,mode,alpha,tall)=>{
+    const xa=pc.x0+ctx.measureText(pc.ln.slice(0,from)).width-(from===0?40:0);
+    const xb=pc.x0+ctx.measureText(pc.ln.slice(0,to)).width+(to===pc.ln.length?40:2);
+    ctx.save();ctx.beginPath();ctx.rect(xa,pc.y-lh*(tall||.62),xb-xa,lh*2*(tall||.62));ctx.clip();
+    ctx.globalCompositeOperation=mode;ctx.globalAlpha=alpha*(o.alpha==null?1:o.alpha);ctx.drawImage(cnv,ox,oy);ctx.restore();
+  };
+  // scorch around the letters, then the charred letters themselves (multiplied so the crumb shows through)
+  pieces.forEach(pc=>{if(pc.k>0)clipDraw(mk.cH,pc,0,pc.k,'multiply',1,1.1);});
+  pieces.forEach(pc=>{if(pc.k>0)clipDraw(mk.cC,pc,0,pc.k,'multiply',1);});
   // glowing ember on the freshest letters
-  ctx.save();ctx.globalCompositeOperation='screen';ctx.shadowColor='rgba(255,120,20,.9)';ctx.shadowBlur=18;
-  ctx.fillStyle='#FF8A1F';ctx.globalAlpha=0.85*(p<1?1:emberA);
+  ctx.save();ctx.shadowColor='rgba(255,120,20,.9)';ctx.shadowBlur=16;
   pieces.forEach(pc=>{
     if(pc.k<=0)return;
+    if(o.ember){clipDraw(mk.cE,pc,0,pc.k,'screen',0.5*emberA);return;}
     const a=Math.round(clamp(count-tail-pc.start,0,pc.k));
-    if(a<pc.k)ctx.fillText(pc.ln.slice(a,pc.k),pc.x0+ctx.measureText(pc.ln.slice(0,a)).width,pc.y);
+    if(a<pc.k)clipDraw(mk.cE,pc,a,pc.k,'screen',0.85*(p<1?1:emberA));
   });
   ctx.restore();
   // ember point and smoke
-  if(edge&&emberA>0){
+  if(edge&&emberA>0&&!o.ember){
     ctx.save();ctx.globalCompositeOperation='screen';
     const g=ctx.createRadialGradient(edge.x,edge.y,0,edge.x,edge.y,lay.size*0.7);
     g.addColorStop(0,`rgba(255,150,50,${(.6*emberA).toFixed(3)})`);g.addColorStop(1,'rgba(255,150,50,0)');
@@ -548,27 +603,90 @@ function sceneToastPhoto(t){
 
 /* ---------- scene 1c: toast from a video clip ---------- */
 const vid=document.createElement('video');vid.muted=true;vid.playsInline=true;vid.preload='auto';vid.setAttribute('playsinline','');
-const VBURN=2.2,VTAIL=0.8;
-function videoMode(){return S.scene==='toast'&&S.toastStyle==='video'&&S.video;}
-function vBurnStart(){return Math.max(0.5,S.video.dur-1.2);}
-function vTotal(){return Math.max(S.video.dur,vBurnStart()+VBURN)+VTAIL+0.2;}
+const VHOLD=1.0;
+function videoMode(){return S.scene==='toast'&&S.toastStyle==='video'&&S.video&&S.video.track;}
+function vTotal(){return S.video.dur+VHOLD;}
+function poseAt(t){
+  const tr=S.video.track,A=tr.pts;
+  if(t<=A[0].t)return A[0];if(t>=A[A.length-1].t)return A[A.length-1];
+  const f=t*tr.fps,i=Math.floor(f),u=f-i,a=A[i],b=A[Math.min(A.length-1,i+1)],L=(x,y)=>x+(y-x)*u;
+  return{cx:L(a.cx,b.cx),cy:L(a.cy,b.cy),w:L(a.w,b.w),ang:L(a.ang,b.ang),vis:L(a.vis,b.vis)};
+}
 function sceneToastVideo(t){
   ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
   if(vid.readyState>=2)drawCover(vid);
-  drawBurn(t,vBurnStart(),vBurnStart()+VBURN);
+  const tr=S.video.track,ps=poseAt(t);
+  if(ps.vis>0.01){
+    drawBurn(t,-9,-8,{lower:true,alpha:ps.vis,dx:(ps.cx-tr.fin.cx)*W,dy:(ps.cy-tr.fin.cy)*H,k:ps.w/tr.fin.w,drot:ps.ang-tr.fin.ang,ember:[tr.tpop,tr.tpop+1.3]});
+  }
   const vg=ctx.createRadialGradient(W/2,H/2,H*0.3,W/2,H/2,H*0.75);
   vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.28)');
   ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
   const sg2=ctx.createLinearGradient(0,0,0,420);sg2.addColorStop(0,'rgba(0,0,0,.4)');sg2.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=sg2;ctx.fillRect(0,0,W,420);
 }
+// Watches the clip once to learn where the toast is, how big it is and how it tilts, frame by frame,
+// so the burnt words can ride along with it as it pops out of the toaster.
+async function analyseClip(onProgress){
+  const D=vid.duration,fps=20,N=Math.floor(D*fps)+1,sw=108,sh=192;
+  const c=document.createElement('canvas');c.width=sw;c.height=sh;
+  const x=c.getContext('2d',{willReadFrequently:true});
+  const iw=vid.videoWidth,ih=vid.videoHeight,k=Math.max(sw/iw,sh/ih),w=iw*k,h=ih*k;
+  const raw=[];
+  for(let i=0;i<N;i++){
+    await seekVideo(Math.min(i/fps,D-0.03));
+    x.drawImage(vid,(sw-w)/2,(sh-h)/2,w,h);
+    const d=x.getImageData(0,0,sw,sh).data,m=new Uint8Array(sw*sh);
+    for(let j=0;j<sh;j++)for(let ii=0;ii<sw;ii++){
+      const o=(j*sw+ii)*4,r=d[o]/255,g=d[o+1]/255,b=d[o+2]/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),sat=mx?(mx-mn)/mx:0;
+      let hu=0;if(mx!==mn){if(mx===r)hu=((g-b)/(mx-mn))%6;else if(mx===g)hu=(b-r)/(mx-mn)+2;else hu=(r-g)/(mx-mn)+4;hu*=60;if(hu<0)hu+=360;}
+      if(hu>=18&&hu<=46&&sat>.34&&mx>.4&&mx<.98)m[j*sw+ii]=1;
+    }
+    // keep only the biggest connected blob, which is the toast
+    const lab=new Int16Array(sw*sh);let best=0,bestId=0,id=0;
+    for(let s0=0;s0<sw*sh;s0++){
+      if(!m[s0]||lab[s0])continue;
+      id++;let cnt=0;const st=[s0];lab[s0]=id;
+      while(st.length){const c=st.pop();cnt++;const cx=c%sw,cy=(c/sw)|0;
+        for(const nb of[cx>0?c-1:-1,cx<sw-1?c+1:-1,cy>0?c-sw:-1,cy<sh-1?c+sw:-1]){if(nb>=0&&m[nb]&&!lab[nb]){lab[nb]=id;st.push(nb);}}}
+      if(cnt>best){best=cnt;bestId=id;}
+    }
+    const xs=[],ys=[],top=new Array(sw).fill(-1);
+    for(let j=0;j<sh;j++)for(let ii=0;ii<sw;ii++){if(lab[j*sw+ii]===bestId&&bestId){xs.push(ii);ys.push(j);if(top[ii]<0)top[ii]=j;}}
+    const q=(arr,f)=>arr[Math.min(arr.length-1,Math.floor(arr.length*f))];
+    if(xs.length<40){raw.push({ok:false,area:0});}
+    else{
+      xs.sort((m,n)=>m-n);ys.sort((m,n)=>m-n);
+      const x0=q(xs,.03),x1=q(xs,.97),y0=q(ys,.03),y1=q(ys,.97);
+      let sx=0,sy=0,sxx=0,sxy=0,n=0;
+      for(let ii=Math.ceil(x0+(x1-x0)*.18);ii<=Math.floor(x1-(x1-x0)*.18);ii++){if(top[ii]>=0){n++;sx+=ii;sy+=top[ii];sxx+=ii*ii;sxy+=ii*top[ii];}}
+      const slope=n>5?(n*sxy-sx*sy)/Math.max(1e-6,(n*sxx-sx*sx)):0;
+      raw.push({ok:true,area:xs.length,cx:(x0+x1)/2/sw,cy:(y0+y1)/2/sh,w:(x1-x0)/sw,ang:Math.atan(slope)*180/Math.PI});
+    }
+    if(onProgress&&i%8===0)onProgress(i/N);
+  }
+  // the settled toast is the average of the last few frames
+  const tail=raw.slice(-4).filter(r=>r.ok);
+  if(!tail.length)throw new Error('no toast');
+  const av=key=>tail.reduce((a,r)=>a+r[key],0)/tail.length;
+  const fin={cx:av('cx'),cy:av('cy'),w:av('w'),ang:av('ang'),area:av('area')};
+  // fill gaps, smooth, and work out how visible the face is
+  let last=null;const filled=raw.map(r=>{if(r.ok){last=r;return r;}return last?{...last,area:0}:{ok:false,area:0,cx:fin.cx,cy:fin.cy,w:fin.w,ang:fin.ang};});
+  const sm=(i,key)=>{let a=0,n=0;for(let j=i-2;j<=i+2;j++){if(j>=0&&j<filled.length){a+=filled[j][key];n++;}}return a/n;};
+  const sstepL=(a,b,v)=>{const t=Math.max(0,Math.min(1,(v-a)/(b-a)));return t*t*(3-2*t);};
+  const pts=filled.map((r,i)=>({t:i/fps,cx:sm(i,'cx'),cy:sm(i,'cy'),w:sm(i,'w'),ang:0,vis:sstepL(.72,.92,sm(i,'area')/fin.area)}));
+  // once the toast has shown its face it keeps it
+  let seen=false;pts.forEach(p=>{if(p.vis>=.98)seen=true;if(seen)p.vis=1;});
+  const first=pts.find(p=>p.vis>=.5);
+  return{fps,pts,fin,tpop:first?first.t:0};
+}
 function seekVideo(to){return new Promise(res=>{
-  if(!S.video){res();return;}
+  if(!vid.src||!isFinite(vid.duration)){res();return;}
   vid.pause();
-  const done=()=>{vid.removeEventListener('seeked',done);res();};
+  let fin=false;const done=()=>{if(fin)return;fin=true;vid.removeEventListener('seeked',done);res();};
   vid.addEventListener('seeked',done);
-  vid.currentTime=Math.max(0,Math.min(to,S.video.dur-0.03));
-  setTimeout(res,1500);
+  vid.currentTime=Math.max(0,Math.min(to,vid.duration-0.03));
+  setTimeout(done,1500);
 });}
 function playVideo(opts){
   cancelAnimationFrame(raf);const my=++token;
@@ -887,23 +1005,33 @@ $('photoFile').addEventListener('change',e=>{
   const rd=new FileReader();rd.onload=()=>setPhoto(rd.result);rd.readAsDataURL(f);
 });
 
-$('vidFile').addEventListener('change',e=>{
-  const f=e.target.files&&e.target.files[0];if(!f)return;
-  const st=$('vidStatus');st.textContent='Opening your clip...';
-  const url=URL.createObjectURL(f);
+function openClip(url,label){
+  const st=$('vidStatus');st.textContent='Opening '+label+'...';
   vid.onloadedmetadata=async()=>{
     const d=vid.duration;
     if(!isFinite(d)||d<1){st.textContent='That clip would not open. Try an MP4.';return;}
     if(d>10){st.textContent='That clip is '+d.toFixed(1)+' seconds. Please use one of 10 seconds or less.';return;}
-    S.video={dur:d};
-    await seekVideo(d);
-    findToast(true);
-    st.textContent='Clip added ('+d.toFixed(1)+' seconds). The toast is found automatically. If the words sit in the wrong place, move them with the sliders.';
-    restart();
+    S.video=null;token++;
+    try{
+      st.textContent='Watching your clip so the words can ride on the toast...';
+      vid.dur=d;
+      const track=await analyseClip(f=>{st.textContent='Watching your clip so the words can ride on the toast... '+Math.round(f*100)+'%';});
+      S.video={dur:d,track};
+      S.tx=track.fin.cx;S.ty=track.fin.cy+0.075;S.tsize=clamp(track.fin.w*W*0.68/560,.4,1.6);S.trot=0;
+      $('pX').value=Math.round(S.tx*100);$('pY').value=Math.round(S.ty*100);$('pS').value=Math.round(S.tsize*100);$('pR').value=0;
+      st.textContent='Clip added ('+d.toFixed(1)+' seconds). The words are burnt into the toast and travel with it. Nudge them with the sliders if you like.';
+      restart();
+    }catch(e){st.textContent='I could not find the toast in that clip. Please check it is a clip of plain toast popping up.';}
   };
   vid.onerror=()=>{st.textContent='This browser cannot open that clip. Try an MP4 (H.264) or use Chrome.';};
   vid.src=url;vid.load();
+}
+$('vidFile').addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  openClip(URL.createObjectURL(f),'your clip');
 });
+// The built in toast clip loads by itself on the site, so the cartoon toast is never what you see first.
+fetch('/morning-motivation/clips/toast-1.mp4',{method:'HEAD'}).then(r=>{if(r.ok&&(r.headers.get('content-type')||'').indexOf('video')===0)openClip('/morning-motivation/clips/toast-1.mp4','the built in toast clip');}).catch(()=>{});
 let variantNo=Math.floor(Math.random()*4);
 $('genPhoto').addEventListener('click',async()=>{
   const btn=$('genPhoto');btn.disabled=true;$('photoStatus').textContent='Making your toast photo. This takes about 20 seconds...';
@@ -940,7 +1068,7 @@ function findToast(quiet){
   $('pX').value=Math.round(S.tx*100);$('pY').value=Math.round(S.ty*100);$('pS').value=Math.round(S.tsize*100);$('pR').value=0;
   holdFrame();
 }
-$('findToast').addEventListener('click',()=>findToast(false));
+$('findToast').addEventListener('click',async()=>{if(videoMode())await seekVideo(S.video.dur);findToast(false);});
 
 /* ---------- client, caption and schedule (uses the same system as the rest of the tools) ---------- */
 const ON_SITE=/thecybersuite\.com$/i.test(location.hostname)||location.hostname==='localhost';
@@ -1061,8 +1189,9 @@ pick(LOCAL.length);
 render(DUR.toast);
 Promise.all([
   document.fonts.load("700 40px Caveat"),
+  document.fonts.load("700 40px Nunito"),
   document.fonts.load("400 40px 'Special Elite'"),
-  document.fonts.load("600 40px Fredoka")
+  document.fonts.load("700 40px Nunito")
 ]).catch(()=>{}).then(()=>{memo={};play({loop:true});});
 setTimeout(()=>{if(!raf)play({loop:true});},2500);
 })();
