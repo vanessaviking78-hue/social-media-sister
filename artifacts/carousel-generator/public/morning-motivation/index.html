@@ -84,9 +84,14 @@ canvas{width:100%;height:100%;display:block}
       </div>
       <div id="toastOpts" style="margin-top:14px">
         <p class="note" style="margin:0 0 8px">Toast look</p>
-        <div class="scenes" style="grid-template-columns:repeat(2,1fr)">
-          <input type="radio" name="tstyle" id="ts1" value="photo" checked><label for="ts1">Real photo<small>Looks like real life</small></label>
+        <div class="scenes" style="grid-template-columns:repeat(3,1fr)">
+          <input type="radio" name="tstyle" id="ts0" value="video" checked><label for="ts0">Video clip<small>Toast pops up</small></label>
+          <input type="radio" name="tstyle" id="ts1" value="photo"><label for="ts1">Real photo<small>Looks like real life</small></label>
           <input type="radio" name="tstyle" id="ts2" value="draw"><label for="ts2">Illustrated<small>Cartoon toaster</small></label>
+        </div>
+        <div id="vidOpts" style="margin-top:12px;display:none">
+          <div class="row" style="margin-top:0"><input type="file" id="vidFile" accept="video/*"></div>
+          <p class="note" id="vidStatus">Upload your plain toast clip, the one where the toast pops up with nothing written on it. About 5 seconds works best. Your words burn onto the toast after it settles.</p>
         </div>
         <div id="photoOpts" style="margin-top:12px">
           <div class="row" style="margin-top:0">
@@ -94,6 +99,8 @@ canvas{width:100%;height:100%;display:block}
             <input type="file" id="photoFile" accept="image/*">
           </div>
           <p class="note" id="photoStatus">Use your own photo of plain toast, or let me make one. Until a photo is added you will see the illustrated toast.</p>
+        </div>
+        <div id="poseOpts" style="margin-top:12px">
           <div class="cols" style="margin-top:10px">
             <label>Words up and down<input type="range" id="pY" min="15" max="85" value="48"></label>
             <label>Words left and right<input type="range" id="pX" min="15" max="85" value="50"></label>
@@ -284,7 +291,7 @@ const PALETTES=[
 ];
 
 const S={scene:'toast',msg:'',bg:'#FBE3C8',accent:'#2E9C8E',ink:'#3A2A22',pop:'#F4B63F',
-  skin:'#E0A97D',hair:'#3B2416',logoImg:null,showLogo:true,handle:'',toastStyle:'photo',photo:null,tx:.5,ty:.48,tsize:1,trot:0};
+  skin:'#E0A97D',hair:'#3B2416',logoImg:null,showLogo:true,handle:'',toastStyle:'video',video:null,photo:null,tx:.5,ty:.48,tsize:1,trot:0};
 let LOGO_LIGHT=false;
 
 /* ---------- helpers ---------- */
@@ -469,18 +476,13 @@ function sceneToast(t){
 }
 
 /* ---------- scene 1b: toast from a real photo ---------- */
-function drawCover(im){const k=Math.max(W/im.width,H/im.height),w=im.width*k,h=im.height*k;ctx.drawImage(im,(W-w)/2,(H-h)/2,w,h);}
-function sceneToastPhoto(t){
-  const D=DUR.toast,push=1+0.07*seg(t,0,D);
-  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
-  ctx.save();
-  ctx.translate(W/2,H/2);ctx.scale(push,push);ctx.translate(-W/2,-H/2);
-  drawCover(S.photo);
+function drawCover(im){const iw=im.videoWidth||im.width,ih=im.videoHeight||im.height,k=Math.max(W/iw,H/ih),w=iw*k,h=ih*k;ctx.drawImage(im,(W-w)/2,(H-h)/2,w,h);}
+function drawBurn(t,t0,t1){
   const bw=560*S.tsize,bh=430*S.tsize;
   const lay=cached('tphoto|'+msg()+'|'+S.tsize,()=>fit(msg(),F_TOAST,700,bw,bh,120,32,1.12));
   const lh=lay.size*1.12,blockH=lay.lines.length*lh;
   const total=lay.lines.reduce((a,l)=>a+l.length,0);
-  const p=seg(t,0.9,3.7),count=total*p,tail=Math.max(3,total*0.14),emberA=1-seg(t,3.7,4.5);
+  const p=seg(t,t0,t1),count=total*p,tail=Math.max(3,total*0.14),emberA=1-seg(t,t1,t1+0.8);
   ctx.save();
   ctx.translate(S.tx*W,S.ty*H);ctx.rotate(S.trot*Math.PI/180);
   ctx.font=`700 ${lay.size}px ${F_TOAST}`;ctx.textBaseline='middle';ctx.textAlign='left';
@@ -524,6 +526,14 @@ function sceneToastPhoto(t){
     }
   }
   ctx.restore();
+}
+function sceneToastPhoto(t){
+  const D=DUR.toast,push=1+0.07*seg(t,0,D);
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  ctx.save();
+  ctx.translate(W/2,H/2);ctx.scale(push,push);ctx.translate(-W/2,-H/2);
+  drawCover(S.photo);
+  drawBurn(t,0.9,3.7);
   // soft vignette
   const vg=ctx.createRadialGradient(W/2,H/2,H*0.25,W/2,H/2,H*0.7);
   vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.35)');
@@ -533,6 +543,56 @@ function sceneToastPhoto(t){
   const sg2=ctx.createLinearGradient(0,0,0,420);sg2.addColorStop(0,'rgba(0,0,0,.4)');sg2.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=sg2;ctx.fillRect(0,0,W,420);
   const fade=1-seg(t,0,0.5);if(fade>0){ctx.fillStyle=`rgba(0,0,0,${fade.toFixed(3)})`;ctx.fillRect(0,0,W,H);}
+}
+
+
+/* ---------- scene 1c: toast from a video clip ---------- */
+const vid=document.createElement('video');vid.muted=true;vid.playsInline=true;vid.preload='auto';vid.setAttribute('playsinline','');
+const VBURN=2.2,VTAIL=0.8;
+function videoMode(){return S.scene==='toast'&&S.toastStyle==='video'&&S.video;}
+function vBurnStart(){return Math.max(0.5,S.video.dur-1.2);}
+function vTotal(){return Math.max(S.video.dur,vBurnStart()+VBURN)+VTAIL+0.2;}
+function sceneToastVideo(t){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  if(vid.readyState>=2)drawCover(vid);
+  drawBurn(t,vBurnStart(),vBurnStart()+VBURN);
+  const vg=ctx.createRadialGradient(W/2,H/2,H*0.3,W/2,H/2,H*0.75);
+  vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.28)');
+  ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
+  const sg2=ctx.createLinearGradient(0,0,0,420);sg2.addColorStop(0,'rgba(0,0,0,.4)');sg2.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=sg2;ctx.fillRect(0,0,W,420);
+}
+function seekVideo(to){return new Promise(res=>{
+  if(!S.video){res();return;}
+  vid.pause();
+  const done=()=>{vid.removeEventListener('seeked',done);res();};
+  vid.addEventListener('seeked',done);
+  vid.currentTime=Math.max(0,Math.min(to,S.video.dur-0.03));
+  setTimeout(res,1500);
+});}
+function playVideo(opts){
+  cancelAnimationFrame(raf);const my=++token;
+  vid.pause();
+  const T=vTotal(),D=S.video.dur;let endAt=0;
+  const go=()=>{
+    if(my!==token)return;
+    vid.play().catch(()=>{});
+    function step(now){
+      if(my!==token)return;
+      let t;
+      if(!vid.ended&&vid.currentTime<D-0.04)t=vid.currentTime;
+      else{if(!endAt)endAt=now;t=D-0.04+(now-endAt)/1000;}
+      if(t>=T){
+        if(opts.loop){playVideo(opts);return;}
+        render(T);if(opts.onEnd)opts.onEnd();return;
+      }
+      render(t);raf=requestAnimationFrame(step);
+    }
+    raf=requestAnimationFrame(step);
+  };
+  vid.currentTime=0;
+  let started=false;const kick=()=>{if(started)return;started=true;vid.removeEventListener('seeked',kick);go();};
+  vid.addEventListener('seeked',kick);setTimeout(kick,600);
 }
 
 /* ---------- scene 2: typewriter ---------- */
@@ -690,16 +750,18 @@ function sceneSkate(t){
 
 /* ---------- render and playback ---------- */
 const scenes={toast:sceneToast,type:sceneType,skate:sceneSkate};
-function dur(){return DUR[S.scene];}
+function dur(){return videoMode()?vTotal():DUR[S.scene];}
 function render(t){
   ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,H);
   ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.globalAlpha=1;
-  if(S.scene==='toast'&&S.toastStyle==='photo'&&S.photo){LOGO_LIGHT=true;sceneToastPhoto(t);drawLogo();LOGO_LIGHT=false;}
+  if(videoMode()){LOGO_LIGHT=true;sceneToastVideo(t);drawLogo();LOGO_LIGHT=false;}
+  else if(S.scene==='toast'&&S.toastStyle==='photo'&&S.photo){LOGO_LIGHT=true;sceneToastPhoto(t);drawLogo();LOGO_LIGHT=false;}
   else{drawBG(t);drawLogo();scenes[S.scene](t);}
 }
 let raf=0,token=0;
 function play(opts){
   opts=opts||{};cancelAnimationFrame(raf);
+  if(videoMode()){playVideo(opts);return;}
   const my=++token,D=dur(),total=D+(opts.record?0.6:0.9),start=performance.now();
   function step(now){
     if(my!==token)return;
@@ -767,8 +829,8 @@ $('logo').addEventListener('change',e=>{
 $('replay').addEventListener('click',()=>play({loop:true}));
 $('safe').addEventListener('change',e=>$('guides').classList.toggle('on',e.target.checked));
 
-$('cover').addEventListener('click',()=>{
-  render(dur());
+$('cover').addEventListener('click',async()=>{
+  await stillFrame();
   cv.toBlob(b=>save(b,`morning-motivation-${S.scene}-cover.png`),'image/png');
   restart(1200);
 });
@@ -805,11 +867,14 @@ $('dl').addEventListener('click',async()=>{
 function syncToastOpts(){
   $('toastOpts').style.display=S.scene==='toast'?'block':'none';
   $('photoOpts').style.display=S.toastStyle==='photo'?'block':'none';
+  $('vidOpts').style.display=S.toastStyle==='video'?'block':'none';
+  $('poseOpts').style.display=(S.toastStyle==='photo'||S.toastStyle==='video')?'block':'none';
 }
 document.querySelectorAll('input[name=scene]').forEach(r=>r.addEventListener('change',syncToastOpts));
 document.querySelectorAll('input[name=tstyle]').forEach(r=>r.addEventListener('change',()=>{S.toastStyle=r.value;syncToastOpts();restart();}));
 syncToastOpts();
-function holdFrame(){token++;cancelAnimationFrame(raf);render(dur());restart(1500);}
+async function stillFrame(){if(videoMode()){token++;cancelAnimationFrame(raf);await seekVideo(S.video.dur);}render(videoMode()?vTotal()-0.4:dur());}
+async function holdFrame(){token++;cancelAnimationFrame(raf);await stillFrame();restart(1500);}
 [['pX','tx',v=>v/100],['pY','ty',v=>v/100],['pS','tsize',v=>v/100],['pR','trot',v=>v]].forEach(([id,key,f])=>$(id).addEventListener('input',e=>{S[key]=f(Number(e.target.value));holdFrame();}));
 function setPhoto(src){
   const im=new Image();
@@ -820,6 +885,24 @@ function setPhoto(src){
 $('photoFile').addEventListener('change',e=>{
   const f=e.target.files&&e.target.files[0];if(!f)return;
   const rd=new FileReader();rd.onload=()=>setPhoto(rd.result);rd.readAsDataURL(f);
+});
+
+$('vidFile').addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  const st=$('vidStatus');st.textContent='Opening your clip...';
+  const url=URL.createObjectURL(f);
+  vid.onloadedmetadata=async()=>{
+    const d=vid.duration;
+    if(!isFinite(d)||d<1){st.textContent='That clip would not open. Try an MP4.';return;}
+    if(d>10){st.textContent='That clip is '+d.toFixed(1)+' seconds. Please use one of 10 seconds or less.';return;}
+    S.video={dur:d};
+    await seekVideo(d);
+    findToast(true);
+    st.textContent='Clip added ('+d.toFixed(1)+' seconds). The toast is found automatically. If the words sit in the wrong place, move them with the sliders.';
+    restart();
+  };
+  vid.onerror=()=>{st.textContent='This browser cannot open that clip. Try an MP4 (H.264) or use Chrome.';};
+  vid.src=url;vid.load();
 });
 let variantNo=Math.floor(Math.random()*4);
 $('genPhoto').addEventListener('click',async()=>{
@@ -834,21 +917,26 @@ $('genPhoto').addEventListener('click',async()=>{
 });
 // A best guess at where the toast is: golden brown pixels near the middle of the frame.
 function findToast(quiet){
-  if(!S.photo)return;
+  const src=videoMode()?vid:S.photo;
+  if(!src)return;
   const sw=108,sh=192,c=document.createElement('canvas');c.width=sw;c.height=sh;
   const x=c.getContext('2d',{willReadFrequently:true});
-  const k=Math.max(sw/S.photo.width,sh/S.photo.height),w=S.photo.width*k,h=S.photo.height*k;
-  x.drawImage(S.photo,(sw-w)/2,(sh-h)/2,w,h);
-  const d=x.getImageData(0,0,sw,sh).data;let n=0,sx=0,sy=0;
+  const iw=src.videoWidth||src.width,ih=src.videoHeight||src.height,k=Math.max(sw/iw,sh/ih),w=iw*k,h=ih*k;
+  x.drawImage(src,(sw-w)/2,(sh-h)/2,w,h);
+  const d=x.getImageData(0,0,sw,sh).data;const xs=[],ys=[];
   for(let j=0;j<sh;j++)for(let i=0;i<sw;i++){
     const o=(j*sw+i)*4,r=d[o]/255,g=d[o+1]/255,b=d[o+2]/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),v=mx,sat=mx?(mx-mn)/mx:0;
     let hu=0;if(mx!==mn){if(mx===r)hu=((g-b)/(mx-mn))%6;else if(mx===g)hu=(b-r)/(mx-mn)+2;else hu=(r-g)/(mx-mn)+4;hu*=60;if(hu<0)hu+=360;}
     const dx=i/sw-.5,dy=j/sh-.5;
-    if(hu>=20&&hu<=48&&sat>.28&&v>.38&&v<.97&&Math.abs(dx)<.42&&Math.abs(dy)<.36){n++;sx+=i;sy+=j;}
+    if(hu>=20&&hu<=48&&sat>.28&&v>.38&&v<.97&&Math.abs(dx)<.42&&Math.abs(dy)<.36){xs.push(i);ys.push(j);}
   }
-  if(n<sw*sh*0.03){if(!quiet)$('photoStatus').textContent='I could not spot the toast. Use the sliders to put the words where you want them.';return;}
-  S.tx=sx/n/sw;S.ty=sy/n/sh;
-  const side=Math.sqrt(n)*(W/sw);S.tsize=clamp(side*0.62/560,.5,1.6);S.trot=0;
+  if(xs.length<sw*sh*0.03){if(!quiet)$('photoStatus').textContent='I could not spot the toast. Use the sliders to put the words where you want them.';return;}
+  xs.sort((m,n)=>m-n);ys.sort((m,n)=>m-n);
+  const q=(arr,f)=>arr[Math.min(arr.length-1,Math.floor(arr.length*f))];
+  const x0=q(xs,.03),x1=q(xs,.97),y0=q(ys,.03),y1=q(ys,.97);
+  S.tx=(x0+x1)/2/sw;S.ty=(y0+y1)/2/sh;
+  const toastW=(x1-x0)*(W/sw);
+  S.tsize=clamp(toastW*0.64/560,.5,1.6);S.trot=0;
   $('pX').value=Math.round(S.tx*100);$('pY').value=Math.round(S.ty*100);$('pS').value=Math.round(S.tsize*100);$('pR').value=0;
   holdFrame();
 }
@@ -942,7 +1030,7 @@ $('sched').addEventListener('click',async()=>{
     const title='Morning motivation';let postType,content,isTrial=false;
     if(t==='story'){
       schedNote('Saving the story image...');
-      render(dur());
+      await stillFrame();
       const up=await postJson('/api/content/upload-image',{images:[{name:`morning-motivation-${Date.now()}.png`,base64:cv.toDataURL('image/png')}]});
       const url=up.results&&up.results[0]&&up.results[0].url;if(!url)throw new Error('The image did not upload');
       postType='story';content={caption:'',title:title+' (story)',platforms:['instagram'],imageUrls:[url],sourceTool:'morning-motivation'};
