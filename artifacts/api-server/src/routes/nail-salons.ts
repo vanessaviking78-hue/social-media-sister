@@ -94,6 +94,11 @@ function systemPrompt(kind: NailPostKind, n: Notes): string {
 
 WHO SHE IS TALKING TO: ${n.audience || "women aged 18 plus who love nails, cute, girly and sweet"}. Use the consumer psychology of a young, girly, social audience: they save, share and tag friends, they love a treat they feel they have earned, they want to feel seen, they follow people who feel like a mate. Cute, girly, sweet, warm, affable, funny and humanised. Fun rather than technical.
 ${n.brandNotes ? `BRAND NOTES: ${n.brandNotes}\n` : ""}${n.services ? `SERVICES SHE OFFERS: ${n.services}\n` : ""}${n.offer ? `CURRENT OFFER: ${n.offer}\n` : ""}${n.booking ? `HOW PEOPLE BOOK: ${n.booking}\n` : ""}
+THE TWO JOBS EVERY POST DOES (this is the whole point of the week)
+1. WIN NEW CLIENTS. Write for the girl who has never booked with her and is quietly scrolling. She should land on the post, feel she already likes ${n.ownerName || "Millie"}, picture herself in the chair, and want to say hello. Make saying hello easy and low pressure: the reply word is her way in, the reason to comment is a fun one, and the details come to her in a message. Never talk only to existing regulars. Let a first time visitor feel welcome, with nothing she needs to already know.
+2. BUILD A COMMUNITY. Make the page feel like a little club of nail girls, not a shop window. Invite her to join in: ask something easy and fun that she can answer in one line, get her to tag a friend who needs to see it, get her to share her own nail story, favourite shade or nail habit, and give her a feeling of belonging ("my girls", "come and sit with me"). Write as if she will reply and ${n.ownerName || "Millie"} will answer every comment. Never invent names, shoutouts or client stories.
+Both jobs must be woven in through warmth and fun, never pushy, never salesy.
+
 THIS POST
 ${BRIEFS[kind]}
 ${kind === "personal" && n.personal ? `What is really going on in her week (use this, only this): ${n.personal}\n` : ""}${kind === "availability" && n.availability ? `Her availability (use exactly this): ${n.availability}\n` : ""}
@@ -108,7 +113,7 @@ WRITING RULES (non-negotiable)
 - ${n.emojis ? "A few cute emojis are welcome (nails, sparkles, hearts), no more than three in the whole caption." : "No emojis."}
 - Never state prices, percentages or guarantees unless they were supplied above. Never invent a client, a result, a quote or a number.
 - Never mention a website or a link anywhere. Get people to engage on the platform instead (comment the reply word, send a message).
-- STEALTH SALES: she never says "book now". She makes the reader picture herself in the chair, feel the little lift of fresh nails, and quietly decide she wants it. The close is a strong but friendly nudge to comment the reply word so Millie can send the details.
+- STEALTH SALES: she never says "book now". She makes the reader picture herself in the chair, feel the little lift of fresh nails, and quietly decide she wants it. The close is a strong but friendly nudge to comment the reply word so Millie can send the details, and the closing question is easy to answer in a few words so the comments section fills up.
 - The caption ends with ONE question that relates to the post. The reply word sits inside that closing question or the line just before it, written as "Comment ${word || "WORD"}" with the word in capitals${word ? ` (use ${word} exactly)` : " (a fun single uppercase word that fits the post)"}.
 - Do not put hashtags in the caption text. Return them separately as the "hashtags" array: exactly 5, lower case, no spaces, all based on the area (${n.area}) and the post, for example the town, the city, the nearby areas and nail related tags with the town.
 
