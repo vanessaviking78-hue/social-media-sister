@@ -155,9 +155,15 @@ canvas{width:100%;height:100%;display:block}
         <label class="chk"><input type="checkbox" id="showLogo" checked> Show logo</label>
         <input type="file" id="logo" accept="image/*">
       </div>
-      <div class="row">
-        <p class="note" id="logoNote" style="margin:8px 0 0">The client's own logo loads when you choose them in step 4. You can also upload one here.</p>
-        <input type="text" id="handle" placeholder="@yourclinic (optional, sits under the logo)">
+      <div class="row" style="align-items:center">
+        <img id="logoPrev" alt="" style="display:none;height:64px;max-width:200px;object-fit:contain;border:1px solid var(--border);border-radius:10px;padding:6px;background:#fff linear-gradient(45deg,#d9d9de 25%,transparent 25%,transparent 75%,#d9d9de 75%),linear-gradient(45deg,#d9d9de 25%,transparent 25%,transparent 75%,#d9d9de 75%);background-color:#f4f4f6;background-size:14px 14px;background-position:0 0,7px 7px">
+        <button class="alt" id="logoOrig" type="button" style="display:none">Keep the original background</button>
+        <label class="chk" id="logoWhiteRow" style="display:none"><input type="checkbox" id="logoWhite"> Make the logo white</label>
+        <a id="logoDl" style="display:none;color:var(--pink);font-size:13px" href="#" download="logo-transparent.png">Download transparent PNG</a>
+      </div>
+      <div class="row" style="flex-wrap:wrap">
+        <p class="note" id="logoNote" style="margin:8px 0 0;flex:1 1 100%">Making a sample for someone who is not a client? Upload their logo here and I take the background away for you. For clients, their own logo loads when you choose them in step 4.</p>
+        <input type="text" id="handle" style="flex:1 1 100%" placeholder="@yourclinic (optional, sits under the logo)">
       </div>
     </div>
 
@@ -938,12 +944,82 @@ $('skin').addEventListener('change',e=>{S.skin=e.target.value;restart();});
 $('hair').addEventListener('change',e=>{S.hair=e.target.value;restart();});
 $('showLogo').addEventListener('change',e=>{S.showLogo=e.target.checked;restart();});
 $('handle').addEventListener('input',e=>{S.handle=e.target.value.trim();restart(300);});
+
+/* ---------- logo upload: always a transparent background ---------- */
+function makeTransparent(img){
+  const w=img.naturalWidth||img.width,h=img.naturalHeight||img.height,k=Math.min(1,1600/Math.max(w,h));
+  const cw=Math.max(1,Math.round(w*k)),ch=Math.max(1,Math.round(h*k));
+  const c=document.createElement('canvas');c.width=cw;c.height=ch;
+  const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0,cw,ch);
+  const id=x.getImageData(0,0,cw,ch),d=id.data;
+  const border=[];for(let i=0;i<cw;i++){border.push(i,(ch-1)*cw+i);}for(let j=0;j<ch;j++){border.push(j*cw,j*cw+cw-1);}
+  let clear=0;border.forEach(i=>{if(d[i*4+3]<250)clear++;});
+  let bg=null;
+  if(clear/border.length<.6){
+    const bk=new Map();
+    border.forEach(i=>{const o=i*4,key=((d[o]>>4)<<8)|((d[o+1]>>4)<<4)|(d[o+2]>>4),b=bk.get(key)||{n:0,r:0,g:0,b:0};b.n++;b.r+=d[o];b.g+=d[o+1];b.b+=d[o+2];bk.set(key,b);});
+    let best=null;bk.forEach(b=>{if(!best||b.n>best.n)best=b;});
+    if(best&&best.n/border.length>.5)bg=[best.r/best.n,best.g/best.n,best.b/best.n];
+  }
+  if(bg){
+    const lo=26,hi=96;
+    for(let i=0;i<cw*ch;i++){
+      const o=i*4,dr=d[o]-bg[0],dg=d[o+1]-bg[1],db=d[o+2]-bg[2],dist=Math.sqrt(dr*dr+dg*dg+db*db);
+      let t=(dist-lo)/(hi-lo);t=t<=0?0:t>=1?1:t*t*(3-2*t);
+      if(t>0&&t<1){for(let q=0;q<3;q++){const v=(d[o+q]-bg[q]*(1-t))/t;d[o+q]=v<0?0:v>255?255:v;}}
+      d[o+3]=Math.round(d[o+3]*t);
+    }
+  }
+  x.putImageData(id,0,0);
+  // trim the empty space around the logo
+  let x0=cw,y0=ch,x1=-1,y1=-1;
+  for(let j=0;j<ch;j++)for(let i=0;i<cw;i++){if(d[(j*cw+i)*4+3]>10){if(i<x0)x0=i;if(i>x1)x1=i;if(j<y0)y0=j;if(j>y1)y1=j;}}
+  if(x1<0)return{canvas:c,cut:false};
+  const pad=4;x0=Math.max(0,x0-pad);y0=Math.max(0,y0-pad);x1=Math.min(cw-1,x1+pad);y1=Math.min(ch-1,y1+pad);
+  const o2=document.createElement('canvas');o2.width=x1-x0+1;o2.height=y1-y0+1;
+  o2.getContext('2d').drawImage(c,x0,y0,o2.width,o2.height,0,0,o2.width,o2.height);
+  return{canvas:o2,cut:!!bg};
+}
+function logoIsDark(c){
+  const x=c.getContext('2d'),d=x.getImageData(0,0,c.width,c.height).data;let sum=0,n=0;
+  for(let i=0;i<d.length;i+=16){if(d[i+3]>40){sum+=(0.299*d[i]+0.587*d[i+1]+0.114*d[i+2])/255;n++;}}
+  return n?sum/n<0.5:false;
+}
+function applyLogo(){
+  const base=S.logoMode==='orig'?S.logoOrigImg:S.logoCut;
+  const w=base.naturalWidth||base.width,h=base.naturalHeight||base.height;
+  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');
+  x.drawImage(base,0,0,w,h);
+  if(S.logoWhite){x.globalCompositeOperation='source-in';x.fillStyle='#fff';x.fillRect(0,0,w,h);}
+  const url=c.toDataURL('image/png'),im=new Image();
+  im.onload=()=>{
+    S.logoImg=im;S.showLogo=true;$('showLogo').checked=true;
+    const pv=$('logoPrev');pv.src=url;pv.style.display='block';pv.style.backgroundColor=S.logoWhite?'#5c5c68':'#f4f4f6';
+    const dl=$('logoDl');dl.href=url;dl.style.display='inline';
+    $('logoOrig').style.display='inline-block';$('logoOrig').textContent=S.logoMode==='orig'?'Take the background away again':'Keep the original background';
+    $('logoWhiteRow').style.display='flex';$('logoWhite').checked=!!S.logoWhite;
+    restart();
+  };
+  im.src=url;
+}
+function useLogo(img,cutCanvas){
+  S.logoOrigImg=img;S.logoCut=cutCanvas;S.logoMode='cut';
+  S.logoWhite=logoIsDark(cutCanvas);
+  applyLogo();
+}
 $('logo').addEventListener('change',e=>{
   const f=e.target.files&&e.target.files[0];if(!f)return;
   const rd=new FileReader();
-  rd.onload=()=>{const im=new Image();im.onload=()=>{S.logoImg=im;$('logoNote').textContent='Your uploaded logo is on the reel.';restart();};im.src=rd.result;};
+  rd.onload=()=>{const im=new Image();im.onload=()=>{
+    const r=makeTransparent(im);useLogo(im,r.canvas);
+    $('logoNote').textContent=(r.cut?'Logo added with the background taken away.':'Logo added. It already had a see through background.')+(S.logoWhite?' It is a dark logo, so I made it white so it shows on the photo. Untick Make the logo white to see it in its own colours.':'')+' If a coloured box is part of the logo, press Keep the original background.';
+  };im.src=rd.result;};
   rd.readAsDataURL(f);
 });
+$('logoOrig').addEventListener('click',()=>{if(!S.logoOrigImg)return;S.logoMode=S.logoMode==='orig'?'cut':'orig';applyLogo();});
+$('logoWhite').addEventListener('change',e=>{S.logoWhite=e.target.checked;applyLogo();});
+
+
 $('replay').addEventListener('click',()=>play({loop:true}));
 $('safe').addEventListener('change',e=>$('guides').classList.toggle('on',e.target.checked));
 
@@ -1078,7 +1154,7 @@ let presets=[];
 const clientSel=$('client');
 function fillClients(list,live){
   presets=list;
-  clientSel.innerHTML='<option value="">Choose a client</option>'+list.map(p=>`<option value="${p.key}">${String(p.name).replace(/</g,'&lt;')}</option>`).join('');
+  clientSel.innerHTML='<option value="">No client (sample for a prospect)</option>'+list.map(p=>`<option value="${p.key}">${String(p.name).replace(/</g,'&lt;')}</option>`).join('');
   $('clientNote').textContent=live?'Your live client list is loaded, so you can write captions and schedule.':'Showing your usual clients so you can write captions. To schedule, open this page on thecybersuite.com where your live client list loads.';
 }
 fillClients(FALLBACK_CLIENTS.map((n,i)=>({key:'f'+i,name:n,fallback:true})),false);
