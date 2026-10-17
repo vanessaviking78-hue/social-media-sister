@@ -80,6 +80,7 @@ type Notes = {
   audience: string;
   brandNotes: string;
   services: string;
+  policies: string;
   offer: string;
   availability: string;
   personal: string;
@@ -93,7 +94,7 @@ function systemPrompt(kind: NailPostKind, n: Notes): string {
   return `You write one social media post for ${n.ownerName || "Millie"}, a nail technician who runs ${n.businessName}, in ${n.area}. You write as ${n.ownerName || "Millie"} herself, in the first person ("I", "my", "you"), never as a social media manager and never as "we".
 
 WHO SHE IS TALKING TO: ${n.audience || "women aged 18 plus who love nails, cute, girly and sweet"}. Use the consumer psychology of a young, girly, social audience: they save, share and tag friends, they love a treat they feel they have earned, they want to feel seen, they follow people who feel like a mate. Cute, girly, sweet, warm, affable, funny and humanised. Fun rather than technical.
-${n.brandNotes ? `BRAND NOTES: ${n.brandNotes}\n` : ""}${n.services ? `SERVICES SHE OFFERS: ${n.services}\n` : ""}${n.offer ? `CURRENT OFFER: ${n.offer}\n` : ""}${n.booking ? `HOW PEOPLE BOOK: ${n.booking}\n` : ""}
+${n.brandNotes ? `BRAND NOTES: ${n.brandNotes}\n` : ""}${n.services ? `HER SERVICES AND PRICES (only these exist, never offer anything else such as acrylics or other treatments): ${n.services}\n` : ""}${n.policies ? `HER BOOKING POLICIES (mention one only where it fits the post naturally, for example the deposit securing a slot on the availability post, and never invent any other policy): ${n.policies}\n` : ""}${n.offer ? `CURRENT OFFER: ${n.offer}\n` : ""}${n.booking ? `HOW PEOPLE BOOK: ${n.booking}\n` : ""}
 THE TWO JOBS EVERY POST DOES (this is the whole point of the week)
 1. WIN NEW CLIENTS. Write for the girl who has never booked with her and is quietly scrolling. She should land on the post, feel she already likes ${n.ownerName || "Millie"}, picture herself in the chair, and want to say hello. Make saying hello easy and low pressure: the reply word is her way in, the reason to comment is a fun one, and the details come to her in a message. Never talk only to existing regulars. Let a first time visitor feel welcome, with nothing she needs to already know.
 2. BUILD A COMMUNITY. Make the page feel like a little club of nail girls, not a shop window. Invite her to join in: ask something easy and fun that she can answer in one line, get her to tag a friend who needs to see it, get her to share her own nail story, favourite shade or nail habit, and give her a feeling of belonging ("my girls", "come and sit with me"). Write as if she will reply and ${n.ownerName || "Millie"} will answer every comment. Never invent names, shoutouts or client stories.
@@ -112,7 +113,7 @@ WRITING RULES (non-negotiable)
 - No AI patter. Banned: elevate, transform, unlock, journey, empower, game-changer, dive into, delve, navigate, seamless, effortless, next level, bespoke, holistic, fluff, faff, "fuss", "we've all been there". If a sentence sounds like a chatbot or a LinkedIn post, write what a real girl would actually say.
 - Short punchy lines, the odd one word line, plain conversational words. No exclamation marks.
 - ${n.emojis ? "A few cute emojis are welcome (nails, sparkles, hearts), no more than three in the whole caption." : "No emojis."}
-- Never state prices, percentages or guarantees unless they were supplied above. Never invent a client, a result, a quote or a number.
+- Only state a price, a policy or a guarantee if it appears in her services and policies above, exactly as written, and use prices sparingly (a post can sell the feeling without a price list). Never invent a client, a result, a quote or a number.
 - Never mention a website or a link anywhere. Get people to engage on the platform instead (comment the reply word, send a message).
 - STEALTH SALES: she never says "book now". She makes the reader picture herself in the chair, feel the little lift of fresh nails, and quietly decide she wants it. The close is a strong but friendly nudge to comment the reply word so Millie can send the details, and the closing question is easy to answer in a few words so the comments section fills up.
 - The caption ends with ONE question that relates to the post. The reply word sits inside that closing question or the line just before it, written as "Comment ${word || "WORD"}" with the word in capitals${word ? ` (use ${word} exactly)` : " (a fun single uppercase word that fits the post)"}.
@@ -181,7 +182,8 @@ router.post("/nail-salons/copy", async (req: Request, res: Response) => {
       area: str(b.area, 80) || "Wyke, Bradford",
       audience: str(b.audience, 200),
       brandNotes: str(b.brandNotes, 600),
-      services: str(b.services, 300),
+      services: str(b.services, 600),
+      policies: str(b.policies, 600),
       offer: str(b.offer, 300),
       availability: str(b.availability, 300),
       personal: str(b.personal, 400),
