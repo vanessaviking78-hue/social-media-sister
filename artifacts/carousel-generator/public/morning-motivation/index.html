@@ -309,6 +309,50 @@ const LOCAL=[
 "To the woman in {town} who says 'maybe next year' every year. Hi, I'm here. Maybe this week?",
 "That moment when a {town} woman walks in nervous and leaves booking her next visit. Hi, I'm here."
 ];
+const FERAL=[
+"You have 'thought about it' for 14 months. The thought now pays rent. Book.",
+"Your skin has been shouting for help and you gave it a tinted moisturiser. Come in.",
+"Imagine spending £40 on a candle and £0 on the face that sniffs it.",
+"Your 'I'll start Monday' has a longer waiting list than my diary. Try Tuesday.",
+"Her: 'I don't have time.' Also her: four hours scrolling other people's holidays.",
+"You deserve nice things. Stop pinning them and book one.",
+"Your group chat has heard about this treatment for six months. Give them an ending.",
+"Dear woman who is 'just seeing how it goes'. It goes to a consultation, love.",
+"Your face works 16 hours a day for you, unpaid. Pay it.",
+"No questions on why you are still using a facewipe at midnight. Just come and see me.",
+"Sunscreen in winter. Yes, really. Yes, you. Yes, today.",
+"You have followed the clinic and liked eleven posts. Say hello, you stalker.",
+"Nobody looks fine under a changing room light. Book in anyway.",
+"Your mum's friend Sandra looks amazing and she is keeping schtum. I won't.",
+"Bin the 'I'm fine' face. Book the 'oh hello' face.",
+"You own 14 half used serums. A consultation would save you a fortune. You're welcome.",
+"If you have said 'I must do something about my face' out loud twice this week, this is your sign.",
+"Treat yourself, you absolute legend. Future you is already taking the credit.",
+"My records show your 'me time' basket has been abandoned since 2019. Check out.",
+"Plot twist: the woman you keep envying booked an appointment. That is the whole secret."
+];
+const STOIC=[
+"You cannot control the clock. You can decide that this week has something in it for you.",
+"The right moment never turns up on its own. You book it.",
+"Be kind to the woman in the mirror. She has carried a lot.",
+"Calm skin, calm mind. Start with one small thing today.",
+"Pick one thing today and look after it well.",
+"Quiet confidence is built from small appointments you keep with yourself.",
+"What you put up with becomes what you accept. Raise the bar gently.",
+"Take care of the body that takes care of everyone else.",
+"Fear of judgement shrinks the moment you walk through the door.",
+"Progress looks like a Tuesday afternoon you gave to yourself.",
+"Some days the bravest thing is booking the consultation. Go on.",
+"Decide what matters, then protect the time for it.",
+"One steady habit beats a hundred big plans. Cleanse. SPF. Repeat.",
+"The woman who looks after her skin has chosen to turn up for her own life.",
+"Slow down. The glow comes from rest, water and a good plan.",
+"Be gentle with the mirror. It only shows you today.",
+"Today is a good day to keep a promise to yourself.",
+"Ask the question you have been rehearsing in the shower.",
+"Patience is a beauty treatment. So is a proper night's sleep and a good cuppa.",
+"Look after yourself the way you look after everyone you love."
+];
 const MESSAGES=[
 "To the woman who has been putting herself last all week. Book the thing.",
 "Life is short. Get the lips.",
@@ -962,14 +1006,17 @@ function restart(delay){clearTimeout(restartTimer);restartTimer=setTimeout(()=>p
 /* ---------- ui ---------- */
 const $=id=>document.getElementById(id);
 const bank=$('bank'),msgBox=$('msg');
-const ALL=[].concat(LOCAL.map(t=>({t,local:true})),MESSAGES.map(t=>({t,local:false})));
+const ALL=[].concat(LOCAL.map(t=>({t,local:true,k:'local'})),MESSAGES.map(t=>({t,local:false,k:'mot'})),FERAL.map(t=>({t,local:false,k:'feral'})),STOIC.map(t=>({t,local:false,k:'stoic'})));
 function town(){return $('town').value.trim();}
 function fill(t){return t.replace(/\{town\}/g,town()||'[your town]');}
 (function(){
   const g1=document.createElement('optgroup');g1.label='Local to your clinic';
   const g2=document.createElement('optgroup');g2.label='Motivation';
-  ALL.forEach((m,i)=>{const o=document.createElement('option');o.value=i;o.textContent=m.t.length>62?m.t.slice(0,60)+'...':m.t;(m.local?g1:g2).appendChild(o);});
-  bank.appendChild(g1);bank.appendChild(g2);
+  const g3=document.createElement('optgroup');g3.label='Feral';
+  const g4=document.createElement('optgroup');g4.label='Stoic';
+  const gm={local:g1,mot:g2,feral:g3,stoic:g4};
+  ALL.forEach((m,i)=>{const o=document.createElement('option');o.value=i;o.textContent=m.t.length>62?m.t.slice(0,60)+'...':m.t;gm[m.k].appendChild(o);});
+  bank.appendChild(g1);bank.appendChild(g2);bank.appendChild(g3);bank.appendChild(g4);
 })();
 let TPL=null;
 function setMsg(m,tpl){TPL=tpl||null;S.msg=m;msgBox.value=m;$('count').textContent=m.length+' characters';}
@@ -1678,7 +1725,7 @@ $('bAddCur').addEventListener('click',()=>{if(addItem(msg(),TPL)){renderQ();bNot
 $('bRand').addEventListener('click',()=>{
   const want=Math.min(+$('bRandN').value,MAXQ-Q.length);if(want<=0){bNote('The list is full.',true);return;}
   const p=preset(),hasTown=!!(town()||(p&&p.seoArea));
-  const loc=ALL.map((m,i)=>i).filter(i=>ALL[i].local),mot=ALL.map((m,i)=>i).filter(i=>!ALL[i].local);
+  const loc=ALL.map((m,i)=>i).filter(i=>ALL[i].local),mot=ALL.map((m,i)=>i).filter(i=>ALL[i].k==='mot'),fer=ALL.map((m,i)=>i).filter(i=>ALL[i].k==='feral'),sto=ALL.map((m,i)=>i).filter(i=>ALL[i].k==='stoic');
   const have=new Set(Q.map(x=>x.tpl||x.msg));
   const shuf=a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
   const nLoc=hasTown?Math.round(want/2):0;
@@ -1750,22 +1797,26 @@ $('bSched').addEventListener('click',()=>{
   });
 });
 (function(){
-  const g1='<optgroup label="Local to your clinic">'+ALL.map((m,i)=>m.local?`<option value="${i}">${esc(m.t)}</option>`:'').join('')+'</optgroup>';
-  const g2='<optgroup label="Motivation">'+ALL.map((m,i)=>m.local?'':`<option value="${i}">${esc(m.t)}</option>`).join('')+'</optgroup>';
-  WORD_OPTS='<option value="">Pick a message from the list...</option>'+g1+g2;
-  $('bWord').innerHTML='<option value="mix">Wording: a random mix, half local and half motivational</option><option value="local">Wording: random local ones</option><option value="mot">Wording: random motivational ones</option>'+g1.replace('<optgroup label="Local to your clinic">','<optgroup label="Or use this one message for every scene (local)">')+g2.replace('<optgroup label="Motivation">','<optgroup label="Or use this one message for every scene (motivation)">');
+  const grp=(k,l)=>'<optgroup label="'+l+'">'+ALL.map((m,i)=>m.k===k?`<option value="${i}">${esc(m.t)}</option>`:'').join('')+'</optgroup>';
+  const g1=grp('local','Local to your clinic'),g2=grp('mot','Motivation'),g3=grp('feral','Feral'),g4=grp('stoic','Stoic');
+  WORD_OPTS='<option value="">Pick a message from the list...</option>'+g1+g2+g3+g4;
+  const lab=(g,t)=>g.replace(/<optgroup label="[^"]*">/,'<optgroup label="'+t+'">');
+  $('bWord').innerHTML='<option value="mix">Wording: a random mix, half local and half motivational</option><option value="local">Wording: random local ones</option><option value="mot">Wording: random motivational ones</option><option value="feral">Wording: random feral ones</option><option value="stoic">Wording: random stoic ones</option><option value="all">Wording: a mix of everything</option>'+lab(g1,'Or use this one message for every scene (local)')+lab(g2,'Or use this one message for every scene (motivation)')+lab(g3,'Or use this one message for every scene (feral)')+lab(g4,'Or use this one message for every scene (stoic)');
 })();
 $('bAddScenes').addEventListener('click',()=>{
   if(qBusy)return;
   const ids=SCORDER.filter(k=>SEL.has(k));
   if(!ids.length){bNote('Tick at least one scene in step 1 first.',true);return;}
   const mode=$('bWord').value,p=preset(),hasTown=!!(town()||(p&&p.seoArea));
-  const loc=ALL.map((m,i)=>i).filter(i=>ALL[i].local),mot=ALL.map((m,i)=>i).filter(i=>!ALL[i].local);
+  const loc=ALL.map((m,i)=>i).filter(i=>ALL[i].local),mot=ALL.map((m,i)=>i).filter(i=>ALL[i].k==='mot'),fer=ALL.map((m,i)=>i).filter(i=>ALL[i].k==='feral'),sto=ALL.map((m,i)=>i).filter(i=>ALL[i].k==='stoic');
   const shuf=a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
-  let lq=shuf(loc),mq=shuf(mot),n=0;
+  let lq=shuf(loc),mq=shuf(mot),fq=shuf(fer),sq=shuf(sto),n=0;
   for(let j=0;j<ids.length;j++){
     let i;
     if(/^\d+$/.test(mode))i=+mode;
+    else if(mode==='feral')i=fq[j%fq.length];
+    else if(mode==='stoic')i=sq[j%sq.length];
+    else if(mode==='all'){const pools=[mq,fq,sq].concat(hasTown?[lq]:[]);const pl=pools[j%pools.length];i=pl[Math.floor(j/pools.length)%pl.length];}
     else if(mode==='local'&&hasTown)i=lq[j%lq.length];
     else if(mode==='mix'&&hasTown&&j%2===0)i=lq[Math.floor(j/2)%lq.length];
     else i=mq[j%mq.length];
