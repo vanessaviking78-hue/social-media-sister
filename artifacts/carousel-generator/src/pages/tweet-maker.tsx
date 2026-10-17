@@ -220,6 +220,25 @@ export default function TweetMaker() {
 
   const selectedPreset = presets.find((p) => p.name === clientName) ?? null;
 
+  // A tweet handed over from another tool (Nail Salons) arrives in the address as ?quote=...&client=...
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search);
+      const quote = (q.get("quote") ?? "").trim();
+      if (!quote) return;
+      const client = (q.get("client") ?? "").trim();
+      const name = (q.get("name") ?? client).trim();
+      const handle = (q.get("handle") ?? "").trim().replace(/^@/, "");
+      if (client) setClientName(client);
+      setRows([{ name, handle, quote, bgUrl: "", stats: randomStats(), dx: 0, dy: 0, caption: (q.get("caption") ?? "").trim() }]);
+      setSelectedIndex(0);
+      toast.success("Your Sunday tweet is loaded. Add a background photo and schedule it.");
+    } catch {
+      /* nothing handed over */
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Pull the clinic's own logo automatically from their preset, same convention
   // used across the other carousel tools, rather than asking Vanessa to upload it.
   useEffect(() => {

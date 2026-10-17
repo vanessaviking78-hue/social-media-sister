@@ -29,6 +29,9 @@ const MILLIE_SERVICES =
 const MILLIE_POLICIES =
   "5 pound non-refundable deposit secures a booking. 15 minute grace period. 48 hours notice to cancel. 72 hour guarantee, any problems with the nails within 72 hours fixed free. No foreign infills or acrylic soak offs.";
 
+// Reviews are built but parked for now. Flip this to true to bring the section back.
+const SHOW_REVIEWS = false;
+
 const ORDER: Kind[] = ["personal", "facts", "availability", "beforeafter", "tweet"];
 
 const META: Record<Kind, { title: string; blurb: string }> = {
@@ -36,7 +39,7 @@ const META: Record<Kind, { title: string; blurb: string }> = {
   facts: { title: "Nail facts post", blurb: "Fun and true, never a lecture. Great for saves and shares." },
   availability: { title: "Availability post", blurb: "Gaps in the diary, written as a little treat, never pressure." },
   beforeafter: { title: "Before and after template", blurb: "Add Millie's photos, then use the words below." },
-  tweet: { title: "Sunday tweet post", blurb: "A shareable tweet. Drop the text into Tweet Maker for the graphic." },
+  tweet: { title: "Sunday Tweet Maker post", blurb: "A shareable tweet for Sunday. One click sends it to Tweet Maker to become the graphic." },
 };
 
 const inputCls =
@@ -370,6 +373,7 @@ export default function NailSalons() {
   const [availability, setAvailability] = useState("");
   const [personal, setPersonal] = useState("");
   const [booking, setBooking] = useState("");
+  const [handle, setHandle] = useState("");
   const [emojis, setEmojis] = useState(false);
   const [replyWords, setReplyWords] = useState<Record<string, string>>({});
   const [posts, setPosts] = useState<Post[]>([]);
@@ -436,6 +440,18 @@ export default function NailSalons() {
 
   function patch(kind: Kind, change: Partial<Post>) {
     setPosts((old) => old.map((p) => (p.kind === kind ? { ...p, ...change } : p)));
+  }
+
+  // Sends the Sunday tweet, with its caption and hashtags, straight into Tweet Maker.
+  function tweetMakerLink(p: Post): string {
+    const q = new URLSearchParams({
+      client: preset?.name ?? "",
+      name: preset?.name ?? "",
+      handle: handle.trim(),
+      quote: p.hook,
+      caption: fullCaption(p),
+    });
+    return `${BASE}/tweet-maker?${q.toString()}`;
   }
 
   async function copy(key: string, text: string) {
@@ -508,6 +524,10 @@ export default function NailSalons() {
               <Label>How people book (optional)</Label>
               <input className={inputCls} value={booking} onChange={(e) => setBooking(e.target.value)} placeholder="Message me on Instagram" />
             </label>
+            <label className="block">
+              <Label>Instagram handle (shown on the Sunday tweet)</Label>
+              <input className={inputCls} value={handle} onChange={(e) => setHandle(e.target.value)} placeholder="@thenailcorner" />
+            </label>
             <label className="flex items-center gap-2 mt-6 text-sm">
               <input type="checkbox" checked={emojis} onChange={(e) => setEmojis(e.target.checked)} />
               Add a few cute emojis
@@ -569,9 +589,14 @@ export default function NailSalons() {
                       {copied === `${p.kind}-tweet` ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                       Copy tweet text
                     </button>
-                    <Link href="/tweet-maker" className="ml-4 text-sm text-pink-300 hover:text-pink-200 underline">
-                      Open Tweet Maker
-                    </Link>
+                    <a
+                      href={tweetMakerLink(p)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-4 inline-flex items-center rounded-lg bg-pink-500 hover:bg-pink-400 text-white text-sm font-semibold px-3 py-1.5"
+                    >
+                      Make it in Tweet Maker
+                    </a>
                   </div>
                 )}
 
@@ -628,7 +653,7 @@ export default function NailSalons() {
           </section>
         )}
 
-        {preset && <ReviewsSection salon={preset.name} owner={owner} />}
+        {SHOW_REVIEWS && preset && <ReviewsSection salon={preset.name} owner={owner} />}
       </main>
     </div>
   );
