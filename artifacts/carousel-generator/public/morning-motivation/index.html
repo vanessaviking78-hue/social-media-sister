@@ -61,6 +61,15 @@ canvas{width:100%;height:100%;display:block}
 .note{font-size:12px;color:var(--muted);margin:8px 0 0;line-height:1.5}
 .btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
 .chk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.qi{border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:10px;background:var(--accent)}
+.qi .qh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.qi .qn{font-weight:700;color:var(--pink);min-width:20px}
+.qi select{width:auto;flex:1 1 130px;padding:7px 10px;font-size:13px}
+.qi input[type=text]{margin-top:8px;padding:8px 10px;font-size:13px}
+.qi textarea{margin-top:8px;min-height:64px;font-size:13px}
+.qi .qs{font-size:12px;color:var(--muted);margin-left:auto}
+.qi .qs.bad{color:#ff6b8a}.qi .qs.ok{color:#7ee0a1}
+.qi button{padding:6px 12px;font-size:12px}
 </style>
 </head>
 <body>
@@ -91,6 +100,7 @@ canvas{width:100%;height:100%;display:block}
         </div>
         <div id="vidOpts" style="margin-top:12px;display:none">
           <div class="row" style="margin-top:0"><input type="file" id="vidFile" accept="video/*"></div>
+          <div class="row"><button id="aiClip" class="alt" type="button">Make a toast clip with AI</button><span class="count" id="aiClipSt"></span></div>
           <p class="note" id="vidStatus">Upload your plain toast clip, the one where the toast pops up with nothing written on it. About 5 seconds works best. Your words burn onto the toast after it settles.</p>
         </div>
         <div id="photoOpts" style="margin-top:12px">
@@ -206,6 +216,40 @@ canvas{width:100%;height:100%;display:block}
         <button class="alt" id="cover" type="button">Download cover image</button>
       </div>
       <p class="note" id="fmtNote">The video is silent, so you can add trending audio in Instagram. It records in real time, so it takes as long as the reel lasts.</p>
+    </div>
+
+    <div class="card">
+      <h2>7. Bulk: make several at once</h2>
+      <p class="note" style="margin-top:0">Line up a few reels, then write all the captions, schedule them all or download them all in one go. New reels use the scene, client and post type you have picked above, and you can change any of them in the list.</p>
+      <textarea id="bulkText" style="min-height:90px" placeholder="Type or paste one message per line. Use {town} where the town should go."></textarea>
+      <div class="row">
+        <button class="alt" id="bAddLines" type="button">Add these to the list</button>
+        <button class="alt" id="bAddCur" type="button">Add my current message</button>
+      </div>
+      <div class="row">
+        <select id="bRandN" style="width:auto"><option>3</option><option selected>5</option><option>8</option><option>10</option></select>
+        <button class="alt" id="bRand" type="button">Fill with random messages</button>
+        <button class="alt" id="bClear" type="button">Clear the list</button>
+        <span class="count" id="bCount"></span>
+      </div>
+      <div id="qList"></div>
+      <div class="row" style="margin-top:14px;align-items:flex-end">
+        <label style="font-size:12px;font-weight:500;display:flex;flex-direction:column;gap:4px">First one goes out
+          <input type="datetime-local" id="bWhen" style="font:inherit;font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--accent);color:#fff;color-scheme:dark">
+        </label>
+        <label style="font-size:12px;font-weight:500;display:flex;flex-direction:column;gap:4px">Then one every
+          <select id="bGap" style="width:auto">
+            <option value="86400000">1 day</option><option value="172800000">2 days</option><option value="259200000">3 days</option>
+            <option value="43200000">12 hours</option><option value="14400000">4 hours</option>
+          </select>
+        </label>
+      </div>
+      <div class="row">
+        <button id="bCaps" type="button">Write captions for all</button>
+        <button id="bSched" class="shimmer" type="button">Schedule all</button>
+        <button id="bDl" class="alt" type="button">Download all</button>
+      </div>
+      <p class="note" id="bNote">Scheduling uses the post type and reply word from the steps above. Reels are recorded one after another in real time, so ten reels takes a few minutes. Keep this tab open while it works. Chrome may ask once to allow multiple downloads.</p>
     </div>
   </div>
 
@@ -1141,15 +1185,46 @@ function findToast(quiet){
 }
 $('findToast').addEventListener('click',async()=>{if(videoMode())await seekVideo(S.video.dur);findToast(false);});
 
+/* ---------- make a plain clip with Veo (the same video maker as the Veo Video tool) ---------- */
+const AI_PROMPT={toast:'Cinematic locked off shot of a retro chrome toaster on a bright, sunny kitchen counter. A single slice of golden brown toast pops up out of the toaster and hovers at the top, a little steam rising, soft morning light, shallow depth of field, steady camera. The toast is plain with no marks, no writing and no text. No people. Vertical 9:16.'};
+$('aiClip').addEventListener('click',async()=>{
+  const btn=$('aiClip'),st=$('aiClipSt');
+  let pw='';try{pw=localStorage.getItem('cybersuite-pw')||'';}catch(e){}
+  const H={'Content-Type':'application/json','x-app-password':pw,Authorization:'Bearer '+pw};
+  btn.disabled=true;st.textContent='Sending to Veo...';
+  try{
+    const r=await fetch(BASE+'/api/veo/generate',{method:'POST',headers:H,body:JSON.stringify({prompt:AI_PROMPT.toast,aspectRatio:'9:16',tier:'lite',durationSeconds:'6'})});
+    const d=await r.json().catch(()=>({}));
+    if(r.status===401)throw new Error('Veo needs you to be logged in. Open thecybersuite.com, log in, then come back here.');
+    if(!r.ok||!d.jobId)throw new Error(d.error||'Veo is not reachable from here');
+    for(let n=0;n<80;n++){
+      await new Promise(x=>setTimeout(x,5000));
+      const j=await (await fetch(BASE+'/api/veo/jobs/'+d.jobId+'/status',{headers:H})).json();
+      if(j.status==='failed')throw new Error(j.error||'Veo could not make the clip');
+      if(j.status==='done'&&j.videoUrl){
+        st.textContent='Loading your clip...';
+        const v=await fetch(BASE+j.videoUrl,{headers:H});if(!v.ok)throw new Error('The clip is made but would not download');
+        openClip(URL.createObjectURL(await v.blob()),'your AI clip');
+        st.textContent='Done. If the toast does not look right, press the button for another go.';
+        btn.disabled=false;return;
+      }
+      st.textContent=(j.message||'Making your clip')+(j.progress?' '+Math.round(j.progress*100)+'%':'');
+    }
+    throw new Error('That took too long. Please try again.');
+  }catch(e){st.textContent=e.message||'Could not make a clip';}
+  btn.disabled=false;
+});
+
 /* ---------- client, caption and schedule (uses the same system as the rest of the tools) ---------- */
 const ON_SITE=/thecybersuite\.com$/i.test(location.hostname)||location.hostname==='localhost';
 const BASE=ON_SITE?'':'https://workspaceapi-server-production-0f0d.up.railway.app';
 const FALLBACK_CLIENTS=['Social Media Sister','Eva Garcia Aesthetics','AD Aesthetics','Aspyre Aesthetics','The Church Street Clinic','Teviot Dental Face','Highcroft Aesthetics','Madame Wax','Madame Skin','Fresher Faces','CT Aesthetics','Tweaked by Helen','Pura Aesthetics','Cantik Aesthetics','Castle Clinic','The Ryder Clinic'];
-let presets=[];
+let presets=[],fillClientsHook=null;
 const clientSel=$('client');
 function fillClients(list,live){
   presets=list;
   clientSel.innerHTML='<option value="">No client (sample for a prospect)</option>'+list.map(p=>`<option value="${p.key}">${String(p.name).replace(/</g,'&lt;')}</option>`).join('');
+  if(fillClientsHook)fillClientsHook();
   $('clientNote').textContent=live?'Your live client list is loaded, so you can write captions and schedule.':'Showing your usual clients so you can write captions. To schedule, open this page on thecybersuite.com where your live client list loads.';
 }
 fillClients(FALLBACK_CLIENTS.map((n,i)=>({key:'f'+i,name:n,fallback:true})),false);
@@ -1183,26 +1258,28 @@ document.querySelectorAll('input[name=ptype]').forEach(r=>r.addEventListener('ch
   $('when').value=`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`;})();
 
 const SCENE_WORDS={toast:'words burnt into a slice of toast as it pops out of a toaster',type:'words typed out on a vintage typewriter',skate:'words trailing behind a woman gliding past on roller boots'};
-$('capBtn').addEventListener('click',async()=>{
-  const p=preset(),t=ptype(),reply=($('replyWord').value||'').trim().replace(/[^A-Za-z0-9]/g,'').toUpperCase();
+async function genCaption(p,t,message){
+  const reply=($('replyWord').value||'').trim().replace(/[^A-Za-z0-9]/g,'').toUpperCase();
   const kind=t==='story'?'Instagram story':(t==='trial'?'Instagram trial reel':'Instagram reel');
   const manager=p&&/social media sister/i.test(p.name);
   const voice=manager
     ?'Write it as the social media manager for an aesthetics clinic speaking directly to the reader, never as a clinician. '
     :'Write it as the clinician or owner of the clinic, in the first person, posting this themselves. ';
-  const context=`An ${kind}. It is a short, silent morning motivation animation showing ${SCENE_WORDS[S.scene]}. The message on screen says: "${msg()}". `+
+  const context=`An ${kind}. It is a short, silent morning motivation animation showing ${SCENE_WORDS[S.scene]}. The message on screen says: "${message}". `+
     `Write a short caption that adds something the video does not already say. Make it warm, funny and affable, for women over 35. `+voice+
     `Make no medical claims and no promises about results. Use UK spelling and never use em dashes or en dashes. `+
     (reply?`Use the reply word ${reply} in the closing question, written as "Comment ${reply}". `:'')+
     `Finish with one question that relates to the post.`;
+  const r=await fetch(BASE+'/api/caption-generator/generate',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({tone:'1',clinicName:p?p.name:undefined,location:p&&p.seoArea?p.seoArea:undefined,context})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok||!d.caption)throw new Error(d.error||'The caption writer is not reachable here');
+  return d.caption;
+}
+$('capBtn').addEventListener('click',async()=>{
   const btn=$('capBtn');btn.disabled=true;$('capStatus').textContent='Writing...';
-  try{
-    const r=await fetch(BASE+'/api/caption-generator/generate',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({tone:'1',clinicName:p?p.name:undefined,location:p&&p.seoArea?p.seoArea:undefined,context})});
-    const d=await r.json().catch(()=>({}));
-    if(!r.ok||!d.caption)throw new Error(d.error||'The caption writer is not reachable here');
-    $('caption').value=d.caption;$('capStatus').textContent='Done. Edit it if you like.';
-  }catch(e){$('capStatus').textContent=e.message||'Could not write a caption';}
+  try{$('caption').value=await genCaption(preset(),ptype(),msg());$('capStatus').textContent='Done. Edit it if you like.';}
+  catch(e){$('capStatus').textContent=e.message||'Could not write a caption';}
   btn.disabled=false;
 });
 $('capCopy').addEventListener('click',()=>{
@@ -1217,6 +1294,32 @@ async function postJson(url,body){
   return d;
 }
 function schedNote(m,bad){const n=$('schedNote');n.textContent=m;n.style.color=bad?'#ff6b8a':'';}
+async function schedulePost(o){
+  const p=o.p,t=o.t,caption=o.caption,at=o.at,say=o.say||function(){};
+  const title='Morning motivation';let postType,content,isTrial=false;
+  if(t==='story'){
+    say('Saving the story image...');
+    await stillFrame();
+    const up=await postJson('/api/content/upload-image',{images:[{name:`morning-motivation-${Date.now()}.png`,base64:cv.toDataURL('image/png')}]});
+    const url=up.results&&up.results[0]&&up.results[0].url;if(!url)throw new Error('The image did not upload');
+    postType='story';content={caption:'',title:title+' (story)',platforms:['instagram'],imageUrls:[url],sourceTool:'morning-motivation'};
+  }else{
+    say('Recording the reel, this takes about '+Math.round(dur())+' seconds...');
+    const {blob,ext}=await recordVideo();
+    if(ext!=='mp4')throw new Error('This browser makes WEBM files and Instagram needs an MP4. Please schedule from Chrome or Safari on a computer.');
+    say('Uploading the reel...');
+    const form=new FormData();form.append('video',blob,`morning-motivation-${Date.now()}.mp4`);
+    const r=await fetch(BASE+'/api/content/upload-video',{method:'POST',body:form});
+    const up=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(up.error||'The video did not upload');
+    const videoUrl=up.proxyUrl||up.url;if(!videoUrl)throw new Error('The video did not upload');
+    postType='reel';isTrial=t==='trial';
+    const platforms=(t==='reel'&&o.fb)?['instagram','facebook']:['instagram'];
+    content={caption,title,platforms,videoUrl,sourceTool:'morning-motivation'};
+  }
+  say('Booking it in...');
+  await postJson('/api/scheduler/posts',{presetId:p.id,postType,content,scheduledAt:at.toISOString(),isTrial,notes:''});
+}
 $('sched').addEventListener('click',async()=>{
   const p=preset(),t=ptype(),caption=$('caption').value.trim(),when=$('when').value;
   if(!p){schedNote('Pick a client first.',true);return;}
@@ -1226,33 +1329,146 @@ $('sched').addEventListener('click',async()=>{
   const at=new Date(when);if(at.getTime()<=Date.now()){schedNote('Pick a time in the future.',true);return;}
   const btn=$('sched');btn.disabled=true;
   try{
-    const title='Morning motivation';let postType,content,isTrial=false;
-    if(t==='story'){
-      schedNote('Saving the story image...');
-      await stillFrame();
-      const up=await postJson('/api/content/upload-image',{images:[{name:`morning-motivation-${Date.now()}.png`,base64:cv.toDataURL('image/png')}]});
-      const url=up.results&&up.results[0]&&up.results[0].url;if(!url)throw new Error('The image did not upload');
-      postType='story';content={caption:'',title:title+' (story)',platforms:['instagram'],imageUrls:[url],sourceTool:'morning-motivation'};
-    }else{
-      schedNote('Recording the reel, this takes about '+dur()+' seconds...');
-      const {blob,ext}=await recordVideo();
-      if(ext!=='mp4')throw new Error('This browser makes WEBM files and Instagram needs an MP4. Please schedule from Chrome or Safari on a computer.');
-      schedNote('Uploading the reel...');
-      const form=new FormData();form.append('video',blob,`morning-motivation-${Date.now()}.mp4`);
-      const r=await fetch(BASE+'/api/content/upload-video',{method:'POST',body:form});
-      const up=await r.json().catch(()=>({}));
-      if(!r.ok)throw new Error(up.error||'The video did not upload');
-      const videoUrl=up.proxyUrl||up.url;if(!videoUrl)throw new Error('The video did not upload');
-      postType='reel';isTrial=t==='trial';
-      const platforms=(t==='reel'&&$('fb').checked)?['instagram','facebook']:['instagram'];
-      content={caption,title,platforms,videoUrl,sourceTool:'morning-motivation'};
-    }
-    schedNote('Booking it in...');
-    await postJson('/api/scheduler/posts',{presetId:p.id,postType,content,scheduledAt:at.toISOString(),isTrial,notes:''});
+    await schedulePost({p,t,caption,at,fb:$('fb').checked,say:schedNote});
     schedNote('Scheduled for '+at.toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' as a '+(t==='story'?'story':(t==='trial'?'trial reel':'reel'))+' for '+p.name+'.');
   }catch(e){schedNote(e.message||'Scheduling failed',true);}
   btn.disabled=false;restart(600);
 });
+
+/* ---------- bulk ---------- */
+const Q=[],MAXQ=12;let qBusy=false;
+const SCENE_NAMES={toast:'Toast',type:'Typewriter',skate:'Roller boots'};
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+function qText(it){
+  if(!it.tpl)return it.msg;
+  const p=presets.find(x=>x.key===it.client);
+  return it.tpl.replace(/\{town\}/g,(p&&p.seoArea)||town()||'[your town]');
+}
+function bNote(m,bad){const n=$('bNote');n.textContent=m;n.style.color=bad?'#ff6b8a':'';}
+function addItem(text,tpl){
+  if(Q.length>=MAXQ)return false;
+  Q.push({msg:text,tpl:tpl||null,client:clientSel.value,scene:S.scene,caption:'',status:'Waiting',state:''});
+  return true;
+}
+function renderQ(){
+  const opts=['<option value="">No client (sample)</option>'].concat(presets.map(p=>`<option value="${esc(p.key)}">${esc(p.name)}</option>`)).join('');
+  $('qList').innerHTML=Q.map((it,i)=>{
+    if(it.client&&!presets.some(p=>p.key===it.client))it.client='';
+    return `<div class="qi" data-i="${i}">
+      <div class="qh"><span class="qn">${i+1}</span>
+        <select data-f="scene">${Object.keys(SCENE_NAMES).map(k=>`<option value="${k}"${it.scene===k?' selected':''}>${SCENE_NAMES[k]}</option>`).join('')}</select>
+        <select data-f="client">${opts.replace(`value="${esc(it.client)}"`,`value="${esc(it.client)}" selected`)}</select>
+        <button class="alt" data-a="view" type="button">Preview</button>
+        <button class="alt" data-a="del" type="button">Remove</button>
+        <span class="qs ${it.state}" data-st>${esc(it.status)}</span></div>
+      <input type="text" data-f="text" maxlength="120" value="${esc(it.tpl||it.msg)}">
+      <textarea data-f="caption" placeholder="Caption (write them all with the button below, then edit)">${esc(it.caption)}</textarea>
+    </div>`;
+  }).join('');
+  $('bCount').textContent=Q.length?Q.length+' in the list (max '+MAXQ+')':'';
+}
+function setSt(i,text,state){
+  const it=Q[i];if(!it)return;it.status=text;it.state=state||'';
+  const el=$('qList').querySelector(`[data-i="${i}"] [data-st]`);if(el){el.textContent=text;el.className='qs '+(state||'');}
+}
+$('qList').addEventListener('input',e=>{
+  const row=e.target.closest('.qi');if(!row)return;const it=Q[+row.dataset.i],f=e.target.dataset.f;
+  if(f==='text'){const v=e.target.value;if(/\{town\}/.test(v)){it.tpl=v;it.msg=v;}else{it.tpl=null;it.msg=v;}}
+  if(f==='caption')it.caption=e.target.value;
+});
+$('qList').addEventListener('change',e=>{
+  const row=e.target.closest('.qi');if(!row)return;const it=Q[+row.dataset.i],f=e.target.dataset.f;
+  if(f==='scene')it.scene=e.target.value;
+  if(f==='client')it.client=e.target.value;
+});
+$('qList').addEventListener('click',async e=>{
+  const b=e.target.closest('button[data-a]');if(!b||qBusy)return;const i=+b.closest('.qi').dataset.i;
+  if(b.dataset.a==='del'){Q.splice(i,1);renderQ();}
+  if(b.dataset.a==='view'){await applyItem(Q[i]);restart();}
+});
+function addMany(lines){
+  let n=0;for(const l of lines){const t=l.trim().slice(0,120);if(!t)continue;if(!addItem(/\{town\}/.test(t)?fill(t):t,/\{town\}/.test(t)?t:null)){bNote('The list holds up to '+MAXQ+' reels at a time, so I stopped there.',true);break;}n++;}
+  renderQ();return n;
+}
+$('bAddLines').addEventListener('click',()=>{const n=addMany($('bulkText').value.split(/\r?\n/));if(n){$('bulkText').value='';bNote(n+' added to the list.');}});
+$('bAddCur').addEventListener('click',()=>{if(addItem(msg(),TPL)){renderQ();bNote('Added your current message.');}else bNote('The list is full.',true);});
+$('bRand').addEventListener('click',()=>{
+  const want=Math.min(+$('bRandN').value,MAXQ-Q.length);if(want<=0){bNote('The list is full.',true);return;}
+  const p=preset(),hasTown=!!(town()||(p&&p.seoArea));
+  const loc=ALL.map((m,i)=>i).filter(i=>ALL[i].local),mot=ALL.map((m,i)=>i).filter(i=>!ALL[i].local);
+  const have=new Set(Q.map(x=>x.tpl||x.msg));
+  const shuf=a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
+  const nLoc=hasTown?Math.round(want/2):0;
+  const chosen=shuf(loc).filter(i=>!have.has(ALL[i].t)).slice(0,nLoc).concat(shuf(mot).filter(i=>!have.has(ALL[i].t)).slice(0,want-nLoc));
+  shuf(chosen).forEach(i=>{const m=ALL[i];addItem(m.local?fill(m.t):m.t,m.local?m.t:null);});
+  renderQ();bNote(hasTown?'Added a mix of local and motivational messages.':'Added motivational messages. Put a town in step 2, or choose a client, to include local ones.');
+});
+$('bClear').addEventListener('click',()=>{if(qBusy)return;Q.length=0;renderQ();bNote('');});
+(function(){const d=new Date();d.setDate(d.getDate()+1);d.setHours(7,0,0,0);const z=n=>String(n).padStart(2,'0');
+  $('bWhen').value=`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`;})();
+
+async function applyItem(it){
+  S.scene=it.scene;
+  const r=document.querySelector('input[name=scene][value="'+it.scene+'"]');if(r)r.checked=true;
+  syncToastOpts();
+  if(it.client!==clientSel.value&&it.client){
+    clientSel.value=it.client;const p=preset();
+    if(p&&p.logoUrl)await loadClientLogo(p);
+  }
+  setMsg(qText(it),it.tpl);
+  await new Promise(r=>setTimeout(r,200));clearTimeout(restartTimer);
+}
+const itemPreset=it=>presets.find(p=>p.key===it.client)||null;
+function lock(on){
+  qBusy=on;['bAddLines','bAddCur','bRand','bClear','bCaps','bSched','bDl','dl','sched','capBtn'].forEach(id=>{$(id).disabled=on;});
+}
+async function runAll(label,fn){
+  if(qBusy)return;
+  if(!Q.length){bNote('Add some reels to the list first.',true);return;}
+  lock(true);let ok=0;
+  try{
+    for(let i=0;i<Q.length;i++){
+      try{await fn(Q[i],i);ok++;}catch(e){setSt(i,e.message||'Failed','bad');}
+    }
+    bNote(label+': '+ok+' of '+Q.length+' done.',ok<Q.length);
+  }catch(e){bNote(e.message||'Something went wrong',true);}
+  lock(false);restart(600);
+}
+$('bCaps').addEventListener('click',()=>runAll('Captions',async(it,i)=>{
+  setSt(i,'Writing caption...');await applyItem(it);
+  it.caption=await genCaption(itemPreset(it),ptype(),qText(it));
+  const ta=$('qList').querySelector(`[data-i="${i}"] textarea`);if(ta)ta.value=it.caption;
+  setSt(i,'Caption done','ok');
+}));
+$('bDl').addEventListener('click',()=>runAll('Downloads',async(it,i)=>{
+  setSt(i,'Recording...');await applyItem(it);
+  const {blob,ext}=await recordVideo();
+  const slug=qText(it).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,28);
+  save(blob,`morning-motivation-${String(i+1).padStart(2,'0')}-${slug}.${ext}`);
+  setSt(i,'Downloaded','ok');
+  await new Promise(r=>setTimeout(r,500));
+}));
+$('bSched').addEventListener('click',()=>{
+  const t=ptype(),base=new Date($('bWhen').value),gap=+$('bGap').value;
+  if(!Q.length){bNote('Add some reels to the list first.',true);return;}
+  if(isNaN(base.getTime())){bNote('Pick the date and time for the first one.',true);return;}
+  if(base.getTime()<=Date.now()){bNote('Pick a time in the future for the first one.',true);return;}
+  const bad=Q.findIndex(it=>{const p=itemPreset(it);return !p||p.fallback;});
+  if(bad>=0){bNote('Reel '+(bad+1)+' needs a client from your live list. Scheduling only works on thecybersuite.com, and prospects without a client can be downloaded but not scheduled.',true);return;}
+  runAll('Scheduled',async(it,i)=>{
+    const p=itemPreset(it);
+    await applyItem(it);
+    if(t!=='story'&&!it.caption.trim()){
+      setSt(i,'Writing caption...');it.caption=await genCaption(p,t,qText(it));
+      const ta=$('qList').querySelector(`[data-i="${i}"] textarea`);if(ta)ta.value=it.caption;
+    }
+    const at=new Date(base.getTime()+i*gap);
+    await schedulePost({p,t,caption:it.caption.trim(),at,fb:$('fb').checked,say:m=>setSt(i,m)});
+    setSt(i,'Booked '+at.toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}),'ok');
+  });
+});
+fillClientsHook=renderQ;
+renderQ();
 
 /* ---------- start ---------- */
 syncColours();
