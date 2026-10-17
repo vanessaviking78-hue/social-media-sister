@@ -4,6 +4,8 @@ import { ArrowLeft, Sparkles, Loader2, Copy, RefreshCcw, Check, Star, Eye, EyeOf
 import { toast } from "sonner";
 import { usePresets } from "@/lib/use-presets";
 import { authHeaders } from "@/lib/use-approval";
+import NailPostImage from "@/components/nail-post-image";
+import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -379,6 +381,7 @@ export default function NailSalons() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [busy, setBusy] = useState<Kind | "all" | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [scheduleItems, setScheduleItems] = useState<SchedulePostPayload[] | null>(null);
 
   // Start on The Nail Corner when it exists, otherwise let her choose.
   useEffect(() => {
@@ -435,6 +438,28 @@ export default function NailSalons() {
       toast.error(e?.message || "The copy would not write, try again");
     } finally {
       setBusy(null);
+    }
+  }
+
+  // Uploads the finished picture, then opens the scheduler with the caption and hashtags ready.
+  async function schedulePost(p: Post, canvas: HTMLCanvasElement) {
+    try {
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+      const resp = await fetch(`${BASE}/api/content/upload-image`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: [{ name: `nail-${p.kind}-${Date.now()}.jpg`, base64: dataUrl.split(",")[1] }] }),
+      });
+      if (!resp.ok) {
+        const data = await resp.json().catch(() => ({}));
+        throw new Error(data?.error || `Upload failed (${resp.status})`);
+      }
+      const data = await resp.json();
+      const url = data.results?.[0]?.url;
+      if (!url) throw new Error("Upload came back without a link");
+      setScheduleItems([{ title: `${META[p.kind].title}`, caption: fullCaption(p), imageUrls: [url] }]);
+    } catch (e: any) {
+      toast.error(e?.message || "Could not get that ready to schedule");
     }
   }
 
@@ -639,6 +664,17 @@ export default function NailSalons() {
                   </div>
                 )}
 
+                {p.kind !== "tweet" && preset && (
+                  <NailPostImage
+                    post={p}
+                    salon={preset.name}
+                    logoUrl={preset.logoUrl}
+                    availability={availability}
+                    caption={p.caption}
+                    onSchedule={(canvas) => schedulePost(p, canvas)}
+                  />
+                )}
+
                 <div>
                   <Label>Caption</Label>
                   <textarea rows={8} className={inputCls} value={p.caption} onChange={(e) => patch(p.kind, { caption: e.target.value })} />
@@ -651,6 +687,20 @@ export default function NailSalons() {
               </article>
             ))}
           </section>
+        )}
+
+        {scheduleItems && (
+          <ScheduleModal
+            presetId={preset?.id ?? null}
+            presetName={preset?.name}
+            postType="single-image"
+            posts={scheduleItems}
+            perPostCaptions
+            sourceTool="Nail Salons"
+            presets={presets.map((x) => ({ id: x.id, name: x.name }))}
+            onClose={() => setScheduleItems(null)}
+            onSaved={() => setScheduleItems(null)}
+          />
         )}
 
         {SHOW_REVIEWS && preset && <ReviewsSection salon={preset.name} owner={owner} />}
