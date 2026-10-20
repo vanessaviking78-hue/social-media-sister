@@ -858,7 +858,7 @@ export default function MagazinePost() {
                   );
                 })}
               </div>
-              <HookBankPicker client={clinicName} single days={["Monday", "Any day"]} picked={hookPick} onChange={setHook} startDate={hookStart} onStartDate={setHookStart} />
+              <HookBankPicker client={clinicName} single days={["Monday"]} picked={hookPick} onChange={setHook} startDate={hookStart} onStartDate={setHookStart} />
               <Field label="Reply word people comment" value={replyWord} onChange={setReplyWord} placeholder="e.g. GLOW" />
             </section>
 
