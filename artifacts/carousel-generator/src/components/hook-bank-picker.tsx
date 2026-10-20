@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { getUsedHooks, clearUsedHooks } from "@/lib/hook-used";
 import { ChevronDown } from "lucide-react";
 import { Label } from "@/components/ui/label";
@@ -38,6 +38,7 @@ function HookText({ text }: { text: string }) {
 }
 
 export default function HookBankPicker({ picked, onChange, startDate, onStartDate, single, days, client = "" }: Props) {
+  const uid = useId();
   const [used, setUsed] = useState<string[]>([]);
   const dayRows = days ? HOOK_DAYS.filter(d => days.includes(d.day)) : HOOK_DAYS;
   const [open, setOpen] = useState(false);
@@ -69,9 +70,9 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
       {open && (
         <div className="space-y-3 rounded-md border border-border/40 p-3">
           <div className="space-y-1.5">
-            <Label htmlFor="hook-start" className="text-xs font-medium">When will this pack be posted?</Label>
+            <Label htmlFor={`hook-start-${uid}`} className="text-xs font-medium">When will this pack be posted?</Label>
             <select
-              id="hook-start"
+              id={`hook-start-${uid}`}
               value={isoDate(start)}
               onChange={e => onStartDate(e.target.value)}
               className="w-full rounded-md border border-border/40 bg-background px-3 py-2 text-sm"

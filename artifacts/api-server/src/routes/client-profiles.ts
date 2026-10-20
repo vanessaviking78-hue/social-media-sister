@@ -113,28 +113,84 @@ const LABELS: Record<string, string> = {
 
 /**
  * What I know about a client, written as a block for the caption, hook, story and copy prompts so the
- * writing sounds like them. Returns an empty string when there is no profile yet. Never throws.
+ * writing sounds like them. It gathers Getting to know you, their client question answers, their weekly
+ * homework replies and the details saved on their preset (website, area, audience, pillars, notes).
+ * Returns an empty string when there is nothing yet. Never throws.
  */
 export async function clientProfileContext(clientName?: string | null): Promise<string> {
+  const n = String(clientName ?? "").trim();
+  if (n.length < 2) return "";
+  const parts: string[] = [];
+  const clip = (t: unknown, max = 600) => String(t ?? "").trim().replace(/\s+/g, " ").slice(0, max);
+
+  // Getting to know you
   try {
-    const n = String(clientName ?? "").trim();
-    if (n.length < 2) return "";
     await ensureTable();
     const r = await db.execute(sql`
       SELECT client_name, answers_json, photo_url, updated_at FROM client_profiles
       WHERE lower(client_name) = lower(${n}) LIMIT 1
     `);
     const row = (r.rows as Row[])[0];
-    if (!row) return "";
-    const { answers } = shape(row);
-    const lines = Object.keys(LABELS)
-      .filter(k => (answers[k] ?? "").trim())
-      .map(k => `- ${LABELS[k]}: ${answers[k].trim().replace(/\s+/g, " ")}`);
-    if (!lines.length) return "";
-    return `\n\nWHAT I KNOW ABOUT THIS CLIENT (it is their own words, so make the writing sound like them, use their humour and their patients' worries, and respect the off limits list absolutely. Never quote this back word for word and never mention that you have it):\n${lines.join("\n")}`;
-  } catch {
-    return "";
-  }
+    if (row) {
+      const { answers } = shape(row);
+      const lines = Object.keys(LABELS)
+        .filter(k => (answers[k] ?? "").trim())
+        .map(k => `- ${LABELS[k]}: ${answers[k].trim().replace(/\s+/g, " ")}`);
+      if (lines.length) parts.push(`GETTING TO KNOW YOU (their own words):\n${lines.join("\n")}`);
+    }
+  } catch { /* skip this part */ }
+
+  // Their answers to the client questions
+  try {
+    const r = await db.execute(sql`
+      SELECT q.question AS question, a.answer AS answer
+      FROM client_question_answers a JOIN client_questions q ON q.id = a.question_id
+      WHERE lower(trim(a.respondent_name)) = lower(${n})
+      ORDER BY a.created_at DESC LIMIT 8
+    `);
+    const lines = (r.rows as { question: string; answer: string }[]).map(x => `- ${clip(x.question, 160)}: ${clip(x.answer)}`);
+    if (lines.length) parts.push(`THEIR ANSWERS TO MY CLIENT QUESTIONS:\n${lines.join("\n")}`);
+  } catch { /* skip this part */ }
+
+  // Their weekly homework replies
+  try {
+    const r = await db.execute(sql`
+      SELECT s.question1, s.question2, s.question3, s.question4, s.question5, s.question6, s.question7, s.question8, s.question9, s.question10,
+             h.answer1, h.answer2, h.answer3, h.answer4, h.answer5, h.answer6, h.answer7, h.answer8, h.answer9, h.answer10
+      FROM homework_replies h JOIN homework_question_sets s ON s.id = h.set_id
+      WHERE lower(trim(h.client_name)) = lower(${n})
+      ORDER BY h.submitted_at DESC LIMIT 2
+    `);
+    const lines: string[] = [];
+    for (const row of r.rows as Record<string, string>[]) {
+      for (let i = 1; i <= 10; i++) {
+        const a = clip(row[`answer${i}`]);
+        if (a) lines.push(`- ${clip(row[`question${i}`], 160)}: ${a}`);
+      }
+    }
+    if (lines.length) parts.push(`THEIR RECENT HOMEWORK REPLIES:\n${lines.slice(0, 14).join("\n")}`);
+  } catch { /* skip this part */ }
+
+  // What is saved on their preset
+  try {
+    const r = await db.execute(sql`
+      SELECT website_url, seo_area, target_audience, content_pillars, brand_notes FROM client_presets
+      WHERE lower(name) = lower(${n}) LIMIT 1
+    `);
+    const p = (r.rows as Record<string, string | null>[])[0];
+    if (p) {
+      const lines: string[] = [];
+      if (clip(p.website_url)) lines.push(`- Website (for treatment details only, never mention it unless the post is a treatment post): ${clip(p.website_url, 200)}`);
+      if (clip(p.seo_area)) lines.push(`- Area: ${clip(p.seo_area, 200)}`);
+      if (clip(p.target_audience)) lines.push(`- Target audience: ${clip(p.target_audience)}`);
+      if (clip(p.content_pillars)) lines.push(`- Content pillars: ${clip(p.content_pillars)}`);
+      if (clip(p.brand_notes)) lines.push(`- Brand notes: ${clip(p.brand_notes)}`);
+      if (lines.length) parts.push(`SAVED ON THEIR PRESET:\n${lines.join("\n")}`);
+    }
+  } catch { /* skip this part */ }
+
+  if (!parts.length) return "";
+  return `\n\nWHAT I KNOW ABOUT THIS CLIENT (use it so the writing sounds like them, use their humour and their patients' worries, and respect any off limits list absolutely. Never quote this back word for word and never mention that you have it):\n${parts.join("\n\n")}`;
 }
 
 const newToken = () => randomBytes(12).toString("hex");

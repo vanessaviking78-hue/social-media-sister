@@ -4329,7 +4329,7 @@ export default function Stylish() {
             <textarea value={csvRest} onChange={e => setCsvRest(e.target.value)} rows={3}
               placeholder="What should the rest of the posts be? For example: 4 about menopause, 4 shareable and emotional, 4 skincare tips, 4 about what to expect at a consultation."
               className="w-full text-sm bg-muted/30 border border-border/40 rounded-md px-3 py-2" />
-            <HookBankPicker client={preset?.name ?? ""} picked={csvHookPick} onChange={setCsvHookPick} startDate={csvHookStart} onStartDate={setCsvHookStart} />
+            <HookBankPicker client={preset?.name ?? ""} days={(() => { const d = new URLSearchParams(window.location.search).get("day"); return d === "wednesday" ? ["Wednesday", "Any day"] : d === "friday" ? ["Friday"] : undefined; })()} picked={csvHookPick} onChange={setCsvHookPick} startDate={csvHookStart} onStartDate={setCsvHookStart} />
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               Other posts
               <input type="number" min={0} max={40} value={csvRestCount} onChange={e => setCsvRestCount(Number(e.target.value))} className="h-8 w-20 text-sm bg-muted/30 border border-border/40 rounded-md px-2" />
