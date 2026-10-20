@@ -28,16 +28,9 @@ const TONES = [
 
 const pad = (n: number) => String(n).padStart(2, "0");
 // Autumn and winter alternate, so the photos run autumn, winter, autumn, winter and so on.
-// The eight Halloween ideas. Up to three can be added to a pack, each with its own photo preset.
+// The one Halloween idea, for posting on 31 October. It can be added to a pack and has its own photo preset.
 const HALLOWEEN_IDEAS = [
-  { id: "hl-01", title: "Ghost stories from the treatment room" },
   { id: "hl-02", title: "Halloween 1992" },
-  { id: "hl-03", title: "Things scarier than Halloween" },
-  { id: "hl-04", title: "Which Halloween film is your perimenopause?" },
-  { id: "hl-05", title: "The witch's cauldron (reading a skincare label)" },
-  { id: "hl-06", title: "Carve the pumpkin with a plan (first consultation)" },
-  { id: "hl-07", title: "Sheet mask Sunday looks like Scream" },
-  { id: "hl-08", title: "The face behind the costume" },
 ];
 const BASE_SLOTS = Array.from({ length: 10 }, (_, i) => [
   { id: `au-${pad(i + 1)}`, label: `Autumn ${i + 1}` },
@@ -45,7 +38,7 @@ const BASE_SLOTS = Array.from({ length: 10 }, (_, i) => [
 ]).flat();
 
 // The pack repeats treatment, funny, things that, shareable, mix four times.
-const ROW_GROUPS = Array.from({ length: 23 }, (_, i) => i >= 20 ? "Halloween" : ["Treatment", "Funny", "Things that", "Shareable", "Mix"][i % 5]);
+const ROW_GROUPS = Array.from({ length: 21 }, (_, i) => i >= 20 ? "Halloween" : ["Treatment", "Funny", "Things that", "Shareable", "Mix"][i % 5]);
 
 type CardStatus = "idle" | "generating" | "success" | "failed" | "rate-limited";
 type Card = { scenarioId: string; status: CardStatus; outputImageUrl?: string; failureReason?: string };
@@ -62,7 +55,7 @@ export default function ClientStylish() {
   const [spot, setSpot] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   // Option to skip the photoshoot and use photos already in the client's approved images.
-  // Halloween posts picked for this pack (up to 3). packHalloween is what the running pack was made with.
+  // Halloween posts picked for this pack (up to 1). packHalloween is what the running pack was made with.
   const [halloweenPick, setHalloweenPick] = useState<string[]>([]);
   const [packHalloween, setPackHalloween] = useState<string[]>([]);
   const hallRef = useRef<string[]>([]);
@@ -659,11 +652,11 @@ export default function ClientStylish() {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-medium">Halloween posts <span className="text-muted-foreground font-normal">(optional, pick up to 3)</span></Label>
+            <Label className="text-sm font-medium">Halloween posts <span className="text-muted-foreground font-normal">(optional, one post for 31 October)</span></Label>
             <div className="space-y-1.5">
               {HALLOWEEN_IDEAS.map(h => {
                 const on = halloweenPick.includes(h.id);
-                const full = !on && halloweenPick.length >= 3;
+                const full = !on && halloweenPick.length >= 1;
                 return (
                   <label key={h.id} className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${on ? "border-orange-500/60 bg-orange-500/10" : "border-border/40"} ${full ? "opacity-40" : "cursor-pointer hover:border-border/70"}`}>
                     <input type="checkbox" checked={on} disabled={full} className="accent-orange-500"
