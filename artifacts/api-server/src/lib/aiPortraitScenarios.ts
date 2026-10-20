@@ -895,8 +895,9 @@ export const WINTER_WOOLIES_PRESETS: PhotoStudioPreset[] = [
 ];
 
 // ─── DINLEYS folder ───────────────────────────────────────────────────────
-// 20 couple shots of Dr Justin and Dr Lisa from one reference photo:
-// 5 clinic scrubs (him white, her black), 5 lifestyle, 5 winter, 5 studio.
+// 30 couple shots of Dr Justin and Dr Lisa from one reference photo:
+// 5 clinic scrubs (him white, her black), 5 lifestyle, 5 winter, 5 studio,
+// plus 10 artistic portraiture extras.
 const DINLEYS_SUFFIX = `Two people, a man and a woman, both taken from the reference photo. The man has short light brown hair, a salt and pepper stubble beard and thick black rimmed glasses. The woman has voluminous curly red hair and round dark rimmed glasses. Both keep their glasses on. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm or orange colour cast. Keep both faces, skin tones, facial features, hair and glasses exactly the same as the reference photo. Same facial features as reference photo.`;
 
 export const DINLEYS_PRESETS: PhotoStudioPreset[] = [
@@ -983,6 +984,47 @@ export const DINLEYS_PRESETS: PhotoStudioPreset[] = [
   {
     id: "dn-20", name: "Studio Back To Back", hasColour: false,
     promptTemplate: `The man and the woman from the reference photo standing back to back with arms crossed and big playful smiles, looking at the camera. Smart dark clothes, clean mid grey studio backdrop, strong and fun power couple pose, soft even lighting. ${DINLEYS_SUFFIX}`,
+  },
+  // Extras: artistic portraiture
+  {
+    id: "dn-21", name: "Artistic Rembrandt Window Light", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo seated close together beside a tall window, dramatic Rembrandt style side light falling across their faces, deep soft shadows, quiet and intimate. Dark muted clothing, dark painterly background. Fine art portrait, shallow depth of field. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-22", name: "Artistic Black And White Film", hasColour: false,
+    promptTemplate: `Classic black and white film portrait of the man and the woman from the reference photo, heads close together, gentle smiles, rich greyscale tones, fine film grain and deep contrast. Plain dark backdrop, timeless editorial feel. Render the whole image in monochrome. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-23", name: "Artistic Golden Hour Field", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo standing in a field of tall grass at golden hour, backlit by the low sun with a soft glowing rim of light around their hair, foreheads almost touching. Neutral, natural clothing. Dreamy shallow depth of field, cinematic fine art feel. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-24", name: "Artistic Window Silhouette Profile", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo in profile facing each other in front of a large bright window, soft silhouette lighting with just enough light to see their faces and glasses. Minimal, elegant and calm, muted tones. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-25", name: "Artistic Rainy Window Reflection", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo sitting side by side looking out of a rain streaked window, their faces softly reflected in the glass, moody blue grey light, quiet and contemplative. Cosy dark knitwear, shallow depth of field. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-26", name: "Artistic Oil Painting Style", hasColour: false,
+    promptTemplate: `A rich oil painting style portrait of the man and the woman from the reference photo, seated side by side in the manner of a classic gallery portrait, visible soft brushwork, deep jewel toned background and dark elegant clothes. Their faces remain a true likeness with their glasses on. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-27", name: "Artistic Dramatic Spotlight", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo standing together in a single pool of soft spotlight against a deep black background, faces lit gently from above, strong cinematic contrast, confident and elegant. Dark tailored clothes. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-28", name: "Artistic Double Exposure Woodland", hasColour: false,
+    promptTemplate: `A tasteful double exposure portrait: the profile of the woman and the man from the reference photo blended softly into a misty autumn woodland scene, trees and light flowing through their silhouettes, faces still clearly recognisable. Muted natural colours, fine art style. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-29", name: "Artistic Studio Smoke And Shadow", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo posed close together in a dark studio with soft drifting smoke and a single directional light from the side, sculptural shadows and highlights on their faces, moody editorial portrait. Charcoal clothing. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-30", name: "Artistic Gallery Wall Candid", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo walking through a quiet art gallery, pausing together in front of a large abstract painting, looking at each other and smiling rather than at the artwork. Soft gallery light, smart dark clothes, candid fine art documentary feel. ${DINLEYS_SUFFIX}`,
   },
 ];
 

@@ -154,6 +154,16 @@ const DINLEYS_PRESETS: PhotoStudioPreset[] = [
   { id: "dn-18", name: "Studio Justin Headshot", hasColour: false },
   { id: "dn-19", name: "Studio Stools Leaning In", hasColour: false },
   { id: "dn-20", name: "Studio Back To Back", hasColour: false },
+  { id: "dn-21", name: "Artistic Rembrandt Window Light", hasColour: false },
+  { id: "dn-22", name: "Artistic Black And White Film", hasColour: false },
+  { id: "dn-23", name: "Artistic Golden Hour Field", hasColour: false },
+  { id: "dn-24", name: "Artistic Window Silhouette Profile", hasColour: false },
+  { id: "dn-25", name: "Artistic Rainy Window Reflection", hasColour: false },
+  { id: "dn-26", name: "Artistic Oil Painting Style", hasColour: false },
+  { id: "dn-27", name: "Artistic Dramatic Spotlight", hasColour: false },
+  { id: "dn-28", name: "Artistic Double Exposure Woodland", hasColour: false },
+  { id: "dn-29", name: "Artistic Studio Smoke And Shadow", hasColour: false },
+  { id: "dn-30", name: "Artistic Gallery Wall Candid", hasColour: false },
 ];
 
 const HALLOWEEN_PRESETS: PhotoStudioPreset[] = [
@@ -1818,7 +1828,7 @@ export default function AiPortraitStudio() {
 {activeSection === "dinleys" && (
 <>
 <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">DINLEYS</p>
-<p className="text-xs text-muted-foreground mb-3">Dr Justin and Dr Lisa together. Upload their photo, then pick from 5 clinic scrubs (him in white, her in black), 5 lifestyle, 5 winter and 5 professional studio shots.</p>
+<p className="text-xs text-muted-foreground mb-3">Dr Justin and Dr Lisa together. Upload their photo, then pick from 5 clinic scrubs (him in white, her in black), 5 lifestyle, 5 winter and 5 professional studio shots, plus 10 artistic portraiture extras.</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
               {DINLEYS_PRESETS.map((preset) => {
