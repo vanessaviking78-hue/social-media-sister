@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { TOPIC_BOXES } from "@/lib/topic-boxes";
 import { MagazineIcon } from "@/components/magazine-icon";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
-import { usePresets } from "@/lib/use-presets";
+import { usePresets, presetWebsite } from "@/lib/use-presets";
 import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { setFlipHandoff } from "@/lib/flip-handoff";
 import { loadImageFromFile } from "@/lib/advent-door";
@@ -599,6 +599,34 @@ export default function MagazinePost() {
   const set = (path: string) => (v: string) => setCopy((c) => setAt(c, path, v));
   const selectedClient = presets.find((p) => p.id === presetId);
 
+  // Reads the clinic's own website for the treatments it offers, so the treatment ticks are the clinic's real
+  // treatments. Uses the same reader and the same remembered list as Client Stylish. Falls back to the general topics.
+  const siteUrl = presetWebsite(selectedClient);
+  const [siteTreatments, setSiteTreatments] = useState<string[]>([]);
+  const [loadingTreatments, setLoadingTreatments] = useState(false);
+  useEffect(() => {
+    const w = siteUrl.trim();
+    setSiteTreatments([]);
+    if (!/\.[a-z]{2,}/i.test(w)) return;
+    const key = `client-stylish-treatments:${w.toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "")}`;
+    try { const c = JSON.parse(localStorage.getItem(key) ?? "null"); if (Array.isArray(c) && c.length) { setSiteTreatments(c); return; } } catch { /* ignore */ }
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      setLoadingTreatments(true);
+      try {
+        const r = await fetch(`${BASE}/api/client-stylish/treatments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ website: w }) });
+        const d = JSON.parse(await r.text()) as { treatments?: string[] };
+        if (!cancelled && Array.isArray(d.treatments)) {
+          setSiteTreatments(d.treatments);
+          if (d.treatments.length) { try { localStorage.setItem(key, JSON.stringify(d.treatments)); } catch { /* ignore */ } }
+        }
+      } catch { /* the treatment box still accepts typing */ }
+      finally { if (!cancelled) setLoadingTreatments(false); }
+    }, 600);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [siteUrl]);
+  const treatmentOptions = siteTreatments.length ? siteTreatments : TOPIC_BOXES;
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white">
       <div className="max-w-6xl mx-auto px-4 py-8">
@@ -845,7 +873,7 @@ export default function MagazinePost() {
               <p className="text-xs uppercase tracking-widest text-zinc-500">3. The treatment and reply word for post {cur + 1}</p>
               <Field label="Treatment (becomes the magazine title)" value={treatment} onChange={setTreatment} placeholder="e.g. Polynucleotides" />
               <div className="flex flex-wrap gap-1.5" role="group" aria-label={`Tick a topic for post ${cur + 1}`}>
-                {TOPIC_BOXES.map((tp) => {
+                {treatmentOptions.map((tp) => {
                   const on = treatment.trim().toLowerCase() === tp.toLowerCase();
                   return (
                     <label
@@ -858,6 +886,9 @@ export default function MagazinePost() {
                   );
                 })}
               </div>
+              <p className="text-[11px] text-zinc-500">
+                {loadingTreatments ? "Reading their website for treatments..." : siteTreatments.length ? `${siteTreatments.length} treatments found on their website. Tick one, or type your own above.` : siteUrl ? "No treatment list found on their website, so these are general topics." : "Pick a client with a website saved and their own treatments appear here."}
+              </p>
               <HookBankPicker client={clinicName} single days={["Monday"]} picked={hookPick} onChange={setHook} startDate={hookStart} onStartDate={setHookStart} />
               <Field label="Reply word people comment" value={replyWord} onChange={setReplyWord} placeholder="e.g. GLOW" />
             </section>
