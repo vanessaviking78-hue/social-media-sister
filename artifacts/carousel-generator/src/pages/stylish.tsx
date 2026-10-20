@@ -24,6 +24,7 @@ import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-m
 import { nthPostingSlot } from "@/lib/schedule";
 import opentype from "opentype.js";
 import HookBankPicker from "@/components/hook-bank-picker";
+import ReadyContentPicker from "@/components/ready-content-picker";
 import { markHooksUsed } from "@/lib/hook-used";
 import { packStarts, isoDate, pickedHookPayload } from "@/lib/hook-bank";
 
@@ -3156,6 +3157,27 @@ export default function Stylish() {
     });
   }, []);
 
+  // Ready made posts picked from the content list become posts, added to the ones already here or replacing them.
+  const addReadyContent = (rows: string[][], replace: boolean) => {
+    if (!rows.length) return;
+    const base = replace ? 0 : posts.length;
+    const added: Post[] = rows.map((texts, i) => ({
+      id: makeId(), texts, caption: "", captionBusy: false, selected: true, cover: ALL_COVERS[(base + i) % ALL_COVERS.length],
+    }));
+    const cols = Math.max(5, ...posts.map(p => p.texts.length));
+    const fit = (p: Post): Post => {
+      if (p.texts.length >= cols) return p;
+      const body = p.texts.slice(0, -1);
+      while (body.length < cols - 1) body.push("");
+      return { ...p, texts: [...body, p.texts[p.texts.length - 1] ?? ""] };
+    };
+    setPosts(replace ? added : [...posts.map(fit), ...added.map(fit)]);
+    if (replace) { setOverrides({}); focusRef.current = {}; }
+    setCsvName(n => (replace || !n ? "Ready made content" : n));
+    setCsvError(null);
+    toast.success(`${added.length} post${added.length === 1 ? "" : "s"} added`);
+  };
+
   // -- write the CSV for me ---------------------------------------------------------------
   const [csvTopics, setCsvTopics] = useState<string[]>(["", "", "", ""]);
   const [csvRest, setCsvRest] = useState("");
@@ -4341,6 +4363,10 @@ export default function Stylish() {
               </Button>
               {csvText && <Button size="sm" variant="outline" onClick={() => saveAs(new Blob([csvText], { type: "text/csv;charset=utf-8" }), `${preset?.name ?? "Stylish"} Stylish.csv`)}>Download CSV</Button>}
             </div>
+          </section>
+
+          <section className="space-y-2 rounded-lg border border-border/40 p-3">
+            <ReadyContentPicker onAdd={addReadyContent} />
           </section>
 
           <section className="space-y-2">

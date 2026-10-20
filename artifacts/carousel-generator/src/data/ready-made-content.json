@@ -1,0 +1,455 @@
+{
+ "theme": "The clocks go back, dark evenings and getting cosy (October)",
+ "items": [
+  {
+   "id": "RM01",
+   "hook": "Coat roulette",
+   "subtitle": "Spin the wheel. Regret it by lunch.",
+   "text1": "Wear the big coat and boil on the bus. Wear the light one and shiver outside the chip shop. Take both and carry one like a toddler who has gone limp.",
+   "text2": "There is no winning, only layers. My advice is a cardigan with pockets. Pockets are the real luxury of a woman over 35.",
+   "cta": "Which coat are you today? Big, small or carrying both.",
+   "check": false
+  },
+  {
+   "id": "RM02",
+   "hook": "Friend, 1 October: 'I am NOT doing Christmas yet.' Friend, 18 October:",
+   "subtitle": "Her basket tells a different story.",
+   "text1": "Eleven presents bought. A wrapping paper situation that needs its own cupboard. A spreadsheet. She has a spreadsheet with COLUMNS.",
+   "text2": "She still says it is too early and we all nod, because we love her and because we have also quietly bought a tin of shortbread.",
+   "cta": "Tag the friend with the spreadsheet. She will pretend she does not know why.",
+   "check": false
+  },
+  {
+   "id": "RM03",
+   "hook": "Things that did not get the memo about the clocks",
+   "subtitle": "I have a list. It is long.",
+   "text1": "The oven. The car. The microwave that has been wrong since 2019 and which we have all accepted as family. My cat, who will want breakfast at what she believes is 6am and I believe is a criminal hour.",
+   "text2": "My body is the worst. It will wake me at 5.12 for a full week, then demand a nap at 3 like a toddler who has seen too much.",
+   "cta": "Which clock in your house is still wrong? Tell me. I need to know I am not alone.",
+   "check": false
+  },
+  {
+   "id": "RM04",
+   "hook": "Ranking the hot water bottle, the heated blanket and the dog",
+   "subtitle": "Scientifically unsound. Deeply accurate.",
+   "text1": "Third place: the hot water bottle. Loyal, but it goes cold at 2am like it has somewhere better to be. Second: the heated blanket, a small electric hug with slightly alarming wiring.",
+   "text2": "First place: the dog, who is warm, uninvited and now occupies 80 per cent of the bed. I have nowhere to put my feet and have never been happier.",
+   "cta": "Where does your cat or dog sit in your ranking? Be fair.",
+   "check": false
+  },
+  {
+   "id": "RM05",
+   "hook": "The friend who texts 'home safe?'",
+   "subtitle": "Two words. Quietly the best thing about getting older.",
+   "text1": "As the evenings draw in, it is the text that arrives at 10.47pm after a night out or a long dark drive. 'Home safe?' No drama. Just somebody checking.",
+   "text2": "I have four of those women. I would walk through fire for every one of them, and I have told them, mostly with biscuits.",
+   "cta": "Tag your 'home safe?' friend and tell her she counts.",
+   "check": false
+  },
+  {
+   "id": "RM06",
+   "hook": "Pyjamas by 4.45pm and I refuse to feel bad about it",
+   "subtitle": "The sun has gone. So have my standards.",
+   "text1": "In June, getting changed at 4.45 would be lazy. In October it is called reading the room. Nature has switched the lights off and I am simply following instructions.",
+   "text2": "House rules: anything with an elasticated waist is formalwear. Socks must not match. A hot drink must be held in both hands, like a small bird.",
+   "cta": "Send this to the friend who texts 'just in my pjs' at 4.50. You know exactly who.",
+   "check": false
+  },
+  {
+   "id": "RM07",
+   "hook": "Lip filler myths, busted gently",
+   "subtitle": "No, you will not wake up looking like a goldfish.",
+   "text1": "Myth one: it is all or nothing. A good practitioner can use a small amount and build slowly, and you always have a say. Myth two: it is forever. Most lip fillers are hyaluronic acid based, break down over time and can be dissolved by a suitably qualified professional if needed.",
+   "text2": "Myth three: it will look obvious. It looks obvious when the plan was rushed. Take your time at consultation, ask to see real results, and walk away if you feel pressured.",
+   "cta": "Questions? Send them my way. No question is too silly.",
+   "check": true
+  },
+  {
+   "id": "RM08",
+   "hook": "The thermostat war: a nature documentary",
+   "subtitle": "In a quiet house, two creatures circle the dial.",
+   "text1": "Creature one believes 17 degrees is plenty and wears one thin jumper like a brave explorer. Creature two is in a dressing gown, a blanket and a second dressing gown.",
+   "text2": "The dial is moved at night. Nobody saw anything. In the morning both swear they never touched it. The cat watched. The cat knows.",
+   "cta": "What number is your house war fought at? Tell me and I will tell you who is winning.",
+   "check": false
+  },
+  {
+   "id": "RM09",
+   "hook": "Receipt for one extra hour",
+   "subtitle": "Itemised, because I am a professional.",
+   "text1": "10 mins: looking for my phone, which is in my hand. 10 mins: standing at the open fridge hoping it has changed. 15 mins: telling myself I will start the thing.",
+   "text2": "20 mins: starting the thing, then watching the dog. 5 mins: real productivity. Total: 60 minutes. Total achieved: one cup of tea.",
+   "cta": "What would your receipt say? Put it in the comments.",
+   "check": false
+  },
+  {
+   "id": "RM10",
+   "hook": "Things I whisper to the bedside lamp",
+   "subtitle": "She listens. She never judges.",
+   "text1": "'Just one more chapter.' 'I have had a long day.' 'Is it too late to start a sourdough?' It is 10.14pm.",
+   "text2": "She flickers on, she flickers off. She has seen things. She is the only one who knows how many chapters 'one more' really is.",
+   "cta": "What do you tell your lamp? This is a safe space.",
+   "check": false
+  },
+  {
+   "id": "RM11",
+   "hook": "Catching sight of yourself in the car window at dusk",
+   "subtitle": "And deciding to be kind about it.",
+   "text1": "You pull onto the drive, the light has gone, and there she is in the glass. A tired, lovely face that has done a great deal today.",
+   "text2": "I used to look for what to fix. Now I look for who stayed. That woman has been through everything and still remembered the biscuits. She is alright.",
+   "cta": "Be kind to her tonight. And if you ever want a chat about how you feel in your skin, my door is open.",
+   "check": false
+  },
+  {
+   "id": "RM12",
+   "hook": "The clocks go back and I get an extra hour. Here is my plan.",
+   "subtitle": "Spoiler: it involves a biscuit.",
+   "text1": "Version one: I will learn Italian, clear the loft and finally do something with the 400 photos on my phone.",
+   "text2": "Version two, the true one: I will lie horizontally and watch a stranger renovate a barn. I have never been more sure of anything.",
+   "cta": "Tell me how you are really spending your hour. No judgement. We all know it is the barn.",
+   "check": false
+  },
+  {
+   "id": "RM13",
+   "hook": "Tights drawer archaeology",
+   "subtitle": "Dig carefully. There may be a ladder.",
+   "text1": "Layer one: last winter's tights, now a single knot. Layer two: one sock that has lost its partner and its will to live. Layer three: a fiver and a receipt from 2022.",
+   "text2": "You find the good black pair. It has a ladder. You put them on anyway and tell yourself clear nail varnish will fix it. It will not. You know it will not.",
+   "cta": "What is the oldest thing you have found in your drawer? I will go first: a Tamagotchi.",
+   "check": false
+  },
+  {
+   "id": "RM14",
+   "hook": "Overheard at our reception on the first properly dark Monday",
+   "subtitle": "Names withheld. Biscuits not.",
+   "text1": "'I booked in for a glow and I have turned up looking like a lamp that has been switched off.' 'My husband asked if I was ill. I said no, love, I am just October.'",
+   "text2": "'Is it too early to wear a Christmas jumper to a consultation?' It is not. I wore mine to one last year and it went very well.",
+   "cta": "Where did you overhear your best one? Share it. The best one gets a biscuit.",
+   "check": false
+  },
+  {
+   "id": "RM15",
+   "hook": "Skin tightening: what is realistic?",
+   "subtitle": "A gentle truth, served with a cuppa.",
+   "text1": "Energy-based treatments such as radiofrequency may support firmness for some people, but they are not a facelift. Changes are usually gradual and subtle, and results differ.",
+   "text2": "A good clinic will show you what is realistic and tell you if something else is a better fit. If anyone promises miracles, back slowly out of the room.",
+   "cta": "Ask us what is realistic for you. We will tell you straight.",
+   "check": false
+  },
+  {
+   "id": "RM16",
+   "hook": "Six things you only say in October",
+   "subtitle": "Count how many you have said this week.",
+   "text1": "'It is not cold, it is fresh.' 'I am not putting the heating on yet.' (The heating is on.) 'Is that a frost?'",
+   "text2": "'It's dark already?' 'Where are my gloves?' 'I am only having one.' (She is having four.) Six out of six and you are officially a woman in autumn.",
+   "cta": "Your score out of six, please. No cheating.",
+   "check": false
+  },
+  {
+   "id": "RM17",
+   "hook": "Prescription-only treatments: who should be prescribing?",
+   "subtitle": "Short answer: someone qualified, after meeting you.",
+   "text1": "Certain injectable treatments are prescription-only medicines. That means a qualified prescriber must assess you and decide whether they are suitable. It is not a formality.",
+   "text2": "If one is offered through a DM, a quick chat with no questions about your health or a stranger at a party, pause. Ask who the prescriber is and when they will assess you.",
+   "cta": "Ask the question. It is your face.",
+   "check": true
+  },
+  {
+   "id": "RM18",
+   "hook": "Peels in autumn: why practitioners like this time of year",
+   "subtitle": "Less sun. More sense.",
+   "text1": "Chemical peels can make skin more sensitive to sunlight, so lower UV in the cooler months can be easier to manage. It does not mean you skip SPF. SPF is a year round habit.",
+   "text2": "A peel needs a proper assessment of your skin and a clear aftercare plan. Skip the one-size-fits-all approach and book a consultation first.",
+   "cta": "Not sure what your skin needs? Come and have a proper look with us.",
+   "check": false
+  },
+  {
+   "id": "RM19",
+   "hook": "Cheek filler without the 'done' look",
+   "subtitle": "It is about balance, not blimp.",
+   "text1": "A skilled practitioner looks at the whole face, not just the cheek. Sometimes the answer is a tiny amount, sometimes a different treatment, and sometimes it is 'you do not need this'.",
+   "text2": "If you want something subtle, say so out loud. Bring photos of looks you like and be honest about the ones you do not. Good practitioners love that kind of clarity.",
+   "cta": "Bring your photos and your honest opinions.",
+   "check": true
+  },
+  {
+   "id": "RM20",
+   "hook": "Microneedling: what to expect on the day and the day after",
+   "subtitle": "Pink, a bit tight and a good excuse to cancel Tuesday.",
+   "text1": "Expect numbing cream, a small device and a feeling people often describe as a warm scratch. Skin can look pink and feel tight for a day or two, sometimes longer.",
+   "text2": "Afterwards: gentle skincare, daily SPF, and make-up only when your practitioner says so. It is not suitable for everyone, which is exactly why the consultation matters.",
+   "cta": "Book a consultation to find out if it is right for you.",
+   "check": false
+  },
+  {
+   "id": "RM21",
+   "hook": "Laser hair removal: why autumn is a popular time to start",
+   "subtitle": "Sunburn season is over. The razor can have a rest.",
+   "text1": "Laser treatment usually needs a course of sessions, and skin that has not been recently tanned is generally better suited to it. That is why the cooler months work for many people.",
+   "text2": "You will need a patch test and skin assessment first, and advice on avoiding sunbeds and fake tan beforehand. Results vary, and your practitioner will talk you through what is realistic.",
+   "cta": "Ready for a smoother winter? Book your patch test.",
+   "check": false
+  },
+  {
+   "id": "RM22",
+   "hook": "Weather forecast for the average face this week",
+   "subtitle": "Brought to you by a woman with a flask.",
+   "text1": "Monday: scattered tiredness moving in from the west. Tuesday: patchy dryness with a risk of the word 'knackered'. Wednesday: a bright spell after coffee.",
+   "text2": "Thursday to Sunday: widespread cosy. Moisturiser advised. Gale force opinions from teenagers expected. Please carry a biscuit.",
+   "cta": "Write your own forecast below. Mine is a 70 per cent chance of wine.",
+   "check": false
+  },
+  {
+   "id": "RM23",
+   "hook": "Black Friday and your face: a gentle warning",
+   "subtitle": "Discounts are lovely. Rushing is not.",
+   "text1": "Treatments come with consultations, medical history, aftercare and follow-up. A sale should never squeeze those out.",
+   "text2": "If a deal means being rushed or skipping any of that, it is too expensive. Book for the day you are ready, not the day the banner says.",
+   "cta": "Book a consultation first, shop later.",
+   "check": false
+  },
+  {
+   "id": "RM24",
+   "hook": "Autumn jobs I will be ignoring",
+   "subtitle": "A list I am proud of.",
+   "text1": "Clearing the gutters. Raking the leaves. Sorting the shed, which has become a small country. Bleeding the radiators, because that sounds like a job for a man called Gary.",
+   "text2": "Instead I will buy a candle called 'Woodland Hush' for £19 and call it maintenance.",
+   "cta": "What are you ignoring this weekend? Solidarity below.",
+   "check": false
+  },
+  {
+   "id": "RM25",
+   "hook": "Why your face looks tired when the clocks change, and what actually helps",
+   "subtitle": "Hint: some of it is just sleep.",
+   "text1": "Darker mornings, broken sleep and central heating can leave skin looking flat and dull. That is very real, and no treatment replaces a good night, plenty of water and a decent moisturiser.",
+   "text2": "If you would like a little extra, a skin consultation can look at hydration-focused treatments that might suit you. A good practitioner will also tell you honestly if what you need is a nap.",
+   "cta": "Book a skin chat. Honest advice, even if the advice is 'go to bed'.",
+   "check": false
+  },
+  {
+   "id": "RM26",
+   "hook": "Halloween: the scariest thing in my house",
+   "subtitle": "The ghosts are fine.",
+   "text1": "The text from school at 9.14pm: 'Can my child have a skeleton costume tomorrow? A proper one?'",
+   "text2": "I made one from a black top and some white tape. Nobody was fooled, but the tape was a triumph. Parenting is mostly improvisation with whatever is in the drawer.",
+   "cta": "Share your last-minute costume rescue. I need ideas.",
+   "check": false
+  },
+  {
+   "id": "RM27",
+   "hook": "Dear 4.30pm darkness",
+   "subtitle": "A strongly worded letter.",
+   "text1": "I have questions. You arrived uninvited again. I was halfway through a sandwich in daylight and now I am in a Scandinavian crime drama.",
+   "text2": "I have lit every candle I own. The dog is nervous. Please return in March, ideally later in the day. Yours, mildly annoyed.",
+   "cta": "Write your own letter in the comments. The best one gets read out at the clinic.",
+   "check": false
+  },
+  {
+   "id": "RM28",
+   "hook": "Clinic lighting: the truth",
+   "subtitle": "Everyone looks different under a ring light.",
+   "text1": "A clinic has proper lighting for a reason. Bathroom light in October is a liar, a bully and a rotten flatterer all at once.",
+   "text2": "If you have ever booked something because of a bathroom mirror at 6.40am, take a breath. Come in for a proper chat in kinder light, with a real person and a cup of tea.",
+   "cta": "Come and see yourself in better light. Book a chat.",
+   "check": false
+  },
+  {
+   "id": "RM29",
+   "hook": "Your face in a dark car mirror at traffic lights",
+   "subtitle": "A short horror film.",
+   "text1": "The overhead light comes on and suddenly every pore is a headline. You lean in. You find a hair that was not there this morning. You leave it. It has clearly paid rent.",
+   "text2": "The lights go green. The car behind beeps. You emerge from the mirror a changed woman, mostly the same woman, slightly pinker.",
+   "cta": "Own up: how long do you spend checking the mirror at red lights?",
+   "check": false
+  },
+  {
+   "id": "RM30",
+   "hook": "Red flags in a DM",
+   "subtitle": "If it starts with 'hey babe', run.",
+   "text1": "Prices only by message, 'special offers' that vanish at midnight, no mention of a consultation, no qualifications on the profile. These are not the signs of a safe service.",
+   "text2": "Look for a practitioner who is proud to show their credentials, location and aftercare process. Boring is good here. Boring is safe.",
+   "cta": "Share this with someone who loves a bargain.",
+   "check": false
+  },
+  {
+   "id": "RM31",
+   "hook": "Planning for Christmas: when to book your anti-wrinkle treatment",
+   "subtitle": "Timing is everything. So is not panicking.",
+   "text1": "Results from anti-wrinkle treatment can take up to two weeks to show fully, with a review afterwards if needed. Book the week of the party and there is no time to settle.",
+   "text2": "As a rough guide I suggest planning about four weeks ahead of your event. That is a guide, not a promise, because everyone responds differently. Your practitioner will plan it with you at your consultation.",
+   "cta": "Diaries are filling up. Book your consultation now.",
+   "check": true
+  },
+  {
+   "id": "RM32",
+   "hook": "The extra hour is for you",
+   "subtitle": "No list. No kids. No inbox.",
+   "text1": "I spend most of the year handing hours to other people: clients, children, the dog, someone's urgent email. The clocks go back once a year and give one back.",
+   "text2": "I am putting mine in a bath with a book and a door that shuts. You deserve one too, even if you only get twenty minutes of it.",
+   "cta": "Tell me what yours is going to be. I will cheer for you in the replies.",
+   "check": false
+  },
+  {
+   "id": "RM33",
+   "hook": "Informed consent is a conversation",
+   "subtitle": "The form is just the receipt.",
+   "text1": "Informed consent means you understand what the treatment is, the risks, the alternatives, the cost and what could go wrong. You should have time to ask questions before signing anything.",
+   "text2": "If someone hands you a clipboard and says 'sign here, it is just paperwork', pause. You can say no at any point, even with the needle in sight.",
+   "cta": "Remember: you can change your mind. Always.",
+   "check": false
+  },
+  {
+   "id": "RM34",
+   "hook": "What a skin booster appointment actually feels like",
+   "subtitle": "Short version: odd, fine and over quickly.",
+   "text1": "Skin boosters are tiny injections of a hydrating product into the skin. Expect numbing cream, a few minutes of 'hmm' and small bumps that often settle within a day or two.",
+   "text2": "Many people have a course of sessions, and results vary from person to person. Your practitioner should tell you what is realistic for you, not what is on a poster.",
+   "cta": "Curious? Book a consultation and ask us everything.",
+   "check": true
+  },
+  {
+   "id": "RM35",
+   "hook": "Check the register before you check the price",
+   "subtitle": "Takes under five minutes.",
+   "text1": "In the UK, check your practitioner is on the relevant register: the GMC for doctors, the NMC for nurses, the GDC for dentists, or a voluntary register such as the JCCP. Ask for their registration number.",
+   "text2": "A real professional will be glad you asked. Anyone who gets cross or vague is giving you your answer for free.",
+   "cta": "Send this to a friend who is booking something.",
+   "check": false
+  },
+  {
+   "id": "RM36",
+   "hook": "The wardrobe swap: a love story in three acts",
+   "subtitle": "Summer goes up. Winter comes down. Chaos stays.",
+   "text1": "Act one: carrying a box down from the loft in the dark while saying 'I will just pop up there' with total confidence. Act two: finding a jumper you forgot you loved.",
+   "text2": "Act three: discovering that same jumper has shrunk, or I have, or neither of us has and the loft is playing tricks. We move on. We always move on.",
+   "cta": "Found a lost favourite this week? Tell me what it was.",
+   "check": false
+  },
+  {
+   "id": "RM37",
+   "hook": "Gossip from the clinic kettle",
+   "subtitle": "Strictly confidential. By which I mean, about biscuits.",
+   "text1": "Our rule is that nothing said at the kettle leaves the kettle. It has seen it all: dress dilemmas, ex-husbands and the dark truth about Brenda's flapjacks.",
+   "text2": "What I have learned is that women tell the truth at the kettle. About what they would like, what scares them, what they have never said out loud. That is where the real consultation starts.",
+   "cta": "Fancy a cuppa and a proper chat? Come and see us.",
+   "check": false
+  },
+  {
+   "id": "RM38",
+   "hook": "The contents of my handbag this month",
+   "subtitle": "An inventory I am not proud of but am very ready for.",
+   "text1": "One glove (the other has gone to a better place). Hand cream. Lip balm in three flavours. A raisin of unknown age.",
+   "text2": "A pen that only works on Tuesdays. A tissue folded into a swan. Never throw anything away. You might need a swan.",
+   "cta": "What is the strangest thing in your bag right now? Be brave.",
+   "check": false
+  },
+  {
+   "id": "RM39",
+   "hook": "I am an hour early for everything this week and nobody believes me",
+   "subtitle": "A rare public service announcement from a lifelong late person.",
+   "text1": "For twenty years I have arrived just as everyone is ordering pudding. This week the clocks go back, and for ONE day the world runs to my timetable.",
+   "text2": "I will take the hour. I will arrive at my own meeting looking calm. I will tell no one it was a fluke. Enjoy it, fellow late people, it is a gift.",
+   "cta": "Chronically late? Say 'present' in the comments. We will arrive eventually.",
+   "check": false
+  },
+  {
+   "id": "RM40",
+   "hook": "Ask what is in the syringe",
+   "subtitle": "It is a fair question and a brilliant habit.",
+   "text1": "Dermal fillers are medical devices. Ask which product is being used, check it comes from a legitimate supplier and ask for the details to be recorded in your notes.",
+   "text2": "Your records should include the product name and batch number. If you ever need to see another clinic, that information is gold dust.",
+   "cta": "Save this and take it to your next appointment.",
+   "check": true
+  },
+  {
+   "id": "RM41",
+   "hook": "Who do you call at 9pm when something does not feel right?",
+   "subtitle": "Ask this before the appointment.",
+   "text1": "Before any treatment, ask: what are the common side effects? What would worry you? Who do I contact if I am unsure, and how quickly will someone answer?",
+   "text2": "A good clinic gives you a clear answer, in writing. If the best reply is 'it will be fine', ask again. In an emergency call 999, and for advice out of hours NHS 111 can help.",
+   "cta": "Save this list before your next appointment.",
+   "check": false
+  },
+  {
+   "id": "RM42",
+   "hook": "Dark circles are not all the same thing",
+   "subtitle": "Sleep, shadows, genetics. Possibly all three.",
+   "text1": "Under-eye darkness can come from pigment, shadows created by the structure of your face, thin skin or plain tiredness. Each needs a different approach, and some cannot be changed at all.",
+   "text2": "That is why a proper assessment matters. Be wary of anyone who promises to fix dark circles before they have looked properly at yours.",
+   "cta": "Pop in for an honest look at your under-eyes.",
+   "check": false
+  },
+  {
+   "id": "RM43",
+   "hook": "The ten minute rule for dark mornings",
+   "subtitle": "It has saved my life and several marriages.",
+   "text1": "Put tomorrow's clothes on the radiator the night before. At 6am you step into warm trousers and feel like royalty. It is the cheapest luxury I know.",
+   "text2": "Second rule: no mirror until you have had a hot drink. Nobody makes good decisions about their own face at 6.15am. That is a fact of life.",
+   "cta": "Share your best dark morning hack. I will steal it.",
+   "check": false
+  },
+  {
+   "id": "RM44",
+   "hook": "Here we see the woman at the school gate in October",
+   "subtitle": "Narrated quietly, so as not to startle her.",
+   "text1": "She has dressed for three seasons at once: sandals, a coat and a scarf, just in case. In her bag, a snack, a spare sock and a letter she has not yet read about non-uniform day.",
+   "text2": "She has spotted a mum in a puffer jacket and thought 'I should have worn mine'. She will remember next week. Magnificent creature, truly.",
+   "cta": "Tag the woman at your school gate holding it all together with a snack.",
+   "check": false
+  },
+  {
+   "id": "RM45",
+   "hook": "How to cancel a Saturday plan without losing a friend",
+   "subtitle": "A clinic-approved script.",
+   "text1": "Never say 'I can't be bothered'. Say 'I am having a quiet night to protect my energy'. It sounds like a wellness retreat. It is a sofa.",
+   "text2": "Always follow up with a firm promise to make it up to her. 'Next weekend, I am all yours.' Then cancel next weekend. Joking. Mostly.",
+   "cta": "Send this to a friend who is cancelling right now. She will know.",
+   "check": false
+  },
+  {
+   "id": "RM46",
+   "hook": "My mum's coat",
+   "subtitle": "Every October I think of it.",
+   "text1": "It was camel, too big in the shoulders and always smelt of Polo mints. She would put it round me at the bus stop without a word, like it was the most normal thing in the world.",
+   "text2": "I am the one with the coat now, and the Polos. I have done it for a friend, a client, a stranger who looked cold. Who put the coat round you?",
+   "cta": "Tell me about the person who warmed you up. I would love to read it.",
+   "check": false
+  },
+  {
+   "id": "RM47",
+   "hook": "Bonfire night packing list for a woman who has done it all before",
+   "subtitle": "Gloves, wellies and a deep sense of resignation.",
+   "text1": "A flask of something warm that is nobody else's business. Three pairs of socks. A hat that does not care about your hair. A small person who has never been so excited.",
+   "text2": "A sparkler with your name on. And a big warm feeling you did not plan for when the first rocket goes up and everyone says 'ooooh' at once.",
+   "cta": "What is in your flask? Do not tell the children.",
+   "check": false
+  },
+  {
+   "id": "RM48",
+   "hook": "The cooling off question nobody asks",
+   "subtitle": "You are allowed to go home and think.",
+   "text1": "A responsible practitioner will never pressure you to book on the day. A good consultation leaves space to go home, sleep on it and come back.",
+   "text2": "If someone says 'this price is only available today', that is a sales line. Walk out, have a tea and decide when you are ready.",
+   "cta": "Save this for your next consultation.",
+   "check": false
+  },
+  {
+   "id": "RM49",
+   "hook": "The five stages of the snooze button",
+   "subtitle": "In order. Every day. Without fail.",
+   "text1": "1. Denial: that was not the alarm. 2. Bargaining: five more minutes and I will be a new woman. 3. Anger: who decided 6am was a time?",
+   "text2": "4. Depression: I have been defeated by a rectangle. 5. Acceptance: I am wearing yesterday's jumper and calling it consistency.",
+   "cta": "Which stage are you at today? Pop the number in the comments.",
+   "check": false
+  },
+  {
+   "id": "RM50",
+   "hook": "The sat nav voice for surviving October",
+   "subtitle": "In 200 yards, turn left at the biscuit tin.",
+   "text1": "'In 200 yards, you have reached your sofa.' 'Recalculating: you said you would go to the gym.' 'Please make a U-turn away from the mince pies. It is the 18th of October.'",
+   "text2": "'You have arrived. Your destination is under a blanket.' Honestly the best route planner I have ever had.",
+   "cta": "Give me your best sat nav line. I will pin the winner.",
+   "check": false
+  }
+ ]
+}
