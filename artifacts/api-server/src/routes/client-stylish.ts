@@ -277,14 +277,7 @@ The user message lists this clinic's own best performing posts, most engaged fir
 Never copy a top post or lightly reword it, every row must be new. Only echo a personal fact or credential (a career history, a number of years, a qualification) if it appears in the top posts or the clinician notes, and never invent one.`;
 
 const HALLOWEEN_IDEAS: Record<string, { title: string; brief: string }> = {
-  "hl-01": { title: "Ghost stories from the treatment room", brief: "Funny, gently spooky stories about things people have put on their faces (three retinols at once, a kitchen table facial, a mystery serum from a Facebook group). Ends warmly on why a proper consultation matters. Never name a real product, person or competitor." },
   "hl-02": { title: "Halloween 1992", brief: "Pure nostalgia for UK women over 35: a bin bag costume, Woolworths face paint that stained for a week, an Elnett cloud, a pointed hat from Tammy Girl. Hyper specific, affectionate and funny." },
-  "hl-03": { title: "Things scarier than Halloween", brief: "A 'things that' list: the 3am hot flush, a front camera in bad light, a group chat that has gone quiet. Warm, funny, never body shaming." },
-  "hl-04": { title: "Which Halloween film is your perimenopause?", brief: "Each slide matches a film to a menopause moment with a one line joke (for example Night Sweats on Elm Street, The Fog, Poltergeist for the thermostat). Warm, validating, no medical advice, no mention of hormones or medicines." },
-  "hl-05": { title: "The witch's cauldron", brief: "Reading a skincare label like a spell book: three ingredient names that sound like curses, with what each does in plain, light English. Fun, no medical claims, no brands." },
-  "hl-06": { title: "Carve the pumpkin with a plan", brief: "Nobody carves a pumpkin without a plan, so here is what to bring to a first consultation. A stealth sell: she finishes it feeling curious and comfortable." },
-  "hl-07": { title: "Sheet mask Sunday looks like Scream", brief: "The picture of you in a face mask opening the door to the delivery driver. Pure relatable humour about Sunday night routines." },
-  "hl-08": { title: "The face behind the costume", brief: "Emotional and shareable: the Halloweens she dressed as someone else, and the one where she was happy as herself. Original and specific, never a stock quote." },
 };
 
 const PERSONAL_RULES = `PERSONAL, NEVER LIKE A BUSINESS
@@ -481,7 +474,7 @@ router.post("/client-stylish/copy", upload.array("screenshots", 3), async (req: 
     if (cleanTreatments.length !== 3) { out.status(400).json({ error: "Please give me 3 treatments" }); return; }
 
     const rawHall = body.halloween;
-    const hallIds = (Array.isArray(rawHall) ? rawHall : rawHall ? [rawHall] : []).map(String).filter((h, i, a) => HALLOWEEN_IDEAS[h] && a.indexOf(h) === i).slice(0, 3);
+    const hallIds = (Array.isArray(rawHall) ? rawHall : rawHall ? [rawHall] : []).map(String).filter((h, i, a) => HALLOWEEN_IDEAS[h] && a.indexOf(h) === i).slice(0, 1);
     const expected = 20 + hallIds.length;
     const bankHooks = parseBankHooks(body.hooks);
     const hookDays = new Set((bankHooks.map((h) => h.text.match(DAY_WORDS) ?? []).flat()).map((d) => d.toLowerCase()));
