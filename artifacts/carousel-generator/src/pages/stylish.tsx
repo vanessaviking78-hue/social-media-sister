@@ -49,6 +49,8 @@ const STYLE_STORAGE_KEY = "stylish-style-v4";
 
 type CoverLayout = "band" | "centred" | "block" | "split" | "serif" | "plain" | "behind"
   | "fullbleed" | "blur" | "strip" | "diagonal" | "behind2" | "polaroid" | "sidebar" | "frame" | "layered"
+  // Cover-only templates added 20 Oct 2026: paper card, dimmed caps, light italic bold, collage and paper page.
+  | "paper" | "dimmed" | "stacked" | "collage" | "sheet"
   // The "October 26" set: each is a scene photo (made in AI Photo Studio) with the words placed on it. The number is the pin's number.
   | "oct1" | "oct8" | "oct9" | "oct11" | "oct17" | "oct2" | "oct5" | "oct10" | "oct15" | "oct3" | "oct4" | "oct6" | "oct7" | "oct12" | "oct13" | "oct14" | "oct16" | "oct18";
 
@@ -146,6 +148,7 @@ const COVER_WANTS: Record<CoverLayout, string[]> = {
   plain: [],
   behind: [],
   fullbleed: [], blur: [], strip: [], diagonal: [], behind2: [], polaroid: [], sidebar: [], frame: [], layered: [],
+  paper: [], dimmed: [], stacked: [], collage: [], sheet: [],
   oct1: [], oct8: [], oct9: [], oct11: [], oct17: [], oct2: [], oct5: [], oct10: [], oct15: [], oct3: [], oct4: [], oct6: [], oct7: [], oct12: [], oct13: [], oct14: [], oct16: [], oct18: [],
 };
 
@@ -175,6 +178,26 @@ const COVER_PRESETS: Record<CoverLayout, Partial<Style>> = {
     coverLayout: "plain", cvWeight: 700, cvSubWeight: 400,
     cvCaps: false, cvSubCaps: false, cvTracking: 0, cvSubTracking: 0, cvSize: 150, cvSubSize: 56, cvScrim: 0,
     cvColour: "#ffffff", cvSubColour: "#ffffff", cvBlock: "#1f2a44",
+  },
+  paper: {
+    coverLayout: "paper", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: false, cvTracking: -2, cvSubTracking: 1,
+    cvSize: 120, cvSubSize: 40, cvScrim: 0, cvColour: "#111111", cvSubColour: "#ffffff", cvBlock: "#5b73a8", cvY: 51,
+  },
+  dimmed: {
+    coverLayout: "dimmed", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: true, cvTracking: 0, cvSubTracking: 3,
+    cvSize: 230, cvSubSize: 36, cvScrim: 38, cvColour: "#ffffff", cvSubColour: "#ffffff", cvY: 50,
+  },
+  stacked: {
+    coverLayout: "stacked", cvWeight: 400, cvSubWeight: 400, cvCaps: false, cvSubCaps: false, cvTracking: -2, cvSubTracking: 0,
+    cvSize: 190, cvSubSize: 40, cvScrim: 15, cvColour: "#ffffff", cvSubColour: "#ffffff", cvY: 17,
+  },
+  collage: {
+    coverLayout: "collage", cvWeight: 400, cvSubWeight: 400, cvCaps: false, cvSubCaps: false, cvTracking: -2, cvSubTracking: 0,
+    cvSize: 160, cvSubSize: 40, cvScrim: 0, cvColour: "#ffffff", cvSubColour: "#ffffff", cvBlock: "#383632", cvY: 49,
+  },
+  sheet: {
+    coverLayout: "sheet", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: false, cvTracking: 0, cvSubTracking: 0,
+    cvSize: 90, cvSubSize: 64, cvScrim: 0, cvColour: "#3d3a2e", cvSubColour: "#ffffff", cvBlock: "#e6e5dc",
   },
   fullbleed: {
     coverLayout: "fullbleed", cvWeight: 400, cvSubWeight: 400, cvCaps: true, cvSubCaps: false, cvTracking: 0, cvSubTracking: 0,
@@ -394,6 +417,11 @@ const DEFAULT_STYLE: Style = {
     sidebar: { h: "'DM Serif Display', serif", s: F_MONT },
     frame: { h: "'Playfair Display', serif", s: F_MONT },
     layered: { h: "'Anton', sans-serif", s: F_MONT },
+    paper: { h: "'DM Serif Display', serif", s: "'Dancing Script', cursive" },
+    dimmed: { h: "'Bodoni Moda', serif", s: F_MONT },
+    stacked: { h: "'Playfair Display', serif", s: F_MONT },
+    collage: { h: "'Playfair Display', serif", s: F_MONT },
+    sheet: { h: "'Cormorant SC', serif", s: "'Sacramento', cursive" },
   },
   clientCoverFont: "",
   clientCoverSubFont: "",
@@ -515,7 +543,7 @@ function buildSlides(texts: string[], opts?: SlideTextOpts): SlideSpec[] {
 }
 
 // Block, serif, diagonal, behind 2, polaroid and layered were retired. Their drawing code is left in place, but they are no longer offered.
-const COVER_ORDER: CoverLayout[] = ["centred", "fullbleed", "blur", "strip"];
+const COVER_ORDER: CoverLayout[] = ["centred", "fullbleed", "blur", "strip", "paper", "dimmed", "stacked", "collage", "sheet"];
 
 // The "October 26" set. Each look is named by its number on the Pinterest board.
 // No. 1 (newspaper over the face) and No. 3 (poster on the pavement) were removed; their drawing code is left in place but they are no longer offered.
@@ -551,14 +579,14 @@ const OCT_HELP: Partial<Record<CoverLayout, string>> = {
 // The name of each cover's colour block, for the colour picker. Covers not listed have no block.
 const BLOCK_LABEL: Partial<Record<CoverLayout, string>> = {
   band: "Band colour", block: "Block colour", split: "Block colour", plain: "Background colour", behind: "Background colour",
-  behind2: "Background colour", strip: "Band colour", polaroid: "Background colour", sidebar: "Band colour", frame: "Panel colour", layered: "Card colour",
+  behind2: "Background colour", strip: "Band colour", paper: "Label colour", collage: "Background colour", sheet: "Paper colour", polaroid: "Background colour", sidebar: "Band colour", frame: "Panel colour", layered: "Card colour",
 };
 
 // Each cover's headline and subtitle fonts, before any client override.
 function coverDefaultFaces(style: Style, layout: CoverLayout): [string, string] {
   if (layout === "plain") return [style.plainFont, style.plainSubFont];
   if (layout === "behind") return [style.behindFont, style.behindSubFont];
-  const f = style.lf?.[layout];
+  const f = style.lf?.[layout] ?? DEFAULT_STYLE.lf[layout];
   return f ? [f.h, f.s] : [style.cvFont, style.cvSubFont];
 }
 
@@ -1058,7 +1086,7 @@ async function getCutout(file: File): Promise<ImageBitmap | null> {
 // Cover options 8 to 16
 // ---------------------------------------------------------------------------
 
-const MORE_LAYOUTS = new Set<CoverLayout>(["fullbleed", "blur", "strip", "diagonal", "behind2", "polaroid", "sidebar", "frame", "layered"]);
+const MORE_LAYOUTS = new Set<CoverLayout>(["fullbleed", "blur", "strip", "diagonal", "behind2", "polaroid", "sidebar", "frame", "layered", "paper", "dimmed", "stacked", "collage", "sheet"]);
 
 // A small print style card, drawn tilted around its centre. Anything passed as inner is drawn in the tilted space.
 function drawPolaroid(
@@ -1147,6 +1175,21 @@ function applyCoverGradient(ctx: CanvasRenderingContext2D, style: Style, x: numb
   g.addColorStop(1, style.cvGradTo);
   ctx.fillStyle = g;
   ctx.fillRect(x, y, w, h);
+  ctx.restore();
+}
+
+// A steady scatter of tiny light and dark specks that looks like paper or felt. The same every time, so a preview matches the export.
+function speckle(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, strength: number, density = 60) {
+  let a = 1234567;
+  const rnd = () => { a = (a + 0x6d2b79f5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+  const n = Math.round((w * h) / density);
+  for (let i = 0; i < n; i++) {
+    const v = rnd(), px = x + rnd() * w, py = y + rnd() * h;
+    ctx.fillStyle = v < 0.5 ? `rgba(0,0,0,${strength * rnd()})` : `rgba(255,255,255,${strength * rnd()})`;
+    ctx.fillRect(px, py, 1.6, 1.6);
+  }
   ctx.restore();
 }
 
@@ -1352,6 +1395,172 @@ async function drawCoverMore(
       drawPaperclip(ctx, Math.round(W * 0.335), Math.round(H * 0.225));
       const r = heading(cardX + 26, { top: Math.round(H * 0.655) }, cardW - 52, 2, "left");
       subtitle(cardX + 26, r.bottom + 12, cardW - 52, "left");
+    } else if (layout === "paper") {
+      // Paper card: full photo, a white paper card in the middle with the headline in two parts, and a tilted colour label for the subtitle.
+      fill("#777777");
+      const b = await open(photo);
+      if (b) drawPhotoIn(ctx, b, 0, 0, W, H, at);
+      applyCoverGradient(ctx, style, 0, 0, W, H);
+      scrim();
+      const cw = Math.round(W * 0.505), ch = Math.round(H * 0.403);
+      const cx = Math.round((W - cw) / 2), cy = Math.round((style.cvY / 100) * H - ch / 2);
+      shadowOn();
+      ctx.fillStyle = "#fbfaf6";
+      ctx.fillRect(cx, cy, cw, ch);
+      shadowOff();
+      speckle(ctx, cx, cy, cw, ch, 0.05);
+      // The headline splits on | or a line break. With neither, the last two words go in italics.
+      const raw = spec.text.trim();
+      let top = raw, bottom = "";
+      const bits = raw.split(/\s*[|\n]\s*/).filter(Boolean);
+      if (bits.length > 1) { top = bits[0]; bottom = bits.slice(1).join(" "); }
+      else {
+        const w = raw.split(/\s+/);
+        if (w.length > 2) { top = w.slice(0, -2).join(" "); bottom = w.slice(-2).join(" "); }
+        else if (w.length === 2) { top = w[0]; bottom = w[1]; }
+      }
+      if (style.cvCaps) top = top.toUpperCase();
+      const maxW = cw - 80;
+      let sz = Math.round(style.cvSize * headScale);
+      setSpacing(ctx, style.cvTracking);
+      for (; sz > 40; sz -= 4) {
+        ctx.font = `${style.cvWeight} ${sz}px ${hf}`; const a = ctx.measureText(top).width;
+        ctx.font = `italic ${style.cvWeight} ${Math.round(sz * 1.08)}px ${hf}`; const c = ctx.measureText(bottom).width;
+        if (a <= maxW && c <= maxW) break;
+      }
+      const lineB = Math.round(sz * 1.08);
+      const labelH = sub ? Math.round(subSize * 1.9) : 0;
+      const blockH = sz + (bottom ? lineB : 0) + (sub ? labelH + 26 : 0);
+      let ty = Math.round(cy + (ch - blockH) / 2) + textAt.dy;
+      ctx.textAlign = "center";
+      ctx.fillStyle = metallicFill(ctx, style.cvColour);
+      ctx.font = `${style.cvWeight} ${sz}px ${hf}`;
+      ctx.fillText(top, W / 2 + textAt.dx, ty);
+      ty += Math.round(sz * 0.98);
+      if (bottom) {
+        ctx.font = `italic ${style.cvWeight} ${lineB}px ${hf}`;
+        ctx.fillText(bottom, W / 2 + textAt.dx, ty);
+        ty += lineB;
+      }
+      setSpacing(ctx, 0);
+      if (sub) {
+        setSub();
+        let ss = subSize;
+        while (ss > 18) { ctx.font = `${style.cvSubWeight} ${ss}px ${sf}`; if (ctx.measureText(sub).width <= cw - 120) break; ss -= 2; }
+        const lw = Math.round(ctx.measureText(sub).width + 90), lh = Math.round(ss * 1.9);
+        ctx.save();
+        ctx.translate(W / 2 + subTextAt.dx, ty + 26 + lh / 2 + subTextAt.dy);
+        ctx.rotate(-0.05);
+        ctx.fillStyle = blockFill(ctx, style.cvBlock);
+        ctx.fillRect(-lw / 2, -lh / 2, lw, lh);
+        ctx.fillStyle = metallicFill(ctx, style.cvSubColour);
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "center";
+        ctx.fillText(sub, 0, 0);
+        ctx.restore();
+        ctx.textBaseline = "top";
+      }
+    } else if (layout === "dimmed") {
+      // Dimmed caps: the photo darkened, with tall elegant capitals centred over it.
+      fill("#555555");
+      const b = await open(photo);
+      if (b) drawPhotoIn(ctx, b, 0, 0, W, H, at);
+      applyCoverGradient(ctx, style, 0, 0, W, H);
+      scrim();
+      const r = heading(W / 2, { centre: Math.round((style.cvY / 100) * H) }, W - 170, 3, "center", 0.92);
+      subtitle(W / 2, r.bottom + 40, Math.round(W * 0.7), "center");
+    } else if (layout === "stacked") {
+      // Light, italic, bold: the first word light and large, the small words in italics beside it, the last word bold underneath. A dark fade from the top left.
+      fill("#555555");
+      const b = await open(photo);
+      if (b) drawPhotoIn(ctx, b, 0, 0, W, H, at);
+      applyCoverGradient(ctx, style, 0, 0, W, H);
+      scrim();
+      const fade = ctx.createLinearGradient(0, 0, W * 0.85, H * 0.6);
+      fade.addColorStop(0, "rgba(0,0,0,0.78)"); fade.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = fade; ctx.fillRect(0, 0, W, H);
+      const words = spec.text.trim().split(/\s+/).filter(Boolean);
+      const cap = (t: string) => (style.cvCaps ? t.toUpperCase() : t);
+      const first = cap(words[0] ?? "");
+      const last = words.length > 1 ? cap(words[words.length - 1]) : "";
+      const mid = words.length > 2 ? words.slice(1, -1).join(" ") : "";
+      const x0 = 110 + textAt.dx, maxW = W - 220;
+      let sz = Math.round(style.cvSize * headScale);
+      setSpacing(ctx, style.cvTracking);
+      for (; sz > 50; sz -= 4) {
+        ctx.font = `300 ${sz}px ${hf}`; const a = ctx.measureText(first).width;
+        ctx.font = `italic 400 ${Math.round(sz * 0.5)}px ${hf}`; const m = mid ? ctx.measureText(mid).width + 22 : 0;
+        ctx.font = `700 ${Math.round(sz * 1.1)}px ${hf}`; const c = ctx.measureText(last).width;
+        if (a + m <= maxW && c <= maxW) break;
+      }
+      ctx.textBaseline = "alphabetic";
+      ctx.textAlign = "left";
+      ctx.fillStyle = metallicFill(ctx, style.cvColour);
+      const y1 = Math.round((style.cvY / 100) * H) + Math.round(sz * 0.85) + textAt.dy;
+      ctx.font = `${last ? 300 : 700} ${sz}px ${hf}`;
+      ctx.fillText(first, x0, y1);
+      let bottom = y1;
+      if (mid) {
+        const w1 = ctx.measureText(first).width;
+        ctx.font = `italic 400 ${Math.round(sz * 0.5)}px ${hf}`;
+        ctx.fillText(mid, x0 + w1 + 22, y1);
+      }
+      if (last) {
+        const y2 = y1 + Math.round(sz * 1.05);
+        ctx.font = `700 ${Math.round(sz * 1.1)}px ${hf}`;
+        ctx.fillText(last, x0, y2);
+        bottom = y2;
+      }
+      setSpacing(ctx, 0);
+      ctx.textBaseline = "top";
+      subtitle(110, bottom + 36 - textAt.dy, Math.round(W * 0.6), "left");
+    } else if (layout === "collage") {
+      // Photo collage: a colour background, one large photo and two framed photos, with the headline over the large one. Uses this post's next two photos.
+      fill(style.cvBlock);
+      const bx = Math.round(W * 0.25), by = Math.round(H * 0.155), bw = Math.round(W * 0.675), bh = Math.round(H * 0.69);
+      const big = await open(photo);
+      if (big) drawPhotoIn(ctx, big, bx, by, bw, bh, at);
+      applyCoverGradient(ctx, style, bx, by, bw, bh);
+      const fw = Math.round(W * 0.389), fh = Math.round(H * 0.411), fx = Math.round(W * 0.074), pad = Math.round(W * 0.015);
+      const frames = [Math.round(H * 0.059), Math.round(H * 0.53)];
+      for (let i = 0; i < 2; i++) {
+        shadowOn();
+        ctx.fillStyle = "#fbf6e3";
+        ctx.fillRect(fx, frames[i], fw, fh);
+        shadowOff();
+        const e = await open(extras[i] ?? photo);
+        if (e) drawPhotoIn(ctx, e, fx + pad, frames[i] + pad, fw - pad * 2, fh - pad * 2, { x: 50, y: 40 });
+      }
+      ctx.shadowColor = "rgba(0,0,0,0.35)"; ctx.shadowBlur = 22; ctx.shadowOffsetY = 4;
+      const r = heading(W - 60, { centre: Math.round((style.cvY / 100) * H) }, Math.round(W * 0.56), 2, "right", 1);
+      subtitle(W - 60, r.bottom + 20, Math.round(W * 0.5), "right");
+      shadowOff();
+    } else if (layout === "sheet") {
+      // Paper page: a dark felt background, a sheet of paper with two punch holes, the headline on top and the photo in the middle with the subtitle written over it.
+      fill("#1c1c1c");
+      speckle(ctx, 0, 0, W, H, 0.14, 30);
+      const sx = Math.round(W * 0.1), sy = Math.round(H * 0.1), sw = Math.round(W * 0.765), sh = Math.round(H * 0.8);
+      shadowOn();
+      ctx.fillStyle = blockFill(ctx, style.cvBlock);
+      ctx.fillRect(sx, sy, sw, sh);
+      shadowOff();
+      speckle(ctx, sx, sy, sw, sh, 0.035);
+      ctx.fillStyle = "#2a2824";
+      for (const hy of [0.23, 0.77]) { ctx.beginPath(); ctx.arc(sx + Math.round(sw * 0.07), sy + Math.round(sh * hy), 18, 0, Math.PI * 2); ctx.fill(); }
+      const px = Math.round(W * 0.286), pw = Math.round(W * 0.428), py = Math.round(H * 0.268), ph = Math.round(H * 0.463);
+      heading(W / 2, { centre: Math.round((sy + py) / 2) }, sw - 120, 2, "center", 1);
+      const b = await open(photo);
+      if (b) drawPhotoIn(ctx, b, px, py, pw, ph, at);
+      applyCoverGradient(ctx, style, px, py, pw, ph);
+      if (sub) {
+        ctx.save();
+        ctx.translate(W / 2 + subTextAt.dx, py + Math.round(ph * 0.8) + subTextAt.dy);
+        ctx.rotate(-0.1);
+        setSub();
+        ctx.shadowColor = "rgba(0,0,0,0.35)"; ctx.shadowBlur = 12;
+        drawLines(balancedWrap(ctx, sub, Math.round(pw * 0.92)), 0, 0, subLineH, "center");
+        ctx.restore();
+      }
     }
   } finally {
     for (const b of opened) b.close();
@@ -2709,6 +2918,11 @@ function CoverIcon({ k }: { k: CoverLayout }) {
       {k === "sidebar" && (<><div className="absolute inset-0 bg-amber-800/60" /><div className="absolute left-1 top-0 bottom-0 w-[50%] bg-white" /><div className="absolute left-1.5 top-[30%] w-3 h-1.5 bg-black" /></>)}
       {k === "frame" && (<><div className="absolute inset-0 bg-amber-900/70" /><div className="absolute inset-1 bg-white" /><div className="absolute left-1.5 top-1.5 w-[42%] h-[42%] bg-amber-700/70" /><div className="absolute right-1.5 bottom-1.5 w-[42%] h-[42%] bg-amber-700/70" /></>)}
       {k === "layered" && (<><div className="absolute inset-0 bg-amber-900/60" /><div className="absolute left-2 right-2 top-[20%] bottom-[18%] bg-stone-200" /><div className="absolute left-2.5 right-2.5 top-[24%] h-[32%] bg-amber-700/70" /></>)}
+      {k === "paper" && (<><div className="absolute inset-0 bg-amber-800/60" /><div className="absolute left-2 right-2 top-[30%] bottom-[30%] bg-white" /><div className="absolute left-3 right-3 top-[44%] h-1 bg-black" /><div className="absolute left-3 right-4 bottom-[34%] h-1 bg-indigo-500 rotate-[-4deg]" /></>)}
+      {k === "dimmed" && (<><div className="absolute inset-0 bg-amber-900/80" /><div className="absolute left-2 right-2 top-[34%] h-1.5 bg-white" /><div className="absolute left-2 right-2 top-[50%] h-1.5 bg-white" /></>)}
+      {k === "stacked" && (<><div className="absolute inset-0 bg-amber-800/60" /><div className="absolute inset-0 bg-gradient-to-br from-black/80 to-transparent" /><div className="absolute left-1.5 top-[18%] w-4 h-1 bg-white/80" /><div className="absolute left-1.5 top-[28%] w-5 h-1.5 bg-white" /></>)}
+      {k === "collage" && (<><div className="absolute inset-0 bg-stone-700" /><div className="absolute left-1 top-1 w-[38%] h-[40%] bg-amber-50 border border-amber-50" /><div className="absolute left-1 bottom-1 w-[38%] h-[40%] bg-amber-50" /><div className="absolute right-1 top-[18%] bottom-[18%] w-[56%] bg-amber-700/70" /></>)}
+      {k === "sheet" && (<><div className="absolute inset-0 bg-neutral-800" /><div className="absolute left-1 right-1 top-1 bottom-1 bg-stone-200" /><div className="absolute left-2.5 right-2.5 top-[10%] h-1 bg-stone-700" /><div className="absolute left-3 right-3 top-[28%] bottom-[28%] bg-neutral-500" /></>)}
       {k === "split" && (<><div className="absolute inset-y-0 left-0 w-[47%] bg-amber-700/70" /><div className="absolute left-[54%] right-1 top-[24%] h-1.5 bg-black" /><div className="absolute right-1 bottom-0 left-[47%] h-1.5 bg-neutral-500" /></>)}
     </div>
   );
@@ -4497,6 +4711,11 @@ export default function Stylish() {
               {style.coverLayout === "sidebar" && "Full photo with a colour band down the side carrying the words."}
               {style.coverLayout === "frame" && "Photo behind, a panel on top with two photos and two blocks of words on the diagonal. Uses this post's next two photos."}
               {style.coverLayout === "layered" && "One photo at the back, a print at the front and a card below with the words."}
+              {style.coverLayout === "paper" && "Full photo with a white paper card in the middle. Headline: FIRST PART | last words in italics. The subtitle sits on a tilted colour label."}
+              {style.coverLayout === "dimmed" && "The photo darkened, with big elegant capitals centred over it. Use Darken the photo to set how dark."}
+              {style.coverLayout === "stacked" && "A dark fade from the top left. The first word light and large, any small words in italics beside it and the last word bold underneath."}
+              {style.coverLayout === "collage" && "A colour background with one large photo and two framed photos, and the headline over the large photo. Uses this post's next two photos."}
+              {style.coverLayout === "sheet" && "A sheet of paper with two punch holes on dark felt, the headline on top, the photo in the middle and the subtitle written over it."}
               {style.coverLayout === "plain" && "No photo. A flat colour of your choice with your own headline and subheading fonts."}
               {" "}Picking one loads its fonts and colours, then change whatever you like.
             </p>
@@ -4588,7 +4807,7 @@ export default function Stylish() {
                 />
               </>
             )}
-            {["centred", "serif", "behind", "behind2", "fullbleed", "blur", "diagonal", "sidebar"].includes(style.coverLayout) && (
+            {["centred", "serif", "behind", "behind2", "fullbleed", "blur", "diagonal", "sidebar", "paper", "dimmed", "stacked", "collage"].includes(style.coverLayout) && (
               <SliderField label={style.coverLayout === "serif" ? "Text bottom edge" : "Text height"} value={style.cvY} min={5} max={96} suffix="%" onChange={v => patch({ cvY: v })} />
             )}
             {style.coverLayout === "blur" && (
@@ -4600,7 +4819,7 @@ export default function Stylish() {
             {style.coverLayout === "sidebar" && (
               <SliderField label="Band width" value={style.cvPhoto} min={25} max={80} suffix="%" onChange={v => patch({ cvPhoto: v })} />
             )}
-            {["fullbleed", "blur", "diagonal", "layered"].includes(style.coverLayout) && (
+            {["fullbleed", "blur", "diagonal", "layered", "paper", "dimmed", "stacked"].includes(style.coverLayout) && (
               <SliderField label="Darken the photo" value={style.cvScrim} min={0} max={70} suffix="%" onChange={v => patch({ cvScrim: v })} />
             )}
             {style.coverLayout === "serif" && (
