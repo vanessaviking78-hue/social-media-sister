@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "wouter";
 import { ArrowLeft, BatteryCharging, Play, CheckCircle2, Loader2, PartyPopper, RefreshCcw } from "lucide-react";
-import { usePresets } from "@/lib/use-presets";
+import { usePresets, presetWebsite } from "@/lib/use-presets";
+import { useSiteTreatments } from "@/lib/use-site-treatments";
 import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
 import HookBankPicker from "@/components/hook-bank-picker";
 import { packStarts, isoDate } from "@/lib/hook-bank";
@@ -12,11 +13,11 @@ type Kind = "monday" | "wednesday" | "friday" | "sunday";
 type KindState = { kind: Kind; scheduled: number; target: number; done: boolean; latest: string | null };
 type Result = { presetId: number; kinds: KindState[]; allDone: boolean; completeUntil: string | null };
 
-const CARDS: Record<Kind, { day: string; title: string; tool: string; href: string; hint: string }> = {
-  monday: { day: "Monday", title: "Treatment carousels", tool: "Magazine Post", href: "/magazinepost", hint: "4 treatment posts, scheduled one per Monday" },
-  wednesday: { day: "Wednesday", title: "Nostalgic and funny reels", tool: "Stylish then Magazine Flip", href: "/magazine", hint: "4 posts built in Stylish, posted as Magazine Flip reels" },
-  friday: { day: "Friday", title: "Things that carousels", tool: "Stylish", href: "/stylish", hint: "4 'things that' carousels built in Stylish" },
-  sunday: { day: "Sunday", title: "Shareable quotes", tool: "Tweet Maker", href: "/tweet-maker", hint: "4 quote posts from Tweet Maker" },
+const CARDS: Record<Kind, { day: string; title: string; tool: string; href: string; hint: string; hookDays: string[]; hookNote: string }> = {
+  monday: { day: "Monday", title: "Treatment carousels", tool: "Magazine Post", href: "/magazinepost", hint: "4 treatment posts, scheduled one per Monday", hookDays: ["Monday"], hookNote: "Treatment hooks" },
+  wednesday: { day: "Wednesday", title: "Nostalgic and funny reels", tool: "Stylish", href: "/stylish?day=wednesday", hint: "4 posts built in Stylish, then posted as Magazine Flip reels", hookDays: ["Wednesday", "Any day"], hookNote: "Nostalgic and funny hooks" },
+  friday: { day: "Friday", title: "Things that carousels", tool: "Stylish", href: "/stylish?day=friday", hint: "4 'things that' carousels built in Stylish", hookDays: ["Friday"], hookNote: "Things that hooks" },
+  sunday: { day: "Sunday", title: "Shareable quotes", tool: "Tweet Maker", href: "/tweet-maker", hint: "4 quote posts from Tweet Maker", hookDays: [], hookNote: "" },
 };
 
 const ORDER: Kind[] = ["monday", "wednesday", "friday", "sunday"];
@@ -53,7 +54,7 @@ export default function FourWeeks() {
   const [starting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [startedAt, setStartedAt] = useState<number | null>(null);
-  const [hookLook, setHookLook] = useState<string[]>([]);
+  const [hookLook, setHookLook] = useState<Record<Kind, string[]>>({ monday: [], wednesday: [], friday: [], sunday: [] });
   const [hookStart, setHookStart] = useState(() => isoDate(packStarts()[0]));
 
   const [headFont, setHeadFont] = useState("");
@@ -122,6 +123,8 @@ export default function FourWeeks() {
   }, [presetId, load]);
 
   const clientName = presets.find((p) => p.id === presetId)?.name ?? "";
+  const clientPreset = presets.find((p) => p.id === presetId);
+  const { treatments: siteTreatments, loading: loadingTreatments } = useSiteTreatments(presetWebsite(clientPreset));
   const doneCount = data ? data.kinds.filter((k) => k.done).length : 0;
 
   return (
@@ -240,6 +243,16 @@ export default function FourWeeks() {
                     <p className="mb-3 mt-1 text-xs text-muted-foreground">{c.hint}</p>
                     <Battery filled={s.scheduled} total={s.target} />
                     <p className="mt-2 text-xs text-muted-foreground">{s.scheduled} of {s.target} scheduled</p>
+                    {k === "monday" && (
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        {loadingTreatments ? "Reading their website for treatments..." : siteTreatments.length ? `Treatments on their website: ${siteTreatments.slice(0, 8).join(", ")}${siteTreatments.length > 8 ? " and more" : ""}.` : "Pick a treatment in Magazine Post. Their website treatments appear there once a website is saved."}
+                      </p>
+                    )}
+                    {c.hookDays.length > 0 && (
+                      <div className="mt-3">
+                        <HookBankPicker client={clientName} days={c.hookDays} picked={hookLook[k]} onChange={(codes) => setHookLook((h) => ({ ...h, [k]: codes }))} startDate={hookStart} onStartDate={setHookStart} />
+                      </div>
+                    )}
                     <Link href={c.href}>
                       <button className="mt-3 w-full rounded-lg bg-pink-600 px-3 py-2 text-xs font-medium text-white hover:bg-pink-700">
                         {s.done ? `Open ${c.tool}` : `Go to ${c.tool}`}
@@ -250,10 +263,6 @@ export default function FourWeeks() {
               })}
             </div>
 
-            <div className="space-y-1 rounded-xl border border-border/40 p-4">
-              <p className="text-xs text-muted-foreground">Hooks for {clientName}. Any with a line through it have already been used for them. Pick them in the tool you are writing in (Magazine Post, Stylish, Tweet Maker, Bulk Carousel), they are crossed off there once used.</p>
-              <HookBankPicker client={clientName} picked={hookLook} onChange={setHookLook} startDate={hookStart} onStartDate={setHookStart} />
-            </div>
           </>
         )}
       </main>

@@ -4,6 +4,7 @@ import { STYLE_PROMPTS, RULES, clean } from "./magazine-maker";
 import { clinicNoun } from "./caption-generator";
 import { scanText, applySwap } from "../lib/newsletterCompliance";
 import { followOnVoice, splitHook } from "../lib/hookBank";
+import { clientProfileContext } from "./client-profiles";
 
 const router: IRouter = Router();
 
@@ -49,6 +50,7 @@ router.post("/magazine-post/copy", async (req: Request, res: Response) => {
     const hookText = tidy(String(hook ?? ""), 240);
     const hookParts = hookText ? splitHook(hookText) : null;
 
+    const profileCtx = await clientProfileContext(clinicName);
     const systemPrompt = `You write the copy for a 5 page social media magazine post for a ${clinicNoun(clinicName)}, ${clinic}, all about ONE treatment: "${treat}". It is a swipe carousel, so every piece of copy must be short enough to read in a couple of seconds.
 
 VOICE: ${stylePrompt}
@@ -81,7 +83,7 @@ ${RULES}`;
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: systemPrompt + profileCtx },
         { role: "user", content: `Treatment: ${treat}` },
       ],
       temperature: 0.85,
