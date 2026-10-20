@@ -6,6 +6,7 @@ import { TOPIC_BOXES } from "@/lib/topic-boxes";
 import { MagazineIcon } from "@/components/magazine-icon";
 import { ScheduleModal, type SchedulePostPayload } from "@/components/schedule-modal";
 import { usePresets } from "@/lib/use-presets";
+import ApprovedImagesPicker from "@/components/approved-images-picker";
 import { setFlipHandoff } from "@/lib/flip-handoff";
 import { loadImageFromFile } from "@/lib/advent-door";
 import { getPhotoHits, DEFAULT_ADJUST, PAGE_W, PAGE_H, setMagazineFonts, setMagazineMetals, onColour, METAL_BASE, type Metal, type PhotoAdjust, type MagazineBrand } from "@/lib/magazine-pages";
@@ -759,6 +760,16 @@ export default function MagazinePost() {
                   <p className="text-sm font-medium text-zinc-300">Drop your photos here, or tap to choose</p>
                   <p className="text-[11px] text-zinc-500 mt-1">The first is the cover and the last is the full photo page. The rest are shared across the inside pages.</p>
                 </label>
+              )}
+              {photos.length < MAX_PHOTOS && (
+                <ApprovedImagesPicker
+                  clientName={selectedClient?.name || ""}
+                  mode="multi"
+                  skipBackgroundRemoval
+                  large
+                  label="Add approved photos"
+                  onAddImages={(files) => { if (files.length) addPhotos(files); }}
+                />
               )}
               <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
                 <p className="text-[11px] uppercase tracking-widest text-zinc-500 mb-2">
