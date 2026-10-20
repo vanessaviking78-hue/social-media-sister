@@ -894,6 +894,98 @@ export const WINTER_WOOLIES_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
+// ─── DINLEYS folder ───────────────────────────────────────────────────────
+// 20 couple shots of Dr Justin and Dr Lisa from one reference photo:
+// 5 clinic scrubs (him white, her black), 5 lifestyle, 5 winter, 5 studio.
+const DINLEYS_SUFFIX = `Two people, a man and a woman, both taken from the reference photo. The man has short light brown hair, a salt and pepper stubble beard and thick black rimmed glasses. The woman has voluminous curly red hair and round dark rimmed glasses. Both keep their glasses on. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm or orange colour cast. Keep both faces, skin tones, facial features, hair and glasses exactly the same as the reference photo. Same facial features as reference photo.`;
+
+export const DINLEYS_PRESETS: PhotoStudioPreset[] = [
+  // Clinic scrubs: he is always in white, she is always in black
+  {
+    id: "dn-01", name: "Scrubs Corridor Side By Side", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo standing side by side in a bright, modern clinic corridor, relaxed arms, both smiling warmly at the camera. He is wearing fitted white medical scrubs, entirely white. She is wearing fitted black medical scrubs, entirely black. Clean white walls and soft clinical lighting. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-02", name: "Scrubs Desk Planning", hasColour: false,
+    promptTemplate: `The woman from the reference photo seated at a clinic desk with a laptop and a notepad, the man from the reference photo standing beside her looking at the screen with a smile. He is wearing white medical scrubs, entirely white. She is wearing black medical scrubs, entirely black. Soft daylight from a window, tidy modern clinic office. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-03", name: "Scrubs Treatment Room", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo standing either side of a treatment couch in a calm, welcoming treatment room, hands resting lightly on it, smiling at the camera. He is wearing white medical scrubs, entirely white. She is wearing black medical scrubs, entirely black. Clean clinical background with soft even light. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-04", name: "Scrubs Reception Laugh", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo laughing together by a stylish clinic reception desk, a natural candid moment, fresh flowers on the desk. He is wearing white medical scrubs, entirely white. She is wearing black medical scrubs, entirely black. Bright, welcoming clinic reception softly blurred behind them. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-05", name: "Scrubs Arms Folded Lean", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo leaning against a clean clinic wall with arms folded, confident and friendly, shoulders close together. He is wearing white medical scrubs, entirely white. She is wearing black medical scrubs, entirely black. Bright minimal clinic background, soft natural light. ${DINLEYS_SUFFIX}`,
+  },
+  // Lifestyle: coffee shop, sofa and home
+  {
+    id: "dn-06", name: "Coffee Shop Table", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo sharing a small table in a cosy independent coffee shop, a flat white in front of each of them, mid laugh and leaning in towards each other. Smart casual clothes, he in a crisp shirt and she in a soft knit. Warm interior, softly blurred cafe background. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-07", name: "Coffee Shop Doorway", hasColour: false,
+    promptTemplate: `The woman from the reference photo holding a takeaway coffee, the man from the reference photo holding the coffee shop door open for her, both stepping out together and smiling, relaxed morning light. Smart casual clothes in neutral tones. Charming high street coffee shop frontage, softly blurred. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-08", name: "Sofa Mugs And Blanket", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo curled up together on a comfy sofa under a blanket, a mug each, looking at each other and smiling. Soft loungewear in neutral tones. A lived in, stylish living room with a lamp and cushions, soft natural light. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-09", name: "Sofa Reading Arm Perch", hasColour: false,
+    promptTemplate: `The woman from the reference photo reading a book on a sofa while the man from the reference photo sits on the arm beside her, looking down at her with an affectionate smile. Relaxed smart casual clothes. Soft lamp light and a calm, elegant living room. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-10", name: "Kitchen Island Planning", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo at a kitchen island with a laptop and notebooks between them, planning together with big smiles. Casual smart clothes. Bright, modern home kitchen, soft daylight. ${DINLEYS_SUFFIX}`,
+  },
+  // Winter
+  {
+    id: "dn-11", name: "Frosty Park Walk", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo walking arm in arm through a frosty park, breath just visible in the cold air, laughing. They are wearing chunky knitwear and scarves. Low winter sun, bare trees and frosted grass softly blurred behind them. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-12", name: "Winter Coats Cobbled Street", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo standing close on a cobbled street at dusk, she in a long camel coat and he in a dark wool overcoat, both smiling at the camera. Twinkling festive lights softly blurred behind them. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-13", name: "Christmas Market Hot Chocolate", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo at a Christmas market holding hot chocolates, wearing woolly hats, scarves and gloves, laughing together. Wooden stalls and string lights softly blurred behind them. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-14", name: "Fireside Jumpers", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo sitting by a log fire sharing a blanket, both in thick jumpers, relaxed and smiling. Cosy cottage living room, the glow of the fire in the background but skin tones kept natural and neutral. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-15", name: "Snowy Path Wellies", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo on a snowy countryside path in wellies and woolly hats, looking back over their shoulders at the camera and smiling. Soft snowy fields and bare hedgerows behind them, gentle overcast light. ${DINLEYS_SUFFIX}`,
+  },
+  // Professional studio
+  {
+    id: "dn-16", name: "Studio Navy Blazers", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo in matching navy blazers against a plain light grey studio backdrop, shoulders angled together, confident warm smiles. Polished professional studio portrait, soft even lighting. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-17", name: "Studio Lisa Headshot", hasColour: false,
+    promptTemplate: `Head and shoulders studio portrait of the woman from the reference photo only, in a black blazer, plain white studio background, soft even lighting, warm and approachable. Only the woman is in the frame. She keeps her round dark rimmed glasses on. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm or orange colour cast. Keep her face, skin tone, facial features, curly red hair and glasses exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "dn-18", name: "Studio Justin Headshot", hasColour: false,
+    promptTemplate: `Head and shoulders studio portrait of the man from the reference photo only, in a charcoal suit with an open collar white shirt, plain white studio background, soft even lighting, friendly and trustworthy. Only the man is in the frame. He keeps his thick black rimmed glasses on. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm or orange colour cast. Keep his face, skin tone, facial features, hair, stubble and glasses exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "dn-19", name: "Studio Stools Leaning In", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo seated on two studio stools, relaxed and leaning in towards each other, smiling. Smart dark clothes, neutral mid grey studio backdrop, polished editorial feel with soft directional light. ${DINLEYS_SUFFIX}`,
+  },
+  {
+    id: "dn-20", name: "Studio Back To Back", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo standing back to back with arms crossed and big playful smiles, looking at the camera. Smart dark clothes, clean mid grey studio backdrop, strong and fun power couple pose, soft even lighting. ${DINLEYS_SUFFIX}`,
+  },
+];
+
 export const HALLOWEEN_PRESETS: PhotoStudioPreset[] = [
   {
     id: "hl-01",

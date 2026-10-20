@@ -133,6 +133,29 @@ const WINTER_WOOLIES_PRESETS: PhotoStudioPreset[] = [
   { id: "ww-20", name: "Brown Jumper Dress Herringbone Sofa", hasColour: false },
 ];
 
+const DINLEYS_PRESETS: PhotoStudioPreset[] = [
+  { id: "dn-01", name: "Scrubs Corridor Side By Side", hasColour: false },
+  { id: "dn-02", name: "Scrubs Desk Planning", hasColour: false },
+  { id: "dn-03", name: "Scrubs Treatment Room", hasColour: false },
+  { id: "dn-04", name: "Scrubs Reception Laugh", hasColour: false },
+  { id: "dn-05", name: "Scrubs Arms Folded Lean", hasColour: false },
+  { id: "dn-06", name: "Coffee Shop Table", hasColour: false },
+  { id: "dn-07", name: "Coffee Shop Doorway", hasColour: false },
+  { id: "dn-08", name: "Sofa Mugs And Blanket", hasColour: false },
+  { id: "dn-09", name: "Sofa Reading Arm Perch", hasColour: false },
+  { id: "dn-10", name: "Kitchen Island Planning", hasColour: false },
+  { id: "dn-11", name: "Frosty Park Walk", hasColour: false },
+  { id: "dn-12", name: "Winter Coats Cobbled Street", hasColour: false },
+  { id: "dn-13", name: "Christmas Market Hot Chocolate", hasColour: false },
+  { id: "dn-14", name: "Fireside Jumpers", hasColour: false },
+  { id: "dn-15", name: "Snowy Path Wellies", hasColour: false },
+  { id: "dn-16", name: "Studio Navy Blazers", hasColour: false },
+  { id: "dn-17", name: "Studio Lisa Headshot", hasColour: false },
+  { id: "dn-18", name: "Studio Justin Headshot", hasColour: false },
+  { id: "dn-19", name: "Studio Stools Leaning In", hasColour: false },
+  { id: "dn-20", name: "Studio Back To Back", hasColour: false },
+];
+
 const HALLOWEEN_PRESETS: PhotoStudioPreset[] = [
   { id: "hl-01", name: "Ghost Stories Candlelit Treatment Room", hasColour: false },
   { id: "hl-02", name: "Halloween 1992 Witch Hat", hasColour: false },
@@ -592,7 +615,7 @@ const MIX_STYLES: { value: string; label: string }[] = [
   { value: "speaking to a patient", label: "Speaking to a patient (a woman aged 50)" },
 ];
 
-const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...TWEAKED_PRESETS, ...AUTUMN_PRESETS, ...HALLOWEEN_PRESETS, ...CASUAL_PRESETS, ...MIX_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
+const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...TWEAKED_PRESETS, ...AUTUMN_PRESETS, ...HALLOWEEN_PRESETS, ...CASUAL_PRESETS, ...MIX_PRESETS, ...DINLEYS_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
 const findPreset = (id: string) => ALL_PRESETS.find((p) => p.id === id);
 
 const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
@@ -790,7 +813,7 @@ export default function AiPortraitStudio() {
   };
 
   const [activeGender, setActiveGender]   = useState<"women" | "men">("women");
-  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "tweaked" | "autumn" | "halloween" | "casual" | "mix">("new");
+  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "tweaked" | "autumn" | "halloween" | "casual" | "mix" | "dinleys">("new");
   const [mixSelected, setMixSelected] = useState<Set<string>>(new Set(MIX_PRESETS.map((p) => p.id)));
   const [mixMonth, setMixMonth] = useState(MIX_MONTHS[new Date().getMonth()]);
   const [mixStyle, setMixStyle] = useState(MIX_STYLES[0].value);
@@ -1561,6 +1584,7 @@ export default function AiPortraitStudio() {
                 { key: "homework", label: "Homework Shots" },
                 { key: "classy", label: "CLASSY CORPORATE" },
                 { key: "winter", label: "WINTER WOOLIES" },
+                { key: "dinleys", label: "Dinleys" },
                 { key: "tweaked", label: "TWEAKED" },
                 { key: "autumn", label: "AUTUMN" },
                 { key: "halloween", label: "HALLOWEEN" },
@@ -1745,6 +1769,59 @@ export default function AiPortraitStudio() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
               {WINTER_WOOLIES_PRESETS.map((preset) => {
+                const isSelected = selectedPresets.has(preset.id);
+                return (
+                  <div
+                    key={preset.id}
+                    className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
+                      isSelected
+                        ? "border-violet-500/70 bg-violet-500/10"
+                        : "border-border/30 hover:border-border/60 hover:bg-muted/20"
+                    }`}
+                    onClick={() => togglePreset(preset.id)}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                        isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
+                      }`}>
+                        {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium leading-snug">{preset.name}</p>
+                        {preset.hasColour && (
+                          <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                            scrubs colour
+                          </Badge>
+                        )}
+                        {preset.hasColour && isSelected && (
+                          <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              value={presetColours[preset.id] ?? ""}
+                              onChange={(e) => setPresetColours((prev) => ({ ...prev, [preset.id]: e.target.value }))}
+                              placeholder="e.g. navy blue"
+                              className="w-full text-xs bg-background border border-border/50 rounded px-2 py-1 focus:outline-none focus:border-violet-500/50"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+
+</>
+)}
+
+{activeSection === "dinleys" && (
+<>
+<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">DINLEYS</p>
+<p className="text-xs text-muted-foreground mb-3">Dr Justin and Dr Lisa together. Upload their photo, then pick from 5 clinic scrubs (him in white, her in black), 5 lifestyle, 5 winter and 5 professional studio shots.</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+              {DINLEYS_PRESETS.map((preset) => {
                 const isSelected = selectedPresets.has(preset.id);
                 return (
                   <div
