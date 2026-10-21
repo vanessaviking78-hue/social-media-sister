@@ -96,6 +96,16 @@ button{font:inherit;cursor:pointer}
 .cbox i{position:absolute;width:18px;height:18px;background:#fff;border:2px solid var(--accent);border-radius:50%}
 .cbox i[data-h=nw]{left:-9px;top:-9px;cursor:nwse-resize}.cbox i[data-h=ne]{right:-9px;top:-9px;cursor:nesw-resize}
 .cbox i[data-h=sw]{left:-9px;bottom:-9px;cursor:nesw-resize}.cbox i[data-h=se]{right:-9px;bottom:-9px;cursor:nwse-resize}
+
+.editing{border:2px solid var(--accent);position:sticky;top:8px;z-index:5}
+.ehead{display:flex;gap:10px;align-items:center;margin-bottom:10px;min-width:0}
+.ehead img{width:52px;height:52px;object-fit:cover;border-radius:8px;border:1px solid var(--line);flex:none}
+.etext{display:grid;min-width:0}.etext b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.elab{font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;color:var(--accent)}
+.editing small{display:block;color:var(--muted);font-size:12px;margin-top:8px;line-height:1.35}
+.card{cursor:pointer}.card.sel{outline:3px solid var(--accent);outline-offset:-1px}
+.badge.edit{left:auto;right:8px;background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.badge.chg{color:var(--warn)}
 </style>
 
 <div class="wrap">
@@ -111,6 +121,19 @@ button{font:inherit;cursor:pointer}
         <span>Drop them here or tap to choose. Any number at once.</span>
         <input type="file" id="file" accept="image/*" multiple>
       </label>
+
+      <div class="panel editing" id="editing">
+        <div class="ehead"><img id="eThumb" alt="" hidden><div class="etext"><span class="elab">EDITING</span><b id="eName">Add a photo to start</b></div></div>
+        <div class="row" id="scope" role="radiogroup" aria-label="Apply changes to">
+          <button class="btn" type="button" data-s="one" aria-pressed="true">This photo</button>
+          <button class="btn" type="button" data-s="all" aria-pressed="false">All photos <span id="allN">(0)</span></button>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn primary" id="apply" type="button">Apply to this photo</button>
+          <button class="btn" id="reset" type="button">Reset</button>
+        </div>
+        <small id="scopeNote">Changes below only affect this photo. Click any photo to switch.</small>
+      </div>
 
       <div class="panel">
         <h2>Light</h2>
@@ -154,10 +177,6 @@ button{font:inherit;cursor:pointer}
             <button class="btn" type="button" data-a="0.5625" aria-pressed="false">9:16</button>
           </div>
           <small>Centred crop. Use the Crop button on any photo to position it by hand.</small></div>
-        <div class="row" style="margin-top:16px">
-          <button class="btn primary" id="apply" type="button">Perfect all</button>
-          <button class="btn" id="reset" type="button">Reset</button>
-        </div>
       </div>
     </aside>
 
@@ -206,8 +225,11 @@ const HANDOFF_DB='cybersuite-handoff', HANDOFF_STORE='images';
 const MAX_EDGE=2600;
 
 const $=s=>document.querySelector(s);
-const state={items:[],busy:false,dirty:false,uid:0,vt:'none',asp:0};
-const opts=()=>({brt:+$('#brt').value/100,sh:+$('#sh').value/100,mid:+$('#mid').value/100,hi:+$('#hi').value/100,bw:$('#bw').checked,vig:+$('#vig').value/100,vsz:+$('#vsz').value/100,vt:state.vt,asp:state.asp});
+const DEFAULT={brt:50,sh:0,mid:0,hi:0,bw:false,vig:50,vsz:50,vt:'none',asp:0};
+const state={items:[],busy:false,dirty:false,uid:0,sel:null,scope:'one'};
+const toOpts=q=>({brt:q.brt/100,sh:q.sh/100,mid:q.mid/100,hi:q.hi/100,bw:q.bw,vig:q.vig/100,vsz:q.vsz/100,vt:q.vt,asp:q.asp});
+const selItem=()=>state.items.find(i=>i.id===state.sel)||null;
+const targets=()=>state.scope==='all'?state.items:(selItem()?[selItem()]:[]);
 
 /* ---------------- image maths ---------------- */
 const sstep=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t)};
@@ -458,29 +480,48 @@ const tick=()=>new Promise(r=>setTimeout(r,12));
 async function addFiles(files){
   for(const f of files){
     if(!f.type.startsWith('image/'))continue;
-    state.items.push({id:++state.uid,file:f,name:f.name,origUrl:URL.createObjectURL(f),out:null,outUrl:null,status:'queued',showOrig:false});
+    const base=selItem()?selItem().s:DEFAULT;
+    const it={id:++state.uid,file:f,name:f.name,origUrl:URL.createObjectURL(f),out:null,outUrl:null,status:'queued',showOrig:false,s:{...base},stale:false,crop:null};
+    state.items.push(it);if(state.sel==null)state.sel=it.id;
   }
-  render();runQueue();
+  syncControls();render();runQueue();
 }
 async function runQueue(){
   if(state.busy)return;state.busy=true;
-  const o=opts();
   for(const it of state.items){
     if(it.status!=='queued')continue;
     it.status='work';render();await tick();
     try{
       const bmp=await createImageBitmap(it.file,{imageOrientation:'from-image'});
-      const blob=await perfect(bmp,o,it.crop);bmp.close&&bmp.close();
+      const blob=await perfect(bmp,toOpts(it.s),it.crop);bmp.close&&bmp.close();
       if(it.outUrl)URL.revokeObjectURL(it.outUrl);
-      it.out=blob;it.outUrl=URL.createObjectURL(blob);it.status='done';
+      it.out=blob;it.outUrl=URL.createObjectURL(blob);it.status='done';it.stale=false;
     }catch(e){it.status='error';}
     render();
   }
   state.busy=false;state.dirty=false;render();
 }
 function reapply(){
-  for(const it of state.items)it.status='queued';
-  state.dirty=false;render();runQueue();
+  for(const it of targets())it.status='queued';
+  render();runQueue();
+}
+function selectItem(id){state.sel=id;syncControls();render()}
+function syncControls(){
+  const it=selItem(),q=it?it.s:DEFAULT;
+  for(const [id,o] of SL){$('#'+id).value=q[id];$('#'+o).textContent=q[id]}
+  $('#bw').checked=q.bw;
+  document.querySelectorAll('#vigType button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===q.vt));
+  document.querySelectorAll('#cropType button').forEach(x=>x.setAttribute('aria-pressed',+x.dataset.a===q.asp));
+  const th=$('#eThumb');
+  if(it){th.src=it.outUrl&&!it.stale?it.outUrl:it.origUrl;th.hidden=false;$('#eName').textContent=it.name;}
+  else{th.hidden=true;$('#eName').textContent='Add a photo to start';}
+  $('#allN').textContent='('+state.items.length+')';
+  document.querySelectorAll('#scope button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.s===state.scope));
+  $('#scopeNote').textContent=state.scope==='all'?'Changes below apply to every photo, whichever one you click.':'Changes below only affect this photo. Click any photo to switch.';
+}
+function setVal(k,v){
+  for(const t of targets()){t.s[k]=v;t.stale=true;if(k==='asp')t.crop=null;}
+  render();
 }
 
 /* ---------------- rendering ---------------- */
@@ -489,16 +530,20 @@ function render(){
   const grid=$('#grid'),done=state.items.filter(i=>i.status==='done').length;
   $('#count').textContent=state.items.length+(state.items.length===1?' photo':' photos')+(done<state.items.length?' · '+done+' done':'');
   $('#zip').disabled=!done;
-  $('#apply').classList.toggle('pulse',state.dirty);
-  $('#apply').textContent=state.dirty?'Apply new settings':'Perfect all';
+  const tg=targets(),nst=tg.filter(i=>i.stale||i.status!=='done').length;
+  $('#apply').classList.toggle('pulse',nst>0);
+  $('#apply').textContent=state.scope==='all'?'Apply to all '+tg.length+' photos':'Apply to this photo';
+  $('#apply').disabled=!tg.length;
+  const sit=selItem();if(sit){const th=$('#eThumb');const u=sit.outUrl&&!sit.stale?sit.outUrl:sit.origUrl;if(th.getAttribute('src')!==u)th.src=u;}
+  $('#allN').textContent='('+state.items.length+')';
   [...document.querySelectorAll('#chips .chip')].forEach(a=>a.setAttribute('aria-disabled',done?'false':'true'));
   grid.innerHTML='';
   for(const it of state.items){
-    const card=document.createElement('div');card.className='card';
+    const card=document.createElement('div');card.className='card'+(it.id===state.sel?' sel':'');card.onclick=e=>{if(!e.target.closest('button'))selectItem(it.id)};
     const showOrig=it.showOrig||it.status!=='done';
-    const label=it.status==='done'?(it.showOrig?'ORIGINAL':'PERFECTED'):it.status==='error'?'ERROR':it.status==='work'?'WORKING':'QUEUED';
+    const label=it.status==='done'?(it.showOrig?'ORIGINAL':it.stale?'CHANGED':'PERFECTED'):it.status==='error'?'ERROR':it.status==='work'?'WORKING':'QUEUED';
     card.innerHTML=`<div class="shot"><img alt="${it.name}" src="${showOrig?it.origUrl:it.outUrl}">
-      <span class="badge ${it.status==='done'&&!it.showOrig?'done':'work'}">${label}</span>${it.status==='work'?'<div class="work-bar"></div>':''}</div>
+      <span class="badge ${it.status==='done'&&!it.showOrig&&!it.stale?'done':it.stale?'chg':'work'}">${label}</span>${it.id===state.sel?'<span class="badge edit">EDITING</span>':''}${it.status==='work'?'<div class="work-bar"></div>':''}</div>
       <div class="meta"><div class="name" title="${it.name}">${it.name}</div>
       <div class="acts"></div></div>`;
     const acts=card.querySelector('.acts');
@@ -507,7 +552,7 @@ function render(){
       const dl=mk('Download','mini');dl.onclick=()=>save(it.out,baseName(it.name)+'-perfected.jpg');acts.append(dl);
     }
     const cr=mk(it.crop?'Crop ✓':'Crop','mini');cr.onclick=()=>openCrop(it);acts.append(cr);
-    const rm=mk('Remove','mini');rm.onclick=()=>{URL.revokeObjectURL(it.origUrl);it.outUrl&&URL.revokeObjectURL(it.outUrl);state.items=state.items.filter(x=>x!==it);render()};acts.append(rm);
+    const rm=mk('Remove','mini');rm.onclick=()=>{URL.revokeObjectURL(it.origUrl);it.outUrl&&URL.revokeObjectURL(it.outUrl);state.items=state.items.filter(x=>x!==it);if(state.sel===it.id)state.sel=state.items.length?state.items[0].id:null;syncControls();render()};acts.append(rm);
     grid.append(card);
   }
 }
@@ -562,18 +607,15 @@ function buildChips(){
 
 /* ---------------- events ---------------- */
 const SL=[['brt','brtO'],['sh','shO'],['mid','midO'],['hi','hiO'],['vig','vigO'],['vsz','vszO']];
-for(const [id,o] of SL)$('#'+id).addEventListener('input',e=>{$('#'+o).textContent=e.target.value;state.dirty=true;render()});
-$('#bw').addEventListener('change',()=>{state.dirty=true;render()});
-function pressGroup(sel,fn){document.querySelectorAll(sel+' button').forEach(b=>b.addEventListener('click',()=>{fn(b);document.querySelectorAll(sel+' button').forEach(x=>x.setAttribute('aria-pressed',x===b));state.dirty=true;render()}))}
-pressGroup('#vigType',b=>{state.vt=b.dataset.v});
-pressGroup('#cropType',b=>{state.asp=+b.dataset.a;for(const it of state.items)it.crop=null});
+for(const [id,o] of SL)$('#'+id).addEventListener('input',e=>{$('#'+o).textContent=e.target.value;setVal(id,+e.target.value)});
+$('#bw').addEventListener('change',e=>setVal('bw',e.target.checked));
+function pressGroup(sel,fn){document.querySelectorAll(sel+' button').forEach(b=>b.addEventListener('click',()=>{fn(b);document.querySelectorAll(sel+' button').forEach(x=>x.setAttribute('aria-pressed',x===b))}))}
+pressGroup('#vigType',b=>setVal('vt',b.dataset.v));
+pressGroup('#cropType',b=>setVal('asp',+b.dataset.a));
+pressGroup('#scope',b=>{state.scope=b.dataset.s;syncControls();render()});
 $('#reset').addEventListener('click',()=>{
-  const dv={brt:50,sh:0,mid:0,hi:0,vig:50,vsz:50};
-  for(const [id,o] of SL){$('#'+id).value=dv[id];$('#'+o).textContent=dv[id]}
-  $('#bw').checked=false;state.vt='none';state.asp=0;for(const it of state.items)it.crop=null;
-  document.querySelectorAll('#vigType button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v==='none'));
-  document.querySelectorAll('#cropType button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.a==='0'));
-  state.dirty=true;render()});
+  for(const t of targets()){t.s={...DEFAULT};t.crop=null;t.stale=true}
+  syncControls();render()});
 
 /* ---------------- crop editor ---------------- */
 const CR={it:null,box:{x:0,y:0,w:1,h:1},asp:0,drag:null};
@@ -584,7 +626,7 @@ function openCrop(it){
   const init=()=>{
     const iw=img.naturalWidth,ih=img.naturalHeight;
     if(it.crop)CR.box={...it.crop};
-    else{const r=cropRect(iw,ih,{asp:state.asp},null);CR.box={x:r.x/iw,y:r.y/ih,w:r.w/iw,h:r.h/ih};}
+    else{const r=cropRect(iw,ih,{asp:it.s.asp},null);CR.box={x:r.x/iw,y:r.y/ih,w:r.w/iw,h:r.h/ih};}
     drawBox();
   };
   img.onload=init;img.src=it.origUrl;if(img.complete&&img.naturalWidth)init();
@@ -627,7 +669,7 @@ $('#stage').addEventListener('pointerup',endDrag);$('#stage').addEventListener('
 $('#cropDone').onclick=()=>{CR.it.crop={...CR.box};CR.it.status='queued';$('#cropModal').hidden=true;render();runQueue()};
 $('#cropClear').onclick=()=>{CR.it.crop=null;CR.it.status='queued';$('#cropModal').hidden=true;render();runQueue()};
 $('#cropCancel').onclick=()=>{$('#cropModal').hidden=true};$('#apply').onclick=reapply;
-$('#clear').onclick=()=>{state.items.forEach(i=>{URL.revokeObjectURL(i.origUrl);i.outUrl&&URL.revokeObjectURL(i.outUrl)});state.items=[];render()};
+$('#clear').onclick=()=>{state.items.forEach(i=>{URL.revokeObjectURL(i.origUrl);i.outUrl&&URL.revokeObjectURL(i.outUrl)});state.items=[];state.sel=null;syncControls();render()};
 $('#file').addEventListener('change',e=>{addFiles([...e.target.files]);e.target.value=''});
 const drop=$('#drop');
 ['dragenter','dragover'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('over')}));
