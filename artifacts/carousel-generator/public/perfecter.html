@@ -106,6 +106,8 @@ button{font:inherit;cursor:pointer}
 .card{cursor:pointer}.card.sel{outline:3px solid var(--accent);outline-offset:-1px}
 .badge.edit{left:auto;right:8px;background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .badge.chg{color:var(--warn)}
+input[type=text]{font:inherit;width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+input[type=text]:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 </style>
 
 <div class="wrap">
@@ -121,6 +123,12 @@ button{font:inherit;cursor:pointer}
         <span>Drop them here or tap to choose. Any number at once.</span>
         <input type="file" id="file" accept="image/*" multiple>
       </label>
+
+      <div class="panel">
+        <div class="ctl" style="margin:0"><label for="client">Client name</label>
+          <input type="text" id="client" placeholder="e.g. Eva Garcia Aesthetics" autocomplete="off" maxlength="60">
+          <small id="clientNote">Saved photos are named after them, for example Eva Garcia Aesthetics - perfected 1.jpg</small></div>
+      </div>
 
       <div class="panel editing" id="editing">
         <div class="ehead"><img id="eThumb" alt="" hidden><div class="etext"><span class="elab">EDITING</span><b id="eName">Add a photo to start</b></div></div>
@@ -526,6 +534,13 @@ function setVal(k,v){
 
 /* ---------------- rendering ---------------- */
 const baseName=n=>n.replace(/\.[^.]+$/,'');
+const clientName=()=>($('#client').value||'').replace(/[\\/:*?"<>|\u0000-\u001f]/g,'').replace(/\s+/g,' ').trim();
+/* "Client name - perfected 1.jpg", numbered by position so names never clash. Falls back to the original file name. */
+function outName(it){
+  const c=clientName();
+  if(!c)return baseName(it.name)+' - perfected.jpg';
+  return c+' - perfected '+(state.items.indexOf(it)+1)+'.jpg';
+}
 function render(){
   const grid=$('#grid'),done=state.items.filter(i=>i.status==='done').length;
   $('#count').textContent=state.items.length+(state.items.length===1?' photo':' photos')+(done<state.items.length?' · '+done+' done':'');
@@ -549,7 +564,7 @@ function render(){
     const acts=card.querySelector('.acts');
     if(it.status==='done'){
       const cmp=mk('Compare','mini');cmp.setAttribute('aria-pressed',it.showOrig);cmp.onclick=()=>{it.showOrig=!it.showOrig;render()};acts.append(cmp);
-      const dl=mk('Download','mini');dl.onclick=()=>save(it.out,baseName(it.name)+'-perfected.jpg');acts.append(dl);
+      const dl=mk('Download','mini');dl.onclick=()=>save(it.out,outName(it));acts.append(dl);
     }
     const cr=mk(it.crop?'Crop ✓':'Crop','mini');cr.onclick=()=>openCrop(it);acts.append(cr);
     const rm=mk('Remove','mini');rm.onclick=()=>{URL.revokeObjectURL(it.origUrl);it.outUrl&&URL.revokeObjectURL(it.outUrl);state.items=state.items.filter(x=>x!==it);if(state.sel===it.id)state.sel=state.items.length?state.items[0].id:null;syncControls();render()};acts.append(rm);
@@ -570,9 +585,9 @@ $('#zip').onclick=async()=>{
   if(!window.JSZip){toast('The zip tool did not load. Download the photos one at a time.');return;}
   toast('Packing '+done.length+' photos');
   const z=new JSZip(),used={};
-  for(const it of done){let n=baseName(it.name)+'-perfected.jpg';if(used[n]){n=baseName(it.name)+'-perfected-'+it.id+'.jpg'}used[n]=1;z.file(n,it.out);}
+  for(const it of done){let n=outName(it);if(used[n]){n=n.replace(/\.jpg$/,' ('+it.id+').jpg')}used[n]=1;z.file(n,it.out);}
   const blob=await z.generateAsync({type:'blob',compression:'STORE'});
-  save(blob,'perfected-photos.zip');
+  save(blob,(clientName()||'perfected photos')+' - perfected.zip');
 };
 
 /* ---------------- hand-off to the other tools ----------------
@@ -587,7 +602,7 @@ async function handoff(tool){
   try{
     const db=await openDb();
     await new Promise((res,rej)=>{const tx=db.transaction(HANDOFF_STORE,'readwrite'),st=tx.objectStore(HANDOFF_STORE);
-      st.clear();done.forEach((it,i)=>st.put({id:i+1,name:baseName(it.name)+'-perfected.jpg',blob:it.out,target:tool.name,ts:Date.now()}));
+      st.clear();done.forEach((it,i)=>st.put({id:i+1,name:outName(it),blob:it.out,target:tool.name,ts:Date.now()}));
       tx.oncomplete=res;tx.onerror=()=>rej(tx.error);});
     db.close();
   }catch(e){toast('Could not pass the photos on. Download them and add them in '+tool.name+'.');}
@@ -608,6 +623,8 @@ function buildChips(){
 /* ---------------- events ---------------- */
 const SL=[['brt','brtO'],['sh','shO'],['mid','midO'],['hi','hiO'],['vig','vigO'],['vsz','vszO']];
 for(const [id,o] of SL)$('#'+id).addEventListener('input',e=>{$('#'+o).textContent=e.target.value;setVal(id,+e.target.value)});
+try{$('#client').value=localStorage.getItem('perfecter-client')||''}catch(e){}
+$('#client').addEventListener('input',()=>{try{localStorage.setItem('perfecter-client',$('#client').value)}catch(e){}});
 $('#bw').addEventListener('change',e=>setVal('bw',e.target.checked));
 function pressGroup(sel,fn){document.querySelectorAll(sel+' button').forEach(b=>b.addEventListener('click',()=>{fn(b);document.querySelectorAll(sel+' button').forEach(x=>x.setAttribute('aria-pressed',x===b))}))}
 pressGroup('#vigType',b=>setVal('vt',b.dataset.v));
