@@ -2045,6 +2045,35 @@ function mixSeasonText(month?: string, style?: string): { styleText: string; sea
   };
 }
 
+
+// Same Room: edits the uploaded photo itself. Background, framing, camera angle and lighting stay exactly as
+// the reference photo; only the clothing (black scrubs) and the pose change.
+const SAME_ROOM_BASE = `Edit the reference photo rather than creating a new scene. Keep the entire background, room, furniture, objects, framing, camera angle, perspective and lighting exactly as they are in the reference photo, with nothing added to or removed from the room behind her. The woman is the same person: keep her face, skin tone, freckles, eye colour, hairstyle and body shape exactly the same as the reference photo. Change only two things: she is wearing fitted, plain black medical scrubs (a black scrub top, entirely black, no logos, no pattern), and she is in the pose described below.`;
+const SAME_ROOM_SUFFIX = `Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm or orange colour cast, same white balance as the reference photo. Natural hands with five fingers each.`;
+
+export const SAME_ROOM_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "sr-01", name: "Arms Folded", hasColour: false,
+    promptTemplate: `${SAME_ROOM_BASE} Pose: her arms folded across her chest, confident and composed, looking calmly towards the camera. ${SAME_ROOM_SUFFIX}`,
+  },
+  {
+    id: "sr-02", name: "Holding A Syringe Tray", hasColour: false,
+    promptTemplate: `${SAME_ROOM_BASE} Pose: she is holding a plain stainless steel clinic tray at waist height with both hands, with a few capped syringes and small unbranded vials lying on it, glancing down at the tray with a calm professional expression. No brand names, no labels with text. ${SAME_ROOM_SUFFIX}`,
+  },
+  {
+    id: "sr-03", name: "Laughing Mid Chat", hasColour: false,
+    promptTemplate: `${SAME_ROOM_BASE} Pose: she is caught mid conversation, laughing naturally and warmly with her head slightly tilted, looking just off camera as if chatting to a patient, one hand gesturing lightly. ${SAME_ROOM_SUFFIX}`,
+  },
+  {
+    id: "sr-04", name: "Hand On Hip", hasColour: false,
+    promptTemplate: `${SAME_ROOM_BASE} Pose: one hand resting on her hip, the other arm relaxed by her side, weight on one leg, a confident knowing smile to camera. ${SAME_ROOM_SUFFIX}`,
+  },
+  {
+    id: "sr-05", name: "Looking Pensive", hasColour: false,
+    promptTemplate: `${SAME_ROOM_BASE} Pose: looking pensive, gazing thoughtfully off to one side with a soft, considering expression, one hand lightly touching her chin. ${SAME_ROOM_SUFFIX}`,
+  },
+];
+
 export const MIX_PRESETS: PhotoStudioPreset[] = [
   // Set 1: clinical, always black scrubs
   {
