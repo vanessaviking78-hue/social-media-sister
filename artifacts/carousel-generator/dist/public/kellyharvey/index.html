@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Enhance HQ Sample Posts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+/* Layout: one calm column. Each post is a row, the picture on the left and the words with their buttons on the right, stacking on a phone. */
+:root {
+  --bg: #f4efed;
+  --card: #fffdfc;
+  --ink: #1f1a1d;
+  --muted: #6b6166;
+  --line: #e2d8d6;
+  --accent: #c81e6a;
+  --accent-ink: #ffffff;
+  --soft: #f0e3e6;
+  --display: "Bricolage Grotesque", "DM Sans", system-ui, sans-serif;
+  --body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #151215; --card: #1f1a1e; --ink: #f3ecee; --muted: #b3a7ad; --line: #3a3036;
+    --accent: #ff5fa2; --accent-ink: #1a0b13; --soft: #2c2128; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #151215; --card: #1f1a1e; --ink: #f3ecee; --muted: #b3a7ad; --line: #3a3036;
+  --accent: #ff5fa2; --accent-ink: #1a0b13; --soft: #2c2128; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55;
+  padding-block: 40px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+header { display: flex; flex-direction: column; gap: 14px; }
+.from { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(34px, 6vw, 56px); line-height: 1.04; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+.lede { max-width: 62ch; font-size: 18px; margin: 0; color: var(--ink); }
+.meta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.pill { border: 1px solid var(--line); background: var(--card); padding: 6px 12px; border-radius: 999px; font-size: 14px; color: var(--muted); }
+button { font: inherit; cursor: pointer; }
+.btn { border: 1.5px solid var(--ink); background: transparent; color: var(--ink); padding: 10px 16px; border-radius: 10px; font-weight: 700; font-size: 15px; min-height: 44px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn:hover { transform: translateY(-1px); }
+.btn:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.btn[disabled] { opacity: .6; cursor: default; transform: none; }
+.week { display: flex; flex-direction: column; gap: 20px; }
+.week h2 { font-family: var(--display); font-size: 26px; margin: 0; display: flex; align-items: baseline; gap: 12px; }
+.week h2 small { font-family: var(--body); font-size: 14px; font-weight: 500; color: var(--muted); }
+.post { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 24px; }
+.post img { width: 100%; height: auto; aspect-ratio: 4 / 5; display: block; border-radius: 10px; background: var(--soft); }
+.words { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.day { font-family: var(--display); font-weight: 700; font-size: 20px; margin: 0; }
+.caption { white-space: pre-wrap; margin: 0; font-size: 16px; overflow-wrap: anywhere; }
+.tags { margin: 0; color: var(--accent); font-weight: 500; overflow-wrap: anywhere; font-size: 15px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: auto; }
+.status { min-height: 22px; font-size: 14px; color: var(--muted); }
+footer { background: var(--soft); border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+footer h2 { font-family: var(--display); font-size: 24px; margin: 0; }
+footer p, footer li { max-width: 68ch; margin: 0; }
+footer ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; }
+.sig { color: var(--muted); font-size: 14px; }
+@media (max-width: 720px) {
+  .post { grid-template-columns: minmax(0, 1fr); }
+  .actions .btn { flex: 1 1 140px; }
+}
+@media (prefers-reduced-motion: reduce) { .btn:hover { transform: none; } }
+
+body{margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="from">A free sample from Social Media Sister</span>
+    <h1>Enhance HQ, Wynyard</h1>
+    <p class="lede">Hello from Vanessa. I made these from one photo and your logo, so you can see how your page could look. Eight posts across two weeks, one each for Monday, Wednesday, Friday and Sunday, with the captions and hashtags already written.</p>
+    <div class="meta">
+      <span class="pill">8 posts</span>
+      <span class="pill">2 weeks</span>
+      <button class="btn primary" id="saveAll" type="button">Save all 8 images</button>
+      <button class="btn" id="saveCaptions" type="button">Save all captions</button>
+    </div>
+    <div class="status" id="topStatus" role="status" aria-live="polite"></div>
+  </header>
+
+  <main id="weeks" class="wrap" style="gap:40px"></main>
+
+  <footer>
+    <h2>Before you post</h2>
+    <ol>
+      <li>Save each image to your phone or computer.</li>
+      <li>Open Instagram or Facebook on your side and upload the image.</li>
+      <li>Paste in the caption and hashtags, and change anything you like.</li>
+      <li>Read it through to check it suits your clinic, then post or schedule it yourself.</li>
+      <li>Every caption asks people to comment ENHANCE. When they do, send them a message.</li>
+    </ol>
+    <p>These are a sample of my work, so nothing is posted for you. If you would like more like this, send me a message at Social Media Sister and we will have a chat.</p>
+    <p class="sig">Vanessa Wormald, Social Media Sister</p>
+  </footer>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+const POSTS = [{"n": 1, "week": 1, "day": "Monday", "file": "Enhance Wynyard Sample 1.jpg", "img": "images/1.jpg", "caption": "Nobody tells you that half of what I do all day is listen.\n\nSomeone sits down, takes a breath and says what they really came in to say. It usually starts with \"this is going to sound silly\". It never does.\n\nSo here is my rule at Enhance HQ. We take our time, the kettle stays on and nobody gets judged for their Tuesday face.\n\nFancy a chat? Comment ENHANCE and I will send you a message so we can find a time that suits you.\n\nWhat is the one thing you would ask me if you knew I would never judge?", "tags": "#Wynyard #Teesside #Stockton #Billingham #NorthEastAesthetics"}, {"n": 2, "week": 1, "day": "Wednesday", "file": "Enhance Wynyard Sample 2.jpg", "img": "images/2.jpg", "caption": "If you ever sat on the landing with the phone cord stretched under the bedroom door so you could chat in peace, you and I are firm friends.\n\nWe grew up on Sun-In, Impulse body spray and glitter gel on every part of our faces. We survived the thin eyebrow years and the one photo your sister still has. And look at us now, still here and still saying \"in my day\".\n\nI love a trip down memory lane, but I love being kind to the grown up version of that crimped fringe even more. Comment ENHANCE if you would like to hear how I look after her.\n\nWhich hurts the most to remember, the Sun-In or the thin eyebrows?", "tags": "#WynyardAesthetics #TeessideAesthetics #StocktonOnTees #Billingham #NorthEastUK"}, {"n": 3, "week": 1, "day": "Friday", "file": "Enhance Wynyard Sample 3.jpg", "img": "images/3.jpg", "caption": "Things my patients have taught me, in no particular order.\n\nA good cry in my chair is a perfectly normal Wednesday.\n\nEveryone thinks they are the only one who notices that tiny thing. They never are, and nobody else has spotted it.\n\nThe best conversations happen when somebody has their coat half on.\n\nThe bravest thing anyone does is book the appointment they have been thinking about for two years.\n\nComment ENHANCE if you have been thinking about yours and I will message you.\n\nWhat is the best thing a stranger has ever taught you?", "tags": "#Wynyard #Teesside #Stockton #Billingham #NorthEastAesthetics"}, {"n": 4, "week": 1, "day": "Sunday", "file": "Enhance Wynyard Sample 4.jpg", "img": "images/4.jpg", "caption": "Somewhere between the school run, the work diary and everyone else's birthday cards, you stopped putting yourself on the list.\n\nI see it every week. A woman sits down, apologises for taking my time and then tells me she has not done a single thing for herself since the summer. I always say the same thing. You are on the list too.\n\nThis Sunday, please do one small thing that is only for you. A long bath or ten minutes with the door shut. Then tell me about it by commenting ENHANCE so I know you did it. And if you are ready for something bigger, message me and we will find you a time.\n\nWhat is your one small thing this Sunday?", "tags": "#WynyardAesthetics #TeessideAesthetics #StocktonOnTees #Billingham #NorthEastUK"}, {"n": 5, "week": 2, "day": "Monday", "file": "Enhance Wynyard Sample 5.jpg", "img": "images/5.jpg", "caption": "\"Will people be able to tell?\"\n\nThat is the question I get most. It is usually asked in a whisper and usually while looking at my shoes rather than at me.\n\nMy answer never changes. We plan everything together, at your pace, so you still look like you on your best Monday.\n\nWant a quiet chat about what might suit you? Comment ENHANCE and I will message you.\n\nWhat would you ask me if nobody else was listening?", "tags": "#Wynyard #Teesside #Stockton #Billingham #NorthEastAesthetics"}, {"n": 6, "week": 2, "day": "Wednesday", "file": "Enhance Wynyard Sample 6.jpg", "img": "images/6.jpg", "caption": "Remember when a perfect Friday night was a video from Blockbuster, a bag of Revels and a row over who had to take it back on Saturday morning?\n\nI would swap a lot of things from those days, but never that feeling of being completely cosy. It is exactly what I want you to feel when you come to see me at Enhance HQ. An armchair and a hot drink. My chairs are better than the Blockbuster ones, I promise.\n\nComment ENHANCE for a cosy chat with me in Wynyard.\n\nWhich sweet did you always pick, Revels or a mixed pick and mix bag?", "tags": "#WynyardAesthetics #TeessideAesthetics #StocktonOnTees #Billingham #NorthEastUK"}, {"n": 7, "week": 2, "day": "Friday", "file": "Enhance Wynyard Sample 7.jpg", "img": "images/7.jpg", "caption": "Things I wish someone had told me when I started in this industry.\n\nYou will talk about life far more than you talk about skin.\n\nMost of what people need is one hour with somebody who is completely on their side.\n\nYour diary fills up with kindness when you stay human.\n\nAnd yes, you will cry at a thank you card. Often.\n\nIf you have been wondering what it feels like to book in with a real person who is on your side, comment ENHANCE and I will message you.\n\nWhat do you wish someone had told you at 25?", "tags": "#Wynyard #Teesside #Stockton #Billingham #NorthEastAesthetics"}, {"n": 8, "week": 2, "day": "Sunday", "file": "Enhance Wynyard Sample 8.jpg", "img": "images/8.jpg", "caption": "A small reminder from me, on a Sunday, while the kettle boils.\n\nYou are doing better than you think. The house is not perfect, the washing pile has its own postcode and you are still the person everyone leans on. I know how much you carry because you tell me about it in my chair.\n\nIf today is the day you want a bit of that attention turned back towards you, I am in Wynyard and the door is open. Comment ENHANCE and I will message you.\n\nWhat are you most proud of this week?", "tags": "#WynyardAesthetics #TeessideAesthetics #StocktonOnTees #Billingham #NorthEastUK"}];
+const weeksEl = document.getElementById("weeks");
+const topStatus = document.getElementById("topStatus");
+function fullText(p) { return p.caption + "\n\n" + p.tags; }
+function say(el, msg) { el.textContent = msg; }
+function triggerDownload(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+async function imageBlob(p) { const r = await fetch(p.img); if (!r.ok) throw new Error("fetch"); return r.blob(); }
+function render() {
+  [1, 2].forEach(w => {
+    const sec = document.createElement("section"); sec.className = "week";
+    const h = document.createElement("h2"); h.textContent = "Week " + w;
+    const sm = document.createElement("small"); sm.textContent = "Monday, Wednesday, Friday, Sunday"; h.appendChild(sm);
+    sec.appendChild(h);
+    POSTS.filter(p => p.week === w).forEach(p => {
+      const card = document.createElement("article"); card.className = "post";
+      const img = document.createElement("img"); img.src = p.img; img.alt = "Week " + w + " " + p.day + " post for Enhance HQ"; img.width = 1080; img.height = 1350;
+      const words = document.createElement("div"); words.className = "words";
+      const day = document.createElement("h3"); day.className = "day"; day.textContent = p.day;
+      const cap = document.createElement("p"); cap.className = "caption"; cap.textContent = p.caption;
+      const tags = document.createElement("p"); tags.className = "tags"; tags.textContent = p.tags;
+      const actions = document.createElement("div"); actions.className = "actions";
+      const status = document.createElement("div"); status.className = "status"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
+      const bSave = document.createElement("button"); bSave.type = "button"; bSave.className = "btn primary"; bSave.textContent = "Save image";
+      const bCopy = document.createElement("button"); bCopy.type = "button"; bCopy.className = "btn"; bCopy.textContent = "Copy caption and hashtags";
+      bSave.addEventListener("click", async () => {
+        try { triggerDownload(await imageBlob(p), p.file); say(status, "Saved."); }
+        catch (e) { say(status, "That did not save. Press and hold the image, or right click it, to save it instead."); }
+      });
+      bCopy.addEventListener("click", async () => {
+        try { await navigator.clipboard.writeText(fullText(p)); say(status, "Copied. Now paste it into your post."); }
+        catch (e) {
+          const r = document.createRange(); r.setStartBefore(cap); r.setEndAfter(tags);
+          const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+          say(status, "Your caption is selected. Copy it with your keyboard or the menu.");
+        }
+      });
+      actions.append(bSave, bCopy);
+      words.append(day, cap, tags, actions, status);
+      card.append(img, words); sec.appendChild(card);
+    });
+    weeksEl.appendChild(sec);
+  });
+}
+document.getElementById("saveAll").addEventListener("click", async () => {
+  try {
+    say(topStatus, "Packing the images...");
+    const zip = new JSZip();
+    for (const p of POSTS) zip.file(p.file, await imageBlob(p));
+    triggerDownload(await zip.generateAsync({ type: "blob" }), "Enhance HQ Sample Posts.zip");
+    say(topStatus, "Saved.");
+  } catch (e) { say(topStatus, "That did not save. Try saving the images one at a time."); }
+});
+document.getElementById("saveCaptions").addEventListener("click", () => {
+  const text = POSTS.map(p => "WEEK " + p.week + ", " + p.day.toUpperCase() + "\n\n" + fullText(p)).join("\n\n----------\n\n");
+  triggerDownload(new Blob([text], { type: "text/plain" }), "Enhance HQ Sample Captions.txt");
+  say(topStatus, "Saved.");
+});
+render();
+</script>
+</body>
+</html>
