@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
 import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck, Grid3x3, Mail, Star, Heart, CalendarCheck, PackageOpen, BatteryCharging } from "lucide-react";
-import { LogOut, TreePine } from "lucide-react";
+import { LogOut, TreePine, Scissors } from "lucide-react";
 import { AdventCalendarIcon } from "@/components/advent-icon";
 import { MagazineIcon } from "@/components/magazine-icon";
 import { PerfecterIcon } from "@/components/perfecter-icon";
@@ -146,6 +146,16 @@ description: "One week for a nail tech: a personal post, a nail facts post, a be
 color: "from-pink-500/20 to-pink-500/5",
 border: "hover:border-pink-500/50",
 iconColor: "text-pink-400",
+},
+{
+href: "/hairdressers",
+group: "content",
+icon: Scissors,
+name: "Hairdressers",
+description: "One week for a hairdresser: a personal post, a hair facts post, a before and after template, an availability post and a Sunday tweet, written in their own voice with a reply word and 5 area hashtags.",
+color: "from-amber-500/20 to-amber-500/5",
+border: "hover:border-amber-500/50",
+iconColor: "text-amber-400",
 },
 {
 href: "/ninety-days",
