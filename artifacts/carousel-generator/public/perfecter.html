@@ -86,6 +86,16 @@ button{font:inherit;cursor:pointer}
 .steps{margin:0;padding:0;list-style:none;display:grid;gap:7px;font-size:13px;color:var(--muted)}
 .steps b{color:var(--ink);font-weight:600}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:max(18px,env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:13.5px;max-width:calc(100vw - 32px);z-index:5}
+
+.modal{position:fixed;inset:0;background:rgba(10,5,12,.72);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal[hidden]{display:none}
+.mbox{background:var(--panel);border-radius:12px;padding:16px;max-width:min(92vw,760px);width:100%;max-height:94vh;overflow:auto}
+.cropstage{position:relative;display:inline-block;max-width:100%;touch-action:none;user-select:none;line-height:0}
+.cropstage img{max-width:100%;max-height:62vh;display:block}
+.cbox{position:absolute;border:2px solid #fff;box-shadow:0 0 0 9999px rgba(0,0,0,.55);cursor:move;box-sizing:border-box}
+.cbox i{position:absolute;width:18px;height:18px;background:#fff;border:2px solid var(--accent);border-radius:50%}
+.cbox i[data-h=nw]{left:-9px;top:-9px;cursor:nwse-resize}.cbox i[data-h=ne]{right:-9px;top:-9px;cursor:nesw-resize}
+.cbox i[data-h=sw]{left:-9px;bottom:-9px;cursor:nesw-resize}.cbox i[data-h=se]{right:-9px;bottom:-9px;cursor:nwse-resize}
 </style>
 
 <div class="wrap">
@@ -103,21 +113,50 @@ button{font:inherit;cursor:pointer}
       </label>
 
       <div class="panel">
-        <h2>The two touches</h2>
+        <h2>Light</h2>
         <div class="ctl"><label for="brt">Brighten <output id="brtO">50</output></label>
-          <input type="range" id="brt" min="0" max="100" value="50">
-          <small>Lifts the whole photo evenly. Colours and skin tone stay as shot.</small></div>
-        <div class="ctl"><label>Vignette</label>
+          <input type="range" id="brt" min="0" max="100" value="50"></div>
+        <div class="ctl"><label for="sh">Shadows <output id="shO">0</output></label>
+          <input type="range" id="sh" min="-100" max="100" value="0">
+          <small>Right opens up the dark areas. Left deepens them.</small></div>
+        <div class="ctl"><label for="mid">Midtones <output id="midO">0</output></label>
+          <input type="range" id="mid" min="-100" max="100" value="0"></div>
+        <div class="ctl"><label for="hi">Highlights <output id="hiO">0</output></label>
+          <input type="range" id="hi" min="-100" max="100" value="0">
+          <small>Left calms bright areas. Right makes them glow.</small></div>
+        <label class="toggle"><input type="checkbox" id="bw">
+          <span>Black and white</span></label>
+      </div>
+
+      <div class="panel">
+        <h2>Vignette</h2>
+        <div class="ctl">
           <div class="row" id="vigType" role="radiogroup" aria-label="Vignette colour">
-            <button class="btn" type="button" data-v="black" aria-pressed="true">Black</button>
+            <button class="btn" type="button" data-v="black" aria-pressed="false">Black</button>
             <button class="btn" type="button" data-v="white" aria-pressed="false">White</button>
-            <button class="btn" type="button" data-v="none" aria-pressed="false">None</button>
+            <button class="btn" type="button" data-v="none" aria-pressed="true">None</button>
           </div></div>
-        <div class="ctl"><label for="vig">Vignette strength <output id="vigO">50</output></label>
-          <input type="range" id="vig" min="0" max="100" value="50">
-          <small>How far in from the edges it creeps and how strong it is.</small></div>
+        <div class="ctl"><label for="vig">Strength <output id="vigO">50</output></label>
+          <input type="range" id="vig" min="0" max="100" value="50"></div>
+        <div class="ctl"><label for="vsz">Size <output id="vszO">50</output></label>
+          <input type="range" id="vsz" min="0" max="100" value="50">
+          <small>Low keeps it tight to the corners. High brings it further in.</small></div>
+      </div>
+
+      <div class="panel">
+        <h2>Crop</h2>
+        <div class="ctl"><label>Shape for all photos</label>
+          <div class="row" id="cropType" role="radiogroup" aria-label="Crop shape">
+            <button class="btn" type="button" data-a="0" aria-pressed="true">Original</button>
+            <button class="btn" type="button" data-a="1" aria-pressed="false">1:1</button>
+            <button class="btn" type="button" data-a="0.8" aria-pressed="false">4:5</button>
+            <button class="btn" type="button" data-a="0.75" aria-pressed="false">3:4</button>
+            <button class="btn" type="button" data-a="0.5625" aria-pressed="false">9:16</button>
+          </div>
+          <small>Centred crop. Use the Crop button on any photo to position it by hand.</small></div>
         <div class="row" style="margin-top:16px">
           <button class="btn primary" id="apply" type="button">Perfect all</button>
+          <button class="btn" id="reset" type="button">Reset</button>
         </div>
       </div>
     </aside>
@@ -141,6 +180,18 @@ button{font:inherit;cursor:pointer}
     </main>
   </div>
 </div>
+<div class="modal" id="cropModal" hidden>
+  <div class="mbox">
+    <h2>Crop <span id="cropName"></span></h2>
+    <div class="row" id="mAspect" style="margin-bottom:10px"></div>
+    <div class="cropstage" id="stage"><img id="cropImg" alt=""><div class="cbox" id="cbox"><i data-h="nw"></i><i data-h="ne"></i><i data-h="sw"></i><i data-h="se"></i></div></div>
+    <div class="row" style="margin-top:12px;justify-content:flex-end">
+      <button class="btn" id="cropClear" type="button">Clear crop</button>
+      <button class="btn" id="cropCancel" type="button">Cancel</button>
+      <button class="btn primary" id="cropDone" type="button">Use this crop</button>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast" hidden></div>
 
 <script>
@@ -155,8 +206,8 @@ const HANDOFF_DB='cybersuite-handoff', HANDOFF_STORE='images';
 const MAX_EDGE=2600;
 
 const $=s=>document.querySelector(s);
-const state={items:[],busy:false,dirty:false,uid:0};
-const opts=()=>({brt:+$('#brt').value/100,vig:+$('#vig').value/100,vt:state.vt||'black'});
+const state={items:[],busy:false,dirty:false,uid:0,vt:'none',asp:0};
+const opts=()=>({brt:+$('#brt').value/100,sh:+$('#sh').value/100,mid:+$('#mid').value/100,hi:+$('#hi').value/100,bw:$('#bw').checked,vig:+$('#vig').value/100,vsz:+$('#vsz').value/100,vt:state.vt,asp:state.asp});
 
 /* ---------------- image maths ---------------- */
 const sstep=(a,b,x)=>{const t=Math.min(1,Math.max(0,(x-a)/(b-a)));return t*t*(3-2*t)};
@@ -360,21 +411,42 @@ function brighten(d,b){
   for(let v=0;v<256;v++)lut[v]=Math.min(255,Math.pow(v/255,g)*255*gain);
   for(let p=0;p<d.length;p+=4){d[p]=lut[d[p]];d[p+1]=lut[d[p+1]];d[p+2]=lut[d[p+2]];}
 }
-function vignette(d,w,h,s,tone){
-  const cx=w/2,cy=h/2,start=.95-.65*s,maxA=.35+.6*s;
+function tone(d,sh,mid,hi){
+  if(!sh&&!mid&&!hi)return;
+  const lut=new Float32Array(256);
+  for(let v=0;v<256;v++){const y=v/255,ws=(1-y)*(1-y),wh=y*y,wm=4*y*(1-y);
+    lut[v]=255*(.28*sh*ws+.28*hi*wh+.28*mid*wm);}
+  for(let p=0;p<d.length;p+=4){
+    const y=.2126*d[p]+.7152*d[p+1]+.0722*d[p+2],e=lut[y|0];
+    d[p]=Math.max(0,Math.min(255,d[p]+e));d[p+1]=Math.max(0,Math.min(255,d[p+1]+e));d[p+2]=Math.max(0,Math.min(255,d[p+2]+e));}
+}
+function mono(d){
+  for(let p=0;p<d.length;p+=4){const y=.2126*d[p]+.7152*d[p+1]+.0722*d[p+2];d[p]=d[p+1]=d[p+2]=y;}
+}
+function vignette(d,w,h,s,size,tone){
+  const cx=w/2,cy=h/2,start=.9-.8*size,maxA=.3+.65*s;
   for(let y=0,p=0;y<h;y++){const dy=(y-cy)/cy;
     for(let x=0;x<w;x++,p+=4){const dx=(x-cx)/cx,r=Math.sqrt(dx*dx+dy*dy)/1.4142;
       let t=(r-start)/(1-start);if(t<=0)continue;if(t>1)t=1;
       const a=maxA*t*t*(3-2*t);
-      d[p]+= (tone-d[p])*a;d[p+1]+=(tone-d[p+1])*a;d[p+2]+=(tone-d[p+2])*a;}}
+      d[p]+=(tone-d[p])*a;d[p+1]+=(tone-d[p+1])*a;d[p+2]+=(tone-d[p+2])*a;}}
 }
-async function perfect(bitmap,o){
-  let w=bitmap.width,h=bitmap.height;const sc=Math.min(1,MAX_EDGE/Math.max(w,h));w=Math.round(w*sc);h=Math.round(h*sc);
+function cropRect(bw,bh,o,crop){
+  if(crop)return {x:crop.x*bw,y:crop.y*bh,w:crop.w*bw,h:crop.h*bh};
+  if(!o.asp)return {x:0,y:0,w:bw,h:bh};
+  let w=bw,h=w/o.asp;if(h>bh){h=bh;w=h*o.asp;}
+  return {x:(bw-w)/2,y:(bh-h)/2,w,h};
+}
+async function perfect(bitmap,o,crop){
+  const r=cropRect(bitmap.width,bitmap.height,o,crop);
+  const sc=Math.min(1,MAX_EDGE/Math.max(r.w,r.h));const w=Math.max(1,Math.round(r.w*sc)),h=Math.max(1,Math.round(r.h*sc));
   const cv=document.createElement('canvas');cv.width=w;cv.height=h;
-  const cx=cv.getContext('2d',{willReadFrequently:true});cx.drawImage(bitmap,0,0,w,h);
+  const cx=cv.getContext('2d',{willReadFrequently:true});cx.drawImage(bitmap,r.x,r.y,r.w,r.h,0,0,w,h);
   const id=cx.getImageData(0,0,w,h),d=id.data;
   brighten(d,o.brt);
-  if(o.vt!=='none'&&o.vig>0)vignette(d,w,h,o.vig,o.vt==='white'?255:0);
+  tone(d,o.sh,o.mid,o.hi);
+  if(o.bw)mono(d);
+  if(o.vt!=='none'&&o.vig>0)vignette(d,w,h,o.vig,o.vsz,o.vt==='white'?255:0);
   cx.putImageData(id,0,0);
   const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',.95));
   cv.width=cv.height=1;
@@ -398,7 +470,7 @@ async function runQueue(){
     it.status='work';render();await tick();
     try{
       const bmp=await createImageBitmap(it.file,{imageOrientation:'from-image'});
-      const blob=await perfect(bmp,o);bmp.close&&bmp.close();
+      const blob=await perfect(bmp,o,it.crop);bmp.close&&bmp.close();
       if(it.outUrl)URL.revokeObjectURL(it.outUrl);
       it.out=blob;it.outUrl=URL.createObjectURL(blob);it.status='done';
     }catch(e){it.status='error';}
@@ -434,6 +506,7 @@ function render(){
       const cmp=mk('Compare','mini');cmp.setAttribute('aria-pressed',it.showOrig);cmp.onclick=()=>{it.showOrig=!it.showOrig;render()};acts.append(cmp);
       const dl=mk('Download','mini');dl.onclick=()=>save(it.out,baseName(it.name)+'-perfected.jpg');acts.append(dl);
     }
+    const cr=mk(it.crop?'Crop ✓':'Crop','mini');cr.onclick=()=>openCrop(it);acts.append(cr);
     const rm=mk('Remove','mini');rm.onclick=()=>{URL.revokeObjectURL(it.origUrl);it.outUrl&&URL.revokeObjectURL(it.outUrl);state.items=state.items.filter(x=>x!==it);render()};acts.append(rm);
     grid.append(card);
   }
@@ -488,10 +561,72 @@ function buildChips(){
 }
 
 /* ---------------- events ---------------- */
-for(const [id,o] of [['brt','brtO'],['vig','vigO']])$('#'+id).addEventListener('input',e=>{$('#'+o).textContent=e.target.value;state.dirty=true;render()});
-state.vt='black';
-document.querySelectorAll('#vigType button').forEach(b=>b.addEventListener('click',()=>{state.vt=b.dataset.v;document.querySelectorAll('#vigType button').forEach(x=>x.setAttribute('aria-pressed',x===b));state.dirty=true;render()}));
-$('#apply').onclick=reapply;
+const SL=[['brt','brtO'],['sh','shO'],['mid','midO'],['hi','hiO'],['vig','vigO'],['vsz','vszO']];
+for(const [id,o] of SL)$('#'+id).addEventListener('input',e=>{$('#'+o).textContent=e.target.value;state.dirty=true;render()});
+$('#bw').addEventListener('change',()=>{state.dirty=true;render()});
+function pressGroup(sel,fn){document.querySelectorAll(sel+' button').forEach(b=>b.addEventListener('click',()=>{fn(b);document.querySelectorAll(sel+' button').forEach(x=>x.setAttribute('aria-pressed',x===b));state.dirty=true;render()}))}
+pressGroup('#vigType',b=>{state.vt=b.dataset.v});
+pressGroup('#cropType',b=>{state.asp=+b.dataset.a;for(const it of state.items)it.crop=null});
+$('#reset').addEventListener('click',()=>{
+  const dv={brt:50,sh:0,mid:0,hi:0,vig:50,vsz:50};
+  for(const [id,o] of SL){$('#'+id).value=dv[id];$('#'+o).textContent=dv[id]}
+  $('#bw').checked=false;state.vt='none';state.asp=0;for(const it of state.items)it.crop=null;
+  document.querySelectorAll('#vigType button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v==='none'));
+  document.querySelectorAll('#cropType button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.a==='0'));
+  state.dirty=true;render()});
+
+/* ---------------- crop editor ---------------- */
+const CR={it:null,box:{x:0,y:0,w:1,h:1},asp:0,drag:null};
+function openCrop(it){
+  CR.it=it;CR.asp=0;
+  const img=$('#cropImg');$('#cropName').textContent=it.name;
+  $('#cropModal').hidden=false;
+  const init=()=>{
+    const iw=img.naturalWidth,ih=img.naturalHeight;
+    if(it.crop)CR.box={...it.crop};
+    else{const r=cropRect(iw,ih,{asp:state.asp},null);CR.box={x:r.x/iw,y:r.y/ih,w:r.w/iw,h:r.h/ih};}
+    drawBox();
+  };
+  img.onload=init;img.src=it.origUrl;if(img.complete&&img.naturalWidth)init();
+  const m=$('#mAspect');m.innerHTML='';
+  for(const [lab,a] of [['Free',0],['1:1',1],['4:5',.8],['3:4',.75],['9:16',.5625]]){
+    const b=mk(lab,'btn');b.setAttribute('aria-pressed',a===0);
+    b.onclick=()=>{CR.asp=a;[...m.children].forEach(x=>x.setAttribute('aria-pressed',x===b));if(a)fitAspect();drawBox()};m.append(b);}
+}
+function ratio(){const i=$('#cropImg');return i.naturalWidth/i.naturalHeight}
+function fitAspect(){ // box in fractions; pixel aspect = (w*iw)/(h*ih)
+  const R=ratio(),b=CR.box,cx=b.x+b.w/2,cy=b.y+b.h/2;
+  let w=b.w,h=w*R/CR.asp;if(h>1){h=1;w=h*CR.asp/R}if(w>1){w=1;h=w*R/CR.asp}
+  CR.box={x:Math.min(Math.max(cx-w/2,0),1-w),y:Math.min(Math.max(cy-h/2,0),1-h),w,h};
+}
+function drawBox(){const b=CR.box,e=$('#cbox');e.style.left=b.x*100+'%';e.style.top=b.y*100+'%';e.style.width=b.w*100+'%';e.style.height=b.h*100+'%'}
+$('#stage').addEventListener('pointerdown',e=>{
+  const hnd=e.target.dataset&&e.target.dataset.h;const inBox=e.target.id==='cbox';
+  if(!hnd&&!inBox)return;
+  e.preventDefault();$('#stage').setPointerCapture(e.pointerId);
+  CR.drag={mode:hnd||'move',sx:e.clientX,sy:e.clientY,b:{...CR.box}};
+});
+$('#stage').addEventListener('pointermove',e=>{
+  const d=CR.drag;if(!d)return;
+  const st=$('#cropImg').getBoundingClientRect(),dx=(e.clientX-d.sx)/st.width,dy=(e.clientY-d.sy)/st.height;let b={...d.b};
+  if(d.mode==='move'){b.x=Math.min(Math.max(d.b.x+dx,0),1-b.w);b.y=Math.min(Math.max(d.b.y+dy,0),1-b.h);}
+  else{
+    let x0=d.b.x,y0=d.b.y,x1=d.b.x+d.b.w,y1=d.b.y+d.b.h;
+    if(d.mode.includes('w'))x0=Math.min(Math.max(x0+dx,0),x1-.05);else x1=Math.max(Math.min(x1+dx,1),x0+.05);
+    if(d.mode.includes('n'))y0=Math.min(Math.max(y0+dy,0),y1-.05);else y1=Math.max(Math.min(y1+dy,1),y0+.05);
+    let w=x1-x0,h=y1-y0;
+    if(CR.asp){const R=ratio();h=w*R/CR.asp;
+      if(d.mode.includes('n')){y0=y1-h;if(y0<0){y0=0;h=y1;w=h*CR.asp/R;if(d.mode.includes('w'))x0=x1-w;else x1=x0+w}}
+      else{y1=y0+h;if(y1>1){y1=1;h=1-y0;w=h*CR.asp/R;if(d.mode.includes('w'))x0=x1-w;else x1=x0+w}}}
+    b={x:x0,y:y0,w:x1-x0,h:y1-y0};
+  }
+  CR.box=b;drawBox();
+});
+const endDrag=()=>{CR.drag=null};
+$('#stage').addEventListener('pointerup',endDrag);$('#stage').addEventListener('pointercancel',endDrag);
+$('#cropDone').onclick=()=>{CR.it.crop={...CR.box};CR.it.status='queued';$('#cropModal').hidden=true;render();runQueue()};
+$('#cropClear').onclick=()=>{CR.it.crop=null;CR.it.status='queued';$('#cropModal').hidden=true;render();runQueue()};
+$('#cropCancel').onclick=()=>{$('#cropModal').hidden=true};$('#apply').onclick=reapply;
 $('#clear').onclick=()=>{state.items.forEach(i=>{URL.revokeObjectURL(i.origUrl);i.outUrl&&URL.revokeObjectURL(i.outUrl)});state.items=[];render()};
 $('#file').addEventListener('change',e=>{addFiles([...e.target.files]);e.target.value=''});
 const drop=$('#drop');
