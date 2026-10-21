@@ -11,6 +11,7 @@ import { setFlipHandoff } from "@/lib/flip-handoff";
 import { loadImageFromFile } from "@/lib/advent-door";
 import { getPhotoHits, DEFAULT_ADJUST, PAGE_W, PAGE_H, setMagazineFonts, setMagazineMetals, onColour, METAL_BASE, type Metal, type PhotoAdjust, type MagazineBrand } from "@/lib/magazine-pages";
 import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
+import { syncSharedFonts, FONTS_CHANGED_EVENT } from "@/lib/shared-fonts";
 import {
   EMPTY_POST_COPY,
   PAGE_NAMES,
@@ -193,6 +194,16 @@ export default function MagazinePost() {
   const dragRef = useRef<{ slot: number; x: number; y: number; inv: DOMMatrix; slackX: number; slackY: number } | null>(null);
 
   useEffect(() => { loadGoogleFonts(); }, []);
+
+  // Pick up the Envato and uploaded fonts saved in this browser, and redraw the dropdowns
+  // when they arrive, the same way Stylish and Slideshow do.
+  const [, setFontsTick] = useState(0);
+  useEffect(() => {
+    const bump = () => setFontsTick((n) => n + 1);
+    window.addEventListener(FONTS_CHANGED_EVENT, bump);
+    void syncSharedFonts();
+    return () => window.removeEventListener(FONTS_CHANGED_EVENT, bump);
+  }, []);
 
   // Picking a font waits for it to arrive, then redraws the pages in it.
   function chooseFont(which: "serif" | "sans", value: string) {
