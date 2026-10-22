@@ -245,9 +245,6 @@ return (
 <div className="space-y-2 pt-2">
 <label className="block text-xs uppercase tracking-widest text-muted-foreground mb-1">Caption</label>
 <div className="flex gap-2">
-<select value={captionStyle} onChange={(e) => setCaptionStyle(e.target.value)} className="bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm">
-{CAPTION_STYLES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-</select>
 <button onClick={generateCaption} disabled={generatingCaption} className="px-4 py-2 rounded-lg border border-border/50 hover:border-pink-500/60 text-sm disabled:opacity-50 whitespace-nowrap">{generatingCaption ? "Writing…" : "Generate Caption"}</button>
 </div>
 <textarea value={caption} onChange={(e) => setCaption(e.target.value)} placeholder="Caption (optional)…" className="w-full bg-white/5 border border-border/50 rounded-md px-3 py-2 text-sm" rows={3} />

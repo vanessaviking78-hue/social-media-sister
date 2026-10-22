@@ -5,6 +5,7 @@ import fs from "fs";
 import os from "os";
 import { v4 as uuidv4 } from "uuid";
 import { parse } from "csv-parse/sync";
+import { HOUSE_VOICE } from "../../lib/houseRules";
 
 const router: IRouter = Router();
 
@@ -241,6 +242,8 @@ router.post("/carousel/generate-caption", async (req, res) => {
     ].filter(Boolean).join("\n");
 
     const systemPrompt = [
+      HOUSE_VOICE,
+      "",
       "You are writing an Instagram caption for an aesthetic clinic practitioner, based on the carousel slides provided.",
       "Write it as the practitioner, in the first person, in British English.",
       "The voice is professional but full of personality: warm, affable, honest, a little funny where it fits, like a real person chatting to their followers, never like a brand or an advert.",

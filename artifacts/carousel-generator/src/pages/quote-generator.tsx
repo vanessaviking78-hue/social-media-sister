@@ -424,9 +424,6 @@ className="border-2 border-dashed border-border/40 hover:border-border/70 rounde
 <h2 className="font-semibold text-base">4. Caption</h2>
 <p className="text-xs text-muted-foreground">By default the caption is just the quote and who it's from. Generate a proper caption instead, with a natural nudge to share or tag someone, in one of your styles.</p>
 <div className="flex gap-2">
-<select value={captionStyle} onChange={(e) => setCaptionStyle(e.target.value)} className="rounded-lg bg-muted/30 border border-border/30 text-sm px-2 py-2 focus:outline-none focus:ring-1 focus:ring-primary/50">
-{CAPTION_STYLES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-</select>
 <Button variant="outline" onClick={generateCaption} disabled={generatingCaption || !quotes.length} className="flex-1">
 <Sparkles className="w-4 h-4 mr-1.5" />{generatingCaption ? "Writing…" : "Generate Caption"}
 </Button>

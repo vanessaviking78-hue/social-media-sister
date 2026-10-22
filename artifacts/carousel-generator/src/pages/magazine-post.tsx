@@ -58,14 +58,6 @@ const POST_COUNT = 4;
 type Draft = { treatment: string; replyWord: string; photos: Photo[]; copy: MagazinePostCopy; hook: string[] };
 const blankDraft = (): Draft => ({ treatment: "", replyWord: "", photos: [], copy: EMPTY_POST_COPY, hook: [] });
 
-const STYLES = [
-  { key: "1", label: "Northern grit", hint: "Straight talking, warm, dry" },
-  { key: "2", label: "Springsteen storyteller", hint: "Little scenes, big heart, whimsical" },
-  { key: "3", label: "Dawn French", hint: "Funny and blunt" },
-  { key: "4", label: "Professional with personality", hint: "Polished, still very you" },
-  { key: "5", label: "Feral and sarcastic", hint: "Savage, cheeky, affable underneath" },
-];
-
 const PAGE_TABS = ["Cover", "Fun facts", "For you if", "Helps most with", "Last page"];
 
 function monthYear() {
@@ -164,7 +156,7 @@ export default function MagazinePost() {
   const [cur, setCur] = useState(0);
   const curRef = useRef(0);
   curRef.current = cur;
-  const [style, setStyle] = useState<string | null>(null);
+  const style = "1"; // one house voice, no picker
   const [serifFont, setSerifFont] = useState("");
   const [sansFont, setSansFont] = useState("");
   const [fontTick, setFontTick] = useState(0);
@@ -403,7 +395,6 @@ export default function MagazinePost() {
     const dd = drafts[i];
     if (!dd.treatment.trim()) { toast.error(`Post ${i + 1}: add the treatment first`); return false; }
     if (!dd.replyWord.trim()) { toast.error(`Post ${i + 1}: add the reply word first, the one people comment`); return false; }
-    if (!style) { toast.error("Pick a voice first"); return false; }
     try {
       const hook = pickedHookPayload(dd.hook ?? [], dd.treatment.trim())[0];
       const r = await fetch(`${BASE}/api/magazine-post/copy`, {
@@ -432,7 +423,6 @@ export default function MagazinePost() {
   }
 
   async function writeAll() {
-    if (!style) { toast.error("Pick a voice first"); return; }
     const todo = drafts.map((x, i) => i).filter((i) => drafts[i].treatment.trim() && drafts[i].replyWord.trim());
     if (!todo.length) { toast.error("Add a treatment and reply word to at least one post first"); return; }
     setWriting(true);
@@ -905,22 +895,6 @@ export default function MagazinePost() {
             </section>
 
             <section className="space-y-3">
-              <p className="text-xs uppercase tracking-widest text-zinc-500">4. How should it sound</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {STYLES.map((s) => (
-                  <button
-                    key={s.key}
-                    onClick={() => setStyle(s.key)}
-                    aria-pressed={style === s.key}
-                    className={`text-left rounded-xl border px-3 py-2.5 transition-colors ${
-                      style === s.key ? "border-fuchsia-500 bg-fuchsia-500/10" : "border-zinc-800 bg-zinc-900 hover:border-fuchsia-500/50"
-                    }`}
-                  >
-                    <span className="block text-sm font-semibold">{s.label}</span>
-                    <span className="block text-xs text-zinc-500 mt-0.5">{s.hint}</span>
-                  </button>
-                ))}
-              </div>
               <button
                 onClick={writeCopy}
                 disabled={writing}

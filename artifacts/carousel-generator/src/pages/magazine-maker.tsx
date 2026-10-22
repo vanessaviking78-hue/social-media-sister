@@ -21,14 +21,6 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 type Photo = { canvas: HTMLCanvasElement; thumb: string; name: string };
 
-const STYLES = [
-  { key: "1", label: "Northern grit", hint: "Straight talking, warm, dry" },
-  { key: "2", label: "Springsteen storyteller", hint: "Little scenes, big heart, whimsical" },
-  { key: "3", label: "Dawn French", hint: "Funny and blunt" },
-  { key: "4", label: "Professional with personality", hint: "Polished, still very you" },
-  { key: "5", label: "Feral and sarcastic", hint: "Savage, cheeky, affable underneath" },
-];
-
 const PHOTO_LABELS = [
   "Cover main photo",
   "Cover small photo",
@@ -130,7 +122,7 @@ export default function MagazineMaker() {
   const [accent, setAccent] = useState("#f0b8a4");
   const [ctaButton, setCtaButton] = useState("Book a consultation");
   const [contact, setContact] = useState("");
-  const [style, setStyle] = useState("1");
+  const style = "1"; // one house voice, no picker
   const [topics, setTopics] = useState(["", "", ""]);
   const [photos, setPhotos] = useState<(Photo | null)[]>([null, null, null, null, null, null]);
   const [copy, setCopy] = useState<MagazineCopy>(EMPTY_COPY);
@@ -355,7 +347,7 @@ export default function MagazineMaker() {
               <MagazineIcon className="w-6 h-6 text-fuchsia-400" /> Magazine Maker
             </h1>
             <p className="text-zinc-400 text-sm mt-0.5">
-              Add 6 photos and 3 topics, pick a voice, and I write and lay out the 4 pages. Download them and pop them into Magazine Flip.
+              Add 6 photos and 3 topics, and I write and lay out the 4 pages. Download them and pop them into Magazine Flip.
             </p>
           </div>
         </div>
@@ -436,22 +428,6 @@ export default function MagazineMaker() {
             </section>
 
             <section className="space-y-3">
-              <p className="text-xs uppercase tracking-widest text-zinc-500">4. How should it sound</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {STYLES.map((s) => (
-                  <button
-                    key={s.key}
-                    onClick={() => setStyle(s.key)}
-                    aria-pressed={style === s.key}
-                    className={`text-left rounded-xl border px-3 py-2.5 transition-colors ${
-                      style === s.key ? "border-fuchsia-500 bg-fuchsia-500/10" : "border-zinc-800 bg-zinc-900 hover:border-fuchsia-500/50"
-                    }`}
-                  >
-                    <span className="block text-sm font-semibold">{s.label}</span>
-                    <span className="block text-xs text-zinc-500 mt-0.5">{s.hint}</span>
-                  </button>
-                ))}
-              </div>
               <button
                 onClick={writeCopy}
                 disabled={writing}

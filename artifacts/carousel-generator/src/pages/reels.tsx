@@ -2115,19 +2115,6 @@ export default function Reels() {
                       />
                     </div>
 
-                    <div>
-                      <label className="text-xs text-white/40 uppercase tracking-wide font-semibold mb-1.5 block">Voice style</label>
-                      <Select value={captionVoiceStyle} onValueChange={setCaptionVoiceStyle}>
-                        <SelectTrigger className="bg-white/5 border-white/10 text-white/60 h-10 text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {VOICE_STYLES.map((v) => (
-                            <SelectItem key={v.value} value={v.value}>{v.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
 
                     <Button
                       onClick={handleGenerateCaption}

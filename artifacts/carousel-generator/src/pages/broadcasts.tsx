@@ -731,16 +731,6 @@ export default function Broadcasts() {
             </div>
           )}
           <div className="flex flex-col sm:flex-row gap-2">
-            <select
-              value={singleImgTone}
-              onChange={(e) => setSingleImgTone(e.target.value)}
-              disabled={singleImgBusy}
-              className="rounded-xl bg-zinc-900 border border-zinc-800 px-3 py-2.5 text-sm text-white outline-none focus:border-pink-600"
-            >
-              {CAPTION_TONES.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
             <button
               onClick={broadcastAllImages}
               disabled={singleImgBusy || bulkImgItems.length === 0}
@@ -801,16 +791,6 @@ export default function Broadcasts() {
                 </button>
               )}
               <div className="flex flex-col sm:flex-row gap-2">
-                <select
-                  value={singleVidTone}
-                  onChange={(e) => setSingleVidTone(e.target.value)}
-                  disabled={singleVidBusy}
-                  className="rounded-xl bg-zinc-900 border border-zinc-800 px-3 py-2.5 text-sm text-white outline-none focus:border-pink-600"
-                >
-                  {CAPTION_TONES.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
                 <button
                   onClick={broadcastSingleVideo}
                   disabled={singleVidBusy || !singleVidFile}
