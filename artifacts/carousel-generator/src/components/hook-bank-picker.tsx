@@ -17,6 +17,8 @@ type Props = {
   days?: string[];
   // The client these hooks are for. Hooks already used for them are crossed out so nothing is posted twice.
   client?: string;
+  // Replaces the default "Hook bank" heading, for pages that show one picker per day.
+  title?: string;
 };
 
 const SEASON_STYLE: Record<string, string> = {
@@ -37,7 +39,7 @@ function HookText({ text }: { text: string }) {
   );
 }
 
-export default function HookBankPicker({ picked, onChange, startDate, onStartDate, single, days, client = "" }: Props) {
+export default function HookBankPicker({ picked, onChange, startDate, onStartDate, single, days, client = "", title }: Props) {
   const uid = useId();
   const [used, setUsed] = useState<string[]>([]);
   const dayRows = days ? HOOK_DAYS.filter(d => days.includes(d.day)) : HOOK_DAYS;
@@ -55,7 +57,7 @@ export default function HookBankPicker({ picked, onChange, startDate, onStartDat
   return (
     <div className="space-y-2">
       <Label className="text-sm font-medium">
-        Hook bank <span className="text-muted-foreground font-normal">({single ? "optional, pick one" : "optional, your own slide 1 hooks"})</span>
+        {title ?? "Hook bank"} <span className="text-muted-foreground font-normal">({single ? "optional, pick one" : "optional, your own slide 1 hooks"})</span>
       </Label>
       <button
         type="button"
