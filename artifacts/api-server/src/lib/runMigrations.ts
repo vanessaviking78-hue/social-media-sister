@@ -51,6 +51,7 @@ await createBroadcastDraftsTable();
     await createClientQuestionTables();
     await addStylishCoverFontColumns();
     await createContentTicklistsTable();
+    await createFreeSamplesTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -740,6 +741,17 @@ async function createContentTicklistsTable(): Promise<void> {
       id text PRIMARY KEY,
       state json NOT NULL DEFAULT '{}',
       updated_at timestamp NOT NULL DEFAULT now()
+    )
+  `);
+}
+
+async function createFreeSamplesTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS free_samples (
+      slug text PRIMARY KEY,
+      clinic_name text NOT NULL,
+      data json NOT NULL DEFAULT '{}',
+      created_at timestamp NOT NULL DEFAULT now()
     )
   `);
 }

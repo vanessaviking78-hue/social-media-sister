@@ -80,10 +80,12 @@ import newsletterRouter from "./newsletter";
 import clientQuestionRouter from "./client-question";
 import yetToPostRouter from "./yet-to-post";
 import toastPhotoRouter from "./toast-photo";
+import freeSamplesRouter from "./free-samples";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(freeSamplesRouter);
 router.use(toastPhotoRouter);
 router.use(magazineMakerRouter);
 router.use(magazinePostRouter);

@@ -53,6 +53,8 @@ import BackgroundBuilder from "@/pages/background-builder";
 import HighlightCovers from "@/pages/highlight-covers";
 import SelfieCarousels from "@/pages/selfie-carousels";
 import AiPortraitStudio from "@/pages/ai-portrait-studio";
+import FreeSample from "@/pages/free-sample";
+import SamplePublic from "@/pages/sample-public";
 import ComicPage from "@/pages/comic";
 import Onboard from "@/pages/onboard";
 import SubmitBeforeAfter from "@/pages/submit";
@@ -181,6 +183,7 @@ function ProtectedRouter() {
       <Route path="/highlight-covers" component={HighlightCovers} />
       <Route path="/selfie-carousels" component={SelfieCarousels} />
       <Route path="/ai-portrait-studio" component={AiPortraitStudio} />
+      <Route path="/free-sample" component={FreeSample} />
       <Route path="/comic" component={ComicPage} />
       <Route path="/dm-automations" component={DmAutomations} />
       <Route path="/intake" component={Intake} />
@@ -280,6 +283,7 @@ function AppContent() {
   const [isTrialBundle] = useRoute("/trialbundle");
   const [isContentPreview, contentPreviewParams] = useRoute("/preview/:clientSlug");
   const [isClientBankView, clientBankViewParams] = useRoute("/bank/:clientSlug");
+  const [isSamplePublic, samplePublicParams] = useRoute("/sample/:slug");
   const [isContentGenerator] = useRoute("/content-generator");
   const [location] = useLocation();
   const isSplash = location === "/";
@@ -391,6 +395,9 @@ function AppContent() {
   }
   if (isClientBankView && clientBankViewParams?.clientSlug) {
     return <ClientBankView clientSlug={clientBankViewParams.clientSlug} />;
+  }
+  if (isSamplePublic && samplePublicParams?.slug) {
+    return <SamplePublic slug={samplePublicParams.slug} />;
   }
   if (isContentGenerator) {
     return <ContentGenerator />;
