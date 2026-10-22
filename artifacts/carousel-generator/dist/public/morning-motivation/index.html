@@ -1,0 +1,1940 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Morning Motivation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@300;400;500;600;700;800&family=Caveat:wght@700&family=Fredoka:wght@400;500;600;700&family=Special+Elite&family=Nunito:wght@600;700;800&family=Permanent+Marker&family=Courier+Prime&family=Share+Tech+Mono&family=Pacifico&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#08080D;--card:#111118;--border:#1F1F28;--accent:#1A1A23;--muted:#B2B2BD;--pink:#FF2499;--pink-d:#F00080;--pink-l:#FF42A7}
+*{box-sizing:border-box;border-color:var(--border)}
+body{margin:0;font-family:'League Spartan',system-ui,sans-serif;background:var(--bg);color:#fff;-webkit-font-smoothing:antialiased}
+::selection{background:rgba(255,36,153,.3)}
+header{padding:16px 24px;border-bottom:1px solid rgba(31,31,40,.6);display:flex;align-items:center;gap:14px}
+header a{color:var(--muted);text-decoration:none;font-size:22px;line-height:1;transition:color .2s}
+header a:hover{color:#fff}
+h1{margin:0;font-size:18px;font-weight:700;line-height:1}
+.sub{margin:4px 0 0;font-size:12px;color:var(--muted)}
+.wrap{display:flex;flex-wrap:wrap;gap:32px;padding:32px 24px 70px;align-items:flex-start;max-width:1152px;margin:0 auto}
+.panel{flex:1 1 380px;max-width:640px}
+.stage{flex:1 1 320px;position:sticky;top:16px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:16px}
+.card h2{margin:0 0 12px;font-size:16px;font-weight:600}
+.scenes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.scenes input{position:absolute;opacity:0;pointer-events:none}
+.scenes label{display:block;text-align:center;padding:12px 6px;border-radius:12px;border:2px solid var(--border);cursor:pointer;font-weight:500;line-height:1.25;transition:border-color .2s}
+.scenes label:hover{border-color:#3a3a48}
+.scenes label small{display:block;color:var(--muted);font-weight:400;font-size:12px}
+.scenes input:checked+label{border-color:var(--pink);background:rgba(255,36,153,.1)}
+textarea,select,input[type=text]{width:100%;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--accent);color:#fff}
+textarea:focus,select:focus,input[type=text]:focus{outline:2px solid rgba(255,36,153,.55);outline-offset:0}
+textarea{min-height:96px;resize:vertical}
+input::placeholder,textarea::placeholder{color:#7d7d8a}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.row>*{flex:0 0 auto}
+button{font:inherit;font-weight:600;font-size:14px;border:0;border-radius:10px;padding:10px 18px;cursor:pointer;background:var(--pink);color:#fff;transition:filter .2s}
+button:hover{filter:brightness(1.1)}
+button.alt{background:var(--border);color:#fff}
+button.shimmer{background:linear-gradient(90deg,#F00080,#FF42A7,#FF5CD6,#F00080);background-size:200% auto;animation:shimmer 3s linear infinite}
+button:disabled{opacity:.5;cursor:wait;animation:none}
+@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+.count{font-size:12px;color:var(--muted);margin-left:auto}
+.sw{display:flex;gap:8px;flex-wrap:wrap}
+.sw button{width:42px;height:42px;padding:0;border-radius:50%;border:3px solid var(--card);box-shadow:0 0 0 2px #3a3a48}
+.sw button:hover{box-shadow:0 0 0 2px var(--pink);filter:none}
+.cols{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 14px}
+.cols label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:500}
+input[type=color]{width:100%;height:38px;border:1px solid var(--border);border-radius:10px;padding:2px;background:var(--accent)}
+input[type=file]{font:inherit;font-size:13px;color:var(--muted)}
+input[type=file]::file-selector-button{font:inherit;font-weight:600;font-size:13px;border:0;border-radius:8px;padding:8px 14px;margin-right:10px;background:var(--border);color:#fff;cursor:pointer}
+input[type=checkbox],input[type=range]{accent-color:var(--pink)}
+input[type=range]{width:100%}
+.frame{position:relative;height:min(76vh,880px);aspect-ratio:9/16;background:#000;border-radius:16px;overflow:hidden;border:1px solid var(--border);box-shadow:0 16px 32px -4px rgba(0,0,0,.6)}
+canvas{width:100%;height:100%;display:block}
+.guides{position:absolute;inset:0;pointer-events:none;display:none}
+.guides.on{display:block}
+.guides i{position:absolute;left:0;right:0;background:rgba(255,36,153,.2);border:1px dashed rgba(255,36,153,.85)}
+.guides .top{top:0;height:13%}
+.guides .bot{bottom:0;height:18%}
+.note{font-size:12px;color:var(--muted);margin:8px 0 0;line-height:1.5}
+.btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.chk{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.qi{border:1px solid var(--border);border-radius:12px;padding:12px;margin-top:10px;background:var(--accent)}
+.qi .qh{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.qi .qn{font-weight:700;color:var(--pink);min-width:20px}
+.qi select{width:auto;flex:1 1 130px;padding:7px 10px;font-size:13px}
+.qi input[type=text]{margin-top:8px;padding:8px 10px;font-size:13px}
+.qi textarea{margin-top:8px;min-height:64px;font-size:13px}
+.qi .qs{font-size:12px;color:var(--muted);margin-left:auto}
+.qi .qs.bad{color:#ff6b8a}.qi .qs.ok{color:#7ee0a1}
+.qi button{padding:6px 12px;font-size:12px}
+.sgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px}
+.tile{position:relative;border:2px solid var(--border);border-radius:12px;padding:12px 8px 10px;text-align:center;cursor:pointer;transition:border-color .2s;background:var(--accent)}
+.tile.on{border-color:var(--pink);background:rgba(255,36,153,.1)}
+.tile .tn{font-weight:600;font-size:13px;line-height:1.25;padding:0 12px}
+.tile .ts{font-size:11px;color:var(--muted);margin-top:3px}.tile .ts.ok{color:#7ee0a1}
+.tile .tck{position:absolute;top:6px;left:6px;display:block;width:20px;height:20px;cursor:pointer}
+.tile .tck input{position:absolute;opacity:0;width:20px;height:20px;margin:0;cursor:pointer}
+.tile .tck span{display:block;width:18px;height:18px;border:2px solid #6b6b78;border-radius:5px}
+.tile.sel .tck span{background:var(--pink);border-color:var(--pink);box-shadow:inset 0 0 0 3px var(--accent)}
+</style>
+</head>
+<body>
+<header>
+  <a href="/hub" aria-label="Back to the hub">&larr;</a>
+  <div>
+    <h1>Morning Motivation</h1>
+    <p class="sub">A little 5 to 10 second reel to start someone's day. Pick a scene, pick a message, add your logo, download.</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="panel">
+
+    <div class="card">
+      <h2>1. Pick your scene</h2>
+      <p class="note" style="margin:0 0 10px">Click a scene to see it in the phone. Tick the box on every scene you want in your batch, then use step 7 to make them all at once.</p>
+      <div class="sgrid" id="sceneGrid"></div>
+      <div class="row"><button class="alt" id="selAll" type="button">Tick all 20</button><button class="alt" id="selNone" type="button">Untick all</button><span class="count" id="selCount"></span></div>
+      <div id="toastOpts" style="margin-top:14px">
+        <p class="note" style="margin:0 0 8px">Toast look</p>
+        <div class="scenes" style="grid-template-columns:repeat(3,1fr)">
+          <input type="radio" name="tstyle" id="ts0" value="video" checked><label for="ts0">Video clip<small>Toast pops up</small></label>
+          <input type="radio" name="tstyle" id="ts1" value="photo"><label for="ts1">Real photo<small>Looks like real life</small></label>
+          <input type="radio" name="tstyle" id="ts2" value="draw"><label for="ts2">Illustrated<small>Cartoon toaster</small></label>
+        </div>
+        <div id="vidOpts" style="margin-top:12px;display:none">
+          <div class="row" style="margin-top:0"><input type="file" id="vidFile" accept="video/*"></div>
+          <div class="row"><button id="aiClip" class="alt" type="button">Make a toast clip with AI</button><span class="count" id="aiClipSt"></span></div>
+          <p class="note" id="vidStatus">Upload your plain toast clip, the one where the toast pops up with nothing written on it. About 5 seconds works best. Your words burn onto the toast after it settles.</p>
+        </div>
+        <div id="photoOpts" style="margin-top:12px">
+          <div class="row" style="margin-top:0">
+            <button id="genPhoto" class="alt" type="button">Make me a toast photo</button>
+            <input type="file" id="photoFile" accept="image/*">
+          </div>
+          <p class="note" id="photoStatus">Use your own photo of plain toast, or let me make one. Until a photo is added you will see the illustrated toast.</p>
+        </div>
+      </div>
+      <div id="clipOpts" style="margin-top:14px;display:none">
+        <div class="row" style="margin-top:0"><button id="aiClip2" type="button">Make this clip with AI</button><input type="file" id="vidFile2" accept="video/*"><span class="count" id="aiClip2St"></span></div>
+        <p class="note" id="clipNote">The video is made by Veo, which bills your Google key for each clip, then your words are added on top. You can also upload your own video of this scene.</p>
+      </div>
+        <div id="poseOpts" style="margin-top:14px">
+          <div class="cols" style="margin-top:10px">
+            <label>Words up and down<input type="range" id="pY" min="15" max="85" value="48"></label>
+            <label>Words left and right<input type="range" id="pX" min="15" max="85" value="50"></label>
+            <label>Words size<input type="range" id="pS" min="40" max="180" value="100"></label>
+            <label>Tilt<input type="range" id="pR" min="-45" max="45" value="0"></label>
+          </div>
+          <div class="row"><button id="findToast" class="alt" type="button">Find the toast for me</button></div>
+        </div>
+    </div>
+
+    <div class="card">
+      <h2>2. Choose your message</h2>
+      <label class="note" for="town" style="display:block;margin-bottom:6px">Town or area for the local messages (fills in when you pick a client)</label>
+      <input type="text" id="town" placeholder="e.g. Chester" style="margin-bottom:10px">
+      <select id="bank"></select>
+      <div class="row">
+        <button class="alt" id="shuffle" type="button">Surprise me</button>
+        <span class="count" id="count"></span>
+      </div>
+      <p class="note" style="margin-top:12px">Or write your own below (keep it short and punchy, 90 characters is the sweet spot).</p>
+      <textarea id="msg" maxlength="120"></textarea>
+    </div>
+
+    <div class="card">
+      <h2>3. Make it yours</h2>
+      <div class="sw" id="palettes"></div>
+      <div class="cols" style="margin-top:12px">
+        <label>Background<input type="color" id="cBg"></label>
+        <label>Main colour<input type="color" id="cAccent"></label>
+        <label>Pop colour<input type="color" id="cPop"></label>
+        <label>Text and outlines<input type="color" id="cInk"></label>
+        <label>Skin tone (skater)
+          <select id="skin">
+            <option value="#F3CDB0">Light</option>
+            <option value="#E0A97D" selected>Medium</option>
+            <option value="#C68B5E">Tan</option>
+            <option value="#8D5A3B">Deep</option>
+          </select>
+        </label>
+        <label>Hair (skater)
+          <select id="hair">
+            <option value="#3B2416" selected>Dark brown</option>
+            <option value="#1E1A1A">Black</option>
+            <option value="#9B3E22">Auburn</option>
+            <option value="#D9B05B">Blonde</option>
+            <option value="#C9C9CF">Silver</option>
+          </select>
+        </label>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <label class="chk"><input type="checkbox" id="showLogo" checked> Show logo</label>
+        <input type="file" id="logo" accept="image/*">
+      </div>
+      <div class="row" style="align-items:center">
+        <img id="logoPrev" alt="" style="display:none;height:64px;max-width:200px;object-fit:contain;border:1px solid var(--border);border-radius:10px;padding:6px;background:#fff linear-gradient(45deg,#d9d9de 25%,transparent 25%,transparent 75%,#d9d9de 75%),linear-gradient(45deg,#d9d9de 25%,transparent 25%,transparent 75%,#d9d9de 75%);background-color:#f4f4f6;background-size:14px 14px;background-position:0 0,7px 7px">
+        <button class="alt" id="logoOrig" type="button" style="display:none">Keep the original background</button>
+        <label class="chk" id="logoWhiteRow" style="display:none"><input type="checkbox" id="logoWhite"> Make the logo white</label>
+        <a id="logoDl" style="display:none;color:var(--pink);font-size:13px" href="#" download="logo-transparent.png">Download transparent PNG</a>
+      </div>
+      <div class="row" style="flex-wrap:wrap">
+        <p class="note" id="logoNote" style="margin:8px 0 0;flex:1 1 100%">Making a sample for someone who is not a client? Upload their logo here and I take the background away for you. For clients, their own logo loads when you choose them in step 4.</p>
+        <input type="text" id="handle" style="flex:1 1 100%" placeholder="@yourclinic (optional, sits under the logo)">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>4. Client and caption</h2>
+      <select id="client"><option value="">Loading your clients...</option></select>
+      <p class="note" id="clientNote" style="margin-top:6px"></p>
+      <div class="row">
+        <input type="text" id="replyWord" placeholder="Reply word (optional, for example GLOW)" style="max-width:300px">
+      </div>
+      <div class="row">
+        <button id="capBtn" type="button">Write my caption</button>
+        <span class="count" id="capStatus"></span>
+      </div>
+      <textarea id="caption" style="margin-top:12px;min-height:160px" placeholder="Your caption appears here. You can edit it before you schedule."></textarea>
+      <div class="row"><button class="alt" id="capCopy" type="button">Copy caption</button></div>
+    </div>
+
+    <div class="card">
+      <h2>5. Schedule</h2>
+      <div class="scenes">
+        <input type="radio" name="ptype" id="pt1" value="reel" checked><label for="pt1">Reel<small>Goes to the feed</small></label>
+        <input type="radio" name="ptype" id="pt2" value="trial"><label for="pt2">Trial reel<small>Non followers first</small></label>
+        <input type="radio" name="ptype" id="pt3" value="story"><label for="pt3">Story<small>Still of the last frame</small></label>
+      </div>
+      <div class="row">
+        <label style="font-size:12px;font-weight:500;display:flex;flex-direction:column;gap:4px">Date and time
+          <input type="datetime-local" id="when" style="font:inherit;font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--accent);color:#fff;color-scheme:dark">
+        </label>
+        <label class="chk" id="fbRow"><input type="checkbox" id="fb"> Also post the reel to Facebook</label>
+      </div>
+      <div class="row"><button id="sched" class="shimmer" type="button">Schedule it</button></div>
+      <p class="note" id="schedNote">The reel is recorded, uploaded and booked for you. Stories do not carry a caption, so none is sent.</p>
+    </div>
+
+    <div class="card">
+      <h2>6. Download</h2>
+      <div class="btns" style="justify-content:flex-start">
+        <button id="dl" class="shimmer" type="button">Download video</button>
+        <button class="alt" id="cover" type="button">Download cover image</button>
+      </div>
+      <p class="note" id="fmtNote">The video is silent, so you can add trending audio in Instagram. It records in real time, so it takes as long as the reel lasts.</p>
+    </div>
+
+    <div class="card">
+      <h2>7. Bulk: make several at once</h2>
+      <p class="note" style="margin-top:0">Line up a few reels, then write all the captions, schedule them all or download them all in one go. New reels use the scene, client and post type you have picked above, and you can change any of them in the list.</p>
+      <div style="border:1px solid var(--border);border-radius:12px;padding:12px;margin-bottom:12px;background:var(--accent)">
+        <p class="note" style="margin:0 0 8px"><b>Quick start:</b> tick the scenes you want in step 1, choose the wording here, then press the first button. You get one reel per ticked scene.</p>
+        <select id="bWord"></select>
+        <div class="row"><button class="alt" id="bAddScenes" type="button">Add my ticked scenes to the list</button><button class="alt" id="bClips" type="button">Make clips for my ticked scenes</button></div>
+      </div>
+      <textarea id="bulkText" style="min-height:90px" placeholder="Type or paste one message per line. Use {town} where the town should go."></textarea>
+      <div class="row">
+        <button class="alt" id="bAddLines" type="button">Add these to the list</button>
+        <button class="alt" id="bAddCur" type="button">Add my current message</button>
+      </div>
+      <div class="row">
+        <select id="bRandN" style="width:auto"><option>3</option><option selected>5</option><option>8</option><option>10</option></select>
+        <button class="alt" id="bRand" type="button">Fill with random messages</button>
+        <button class="alt" id="bClear" type="button">Clear the list</button>
+        <span class="count" id="bCount"></span>
+      </div>
+      <div id="qList"></div>
+      <div class="row" style="margin-top:14px;align-items:flex-end">
+        <label style="font-size:12px;font-weight:500;display:flex;flex-direction:column;gap:4px">First one goes out
+          <input type="datetime-local" id="bWhen" style="font:inherit;font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:10px;background:var(--accent);color:#fff;color-scheme:dark">
+        </label>
+        <label style="font-size:12px;font-weight:500;display:flex;flex-direction:column;gap:4px">Then one every
+          <select id="bGap" style="width:auto">
+            <option value="86400000">1 day</option><option value="172800000">2 days</option><option value="259200000">3 days</option>
+            <option value="43200000">12 hours</option><option value="14400000">4 hours</option>
+          </select>
+        </label>
+      </div>
+      <div class="row">
+        <button id="bCaps" type="button">Write captions for all</button>
+        <button id="bSched" class="shimmer" type="button">Schedule all</button>
+        <button id="bDl" class="alt" type="button">Download all</button>
+      </div>
+      <p class="note" id="bNote">Scheduling uses the post type and reply word from the steps above. Reels are recorded one after another in real time, so ten reels takes a few minutes. Keep this tab open while it works. Chrome may ask once to allow multiple downloads.</p>
+    </div>
+  </div>
+
+  <div class="stage">
+    <div class="frame">
+      <canvas id="cv" width="1080" height="1920"></canvas>
+      <div class="guides" id="guides"><i class="top"></i><i class="bot"></i></div>
+    </div>
+    <div class="btns">
+      <button class="alt" id="replay" type="button">Replay</button>
+      <label class="chk"><input type="checkbox" id="safe"> Show Instagram safe zones</label>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const W=1080,H=1920;
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const F_TOAST="'Caveat','Segoe Script',cursive";
+const F_TYPE="'Special Elite','Courier New',monospace";
+const F_SKATE="'Fredoka','Arial Rounded MT Bold',sans-serif";
+const DUR={toast:5,type:7,skate:9};
+
+const LOCAL=[
+"To the woman in {town} who has been 'thinking about it' since March. Hi, I'm here.",
+"If you are in {town} and want a clinic that feels like a hug with a good lamp, hi, I'm here.",
+"POV: you live in {town} and finally want someone kind to ask about your skin. Hi, I'm here.",
+"To the {town} woman googling clinics at 11pm in her dressing gown. Hi, I'm here.",
+"The quiet worry nobody mentions in {town}: walking in and feeling judged. Hi, I'm here, and I don't.",
+"If you are in {town} and have been secretly screenshotting treatments, hi. I'm here. Kettle's on.",
+"Unpopular opinion from your {town} clinic: a consultation should feel like a natter. Hi, I'm here.",
+"If you are in {town} and nervous about booking, hi. I'm here. I'm nervous at the dentist too.",
+"Me when a {town} woman says 'I'm not really a clinic person'. Hi, I'm here. Neither was I.",
+"To the woman in {town} who always puts herself last on the list. Hi, I'm here. Book the thing.",
+"If you are in {town} and want a no judgement chat about your skin, hi, I'm here.",
+"POV: you are in {town}, you have a coffee, and you have finally decided to ask. Hi, I'm here.",
+"{town}, if your friends keep asking where you have been looking so rested, hi, I'm here.",
+"If you are in {town} and want a friendly face who will tell you the truth, hi, I'm here.",
+"To the woman in {town} who says 'maybe next year' every year. Hi, I'm here. Maybe this week?",
+"That moment when a {town} woman walks in nervous and leaves booking her next visit. Hi, I'm here.",
+"{town}, if you have been thinking about it since the summer, hi. I'm here. Kettle's on.",
+"To the woman in {town} who keeps saying 'one day'. Hi, I'm here. Make it Tuesday.",
+"If you are in {town} and bracing for judgement, hi. I'm here, and I left mine at home.",
+"{town}, your best friend has asked where you got that glow and you said 'sleep'. Hi, I'm here.",
+"If you are in {town} and have screenshotted this treatment four times, hi. I'm here. Say hello.",
+"To the {town} woman who has bought the serum, the cream and the gadget. Hi, I'm here. Try a chat.",
+"If you are in {town} and a bit nervous, hi. I'm here, I'm nervous at the dentist too.",
+"{town}, if you are googling clinics at midnight in your dressing gown, hi. I'm here. Pop in.",
+"To the woman in {town} who looks after everyone. Hi, I'm here. Your turn for the comfy chair.",
+"If you are in {town} and want honest advice and a decent brew, hi. I'm here."
+];
+const FERAL=[
+"You have 'thought about it' for 14 months. The thought now pays rent. Book.",
+"Your skin has been shouting for help and you gave it a tinted moisturiser. Come in.",
+"Imagine spending £40 on a candle and £0 on the face that sniffs it.",
+"Your 'I'll start Monday' has a longer waiting list than my diary. Try Tuesday.",
+"Her: 'I don't have time.' Also her: four hours scrolling other people's holidays.",
+"You deserve nice things. Stop pinning them and book one.",
+"Your group chat has heard about this treatment for six months. Give them an ending.",
+"Dear woman who is 'just seeing how it goes'. It goes to a consultation, love.",
+"Your face works 16 hours a day for you, unpaid. Pay it.",
+"No questions on why you are still using a facewipe at midnight. Just come and see me.",
+"Sunscreen in winter. Yes, really. Yes, you. Yes, today.",
+"You have followed the clinic and liked eleven posts. Say hello, you stalker.",
+"Nobody looks fine under a changing room light. Book in anyway.",
+"Your mum's friend Sandra looks amazing and she is keeping schtum. I won't.",
+"Bin the 'I'm fine' face. Book the 'oh hello' face.",
+"You own 14 half used serums. A consultation would save you a fortune. You're welcome.",
+"If you have said 'I must do something about my face' out loud twice this week, this is your sign.",
+"Treat yourself, you absolute legend. Future you is already taking the credit.",
+"My records show your 'me time' basket has been abandoned since 2019. Check out.",
+"Plot twist: the woman you keep envying booked an appointment. That is the whole secret.",
+"Get up. Get dressed. Go and be the reason someone else feels underdressed.",
+"Your inner critic has had a very long contract. Time to let her go.",
+"You survived school reunions and group chats. A new haircut is nothing.",
+"Be the woman your ex Googles at 2am.",
+"Stop apologising for taking up space. You pay rent on it.",
+"Your comfort zone is lovely, but it has no windows. Go outside.",
+"Wake up and choose violence against your own self doubt.",
+"Every woman who looks like she has it together is winging it with good lighting.",
+"You have been putting up with that for years. Who exactly is it for?",
+"Today's agenda: look fabulous, ignore Brenda, take the compliment.",
+"Somewhere a woman is ruling the world on four hours sleep and concealer. Join her.",
+"The version of you that you keep postponing is tapping her watch.",
+"Your standards are fine. Someone just moved the floor.",
+"Say it with a straight face: I am the catch, and I am booked up.",
+"Be so full of yourself this week that the mirror asks for a day off.",
+"Your chin up looks better than any filter. Test it today.",
+"Stop waiting for permission. Consider this a signed note from your mum.",
+"You are a limited edition and the production run is one. Act like it.",
+"Put the kettle on, put your shoulders back and put yourself first.",
+"Today you are unbothered, moisturised and in your prime. Make a note.",
+"You have rehearsed this conversation in the shower for months. Time for the live show.",
+"A consultation is just a natter with a clinician who has seen it all. Book the natter.",
+"Your skin has filed a formal complaint. Come and meet the manager.",
+"You will spend £60 on a candle but hesitate over a chat. Priorities, love.",
+"Nobody ever left a consultation wishing they had waited another year.",
+"Your 'I'll book it when things calm down' has been running since 2021. Book it.",
+"Ask the daft question. We have heard worse, and we have loved it.",
+"Booking in takes two minutes. Overthinking it has taken you two years.",
+"Ready is optional. Turn up with a coffee.",
+"Your future glow is sitting in the waiting room. Go and collect it."
+];
+const STOIC=[
+"You cannot control the clock. You can decide that this week has something in it for you.",
+"The right moment never turns up on its own. You book it.",
+"Be kind to the woman in the mirror. She has carried a lot.",
+"Calm skin, calm mind. Start with one small thing today.",
+"Pick one thing today and look after it well.",
+"Quiet confidence is built from small appointments you keep with yourself.",
+"What you put up with becomes what you accept. Raise the bar gently.",
+"Take care of the body that takes care of everyone else.",
+"Fear of judgement shrinks the moment you walk through the door.",
+"Progress looks like a Tuesday afternoon you gave to yourself.",
+"Some days the bravest thing is booking the consultation. Go on.",
+"Decide what matters, then protect the time for it.",
+"One steady habit beats a hundred big plans. Cleanse. SPF. Repeat.",
+"The woman who looks after her skin has chosen to turn up for her own life.",
+"Slow down. The glow comes from rest, water and a good plan.",
+"Be gentle with the mirror. It only shows you today.",
+"Today is a good day to keep a promise to yourself.",
+"Ask the question you have been rehearsing in the shower.",
+"Patience is a beauty treatment. So is a proper night's sleep and a good cuppa.",
+"Look after yourself the way you look after everyone you love."
+];
+const MESSAGES=[
+"To the woman who has been putting herself last all week. Book the thing.",
+"Life is short. Get the lips.",
+"POV: you said 'just a little look at the treatments' and now you have a consultation booked.",
+"Me when she says she is only here for a chat. Narrator: it was not only a chat.",
+"The quiet worry nobody mentions: feeling guilty for spending on yourself. Spend on yourself.",
+"What I wish more women knew: a consultation is free to ask and lovely to have.",
+"Unpopular opinion from someone who loves skin: your SPF is the real hero. Wear it in November.",
+"When you look in the mirror and think 'oh, there you are'. That is the feeling we are chasing.",
+"To the woman who always says 'I'll book it next month'. It is next month. Hi.",
+"3 things I would never do as a skin obsessed woman: skip SPF, sleep in mascara, ignore a good cuppa.",
+"POV: you finally booked the facial and the whole day suddenly feels like a holiday.",
+"If you have been secretly saving treatment ideas on your phone, this one is for you.",
+"That moment when you wear the red lipstick and the whole week gets better.",
+"Me when someone says they don't have time for self care. Ten minutes. Kettle on. Face mask on.",
+"To the woman who looks after everyone else's glow. Your turn.",
+"The quiet worry nobody mentions: 'Will I still look like me?' Yes. Just a well rested me.",
+"When your skin finally behaves and you tell absolutely everyone.",
+"What I wish more women knew before booking: ask every question you have. Even the silly ones.",
+"Unpopular opinion: moisturiser on a Monday is a personality trait.",
+"If you cried at an advert and then booked a facial, you are my kind of woman.",
+"POV: you are the special occasion. Nobody else is coming to book it for you.",
+"Me when she says 'I don't want to look done'. Lovely. Neither do I. Natural is the whole plan.",
+"To the woman who says she has no time. Same. We are booking it anyway.",
+"When you leave a consultation feeling taller. That one is my favourite bit.",
+"Today's plan: drink the water, wear the SPF, ignore the comparison game.",
+"If you are scrolling past this thinking 'maybe me one day', take this as your sign.",
+"The quiet worry nobody mentions: 'Am I too old for this?' You are exactly the right age to start.",
+"My favourite way to feel fabulous without a full overhaul: one small thing, done well.",
+"Unpopular opinion: a good skin routine beats any miracle product. Boring. True.",
+"When you tell the clinic it is your first time and they make you a brew. That is what I do.",
+"Get the lips. Get the glow. Get the compliments you pretend not to love.",
+"You have walked through a lot of doors. This one has a very nice chair.",
+"Your best chapter does not have a start date. Pick a Thursday and begin.",
+"Whatever you did yesterday, you still got up today. That is real strength.",
+"Walk in like the woman who has already said yes to herself.",
+"Too old, too busy, too late? None of those apply. You are exactly on time.",
+"Put your own name at the top of today's list. Underline it twice.",
+"Confidence is just a promise you keep to yourself, again and again.",
+"You have spent years being brilliant for everyone else. Be brilliant for you.",
+"A good day starts with one small choice that is only for you.",
+"Do the brave thing before the kettle boils. Nobody will have time to talk you out of it.",
+"The woman in the mirror has seen you through everything. Say good morning to her.",
+"Your glow is a habit you are allowed to have.",
+"Take up the space. You have earned every inch of it.",
+"Some mornings you need a pep talk. Consider this one delivered, with biscuits.",
+"You are allowed to be a work in progress and a masterpiece in the same week.",
+"Say yes to the invitation you keep pretending you did not see.",
+"Today you are the main character. The rest of the cast can wait.",
+"Your future self is already grateful for what you do this morning.",
+"Be the woman who books it, wears it, says it and means it.",
+"Hold your head high today. The view is far better from up there."
+];
+const HAIR=[
+"If you are in {town} and have been hiding under a hat since August, hi. I'm here.",
+"To the {town} woman who has been trimming her own fringe in the bathroom. Hi, I'm here. Put the scissors down.",
+"{town}, your roots have been waving at you for weeks. Hi, I'm here. Kettle's on.",
+"Nobody walks out of my chair feeling the same as when they walked in. {town}, come and sit down.",
+"If you are in {town} and have said 'I'll just leave it' three times this month, hi. I'm here.",
+"To the woman in {town} who has screenshotted the same hair colour for a year. Hi, I'm here. Show me.",
+"Good hair days are booked, love. {town}, I've got a chair with your name on it."
+];
+
+const PALETTES=[
+ {n:'Sunshine',bg:'#FBE3C8',accent:'#2E9C8E',ink:'#3A2A22',pop:'#F4B63F'},
+ {n:'Blush',bg:'#FBDDE0',accent:'#B0386B',ink:'#3B1F2B',pop:'#F6C453'},
+ {n:'Sage',bg:'#E4EBD6',accent:'#5B7F5A',ink:'#2F3B2C',pop:'#F2A65A'},
+ {n:'Navy',bg:'#F3ECDD',accent:'#1F3A5F',ink:'#23262B',pop:'#E7B64B'},
+ {n:'Lilac',bg:'#E9E1F5',accent:'#6C4AB6',ink:'#2B2140',pop:'#FFB3C7'}
+];
+
+const S={scene:'toast',msg:'',bg:'#FBE3C8',accent:'#2E9C8E',ink:'#3A2A22',pop:'#F4B63F',
+  skin:'#E0A97D',hair:'#3B2416',logoImg:null,showLogo:true,handle:'',toastStyle:'video',video:null,photo:null,tx:.5,ty:.48,tsize:1,trot:0};
+let LOGO_LIGHT=false;
+
+/* ---------- helpers ---------- */
+const clamp=(v,a=0,b=1)=>Math.min(b,Math.max(a,v));
+const seg=(t,a,b)=>clamp((t-a)/(b-a));
+const ease={
+  out:t=>1-Math.pow(1-t,3),
+  back:t=>{const c1=1.70158,c3=c1+1;return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2);}
+};
+function hex2rgb(h){h=h.replace('#','');return [parseInt(h.slice(0,2),16),parseInt(h.slice(2,4),16),parseInt(h.slice(4,6),16)];}
+function toHex(r,g,b){return '#'+[r,g,b].map(v=>Math.round(clamp(v,0,255)).toString(16).padStart(2,'0')).join('');}
+function shade(h,amt){const [r,g,b]=hex2rgb(h);const m=amt<0?0:255,k=Math.abs(amt);return toHex(r+(m-r)*k,g+(m-g)*k,b+(m-b)*k);}
+function mix(a,b,k){const A=hex2rgb(a),B=hex2rgb(b);return toHex(A[0]+(B[0]-A[0])*k,A[1]+(B[1]-A[1])*k,A[2]+(B[2]-A[2])*k);}
+function lum(h){const [r,g,b]=hex2rgb(h);return (0.299*r+0.587*g+0.114*b)/255;}
+function circle(x,y,r){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}
+function rr(x,y,w,h,r){r=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function frr(x,y,w,h,r){rr(x,y,w,h,r);ctx.fill();}
+function line(x1,y1,x2,y2,w,col){ctx.strokeStyle=col;ctx.lineWidth=w;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();}
+function star(x,y,r,col){ctx.fillStyle=col;ctx.beginPath();for(let i=0;i<8;i++){const a=i*Math.PI/4-Math.PI/2,rad=i%2?r*0.28:r;ctx.lineTo(x+Math.cos(a)*rad,y+Math.sin(a)*rad);}ctx.closePath();ctx.fill();}
+
+let memo={};
+function cached(k,fn){if(!(k in memo))memo[k]=fn();return memo[k];}
+function wrap(text,font,maxW){
+  ctx.font=font;
+  const words=text.split(/\s+/).filter(Boolean),lines=[];let cur='';
+  for(const w of words){const test=cur?cur+' '+w:w;if(ctx.measureText(test).width>maxW&&cur){lines.push(cur);cur=w;}else cur=test;}
+  if(cur)lines.push(cur);return lines;
+}
+function fit(text,fam,weight,maxW,maxH,max,min,lh){
+  for(let s=max;s>=min;s-=2){const lines=wrap(text,`${weight} ${s}px ${fam}`,maxW);if(lines.length*s*lh<=maxH)return {size:s,lines};}
+  return {size:min,lines:wrap(text,`${weight} ${min}px ${fam}`,maxW)};
+}
+function msg(){return (S.msg||'').trim()||MESSAGES[0];}
+
+/* ---------- background and logo ---------- */
+const DOTS=Array.from({length:16},(_,i)=>({x:(i*229+90)%W,y:(i*387+260)%H,r:6+(i%3)*4,s:i}));
+function drawBG(t){
+  ctx.fillStyle=S.bg;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle=shade(S.bg,-0.05);circle(160,520,280);circle(960,1380,340);
+  ctx.fillStyle=shade(S.bg,0.4);circle(900,520,150);circle(150,1500,190);
+  ctx.globalAlpha=0.55;
+  DOTS.forEach((d,i)=>{ctx.fillStyle=i%2?S.pop:S.accent;circle(d.x,d.y+Math.sin(t*1.4+d.s)*10,d.r);});
+  ctx.globalAlpha=1;
+}
+function drawLogo(){
+  if(!S.showLogo)return;
+  let y=190;
+  if(S.logoImg){
+    const im=S.logoImg,r=Math.min(440/im.width,170/im.height),w=im.width*r,h=im.height*r;
+    ctx.drawImage(im,(W-w)/2,y,w,h);y+=h+18;
+  }
+  if(S.handle){
+    ctx.font=`600 40px ${F_SKATE}`;ctx.fillStyle=LOGO_LIGHT?'#ffffff':S.ink;ctx.textAlign='center';ctx.textBaseline='alphabetic';
+    ctx.fillText(S.handle,W/2,y+34);
+  }
+}
+
+/* ---------- scene 1: toast ---------- */
+function toastPath(x,y,w,h){
+  ctx.beginPath();
+  ctx.moveTo(x+.1*w,y+h);ctx.lineTo(x+.1*w,y+.45*h);
+  ctx.bezierCurveTo(x-.05*w,y+.40*h,x-.02*w,y+.02*h,x+.30*w,y+.05*h);
+  ctx.bezierCurveTo(x+.42*w,y-.02*h,x+.58*w,y-.02*h,x+.70*w,y+.05*h);
+  ctx.bezierCurveTo(x+1.02*w,y+.02*h,x+1.05*w,y+.40*h,x+.90*w,y+.45*h);
+  ctx.lineTo(x+.9*w,y+h);ctx.closePath();
+}
+function rnd(i){const v=Math.sin(i*127.1+311.7)*43758.5453;return v-Math.floor(v);}
+function drawToast(x,y,w,h,k){
+  ctx.save();
+  // crust
+  toastPath(x,y,w,h);
+  const cg=ctx.createLinearGradient(x,y,x,y+h);
+  cg.addColorStop(0,mix('#C98A4B','#8A4E1E',k*.8));cg.addColorStop(1,mix('#B8742C','#6E3A12',k*.8));
+  ctx.fillStyle=cg;ctx.fill();
+  // crumb (the soft middle)
+  ctx.save();
+  ctx.translate(x+w/2,y+h/2);ctx.scale(.87,.89);ctx.translate(-(x+w/2),-(y+h/2));
+  toastPath(x,y,w,h);
+  const ig=ctx.createRadialGradient(x+w/2,y+h*.42,w*.06,x+w/2,y+h*.42,w*.62);
+  ig.addColorStop(0,mix('#FBEABF','#EBB862',k));
+  ig.addColorStop(.65,mix('#F4D590','#D78B36',k));
+  ig.addColorStop(1,mix('#E3B565','#A55418',k));
+  ctx.fillStyle=ig;ctx.fill();
+  ctx.save();ctx.clip();
+  // toasting blotches
+  for(let i=0;i<9;i++){
+    const bx=x+rnd(i+1)*w,by=y+rnd(i+20)*h,br=60+rnd(i+40)*90;
+    const bg=ctx.createRadialGradient(bx,by,0,bx,by,br);
+    bg.addColorStop(0,`rgba(140,64,12,${(.16*k).toFixed(3)})`);bg.addColorStop(1,'rgba(140,64,12,0)');
+    ctx.fillStyle=bg;ctx.fillRect(bx-br,by-br,br*2,br*2);
+  }
+  // air holes, dark and light
+  for(let i=0;i<170;i++){
+    const px=x+rnd(i*3+7)*w,py=y+rnd(i*3+8)*h,r=2+rnd(i*3+9)*7;
+    ctx.fillStyle=`rgba(120,60,14,${(.14+.2*rnd(i+300)).toFixed(3)})`;
+    ctx.beginPath();ctx.ellipse(px,py,r*1.25,r*.8,rnd(i)*3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,243,205,.28)';
+    ctx.beginPath();ctx.ellipse(px-r*.35,py-r*.3,r*.55,r*.3,rnd(i)*3,0,Math.PI*2);ctx.fill();
+  }
+  // darker toasted edge where crumb meets crust
+  toastPath(x,y,w,h);
+  ctx.lineWidth=34;ctx.lineJoin='round';
+  ctx.strokeStyle=`rgba(115,52,10,${(.14+.34*k).toFixed(3)})`;ctx.stroke();
+  ctx.restore();
+  ctx.restore();
+  // crust highlight and outer line
+  toastPath(x,y,w,h);ctx.lineWidth=4;ctx.strokeStyle='rgba(255,226,160,.35)';ctx.stroke();
+  ctx.restore();
+}
+function drawToaster(x,y,w,h,lever){
+  ctx.fillStyle=shade(S.accent,-.5);frr(x+70,y+h-20,110,40,14);frr(x+w-180,y+h-20,110,40,14);
+  ctx.fillStyle=S.accent;frr(x,y,w,h,80);
+  ctx.save();rr(x,y,w,h,80);ctx.clip();ctx.fillStyle=shade(S.accent,-.16);ctx.fillRect(x,y+h-120,w,120);ctx.restore();
+  ctx.fillStyle=shade(S.accent,.35);frr(x+40,y+46,w-80,24,12);
+  ctx.fillStyle=shade(S.accent,-.65);frr(x+90,y-6,w-180,34,17);
+  ctx.fillStyle=shade(S.accent,-.5);frr(x+w-110,y+80,26,150,13);
+  ctx.fillStyle=S.pop;circle(x+w-97,y+105+lever*85,28);
+  ctx.fillStyle=S.pop;circle(x+110,y+h-62,34);
+  ctx.fillStyle=shade(S.accent,-.5);circle(x+110,y+h-62,12);
+  line(x+110,y+h-62,x+128,y+h-80,6,shade(S.accent,-.5));
+  ctx.fillStyle=shade(S.accent,.25);frr(x+210,y+h-78,260,28,14);
+}
+function sceneToast(t){
+  const bodyTop=1260,bx=130,bw=820,bh=330,tw=640,th=720;
+  const topHidden=bodyTop+20,topUp=bodyTop-560;
+  const pop=ease.back(seg(t,0,0.6));
+  const rise=ease.back(seg(t,1.4,2.0));
+  const ty=topHidden+(topUp-topHidden)*rise;
+  const toasted=seg(t,2.0,3.3);
+  const lever=clamp(seg(t,0.6,0.9)-seg(t,1.4,1.5));
+  const shake=(t>0.9&&t<1.4)?Math.sin(t*70)*4:0;
+  ctx.save();
+  ctx.translate(W/2+shake,bodyTop+bh);ctx.scale(pop,pop);ctx.translate(-W/2,-(bodyTop+bh));
+  // toast with a little proud wiggle
+  const wt=t-3.6,rot=t>3.6?0.025*Math.sin(wt*9)*Math.exp(-wt*1.2):0;
+  ctx.save();ctx.translate(W/2,bodyTop);ctx.rotate(rot);ctx.translate(-W/2,-bodyTop);
+  drawToast(W/2-tw/2,ty,tw,th,toasted);
+  const lay=cached('toast|'+msg(),()=>fit(msg(),F_TOAST,700,410,330,72,30,1.12));
+  const a=seg(t,2.3,3.5),lh=lay.size*1.12,blockH=lay.lines.length*lh,cy=ty+th*0.36;
+  if(a>0){
+    ctx.save();
+    ctx.font=`700 ${lay.size}px ${F_TOAST}`;ctx.textAlign='center';ctx.textBaseline='middle';
+    const put=(fn)=>lay.lines.forEach((ln,i)=>fn(ln,W/2,cy-blockH/2+(i+.5)*lh));
+    // scorched halo
+    ctx.shadowColor=`rgba(70,28,6,${(.6*a).toFixed(3)})`;ctx.shadowBlur=20*a;
+    ctx.fillStyle=`rgba(70,28,6,${(.45*a).toFixed(3)})`;put((l,px,py)=>ctx.fillText(l,px,py));
+    ctx.shadowBlur=0;ctx.shadowColor='transparent';
+    // burnt letters, pressed into the toast so the crumb shows through
+    ctx.globalCompositeOperation='multiply';
+    ctx.globalAlpha=clamp(a*1.5);
+    ctx.fillStyle=mix('#FF9A3C','#35180A',clamp(a*1.3));
+    put((l,px,py)=>ctx.fillText(l,px,py));
+    ctx.globalCompositeOperation='source-over';
+    // glowing ember edge while it burns in
+    if(a<0.95){
+      ctx.globalAlpha=(1-a)*0.9;ctx.strokeStyle='#FFB347';ctx.lineWidth=2.5;ctx.lineJoin='round';
+      put((l,px,py)=>ctx.strokeText(l,px,py));
+    }
+    ctx.restore();
+  }
+  ctx.restore();
+  drawToaster(bx,bodyTop,bw,bh,lever);
+  ctx.restore();
+  // steam
+  const sa=seg(t,2.6,3.3);
+  if(sa>0){
+    for(let i=0;i<3;i++){
+      const pr=((t*0.45+i*0.33)%1),x0=W/2+(i-1)*150;
+      ctx.globalAlpha=0.55*sa*(1-pr);ctx.strokeStyle='#ffffff';ctx.lineWidth=14;ctx.lineCap='round';
+      ctx.beginPath();
+      for(let k=0;k<=12;k++){const yy=topUp-20-k*20-pr*60,xx=x0+Math.sin(k*0.7+t*3+i)*18;k?ctx.lineTo(xx,yy):ctx.moveTo(xx,yy);}
+      ctx.stroke();
+    }
+    ctx.globalAlpha=1;
+  }
+  // sparkles
+  const sp=seg(t,1.7,2.7);
+  if(sp>0&&sp<1){
+    const sz=40*Math.sin(sp*Math.PI);
+    [[-370,-30],[360,20],[-310,220],[330,250],[40,-120]].forEach(p=>star(W/2+p[0],topUp+p[1],sz,S.pop));
+  }
+}
+
+/* ---------- scene 1b: toast from a real photo ---------- */
+function drawCover(im){const iw=im.videoWidth||im.width,ih=im.videoHeight||im.height,k=Math.max(W/iw,H/ih),w=iw*k,h=ih*k;ctx.drawImage(im,(W-w)/2,(H-h)/2,w,h);}
+const F_BURN="'Nunito','Fredoka','Arial Rounded MT Bold','Arial',sans-serif";
+function noiseField(w,h,seed){
+  let st=seed>>>0;const rnd=()=>(st=(st*1664525+1013904223)>>>0)/4294967296;
+  const mk=cell=>{const gw=Math.ceil(w/cell)+3,gh=Math.ceil(h/cell)+3,g=new Float32Array(gw*gh);for(let i=0;i<g.length;i++)g[i]=rnd();return{gw,cell,g};};
+  const A=mk(7),B=mk(2.5);
+  const smp=(N,x,y)=>{const fx=x/N.cell,fy=y/N.cell,ix=fx|0,iy=fy|0,tx=fx-ix,ty=fy-iy,a=N.g[iy*N.gw+ix],b=N.g[iy*N.gw+ix+1],c=N.g[(iy+1)*N.gw+ix],d=N.g[(iy+1)*N.gw+ix+1];return(a*(1-tx)+b*tx)*(1-ty)+(c*(1-tx)+d*tx)*ty;};
+  const out=new Float32Array(w*h);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)out[y*w+x]=smp(A,x,y)*0.6+smp(B,x,y)*0.4;
+  return out;
+}
+function boxBlur(src,w,h,r,passes){
+  let a=Float32Array.from(src),b=new Float32Array(src.length);
+  for(let p=0;p<passes;p++){
+    for(let y=0;y<h;y++){let sum=0;const o=y*w;
+      for(let x=-r;x<=r;x++)sum+=a[o+Math.min(w-1,Math.max(0,x))];
+      for(let x=0;x<w;x++){b[o+x]=sum/(2*r+1);sum+=a[o+Math.min(w-1,x+r+1)]-a[o+Math.max(0,x-r)];}}
+    for(let x=0;x<w;x++){let sum=0;
+      for(let y=-r;y<=r;y++)sum+=b[Math.min(h-1,Math.max(0,y))*w+x];
+      for(let y=0;y<h;y++){a[y*w+x]=sum/(2*r+1);sum+=b[Math.min(h-1,y+r+1)*w+x]-b[Math.max(0,y-r)*w+x];}}
+  }
+  return a;
+}
+const sstep=(a,b,v)=>{const t=clamp((v-a)/(b-a));return t*t*(3-2*t);};
+// Builds the burnt lettering once per message: ragged charred edges, a dark core, a browned scorch around it.
+function buildBurnMask(lay,lh){
+  const pad=70,blockH=lay.lines.length*lh;
+  const m=document.createElement('canvas').getContext('2d');m.font=`700 ${lay.size}px ${F_BURN}`;
+  const maxW=Math.max(...lay.lines.map(l=>m.measureText(l).width));
+  const mw=Math.ceil(maxW+pad*2),mh=Math.ceil(blockH+pad*2);
+  const c0=document.createElement('canvas');c0.width=mw;c0.height=mh;
+  const x0c=c0.getContext('2d',{willReadFrequently:true});
+  x0c.font=`700 ${lay.size}px ${F_BURN}`;x0c.textBaseline='middle';x0c.textAlign='left';x0c.fillStyle='#fff';
+  lay.lines.forEach((ln,i)=>{const lw=x0c.measureText(ln).width;x0c.fillText(ln,mw/2-lw/2,mh/2-blockH/2+(i+.5)*lh);});
+  const px=x0c.getImageData(0,0,mw,mh).data,n=mw*mh,al=new Float32Array(n);
+  for(let i=0;i<n;i++)al[i]=px[i*4+3]/255;
+  const core=boxBlur(al,mw,mh,2,2),halo=boxBlur(al,mw,mh,Math.max(8,Math.round(lay.size*.14)),3),nz=noiseField(mw,mh,91+lay.size);
+  const mkc=()=>{const c=document.createElement('canvas');c.width=mw;c.height=mh;return c;};
+  const cH=mkc(),cC=mkc(),cE=mkc();
+  const iH=cH.getContext('2d').createImageData(mw,mh),iC=cC.getContext('2d').createImageData(mw,mh),iE=cE.getContext('2d').createImageData(mw,mh);
+  for(let i=0;i<n;i++){
+    const r=core[i]+(nz[i]-.5)*.5,e=sstep(.26,.74,r);
+    const hh=clamp(halo[i]*1.6)*(1-e)*.45*(0.6+0.4*nz[i]);
+    const t=sstep(.5,.98,e*(0.78+0.3*nz[i])),o=i*4;
+    iC.data[o]=165+(92-165)*t;iC.data[o+1]=96+(42-96)*t;iC.data[o+2]=42+(14-42)*t;iC.data[o+3]=e*(170+55*t);
+    iH.data[o]=110;iH.data[o+1]=52;iH.data[o+2]=14;iH.data[o+3]=hh*255;
+    iE.data[o]=255;iE.data[o+1]=140;iE.data[o+2]=40;iE.data[o+3]=e*255;
+  }
+  cH.getContext('2d').putImageData(iH,0,0);cC.getContext('2d').putImageData(iC,0,0);cE.getContext('2d').putImageData(iE,0,0);
+  return{cH,cC,cE,mw,mh};
+}
+function drawBurn(t,t0,t1,o){
+  o=o||{};const mt=o.lower?msg().toLowerCase():msg(),LH=1.28;
+  const bw=560*S.tsize,bh=430*S.tsize,fr=document.fonts&&document.fonts.check?document.fonts.check("700 40px Nunito"):1;
+  const lay=cached('tburn|'+mt+'|'+S.tsize+'|'+fr,()=>fit(mt,F_BURN,700,bw,bh,120,28,LH));
+  const lh=lay.size*LH,blockH=lay.lines.length*lh;
+  const mk=cached('tmask|'+mt+'|'+S.tsize+'|'+fr,()=>buildBurnMask(lay,lh));
+  const total=lay.lines.reduce((a,l)=>a+l.length,0);
+  const p=seg(t,t0,t1),count=total*p,tail=Math.max(3,total*0.14),emberA=o.ember?1-seg(t,o.ember[0],o.ember[1]):1-seg(t,t1,t1+0.8);
+  ctx.save();
+  if(o.alpha!=null)ctx.globalAlpha=o.alpha;
+  ctx.translate(S.tx*W+(o.dx||0),S.ty*H+(o.dy||0));ctx.rotate((S.trot+(o.drot||0))*Math.PI/180);if(o.k)ctx.scale(o.k,o.k);
+  ctx.font=`700 ${lay.size}px ${F_BURN}`;ctx.textBaseline='middle';ctx.textAlign='left';
+  const pieces=[];let used=0,edge=null;
+  lay.lines.forEach((ln,i)=>{
+    const lw=ctx.measureText(ln).width,x0=-lw/2,y=-blockH/2+(i+.5)*lh;
+    const k=Math.max(0,Math.min(ln.length,Math.floor(count-used)));
+    pieces.push({ln,x0,y,k,start:used,lw});
+    if(k>0)edge={x:x0+ctx.measureText(ln.slice(0,k)).width,y};
+    used+=ln.length;
+  });
+  const ox=-mk.mw/2,oy=-mk.mh/2;
+  const clipDraw=(cnv,pc,from,to,mode,alpha,tall)=>{
+    const xa=pc.x0+ctx.measureText(pc.ln.slice(0,from)).width-(from===0?40:0);
+    const xb=pc.x0+ctx.measureText(pc.ln.slice(0,to)).width+(to===pc.ln.length?40:2);
+    ctx.save();ctx.beginPath();ctx.rect(xa,pc.y-lh*(tall||.62),xb-xa,lh*2*(tall||.62));ctx.clip();
+    ctx.globalCompositeOperation=mode;ctx.globalAlpha=alpha*(o.alpha==null?1:o.alpha);ctx.drawImage(cnv,ox,oy);ctx.restore();
+  };
+  // scorch around the letters, then the charred letters themselves (multiplied so the crumb shows through)
+  pieces.forEach(pc=>{if(pc.k>0)clipDraw(mk.cH,pc,0,pc.k,'multiply',1,1.1);});
+  pieces.forEach(pc=>{if(pc.k>0)clipDraw(mk.cC,pc,0,pc.k,'multiply',1);});
+  // glowing ember on the freshest letters
+  ctx.save();ctx.shadowColor='rgba(255,120,20,.9)';ctx.shadowBlur=16;
+  pieces.forEach(pc=>{
+    if(pc.k<=0)return;
+    if(o.ember){clipDraw(mk.cE,pc,0,pc.k,'screen',0.5*emberA);return;}
+    const a=Math.round(clamp(count-tail-pc.start,0,pc.k));
+    if(a<pc.k)clipDraw(mk.cE,pc,a,pc.k,'screen',0.85*(p<1?1:emberA));
+  });
+  ctx.restore();
+  // ember point and smoke
+  if(edge&&emberA>0&&!o.ember){
+    ctx.save();ctx.globalCompositeOperation='screen';
+    const g=ctx.createRadialGradient(edge.x,edge.y,0,edge.x,edge.y,lay.size*0.7);
+    g.addColorStop(0,`rgba(255,150,50,${(.6*emberA).toFixed(3)})`);g.addColorStop(1,'rgba(255,150,50,0)');
+    ctx.fillStyle=g;ctx.fillRect(edge.x-lay.size,edge.y-lay.size,lay.size*2,lay.size*2);ctx.restore();
+    for(let i=0;i<7;i++){
+      const age=((t*0.9+i/7)%1),a=0.24*(1-age)*emberA,r=12+age*36;
+      const sx=edge.x+Math.sin(i*2.3+t*2.2)*16*(age+.3),sy=edge.y-24-age*180;
+      const sg=ctx.createRadialGradient(sx,sy,0,sx,sy,r);
+      sg.addColorStop(0,`rgba(255,255,255,${a.toFixed(3)})`);sg.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=sg;ctx.fillRect(sx-r,sy-r,r*2,r*2);
+    }
+  }
+  ctx.restore();
+}
+function sceneToastPhoto(t){
+  const D=DUR.toast,push=1+0.07*seg(t,0,D);
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  ctx.save();
+  ctx.translate(W/2,H/2);ctx.scale(push,push);ctx.translate(-W/2,-H/2);
+  drawCover(S.photo);
+  drawBurn(t,0.9,3.7);
+  // soft vignette
+  const vg=ctx.createRadialGradient(W/2,H/2,H*0.25,W/2,H/2,H*0.7);
+  vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.35)');
+  ctx.fillStyle=vg;ctx.fillRect(-60,-60,W+120,H+120);
+  ctx.restore();
+  // dark band behind the logo so it always reads, then fade in from black
+  const sg2=ctx.createLinearGradient(0,0,0,420);sg2.addColorStop(0,'rgba(0,0,0,.4)');sg2.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=sg2;ctx.fillRect(0,0,W,420);
+  const fade=1-seg(t,0,0.5);if(fade>0){ctx.fillStyle=`rgba(0,0,0,${fade.toFixed(3)})`;ctx.fillRect(0,0,W,H);}
+}
+
+
+/* ---------- scene 1c: toast from a video clip ---------- */
+const vid=document.createElement('video');vid.muted=true;vid.playsInline=true;vid.preload='auto';vid.setAttribute('playsinline','');
+const VHOLD=1.0;
+function videoMode(){return S.scene==='toast'&&S.toastStyle==='video'&&S.video&&S.video.track&&S.video.scene==='toast';}
+function vTotal(){return S.video.dur+VHOLD;}
+function poseAt(t){
+  const tr=S.video.track,A=tr.pts;
+  if(t<=A[0].t)return A[0];if(t>=A[A.length-1].t)return A[A.length-1];
+  const f=t*tr.fps,i=Math.floor(f),u=f-i,a=A[i],b=A[Math.min(A.length-1,i+1)],L=(x,y)=>x+(y-x)*u;
+  return{cx:L(a.cx,b.cx),cy:L(a.cy,b.cy),w:L(a.w,b.w),ang:L(a.ang,b.ang),vis:L(a.vis,b.vis)};
+}
+function sceneToastVideo(t){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  if(vid.readyState>=2)drawCover(vid);
+  const tr=S.video.track,ps=poseAt(t);
+  if(ps.vis>0.01){
+    drawBurn(t,-9,-8,{lower:true,alpha:ps.vis,dx:(ps.cx-tr.fin.cx)*W,dy:(ps.cy-tr.fin.cy)*H,k:ps.w/tr.fin.w,drot:ps.ang-tr.fin.ang,ember:[tr.tpop,tr.tpop+1.3]});
+  }
+  const vg=ctx.createRadialGradient(W/2,H/2,H*0.3,W/2,H/2,H*0.75);
+  vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.28)');
+  ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
+  const sg2=ctx.createLinearGradient(0,0,0,420);sg2.addColorStop(0,'rgba(0,0,0,.4)');sg2.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=sg2;ctx.fillRect(0,0,W,420);
+}
+// Watches the clip once to learn where the toast is, how big it is and how it tilts, frame by frame,
+// so the burnt words can ride along with it as it pops out of the toaster.
+async function analyseClip(onProgress){
+  const D=vid.duration,fps=20,N=Math.floor(D*fps)+1,sw=108,sh=192;
+  const c=document.createElement('canvas');c.width=sw;c.height=sh;
+  const x=c.getContext('2d',{willReadFrequently:true});
+  const iw=vid.videoWidth,ih=vid.videoHeight,k=Math.max(sw/iw,sh/ih),w=iw*k,h=ih*k;
+  const raw=[];
+  for(let i=0;i<N;i++){
+    await seekVideo(Math.min(i/fps,D-0.03));
+    x.drawImage(vid,(sw-w)/2,(sh-h)/2,w,h);
+    const d=x.getImageData(0,0,sw,sh).data,m=new Uint8Array(sw*sh);
+    for(let j=0;j<sh;j++)for(let ii=0;ii<sw;ii++){
+      const o=(j*sw+ii)*4,r=d[o]/255,g=d[o+1]/255,b=d[o+2]/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),sat=mx?(mx-mn)/mx:0;
+      let hu=0;if(mx!==mn){if(mx===r)hu=((g-b)/(mx-mn))%6;else if(mx===g)hu=(b-r)/(mx-mn)+2;else hu=(r-g)/(mx-mn)+4;hu*=60;if(hu<0)hu+=360;}
+      if(hu>=18&&hu<=46&&sat>.34&&mx>.4&&mx<.98)m[j*sw+ii]=1;
+    }
+    // keep only the biggest connected blob, which is the toast
+    const lab=new Int16Array(sw*sh);let best=0,bestId=0,id=0;
+    for(let s0=0;s0<sw*sh;s0++){
+      if(!m[s0]||lab[s0])continue;
+      id++;let cnt=0;const st=[s0];lab[s0]=id;
+      while(st.length){const c=st.pop();cnt++;const cx=c%sw,cy=(c/sw)|0;
+        for(const nb of[cx>0?c-1:-1,cx<sw-1?c+1:-1,cy>0?c-sw:-1,cy<sh-1?c+sw:-1]){if(nb>=0&&m[nb]&&!lab[nb]){lab[nb]=id;st.push(nb);}}}
+      if(cnt>best){best=cnt;bestId=id;}
+    }
+    const xs=[],ys=[],top=new Array(sw).fill(-1);
+    for(let j=0;j<sh;j++)for(let ii=0;ii<sw;ii++){if(lab[j*sw+ii]===bestId&&bestId){xs.push(ii);ys.push(j);if(top[ii]<0)top[ii]=j;}}
+    const q=(arr,f)=>arr[Math.min(arr.length-1,Math.floor(arr.length*f))];
+    if(xs.length<40){raw.push({ok:false,area:0});}
+    else{
+      xs.sort((m,n)=>m-n);ys.sort((m,n)=>m-n);
+      const x0=q(xs,.03),x1=q(xs,.97),y0=q(ys,.03),y1=q(ys,.97);
+      let sx=0,sy=0,sxx=0,sxy=0,n=0;
+      for(let ii=Math.ceil(x0+(x1-x0)*.18);ii<=Math.floor(x1-(x1-x0)*.18);ii++){if(top[ii]>=0){n++;sx+=ii;sy+=top[ii];sxx+=ii*ii;sxy+=ii*top[ii];}}
+      const slope=n>5?(n*sxy-sx*sy)/Math.max(1e-6,(n*sxx-sx*sx)):0;
+      raw.push({ok:true,area:xs.length,cx:(x0+x1)/2/sw,cy:(y0+y1)/2/sh,w:(x1-x0)/sw,ang:Math.atan(slope)*180/Math.PI});
+    }
+    if(onProgress&&i%8===0)onProgress(i/N);
+  }
+  // the settled toast is the average of the last few frames
+  const tail=raw.slice(-4).filter(r=>r.ok);
+  if(!tail.length)throw new Error('no toast');
+  const av=key=>tail.reduce((a,r)=>a+r[key],0)/tail.length;
+  const fin={cx:av('cx'),cy:av('cy'),w:av('w'),ang:av('ang'),area:av('area')};
+  // fill gaps, smooth, and work out how visible the face is
+  let last=null;const filled=raw.map(r=>{if(r.ok){last=r;return r;}return last?{...last,area:0}:{ok:false,area:0,cx:fin.cx,cy:fin.cy,w:fin.w,ang:fin.ang};});
+  const sm=(i,key)=>{let a=0,n=0;for(let j=i-2;j<=i+2;j++){if(j>=0&&j<filled.length){a+=filled[j][key];n++;}}return a/n;};
+  const sstepL=(a,b,v)=>{const t=Math.max(0,Math.min(1,(v-a)/(b-a)));return t*t*(3-2*t);};
+  const pts=filled.map((r,i)=>({t:i/fps,cx:sm(i,'cx'),cy:sm(i,'cy'),w:sm(i,'w'),ang:0,vis:sstepL(.72,.92,sm(i,'area')/fin.area)}));
+  // once the toast has shown its face it keeps it
+  let seen=false;pts.forEach(p=>{if(p.vis>=.98)seen=true;if(seen)p.vis=1;});
+  const first=pts.find(p=>p.vis>=.5);
+  return{fps,pts,fin,tpop:first?first.t:0};
+}
+function seekVideo(to){return new Promise(res=>{
+  if(!vid.src||!isFinite(vid.duration)){res();return;}
+  vid.pause();
+  let fin=false;const done=()=>{if(fin)return;fin=true;vid.removeEventListener('seeked',done);res();};
+  vid.addEventListener('seeked',done);
+  vid.currentTime=Math.max(0,Math.min(to,vid.duration-0.03));
+  setTimeout(done,1500);
+});}
+function playVideo(opts){
+  cancelAnimationFrame(raf);const my=++token;
+  vid.pause();
+  const T=vTotal(),D=S.video.dur;let endAt=0;
+  const go=()=>{
+    if(my!==token)return;
+    vid.play().catch(()=>{});
+    function step(now){
+      if(my!==token)return;
+      let t;
+      if(!vid.ended&&vid.currentTime<D-0.04)t=vid.currentTime;
+      else{if(!endAt)endAt=now;t=D-0.04+(now-endAt)/1000;}
+      if(t>=T){
+        if(opts.loop){playVideo(opts);return;}
+        render(T);if(opts.onEnd)opts.onEnd();return;
+      }
+      render(t);raf=requestAnimationFrame(step);
+    }
+    raf=requestAnimationFrame(step);
+  };
+  vid.currentTime=0;
+  let started=false;const kick=()=>{if(started)return;started=true;vid.removeEventListener('seeked',kick);go();};
+  vid.addEventListener('seeked',kick);setTimeout(kick,600);
+}
+
+/* ---------- scene 2: typewriter ---------- */
+function sceneType(t){
+  const D=DUR.type,px=200,pw=680,platenY=1150,visH=730;
+  const slide=ease.out(seg(t,0,0.9)),ptop=platenY-visH*slide;
+  const lay=cached('type|'+msg(),()=>fit(msg(),F_TYPE,400,560,560,56,28,1.5));
+  const total=lay.lines.reduce((a,l)=>a+l.length,0);
+  const prog=seg(t,1.0,D-1.7),raw=total*prog,n=Math.floor(raw),frac=raw-n;
+  const typing=prog>0&&prog<1;
+  const jig=typing&&(n%2)?1.5:0;
+  // paper
+  ctx.save();ctx.translate(0,jig);
+  ctx.shadowColor='rgba(0,0,0,.2)';ctx.shadowBlur=26;ctx.shadowOffsetY=10;
+  ctx.fillStyle='#FFFDF6';frr(px,ptop,pw,visH+220,6);
+  ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  ctx.fillStyle=S.accent;ctx.fillRect(px,ptop,pw,12);
+  if(slide>=1){
+    ctx.font=`400 ${lay.size}px ${F_TYPE}`;ctx.textAlign='left';ctx.textBaseline='alphabetic';
+    ctx.fillStyle='#2b2623';
+    const lh=lay.size*1.5,y0=ptop+110+lay.size,x0=px+64;
+    let rem=n,curX=x0,curY=y0;
+    lay.lines.forEach((ln,i)=>{
+      const take=Math.min(rem,ln.length);
+      if(take>0)ctx.fillText(ln.slice(0,take),x0,y0+i*lh);
+      if(rem>=0&&rem<=ln.length&&(rem>0||i===0)){curX=x0+ctx.measureText(ln.slice(0,take)).width;curY=y0+i*lh;}
+      rem-=take;
+    });
+    if(t<D-0.4&&(typing||Math.floor(t*3)%2===0)){ctx.fillStyle=S.accent;ctx.fillRect(curX+2,curY-lay.size*0.78,lay.size*0.5,lay.size*0.95);}
+  }
+  ctx.restore();
+  // body
+  ctx.fillStyle=shade(S.accent,-.3);frr(130,platenY+60,820,440,70);
+  ctx.fillStyle=S.accent;frr(110,platenY+40,860,430,70);
+  ctx.fillStyle=shade(S.accent,.3);frr(160,platenY+70,760,18,9);
+  ctx.fillStyle=shade(S.accent,-.45);frr(400,platenY+100,280,46,23);
+  // platen and knobs
+  ctx.fillStyle='#2d2a2a';frr(150,platenY-12,780,72,36);
+  ctx.fillStyle='#4a4545';frr(170,platenY-4,740,14,7);
+  ctx.fillStyle=S.pop;circle(125,platenY+24,38);circle(955,platenY+24,38);
+  ctx.fillStyle=shade(S.pop,-.25);circle(125,platenY+24,15);circle(955,platenY+24,15);
+  line(125,platenY+24,66,platenY-44,14,'#2d2a2a');ctx.fillStyle=S.pop;circle(66,platenY-44,16);
+  // keys
+  const rows=['QWERTYUIO','ASDFGHJKL','ZXCVBNM,.'];
+  const pressed=typing&&frac<0.5?(n*7+3)%27:-1;
+  rows.forEach((row,r)=>{
+    [...row].forEach((ch,c)=>{
+      const idx=r*9+c,x=540+(c-4)*84,y=platenY+215+r*86,down=idx===pressed?8:0;
+      ctx.fillStyle=shade(S.accent,-.4);circle(x,y+10,34);
+      ctx.fillStyle=down?shade('#FFF6E6',-.1):'#FFF6E6';circle(x,y+down,34);
+      ctx.strokeStyle=S.ink;ctx.lineWidth=5;ctx.beginPath();ctx.arc(x,y+down,30,0,Math.PI*2);ctx.stroke();
+      ctx.font=`600 28px ${F_SKATE}`;ctx.fillStyle=S.ink;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(ch,x,y+down+1);
+    });
+  });
+  // ding
+  const d=seg(t,D-1.5,D-1.2);
+  if(d>0){
+    const sc=ease.back(d);
+    ctx.save();ctx.translate(905,1010);ctx.rotate(-0.18);ctx.scale(sc,sc);
+    ctx.font=`700 60px ${F_SKATE}`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=S.ink;
+    ctx.fillText('ding!',0,0);
+    ctx.restore();
+    for(let i=0;i<3;i++){const a=-0.9+i*0.5;line(905+Math.cos(a)*100,1010+Math.sin(a)*100-40,905+Math.cos(a)*140,1010+Math.sin(a)*140-40,8,S.pop);}
+  }
+}
+
+/* ---------- scene 3: roller boots ---------- */
+function ik(hx,hy,ax,ay,l1,l2){
+  const dx=ax-hx,dy=ay-hy;let d=Math.hypot(dx,dy);d=Math.min(d,l1+l2-0.01);
+  const a=Math.atan2(dy,dx),A=Math.acos(clamp((l1*l1+d*d-l2*l2)/(2*l1*d),-1,1)),ang=a-A;
+  return [hx+Math.cos(ang)*l1,hy+Math.sin(ang)*l1];
+}
+function skater(x,feet,s,t){
+  ctx.save();ctx.translate(x,feet);ctx.scale(s,s);ctx.lineJoin='round';ctx.lineCap='round';
+  const p=t*5.5,bob=Math.sin(p*2)*5,hipX=0,hipY=-180+bob,wr=x*0.06;
+  const headX=24,headY=-376+bob*0.8;
+  const legCol=S.ink;
+  function boot(ax,ay){
+    ctx.fillStyle=S.accent;frr(ax-30,ay-34,58,48,16);frr(ax-12,ay-6,62,32,16);
+    ctx.fillStyle=S.pop;frr(ax-30,ay-34,58,12,6);
+    ctx.fillStyle=S.ink;frr(ax-34,ay+20,104,9,4);
+    [ax-18,ax+44].forEach(wx=>{
+      ctx.fillStyle=S.pop;circle(wx,ay+36,15);ctx.fillStyle=S.ink;circle(wx,ay+36,5);
+      line(wx+Math.cos(wr)*10,ay+36+Math.sin(wr)*10,wx-Math.cos(wr)*10,ay+36-Math.sin(wr)*10,3,S.ink);
+    });
+  }
+  function leg(q){
+    const ax=62*Math.sin(q)+6,ay=-48-30*Math.max(0,Math.cos(q));
+    const k=ik(hipX,hipY,ax,ay,80,72);
+    line(hipX,hipY,k[0],k[1],34,legCol);line(k[0],k[1],ax,ay-6,28,legCol);
+    boot(ax,ay);
+  }
+  function arm(q){
+    const sx=12,sy=-300+bob,th=0.7*Math.sin(q),ex=sx+Math.sin(th)*56,ey=sy+Math.cos(th)*56;
+    const th2=th+0.9,fx=ex+Math.sin(th2)*50,fy=ey+Math.cos(th2)*50;
+    line(sx,sy,ex,ey,26,S.pop);line(ex,ey,fx,fy,20,S.skin);ctx.fillStyle=S.skin;circle(fx,fy,12);
+  }
+  // ponytail
+  const wv=Math.sin(p*2+1)*14,wv2=Math.cos(p*2)*12;
+  ctx.strokeStyle=S.hair;ctx.lineWidth=34;ctx.beginPath();ctx.moveTo(headX-22,headY-14);
+  ctx.quadraticCurveTo(headX-80,headY-40+wv,headX-124,headY+10+wv2);ctx.stroke();
+  arm(p+Math.PI);
+  leg(p+Math.PI);
+  // torso
+  ctx.fillStyle=S.pop;ctx.strokeStyle=S.pop;ctx.lineWidth=16;
+  ctx.beginPath();ctx.moveTo(-22,-316+bob);ctx.lineTo(42,-318+bob);ctx.lineTo(36,-178+bob);ctx.lineTo(-30,-178+bob);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle=shade(S.pop,-.18);ctx.fillRect(-30,-196+bob,66,14);
+  ctx.fillStyle=S.skin;frr(headX-14,-340+bob,26,34,8);
+  leg(p);
+  arm(p);
+  // head
+  ctx.fillStyle=S.skin;circle(headX,headY,40);
+  ctx.fillStyle=S.hair;ctx.beginPath();ctx.arc(headX,headY,43,Math.PI*0.88,Math.PI*2.1);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(headX-40,headY-8);ctx.quadraticCurveTo(headX+10,headY-56,headX+43,headY-14);ctx.quadraticCurveTo(headX+18,headY-30,headX-6,headY-22);ctx.closePath();ctx.fill();
+  ctx.strokeStyle=S.accent;ctx.lineWidth=10;ctx.beginPath();ctx.arc(headX,headY,41,Math.PI*1.15,Math.PI*1.7);ctx.stroke();
+  ctx.fillStyle=S.pop;circle(headX-24,headY-14,12);
+  ctx.fillStyle=S.ink;circle(headX+16,headY-2,4.5);
+  ctx.strokeStyle=S.ink;ctx.lineWidth=4;ctx.beginPath();ctx.arc(headX+12,headY+10,13,0.15*Math.PI,0.85*Math.PI);ctx.stroke();
+  ctx.fillStyle='rgba(255,110,110,.35)';circle(headX+26,headY+12,8);
+  ctx.restore();
+}
+function sceneSkate(t){
+  const D=DUR.skate;
+  const lay=cached('skate|'+msg(),()=>fit(msg(),F_SKATE,600,880,700,92,44,1.25));
+  const n=lay.lines.length,rowH=Math.min(400,1150/n),s=Math.min(1,rowH*0.92/420);
+  const top0=470+(1150-rowH*n)/2,rt=(D-1.1)/n;
+  const txtCol=lum(S.accent)>0.62?S.ink:'#FFFDF7';
+  ctx.font=`600 ${lay.size}px ${F_SKATE}`;
+  for(let i=0;i<n;i++){
+    const feet=top0+rowH*(i+1)-24,ts=0.3+i*rt,te=ts+rt*0.9,k=seg(t,ts,te);
+    const sx=-240*s+(W+480*s)*k;
+    // floor
+    ctx.globalAlpha=.8;line(90,feet+4,W-90,feet+4,6,shade(S.bg,-.12));ctx.globalAlpha=1;
+    // ribbon and words, revealed behind the skater
+    const clipX=k>=1?W:(t>ts?Math.max(0,sx-60*s):0);
+    if(clipX>0){
+      ctx.save();ctx.beginPath();ctx.rect(0,feet-rowH,clipX,rowH+40);ctx.clip();
+      ctx.font=`600 ${lay.size}px ${F_SKATE}`;
+      const lw=ctx.measureText(lay.lines[i]).width,bandH=lay.size*1.45,cy=feet-110*s;
+      ctx.fillStyle=S.accent;frr((W-lw)/2-44,cy-bandH/2,lw+88,bandH,bandH/2);
+      ctx.fillStyle=txtCol;ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(lay.lines[i],W/2,cy+lay.size*0.04);
+      ctx.restore();
+    }
+    if(k>0&&k<1){
+      for(let j=0;j<3;j++){
+        ctx.globalAlpha=.4;
+        line(sx-(330+j*20)*s,feet-(120+j*60)*s,sx-(190+j*40)*s,feet-(120+j*60)*s,8*s,S.accent);
+      }
+      ctx.globalAlpha=1;
+      skater(sx,feet,s,t);
+    }
+  }
+}
+
+/* ---------- render and playback ---------- */
+const scenes={toast:sceneToast,type:sceneType,skate:sceneSkate};
+function dur(){return anyVid()?vTotal():DUR[S.scene];}
+function render(t){
+  ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,H);
+  ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.globalAlpha=1;
+  if(inkMode()){LOGO_LIGHT=true;sceneInkVideo(t);drawLogo();LOGO_LIGHT=false;}
+  else if(isNewScene()){LOGO_LIGHT=true;sceneInkFallback(t);drawLogo();LOGO_LIGHT=false;}
+  else if(videoMode()){LOGO_LIGHT=true;sceneToastVideo(t);drawLogo();LOGO_LIGHT=false;}
+  else if(S.scene==='toast'&&S.toastStyle==='photo'&&S.photo){LOGO_LIGHT=true;sceneToastPhoto(t);drawLogo();LOGO_LIGHT=false;}
+  else{drawBG(t);drawLogo();scenes[S.scene](t);}
+}
+let raf=0,token=0;
+function play(opts){
+  opts=opts||{};cancelAnimationFrame(raf);
+  if(anyVid()){playVideo(opts);return;}
+  const my=++token,D=dur(),total=D+(opts.record?0.6:0.9),start=performance.now();
+  function step(now){
+    if(my!==token)return;
+    let t=(now-start)/1000;
+    if(t>=total){
+      if(opts.loop){t=t%total;}
+      else{render(D);if(opts.onEnd)opts.onEnd();return;}
+    }
+    render(Math.min(t,D));
+    raf=requestAnimationFrame(step);
+  }
+  raf=requestAnimationFrame(step);
+}
+let restartTimer=0;
+function restart(delay){clearTimeout(restartTimer);restartTimer=setTimeout(()=>play({loop:true}),delay||0);}
+
+/* ---------- ui ---------- */
+const $=id=>document.getElementById(id);
+const bank=$('bank'),msgBox=$('msg');
+const ALL=[].concat(LOCAL.map(t=>({t,local:true,k:'local'})),MESSAGES.map(t=>({t,local:false,k:'mot'})),FERAL.map(t=>({t,local:false,k:'feral'})),STOIC.map(t=>({t,local:false,k:'stoic'})),HAIR.map(t=>({t,local:true,k:'hair'})));
+function town(){return $('town').value.trim();}
+function fill(t){return t.replace(/\{town\}/g,town()||'[your town]');}
+(function(){
+  const g1=document.createElement('optgroup');g1.label='Local to your clinic';
+  const g2=document.createElement('optgroup');g2.label='Motivation';
+  const g3=document.createElement('optgroup');g3.label='Feral';
+  const g4=document.createElement('optgroup');g4.label='Stoic';
+  const g5=document.createElement('optgroup');g5.label='Hairdressers';
+  const gm={local:g1,mot:g2,feral:g3,stoic:g4,hair:g5};
+  ALL.forEach((m,i)=>{const o=document.createElement('option');o.value=i;o.textContent=m.t.length>62?m.t.slice(0,60)+'...':m.t;gm[m.k].appendChild(o);});
+  bank.appendChild(g1);bank.appendChild(g2);bank.appendChild(g3);bank.appendChild(g4);bank.appendChild(g5);
+})();
+let TPL=null;
+function setMsg(m,tpl){TPL=tpl||null;S.msg=m;msgBox.value=m;$('count').textContent=m.length+' characters';}
+function pick(i){const m=ALL[i];bank.value=i;setMsg(m.local?fill(m.t):m.t,m.local?m.t:null);}
+function applyTown(){if(TPL){setMsg(fill(TPL),TPL);restart();}else refreshLabels();}
+function refreshLabels(){}
+$('town').addEventListener('input',()=>{$('town').dataset.auto='0';applyTown();});
+bank.addEventListener('change',()=>{pick(bank.value);restart();});
+$('shuffle').addEventListener('click',()=>{
+  const pool=ALL.map((m,i)=>i).filter(i=>ALL[i].k!=='hair'&&(town()||!ALL[i].local));
+  const wantLocal=town()&&Math.random()<.5;
+  const sub=pool.filter(i=>ALL[i].local===!!wantLocal);
+  let i,n=0;do{i=sub[Math.floor(Math.random()*sub.length)];n++;}while(ALL[i].t===S.msg&&n<20);
+  pick(i);restart();
+});
+msgBox.addEventListener('input',()=>{TPL=null;S.msg=msgBox.value;$('count').textContent=S.msg.length+' characters';restart(300);});
+
+const pal=$('palettes');
+PALETTES.forEach(p=>{
+  const b=document.createElement('button');b.type='button';b.title=p.n;
+  b.style.background=`linear-gradient(135deg,${p.bg} 50%,${p.accent} 50%)`;
+  b.addEventListener('click',()=>{S.bg=p.bg;S.accent=p.accent;S.ink=p.ink;S.pop=p.pop;syncColours();restart();});
+  pal.appendChild(b);
+});
+function syncColours(){$('cBg').value=S.bg;$('cAccent').value=S.accent;$('cPop').value=S.pop;$('cInk').value=S.ink;}
+[['cBg','bg'],['cAccent','accent'],['cPop','pop'],['cInk','ink']].forEach(([id,key])=>$(id).addEventListener('input',e=>{S[key]=e.target.value;restart(150);}));
+$('skin').addEventListener('change',e=>{S.skin=e.target.value;restart();});
+$('hair').addEventListener('change',e=>{S.hair=e.target.value;restart();});
+$('showLogo').addEventListener('change',e=>{S.showLogo=e.target.checked;restart();});
+$('handle').addEventListener('input',e=>{S.handle=e.target.value.trim();restart(300);});
+
+/* ---------- logo upload: always a transparent background ---------- */
+function makeTransparent(img){
+  const w=img.naturalWidth||img.width,h=img.naturalHeight||img.height,k=Math.min(1,1600/Math.max(w,h));
+  const cw=Math.max(1,Math.round(w*k)),ch=Math.max(1,Math.round(h*k));
+  const c=document.createElement('canvas');c.width=cw;c.height=ch;
+  const x=c.getContext('2d',{willReadFrequently:true});x.drawImage(img,0,0,cw,ch);
+  const id=x.getImageData(0,0,cw,ch),d=id.data;
+  const border=[];for(let i=0;i<cw;i++){border.push(i,(ch-1)*cw+i);}for(let j=0;j<ch;j++){border.push(j*cw,j*cw+cw-1);}
+  let clear=0;border.forEach(i=>{if(d[i*4+3]<250)clear++;});
+  let bg=null;
+  if(clear/border.length<.6){
+    const bk=new Map();
+    border.forEach(i=>{const o=i*4,key=((d[o]>>4)<<8)|((d[o+1]>>4)<<4)|(d[o+2]>>4),b=bk.get(key)||{n:0,r:0,g:0,b:0};b.n++;b.r+=d[o];b.g+=d[o+1];b.b+=d[o+2];bk.set(key,b);});
+    let best=null;bk.forEach(b=>{if(!best||b.n>best.n)best=b;});
+    if(best&&best.n/border.length>.5)bg=[best.r/best.n,best.g/best.n,best.b/best.n];
+  }
+  if(bg){
+    const lo=26,hi=96;
+    for(let i=0;i<cw*ch;i++){
+      const o=i*4,dr=d[o]-bg[0],dg=d[o+1]-bg[1],db=d[o+2]-bg[2],dist=Math.sqrt(dr*dr+dg*dg+db*db);
+      let t=(dist-lo)/(hi-lo);t=t<=0?0:t>=1?1:t*t*(3-2*t);
+      if(t>0&&t<1){for(let q=0;q<3;q++){const v=(d[o+q]-bg[q]*(1-t))/t;d[o+q]=v<0?0:v>255?255:v;}}
+      d[o+3]=Math.round(d[o+3]*t);
+    }
+  }
+  x.putImageData(id,0,0);
+  // trim the empty space around the logo
+  let x0=cw,y0=ch,x1=-1,y1=-1;
+  for(let j=0;j<ch;j++)for(let i=0;i<cw;i++){if(d[(j*cw+i)*4+3]>10){if(i<x0)x0=i;if(i>x1)x1=i;if(j<y0)y0=j;if(j>y1)y1=j;}}
+  if(x1<0)return{canvas:c,cut:false};
+  const pad=4;x0=Math.max(0,x0-pad);y0=Math.max(0,y0-pad);x1=Math.min(cw-1,x1+pad);y1=Math.min(ch-1,y1+pad);
+  const o2=document.createElement('canvas');o2.width=x1-x0+1;o2.height=y1-y0+1;
+  o2.getContext('2d').drawImage(c,x0,y0,o2.width,o2.height,0,0,o2.width,o2.height);
+  return{canvas:o2,cut:!!bg};
+}
+function logoIsDark(c){
+  const x=c.getContext('2d'),d=x.getImageData(0,0,c.width,c.height).data;let sum=0,n=0;
+  for(let i=0;i<d.length;i+=16){if(d[i+3]>40){sum+=(0.299*d[i]+0.587*d[i+1]+0.114*d[i+2])/255;n++;}}
+  return n?sum/n<0.5:false;
+}
+function applyLogo(){
+  const base=S.logoMode==='orig'?S.logoOrigImg:S.logoCut;
+  const w=base.naturalWidth||base.width,h=base.naturalHeight||base.height;
+  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');
+  x.drawImage(base,0,0,w,h);
+  if(S.logoWhite){x.globalCompositeOperation='source-in';x.fillStyle='#fff';x.fillRect(0,0,w,h);}
+  const url=c.toDataURL('image/png'),im=new Image();
+  im.onload=()=>{
+    S.logoImg=im;S.showLogo=true;$('showLogo').checked=true;
+    const pv=$('logoPrev');pv.src=url;pv.style.display='block';pv.style.backgroundColor=S.logoWhite?'#5c5c68':'#f4f4f6';
+    const dl=$('logoDl');dl.href=url;dl.style.display='inline';
+    $('logoOrig').style.display='inline-block';$('logoOrig').textContent=S.logoMode==='orig'?'Take the background away again':'Keep the original background';
+    $('logoWhiteRow').style.display='flex';$('logoWhite').checked=!!S.logoWhite;
+    restart();
+  };
+  im.src=url;
+}
+function useLogo(img,cutCanvas){
+  S.logoOrigImg=img;S.logoCut=cutCanvas;S.logoMode='cut';
+  S.logoWhite=logoIsDark(cutCanvas);
+  applyLogo();
+}
+$('logo').addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{const im=new Image();im.onload=()=>{
+    const r=makeTransparent(im);useLogo(im,r.canvas);
+    $('logoNote').textContent=(r.cut?'Logo added with the background taken away.':'Logo added. It already had a see through background.')+(S.logoWhite?' It is a dark logo, so I made it white so it shows on the photo. Untick Make the logo white to see it in its own colours.':'')+' If a coloured box is part of the logo, press Keep the original background.';
+  };im.src=rd.result;};
+  rd.readAsDataURL(f);
+});
+$('logoOrig').addEventListener('click',()=>{if(!S.logoOrigImg)return;S.logoMode=S.logoMode==='orig'?'cut':'orig';applyLogo();});
+$('logoWhite').addEventListener('change',e=>{S.logoWhite=e.target.checked;applyLogo();});
+
+
+$('replay').addEventListener('click',()=>play({loop:true}));
+$('safe').addEventListener('change',e=>$('guides').classList.toggle('on',e.target.checked));
+
+$('cover').addEventListener('click',async()=>{
+  await stillFrame();
+  cv.toBlob(b=>save(b,`morning-motivation-${S.scene}-cover.png`),'image/png');
+  restart(1200);
+});
+function save(blob,name){
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
+}
+async function recordVideo(){
+  if(isNewScene())throw new Error(needsClipMsg());
+  if(!window.MediaRecorder||!cv.captureStream)throw new Error('This browser cannot record video. Please use Chrome, Edge or Safari on a computer.');
+  const types=['video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp9','video/webm'];
+  const mime=types.find(t=>MediaRecorder.isTypeSupported(t))||'';
+  const rec=new MediaRecorder(cv.captureStream(30),mime?{mimeType:mime,videoBitsPerSecond:8000000}:{videoBitsPerSecond:8000000});
+  const chunks=[];rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
+  const done=new Promise(r=>{rec.onstop=r;});
+  render(0);rec.start();
+  play({record:true,onEnd:()=>setTimeout(()=>rec.stop(),200)});
+  await done;
+  const type=rec.mimeType||mime||'video/webm';
+  return {blob:new Blob(chunks,{type}),ext:type.includes('mp4')?'mp4':'webm'};
+}
+$('dl').addEventListener('click',async()=>{
+  const btn=$('dl');btn.disabled=true;const old=btn.textContent;btn.textContent='Recording...';
+  try{
+    const {blob,ext}=await recordVideo();
+    save(blob,`morning-motivation-${S.scene}.${ext}`);
+    $('fmtNote').textContent=ext==='mp4'
+      ?'Saved as an MP4, ready to upload to Instagram. The video is silent so you can add trending audio.'
+      :'Saved as a WEBM file because this browser cannot make MP4s. Use Chrome or Safari for an MP4, or convert it before uploading.';
+  }catch(e){alert(e.message||'Recording failed');}
+  btn.disabled=false;btn.textContent=old;restart(600);
+});
+
+/* ---------- real photo toast controls ---------- */
+function syncToastOpts(){
+  const toast=S.scene==='toast';
+  $('toastOpts').style.display=toast?'block':'none';
+  $('photoOpts').style.display=toast&&S.toastStyle==='photo'?'block':'none';
+  $('vidOpts').style.display=toast&&S.toastStyle==='video'?'block':'none';
+  $('clipOpts').style.display=toast?'none':'block';
+  $('poseOpts').style.display=(toast?(S.toastStyle==='photo'||S.toastStyle==='video'):true)?'block':'none';
+  $('findToast').style.display=toast?'inline-block':'none';
+  $('clipNote').textContent=SC[S.scene].legacy?'Until a real clip is added you will see the old illustration. Make a real video clip with Veo (billed to your Google key) or upload your own. Your words are added on top.':'The video is made by Veo, which bills your Google key for each clip, then your words are added on top. You can also upload your own video of this scene.';
+}
+document.querySelectorAll('input[name=tstyle]').forEach(r=>r.addEventListener('change',()=>{S.toastStyle=r.value;syncToastOpts();restart();}));
+async function stillFrame(){if(anyVid()){token++;cancelAnimationFrame(raf);await seekVideo(S.video.dur);}render(anyVid()?vTotal()-0.4:dur());}
+async function holdFrame(){token++;cancelAnimationFrame(raf);await stillFrame();restart(1500);}
+[['pX','tx',v=>v/100],['pY','ty',v=>v/100],['pS','tsize',v=>v/100],['pR','trot',v=>v]].forEach(([id,key,f])=>$(id).addEventListener('input',e=>{S[key]=f(Number(e.target.value));if(S.scene!=='toast'){SAVED_POSE[S.scene]={tx:S.tx,ty:S.ty,tsize:S.tsize,trot:S.trot};savePoses();}holdFrame();}));
+function setPhoto(src){
+  const im=new Image();
+  im.onload=()=>{S.photo=im;$('photoStatus').textContent='Photo added. Move the words with the sliders, or press Find the toast.';findToast(true);restart();};
+  im.onerror=()=>{$('photoStatus').textContent='That photo would not open. Try a JPG or PNG.';};
+  im.src=src;
+}
+$('photoFile').addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  const rd=new FileReader();rd.onload=()=>setPhoto(rd.result);rd.readAsDataURL(f);
+});
+
+function openClip(url,label){
+  const st=$('vidStatus');st.textContent='Opening '+label+'...';
+  vid.onloadedmetadata=async()=>{
+    const d=vid.duration;
+    if(!isFinite(d)||d<1){st.textContent='That clip would not open. Try an MP4.';return;}
+    if(d>10){st.textContent='That clip is '+d.toFixed(1)+' seconds. Please use one of 10 seconds or less.';return;}
+    S.video=null;token++;
+    try{
+      st.textContent='Watching your clip so the words can ride on the toast...';
+      vid.dur=d;
+      const track=await analyseClip(f=>{st.textContent='Watching your clip so the words can ride on the toast... '+Math.round(f*100)+'%';});
+      CLIPS.toast={url:vid.src,dur:d,track};vid.setAttribute('data-s','toast');
+      POSE.toast={tx:track.fin.cx,ty:track.fin.cy+0.075,tsize:clamp(track.fin.w*W*0.68/560,.4,1.6),trot:0};
+      if(S.scene==='toast'){S.video={dur:d,track,scene:'toast'};applyPose('toast');}else{vid.removeAttribute('data-s');await bindClip(S.scene);}
+      syncTiles();
+      st.textContent='Clip added ('+d.toFixed(1)+' seconds). The words are burnt into the toast and travel with it. Nudge them with the sliders if you like.';
+      restart();
+    }catch(e){st.textContent='I could not find the toast in that clip. Please check it is a clip of plain toast popping up.';}
+  };
+  vid.onerror=()=>{st.textContent='This browser cannot open that clip. Try an MP4 (H.264) or use Chrome.';};
+  vid.src=url;vid.load();
+}
+$('vidFile').addEventListener('change',e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  openClip(URL.createObjectURL(f),'your clip');
+});
+$('vidFile2').addEventListener('change',async e=>{
+  const f=e.target.files&&e.target.files[0];if(!f)return;
+  const st=$('aiClip2St');st.textContent='Opening your clip...';
+  try{await loadClipFor(S.scene,URL.createObjectURL(f));st.textContent='Clip added.';}catch(err){st.textContent=err.message;}
+});
+// The built in toast clip loads by itself on the site, so the cartoon toast is never what you see first.
+fetch('/morning-motivation/clips/toast-1.mp4',{method:'HEAD'}).then(r=>{if(r.ok&&(r.headers.get('content-type')||'').indexOf('video')===0)openClip('/morning-motivation/clips/toast-1.mp4','the built in toast clip');}).catch(()=>{});
+let variantNo=Math.floor(Math.random()*4);
+$('genPhoto').addEventListener('click',async()=>{
+  const btn=$('genPhoto');btn.disabled=true;$('photoStatus').textContent='Making your toast photo. This takes about 20 seconds...';
+  try{
+    const r=await fetch(BASE+'/api/morning-motivation/toast-photo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({variant:variantNo++%4})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||!d.image)throw new Error(d.error||'The photo maker is not reachable here');
+    setPhoto(d.image);
+  }catch(e){$('photoStatus').textContent=(e.message||'Could not make a photo')+'. You can still upload your own photo.';}
+  btn.disabled=false;
+});
+// A best guess at where the toast is: golden brown pixels near the middle of the frame.
+function findToast(quiet){
+  const src=videoMode()?vid:S.photo;
+  if(!src)return;
+  const sw=108,sh=192,c=document.createElement('canvas');c.width=sw;c.height=sh;
+  const x=c.getContext('2d',{willReadFrequently:true});
+  const iw=src.videoWidth||src.width,ih=src.videoHeight||src.height,k=Math.max(sw/iw,sh/ih),w=iw*k,h=ih*k;
+  x.drawImage(src,(sw-w)/2,(sh-h)/2,w,h);
+  const d=x.getImageData(0,0,sw,sh).data;const xs=[],ys=[];
+  for(let j=0;j<sh;j++)for(let i=0;i<sw;i++){
+    const o=(j*sw+i)*4,r=d[o]/255,g=d[o+1]/255,b=d[o+2]/255,mx=Math.max(r,g,b),mn=Math.min(r,g,b),v=mx,sat=mx?(mx-mn)/mx:0;
+    let hu=0;if(mx!==mn){if(mx===r)hu=((g-b)/(mx-mn))%6;else if(mx===g)hu=(b-r)/(mx-mn)+2;else hu=(r-g)/(mx-mn)+4;hu*=60;if(hu<0)hu+=360;}
+    const dx=i/sw-.5,dy=j/sh-.5;
+    if(hu>=20&&hu<=48&&sat>.28&&v>.38&&v<.97&&Math.abs(dx)<.42&&Math.abs(dy)<.36){xs.push(i);ys.push(j);}
+  }
+  if(xs.length<sw*sh*0.03){if(!quiet)$('photoStatus').textContent='I could not spot the toast. Use the sliders to put the words where you want them.';return;}
+  xs.sort((m,n)=>m-n);ys.sort((m,n)=>m-n);
+  const q=(arr,f)=>arr[Math.min(arr.length-1,Math.floor(arr.length*f))];
+  const x0=q(xs,.03),x1=q(xs,.97),y0=q(ys,.03),y1=q(ys,.97);
+  S.tx=(x0+x1)/2/sw;S.ty=(y0+y1)/2/sh;
+  const toastW=(x1-x0)*(W/sw);
+  S.tsize=clamp(toastW*0.64/560,.5,1.6);S.trot=0;
+  $('pX').value=Math.round(S.tx*100);$('pY').value=Math.round(S.ty*100);$('pS').value=Math.round(S.tsize*100);$('pR').value=0;
+  holdFrame();
+}
+$('findToast').addEventListener('click',async()=>{if(videoMode())await seekVideo(S.video.dur);findToast(false);});
+
+/* ---------- make a plain clip with Veo (the same video maker as the Veo Video tool) ---------- */
+const AI_PROMPT={toast:'Cinematic locked off shot of a retro chrome toaster on a bright, sunny kitchen counter. A single slice of golden brown toast pops up out of the toaster and hovers at the top, a little steam rising, soft morning light, shallow depth of field, steady camera. The toast is plain with no marks, no writing and no text. No people. Vertical 9:16.'};
+$('aiClip').addEventListener('click',async()=>{
+  const btn=$('aiClip'),st=$('aiClipSt');btn.disabled=true;st.textContent='Sending to Veo...';
+  try{await makeClip('toast',m=>{st.textContent=m;});st.textContent='Done. If the toast does not look right, press the button for another go.';}
+  catch(e){st.textContent=e.message||'Could not make a clip';}
+  btn.disabled=false;
+});
+$('aiClip2').addEventListener('click',async()=>{
+  const btn=$('aiClip2'),st=$('aiClip2St'),id=S.scene;btn.disabled=true;st.textContent='Sending to Veo...';
+  try{await makeClip(id,m=>{st.textContent=m;});st.textContent='Done. Move the words with the sliders if you like.';}
+  catch(e){st.textContent=e.message||'Could not make a clip';}
+  btn.disabled=false;
+});
+
+/* ---------- the 20 scenes: a real AI video clip plus how the words appear on it ---------- */
+const CLIPS={},POSE={},SEL=new Set(['toast']);
+let SAVED_POSE={},SAVED_CLIPS={};
+try{SAVED_POSE=JSON.parse(localStorage.getItem('mm-poses')||'{}')||{};SAVED_CLIPS=JSON.parse(localStorage.getItem('mm-clips')||'{}')||{};}catch(e){}
+function savePoses(){try{localStorage.setItem('mm-poses',JSON.stringify(SAVED_POSE));}catch(e){}}
+function saveClips(){try{localStorage.setItem('mm-clips',JSON.stringify(SAVED_CLIPS));}catch(e){}}
+const FC="'Caveat','Segoe Script',cursive",FM="'Share Tech Mono','Courier New',monospace",FP="'Pacifico','Caveat',cursive",FK="'Permanent Marker','Caveat',cursive",FR="'Courier Prime','Courier New',monospace",FN="'Nunito','Arial Rounded MT Bold',sans-serif";
+const SC={
+ toast:{name:'Toast',sub:'Burnt into toast',legacy:true,words:'words burnt into a slice of toast as it pops out of a toaster',
+  prompt:'Cinematic locked off shot of a retro chrome toaster on a bright, sunny kitchen counter. A single slice of golden brown toast pops up out of the toaster and hovers at the top, a little steam rising, soft morning light, shallow depth of field, steady camera. The toast is plain with no marks, no writing and no text. No people.'},
+ type:{name:'Typewriter',sub:'Typed on paper',legacy:true,words:'words typed out on a vintage typewriter',
+  prompt:'Close up cinematic shot of a vintage cream typewriter on a wooden desk by a sunny window, a blank sheet of white paper loaded in it, keys pressing as if typing, soft morning light, shallow depth of field, a coffee cup steaming beside it, completely blank paper with no writing.',
+  pose:{x:.5,y:.34},ink:{fam:"'Special Elite','Courier New',monospace",weight:400,w:.5,h:.2,max:54,min:26,lh:1.5,mode:'type',t0:1.3,passes:[{fill:'rgba(28,24,22,.9)'}]}},
+ skate:{name:'Roller boots',sub:'Words in her wake',legacy:true,words:'words trailing behind a woman gliding past on roller boots',
+  prompt:'Cinematic side tracking shot of a woman in her 40s gliding on retro white roller boots along a sunny seafront promenade, relaxed and smiling, pink jacket, golden morning light, plain uncluttered background with no signs or text, camera moving smoothly alongside her.',
+  pose:{x:.5,y:.2},ink:{fam:FN,weight:800,w:.8,h:.2,max:92,min:34,lh:1.2,mode:'sweep',t0:1.2,passes:[{fill:'rgba(255,255,255,.96)',shadow:['rgba(255,36,153,.9)',26,0,0]}]}},
+ steam:{name:'Steamy mirror',sub:'Finger writes in steam',words:'words written by a finger in the steam on a bathroom mirror',
+  prompt:'Locked off shot of a large bathroom mirror completely fogged with condensation after a hot shower, soft warm light, a few droplets running down the glass, calm spa feel, nobody in shot, no writing on the mirror.',
+  pose:{x:.5,y:.4,rot:-3},ink:{fam:FC,weight:700,w:.72,h:.24,max:128,min:44,lh:1.15,mode:'sweep',t0:1.2,passes:[{fill:'rgba(22,32,44,.62)',blur:4.5},{fill:'rgba(255,255,255,.4)',blur:1.2,dy:3}]}},
+ lipstick:{name:'Lipstick mirror',sub:'Red lipstick on glass',words:'words written in red lipstick on a mirror',
+  prompt:'Close up of a woman\'s hand holding a classic red lipstick, about to write on a clean bathroom mirror, soft flattering light, shallow depth of field, her face not visible, the mirror completely clear with no writing.',
+  pose:{x:.5,y:.42,rot:-4},ink:{fam:FC,weight:700,w:.74,h:.24,max:132,min:44,lh:1.12,mode:'sweep',t0:1.2,passes:[{fill:'#a30f2b',shadow:['rgba(0,0,0,.4)',9,0,5]},{stroke:'rgba(255,175,190,.5)',sw:2.4,dx:-2,dy:-2}]}},
+ receipt:{name:'Till receipt',sub:'Printed on a receipt',words:'words printed on a till receipt as it feeds out of a receipt printer',
+  prompt:'Close up of a small white till receipt printer on a pretty shop counter, a blank white paper receipt slowly feeding out of it, soft warm light, shallow depth of field, a vase of fresh flowers blurred behind, receipt completely blank with no printing.',
+  pose:{x:.5,y:.5},ink:{fam:FR,weight:400,w:.5,h:.26,max:50,min:24,lh:1.5,case:'upper',mode:'lines',t0:1.3,td:2.2,passes:[{fill:'rgba(34,34,34,.92)'}]}},
+ latte:{name:'Latte art',sub:'Written in the foam',words:'words drawn in the foam of a latte',
+  prompt:'Top down shot of a cappuccino in a white cup on a marble table, smooth creamy foam, gentle steam rising, soft morning light, a croissant blurred at the edge of frame, foam perfectly plain with no pattern and no writing.',
+  pose:{x:.5,y:.5,rot:-6},ink:{fam:FC,weight:700,w:.42,h:.2,max:96,min:34,lh:1.1,mode:'fade',t0:1.5,td:1.6,passes:[{fill:'rgba(255,243,224,.92)',blur:2.6},{fill:'rgba(255,246,230,.88)',blur:.7}]}},
+ phone:{name:'Text from Future You',sub:'A message on a phone',words:'a text message from Future You lighting up a phone',
+  prompt:'Close up of a smartphone lying on a bedside table next to a cup of coffee, screen lighting up as if a message has arrived, soft early morning light through curtains, shallow depth of field, screen showing only a plain blank message bubble with no readable text.',
+  pose:{x:.5,y:.5},ink:{fam:FN,weight:700,w:.5,h:.16,max:52,min:26,lh:1.3,mode:'type',t0:1.6,bubble:{fill:'rgba(244,244,247,.97)',label:'Future You'},passes:[{fill:'#1b1b1f'}]}},
+ board:{name:'Departures board',sub:'Letters flip into place',words:'words appearing letter by letter on an airport departures board',
+  prompt:'Locked off close up of a large black split flap departures board in a bright airport, rows of mechanical flaps with no readable text, a few flaps flipping, warm light, shallow depth of field.',
+  pose:{x:.5,y:.5},ink:{fam:FM,weight:400,w:.84,h:.3,max:62,min:24,lh:1.35,case:'upper',wf:.74,mode:'flip',t0:1.2,td:2.4,passes:[]}},
+ sparkler:{name:'Sparkler',sub:'Light trails in the dark',words:'words drawn in the air with a sparkler at night',
+  prompt:'A woman\'s hand holding a lit sparkler in the dark, slowly drawing in the air with the glowing trail, night time, dark blue background, warm golden sparks, her face not visible, locked off camera.',
+  pose:{x:.5,y:.42,rot:-4},ink:{fam:FP,weight:400,w:.8,h:.26,max:112,min:40,lh:1.3,mode:'sweep',t0:1.2,fx:'spark',passes:[{fill:'rgba(255,196,84,.95)',shadow:['rgba(255,160,30,.95)',26,0,0]},{fill:'rgba(255,246,214,.92)'}]}},
+ sand:{name:'Words in the sand',sub:'Then a wave takes them',words:'words written in wet sand on a beach before a wave washes them away',
+  prompt:'Close up of smooth wet golden sand on an empty beach at sunrise, a hand drawing with one finger, a gentle wave rolling up at the end, soft light, shallow depth of field, locked off camera, sand completely smooth with no writing.',
+  pose:{x:.5,y:.5,rot:-2},ink:{fam:FC,weight:700,w:.78,h:.26,max:126,min:44,lh:1.15,mode:'sweep',t0:1.2,wash:true,passes:[{fill:'rgba(74,48,22,.6)',blur:3,dy:3},{fill:'rgba(255,238,205,.45)',blur:1,dy:-2}]}},
+ cookie:{name:'Fortune cookie',sub:'The little paper slip',words:'a message on the paper slip inside a fortune cookie',
+  prompt:'Close up of a hand cracking open a golden fortune cookie on a pink plate, a blank rolled paper slip inside, soft studio light, shallow depth of field, the paper completely blank with no text.',
+  pose:{x:.5,y:.52,rot:-3},ink:{fam:FC,weight:700,w:.4,h:.14,max:64,min:26,lh:1.15,mode:'fade',t0:2.2,td:1.4,passes:[{fill:'rgba(52,34,24,.92)'}]}},
+ neon:{name:'Neon sign',sub:'Flickers on in pink',words:'a pink neon sign flickering on in a cosy dark room',
+  prompt:'A dark cosy room with a red brick wall, a warm neon sign flickering on in soft pink light with the tubes switching on, no readable shape, atmospheric glow, locked off camera.',
+  pose:{x:.5,y:.4,rot:-3},ink:{fam:FP,weight:400,w:.8,h:.28,max:112,min:40,lh:1.35,mode:'flicker',t0:1.4,td:1.6,passes:[{fill:'rgba(255,60,160,.95)',shadow:['#ff2ea0',46,0,0]},{fill:'#ffe3f2',shadow:['#ff2ea0',16,0,0]}]}},
+ sky:{name:'Skywriting plane',sub:'A trail across the sky',words:'words written across the sky by a small plane',
+  prompt:'A small white plane flying across a clear blue sky leaving a soft white trail, camera on the ground looking up, slow steady shot, a few wisps of cloud, no text or writing in the sky.',
+  pose:{x:.5,y:.3},ink:{fam:FN,weight:800,w:.86,h:.22,max:108,min:36,lh:1.2,mode:'sweep',t0:1.2,td:2.8,passes:[{fill:'rgba(255,255,255,.88)',blur:11},{fill:'rgba(255,255,255,.96)',blur:2.6}]}},
+ icing:{name:'Icing on a biscuit',sub:'Piped in pink icing',words:'words piped in pink icing onto a biscuit',
+  prompt:'Close up of a hand with a piping bag drawing smooth pink icing onto a round plain shortbread biscuit on a pretty plate, soft kitchen light, shallow depth of field, the biscuit only has a smooth icing surface, no writing.',
+  pose:{x:.5,y:.5,rot:-3},ink:{fam:FC,weight:700,w:.5,h:.2,max:92,min:32,lh:1.1,mode:'sweep',t0:1.2,passes:[{fill:'#f06aa8',shadow:['rgba(120,20,70,.5)',6,0,4]},{stroke:'rgba(255,255,255,.75)',sw:2.6,dx:-1,dy:-2}]}},
+ sticky:{name:'Sticky note',sub:'Marker on a note',words:'a handwritten sticky note slapped on a bathroom mirror',
+  prompt:'Close up of a hand slapping a plain yellow sticky note onto a bathroom mirror, soft morning light, shallow depth of field, the note completely blank with no writing.',
+  pose:{x:.5,y:.5,rot:-5},ink:{fam:FK,weight:400,w:.4,h:.2,max:70,min:26,lh:1.2,mode:'sweep',t0:1.9,passes:[{fill:'#1b2a5e'}]}},
+ chalk:{name:'Chalkboard sign',sub:'Chalked outside a cafe',words:'words chalked onto a cafe A-board',
+  prompt:'A black chalkboard A-frame sign outside a pretty coffee shop on a sunny morning, a hand holding a piece of chalk about to write, shallow depth of field, the board completely blank, no writing.',
+  pose:{x:.5,y:.5,rot:-2},ink:{fam:FC,weight:700,w:.6,h:.3,max:100,min:34,lh:1.15,mode:'sweep',t0:1.5,passes:[{fill:'rgba(255,255,255,.4)',blur:3},{fill:'rgba(255,255,255,.9)',blur:.8}]}},
+ alarm:{name:'Alarm clock',sub:'On the clock screen',words:'a message glowing on a bedside alarm clock screen at sunrise',
+  prompt:'Close up of a small retro digital alarm clock on a bedside table, morning light slowly creeping through white curtains, a mug and a pair of glasses blurred nearby, the clock screen glowing softly with no readable numbers.',
+  pose:{x:.5,y:.52},ink:{fam:FM,weight:400,w:.56,h:.14,max:60,min:24,lh:1.3,case:'upper',mode:'type',t0:1.4,passes:[{fill:'rgba(255,72,52,.95)',shadow:['#ff2a1a',24,0,0]}]}},
+ journal:{name:'Fountain pen journal',sub:'Handwritten in ink',words:'words handwritten with a fountain pen in a journal',
+  prompt:'Close up of a hand holding a fountain pen above an open cream journal on a wooden desk, soft window light, shallow depth of field, a coffee cup blurred behind, the page completely blank with no writing.',
+  pose:{x:.5,y:.55,rot:-2},ink:{fam:FC,weight:700,w:.62,h:.24,max:96,min:34,lh:1.2,mode:'sweep',t0:1.5,passes:[{fill:'rgba(26,44,108,.93)'}]}},
+ frost:{name:'Frosted window',sub:'Finger writes in frost',words:'words written by a finger in the frost on a winter window',
+  prompt:'Close up of a window covered in delicate frost on a cold winter morning, soft golden sunrise light behind it, a finger gently touching the frost, shallow depth of field, locked off camera, frost completely plain with no writing.',
+  pose:{x:.5,y:.45,rot:-3},ink:{fam:FC,weight:700,w:.72,h:.24,max:124,min:44,lh:1.15,mode:'sweep',t0:1.3,passes:[{fill:'rgba(18,34,56,.5)',blur:4.5},{fill:'rgba(255,255,255,.7)',blur:1.2,dy:2}]}}
+};
+const SCORDER=Object.keys(SC);
+SCORDER.forEach(k=>{if(!(k in DUR))DUR[k]=6;});
+const TONES={steam:['#9fb3bd','#5c6f7c'],lipstick:['#e9c9cf','#9a6f7a'],receipt:['#f4e8dc','#c9b39f'],latte:['#d9c2a6','#8d6b4b'],phone:['#3b3a42','#17161b'],board:['#222','#0a0a0a'],sparkler:['#0a1230','#02040d'],sand:['#e8d0a4','#b8935c'],cookie:['#f6d3dc','#d9a0b0'],neon:['#2a0f1e','#0b0408'],sky:['#6fb4ee','#cfe9fb'],icing:['#fbeee0','#e8c9a8'],sticky:['#d8e0e6','#8fa0ab'],chalk:['#2c2f2d','#171918'],alarm:['#2a2c35','#101116'],journal:['#e9dcc4','#b49c75'],frost:['#a9c4dc','#e9f2fa'],type:['#e6dccd','#b8a58d'],skate:['#8fd0ff','#ffd9a8'],toast:['#f3e3c7','#c9a577']};
+
+function inkMode(){return S.scene!=='toast'&&!!S.video&&S.video.scene===S.scene&&!S.video.track;}
+function anyVid(){return videoMode()||inkMode();}
+function isNewScene(){const c=SC[S.scene];return !!c&&!c.legacy&&!anyVid();}
+function hasClip(id){return !!CLIPS[id];}
+let INK_T=0;
+function inkText(cfg){const m=msg();return cfg.case==='upper'?m.toUpperCase():cfg.case==='lower'?m.toLowerCase():m;}
+function inkPiece(pc,ps,cfg,p,lh,nLines,aBase){
+  ctx.save();
+  let a=(ps.alpha==null?1:ps.alpha)*aBase;
+  const m=cfg.mode;
+  if(m==='fade')a*=ease.out(p);
+  if(m==='flicker'){const f=p<1?((Math.sin(p*70+INK_T*9)>-0.2||p>.85)?1:.15)*(.3+.7*p):.97+.03*Math.sin(INK_T*33);a*=f;}
+  if(m==='sweep'){
+    const xa=pc.x0-(pc.k===0?0:40),xb=pc.x0+ctx.measureText(pc.ln.slice(0,pc.k)).width+(pc.k===pc.ln.length?44:2);
+    ctx.beginPath();ctx.rect(pc.x0-44,pc.y-lh*.9,xb-(pc.x0-44),lh*1.8);ctx.clip();
+  }
+  if(m==='lines'){const lp=clamp(p*nLines-pc.i);ctx.beginPath();ctx.rect(pc.x0-30,pc.y-lh/2,pc.lw+60,lh*lp);ctx.clip();}
+  ctx.globalCompositeOperation=ps.blend||'source-over';ctx.globalAlpha=clamp(a);
+  const s=m==='type'?pc.ln.slice(0,pc.k):pc.ln,x=pc.x0+(ps.dx||0),y=pc.y+(ps.dy||0);
+  if(ps.fill){
+    if(ps.blur){let col=ps.fill,al=1;const mm=/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/.exec(col);if(mm){col='rgb('+mm[1]+','+mm[2]+','+mm[3]+')';al=+mm[4];}ctx.globalAlpha=clamp(a*al);const th=S.trot*Math.PI/180;ctx.shadowColor=col;ctx.shadowBlur=ps.blur*2;ctx.shadowOffsetX=4000*Math.cos(th);ctx.shadowOffsetY=4000*Math.sin(th);ctx.fillStyle=col;ctx.fillText(s,x-4000,y);}
+    else{if(ps.shadow){ctx.shadowColor=ps.shadow[0];ctx.shadowBlur=ps.shadow[1];ctx.shadowOffsetX=ps.shadow[2];ctx.shadowOffsetY=ps.shadow[3];}ctx.fillStyle=ps.fill;ctx.fillText(s,x,y);}
+  }
+  if(ps.stroke){ctx.strokeStyle=ps.stroke;ctx.lineWidth=ps.sw||2;ctx.lineJoin='round';ctx.strokeText(s,x,y);}
+  ctx.restore();
+}
+function drawBoard(lay,lh,p,aBase,t){
+  const tw=lay.size*.68,th=lay.size*1.3,gap=lay.size*.12,total=lay.lines.reduce((a,l)=>a+l.length,0);
+  const maxN=Math.max.apply(null,lay.lines.map(l=>l.length)),padx=lay.size*.5,pady=lay.size*.45;
+  const bw=maxN*(tw+gap)-gap+padx*2,bh=lay.lines.length*(th+gap)-gap+pady*2;
+  ctx.save();ctx.globalAlpha=aBase*.92;ctx.fillStyle='#0b0b0c';frr(-bw/2,-bh/2,bw,bh,16);
+  let idx=0;
+  lay.lines.forEach((ln,i)=>{
+    const lw=ln.length*(tw+gap)-gap,y0=-bh/2+pady+i*(th+gap);
+    for(let j=0;j<ln.length;j++,idx++){
+      const x0=-lw/2+j*(tw+gap),cp=clamp(p*(total+6)-idx*0.9);
+      const ch=ln[j];if(ch===' ')continue;
+      const shown=cp<.5?String.fromCharCode(65+Math.floor(rnd(idx*13+Math.floor(t*18))*26)):ch;
+      const sy=cp<=0?1:(cp<.5?1-cp*2:(cp-.5)*2);
+      ctx.save();ctx.translate(x0+tw/2,y0+th/2);ctx.scale(1,Math.max(.04,sy));
+      ctx.fillStyle='#17171a';frr(-tw/2,-th/2,tw,th,6);
+      ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(-tw/2,-1,tw,2);
+      if(cp>0){ctx.fillStyle='#ffd24a';ctx.font=`400 ${lay.size}px ${FM}`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(shown,0,2);}
+      ctx.restore();
+    }
+  });
+  ctx.restore();
+}
+function drawInk(t,tEnd){
+  const sc=SC[S.scene];if(!sc||!sc.ink)return;
+  INK_T=t;const cfg=sc.ink,mt=inkText(cfg),LH=cfg.lh||1.25;
+  const bw=cfg.w*W*S.tsize*(cfg.wf||1),bh=cfg.h*H*S.tsize,fam=cfg.fam;
+  const lay=cached('ink|'+S.scene+'|'+mt+'|'+S.tsize+'|'+document.fonts.status,()=>fit(mt,fam,cfg.weight||700,bw,bh,cfg.max||110,cfg.min||30,LH));
+  const lh=lay.size*LH,blockH=lay.lines.length*lh,total=lay.lines.reduce((a,l)=>a+l.length,0);
+  const t0=cfg.t0==null?1.3:cfg.t0,td=cfg.td||Math.min(3.4,Math.max(1.4,total*.075));
+  const p=seg(t,t0,t0+td);
+  const aBase=cfg.wash&&tEnd?1-seg(t,tEnd-1.5,tEnd-.3):1;
+  const pBub=cfg.bubble?seg(t,t0-.5,t0-.1):0;
+  if(aBase<=0||(p<=0&&pBub<=0))return;
+  ctx.save();
+  ctx.translate(S.tx*W,S.ty*H);ctx.rotate(S.trot*Math.PI/180);
+  ctx.font=`${cfg.weight||700} ${lay.size}px ${fam}`;ctx.textBaseline='middle';ctx.textAlign='left';
+  if(cfg.mode==='flip'){drawBoard(lay,lh,p,aBase,t);ctx.restore();return;}
+  const count=total*p,pcs=[];let used=0,edge=null;
+  const prog=cfg.mode==='sweep'||cfg.mode==='type';
+  lay.lines.forEach((ln,i)=>{
+    const lw=ctx.measureText(ln).width,x0=-lw/2,y=-blockH/2+(i+.5)*lh;
+    const k=prog?Math.max(0,Math.min(ln.length,Math.floor(count-used))):ln.length;
+    pcs.push({ln,x0,y,k,lw,i});
+    if(prog&&k>0)edge={x:x0+ctx.measureText(ln.slice(0,k)).width,y};
+    used+=ln.length;
+  });
+  if(cfg.bubble){
+    const mw=Math.max.apply(null,pcs.map(x=>x.lw)),px=40,py=30,bw2=mw+px*2,bh2=blockH+py*2;
+    ctx.save();ctx.globalAlpha=aBase*pBub;ctx.fillStyle=cfg.bubble.fill;
+    ctx.shadowColor='rgba(0,0,0,.3)';ctx.shadowBlur=24;ctx.shadowOffsetY=8;
+    frr(-bw2/2,-bh2/2,bw2,bh2,Math.min(46,bh2/2));
+    ctx.beginPath();ctx.moveTo(-bw2/2+14,bh2/2-14);ctx.lineTo(-bw2/2-8,bh2/2+16);ctx.lineTo(-bw2/2+44,bh2/2-4);ctx.closePath();ctx.fill();
+    ctx.shadowColor='transparent';ctx.fillStyle='rgba(235,235,240,.9)';ctx.font=`700 ${Math.round(lay.size*.52)}px ${FN}`;
+    ctx.fillText(cfg.bubble.label,-bw2/2+8,-bh2/2-34);
+    ctx.restore();ctx.font=`${cfg.weight||700} ${lay.size}px ${fam}`;
+  }
+  if(p>0)cfg.passes.forEach(ps=>pcs.forEach(pc=>{if(prog&&pc.k<=0)return;inkPiece(pc,ps,cfg,p,lh,lay.lines.length,aBase);}));
+  if(cfg.fx==='spark'&&edge&&p<1.18&&p>0){
+    ctx.save();ctx.globalCompositeOperation='lighter';
+    const g=ctx.createRadialGradient(edge.x,edge.y,0,edge.x,edge.y,70);g.addColorStop(0,'rgba(255,240,200,.95)');g.addColorStop(.3,'rgba(255,190,70,.55)');g.addColorStop(1,'rgba(255,150,30,0)');
+    ctx.fillStyle=g;ctx.fillRect(edge.x-70,edge.y-70,140,140);
+    for(let i=0;i<22;i++){const a=rnd(i*3.1+Math.floor(t*30))*6.283,d=rnd(i*7.7+Math.floor(t*30))*80;ctx.fillStyle=`rgba(255,${180+Math.floor(rnd(i)*70)},90,${(.9-d/100).toFixed(2)})`;ctx.fillRect(edge.x+Math.cos(a)*d,edge.y+Math.sin(a)*d,4,4);}
+    ctx.restore();
+  }
+  ctx.restore();
+}
+function sceneInkVideo(t){
+  ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);
+  if(vid.readyState>=2)drawCover(vid);
+  drawInk(t,vTotal());
+  const vg=ctx.createRadialGradient(W/2,H/2,H*.3,W/2,H/2,H*.75);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.22)');
+  ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);
+  const sg=ctx.createLinearGradient(0,0,0,420);sg.addColorStop(0,'rgba(0,0,0,.35)');sg.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=sg;ctx.fillRect(0,0,W,420);
+}
+function sceneInkFallback(t){
+  const tn=TONES[S.scene]||['#333','#111'],g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,tn[0]);g.addColorStop(1,tn[1]);
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  drawInk(t%DUR[S.scene],DUR[S.scene]);
+  ctx.fillStyle='rgba(255,255,255,.75)';ctx.font=`600 34px ${FN}`;ctx.textAlign='center';ctx.textBaseline='alphabetic';
+  ctx.fillText('Preview of the wording style only',W/2,H-210);
+  ctx.font=`500 28px ${FN}`;ctx.fillText('Make this scene\'s clip to get the real video',W/2,H-166);
+}
+SCORDER.forEach(k=>{if(!SC[k].legacy)scenes[k]=function(t){sceneInkFallback(t);};});
+
+/* ---------- scene picker, poses and clips ---------- */
+function applyPose(id){
+  const sc=SC[id],base=sc.pose||{};
+  const p=POSE[id]||SAVED_POSE[id]||(id==='toast'?null:{tx:base.x==null?.5:base.x,ty:base.y==null?.5:base.y,tsize:1,trot:base.rot||0});
+  if(!p)return;
+  S.tx=p.tx;S.ty=p.ty;S.tsize=p.tsize;S.trot=p.trot||0;
+  $('pX').value=Math.round(S.tx*100);$('pY').value=Math.round(S.ty*100);$('pS').value=Math.round(S.tsize*100);$('pR').value=Math.round(S.trot);
+}
+async function bindClip(id){
+  const c=CLIPS[id];
+  if(!c){S.video=null;return false;}
+  if(vid.getAttribute('data-s')!==id||!vid.src){
+    vid.setAttribute('data-s',id);
+    await new Promise(res=>{vid.onloadedmetadata=res;vid.onerror=res;vid.src=c.url;vid.load();setTimeout(res,4000);});
+  }
+  vid.dur=c.dur;S.video={dur:c.dur,track:c.track||null,scene:id};
+  return true;
+}
+function loadClipFor(id,url,remember){
+  return new Promise(async(res,rej)=>{
+    const v=document.createElement('video');v.preload='metadata';v.muted=true;
+    v.onloadedmetadata=async()=>{
+      if(!isFinite(v.duration)||v.duration<1){rej(new Error('That clip would not open. Try an MP4.'));return;}
+      if(v.duration>10){rej(new Error('That clip is '+v.duration.toFixed(1)+' seconds. Please use one of 10 seconds or less.'));return;}
+      CLIPS[id]={url,dur:v.duration};
+      if(remember){SAVED_CLIPS[id]=remember;saveClips();}
+      if(S.scene===id){vid.removeAttribute('data-s');await bindClip(id);restart();}
+      syncTiles();res();
+    };
+    v.onerror=()=>rej(new Error('This browser cannot open that clip. Try an MP4 (H.264) or use Chrome.'));
+    v.src=url;
+  });
+}
+function authH(){let pw='';try{pw=localStorage.getItem('cybersuite-pw')||'';}catch(e){}return{'Content-Type':'application/json','x-app-password':pw,Authorization:'Bearer '+pw};}
+async function tryRestore(id){
+  const u=SAVED_CLIPS[id];if(!u||id==='toast')return;
+  try{const r=await fetch(BASE+u,{headers:authH()});if(!r.ok)throw new Error('x');await loadClipFor(id,URL.createObjectURL(await r.blob()));}
+  catch(e){delete SAVED_CLIPS[id];saveClips();}
+}
+async function makeClip(id,say){
+  say=say||function(){};
+  const H=authH();
+  const r=await fetch(BASE+'/api/veo/generate',{method:'POST',headers:H,body:JSON.stringify({prompt:SC[id].prompt,aspectRatio:'9:16',tier:'lite',durationSeconds:'6'})});
+  const d=await r.json().catch(()=>({}));
+  if(r.status===401)throw new Error('Veo needs you to be logged in. Open thecybersuite.com, log in, then come back here.');
+  if(!r.ok||!d.jobId)throw new Error(d.error||'Veo is not reachable from here');
+  for(let n=0;n<90;n++){
+    await new Promise(x=>setTimeout(x,5000));
+    const j=await (await fetch(BASE+'/api/veo/jobs/'+d.jobId+'/status',{headers:H})).json();
+    if(j.status==='failed')throw new Error(j.error||'Veo could not make the clip');
+    if(j.status==='done'&&j.videoUrl){
+      say('Loading the clip...');
+      const v=await fetch(BASE+j.videoUrl,{headers:H});if(!v.ok)throw new Error('The clip is made but would not download');
+      const burl=URL.createObjectURL(await v.blob());
+      if(id==='toast'){openClip(burl,'your AI clip');}else{await loadClipFor(id,burl,j.videoUrl);}
+      return;
+    }
+    say((j.message||'Making the clip')+(j.progress?' '+Math.round(j.progress*100)+'%':''));
+  }
+  throw new Error('That took too long. Please try again.');
+}
+async function setScene(id,quiet){
+  if(!SC[id])return;
+  token++;cancelAnimationFrame(raf);
+  S.scene=id;
+  if(!CLIPS[id])await tryRestore(id);
+  applyPose(id);
+  await bindClip(id);
+  buildTiles();syncToastOpts();
+  if(!quiet)restart();
+}
+function tileSub(id){return CLIPS[id]?'Real video ready':(SC[id].legacy&&id!=='toast'?'Needs a real clip':(id==='toast'?'Real video':'Needs a clip'));}
+function buildTiles(){
+  const g=$('sceneGrid');if(!g)return;
+  g.innerHTML=SCORDER.map(id=>`<div class="tile${S.scene===id?' on':''}${SEL.has(id)?' sel':''}" data-id="${id}"><label class="tck" title="Include in my batch"><input type="checkbox" data-sel="${id}"${SEL.has(id)?' checked':''}><span></span></label><div class="tn">${esc(SC[id].name)}</div><div class="ts${CLIPS[id]?' ok':''}" data-ts="${id}">${esc(tileSub(id))}</div></div>`).join('');
+  $('selCount').textContent=SEL.size+' picked for the batch';
+}
+function syncTiles(){document.querySelectorAll('[data-ts]').forEach(el=>{el.textContent=tileSub(el.dataset.ts);el.className='ts'+(CLIPS[el.dataset.ts]?' ok':'');});}
+$('sceneGrid').addEventListener('click',e=>{
+  const cb=e.target.closest('input[data-sel]');
+  if(cb){const id=cb.dataset.sel;if(cb.checked)SEL.add(id);else SEL.delete(id);buildTiles();return;}
+  if(e.target.closest('.tck'))return;
+  const t=e.target.closest('.tile');if(t&&!qBusy)setScene(t.dataset.id);
+});
+$('selAll').addEventListener('click',()=>{SCORDER.forEach(k=>SEL.add(k));buildTiles();});
+$('selNone').addEventListener('click',()=>{SEL.clear();buildTiles();});
+function needsClipMsg(){return 'This scene needs its clip first. Press "Make this clip with AI" or upload your own video of it.';}
+
+/* ---------- client, caption and schedule (uses the same system as the rest of the tools) ---------- */
+const ON_SITE=/thecybersuite\.com$/i.test(location.hostname)||location.hostname==='localhost';
+const BASE=ON_SITE?'':'https://workspaceapi-server-production-0f0d.up.railway.app';
+const FALLBACK_CLIENTS=['Social Media Sister','Eva Garcia Aesthetics','AD Aesthetics','Aspyre Aesthetics','The Church Street Clinic','Teviot Dental Face','Highcroft Aesthetics','Madame Wax','Madame Skin','Fresher Faces','CT Aesthetics','Tweaked by Helen','Pura Aesthetics','Cantik Aesthetics','Castle Clinic','The Ryder Clinic'];
+let presets=[],fillClientsHook=null;
+const clientSel=$('client');
+function fillClients(list,live){
+  presets=list;
+  clientSel.innerHTML='<option value="">No client (sample for a prospect)</option>'+list.map(p=>`<option value="${p.key}">${String(p.name).replace(/</g,'&lt;')}</option>`).join('');
+  if(fillClientsHook)fillClientsHook();
+  $('clientNote').textContent=live?'Your live client list is loaded, so you can write captions and schedule.':'Showing your usual clients so you can write captions. To schedule, open this page on thecybersuite.com where your live client list loads.';
+}
+fillClients(FALLBACK_CLIENTS.map((n,i)=>({key:'f'+i,name:n,fallback:true})),false);
+fetch(BASE+'/api/presets').then(r=>{if(!r.ok)throw new Error();return r.json();}).then(d=>{
+  const list=((d&&d.presets)||[]).map(p=>({key:String(p.id),id:p.id,name:p.name,seoArea:p.seoArea,logoUrl:p.logoUrl}));
+  if(list.length)fillClients(list,true);
+}).catch(()=>{});
+function preset(){return presets.find(p=>p.key===clientSel.value)||null;}
+
+async function loadClientLogo(p){
+  const note=$('logoNote');
+  try{
+    const abs=/^(https?:|data:|blob:)/i.test(p.logoUrl)?p.logoUrl:BASE+(p.logoUrl.charAt(0)==='/'?'':'/')+p.logoUrl;
+    const r=await fetch(abs);if(!r.ok)throw new Error('x');
+    const url=URL.createObjectURL(await r.blob());
+    await new Promise((ok,no)=>{const im=new Image();im.onload=()=>{S.logoImg=im;ok();};im.onerror=no;im.src=url;});
+    S.showLogo=true;$('showLogo').checked=true;
+    note.textContent=p.name+"'s logo is on the reel.";restart();
+  }catch(e){note.textContent="I could not load "+p.name+"'s logo from here, so please upload it above.";}
+}
+clientSel.addEventListener('change',()=>{
+  const p=preset();if(!p)return;
+  if(p.seoArea&&!$('town').value.trim()||$('town').dataset.auto==='1'){if(p.seoArea){$('town').value=p.seoArea;$('town').dataset.auto='1';applyTown();}}
+  if(p.logoUrl)loadClientLogo(p);
+  else $('logoNote').textContent=p.fallback?"Upload "+p.name+"'s logo above. It loads by itself when this runs on thecybersuite.com.":"No logo saved for "+p.name+" yet, so please upload it above.";
+});
+function ptype(){const r=document.querySelector('input[name=ptype]:checked');return r?r.value:'reel';}
+function syncPtype(){const t=ptype();$('fbRow').style.display=t==='reel'?'flex':'none';}
+document.querySelectorAll('input[name=ptype]').forEach(r=>r.addEventListener('change',syncPtype));syncPtype();
+(function(){const d=new Date();d.setDate(d.getDate()+1);d.setHours(7,0,0,0);const z=n=>String(n).padStart(2,'0');
+  $('when').value=`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`;})();
+
+const SCENE_WORDS={toast:'words burnt into a slice of toast as it pops out of a toaster',type:'words typed out on a vintage typewriter',skate:'words trailing behind a woman gliding past on roller boots'};
+async function genCaption(p,t,message){
+  const reply=($('replyWord').value||'').trim().replace(/[^A-Za-z0-9]/g,'').toUpperCase();
+  const kind=t==='story'?'Instagram story':(t==='trial'?'Instagram trial reel':'Instagram reel');
+  const manager=p&&/social media sister/i.test(p.name);
+  const voice=manager
+    ?'Write it as the social media manager for an aesthetics clinic speaking directly to the reader, never as a clinician. '
+    :'Write it as the clinician or owner of the clinic, in the first person, posting this themselves. ';
+  const context=`An ${kind}. It is a short, silent morning motivation animation showing ${(SC[S.scene]&&SC[S.scene].words)||SCENE_WORDS[S.scene]}. The message on screen says: "${message}". `+
+    `Write a short caption that adds something the video does not already say. Make it warm, funny and affable, for women over 35. `+voice+
+    `Make no medical claims and no promises about results. Use UK spelling and never use em dashes or en dashes. `+
+    (reply?`Use the reply word ${reply} in the closing question, written as "Comment ${reply}". `:'')+
+    `Finish with one question that relates to the post.`;
+  const r=await fetch(BASE+'/api/caption-generator/generate',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({tone:'1',clinicName:p?p.name:undefined,location:p&&p.seoArea?p.seoArea:undefined,context})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok||!d.caption)throw new Error(d.error||'The caption writer is not reachable here');
+  return d.caption;
+}
+$('capBtn').addEventListener('click',async()=>{
+  const btn=$('capBtn');btn.disabled=true;$('capStatus').textContent='Writing...';
+  try{$('caption').value=await genCaption(preset(),ptype(),msg());$('capStatus').textContent='Done. Edit it if you like.';}
+  catch(e){$('capStatus').textContent=e.message||'Could not write a caption';}
+  btn.disabled=false;
+});
+$('capCopy').addEventListener('click',()=>{
+  const v=$('caption').value;if(!v)return;
+  (navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(()=>{$('capStatus').textContent='Copied.';}).catch(()=>{$('caption').select();document.execCommand('copy');$('capStatus').textContent='Copied.';});
+});
+
+async function postJson(url,body){
+  const r=await fetch(BASE+url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(d.error||'Request failed');
+  return d;
+}
+function schedNote(m,bad){const n=$('schedNote');n.textContent=m;n.style.color=bad?'#ff6b8a':'';}
+async function schedulePost(o){
+  const p=o.p,t=o.t,caption=o.caption,at=o.at,say=o.say||function(){};
+  const title='Morning motivation';let postType,content,isTrial=false;
+  if(t==='story'){
+    say('Saving the story image...');
+    await stillFrame();
+    const up=await postJson('/api/content/upload-image',{images:[{name:`morning-motivation-${Date.now()}.png`,base64:cv.toDataURL('image/png')}]});
+    const url=up.results&&up.results[0]&&up.results[0].url;if(!url)throw new Error('The image did not upload');
+    postType='story';content={caption:'',title:title+' (story)',platforms:['instagram'],imageUrls:[url],sourceTool:'morning-motivation'};
+  }else{
+    say('Recording the reel, this takes about '+Math.round(dur())+' seconds...');
+    const {blob,ext}=await recordVideo();
+    if(ext!=='mp4')throw new Error('This browser makes WEBM files and Instagram needs an MP4. Please schedule from Chrome or Safari on a computer.');
+    say('Uploading the reel...');
+    const form=new FormData();form.append('video',blob,`morning-motivation-${Date.now()}.mp4`);
+    const r=await fetch(BASE+'/api/content/upload-video',{method:'POST',body:form});
+    const up=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(up.error||'The video did not upload');
+    const videoUrl=up.proxyUrl||up.url;if(!videoUrl)throw new Error('The video did not upload');
+    postType='reel';isTrial=t==='trial';
+    const platforms=(t==='reel'&&o.fb)?['instagram','facebook']:['instagram'];
+    content={caption,title,platforms,videoUrl,sourceTool:'morning-motivation'};
+  }
+  say('Booking it in...');
+  await postJson('/api/scheduler/posts',{presetId:p.id,postType,content,scheduledAt:at.toISOString(),isTrial,notes:''});
+}
+$('sched').addEventListener('click',async()=>{
+  const p=preset(),t=ptype(),caption=$('caption').value.trim(),when=$('when').value;
+  if(!p){schedNote('Pick a client first.',true);return;}
+  if(p.fallback){schedNote('To schedule, open this page on thecybersuite.com so your live client list loads. Captions work from here.',true);return;}
+  if(t!=='story'&&!caption){schedNote('Write or paste a caption first. Stories are the only post that can go without one.',true);return;}
+  if(!when){schedNote('Pick a date and time.',true);return;}
+  const at=new Date(when);if(at.getTime()<=Date.now()){schedNote('Pick a time in the future.',true);return;}
+  const btn=$('sched');btn.disabled=true;
+  try{
+    await schedulePost({p,t,caption,at,fb:$('fb').checked,say:schedNote});
+    schedNote('Scheduled for '+at.toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+' as a '+(t==='story'?'story':(t==='trial'?'trial reel':'reel'))+' for '+p.name+'.');
+  }catch(e){schedNote(e.message||'Scheduling failed',true);}
+  btn.disabled=false;restart(600);
+});
+
+/* ---------- bulk ---------- */
+const Q=[],MAXQ=12;let qBusy=false;
+let WORD_OPTS='';
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+function qText(it){
+  if(!it.tpl)return it.msg;
+  const p=presets.find(x=>x.key===it.client);
+  return it.tpl.replace(/\{town\}/g,(p&&p.seoArea)||town()||'[your town]');
+}
+function bNote(m,bad){const n=$('bNote');n.textContent=m;n.style.color=bad?'#ff6b8a':'';}
+function addItem(text,tpl,scene){
+  if(Q.length>=MAXQ)return false;
+  Q.push({msg:text,tpl:tpl||null,client:clientSel.value,scene:scene||S.scene,caption:'',status:'Waiting',state:''});
+  return true;
+}
+function renderQ(){
+  const opts=['<option value="">No client (sample)</option>'].concat(presets.map(p=>`<option value="${esc(p.key)}">${esc(p.name)}</option>`)).join('');
+  $('qList').innerHTML=Q.map((it,i)=>{
+    if(it.client&&!presets.some(p=>p.key===it.client))it.client='';
+    return `<div class="qi" data-i="${i}">
+      <div class="qh"><span class="qn">${i+1}</span>
+        <select data-f="scene">${SCORDER.map(k=>`<option value="${k}"${it.scene===k?' selected':''}>${esc(SC[k].name)}</option>`).join('')}</select>
+        <select data-f="client">${opts.replace(`value="${esc(it.client)}"`,`value="${esc(it.client)}" selected`)}</select>
+        <button class="alt" data-a="view" type="button">Preview</button>
+        <button class="alt" data-a="del" type="button">Remove</button>
+        <span class="qs ${it.state}" data-st>${esc(it.status)}</span></div>
+      <select data-f="pick" style="width:100%;margin-top:8px">${WORD_OPTS}</select>
+      <input type="text" data-f="text" maxlength="120" value="${esc(it.tpl||it.msg)}">
+      <textarea data-f="caption" placeholder="Caption (write them all with the button below, then edit)">${esc(it.caption)}</textarea>
+    </div>`;
+  }).join('');
+  $('bCount').textContent=Q.length?Q.length+' in the list (max '+MAXQ+')':'';
+}
+function setSt(i,text,state){
+  const it=Q[i];if(!it)return;it.status=text;it.state=state||'';
+  const el=$('qList').querySelector(`[data-i="${i}"] [data-st]`);if(el){el.textContent=text;el.className='qs '+(state||'');}
+}
+$('qList').addEventListener('input',e=>{
+  const row=e.target.closest('.qi');if(!row)return;const it=Q[+row.dataset.i],f=e.target.dataset.f;
+  if(f==='text'){const v=e.target.value;if(/\{town\}/.test(v)){it.tpl=v;it.msg=v;}else{it.tpl=null;it.msg=v;}}
+  if(f==='caption')it.caption=e.target.value;
+});
+$('qList').addEventListener('change',e=>{
+  const row=e.target.closest('.qi');if(!row)return;const it=Q[+row.dataset.i],f=e.target.dataset.f;
+  if(f==='pick'){const m=ALL[+e.target.value];if(m){it.tpl=m.local?m.t:null;it.msg=m.t;const ti=row.querySelector('[data-f=text]');if(ti)ti.value=m.t;}e.target.value='';}
+  if(f==='scene')it.scene=e.target.value;
+  if(f==='client')it.client=e.target.value;
+});
+$('qList').addEventListener('click',async e=>{
+  const b=e.target.closest('button[data-a]');if(!b||qBusy)return;const i=+b.closest('.qi').dataset.i;
+  if(b.dataset.a==='del'){Q.splice(i,1);renderQ();}
+  if(b.dataset.a==='view'){await applyItem(Q[i]);restart();}
+});
+function addMany(lines){
+  let n=0;for(const l of lines){const t=l.trim().slice(0,120);if(!t)continue;if(!addItem(/\{town\}/.test(t)?fill(t):t,/\{town\}/.test(t)?t:null)){bNote('The list holds up to '+MAXQ+' reels at a time, so I stopped there.',true);break;}n++;}
+  renderQ();return n;
+}
+$('bAddLines').addEventListener('click',()=>{const n=addMany($('bulkText').value.split(/\r?\n/));if(n){$('bulkText').value='';bNote(n+' added to the list.');}});
+$('bAddCur').addEventListener('click',()=>{if(addItem(msg(),TPL)){renderQ();bNote('Added your current message.');}else bNote('The list is full.',true);});
+$('bRand').addEventListener('click',()=>{
+  const want=Math.min(+$('bRandN').value,MAXQ-Q.length);if(want<=0){bNote('The list is full.',true);return;}
+  const p=preset(),hasTown=!!(town()||(p&&p.seoArea));
+  const loc=ALL.map((m,i)=>i).filter(i=>ALL[i].k==='local'),mot=ALL.map((m,i)=>i).filter(i=>ALL[i].k==='mot'),fer=ALL.map((m,i)=>i).filter(i=>ALL[i].k==='feral'),sto=ALL.map((m,i)=>i).filter(i=>ALL[i].k==='stoic');
+  const have=new Set(Q.map(x=>x.tpl||x.msg));
+  const shuf=a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
+  const nLoc=hasTown?Math.round(want/2):0;
+  const chosen=shuf(loc).filter(i=>!have.has(ALL[i].t)).slice(0,nLoc).concat(shuf(mot).filter(i=>!have.has(ALL[i].t)).slice(0,want-nLoc));
+  shuf(chosen).forEach(i=>{const m=ALL[i];addItem(m.local?fill(m.t):m.t,m.local?m.t:null);});
+  renderQ();bNote(hasTown?'Added a mix of local and motivational messages.':'Added motivational messages. Put a town in step 2, or choose a client, to include local ones.');
+});
+$('bClear').addEventListener('click',()=>{if(qBusy)return;Q.length=0;renderQ();bNote('');});
+(function(){const d=new Date();d.setDate(d.getDate()+1);d.setHours(7,0,0,0);const z=n=>String(n).padStart(2,'0');
+  $('bWhen').value=`${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`;})();
+
+async function applyItem(it,need){
+  await setScene(it.scene,true);
+  if(it.client!==clientSel.value&&it.client){
+    clientSel.value=it.client;const p=preset();
+    if(p&&p.logoUrl)await loadClientLogo(p);
+  }
+  setMsg(qText(it),it.tpl);
+  await new Promise(r=>setTimeout(r,200));clearTimeout(restartTimer);
+  if(need&&isNewScene())throw new Error('Needs its clip first');
+}
+const itemPreset=it=>presets.find(p=>p.key===it.client)||null;
+function lock(on){
+  qBusy=on;['bAddLines','bAddCur','bRand','bClear','bCaps','bSched','bDl','bAddScenes','bClips','dl','sched','capBtn'].forEach(id=>{$(id).disabled=on;});
+}
+async function runAll(label,fn){
+  if(qBusy)return;
+  if(!Q.length){bNote('Add some reels to the list first.',true);return;}
+  lock(true);let ok=0;
+  try{
+    for(let i=0;i<Q.length;i++){
+      try{await fn(Q[i],i);ok++;}catch(e){setSt(i,e.message||'Failed','bad');}
+    }
+    bNote(label+': '+ok+' of '+Q.length+' done.',ok<Q.length);
+  }catch(e){bNote(e.message||'Something went wrong',true);}
+  lock(false);restart(600);
+}
+$('bCaps').addEventListener('click',()=>runAll('Captions',async(it,i)=>{
+  setSt(i,'Writing caption...');await applyItem(it);
+  it.caption=await genCaption(itemPreset(it),ptype(),qText(it));
+  const ta=$('qList').querySelector(`[data-i="${i}"] textarea`);if(ta)ta.value=it.caption;
+  setSt(i,'Caption done','ok');
+}));
+$('bDl').addEventListener('click',()=>runAll('Downloads',async(it,i)=>{
+  setSt(i,'Recording...');await applyItem(it,true);
+  const {blob,ext}=await recordVideo();
+  const slug=qText(it).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,28);
+  save(blob,`morning-motivation-${String(i+1).padStart(2,'0')}-${slug}.${ext}`);
+  setSt(i,'Downloaded','ok');
+  await new Promise(r=>setTimeout(r,500));
+}));
+$('bSched').addEventListener('click',()=>{
+  const t=ptype(),base=new Date($('bWhen').value),gap=+$('bGap').value;
+  if(!Q.length){bNote('Add some reels to the list first.',true);return;}
+  if(isNaN(base.getTime())){bNote('Pick the date and time for the first one.',true);return;}
+  if(base.getTime()<=Date.now()){bNote('Pick a time in the future for the first one.',true);return;}
+  const bad=Q.findIndex(it=>{const p=itemPreset(it);return !p||p.fallback;});
+  if(bad>=0){bNote('Reel '+(bad+1)+' needs a client from your live list. Scheduling only works on thecybersuite.com, and prospects without a client can be downloaded but not scheduled.',true);return;}
+  runAll('Scheduled',async(it,i)=>{
+    const p=itemPreset(it);
+    await applyItem(it,true);
+    if(t!=='story'&&!it.caption.trim()){
+      setSt(i,'Writing caption...');it.caption=await genCaption(p,t,qText(it));
+      const ta=$('qList').querySelector(`[data-i="${i}"] textarea`);if(ta)ta.value=it.caption;
+    }
+    const at=new Date(base.getTime()+i*gap);
+    await schedulePost({p,t,caption:it.caption.trim(),at,fb:$('fb').checked,say:m=>setSt(i,m)});
+    setSt(i,'Booked '+at.toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}),'ok');
+  });
+});
+(function(){
+  const grp=(k,l)=>'<optgroup label="'+l+'">'+ALL.map((m,i)=>m.k===k?`<option value="${i}">${esc(m.t)}</option>`:'').join('')+'</optgroup>';
+  const g1=grp('local','Local to your clinic'),g2=grp('mot','Motivation'),g3=grp('feral','Feral'),g4=grp('stoic','Stoic'),g5=grp('hair','Hairdressers');
+  WORD_OPTS='<option value="">Pick a message from the list...</option>'+g1+g2+g3+g4+g5;
+  const lab=(g,t)=>g.replace(/<optgroup label="[^"]*">/,'<optgroup label="'+t+'">');
+  $('bWord').innerHTML='<option value="mix">Wording: a random mix, half local and half motivational</option><option value="local">Wording: random local ones</option><option value="mot">Wording: random motivational ones</option><option value="feral">Wording: random feral ones</option><option value="stoic">Wording: random stoic ones</option><option value="hair">Wording: random hairdresser ones</option><option value="all">Wording: a mix of everything</option>'+lab(g1,'Or use this one message for every scene (local)')+lab(g2,'Or use this one message for every scene (motivation)')+lab(g3,'Or use this one message for every scene (feral)')+lab(g4,'Or use this one message for every scene (stoic)')+lab(g5,'Or use this one message for every scene (hairdressers)');
+})();
+$('bAddScenes').addEventListener('click',()=>{
+  if(qBusy)return;
+  const ids=SCORDER.filter(k=>SEL.has(k));
+  if(!ids.length){bNote('Tick at least one scene in step 1 first.',true);return;}
+  const mode=$('bWord').value,p=preset(),hasTown=!!(town()||(p&&p.seoArea));
+  const loc=ALL.map((m,i)=>i).filter(i=>ALL[i].k==='local'),mot=ALL.map((m,i)=>i).filter(i=>ALL[i].k==='mot'),fer=ALL.map((m,i)=>i).filter(i=>ALL[i].k==='feral'),sto=ALL.map((m,i)=>i).filter(i=>ALL[i].k==='stoic'),hai=ALL.map((m,i)=>i).filter(i=>ALL[i].k==='hair');
+  const shuf=a=>a.map(v=>[Math.random(),v]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]);
+  let lq=shuf(loc),mq=shuf(mot),fq=shuf(fer),sq=shuf(sto),hq=shuf(hai),n=0;
+  for(let j=0;j<ids.length;j++){
+    let i;
+    if(/^\d+$/.test(mode))i=+mode;
+    else if(mode==='feral')i=fq[j%fq.length];
+    else if(mode==='stoic')i=sq[j%sq.length];
+    else if(mode==='hair')i=hq[j%hq.length];
+    else if(mode==='all'){const pools=[mq,fq,sq].concat(hasTown?[lq]:[]);const pl=pools[j%pools.length];i=pl[Math.floor(j/pools.length)%pl.length];}
+    else if(mode==='local'&&hasTown)i=lq[j%lq.length];
+    else if(mode==='mix'&&hasTown&&j%2===0)i=lq[Math.floor(j/2)%lq.length];
+    else i=mq[j%mq.length];
+    const m=ALL[i];
+    if(!addItem(m.local?fill(m.t):m.t,m.local?m.t:null,ids[j])){bNote('The list holds up to '+MAXQ+' reels, so I stopped there.',true);break;}
+    n++;
+  }
+  renderQ();
+  if(n)bNote(n+' added. '+((mode==='local'||mode==='mix')&&!hasTown?'I used motivational lines because there is no town yet. Put one in step 2 for local ones. ':'')+'Next, make any missing clips, then write captions.');
+});
+$('bClips').addEventListener('click',async()=>{
+  if(qBusy)return;
+  const ids=SCORDER.filter(k=>SEL.has(k)&&!CLIPS[k]);
+  if(!SEL.size){bNote('Tick at least one scene in step 1 first.',true);return;}
+  if(!ids.length){bNote('Every ticked scene already has its clip.');return;}
+  if(!window.confirm('This makes '+ids.length+' video clip'+(ids.length>1?'s':'')+' with Veo, and each one is billed to your Google key. Carry on?'))return;
+  lock(true);let ok=0,bad=[];
+  const queue=ids.slice();
+  const setTile=(id,m)=>{const el=document.querySelector('[data-ts="'+id+'"]');if(el)el.textContent=m;};
+  const worker=async()=>{while(queue.length){const id=queue.shift();
+    try{setTile(id,'Making...');await makeClip(id,m=>setTile(id,m.slice(0,28)));ok++;}
+    catch(e){bad.push(SC[id].name+': '+(e.message||'failed'));setTile(id,'Failed');}}};
+  bNote('Making '+ids.length+' clip'+(ids.length>1?'s':'')+' at once. This takes about 2 to 4 minutes. Keep this tab open.');
+  await Promise.all([worker(),worker(),worker()]);
+  lock(false);syncTiles();
+  bNote(ok+' of '+ids.length+' clips made.'+(bad.length?' Problems: '+bad.join('; '):''),bad.length>0);
+});
+fillClientsHook=renderQ;
+renderQ();
+
+/* ---------- start ---------- */
+syncColours();
+pick(LOCAL.length);
+buildTiles();syncToastOpts();
+render(DUR.toast);
+Promise.all([
+  document.fonts.load("700 40px Caveat"),
+  document.fonts.load("700 40px Nunito"),
+  document.fonts.load("400 40px 'Special Elite'"),
+  document.fonts.load("700 40px Nunito"),
+  document.fonts.load("400 40px 'Permanent Marker'"),
+  document.fonts.load("400 40px 'Courier Prime'"),
+  document.fonts.load("400 40px 'Share Tech Mono'"),
+  document.fonts.load("400 40px Pacifico")
+]).catch(()=>{}).then(()=>{memo={};play({loop:true});});
+setTimeout(()=>{if(!raf)play({loop:true});},2500);
+})();
+</script>
+</body>
+</html>

@@ -185,6 +185,59 @@ const HALLOWEEN_PRESETS: PhotoStudioPreset[] = [
   { id: "hl-08", name: "Face Behind The Costume", hasColour: false },
 ];
 
+const XMAS_PRESETS: PhotoStudioPreset[] = [
+  { id: "xm-01", name: "Scrubs Snowflake Corners", hasColour: true },
+  { id: "xm-02", name: "Scrubs And Santa Hat Treatment Room", hasColour: true },
+  { id: "xm-03", name: "Scrubs Tinsel Stethoscope", hasColour: true },
+  { id: "xm-04", name: "Scrubs Holding A Wrapped Present", hasColour: true },
+  { id: "xm-05", name: "Scrubs Beside The Clinic Tree", hasColour: true },
+  { id: "xm-06", name: "Scrubs Reindeer Antlers", hasColour: true },
+  { id: "xm-07", name: "Scrubs Presents On Reception Desk", hasColour: true },
+  { id: "xm-08", name: "Scrubs Hot Chocolate Break", hasColour: true },
+  { id: "xm-09", name: "Scrubs And Elf Hat Clipboard", hasColour: true },
+  { id: "xm-10", name: "Scrubs Snowflake Window Clings", hasColour: true },
+  { id: "xm-11", name: "Hat And Scarf Snowy Walk", hasColour: false },
+  { id: "xm-12", name: "Hat And Scarf Christmas Market", hasColour: false },
+  { id: "xm-13", name: "Cream Scarf And Berry Red Coat", hasColour: false },
+  { id: "xm-14", name: "Tartan Scarf Snowfall", hasColour: false },
+  { id: "xm-15", name: "Hat Scarf And Gloves Gift Wrapped", hasColour: false },
+  { id: "xm-16", name: "Fluffy Earmuffs And Scarf", hasColour: false },
+  { id: "xm-17", name: "Frosty Morning Dog Walk Style", hasColour: false },
+  { id: "xm-18", name: "Santa Hat And Chunky Scarf", hasColour: false },
+  { id: "xm-19", name: "Scarf Tied Over A Black Polo Neck", hasColour: false },
+  { id: "xm-20", name: "Woolly Hat Hot Chocolate Steps", hasColour: false },
+  { id: "xm-21", name: "Decorating The Tree", hasColour: false },
+  { id: "xm-22", name: "Tree Lights On Evening", hasColour: false },
+  { id: "xm-23", name: "Presents Under The Tree", hasColour: false },
+  { id: "xm-24", name: "Wrapping Presents At The Table", hasColour: false },
+  { id: "xm-25", name: "Presents Stacked Behind Her", hasColour: false },
+  { id: "xm-26", name: "Holding A Bauble Up To The Camera", hasColour: false },
+  { id: "xm-27", name: "Tree Topper Moment", hasColour: false },
+  { id: "xm-28", name: "Gift Tag Writing", hasColour: false },
+  { id: "xm-29", name: "Paper Snowflake Corners Cosy Jumper", hasColour: false },
+  { id: "xm-30", name: "Wreath On The Door", hasColour: false },
+  { id: "xm-31", name: "Christmas Jumper Sofa", hasColour: false },
+  { id: "xm-32", name: "Matching Pyjamas Christmas Morning", hasColour: false },
+  { id: "xm-33", name: "Gingerbread Baking Kitchen", hasColour: false },
+  { id: "xm-34", name: "Mince Pie Taste Test", hasColour: false },
+  { id: "xm-35", name: "Film Night Blanket And Fairy Lights", hasColour: false },
+  { id: "xm-36", name: "Tea And Tinsel Kitchen Table", hasColour: false },
+  { id: "xm-37", name: "Writing Christmas Cards", hasColour: false },
+  { id: "xm-38", name: "Candle And Cashmere", hasColour: false },
+  { id: "xm-39", name: "Slippers By The Fire", hasColour: false },
+  { id: "xm-40", name: "Christmas Eve Tidy Up", hasColour: false },
+  { id: "xm-41", name: "Party Dress Sparkle", hasColour: false },
+  { id: "xm-42", name: "Velvet Blazer Festive Lunch", hasColour: false },
+  { id: "xm-43", name: "Cracker Pulling", hasColour: false },
+  { id: "xm-44", name: "Paper Crown Reading The Joke", hasColour: false },
+  { id: "xm-45", name: "Mistletoe Doorway", hasColour: false },
+  { id: "xm-46", name: "Secret Santa Reveal", hasColour: false },
+  { id: "xm-47", name: "Bauble Earrings And Red Lipstick", hasColour: false },
+  { id: "xm-48", name: "Snow Globe Moment", hasColour: false },
+  { id: "xm-49", name: "Sparklers In The Garden", hasColour: false },
+  { id: "xm-50", name: "Last Day Before Christmas Break", hasColour: false },
+];
+
 const TWEAKED_PRESETS: PhotoStudioPreset[] = [
   { id: "tw-01", name: "Brew And Blanket", hasColour: false },
   { id: "tw-02", name: "Pumpkin Patch Queen", hasColour: false },
@@ -633,7 +686,7 @@ const MIX_STYLES: { value: string; label: string }[] = [
   { value: "speaking to a patient", label: "Speaking to a patient (a woman aged 50)" },
 ];
 
-const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...TWEAKED_PRESETS, ...AUTUMN_PRESETS, ...HALLOWEEN_PRESETS, ...CASUAL_PRESETS, ...MIX_PRESETS, ...DINLEYS_PRESETS, ...SAME_ROOM_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
+const ALL_PRESETS = [...NEW_PORTRAITS_PRESETS, ...JULY_2ND_SHOOT_PRESETS, ...CLASSY_CORPORATE_PRESETS, ...WINTER_WOOLIES_PRESETS, ...TWEAKED_PRESETS, ...AUTUMN_PRESETS, ...HALLOWEEN_PRESETS, ...XMAS_PRESETS, ...CASUAL_PRESETS, ...MIX_PRESETS, ...DINLEYS_PRESETS, ...SAME_ROOM_PRESETS, ...PHOTO_STUDIO_PRESETS, ...INJECTOR_COLLECTION_PRESETS, ...MEN_STUDIO_PRESETS];
 const findPreset = (id: string) => ALL_PRESETS.find((p) => p.id === id);
 
 const ASPECT_OPTIONS: { value: AspectRatio; label: string }[] = [
@@ -831,7 +884,7 @@ export default function AiPortraitStudio() {
   };
 
   const [activeGender, setActiveGender]   = useState<"women" | "men">("women");
-  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "tweaked" | "autumn" | "halloween" | "casual" | "mix" | "dinleys" | "sameroom">("new");
+  const [activeSection, setActiveSection] = useState<"new" | "july" | "photo" | "injector" | "homework" | "classy" | "winter" | "tweaked" | "autumn" | "halloween" | "xmas" | "casual" | "mix" | "dinleys" | "sameroom">("new");
   const [mixSelected, setMixSelected] = useState<Set<string>>(new Set(MIX_PRESETS.map((p) => p.id)));
   const [mixMonth, setMixMonth] = useState(MIX_MONTHS[new Date().getMonth()]);
   const [mixStyle, setMixStyle] = useState(MIX_STYLES[0].value);
@@ -1607,6 +1660,7 @@ export default function AiPortraitStudio() {
                 { key: "tweaked", label: "TWEAKED" },
                 { key: "autumn", label: "AUTUMN" },
                 { key: "halloween", label: "HALLOWEEN" },
+                { key: "xmas", label: "XMAS" },
                 { key: "casual", label: "CASUAL" },
                 { key: "mix", label: "Mix" },
               ].map((tab) => (
@@ -2035,6 +2089,58 @@ export default function AiPortraitStudio() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
               {HALLOWEEN_PRESETS.map((preset) => {
+                const isSelected = selectedPresets.has(preset.id);
+                return (
+                  <div
+                    key={preset.id}
+                    className={`rounded-lg border p-3 cursor-pointer select-none transition-all ${
+                      isSelected
+                        ? "border-violet-500/70 bg-violet-500/10"
+                        : "border-border/30 hover:border-border/60 hover:bg-muted/20"
+                    }`}
+                    onClick={() => togglePreset(preset.id)}
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                        isSelected ? "bg-violet-500 border-violet-500" : "border-border/50"
+                      }`}>
+                        {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium leading-snug">{preset.name}</p>
+                        {preset.hasColour && (
+                          <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 border-violet-500/30 text-violet-400">
+                            scrubs colour
+                          </Badge>
+                        )}
+                        {preset.hasColour && isSelected && (
+                          <div className="mt-2" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="text"
+                              value={presetColours[preset.id] ?? ""}
+                              onChange={(e) => setPresetColours((prev) => ({ ...prev, [preset.id]: e.target.value }))}
+                              placeholder="e.g. navy blue"
+                              className="w-full text-xs bg-background border border-border/50 rounded px-2 py-1 focus:outline-none focus:border-violet-500/50"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+
+</>
+)}
+
+{activeSection === "xmas" && (
+<>
+<p className="text-[10px] uppercase tracking-widest text-muted-foreground/50 font-medium mb-2">XMAS</p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+              {XMAS_PRESETS.map((preset) => {
                 const isSelected = selectedPresets.has(preset.id);
                 return (
                   <div
