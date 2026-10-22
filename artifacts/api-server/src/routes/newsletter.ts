@@ -79,7 +79,7 @@ THIS IS A PATIENT EMAIL NEWSLETTER, NOT A SOCIAL CAPTION
 - First person singular, written as the clinic owner or lead clinician. British English throughout (colour, practise as a verb, specialise, centre, programme).
 - No em dashes or en dashes anywhere, not once. No hashtags. No emojis.
 - No boring medical education. Plain words, a bit of humour, real feeling. Keep facts careful and never overclaim.
-- Never name a prescription-only medicine or brand (Botox, Azzalure, Bocouture, Dysport, Xeomin, Letybo, Relfydess and so on). Never write "anti-wrinkle", wrinkles, injectables or injections. Say "skin treatments" or leave the treatment unnamed and point readers to the clinic website for treatment details only where the item is about a treatment.
+- Never name a prescription-only medicine or brand (Botox, Azzalure, Bocouture, Dysport, Xeomin, Letybo, Relfydess and so on). Never write "anti-wrinkle", wrinkles, injectables or injections. Say "skin treatments" or leave the treatment unnamed and invite readers to drop the clinic a message to see if it is for them where the item is about a treatment. Never mention a website.
 - Never promote or discount a prescription-only medicine treatment. Offers can only apply to consultations, skincare, facials, devices or other non-prescription services.
 - Never say safe, pain-free, painless, guaranteed, permanent, no downtime, risk-free, instant results, best, number one, miracle, or promise any result. No before and after claims.
 - No urgency or pressure: no "limited time", "hurry", "don't miss out", "last chance", "only X left".

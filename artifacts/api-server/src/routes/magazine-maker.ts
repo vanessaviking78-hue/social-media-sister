@@ -30,7 +30,7 @@ WRITING RULES (non-negotiable)
 
 COMPLIANCE (UK, non-negotiable)
 - NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman, how she feels and the clinic, and name a treatment only in plain everyday words when it is not a prescription-only medicine.
-- On treatment posts, send the reader to the clinic website for treatment details ("all the treatment details are on my website, link in bio"). Never state prices, doses or treatment specifics on a page.
+- On treatment posts, invite the reader to drop me a message and see if this is for you or something else similar (never mention a website or link in bio). Never state prices, doses or treatment specifics on a page.
 - Never use the word "safe" in a claim. No medical claims, no guaranteed results, no before and after promises, no superlatives (best, number one, guaranteed).
 - No pressure tactics and no urgency language (no "limited spaces", "book now before it's gone").
 - Frame treatment as consultation and possibility: "may help", "can improve".
