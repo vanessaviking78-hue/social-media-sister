@@ -1983,6 +1983,7 @@ export const RANDOM_PROMPT_PRESETS: PhotoStudioPreset[] = [
 // all black jumper and jeans set.
 const MIX_SUFFIX = `Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm or orange colour cast. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`;
 
+export const MIX_SHIRT_IDS = ["mx-05", "mx-06", "mx-07", "mx-08"];
 export const MIX_SEASONAL_IDS = ["mx-09", "mx-10", "mx-11", "mx-12"];
 
 export const MIX_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -2152,6 +2153,9 @@ export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: strin
   if (MIX_SEASONAL_IDS.includes(preset.id)) {
     const mix = mixSeasonText(vars?.month, vars?.mixStyle);
     prompt = prompt.replace("[MIX STYLE]", mix.styleText).replace("[MIX SEASON]", mix.seasonText).replace("[MIX OUTFIT]", mix.outfitText);
+  }
+  if (MIX_SHIRT_IDS.includes(preset.id) && vars?.outfit?.trim()) {
+    prompt = prompt.replace(/luxury silk shirt/g, `luxury ${vars.outfit.trim()} silk shirt`);
   }
   if (preset.hasCustomText && vars?.customText?.trim()) {
     prompt = `${vars.customText.trim()}\n\nMaintain their exact facial features, skin tone, body shape, and likeness from the reference photo. Must look physically believable and naturally photographed, not CGI or illustrated, natural imperfections, realistic depth, tactile textures, subtle sensor grain, true to life reflections and lighting.`;

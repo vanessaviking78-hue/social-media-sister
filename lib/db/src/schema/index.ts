@@ -958,3 +958,13 @@ export const clientQuestionAnswersTable = pgTable("client_question_answers", {
 });
 export type ClientQuestionAnswer = typeof clientQuestionAnswersTable.$inferSelect;
 
+
+// Free sample pages: one row per clinic sample (8 posts with images, captions
+// and hashtags) served publicly at /sample/<slug>.
+export const freeSamplesTable = pgTable("free_samples", {
+  slug: text("slug").primaryKey(),
+  clinicName: text("clinic_name").notNull(),
+  data: json("data").notNull().default({}),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+export type FreeSample = typeof freeSamplesTable.$inferSelect;
