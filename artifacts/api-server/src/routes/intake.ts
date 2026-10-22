@@ -134,7 +134,7 @@ ${businessProfile}
 
 CLIENT: ${clientName || "this clinic"}
 
-Each caption should be ready to post with relevant emoji, a warm call to action, and 3-5 UK-relevant hashtags at the end. Write in the voice of the clinic owner speaking directly and honestly to their ideal client.
+Each caption should be ready to post with relevant emoji, a call to action that is one engaging question easy to answer in the comments, and 3-5 UK-relevant hashtags at the end. Write in the voice of the clinic owner speaking directly and honestly to their ideal client.
 
 Return valid JSON: { "captions": ["caption 1", "caption 2", ...] }`;
 

@@ -22,7 +22,7 @@ Rules without exception:
 - No em dashes.
 - Never mention Botox, anti-wrinkle, wrinkles, injectables, injections or prescription medicines. Only on a treatment reel, send viewers to the clinic website for treatment details.
 - The hook lands inside 3 seconds and feels relatable, personal and a little funny. Write like a friend chatting, never like a business.
-- The CTA is a question that carries a reply word (Comment WORD, one fun uppercase word relating to the reel).
+- The CTA is ONE closing question that is easy and fun to answer in the comments, written like a friend chatting and relating to the post, such as What reminds you of your childhood? or What are you done apologising for?. Never Comment WORD or a reply word. A reel about a treatment ends with exactly: Drop me a DM to see if you're a good fit for this.
 - No marketing buzzwords or jargon.
 - Write in plain English. Active voice. Short sentences.
 - For 15-second scripts: hook + 1 body point + CTA (total around 40-50 words spoken).

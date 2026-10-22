@@ -5,7 +5,7 @@ export function getVoiceSystemPrompt(_chosenStyle: string): string {
   const base = `
 COMPLIANCE (always, without exception)
 - NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the person and how she feels, and name a treatment only in plain everyday words when it is not a prescription-only medicine.
-- Never mention the website, a link in bio or any web address on any post, treatment posts included. On a treatment post the call to action is a warm invitation to drop me a message and see if this is for you or something else similar. Never state prices, doses or treatment specifics in the post itself.
+- Never mention the website, a link in bio or any web address on any post, treatment posts included. On a treatment post the call to action is exactly: Drop me a DM to see if you're a good fit for this. Never state prices, doses or treatment specifics in the post itself.
 - Never use the word "safe" in advertising claims.
 - No medical claims. No guaranteed results. No before/after that implies certainty.
 - No pressure tactics. No urgency language.

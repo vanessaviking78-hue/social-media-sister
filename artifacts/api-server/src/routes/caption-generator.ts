@@ -20,7 +20,7 @@ export const HOOK_RULES = `HOOKS (the first line of every caption, slide 1 headl
 
 export const DENTAL_RULES = `THIS IS A DENTAL PRACTICE, NOT AN AESTHETICS CLINIC
 - Write about dentistry: check-ups, hygiene, whitening, straightening, restorations, nervous patients, children and families, smiles. Never mention aesthetics, skin, injectables or facial treatments.
-- Dental advertising standards: no guaranteed results, no before and after promises, no pressure, no superlatives. Never send readers to the practice website; invite them to drop me a message and see if this is for you or something else similar.`;
+- Dental advertising standards: no guaranteed results, no before and after promises, no pressure, no superlatives. Never send readers to the practice website; end treatment posts with exactly: Drop me a DM to see if you're a good fit for this.`;
 
 export const isDental = (name?: string) => /castle|dental|dentist|orthodont/i.test(name ?? "");
 export const clinicNoun = (name?: string) => (isDental(name) ? "dental practice" : "aesthetics clinic");
@@ -28,8 +28,8 @@ export const clinicNoun = (name?: string) => (isDental(name) ? "dental practice"
 export const BASE_RULES = `
 COMPLIANCE (non-negotiable, every single caption)
 - NEVER mention Botox, anti-wrinkle anything, wrinkles, lines or any prescription-only medicine, and never hint at one with words such as injectable, jab, needle, dose or prescription. Write about the woman, how she feels and the clinic. Name a treatment only in plain everyday words and only when it is not a prescription-only medicine (facials, peels, skin treatments, HIFU, skin boosters, lip treatments).
-- Never mention the website, a link in bio or any web address on any post, treatment posts included. On a treatment post the call to action is a warm invitation to drop me a message and see if this is for you or something else similar. Never state prices, doses or treatment specifics in the caption itself.
-- Every caption carries a reply word, written inside the closing question as "Comment WORD" (for example "Fancy a nosy? Comment GLOW and I will send you the details"). WORD is one uppercase word. Use the clinic's own reply word if one is given in the notes, otherwise choose a fun, single uppercase word that relates to that post, different for each post.
+- Never mention the website, a link in bio or any web address on any post, treatment posts included. On a treatment post the call to action is exactly: Drop me a DM to see if you're a good fit for this. Never state prices, doses or treatment specifics in the caption itself.
+- The call to action on every post is ONE closing question that is easy and fun to answer in the comments, written like a friend chatting and relating to the post, such as What reminds you of your childhood? or What are you done apologising for?. Never use Comment WORD, DM me the word, a reply word or a link. The only exception is a post about a treatment, which ends with exactly: Drop me a DM to see if you're a good fit for this.
 - Never use the word "safe" in advertising claims.
 - No medical claims. No guaranteed results. No before/after that implies certainty.
 - No pressure tactics. No urgency language.

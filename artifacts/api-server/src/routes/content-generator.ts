@@ -95,7 +95,7 @@ slide3_body
 3-4 sentences going deeper into the topic. A turning point, a relatable observation, or a quiet truth that earns the reader's trust. Do not repeat what was said in slide2_body.
 
 slide4_cta
-A DM-keyword call to action. Use this format: "DM me the word [KEYWORD] and I'll [what they receive]". The keyword should be a single, memorable word related to the post topic. No urgency. No "NOW". Sounds like a person quietly extending an invitation, not a campaign.
+A question call to action: one engaging question that is easy and fun to answer in the comments, such as What reminds you of your childhood? Never a DM keyword. Treatment posts say exactly: Drop me a DM to see if you're a good fit for this. No urgency. No NOW.
 ${BASE_RULES}`;
 
   // Streamed as Server-Sent Events so the client gets posts as each batch finishes,

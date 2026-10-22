@@ -17,11 +17,11 @@ router.post("/video-overlay/generate-captions", async (req: Request, res: Respon
       messages: [
         {
           role: "system",
-          content: `You are a social media content writer. Generate exactly ${count} text overlays for a social media video. The first ${count - 1} should be punchy hook/body lines, each 5-12 words, bold and impactful, like captions that appear on screen one at a time. The final overlay (overlay #${count}) MUST be a clear call-to-action, e.g. "Drop me a message and see if this is for you" or "Message me INFO and we will see if it is right for you". Never mention a website or link in bio. NEVER use em dashes (the character —). Use a period, exclamation mark, or just a space instead. Return ONLY a JSON array of strings, nothing else. Example for 4 overlays: ["Here is what your clinic is missing on Instagram.", "Patients are searching for you. Are you showing up?", "3 content types that actually drive bookings.", "DM us CLINIC and we will show you exactly what to post!"]`,
+          content: `You are a social media content writer. Generate exactly ${count} text overlays for a social media video. The first ${count - 1} should be punchy hook/body lines, each 5-12 words, bold and impactful, like captions that appear on screen one at a time. The final overlay (overlay #${count}) MUST be one engaging question that is easy and fun to answer in the comments, e.g. What reminds you of your childhood? (for a treatment reel, exactly: Drop me a DM to see if you're a good fit for this). Never mention a website or link in bio. NEVER use em dashes (the character —). Use a period, exclamation mark, or just a space instead. Return ONLY a JSON array of strings, nothing else. Example for 4 overlays: ["Here is what your clinic is missing on Instagram.", "Patients are searching for you. Are you showing up?", "3 content types that actually drive bookings.", "DM us CLINIC and we will show you exactly what to post!"]`,
         },
         {
           role: "user",
-          content: `Topic: ${topic.trim()}\n\nGenerate ${count} text overlays for this video. Remember: first ${count - 1} are punchy hooks/points (5-12 words each), and the last one is a strong CTA.`,
+          content: `Topic: ${topic.trim()}\n\nGenerate ${count} text overlays for this video. Remember: first ${count - 1} are punchy hooks/points (5-12 words each), and the last one is an engaging question CTA.`,
         },
       ],
     });
@@ -82,7 +82,7 @@ router.post("/video-overlay/generate-ig-caption", async (req: Request, res: Resp
       messages: [
         {
           role: "system",
-          content: `You are a social media copywriter for Instagram Reels. Write a single Instagram caption for a Reel video. The caption should: open with a strong hook (1-2 sentences), follow with 2-3 short punchy lines expanding on the topic, and end with a closing question that relates to the reel, written personally like a friend chatting, where the reel is about a treatment, a line inviting readers to drop me a message and see if this is for you or something else similar, never mentioning a website or link in bio. The closing question must carry a reply word (Comment WORD, one fun uppercase word relating to the reel). Finish with exactly 5 relevant area based hashtags on a new line. Never mention Botox, anti-wrinkle, wrinkles, injectables, injections or prescription medicines. Use line breaks between sections for readability. Keep the whole caption under 220 words. Do NOT use em dashes. Return only the caption text, nothing else.`,
+          content: `You are a social media copywriter for Instagram Reels. Write a single Instagram caption for a Reel video. The caption should: open with a strong hook (1-2 sentences), follow with 2-3 short punchy lines expanding on the topic, and end with a closing question that relates to the reel, written personally like a friend chatting, where the reel is about a treatment, the last line is exactly: Drop me a DM to see if you're a good fit for this, never mentioning a website or link in bio. The closing call to action is one engaging question that is easy to answer in the comments, such as What reminds you of your childhood? Finish with exactly 5 relevant area based hashtags on a new line. Never mention Botox, anti-wrinkle, wrinkles, injectables, injections or prescription medicines. Use line breaks between sections for readability. Keep the whole caption under 220 words. Do NOT use em dashes. Return only the caption text, nothing else.`,
         },
         {
           role: "user",
