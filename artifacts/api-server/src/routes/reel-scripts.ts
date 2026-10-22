@@ -1,9 +1,14 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
+import { HOUSE_VOICE } from "../lib/houseRules";
 
 const router: IRouter = Router();
 
-const REEL_SYSTEM = `You write reel scripts for social media managers. The scripts are spoken on camera by a real person — not a voiceover, not a teleprompter-reader, but someone talking naturally to their phone.
+const REEL_SYSTEM = `${HOUSE_VOICE}
+
+The house voice above is the voice for everything you write. Where the brief below sets who the post is for, what she offers or a rule that is specific to this tool, that still applies.
+
+You write reel scripts for social media managers. The scripts are spoken on camera by a real person — not a voiceover, not a teleprompter-reader, but someone talking naturally to their phone.
 
 Rules without exception:
 - Hook: one sentence, maximum 12 words. It must make someone stop scrolling. Specific, concrete, a little unexpected. Not a generic question.

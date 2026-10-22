@@ -424,18 +424,6 @@ export default function EngagingReels() {
  <span className="text-xs text-muted-foreground font-mono">{boxColor}</span>
  </div>
  </div>
- <div>
- <label className="block text-xs text-muted-foreground mb-1.5">Caption style</label>
- <select
- value={captionStyle}
- onChange={(e) => setCaptionStyle(e.target.value)}
- className="rounded-lg bg-zinc-900 border border-zinc-800 px-3 py-2 text-sm text-white outline-none focus:border-pink-600"
- >
- {CAPTION_STYLES.map((s) => (
- <option key={s.value} value={s.value}>{s.label}</option>
- ))}
- </select>
- </div>
  <p className="text-xs text-muted-foreground flex-1 min-w-[160px]">
  Font is Inter, black text on a coloured box. Hook plays over the first third of the clip, second hook over
  the middle, CTA over the last third. Use "Position text" on each reel below to drag, resize and font-size

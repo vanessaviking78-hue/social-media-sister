@@ -175,7 +175,7 @@ export default function ComicPage() {
   const [search, setSearch] = useState("");
   const [footer, setFooter] = useState("");
   const [tagline, setTagline] = useState('Follow along for more "How Not To Do Aesthetics"');
-  const [tone, setTone] = useState("5");
+  const tone = "1"; // one house voice, no picker
   const [caption, setCaption] = useState("");
   const [titleIdx, setTitleIdx] = useState(0);
   const [customTitle, setCustomTitle] = useState("");
@@ -517,16 +517,6 @@ export default function ComicPage() {
           <section className="space-y-2 rounded-xl border border-border/30 p-4">
             <h2 className="font-semibold text-base">Caption</h2>
             <div className="flex items-center gap-2">
-              <Select value={tone} onValueChange={setTone}>
-                <SelectTrigger className="h-8 text-sm w-64"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="5">Feral, savage, sarcastic</SelectItem>
-                  <SelectItem value="1">Northern grit</SelectItem>
-                  <SelectItem value="3">Funny and blunt</SelectItem>
-                  <SelectItem value="4">Professional with personality</SelectItem>
-                  <SelectItem value="2">Storyteller, whimsical</SelectItem>
-                </SelectContent>
-              </Select>
               <Button size="sm" onClick={writeCaption} disabled={writing}>
                 {writing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Wand2 className="w-4 h-4 mr-2" />Write caption</>}
               </Button>

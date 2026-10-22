@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
+import { HOUSE_VOICE } from "../lib/houseRules";
 
 const router: IRouter = Router();
 
@@ -91,7 +92,11 @@ type Notes = {
 
 function systemPrompt(kind: NailPostKind, n: Notes): string {
   const word = n.replyWords[kind] || "";
-  return `You write one social media post for ${n.ownerName || "Millie"}, a nail technician who runs ${n.businessName}, in ${n.area}. You write as ${n.ownerName || "Millie"} herself, in the first person ("I", "my", "you"), never as a social media manager and never as "we".
+  return `${HOUSE_VOICE}
+
+The house voice above is the voice for everything you write. Where the brief below sets who the post is for, what she offers or a rule that is specific to this tool, that still applies.
+
+You write one social media post for ${n.ownerName || "Millie"}, a nail technician who runs ${n.businessName}, in ${n.area}. You write as ${n.ownerName || "Millie"} herself, in the first person ("I", "my", "you"), never as a social media manager and never as "we".
 
 WHO SHE IS TALKING TO: ${n.audience || "women aged 18 plus who love nails, cute, girly and sweet"}. Use the consumer psychology of a young, girly, social audience: they save, share and tag friends, they love a treat they feel they have earned, they want to feel seen, they follow people who feel like a mate. Cute, girly, sweet, warm, affable, funny and humanised. Fun rather than technical.
 ${n.brandNotes ? `BRAND NOTES: ${n.brandNotes}\n` : ""}${n.services ? `HER SERVICES AND PRICES (only these exist, never offer anything else such as acrylics or other treatments): ${n.services}\n` : ""}${n.policies ? `HER BOOKING POLICIES (mention one only where it fits the post naturally, for example the deposit securing a slot on the availability post, and never invent any other policy): ${n.policies}\n` : ""}${n.offer ? `CURRENT OFFER: ${n.offer}\n` : ""}${n.booking ? `HOW PEOPLE BOOK: ${n.booking}\n` : ""}

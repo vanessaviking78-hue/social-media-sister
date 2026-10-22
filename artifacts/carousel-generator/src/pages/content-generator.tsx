@@ -17,14 +17,6 @@ type GeneratedPost = {
   slide4_cta: string;
 };
 
-const TONES = [
-  { value: "1", label: "Northern Grit", desc: "Raw, real, working-class warm. No fluff." },
-  { value: "2", label: "Whimsical Storytelling", desc: "Poetic, vivid, story-led, character-driven." },
-  { value: "3", label: "Dawn French", desc: "Funny, blunt, self-aware. Woman over 40." },
-  { value: "4", label: "Professional with Personality", desc: "Warm but authoritative. Relatable expert." },
-  { value: "5", label: "High Brow Doctor", desc: "Super professional, clinical authority, premium." },
-  { value: "6", label: "Male Clinician", desc: "Direct, approachable, dry humour." },
-];
 
 const BATCH_OPTIONS = [
   { value: "1", label: "1 post" },
@@ -80,7 +72,7 @@ export default function ContentGenerator() {
   const [clinicName, setClinicName] = useState("");
   const [location, setLocation] = useState("");
   const [treatments, setTreatments] = useState("");
-  const [tone, setTone] = useState("1");
+  const tone = "1"; // one house voice, no picker
   const [brandVoice, setBrandVoice] = useState("");
   const [postTitlesRaw, setPostTitlesRaw] = useState("");
   const [batchSize, setBatchSize] = useState("all");
@@ -277,40 +269,14 @@ export default function ContentGenerator() {
 
             {/* Tone */}
             <div className="rounded-xl border border-border/30 bg-card/30 p-5 space-y-3">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Writing Tone</h2>
-              <div className="space-y-2">
-                {TONES.map((t) => (
-                  <label
-                    key={t.value}
-                    className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                      tone === t.value && !brandVoice.trim()
-                        ? "border-pink-500/60 bg-pink-500/8"
-                        : "border-border/25 hover:border-border/50"
-                    } ${brandVoice.trim() ? "opacity-40 cursor-not-allowed" : ""}`}
-                  >
-                    <input
-                      type="radio"
-                      name="tone"
-                      value={t.value}
-                      checked={tone === t.value}
-                      onChange={() => setTone(t.value)}
-                      disabled={!!brandVoice.trim()}
-                      className="mt-0.5 accent-pink-500 shrink-0"
-                    />
-                    <div>
-                      <span className="text-sm font-medium">{t.label}</span>
-                      <p className="text-xs text-muted-foreground mt-0.5">{t.desc}</p>
-                    </div>
-                  </label>
-                ))}
-              </div>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Voice</h2>
             </div>
 
             {/* Brand Voice */}
             <div className="rounded-xl border border-border/30 bg-card/30 p-5 space-y-3">
               <div>
                 <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Brand Voice Document</h2>
-                <p className="text-xs text-muted-foreground mt-1">Optional. Paste the client's brand guidelines here and they override the tone selection above.</p>
+                <p className="text-xs text-muted-foreground mt-1">Optional. Paste the client's brand guidelines here and they override the house voice.</p>
               </div>
               <Textarea
                 value={brandVoice}
@@ -320,7 +286,7 @@ export default function ContentGenerator() {
                 className="bg-background/60 border-border/40 text-sm resize-none"
               />
               {brandVoice.trim() && (
-                <p className="text-xs text-pink-400">Tone selection overridden by brand voice document.</p>
+                <p className="text-xs text-pink-400">House voice overridden by brand voice document.</p>
               )}
             </div>
 

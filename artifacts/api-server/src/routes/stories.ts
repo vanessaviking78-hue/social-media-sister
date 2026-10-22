@@ -1,9 +1,14 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
+import { HOUSE_VOICE } from "../lib/houseRules";
 
 const router: IRouter = Router();
 
-const QUESTIONS_SYSTEM = `You write Instagram Story engagement questions for aesthetic and beauty clinics.
+const QUESTIONS_SYSTEM = `${HOUSE_VOICE}
+
+The house voice above is the voice for everything you write. Where the brief below sets who the post is for, what she offers or a rule that is specific to this tool, that still applies.
+
+You write Instagram Story engagement questions for aesthetic and beauty clinics.
 
 Audience: women aged 35 and over. They are confident, self-aware, and a little tired of being talked down to. They respond to warmth, honesty, and a bit of cheek. Think Dawn French energy — human, inclusive, gently funny, never preachy.
 

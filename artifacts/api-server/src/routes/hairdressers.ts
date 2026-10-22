@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
+import { HOUSE_VOICE } from "../lib/houseRules";
 
 const router: IRouter = Router();
 
@@ -92,7 +93,11 @@ type Notes = {
 function systemPrompt(kind: HairPostKind, n: Notes): string {
   const word = n.replyWords[kind] || "";
   const who = n.ownerName || "the stylist";
-  return `You write one social media post for ${who}, a hairdresser who runs ${n.businessName}, in ${n.area}. You write as ${who} themselves, in the first person ("I", "my", "you"), never as a social media manager and never as "we".
+  return `${HOUSE_VOICE}
+
+The house voice above is the voice for everything you write. Where the brief below sets who the post is for, what she offers or a rule that is specific to this tool, that still applies.
+
+You write one social media post for ${who}, a hairdresser who runs ${n.businessName}, in ${n.area}. You write as ${who} themselves, in the first person ("I", "my", "you"), never as a social media manager and never as "we".
 
 WHO THEY ARE TALKING TO: ${n.audience || "women aged 25 plus who want to feel good in their own hair and love a chat in the chair"}. Use the consumer psychology of women who treat their hair appointment as their own hour: they save, share and tag friends, they love a treat they feel they have earned, they want to feel seen, they follow people who feel like a mate. Warm, affable, funny and humanised. Fun rather than technical.
 ${n.brandNotes ? `BRAND NOTES: ${n.brandNotes}\n` : ""}${n.services ? `SERVICES AND PRICES (only these exist, never offer anything else): ${n.services}\n` : ""}${n.policies ? `BOOKING POLICIES (mention one only where it fits the post naturally, for example the deposit securing a slot on the availability post, and never invent any other policy): ${n.policies}\n` : ""}${n.offer ? `CURRENT OFFER: ${n.offer}\n` : ""}${n.booking ? `HOW PEOPLE BOOK: ${n.booking}\n` : ""}

@@ -38,11 +38,7 @@ type TweetRow = {
 };
 
 const PERSONALITIES: { key: string; tone: string; label: string; brief: string }[] = [
-  { key: "grit", tone: "1", label: "1. Northern grit Vanessa", brief: "direct, warm and honest, plain words, like chatting to your best mate over a brew" },
-  { key: "story", tone: "2", label: "2. Springsteen storytelling, whimsical", brief: "vivid, story led, a little wistful and whimsical, painting a small scene" },
-  { key: "dawn", tone: "3", label: "3. Dawn French, funny and blunt", brief: "genuinely funny, blunt, self-deprecating and warm, never cruel" },
-  { key: "pro", tone: "4", label: "4. Professional but with personality", brief: "polished and professional but with real personality and warmth, never stiff" },
-  { key: "feral", tone: "5", label: "5. Feral, savage, sarcastic", brief: "dry, blunt, a bit unhinged and sarcastic, short punchy sentences, never cruel to anyone" },
+  { key: "house", tone: "1", label: "House voice", brief: "warm, quick witted and chatty, plain words, short punchy lines, like talking to one friend over a cuppa" },
 ];
 
 const CONFETTI_COLOURS = ["#ec4899", "#f59e0b", "#a855f7", "#22c55e", "#3b82f6", "#facc15", "#f43f5e"];
@@ -657,7 +653,7 @@ export default function TweetMaker() {
   // ---- Captions, written before anything is scheduled ----
   const [captioning, setCaptioning] = useState<string | null>(null);
   // Used when there is no client picked: the person chooses the voice the captions are written in.
-  const [personality, setPersonality] = useState("");
+  const [personality] = useState("house");
   const chosenPersonality = PERSONALITIES.find((p) => p.key === personality) ?? null;
   const canCaption = !!selectedPreset || !!chosenPersonality;
   const captionFor = async (quote: string, askIndex: number): Promise<string> => {
@@ -694,7 +690,7 @@ export default function TweetMaker() {
     setRows((prev) => prev.map((r, i) => (i === index ? { ...r, caption } : r)));
   // Fills in every tweet that has no caption yet, so anything already written or edited is left alone.
   const generateAllCaptions = async () => {
-    if (!canCaption) { toast.error("Pick a client, or choose a personality, so I know how to write the captions"); return; }
+    if (!canCaption) { toast.error("Pick a client first so I know how to write the captions"); return; }
     const todo = rows.map((r, i) => ({ r, i })).filter(({ r }) => !r.caption.trim());
     if (!todo.length) { toast.success("Every tweet already has a caption"); return; }
     let done = 0;
@@ -1197,17 +1193,6 @@ export default function TweetMaker() {
               {captioning ? <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" />{captioning}</> : <><Sparkles className="w-4 h-4 mr-1.5" />Generate captions</>}
             </Button>
             <p className="text-[11px] text-muted-foreground">Each caption asks readers to tag or share, worded differently every time, and ends with a question.</p>
-            {!selectedPreset && (
-              <div className="space-y-1">
-                <p className="text-[11px] text-muted-foreground">No client picked, so what personality should these captions be written in?</p>
-                <Select value={personality} onValueChange={setPersonality}>
-                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Choose a personality" /></SelectTrigger>
-                  <SelectContent>
-                    {PERSONALITIES.map((p) => <SelectItem key={p.key} value={p.key}>{p.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
             {rows[selectedIndex] && (
               <div className="space-y-1.5">
                 <p className="text-[11px] text-muted-foreground">Caption for the tweet you are previewing. Edit it however you like.</p>

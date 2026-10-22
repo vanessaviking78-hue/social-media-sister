@@ -18,14 +18,6 @@ import { HOOKS, SEASON_WINDOWS, packStarts, isoDate, parseIso, hookTiming, hooks
 
 const BASE = import.meta.env.BASE_URL;
 
-const TONES = [
-  { value: "1", label: "Northern grit Vanessa style" },
-  { value: "2", label: "Bruce Springsteen storytelling, whimsical" },
-  { value: "3", label: "Dawn French, funny and blunt" },
-  { value: "4", label: "Professional but with personality" },
-  { value: "5", label: "Feral, savage, sarcastic" },
-];
-
 const pad = (n: number) => String(n).padStart(2, "0");
 // Autumn and winter alternate, so the photos run autumn, winter, autumn, winter and so on.
 // The one Halloween idea, for posting on 31 October. It can be added to a pack and has its own photo preset.
@@ -79,7 +71,7 @@ export default function ClientStylish() {
   const [treatments, setTreatments] = useState(["", "", ""]);
   const [siteTreatments, setSiteTreatments] = useState<string[]>([]);
   const [loadingTreatments, setLoadingTreatments] = useState(false);
-  const [tone, setTone] = useState("");
+  const tone = "1"; // one house voice, no picker
   const [area, setArea] = useState("");
   const [notes, setNotes] = useState("");
   const [topText, setTopText] = useState("");
@@ -309,7 +301,7 @@ export default function ClientStylish() {
   }, [website]);
 
   const canStart =
-    clientName.trim() && website.trim() && (useApproved ? approvedFiles.length > 0 : photo) && treatments.every(t => t.trim()) && tone && !busy;
+    clientName.trim() && website.trim() && (useApproved ? approvedFiles.length > 0 : photo) && treatments.every(t => t.trim()) && !busy;
 
   const handleStart = async () => {
     if (!canStart || (!useApproved && !photo)) return;
@@ -671,18 +663,6 @@ export default function ClientStylish() {
 
           <HookBankPicker client={hookKey} picked={hookPick} onChange={changeHooks} startDate={hookStart} onStartDate={changeHookStart} />
 
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Writing style</Label>
-            <div className="space-y-1.5">
-              {TONES.map(t => (
-                <label key={t.value} className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm cursor-pointer transition-colors ${tone === t.value ? "border-sky-500/60 bg-sky-500/10" : "border-border/40 hover:border-border/70"}`}>
-                  <input type="radio" name="tone" value={t.value} checked={tone === t.value} onChange={() => setTone(t.value)} className="accent-sky-500" />
-                  {t.label}
-                </label>
-              ))}
-            </div>
-          </div>
-
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">About the clinician <span className="text-muted-foreground font-normal">(optional)</span></Label>
             <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} placeholder="A few words on who they are, so the voice fits them." />
@@ -694,7 +674,7 @@ export default function ClientStylish() {
             {started ? "Start again" : "Make the pack"}
           </Button>
           {!canStart && !busy && (
-            <p className="text-xs text-muted-foreground">I need the client, website, photos, all 3 treatments and a writing style.</p>
+            <p className="text-xs text-muted-foreground">I need the client, website, photos, and all 3 treatments.</p>
           )}
           </div>
         </aside>

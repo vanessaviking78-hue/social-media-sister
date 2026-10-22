@@ -512,13 +512,6 @@ const WEIGHTS = [
   { label: "Bold", value: 700 },
 ];
 
-const TONES = [
-  { value: "1", label: "Northern grit" },
-  { value: "2", label: "Storyteller, whimsical" },
-  { value: "3", label: "Funny and blunt" },
-  { value: "4", label: "Professional with personality" },
-  { value: "5", label: "Feral, savage, sarcastic" },
-];
 
 const SAMPLE_CSV = [
   "headline,subtitle,text 1,text 2,text 3,cta",
@@ -3154,7 +3147,7 @@ export default function Stylish() {
       .catch(() => toast.error("Could not save that font to the client"));
   };
 
-  const [tone, setTone] = useState("1");
+  const tone = "1"; // one house voice, no picker
   const [area, setArea] = useState("");
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [customFonts, setCustomFonts] = useState<{ file: string; family: string }[]>([]);
@@ -4574,7 +4567,7 @@ export default function Stylish() {
                 </div>
               </div>
             )}
-            <p className="text-xs text-muted-foreground leading-relaxed">Tell me what the 4 treatment posts are about and what the rest should be, and I will write it in the writing style chosen above the posts. The Ryder Clinic is always written very professionally, warmly and with feeling, for the slides and the captions.</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">Tell me what the 4 treatment posts are about and what the rest should be, and I will write it in the house voice. The Ryder Clinic is always written very professionally, warmly and with feeling, for the slides and the captions.</p>
             {csvTopics.map((t, i) => (
               <input key={i} value={t} onChange={e => setCsvTopics(prev => prev.map((x, j) => (j === i ? e.target.value : x)))}
                 placeholder={`Treatment post ${i + 1}: what is it about?`}
@@ -5063,10 +5056,6 @@ export default function Stylish() {
                     placeholder="Clinic area for local SEO, e.g. Harrogate, North Yorkshire"
                     className="h-9 text-sm bg-muted/30 border border-border/40 rounded-md px-3 w-72"
                   />
-                  <Select value={tone} onValueChange={setTone}>
-                    <SelectTrigger className="h-9 text-sm bg-muted/30 border-border/40 w-56"><SelectValue /></SelectTrigger>
-                    <SelectContent>{TONES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
-                  </Select>
                   <Button size="sm" variant="outline" onClick={handleCaptionAll} disabled={captionAllBusy}>
                     {captionAllBusy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Wand2 className="w-4 h-4 mr-1.5" />}
                     Write all captions
