@@ -641,6 +641,26 @@ router.post("/client-stylish/treatments", async (req: Request, res: Response) =>
   }
 });
 
+// The NEW BUNDLE: the mix that worked brilliantly for Sarah (timeless by sarah), with the clinician's own
+// previous role (paramedic, nurse, doctor, dentist and so on) swapped in wherever a post draws on it.
+function newBundleBrief(role: string, extra: string): string {
+  return `THE NEW BUNDLE. Write exactly 17 other posts in this mix, spread so no two of the same kind sit together. The clinician's role is "${role}". Wherever a post draws on her work background, use that role and what it genuinely involves day to day. Never invent qualifications beyond that role.
+- 2 posts "Things I learnt from my ${role} days" (subtitle along the lines of "That help me in the clinic"): real, specific, funny moments from that working life and how they make her a better clinician now.
+- 1 post "Things my patients taught me": candid, warm, with a giggle.
+- 1 post "Things I wish I told my younger self" about starting out in ${isDentalRole(role) ? "dentistry" : "aesthetics"}.
+- 1 post "Things I've stopped apologising for".
+- 3 nostalgic comedy posts about the 80s, 90s and 00s childhood of a woman over 35 (for example a dream house toy, dial-up internet, a virtual pet, the school disco, bedroom posters, mixtapes). Pick fresh ones, funny, affectionate, ending on a question that makes her share her own memory.
+- 2 "To the woman who..." posts, direct and emotional (for example tired of dodging bathroom mirrors, juggling far too much), warm and reassuring, gently leading to a chat with me.
+- 1 perimenopause post, honest and funny, the things nobody warned her about.
+- 1 ageing post, a funny and loving look at getting older.
+- 1 skincare post that is about understanding her skin right now, not a product list.
+- 1 self-care chaos post, a cuppa and a rant, being kind to herself.
+- 1 fun fact post, quirky history of beauty (a queen's bath ritual, ancient skincare) told with a wink.
+- 1 more post that suits ${role}s turned clinicians, in the same spirit as the first.
+Every cta follows the CTA rules above: one engaging question, never a link, never the website, never a reply word.${extra ? `\nExtra notes from me: ${extra}` : ""}`;
+}
+function isDentalRole(r: string): boolean { return /dent/i.test(r); }
+
 router.post("/client-stylish/csv", async (req: Request, res: Response) => {
   // Written as a job, like the pack copy, so the website's 28 second limit cannot cut it off.
   let out: { status: (c: number) => any; json: (b: unknown) => void } = res;
@@ -655,13 +675,16 @@ router.post("/client-stylish/csv", async (req: Request, res: Response) => {
     };
   }
   try {
-    const body = req.body as { clientName?: string; website?: string; tone?: string; notes?: string; treatmentTopics?: string[]; restBrief?: string; restCount?: number; hooks?: unknown };
+    const body = req.body as { clientName?: string; website?: string; tone?: string; notes?: string; treatmentTopics?: string[]; restBrief?: string; restCount?: number; hooks?: unknown; bundle?: string; role?: string };
     const clientName = String(body.clientName ?? "").trim();
     if (!clientName) { out.status(400).json({ error: "Please choose the client first" }); return; }
+    const newBundle = body.bundle === "new";
+    const role = neutralise(String(body.role ?? "").trim()).slice(0, 60);
+    if (newBundle && !role) { out.status(400).json({ error: "Tell me the clinician's role first, for example paramedic, nurse, doctor or dentist" }); return; }
     const topics = (Array.isArray(body.treatmentTopics) ? body.treatmentTopics : []).map((t) => neutralise(String(t ?? "").trim())).filter(Boolean).slice(0, 4);
     if (topics.length < 1) { out.status(400).json({ error: "Tell me what the treatment posts are about" }); return; }
-    const restCount = Math.min(40, Math.max(0, Math.round(Number(body.restCount ?? 16))));
-    const restBrief = neutralise(String(body.restBrief ?? "").trim()).slice(0, 2000);
+    const restCount = newBundle ? 17 : Math.min(40, Math.max(0, Math.round(Number(body.restCount ?? 16))));
+    const restBrief = newBundle ? newBundleBrief(role, neutralise(String(body.restBrief ?? "").trim()).slice(0, 800)) : neutralise(String(body.restBrief ?? "").trim()).slice(0, 2000);
     const ryder = isRyder(clientName);
     const tonePrompt = ryder ? RYDER_TONE : (CAPTION_TONE_PROMPTS[String(body.tone ?? "4")] ?? CAPTION_TONE_PROMPTS["4"]);
     const notes = neutralise(String(body.notes ?? "").trim()).slice(0, 1500);

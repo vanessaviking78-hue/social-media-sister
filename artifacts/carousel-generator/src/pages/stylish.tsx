@@ -3400,10 +3400,13 @@ export default function Stylish() {
   const [csvHookStart, setCsvHookStart] = useState(() => isoDate(packStarts()[0]));
   const [csvWriting, setCsvWriting] = useState(false);
   const [csvText, setCsvText] = useState("");
+  const [csvMode, setCsvMode] = useState<"custom" | "bundle">("custom");
+  const [csvRole, setCsvRole] = useState("");
 
   const writeCsv = async () => {
     if (!preset?.name) { toast.error("Choose the client first"); return; }
     if (!csvTopics.some(t => t.trim())) { toast.error("Tell me what the treatment posts are about"); return; }
+    if (csvMode === "bundle" && !csvRole.trim()) { toast.error("Tell me the role first, for example paramedic, nurse, doctor or dentist"); return; }
     setCsvWriting(true);
     const t = toast.loading("Writing the CSV");
     try {
@@ -3411,7 +3414,7 @@ export default function Stylish() {
       const readJson = async (r: Response): Promise<CsvReply | null> => {
         try { return (await r.json()) as CsvReply; } catch { return null; }
       };
-      const payload = JSON.stringify({ clientName: preset.name, website: presetWebsite(preset), tone, treatmentTopics: csvTopics, restBrief: csvRest, restCount: csvRestCount, hooks: pickedHookPayload(csvHookPick, csvTopics), async: "1" });
+      const payload = JSON.stringify({ clientName: preset.name, website: presetWebsite(preset), tone, treatmentTopics: csvTopics, restBrief: csvRest, restCount: csvRestCount, hooks: pickedHookPayload(csvHookPick, csvTopics), ...(csvMode === "bundle" ? { bundle: "new", role: csvRole.trim() } : {}), async: "1" });
       let d: CsvReply | null = null;
       // The server can be restarting after an update, so a web page instead of an answer means try again.
       for (let attempt = 0; attempt < 4 && !d?.csv; attempt++) {
@@ -4555,21 +4558,36 @@ export default function Stylish() {
           </section>
 
           <section className="space-y-2 rounded-lg border border-border/40 p-3">
-            <Label className="text-sm font-medium">Write my CSV for me</Label>
+            <div className="flex gap-1.5">
+              <button onClick={() => setCsvMode("custom")} className={`px-3 h-8 rounded-md text-xs font-medium border ${csvMode === "custom" ? "bg-sky-500/15 border-sky-500/50 text-sky-400" : "border-border/40 text-muted-foreground"}`}>Write my CSV for me</button>
+              <button onClick={() => setCsvMode("bundle")} className={`px-3 h-8 rounded-md text-xs font-bold tracking-wide border ${csvMode === "bundle" ? "bg-sky-500/15 border-sky-500/50 text-sky-400" : "border-border/40 text-muted-foreground"}`}>NEW BUNDLE</button>
+            </div>
+            {csvMode === "bundle" && (
+              <div className="space-y-2 rounded-md bg-muted/20 p-2.5">
+                <p className="text-xs text-muted-foreground leading-relaxed">21 posts in the mix that worked brilliantly for Sarah: 4 treatment posts, nostalgic comedy, "to the woman who", things my patients taught me, perimenopause, ageing and more. Pick the role and the "things I learnt from my ... days" posts change to match.</p>
+                <input value={csvRole} onChange={e => setCsvRole(e.target.value)} placeholder="Their role: paramedic, nurse, doctor, dentist..."
+                  className="h-9 w-full text-sm bg-muted/30 border border-border/40 rounded-md px-3" />
+                <div className="flex flex-wrap gap-1.5">
+                  {["Paramedic", "Nurse", "Doctor", "Dentist", "Midwife", "Pharmacist", "Physiotherapist"].map(r => (
+                    <button key={r} onClick={() => setCsvRole(r.toLowerCase())} className={`px-2.5 h-7 rounded-full text-xs border ${csvRole.toLowerCase() === r.toLowerCase() ? "bg-sky-500/15 border-sky-500/50 text-sky-400" : "border-border/40 text-muted-foreground"}`}>{r}</button>
+                  ))}
+                </div>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground leading-relaxed">Tell me what the 4 treatment posts are about and what the rest should be, and I will write it in the writing style chosen above the posts. The Ryder Clinic is always written very professionally, warmly and with feeling, for the slides and the captions.</p>
             {csvTopics.map((t, i) => (
               <input key={i} value={t} onChange={e => setCsvTopics(prev => prev.map((x, j) => (j === i ? e.target.value : x)))}
                 placeholder={`Treatment post ${i + 1}: what is it about?`}
                 className="h-9 w-full text-sm bg-muted/30 border border-border/40 rounded-md px-3" />
             ))}
-            <textarea value={csvRest} onChange={e => setCsvRest(e.target.value)} rows={3}
-              placeholder="What should the rest of the posts be? For example: 4 about menopause, 4 shareable and emotional, 4 skincare tips, 4 about what to expect at a consultation."
+            <textarea value={csvRest} onChange={e => setCsvRest(e.target.value)} rows={csvMode === "bundle" ? 2 : 3}
+              placeholder={csvMode === "bundle" ? "Anything extra for this client? (optional)" : "What should the rest of the posts be? For example: 4 about menopause, 4 shareable and emotional, 4 skincare tips, 4 about what to expect at a consultation."}
               className="w-full text-sm bg-muted/30 border border-border/40 rounded-md px-3 py-2" />
             <HookBankPicker client={preset?.name ?? ""} days={(() => { const d = new URLSearchParams(window.location.search).get("day"); return d === "wednesday" ? ["Wednesday", "Any day"] : d === "friday" ? ["Friday"] : undefined; })()} picked={csvHookPick} onChange={setCsvHookPick} startDate={csvHookStart} onStartDate={setCsvHookStart} />
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            {csvMode === "custom" && <label className="flex items-center gap-2 text-xs text-muted-foreground">
               Other posts
               <input type="number" min={0} max={40} value={csvRestCount} onChange={e => setCsvRestCount(Number(e.target.value))} className="h-8 w-20 text-sm bg-muted/30 border border-border/40 rounded-md px-2" />
-            </label>
+            </label>}
             <div className="flex flex-wrap gap-2">
               <Button size="sm" onClick={writeCsv} disabled={csvWriting}>
                 {csvWriting ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Wand2 className="w-4 h-4 mr-1.5" />}
