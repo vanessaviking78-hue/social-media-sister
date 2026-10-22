@@ -1382,6 +1382,129 @@ export const XMAS_PRESETS: PhotoStudioPreset[] = [
   },
 ];
 
+export const XMAS_COUPLES_PRESETS: PhotoStudioPreset[] = [
+  {
+    id: "xc-01", name: "Scrubs Snowflake Corners", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo standing side by side against a clean pale studio backdrop, both smiling warmly, delicate white paper snowflakes framing all four corners of the picture. He is wearing white medical scrubs, entirely white. She is wearing black medical scrubs, entirely black. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-02", name: "Scrubs Santa Hats Treatment Room", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo standing either side of a treatment couch in a bright clinic room, both wearing red Santa hats, a small decorated tree on the shelf behind. He is wearing white medical scrubs, entirely white. She is wearing black medical scrubs, entirely black. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-03", name: "Scrubs Beside The Clinic Tree", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo standing together beside a tall decorated Christmas tree in a modern clinic waiting area, relaxed and smiling. He is wearing white medical scrubs, entirely white. She is wearing black medical scrubs, entirely black. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-04", name: "Scrubs Presents On Reception", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo leaning on a reception desk stacked with wrapped presents in matching paper, a tree softly blurred behind them, both smiling at the camera. He is wearing white medical scrubs, entirely white. She is wearing black medical scrubs, entirely black. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-05", name: "Scrubs Tinsel Corridor", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo walking side by side down a bright clinic corridor with fairy lights and tinsel along the wall, laughing at something off camera with closed mouths. He is wearing white medical scrubs, entirely white. She is wearing black medical scrubs, entirely black. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-06", name: "Scrubs Reindeer And Elf", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo he wearing reindeer antlers on a headband and she wearing a green elf hat, standing in a clinic treatment room, both with mock serious faces. He is wearing white medical scrubs, entirely white. She is wearing black medical scrubs, entirely black. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-07", name: "Scrubs Window Snowflakes", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo standing in front of a large clinic window covered in white snowflake stickers, soft grey winter daylight, standing close and smiling. He is wearing white medical scrubs, entirely white. She is wearing black medical scrubs, entirely black. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-08", name: "Scrubs Hot Chocolate Break", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo sitting together in a staff room with mugs of hot chocolate topped with marshmallows, fairy lights and a small tree behind them, relieved end of day smiles. He is wearing white medical scrubs, entirely white. She is wearing black medical scrubs, entirely black. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-09", name: "Hats And Scarves Snowy Walk", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo walking arm in arm along a frosted park path in bobble hats, wool scarves and winter coats, breath visible in the cold air, rosy cheeks. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-10", name: "Matching Scarves Christmas Market", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo holding paper cups of hot chocolate at a Christmas market stall in matching tartan scarves and hats, festoon lights blurred behind them. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-11", name: "Snowfall Looking Up", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo standing close in dark winter coats and scarves, snow falling around them, both looking up with delight, a street of lit shop windows blurred behind. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-12", name: "Frosty Morning Flask", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo standing in a frosty field at sunrise in wax jackets and knitted hats, sharing a flask, peaceful and content. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-13", name: "Decorating The Tree Together", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo hanging baubles on a large Christmas tree in a living room, she on tiptoe and he holding a box of decorations, laughing at each other. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-14", name: "Tree Topper Teamwork", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo he lifting a star towards the top of a tall Christmas tree while she steadies a step stool, looking at the camera with playful looks. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-15", name: "Wrapping Presents Together", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo sitting on the floor wrapping presents with kraft paper and red ribbon, scissors and tape between them, he in a tangle of ribbon and she looking on with amusement. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-16", name: "Presents Under The Tree", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo kneeling in front of a Christmas tree arranging wrapped presents beneath it, shoulder to shoulder, quiet happy smiles. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-17", name: "Christmas Jumpers Sofa", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo sitting close on a sofa in matching knitted Christmas jumpers holding mugs, a blanket over their knees and a lit tree behind, self aware grins. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-18", name: "Pyjamas Christmas Morning", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo sitting on the floor in red and white check pyjamas surrounded by torn wrapping paper beside a tree, each holding a freshly opened present, delighted. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-19", name: "Gingerbread Kitchen", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo in a kitchen wearing aprons, decorating gingerbread biscuits with white icing, a tray of gingerbread people on the counter, flour on their sleeves. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-20", name: "Cracker Pull", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo pulling a Christmas cracker between them across a festive dinner table laid with candles, both wearing paper crowns, playful looks. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-21", name: "Film Night Blankets", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo curled up together on a sofa under a blanket in festive pyjamas with a bowl of popcorn, strings of fairy lights on the wall behind, cosy smiles. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-22", name: "Writing Christmas Cards", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo sitting at a desk together writing Christmas cards, a neat stack of cards and a small tree behind, a tender moment. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-23", name: "Fireside Cashmere", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo sitting close on a hearth rug in soft knitwear, stockings hanging from the mantelpiece above, mugs in hand, a quiet shared smile. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-24", name: "Mistletoe Doorway", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo standing close in a doorway with a sprig of mistletoe hanging above them, a garland on the doorframe, teasing closed mouth smiles. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-25", name: "Party Night Sparkle", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo he in a black dinner suit and she in an elegant black sequin dress, standing in front of a tree with twinkling lights holding glasses of sparkling water with orange slices, poised and glamorous. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-26", name: "Velvet Festive Lunch", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo he in a smart dark jumper and shirt and she in a deep green velvet blazer, seated at a beautifully laid festive table with candles and crackers, warm hosts smiles. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-27", name: "Sparklers In The Garden", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo in long coats and scarves holding lit sparklers in a dark garden at dusk, fairy lights in the trees behind, joyful. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-28", name: "Snow Globe Wonder", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo holding a snow globe up together in both hands at chest height, looking into it with wonder, a softly lit room with a tree blurred behind. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-29", name: "Wreath On The Door", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo standing in a doorway with a large green wreath with a red bow held up between them, stone porch with a few Christmas lights behind, happy smiles. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+  {
+    id: "xc-30", name: "Last Day Before The Break", hasColour: false,
+    promptTemplate: `The man and the woman from the reference photo in smart coats and Santa hats locking the clinic front door that has a small wreath on it, turning to the camera together with relieved smiles. Two people, a man and a woman, both taken from the reference photo. Closed mouth smiles, no teeth showing. Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm tint, no orange colour cast, no filter. If either person wears glasses in the reference photo they keep them on. Keep both faces, skin tones, facial features and hairstyles exactly the same as the reference photo. Same facial features as reference photo.`,
+  },
+];
+
 export const AUTUMN_PRESETS: PhotoStudioPreset[] = [
   {
     id: "au-01",
