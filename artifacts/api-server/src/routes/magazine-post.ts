@@ -75,8 +75,8 @@ Return JSON only, in exactly this shape and within these limits:
   "funFacts": { "kicker": "max 3 words", "headline": "max 7 words", "intro": "max 18 words", "facts": [ { "label": "max 3 words", "text": "max 22 words" }, { "label": "max 3 words", "text": "max 22 words" }, { "label": "max 3 words", "text": "max 22 words" } ] },
   "forYouIf": { "kicker": "max 3 words", "intro": "max 16 words", "items": ["max 12 words", "max 12 words", "max 12 words", "max 12 words", "max 12 words"] },
   "helpsMostWith": { "kicker": "max 3 words", "intro": "max 16 words", "items": ["max 10 words", "max 10 words", "max 10 words", "max 10 words", "max 10 words"] },
-  "cta": { "line": "max 12 words, a warm sly nudge to comment, no pressure" },
-  "caption": "max 70 words. ${hookText ? "Starts with the hook word for word, then carries on from it," : "Opens with a hook,"} ends by inviting her to comment ${word || "the reply word"} so the details can be sent over. No hashtags."
+  "cta": { "line": "max 12 words, one engaging question that is easy and fun to answer in the comments, no pressure" },
+  "caption": "max 70 words. ${hookText ? "Starts with the hook word for word, then carries on from it," : "Opens with a hook,"} ends with ONE engaging question that is easy and fun to answer in the comments, such as What reminds you of your childhood? (a treatment post ends with exactly: Drop me a DM to see if you're a good fit for this). No reply word. No hashtags."
 }
 ${RULES}`;
 

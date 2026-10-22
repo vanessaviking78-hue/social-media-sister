@@ -166,7 +166,7 @@ VALUE SLIDES
 One idea per slide. Short. Specific over general. Give the actual information, plainly, without preamble. Do not restate at the end. Do not add a summary sentence. Land the point, stop.
 
 CTA SLIDES
-No urgency. No "DM us NOW". No "Don't miss out". Sounds like a person quietly extending an invitation: "If you've been thinking about it, a consultation is a good first step. No commitment." or "Save this one, it tends to come in useful." or "Drop us a message if any of this sounds familiar."
+The CTA slide is one engaging question she wants to answer, such as What reminds you of your childhood? (treatment posts: exactly Drop me a DM to see if you're a good fit for this). No urgency. No "DM us NOW". No "Don't miss out". Sounds like a person quietly extending an invitation: "If you've been thinking about it, a consultation is a good first step. No commitment." or "Save this one, it tends to come in useful." or "Drop us a message if any of this sounds familiar."
 
 STRICT WRITING RULES
 - NEVER use em dashes (—) or en dashes (–). Not once. Use a comma, a full stop, or a plain hyphen in a compound adjective.
@@ -217,7 +217,7 @@ You are generating carousel post content for a ${industry} business.${clientName
 Slide structure — follow this exactly:
 - Slide 1 is the HOOK. Under 10 words. Sounds like something a real person would actually say. Quiet, specific, honest. Not a marketing line. No banned openers. No generic "Are you tired of..." or "It's time to..." — follow the GOOD hook patterns in the voice rules above.
 - Slides 2 to ${slides - 1} are VALUE slides. One idea per slide. 1-3 short sentences. Specific over general. Give the actual information plainly, no preamble, no restatement.
-- Slide ${slides} is the CTA. A warm, unhurried invitation. No urgency. No "DM us NOW". Sounds like a person, not a campaign.
+- Slide ${slides} is the CTA. One engaging question she wants to answer (treatment posts: exactly Drop me a DM to see if you're a good fit for this). No urgency. No "DM us NOW". Sounds like a person, not a campaign.
 
 Rules:
 - Every post must be fully MHRA and ASA compliant
@@ -399,7 +399,7 @@ You will receive the ${isSingle ? "overlay text" : "slide text"} for each ${post
 - Is MHRA/ASA compliant - no medical claims, no guaranteed results, no pressure tactics
 - Includes 1-2 relevant emojis naturally woven in (not emoji spam)
 - NEVER use em dashes or en dashes, use hyphens or commas instead
-- The caption finishes with a closing question that relates to the post. Always fold a reply word into the question, for example "Fancy a nosy? Comment GLOW and I will send you the details". The reply word is a single fun uppercase word that relates to that post, different for each caption.
+- The call to action on every post is ONE closing question that is easy and fun to answer in the comments, written like a friend chatting and relating to the post, such as What reminds you of your childhood? or What are you done apologising for?. Never use Comment WORD, DM me the word, a reply word or a link. The only exception is a post about a treatment, which ends with exactly: Drop me a DM to see if you're a good fit for this.
 - ${HASHTAG_RULE}
 ${isDental(clientName) ? DENTAL_RULES : ""}
 ${extraInstructions ? `\nAdditional instructions: ${extraInstructions}` : ""}

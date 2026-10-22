@@ -77,21 +77,21 @@ const FORMAT_PROMPTS: Record<string, string> = {
     {"heading": "value point 2", "body": "specific fact or insight for this treatment"},
     {"heading": "value point 3", "body": "specific fact or insight"},
     {"heading": "value point 4", "body": "specific fact or insight"},
-    {"heading": "cta slide heading", "body": "warm invitation — no urgency, no DM us NOW"}
+    {"heading": "cta slide heading", "body": "one engaging question she wants to answer, no urgency (treatment posts: Drop me a DM to see if you're a good fit for this)"}
   ],
-  "caption": "80-150 words, personal and warm, ending with a closing question that includes a Comment [WORD] invitation, then on its own final line exactly 5 area based hashtags"
+  "caption": "80-150 words, personal and warm, ending with one engaging closing question that is easy and fun to answer in the comments (treatment posts end with exactly: Drop me a DM to see if you're a good fit for this), then on its own final line exactly 5 area based hashtags"
 }`,
   aboutMe: `{
   "intro": "2-3 sentences from the clinic owner's perspective. First person. Warm, real, no patter.",
-  "caption": "80-150 words, personal and warm, ending with a closing question that includes a Comment [WORD] invitation, then on its own final line exactly 5 area based hashtags"
+  "caption": "80-150 words, personal and warm, ending with one engaging closing question that is easy and fun to answer in the comments (treatment posts end with exactly: Drop me a DM to see if you're a good fit for this), then on its own final line exactly 5 area based hashtags"
 }`,
   reel: `{
   "script": "3-4 short punchy lines for video overlay text. Each line under 8 words. Lines separated by | characters.",
-  "caption": "80-150 words, personal and warm, ending with a closing question that includes a Comment [WORD] invitation, then on its own final line exactly 5 area based hashtags"
+  "caption": "80-150 words, personal and warm, ending with one engaging closing question that is easy and fun to answer in the comments (treatment posts end with exactly: Drop me a DM to see if you're a good fit for this), then on its own final line exactly 5 area based hashtags"
 }`,
   seamless: `{
   "tagline": "one powerful 3-7 word tagline for a seamless panoramic carousel",
-  "caption": "80-150 words, personal and warm, ending with a closing question that includes a Comment [WORD] invitation, then on its own final line exactly 5 area based hashtags"
+  "caption": "80-150 words, personal and warm, ending with one engaging closing question that is easy and fun to answer in the comments (treatment posts end with exactly: Drop me a DM to see if you're a good fit for this), then on its own final line exactly 5 area based hashtags"
 }`,
 };
 
@@ -117,7 +117,7 @@ ${captionHint}
 Generate the following as a JSON object (no markdown fences, no extra text):
 ${FORMAT_PROMPTS[type]}
 
-All content must be MHRA/ASA compliant. No em dashes. Each Comment [WORD] CTA must use a different creative uppercase word relevant to that specific post.`;
+All content must be MHRA/ASA compliant. No em dashes. Each closing question must be different and specific to that post, never Comment WORD.`;
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",

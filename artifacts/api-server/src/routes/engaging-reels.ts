@@ -148,7 +148,7 @@ async function assignRoles(rows: CsvRow[]): Promise<{ hook: string; secondHook: 
 For each row you get three unordered sentences. Decide:
 - "hook": whichever sentence works best as the opening line that stops someone scrolling in the first second.
 - "secondHook": whichever sentence works best as the follow-up line that keeps them watching, builds curiosity or context.
-- "cta": whichever sentence works best as the closing call to action, telling the viewer what to do next.
+- "cta": whichever sentence works best as the closing call to action. It must be one engaging question that is easy and fun to answer in the comments (for a treatment reel, exactly: Drop me a DM to see if you're a good fit for this).
 
 Never rewrite, shorten or reword the sentences. Only assign the exact given text to a role. Every row must use all three of its own sentences exactly once, one per role.
 
@@ -464,7 +464,7 @@ router.post("/engaging-reels/:id/caption", async (req: Request, res: Response) =
     const toneKey = String(tone ?? "1");
     const tonePrompt = CAPTION_TONE_PROMPTS[toneKey] ?? CAPTION_TONE_PROMPTS["1"];
 
-    const systemPrompt = `You write a single Instagram/Facebook caption to go under a silent B-roll reel for an aesthetics clinic. The reel has no spoken audio, just three lines of on-screen text shown in turn: an opening hook, a second line, and a closing call to action. Write a caption that sits underneath and adds to those on-screen lines rather than just repeating them.
+    const systemPrompt = `You write a single Instagram/Facebook caption to go under a silent B-roll reel for an aesthetics clinic. The reel has no spoken audio, just three lines of on-screen text shown in turn: an opening hook, a second line, and a closing call to action. The caption ends with one engaging question that is easy to answer in the comments (treatment reels end with exactly: Drop me a DM to see if you're a good fit for this). Write a caption that sits underneath and adds to those on-screen lines rather than just repeating them.
 
 TONE: ${tonePrompt}
 

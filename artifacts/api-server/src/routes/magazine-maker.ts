@@ -30,7 +30,7 @@ WRITING RULES (non-negotiable)
 
 COMPLIANCE (UK, non-negotiable)
 - NEVER mention Botox, anti-wrinkle anything, wrinkles, lines, injectables, injections or any prescription-only medicine. Write about the woman, how she feels and the clinic, and name a treatment only in plain everyday words when it is not a prescription-only medicine.
-- On treatment posts, invite the reader to drop me a message and see if this is for you or something else similar (never mention a website or link in bio). Never state prices, doses or treatment specifics on a page.
+- On treatment posts, the call to action page says exactly: Drop me a DM to see if you're a good fit for this (never mention a website or link in bio). Never state prices, doses or treatment specifics on a page.
 - Never use the word "safe" in a claim. No medical claims, no guaranteed results, no before and after promises, no superlatives (best, number one, guaranteed).
 - No pressure tactics and no urgency language (no "limited spaces", "book now before it's gone").
 - Frame treatment as consultation and possibility: "may help", "can improve".
@@ -69,7 +69,7 @@ router.post("/magazine-maker/copy", async (req: Request, res: Response) => {
 
     const stylePrompt = STYLE_PROMPTS[String(style ?? "1")] ?? STYLE_PROMPTS["1"];
     const clinic = (clinicName ?? "").trim() || "the clinic";
-    const action = (cta ?? "").trim() || "Book a consultation";
+    const action = (cta ?? "").trim() || "Ask one engaging question the reader wants to answer in the comments";
 
     const systemPrompt = `You write the copy for a 4 page social media magazine for an aesthetics clinic, ${clinic}. It is shown as a video that turns the pages, so every piece of copy must be short enough to read in two seconds.
 
@@ -79,7 +79,7 @@ THE PAGES
 1. Cover: a headline that makes the reader want to turn the page, plus 3 cover lines, one teasing each topic.
 2. Page 2: a feature on topic 1.
 3. Page 3: two smaller features, on topic 2 and topic 3.
-4. Call to action page: a warm, sly nudge towards this action: "${action}".
+4. Call to action page: one engaging question (or, for a treatment, exactly: Drop me a DM to see if you're a good fit for this) built around this idea: "${action}".
 
 Return JSON only, in exactly this shape and within these limits:
 {
