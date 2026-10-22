@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Trash2, Plus, BarChart3, Calendar, Film, Layers, ChevronDown, ChevronUp, Edit2, ExternalLink, ChevronLeft, ChevronRight, Image as ImageIcon, GripVertical, Hourglass } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Trash2, Plus, BarChart3, Calendar, Film, Layers, ChevronDown, ChevronUp, Edit2, ExternalLink, ChevronLeft, ChevronRight, Image as ImageIcon, GripVertical, Hourglass, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -104,6 +104,11 @@ const MONTH_NAMES = [
 ];
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+// Stories get a pink hue in the scheduler so they stand out from posts and reels.
+function isStoryType(postType: string | undefined | null): boolean {
+  return postType === "story" || postType === "stories";
+}
+
 function postThumb(post: ScheduledPost): string | null {
   if (post.content?.imageUrls?.length) return post.content.imageUrls[0];
   return null;
@@ -114,7 +119,7 @@ function hoverInfo(post: ScheduledPost, draggable: boolean): string {
   const when = isNaN(d.getTime()) ? "" : `${d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} at ${d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
   const cap = (post.content?.caption || "").replace(/\s+/g, " ").trim();
   const status = post.status === "published" ? "Posted" : post.status === "failed" ? "Failed" : post.status === "draft" ? "Draft" : post.status === "processing" ? "Posting now" : post.status === "cancelled" ? "Cancelled" : "Scheduled";
-  const kind = post.postType === "reel" ? "Reel" : post.postType === "video_carousel" ? "Video carousel" : "Carousel";
+  const kind = isStoryType(post.postType) ? "Story" : post.postType === "reel" ? "Reel" : post.postType === "video_carousel" ? "Video carousel" : "Carousel";
   return [
     post.clientName,
     `Topic: ${post.content?.title || "Untitled"}`,
@@ -131,12 +136,13 @@ function hoverInfo(post: ScheduledPost, draggable: boolean): string {
 function FeedCard({ post, draggable, onDragStart, onDelete }: { post: ScheduledPost; draggable: boolean; onDragStart: (e: React.DragEvent) => void; onDelete?: () => void }) {
   const thumb = postThumb(post);
   const isVideo = post.postType === "reel" || post.postType === "video_carousel";
+  const isStory = isStoryType(post.postType);
   return (
     <div
       draggable={draggable}
       onDragStart={draggable ? onDragStart : undefined}
       title={hoverInfo(post, draggable)}
-      className={`group relative rounded-md overflow-hidden border border-zinc-700/60 aspect-square ${draggable ? "cursor-grab active:cursor-grabbing" : "cursor-default opacity-80"}`}
+      className={`group relative rounded-md overflow-hidden border aspect-square ${isStory ? "border-pink-400 ring-1 ring-pink-400/70" : "border-zinc-700/60"} ${draggable ? "cursor-grab active:cursor-grabbing" : "cursor-default opacity-80"}`}
     >
       {thumb ? (
         <img src={thumb} alt="" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
@@ -144,6 +150,13 @@ function FeedCard({ post, draggable, onDragStart, onDelete }: { post: ScheduledP
         <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
           {isVideo ? <Film size={14} className="text-zinc-500" /> : <ImageIcon size={14} className="text-zinc-500" />}
         </div>
+      )}
+      {isStory && (
+        <>
+          <div className="absolute inset-0 bg-pink-500/40 mix-blend-multiply pointer-events-none" />
+          <div className="absolute inset-0 bg-pink-400/20 pointer-events-none" />
+          <span className="absolute top-0.5 left-0.5 bg-pink-500 text-white text-[7px] font-bold tracking-wide uppercase px-1 rounded-sm group-hover:opacity-0 transition-opacity pointer-events-none">Story</span>
+        </>
       )}
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-1 py-0.5">
         <p className="text-[9px] text-white/90 truncate leading-tight">{post.clientName}</p>
@@ -983,10 +996,12 @@ export default function Scheduler() {
               </div>
             )}
             {!loading && waitingRoomPosts.map((post) => (
-              <div key={post.id} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+              <div key={post.id} className={`rounded-xl overflow-hidden border ${isStoryType(post.postType) ? "bg-pink-950/40 border-pink-500/50" : "bg-zinc-900 border-zinc-800"}`}>
                 <div className="p-4 flex items-start gap-3">
                   <div className="mt-0.5 shrink-0">
-                    {post.postType === "reel"
+                    {isStoryType(post.postType)
+                      ? <BookOpen size={16} className="text-pink-400" />
+                      : post.postType === "reel"
                       ? <Film size={16} className="text-purple-400" />
                       : <Layers size={16} className="text-blue-400" />}
                   </div>
@@ -1037,7 +1052,9 @@ export default function Scheduler() {
                     {group.map((post) => (
                       <div key={post.id} className="p-3 flex items-center gap-3">
                         <div className="shrink-0">
-                          {post.postType === "reel"
+                          {isStoryType(post.postType)
+                            ? <BookOpen size={16} className="text-pink-400" />
+                            : post.postType === "reel"
                             ? <Film size={16} className="text-purple-400" />
                             : <Layers size={16} className="text-blue-400" />}
                         </div>
@@ -1072,10 +1089,12 @@ export default function Scheduler() {
               </div>
             )}
             {!loading && filtered.map((post) => (
-              <div key={post.id} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+              <div key={post.id} className={`rounded-xl overflow-hidden border ${isStoryType(post.postType) ? "bg-pink-950/40 border-pink-500/50" : "bg-zinc-900 border-zinc-800"}`}>
                 <div className="p-4 flex items-start gap-3">
                   <div className="mt-0.5 shrink-0">
-                    {post.postType === "reel"
+                    {isStoryType(post.postType)
+                      ? <BookOpen size={16} className="text-pink-400" />
+                      : post.postType === "reel"
                       ? <Film size={16} className="text-purple-400" />
                       : <Layers size={16} className="text-blue-400" />}
                   </div>
