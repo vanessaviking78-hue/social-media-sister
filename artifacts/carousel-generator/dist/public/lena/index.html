@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>L's Aesthetics Sample Posts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+/* Layout: one calm column. Each post is a row, the picture on the left and the words with their buttons on the right, stacking on a phone. */
+:root {
+  --bg: #faf3ef;
+  --card: #fffdfc;
+  --ink: #2a1e1a;
+  --muted: #6e5d56;
+  --line: #ead9d0;
+  --accent: #9a5a49;
+  --accent-ink: #ffffff;
+  --soft: #f6e6dc;
+  --display: "Bricolage Grotesque", "DM Sans", system-ui, sans-serif;
+  --body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #181210; --card: #221915; --ink: #f6ebe6; --muted: #bba8a0; --line: #3d2f29;
+    --accent: #e8a98f; --accent-ink: #2a1510; --soft: #2d211c; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #181210; --card: #221915; --ink: #f6ebe6; --muted: #bba8a0; --line: #3d2f29;
+  --accent: #e8a98f; --accent-ink: #2a1510; --soft: #2d211c; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55;
+  padding-block: 40px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 40px; }
+header { display: flex; flex-direction: column; gap: 14px; }
+.from { font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 700; }
+h1 { font-family: var(--display); font-weight: 700; font-size: clamp(34px, 6vw, 56px); line-height: 1.04; margin: 0; text-wrap: balance; letter-spacing: -.01em; }
+.lede { max-width: 62ch; font-size: 18px; margin: 0; color: var(--ink); }
+.meta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.brand { width: 260px; max-width: 70%; height: auto; border-radius: 14px; background: #fffcfb; align-self: flex-start; }
+.pill { border: 1px solid var(--line); background: var(--card); padding: 6px 12px; border-radius: 999px; font-size: 14px; color: var(--muted); }
+button { font: inherit; cursor: pointer; }
+.btn { border: 1.5px solid var(--ink); background: transparent; color: var(--ink); padding: 10px 16px; border-radius: 10px; font-weight: 700; font-size: 15px; min-height: 44px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn:hover { transform: translateY(-1px); }
+.btn:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.btn[disabled] { opacity: .6; cursor: default; transform: none; }
+.week { display: flex; flex-direction: column; gap: 20px; }
+.week h2 { font-family: var(--display); font-size: 26px; margin: 0; display: flex; align-items: baseline; gap: 12px; }
+.week h2 small { font-family: var(--body); font-size: 14px; font-weight: 500; color: var(--muted); }
+.post { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 24px; }
+.post img { width: 100%; height: auto; aspect-ratio: 4 / 5; display: block; border-radius: 10px; background: var(--soft); }
+.words { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.day { font-family: var(--display); font-weight: 700; font-size: 20px; margin: 0; }
+.caption { white-space: pre-wrap; margin: 0; font-size: 16px; overflow-wrap: anywhere; }
+.tags { margin: 0; color: var(--accent); font-weight: 500; overflow-wrap: anywhere; font-size: 15px; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: auto; }
+.status { min-height: 22px; font-size: 14px; color: var(--muted); }
+footer { background: var(--soft); border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 12px; }
+footer h2 { font-family: var(--display); font-size: 24px; margin: 0; }
+footer p, footer li { max-width: 68ch; margin: 0; }
+footer ol { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 8px; }
+.sig { color: var(--muted); font-size: 14px; }
+@media (max-width: 720px) {
+  .post { grid-template-columns: minmax(0, 1fr); }
+  .actions .btn { flex: 1 1 140px; }
+}
+@media (prefers-reduced-motion: reduce) { .btn:hover { transform: none; } }
+
+body{margin:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="from">A free sample from Social Media Sister</span>
+    <img class="brand" src="images/logo.jpg" alt="L's Aesthetics, Aesthetic Nurse logo" width="260" height="130">
+    <h1>L's Aesthetics, Milton Keynes</h1>
+    <p class="lede">Hello Lena, it is Vanessa. I made these from one photo and your logo, so you can see how your page could look. Eight posts across two weeks, one each for Monday, Wednesday, Friday and Sunday, with the captions and hashtags already written.</p>
+    <div class="meta">
+      <span class="pill">8 posts</span>
+      <span class="pill">2 weeks</span>
+      <button class="btn primary" id="saveAll" type="button">Save all 8 images</button>
+      <button class="btn" id="saveCaptions" type="button">Save all captions</button>
+    </div>
+    <div class="status" id="topStatus" role="status" aria-live="polite"></div>
+  </header>
+
+  <main id="weeks" class="wrap" style="gap:40px"></main>
+
+  <footer>
+    <h2>Before you post</h2>
+    <ol>
+      <li>Save each image to your phone or computer.</li>
+      <li>Open Instagram or Facebook on your side and upload the image.</li>
+      <li>Paste in the caption and hashtags, and change anything you like.</li>
+      <li>Read it through to check it suits your clinic, then post or schedule it yourself.</li>
+      <li>Every caption asks people to comment LENA. When they do, send them a message.</li>
+    </ol>
+    <p>These are a sample of my work, so nothing is posted for you. If you would like more like this, send me a message at Social Media Sister and we will have a chat.</p>
+    <p class="sig">Vanessa Wormald, Social Media Sister</p>
+  </footer>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+const POSTS = [{"n": 1, "week": 1, "day": "Monday", "file": "L's Aesthetics Sample 1.jpg", "img": "images/1.jpg", "caption": "I spent my career in Emergency Medicine, so very little shocks me. A nervous \"this is going to sound silly\" gets a smile from me, and so does the fringe you cut yourself on Sunday night.\n\nThese days I am an aesthetic nurse in Milton Keynes and my favourite bit of the whole day is the first five minutes, when someone sits down and finally says out loud what has been on her mind. I keep a very good biscuit tin for those moments.\n\nIf you have been meaning to ask me something, comment LENA and I will message you to find a time that suits you.\n\nWhat is the one question you would ask me over a biscuit?", "tags": "#MiltonKeynes #MKAesthetics #StonyStratford #Buckinghamshire #AestheticNurseMK"}, {"n": 2, "week": 1, "day": "Wednesday", "file": "L's Aesthetics Sample 2.jpg", "img": "images/2.jpg", "caption": "Quick, hit record!\n\nEvery Sunday teatime I sat next to the stereo with my finger hovering over the button, waiting to tape my favourite song off the Top 40, and every single week the DJ talked right over the start of it.\n\nThen came the careful labelling in felt tip and the mixtape for a friend, and the sheer panic when your mum shouted \"tea's ready\" halfway through the number one.\n\nWe are the generation who wound cassettes back with a pencil and thought nothing of it. If that is you, comment LENA so I know I am among friends.\n\nWhich song did the DJ ruin for you?", "tags": "#MiltonKeynesAesthetics #MiltonKeynesLife #StonyStratford #Buckinghamshire #MKLocal"}, {"n": 3, "week": 1, "day": "Friday", "file": "L's Aesthetics Sample 3.jpg", "img": "images/3.jpg", "caption": "Things I learned in Emergency Medicine that I use in clinic every single day.\n\nStay calm and the whole room stays calm. This works on nervous first timers and on husbands.\n\nListen to the second thing someone says. It is nearly always the real reason she came.\n\nEverybody has a story and nobody wants to be rushed through it.\n\nA cup of tea fixes more than you would think.\n\nIf you would like a quiet chat with a nurse who has seen a lot and is still very nice, comment LENA and I will message you.\n\nWhat is the kindest thing a nurse has ever said to you?", "tags": "#MiltonKeynes #MKAesthetics #StonyStratford #Buckinghamshire #AestheticNurseMK"}, {"n": 4, "week": 1, "day": "Sunday", "file": "L's Aesthetics Sample 4.jpg", "img": "images/4.jpg", "caption": "Dear you, the one who has been running at full speed since September.\n\nThe shops are already selling Christmas, the school emails keep arriving and somebody needs a packed lunch and clean PE kit by tomorrow morning. I see you holding all of it together with a coffee and a smile.\n\nSo today I would like you to choose one small thing that belongs to you. A blanket and a film you have watched far too many times, or a walk where you crunch every single leaf.\n\nTell me yours by commenting LENA and I will cheer you on. And if you are ready for something a little bigger, send me a message and we will find you a time.\n\nWhat is on your Sunday list for you, and only you?", "tags": "#MiltonKeynesAesthetics #MiltonKeynesLife #StonyStratford #Buckinghamshire #MKLocal"}, {"n": 5, "week": 2, "day": "Monday", "file": "L's Aesthetics Sample 5.jpg", "img": "images/5.jpg", "caption": "Before we start anything, every new client gets the same little speech from me.\n\nWe go at your pace. You can change your mind at any point, even halfway through a sentence. I would much rather you leave with a plan and a smile than a decision you made in a rush.\n\nI am a registered nurse, fully qualified and fully insured, so you are in safe hands. I also want you to feel properly looked after, and that part needs no certificate at all, just a comfy chair and my full attention.\n\nFancy a no pressure chat? Comment LENA and I will message you.\n\nWhat would make a first appointment feel easy for you?", "tags": "#MiltonKeynes #MKAesthetics #StonyStratford #Buckinghamshire #AestheticNurseMK"}, {"n": 6, "week": 2, "day": "Wednesday", "file": "L's Aesthetics Sample 6.jpg", "img": "images/6.jpg", "caption": "Remember when the Argos catalogue landed and you spent the whole weekend circling things in biro that you had no hope of getting?\n\nThe tiny pencil on a string. The slip of paper you filled in with your item numbers. The long wait by the collection desk, listening for your number while your mum checked her watch.\n\nI circled the Barbie Dream House three Christmases in a row and received a cardigan every time. I have forgiven her. Mostly.\n\nI still love a good sit down and a natter, so if you fancy one in Milton Keynes, comment LENA and I will message you.\n\nWhat did you circle every single year?", "tags": "#MiltonKeynesAesthetics #MiltonKeynesLife #StonyStratford #Buckinghamshire #MKLocal"}, {"n": 7, "week": 2, "day": "Friday", "file": "L's Aesthetics Sample 7.jpg", "img": "images/7.jpg", "caption": "Things I know now that twenty five year old me would have loved to hear.\n\nSleep is the most underrated thing in the world and nobody gets enough of it.\n\nNobody drinks the amount of water the posters say, and the world carries on.\n\nComparing yourself to a filtered photo is a waste of a perfectly good afternoon.\n\nThe friends who make you laugh until you cry are worth more than any plan you make in January.\n\nYou are allowed to stand in the middle of the photo.\n\nComment LENA and tell me what you would add, or message me if you would like a natter in person.\n\nWhat would you tell your 25 year old self?", "tags": "#MiltonKeynes #MKAesthetics #StonyStratford #Buckinghamshire #AestheticNurseMK"}, {"n": 8, "week": 2, "day": "Sunday", "file": "L's Aesthetics Sample 8.jpg", "img": "images/8.jpg", "caption": "A note from me to you, on a Sunday.\n\nI spent years in Emergency Medicine looking after people on the hardest days of their lives, and I noticed something. The carers are always the last to sit down. The mums, the daughters, the nurses and the friend everyone rings at midnight.\n\nSo here is your permission slip. Sit down, put your feet up and let somebody else make the tea today.\n\nIf you would like some of that care turned towards you, I am here in Milton Keynes with the door open. Comment LENA and I will send you a message.\n\nWho looks after you while you are looking after everyone else?", "tags": "#MiltonKeynesAesthetics #MiltonKeynesLife #StonyStratford #Buckinghamshire #MKLocal"}];
+const weeksEl = document.getElementById("weeks");
+const topStatus = document.getElementById("topStatus");
+function fullText(p) { return p.caption + "\n\n" + p.tags; }
+function say(el, msg) { el.textContent = msg; }
+function triggerDownload(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+async function imageBlob(p) { const r = await fetch(p.img); if (!r.ok) throw new Error("fetch"); return r.blob(); }
+function render() {
+  [1, 2].forEach(w => {
+    const sec = document.createElement("section"); sec.className = "week";
+    const h = document.createElement("h2"); h.textContent = "Week " + w;
+    const sm = document.createElement("small"); sm.textContent = "Monday, Wednesday, Friday, Sunday"; h.appendChild(sm);
+    sec.appendChild(h);
+    POSTS.filter(p => p.week === w).forEach(p => {
+      const card = document.createElement("article"); card.className = "post";
+      const img = document.createElement("img"); img.src = p.img; img.alt = "Week " + w + " " + p.day + " post for L's Aesthetics"; img.width = 1080; img.height = 1350;
+      const words = document.createElement("div"); words.className = "words";
+      const day = document.createElement("h3"); day.className = "day"; day.textContent = p.day;
+      const cap = document.createElement("p"); cap.className = "caption"; cap.textContent = p.caption;
+      const tags = document.createElement("p"); tags.className = "tags"; tags.textContent = p.tags;
+      const actions = document.createElement("div"); actions.className = "actions";
+      const status = document.createElement("div"); status.className = "status"; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite");
+      const bSave = document.createElement("button"); bSave.type = "button"; bSave.className = "btn primary"; bSave.textContent = "Save image";
+      const bCopy = document.createElement("button"); bCopy.type = "button"; bCopy.className = "btn"; bCopy.textContent = "Copy caption and hashtags";
+      bSave.addEventListener("click", async () => {
+        try { triggerDownload(await imageBlob(p), p.file); say(status, "Saved."); }
+        catch (e) { say(status, "That did not save. Press and hold the image, or right click it, to save it instead."); }
+      });
+      bCopy.addEventListener("click", async () => {
+        try { await navigator.clipboard.writeText(fullText(p)); say(status, "Copied. Now paste it into your post."); }
+        catch (e) {
+          const r = document.createRange(); r.setStartBefore(cap); r.setEndAfter(tags);
+          const s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+          say(status, "Your caption is selected. Copy it with your keyboard or the menu.");
+        }
+      });
+      actions.append(bSave, bCopy);
+      words.append(day, cap, tags, actions, status);
+      card.append(img, words); sec.appendChild(card);
+    });
+    weeksEl.appendChild(sec);
+  });
+}
+document.getElementById("saveAll").addEventListener("click", async () => {
+  try {
+    say(topStatus, "Packing the images...");
+    const zip = new JSZip();
+    for (const p of POSTS) zip.file(p.file, await imageBlob(p));
+    triggerDownload(await zip.generateAsync({ type: "blob" }), "L's Aesthetics Sample Posts.zip");
+    say(topStatus, "Saved.");
+  } catch (e) { say(topStatus, "That did not save. Try saving the images one at a time."); }
+});
+document.getElementById("saveCaptions").addEventListener("click", () => {
+  const text = POSTS.map(p => "WEEK " + p.week + ", " + p.day.toUpperCase() + "\n\n" + fullText(p)).join("\n\n----------\n\n");
+  triggerDownload(new Blob([text], { type: "text/plain" }), "L's Aesthetics Sample Captions.txt");
+  say(topStatus, "Saved.");
+});
+render();
+</script>
+</body>
+</html>
