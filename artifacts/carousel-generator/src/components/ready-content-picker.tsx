@@ -4,7 +4,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import data from "@/data/ready-made-content.json";
 
-type Item = { id: string; hook: string; subtitle: string; text1: string; text2: string; cta: string; check: boolean };
+type Item = { id: string; hook: string; subtitle: string; text1: string; text2: string; cta: string; check: boolean; day: string };
+const DAYS = ["All", "Wednesday", "Friday", "October"] as const;
 const ITEMS = data.items as Item[];
 
 type Props = {
@@ -17,11 +18,13 @@ export default function ReadyContentPicker({ onAdd }: Props) {
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<string[]>([]);
   const [q, setQ] = useState("");
+  const [day, setDay] = useState<(typeof DAYS)[number]>("All");
 
   const shown = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return s ? ITEMS.filter(i => `${i.hook} ${i.subtitle} ${i.text1} ${i.text2} ${i.cta}`.toLowerCase().includes(s)) : ITEMS;
-  }, [q]);
+    const byDay = day === "All" ? ITEMS : ITEMS.filter(i => i.day === day);
+    return s ? byDay.filter(i => `${i.hook} ${i.subtitle} ${i.text1} ${i.text2} ${i.cta}`.toLowerCase().includes(s)) : byDay;
+  }, [q, day]);
 
   const toggle = (id: string) => setPicked(p => (p.includes(id) ? p.filter(x => x !== id) : [...p, id]));
   const rowsFor = () => picked
@@ -32,7 +35,7 @@ export default function ReadyContentPicker({ onAdd }: Props) {
   return (
     <div className="space-y-2">
       <Label className="text-sm font-medium">Ready made content</Label>
-      <p className="text-xs text-muted-foreground leading-snug">{data.theme}. Tick the ones you want, then add them as posts.</p>
+      <p className="text-xs text-muted-foreground leading-snug">{day === "All" || day === "October" ? `${data.theme}. ` : ""}Tick the ones you want, then add them as posts.</p>
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
@@ -49,6 +52,18 @@ export default function ReadyContentPicker({ onAdd }: Props) {
             placeholder="Search the list"
             className="w-full h-8 rounded bg-muted/30 border border-border/40 px-2 text-sm"
           />
+          <div className="flex flex-wrap gap-1.5">
+            {DAYS.map(d => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setDay(d)}
+                className={`rounded-full border px-2.5 py-0.5 text-xs ${day === d ? "border-sky-500 bg-sky-500/20 text-sky-300" : "border-border/40 text-muted-foreground"}`}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
           <div className="flex gap-2 text-xs">
             <button type="button" className="underline" onClick={() => setPicked(Array.from(new Set([...picked, ...shown.map(i => i.id)])))}>Tick all shown</button>
             <button type="button" className="underline" onClick={() => setPicked([])}>Clear</button>
@@ -60,7 +75,7 @@ export default function ReadyContentPicker({ onAdd }: Props) {
                 <span>
                   {i.hook}
                   <span className="block text-xs text-muted-foreground">{i.subtitle}</span>
-                  {i.check && <span className="block text-xs text-amber-400">Check wording: mentions a treatment you may not want to name</span>}
+                  {i.check && <span className="block text-xs text-amber-400">Check wording: mentions treatment, consultations or the clinic</span>}
                 </span>
               </label>
             ))}
