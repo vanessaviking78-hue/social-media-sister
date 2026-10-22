@@ -180,7 +180,7 @@ export async function clientProfileContext(clientName?: string | null): Promise<
     const p = (r.rows as Record<string, string | null>[])[0];
     if (p) {
       const lines: string[] = [];
-      if (clip(p.website_url)) lines.push(`- Website (for treatment details only, never mention it unless the post is a treatment post): ${clip(p.website_url, 200)}`);
+      if (clip(p.website_url)) lines.push(`- Website (background reading only, never mention it or a link in bio in any post): ${clip(p.website_url, 200)}`);
       if (clip(p.seo_area)) lines.push(`- Area: ${clip(p.seo_area, 200)}`);
       if (clip(p.target_audience)) lines.push(`- Target audience: ${clip(p.target_audience)}`);
       if (clip(p.content_pillars)) lines.push(`- Content pillars: ${clip(p.content_pillars)}`);
