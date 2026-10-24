@@ -219,7 +219,7 @@ export async function runDraft(id: string): Promise<void> {
     const plan = input.mixType === "standard" ? PLAN_STANDARD : PLAN_HALF;
     const approved = input.approved ?? {};
     const month = input.month || MONTHS[new Date().getMonth()];
-    const shirt = (input.shirt ?? "white").trim();
+    const shirt = (input.shirt ?? "bright optic white").trim();
 
     const photos: ({ url: string; source: "studio" | "approved" } | null)[] = plan.map((_, i) =>
       approved[String(i)] ? { url: `/api/media/${approved[String(i)]}`, source: "approved" } : null,

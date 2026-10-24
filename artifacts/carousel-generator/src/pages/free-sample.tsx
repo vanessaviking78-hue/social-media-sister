@@ -376,7 +376,7 @@ export default function FreeSample() {
   const [credentials, setCredentials] = useState("");
   const [treatments, setTreatments] = useState("");
   const [mixType, setMixType] = useState<MixType>("half");
-  const [shirt, setShirt] = useState("white");
+  const [shirt, setShirt] = useState("bright optic white");
   const [month, setMonth] = useState(MONTHS[new Date().getMonth()]);
   const [photoMode, setPhotoMode] = useState<"studio" | "approved">("studio");
   const [photoFile, setPhotoFile] = useState<File | null>(null);

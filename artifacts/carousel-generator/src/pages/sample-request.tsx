@@ -30,6 +30,16 @@ const CSS = `
 .sr-sig { color:var(--muted); font-size:14px; margin:0; }
 `;
 
+// iPhone photos are often HEIC, which most browsers and the server cannot read, so turn them into JPEGs here.
+async function toUsable(file: File): Promise<File> {
+  const isHeic = /heic|heif/i.test(file.type) || /\.(heic|heif)$/i.test(file.name);
+  if (!isHeic) return file;
+  const { default: heic2any } = await import("heic2any");
+  const out = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+  const blob = Array.isArray(out) ? out[0] : out;
+  return new File([blob], file.name.replace(/\.(heic|heif)$/i, "") + ".jpg", { type: "image/jpeg" });
+}
+
 export default function SampleRequest() {
   const [clinicName, setClinicName] = useState("");
   const [handle, setHandle] = useState("");
@@ -41,6 +51,17 @@ export default function SampleRequest() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [done, setDone] = useState(false);
+
+  const pick = async (file: File | undefined, set: (f: File | null) => void) => {
+    if (!file) return set(null);
+    try {
+      set(await toUsable(file));
+      setError("");
+    } catch {
+      set(null);
+      setError("I could not read that photo. Please choose a JPG or PNG instead.");
+    }
+  };
 
   useEffect(() => {
     document.title = "Your free sample posts";
@@ -128,11 +149,11 @@ export default function SampleRequest() {
           <div className="sr-field">
             <label htmlFor="sr-photo">A photo of you</label>
             <small>A clear, well lit photo of your face and shoulders works best.</small>
-            <input id="sr-photo" className="sr-input" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setPhoto(e.target.files?.[0] ?? null)} required />
+            <input id="sr-photo" className="sr-input" type="file" accept="image/*,.heic,.heif" onChange={(e) => void pick(e.target.files?.[0], setPhoto)} required />
           </div>
           <div className="sr-field">
             <label htmlFor="sr-logo">Your logo (optional)</label>
-            <input id="sr-logo" className="sr-input" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setLogo(e.target.files?.[0] ?? null)} />
+            <input id="sr-logo" className="sr-input" type="file" accept="image/*,.heic,.heif" onChange={(e) => void pick(e.target.files?.[0], setLogo)} />
           </div>
           <div className="sr-field">
             <label htmlFor="sr-email">Email (optional)</label>
