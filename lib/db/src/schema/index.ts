@@ -968,3 +968,27 @@ export const freeSamplesTable = pgTable("free_samples", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 export type FreeSample = typeof freeSamplesTable.$inferSelect;
+
+// Free sample drafts: a request for a sample (from the Free Sample tool or the
+// public intake link) that is built in the background, then waits for Vanessa
+// to review it, publish it or send it to a client's Client Bank.
+export const freeSampleDraftsTable = pgTable("free_sample_drafts", {
+  id: text("id").primaryKey(),
+  status: text("status").notNull().default("submitted"),
+  source: text("source").notNull().default("tool"),
+  clinicName: text("clinic_name").notNull(),
+  handle: text("handle").notNull().default(""),
+  area: text("area").notNull().default(""),
+  clinicianName: text("clinician_name").notNull().default(""),
+  credentials: text("credentials").notNull().default(""),
+  treatments: text("treatments").notNull().default(""),
+  email: text("email").notNull().default(""),
+  logoUrl: text("logo_url").notNull().default(""),
+  input: json("input").notNull().default({}),
+  data: json("data").notNull().default({}),
+  error: text("error").notNull().default(""),
+  slug: text("slug").notNull().default(""),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+export type FreeSampleDraft = typeof freeSampleDraftsTable.$inferSelect;

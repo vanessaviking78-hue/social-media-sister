@@ -52,6 +52,7 @@ await createBroadcastDraftsTable();
     await addStylishCoverFontColumns();
     await createContentTicklistsTable();
     await createFreeSamplesTable();
+    await createFreeSampleDraftsTable();
   } catch (err) {
     logger.error({ err }, "Migration failed");
     throw err;
@@ -752,6 +753,30 @@ async function createFreeSamplesTable(): Promise<void> {
       clinic_name text NOT NULL,
       data json NOT NULL DEFAULT '{}',
       created_at timestamp NOT NULL DEFAULT now()
+    )
+  `);
+}
+
+async function createFreeSampleDraftsTable(): Promise<void> {
+  await db.execute(sql`
+    CREATE TABLE IF NOT EXISTS free_sample_drafts (
+      id text PRIMARY KEY,
+      status text NOT NULL DEFAULT 'submitted',
+      source text NOT NULL DEFAULT 'tool',
+      clinic_name text NOT NULL,
+      handle text NOT NULL DEFAULT '',
+      area text NOT NULL DEFAULT '',
+      clinician_name text NOT NULL DEFAULT '',
+      credentials text NOT NULL DEFAULT '',
+      treatments text NOT NULL DEFAULT '',
+      email text NOT NULL DEFAULT '',
+      logo_url text NOT NULL DEFAULT '',
+      input json NOT NULL DEFAULT '{}',
+      data json NOT NULL DEFAULT '{}',
+      error text NOT NULL DEFAULT '',
+      slug text NOT NULL DEFAULT '',
+      created_at timestamp NOT NULL DEFAULT now(),
+      updated_at timestamp NOT NULL DEFAULT now()
     )
   `);
 }

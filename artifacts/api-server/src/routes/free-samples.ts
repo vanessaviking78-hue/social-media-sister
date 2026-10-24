@@ -1,155 +1,28 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import multer from "multer";
 import { v4 as uuid } from "uuid";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, gt } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { freeSamplesTable } from "@workspace/db/schema";
-import { openai } from "@workspace/integrations-openai-ai-server";
+import { freeSamplesTable, freeSampleDraftsTable, scheduledPostsTable, clientPresetsTable } from "@workspace/db/schema";
 import { objectStorageClient } from "../lib/objectStorage";
-import { HOUSE_VOICE } from "../lib/houseRules";
-import { BASE_RULES } from "./caption-generator";
+import { saveSampleFile, runDraft, markStaleDrafts, type DraftInput, type MixType } from "../lib/freeSampleWorker";
 
 const router: IRouter = Router();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024 } });
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 12 * 1024 * 1024, files: 12 } });
 
-// Free Sample tool: Vanessa builds a sample pack for a prospective clinic
-// (8 posts, 2 weeks, with captions and hashtags) and the clinic gets a public
-// link at /sample/<slug> to download everything.
+// Free Sample tool. A request (from the tool, or from the public intake link
+// that Vanessa hands out in DMs and groups) is built in the background:
+// Studio photos plus the 8 captions. Vanessa gets an email, opens the draft in
+// the tool, then publishes a public page at /sample/<slug> or sends the 8
+// posts to a client's Client Bank.
 
-const DAYS = ["Monday", "Wednesday", "Friday", "Sunday"];
+setTimeout(() => void markStaleDrafts(), 30_000).unref();
 
-const BRIEF = `YOU ARE WRITING A FREE SAMPLE PACK: 8 Instagram and Facebook posts over two weeks for one clinic, as the clinician or clinic owner, in the first person.
+const IMAGE_MIMES = ["image/jpeg", "image/png", "image/webp"];
 
-STRUCTURE (exactly 8 posts, in this order)
-1. Week 1 Monday: relatable or treatment led (only if treatments were given, otherwise treatment neutral), warm and useful.
-2. Week 1 Wednesday: really nostalgic and really funny for UK women over 35 (childhood, teenage years, early adulthood in the UK: telly, music, sweets, catalogues, school, the early 2000s).
-3. Week 1 Friday: a "things that" post (things my patients have taught me, things I wish someone had told me, things I learned in my career).
-4. Week 1 Sunday: shareable, empowering and emotional, tied to the season.
-5. Week 2 Monday, 6. Week 2 Wednesday, 7. Week 2 Friday, 8. Week 2 Sunday: the same four jobs but different angles and different hooks. Week 2 must not repeat week 1.
-
-FOR EACH POST WRITE
-- headline: 2 to 4 words that will sit big on the photo, and subtitle: 3 to 8 words that finish the thought. Read together they are one hook line. No full stops. No month or year.
-- caption: the hook line first, then the story in short paragraphs separated by a blank line, then a call to action that carries the reply word as "Comment WORD" (vary the wording each time, never pushy, invite a message too), then ONE closing question related to the post. Do NOT put hashtags in the caption.
-- Small believable personal details (the kettle, a quiet Tuesday, the school run, a biscuit tin). Never invent results, client names, statistics or numbers about the clinic.
-- 120 to 190 words per caption. No emojis. No em dashes or en dashes anywhere. UK spelling.
-- Never use negative parallelism, rhetorical triplets, a tidy summing up ending, or the buzzwords journey, glow up, game changer, unlock, dive in, tapestry, elevate, faff, fluff.
-- No treatment specifics, prices, doses, results claims, guarantees, urgency or scarcity. Never mention a website or any web address.
-- Qualifications the clinician gave may be mentioned lightly and truthfully. Do not add any qualification that was not given.
-
-HASHTAGS
-- Give two lines, tagsA and tagsB, each with EXACTLY 5 hashtags separated by single spaces, all based on the clinic's area (town, nearby places, county or region) plus aesthetics. Posts alternate between tagsA and tagsB.
-
-Return JSON only: {"posts":[{"headline":"","subtitle":"","caption":""} x 8],"tagsA":"","tagsB":""}`;
-
-function clean(s: unknown): string {
-  return String(s ?? "")
-    .replace(/[–—]/g, ",")
-    .replace(/\s+\n/g, "\n")
-    .trim();
+function paramKey(raw: string | string[] | undefined): string {
+  return Array.isArray(raw) ? raw.join("/") : (raw ?? "");
 }
-
-function fiveTags(line: unknown, fallback: string): string {
-  const tags = String(line ?? "")
-    .split(/\s+/)
-    .map((t) => t.replace(/[^#A-Za-z0-9]/g, ""))
-    .filter((t) => t.length > 1)
-    .map((t) => (t.startsWith("#") ? t : `#${t}`));
-  const uniq = Array.from(new Set(tags));
-  if (uniq.length >= 5) return uniq.slice(0, 5).join(" ");
-  return fallback;
-}
-
-router.post("/free-samples/captions", async (req: Request, res: Response) => {
-  try {
-    const { clinicName, clinicianName, area, credentials, treatments, replyWord } = req.body as {
-      clinicName?: string;
-      clinicianName?: string;
-      area?: string;
-      credentials?: string;
-      treatments?: string;
-      replyWord?: string;
-    };
-    if (!clinicName?.trim() || !area?.trim()) {
-      res.status(400).json({ error: "clinicName and area are required" });
-      return;
-    }
-    const word = (replyWord ?? "").trim().replace(/[^A-Za-z]/g, "").toUpperCase();
-    const details = [
-      `Clinic: ${clinicName.trim()}`,
-      clinicianName?.trim() ? `Clinician: ${clinicianName.trim()}` : "",
-      `Area: ${area.trim()}`,
-      credentials?.trim() ? `Qualifications and background (use only these): ${credentials.trim()}` : "No qualifications given, so mention none.",
-      treatments?.trim() ? `Treatments offered (never prescription only): ${treatments.trim()}` : "No treatments given, so write treatment neutral posts about the woman and how she feels.",
-      word ? `Reply word to use in every call to action: ${word}` : "Choose one short, friendly, clinic related reply word (one uppercase word, not a buzzword) and use it in every call to action.",
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    const system = `${HOUSE_VOICE}\n\n${BASE_RULES}\n\n${BRIEF}`;
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: details },
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.9,
-      max_tokens: 4000,
-    });
-    const raw = completion.choices[0]?.message?.content ?? "";
-    const parsed = JSON.parse(raw) as {
-      posts?: { headline?: string; subtitle?: string; caption?: string }[];
-      tagsA?: string;
-      tagsB?: string;
-    };
-    const posts = parsed.posts ?? [];
-    if (posts.length < 8) {
-      res.status(502).json({ error: "The writer returned fewer than 8 posts, please try again" });
-      return;
-    }
-    const slugWord = (area.trim().split(/[,\s]+/)[0] || "Local").replace(/[^A-Za-z0-9]/g, "");
-    const fbA = `#${slugWord} #${slugWord}Aesthetics #AestheticsNurse #LocalClinic #SkinCare`;
-    const fbB = `#${slugWord}Life #${slugWord}Clinic #AestheticClinic #UKAesthetics #SelfCare`;
-    const tagsA = fiveTags(parsed.tagsA, fbA);
-    const tagsB = fiveTags(parsed.tagsB, fbB);
-    res.json({
-      posts: posts.slice(0, 8).map((p, i) => ({
-        n: i + 1,
-        week: i < 4 ? 1 : 2,
-        day: DAYS[i % 4],
-        headline: clean(p.headline),
-        subtitle: clean(p.subtitle),
-        caption: clean(p.caption),
-        tags: i % 2 === 0 ? tagsA : tagsB,
-      })),
-    });
-  } catch (err: unknown) {
-    req.log?.error({ err }, "free-samples captions failed");
-    res.status(500).json({ error: err instanceof Error ? err.message : "Caption writing failed" });
-  }
-});
-
-router.post("/free-samples/image", upload.single("image"), async (req: Request, res: Response) => {
-  try {
-    const file = req.file;
-    if (!file) {
-      res.status(400).json({ error: "image file required" });
-      return;
-    }
-    const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-    if (!bucketId) throw new Error("DEFAULT_OBJECT_STORAGE_BUCKET_ID not set");
-    const ext = file.mimetype === "image/png" ? "png" : "jpg";
-    const key = `free-samples/${uuid()}/image.${ext}`;
-    await objectStorageClient.bucket(bucketId).file(key).save(file.buffer, {
-      contentType: file.mimetype,
-      metadata: { cacheControl: "public, max-age=31536000" },
-    });
-    res.json({ url: `/api/free-samples/media/${key}` });
-  } catch (err: unknown) {
-    req.log?.error({ err }, "free-samples image upload failed");
-    res.status(500).json({ error: err instanceof Error ? err.message : "Upload failed" });
-  }
-});
 
 function slugify(s: string): string {
   return s
@@ -160,21 +33,406 @@ function slugify(s: string): string {
     .slice(0, 40);
 }
 
+function clean(s: unknown): string {
+  return String(s ?? "")
+    .replace(/[–—]/g, ",")
+    .replace(/\s+\n/g, "\n")
+    .trim();
+}
+
+function str(v: unknown, max = 300): string {
+  return String(v ?? "").trim().slice(0, max);
+}
+
+// ---------------------------------------------------------------------------
+// Stored images, served from this server so they can be drawn and downloaded in the browser
+// ---------------------------------------------------------------------------
+
+async function streamKey(key: string, allowedPrefixes: string[], res: Response, cache: string): Promise<void> {
+  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
+  if (!bucketId) {
+    res.status(500).json({ error: "Object storage not configured" });
+    return;
+  }
+  if (!allowedPrefixes.some((p) => key.startsWith(p)) || key.includes("..")) {
+    res.status(400).json({ error: "Not allowed" });
+    return;
+  }
+  const [buffer] = await objectStorageClient.bucket(bucketId).file(key).download();
+  res.set("Content-Type", key.endsWith(".png") ? "image/png" : key.endsWith(".webp") ? "image/webp" : "image/jpeg");
+  res.set("Cache-Control", cache);
+  res.send(buffer);
+}
+
+router.get("/free-samples/media/*key", async (req: Request, res: Response) => {
+  try {
+    await streamKey(paramKey((req.params as Record<string, string | string[]>).key), ["free-samples/"], res, "public, max-age=31536000");
+  } catch (err: unknown) {
+    res.status(404).json({ error: err instanceof Error ? err.message : "Not found" });
+  }
+});
+
+// Studio output images and uploaded photos, read by the tool so it can draw them onto a canvas.
+router.get("/free-samples/source-image", async (req: Request, res: Response) => {
+  try {
+    const url = String(req.query.url ?? "");
+    const key = url.startsWith("/api/media/") ? url.slice("/api/media/".length) : url.startsWith("/api/free-samples/media/") ? url.slice("/api/free-samples/media/".length) : "";
+    if (!key) {
+      res.status(400).json({ error: "Not allowed" });
+      return;
+    }
+    await streamKey(key, ["ai-portraits/", "free-samples/"], res, "private, max-age=600");
+  } catch (err: unknown) {
+    res.status(404).json({ error: err instanceof Error ? err.message : "Not found" });
+  }
+});
+
+router.post("/free-samples/image", upload.single("image"), async (req: Request, res: Response) => {
+  try {
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ error: "image file required" });
+      return;
+    }
+    const key = await saveSampleFile(file.buffer, file.mimetype, "image");
+    res.json({ url: `/api/free-samples/media/${key}` });
+  } catch (err: unknown) {
+    req.log?.error({ err }, "free-samples image upload failed");
+    res.status(500).json({ error: err instanceof Error ? err.message : "Upload failed" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Drafts: creating them
+// ---------------------------------------------------------------------------
+
+async function createDraft(opts: {
+  source: "tool" | "intake";
+  clinicName: string;
+  handle: string;
+  area: string;
+  clinicianName: string;
+  credentials: string;
+  treatments: string;
+  email: string;
+  logo?: Express.Multer.File;
+  input: DraftInput;
+}): Promise<string> {
+  const id = uuid();
+  const logoKey = opts.logo ? await saveSampleFile(opts.logo.buffer, opts.logo.mimetype, "logo") : "";
+  await db.insert(freeSampleDraftsTable).values({
+    id,
+    status: "submitted",
+    source: opts.source,
+    clinicName: opts.clinicName,
+    handle: opts.handle,
+    area: opts.area,
+    clinicianName: opts.clinicianName,
+    credentials: opts.credentials,
+    treatments: opts.treatments,
+    email: opts.email,
+    logoUrl: logoKey ? `/api/free-samples/media/${logoKey}` : "",
+    input: opts.input,
+  });
+  setImmediate(() => void runDraft(id));
+  return id;
+}
+
+const hits = new Map<string, number[]>();
+function tooMany(ip: string): boolean {
+  const now = Date.now();
+  const recent = (hits.get(ip) ?? []).filter((t) => now - t < 60 * 60 * 1000);
+  recent.push(now);
+  hits.set(ip, recent);
+  return recent.length > 8;
+}
+
+type Files = { [field: string]: Express.Multer.File[] };
+
+// Public intake link: only people Vanessa sends the link to ever see it.
+router.post(
+  "/free-samples/intake",
+  upload.fields([{ name: "photo", maxCount: 1 }, { name: "logo", maxCount: 1 }]),
+  async (req: Request, res: Response) => {
+    try {
+      if (tooMany(req.ip || "unknown")) {
+        res.status(429).json({ error: "That is a lot of requests, please try again later" });
+        return;
+      }
+      const files = (req.files ?? {}) as Files;
+      const photo = files.photo?.[0];
+      const body = req.body as Record<string, string>;
+      const clinicName = str(body.clinicName, 120);
+      const handle = str(body.handle, 80).replace(/^@/, "").replace(/\s+/g, "");
+      const area = str(body.area, 120);
+      if (!clinicName || !handle || !area || !photo) {
+        res.status(400).json({ error: "Please add your clinic name, Instagram handle, town and a photo" });
+        return;
+      }
+      if (body.consent !== "yes") {
+        res.status(400).json({ error: "Please tick the box to say you are happy for your photo to be used" });
+        return;
+      }
+      if (!IMAGE_MIMES.includes(photo.mimetype) || (files.logo?.[0] && !IMAGE_MIMES.includes(files.logo[0].mimetype))) {
+        res.status(400).json({ error: "Please upload a JPG, PNG or WebP image" });
+        return;
+      }
+      // One request per handle in 48 hours
+      const since = new Date(Date.now() - 48 * 60 * 60 * 1000);
+      const existing = await db
+        .select()
+        .from(freeSampleDraftsTable)
+        .where(and(eq(freeSampleDraftsTable.source, "intake"), gt(freeSampleDraftsTable.createdAt, since)));
+      if (existing.some((d) => d.handle.toLowerCase() === handle.toLowerCase())) {
+        res.json({ ok: true });
+        return;
+      }
+      const photoKey = await saveSampleFile(photo.buffer, photo.mimetype, "photo");
+      await createDraft({
+        source: "intake",
+        clinicName,
+        handle,
+        area,
+        clinicianName: "",
+        credentials: "",
+        treatments: "",
+        email: str(body.email, 160),
+        logo: files.logo?.[0],
+        input: { mixType: "half", shirt: "white", photoKey },
+      });
+      res.json({ ok: true });
+    } catch (err: unknown) {
+      req.log?.error({ err }, "free-samples intake failed");
+      res.status(500).json({ error: "Something went wrong, please try again" });
+    }
+  },
+);
+
+const REQUEST_FIELDS = [{ name: "photo", maxCount: 1 }, { name: "logo", maxCount: 1 }, ...Array.from({ length: 8 }, (_, i) => ({ name: `a${i}`, maxCount: 1 }))];
+
+// From the tool: all the options, including approved photos for some or all of the 8 slots.
+router.post("/free-samples/requests", upload.fields(REQUEST_FIELDS), async (req: Request, res: Response) => {
+  try {
+    const files = (req.files ?? {}) as Files;
+    let meta: Record<string, string> = {};
+    try {
+      meta = JSON.parse(String((req.body as Record<string, string>).meta ?? "{}"));
+    } catch {
+      /* fall through to validation */
+    }
+    const clinicName = str(meta.clinicName, 120);
+    const area = str(meta.area, 120);
+    if (!clinicName || !area) {
+      res.status(400).json({ error: "clinicName and area are required" });
+      return;
+    }
+    const approved: Record<string, string> = {};
+    for (let i = 0; i < 8; i++) {
+      const f = files[`a${i}`]?.[0];
+      if (f) approved[String(i)] = await saveSampleFile(f.buffer, f.mimetype, `approved-${i}`);
+    }
+    const photo = files.photo?.[0];
+    if (!photo && Object.keys(approved).length < 8) {
+      res.status(400).json({ error: "Add the clinician photo, or choose all 8 approved photos" });
+      return;
+    }
+    const photoKey = photo ? await saveSampleFile(photo.buffer, photo.mimetype, "photo") : undefined;
+    const id = await createDraft({
+      source: "tool",
+      clinicName,
+      handle: str(meta.handle, 80).replace(/^@/, ""),
+      area,
+      clinicianName: str(meta.clinicianName, 80),
+      credentials: str(meta.credentials, 300),
+      treatments: str(meta.treatments, 300),
+      email: "",
+      logo: files.logo?.[0],
+      input: {
+        mixType: (meta.mixType === "standard" ? "standard" : "half") as MixType,
+        shirt: str(meta.shirt, 40) || "white",
+        month: str(meta.month, 20),
+        approved,
+        photoKey,
+      },
+    });
+    res.json({ id });
+  } catch (err: unknown) {
+    req.log?.error({ err }, "free-samples request failed");
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not start the sample" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Drafts: listing, opening, editing, retrying, deleting
+// ---------------------------------------------------------------------------
+
+router.get("/free-samples/drafts", async (_req: Request, res: Response) => {
+  try {
+    const rows = await db.select().from(freeSampleDraftsTable).orderBy(desc(freeSampleDraftsTable.createdAt)).limit(100);
+    res.json({
+      drafts: rows.map((r) => ({
+        id: r.id,
+        status: r.status,
+        source: r.source,
+        clinicName: r.clinicName,
+        handle: r.handle,
+        slug: r.slug,
+        error: r.error,
+        createdAt: (r.createdAt as Date).toISOString(),
+      })),
+    });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to list drafts" });
+  }
+});
+
+router.get("/free-samples/drafts/:id", async (req: Request, res: Response) => {
+  try {
+    const [r] = await db.select().from(freeSampleDraftsTable).where(eq(freeSampleDraftsTable.id, String(req.params.id)));
+    if (!r) {
+      res.status(404).json({ error: "Draft not found" });
+      return;
+    }
+    res.set("Cache-Control", "no-store");
+    res.json({
+      id: r.id,
+      status: r.status,
+      source: r.source,
+      clinicName: r.clinicName,
+      handle: r.handle,
+      area: r.area,
+      logoUrl: r.logoUrl,
+      slug: r.slug,
+      error: r.error,
+      data: r.data,
+    });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to load draft" });
+  }
+});
+
+// Save edits to the headlines and captions, or note which public page it became.
+router.patch("/free-samples/drafts/:id", async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    const [r] = await db.select().from(freeSampleDraftsTable).where(eq(freeSampleDraftsTable.id, id));
+    if (!r) {
+      res.status(404).json({ error: "Draft not found" });
+      return;
+    }
+    const body = req.body as { posts?: { n: number; headline: string; subtitle: string; caption: string; tags: string }[]; slug?: string };
+    const data = { ...((r.data ?? {}) as { posts?: Record<string, unknown>[] }) };
+    if (Array.isArray(body.posts) && Array.isArray(data.posts)) {
+      data.posts = data.posts.map((p) => {
+        const edit = body.posts!.find((e) => e.n === p.n);
+        return edit ? { ...p, headline: clean(edit.headline), subtitle: clean(edit.subtitle), caption: clean(edit.caption), tags: clean(edit.tags) } : p;
+      });
+    }
+    await db
+      .update(freeSampleDraftsTable)
+      .set({ data, slug: body.slug ?? r.slug, updatedAt: new Date() })
+      .where(eq(freeSampleDraftsTable.id, id));
+    res.json({ ok: true });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to save" });
+  }
+});
+
+router.post("/free-samples/drafts/:id/retry", async (req: Request, res: Response) => {
+  try {
+    const id = String(req.params.id);
+    const [r] = await db.select().from(freeSampleDraftsTable).where(eq(freeSampleDraftsTable.id, id));
+    if (!r) {
+      res.status(404).json({ error: "Draft not found" });
+      return;
+    }
+    if (r.status === "working") {
+      res.status(409).json({ error: "It is still being built" });
+      return;
+    }
+    setImmediate(() => void runDraft(id));
+    res.json({ ok: true });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to retry" });
+  }
+});
+
+router.delete("/free-samples/drafts/:id", async (req: Request, res: Response) => {
+  try {
+    await db.delete(freeSampleDraftsTable).where(eq(freeSampleDraftsTable.id, String(req.params.id)));
+    res.json({ ok: true });
+  } catch (err: unknown) {
+    res.status(500).json({ error: err instanceof Error ? err.message : "Failed to delete" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Send the 8 finished posts to a client's Client Bank (parked drafts, no dates)
+// ---------------------------------------------------------------------------
+
+router.post("/free-samples/send-to-bank", async (req: Request, res: Response) => {
+  try {
+    const { presetId, draftId, posts } = req.body as {
+      presetId?: number;
+      draftId?: string;
+      posts?: { n: number; headline?: string; imageUrl: string; caption: string; tags: string }[];
+    };
+    if (!presetId || !Array.isArray(posts) || posts.length !== 8) {
+      res.status(400).json({ error: "presetId and exactly 8 posts are required" });
+      return;
+    }
+    const [preset] = await db.select().from(clientPresetsTable).where(eq(clientPresetsTable.id, presetId));
+    if (!preset) {
+      res.status(404).json({ error: "Client not found" });
+      return;
+    }
+    for (const p of posts) {
+      // The scheduler reads stored images from /api/media/<key>
+      const imageUrl = p.imageUrl.replace("/api/free-samples/media/", "/api/media/");
+      await db.insert(scheduledPostsTable).values({
+        presetId,
+        clientName: preset.name,
+        postType: "carousel",
+        content: {
+          imageUrls: [imageUrl],
+          caption: `${clean(p.caption)}\n\n${clean(p.tags)}`,
+          title: clean(p.headline) || `Sample post ${p.n}`,
+          sourceTool: "free-sample",
+        },
+        scheduledAt: new Date(),
+        status: "draft",
+        notes: "From the Free Sample tool",
+      });
+    }
+    if (draftId) {
+      await db.update(freeSampleDraftsTable).set({ status: "sent", updatedAt: new Date() }).where(eq(freeSampleDraftsTable.id, draftId));
+    }
+    res.json({ ok: true, clientName: preset.name });
+  } catch (err: unknown) {
+    req.log?.error({ err }, "free-samples send-to-bank failed");
+    res.status(500).json({ error: err instanceof Error ? err.message : "Could not send to the Client Bank" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Published sample pages
+// ---------------------------------------------------------------------------
+
 router.post("/free-samples", async (req: Request, res: Response) => {
   try {
-    const { clinicName, slug, logoUrl, accent, replyWord, posts } = req.body as {
+    const { clinicName, slug, logoUrl, accent, draftId, posts } = req.body as {
       clinicName?: string;
       slug?: string;
       logoUrl?: string;
       accent?: string;
-      replyWord?: string;
+      draftId?: string;
       posts?: { n: number; week: number; day: string; imageUrl: string; caption: string; tags: string }[];
     };
     if (!clinicName?.trim() || !Array.isArray(posts) || posts.length !== 8) {
       res.status(400).json({ error: "clinicName and exactly 8 posts are required" });
       return;
     }
-    let base = slugify(slug?.trim() || clinicName) || "clinic";
+    const base = slugify(slug?.trim() || clinicName) || "clinic";
     let final = base;
     for (let i = 2; i < 50; i++) {
       const [exists] = await db.select().from(freeSamplesTable).where(eq(freeSamplesTable.slug, final));
@@ -187,7 +445,6 @@ router.post("/free-samples", async (req: Request, res: Response) => {
       data: {
         logoUrl: logoUrl ?? "",
         accent: /^#[0-9a-fA-F]{6}$/.test(accent ?? "") ? accent : "#9a5a49",
-        replyWord: (replyWord ?? "").toUpperCase(),
         posts: posts.map((p) => ({
           n: p.n,
           week: p.week,
@@ -198,6 +455,12 @@ router.post("/free-samples", async (req: Request, res: Response) => {
         })),
       },
     });
+    if (draftId) {
+      await db
+        .update(freeSampleDraftsTable)
+        .set({ status: "published", slug: final, updatedAt: new Date() })
+        .where(eq(freeSampleDraftsTable.id, draftId));
+    }
     res.json({ slug: final });
   } catch (err: unknown) {
     req.log?.error({ err }, "free-samples save failed");
@@ -211,50 +474,6 @@ router.get("/free-samples", async (_req: Request, res: Response) => {
     res.json({ samples: rows.map((r) => ({ slug: r.slug, clinicName: r.clinicName, createdAt: (r.createdAt as Date).toISOString() })) });
   } catch (err: unknown) {
     res.status(500).json({ error: err instanceof Error ? err.message : "Failed to list samples" });
-  }
-});
-
-async function streamKey(key: string, allowedPrefix: string, res: Response, cache: string): Promise<void> {
-  const bucketId = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
-  if (!bucketId) {
-    res.status(500).json({ error: "Object storage not configured" });
-    return;
-  }
-  if (!key.startsWith(allowedPrefix) || key.includes("..")) {
-    res.status(400).json({ error: "Not allowed" });
-    return;
-  }
-  const [buffer] = await objectStorageClient.bucket(bucketId).file(key).download();
-  res.set("Content-Type", key.endsWith(".png") ? "image/png" : "image/jpeg");
-  res.set("Cache-Control", cache);
-  res.send(buffer);
-}
-
-function paramKey(raw: string | string[] | undefined): string {
-  return Array.isArray(raw) ? raw.join("/") : (raw ?? "");
-}
-
-// Public stored images for the sample pages (same origin, so they can be
-// downloaded and zipped in the browser without any cross origin trouble).
-router.get("/free-samples/media/*key", async (req: Request, res: Response) => {
-  try {
-    await streamKey(paramKey((req.params as Record<string, string | string[]>).key), "free-samples/", res, "public, max-age=31536000");
-  } catch (err: unknown) {
-    res.status(404).json({ error: err instanceof Error ? err.message : "Not found" });
-  }
-});
-
-// Studio output images, read by the tool so it can draw them onto a canvas.
-router.get("/free-samples/source-image", async (req: Request, res: Response) => {
-  try {
-    const url = String(req.query.url ?? "");
-    if (!url.startsWith("/api/media/")) {
-      res.status(400).json({ error: "Not allowed" });
-      return;
-    }
-    await streamKey(url.slice("/api/media/".length), "ai-portraits/", res, "private, max-age=600");
-  } catch (err: unknown) {
-    res.status(404).json({ error: err instanceof Error ? err.message : "Not found" });
   }
 });
 

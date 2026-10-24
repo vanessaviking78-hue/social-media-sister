@@ -8,7 +8,6 @@ type SampleData = {
   clinicName: string;
   logoUrl: string;
   accent: string;
-  replyWord: string;
   posts: SamplePost[];
 };
 
@@ -159,7 +158,6 @@ export default function SamplePublic({ slug }: { slug: string }) {
   }
 
   const accent = /^#[0-9a-fA-F]{6}$/.test(data.accent) ? data.accent : "#9a5a49";
-  const word = data.replyWord || "your reply word";
 
   return (
     <div className="sp-root" style={{ ["--accent" as string]: accent }}>
@@ -214,7 +212,7 @@ export default function SamplePublic({ slug }: { slug: string }) {
             <li>Open Instagram or Facebook on your side and upload the image.</li>
             <li>Paste in the caption and hashtags, and change anything you like.</li>
             <li>Read it through to check it suits your clinic, then post or schedule it yourself.</li>
-            <li>Every caption asks people to comment {word}. When they do, send them a message.</li>
+            <li>Every caption ends with a question, so stay close to your comments and reply to everyone who joins in.</li>
           </ol>
           <p>These are a sample of my work, so nothing is posted for you. If you would like more like this, send me a message at Social Media Sister and we will have a chat.</p>
           <p className="sp-sig">Vanessa Wormald, Social Media Sister</p>
