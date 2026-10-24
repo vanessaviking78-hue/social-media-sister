@@ -53,6 +53,12 @@ export type DraftInput = {
   approved?: Record<string, string>;
   /** stored key of the clinician photo, used to make the Studio images */
   photoKey?: string;
+  /** colour of the scrubs worn in the clinical photos */
+  scrubs?: string;
+  /** brand colours as typed by the clinic, e.g. "navy and gold" */
+  brandColours?: string;
+  /** about the clinician, in their own words (about 3 sentences) */
+  about?: string;
 };
 
 export type DraftPost = {
@@ -70,6 +76,8 @@ export type DraftPost = {
 export type DraftData = {
   photos?: { url: string; source: "studio" | "approved" }[];
   posts?: DraftPost[];
+  /** brand colours resolved to hex codes, first is the main one */
+  brand?: { hex: string[] };
 };
 
 // ---------------------------------------------------------------------------
@@ -123,7 +131,13 @@ FOR EACH POST WRITE
 HASHTAGS
 - Give two lines, tagsA and tagsB, each with EXACTLY 5 hashtags separated by single spaces, all based on the clinic's area (town, nearby places, county or region) plus aesthetics. Posts alternate between tagsA and tagsB.
 
-Return JSON only: {"posts":[{"headline":"","subtitle":"","caption":""} x 8],"tagsA":"","tagsB":""}`;
+BRAND COLOURS
+- If brand colours are given, also return "brandHex": up to 3 hex codes (like #1f3a5f) that match those colours as closely as you can, main colour first, chosen so white or very dark text is readable on a pale tint of the first one. If none are given, return an empty array.
+
+ABOUT THE CLINICIAN
+- If an About section is given, use small true details from it in the captions, in her voice. Never add facts that are not in it.
+
+Return JSON only: {"posts":[{"headline":"","subtitle":"","caption":""} x 8],"tagsA":"","tagsB":"","brandHex":[]}`;
 
 function clean(s: unknown): string {
   return String(s ?? "")
@@ -190,7 +204,9 @@ export async function generateSampleCaptions(opts: {
   credentials?: string;
   treatments?: string;
   month?: string;
-}): Promise<{ headline: string; subtitle: string; caption: string; tags: string }[]> {
+  about?: string;
+  brandColours?: string;
+}): Promise<{ posts: { headline: string; subtitle: string; caption: string; tags: string }[]; brandHex: string[] }> {
   const details = [
     `Clinic: ${opts.clinicName.trim()}`,
     opts.clinicianName?.trim() ? `Clinician: ${opts.clinicianName.trim()}` : "",
@@ -199,6 +215,10 @@ export async function generateSampleCaptions(opts: {
     opts.treatments?.trim()
       ? `Treatments offered (never prescription only): ${opts.treatments.trim()}`
       : "No treatments given, so write treatment neutral posts about the woman and how she feels, and every post ends with a closing question.",
+    opts.about?.trim()
+      ? `About the clinician, in her own words (true background to draw small personal details from, never invent anything beyond it): ${opts.about.trim()}`
+      : "",
+    opts.brandColours?.trim() ? `Brand colours: ${opts.brandColours.trim()}` : "",
     `Current month: ${opts.month || MONTHS[new Date().getMonth()]}`,
   ]
     .filter(Boolean)
@@ -218,15 +238,17 @@ export async function generateSampleCaptions(opts: {
     posts?: { headline?: string; subtitle?: string; caption?: string }[];
     tagsA?: string;
     tagsB?: string;
+    brandHex?: string[];
   };
   const posts = parsed.posts ?? [];
+  const brandHex = (Array.isArray(parsed.brandHex) ? parsed.brandHex : []).filter((h) => /^#[0-9a-fA-F]{6}$/.test(String(h))).slice(0, 3);
   if (posts.length < 8) throw new Error("The writer returned fewer than 8 posts");
   const word = (opts.area.trim().split(/[,\s]+/)[0] || "Local").replace(/[^A-Za-z0-9]/g, "");
   const tagsA = fiveTags(parsed.tagsA, `#${word} #${word}Aesthetics #AestheticsNurse #LocalClinic #SkinCare`);
   const tagsB = fiveTags(parsed.tagsB, `#${word}Life #${word}Clinic #AestheticClinic #UKAesthetics #SelfCare`);
   const eight = posts.slice(0, 8).map((p) => ({ headline: clean(p.headline), subtitle: clean(p.subtitle), caption: clean(p.caption) }));
   await rewriteFlagged(eight).catch(() => {});
-  return eight.map((p, i) => ({ ...p, tags: i % 2 === 0 ? tagsA : tagsB }));
+  return { posts: eight.map((p, i) => ({ ...p, tags: i % 2 === 0 ? tagsA : tagsB })), brandHex };
 }
 
 // ---------------------------------------------------------------------------
@@ -271,6 +293,8 @@ export async function runDraft(id: string): Promise<void> {
       credentials: draft.credentials,
       treatments: draft.treatments,
       month,
+      about: input.about,
+      brandColours: input.brandColours,
     });
 
     if (needed.length > 0) {
@@ -288,6 +312,7 @@ export async function runDraft(id: string): Promise<void> {
           promptVars.mixStyle = slot.mixStyle;
         }
         if (SHIRT_IDS.includes(slot.id) && shirt) promptVars.outfit = shirt;
+        if (input.scrubs?.trim() && ["mx-01", "mx-02", "mx-03", "mx-04"].includes(slot.id)) promptVars.scrubs = input.scrubs.trim();
         return { id: slot.id, aspectRatio: "3:4", ...(Object.keys(promptVars).length ? { promptVars } : {}) };
       };
 
@@ -309,7 +334,7 @@ export async function runDraft(id: string): Promise<void> {
       for (const { p, i } of needed) photos[i] = { url: results.get(p.id)!, source: "studio" };
     }
 
-    const written = await captionsPromise;
+    const { posts: written, brandHex } = await captionsPromise;
     const posts: DraftPost[] = written.map((w, i) => ({
       n: i + 1,
       week: i < 4 ? 1 : 2,
@@ -318,7 +343,7 @@ export async function runDraft(id: string): Promise<void> {
       zoom: !!plan[i].zoom && photos[i]?.source === "studio",
       ...w,
     }));
-    const data: DraftData = { photos: photos as { url: string; source: "studio" | "approved" }[], posts };
+    const data: DraftData = { photos: photos as { url: string; source: "studio" | "approved" }[], posts, ...(brandHex.length ? { brand: { hex: brandHex } } : {}) };
     await setDraft(id, { status: "ready", data, error: "" });
     await notifySampleReady({ clinicName: draft.clinicName, handle: draft.handle, link: appLink(`/free-sample?draft=${id}`), ok: true });
   } catch (err: unknown) {

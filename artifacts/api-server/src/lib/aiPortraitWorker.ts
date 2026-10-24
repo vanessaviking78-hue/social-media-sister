@@ -150,7 +150,7 @@ interface ScenarioConfig {
   textOnly?: boolean;
   cartoon?: boolean;
   cartoonRedraw?: boolean;
-  promptVars?: { outfit?: string; colour?: string; name?: string; skills?: string; knownAs?: string; customText?: string; month?: string; mixStyle?: string };
+  promptVars?: { outfit?: string; colour?: string; name?: string; skills?: string; knownAs?: string; customText?: string; month?: string; mixStyle?: string; scrubs?: string };
 }
 
 export async function processPortraitJob(

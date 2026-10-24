@@ -30,7 +30,7 @@ type PostDraft = {
 type DraftRow = { id: string; status: string; source: string; clinicName: string; handle: string; slug: string; error: string; createdAt: string };
 type DraftFull = {
   id: string; status: string; source: string; clinicName: string; handle: string; area: string; logoUrl: string; slug: string; error: string;
-  data: { photos?: { url: string; source: string }[]; posts?: Omit<PostDraft, "photo" | "preview">[] } | null;
+  data: { photos?: { url: string; source: string }[]; posts?: Omit<PostDraft, "photo" | "preview">[]; brand?: { hex: string[] } } | null;
 };
 type SavedSample = { slug: string; clinicName: string; createdAt: string };
 
@@ -307,6 +307,23 @@ function dataUrlToBlob(url: string): Blob {
   return new Blob([arr], { type: mime });
 }
 
+function hexToRgb(h: string): number[] {
+  return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+}
+
+// Posts follow the clinic's own brand colours when they gave them.
+function brandPalette(h: string, base: Palette): Palette {
+  const accent = hexToRgb(h);
+  return {
+    band: rgb(mix(accent, [255, 255, 255], 0.84)),
+    rule: rgb(mix(accent, [0, 0, 0], 0.18)),
+    ink: rgb(mix(accent, [0, 0, 0], 0.84)),
+    sub: rgb(mix(accent, [0, 0, 0], 0.66)),
+    accentHex: hex(mix(accent, [0, 0, 0], 0.32)),
+    tile: base.tile,
+  };
+}
+
 const FALLBACK_PALETTE: Palette = {
   band: rgb(mix([150, 120, 105], [255, 255, 255], 0.84)),
   rule: rgb(mix([150, 120, 105], [0, 0, 0], 0.18)),
@@ -372,6 +389,9 @@ export default function FreeSample() {
   const [clinicName, setClinicName] = useState("");
   const [handle, setHandle] = useState("");
   const [clinicianName, setClinicianName] = useState("");
+  const [brandColours, setBrandColours] = useState("");
+  const [scrubs, setScrubs] = useState("");
+  const [about, setAbout] = useState("");
   const [area, setArea] = useState("");
   const [credentials, setCredentials] = useState("");
   const [treatments, setTreatments] = useState("");
@@ -473,6 +493,8 @@ export default function FreeSample() {
         } catch {
           prepared = textLogo(d.clinicName);
         }
+        const brandHex = d.data.brand?.hex?.[0];
+        if (brandHex && /^#[0-9a-fA-F]{6}$/.test(brandHex)) prepared = { logo: prepared.logo, palette: brandPalette(brandHex, prepared.palette) };
         logoRef.current = prepared;
         const masthead = d.area.split(",")[0].trim();
         const out: PostDraft[] = [];
@@ -520,7 +542,7 @@ export default function FreeSample() {
       if (photoMode === "approved") approvedFiles.slice(0, 8).forEach((f, i) => fd.append(`a${i}`, f));
       fd.append(
         "meta",
-        JSON.stringify({ clinicName: clinicName.trim(), handle: handle.trim(), clinicianName, area: area.trim(), credentials, treatments, mixType, shirt, month }),
+        JSON.stringify({ clinicName: clinicName.trim(), handle: handle.trim(), clinicianName, area: area.trim(), credentials, treatments, mixType, shirt, month, brandColours, scrubs, about }),
       );
       const r = await fetch(`${API}/free-samples/requests`, { method: "POST", body: fd });
       const d = (await r.json()) as { id?: string; error?: string };
@@ -532,6 +554,9 @@ export default function FreeSample() {
       setArea("");
       setCredentials("");
       setTreatments("");
+      setBrandColours("");
+      setScrubs("");
+      setAbout("");
       setPhotoFile(null);
       setLogoFile(null);
       setApprovedFiles([]);
@@ -848,6 +873,20 @@ export default function FreeSample() {
                   <input className={inputCls} value={treatments} onChange={(e) => setTreatments(e.target.value)} placeholder="Leave empty for treatment neutral posts" />
                 </label>
               </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <label className="block">
+                  <Label>Brand colours (optional)</Label>
+                  <input className={inputCls} value={brandColours} onChange={(e) => setBrandColours(e.target.value)} placeholder="Navy and gold" />
+                </label>
+                <label className="block">
+                  <Label>Scrub colour (optional, default black)</Label>
+                  <input className={inputCls} value={scrubs} onChange={(e) => setScrubs(e.target.value)} placeholder="Navy" />
+                </label>
+              </div>
+              <label className="block">
+                <Label>About the clinician, about 3 sentences (optional)</Label>
+                <textarea className={`${inputCls} min-h-[90px]`} value={about} onChange={(e) => setAbout(e.target.value)} />
+              </label>
               <div className="grid sm:grid-cols-3 gap-4">
                 <label className="block">
                   <Label>Photo mix</Label>

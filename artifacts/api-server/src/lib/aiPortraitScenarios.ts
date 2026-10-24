@@ -2410,6 +2410,7 @@ export const RANDOM_PROMPT_PRESETS: PhotoStudioPreset[] = [
 const MIX_SUFFIX = `Hyper-realistic unretouched skin texture with visible pores, no airbrushing, no smoothing. True-to-life neutral colour balance, no warm or orange colour cast. Keep the face, skin tone, facial features and hairstyle exactly the same as the reference photo. Same facial features as reference photo.`;
 
 export const MIX_SHIRT_IDS = ["mx-05", "mx-06", "mx-07", "mx-08"];
+export const MIX_SCRUB_IDS = ["mx-01", "mx-02", "mx-03", "mx-04"];
 export const MIX_SEASONAL_IDS = ["mx-09", "mx-10", "mx-11", "mx-12"];
 
 export const MIX_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -2574,7 +2575,7 @@ export const MIX_PRESETS: PhotoStudioPreset[] = [
 
 const DEFAULT_CASUAL_OUTFIT = "a fitted black t-shirt";
 
-export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: string, aspectRatio = "3:4", vars?: { colour?: string; name?: string; skills?: string; knownAs?: string; hairColour?: string; number?: string; numberColour?: string; word?: string; wordColour?: string; outfit?: string; studioColour?: string; scrubColour?: string; customText?: string; monochrome?: boolean; month?: string; mixStyle?: string }): string {
+export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: string, aspectRatio = "3:4", vars?: { colour?: string; name?: string; skills?: string; knownAs?: string; hairColour?: string; number?: string; numberColour?: string; word?: string; wordColour?: string; outfit?: string; studioColour?: string; scrubColour?: string; customText?: string; monochrome?: boolean; month?: string; mixStyle?: string; scrubs?: string }): string {
   let prompt = preset.promptTemplate;
   if (MIX_SEASONAL_IDS.includes(preset.id)) {
     const mix = mixSeasonText(vars?.month, vars?.mixStyle);
@@ -2582,6 +2583,10 @@ export function buildPhotoStudioPrompt(preset: PhotoStudioPreset, colour?: strin
   }
   if (MIX_SHIRT_IDS.includes(preset.id) && vars?.outfit?.trim()) {
     prompt = prompt.replace(/luxury silk shirt/g, `luxury ${vars.outfit.trim()} silk shirt`);
+  }
+  if (MIX_SCRUB_IDS.includes(preset.id) && vars?.scrubs?.trim()) {
+    const c = vars.scrubs.trim();
+    prompt = prompt.replace(/black medical scrubs, entirely black/g, `${c} medical scrubs, entirely ${c}`);
   }
   if (preset.hasCustomText && vars?.customText?.trim()) {
     prompt = `${vars.customText.trim()}\n\nMaintain their exact facial features, skin tone, body shape, and likeness from the reference photo. Must look physically believable and naturally photographed, not CGI or illustrated, natural imperfections, realistic depth, tactile textures, subtle sensor grain, true to life reflections and lighting.`;
