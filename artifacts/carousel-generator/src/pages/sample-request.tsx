@@ -45,6 +45,9 @@ export default function SampleRequest() {
   const [handle, setHandle] = useState("");
   const [area, setArea] = useState("");
   const [email, setEmail] = useState("");
+  const [brandColours, setBrandColours] = useState("");
+  const [scrubs, setScrubs] = useState("");
+  const [about, setAbout] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [logo, setLogo] = useState<File | null>(null);
   const [consent, setConsent] = useState(false);
@@ -81,6 +84,10 @@ export default function SampleRequest() {
       setError("Please add your clinic name, Instagram handle, town and a photo.");
       return;
     }
+    if (!brandColours.trim() || !scrubs.trim() || !about.trim()) {
+      setError("Please tell me your brand colours, the colour of your scrubs and a little about you.");
+      return;
+    }
     if (!consent) {
       setError("Please tick the box so I know you are happy for me to use your photo.");
       return;
@@ -92,6 +99,9 @@ export default function SampleRequest() {
       fd.append("handle", handle.trim());
       fd.append("area", area.trim());
       fd.append("email", email.trim());
+      fd.append("brandColours", brandColours.trim());
+      fd.append("scrubs", scrubs.trim());
+      fd.append("about", about.trim());
       fd.append("consent", "yes");
       fd.append("photo", photo);
       if (logo) fd.append("logo", logo);
@@ -145,6 +155,20 @@ export default function SampleRequest() {
           <div className="sr-field">
             <label htmlFor="sr-area">Town or area</label>
             <input id="sr-area" className="sr-input" value={area} onChange={(e) => setArea(e.target.value)} placeholder="Milton Keynes" maxLength={120} required />
+          </div>
+          <div className="sr-field">
+            <label htmlFor="sr-brand">What are your brand colours?</label>
+            <small>For example navy and gold, or dusty pink and cream.</small>
+            <input id="sr-brand" className="sr-input" value={brandColours} onChange={(e) => setBrandColours(e.target.value)} maxLength={120} required />
+          </div>
+          <div className="sr-field">
+            <label htmlFor="sr-scrubs">What colour scrubs do you wear?</label>
+            <input id="sr-scrubs" className="sr-input" value={scrubs} onChange={(e) => setScrubs(e.target.value)} placeholder="Navy" maxLength={60} required />
+          </div>
+          <div className="sr-field">
+            <label htmlFor="sr-about">Tell me about you in 3 sentences</label>
+            <small>Who you are, how you got into aesthetics and what you love about it. I use this to write in your voice.</small>
+            <textarea id="sr-about" className="sr-input" rows={5} value={about} onChange={(e) => setAbout(e.target.value)} maxLength={900} required />
           </div>
           <div className="sr-field">
             <label htmlFor="sr-photo">A photo of you</label>
