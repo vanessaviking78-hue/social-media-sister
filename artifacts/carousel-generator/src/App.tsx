@@ -22,6 +22,7 @@ import Hairdressers from "@/pages/hairdressers";
 import BasicPosts from "@/pages/basic-posts";
 import NinetyDays from "@/pages/ninety-days";
 import XmasMonth from "@/pages/xmas-month";
+import XmasPosts from "@/pages/xmas-posts";
 import YetToPost from "@/pages/yet-to-post";
 import Hub from "@/pages/hub";
 import Home from "@/pages/home";
@@ -163,6 +164,7 @@ function ProtectedRouter() {
       <Route path="/basic-posts" component={BasicPosts} />
       <Route path="/ninety-days" component={NinetyDays} />
       <Route path="/xmas-month" component={XmasMonth} />
+      <Route path="/xmas-posts" component={XmasPosts} />
       <Route path="/yet-to-post" component={YetToPost} />
       <Route path="/carousel" component={Home} />
       <Route path="/single-image" component={SingleImage} />

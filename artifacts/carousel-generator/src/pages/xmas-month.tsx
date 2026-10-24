@@ -155,6 +155,16 @@ export default function XmasMonth() {
           </select>
         </div>
 
+        <Link href="/xmas-posts">
+          <div className="flex cursor-pointer items-center justify-between rounded-xl border border-red-500/40 bg-red-500/5 p-4 hover:bg-red-500/10">
+            <div>
+              <p className="text-sm font-semibold">Xmas Posts</p>
+              <p className="text-xs text-muted-foreground">Ten Christmas image posts from your Canva designs, with photos, colours and captions.</p>
+            </div>
+            <span className="rounded-lg bg-red-600 px-3 py-2 text-xs font-medium text-white">Open</span>
+          </div>
+        </Link>
+
         {error && <p className="text-sm text-red-400">{error}</p>}
 
         {presetId != null && clientName && (
