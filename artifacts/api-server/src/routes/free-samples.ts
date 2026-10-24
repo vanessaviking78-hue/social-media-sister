@@ -198,7 +198,7 @@ router.post(
         treatments: "",
         email: str(body.email, 160),
         logo: files.logo?.[0],
-        input: { mixType: "half", shirt: "white", photoKey },
+        input: { mixType: "half", shirt: "bright optic white", photoKey },
       });
       res.json({ ok: true });
     } catch (err: unknown) {
@@ -249,7 +249,7 @@ router.post("/free-samples/requests", upload.fields(REQUEST_FIELDS), async (req:
       logo: files.logo?.[0],
       input: {
         mixType: (meta.mixType === "standard" ? "standard" : "half") as MixType,
-        shirt: str(meta.shirt, 40) || "white",
+        shirt: str(meta.shirt, 40) || "bright optic white",
         month: str(meta.month, 20),
         approved,
         photoKey,
