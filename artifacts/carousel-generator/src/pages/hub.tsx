@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
 import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck, Grid3x3, Mail, Star, Heart, CalendarCheck, PackageOpen, BatteryCharging } from "lucide-react";
-import { LogOut, TreePine, Scissors } from "lucide-react";
+import { LogOut, TreePine, Scissors, LayoutTemplate } from "lucide-react";
 import { AdventCalendarIcon } from "@/components/advent-icon";
 import { MagazineIcon } from "@/components/magazine-icon";
 import { PerfecterIcon } from "@/components/perfecter-icon";
@@ -146,6 +146,16 @@ description: "One week for a nail tech: a personal post, a nail facts post, a be
 color: "from-pink-500/20 to-pink-500/5",
 border: "hover:border-pink-500/50",
 iconColor: "text-pink-400",
+},
+{
+href: "/basic-posts",
+group: "content",
+icon: LayoutTemplate,
+name: "BASIC posts",
+description: "The trust carousel every client gets, one every other Wednesday. Pick a cover, the next two slides are full bleed approved photos with words that carry on from the cover, plus a caption and a question to get people talking.",
+color: "from-sky-500/20 to-sky-500/5",
+border: "hover:border-sky-500/50",
+iconColor: "text-sky-400",
 },
 {
 href: "/hairdressers",
