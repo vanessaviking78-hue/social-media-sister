@@ -142,6 +142,47 @@ function fiveTags(line: unknown, fallback: string): string {
   return uniq.length >= 5 ? uniq.slice(0, 5).join(" ") : fallback;
 }
 
+// Catches "not just X, but Y", "it isn't X, it's Y", "less about X, more about Y" and the buzzwords she bans.
+const NEGATIVE_PARALLEL = [
+  /\bnot (?:just|only|merely|simply)\b[^.!?\n]{0,80}\bbut\b/i,
+  /\bnot\b[^.!?\n]{0,60},\s*(?:but|it'?s|it is|that'?s|they'?re)\b/i,
+  /\b(?:isn'?t|aren'?t|wasn'?t|doesn'?t|don'?t|didn'?t|never)\b[^.!?\n]{0,60}[,;]\s*(?:it'?s|it is|that'?s|but|they'?re|you'?re)\b/i,
+  /\b(?:it'?s|this is|that'?s) not (?:about|just|only)\b/i,
+  /\bless about\b[^.!?\n]{0,60}\bmore about\b/i,
+  /\bno (?:fluff|faff)\b/i,
+  /\b(?:journey|game.?changer|glow.?up|unlock|dive in|tapestry|elevate|faff|fluff)\b/i,
+];
+
+function needsRewrite(text: string): boolean {
+  return NEGATIVE_PARALLEL.some((re) => re.test(text));
+}
+
+async function rewriteFlagged(posts: { headline: string; subtitle: string; caption: string }[]): Promise<void> {
+  for (let pass = 0; pass < 2; pass++) {
+    const flagged = posts.map((p, i) => ({ p, i })).filter(({ p }) => needsRewrite(p.caption));
+    if (flagged.length === 0) return;
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `${HOUSE_VOICE}\n\n${BASE_RULES}\n\nRewrite each caption below so it keeps the same story, voice, length and closing line, but contains NO negative parallelism at all. That means no "not just X but Y", no "it isn't X, it's Y", no "not about X, about Y", no "less X, more Y", and none of the banned buzzwords. State things positively and directly instead. Keep the first person voice, UK spelling, no em dashes and no emojis. Return JSON only: {"captions":["",...]} with the same number of captions in the same order.`,
+        },
+        { role: "user", content: JSON.stringify({ captions: flagged.map(({ p }) => p.caption) }) },
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0.7,
+      max_tokens: 3000,
+    });
+    try {
+      const out = JSON.parse(completion.choices[0]?.message?.content ?? "{}") as { captions?: string[] };
+      if (out.captions?.length === flagged.length) flagged.forEach(({ i }, k) => (posts[i].caption = clean(out.captions![k])));
+    } catch {
+      return;
+    }
+  }
+}
+
 export async function generateSampleCaptions(opts: {
   clinicName: string;
   clinicianName?: string;
@@ -183,12 +224,9 @@ export async function generateSampleCaptions(opts: {
   const word = (opts.area.trim().split(/[,\s]+/)[0] || "Local").replace(/[^A-Za-z0-9]/g, "");
   const tagsA = fiveTags(parsed.tagsA, `#${word} #${word}Aesthetics #AestheticsNurse #LocalClinic #SkinCare`);
   const tagsB = fiveTags(parsed.tagsB, `#${word}Life #${word}Clinic #AestheticClinic #UKAesthetics #SelfCare`);
-  return posts.slice(0, 8).map((p, i) => ({
-    headline: clean(p.headline),
-    subtitle: clean(p.subtitle),
-    caption: clean(p.caption),
-    tags: i % 2 === 0 ? tagsA : tagsB,
-  }));
+  const eight = posts.slice(0, 8).map((p) => ({ headline: clean(p.headline), subtitle: clean(p.subtitle), caption: clean(p.caption) }));
+  await rewriteFlagged(eight).catch(() => {});
+  return eight.map((p, i) => ({ ...p, tags: i % 2 === 0 ? tagsA : tagsB }));
 }
 
 // ---------------------------------------------------------------------------
