@@ -327,3 +327,37 @@ export async function notifyReconnectionNeeded(opts: {
     logger.warn({ err }, "Reconnection alert email failed");
   }
 }
+
+/**
+ * Emails NOTIFY_EMAIL when a free sample has been built (or has failed), with
+ * a link to open it in the Free Sample tool. Fire-and-forget: never throws.
+ */
+export async function notifySampleReady(opts: {
+  clinicName: string;
+  handle?: string;
+  link: string;
+  ok: boolean;
+  detail?: string;
+}): Promise<void> {
+  const to = process.env.NOTIFY_EMAIL;
+  if (!to) return;
+  const transporter = getTransporter();
+  if (!transporter) return;
+  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  const who = `${opts.clinicName}${opts.handle ? ` (@${opts.handle.replace(/^@/, "")})` : ""}`;
+  const subject = opts.ok ? `Sample ready: ${opts.clinicName}` : `Sample FAILED: ${opts.clinicName}`;
+  const lines = [
+    opts.ok ? `The free sample for ${who} is ready for you to look at.` : `The free sample for ${who} did not finish building.`,
+    "",
+    opts.detail ? `Details: ${opts.detail}` : "",
+    opts.ok ? "Open it, check it, then publish it to get the link for the clinic, or send it to a client's Client Bank:" : "Open it in the tool to try again:",
+    opts.link,
+    "",
+    "Social Media Sister",
+  ].filter((l, i, a) => l !== "" || (i > 0 && a[i - 1] !== ""));
+  try {
+    await transporter.sendMail({ from, to, subject, text: lines.join("\n") });
+  } catch (err) {
+    logger.warn({ err }, "Sample ready notification email failed");
+  }
+}

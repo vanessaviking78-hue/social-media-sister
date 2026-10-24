@@ -55,6 +55,7 @@ import SelfieCarousels from "@/pages/selfie-carousels";
 import AiPortraitStudio from "@/pages/ai-portrait-studio";
 import FreeSample from "@/pages/free-sample";
 import SamplePublic from "@/pages/sample-public";
+import SampleRequest from "@/pages/sample-request";
 import ComicPage from "@/pages/comic";
 import Onboard from "@/pages/onboard";
 import SubmitBeforeAfter from "@/pages/submit";
@@ -284,6 +285,7 @@ function AppContent() {
   const [isContentPreview, contentPreviewParams] = useRoute("/preview/:clientSlug");
   const [isClientBankView, clientBankViewParams] = useRoute("/bank/:clientSlug");
   const [isSamplePublic, samplePublicParams] = useRoute("/sample/:slug");
+  const [isSampleRequest] = useRoute("/getmysample");
   const [isContentGenerator] = useRoute("/content-generator");
   const [location] = useLocation();
   const isSplash = location === "/";
@@ -395,6 +397,9 @@ function AppContent() {
   }
   if (isClientBankView && clientBankViewParams?.clientSlug) {
     return <ClientBankView clientSlug={clientBankViewParams.clientSlug} />;
+  }
+  if (isSampleRequest) {
+    return <SampleRequest />;
   }
   if (isSamplePublic && samplePublicParams?.slug) {
     return <SamplePublic slug={samplePublicParams.slug} />;
