@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE, HOUSE_RULES, DENTAL_RULES, isDental } from "../lib/houseRules";
+import { clientProfileContext } from "./client-profiles";
 
 const router: IRouter = Router();
 
@@ -109,10 +110,11 @@ router.post("/xmas-posts/copy", async (req: Request, res: Response) => {
       onImage: str(b.onImage, 1200),
       asManager: /social media sister/i.test(businessName),
     };
+    const profileCtx = await clientProfileContext(businessName);
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: systemPrompt(notes) },
+        { role: "system", content: systemPrompt(notes) + profileCtx },
         { role: "user", content: `Write the caption for the "${notes.designName}" Christmas post for ${notes.businessName}.` },
       ],
       temperature: 0.9,
