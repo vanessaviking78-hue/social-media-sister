@@ -24,6 +24,7 @@ import NinetyDays from "@/pages/ninety-days";
 import XmasMonth from "@/pages/xmas-month";
 import XmasPosts from "@/pages/xmas-posts";
 import NovemberPosts from "@/pages/november-posts";
+import HalloweenPosts from "@/pages/halloween-posts";
 import YetToPost from "@/pages/yet-to-post";
 import Hub from "@/pages/hub";
 import Home from "@/pages/home";
@@ -167,6 +168,7 @@ function ProtectedRouter() {
       <Route path="/xmas-month" component={XmasMonth} />
       <Route path="/xmas-posts" component={XmasPosts} />
       <Route path="/november-posts" component={NovemberPosts} />
+      <Route path="/halloween-posts" component={HalloweenPosts} />
       <Route path="/yet-to-post" component={YetToPost} />
       <Route path="/carousel" component={Home} />
       <Route path="/single-image" component={SingleImage} />
