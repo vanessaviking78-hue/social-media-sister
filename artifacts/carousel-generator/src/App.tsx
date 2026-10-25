@@ -20,6 +20,7 @@ import FourWeeks from "@/pages/four-weeks";
 import NailSalons from "@/pages/nail-salons";
 import Hairdressers from "@/pages/hairdressers";
 import BasicPosts from "@/pages/basic-posts";
+import Treatments from "@/pages/treatments";
 import NinetyDays from "@/pages/ninety-days";
 import XmasMonth from "@/pages/xmas-month";
 import XmasPosts from "@/pages/xmas-posts";
@@ -164,6 +165,7 @@ function ProtectedRouter() {
       <Route path="/nail-salons" component={NailSalons} />
       <Route path="/hairdressers" component={Hairdressers} />
       <Route path="/basic-posts" component={BasicPosts} />
+      <Route path="/treatments" component={Treatments} />
       <Route path="/ninety-days" component={NinetyDays} />
       <Route path="/xmas-month" component={XmasMonth} />
       <Route path="/xmas-posts" component={XmasPosts} />
