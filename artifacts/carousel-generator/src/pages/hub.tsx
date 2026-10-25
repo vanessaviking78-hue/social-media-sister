@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
 import { Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck, Grid3x3, Mail, Star, Heart, CalendarCheck, PackageOpen, BatteryCharging } from "lucide-react";
-import { LogOut, TreePine, Scissors, LayoutTemplate } from "lucide-react";
+import { LogOut, TreePine, Scissors, LayoutTemplate, Flame } from "lucide-react";
 import { AdventCalendarIcon } from "@/components/advent-icon";
 import { MagazineIcon } from "@/components/magazine-icon";
 import { PerfecterIcon } from "@/components/perfecter-icon";
@@ -176,6 +176,16 @@ description: "Pick a client and fill 13 weeks of Monday, Wednesday, Friday and S
 color: "from-emerald-500/20 to-emerald-500/5",
 border: "hover:border-emerald-500/50",
 iconColor: "text-emerald-400",
+},
+{
+href: "/november-posts",
+group: "content",
+icon: Flame,
+name: "November Posts",
+description: "Ten November image posts from your Canva designs. Drop in photos, change any colour, word or font, write the captions and schedule them across November.",
+color: "from-orange-500/20 to-slate-500/5",
+border: "hover:border-orange-500/50",
+iconColor: "text-orange-400",
 },
 {
 href: "/xmas-posts",
