@@ -10,7 +10,7 @@ import { usePresets } from "@/lib/use-presets";
 import { useApprovedImages } from "@/lib/use-approval";
 import { loadGoogleFonts } from "@/lib/slide-utils";
 import {
-  TOOL_LABEL, designName, designsFor, ensureFonts, makePost, photoCount, renderSlide, schedulePost, slideCount, uid, urlToFile, writeCopy,
+  TOOL_LABEL, colourFields, designName, designsFor, ensureFonts, makePost, photoCount, renderSlide, schedulePost, slideCount, uid, urlToFile, writeCopy,
   type Client, type MPost, type PoolPhoto, type ToolId,
 } from "@/lib/month-engine";
 
@@ -376,6 +376,15 @@ export default function MonthPlanner() {
                   <Button size="sm" variant="outline" className="ml-auto" disabled={p.busy || !!busy} onClick={() => rewrite(p)}>
                     {p.busy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1.5" />} Rewrite words
                   </Button>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+                  {colourFields(p).map((f) => (
+                    <label key={f.key} className="flex items-center gap-1.5">
+                      <input type="color" value={/^#[0-9a-f]{6}$/i.test(f.value) ? f.value : "#000000"} onChange={(e) => patchPost(p.id, { pal: { ...(p.pal ?? {}), [f.key]: e.target.value } })} className="h-6 w-8 rounded border border-border/40 bg-transparent" />
+                      {f.label}
+                    </label>
+                  ))}
+                  {p.pal && <button type="button" className="underline" onClick={() => patchPost(p.id, { pal: undefined })}>reset colours</button>}
                 </div>
                 <div className={`grid gap-3 ${count === 1 ? "grid-cols-1 max-w-[220px]" : count === 3 ? "grid-cols-3 max-w-3xl" : "grid-cols-5"}`}>
                   {Array.from({ length: count }, (_, n) => (

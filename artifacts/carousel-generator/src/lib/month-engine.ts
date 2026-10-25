@@ -4,8 +4,8 @@
 import * as BC from "./basic-covers";
 import * as TD from "./treatment-designs";
 import * as UD from "./unique-designs";
-import { HALLOWEEN_BY_ID, HALLOWEEN_DESIGNS, HALLOWEEN_PALETTE, drawHalloween, resolveHalText } from "./halloween-designs";
-import { NOVEMBER_BY_ID, NOVEMBER_DESIGNS, NOVEMBER_PALETTE, drawNovember, resolveNovText } from "./november-designs";
+import { HALLOWEEN_BY_ID, HALLOWEEN_DESIGNS, HALLOWEEN_PALETTE, HALLOWEEN_PALETTE_LABELS, drawHalloween, resolveHalText } from "./halloween-designs";
+import { NOVEMBER_BY_ID, NOVEMBER_DESIGNS, NOVEMBER_PALETTE, NOVEMBER_PALETTE_LABELS, drawNovember, resolveNovText } from "./november-designs";
 import { DEFAULT_PALETTES, DESIGNS as XMAS_DESIGNS, DESIGN_BY_ID as XMAS_BY_ID, drawXmas, resolveText as resolveXmasText } from "./xmas-designs";
 import type { Fill, Focus, Slot } from "./basic-covers";
 
@@ -49,6 +49,7 @@ export type MPost = {
   selected: boolean;
   scheduled: boolean;
   group?: "xmas" | "newyear";
+  pal?: Record<string, string>; // her own colour changes for this post
 };
 
 export const TOOL_LABEL: Record<ToolId, string> = {
@@ -161,6 +162,19 @@ const bmp = async (c: Client, i: number | null | undefined) => {
   return p ? await getBitmap(p) : null;
 };
 
+// The colours a post uses: the design's own, with any she has changed laid on top.
+export function colourFields(post: MPost): { key: string; label: string; value: string }[] {
+  let base: Record<string, string>; let labels: { key: string; label: string }[];
+  if (post.tool === "unique") { base = { ...UD.UNIQUE_BY_ID[post.design as UD.UniId].palette }; labels = UD.PALETTE_LABELS; }
+  else if (post.tool === "treatments") { base = { ...TD.T_PALETTE }; labels = (Object.keys(TD.T_PALETTE_LABELS) as (keyof typeof TD.T_PALETTE_LABELS)[]).map((k) => ({ key: k, label: TD.T_PALETTE_LABELS[k] })); }
+  else if (post.tool === "basic") { base = { bg: BASIC_BG }; labels = [{ key: "bg", label: "Background" }]; }
+  else if (post.tool === "halloween") { base = { ...HALLOWEEN_PALETTE }; labels = HALLOWEEN_PALETTE_LABELS; }
+  else if (post.tool === "november") { base = { ...NOVEMBER_PALETTE }; labels = NOVEMBER_PALETTE_LABELS; }
+  else { base = { ...DEFAULT_PALETTES[post.group ?? "xmas"] }; labels = UD.PALETTE_LABELS; }
+  return labels.map(({ key, label }) => ({ key, label, value: post.pal?.[key] ?? base[key] }));
+}
+const palOf = <T,>(post: MPost): T => Object.fromEntries(colourFields(post).map((f) => [f.key, f.value])) as T;
+
 // Draws slide n (0 is the cover) of a post onto the canvas at the given scale.
 export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTMLCanvasElement, scale: number): Promise<Slot[]> {
   const ctx = canvas.getContext("2d")!;
@@ -173,12 +187,12 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
     const def = UD.UNIQUE_BY_ID[post.design as UD.UniId];
     if (n === 0) {
       return UD.drawUnique(ctx, {
-        design: def.id, text: UD.resolveUniText(def, post.text, c.fill), palette: def.palette, headFont: c.headFont, bodyFont: c.bodyFont,
+        design: def.id, text: UD.resolveUniText(def, post.text, c.fill), palette: palOf<never>(post), headFont: c.headFont, bodyFont: c.bodyFont,
         upper: true, photo: await bmp(c, post.photos[0]), focus: post.focus.c0 ?? DEFAULT_FOCUS, logo: c.logo,
       });
     }
     return UD.drawUniPhotoSlide(ctx, {
-      text: BC.fillTokens(post.slides[n - 1] ?? "", c.fill), cta: last ? BC.fillTokens(post.cta, c.fill) : "", palette: def.palette, bodyFont: c.bodyFont,
+      text: BC.fillTokens(post.slides[n - 1] ?? "", c.fill), cta: last ? BC.fillTokens(post.cta, c.fill) : "", palette: palOf<never>(post), bodyFont: c.bodyFont,
       photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo: c.logo, arrow: !last,
     });
   }
@@ -189,20 +203,20 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
       return TD.drawCover(ctx, {
         treat: def.id, layout: def.layout,
         text: Object.fromEntries(TD.FIELDS.map((fd) => [fd.key, TD.fillTreat(post.text[fd.key] ?? "", c.fill)])) as never,
-        pal: TD.T_PALETTE, headFont: c.headFont, bodyFont: c.bodyFont, upper: true,
+        pal: palOf<never>(post), headFont: c.headFont, bodyFont: c.bodyFont, upper: true,
         photo: await bmp(c, post.photos[0]), focus: post.focus.c0 ?? DEFAULT_FOCUS, logo: c.logo,
       } as never);
     }
     return TD.drawPhotoSlide(ctx, {
       text: TD.fillTreat(post.slides[n - 1] ?? "", c.fill), cta: last ? TD.fillTreat(post.cta, c.fill) : "",
-      small: last ? TD.fillTreat(post.text.small ?? "", c.fill) : "", pal: TD.T_PALETTE, bodyFont: c.bodyFont, headFont: c.headFont,
+      small: last ? TD.fillTreat(post.text.small ?? "", c.fill) : "", pal: palOf<never>(post), bodyFont: c.bodyFont, headFont: c.headFont,
       photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo: c.logo, arrow: !last,
     } as never);
   }
 
   if (post.tool === "basic") {
     const def = BC.COVER_BY_ID[post.design as BC.CoverId];
-    const colours = BC.makeColours(BASIC_BG);
+    const colours = BC.makeColours(palOf<{ bg: string }>(post).bg);
     if (n === 0) {
       return BC.drawCover(ctx, {
         cover: def.id,
@@ -224,14 +238,14 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
   const common = { headFont: c.headFont, bodyFont: c.bodyFont, upper: true, photo, focus: post.focus.c0 ?? DEFAULT_FOCUS, logo: c.logo, logoPos: "off" as const };
   if (post.tool === "halloween") {
     const d = HALLOWEEN_BY_ID[post.design as keyof typeof HALLOWEEN_BY_ID];
-    return drawHalloween(ctx, { design: d.id, text: resolveHalText(d, post.text, c.fill), palette: HALLOWEEN_PALETTE, mono: false, ...common } as never);
+    return drawHalloween(ctx, { design: d.id, text: resolveHalText(d, post.text, c.fill), palette: palOf<never>(post), mono: false, ...common } as never);
   }
   if (post.tool === "november") {
     const d = NOVEMBER_BY_ID[post.design as keyof typeof NOVEMBER_BY_ID];
-    return drawNovember(ctx, { design: d.id, text: resolveNovText(d, post.text, c.fill), palette: NOVEMBER_PALETTE, ...common } as never);
+    return drawNovember(ctx, { design: d.id, text: resolveNovText(d, post.text, c.fill), palette: palOf<never>(post), ...common } as never);
   }
   const d = XMAS_BY_ID[post.design as keyof typeof XMAS_BY_ID];
-  return drawXmas(ctx, { design: d.id, text: resolveXmasText(d, post.text, c.fill), palette: DEFAULT_PALETTES[d.group], ...common } as never);
+  return drawXmas(ctx, { design: d.id, text: resolveXmasText(d, post.text, c.fill), palette: palOf<never>(post), ...common } as never);
 }
 
 export async function renderPostImages(post: MPost, c: Client, scale = 1): Promise<HTMLCanvasElement[]> {
