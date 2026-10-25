@@ -293,6 +293,7 @@ export type G = {
   photo: ImageBitmap | null;
   focus: Focus;
   slots: Slot[];
+  mono?: boolean; // draw the photo in black and white
 };
 
 const SCRIPT = `'Playfair Display', Georgia, 'Times New Roman', serif`;
@@ -388,7 +389,7 @@ export function rule(g: G, x1: number, x2: number, y: number, colour: string, wi
 
 // --- torn paper ------------------------------------------------------------
 
-function tornPath(ctx: Ctx, pts: P[], torn: boolean[], seed: number, amp: number, off: number) {
+export function tornPath(ctx: Ctx, pts: P[], torn: boolean[], seed: number, amp: number, off: number) {
   const r = rand(seed);
   const n = pts.length;
   let cx = 0, cy = 0;
@@ -602,7 +603,7 @@ function giftTag(g: G, cx: number, cy: number, w: number, h: number, rot: number
   ctx.restore();
 }
 
-function placeholder(g: G, w: number, h: number) {
+export function placeholder(g: G, w: number, h: number) {
   const { ctx } = g;
   ctx.fillStyle = "#cdcac3";
   ctx.fillRect(-w / 2, -h / 2, w, h);
@@ -645,12 +646,14 @@ export function polaroid(g: G, cx: number, cy: number, w: number, h: number, rot
   if (o?.tapeAt) tape(g, cx + Math.sin(a) * (h / 2) * -1 + 0, cy - Math.cos(a) * (h / 2) + 4, 190, 52, rot - 4, o.tapeAt);
 }
 
-function drawPhoto(g: G, w: number, h: number) {
+export function drawPhoto(g: G, w: number, h: number) {
   const { ctx, photo: bmp, focus: fc } = g;
   if (!bmp) { placeholder(g, w, h); return; }
   const s = Math.max(w / bmp.width, h / bmp.height);
   const dw = bmp.width * s, dh = bmp.height * s;
+  if (g.mono) { ctx.save(); ctx.filter = "grayscale(1) contrast(1.12) brightness(0.95)"; }
   ctx.drawImage(bmp, -w / 2 - (dw - w) * fc[0], -h / 2 - (dh - h) * fc[1], dw, dh);
+  if (g.mono) ctx.restore();
 }
 
 function fullBleed(g: G) {

@@ -161,7 +161,7 @@ export const NOVEMBER_BY_ID: Record<NovId, NovDesign> = Object.fromEntries(NOVEM
 // Small helpers for this set
 // ---------------------------------------------------------------------------
 
-const wrapLine = (ctx: Ctx, text: string, maxW: number) => {
+export const wrapLine = (ctx: Ctx, text: string, maxW: number) => {
   const out: string[] = [];
   for (const para of (text ?? "").split("\n")) {
     const words = para.split(/\s+/).filter(Boolean);
@@ -176,7 +176,7 @@ const wrapLine = (ctx: Ctx, text: string, maxW: number) => {
 };
 
 // A stack of headline lines, one size for all of them, each line in its own colour. Lines stay as typed.
-function stack(g: G, items: { text: string; colour: string }[], x: number, y: number, w: number, max: number, min: number, lh = 0.98, o?: { align?: CanvasTextAlign; hMax?: number }): number {
+export function stack(g: G, items: { text: string; colour: string }[], x: number, y: number, w: number, max: number, min: number, lh = 0.98, o?: { align?: CanvasTextAlign; hMax?: number }): number {
   const { ctx } = g;
   const rows: { t: string; colour: string }[] = [];
   items.forEach((it) => (it.text ?? "").split("\n").filter((s) => s.length).forEach((t) => rows.push({ t: HU(g, t), colour: it.colour })));
@@ -195,7 +195,7 @@ function stack(g: G, items: { text: string; colour: string }[], x: number, y: nu
   return yy;
 }
 
-function dash(g: G, x1: number, x2: number, y: number, colour: string, lw = 2.5, alpha = 0.5) {
+export function dash(g: G, x1: number, x2: number, y: number, colour: string, lw = 2.5, alpha = 0.5) {
   const { ctx } = g;
   ctx.save();
   ctx.globalAlpha = alpha; ctx.strokeStyle = colour; ctx.lineWidth = lw; ctx.setLineDash([10, 9]); ctx.lineCap = "round";
@@ -203,7 +203,7 @@ function dash(g: G, x1: number, x2: number, y: number, colour: string, lw = 2.5,
   ctx.restore();
 }
 
-function squiggle(g: G, x: number, y: number, w: number, colour: string, lw = 4) {
+export function squiggle(g: G, x: number, y: number, w: number, colour: string, lw = 4) {
   const { ctx } = g;
   ctx.save();
   ctx.strokeStyle = colour; ctx.lineWidth = lw; ctx.lineCap = "round"; ctx.lineJoin = "round";
@@ -230,7 +230,7 @@ function tick(g: G, x: number, y: number, s: number, colour: string, filled = fa
   ctx.restore();
 }
 
-function vbar(g: G, x: number, y: number, w: number, h: number, colour: string) {
+export function vbar(g: G, x: number, y: number, w: number, h: number, colour: string) {
   const { ctx } = g;
   ctx.save();
   ctx.shadowColor = "rgba(0,0,0,0.2)"; ctx.shadowBlur = 8; ctx.shadowOffsetY = 3;
