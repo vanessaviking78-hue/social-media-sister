@@ -3398,7 +3398,7 @@ export default function Stylish() {
 
   const writeCsv = async () => {
     if (!preset?.name) { toast.error("Choose the client first"); return; }
-    if (!csvTopics.some(t => t.trim())) { toast.error("Tell me what the treatment posts are about"); return; }
+    if (pickedHookPayload(csvHookPick, csvTopics).some(h => h.kind === "treatment") && !csvTopics.some(t => t.trim())) { toast.error("You picked a Monday hook, so tell me what the treatment posts are about"); return; }
     if (csvMode === "bundle" && !csvRole.trim()) { toast.error("Tell me the role first, for example paramedic, nurse, doctor or dentist"); return; }
     setCsvWriting(true);
     const t = toast.loading("Writing the CSV");
@@ -4567,16 +4567,51 @@ export default function Stylish() {
                 </div>
               </div>
             )}
-            <p className="text-xs text-muted-foreground leading-relaxed">Tell me what the 4 treatment posts are about and what the rest should be, and I will write it in the house voice. The Ryder Clinic is always written very professionally, warmly and with feeling, for the slides and the captions.</p>
-            {csvTopics.map((t, i) => (
-              <input key={i} value={t} onChange={e => setCsvTopics(prev => prev.map((x, j) => (j === i ? e.target.value : x)))}
-                placeholder={`Treatment post ${i + 1}: what is it about?`}
-                className="h-9 w-full text-sm bg-muted/30 border border-border/40 rounded-md px-3" />
-            ))}
-            <textarea value={csvRest} onChange={e => setCsvRest(e.target.value)} rows={csvMode === "bundle" ? 2 : 3}
-              placeholder={csvMode === "bundle" ? "Anything extra for this client? (optional)" : "What should the rest of the posts be? For example: 4 about menopause, 4 shareable and emotional, 4 skincare tips, 4 about what to expect at a consultation."}
-              className="w-full text-sm bg-muted/30 border border-border/40 rounded-md px-3 py-2" />
-            <HookBankPicker client={preset?.name ?? ""} days={(() => { const d = new URLSearchParams(window.location.search).get("day"); return d === "wednesday" ? ["Wednesday", "Any day"] : d === "friday" ? ["Friday"] : undefined; })()} picked={csvHookPick} onChange={setCsvHookPick} startDate={csvHookStart} onStartDate={setCsvHookStart} />
+            {(() => {
+              const dayParam = (new URLSearchParams(window.location.search).get("day") ?? "").toLowerCase();
+              const show = (d: string) => !dayParam || dayParam === d;
+              const picker = (days: string[], title: string) => (
+                <HookBankPicker title={title} client={preset?.name ?? ""} days={days} picked={csvHookPick} onChange={setCsvHookPick} startDate={csvHookStart} onStartDate={setCsvHookStart} />
+              );
+              const box = "space-y-2 rounded-lg border-2 border-sky-500/30 bg-muted/10 p-3";
+              return (
+                <div className="space-y-3">
+                  {show("monday") && (
+                    <div className={box}>
+                      <p className="text-sm font-bold uppercase tracking-wide text-sky-400">Monday, treatment posts</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">Only needed for Monday. Tell me what the 4 treatment posts are about and I will write them in the house voice. The Ryder Clinic is always written very professionally, warmly and with feeling, for the slides and the captions.</p>
+                      {csvTopics.map((t, i) => (
+                        <input key={i} value={t} onChange={e => setCsvTopics(prev => prev.map((x, j) => (j === i ? e.target.value : x)))}
+                          placeholder={`Treatment post ${i + 1}: what is it about?`}
+                          className="h-9 w-full text-sm bg-muted/30 border border-border/40 rounded-md px-3" />
+                      ))}
+                      {picker(["Monday"], "Monday hooks")}
+                    </div>
+                  )}
+                  {show("wednesday") && (
+                    <div className={box}>
+                      <p className="text-sm font-bold uppercase tracking-wide text-sky-400">Wednesday, nostalgic and funny</p>
+                      {picker(["Wednesday", "Any day"], "Wednesday hooks")}
+                    </div>
+                  )}
+                  {show("friday") && (
+                    <div className={box}>
+                      <p className="text-sm font-bold uppercase tracking-wide text-sky-400">Friday, things that and breaking news</p>
+                      {picker(["Friday"], "Friday hooks")}
+                    </div>
+                  )}
+                  {show("sunday") && (
+                    <div className={box}>
+                      <p className="text-sm font-bold uppercase tracking-wide text-sky-400">Sunday, shareable and emotional</p>
+                      {picker(["Sunday"], "Sunday hooks")}
+                    </div>
+                  )}
+                  <textarea value={csvRest} onChange={e => setCsvRest(e.target.value)} rows={csvMode === "bundle" ? 2 : 3}
+                    placeholder={csvMode === "bundle" ? "Anything extra for this client? (optional)" : "What should the rest of the posts be? For example: 4 about menopause, 4 shareable and emotional, 4 skincare tips, 4 about what to expect at a consultation."}
+                    className="w-full text-sm bg-muted/30 border border-border/40 rounded-md px-3 py-2" />
+                </div>
+              );
+            })()}
             {csvMode === "custom" && <label className="flex items-center gap-2 text-xs text-muted-foreground">
               Other posts
               <input type="number" min={0} max={40} value={csvRestCount} onChange={e => setCsvRestCount(Number(e.target.value))} className="h-8 w-20 text-sm bg-muted/30 border border-border/40 rounded-md px-2" />

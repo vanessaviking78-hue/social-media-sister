@@ -682,7 +682,7 @@ router.post("/client-stylish/csv", async (req: Request, res: Response) => {
     const role = neutralise(String(body.role ?? "").trim()).slice(0, 60);
     if (newBundle && !role) { out.status(400).json({ error: "Tell me the clinician's role first, for example paramedic, nurse, doctor or dentist" }); return; }
     const topics = (Array.isArray(body.treatmentTopics) ? body.treatmentTopics : []).map((t) => neutralise(String(t ?? "").trim())).filter(Boolean).slice(0, 4);
-    if (topics.length < 1) { out.status(400).json({ error: "Tell me what the treatment posts are about" }); return; }
+    if (topics.length < 1 && parsePickedHooks(body.hooks, (t) => neutralise(clean(t)), 40).some((h) => h.kind === "treatment")) { out.status(400).json({ error: "You picked a Monday hook, so tell me what the treatment posts are about" }); return; }
     const restCount = newBundle ? 17 : Math.min(40, Math.max(0, Math.round(Number(body.restCount ?? 16))));
     const restBrief = newBundle ? newBundleBrief(role, neutralise(String(body.restBrief ?? "").trim()).slice(0, 800)) : neutralise(String(body.restBrief ?? "").trim()).slice(0, 2000);
     const ryder = isRyder(clientName);
@@ -721,10 +721,10 @@ A Stylish carousel pack for one clinic: exactly ${total} posts, each one a row o
 
 THE ${total} ROWS
 ${topics.length} treatment posts and ${restCount} other posts. Spread the treatment posts evenly through the list so the feed stays varied, never bunched together.
-TREATMENT POSTS: one for each of these topics, in this order:
+${topics.length ? `TREATMENT POSTS: one for each of these topics, in this order:
 ${topics.map((t, i) => `${i + 1}. ${t}`).join("\n")}
 Use real details and wording from the website text if given, and never invent a treatment or a claim. Do not write a list of benefits. Find a human way in: a small moment, a question she has been too shy to ask, what a consultation is actually like. Stealth sales: she should finish feeling curious and comfortable, never sold to.
-${restCount ? `OTHER POSTS (${restCount}): ${restBrief || "A varied mix of emotional, shareable, informative and engaging posts for women over 35 that suit the clinic."}
+` : "No treatment posts this time, so every row is one of the other posts."}${restCount ? `OTHER POSTS (${restCount}): ${restBrief || "A varied mix of emotional, shareable, informative and engaging posts for women over 35 that suit the clinic."}
 Follow that brief exactly for the number and kind of posts it describes. Where it does not say, vary the angles so no two posts feel alike.` : ""}
 
 ${common}
