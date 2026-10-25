@@ -4,37 +4,36 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=League+Spartan:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 /* Layout: a retouching bench. Fixed controls on the left, a wall of proofs on the right. */
 :root{
-  --bg:#f5f1f3; --panel:#ffffff; --ink:#1d1520; --muted:#6c5f70; --line:#e2d8e0;
-  --accent:#b3245a; --accent-ink:#ffffff; --soft:#f0e3ea; --good:#2d7a4f; --warn:#a8641a;
-  --f-display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif;
-  --f-body:"Instrument Sans","Helvetica Neue",Arial,sans-serif;
+  color-scheme:dark;
+  --bg:#08080d; --panel:#111118; --ink:#ffffff; --muted:#b2b2bd; --line:#1f1f28;
+  --accent:#db2777; --accent-ink:#ffffff; --soft:#16161f; --good:#6fcf97; --warn:#e8a95a;
+  --f-display:"League Spartan","Helvetica Neue",Arial,sans-serif;
+  --f-body:"League Spartan","Helvetica Neue",Arial,sans-serif;
   --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
 }
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --bg:#151018; --panel:#1f1824; --ink:#f4ecf3; --muted:#a898ad; --line:#33283a;
-  --accent:#f0679b; --accent-ink:#1a0d13; --soft:#2a1f31; --good:#6fcf97; --warn:#e8a95a; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#151018; --panel:#1f1824; --ink:#f4ecf3; --muted:#a898ad; --line:#33283a;
-  --accent:#f0679b; --accent-ink:#1a0d13; --soft:#2a1f31; --good:#6fcf97; --warn:#e8a95a; color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;
-  padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.wrap{max-width:1280px;margin:0 auto}
-header{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:24px}
-h1{font-family:var(--f-display);font-weight:700;font-size:clamp(28px,4vw,40px);letter-spacing:-.02em;margin:0;line-height:1.05}
-.tag{font-family:var(--f-mono);font-size:12px;color:var(--muted);letter-spacing:.04em}
+  padding-block:0 56px}
+.wrap{max-width:1280px;margin:0 auto;padding:24px max(24px,env(safe-area-inset-right,0px)) 0 max(24px,env(safe-area-inset-left,0px))}
+.topbar{display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line);padding:16px 24px}
+.topbar .back{display:grid;place-items:center;width:34px;height:34px;border-radius:8px;color:var(--ink);text-decoration:none}
+.topbar .back:hover{background:var(--soft)}
+.topbar svg{width:20px;height:20px;flex:none}
+.topbar .ico{color:#fb7185}
+h1{font-family:var(--f-display);font-weight:600;font-size:16px;margin:0;line-height:1}
+.tag{display:block;margin-top:3px;font-size:12px;color:var(--muted)}
 .app{display:grid;grid-template-columns:304px minmax(0,1fr);gap:24px;align-items:start}
 @media (max-width:860px){.app{grid-template-columns:minmax(0,1fr)}}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:18px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
 .controls{position:sticky;top:max(16px,env(safe-area-inset-top,0px));display:flex;flex-direction:column;gap:18px}
 @media (max-width:860px){.controls{position:static}}
 .drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;
-  border:1.5px dashed var(--accent);border-radius:10px;padding:22px 12px;background:var(--soft);cursor:pointer;transition:background .15s}
+  border:1.5px dashed var(--accent);border-radius:12px;padding:22px 12px;background:var(--soft);cursor:pointer;transition:background .15s}
 .drop:hover,.drop.over{background:color-mix(in srgb,var(--accent) 16%,var(--soft))}
 .drop strong{font-family:var(--f-display);font-size:18px}
 .drop span{color:var(--muted);font-size:13px}
@@ -61,7 +60,7 @@ button{font:inherit;cursor:pointer}
 .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
 .toolbar .count{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
 .shot{position:relative;aspect-ratio:3/4;background:var(--soft);display:grid;place-items:center}
 .shot img{width:100%;height:100%;object-fit:contain;display:block}
 .badge{position:absolute;left:8px;top:8px;font-family:var(--f-mono);font-size:11px;letter-spacing:.04em;padding:3px 7px;border-radius:5px;background:var(--panel);color:var(--ink);border:1px solid var(--line)}
@@ -110,11 +109,12 @@ input[type=text]{font:inherit;width:100%;padding:9px 11px;border:1px solid var(-
 input[type=text]:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 </style>
 
+<div class="topbar">
+  <a class="back" href="/hub" target="_top" aria-label="Back to the hub"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></a>
+  <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="15" height="14" rx="2.5"/><path d="M3.5 15.5 8 11l3.5 3.5 2-2 4 4"/><circle cx="7.5" cy="8.5" r="1.1" fill="currentColor" fill-opacity="0.35"/><path d="M19.5 2.5v4M17.5 4.5h4"/><path d="M20 11v2.5M18.75 12.25h2.5"/></svg>
+  <div><h1>Photo Perfecter</h1><span class="tag">Drop in, perfect, send on</span></div>
+</div>
 <div class="wrap">
-  <header>
-    <h1>Photo Perfecter</h1>
-    <span class="tag">DROP IN, PERFECT, SEND ON</span>
-  </header>
 
   <div class="app">
     <aside class="controls">
