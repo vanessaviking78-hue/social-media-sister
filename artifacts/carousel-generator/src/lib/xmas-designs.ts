@@ -279,10 +279,10 @@ export const DESIGN_BY_ID: Record<DesignId, Design> = Object.fromEntries(DESIGNS
 // Drawing kit
 // ---------------------------------------------------------------------------
 
-type P = [number, number];
-type Ctx = CanvasRenderingContext2D;
+export type P = [number, number];
+export type Ctx = CanvasRenderingContext2D;
 
-type G = {
+export type G = {
   ctx: Ctx;
   t: Record<string, string>;
   c: Palette;
@@ -298,7 +298,7 @@ type G = {
 const SCRIPT = `'Playfair Display', Georgia, 'Times New Roman', serif`;
 const HAND = `'Caveat', 'Patrick Hand', 'Comic Sans MS', cursive`;
 
-function rand(seed: number) {
+export function rand(seed: number) {
   let a = seed | 0;
   return () => {
     a = (a + 0x6d2b79f5) | 0;
@@ -314,19 +314,19 @@ function hexRgb(hex: string): [number, number, number] {
   const n = parseInt(h.slice(0, 6), 16);
   return Number.isNaN(n) ? [128, 128, 128] : [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
-function shade(hex: string, amt: number): string {
+export function shade(hex: string, amt: number): string {
   const [r, g, b] = hexRgb(hex);
   const m = amt >= 0 ? 255 : 0;
   const k = Math.abs(amt);
   const q = (v: number) => Math.round(v + (m - v) * k).toString(16).padStart(2, "0");
   return `#${q(r)}${q(g)}${q(b)}`;
 }
-function rgba(hex: string, a: number) {
+export function rgba(hex: string, a: number) {
   const [r, g, b] = hexRgb(hex);
   return `rgba(${r},${g},${b},${a})`;
 }
 
-function wrap(ctx: Ctx, text: string, maxW: number): string[] {
+export function wrap(ctx: Ctx, text: string, maxW: number): string[] {
   const out: string[] = [];
   for (const para of (text ?? "").split("\n")) {
     const words = para.split(/\s+/).filter(Boolean);
@@ -340,7 +340,7 @@ function wrap(ctx: Ctx, text: string, maxW: number): string[] {
   return out;
 }
 
-function lines(ctx: Ctx, ls: string[], x: number, y: number, lh: number, align: CanvasTextAlign = "left"): number {
+export function lines(ctx: Ctx, ls: string[], x: number, y: number, lh: number, align: CanvasTextAlign = "left"): number {
   ctx.textAlign = align;
   ctx.textBaseline = "top";
   for (const l of ls) { ctx.fillText(l, x, y); y += lh; }
@@ -348,7 +348,7 @@ function lines(ctx: Ctx, ls: string[], x: number, y: number, lh: number, align: 
 }
 
 // Shrinks the text until it fits the box. Returns the font size used and the y under the text.
-function textBox(g: G, text: string, x: number, y: number, w: number, h: number, o: {
+export function textBox(g: G, text: string, x: number, y: number, w: number, h: number, o: {
   font: "head" | "body" | "script" | "hand"; max: number; min?: number; weight?: number; colour: string; align?: CanvasTextAlign; lh?: number; upper?: boolean; italic?: boolean;
 }): { size: number; y: number } {
   const { ctx } = g;
@@ -374,9 +374,9 @@ function textBox(g: G, text: string, x: number, y: number, w: number, h: number,
   return { size: s, y: end };
 }
 
-const HU = (g: G, s: string) => (g.upper ? (s ?? "").toUpperCase() : s ?? "");
+export const HU = (g: G, s: string) => (g.upper ? (s ?? "").toUpperCase() : s ?? "");
 
-function rule(g: G, x1: number, x2: number, y: number, colour: string, width = 2, alpha = 1) {
+export function rule(g: G, x1: number, x2: number, y: number, colour: string, width = 2, alpha = 1) {
   const { ctx } = g;
   ctx.save();
   ctx.globalAlpha = alpha;
@@ -416,7 +416,7 @@ function tornPath(ctx: Ctx, pts: P[], torn: boolean[], seed: number, amp: number
 type PaperKind = "plain" | "stars" | "holly";
 
 // A piece of torn paper: a pale fibre edge, the coloured paper on top and an optional pattern.
-function paper(g: G, pts: P[], torn: boolean[], colour: string, o?: { seed?: number; kind?: PaperKind; pattern?: string; fringe?: string; shadow?: boolean; amp?: number }) {
+export function paper(g: G, pts: P[], torn: boolean[], colour: string, o?: { seed?: number; kind?: PaperKind; pattern?: string; fringe?: string; shadow?: boolean; amp?: number }) {
   const { ctx } = g;
   const seed = o?.seed ?? 7;
   const amp = o?.amp ?? 7;
@@ -448,7 +448,7 @@ function paper(g: G, pts: P[], torn: boolean[], colour: string, o?: { seed?: num
   }
 }
 
-function star(ctx: Ctx, x: number, y: number, r: number, colour: string) {
+export function star(ctx: Ctx, x: number, y: number, r: number, colour: string) {
   ctx.save();
   ctx.fillStyle = colour;
   ctx.beginPath();
@@ -515,7 +515,7 @@ function holly(g: G, x: number, y: number, s: number, rot: number) {
   ctx.restore();
 }
 
-function tape(g: G, cx: number, cy: number, w: number, h: number, rot: number, kind: "kraft" | "candy") {
+export function tape(g: G, cx: number, cy: number, w: number, h: number, rot: number, kind: "kraft" | "candy") {
   const { ctx, c } = g;
   ctx.save();
   ctx.translate(cx, cy);
@@ -614,7 +614,7 @@ function placeholder(g: G, w: number, h: number) {
 }
 
 // A cropped photo inside a framed print. The slot it reports is the photo itself, so it can be dragged.
-function polaroid(g: G, cx: number, cy: number, w: number, h: number, rot: number, o?: { pad?: number; bottom?: number; tapeAt?: "kraft" | "candy" | null }) {
+export function polaroid(g: G, cx: number, cy: number, w: number, h: number, rot: number, o?: { pad?: number; bottom?: number; tapeAt?: "kraft" | "candy" | null }) {
   const { ctx, c } = g;
   const pad = o?.pad ?? 26;
   const bottom = o?.bottom ?? pad;
@@ -663,7 +663,7 @@ function fullBleed(g: G) {
   ctx.restore();
 }
 
-function bg(g: G) {
+export function bg(g: G) {
   const { ctx, c } = g;
   ctx.fillStyle = c.paper;
   ctx.fillRect(0, 0, XW, XH);
@@ -686,7 +686,7 @@ function squareBullet(g: G, x: number, y: number, s: number, colour: string) {
 // --- New Year kit ------------------------------------------------------------
 
 // Ruled notebook paper with punched holes down the left.
-function notebook(g: G, x: number, y: number, w: number, h: number, o?: { holes?: boolean; lines?: boolean; colour?: string }) {
+export function notebook(g: G, x: number, y: number, w: number, h: number, o?: { holes?: boolean; lines?: boolean; colour?: string }) {
   const { ctx } = g;
   ctx.save();
   ctx.shadowColor = "rgba(0,0,0,0.22)"; ctx.shadowBlur = 20; ctx.shadowOffsetY = 6;
@@ -708,7 +708,7 @@ function notebook(g: G, x: number, y: number, w: number, h: number, o?: { holes?
 }
 
 // A sticky note with a soft shadow. The callback draws inside it with (0,0) at the centre.
-function sticky(g: G, cx: number, cy: number, w: number, h: number, rot: number, colour: string, draw?: (ctx: Ctx) => void, tapeAt?: boolean) {
+export function sticky(g: G, cx: number, cy: number, w: number, h: number, rot: number, colour: string, draw?: (ctx: Ctx) => void, tapeAt?: boolean) {
   const { ctx } = g;
   ctx.save();
   ctx.translate(cx, cy);
@@ -724,7 +724,7 @@ function sticky(g: G, cx: number, cy: number, w: number, h: number, rot: number,
   if (tapeAt) tape(g, cx, cy - h / 2 + 4, 140, 44, rot * 0.5 + 2, "kraft");
 }
 
-function paperclip(g: G, x: number, y: number, rot: number, colour: string) {
+export function paperclip(g: G, x: number, y: number, rot: number, colour: string) {
   const { ctx } = g;
   ctx.save();
   ctx.translate(x, y);
@@ -740,7 +740,7 @@ function paperclip(g: G, x: number, y: number, rot: number, colour: string) {
   ctx.restore();
 }
 
-function strike(g: G, x1: number, x2: number, y: number, colour: string, width = 7) {
+export function strike(g: G, x1: number, x2: number, y: number, colour: string, width = 7) {
   const { ctx } = g;
   const r = rand(Math.round(x1 + y));
   ctx.save();
@@ -753,14 +753,14 @@ function strike(g: G, x1: number, x2: number, y: number, colour: string, width =
   ctx.restore();
 }
 
-function checkbox(g: G, x: number, y: number, s: number, colour: string, lw = 3) {
+export function checkbox(g: G, x: number, y: number, s: number, colour: string, lw = 3) {
   g.ctx.save();
   g.ctx.strokeStyle = colour; g.ctx.lineWidth = lw;
   g.ctx.strokeRect(x, y, s, s);
   g.ctx.restore();
 }
 
-function heart(g: G, cx: number, cy: number, s: number, colour: string, fillIt = false, lw = 4) {
+export function heart(g: G, cx: number, cy: number, s: number, colour: string, fillIt = false, lw = 4) {
   const { ctx } = g;
   ctx.save();
   ctx.translate(cx, cy);
@@ -1351,7 +1351,7 @@ export const LOGO_POSITIONS: { value: LogoPos; label: string }[] = [
 ];
 
 // The logo sits on a small paper plate in the chosen corner, so it reads on any colour or photo.
-function drawLogo(g: G, logo: HTMLImageElement, pos: LogoPos) {
+export function drawLogo(g: G, logo: HTMLImageElement, pos: LogoPos) {
   const { ctx, c } = g;
   const maxW = 230, maxH = 96, pad = 16, m = 28;
   const sc = Math.min(maxW / logo.width, maxH / logo.height);
