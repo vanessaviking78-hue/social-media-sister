@@ -149,7 +149,7 @@ export const HALLOWEEN_BY_ID: Record<HalId, HalDesign> = Object.fromEntries(HALL
 const mute = (g: G) => shade(g.c.light, -0.42);
 
 // Tall, narrow headline lines: one size for the whole stack, squeezed sideways (never below minSx) so long words still fit.
-function hstack(g: G, items: { text: string; colour: string }[], x: number, y: number, w: number, hMax: number, max: number, o?: { lh?: number; minSx?: number; min?: number; align?: CanvasTextAlign }): number {
+export function hstack(g: G, items: { text: string; colour: string }[], x: number, y: number, w: number, hMax: number, max: number, o?: { lh?: number; minSx?: number; min?: number; align?: CanvasTextAlign }): number {
   const { ctx } = g;
   const lh = o?.lh ?? 0.92, minSx = o?.minSx ?? 0.5, min = o?.min ?? 30;
   const rows: { t: string; colour: string }[] = [];
@@ -174,16 +174,16 @@ function hstack(g: G, items: { text: string; colour: string }[], x: number, y: n
 }
 
 // One tall narrow line at (up to) a given size.
-function hline(g: G, text: string, x: number, y: number, w: number, size: number, colour: string, o?: { align?: CanvasTextAlign; minSx?: number }): number {
+export function hline(g: G, text: string, x: number, y: number, w: number, size: number, colour: string, o?: { align?: CanvasTextAlign; minSx?: number }): number {
   return hstack(g, [{ text, colour }], x, y, w, size * 1.02, size, { lh: 1, minSx: o?.minSx ?? 0.5, align: o?.align, min: 24 });
 }
 
 // A rough brush stroke or torn strip, in a single colour.
-function brush(g: G, x: number, y: number, w: number, h: number, colour: string, seed = 3) {
+export function brush(g: G, x: number, y: number, w: number, h: number, colour: string, seed = 3) {
   paper(g, [[x, y], [x + w, y - 2], [x + w, y + h], [x, y + h + 2]], [true, true, true, true], colour, { seed, amp: 2.5, fringe: colour, shadow: false });
 }
 
-function ornament(g: G, cx: number, y: number, w: number, colour: string) {
+export function ornament(g: G, cx: number, y: number, w: number, colour: string) {
   const { ctx } = g;
   ctx.save();
   ctx.strokeStyle = colour; ctx.fillStyle = colour; ctx.lineWidth = 2.5; ctx.lineCap = "round";
@@ -197,7 +197,7 @@ function foot(g: G, y: number, colour: string, o?: { x?: number; w?: number; ali
 }
 
 // A photo on torn paper. Only the torn edges get a paper rim, the others run off the page. The photo is the draggable slot.
-function photoPaper(g: G, x: number, y: number, w: number, h: number, torn: [boolean, boolean, boolean, boolean], seed: number, rim = 11) {
+export function photoPaper(g: G, x: number, y: number, w: number, h: number, torn: [boolean, boolean, boolean, boolean], seed: number, rim = 11) {
   const { ctx, c } = g;
   paper(g, [[x, y], [x + w, y], [x + w, y + h], [x, y + h]], torn, c.frame, { seed, amp: 7 });
   const x0 = torn[3] ? x + rim : x, x1 = torn[1] ? x + w - rim : x + w;
@@ -213,7 +213,7 @@ function photoPaper(g: G, x: number, y: number, w: number, h: number, torn: [boo
 }
 
 // A straight photo with a plain coloured border.
-function photoRect(g: G, x: number, y: number, w: number, h: number, border: number, colour: string) {
+export function photoRect(g: G, x: number, y: number, w: number, h: number, border: number, colour: string) {
   const { ctx } = g;
   ctx.save();
   ctx.shadowColor = "rgba(0,0,0,0.5)"; ctx.shadowBlur = 22; ctx.shadowOffsetY = 6;
@@ -227,13 +227,13 @@ function photoRect(g: G, x: number, y: number, w: number, h: number, border: num
   g.slots.push({ i: 0, x: x + border, y: y + border, w: w - border * 2, h: h - border * 2, rot: 0 });
 }
 
-function archPath(ctx: Ctx, x: number, y: number, w: number, h: number) {
+export function archPath(ctx: Ctx, x: number, y: number, w: number, h: number) {
   const r = w / 2;
   ctx.beginPath();
   ctx.moveTo(x, y + r); ctx.arc(x + r, y + r, r, Math.PI, 0); ctx.lineTo(x + w, y + h); ctx.lineTo(x, y + h); ctx.closePath();
 }
 
-function scan(g: G, x: number, y: number, w: number, h: number, alpha = 0.07) {
+export function scan(g: G, x: number, y: number, w: number, h: number, alpha = 0.07) {
   const { ctx } = g;
   ctx.save();
   ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
@@ -242,7 +242,7 @@ function scan(g: G, x: number, y: number, w: number, h: number, alpha = 0.07) {
   ctx.restore();
 }
 
-function bubble(g: G, x: number, y: number, w: number, h: number, colour: string, tail: "bl" | "br") {
+export function bubble(g: G, x: number, y: number, w: number, h: number, colour: string, tail: "bl" | "br") {
   const { ctx } = g;
   ctx.save();
   ctx.shadowColor = "rgba(0,0,0,0.45)"; ctx.shadowBlur = 18; ctx.shadowOffsetY = 5;
