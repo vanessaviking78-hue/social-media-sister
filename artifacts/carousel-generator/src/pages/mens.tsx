@@ -35,7 +35,9 @@ async function hostedSlides(folder: string, count: number): Promise<string[]> {
   if (got) return got;
   const dataUrls: string[] = [];
   for (let n = 1; n <= count; n++) {
-    const blob = await (await fetch(slideUrl(folder, n))).blob();
+    const res = await fetch(slideUrl(folder, n));
+    const blob = await res.blob();
+    if (!res.ok || !blob.type.startsWith("image/")) throw new Error("The men's slide images have not been added yet, so I can't schedule this one.");
     dataUrls.push(await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(blob); }));
   }
   const urls = await uploadPngs(dataUrls, dataUrls.map((_, i) => `mens-${folder}-${i + 1}-${Date.now()}.png`));
