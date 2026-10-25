@@ -1,62 +1,41 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Check, CalendarRange, Copy, ExternalLink } from "lucide-react";
+import { ArrowLeft, CalendarRange, ExternalLink, ImageIcon, Loader2, RefreshCw, Sparkles, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePresets } from "@/lib/use-presets";
+import { useApprovedImages } from "@/lib/use-approval";
+import { loadGoogleFonts } from "@/lib/slide-utils";
+import {
+  TOOL_LABEL, designName, designsFor, ensureFonts, makePost, photoCount, renderSlide, schedulePost, slideCount, uid, urlToFile, writeCopy,
+  type Client, type MPost, type PoolPhoto, type ToolId,
+} from "@/lib/month-engine";
 
-const KEY = "month-planner-v1";
+const SETTINGS_KEY = "month-client-v1";
+const DONE_KEY = "month-scheduled-v1";
+const OTHER_KEYS = ["unique-posts-client-v1", "treatments-client-v1", "basic-posts-client-v1", "halloween-posts-client-v1", "november-posts-client-v1", "xmas-posts-client-v1"];
+const DEFAULT_HEAD = "'Anton', sans-serif";
+const DEFAULT_BODY = "'Poppins', sans-serif";
+const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-type Kind = "seasonal" | "unique" | "educational" | "basic" | "treatment";
-
-const KIND: Record<Kind, { label: string; colour: string }> = {
-  seasonal: { label: "Seasonal", colour: "bg-orange-500/15 text-orange-300 border-orange-500/30" },
-  unique: { label: "Unique", colour: "bg-amber-500/15 text-amber-300 border-amber-500/30" },
-  educational: { label: "Friday educational", colour: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" },
-  basic: { label: "BASIC", colour: "bg-sky-500/15 text-sky-300 border-sky-500/30" },
-  treatment: { label: "Treatment", colour: "bg-rose-500/15 text-rose-300 border-rose-500/30" },
+// The seasonal pack that fits each month. Months with nothing seasonal ready use Unique for those slots.
+const SEASONAL: Record<number, { tool: ToolId; group?: "xmas" | "newyear"; name: string } | undefined> = {
+  9: { tool: "halloween", name: "Halloween" },
+  10: { tool: "november", name: "November" },
+  11: { tool: "xmas", group: "xmas", name: "Christmas" },
+  0: { tool: "xmas", group: "newyear", name: "New Year" },
 };
 
-// The seasonal tool that fits each month. Months with nothing seasonal ready fall back to Unique.
-const SEASONAL: Record<number, { href: string; name: string; theme: string } | undefined> = {
-  9: { href: "/halloween-posts", name: "Halloween Posts", theme: "Halloween" },
-  10: { href: "/november-posts", name: "November Posts", theme: "November, bonfire night and the dark evenings" },
-  11: { href: "/xmas-posts", name: "Xmas Posts", theme: "Christmas" },
-  0: { href: "/xmas-posts", name: "Xmas Posts (New Year)", theme: "New Year and fresh starts" },
-};
+type Item = { kind: "post"; post: MPost } | { kind: "friday"; n: number; when: string };
 
-const PROMPTS: Record<Kind, string[]> = {
-  seasonal: [
-    "A funny, true moment from the consultation room that fits {theme}. Tell it as a tiny story and end on a question she can answer in a few words.",
-    "What {theme} does to our faces, skin and confidence, said with a wink. One honest line a woman over 35 will screenshot, then a question.",
-    "The thing every client says to me at this time of year about {theme}. Make her laugh first, then make her feel understood.",
-    "A gentle, no pressure {theme} post that shows I am a real person. A small story from my week, then a question about hers.",
-  ],
-  unique: [
-    "Pick the cover that makes you laugh hardest this week. The story: what I wish every woman knew before she walks into any clinic.",
-    "Choose a notice, recall or wanted poster cover and tell the myth behind it in my own voice. Finish with a question that gets people arguing kindly.",
-    "A cover nobody else in {area} has. Tell the true story behind the joke and end on a question.",
-    "Pick a red flags or penalty notice cover. The story: something I have seen that made me stand up for a client.",
-  ],
-  educational: [
-    "Friday educational: a ready made safety or aftercare post from the content list, in my voice, with a question at the end.",
-    "Friday educational: a myth a client believed until she came in, from the content list. Keep it fun and end on a question.",
-    "Friday educational: what to ask any practitioner before booking, from the content list. Warm, honest and a question to finish.",
-    "Friday educational: an aftercare or skin facts post from the content list, made funny and shareable, ending on a question.",
-  ],
-  basic: [
-    "The trust carousel: a cover from BASIC, then two photo slides that carry on. The story: why I do things the slow, honest way.",
-    "The trust carousel: a cover from BASIC. The story: what a consultation with me is actually like.",
-  ],
-  treatment: [
-    "A Possible Side Effects May Include treatment carousel. Pick the treatment this clinic most wants more enquiries for. End with the DM line.",
-    "A treatment carousel for the area of the face clients ask about most. Honest, funny, consultation first. End with the DM line.",
-  ],
+const p2 = (n: number) => String(n).padStart(2, "0");
+const toLocal = (d: Date, hhmm: string) => {
+  const [h, m] = (hhmm || "18:15").split(":").map((x) => parseInt(x, 10));
+  return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(Number.isFinite(h) ? h : 18)}:${p2(Number.isFinite(m) ? m : 15)}`;
 };
-
-type Slot = { n: number; date: Date; kind: Kind; tool: string; href: string; prompt: string };
 
 function weekdays(year: number, month: number): Date[] {
   const out: Date[] = [];
@@ -68,121 +47,398 @@ function weekdays(year: number, month: number): Date[] {
   return out;
 }
 
-function planMonth(year: number, month: number, seed: number, area: string): Slot[] {
+// Mon and Tue seasonal, Wed BASIC or Treatment alternately, Thu Unique, Fri educational. That is 8 + 4 + 2 + 2 + 4 = 20.
+function buildPlan(year: number, month: number, seed: number, hhmm: string, poolLen: number, done: number[]): Item[] {
   const days = weekdays(year, month).slice(0, 20);
   const season = SEASONAL[month];
-  const fillPrompt = (t: string, theme: string) => t.replace(/\{theme\}/g, theme).replace(/\{area\}/g, area || "your area");
-  return days.map((date, i) => {
+  const used: Record<string, number> = {};
+  const pick = (tool: ToolId, group?: "xmas" | "newyear") => {
+    const list = designsFor(tool, group);
+    const key = `${tool}${group ?? ""}`;
+    const k = used[key] ?? 0;
+    used[key] = k + 1;
+    return list[(seed + k) % list.length];
+  };
+  let cursor = seed * 3;
+  const items: Item[] = [];
+  days.forEach((date, i) => {
     const week = Math.floor(i / 5);
-    const dow = i % 5; // 0 Mon to 4 Fri
-    let kind: Kind;
-    if (dow === 0 || dow === 1) kind = "seasonal";
-    else if (dow === 2) kind = week % 2 === 0 ? "basic" : "treatment";
-    else if (dow === 3) kind = "unique";
-    else kind = "educational";
-    const pick = (list: string[]) => list[(seed + week + dow) % list.length];
-    let tool = "", href = "";
-    let useKind = kind;
-    if (kind === "seasonal") {
-      if (season) { tool = season.name; href = season.href; }
-      else { useKind = "unique"; }
-    }
-    if (useKind === "unique") { tool = "Unique"; href = "/unique"; }
-    if (useKind === "educational") { tool = "Stylish ready made content"; href = "/stylish"; }
-    if (useKind === "basic") { tool = "BASIC posts"; href = "/basic-posts"; }
-    if (useKind === "treatment") { tool = "Treatments"; href = "/treatments"; }
-    const theme = season?.theme ?? "this month";
-    return { n: i + 1, date, kind: useKind, tool, href, prompt: fillPrompt(pick(PROMPTS[kind === "seasonal" && !season ? "unique" : kind]), theme) };
+    const dow = i % 5;
+    const n = i + 1;
+    const when = toLocal(date, hhmm);
+    if (dow === 4) { items.push({ kind: "friday", n, when }); return; }
+    let tool: ToolId; let group: "xmas" | "newyear" | undefined;
+    if (dow === 0 || dow === 1) { tool = season?.tool ?? "unique"; group = season?.group; }
+    else if (dow === 2) tool = week % 2 === 0 ? "basic" : "treatments";
+    else tool = "unique";
+    const design = pick(tool, group);
+    const post = makePost(tool, design, n, when, cursor, poolLen, group);
+    cursor += photoCount(tool, design);
+    post.scheduled = done.includes(n);
+    post.selected = !post.scheduled && new Date(when).getTime() > Date.now();
+    items.push({ kind: "post", post });
   });
+  return items;
 }
 
-type Saved = Record<string, { done: boolean; note: string }>;
-const load = (): Record<string, Saved> => { try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch { return {}; } };
+const photoIdxFor = (p: MPost, n: number): number =>
+  p.tool === "basic" ? (n === 0 ? 0 : n === 1 ? 2 : 3) : p.tool === "unique" || p.tool === "treatments" ? n : 0;
 
-const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+function Thumb({ post, n, client, onSwap }: { post: MPost; n: number; client: Client; onSwap: () => void }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  const run = useRef(0);
+  useEffect(() => {
+    const my = ++run.current;
+    const t = setTimeout(async () => {
+      await ensureFonts(client.headFont, client.bodyFont);
+      if (my !== run.current || !ref.current) return;
+      const c = document.createElement("canvas");
+      await renderSlide(post, n, client, c, 0.3);
+      if (my !== run.current || !ref.current) return;
+      ref.current.width = c.width;
+      ref.current.height = c.height;
+      ref.current.getContext("2d")!.drawImage(c, 0, 0);
+    }, 40 + n * 30);
+    return () => clearTimeout(t);
+  }, [post, n, client]);
+  return (
+    <div className="space-y-1">
+      <canvas ref={ref} width={324} height={405} className="w-full rounded-lg border border-border/30 bg-muted/20" style={{ aspectRatio: "4 / 5" }} />
+      <button type="button" onClick={onSwap} className="w-full flex items-center justify-center gap-1 text-[11px] rounded-md border border-border/40 py-1 hover:border-border">
+        <ImageIcon className="w-3 h-3" /> Swap photo
+      </button>
+    </div>
+  );
+}
 
 export default function MonthPlanner() {
   const { presets, loading } = usePresets();
   const now = new Date();
-  const [clientId, setClientId] = useState<string>("");
+  const [clientId, setClientId] = useState("");
   const [ym, setYm] = useState(`${now.getFullYear()}-${now.getMonth()}`);
-  const [saved, setSaved] = useState<Record<string, Saved>>(load);
+  const [owner, setOwner] = useState("");
+  const [role, setRole] = useState("Owner");
+  const [area, setArea] = useState("");
+  const [pool, setPool] = useState<PoolPhoto[]>([]);
+  const [poolBusy, setPoolBusy] = useState(false);
+  const [items, setItems] = useState<Item[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [swap, setSwap] = useState<{ postId: string; slide: number } | null>(null);
+  const [confirm, setConfirm] = useState(false);
+  const [logo, setLogo] = useState<HTMLImageElement | null>(null);
 
   const [year, month] = ym.split("-").map(Number);
   const preset = presets.find((p) => String(p.id) === clientId);
-  const slots = useMemo(() => planMonth(year, month, preset?.id ?? 0, preset?.seoArea ?? ""), [year, month, preset?.id, preset?.seoArea]);
+  const { data: allApproved = [] } = useApprovedImages("");
+
+  useEffect(() => { loadGoogleFonts(); }, []);
+
+  // Choosing a client fills in their owner name and area from anything already saved in the other tools.
+  useEffect(() => {
+    if (!preset) return;
+    let saved: { owner?: string; role?: string; area?: string } = {};
+    const grab = (k: string) => { try { return (JSON.parse(localStorage.getItem(k) || "{}") as Record<string, typeof saved>)[String(preset.id)]; } catch { return undefined; } };
+    saved = grab(SETTINGS_KEY) ?? OTHER_KEYS.map(grab).find((s) => s?.owner) ?? {};
+    setOwner(saved.owner ?? "");
+    setRole(saved.role ?? "Owner");
+    setArea(saved.area || preset.seoArea || "");
+    setItems([]);
+    setLogo(null);
+    if (preset.logoUrl) {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => setLogo(img);
+      img.src = preset.logoUrl;
+    }
+  }, [preset?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!preset) return;
+    try {
+      const all = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+      all[String(preset.id)] = { owner, role, area };
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(all));
+    } catch { /* ignore */ }
+  }, [preset?.id, owner, role, area]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The client's approved photos become the pool every post draws from.
+  const approvedForClient = useMemo(() => (preset ? allApproved.filter((i) => i.clientName === preset.name) : []), [allApproved, preset]);
+  useEffect(() => {
+    let live = true;
+    setPool([]);
+    if (!approvedForClient.length) return;
+    setPoolBusy(true);
+    (async () => {
+      const files: PoolPhoto[] = [];
+      const list = approvedForClient.slice(0, 40);
+      for (let i = 0; i < list.length; i += 6) {
+        const got = await Promise.all(list.slice(i, i + 6).map(async (img, k) => {
+          try { const file = await urlToFile(img.imageUrl, i + k); return { id: uid(), file, url: URL.createObjectURL(file) }; } catch { return null; }
+        }));
+        files.push(...got.filter((x): x is PoolPhoto => !!x));
+        if (!live) return;
+      }
+      if (live) { setPool(files); setPoolBusy(false); }
+    })();
+    return () => { live = false; };
+  }, [approvedForClient]);
+
+  const client: Client = useMemo(() => ({
+    businessName: preset?.name ?? "",
+    ownerName: owner.trim(),
+    role: role.trim(),
+    area: area.trim(),
+    audience: preset?.targetAudience ?? "",
+    brandNotes: preset?.brandNotes ?? "",
+    footnote: preset?.captionFootnote?.trim() ?? "",
+    fill: { owner: owner.trim(), clinic: preset?.name ?? "", area: area.trim(), role: role.trim() },
+    headFont: preset?.stylishCoverHeadlineFont || DEFAULT_HEAD,
+    bodyFont: preset?.stylishCoverSubtitleFont || DEFAULT_BODY,
+    logo,
+    pool,
+  }), [preset, owner, role, area, logo, pool]);
+
   const bucket = `${clientId}:${year}-${month}`;
-  const mine = saved[bucket] ?? {};
+  const doneList = (): number[] => { try { return (JSON.parse(localStorage.getItem(DONE_KEY) || "{}") as Record<string, number[]>)[bucket] ?? []; } catch { return []; } };
+  const markDone = (n: number) => {
+    try {
+      const all = JSON.parse(localStorage.getItem(DONE_KEY) || "{}") as Record<string, number[]>;
+      all[bucket] = [...new Set([...(all[bucket] ?? []), n])];
+      localStorage.setItem(DONE_KEY, JSON.stringify(all));
+    } catch { /* ignore */ }
+  };
 
-  useEffect(() => { try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch { /* ignore */ } }, [saved]);
-  const patch = (n: number, c: Partial<{ done: boolean; note: string }>) =>
-    setSaved((o) => ({ ...o, [bucket]: { ...(o[bucket] ?? {}), [n]: { ...((o[bucket] ?? {})[n] ?? { done: false, note: "" }), ...c } } }));
+  const patchPost = (id: string, change: Partial<MPost>) =>
+    setItems((l) => l.map((it) => (it.kind === "post" && it.post.id === id ? { kind: "post", post: { ...it.post, ...change } } : it)));
+  const posts = items.filter((i): i is { kind: "post"; post: MPost } => i.kind === "post").map((i) => i.post);
 
-  const doneCount = slots.filter((s) => mine[s.n]?.done).length;
+  const rewrite = async (post: MPost) => {
+    patchPost(post.id, { busy: true });
+    try {
+      patchPost(post.id, { ...(await writeCopy(post, client)), busy: false });
+    } catch (e) {
+      patchPost(post.id, { busy: false });
+      toast.error(e instanceof Error ? e.message : "The words would not write, try again");
+    }
+  };
+
+  const create = async () => {
+    if (!preset) { toast.error("Choose a client first"); return; }
+    if (!owner.trim() || !area.trim()) { toast.error("Add the owner's first name and the area first, so no placeholder goes out."); return; }
+    if (!pool.length) { toast.error("This client has no approved photos yet. Approve some first."); return; }
+    const plan = buildPlan(year, month, preset.id, (preset as unknown as { defaultPostTime?: string }).defaultPostTime ?? "18:15", pool.length, doneList());
+    setItems(plan);
+    setBusy("write");
+    const targets = plan.filter((i): i is { kind: "post"; post: MPost } => i.kind === "post").map((i) => i.post).filter((p) => !p.scheduled);
+    const toastId = toast.loading(`Writing 0 of ${targets.length}`);
+    let done = 0;
+    const queue = [...targets];
+    const worker = async () => {
+      while (queue.length) {
+        const p = queue.shift()!;
+        try {
+          const copy = await writeCopy(p, client);
+          setItems((l) => l.map((it) => (it.kind === "post" && it.post.id === p.id ? { kind: "post", post: { ...it.post, ...copy } } : it)));
+        } catch { /* leave blank, she can press Rewrite */ }
+        done++;
+        toast.loading(`Writing ${done} of ${targets.length}`, { id: toastId });
+      }
+    };
+    await Promise.all([worker(), worker(), worker()]);
+    toast.success("The month is ready. Have a look through, nothing is scheduled.", { id: toastId });
+    setBusy(null);
+  };
+
+  const ready = posts.filter((p) => p.selected && !p.scheduled);
+  const scheduleAll = async () => {
+    setConfirm(false);
+    if (!preset) return;
+    const missing = ready.filter((p) => !p.caption.trim());
+    if (missing.length) { toast.error(`${missing.length} ticked post${missing.length > 1 ? "s have" : " has"} no caption yet. Press Rewrite on them first.`); return; }
+    setBusy("schedule");
+    const toastId = toast.loading("Scheduling 0 of " + ready.length);
+    let ok = 0;
+    try {
+      for (const p of ready) {
+        await schedulePost(p, client, preset.id);
+        patchPost(p.id, { scheduled: true, selected: false });
+        markDone(p.n);
+        ok++;
+        toast.loading(`Scheduling ${ok} of ${ready.length}`, { id: toastId });
+      }
+      toast.success(`${ok} posts scheduled. Go and put the kettle on.`, { id: toastId });
+    } catch (e) {
+      toast.error(`${ok} scheduled, then it stopped: ${e instanceof Error ? e.message : "failed"}`, { id: toastId });
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const swapPost = swap ? posts.find((p) => p.id === swap.postId) : null;
   const options = Array.from({ length: 14 }, (_, k) => { const d = new Date(now.getFullYear(), now.getMonth() + k, 1); return { v: `${d.getFullYear()}-${d.getMonth()}`, l: `${MONTHS[d.getMonth()]} ${d.getFullYear()}` }; });
-  const fmt = (d: Date) => d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  const fmt = (when: string) => new Date(when).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  const season = SEASONAL[month];
 
   return (
-    <div className="min-h-[100dvh] w-full bg-background text-foreground">
+    <div className="min-h-[100dvh] w-full bg-background text-foreground pb-24">
       <header className="border-b border-border/30 py-4 px-6 flex items-center gap-3">
         <Link href="/hub" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="w-5 h-5" /></Link>
         <CalendarRange className="w-5 h-5 text-violet-400" />
         <h1 className="font-bold text-lg">Month</h1>
-        <span className="text-sm text-muted-foreground">20 posts for one client, one calendar month</span>
+        <span className="text-sm text-muted-foreground">One client, one calendar month, 20 posts made for you</span>
       </header>
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
-        <section className="rounded-2xl border border-border/30 p-5 grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Client</span>
-            <Select value={clientId} onValueChange={setClientId}>
-              <SelectTrigger className="bg-muted/30 border-border/40"><SelectValue placeholder={loading ? "Loading…" : "Choose a client"} /></SelectTrigger>
-              <SelectContent className="max-h-72">{presets.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Month</span>
-            <Select value={ym} onValueChange={setYm}>
-              <SelectTrigger className="bg-muted/30 border-border/40"><SelectValue /></SelectTrigger>
-              <SelectContent>{options.map((o) => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}</SelectContent>
-            </Select>
+      <main className="max-w-[1400px] mx-auto px-4 py-6 space-y-6">
+        <section className="rounded-2xl border border-border/30 p-5 space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="space-y-1.5 lg:col-span-2">
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Client</span>
+              <Select value={clientId} onValueChange={setClientId}>
+                <SelectTrigger className="bg-muted/30 border-border/40"><SelectValue placeholder={loading ? "Loading…" : "Choose a client"} /></SelectTrigger>
+                <SelectContent className="max-h-72">{presets.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Month</span>
+              <Select value={ym} onValueChange={(v) => { setYm(v); setItems([]); }}>
+                <SelectTrigger className="bg-muted/30 border-border/40"><SelectValue /></SelectTrigger>
+                <SelectContent>{options.map((o) => <SelectItem key={o.v} value={o.v}>{o.l}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <label className="space-y-1.5 block">
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Owner first name</span>
+              <Input value={owner} onChange={(e) => setOwner(e.target.value)} />
+            </label>
+            <label className="space-y-1.5 block">
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Their role</span>
+              <Input value={role} onChange={(e) => setRole(e.target.value)} />
+            </label>
+            <label className="space-y-1.5 block lg:col-span-2">
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Area (also used for the 5 hashtags)</span>
+              <Input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Town, City" />
+            </label>
+            <div className="flex items-end gap-3 lg:col-span-3">
+              <Button onClick={create} disabled={!preset || !!busy || poolBusy}>
+                {busy === "write" ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1.5" />}
+                {items.length ? "Start this month again" : "Create the month"}
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                {!preset ? "Choose a client to begin." : poolBusy ? "Getting their approved photos…" : `${pool.length} approved photo${pool.length === 1 ? "" : "s"} ready.`}
+                {preset && !season ? ` No seasonal pack for ${MONTHS[month]} yet, so those slots use Unique.` : ""}
+              </span>
+            </div>
           </div>
         </section>
 
-        {!preset ? (
-          <p className="text-sm text-muted-foreground">Choose a client and a month and I will lay out the 20 posts, each with a prompt to get you started. Each client starts at a different point in the rotation so no two clinics get the same month.</p>
-        ) : (
-          <>
-            <div className="flex items-center gap-3 text-sm">
-              <span className="font-semibold">{preset.name}, {MONTHS[month]} {year}</span>
-              <span className="text-muted-foreground">{doneCount} of {slots.length} scheduled</span>
-              {!SEASONAL[month] && <span className="text-muted-foreground">No seasonal pack for this month yet, so those slots use Unique.</span>}
-            </div>
-            <div className="space-y-3">
-              {slots.map((s) => {
-                const st = mine[s.n] ?? { done: false, note: "" };
-                return (
-                  <article key={s.n} className={`rounded-2xl border p-4 space-y-3 ${st.done ? "border-emerald-500/40 opacity-70" : "border-border/30"}`}>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <button type="button" onClick={() => patch(s.n, { done: !st.done })} className={`h-6 w-6 rounded-md border flex items-center justify-center ${st.done ? "bg-emerald-500/30 border-emerald-500" : "border-border/50"}`} aria-label="Mark scheduled">
-                        {st.done && <Check className="w-4 h-4" />}
-                      </button>
-                      <span className="font-semibold">{s.n}. {fmt(s.date)}</span>
-                      <span className={`text-xs rounded-full border px-2.5 py-0.5 ${KIND[s.kind].colour}`}>{KIND[s.kind].label}</span>
-                      <span className="text-sm text-muted-foreground">{s.tool}</span>
-                      <div className="ml-auto flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => { void navigator.clipboard?.writeText(s.prompt); toast.success("Prompt copied"); }}><Copy className="w-4 h-4 mr-1.5" /> Copy prompt</Button>
-                        <Link href={s.href}><Button size="sm"><ExternalLink className="w-4 h-4 mr-1.5" /> Open {s.tool}</Button></Link>
-                      </div>
-                    </div>
-                    <p className="text-sm">{s.prompt}</p>
-                    <Input value={st.note} onChange={(e) => patch(s.n, { note: e.target.value })} placeholder="Your notes for this post" />
-                  </article>
-                );
-              })}
-            </div>
-          </>
+        {items.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            Pick a client and a month and press Create the month. I make every post, picture and caption from their approved photos and put them on screen for you to check. Nothing is scheduled until you press the schedule button at the bottom.
+          </p>
         )}
+
+        <div className="space-y-5">
+          {items.map((it) => {
+            if (it.kind === "friday") {
+              return (
+                <article key={`f${it.n}`} className="rounded-2xl border border-dashed border-border/40 p-4 flex flex-wrap items-center gap-3">
+                  <h2 className="font-semibold">{it.n}. {fmt(it.when)}</h2>
+                  <span className="text-xs rounded-full border px-2.5 py-0.5 bg-emerald-500/15 text-emerald-300 border-emerald-500/30">Friday educational</span>
+                  <span className="text-sm text-muted-foreground">Comes from the ready made content in Stylish. I will build these in the next step.</span>
+                  <Link href="/stylish" className="ml-auto"><Button size="sm" variant="outline"><ExternalLink className="w-4 h-4 mr-1.5" /> Open Stylish</Button></Link>
+                </article>
+              );
+            }
+            const p = it.post;
+            const count = slideCount(p.tool, p.design);
+            return (
+              <article key={p.id} className={`rounded-2xl border p-4 space-y-4 ${p.scheduled ? "border-emerald-500/40 opacity-70" : "border-border/30"}`}>
+                <div className="flex flex-wrap items-center gap-3">
+                  <input type="checkbox" checked={p.selected} disabled={p.scheduled} onChange={(e) => patchPost(p.id, { selected: e.target.checked })} />
+                  <h2 className="font-semibold">{p.n}. {fmt(p.when)}</h2>
+                  <input type="datetime-local" value={p.when} onChange={(e) => patchPost(p.id, { when: e.target.value })} className="rounded-md border border-border/40 bg-transparent px-2 py-1 text-sm" />
+                  <span className="text-xs rounded-full border px-2.5 py-0.5 border-border/50">{TOOL_LABEL[p.tool]}</span>
+                  <span className="text-sm text-muted-foreground">{designName(p)}</span>
+                  {p.scheduled && <span className="text-xs text-emerald-400">Scheduled</span>}
+                  {!p.scheduled && new Date(p.when).getTime() <= Date.now() && <span className="text-xs text-amber-400">This date has passed</span>}
+                  <Button size="sm" variant="outline" className="ml-auto" disabled={p.busy || !!busy} onClick={() => rewrite(p)}>
+                    {p.busy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1.5" />} Rewrite words
+                  </Button>
+                </div>
+                <div className={`grid gap-3 ${count === 1 ? "grid-cols-1 max-w-[220px]" : count === 3 ? "grid-cols-3 max-w-3xl" : "grid-cols-5"}`}>
+                  {Array.from({ length: count }, (_, n) => (
+                    <Thumb key={n} post={p} n={n} client={client} onSwap={() => setSwap({ postId: p.id, slide: n })} />
+                  ))}
+                </div>
+                <div className="grid gap-3 lg:grid-cols-2">
+                  <div className="space-y-2">
+                    {p.slides.map((s, i) => (
+                      <label key={i} className="block">
+                        <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Slide {i + 2} words</span>
+                        <Textarea rows={2} value={s} onChange={(e) => patchPost(p.id, { slides: p.slides.map((x, k) => (k === i ? e.target.value : x)) })} />
+                      </label>
+                    ))}
+                    {p.slides.length > 0 && (
+                      <label className="block">
+                        <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Last slide question</span>
+                        <Input value={p.cta} onChange={(e) => patchPost(p.id, { cta: e.target.value })} />
+                      </label>
+                    )}
+                  </div>
+                  <label className="block">
+                    <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Caption</span>
+                    <Textarea rows={7} value={p.caption} onChange={(e) => patchPost(p.id, { caption: e.target.value })} placeholder="Writing…" />
+                    {p.hashtags.length > 0 && <p className="text-sm text-violet-300 break-words mt-1">{p.hashtags.join(" ")}</p>}
+                  </label>
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </main>
+
+      {posts.length > 0 && (
+        <div className="fixed bottom-0 inset-x-0 border-t border-border/40 bg-background/95 backdrop-blur px-6 py-3 flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">{ready.length} ticked, nothing is scheduled until you press the button.</span>
+          <Button className="ml-auto" disabled={!!busy || !ready.length} onClick={() => setConfirm(true)}>Schedule the ticked posts</Button>
+        </div>
+      )}
+
+      {swap && swapPost && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setSwap(null)}>
+          <div className="bg-background rounded-2xl border border-border/40 p-5 max-w-3xl w-full max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center mb-3">
+              <h3 className="font-semibold">Choose from {preset?.name}'s approved photos</h3>
+              <button type="button" className="ml-auto" onClick={() => setSwap(null)}><X className="w-5 h-5" /></button>
+            </div>
+            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+              {pool.map((ph, i) => (
+                <button key={ph.id} type="button" onClick={() => {
+                  const photos = [...swapPost.photos];
+                  photos[photoIdxFor(swapPost, swap.slide)] = i;
+                  patchPost(swapPost.id, { photos });
+                  setSwap(null);
+                }}>
+                  <img src={ph.url} alt="" className="w-full aspect-[3/4] object-cover rounded-md border border-border/30 hover:border-violet-400" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirm && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4" onClick={() => setConfirm(false)}>
+          <div className="bg-background rounded-2xl border border-border/40 p-5 max-w-lg w-full space-y-3" onClick={(e) => e.stopPropagation()}>
+            <h3 className="font-semibold">Schedule {ready.length} posts for {preset?.name}?</h3>
+            <ul className="text-sm text-muted-foreground max-h-60 overflow-y-auto space-y-0.5">
+              {ready.map((p) => <li key={p.id}>{fmt(p.when)}: {designName(p)}</li>)}
+            </ul>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setConfirm(false)}>Not yet</Button>
+              <Button onClick={scheduleAll}>Yes, schedule them</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
