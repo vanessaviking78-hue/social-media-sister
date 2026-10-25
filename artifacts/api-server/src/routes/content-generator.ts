@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_RULES, HOUSE_VOICE } from "../lib/houseRules";
+import { clientProfileContext } from "./client-profiles";
 
 const router: IRouter = Router();
 
@@ -72,6 +73,8 @@ router.post("/content-generator/generate", async (req: Request, res: Response) =
   if (treatments) clinicLines.push(`Treatments offered: ${treatments}`);
   const clinicContext = clinicLines.join("\n");
 
+  const profileCtx = await clientProfileContext(clinicName);
+
   const systemPrompt = `You generate carousel post content for aesthetic clinics, skin clinics, and wellness practices.
 
 ${voiceInstruction}
@@ -96,7 +99,7 @@ slide3_body
 
 slide4_cta
 A question call to action: one engaging question that is easy and fun to answer in the comments, such as What reminds you of your childhood? Never a DM keyword. Treatment posts say exactly: Drop me a DM to see if you're a good fit for this. No urgency. No NOW.
-${BASE_RULES}`;
+${BASE_RULES}${profileCtx}`;
 
   // Streamed as Server-Sent Events so the client gets posts as each batch finishes,
   // rather than waiting on one long request that can get aborted by an upstream

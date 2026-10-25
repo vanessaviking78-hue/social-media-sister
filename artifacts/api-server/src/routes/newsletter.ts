@@ -5,6 +5,7 @@ import { eq, sql } from "drizzle-orm";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { getVoiceSystemPrompt } from "../lib/voicePrompts";
 import { applySwap, isBlocking, scanOffer, scanText, type ComplianceFlag } from "../lib/newsletterCompliance";
+import { clientProfileContext } from "./client-profiles";
 
 const router: IRouter = Router();
 
@@ -297,7 +298,7 @@ router.post("/newsletter/generate", async (req: Request, res: Response) => {
     const system = `${getVoiceSystemPrompt(preset.voiceStyle || "northern-grit")}
 ${NEWSLETTER_RULES}
 
-${clinicContext(preset, month, offer)}
+${clinicContext(preset, month, offer)}${await clientProfileContext(preset.name)}
 ${past.length ? `\nRECENT ISSUES ALREADY COVERED (do not repeat these angles): ${past.join("; ")}` : ""}
 
 Return JSON only, in exactly this shape:
@@ -377,7 +378,7 @@ router.post("/newsletter/regenerate-section", async (req: Request, res: Response
     const system = `${getVoiceSystemPrompt(preset.voiceStyle || "northern-grit")}
 ${NEWSLETTER_RULES}
 
-${clinicContext(preset, month, def.slot === "sell" ? offer : undefined)}
+${clinicContext(preset, month, def.slot === "sell" ? offer : undefined)}${await clientProfileContext(preset.name)}
 
 You are rewriting ONE section of the newsletter: "${def.label}".
 ${def.brief}

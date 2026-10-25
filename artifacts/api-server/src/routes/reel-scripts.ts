@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE } from "../lib/houseRules";
+import { clientProfileContext } from "./client-profiles";
 
 const router: IRouter = Router();
 
@@ -74,7 +75,7 @@ router.post("/reel-scripts/generate", async (req: Request, res: Response) => {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: REEL_SYSTEM },
+        { role: "system", content: REEL_SYSTEM + (await clientProfileContext(clientName)) },
         { role: "user", content: contextLines.join("\n") },
       ],
       temperature: 0.8,

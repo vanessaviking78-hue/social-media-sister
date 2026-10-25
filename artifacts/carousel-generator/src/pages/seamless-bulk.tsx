@@ -354,7 +354,7 @@ toast.success("Rows matched to carousels in order.");
 
 async function genCaptionFor(c: Carousel): Promise<string | undefined> {
 const bodyText = c.blocks.filter((b) => /^body\d+$/.test(b.id)).map((b) => (b as any).text || "").filter(Boolean).join(" ");
-const res = await fetch(`${BASE}/api/carousel/generate-caption`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ hook: c.row.hook ?? (c.row as any).slide1_hook, subtitle: (c.row as any).slide1_subtitle ?? "", body2: bodyText, body3: "", cta: c.row.cta ?? (c.row as any).slide4_cta }) });
+const res = await fetch(`${BASE}/api/carousel/generate-caption`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ hook: c.row.hook ?? (c.row as any).slide1_hook, subtitle: (c.row as any).slide1_subtitle ?? "", body2: bodyText, body3: "", cta: c.row.cta ?? (c.row as any).slide4_cta , clientName: presets.find((p) => p.id === c.presetId)?.name ?? "" }) });
 if (!res.ok) return undefined;
 const d = await res.json(); return d.caption as string;
 }

@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
+import { clientProfileContext } from "./client-profiles";
 
 const router: IRouter = Router();
 
@@ -28,7 +29,8 @@ function clean(q: unknown): string {
 
 router.post("/meme/lines", async (req: Request, res: Response) => {
   try {
-    const { topic, exclude } = req.body as { topic?: string; exclude?: string[] };
+    const { topic, exclude, clientName } = req.body as { topic?: string; exclude?: string[]; clientName?: string };
+    const profileCtx = await clientProfileContext(clientName);
     if (!topic || !topic.trim()) {
       res.status(400).json({ error: "A topic is required" });
       return;
@@ -41,7 +43,7 @@ router.post("/meme/lines", async (req: Request, res: Response) => {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: MEME_SYSTEM },
+        { role: "system", content: MEME_SYSTEM + profileCtx },
         { role: "user", content: user },
       ],
       temperature: 1.0,

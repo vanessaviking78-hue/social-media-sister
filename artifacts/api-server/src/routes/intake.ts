@@ -5,6 +5,7 @@ import { db } from "@workspace/db";
 import { intakeBatchesTable, contentLibraryTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { logActivity } from "../lib/activityLog";
+import { clientProfileContext, clientProfileContextByPreset } from "./client-profiles";
 
 const router: IRouter = Router();
 
@@ -117,6 +118,7 @@ router.post("/intake/generate", async (req: Request, res: Response) => {
     }));
 
     let generated = 0;
+    const profileCtx = clientName ? await clientProfileContext(clientName) : await clientProfileContextByPreset(presetId);
 
     for (const { type, count } of typeDistribution) {
       const typeLabel = CONTENT_TYPE_LABELS[type] || type;
@@ -141,7 +143,7 @@ Return valid JSON: { "captions": ["caption 1", "caption 2", ...] }`;
         const completion = await openai.chat.completions.create({
           model: "gpt-5.2",
           messages: [
-            { role: "system", content: VANESSA_SYSTEM },
+            { role: "system", content: VANESSA_SYSTEM + profileCtx },
             { role: "user", content: prompt },
           ],
           response_format: { type: "json_object" },

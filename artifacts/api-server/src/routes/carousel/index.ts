@@ -6,6 +6,7 @@ import os from "os";
 import { v4 as uuidv4 } from "uuid";
 import { parse } from "csv-parse/sync";
 import { HOUSE_VOICE } from "../../lib/houseRules";
+import { clientProfileContext, withFootnote } from "../client-profiles";
 
 const router: IRouter = Router();
 
@@ -230,8 +231,8 @@ router.get(
 router.post("/carousel/generate-caption", async (req, res) => {
   try {
     const { openai } = await import("@workspace/integrations-openai-ai-server");
-    const { hook = "", subtitle = "", body2 = "", body3 = "", cta = "" } = req.body as {
-      hook?: string; subtitle?: string; body2?: string; body3?: string; cta?: string;
+    const { hook = "", subtitle = "", body2 = "", body3 = "", cta = "", clientName = "" } = req.body as {
+      hook?: string; subtitle?: string; body2?: string; body3?: string; cta?: string; clientName?: string;
     };
     const slideContext = [
       hook     && `Hook: "${hook}"`,
@@ -260,7 +261,7 @@ router.post("/carousel/generate-caption", async (req, res) => {
       "- Weave in a soft, embedded sales pull, never a hard pitch. Use a small social proof mention, a gentle curiosity gap, or a light natural invite (come and ask, message me if this sounds like you) as the close. It should read like a natural next sentence, not a marketing tag. The reader should feel invited, not sold to.",
       "",
       "Write only the caption text.",
-    ].join("\n");
+    ].join("\n") + (await clientProfileContext(clientName));
 
     const completion = await openai.chat.completions.create({
       model: "gpt-5.2",
@@ -271,7 +272,7 @@ router.post("/carousel/generate-caption", async (req, res) => {
       max_completion_tokens: 400,
     });
 
-    const caption = completion.choices[0]?.message?.content?.trim() ?? "";
+    const caption = await withFootnote(clientName, completion.choices[0]?.message?.content?.trim() ?? "");
     res.json({ caption });
   } catch (e: unknown) {
     const anyErr = e as any;

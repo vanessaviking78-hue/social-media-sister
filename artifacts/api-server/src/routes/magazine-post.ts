@@ -4,7 +4,7 @@ import { STYLE_PROMPTS, RULES, clean } from "./magazine-maker";
 import { clinicNoun } from "./caption-generator";
 import { scanText, applySwap } from "../lib/newsletterCompliance";
 import { followOnVoice, splitHook } from "../lib/hookBank";
-import { clientProfileContext } from "./client-profiles";
+import { clientProfileContext, withFootnote } from "./client-profiles";
 
 const router: IRouter = Router();
 
@@ -126,10 +126,10 @@ ${RULES}`;
       },
       pages: [factPage(j?.funFacts), listPage(j?.forYouIf, "This is for you if...", 100), listPage(j?.helpsMostWith, "Helps most with...", 85)],
       cta: { lead: "If this interests you", word, line: tidy(j?.cta?.line ?? "", 100) },
-      caption: (() => {
+      caption: await (async () => {
         let cap = tidy(j?.caption ?? "", 600);
         if (hookText && !cap.toLowerCase().startsWith(hookText.toLowerCase().slice(0, 30))) cap = `${hookText} ${cap}`;
-        return cap;
+        return withFootnote(clinicName, cap);
       })(),
     });
   } catch (err: unknown) {

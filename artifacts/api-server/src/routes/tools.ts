@@ -1,5 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
+import { clientProfileContext } from "./client-profiles";
 
 const router: IRouter = Router();
 
@@ -83,7 +84,7 @@ router.get("/tools/list", (_req: Request, res: Response) => {
 
 router.post("/tools/generate", async (req: Request, res: Response) => {
   try {
-    const { tool, input } = req.body as { tool?: string; input?: string };
+    const { tool, input, clientName } = req.body as { tool?: string; input?: string; clientName?: string };
     if (!tool || !TOOL_MAP.has(tool)) {
       res.status(400).json({ error: "Unknown tool" });
       return;
@@ -96,7 +97,7 @@ router.post("/tools/generate", async (req: Request, res: Response) => {
     const completion = await openai.chat.completions.create({
       model: "gpt-5.2",
       messages: [
-        { role: "system", content: `${COMPLIANCE}\n\nYour current job: ${t.instruction}` },
+        { role: "system", content: `${COMPLIANCE}\n\nYour current job: ${t.instruction}${await clientProfileContext(clientName)}` },
         { role: "user", content: input.trim() },
       ],
     });

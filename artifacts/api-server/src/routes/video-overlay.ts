@@ -1,12 +1,14 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE } from "../lib/houseRules";
+import { clientProfileContext, withFootnote } from "./client-profiles";
 
 const router: IRouter = Router();
 
 router.post("/video-overlay/generate-captions", async (req: Request, res: Response) => {
   try {
-    const { topic, segmentCount = 4 } = req.body as { topic: string; segmentCount?: number };
+    const { topic, segmentCount = 4, clientName } = req.body as { topic: string; segmentCount?: number; clientName?: string };
+    const profileCtx = await clientProfileContext(clientName);
     if (!topic?.trim()) {
       res.status(400).json({ error: "topic is required" });
       return;
@@ -24,6 +26,7 @@ The house voice above is the voice for everything you write. Where the brief bel
 
 You are a social media content writer. Generate exactly ${count} text overlays for a social media video. The first ${count - 1} should be punchy hook/body lines, each 5-12 words, bold and impactful, like captions that appear on screen one at a time. The final overlay (overlay #${count}) MUST be one engaging question that is easy and fun to answer in the comments, e.g. What reminds you of your childhood? (for a treatment reel, exactly: Drop me a DM to see if you're a good fit for this). Never mention a website or link in bio. NEVER use em dashes (the character —). Use a period, exclamation mark, or just a space instead. Return ONLY a JSON array of strings, nothing else. Example for 4 overlays: ["Here is what your clinic is missing on Instagram.", "Patients are searching for you. Are you showing up?", "3 content types that actually drive bookings.", "DM us CLINIC and we will show you exactly what to post!"]`,
         },
+        ...(profileCtx ? [{ role: "system" as const, content: profileCtx.trim() }] : []),
         {
           role: "user",
           content: `Topic: ${topic.trim()}\n\nGenerate ${count} text overlays for this video. Remember: first ${count - 1} are punchy hooks/points (5-12 words each), and the last one is an engaging question CTA.`,
@@ -70,7 +73,8 @@ You are a social media content writer. Generate exactly ${count} text overlays f
 
 router.post("/video-overlay/generate-ig-caption", async (req: Request, res: Response) => {
   try {
-    const { topic, overlayTexts } = req.body as { topic?: string; overlayTexts?: string[] };
+    const { topic, overlayTexts, clientName } = req.body as { topic?: string; overlayTexts?: string[]; clientName?: string };
+    const profileCtx = await clientProfileContext(clientName);
     const context = [
       topic?.trim() ? `Topic: ${topic.trim()}` : "",
       overlayTexts?.length ? `Video overlay texts: ${overlayTexts.filter(Boolean).join(" | ")}` : "",
@@ -93,6 +97,7 @@ The house voice above is the voice for everything you write. Where the brief bel
 
 You are a social media copywriter for Instagram Reels. Write a single Instagram caption for a Reel video. The caption should: open with a strong hook (1-2 sentences), follow with 2-3 short punchy lines expanding on the topic, and end with a closing question that relates to the reel, written personally like a friend chatting, where the reel is about a treatment, the last line is exactly: Drop me a DM to see if you're a good fit for this, never mentioning a website or link in bio. The closing call to action is one engaging question that is easy to answer in the comments, such as What reminds you of your childhood? Finish with exactly 5 relevant area based hashtags on a new line. Never mention Botox, anti-wrinkle, wrinkles, injectables, injections or prescription medicines. Use line breaks between sections for readability. Keep the whole caption under 220 words. Do NOT use em dashes. Return only the caption text, nothing else.`,
         },
+        ...(profileCtx ? [{ role: "system" as const, content: profileCtx.trim() }] : []),
         {
           role: "user",
           content: context,
@@ -106,7 +111,7 @@ You are a social media copywriter for Instagram Reels. Write a single Instagram 
       return;
     }
 
-    res.json({ caption: content.trim().replace(/—/g, "-") });
+    res.json({ caption: await withFootnote(clientName, content.trim().replace(/—/g, "-")) });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Failed to generate caption";
     res.status(500).json({ error: msg });

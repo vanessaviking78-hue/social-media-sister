@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOUSE_VOICE } from "../lib/houseRules";
+import { clientProfileContext, withFootnote } from "./client-profiles";
 
 const router: IRouter = Router();
 
@@ -134,7 +135,7 @@ async function writeOne(kind: HairPostKind, n: Notes) {
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",
     messages: [
-      { role: "system", content: systemPrompt(kind, n) },
+      { role: "system", content: systemPrompt(kind, n) + (await clientProfileContext(n.businessName)) },
       { role: "user", content: `Write the ${kind} post for ${n.businessName}.` },
     ],
     temperature: 0.9,
@@ -149,6 +150,7 @@ async function writeOne(kind: HairPostKind, n: Notes) {
   const hook = clean(j.hook, tweet ? 240 : 140);
   let caption = clean(j.caption, 900);
   if (!tweet && hook && !caption.toLowerCase().startsWith(hook.toLowerCase().slice(0, 24))) caption = `${hook}\n\n${caption}`;
+  if (!tweet) caption = await withFootnote(n.businessName, caption);
   const replyWord = String(j.replyWord ?? n.replyWords[kind] ?? "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 16);
   const hashtags = fiveTags(j.hashtags, n.area, kind);
 

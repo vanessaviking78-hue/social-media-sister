@@ -1792,6 +1792,7 @@ async function openBankForMany(selectedItems: any[]) {
           body2:    item.blocks.find(b => b.id === "body2")?.text    ?? "",
           body3:    item.blocks.find(b => b.id === "body3")?.text    ?? "",
           cta:      item.blocks.find(b => b.id === "cta")?.text      ?? "",
+          clientName: selectedPreset?.name ?? "",
         }),
       });
     if (!res.ok) { let d = "Caption generation failed"; try { const b = await res.json(); d = b?.debug || b?.error || d; } catch {} throw new Error(d); }
@@ -1822,6 +1823,7 @@ async function openBankForMany(selectedItems: any[]) {
                                                       body2:    item.blocks.find(b => b.id === "body2")?.text    ?? "",
                                                       body3:    item.blocks.find(b => b.id === "body3")?.text    ?? "",
                                                       cta:      item.blocks.find(b => b.id === "cta")?.text      ?? "",
+                                          clientName: selectedPreset?.name ?? "",
                                         }),
                             });
                             if (res.ok) {

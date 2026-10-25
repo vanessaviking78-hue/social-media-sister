@@ -14,6 +14,7 @@ import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
 import { parse as csvParse } from "csv-parse/sync";
 import { BASE_RULES, CAPTION_TONE_PROMPTS } from "./caption-generator";
+import { clientProfileContext, withFootnote } from "./client-profiles";
 
 const router: IRouter = Router();
 
@@ -476,7 +477,7 @@ Second line: ${item.secondHook}
 CTA: ${item.cta}
 
 Return plain text only, no JSON, no quote marks around it, no title.
-${BASE_RULES}`;
+${BASE_RULES}${await clientProfileContext(clinicName)}`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -485,8 +486,9 @@ ${BASE_RULES}`;
       max_tokens: 400,
     });
 
-    const caption = completion.choices[0]?.message?.content?.trim() ?? "";
-    if (!caption) { res.status(500).json({ error: "No caption returned" }); return; }
+    const written = completion.choices[0]?.message?.content?.trim() ?? "";
+    if (!written) { res.status(500).json({ error: "No caption returned" }); return; }
+    const caption = await withFootnote(clinicName, written);
 
     await db.update(engagingReelsTable).set({ caption }).where(eq(engagingReelsTable.id, id));
     res.json({ caption });

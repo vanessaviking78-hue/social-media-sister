@@ -376,7 +376,7 @@ export default function VideoOverlay() {
       const res = await fetch(`${import.meta.env.BASE_URL}api/video-overlay/generate-ig-caption`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: topic.trim(), overlayTexts: segments.filter(Boolean) }),
+        body: JSON.stringify({ topic: topic.trim(), overlayTexts: segments.filter(Boolean), clientName: igPresets.find((p) => String(p.id) === igPresetId)?.name ?? "" }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({ error: `Server error (${res.status})` }));
@@ -403,7 +403,7 @@ export default function VideoOverlay() {
       const res = await fetch(`${import.meta.env.BASE_URL}api/video-overlay/generate-captions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic: topic.trim(), segmentCount }),
+        body: JSON.stringify({ topic: topic.trim(), segmentCount, clientName: igPresets.find((p) => String(p.id) === igPresetId)?.name ?? "" }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({ error: `Server error (${res.status})` }));

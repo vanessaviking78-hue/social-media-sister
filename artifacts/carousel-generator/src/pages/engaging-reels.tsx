@@ -17,6 +17,7 @@ import {
  Move,
 } from "lucide-react";
 import JSZip from "jszip";
+import { usePresets } from "@/lib/use-presets";
 import { saveAs } from "file-saver";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const API_ORIGIN = "https://workspaceapi-server-production-0f0d.up.railway.app";
@@ -80,6 +81,8 @@ export default function EngagingReels() {
  const [loading, setLoading] = useState(true);
  const [boxColor, setBoxColor] = useState("#ffffff");
  const [captionStyle, setCaptionStyle] = useState("1");
+ const { presets } = usePresets();
+ const [clinicName, setClinicName] = useState(() => { try { return localStorage.getItem("engaging-reels-client") ?? ""; } catch { return ""; } });
  const [busyId, setBusyId] = useState<number | null>(null);
  const [busyAction, setBusyAction] = useState<"render" | "caption" | "delete" | "save" | null>(null);
  const [editingId, setEditingId] = useState<number | null>(null);
@@ -265,7 +268,7 @@ export default function EngagingReels() {
  const r = await fetch(`${API_ORIGIN}/api/engaging-reels/${id}/caption`, {
  method: "POST",
  headers: authHeaders(),
- body: JSON.stringify({ tone: captionStyle }),
+ body: JSON.stringify({ tone: captionStyle, clinicName }),
  });
  if (!r.ok) throw new Error((await r.json().catch(() => ({})))?.error || "Caption generation failed");
  await load();
@@ -369,6 +372,19 @@ export default function EngagingReels() {
  <UploadCloud className="w-4 h-4 text-pink-400" />
  <h2 className="font-semibold text-sm">Upload a batch</h2>
  </div>
+ <label className="block text-xs text-muted-foreground">
+ Which client are these reels for? Their getting to know you answers, homework, preset and footnote shape every caption.
+ <select
+ value={clinicName}
+ onChange={(e) => { setClinicName(e.target.value); try { localStorage.setItem("engaging-reels-client", e.target.value); } catch { /* ignore */ } }}
+ className="mt-1 block w-full rounded-md border border-border/50 bg-background px-2 py-1.5 text-sm text-foreground"
+ >
+ <option value="">Choose a client</option>
+ {[...presets].sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" })).map((p) => (
+ <option key={p.id} value={p.name}>{p.name}</option>
+ ))}
+ </select>
+ </label>
  <p className="text-xs text-muted-foreground">
  Silent B-roll only, 6 to 10 seconds each — up to 20 clips at once, plus one CSV with a text1, text2, text3
  column and one row per clip, in the same order as the files you pick below. The AI works out which

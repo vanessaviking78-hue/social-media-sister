@@ -4,6 +4,7 @@ import { clientPresetsTable } from "@workspace/db/schema";
 import { isNotNull, and, sql } from "drizzle-orm";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { logger } from "../lib/logger";
+import { clientProfileContext } from "./client-profiles";
 
 const router: IRouter = Router();
 
@@ -519,7 +520,7 @@ VOICE FOR THIS ONE: ${directive}
 ${isClient ? clientContentRules : prospectContentRules}
 ${COMPLIANCE_AND_WRITING_RULES}
 
-OUTPUT: clean semantic HTML only (h2, p, strong, ul, li). No inline styles, no html/head/body wrapper, no markdown, no code fences, no preamble.`;
+OUTPUT: clean semantic HTML only (h2, p, strong, ul, li). No inline styles, no html/head/body wrapper, no markdown, no code fences, no preamble.${isClient ? (await clientProfileContext(row.profile.name || row.profile.username)) + "\n\n(This is written by me, Vanessa, in my own voice, so use the information above for what matters to this client, their patients and what they will not want said, not for the voice.)" : ""}`;
 
   const response = await openai.responses.create({
     model: "gpt-5.5",

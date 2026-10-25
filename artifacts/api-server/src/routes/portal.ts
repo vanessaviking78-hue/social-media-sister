@@ -14,6 +14,7 @@ import { getVapidPublicKey } from "../lib/push";
 import { notifyDownload, notifyRantComment, notifyReject } from "../lib/notify";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { BASE_RULES } from "./caption-generator";
+import { clientProfileContext, withFootnote } from "./client-profiles";
 
 const router: IRouter = Router();
 
@@ -363,7 +364,7 @@ router.post("/portal/:token/reels-challenge/:index/script", async (req, res) => 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: systemPrompt + (await clientProfileContext(preset.name)) },
         { role: "user", content: "Write the script now." },
       ],
       temperature: 0.85,
@@ -615,7 +616,7 @@ router.post("/portal/:token/posts/:id/generate-caption", async (req, res) => {
       .where(eq(clientPresetsTable.clientPortalToken, token));
     if (!preset) { res.status(404).json({ error: "not_found" }); return; }
 
-    const systemPrompt = `You write a single Instagram/Facebook caption for an aesthetics clinic called ${preset.name}. Rewrite the caption below exactly the way the client has asked. Return plain text only, no JSON, no quote marks around it, no title.\n${BASE_RULES}`;
+    const systemPrompt = `You write a single Instagram/Facebook caption for an aesthetics clinic called ${preset.name}. Rewrite the caption below exactly the way the client has asked. Return plain text only, no JSON, no quote marks around it, no title.\n${BASE_RULES}${await clientProfileContext(preset.name)}`;
     const userContent = `Post title: ${title || "(no title)"}\nCurrent caption: ${currentCaption || "(none yet)"}\nWhat the client wants changed: ${note?.trim() || "Just make it better."}`;
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
@@ -626,8 +627,9 @@ router.post("/portal/:token/posts/:id/generate-caption", async (req, res) => {
       temperature: 0.9,
       max_tokens: 400,
     });
-    const caption = completion.choices[0]?.message?.content?.trim() || "";
-    if (!caption) { res.status(500).json({ error: "No caption returned" }); return; }
+    const written = completion.choices[0]?.message?.content?.trim() || "";
+    if (!written) { res.status(500).json({ error: "No caption returned" }); return; }
+    const caption = await withFootnote(preset.name, written);
     res.json({ caption });
   } catch (err: any) {
     res.status(500).json({ error: err.message || "Failed to generate caption" });

@@ -111,16 +111,99 @@ const LABELS: Record<string, string> = {
   extra: "What else makes them them",
 };
 
+export function normaliseSite(url?: string | null): string {
+  const first = String(url ?? "").trim().split(/\s+/)[0] ?? "";
+  return first.toLowerCase().replace(/[,;.]+$/, "").replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/+$/, "");
+}
+
+let siteCacheReady: Promise<void> | null = null;
+function ensureSiteCache(): Promise<void> {
+  if (!siteCacheReady) {
+    siteCacheReady = db
+      .execute(sql`
+        CREATE TABLE IF NOT EXISTS client_site_cache (
+          site TEXT PRIMARY KEY,
+          treatments_json TEXT NOT NULL DEFAULT '[]',
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `)
+      .then(() => undefined)
+      .catch(e => { siteCacheReady = null; throw e; });
+  }
+  return siteCacheReady;
+}
+
+/** Remembers the treatments read from a clinic website so every writing tool can use them. Never throws. */
+export async function rememberSiteTreatments(website: string, treatments: string[]): Promise<void> {
+  try {
+    const site = normaliseSite(website);
+    if (!site || !treatments.length) return;
+    await ensureSiteCache();
+    await db.execute(sql`
+      INSERT INTO client_site_cache (site, treatments_json, updated_at) VALUES (${site}, ${JSON.stringify(treatments.slice(0, 40))}, NOW())
+      ON CONFLICT (site) DO UPDATE SET treatments_json = EXCLUDED.treatments_json, updated_at = NOW()
+    `);
+  } catch { /* the cache is a nicety */ }
+}
+
+/** The caption footnote saved on a client's preset, or an empty string. Never throws. */
+export async function captionFootnoteFor(clientName?: string | null): Promise<string> {
+  const n = String(clientName ?? "").trim();
+  if (n.length < 2) return "";
+  try {
+    const r = await db.execute(sql`SELECT caption_footnote FROM client_presets WHERE lower(name) = lower(${n}) LIMIT 1`);
+    return String((r.rows[0] as { caption_footnote?: string | null } | undefined)?.caption_footnote ?? "").trim();
+  } catch {
+    return "";
+  }
+}
+
+/** Adds the client's own footnote to the end of a caption, once. Never throws. */
+export async function withFootnote(clientName: string | null | undefined, caption: string): Promise<string> {
+  const foot = await captionFootnoteFor(clientName);
+  if (!foot || !caption.trim() || caption.includes(foot)) return caption;
+  return `${caption.trimEnd()}\n\n${foot}`;
+}
+
+/** The same client context, found from a preset id for the tools that work from presets. Never throws. */
+export async function clientProfileContextByPreset(presetId?: number | string | null): Promise<string> {
+  const id = Number(presetId);
+  if (!Number.isFinite(id) || id <= 0) return "";
+  try {
+    const r = await db.execute(sql`SELECT name FROM client_presets WHERE id = ${id} LIMIT 1`);
+    const name = (r.rows[0] as { name: string } | undefined)?.name;
+    return name ? await clientProfileContext(name) : "";
+  } catch {
+    return "";
+  }
+}
+
 /**
  * What I know about a client, written as a block for the caption, hook, story and copy prompts so the
  * writing sounds like them. It gathers Getting to know you, their client question answers, their weekly
  * homework replies and the details saved on their preset (website, area, audience, pillars, notes).
  * Returns an empty string when there is nothing yet. Never throws.
  */
+const ctxCache = new Map<string, { at: number; text: string }>();
+const CTX_TTL_MS = 15_000;
+
 export async function clientProfileContext(clientName?: string | null): Promise<string> {
   const n = String(clientName ?? "").trim();
   if (n.length < 2) return "";
+  const key = n.toLowerCase();
+  const hit = ctxCache.get(key);
+  if (hit && Date.now() - hit.at < CTX_TTL_MS) return hit.text;
+  const text = await buildClientProfileContext(n);
+  ctxCache.set(key, { at: Date.now(), text });
+  if (ctxCache.size > 200) ctxCache.delete(ctxCache.keys().next().value as string);
+  return text;
+}
+
+async function buildClientProfileContext(clientName: string): Promise<string> {
+  const n = String(clientName ?? "").trim();
+  if (n.length < 2) return "";
   const parts: string[] = [];
+  try { await ensureSiteCache(); } catch { /* skip */ }
   const clip = (t: unknown, max = 600) => String(t ?? "").trim().replace(/\s+/g, " ").slice(0, max);
 
   // Getting to know you
@@ -174,7 +257,8 @@ export async function clientProfileContext(clientName?: string | null): Promise<
   // What is saved on their preset
   try {
     const r = await db.execute(sql`
-      SELECT website_url, seo_area, target_audience, content_pillars, brand_notes FROM client_presets
+      SELECT website_url, seo_area, target_audience, content_pillars, brand_notes, voice_style, caption_footnote,
+             booking_link, newsletter_name, clinic_address FROM client_presets
       WHERE lower(name) = lower(${n}) LIMIT 1
     `);
     const p = (r.rows as Record<string, string | null>[])[0];
@@ -182,10 +266,28 @@ export async function clientProfileContext(clientName?: string | null): Promise<
       const lines: string[] = [];
       if (clip(p.website_url)) lines.push(`- Website (background reading only, never mention it or a link in bio in any post): ${clip(p.website_url, 200)}`);
       if (clip(p.seo_area)) lines.push(`- Area: ${clip(p.seo_area, 200)}`);
+      if (clip(p.clinic_address)) lines.push(`- Clinic address (background only, never put it in a post): ${clip(p.clinic_address, 200)}`);
       if (clip(p.target_audience)) lines.push(`- Target audience: ${clip(p.target_audience)}`);
       if (clip(p.content_pillars)) lines.push(`- Content pillars: ${clip(p.content_pillars)}`);
       if (clip(p.brand_notes)) lines.push(`- Brand notes: ${clip(p.brand_notes)}`);
+      if (clip(p.voice_style)) lines.push(`- Their chosen voice leans: ${clip(p.voice_style, 60).replace(/-/g, " ")} (still written in my one house voice, this only tells you how warm, cheeky or polished to be)`);
+      if (clip(p.newsletter_name)) lines.push(`- Newsletter name: ${clip(p.newsletter_name, 120)}`);
+      if (clip(p.booking_link)) lines.push(`- Booking link (background only, never put a link or web address in any post): ${clip(p.booking_link, 200)}`);
+      if (clip(p.caption_footnote, 400)) lines.push(`- Footnote that is added automatically under every one of their captions (never write it out, never repeat it and never contradict it): ${clip(p.caption_footnote, 400)}`);
       if (lines.length) parts.push(`SAVED ON THEIR PRESET:\n${lines.join("\n")}`);
+      // Treatments read from their own website, remembered from the treatment dropdowns.
+      const fromFootnote = (p.caption_footnote ?? "").match(/(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9-]*(?:\.[a-z0-9-]+)*\.(?:co\.uk|com|uk|org|net|clinic|health|beauty)(?:\/[^\s,;)]*)?/i)?.[0];
+      const site = normaliseSite(p.website_url || fromFootnote);
+      if (site) {
+        try {
+          const t = await db.execute(sql`SELECT treatments_json FROM client_site_cache WHERE site = ${site} LIMIT 1`);
+          const raw = (t.rows[0] as { treatments_json: string } | undefined)?.treatments_json;
+          const list = raw ? (JSON.parse(raw) as unknown) : null;
+          if (Array.isArray(list) && list.length) {
+            parts.push(`TREATMENTS ON THEIR OWN WEBSITE (only write about these, never invent one, and neutral wording only for anything prescription only):\n- ${list.filter((x): x is string => typeof x === "string").slice(0, 40).join(", ")}`);
+          }
+        } catch { /* the cache is a nicety */ }
+      }
     }
   } catch { /* skip this part */ }
 

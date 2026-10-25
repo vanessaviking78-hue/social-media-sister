@@ -2,6 +2,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { HOOK_RULES } from "./caption-generator";
 import { HOUSE_VOICE } from "../lib/houseRules";
+import { clientProfileContext } from "./client-profiles";
 
 const router: IRouter = Router();
 
@@ -91,7 +92,7 @@ Return JSON only, in exactly this shape and within these limits:
   ],
   "cta": { "headline": "max 8 words", "body": "max 30 words" }
 }
-${RULES}`;
+${RULES}${await clientProfileContext(clinicName)}`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",

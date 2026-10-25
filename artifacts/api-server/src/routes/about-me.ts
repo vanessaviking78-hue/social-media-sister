@@ -12,6 +12,7 @@ import { eq, desc } from "drizzle-orm";
 import { objectStorageClient } from "../lib/objectStorage";
 import { v4 as uuid } from "uuid";
 import sharp from "sharp";
+import { clientProfileContext, withFootnote } from "./client-profiles";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -829,8 +830,8 @@ router.post("/about-me/:id/render", async (req, res) => {
 router.post("/about-me/generate-caption", async (req, res) => {
   try {
     const { openai } = await import("@workspace/integrations-openai-ai-server");
-    const { title = "", subtitle = "", words = [] } = req.body as {
-      title?: string; subtitle?: string; words?: { text: string }[];
+    const { title = "", subtitle = "", words = [], clientName = "" } = req.body as {
+      title?: string; subtitle?: string; words?: { text: string }[]; clientName?: string;
     };
     const wordList = (words as { text: string }[]).map((w) => w.text).filter(Boolean).join(", ");
     const context = [
@@ -850,10 +851,10 @@ router.post("/about-me/generate-caption", async (req, res) => {
 ].join(" ");
     const completion = await openai.chat.completions.create({
       model: "gpt-5.2",
-      messages: [{ role: "user", content: prompt }],
+      messages: [{ role: "user", content: prompt + (await clientProfileContext(clientName)) }],
       max_completion_tokens: 280,
     });
-    const caption = completion.choices[0]?.message?.content?.trim() ?? "";
+    const caption = await withFootnote(clientName, completion.choices[0]?.message?.content?.trim() ?? "");
     res.json({ caption });
   } catch (e: unknown) {
     req.log.error(e, "generate-caption failed");

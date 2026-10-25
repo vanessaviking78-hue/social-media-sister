@@ -3,7 +3,7 @@ import multer from "multer";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { CAPTION_TONE_PROMPTS, RYDER_TONE, isRyder, HOOK_RULES, DENTAL_RULES, isDental } from "./caption-generator";
 import { validateHost } from "./aiPortrait";
-import { clientProfileContext } from "./client-profiles";
+import { clientProfileContext, rememberSiteTreatments } from "./client-profiles";
 import { parsePickedHooks, followOnVoice, splitHook, type PickedHook } from "../lib/hookBank";
 import { db } from "@workspace/db";
 import { clientPresetsTable } from "@workspace/db/schema";
@@ -634,6 +634,7 @@ router.post("/client-stylish/treatments", async (req: Request, res: Response) =>
     });
     const parsed = JSON.parse(completion.choices[0]?.message?.content ?? "{}") as { treatments?: unknown };
     const list = Array.isArray(parsed.treatments) ? parsed.treatments.filter((t): t is string => typeof t === "string").map(t => t.trim()).filter(Boolean).slice(0, 40) : [];
+    void rememberSiteTreatments(String((req.body as { website?: string } | undefined)?.website ?? ""), list);
     res.json({ treatments: list });
   } catch (err) {
     req.log?.error({ err }, "client-stylish: treatments error");

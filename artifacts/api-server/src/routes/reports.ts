@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { clientPresetsTable, scheduledPostsTable, dmInteractionsTable } from "@workspace/db/schema";
 import { eq, and, gte, lte } from "drizzle-orm";
 import { openai } from "@workspace/integrations-openai-ai-server";
+import { clientProfileContext } from "./client-profiles";
 
 const router: IRouter = Router();
 
@@ -251,7 +252,7 @@ If a data point says not available, do not invent a number for it, just don't le
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: systemPrompt + (await clientProfileContext(report.preset.name)) + "\n\n(This is written by me, Vanessa, in my own voice, so use the information above for what matters to this client, their patients and what they will not want said, not for the voice.)" },
         { role: "user", content: "Write the three paragraph report now." },
       ],
       temperature: 0.8,

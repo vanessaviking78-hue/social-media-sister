@@ -5,6 +5,7 @@ import { sql } from "drizzle-orm";
 import { openai } from "@workspace/integrations-openai-ai-server";
 import { logger } from "../lib/logger";
 import { notifyClientByName } from "../lib/push";
+import { clientProfileContext } from "./client-profiles";
 
 const router: IRouter = Router();
 
@@ -94,7 +95,7 @@ A brief written directly to the clinic owner explaining the idea and how to actu
 
 draftContent
 A ready-to-use piece of copy (a social caption, email, or short post) announcing or promoting the idea, that the clinic could post or send as-is or lightly tweak. 4-6 sentences.
-${COMPLIANCE_RULES}`;
+${COMPLIANCE_RULES}${await clientProfileContext(preset.name)}`;
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",

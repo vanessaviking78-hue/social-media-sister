@@ -10,6 +10,7 @@ import { eq } from "drizzle-orm";
 import { randomBytes } from "crypto";
 import { getVoiceSystemPrompt } from "./voicePrompts";
 import { logger } from "./logger";
+import { clientProfileContext } from "../routes/client-profiles";
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -117,7 +118,7 @@ ${captionHint}
 Generate the following as a JSON object (no markdown fences, no extra text):
 ${FORMAT_PROMPTS[type]}
 
-All content must be MHRA/ASA compliant. No em dashes. Each closing question must be different and specific to that post, never Comment WORD.`;
+All content must be MHRA/ASA compliant. No em dashes. Each closing question must be different and specific to that post, never Comment WORD.${await clientProfileContext(clinicName)}`;
 
   const completion = await openai.chat.completions.create({
     model: "gpt-4o",

@@ -4,6 +4,7 @@ import { trialBundlesTable } from "@workspace/db/schema";
 import { randomBytes } from "crypto";
 import { getVoiceSystemPrompt } from "./voicePrompts";
 import { logger } from "./logger";
+import { clientProfileContext } from "../routes/client-profiles";
 
 export interface GenerateBundleOptions {
   clinicName: string;
@@ -62,7 +63,7 @@ Generate 4 content pieces in this exact JSON structure (no extra text, no markdo
   }
 }
 
-Voice style: follow the system prompt voice exactly. All content MHRA/ASA compliant. No em dashes. Each closing question must be different and specific to that post, never Comment WORD.`;
+Voice style: follow the system prompt voice exactly. All content MHRA/ASA compliant. No em dashes. Each closing question must be different and specific to that post, never Comment WORD.${await clientProfileContext(clinicName)}`;
 
   const completion = await openai.chat.completions.create({
     model: "gpt-5.2",

@@ -106,7 +106,7 @@ export default function MemeGenerator() {
       const r = await fetch(`${BASE}/api/meme/lines`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topic, exclude: more ? seen : [] }),
+        body: JSON.stringify({ topic, exclude: more ? seen : [], clientName }),
       });
       const d = await r.json().catch(() => ({})) as { quotes?: string[]; error?: string };
       if (!r.ok || !d.quotes?.length) throw new Error(d.error || "Could not write quotes");
