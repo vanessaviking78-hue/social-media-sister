@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, CalendarClock, Download, Ghost, ImagePlus, Loader2, RotateCcw, Sparkles, Type, X } from "lucide-react";
+import { ArrowLeft, CalendarClock, Download, Ghost, ImagePlus, Loader2, Plus, RotateCcw, Sparkles, Trash2, Type, X } from "lucide-react";
 import { toast } from "sonner";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -297,10 +297,11 @@ async function uploadPngs(dataUrls: string[], names: string[]): Promise<string[]
   return urls;
 }
 
-const freshPosts = (): Post[] =>
-  HALLOWEEN_DESIGNS.map((d) => ({
-    id: uid(), design: d.id, text: { ...d.defaults }, photo: null, focus: DEFAULT_FOCUS, caption: "", hashtags: [], selected: true, busy: false,
-  }));
+const MAX_POSTS = 3;
+const freshPosts = (): Post[] => [];
+const newPost = (design: Post["design"]): Post => ({
+  id: uid(), design, text: { ...HALLOWEEN_BY_ID[design].defaults }, photo: null, focus: DEFAULT_FOCUS, caption: "", hashtags: [], selected: true, busy: false,
+});
 
 // ---------------------------------------------------------------------------
 // The page
@@ -684,7 +685,7 @@ export default function HalloweenPosts() {
 
         {/* toolbar */}
         <section className="flex flex-wrap items-center gap-3">
-          <p className="text-sm text-muted-foreground">Goes out twice a day (12 hours apart) so the ten posts finish on 31 October. You can move any date or the gap when you schedule.</p>
+          <p className="text-sm text-muted-foreground">Choose up to {MAX_POSTS} Halloween posts for this client, one at a time. Goes out twice a day (12 hours apart) and you can move any date or the gap when you schedule.</p>
           <div className="ml-auto flex flex-wrap items-center gap-3">
             <Button variant="outline" onClick={() => setPosts((l) => { const all = l.every((x) => x.selected); return l.map((p) => ({ ...p, selected: !all })); })}>Tick / untick all</Button>
             <Button onClick={writeAll} disabled={!!busy || !selected.length}>
@@ -699,6 +700,23 @@ export default function HalloweenPosts() {
           </div>
         </section>
 
+        {/* pick the posts one by one */}
+        {preset && posts.length < MAX_POSTS && (
+          <section className="rounded-2xl border border-border/30 p-5 space-y-3">
+            <h2 className="font-semibold">
+              {posts.length === 0 ? "Choose the first post" : `Choose post ${posts.length + 1} of ${MAX_POSTS}`}
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {HALLOWEEN_DESIGNS.filter((d) => !posts.some((p) => p.design === d.id)).map((d) => (
+                <Button key={d.id} variant="outline" size="sm" onClick={() => setPosts((l) => [...l, newPost(d.id)])}>
+                  <Plus className="w-4 h-4 mr-1.5" /> {d.name}
+                </Button>
+              ))}
+            </div>
+          </section>
+        )}
+        {!preset && <p className="text-sm text-muted-foreground">Choose a client to start picking their Halloween posts.</p>}
+
         {/* posts */}
         <div className="grid gap-5 lg:grid-cols-2">
           {shown.map((post, pi) => {
@@ -710,6 +728,7 @@ export default function HalloweenPosts() {
                 <div className="flex flex-wrap items-center gap-3">
                   <input type="checkbox" checked={post.selected} onChange={(e) => patchPost(post.id, { selected: e.target.checked })} />
                   <h2 className="font-semibold">{pi + 1}. {def.name}</h2>
+                  <button type="button" title="Remove this post" onClick={() => setPosts((l) => l.filter((x) => x.id !== post.id))} className="ml-auto text-muted-foreground hover:text-foreground"><Trash2 className="w-4 h-4" /></button>
                   <div className="ml-auto">
                     <Button size="sm" variant="outline" disabled={post.busy || !!busy} onClick={() => writeCopy(post)}>
                       {post.busy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1.5" />}
