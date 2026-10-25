@@ -129,7 +129,8 @@ export default function MonthPlanner() {
 
   const [year, month] = ym.split("-").map(Number);
   const preset = presets.find((p) => String(p.id) === clientId);
-  const { data: allApproved = [] } = useApprovedImages("");
+  const { data: approvedData } = useApprovedImages("");
+  const allApproved = useMemo(() => approvedData ?? [], [approvedData]);
 
   useEffect(() => { loadGoogleFonts(); }, []);
 
@@ -162,7 +163,8 @@ export default function MonthPlanner() {
   }, [preset?.id, owner, role, area]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The client's approved photos become the pool every post draws from.
-  const approvedForClient = useMemo(() => (preset ? allApproved.filter((i) => i.clientName === preset.name) : []), [allApproved, preset]);
+  const approvedForClient = useMemo(() => (preset ? allApproved.filter((i) => i.clientName === preset.name) : []), [allApproved, preset?.name]); // eslint-disable-line react-hooks/exhaustive-deps
+  const approvedKey = approvedForClient.map((i) => i.id).join(",");
   useEffect(() => {
     let live = true;
     setPool([]);
@@ -181,7 +183,7 @@ export default function MonthPlanner() {
       if (live) { setPool(files); setPoolBusy(false); }
     })();
     return () => { live = false; };
-  }, [approvedForClient]);
+  }, [approvedKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const client: Client = useMemo(() => ({
     businessName: preset?.name ?? "",
