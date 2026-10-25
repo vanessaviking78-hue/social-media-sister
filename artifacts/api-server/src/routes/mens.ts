@@ -40,7 +40,7 @@ function fiveTags(raw: unknown, area: string): string[] {
 }
 
 type Notes = {
-  businessName: string; ownerName: string; role: string; area: string; audience: string; brandNotes: string; topic: string; slides: string; asManager: boolean;
+  businessName: string; ownerName: string; role: string; area: string; audience: string; brandNotes: string; topic: string; intro: string; slides: string; asManager: boolean;
 };
 
 function systemPrompt(n: Notes): string {
@@ -56,7 +56,7 @@ The house voice above is the voice for everything you write.
 
 ${voice}
 
-THIS IS A MEN'S POST, an eight slide carousel for the men's section that goes out about every 20 days. The slides are already designed. Topic: ${n.topic}. It is warm, funny and straight talking, it makes men feel they are allowed to ask questions, and it is just as shareable by the women who tag their husbands, brothers and dads. Honest, consultation first, never a hard sell.
+THIS IS ${n.intro}. It goes out about every 20 days and the slides are already designed. Topic: ${n.topic}. Honest, consultation first, never a hard sell.
 
 WHAT THE SLIDES SAY:
 ${n.slides}
@@ -97,7 +97,8 @@ router.post("/mens/copy", async (req: Request, res: Response) => {
       area: str(b.area, 80) || "Yorkshire",
       audience: str(b.audience, 200),
       brandNotes: str(b.brandNotes, 600),
-      topic: str(b.topic, 300) || "men and aesthetics",
+      topic: str(b.topic, 300) || "aesthetics",
+      intro: str(b.intro, 600) || "a feature post, a carousel that goes out about every 20 days",
       slides: str(b.slides, 3000),
       asManager: /social media sister/i.test(businessName),
     };

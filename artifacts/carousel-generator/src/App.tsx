@@ -171,6 +171,7 @@ function ProtectedRouter() {
       <Route path="/treatments" component={Treatments} />
       <Route path="/unique" component={UniquePosts} />
       <Route path="/month-planner" component={MonthPlanner} />
+      <Route path="/features" component={Mens} />
       <Route path="/mens" component={Mens} />
       <Route path="/ninety-days" component={NinetyDays} />
       <Route path="/xmas-month" component={XmasMonth} />

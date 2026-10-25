@@ -37,7 +37,7 @@ async function hostedSlides(folder: string, count: number): Promise<string[]> {
   for (let n = 1; n <= count; n++) {
     const res = await fetch(slideUrl(folder, n));
     const blob = await res.blob();
-    if (!res.ok || !blob.type.startsWith("image/")) throw new Error("The men's slide images have not been added yet, so I can't schedule this one.");
+    if (!res.ok || !blob.type.startsWith("image/")) throw new Error("The slide images have not been added yet, so I can't schedule this one.");
     dataUrls.push(await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(blob); }));
   }
   const urls = await uploadPngs(dataUrls, dataUrls.map((_, i) => `mens-${folder}-${i + 1}-${Date.now()}.png`));
@@ -88,7 +88,7 @@ export default function Mens() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           businessName: preset.name, ownerName: owner.trim(), role: role.trim(), area: area.trim(),
-          audience: preset.targetAudience ?? "", brandNotes: preset.brandNotes ?? "", topic: set.topic, slides: set.summary,
+          audience: preset.targetAudience ?? "", brandNotes: preset.brandNotes ?? "", topic: set.topic, intro: set.intro, slides: set.summary,
         }),
       });
       const data = await r.json().catch(() => ({}));
@@ -134,8 +134,8 @@ export default function Mens() {
       <header className="border-b border-border/30 py-4 px-6 flex items-center gap-3">
         <Link href="/hub" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="w-5 h-5" /></Link>
         <UserRound className="w-5 h-5 text-orange-400" />
-        <h1 className="font-bold text-lg">Men</h1>
-        <span className="text-sm text-muted-foreground">The men's carousels, one about every 20 days</span>
+        <h1 className="font-bold text-lg">20 Day Features</h1>
+        <span className="text-sm text-muted-foreground">Men and Hot Over 40, one about every 20 days</span>
       </header>
       <main className="max-w-[1300px] mx-auto px-4 py-6 space-y-6">
         <section className="rounded-2xl border border-border/30 p-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -165,7 +165,7 @@ export default function Mens() {
           </div>
         </section>
 
-        {!preset && <p className="text-sm text-muted-foreground">Choose a client. The slides are exactly as designed, photos of the man included. I write the caption in the clinic's voice, ending on a question, and the scheduler starts on the next Saturday with 20 days between posts. You can move any date or the gap when you schedule.</p>}
+        {!preset && <p className="text-sm text-muted-foreground">Choose a client. The slides are exactly as designed, photos included. I write the caption in the clinic's voice, ending on a question, and the scheduler starts on the next Saturday with 20 days between posts, so the ticked posts go out one after another. You can move any date or the gap when you schedule.</p>}
 
         {preset && MENS_SETS.map((s) => {
           const e = entries[s.id];
