@@ -37,3 +37,16 @@ export function drawAligned(
   ctx.restore();
   return y;
 }
+
+export type CornerPos = "tl" | "tr" | "bl" | "br";
+
+// The logo on a photo slide. Top right is where it has always sat; `lift` keeps a bottom corner clear of the swipe arrow.
+export function drawCornerLogo(ctx: CanvasRenderingContext2D, logo: HTMLImageElement | null, pos: CornerPos | undefined, pageW: number, pageH: number, lift = 0) {
+  if (!logo) return;
+  const p = pos ?? "tr";
+  const s = Math.min(240 / logo.width, 80 / logo.height);
+  const w = logo.width * s, h = logo.height * s;
+  const x = p === "tl" || p === "bl" ? 50 : pageW - 50 - w;
+  const y = p === "tl" || p === "tr" ? 40 : pageH - 40 - h - (p === "br" ? lift : 0);
+  ctx.drawImage(logo, x, y, w, h);
+}

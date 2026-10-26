@@ -30,6 +30,7 @@ export type Client = {
   bodyFont: string;
   align?: "left" | "center" | "right" | "justify"; // words on slides 2 to 5
   spacing?: number; // line spacing on slides 2 to 5
+  logoPos?: "auto" | "off" | "tl" | "tr" | "bl" | "br"; // auto: top right on photo slides, none on most covers
   logo: HTMLImageElement | null;
   pool: PoolPhoto[];
 };
@@ -184,18 +185,20 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
   canvas.height = Math.round(H * scale);
   ctx.setTransform(scale, 0, 0, scale, 0, 0);
   const last = n === slideCount(post.tool, post.design) - 1;
+  const logo = c.logoPos === "off" ? null : c.logo;
+  const corner = c.logoPos && c.logoPos !== "auto" && c.logoPos !== "off" ? c.logoPos : undefined;
 
   if (post.tool === "unique") {
     const def = UD.UNIQUE_BY_ID[post.design as UD.UniId];
     if (n === 0) {
       return UD.drawUnique(ctx, {
         design: def.id, text: UD.resolveUniText(def, post.text, c.fill), palette: palOf<never>(post), headFont: c.headFont, bodyFont: c.bodyFont,
-        upper: true, photo: await bmp(c, post.photos[0]), focus: post.focus.c0 ?? DEFAULT_FOCUS, logo: c.logo,
+        upper: true, photo: await bmp(c, post.photos[0]), focus: post.focus.c0 ?? DEFAULT_FOCUS, logo, logoPos: corner,
       });
     }
     return UD.drawUniPhotoSlide(ctx, {
       text: BC.fillTokens(post.slides[n - 1] ?? "", c.fill), cta: last ? BC.fillTokens(post.cta, c.fill) : "", palette: palOf<never>(post), bodyFont: c.bodyFont,
-      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo: c.logo, arrow: !last, align: c.align, spacing: c.spacing,
+      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo, logoCorner: corner, arrow: !last, align: c.align, spacing: c.spacing,
     });
   }
 
@@ -206,13 +209,13 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
         treat: def.id, layout: def.layout,
         text: Object.fromEntries(TD.FIELDS.map((fd) => [fd.key, TD.fillTreat(post.text[fd.key] ?? "", c.fill)])) as never,
         pal: palOf<never>(post), headFont: c.headFont, bodyFont: c.bodyFont, upper: true,
-        photo: await bmp(c, post.photos[0]), focus: post.focus.c0 ?? DEFAULT_FOCUS, logo: c.logo,
+        photo: await bmp(c, post.photos[0]), focus: post.focus.c0 ?? DEFAULT_FOCUS, logo,
       } as never);
     }
     return TD.drawPhotoSlide(ctx, {
       text: TD.fillTreat(post.slides[n - 1] ?? "", c.fill), cta: last ? TD.fillTreat(post.cta, c.fill) : "",
       small: last ? TD.fillTreat(post.text.small ?? "", c.fill) : "", pal: palOf<never>(post), bodyFont: c.bodyFont, headFont: c.headFont,
-      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo: c.logo, arrow: !last, align: c.align, spacing: c.spacing,
+      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo, logoCorner: corner, arrow: !last, align: c.align, spacing: c.spacing,
     } as never);
   }
 
@@ -225,19 +228,19 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
         text: Object.fromEntries(def.fields.map((fd) => [fd.key, BC.fillTokens(post.text[fd.key] ?? def.defaults[fd.key] ?? "", c.fill)])),
         colours, headFont: c.headFont, bodyFont: c.bodyFont, upper: true,
         photos: [await bmp(c, post.photos[0]), def.photos > 1 ? await bmp(c, post.photos[1]) : null],
-        focus: [post.focus.c0 ?? DEFAULT_FOCUS, post.focus.c1 ?? DEFAULT_FOCUS], logo: c.logo,
+        focus: [post.focus.c0 ?? DEFAULT_FOCUS, post.focus.c1 ?? DEFAULT_FOCUS], logo,
       } as never);
     }
     const idx = n === 1 ? 2 : 3;
     return BC.drawPhotoSlide(ctx, {
       text: BC.fillTokens(post.slides[n - 1] ?? "", c.fill), cta: n === 2 ? BC.fillTokens(post.cta, c.fill) : "", colours,
       bodyFont: c.bodyFont, headFont: c.headFont, photo: await bmp(c, post.photos[idx]),
-      focus: post.focus[idx === 2 ? "s2" : "s3"] ?? DEFAULT_FOCUS, scrim: 35, logo: c.logo, arrow: n === 1, align: c.align, spacing: c.spacing,
+      focus: post.focus[idx === 2 ? "s2" : "s3"] ?? DEFAULT_FOCUS, scrim: 35, logo, logoCorner: corner, arrow: n === 1, align: c.align, spacing: c.spacing,
     } as never);
   }
 
   const photo = await bmp(c, post.photos[0]);
-  const common = { headFont: c.headFont, bodyFont: c.bodyFont, upper: true, photo, focus: post.focus.c0 ?? DEFAULT_FOCUS, logo: c.logo, logoPos: "off" as const };
+  const common = { headFont: c.headFont, bodyFont: c.bodyFont, upper: true, photo, focus: post.focus.c0 ?? DEFAULT_FOCUS, logo, logoPos: corner ?? ("off" as const) };
   if (post.tool === "halloween") {
     const d = HALLOWEEN_BY_ID[post.design as keyof typeof HALLOWEEN_BY_ID];
     return drawHalloween(ctx, { design: d.id, text: resolveHalText(d, post.text, c.fill), palette: palOf<never>(post), mono: false, ...common } as never);

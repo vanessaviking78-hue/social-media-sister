@@ -1,4 +1,4 @@
-import { drawAligned, type Align } from "./text-layout";
+import { drawAligned, drawCornerLogo, type Align, type CornerPos } from "./text-layout";
 // Treatments: ten "Possible side effects may include..." covers and the four full bleed photo
 // slides that follow them. Everything draws straight onto a 1080 x 1350 canvas so the preview,
 // the download and the scheduled image are always identical. No React in here.
@@ -480,6 +480,7 @@ export type PhotoSlideInput = {
   logo: HTMLImageElement | null;
   arrow: boolean;
   align?: Align;
+  logoCorner?: CornerPos;
   spacing?: number;
 };
 
@@ -557,10 +558,7 @@ export function drawPhotoSlide(ctx: CanvasRenderingContext2D, d: PhotoSlideInput
     const ay = H - 96;
     ctx.beginPath(); ctx.moveTo(W - 168, ay); ctx.lineTo(W - 88, ay); ctx.moveTo(W - 104, ay - 13); ctx.lineTo(W - 88, ay); ctx.lineTo(W - 104, ay + 13); ctx.stroke();
   }
-  if (d.logo) {
-    const s = Math.min(240 / d.logo.width, 80 / d.logo.height);
-    ctx.drawImage(d.logo, W - 50 - d.logo.width * s, 40, d.logo.width * s, d.logo.height * s);
-  }
+  drawCornerLogo(ctx, d.logo, d.logoCorner, W, H, d.arrow ? 110 : 0);
   ctx.restore();
   return slots;
 }

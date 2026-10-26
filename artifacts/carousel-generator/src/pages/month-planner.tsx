@@ -21,6 +21,7 @@ import {
 
 const SETTINGS_KEY = "month-client-v1";
 const DONE_KEY = "month-scheduled-v1";
+const LOGO_KEY = "month-logo-v1";
 const OTHER_KEYS = ["unique-posts-client-v1", "treatments-client-v1", "basic-posts-client-v1", "halloween-posts-client-v1", "november-posts-client-v1", "xmas-posts-client-v1"];
 const DEFAULT_HEAD = "'Anton', sans-serif";
 const DEFAULT_BODY = "'Poppins', sans-serif";
@@ -226,6 +227,8 @@ export default function MonthPlanner() {
   const [bodyFont, setBodyFont] = useState(DEFAULT_BODY);
   const [align, setAlign] = useState<Align>("center");
   const [spacing, setSpacing] = useState(1.3);
+  const [logoPos, setLogoPos] = useState<NonNullable<Client["logoPos"]>>("auto");
+  const logoFileRef = useRef<HTMLInputElement>(null);
   const [fontsTick, setFontsTick] = useState(0);
   const fontFileRef = useRef<HTMLInputElement>(null);
 
@@ -245,7 +248,7 @@ export default function MonthPlanner() {
   // Choosing a client fills in their owner name and area from anything already saved in the other tools.
   useEffect(() => {
     if (!preset) return;
-    let saved: { owner?: string; role?: string; area?: string; headFont?: string; bodyFont?: string; align?: Align; spacing?: number } = {};
+    let saved: { owner?: string; role?: string; area?: string; headFont?: string; bodyFont?: string; align?: Align; spacing?: number; logoPos?: NonNullable<Client["logoPos"]> } = {};
     const grab = (k: string) => { try { return (JSON.parse(localStorage.getItem(k) || "{}") as Record<string, typeof saved>)[String(preset.id)]; } catch { return undefined; } };
     saved = grab(SETTINGS_KEY) ?? OTHER_KEYS.map(grab).find((s) => s?.owner) ?? {};
     setOwner(saved.owner ?? "");
@@ -255,14 +258,18 @@ export default function MonthPlanner() {
     setBodyFont(saved.bodyFont || preset.stylishCoverSubtitleFont || DEFAULT_BODY);
     setAlign(saved.align ?? "center");
     setSpacing(saved.spacing ?? 1.3);
+    setLogoPos(saved.logoPos ?? "auto");
     setItems([]);
     setExtras([]);
     setLogo(null);
-    if (preset.logoUrl) {
+    let custom = "";
+    try { custom = (JSON.parse(localStorage.getItem(LOGO_KEY) || "{}") as Record<string, string>)[String(preset.id)] ?? ""; } catch { /* ignore */ }
+    const src = custom || preset.logoUrl;
+    if (src) {
       const img = new Image();
-      img.crossOrigin = "anonymous";
+      if (!custom) img.crossOrigin = "anonymous";
       img.onload = () => setLogo(img);
-      img.src = preset.logoUrl;
+      img.src = src;
     }
   }, [preset?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -270,10 +277,10 @@ export default function MonthPlanner() {
     if (!preset) return;
     try {
       const all = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
-      all[String(preset.id)] = { owner, role, area, headFont, bodyFont, align, spacing };
+      all[String(preset.id)] = { owner, role, area, headFont, bodyFont, align, spacing, logoPos };
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(all));
     } catch { /* ignore */ }
-  }, [preset?.id, owner, role, area, headFont, bodyFont, align, spacing]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [preset?.id, owner, role, area, headFont, bodyFont, align, spacing, logoPos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The client's approved photos become the pool every post draws from.
   const approvedForClient = useMemo(() => (preset ? allApproved.filter((i) => i.clientName === preset.name) : []), [allApproved, preset?.name]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -311,9 +318,10 @@ export default function MonthPlanner() {
     bodyFont,
     align,
     spacing,
+    logoPos,
     logo,
     pool,
-  }), [preset, owner, role, area, logo, pool, headFont, bodyFont, align, spacing]);
+  }), [preset, owner, role, area, logo, pool, headFont, bodyFont, align, spacing, logoPos]);
 
   const shared = useMemo(() => FONT_OPTIONS as SharedFontOption[], [fontsTick]); // eslint-disable-line react-hooks/exhaustive-deps
   const clientFonts: FontOpt[] = useMemo(
@@ -325,6 +333,20 @@ export default function MonthPlanner() {
   );
   const yourFonts: FontOpt[] = useMemo(() => [...clientFonts, ...shared.filter((f) => f.custom)], [clientFonts, shared]);
   const libraryFonts: FontOpt[] = useMemo(() => shared.filter((f) => !f.custom && /,|['"]/.test(f.value) && !/^(top|bottom)-/.test(f.value)), [shared]);
+  const uploadLogo = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const data = String(reader.result);
+      const img = new Image();
+      img.onload = () => {
+        setLogo(img);
+        if (preset) { try { const all = JSON.parse(localStorage.getItem(LOGO_KEY) || "{}"); all[String(preset.id)] = data; localStorage.setItem(LOGO_KEY, JSON.stringify(all)); } catch { /* too big to remember, still used this time */ } }
+        toast.success("Logo changed. Press Start this month again to see it on the posts.");
+      };
+      img.src = data;
+    };
+    reader.readAsDataURL(file);
+  };
   const addFonts = async (files: File[]) => {
     const added = await addSharedFonts(files);
     if (added.length) { toast.success(`Added ${added.join(", ")}. They are in every font list now.`); setFontsTick((n) => n + 1); }
@@ -475,7 +497,24 @@ export default function MonthPlanner() {
               <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Line spacing {spacing.toFixed(2)}</span>
               <input type="range" min={1} max={1.8} step={0.05} value={spacing} onChange={(e) => setSpacing(Number(e.target.value))} className="w-full" />
             </label>
+            <div className="space-y-1.5">
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Logo</span>
+              <Select value={logoPos} onValueChange={(v) => setLogoPos(v as NonNullable<Client["logoPos"]>)}>
+                <SelectTrigger className="bg-muted/30 border-border/40"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="auto">Automatic</SelectItem>
+                  <SelectItem value="off">No logo</SelectItem>
+                  <SelectItem value="tl">Top left</SelectItem>
+                  <SelectItem value="tr">Top right</SelectItem>
+                  <SelectItem value="bl">Bottom left</SelectItem>
+                  <SelectItem value="br">Bottom right</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="flex items-end gap-3 lg:col-span-3">
+              <Button variant="outline" onClick={() => logoFileRef.current?.click()} disabled={!preset}>{logo ? "Change logo" : "Upload logo"}</Button>
+              <input ref={logoFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) uploadLogo(f); }} />
+              {logo && <img src={logo.src} alt="" className="h-9 max-w-[120px] object-contain rounded bg-white/90 p-1" />}
               <Button variant="outline" onClick={() => fontFileRef.current?.click()}><Type className="w-4 h-4 mr-1.5" /> Upload fonts</Button>
               <input ref={fontFileRef} type="file" accept=".otf,.ttf,.woff,.woff2" multiple className="hidden"
                 onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ""; if (fs.length) void addFonts(fs); }} />
