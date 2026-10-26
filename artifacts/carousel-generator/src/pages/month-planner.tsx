@@ -250,6 +250,9 @@ export default function MonthPlanner() {
   const [bodyFont, setBodyFont] = useState(DEFAULT_BODY);
   const [align, setAlign] = useState<Align>("center");
   const [spacing, setSpacing] = useState(1.3);
+  const [brandOn, setBrandOn] = useState(true);
+  const [brandMain, setBrandMain] = useState("#14195c");
+  const [brandAccent, setBrandAccent] = useState("#c8553d");
   const [logoPos, setLogoPos] = useState<NonNullable<Client["logoPos"]>>("auto");
   const logoFileRef = useRef<HTMLInputElement>(null);
   const [fontsTick, setFontsTick] = useState(0);
@@ -271,7 +274,7 @@ export default function MonthPlanner() {
   // Choosing a client fills in their owner name and area from anything already saved in the other tools.
   useEffect(() => {
     if (!preset) return;
-    let saved: { owner?: string; role?: string; area?: string; headFont?: string; bodyFont?: string; align?: Align; spacing?: number; logoPos?: NonNullable<Client["logoPos"]> } = {};
+    let saved: { owner?: string; role?: string; area?: string; headFont?: string; bodyFont?: string; align?: Align; spacing?: number; logoPos?: NonNullable<Client["logoPos"]>; brandOn?: boolean; brandMain?: string; brandAccent?: string } = {};
     const grab = (k: string) => { try { return (JSON.parse(localStorage.getItem(k) || "{}") as Record<string, typeof saved>)[String(preset.id)]; } catch { return undefined; } };
     saved = grab(SETTINGS_KEY) ?? OTHER_KEYS.map(grab).find((s) => s?.owner) ?? {};
     setOwner(saved.owner ?? "");
@@ -282,6 +285,10 @@ export default function MonthPlanner() {
     setAlign(saved.align ?? "center");
     setSpacing(saved.spacing ?? 1.3);
     setLogoPos(saved.logoPos ?? "auto");
+    const hex = (v?: string | null) => (v && /^#[0-9a-f]{6}$/i.test(v) ? v : undefined);
+    setBrandOn(saved.brandOn ?? true);
+    setBrandMain(saved.brandMain ?? hex(preset.pageColor) ?? "#14195c");
+    setBrandAccent(saved.brandAccent ?? hex(preset.accentColor) ?? hex(preset.cornerColor) ?? "#c8553d");
     setItems([]);
     setExtras([]);
     setLogo(null);
@@ -300,10 +307,10 @@ export default function MonthPlanner() {
     if (!preset) return;
     try {
       const all = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
-      all[String(preset.id)] = { owner, role, area, headFont, bodyFont, align, spacing, logoPos };
+      all[String(preset.id)] = { owner, role, area, headFont, bodyFont, align, spacing, logoPos, brandOn, brandMain, brandAccent };
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(all));
     } catch { /* ignore */ }
-  }, [preset?.id, owner, role, area, headFont, bodyFont, align, spacing, logoPos]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [preset?.id, owner, role, area, headFont, bodyFont, align, spacing, logoPos, brandOn, brandMain, brandAccent]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The client's approved photos become the pool every post draws from.
   const approvedForClient = useMemo(() => (preset ? allApproved.filter((i) => i.presetId === preset.id || sameClientName(i.clientName, preset.name)) : []), [allApproved, preset?.name]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -348,9 +355,10 @@ export default function MonthPlanner() {
     align,
     spacing,
     logoPos,
+    brand: brandOn ? { main: brandMain, accent: brandAccent } : null,
     logo,
     pool,
-  }), [preset, owner, role, area, logo, pool, headFont, bodyFont, align, spacing, logoPos]);
+  }), [preset, owner, role, area, logo, pool, headFont, bodyFont, align, spacing, logoPos, brandOn, brandMain, brandAccent]);
 
   const shared = useMemo(() => FONT_OPTIONS as SharedFontOption[], [fontsTick]); // eslint-disable-line react-hooks/exhaustive-deps
   const clientFonts: FontOpt[] = useMemo(
@@ -540,6 +548,14 @@ export default function MonthPlanner() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5 lg:col-span-3">
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Brand colours</span>
+              <div className="flex flex-wrap items-center gap-3 text-sm">
+                <label className="flex items-center gap-2"><input type="checkbox" checked={brandOn} onChange={(e) => setBrandOn(e.target.checked)} /> Use this client's brand colours on every post</label>
+                <label className="flex items-center gap-1.5">Main <input type="color" value={brandMain} onChange={(e) => setBrandMain(e.target.value)} className="h-7 w-9 rounded border border-border/40 bg-transparent" /></label>
+                <label className="flex items-center gap-1.5">Accent <input type="color" value={brandAccent} onChange={(e) => setBrandAccent(e.target.value)} className="h-7 w-9 rounded border border-border/40 bg-transparent" /></label>
+              </div>
+            </div>
             <div className="flex items-end gap-3 lg:col-span-3">
               <Button variant="outline" onClick={() => logoFileRef.current?.click()} disabled={!preset}>{logo ? "Change logo" : "Upload logo"}</Button>
               <input ref={logoFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) uploadLogo(f); }} />
@@ -610,7 +626,7 @@ export default function MonthPlanner() {
                   </Button>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
-                  {colourFields(p).map((f) => (
+                  {colourFields(p, client.brand).map((f) => (
                     <label key={f.key} className="flex items-center gap-1.5">
                       <input type="color" value={/^#[0-9a-f]{6}$/i.test(f.value) ? f.value : "#000000"} onChange={(e) => patchPost(p.id, { pal: { ...(p.pal ?? {}), [f.key]: e.target.value } })} className="h-6 w-8 rounded border border-border/40 bg-transparent" />
                       {f.label}
