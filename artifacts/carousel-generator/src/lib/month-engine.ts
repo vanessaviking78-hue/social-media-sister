@@ -31,6 +31,7 @@ export type Client = {
   align?: "left" | "center" | "right" | "justify"; // words on slides 2 to 5
   spacing?: number; // line spacing on slides 2 to 5
   logoPos?: "auto" | "off" | "tl" | "tr" | "bl" | "br"; // auto: top right on photo slides, none on most covers
+  brand?: { main: string; accent: string } | null; // her brand colours, laid over every design's own colours
   logo: HTMLImageElement | null;
   pool: PoolPhoto[];
 };
@@ -167,7 +168,28 @@ const bmp = async (c: Client, i: number | null | undefined) => {
 };
 
 // The colours a post uses: the design's own, with any she has changed laid on top.
-export function colourFields(post: MPost): { key: string; label: string; value: string }[] {
+const hexRgb = (h: string): [number, number, number] => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(h.trim());
+  const v = m ? parseInt(m[1], 16) : 0;
+  return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+};
+const rgbHex = (r: number, g: number, b: number) => "#" + [r, g, b].map((x) => Math.max(0, Math.min(255, Math.round(x))).toString(16).padStart(2, "0")).join("");
+const mixHex = (a: string, b: string, t: number) => { const x = hexRgb(a), y = hexRgb(b); return rgbHex(x[0] + (y[0] - x[0]) * t, x[1] + (y[1] - x[1]) * t, x[2] + (y[2] - x[2]) * t); };
+const lumOf = (h: string) => { const [r, g, b] = hexRgb(h); return (0.299 * r + 0.587 * g + 0.114 * b) / 255; };
+
+// Turns two brand colours into the roles each design uses (page, dark panels, accent, light text, ink).
+export function brandPalette(tool: ToolId, brand: { main: string; accent: string }): Record<string, string> {
+  const { main, accent } = brand;
+  const dark = lumOf(main) < 0.4 ? main : mixHex(main, "#000000", 0.62);
+  const tint = mixHex(main, "#ffffff", 0.88);
+  const base = { paper: tint, red: accent, green: dark, tag: mixHex(accent, "#ffffff", 0.6), frame: mixHex(main, "#ffffff", 0.95), light: mixHex(main, "#ffffff", 0.94), ink: mixHex(dark, "#000000", 0.5) };
+  if (tool === "treatments") return { navy: dark, coral: accent, lime: mixHex(accent, "#ffffff", 0.5), cream: tint };
+  if (tool === "basic") return { bg: dark };
+  if (tool === "halloween") return { ...base, paper: mixHex(main, "#000000", 0.86), green: mixHex(main, "#000000", 0.74), tag: mixHex(main, "#ffffff", 0.8), frame: mixHex(main, "#ffffff", 0.88), ink: mixHex(main, "#000000", 0.88) };
+  return base;
+}
+
+export function colourFields(post: MPost, brand?: { main: string; accent: string } | null): { key: string; label: string; value: string }[] {
   let base: Record<string, string>; let labels: { key: string; label: string }[];
   if (post.tool === "unique") { base = { ...UD.UNIQUE_BY_ID[post.design as UD.UniId].palette }; labels = UD.PALETTE_LABELS; }
   else if (post.tool === "treatments") { base = { ...TD.T_PALETTE }; labels = (Object.keys(TD.T_PALETTE_LABELS) as (keyof typeof TD.T_PALETTE_LABELS)[]).map((k) => ({ key: k, label: TD.T_PALETTE_LABELS[k] })); }
@@ -175,9 +197,10 @@ export function colourFields(post: MPost): { key: string; label: string; value: 
   else if (post.tool === "halloween") { base = { ...HALLOWEEN_PALETTE }; labels = HALLOWEEN_PALETTE_LABELS; }
   else if (post.tool === "november") { base = { ...NOVEMBER_PALETTE }; labels = NOVEMBER_PALETTE_LABELS; }
   else { base = { ...DEFAULT_PALETTES[post.group ?? "xmas"] }; labels = UD.PALETTE_LABELS; }
+  if (brand) base = { ...base, ...brandPalette(post.tool, brand) };
   return labels.map(({ key, label }) => ({ key, label, value: post.pal?.[key] ?? base[key] }));
 }
-const palOf = <T,>(post: MPost): T => Object.fromEntries(colourFields(post).map((f) => [f.key, f.value])) as T;
+const palOf = <T,>(post: MPost, brand?: Client["brand"]): T => Object.fromEntries(colourFields(post, brand).map((f) => [f.key, f.value])) as T;
 
 // Draws slide n (0 is the cover) of a post onto the canvas at the given scale.
 export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTMLCanvasElement, scale: number): Promise<Slot[]> {
@@ -193,12 +216,12 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
     const def = UD.UNIQUE_BY_ID[post.design as UD.UniId];
     if (n === 0) {
       return UD.drawUnique(ctx, {
-        design: def.id, text: UD.resolveUniText(def, post.text, c.fill), palette: palOf<never>(post), headFont: c.headFont, bodyFont: c.bodyFont,
+        design: def.id, text: UD.resolveUniText(def, post.text, c.fill), palette: palOf<never>(post, c.brand), headFont: c.headFont, bodyFont: c.bodyFont,
         upper: true, photo: await bmp(c, post.photos[0]), focus: post.focus.c0 ?? DEFAULT_FOCUS, logo, logoPos: corner,
       });
     }
     return UD.drawUniPhotoSlide(ctx, {
-      text: BC.fillTokens(post.slides[n - 1] ?? "", c.fill), cta: last ? BC.fillTokens(post.cta, c.fill) : "", palette: palOf<never>(post), bodyFont: c.bodyFont,
+      text: BC.fillTokens(post.slides[n - 1] ?? "", c.fill), cta: last ? BC.fillTokens(post.cta, c.fill) : "", palette: palOf<never>(post, c.brand), bodyFont: c.bodyFont,
       photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo, logoCorner: corner, arrow: !last, align: c.align, spacing: c.spacing, textDx: post.textPos?.[`t${n + 1}`]?.[0], textDy: post.textPos?.[`t${n + 1}`]?.[1],
     });
   }
@@ -209,20 +232,20 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
       return TD.drawCover(ctx, {
         treat: def.id, layout: def.layout,
         text: Object.fromEntries(TD.FIELDS.map((fd) => [fd.key, TD.fillTreat(post.text[fd.key] ?? "", c.fill)])) as never,
-        pal: palOf<never>(post), headFont: c.headFont, bodyFont: c.bodyFont, upper: true,
+        pal: palOf<never>(post, c.brand), headFont: c.headFont, bodyFont: c.bodyFont, upper: true,
         photo: await bmp(c, post.photos[0]), focus: post.focus.c0 ?? DEFAULT_FOCUS, logo,
       } as never);
     }
     return TD.drawPhotoSlide(ctx, {
       text: TD.fillTreat(post.slides[n - 1] ?? "", c.fill), cta: last ? TD.fillTreat(post.cta, c.fill) : "",
-      small: last ? TD.fillTreat(post.text.small ?? "", c.fill) : "", pal: palOf<never>(post), bodyFont: c.bodyFont, headFont: c.headFont,
+      small: last ? TD.fillTreat(post.text.small ?? "", c.fill) : "", pal: palOf<never>(post, c.brand), bodyFont: c.bodyFont, headFont: c.headFont,
       photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo, logoCorner: corner, arrow: !last, align: c.align, spacing: c.spacing, textDx: post.textPos?.[`t${n + 1}`]?.[0], textDy: post.textPos?.[`t${n + 1}`]?.[1],
     } as never);
   }
 
   if (post.tool === "basic") {
     const def = BC.COVER_BY_ID[post.design as BC.CoverId];
-    const colours = BC.makeColours(palOf<{ bg: string }>(post).bg);
+    const colours = BC.makeColours(palOf<{ bg: string }>(post, c.brand).bg);
     if (n === 0) {
       return BC.drawCover(ctx, {
         cover: def.id,
@@ -244,14 +267,14 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
   const common = { headFont: c.headFont, bodyFont: c.bodyFont, upper: true, photo, focus: post.focus.c0 ?? DEFAULT_FOCUS, logo, logoPos: corner ?? ("off" as const) };
   if (post.tool === "halloween") {
     const d = HALLOWEEN_BY_ID[post.design as keyof typeof HALLOWEEN_BY_ID];
-    return drawHalloween(ctx, { design: d.id, text: resolveHalText(d, post.text, c.fill), palette: palOf<never>(post), mono: false, ...common } as never);
+    return drawHalloween(ctx, { design: d.id, text: resolveHalText(d, post.text, c.fill), palette: palOf<never>(post, c.brand), mono: false, ...common } as never);
   }
   if (post.tool === "november") {
     const d = NOVEMBER_BY_ID[post.design as keyof typeof NOVEMBER_BY_ID];
-    return drawNovember(ctx, { design: d.id, text: resolveNovText(d, post.text, c.fill), palette: palOf<never>(post), ...common } as never);
+    return drawNovember(ctx, { design: d.id, text: resolveNovText(d, post.text, c.fill), palette: palOf<never>(post, c.brand), ...common } as never);
   }
   const d = XMAS_BY_ID[post.design as keyof typeof XMAS_BY_ID];
-  return drawXmas(ctx, { design: d.id, text: resolveXmasText(d, post.text, c.fill), palette: palOf<never>(post), ...common } as never);
+  return drawXmas(ctx, { design: d.id, text: resolveXmasText(d, post.text, c.fill), palette: palOf<never>(post, c.brand), ...common } as never);
 }
 
 export async function renderPostImages(post: MPost, c: Client, scale = 1): Promise<HTMLCanvasElement[]> {
