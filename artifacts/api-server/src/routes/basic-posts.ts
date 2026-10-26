@@ -20,16 +20,18 @@ function clean(text: unknown, max: number): string {
 
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
-// Exactly five area based hashtags, always, whatever the model sent back.
+// Exactly five hashtags, each the clinic's town or city joined to a beauty or mums theme, always, whatever the model sent back.
 function fiveTags(raw: unknown, area: string): string[] {
   const fromModel = Array.isArray(raw) ? raw.map((t) => slug(String(t ?? ""))).filter(Boolean) : [];
   const parts = area.split(",").map((p) => slug(p)).filter(Boolean);
-  const town = parts[0] || "yorkshire";
-  const city = parts[1] || parts[0] || "yorkshire";
-  const fallback = [`${town}aesthetics`, `${city}aesthetics`, `${town}clinic`, `${city}skincare`, `${city}consultation`, `${town}${city}`, `${city}beauty`];
+  const town = parts[0] || "";
+  const city = parts[1] || parts[0] || "";
+  const themed = (t: string) => /(beauty|mum|mam|mummy|mummies|mother|skin|glow|aesthetic|facial|selfcare)/.test(t);
+  const related = fromModel.filter((t) => ((town && t.includes(town)) || (city && t.includes(city))) && themed(t));
+  const fallback = [`${town}beauty`, `${town}mums`, `${city}beauty`, `${city}mums`, `${town}skincare`, `${city}skincare`, `${town}mummies`, `${town}mumlife`, `${town}selfcare`, `${town}glow`];
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const t of [...fromModel, ...fallback]) {
+  for (const t of [...related, ...fallback]) {
     if (t && !seen.has(t)) {
       seen.add(t);
       out.push(t);
@@ -87,7 +89,7 @@ SLIDES 2 AND 3 sit over a full bleed photo, so they must be short enough to read
 - "slide3": lands the point with warmth and a little humour, so she feels she already knows ${who}. 24 to 36 words.
 - "cta": ONE short question for the last slide that is easy and fun to answer in a few words in the comments, relating to the post (for example What would you ask me if you were not worried about sounding silly?). Max 16 words. Never Comment WORD, never DM me, never a website.
 - "caption": the Instagram caption, max 110 words. The first line is a hook that lands inside 3 seconds, specific and relatable or funny, never generic and never a rhetorical question. Then short punchy lines. It adds something the slides do not already say. It ends with ONE closing question relating to the post (it can be the cta question or a close cousin of it).
-- "hashtags": exactly 5, lower case, no spaces, based on the area (${n.area}) and the post.
+- "hashtags": exactly 5, lower case, no spaces, each one is the area (${n.area}) joined to a beauty or mums theme, for example the town or city plus beauty, mums, skincare or mummies. Every tag must contain the town or city.
 
 WRITING RULES (non-negotiable)
 - NEVER use em dashes or en dashes. Use a comma, a full stop or a plain hyphen in compound words only.
@@ -111,6 +113,10 @@ router.post("/basic-posts/copy", async (req: Request, res: Response) => {
       res.status(400).json({ error: "Pick a client first" });
       return;
     }
+    if (!str(b.area, 80)) {
+      res.status(400).json({ error: "Add the clinic's town and city first, so every hashtag matches where they are" });
+      return;
+    }
     const fields: Field[] = (Array.isArray(b.fields) ? b.fields : [])
       .slice(0, 14)
       .map((f) => {
@@ -123,7 +129,7 @@ router.post("/basic-posts/copy", async (req: Request, res: Response) => {
       businessName,
       ownerName: str(b.ownerName, 40),
       role: str(b.role, 60),
-      area: str(b.area, 80) || "Yorkshire",
+      area: str(b.area, 80),
       audience: str(b.audience, 200),
       brandNotes: str(b.brandNotes, 600),
       coverName: str(b.coverName, 60),
