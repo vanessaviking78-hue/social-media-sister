@@ -11,7 +11,7 @@ import { getBitmap } from "@/lib/month-engine";
 import { ALIGNS, type Align } from "@/lib/text-layout";
 import { MonthPhotoMaker } from "@/components/month-photo-maker";
 import { usePresets } from "@/lib/use-presets";
-import { useApprovedImages } from "@/lib/use-approval";
+import { useApprovedImages, sameClientName } from "@/lib/use-approval";
 import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
 import { addSharedFonts, syncSharedFonts, FONTS_CHANGED_EVENT, type SharedFontOption } from "@/lib/shared-fonts";
 import {
@@ -283,7 +283,7 @@ export default function MonthPlanner() {
   }, [preset?.id, owner, role, area, headFont, bodyFont, align, spacing, logoPos]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The client's approved photos become the pool every post draws from.
-  const approvedForClient = useMemo(() => (preset ? allApproved.filter((i) => i.clientName === preset.name) : []), [allApproved, preset?.name]); // eslint-disable-line react-hooks/exhaustive-deps
+  const approvedForClient = useMemo(() => (preset ? allApproved.filter((i) => i.presetId === preset.id || sameClientName(i.clientName, preset.name)) : []), [allApproved, preset?.name]); // eslint-disable-line react-hooks/exhaustive-deps
   const approvedKey = approvedForClient.map((i) => i.id).join(",");
   useEffect(() => {
     let live = true;
@@ -292,7 +292,7 @@ export default function MonthPlanner() {
     setPoolBusy(true);
     (async () => {
       const files: PoolPhoto[] = [];
-      const list = approvedForClient.slice(0, 40);
+      const list = approvedForClient;
       for (let i = 0; i < list.length; i += 6) {
         const got = await Promise.all(list.slice(i, i + 6).map(async (img, k) => {
           try { const file = await urlToFile(img.imageUrl, i + k); return { id: uid(), file, url: URL.createObjectURL(file) }; } catch { return null; }

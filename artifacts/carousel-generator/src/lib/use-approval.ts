@@ -121,7 +121,7 @@ export function usePublicApproval(token: string) {
 }
 
 export function useApprovedImages(clientName: string) {
-  return useQuery<{ id: number; imageUrl: string; batchName: string; clientName: string }[]>({
+  return useQuery<{ id: number; imageUrl: string; batchName: string; clientName: string; presetId?: number | null }[]>({
     queryKey: ["approved-images", clientName],
     queryFn: async () => {
       const params = clientName ? `?clientName=${encodeURIComponent(clientName)}` : "";
@@ -130,4 +130,15 @@ export function useApprovedImages(clientName: string) {
       return res.json();
     },
   });
+}
+
+// Batches are filed under whatever name was typed when they were made ("Kahlo", "Kahlo Skin & Soul", "kahlo skin and soul"),
+// so photos are matched by client id when there is one, then by name with case, spaces, "&" and punctuation ignored.
+const squash = (v: string | null | undefined) => (v || "").toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
+export function sameClientName(a: string | null | undefined, b: string | null | undefined): boolean {
+  const x = squash(a), y = squash(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const [short, long] = x.length <= y.length ? [x, y] : [y, x];
+  return short.length >= 4 && long.startsWith(short);
 }
