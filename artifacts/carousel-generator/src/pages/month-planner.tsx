@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DEFAULT_FOCUS, type Focus, type Slot } from "@/lib/basic-covers";
 import { getBitmap } from "@/lib/month-engine";
+import { ALIGNS, type Align } from "@/lib/text-layout";
+import { MonthPhotoMaker } from "@/components/month-photo-maker";
 import { usePresets } from "@/lib/use-presets";
 import { useApprovedImages } from "@/lib/use-approval";
 import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
@@ -211,7 +213,9 @@ export default function MonthPlanner() {
   const [owner, setOwner] = useState("");
   const [role, setRole] = useState("Owner");
   const [area, setArea] = useState("");
-  const [pool, setPool] = useState<PoolPhoto[]>([]);
+  const [approvedPool, setPool] = useState<PoolPhoto[]>([]);
+  const [extras, setExtras] = useState<PoolPhoto[]>([]);
+  const pool = useMemo(() => [...approvedPool, ...extras], [approvedPool, extras]);
   const [poolBusy, setPoolBusy] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
@@ -220,6 +224,8 @@ export default function MonthPlanner() {
   const [logo, setLogo] = useState<HTMLImageElement | null>(null);
   const [headFont, setHeadFont] = useState(DEFAULT_HEAD);
   const [bodyFont, setBodyFont] = useState(DEFAULT_BODY);
+  const [align, setAlign] = useState<Align>("center");
+  const [spacing, setSpacing] = useState(1.3);
   const [fontsTick, setFontsTick] = useState(0);
   const fontFileRef = useRef<HTMLInputElement>(null);
 
@@ -239,7 +245,7 @@ export default function MonthPlanner() {
   // Choosing a client fills in their owner name and area from anything already saved in the other tools.
   useEffect(() => {
     if (!preset) return;
-    let saved: { owner?: string; role?: string; area?: string; headFont?: string; bodyFont?: string } = {};
+    let saved: { owner?: string; role?: string; area?: string; headFont?: string; bodyFont?: string; align?: Align; spacing?: number } = {};
     const grab = (k: string) => { try { return (JSON.parse(localStorage.getItem(k) || "{}") as Record<string, typeof saved>)[String(preset.id)]; } catch { return undefined; } };
     saved = grab(SETTINGS_KEY) ?? OTHER_KEYS.map(grab).find((s) => s?.owner) ?? {};
     setOwner(saved.owner ?? "");
@@ -247,7 +253,10 @@ export default function MonthPlanner() {
     setArea(saved.area || preset.seoArea || "");
     setHeadFont(saved.headFont || preset.stylishCoverHeadlineFont || DEFAULT_HEAD);
     setBodyFont(saved.bodyFont || preset.stylishCoverSubtitleFont || DEFAULT_BODY);
+    setAlign(saved.align ?? "center");
+    setSpacing(saved.spacing ?? 1.3);
     setItems([]);
+    setExtras([]);
     setLogo(null);
     if (preset.logoUrl) {
       const img = new Image();
@@ -261,10 +270,10 @@ export default function MonthPlanner() {
     if (!preset) return;
     try {
       const all = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
-      all[String(preset.id)] = { owner, role, area, headFont, bodyFont };
+      all[String(preset.id)] = { owner, role, area, headFont, bodyFont, align, spacing };
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(all));
     } catch { /* ignore */ }
-  }, [preset?.id, owner, role, area, headFont, bodyFont]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [preset?.id, owner, role, area, headFont, bodyFont, align, spacing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The client's approved photos become the pool every post draws from.
   const approvedForClient = useMemo(() => (preset ? allApproved.filter((i) => i.clientName === preset.name) : []), [allApproved, preset?.name]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -300,9 +309,11 @@ export default function MonthPlanner() {
     fill: { owner: owner.trim(), clinic: preset?.name ?? "", area: area.trim(), role: role.trim() },
     headFont,
     bodyFont,
+    align,
+    spacing,
     logo,
     pool,
-  }), [preset, owner, role, area, logo, pool, headFont, bodyFont]);
+  }), [preset, owner, role, area, logo, pool, headFont, bodyFont, align, spacing]);
 
   const shared = useMemo(() => FONT_OPTIONS as SharedFontOption[], [fontsTick]); // eslint-disable-line react-hooks/exhaustive-deps
   const clientFonts: FontOpt[] = useMemo(
@@ -452,6 +463,17 @@ export default function MonthPlanner() {
                 <FontList yours={yourFonts} library={libraryFonts} />
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Words on slides 2 to 5</span>
+              <Select value={align} onValueChange={(v) => setAlign(v as Align)}>
+                <SelectTrigger className="bg-muted/30 border-border/40"><SelectValue /></SelectTrigger>
+                <SelectContent>{ALIGNS.map((a) => <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <label className="space-y-1.5 block">
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Line spacing {spacing.toFixed(2)}</span>
+              <input type="range" min={1} max={1.8} step={0.05} value={spacing} onChange={(e) => setSpacing(Number(e.target.value))} className="w-full" />
+            </label>
             <div className="flex items-end gap-3 lg:col-span-3">
               <Button variant="outline" onClick={() => fontFileRef.current?.click()}><Type className="w-4 h-4 mr-1.5" /> Upload fonts</Button>
               <input ref={fontFileRef} type="file" accept=".otf,.ttf,.woff,.woff2" multiple className="hidden"
@@ -461,12 +483,28 @@ export default function MonthPlanner() {
                 {items.length ? "Start this month again" : "Create the month"}
               </Button>
               <span className="text-sm text-muted-foreground">
-                {!preset ? "Choose a client to begin." : poolBusy ? "Getting their approved photos…" : `${pool.length} approved photo${pool.length === 1 ? "" : "s"} ready.`}
+                {!preset ? "Choose a client to begin." : poolBusy ? "Getting their approved photos…" : `${pool.length} photo${pool.length === 1 ? "" : "s"} ready.`}
                 {preset && !season ? ` No seasonal pack for ${MONTHS[month]} yet, so those slots use Unique.` : ""}
               </span>
             </div>
           </div>
         </section>
+        {preset && (
+          <MonthPhotoMaker
+            clientName={preset.name}
+            monthName={MONTHS[month]}
+            refs={approvedForClient.map((a) => ({ id: a.id, imageUrl: a.imageUrl }))}
+            disabled={!!busy || poolBusy}
+            onAdd={async (urls) => {
+              const files: PoolPhoto[] = [];
+              for (let k = 0; k < urls.length; k++) {
+                const file = await urlToFile(urls[k], 1000 + extras.length + k);
+                files.push({ id: uid(), file, url: URL.createObjectURL(file) });
+              }
+              setExtras((l) => [...l, ...files]);
+            }}
+          />
+        )}
 
         {items.length === 0 && (
           <p className="text-sm text-muted-foreground">

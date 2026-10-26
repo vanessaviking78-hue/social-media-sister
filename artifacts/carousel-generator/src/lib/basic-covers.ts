@@ -1,3 +1,4 @@
+import { drawAligned, type Align } from "./text-layout";
 // BASIC posts: twelve cover layouts and the two full bleed photo slides that follow them.
 // Everything draws straight onto a 1080 x 1440 canvas so the preview, the download and the
 // scheduled image are always identical. No React in here, so it can be tested on its own.
@@ -722,6 +723,8 @@ export type PhotoSlideInput = {
   scrim: number; // 0 to 80, how much the photo is dimmed
   logo: HTMLImageElement | null;
   arrow: boolean;
+  align?: Align;
+  spacing?: number;
 };
 
 export function drawPhotoSlide(ctx: CanvasRenderingContext2D, d: PhotoSlideInput): Slot[] {
@@ -752,8 +755,8 @@ export function drawPhotoSlide(ctx: CanvasRenderingContext2D, d: PhotoSlideInput
 
   const maxW = 860;
   const hasCta = !!d.cta?.trim();
-  const body = fit(ctx, d.text, (s) => `600 ${s}px ${d.bodyFont}`, maxW, hasCta ? 520 : 640, 66, 32, 1.3);
-  const lh = Math.round(body.size * 1.3);
+  const body = fit(ctx, d.text, (s) => `600 ${s}px ${d.bodyFont}`, maxW, hasCta ? 520 : 640, 66, 32, d.spacing ?? 1.3);
+  const lh = Math.round(body.size * (d.spacing ?? 1.3));
   const bodyH = body.lines.length * lh;
 
   let pillW = 0, pillH = 0, ctaLines: string[] = [];
@@ -771,7 +774,7 @@ export function drawPhotoSlide(ctx: CanvasRenderingContext2D, d: PhotoSlideInput
   ctx.shadowColor = "rgba(0,0,0,0.4)"; ctx.shadowBlur = 16; ctx.shadowOffsetY = 2;
   ctx.fillStyle = "#ffffff";
   ctx.font = `600 ${body.size}px ${d.bodyFont}`;
-  y = drawLines(ctx, body.lines, W / 2, y, lh, "center");
+  y = drawAligned(ctx, body.lines, y, lh, d.align, W);
   ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
   if (hasCta) {

@@ -1,3 +1,4 @@
+import { drawAligned, type Align } from "./text-layout";
 // Unique: 23 one of a kind cover designs (notices, recalls, wanted posters, myth busting forms) and the two
 // full bleed photo slides that follow each one. Everything draws straight onto a 1080 x 1350 canvas so the
 // preview, the download and the scheduled image are always identical. No React in here.
@@ -242,6 +243,8 @@ export type PhotoSlideInput = {
   scrim: number;
   logo: HTMLImageElement | null;
   arrow: boolean;
+  align?: Align;
+  spacing?: number; // line height as a multiple of the text size
 };
 
 function fitText(ctx: Ctx, text: string, font: (s: number) => string, maxW: number, maxH: number, max: number, min: number, lh: number) {
@@ -286,7 +289,7 @@ export function drawUniPhotoSlide(ctx: Ctx, d: PhotoSlideInput): Slot[] {
   ctx.fillRect(0, H * 0.3, W, H * 0.7);
 
   const hasCta = !!d.cta?.trim();
-  const body = fitText(ctx, d.text, (s) => `600 ${s}px ${d.bodyFont}`, 860, hasCta ? 500 : 620, 66, 32, 1.3);
+  const body = fitText(ctx, d.text, (s) => `600 ${s}px ${d.bodyFont}`, 860, hasCta ? 500 : 620, 66, 32, d.spacing ?? 1.3);
   const bodyH = body.lines.length * body.lh;
   let pillW = 0, pillH = 0, ctaLines: string[] = [];
   const ctaSize = 38, ctaLh = 48;
@@ -302,8 +305,7 @@ export function drawUniPhotoSlide(ctx: Ctx, d: PhotoSlideInput): Slot[] {
   ctx.shadowColor = "rgba(0,0,0,0.42)"; ctx.shadowBlur = 16; ctx.shadowOffsetY = 2;
   ctx.fillStyle = "#ffffff";
   ctx.font = `600 ${body.size}px ${d.bodyFont}`;
-  ctx.textAlign = "center";
-  for (const l of body.lines) { ctx.fillText(l, W / 2, y); y += body.lh; }
+  y = drawAligned(ctx, body.lines, y, body.lh, d.align, W);
   ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
   if (hasCta) {

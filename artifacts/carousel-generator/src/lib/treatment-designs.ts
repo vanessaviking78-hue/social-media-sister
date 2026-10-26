@@ -1,3 +1,4 @@
+import { drawAligned, type Align } from "./text-layout";
 // Treatments: ten "Possible side effects may include..." covers and the four full bleed photo
 // slides that follow them. Everything draws straight onto a 1080 x 1350 canvas so the preview,
 // the download and the scheduled image are always identical. No React in here.
@@ -478,6 +479,8 @@ export type PhotoSlideInput = {
   scrim: number;
   logo: HTMLImageElement | null;
   arrow: boolean;
+  align?: Align;
+  spacing?: number;
 };
 
 export function drawPhotoSlide(ctx: CanvasRenderingContext2D, d: PhotoSlideInput): Slot[] {
@@ -508,7 +511,7 @@ export function drawPhotoSlide(ctx: CanvasRenderingContext2D, d: PhotoSlideInput
   ctx.fillRect(0, H * 0.3, W, H * 0.7);
 
   const hasCta = !!d.cta?.trim();
-  const body = fit(ctx, d.text, (s) => `600 ${s}px ${d.bodyFont}`, 860, hasCta ? 500 : 620, 66, 32, 1.3);
+  const body = fit(ctx, d.text, (s) => `600 ${s}px ${d.bodyFont}`, 860, hasCta ? 500 : 620, 66, 32, d.spacing ?? 1.3);
   const bodyH = body.lines.length * body.lh;
 
   let pillW = 0, pillH = 0, ctaLines: string[] = [];
@@ -526,7 +529,7 @@ export function drawPhotoSlide(ctx: CanvasRenderingContext2D, d: PhotoSlideInput
   ctx.shadowColor = "rgba(0,0,0,0.42)"; ctx.shadowBlur = 16; ctx.shadowOffsetY = 2;
   ctx.fillStyle = "#ffffff";
   ctx.font = `600 ${body.size}px ${d.bodyFont}`;
-  y = drawLines(ctx, body.lines, W / 2, y, body.lh, "center");
+  y = drawAligned(ctx, body.lines, y, body.lh, d.align, W);
   ctx.shadowColor = "transparent"; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
 
   if (hasCta) {
