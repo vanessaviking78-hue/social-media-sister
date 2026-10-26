@@ -10,7 +10,7 @@ import { usePresets } from "@/lib/use-presets";
 import { useApprovedImages } from "@/lib/use-approval";
 import { loadGoogleFonts } from "@/lib/slide-utils";
 import {
-  TOOL_LABEL, designName, designsFor, ensureFonts, makePost, photoCount, renderSlide, schedulePost, slideCount, uid, urlToFile, writeCopy,
+  TOOL_LABEL, colourFields, designName, designsFor, ensureFonts, makePost, photoCount, renderSlide, schedulePost, slideCount, uid, urlToFile, writeCopy,
   type Client, type MPost, type PoolPhoto, type ToolId,
 } from "@/lib/month-engine";
 
@@ -37,10 +37,18 @@ const toLocal = (d: Date, hhmm: string) => {
   return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}T${p2(Number.isFinite(h) ? h : 18)}:${p2(Number.isFinite(m) ? m : 15)}`;
 };
 
-function weekdays(year: number, month: number): Date[] {
+// A future month runs from the 1st. The current month starts from now (today if the post time is still ahead, otherwise tomorrow)
+// and carries on for 20 weekdays, spilling into the next month if it has to.
+function weekdays(year: number, month: number, hhmm: string): Date[] {
   const out: Date[] = [];
+  const now = new Date();
   const d = new Date(year, month, 1);
-  while (d.getMonth() === month) {
+  const current = year === now.getFullYear() && month === now.getMonth();
+  if (current) {
+    d.setTime(new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime());
+    if (new Date(toLocal(d, hhmm)).getTime() <= now.getTime()) d.setDate(d.getDate() + 1);
+  }
+  while (out.length < 20 && (current || d.getMonth() === month)) {
     if (d.getDay() >= 1 && d.getDay() <= 5) out.push(new Date(d));
     d.setDate(d.getDate() + 1);
   }
@@ -49,8 +57,8 @@ function weekdays(year: number, month: number): Date[] {
 
 // Mon and Tue seasonal, Wed BASIC or Treatment alternately, Thu Unique, Fri educational. That is 8 + 4 + 2 + 2 + 4 = 20.
 function buildPlan(year: number, month: number, seed: number, hhmm: string, poolLen: number, done: number[]): Item[] {
-  const days = weekdays(year, month).slice(0, 20);
-  const season = SEASONAL[month];
+  const days = weekdays(year, month, hhmm);
+  let halloweenLeft = 2;
   const used: Record<string, number> = {};
   const pick = (tool: ToolId, group?: "xmas" | "newyear") => {
     const list = designsFor(tool, group);
@@ -63,12 +71,16 @@ function buildPlan(year: number, month: number, seed: number, hhmm: string, pool
   const items: Item[] = [];
   days.forEach((date, i) => {
     const week = Math.floor(i / 5);
-    const dow = i % 5;
+    const dow = date.getDay() - 1;
+    const season = SEASONAL[date.getMonth()];
     const n = i + 1;
     const when = toLocal(date, hhmm);
     if (dow === 4) { items.push({ kind: "friday", n, when }); return; }
     let tool: ToolId; let group: "xmas" | "newyear" | undefined;
-    if (dow === 0 || dow === 1) { tool = season?.tool ?? "unique"; group = season?.group; }
+    if (dow === 0 || dow === 1) {
+      tool = season?.tool ?? "unique"; group = season?.group;
+      if (tool === "halloween") { if (halloweenLeft > 0) halloweenLeft--; else tool = "unique"; }
+    }
     else if (dow === 2) tool = week % 2 === 0 ? "basic" : "treatments";
     else tool = "unique";
     const design = pick(tool, group);
@@ -287,7 +299,7 @@ export default function MonthPlanner() {
         <Link href="/hub" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="w-5 h-5" /></Link>
         <CalendarRange className="w-5 h-5 text-violet-400" />
         <h1 className="font-bold text-lg">Month</h1>
-        <span className="text-sm text-muted-foreground">One client, one calendar month, 20 posts made for you</span>
+        <span className="text-sm text-muted-foreground">One client, one calendar month, 20 posts made for you, starting from now</span>
       </header>
       <main className="max-w-[1400px] mx-auto px-4 py-6 space-y-6">
         <section className="rounded-2xl border border-border/30 p-5 space-y-4">
@@ -364,6 +376,15 @@ export default function MonthPlanner() {
                   <Button size="sm" variant="outline" className="ml-auto" disabled={p.busy || !!busy} onClick={() => rewrite(p)}>
                     {p.busy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1.5" />} Rewrite words
                   </Button>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+                  {colourFields(p).map((f) => (
+                    <label key={f.key} className="flex items-center gap-1.5">
+                      <input type="color" value={/^#[0-9a-f]{6}$/i.test(f.value) ? f.value : "#000000"} onChange={(e) => patchPost(p.id, { pal: { ...(p.pal ?? {}), [f.key]: e.target.value } })} className="h-6 w-8 rounded border border-border/40 bg-transparent" />
+                      {f.label}
+                    </label>
+                  ))}
+                  {p.pal && <button type="button" className="underline" onClick={() => patchPost(p.id, { pal: undefined })}>reset colours</button>}
                 </div>
                 <div className={`grid gap-3 ${count === 1 ? "grid-cols-1 max-w-[220px]" : count === 3 ? "grid-cols-3 max-w-3xl" : "grid-cols-5"}`}>
                   {Array.from({ length: count }, (_, n) => (
