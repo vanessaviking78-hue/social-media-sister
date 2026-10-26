@@ -132,10 +132,11 @@ function slotTarget(post: MPost, n: number, slot: Slot): { key: string; photo: n
   return { key: `s${n + 1}`, photo: post.photos[n] ?? null };
 }
 
-function Thumb({ post, n, client, onSwap, onFocus }: { post: MPost; n: number; client: Client; onSwap: () => void; onFocus: (key: string, f: Focus) => void }) {
+function Thumb({ post, n, client, onSwap, onFocus, onText }: { post: MPost; n: number; client: Client; onSwap: () => void; onFocus: (key: string, f: Focus) => void; onText: (key: string, v: [number, number] | null) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
   const slots = useRef<Slot[]>([]);
   const drag = useRef<{ slot: Slot; key: string; x: number; y: number; f: Focus; ox: number; oy: number } | null>(null);
+  const tdrag = useRef<{ key: string; x: number; y: number; v: [number, number] } | null>(null);
   const run = useRef(0);
   useEffect(() => {
     const my = ++run.current;
@@ -173,6 +174,12 @@ function Thumb({ post, n, client, onSwap, onFocus }: { post: MPost; n: number; c
     const p = toCanvas(e);
     const slot = hit(p.x, p.y);
     if (!slot) return;
+    if (slot.i === -1) {
+      const key = `t${n + 1}`;
+      tdrag.current = { key, x: p.x, y: p.y, v: post.textPos?.[key] ?? [0, 0] };
+      (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      return;
+    }
     const tg = slotTarget(post, n, slot);
     const ph = tg.photo != null ? client.pool[tg.photo] : null;
     const bmp = ph ? await getBitmap(ph) : null;
@@ -182,6 +189,14 @@ function Thumb({ post, n, client, onSwap, onFocus }: { post: MPost; n: number; c
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
   const onMove = (e: React.PointerEvent) => {
+    const td = tdrag.current;
+    if (td) {
+      const q = toCanvas(e);
+      const nx = Math.max(-120, Math.min(120, td.v[0] + q.x - td.x));
+      const ny = Math.max(-600, Math.min(600, td.v[1] + q.y - td.y));
+      onText(td.key, [Math.round(nx), Math.round(ny)]);
+      return;
+    }
     const d = drag.current;
     if (!d) return;
     const p = toCanvas(e);
@@ -193,7 +208,7 @@ function Thumb({ post, n, client, onSwap, onFocus }: { post: MPost; n: number; c
     const ny = d.oy > 1 ? Math.max(0, Math.min(1, d.f[1] - dy / d.oy)) : d.f[1];
     onFocus(d.key, [nx, ny]);
   };
-  const onUp = () => { drag.current = null; };
+  const onUp = () => { drag.current = null; tdrag.current = null; };
   return (
     <div className="space-y-1">
       <canvas ref={ref} width={324} height={405} className="w-full rounded-lg border border-border/30 bg-muted/20 cursor-grab active:cursor-grabbing"
@@ -202,6 +217,11 @@ function Thumb({ post, n, client, onSwap, onFocus }: { post: MPost; n: number; c
       <button type="button" onClick={onSwap} className="w-full flex items-center justify-center gap-1 text-[11px] rounded-md border border-border/40 py-1 hover:border-border">
         <ImageIcon className="w-3 h-3" /> Swap photo
       </button>
+      {n > 0 && post.textPos?.[`t${n + 1}`] && (
+        <button type="button" onClick={() => onText(`t${n + 1}`, null)} className="w-full text-[11px] rounded-md border border-border/40 py-1 hover:border-border">
+          Reset words
+        </button>
+      )}
     </div>
   );
 }
@@ -591,7 +611,7 @@ export default function MonthPlanner() {
                 </div>
                 <div className={`grid gap-3 ${count === 1 ? "grid-cols-1 max-w-[220px]" : count === 3 ? "grid-cols-3 max-w-3xl" : "grid-cols-5"}`}>
                   {Array.from({ length: count }, (_, n) => (
-                    <Thumb key={n} post={p} n={n} client={client} onSwap={() => setSwap({ postId: p.id, slide: n })} onFocus={(key, f) => patchPost(p.id, { focus: { ...p.focus, [key]: f } })} />
+                    <Thumb key={n} post={p} n={n} client={client} onSwap={() => setSwap({ postId: p.id, slide: n })} onFocus={(key, f) => patchPost(p.id, { focus: { ...p.focus, [key]: f } })} onText={(key, v) => { const tp = { ...(p.textPos ?? {}) }; if (v) tp[key] = v; else delete tp[key]; patchPost(p.id, { textPos: tp }); }} />
                   ))}
                 </div>
                 <div className="grid gap-3 lg:grid-cols-2">
