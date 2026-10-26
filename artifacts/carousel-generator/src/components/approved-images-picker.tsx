@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { ShieldCheck, Loader2, X, CheckCircle2, Maximize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useApprovedImages } from "@/lib/use-approval";
+import { useApprovedImages, sameClientName } from "@/lib/use-approval";
 import { toast } from "sonner";
 import ExportToCanvaButton from "@/components/export-to-canva";
 
@@ -67,8 +67,9 @@ export default function ApprovedImagesPicker({ clientName, onAddImages, mode = "
   const clients = Array.from(new Set(allImages.map((img) => img.clientName))).sort();
 
   useEffect(() => {
-    if (clientName && clients.includes(clientName)) {
-      setSelectedClient(clientName);
+    if (clientName) {
+      const match = clients.includes(clientName) ? clientName : clients.find((c) => sameClientName(c, clientName));
+      if (match) setSelectedClient(match);
     }
   }, [clientName, clients.join(",")]);
 

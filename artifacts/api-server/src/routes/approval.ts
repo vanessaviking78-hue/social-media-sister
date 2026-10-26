@@ -193,12 +193,12 @@ router.get("/approval/approved-images", requireAuth, async (req, res) => {
       ? batches.filter((b) => norm(b.clientName) === target)
       : batches;
 
-    const allApproved: { id: number; imageUrl: string; batchName: string; clientName: string }[] = [];
+    const allApproved: { id: number; imageUrl: string; batchName: string; clientName: string; presetId: number | null }[] = [];
     for (const batch of relevantBatches) {
       const images = await db.select().from(approvalImagesTable)
         .where(and(eq(approvalImagesTable.batchId, batch.id), eq(approvalImagesTable.status, "approved")));
       for (const img of images) {
-        allApproved.push({ id: img.id, imageUrl: rewriteImageUrl(img.imageUrl, req), batchName: batch.name, clientName: batch.clientName });
+        allApproved.push({ id: img.id, imageUrl: rewriteImageUrl(img.imageUrl, req), batchName: batch.name, clientName: batch.clientName, presetId: batch.presetId ?? null });
       }
     }
 
