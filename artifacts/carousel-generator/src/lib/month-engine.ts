@@ -28,6 +28,8 @@ export type Client = {
   fill: Fill;
   headFont: string;
   bodyFont: string;
+  align?: "left" | "center" | "right" | "justify"; // words on slides 2 to 5
+  spacing?: number; // line spacing on slides 2 to 5
   logo: HTMLImageElement | null;
   pool: PoolPhoto[];
 };
@@ -193,7 +195,7 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
     }
     return UD.drawUniPhotoSlide(ctx, {
       text: BC.fillTokens(post.slides[n - 1] ?? "", c.fill), cta: last ? BC.fillTokens(post.cta, c.fill) : "", palette: palOf<never>(post), bodyFont: c.bodyFont,
-      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo: c.logo, arrow: !last,
+      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo: c.logo, arrow: !last, align: c.align, spacing: c.spacing,
     });
   }
 
@@ -210,7 +212,7 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
     return TD.drawPhotoSlide(ctx, {
       text: TD.fillTreat(post.slides[n - 1] ?? "", c.fill), cta: last ? TD.fillTreat(post.cta, c.fill) : "",
       small: last ? TD.fillTreat(post.text.small ?? "", c.fill) : "", pal: palOf<never>(post), bodyFont: c.bodyFont, headFont: c.headFont,
-      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo: c.logo, arrow: !last,
+      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo: c.logo, arrow: !last, align: c.align, spacing: c.spacing,
     } as never);
   }
 
@@ -230,7 +232,7 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
     return BC.drawPhotoSlide(ctx, {
       text: BC.fillTokens(post.slides[n - 1] ?? "", c.fill), cta: n === 2 ? BC.fillTokens(post.cta, c.fill) : "", colours,
       bodyFont: c.bodyFont, headFont: c.headFont, photo: await bmp(c, post.photos[idx]),
-      focus: post.focus[idx === 2 ? "s2" : "s3"] ?? DEFAULT_FOCUS, scrim: 35, logo: c.logo, arrow: n === 1,
+      focus: post.focus[idx === 2 ? "s2" : "s3"] ?? DEFAULT_FOCUS, scrim: 35, logo: c.logo, arrow: n === 1, align: c.align, spacing: c.spacing,
     } as never);
   }
 
