@@ -24,12 +24,13 @@ const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 function fiveTags(raw: unknown, area: string): string[] {
   const fromModel = Array.isArray(raw) ? raw.map((t) => slug(String(t ?? ""))).filter(Boolean) : [];
   const parts = area.split(",").map((p) => slug(p)).filter(Boolean);
-  const town = parts[0] || "yorkshire";
-  const city = parts[1] || parts[0] || "yorkshire";
+  const town = parts[0] || "";
+  const city = parts[1] || parts[0] || "";
+  const related = fromModel.filter((t) => (town && t.includes(town)) || (city && t.includes(city)));
   const fallback = [`${town}aesthetics`, `${city}aesthetics`, `${town}clinic`, `${city}skincare`, `${city}consultation`, `${town}${city}`, `${city}beauty`];
   const seen = new Set<string>();
   const out: string[] = [];
-  for (const t of [...fromModel, ...fallback]) {
+  for (const t of [...related, ...fallback]) {
     if (t && !seen.has(t)) {
       seen.add(t);
       out.push(t);
@@ -90,11 +91,15 @@ router.post("/mens/copy", async (req: Request, res: Response) => {
       res.status(400).json({ error: "Pick a client first" });
       return;
     }
+    if (!str(b.area, 80)) {
+      res.status(400).json({ error: "Add the clinic's town and city first, so every hashtag matches where they are" });
+      return;
+    }
     const notes: Notes = {
       businessName,
       ownerName: str(b.ownerName, 40),
       role: str(b.role, 60),
-      area: str(b.area, 80) || "Yorkshire",
+      area: str(b.area, 80),
       audience: str(b.audience, 200),
       brandNotes: str(b.brandNotes, 600),
       topic: str(b.topic, 300) || "men and aesthetics",

@@ -358,6 +358,7 @@ export default function MonthPlanner() {
   const create = async () => {
     if (!preset) { toast.error("Choose a client first"); return; }
     if (!owner.trim() || !area.trim()) { toast.error("Add the owner's first name and the area first, so no placeholder goes out."); return; }
+    if (!area.trim()) { toast.error("Add the clinic's town and city in the Area box first, so every hashtag matches where they are."); return; }
     if (!pool.length) { toast.error("This client has no approved photos yet. Approve some first."); return; }
     const plan = buildPlan(year, month, preset.id, (preset as unknown as { defaultPostTime?: string }).defaultPostTime ?? "18:15", pool.length, doneList());
     setItems(plan);
@@ -447,7 +448,7 @@ export default function MonthPlanner() {
             </label>
             <label className="space-y-1.5 block lg:col-span-2">
               <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Area (also used for the 5 hashtags)</span>
-              <Input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Town, City" />
+              <Input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Town, City (the hashtags use this)" className={!area.trim() && preset ? "border-red-500/60" : ""} />
             </label>
             <div className="space-y-1.5">
               <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Headline font</span>
