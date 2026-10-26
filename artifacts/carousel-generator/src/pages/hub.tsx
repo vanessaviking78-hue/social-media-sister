@@ -861,7 +861,7 @@ border: "hover:border-purple-500/50",
 iconColor: "text-purple-400",
 },
 {
-href: "/free-sample",
+href: "/month-planner",
 group: "content",
 icon: Gift,
 name: "Free Sample",
