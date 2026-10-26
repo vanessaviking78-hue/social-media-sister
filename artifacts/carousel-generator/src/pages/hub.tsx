@@ -5,6 +5,7 @@ import { LogOut, TreePine, Scissors, LayoutTemplate, Flame, Ghost, Syringe } fro
 import { AdventCalendarIcon } from "@/components/advent-icon";
 import { MagazineIcon } from "@/components/magazine-icon";
 import { PerfecterIcon } from "@/components/perfecter-icon";
+import { TodayPopup } from "@/components/today-popup";
 
 const TOOLS = [
 {
@@ -1029,6 +1030,7 @@ return () => clearInterval(id3);
 }, []);
 return (
 <div className="min-h-[100dvh] w-full bg-background">
+<TodayPopup newCount={newCount} hwCount={hwCount} reelCaptionCount={reelCaptionCount} cqCount={cqCount} />
 {/* Header */}
 <header className="border-b border-border/30 py-5 px-8 flex items-center gap-4">
 <img src="/sms-logo.png" alt="Social Media Sister" className="h-8 w-auto object-contain" />
