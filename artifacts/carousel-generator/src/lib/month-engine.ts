@@ -53,6 +53,7 @@ export type MPost = {
   scheduled: boolean;
   group?: "xmas" | "newyear";
   pal?: Record<string, string>; // her own colour changes for this post
+  textPos?: Record<string, [number, number]>; // where she has dragged the words on slides 2 onwards
 };
 
 export const TOOL_LABEL: Record<ToolId, string> = {
@@ -198,7 +199,7 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
     }
     return UD.drawUniPhotoSlide(ctx, {
       text: BC.fillTokens(post.slides[n - 1] ?? "", c.fill), cta: last ? BC.fillTokens(post.cta, c.fill) : "", palette: palOf<never>(post), bodyFont: c.bodyFont,
-      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo, logoCorner: corner, arrow: !last, align: c.align, spacing: c.spacing,
+      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo, logoCorner: corner, arrow: !last, align: c.align, spacing: c.spacing, textDx: post.textPos?.[`t${n + 1}`]?.[0], textDy: post.textPos?.[`t${n + 1}`]?.[1],
     });
   }
 
@@ -215,7 +216,7 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
     return TD.drawPhotoSlide(ctx, {
       text: TD.fillTreat(post.slides[n - 1] ?? "", c.fill), cta: last ? TD.fillTreat(post.cta, c.fill) : "",
       small: last ? TD.fillTreat(post.text.small ?? "", c.fill) : "", pal: palOf<never>(post), bodyFont: c.bodyFont, headFont: c.headFont,
-      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo, logoCorner: corner, arrow: !last, align: c.align, spacing: c.spacing,
+      photo: await bmp(c, post.photos[n]), focus: post.focus[`s${n + 1}`] ?? DEFAULT_FOCUS, scrim: 35, logo, logoCorner: corner, arrow: !last, align: c.align, spacing: c.spacing, textDx: post.textPos?.[`t${n + 1}`]?.[0], textDy: post.textPos?.[`t${n + 1}`]?.[1],
     } as never);
   }
 
@@ -235,7 +236,7 @@ export async function renderSlide(post: MPost, n: number, c: Client, canvas: HTM
     return BC.drawPhotoSlide(ctx, {
       text: BC.fillTokens(post.slides[n - 1] ?? "", c.fill), cta: n === 2 ? BC.fillTokens(post.cta, c.fill) : "", colours,
       bodyFont: c.bodyFont, headFont: c.headFont, photo: await bmp(c, post.photos[idx]),
-      focus: post.focus[idx === 2 ? "s2" : "s3"] ?? DEFAULT_FOCUS, scrim: 35, logo, logoCorner: corner, arrow: n === 1, align: c.align, spacing: c.spacing,
+      focus: post.focus[idx === 2 ? "s2" : "s3"] ?? DEFAULT_FOCUS, scrim: 35, logo, logoCorner: corner, arrow: n === 1, align: c.align, spacing: c.spacing, textDx: post.textPos?.[`t${n + 1}`]?.[0], textDy: post.textPos?.[`t${n + 1}`]?.[1],
     } as never);
   }
 

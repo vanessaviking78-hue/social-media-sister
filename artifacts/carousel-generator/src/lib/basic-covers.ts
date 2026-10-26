@@ -725,6 +725,8 @@ export type PhotoSlideInput = {
   arrow: boolean;
   align?: Align;
   logoCorner?: CornerPos;
+  textDx?: number; // where she has dragged the words to
+  textDy?: number;
   spacing?: number;
 };
 
@@ -771,6 +773,10 @@ export function drawPhotoSlide(ctx: CanvasRenderingContext2D, d: PhotoSlideInput
   const gap = hasCta ? 56 : 0;
   const total = bodyH + gap + pillH;
   let y = Math.round(H * 0.6 - total / 2);
+  const tdx = d.textDx ?? 0, tdy = d.textDy ?? 0;
+  slots.push({ i: -1, x: (W - 860) / 2 + tdx, y: y + tdy, w: 860, h: total, rot: 0 });
+  ctx.save();
+  ctx.translate(tdx, tdy);
 
   ctx.shadowColor = "rgba(0,0,0,0.4)"; ctx.shadowBlur = 16; ctx.shadowOffsetY = 2;
   ctx.fillStyle = "#ffffff";
@@ -790,6 +796,7 @@ export function drawPhotoSlide(ctx: CanvasRenderingContext2D, d: PhotoSlideInput
     drawLines(ctx, ctaLines, W / 2, y + 28, ctaLh, "center");
   }
 
+  ctx.restore();
   if (d.arrow) {
     ctx.strokeStyle = "rgba(255,255,255,0.92)"; ctx.lineWidth = 3; ctx.lineCap = "round"; ctx.lineJoin = "round";
     const ay = H - 96;
