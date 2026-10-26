@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, CalendarRange, ExternalLink, ImageIcon, Loader2, RefreshCw, Sparkles, X } from "lucide-react";
+import { ArrowLeft, CalendarRange, ExternalLink, ImageIcon, Loader2, RefreshCw, Sparkles, Type, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { usePresets } from "@/lib/use-presets";
 import { useApprovedImages } from "@/lib/use-approval";
-import { loadGoogleFonts } from "@/lib/slide-utils";
+import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
+import { addSharedFonts, syncSharedFonts, FONTS_CHANGED_EVENT, type SharedFontOption } from "@/lib/shared-fonts";
 import {
   TOOL_LABEL, colourFields, designName, designsFor, ensureFonts, makePost, photoCount, renderSlide, schedulePost, slideCount, uid, urlToFile, writeCopy,
   type Client, type MPost, type PoolPhoto, type ToolId,
@@ -28,6 +29,24 @@ const SEASONAL: Record<number, { tool: ToolId; group?: "xmas" | "newyear"; name:
   11: { tool: "xmas", group: "xmas", name: "Christmas" },
   0: { tool: "xmas", group: "newyear", name: "New Year" },
 };
+
+type FontOpt = { label: string; value: string };
+function FontList({ yours, library }: { yours: FontOpt[]; library: FontOpt[] }) {
+  return (
+    <SelectContent className="max-h-72">
+      {yours.length > 0 && (
+        <SelectGroup>
+          <SelectLabel>Your fonts</SelectLabel>
+          {yours.map((f) => <SelectItem key={`y-${f.value}`} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>)}
+        </SelectGroup>
+      )}
+      <SelectGroup>
+        <SelectLabel>Library fonts</SelectLabel>
+        {library.map((f) => <SelectItem key={`l-${f.value}`} value={f.value}><span style={{ fontFamily: f.value }}>{f.label}</span></SelectItem>)}
+      </SelectGroup>
+    </SelectContent>
+  );
+}
 
 type Item = { kind: "post"; post: MPost } | { kind: "friday"; n: number; when: string };
 
@@ -138,23 +157,35 @@ export default function MonthPlanner() {
   const [swap, setSwap] = useState<{ postId: string; slide: number } | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [logo, setLogo] = useState<HTMLImageElement | null>(null);
+  const [headFont, setHeadFont] = useState(DEFAULT_HEAD);
+  const [bodyFont, setBodyFont] = useState(DEFAULT_BODY);
+  const [fontsTick, setFontsTick] = useState(0);
+  const fontFileRef = useRef<HTMLInputElement>(null);
 
   const [year, month] = ym.split("-").map(Number);
   const preset = presets.find((p) => String(p.id) === clientId);
   const { data: approvedData } = useApprovedImages("");
   const allApproved = useMemo(() => approvedData ?? [], [approvedData]);
 
-  useEffect(() => { loadGoogleFonts(); }, []);
+  useEffect(() => {
+    loadGoogleFonts();
+    const bump = () => setFontsTick((n) => n + 1);
+    window.addEventListener(FONTS_CHANGED_EVENT, bump);
+    void syncSharedFonts();
+    return () => window.removeEventListener(FONTS_CHANGED_EVENT, bump);
+  }, []);
 
   // Choosing a client fills in their owner name and area from anything already saved in the other tools.
   useEffect(() => {
     if (!preset) return;
-    let saved: { owner?: string; role?: string; area?: string } = {};
+    let saved: { owner?: string; role?: string; area?: string; headFont?: string; bodyFont?: string } = {};
     const grab = (k: string) => { try { return (JSON.parse(localStorage.getItem(k) || "{}") as Record<string, typeof saved>)[String(preset.id)]; } catch { return undefined; } };
     saved = grab(SETTINGS_KEY) ?? OTHER_KEYS.map(grab).find((s) => s?.owner) ?? {};
     setOwner(saved.owner ?? "");
     setRole(saved.role ?? "Owner");
     setArea(saved.area || preset.seoArea || "");
+    setHeadFont(saved.headFont || preset.stylishCoverHeadlineFont || DEFAULT_HEAD);
+    setBodyFont(saved.bodyFont || preset.stylishCoverSubtitleFont || DEFAULT_BODY);
     setItems([]);
     setLogo(null);
     if (preset.logoUrl) {
@@ -169,10 +200,10 @@ export default function MonthPlanner() {
     if (!preset) return;
     try {
       const all = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
-      all[String(preset.id)] = { owner, role, area };
+      all[String(preset.id)] = { owner, role, area, headFont, bodyFont };
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(all));
     } catch { /* ignore */ }
-  }, [preset?.id, owner, role, area]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [preset?.id, owner, role, area, headFont, bodyFont]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The client's approved photos become the pool every post draws from.
   const approvedForClient = useMemo(() => (preset ? allApproved.filter((i) => i.clientName === preset.name) : []), [allApproved, preset?.name]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -206,11 +237,27 @@ export default function MonthPlanner() {
     brandNotes: preset?.brandNotes ?? "",
     footnote: preset?.captionFootnote?.trim() ?? "",
     fill: { owner: owner.trim(), clinic: preset?.name ?? "", area: area.trim(), role: role.trim() },
-    headFont: preset?.stylishCoverHeadlineFont || DEFAULT_HEAD,
-    bodyFont: preset?.stylishCoverSubtitleFont || DEFAULT_BODY,
+    headFont,
+    bodyFont,
     logo,
     pool,
-  }), [preset, owner, role, area, logo, pool]);
+  }), [preset, owner, role, area, logo, pool, headFont, bodyFont]);
+
+  const shared = useMemo(() => FONT_OPTIONS as SharedFontOption[], [fontsTick]); // eslint-disable-line react-hooks/exhaustive-deps
+  const clientFonts: FontOpt[] = useMemo(
+    () => [preset?.stylishCoverHeadlineFont, preset?.stylishCoverSubtitleFont]
+      .filter((v): v is string => !!v && !shared.some((x) => x.value === v))
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .map((v) => ({ label: `${v.split(",")[0].replace(/['"]/g, "").trim()} (this client)`, value: v })),
+    [preset?.stylishCoverHeadlineFont, preset?.stylishCoverSubtitleFont, shared],
+  );
+  const yourFonts: FontOpt[] = useMemo(() => [...clientFonts, ...shared.filter((f) => f.custom)], [clientFonts, shared]);
+  const libraryFonts: FontOpt[] = useMemo(() => shared.filter((f) => !f.custom && /,|['"]/.test(f.value) && !/^(top|bottom)-/.test(f.value)), [shared]);
+  const addFonts = async (files: File[]) => {
+    const added = await addSharedFonts(files);
+    if (added.length) { toast.success(`Added ${added.join(", ")}. They are in every font list now.`); setFontsTick((n) => n + 1); }
+    else toast.error("Those files were not fonts I could read. Try .otf, .ttf or .woff");
+  };
 
   const bucket = `${clientId}:${year}-${month}`;
   const doneList = (): number[] => { try { return (JSON.parse(localStorage.getItem(DONE_KEY) || "{}") as Record<string, number[]>)[bucket] ?? []; } catch { return []; } };
@@ -330,7 +377,24 @@ export default function MonthPlanner() {
               <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Area (also used for the 5 hashtags)</span>
               <Input value={area} onChange={(e) => setArea(e.target.value)} placeholder="Town, City" />
             </label>
+            <div className="space-y-1.5">
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Headline font</span>
+              <Select value={headFont} onValueChange={setHeadFont}>
+                <SelectTrigger className="bg-muted/30 border-border/40"><SelectValue /></SelectTrigger>
+                <FontList yours={yourFonts} library={libraryFonts} />
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Body font</span>
+              <Select value={bodyFont} onValueChange={setBodyFont}>
+                <SelectTrigger className="bg-muted/30 border-border/40"><SelectValue /></SelectTrigger>
+                <FontList yours={yourFonts} library={libraryFonts} />
+              </Select>
+            </div>
             <div className="flex items-end gap-3 lg:col-span-3">
+              <Button variant="outline" onClick={() => fontFileRef.current?.click()}><Type className="w-4 h-4 mr-1.5" /> Upload fonts</Button>
+              <input ref={fontFileRef} type="file" accept=".otf,.ttf,.woff,.woff2" multiple className="hidden"
+                onChange={(e) => { const fs = Array.from(e.target.files ?? []); e.target.value = ""; if (fs.length) void addFonts(fs); }} />
               <Button onClick={create} disabled={!preset || !!busy || poolBusy}>
                 {busy === "write" ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1.5" />}
                 {items.length ? "Start this month again" : "Create the month"}
