@@ -121,6 +121,8 @@ const photoIdxFor = (p: MPost, n: number): number =>
   p.tool === "basic" ? (n === 0 ? 0 : n === 1 ? 2 : 3) : p.tool === "unique" || p.tool === "treatments" ? n : 0;
 
 const SW = 1080, SH = 1350;
+const PROSPECT = "prospect";
+const API = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/api`;
 
 // Which photo and focus key a picture on slide n belongs to, so dragging it moves the right one.
 function slotTarget(post: MPost, n: number, slot: Slot): { key: string; photo: number | null } {
@@ -230,6 +232,9 @@ export default function MonthPlanner() {
   const { presets, loading } = usePresets();
   const now = new Date();
   const [clientId, setClientId] = useState("");
+  const [prospectName, setProspectName] = useState("");
+  const [sampleLink, setSampleLink] = useState("");
+  const photoFileRef = useRef<HTMLInputElement>(null);
   const [ym, setYm] = useState(`${now.getFullYear()}-${now.getMonth()}`);
   const [owner, setOwner] = useState("");
   const [role, setRole] = useState("Owner");
@@ -259,7 +264,14 @@ export default function MonthPlanner() {
   const fontFileRef = useRef<HTMLInputElement>(null);
 
   const [year, month] = ym.split("-").map(Number);
-  const preset = presets.find((p) => String(p.id) === clientId);
+  const isProspect = clientId === PROSPECT;
+  // Someone who isn't a client yet: a stand-in client with just a name, so the whole tool works for them.
+  const preset = useMemo(
+    () => (isProspect
+      ? ({ id: -1, name: prospectName.trim() || "Your clinic", seoArea: "", defaultPostTime: "18:15", logoUrl: null, targetAudience: "", brandNotes: "", captionFootnote: null } as unknown as (typeof presets)[number])
+      : presets.find((p) => String(p.id) === clientId)),
+    [isProspect, prospectName, presets, clientId],
+  );
   const { data: approvedData } = useApprovedImages("");
   const allApproved = useMemo(() => approvedData ?? [], [approvedData]);
 
@@ -275,7 +287,7 @@ export default function MonthPlanner() {
   useEffect(() => {
     if (!preset) return;
     let saved: { owner?: string; role?: string; area?: string; headFont?: string; bodyFont?: string; align?: Align; spacing?: number; logoPos?: NonNullable<Client["logoPos"]>; brandOn?: boolean; brandMain?: string; brandAccent?: string } = {};
-    const grab = (k: string) => { try { return (JSON.parse(localStorage.getItem(k) || "{}") as Record<string, typeof saved>)[String(preset.id)]; } catch { return undefined; } };
+    const grab = (k: string) => { if (isProspect) return undefined; try { return (JSON.parse(localStorage.getItem(k) || "{}") as Record<string, typeof saved>)[String(preset.id)]; } catch { return undefined; } };
     saved = grab(SETTINGS_KEY) ?? OTHER_KEYS.map(grab).find((s) => s?.owner) ?? {};
     setOwner(saved.owner ?? "");
     setRole(saved.role ?? "Owner");
@@ -293,7 +305,7 @@ export default function MonthPlanner() {
     setExtras([]);
     setLogo(null);
     let custom = "";
-    try { custom = (JSON.parse(localStorage.getItem(LOGO_KEY) || "{}") as Record<string, string>)[String(preset.id)] ?? ""; } catch { /* ignore */ }
+    if (!isProspect) { try { custom = (JSON.parse(localStorage.getItem(LOGO_KEY) || "{}") as Record<string, string>)[String(preset.id)] ?? ""; } catch { /* ignore */ } }
     const src = custom || preset.logoUrl;
     if (src) {
       const img = new Image();
@@ -304,7 +316,7 @@ export default function MonthPlanner() {
   }, [preset?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (!preset) return;
+    if (!preset || isProspect) return;
     try {
       const all = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
       all[String(preset.id)] = { owner, role, area, headFont, bodyFont, align, spacing, logoPos, brandOn, brandMain, brandAccent };
@@ -313,7 +325,7 @@ export default function MonthPlanner() {
   }, [preset?.id, owner, role, area, headFont, bodyFont, align, spacing, logoPos, brandOn, brandMain, brandAccent]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The client's approved photos become the pool every post draws from.
-  const approvedForClient = useMemo(() => (preset ? allApproved.filter((i) => i.presetId === preset.id || sameClientName(i.clientName, preset.name)) : []), [allApproved, preset?.name]); // eslint-disable-line react-hooks/exhaustive-deps
+  const approvedForClient = useMemo(() => (preset && !isProspect ? allApproved.filter((i) => i.presetId === preset.id || sameClientName(i.clientName, preset.name)) : []), [allApproved, preset?.name, isProspect]); // eslint-disable-line react-hooks/exhaustive-deps
   const approvedKey = approvedForClient.map((i) => i.id).join(",");
   useEffect(() => {
     let live = true;
@@ -377,7 +389,7 @@ export default function MonthPlanner() {
       const img = new Image();
       img.onload = () => {
         setLogo(img);
-        if (preset) { try { const all = JSON.parse(localStorage.getItem(LOGO_KEY) || "{}"); all[String(preset.id)] = data; localStorage.setItem(LOGO_KEY, JSON.stringify(all)); } catch { /* too big to remember, still used this time */ } }
+        if (preset && !isProspect) { try { const all = JSON.parse(localStorage.getItem(LOGO_KEY) || "{}"); all[String(preset.id)] = data; localStorage.setItem(LOGO_KEY, JSON.stringify(all)); } catch { /* too big to remember, still used this time */ } }
         toast.success("Logo changed. Press Start this month again to see it on the posts.");
       };
       img.src = data;
@@ -418,8 +430,15 @@ export default function MonthPlanner() {
     if (!preset) { toast.error("Choose a client first"); return; }
     if (!owner.trim() || !area.trim()) { toast.error("Add the owner's first name and the area first, so no placeholder goes out."); return; }
     if (!area.trim()) { toast.error("Add the clinic's town and city in the Area box first, so every hashtag matches where they are."); return; }
-    if (!pool.length) { toast.error("This client has no approved photos yet. Approve some first."); return; }
-    const plan = buildPlan(year, month, preset.id, (preset as unknown as { defaultPostTime?: string }).defaultPostTime ?? "18:15", pool.length, doneList());
+    if (isProspect && !prospectName.trim()) { toast.error("Add their clinic name first."); return; }
+    if (!pool.length) { toast.error(isProspect ? "Add some of their photos first." : "This client has no approved photos yet. Approve some first."); return; }
+    setSampleLink("");
+    let plan = buildPlan(year, month, isProspect ? 1 + Math.floor(Math.random() * 40) : preset.id, (preset as unknown as { defaultPostTime?: string }).defaultPostTime ?? "18:15", pool.length, doneList());
+    if (isProspect) {
+      // A free sample is 8 posts, shown on the page I hand over.
+      const only = plan.filter((i) => i.kind === "post").slice(0, 8);
+      plan = only.map((i) => (i.kind === "post" ? { kind: "post" as const, post: { ...i.post, selected: true } } : i));
+    }
     setItems(plan);
     setBusy("write");
     const targets = plan.filter((i): i is { kind: "post"; post: MPost } => i.kind === "post").map((i) => i.post).filter((p) => !p.scheduled);
@@ -467,6 +486,55 @@ export default function MonthPlanner() {
     }
   };
 
+  // Puts the 8 sample posts on a public page and gives back the link to send them.
+  const makeSampleLink = async () => {
+    if (posts.length !== 8) return;
+    const missing = posts.filter((p) => !p.caption.trim());
+    if (missing.length) { toast.error(`${missing.length} post${missing.length > 1 ? "s have" : " has"} no caption yet. Press Rewrite on them first.`); return; }
+    setBusy("link");
+    const toastId = toast.loading("Making their page…");
+    try {
+      await ensureFonts(client.headFont, client.bodyFont);
+      const up = async (blob: Blob, name: string) => {
+        const fd = new FormData(); fd.append("image", blob, name);
+        const r = await fetch(`${API}/free-samples/image`, { method: "POST", body: fd });
+        const d = (await r.json()) as { url?: string; error?: string };
+        if (!r.ok || !d.url) throw new Error(d.error || "Upload failed");
+        return d.url;
+      };
+      const out: { n: number; week: number; day: string; imageUrl: string; caption: string; tags: string }[] = [];
+      for (let i = 0; i < posts.length; i++) {
+        const p = posts[i];
+        toast.loading(`Uploading ${i + 1} of 8`, { id: toastId });
+        const cv = document.createElement("canvas");
+        await renderSlide(p, 0, client, cv, 1);
+        const blob = await new Promise<Blob>((res, rej) => cv.toBlob((b) => (b ? res(b) : rej(new Error("Could not make the picture"))), "image/jpeg", 0.92));
+        const day = new Date(p.when).toLocaleDateString("en-GB", { weekday: "long" });
+        out.push({ n: i + 1, week: i < 4 ? 1 : 2, day, imageUrl: await up(blob, `post-${i + 1}.jpg`), caption: p.caption, tags: p.hashtags.join(" ") });
+      }
+      let logoUrl = "";
+      if (logo) {
+        const lc = document.createElement("canvas"); lc.width = logo.naturalWidth || 400; lc.height = logo.naturalHeight || 200;
+        lc.getContext("2d")!.drawImage(logo, 0, 0, lc.width, lc.height);
+        const lb = await new Promise<Blob | null>((res) => lc.toBlob(res, "image/png"));
+        if (lb) logoUrl = await up(lb, "logo.png");
+      }
+      const r = await fetch(`${API}/free-samples`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clinicName: prospectName.trim(), logoUrl, accent: brandAccent, posts: out }),
+      });
+      const d = (await r.json()) as { slug?: string; error?: string };
+      if (!r.ok || !d.slug) throw new Error(d.error || "Could not save the page");
+      const url = `${window.location.origin}/sample/${d.slug}`;
+      setSampleLink(url);
+      try { await navigator.clipboard.writeText(url); toast.success("Their link is ready and copied.", { id: toastId }); } catch { toast.success("Their link is ready.", { id: toastId }); }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not make the link", { id: toastId });
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const swapPost = swap ? posts.find((p) => p.id === swap.postId) : null;
   const options = Array.from({ length: 14 }, (_, k) => { const d = new Date(now.getFullYear(), now.getMonth() + k, 1); return { v: `${d.getFullYear()}-${d.getMonth()}`, l: `${MONTHS[d.getMonth()]} ${d.getFullYear()}` }; });
   const fmt = (when: string) => new Date(when).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
@@ -487,9 +555,18 @@ export default function MonthPlanner() {
               <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Client</span>
               <Select value={clientId} onValueChange={setClientId}>
                 <SelectTrigger className="bg-muted/30 border-border/40"><SelectValue placeholder={loading ? "Loading…" : "Choose a client"} /></SelectTrigger>
-                <SelectContent className="max-h-72">{presets.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}</SelectContent>
+                <SelectContent className="max-h-72">
+                  <SelectItem value={PROSPECT}>Not a client yet (free sample)</SelectItem>
+                  {presets.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                </SelectContent>
               </Select>
             </div>
+            {isProspect && (
+              <label className="space-y-1.5 block lg:col-span-5">
+                <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Their clinic name</span>
+                <Input value={prospectName} onChange={(e) => setProspectName(e.target.value)} placeholder="e.g. Glow Aesthetics" />
+              </label>
+            )}
             <div className="space-y-1.5">
               <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Month</span>
               <Select value={ym} onValueChange={(v) => { setYm(v); setItems([]); }}>
@@ -574,7 +651,22 @@ export default function MonthPlanner() {
             </div>
           </div>
         </section>
-        {preset && (
+        {isProspect && (
+          <section className="rounded-2xl border border-border/30 p-5 space-y-2">
+            <h2 className="font-semibold">Their photos</h2>
+            <p className="text-sm text-muted-foreground">Add their photos (the more the better, I use them across the 8 posts) and their logo above, then press Create.</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button variant="outline" onClick={() => photoFileRef.current?.click()}><ImageIcon className="w-4 h-4 mr-1.5" /> Add photos</Button>
+              <input ref={photoFileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => {
+                const files = Array.from(e.target.files ?? []); e.target.value = "";
+                if (files.length) setExtras((l) => [...l, ...files.map((file) => ({ id: uid(), file, url: URL.createObjectURL(file) }))]);
+              }} />
+              <span className="text-sm text-muted-foreground">{extras.length} photo{extras.length === 1 ? "" : "s"} added</span>
+              {extras.length > 0 && <Button variant="ghost" size="sm" onClick={() => setExtras([])}>Clear photos</Button>}
+            </div>
+          </section>
+        )}
+        {preset && !isProspect && (
           <MonthPhotoMaker
             clientName={preset.name}
             monthName={MONTHS[month]}
@@ -668,8 +760,18 @@ export default function MonthPlanner() {
 
       {posts.length > 0 && (
         <div className="fixed bottom-0 inset-x-0 border-t border-border/40 bg-background/95 backdrop-blur px-6 py-3 flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">{ready.length} ticked, nothing is scheduled until you press the button.</span>
-          <Button className="ml-auto" disabled={!!busy || !ready.length} onClick={() => setConfirm(true)}>Schedule the ticked posts</Button>
+          {isProspect ? (
+            <>
+              <span className="text-sm text-muted-foreground truncate">{sampleLink ? <a href={sampleLink} target="_blank" rel="noreferrer" className="text-violet-300 underline">{sampleLink}</a> : "When you are happy with the 8 posts, make their link."}</span>
+              {sampleLink && <Button variant="outline" className="ml-auto" onClick={() => { void navigator.clipboard?.writeText(sampleLink); toast.success("Link copied"); }}>Copy link</Button>}
+              <Button className={sampleLink ? "" : "ml-auto"} disabled={!!busy || posts.length !== 8} onClick={makeSampleLink}>{busy === "link" ? "Making the link…" : sampleLink ? "Make the link again" : "Make their link"}</Button>
+            </>
+          ) : (
+            <>
+              <span className="text-sm text-muted-foreground">{ready.length} ticked, nothing is scheduled until you press the button.</span>
+              <Button className="ml-auto" disabled={!!busy || !ready.length} onClick={() => setConfirm(true)}>Schedule the ticked posts</Button>
+            </>
+          )}
         </div>
       )}
 
