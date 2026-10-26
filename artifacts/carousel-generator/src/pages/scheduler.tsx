@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Trash2, Plus, BarChart3, Calendar, Film, Layers, ChevronDown, ChevronUp, Edit2, ExternalLink, ChevronLeft, ChevronRight, Image as ImageIcon, GripVertical, Hourglass, BookOpen } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Trash2, Plus, BarChart3, Calendar, Film, Layers, ChevronDown, ChevronUp, Edit2, ExternalLink, ChevronLeft, ChevronRight, Image as ImageIcon, GripVertical, Hourglass, BookOpen, Archive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -133,7 +133,7 @@ function hoverInfo(post: ScheduledPost, draggable: boolean): string {
 // A single draggable/droppable card in the Preview Feed grid and the Client
 // Grid. onDelete is optional so other, non-interactive uses of this card
 // (there are none right now, but might be later) don't have to wire one up.
-function FeedCard({ post, draggable, onDragStart, onDelete }: { post: ScheduledPost; draggable: boolean; onDragStart: (e: React.DragEvent) => void; onDelete?: () => void }) {
+function FeedCard({ post, draggable, onDragStart, onDelete, onBank, big }: { post: ScheduledPost; draggable: boolean; onDragStart: (e: React.DragEvent) => void; onDelete?: () => void; onBank?: () => void; big?: boolean }) {
   const thumb = postThumb(post);
   const isVideo = post.postType === "reel" || post.postType === "video_carousel";
   const isStory = isStoryType(post.postType);
@@ -159,7 +159,7 @@ function FeedCard({ post, draggable, onDragStart, onDelete }: { post: ScheduledP
         </>
       )}
       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-1 py-0.5">
-        <p className="text-[9px] text-white/90 truncate leading-tight">{post.clientName}</p>
+        <p className="text-[11px] text-white/90 truncate leading-tight">{post.clientName}</p>
       </div>
       {post.status === "published" && (
         <span className="absolute top-0.5 right-0.5 bg-emerald-500/90 rounded-full p-0.5 group-hover:opacity-0 transition-opacity">
@@ -175,6 +175,16 @@ function FeedCard({ post, draggable, onDragStart, onDelete }: { post: ScheduledP
         <span className="absolute top-0.5 left-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <GripVertical size={11} className="text-white/70" />
         </span>
+      )}
+      {onBank && (
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onBank(); }}
+          title="Send to Client Bank to post another time"
+          className="absolute bottom-6 right-1 flex items-center gap-1 bg-black/75 hover:bg-pink-600 rounded-full px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 text-[10px] text-white"
+        >
+          <Archive size={11} /> {big ? "Send to Client Bank" : "Bank"}
+        </button>
       )}
       {onDelete && (
         <button
@@ -490,6 +500,16 @@ export default function Scheduler() {
     } catch (e: any) { toast.error(e.message); }
   }
 
+  // Takes a scheduled post off the calendar and parks it in the client's
+  // Client Bank (status draft, no date) so it can be posted another time.
+  async function handleBank(id: number) {
+    try {
+      await apiFetch(`/api/scheduler/posts/${id}`, { method: "PATCH", body: JSON.stringify({ status: "draft" }) });
+      toast.success("Sent to the Client Bank with no date. Find it in the Waiting Room.");
+      load();
+    } catch (e: any) { toast.error(e.message); }
+  }
+
   async function handleDelete(id: number) {
     try {
       await apiFetch(`/api/scheduler/posts/${id}`, { method: "DELETE" });
@@ -684,7 +704,7 @@ export default function Scheduler() {
         />
       )}
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className={`${tab === "feed" ? "max-w-[1700px]" : "max-w-5xl"} mx-auto px-4 py-8`}>
         <div className="flex items-center gap-4 mb-8">
           <Link href="/hub">
             <button className="text-zinc-400 hover:text-white transition-colors">
@@ -821,7 +841,7 @@ export default function Scheduler() {
                       onDragOver={(e) => handleFeedDragOver(e, day.date)}
                       onDragLeave={handleFeedDragLeave}
                       onDrop={(e) => handleFeedDrop(e, day.date)}
-                      className={`min-h-[104px] border-b border-r border-zinc-800/70 p-1.5 transition-colors ${
+                      className={`min-h-[230px] border-b border-r border-zinc-800/70 p-1.5 transition-colors ${
                         !day.isCurrentMonth ? "bg-zinc-950/60 opacity-40" : "bg-zinc-950"
                       } ${isDragTarget ? "bg-pink-500/10 ring-1 ring-pink-500/40 ring-inset" : ""}`}
                     >
@@ -833,7 +853,7 @@ export default function Scheduler() {
                       </div>
                       {/* Blank when nothing is queued for this day — that's the point, so gaps are obvious at a glance. */}
                       {dayPosts.length > 0 && (
-                        <div className="grid grid-cols-3 gap-1">
+                        <div className="grid grid-cols-2 gap-1.5">
                           {dayPosts.slice(0, 6).map((post) => (
                             <FeedCard
                               key={post.id}
@@ -841,6 +861,8 @@ export default function Scheduler() {
                               draggable={post.status === "pending"}
                               onDragStart={(e) => handleFeedDragStart(e, post)}
                               onDelete={() => handleDelete(post.id)}
+                              onBank={post.status === "pending" ? () => handleBank(post.id) : undefined}
+                              big
                             />
                           ))}
                         </div>
@@ -908,7 +930,7 @@ export default function Scheduler() {
                   <p className="text-xs text-zinc-500">
                     Drag a tile onto another to swap their dates and rearrange the grid. Already-published posts and posts from Broadcasts/Calendar are shown but can't be moved.
                   </p>
-                  <div className="grid grid-cols-3 gap-1 max-w-xl border border-zinc-800 rounded-xl overflow-hidden p-1 bg-zinc-950">
+                  <div className="grid grid-cols-3 gap-1 max-w-3xl border border-zinc-800 rounded-xl overflow-hidden p-1 bg-zinc-950">
                     {gridPosts.map(({ post, draggable, onDelete }) => (
                       <div
                         key={post.id}
@@ -922,6 +944,8 @@ export default function Scheduler() {
                           draggable={draggable}
                           onDragStart={(e) => handleGridDragStart(e, post)}
                           onDelete={onDelete}
+                          onBank={post.status === "pending" ? () => handleBank(post.id) : undefined}
+                          big
                         />
                       </div>
                     ))}
