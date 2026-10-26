@@ -238,6 +238,9 @@ export default function MonthPlanner() {
   const [extras, setExtras] = useState<PoolPhoto[]>([]);
   const pool = useMemo(() => [...approvedPool, ...extras], [approvedPool, extras]);
   const [poolBusy, setPoolBusy] = useState(false);
+  const [poolFail, setPoolFail] = useState(0);
+  const [showAll, setShowAll] = useState(false);
+  const [pickBusy, setPickBusy] = useState(false);
   const [items, setItems] = useState<Item[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [swap, setSwap] = useState<{ postId: string; slide: number } | null>(null);
@@ -308,19 +311,25 @@ export default function MonthPlanner() {
   useEffect(() => {
     let live = true;
     setPool([]);
+    setPoolFail(0);
     if (!approvedForClient.length) return;
     setPoolBusy(true);
     (async () => {
       const files: PoolPhoto[] = [];
+      let failed = 0;
       const list = approvedForClient;
       for (let i = 0; i < list.length; i += 6) {
         const got = await Promise.all(list.slice(i, i + 6).map(async (img, k) => {
-          try { const file = await urlToFile(img.imageUrl, i + k); return { id: uid(), file, url: URL.createObjectURL(file) }; } catch { return null; }
+          for (let attempt = 0; attempt < 3; attempt++) {
+            try { const file = await urlToFile(img.imageUrl, i + k); return { id: uid(), file, url: URL.createObjectURL(file) }; } catch { await new Promise((r) => setTimeout(r, 400)); }
+          }
+          return null;
         }));
+        failed += got.filter((x) => !x).length;
         files.push(...got.filter((x): x is PoolPhoto => !!x));
         if (!live) return;
       }
-      if (live) { setPool(files); setPoolBusy(false); }
+      if (live) { setPool(files); setPoolFail(failed); setPoolBusy(false); }
     })();
     return () => { live = false; };
   }, [approvedKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -543,7 +552,7 @@ export default function MonthPlanner() {
                 {items.length ? "Start this month again" : "Create the month"}
               </Button>
               <span className="text-sm text-muted-foreground">
-                {!preset ? "Choose a client to begin." : poolBusy ? "Getting their approved photos…" : `${pool.length} photo${pool.length === 1 ? "" : "s"} ready.`}
+                {!preset ? "Choose a client to begin." : poolBusy ? "Getting their approved photos…" : `${pool.length} photo${pool.length === 1 ? "" : "s"} ready${approvedForClient.length > approvedPool.length ? ` of ${approvedForClient.length} approved` : ""}${poolFail ? `, ${poolFail} would not load` : ""}.`}
                 {preset && !season ? ` No seasonal pack for ${MONTHS[month]} yet, so those slots use Unique.` : ""}
               </span>
             </div>
@@ -655,6 +664,10 @@ export default function MonthPlanner() {
               <h3 className="font-semibold">Choose from {preset?.name}'s approved photos</h3>
               <button type="button" className="ml-auto" onClick={() => setSwap(null)}><X className="w-5 h-5" /></button>
             </div>
+            <label className="flex items-center gap-2 text-sm mb-3">
+              <input type="checkbox" checked={showAll} onChange={(e) => setShowAll(e.target.checked)} />
+              Show every approved photo, from all clients and batches ({allApproved.length})
+            </label>
             <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
               {pool.map((ph, i) => (
                 <button key={ph.id} type="button" onClick={() => {
@@ -667,6 +680,32 @@ export default function MonthPlanner() {
                 </button>
               ))}
             </div>
+            {showAll && (
+              <div className="mt-4">
+                <p className="text-xs text-muted-foreground mb-2">{pickBusy ? "Getting that photo…" : "All approved photos. Tap one to use it."}</p>
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                  {allApproved.map((a) => (
+                    <button key={a.id} type="button" disabled={pickBusy} title={`${a.clientName} · ${a.batchName}`} onClick={async () => {
+                      setPickBusy(true);
+                      try {
+                        const file = await urlToFile(a.imageUrl, 5000 + a.id);
+                        const pf: PoolPhoto = { id: uid(), file, url: URL.createObjectURL(file) };
+                        const idx = pool.length;
+                        setExtras((x) => [...x, pf]);
+                        const photos = [...swapPost.photos];
+                        photos[photoIdxFor(swapPost, swap.slide)] = idx;
+                        patchPost(swapPost.id, { photos });
+                        setSwap(null);
+                      } catch { toast.error("That photo would not load, try another"); }
+                      setPickBusy(false);
+                    }}>
+                      <img src={a.imageUrl} alt="" loading="lazy" className="w-full aspect-[3/4] object-cover rounded-md border border-border/30 hover:border-violet-400" />
+                      <span className="block text-[10px] text-muted-foreground truncate">{a.clientName}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
