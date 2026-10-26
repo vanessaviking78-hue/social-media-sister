@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DEFAULT_FOCUS, type Focus, type Slot } from "@/lib/basic-covers";
+import { getBitmap } from "@/lib/month-engine";
 import { usePresets } from "@/lib/use-presets";
 import { useApprovedImages } from "@/lib/use-approval";
 import { FONT_OPTIONS, loadGoogleFonts } from "@/lib/slide-utils";
@@ -115,8 +117,22 @@ function buildPlan(year: number, month: number, seed: number, hhmm: string, pool
 const photoIdxFor = (p: MPost, n: number): number =>
   p.tool === "basic" ? (n === 0 ? 0 : n === 1 ? 2 : 3) : p.tool === "unique" || p.tool === "treatments" ? n : 0;
 
-function Thumb({ post, n, client, onSwap }: { post: MPost; n: number; client: Client; onSwap: () => void }) {
+const SW = 1080, SH = 1350;
+
+// Which photo and focus key a picture on slide n belongs to, so dragging it moves the right one.
+function slotTarget(post: MPost, n: number, slot: Slot): { key: string; photo: number | null } {
+  if (post.tool === "basic") {
+    if (n === 0) return { key: `c${slot.i}`, photo: post.photos[slot.i] ?? null };
+    return { key: `s${n + 1}`, photo: post.photos[n === 1 ? 2 : 3] ?? null };
+  }
+  if (n === 0) return { key: "c0", photo: post.photos[0] ?? null };
+  return { key: `s${n + 1}`, photo: post.photos[n] ?? null };
+}
+
+function Thumb({ post, n, client, onSwap, onFocus }: { post: MPost; n: number; client: Client; onSwap: () => void; onFocus: (key: string, f: Focus) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const slots = useRef<Slot[]>([]);
+  const drag = useRef<{ slot: Slot; key: string; x: number; y: number; f: Focus; ox: number; oy: number } | null>(null);
   const run = useRef(0);
   useEffect(() => {
     const my = ++run.current;
@@ -124,17 +140,62 @@ function Thumb({ post, n, client, onSwap }: { post: MPost; n: number; client: Cl
       await ensureFonts(client.headFont, client.bodyFont);
       if (my !== run.current || !ref.current) return;
       const c = document.createElement("canvas");
-      await renderSlide(post, n, client, c, 0.3);
+      const got = await renderSlide(post, n, client, c, 0.3);
       if (my !== run.current || !ref.current) return;
+      slots.current = got;
       ref.current.width = c.width;
       ref.current.height = c.height;
       ref.current.getContext("2d")!.drawImage(c, 0, 0);
     }, 40 + n * 30);
     return () => clearTimeout(t);
   }, [post, n, client]);
+
+  const toCanvas = (e: React.PointerEvent) => {
+    const r = ref.current!.getBoundingClientRect();
+    return { x: ((e.clientX - r.left) / r.width) * SW, y: ((e.clientY - r.top) / r.height) * SH };
+  };
+  const hit = (px: number, py: number): Slot | null => {
+    for (let k = slots.current.length - 1; k >= 0; k--) {
+      const sl = slots.current[k];
+      const cx = sl.x + sl.w / 2, cy = sl.y + sl.h / 2;
+      const a = (-sl.rot * Math.PI) / 180;
+      const dx = px - cx, dy = py - cy;
+      const rx = dx * Math.cos(a) - dy * Math.sin(a);
+      const ry = dx * Math.sin(a) + dy * Math.cos(a);
+      if (Math.abs(rx) <= sl.w / 2 && Math.abs(ry) <= sl.h / 2) return sl;
+    }
+    return null;
+  };
+  const onDown = async (e: React.PointerEvent) => {
+    const p = toCanvas(e);
+    const slot = hit(p.x, p.y);
+    if (!slot) return;
+    const tg = slotTarget(post, n, slot);
+    const ph = tg.photo != null ? client.pool[tg.photo] : null;
+    const bmp = ph ? await getBitmap(ph) : null;
+    if (!bmp) return;
+    const sc = Math.max(slot.w / bmp.width, slot.h / bmp.height);
+    drag.current = { slot, key: tg.key, x: p.x, y: p.y, f: post.focus[tg.key] ?? DEFAULT_FOCUS, ox: bmp.width * sc - slot.w, oy: bmp.height * sc - slot.h };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onMove = (e: React.PointerEvent) => {
+    const d = drag.current;
+    if (!d) return;
+    const p = toCanvas(e);
+    const a = (-d.slot.rot * Math.PI) / 180;
+    const dx0 = p.x - d.x, dy0 = p.y - d.y;
+    const dx = dx0 * Math.cos(a) - dy0 * Math.sin(a);
+    const dy = dx0 * Math.sin(a) + dy0 * Math.cos(a);
+    const nx = d.ox > 1 ? Math.max(0, Math.min(1, d.f[0] - dx / d.ox)) : d.f[0];
+    const ny = d.oy > 1 ? Math.max(0, Math.min(1, d.f[1] - dy / d.oy)) : d.f[1];
+    onFocus(d.key, [nx, ny]);
+  };
+  const onUp = () => { drag.current = null; };
   return (
     <div className="space-y-1">
-      <canvas ref={ref} width={324} height={405} className="w-full rounded-lg border border-border/30 bg-muted/20" style={{ aspectRatio: "4 / 5" }} />
+      <canvas ref={ref} width={324} height={405} className="w-full rounded-lg border border-border/30 bg-muted/20 cursor-grab active:cursor-grabbing"
+        style={{ aspectRatio: "4 / 5", touchAction: "none" }}
+        onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp} />
       <button type="button" onClick={onSwap} className="w-full flex items-center justify-center gap-1 text-[11px] rounded-md border border-border/40 py-1 hover:border-border">
         <ImageIcon className="w-3 h-3" /> Swap photo
       </button>
@@ -452,7 +513,7 @@ export default function MonthPlanner() {
                 </div>
                 <div className={`grid gap-3 ${count === 1 ? "grid-cols-1 max-w-[220px]" : count === 3 ? "grid-cols-3 max-w-3xl" : "grid-cols-5"}`}>
                   {Array.from({ length: count }, (_, n) => (
-                    <Thumb key={n} post={p} n={n} client={client} onSwap={() => setSwap({ postId: p.id, slide: n })} />
+                    <Thumb key={n} post={p} n={n} client={client} onSwap={() => setSwap({ postId: p.id, slide: n })} onFocus={(key, f) => patchPost(p.id, { focus: { ...p.focus, [key]: f } })} />
                   ))}
                 </div>
                 <div className="grid gap-3 lg:grid-cols-2">
