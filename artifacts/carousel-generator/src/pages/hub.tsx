@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
 import { Users, Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck, Grid3x3, Mail, Star, Heart, CalendarCheck, PackageOpen, BatteryCharging } from "lucide-react";
-import { Crown, LogOut, TreePine, Scissors, LayoutTemplate, Flame, Ghost, Syringe } from "lucide-react";
+import { Crown, Gem, LogOut, TreePine, Scissors, LayoutTemplate, Flame, Ghost, Syringe } from "lucide-react";
 import { AdventCalendarIcon } from "@/components/advent-icon";
 import { MagazineIcon } from "@/components/magazine-icon";
 import { PerfecterIcon } from "@/components/perfecter-icon";
@@ -197,6 +197,16 @@ description: "Thirty static posts for women who have had enough of being quiet a
 color: "from-amber-500/20 to-amber-500/5",
 border: "hover:border-amber-500/50",
 iconColor: "text-amber-400",
+},
+{
+href: "/lux",
+group: "content",
+icon: Gem,
+name: "LUX",
+description: "Quiet, elegant ten slide carousels about noticing, confidence and the honest consultation. Choose a client and four carousels are made for you, with fresh words, your colours, a metallic foil option and approved photos. Scheduled every Tuesday at 8pm.",
+color: "from-stone-400/20 to-stone-400/5",
+border: "hover:border-stone-400/50",
+iconColor: "text-stone-300",
 },
 {
 href: "/mens",
