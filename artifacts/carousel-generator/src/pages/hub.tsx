@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { useEffect, useState } from "react";
 import { Users, Image as ImageIcon, User, Grid, BookOpen, Film, Play, Palette, MessageSquareText, Library, CalendarDays, BarChart3, ShieldCheck, ImagePlus, Sparkles, Bot, Wand2, MessageSquare, ScrollText, Package, Inbox, UploadCloud, Layers, CalendarRange, TableProperties, Eye, Send, FileText, CalendarClock, Twitter, TrendingUp, Newspaper, Camera, Sun, ListChecks, AlertTriangle, Target, Activity, Gift, Smartphone, PenSquare, Megaphone, BookImage, Video, Clapperboard, Captions, Trophy, Rows3, RotateCw, Search, ClipboardCheck, Grid3x3, Mail, Star, Heart, CalendarCheck, PackageOpen, BatteryCharging } from "lucide-react";
-import { LogOut, TreePine, Scissors, LayoutTemplate, Flame, Ghost, Syringe } from "lucide-react";
+import { Crown, LogOut, TreePine, Scissors, LayoutTemplate, Flame, Ghost, Syringe } from "lucide-react";
 import { AdventCalendarIcon } from "@/components/advent-icon";
 import { MagazineIcon } from "@/components/magazine-icon";
 import { PerfecterIcon } from "@/components/perfecter-icon";
@@ -187,6 +187,16 @@ description: "Choose a client and a calendar month and get the 20 post plan laid
 color: "from-violet-500/20 to-violet-500/5",
 border: "hover:border-violet-500/50",
 iconColor: "text-violet-400",
+},
+{
+href: "/empower",
+group: "content",
+icon: Crown,
+name: "Empower",
+description: "Thirty static posts for women who have had enough of being quiet about midlife. Pick a client, plan them all or add one, change the words and the colours, and give any colour a metallic foil finish. Photos come from the approved ones.",
+color: "from-amber-500/20 to-amber-500/5",
+border: "hover:border-amber-500/50",
+iconColor: "text-amber-400",
 },
 {
 href: "/mens",
