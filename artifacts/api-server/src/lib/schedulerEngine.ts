@@ -56,7 +56,9 @@ async function igUpload(igId: string, token: string, imageUrl: string, isCarouse
 async function igPublish(igId: string, token: string, creationId: string): Promise<string> {
   // Instagram needs time to finish processing the (carousel) container before it can be published.
   // Publishing too soon returns "Media ID is not available". Retry on not-ready errors with backoff.
-  const NOT_READY = ["not available", "not ready", "not yet", "processing", "in_progress"];
+  // "does not exist" is what Graph returns when a freshly created container has not propagated yet,
+  // which was killing story posts on the first attempt. Capped at 8 attempts, so a genuinely bad id still fails.
+  const NOT_READY = ["not available", "not ready", "not yet", "processing", "in_progress", "does not exist"];
   let lastErr = "";
   for (let attempt = 0; attempt < 8; attempt++) {
     if (attempt > 0) await new Promise((r) => setTimeout(r, attempt === 1 ? 5000 : 8000));
@@ -393,15 +395,32 @@ async function postStoryToIG(
               // video_url, media_type and user_tags are accepted. Sending sticker
               // parameters here was a silent no-op: the story posted fine but the
               // sticker never appeared. Removed rather than leave dead, misleading code.
-    const containerRes = await fetchWithTimeout(`${GRAPH}/${igId}/media`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    const containerData = await containerRes.json() as { id?: string; error?: { message?: string } };
-    if (!containerRes.ok || !containerData.id) {
+    // Make sure our own server can reach the image before Instagram is asked to fetch it.
+    await waitForImageReachable(url);
+    // Network blips ("fetch failed", "operation was aborted") happened on story container creation
+    // and failed the whole post with no retry. Try up to 3 times for those only.
+    let containerData: { id?: string; error?: { message?: string } } = {};
+    let containerOk = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, 4000));
+      try {
+        const containerRes = await fetchWithTimeout(`${GRAPH}/${igId}/media`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        containerData = await containerRes.json() as { id?: string; error?: { message?: string } };
+        containerOk = containerRes.ok && !!containerData.id;
+        break;
+      } catch (err: any) {
+        if (attempt === 2) throw err;
+      }
+    }
+    if (!containerOk || !containerData.id) {
       throw new Error(`Story container failed: ${containerData?.error?.message || JSON.stringify(containerData)}`);
     }
+    // Short settle so the new container is visible to Graph before we publish it.
+    await new Promise((r) => setTimeout(r, 3000));
     postIds.push(await igPublish(igId, token, containerData.id));
   }
   return postIds;
