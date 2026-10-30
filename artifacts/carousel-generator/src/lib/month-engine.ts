@@ -310,7 +310,31 @@ async function postJson(path: string, body: unknown): Promise<Record<string, any
 
 // A training academy uses the same designs as a clinic, so its cover words are rewritten from the academy's point of view.
 export const isAcademyClient = (c: Client): boolean => /academy/i.test(c.businessName);
-const ACADEMY_IDEA = "an academy post from the training academy, speaking to practitioners and people thinking about training in aesthetics, built from the cover words shown";
+// Every academy post is about one of these, in rotation, so the whole month is about training with her.
+const ACADEMY_TOPICS: { title: string; angle: string }[] = [
+  { title: "What happens when you train with me", angle: "a day in my training room, small groups, hands on, nobody left at the back, what it feels like when it clicks" },
+  { title: "Choosing a trainer who has been doing this a long time", angle: "why experience in the room matters, what a trainer who has seen it all can teach that a textbook cannot, questions to ask before choosing" },
+  { title: "Why aesthetics is a great career choice", angle: "my honest reasons I love this career, the variety, the people, being able to build something of your own, no promises about money" },
+  { title: "The empowerment of working in aesthetics", angle: "what it does for your confidence and sense of self to learn a skill and use it, the women I have watched grow" },
+  { title: "The benefits of training in aesthetics", angle: "what you gain from proper training: skills, confidence, community, a new direction" },
+  { title: "Learning something new at 35, 40, 50 and beyond", angle: "it is never too late to change direction, what life experience brings to the training room" },
+  { title: "Nervous about your first day of training", angle: "what I say to every nervous woman, imposter syndrome, it is normal and I will look after you" },
+  { title: "What good training looks like", angle: "how to tell a trainer who will look after you from one who will not, safety and consent as real skills, small groups, support afterwards" },
+  { title: "Being your own boss", angle: "the independence of building your own practice, fitting work around family and the school run, no promises about earnings" },
+  { title: "The support you get after the course ends", angle: "why I stay in touch, the questions that come at 9pm, never being left on your own" },
+  { title: "Meet your trainer", angle: "who I am, what I love about teaching, a small honest detail about me, never an invented story or number of years" },
+  { title: "The questions I get asked most about training", angle: "am I too old, do I need a medical background, will I be good at it, answered honestly and kindly" },
+  { title: "The friendships and community in aesthetics", angle: "the women you meet in the training room, the group chats, the support of people who get it" },
+  { title: "Confidence is the real skill", angle: "technique can be taught, confidence is built, how my training builds it step by step" },
+  { title: "What to look for before you choose a course", angle: "a friendly checklist of questions every woman should ask any trainer, including me" },
+  { title: "Why I still love training people", angle: "the moment I see it click for someone, why teaching is my favourite part" },
+  { title: "Doing it properly", angle: "why safety, consent and standards matter and how I teach them so they feel natural, not scary" },
+  { title: "From nervous to hands on", angle: "the journey over a training day, what changes between the morning and the afternoon, no invented delegates" },
+  { title: "A career that fits your life", angle: "flexible hours, work that can fit around family, why so many women choose aesthetics, no promises" },
+  { title: "Thinking about training with me", angle: "an honest invitation, what to ask, how to find out if it is right for you, no pressure" },
+];
+const academyTopic = (post: MPost) => ACADEMY_TOPICS[((post.n || 1) - 1) % ACADEMY_TOPICS.length];
+const academyIdea = (post: MPost) => { const t = academyTopic(post); return `an academy post whose whole subject is "${t.title}": ${t.angle}. Everything on the cover and in the words must be about this topic`; };
 
 async function academyCover(post: MPost, c: Client): Promise<Record<string, string>> {
   type Fd = { key: string; label: string; words?: number };
@@ -333,7 +357,7 @@ async function academyCover(post: MPost, c: Client): Promise<Record<string, stri
   });
   const data = await postJson("/api/academy/cover", {
     businessName: c.businessName, ownerName: c.ownerName, role: c.role, area: c.area,
-    designName: designName(post), idea: designIdea, fields: req,
+    designName: designName(post), idea: designIdea, topic: `${academyTopic(post).title}: ${academyTopic(post).angle}`, fields: req,
   });
   return (data.cover ?? {}) as Record<string, string>;
 }
@@ -355,24 +379,24 @@ export async function writeCopy(post: MPost, c: Client): Promise<Partial<MPost>>
   if (post.tool === "unique") {
     const def = UD.UNIQUE_BY_ID[post.design as UD.UniId];
     const t = UD.resolveUniText(def, post.text, c.fill);
-    data = await postJson("/api/unique/copy", { ...base, idea: academy ? ACADEMY_IDEA : def.idea, cover: def.fields.map((fd) => `${fd.label}: ${t[fd.key] ?? ""}`).join("\n"), fresh: false, fields: [] });
+    data = await postJson("/api/unique/copy", { ...base, idea: academy ? academyIdea(post) : def.idea, cover: def.fields.map((fd) => `${fd.label}: ${t[fd.key] ?? ""}`).join("\n"), fresh: false, fields: [] });
     slides = [data.slide2, data.slide3];
   } else if (post.tool === "treatments") {
     const def = TD.TREAT_BY_ID[post.design as TD.TreatId];
     const t = Object.fromEntries(TD.FIELDS.map((fd) => [fd.key, TD.fillTreat(post.text[fd.key] ?? "", c.fill)])) as Record<string, string>;
-    data = await postJson("/api/treatments/copy", { ...base, treatment: academy ? ACADEMY_IDEA : def.idea, headline: t.head, bullets: [t.b1, t.b2, t.b3, t.b4], callout: t.callout });
+    data = await postJson("/api/treatments/copy", { ...base, treatment: academy ? academyIdea(post) : def.idea, headline: t.head, bullets: [t.b1, t.b2, t.b3, t.b4], callout: t.callout });
     slides = [data.slide2, data.slide3, data.slide4, data.slide5];
   } else if (post.tool === "basic") {
     const def = BC.COVER_BY_ID[post.design as BC.CoverId];
     const t = Object.fromEntries(def.fields.map((fd) => [fd.key, BC.fillTokens(post.text[fd.key] ?? def.defaults[fd.key] ?? "", c.fill)]));
-    data = await postJson("/api/basic-posts/copy", { ...base, coverName: academy ? "Academy post" : def.name, coverIdea: academy ? ACADEMY_IDEA : def.idea, cover: t, fields: def.fields.map((fd) => ({ key: fd.key, label: fd.label, words: fd.words })), writeCover: false });
+    data = await postJson("/api/basic-posts/copy", { ...base, coverName: academy ? "Academy post" : def.name, coverIdea: academy ? academyIdea(post) : def.idea, cover: t, fields: def.fields.map((fd) => ({ key: fd.key, label: fd.label, words: fd.words })), writeCover: false });
     slides = [data.slide2, data.slide3];
   } else {
     const def = post.tool === "halloween" ? HALLOWEEN_BY_ID[post.design as keyof typeof HALLOWEEN_BY_ID]
       : post.tool === "november" ? NOVEMBER_BY_ID[post.design as keyof typeof NOVEMBER_BY_ID]
       : XMAS_BY_ID[post.design as keyof typeof XMAS_BY_ID];
     const path = post.tool === "halloween" ? "/api/halloween-posts/copy" : post.tool === "november" ? "/api/november-posts/copy" : "/api/xmas-posts/copy";
-    data = await postJson(path, { ...base, designName: academy ? "Academy post" : def.name, idea: academy ? ACADEMY_IDEA : def.idea, onImage: onImageText(post, c) });
+    data = await postJson(path, { ...base, designName: academy ? "Academy post" : def.name, idea: academy ? academyIdea(post) : def.idea, onImage: onImageText(post, c) });
   }
   let caption = noDashes(data.caption ?? "");
   if (c.footnote && !caption.includes(c.footnote)) caption += `\n\n${c.footnote}`;
