@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "wouter";
-import { ArrowLeft, CalendarClock, Crown, Download, ImagePlus, Loader2, Plus, Sparkles, Type, X } from "lucide-react";
+import { ArrowLeft, CalendarClock, Crown, Download, ImagePlus, Loader2, Sparkles, Type, X } from "lucide-react";
 import { toast } from "sonner";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
@@ -315,7 +315,6 @@ export default function Empower() {
 
   const [pool, setPool] = useState<PoolPhoto[]>([]);
   const [posts, setPosts] = useState<Post[]>([]);
-  const [newDesign, setNewDesign] = useState<string>(EMPOWER[0].id);
   const [chooser, setChooser] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [scheduleItems, setScheduleItems] = useState<SchedulePostPayload[] | null>(null);
@@ -354,7 +353,7 @@ export default function Empower() {
     setBodyFont(saved.bodyFont ?? p?.stylishCoverSubtitleFont ?? DEFAULT_BODY);
     setUpper(saved.upper ?? false);
     setLogoPos(saved.logoPos ?? "off");
-    setPosts([]);
+    setPosts(EMPOWER.map((_, k) => ({ ...makePost(EMPOWER[((id ?? 0) + k) % EMPOWER.length].id, k), photo: null })));
   };
 
   useEffect(() => {
@@ -433,13 +432,6 @@ export default function Empower() {
     id: uid(), design, text: { ...EMPOWER_BY_ID[design].defaults },
     photo: pool.length ? cursor % pool.length : null, focus: DEFAULT_FOCUS, caption: "", hashtags: [], selected: true, busy: false,
   });
-  const planAll = () => {
-    if (!preset) { toast.error("Choose a client first"); return; }
-    const start = (preset.id ?? 0) % EMPOWER.length;
-    setPosts(EMPOWER.map((_, k) => makePost(EMPOWER[(start + k) % EMPOWER.length].id, k)));
-    toast.success(`${EMPOWER.length} Empower posts planned. Now write the words.`);
-  };
-  const addPost = () => setPosts((l) => [...l, makePost(newDesign, l.length)]);
 
   // captions
   const onImageText = (post: Post) => {
@@ -670,14 +662,7 @@ export default function Empower() {
 
         {/* toolbar */}
         <section className="flex flex-wrap items-center gap-3">
-          <Button onClick={planAll} disabled={!preset}><CalendarClock className="w-4 h-4 mr-1.5" /> Plan all {EMPOWER.length}</Button>
-          <div className="flex items-center gap-2">
-            <Select value={newDesign} onValueChange={setNewDesign}>
-              <SelectTrigger className="w-56 bg-muted/30 border-border/40"><SelectValue /></SelectTrigger>
-              <SelectContent className="max-h-72">{EMPOWER.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-            </Select>
-            <Button variant="outline" onClick={addPost} disabled={!preset}><Plus className="w-4 h-4 mr-1.5" /> Add one</Button>
-          </div>
+          <p className="text-sm text-muted-foreground">All {EMPOWER.length} are made when you choose a client. Untick any you do not want.</p>
           <div className="ml-auto flex flex-wrap items-center gap-3">
             <Button variant="outline" onClick={() => setPosts((l) => { const all = l.every((x) => x.selected); return l.map((p) => ({ ...p, selected: !all })); })}>Tick / untick all</Button>
             <Button onClick={writeAll} disabled={!!busy || !selected.length}>
@@ -694,7 +679,7 @@ export default function Empower() {
 
         {/* posts */}
         {shown.length === 0 && (
-          <p className="text-muted-foreground text-sm">Choose a client, add their approved photos and press Plan all. Each client starts on a different design. Static posts, one image each. Every colour has a Metallic box beside it for a foil finish. {"{owner}"}, {"{clinic}"}, {"{area}"} and {"{role}"} fill in from the boxes above. Scheduling puts them on every Tuesday at 8pm, starting with the next one, and you can move any date.</p>
+          <p className="text-muted-foreground text-sm">Choose a client and all 30 are made for you, then add their approved photos. Each client starts on a different design. Static posts, one image each. Every colour has a Metallic box beside it for a foil finish. {"{owner}"}, {"{clinic}"}, {"{area}"} and {"{role}"} fill in from the boxes above. Scheduling puts them on every Tuesday at 8pm, starting with the next one, and you can move any date.</p>
         )}
         <div className="grid gap-5 lg:grid-cols-2">
           {shown.map((post, pi) => {
@@ -706,12 +691,8 @@ export default function Empower() {
                 <div className="flex flex-wrap items-center gap-3">
                   <input type="checkbox" checked={post.selected} onChange={(e) => patchPost(post.id, { selected: e.target.checked })} />
                   <h2 className="font-semibold">{pi + 1}.</h2>
-                  <Select value={post.design} onValueChange={(v) => patchPost(post.id, { design: v, text: { ...EMPOWER_BY_ID[v].defaults }, palette: undefined, metal: undefined })}>
-                    <SelectTrigger className="w-52 bg-muted/30 border-border/40"><SelectValue /></SelectTrigger>
-                    <SelectContent className="max-h-72">{EMPOWER.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                  </Select>
+<span className="font-semibold">{def.name}</span>
                   <div className="ml-auto">
-                    <Button size="sm" variant="ghost" onClick={() => setPosts((l) => l.filter((x) => x.id !== post.id))}><X className="w-4 h-4" /></Button>
                     <Button size="sm" variant="outline" disabled={post.busy || !!busy} onClick={() => writeCopy(post)}>
                       {post.busy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1.5" />}
                       {post.caption ? "Rewrite caption" : "Write caption"}
