@@ -305,3 +305,81 @@ export function rows(g: EG, items: string[], x: number, y: number, w: number, lh
 export function T2(g: EG, text: string, x: number, y: number, w: number, h: number, size: number, colour: string, align: CanvasTextAlign = "left", weight = 600) {
   return textBox(g, text, x, y, w, h, { font: "body", max: size, min: 5, weight, colour, align, lh: 1.15 });
 }
+
+// ---------------------------------------------------------------------------
+// Rich words: *asterisks* turn words into the highlight colour, \n starts a new line.
+// The text shrinks until it fits the box.
+// ---------------------------------------------------------------------------
+
+type RO = { font?: "head" | "body"; max: number; min?: number; weight?: number; colour: string; hi?: string; align?: CanvasTextAlign; lh?: number; caps?: boolean; italic?: boolean };
+type Wd = { t: string; hi: boolean };
+
+export function rich(g: EG, key: string, x: number, y: number, w: number, h: number, o: RO) {
+  const { ctx } = g;
+  const raw = tx(g, key);
+  const text = o.caps ? raw.toUpperCase() : raw;
+  const fam = o.font === "body" ? g.body : g.head;
+  const wt = o.weight ?? (o.font === "body" ? 600 : g.headW);
+  const lhm = o.lh ?? (o.font === "body" ? 1.25 : 0.98);
+  let on = false;
+  const paras: Wd[][] = text.split("\n").map((p) => {
+    const words: Wd[] = [];
+    p.split("*").forEach((seg, i) => {
+      if (i > 0) on = !on;
+      seg.split(/\s+/).filter(Boolean).forEach((t) => words.push({ t, hi: on }));
+    });
+    return words;
+  });
+  const build = (s: number) => {
+    ctx.font = `${o.italic ? "italic " : ""}${wt} ${s}px ${fam}`;
+    const sp = ctx.measureText(" ").width;
+    let widest = 0;
+    const lines: { ws: Wd[]; w: number; blank: boolean }[] = [];
+    for (const p of paras) {
+      if (!p.length) { lines.push({ ws: [], w: 0, blank: true }); continue; }
+      let cur: Wd[] = [], cw = 0;
+      for (const wd of p) {
+        const ww = ctx.measureText(wd.t).width;
+        widest = Math.max(widest, ww);
+        if (cur.length && cw + sp + ww > w) { lines.push({ ws: cur, w: cw, blank: false }); cur = []; cw = 0; }
+        cw += (cur.length ? sp : 0) + ww;
+        cur.push(wd);
+      }
+      lines.push({ ws: cur, w: cw, blank: false });
+    }
+    const height = lines.reduce((a, l) => a + s * lhm * (l.blank ? 0.55 : 1), 0);
+    return { lines, sp, height, widest };
+  };
+  let s = o.max;
+  let b = build(s);
+  const min = o.min ?? 5;
+  while ((b.height > h || b.widest > w) && s > min) { s -= 0.5; b = build(s); }
+  ctx.save();
+  ctx.font = `${o.italic ? "italic " : ""}${wt} ${s}px ${fam}`;
+  ctx.textBaseline = "top";
+  ctx.textAlign = "left";
+  let yy = y;
+  for (const l of b.lines) {
+    if (!l.blank) {
+      let xx = o.align === "center" ? x + (w - l.w) / 2 : o.align === "right" ? x + w - l.w : x;
+      l.ws.forEach((wd, i) => {
+        ctx.fillStyle = wd.hi && o.hi ? o.hi : o.colour;
+        ctx.fillText(wd.t, xx, yy);
+        xx += ctx.measureText(wd.t).width + (i < l.ws.length - 1 ? b.sp : 0);
+      });
+    }
+    yy += s * lhm * (l.blank ? 0.55 : 1);
+  }
+  ctx.restore();
+}
+
+// Small barcode, for tickets
+export function barcode(g: EG, x: number, y: number, w: number, h: number, colour: string, seed = 4) {
+  const r = rand(seed);
+  let xx = x;
+  while (xx < x + w) {
+    const bw = 0.8 + r() * 2.4;
+    rect(g, xx, y, Math.min(bw, x + w - xx), h, colour);
+    xx += bw + 0.8 + r() * 1.8;
+  }
+}

@@ -310,7 +310,7 @@ export default function Empower() {
   const [area, setArea] = useState("");
   const [headFont, setHeadFont] = useState(DEFAULT_HEAD);
   const [bodyFont, setBodyFont] = useState(DEFAULT_BODY);
-  const [upper, setUpper] = useState(false);
+  const [upper, setUpper] = useState(true);
   const [logoPos, setLogoPos] = useState<LogoPos>("off");
   const [gpal, setGpal] = useState<Partial<EPalette>>({});
   const [gmetal, setGmetal] = useState<EMetal>({});
@@ -355,7 +355,7 @@ export default function Empower() {
     setArea(saved.area ?? p?.seoArea ?? "");
     setHeadFont(saved.headFont ?? p?.stylishCoverHeadlineFont ?? DEFAULT_HEAD);
     setBodyFont(saved.bodyFont ?? p?.stylishCoverSubtitleFont ?? DEFAULT_BODY);
-    setUpper(saved.upper ?? false);
+    setUpper(saved.upper ?? true);
     setGpal(saved.gpal ?? {});
     setGmetal(saved.gmetal ?? {});
     setLogoPos(saved.logoPos ?? "off");
@@ -631,7 +631,7 @@ export default function Empower() {
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {(["page", "dark", "accent", "soft", "ink", "light"] as EKey[]).map((key) => {
-                const names: Record<EKey, string> = { page: "Background", dark: "Dark block", accent: "Accent", soft: "Soft colour", ink: "Text on light", light: "Text on dark" };
+                const names: Record<EKey, string> = { page: "Background", dark: "Dark block", accent: "Highlight colour", soft: "Second colour", ink: "Text on light", light: "Text on dark" };
                 const on = gpal[key] != null;
                 return (
                   <div key={key} className="flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -792,6 +792,7 @@ export default function Empower() {
                         </label>
                       ))}
                     </div>
+                    <p className="text-[11px] text-muted-foreground">Put *asterisks* around words you want in the highlight colour.</p>
                     <label className="block">
                       <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Caption</span>
                       <Textarea rows={6} value={post.caption} onChange={(e) => patchPost(post.id, { caption: e.target.value })} placeholder="Press Write caption" />
