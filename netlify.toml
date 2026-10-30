@@ -13,6 +13,18 @@
   status = 200
 
 [[redirects]]
+  from = "/hellobaby"
+  to = "https://snazzy-palmier-4b0717.netlify.app/"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/hellobaby/*"
+  to = "https://snazzy-palmier-4b0717.netlify.app/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
