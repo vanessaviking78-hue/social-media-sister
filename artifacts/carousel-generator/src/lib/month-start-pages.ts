@@ -511,10 +511,6 @@ function sellPage(brand: MonthBrand, content: NewsletterContent, photos: (Canvas
     const k = Math.min(maxW / brand.logo.width, maxH / brand.logo.height, 1.6);
     const lw = brand.logo.width * k;
     const lh = brand.logo.height * k;
-    ctx.fillStyle = CREAM;
-    ctx.beginPath();
-    ctx.roundRect(MS_W / 2 - lw / 2 - 24, logoY - 12, lw + 48, lh + 24, 18);
-    ctx.fill();
     ctx.drawImage(brand.logo, MS_W / 2 - lw / 2, logoY, lw, lh);
   } else {
     block(ctx, brand.clinicName, { x: MS_W / 2, y: logoY, maxW: 880, maxLines: 1, size: 40, minSize: 24, family: SERIF, style: "italic", colour: "#ffffff", align: "center" });
