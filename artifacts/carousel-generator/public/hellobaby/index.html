@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hello Baby</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--blush:#FFE0EF;--blush2:#FFF0F7;--rose:#E5007D;--rose-d:#E5007D;--ivory:#FFF8FB;--white:#fff;--ink:#2E2A2C;--soft:#7A6A72;--line:#F7D5E6;--ok:#8FB59A;color-scheme:light}
+[hidden]{display:none!important}
+.toast{position:fixed;left:16px;right:16px;bottom:96px;max-width:440px;margin:0 auto;background:var(--rose-d);color:var(--ivory);padding:12px 16px;border-radius:16px;z-index:9;text-align:center}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='170' height='170' viewBox='0 0 170 170'%3E%3Cg fill='%23E5007D' fill-opacity='.09'%3E%3Cg transform='translate(22 14) rotate(-18) scale(1.6)'%3E%3Cpath d='M12 1c-1.3 0-2.2.9-2.2 2V5h4.4V3c0-1.1-.9-2-2.2-2z'/%3E%3Crect x='8' y='5' width='8' height='2.5' rx='1'/%3E%3Crect x='6.5' y='8' width='11' height='14' rx='3.2'/%3E%3Cg fill='%23fff' fill-opacity='1'%3E%3Crect x='10.5' y='11.5' width='5' height='.8' rx='.4'/%3E%3Crect x='10.5' y='14.5' width='5' height='.8' rx='.4'/%3E%3Crect x='10.5' y='17.5' width='5' height='.8' rx='.4'/%3E%3C/g%3E%3C/g%3E%3Cg transform='translate(108 96) rotate(16) scale(1.35)'%3E%3Cpath d='M12 1c-1.3 0-2.2.9-2.2 2V5h4.4V3c0-1.1-.9-2-2.2-2z'/%3E%3Crect x='8' y='5' width='8' height='2.5' rx='1'/%3E%3Crect x='6.5' y='8' width='11' height='14' rx='3.2'/%3E%3Cg fill='%23fff' fill-opacity='1'%3E%3Crect x='10.5' y='11.5' width='5' height='.8' rx='.4'/%3E%3Crect x='10.5' y='14.5' width='5' height='.8' rx='.4'/%3E%3Crect x='10.5' y='17.5' width='5' height='.8' rx='.4'/%3E%3C/g%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;color:var(--ink);font-family:Montserrat,system-ui,sans-serif;font-size:15px;line-height:1.55}
+h1,h2,.big,.brand{font-family:Anton,Impact,sans-serif;font-weight:400;color:var(--rose);text-transform:uppercase;letter-spacing:.03em}
+h1,h2,h3{margin:0 0 .4rem;line-height:1.2}
+h1{font-size:2rem}h2{font-size:1.45rem}h3{font-family:Montserrat,sans-serif;font-weight:700;font-size:1rem}
+p{margin:.2rem 0 .6rem}
+#app{max-width:480px;margin:0 auto;padding:16px max(16px,env(safe-area-inset-right,0px)) 110px max(16px,env(safe-area-inset-left,0px));min-height:100vh}
+.top{display:flex;justify-content:space-between;align-items:center;margin:6px 0 14px}
+.brand{font-size:1.25rem}
+.card{background:var(--white);border:1px solid var(--line);border-radius:22px;padding:16px;margin:0 0 14px;box-shadow:0 6px 18px rgba(201,133,145,.10)}
+.hero{background:linear-gradient(145deg,var(--blush),var(--blush2));border:none}
+.big{font-size:2.8rem;line-height:1}
+.muted{color:var(--soft);font-size:.9rem}
+.row{display:flex;gap:10px;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bar{height:8px;border-radius:8px;background:var(--line);overflow:hidden;margin-top:10px}
+.bar>i{display:block;height:100%;background:var(--rose);border-radius:8px}
+label{display:block;font-size:.85rem;color:var(--soft);margin:8px 0 3px}
+input,select,textarea{width:100%;font:inherit;color:var(--ink);background:var(--ivory);border:1px solid var(--line);border-radius:14px;padding:11px 12px}
+textarea{min-height:80px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--rose);outline-offset:1px}
+button{font:inherit;cursor:pointer;border:none}
+.btn{background:var(--rose);color:#fff;font-weight:700;border-radius:999px;padding:12px 20px;width:100%;margin-top:12px}
+.btn.ghost{background:transparent;color:var(--rose-d);border:1px solid var(--rose)}
+.btn.small{width:auto;padding:8px 14px;margin:0;font-size:.85rem}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;background:var(--white);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:8px 14px;font-size:.9rem}
+.chip.on{background:var(--rose);color:#fff;border-color:var(--rose)}
+.item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:none}
+.item .grow{flex:1;min-width:0}
+.item .done{text-decoration:line-through;color:var(--soft)}
+.tick{width:26px;height:26px;border-radius:50%;border:2px solid var(--rose);background:transparent;flex:none;color:#fff;font-size:15px;line-height:1}
+.tick.on{background:var(--rose)}
+.x{background:none;color:var(--soft);font-size:1.2rem;padding:4px 8px}
+.badge{display:inline-block;background:var(--blush);color:var(--rose-d);font-size:.7rem;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:middle}
+.moods{display:flex;gap:8px;flex-wrap:wrap}
+.moods label{margin:0}
+.moods input{position:absolute;opacity:0;width:0}
+.moods span{display:block;font-size:1.7rem;padding:6px 10px;border-radius:16px;border:2px solid transparent;background:var(--ivory)}
+.moods input:checked+span{border-color:var(--rose);background:var(--blush)}
+.photo{width:100%;border-radius:16px;margin:8px 0;max-height:320px;object-fit:cover}
+.empty{text-align:center;color:var(--soft);padding:14px 4px}
+.sc{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.sc button{background:var(--white);border:1px solid var(--line);border-radius:18px;padding:14px;text-align:left;color:var(--ink)}
+.sc b{display:block;font-size:1.4rem}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--white);border-top:1px solid var(--line);display:flex;justify-content:center;padding:6px max(8px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));z-index:5}
+nav div{display:flex;width:100%;max-width:480px}
+nav button{flex:1;background:none;color:var(--soft);font-size:.72rem;padding:4px 0}
+nav button span{display:block;font-size:1.35rem}
+nav button.on{color:var(--rose-d);font-weight:700}
+.tl{border-left:3px solid var(--blush);margin-left:8px;padding-left:16px}
+.tl .s{position:relative;padding-bottom:16px}
+.tl .s:before{content:'';position:absolute;left:-23px;top:5px;width:11px;height:11px;border-radius:50%;background:var(--blush)}
+.tl .s.now:before{background:var(--rose);box-shadow:0 0 0 4px var(--blush)}
+.tl .s.past:before{background:var(--rose)}
+.welcome{text-align:center;padding-top:40px}
+.welcome .big{font-size:3.6rem}
+details summary{cursor:pointer;color:var(--rose-d);font-weight:700;padding:4px 0}
+.note{font-size:.8rem;color:var(--soft);text-align:center;margin-top:18px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<nav id="nav" hidden><div></div></nav>
+<script>
+/* ---------- CONFIG ----------
+   Leave blank to run in private demo mode (data stays on this device only).
+   Add your Supabase details to switch on real accounts and the private database (see README). */
+const CFG={SUPABASE_URL:'https://dpxbhkbzkbalfqzjpbyc.supabase.co',SUPABASE_ANON_KEY:'sb_publishable_Y3Q3go9glMvDUZNDA6Kt8Q_VBeL153X'};
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+const dstr=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const today=()=>dstr(new Date());
+const mem={};
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return mem[k]==null?null:mem[k]}},set(k,v){try{localStorage.setItem(k,v)}catch(e){mem[k]=v}},del(k){try{localStorage.removeItem(k)}catch(e){delete mem[k]}}};
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const fmtDate=s=>{if(!s)return'';const d=new Date(s+'T12:00');return d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})};
+
+/* ---------- data layer: same calls for demo mode and Supabase ---------- */
+const TABLES=['food_entries','vitamin_items','sleep_entries','mood_entries','journal_entries','baby_names','selfcare_items','shopping_items','bag_items','appointments','task_logs'];
+let sb=null;
+const DB={
+  user:null,
+  key(t){return 'hb:'+this.user.id+':'+t},
+  async list(t){
+    if(sb){const r=await sb.from(t).select('*').order('created_at',{ascending:true});return r.data||[]}
+    try{return JSON.parse(ls.get(this.key(t))||'[]')}catch(e){return[]}
+  },
+  async add(t,row){
+    if(sb){const r=await sb.from(t).insert(row).select().single();if(r.error)throw r.error;return r.data}
+    const all=await this.list(t);const n={id:uid(),created_at:new Date().toISOString(),...row};all.push(n);ls.set(this.key(t),JSON.stringify(all));return n
+  },
+  async update(t,id,patch){
+    if(sb){await sb.from(t).update(patch).eq('id',id);return}
+    const all=(await this.list(t)).map(r=>r.id===id?{...r,...patch}:r);ls.set(this.key(t),JSON.stringify(all))
+  },
+  async remove(t,id){
+    if(sb){await sb.from(t).delete().eq('id',id);return}
+    const all=(await this.list(t)).filter(r=>r.id!==id);ls.set(this.key(t),JSON.stringify(all))
+  },
+  async getProfile(){
+    if(sb){const r=await sb.from('profiles').select('*').maybeSingle();return r.data}
+    try{return JSON.parse(ls.get(this.key('profile'))||'null')}catch(e){return null}
+  },
+  async saveProfile(p){
+    if(sb){await sb.from('profiles').upsert({id:this.user.id,...p});return}
+    ls.set(this.key('profile'),JSON.stringify(p))
+  }
+};
+
+/* ---------- state ---------- */
+const S={tab:'home',sub:{diary:'food',baby:'journal',plan:'shopping'},profile:null,data:{}};
+
+async function loadAll(){
+  S.profile=await DB.getProfile();
+  for(const t of TABLES)S.data[t]=await DB.list(t);
+}
+const rows=t=>S.data[t]||[];
+async function add(t,row){await DB.add(t,row);S.data[t]=await DB.list(t)}
+async function upd(t,id,p){await DB.update(t,id,p);S.data[t]=await DB.list(t)}
+async function del(t,id){await DB.remove(t,id);S.data[t]=await DB.list(t)}
+
+/* ---------- sample content (all clearly labelled as sample) ---------- */
+const SAMPLE={
+  selfcare_items:['Take a long, warm bath','Ring a friend who makes me laugh','Ten minutes of quiet with a cuppa','Put on a comfy playlist','Go for a slow, gentle wander outside','Book something nice for myself'],
+  bag_items:['Comfy going home outfit','Cosy dressing gown and slippers','Phone charger and long cable','Snacks and drinks I love','Lip balm','Hair ties','Toiletries bag','Muslin cloths','Baby outfits and hat','Nappies','Birth partner snacks and change'],
+  shopping_items:[['Pram or pushchair',350,'High'],['Car seat',180,'High'],['Moses basket or cot',150,'High'],['Baby monitor',60,'Medium'],['Muslins',12,'Medium'],['Nursery lamp',25,'Low']],
+  tasks:[['water','Sip some water through the day'],['move','A gentle stretch or a short walk, if it feels right'],['mood','Check in with how I feel'],['journal','Write one line in my baby journal'],['me','Ten minutes just for me']]
+};
+const MEALS=[['Overnight oats with berries','A make ahead breakfast that feels like a treat.'],['Chicken and veg traybake','One tray, minimal washing up, very forgiving.'],['Veggie chilli with rice','Make a big batch and freeze portions for later.'],['Jacket potato with beans and cheese','Comfort on a plate.'],['Avocado and tomato on toast','Quick, fresh and ready in five minutes.'],['Lentil soup with crusty bread','Warming, simple and easy to batch cook.']];
+const TIMELINE=[[4,'Pop a note in your journal about how you are feeling. This page is yours.'],[8,'Start a little list of questions to take to your appointments.'],[12,'Plenty of mums choose around now to share their news. Only when it feels right for you.'],[16,'Treat yourself to something comfy to wear.'],[20,'Halfway there. A bump photo for the journal could be lovely.'],[24,'Start browsing nursery ideas and add your favourites to the shopping list.'],[28,'Have a look at the hospital bag checklist and start gathering bits.'],[32,'Pack your bag and keep it somewhere easy to grab.'],[36,'Read the manufacturer guide for your car seat and have a practice run.'],[40,'Rest, snacks and a fully charged phone. You have got this.']];
+const MOODS=[['😊','Happy'],['🥰','Loved'],['🤩','Excited'],['😴','Tired'],['😟','Worried'],['😢','Tearful']];
+
+async function seed(){
+  for(const l of SAMPLE.selfcare_items)await DB.add('selfcare_items',{label:l,done:false,is_sample:true});
+  for(const l of SAMPLE.bag_items)await DB.add('bag_items',{label:l,done:false,is_sample:true});
+  for(const [l,p,pr] of SAMPLE.shopping_items)await DB.add('shopping_items',{label:l,price:p,priority:pr,done:false,is_sample:true});
+}
+
+/* ---------- pregnancy maths (dates only, no medical claims) ---------- */
+function preg(){
+  const d=S.profile&&S.profile.due_date;if(!d)return null;
+  const due=new Date(d+'T12:00'),now=new Date();
+  const days=Math.floor((now-new Date(due.getTime()-280*864e5))/864e5);
+  const left=Math.ceil((due-now)/864e5);
+  return{wk:Math.floor(days/7),dd:days%7,left,pct:Math.max(0,Math.min(100,days/280*100)),days};
+}
+const tri=w=>w<14?'First trimester':w<28?'Second trimester':'Third trimester';
+
+/* ---------- views ---------- */
+function header(){return `<div class="top"><div class="brand">Hello Baby</div><div class="muted">${esc(fmtDate(today()))}</div></div>`}
+function chips(group,opts){return `<div class="chips">`+opts.map(([k,l])=>`<button class="chip ${S.sub[group]===k?'on':''}" data-a="sub" data-g="${group}" data-k="${k}">${l}</button>`).join('')+`</div>`}
+function empty(t){return `<div class="empty">${t}</div>`}
+function sampleTag(r){return r.is_sample?'<span class="badge">sample</span>':''}
+function checklist(t,list,opt={}){
+  if(!list.length)return empty(opt.empty||'Nothing here yet. Add your first one below.');
+  return list.map(r=>{
+    const on=opt.vit?r.done_date===today():!!r.done;
+    return `<div class="item"><button class="tick ${on?'on':''}" data-a="toggle" data-t="${t}" data-id="${r.id}" aria-label="Tick">${on?'✓':''}</button><div class="grow"><span class="${on&&!opt.vit?'done':''}">${esc(r.label||r.name)}</span>${sampleTag(r)}${opt.extra?`<div class="muted">${opt.extra(r)}</div>`:''}</div><button class="x" data-a="del" data-t="${t}" data-id="${r.id}" aria-label="Remove">×</button></div>`}).join('');
+}
+function addBox(t,ph,extra=''){return `<form data-form="${t}" class="row" style="margin-top:12px;flex-wrap:wrap"><input name="label" placeholder="${ph}" required style="flex:1;min-width:140px">${extra}<button class="btn small" type="submit">Add</button></form>`}
+
+function vHome(){
+  const p=preg(),name=esc(S.profile.name||'lovely');
+  const done=rows('task_logs').filter(r=>r.log_date===today()).map(r=>r.task_key);
+  const appts=rows('appointments').filter(a=>a.appt_date>=today()).sort((a,b)=>(a.appt_date+(a.appt_time||'')).localeCompare(b.appt_date+(b.appt_time||'')));
+  let hero='';
+  if(p&&p.wk>=0&&p.wk<=42){
+    hero=`<div class="card hero"><div class="muted">${tri(p.wk)}</div><div class="big">Week ${p.wk}</div><p>${p.dd} day${p.dd===1?'':'s'} in. ${p.left>0?`<b>${p.left}</b> day${p.left===1?'':'s'} until your due date.`:'Your due date has arrived. Sending you all my love.'}</p><div class="bar"><i style="width:${p.pct}%"></i></div></div>`;
+  }else hero=`<div class="card hero"><h2>Add your due date</h2><p>Pop it in the Me tab and I will show your week and countdown.</p></div>`;
+  return `<h1>Hello, ${name}</h1><p class="muted">Here is your day, nice and gentle.</p>${hero}
+  <div class="card"><h2>Today's little list</h2>${SAMPLE.tasks.map(([k,l])=>`<div class="item"><button class="tick ${done.includes(k)?'on':''}" data-a="task" data-k="${k}">${done.includes(k)?'✓':''}</button><div class="grow ${done.includes(k)?'done':''}">${l}</div></div>`).join('')}<div class="muted">${done.length} of ${SAMPLE.tasks.length} done</div></div>
+  <div class="sc"><button data-a="go" data-tab="diary" data-g="diary" data-k="food"><b>🍓</b>Food diary</button><button data-a="go" data-tab="diary" data-g="diary" data-k="mood"><b>🌸</b>Mood</button><button data-a="go" data-tab="diary" data-g="diary" data-k="sleep"><b>🌙</b>Sleep</button><button data-a="go" data-tab="baby" data-g="baby" data-k="journal"><b>📸</b>Baby journal</button></div>
+  <div class="card"><h2>Coming up</h2>${appts.length?appts.slice(0,4).map(a=>`<div class="item"><div class="grow"><b>${esc(a.title)}</b><div class="muted">${fmtDate(a.appt_date)}${a.appt_time?' at '+esc(a.appt_time):''}${a.note?' · '+esc(a.note):''}</div></div><button class="x" data-a="del" data-t="appointments" data-id="${a.id}">×</button></div>`).join(''):empty('No appointments yet.')}
+  <details><summary>Add an appointment</summary><form data-form="appointments"><label>What is it?</label><input name="title" required placeholder="e.g. Midwife visit"><div class="grid2"><div><label>Date</label><input type="date" name="appt_date" required></div><div><label>Time</label><input type="time" name="appt_time"></div></div><label>Note</label><input name="note" placeholder="Questions to ask, who is coming..."><button class="btn" type="submit">Save appointment</button></form></details></div>`;
+}
+
+function vDiary(){
+  const s=S.sub.diary;let body='';
+  if(s==='food'){
+    const list=rows('food_entries').slice().reverse().slice(0,25);
+    body=`<div class="card"><h2>Food diary</h2><form data-form="food_entries"><div class="grid2"><div><label>Meal</label><select name="meal"><option>Breakfast</option><option>Lunch</option><option>Dinner</option><option>Snack</option></select></div><div><label>Date</label><input type="date" name="entry_date" value="${today()}"></div></div><label>What I had</label><input name="what" required placeholder="Toast, tea and a banana"><label>How it felt (optional)</label><input name="note" placeholder="Hungry? Queasy? Loved it?"><button class="btn" type="submit">Add to my diary</button></form></div>
+    <div class="card"><h3>Recent entries</h3>${list.length?list.map(r=>`<div class="item"><div class="grow"><b>${esc(r.meal)}</b> · ${esc(r.what)}<div class="muted">${fmtDate(r.entry_date)}${r.note?' · '+esc(r.note):''}</div></div><button class="x" data-a="del" data-t="food_entries" data-id="${r.id}">×</button></div>`).join(''):empty('Nothing yet. What did you enjoy today?')}</div>`;
+  }
+  if(s==='meals'){
+    body=`<div class="card"><h2>Meal inspiration <span class="badge">sample content</span></h2><p class="muted">Just ideas to spark your appetite. For anything about what suits you, your midwife or GP is the best person to ask.</p>${MEALS.map(([n,d],i)=>`<div class="item"><div class="grow"><b>${n}</b><div class="muted">${d}</div></div><button class="btn small ghost" data-a="savemeal" data-i="${i}">Save</button></div>`).join('')}</div>`;
+  }
+  if(s==='vitamins'){
+    body=`<div class="card"><h2>Vitamin checklist</h2><p class="muted">Add whatever you have been advised to take by your midwife or GP. Ticks reset each morning.</p>${checklist('vitamin_items',rows('vitamin_items'),{vit:true,empty:'Nothing added yet. Add your own below.'})}${addBox('vitamin_items','Name of my vitamin')}</div>`;
+  }
+  if(s==='sleep'){
+    const list=rows('sleep_entries').slice().reverse().slice(0,20);
+    body=`<div class="card"><h2>Sleep diary</h2><form data-form="sleep_entries"><div class="grid2"><div><label>Date</label><input type="date" name="entry_date" value="${today()}"></div><div><label>Hours slept</label><input type="number" name="hours" step="0.5" min="0" max="24" required></div></div><label>How did it feel?</label><select name="quality"><option value="5">Dreamy</option><option value="4">Pretty good</option><option value="3" selected>Okay</option><option value="2">Broken</option><option value="1">Rough</option></select><label>Note</label><input name="note" placeholder="Pillow arrangements, night time snacks..."><button class="btn" type="submit">Save sleep</button></form></div>
+    <div class="card"><h3>Recent nights</h3>${list.length?list.map(r=>`<div class="item"><div class="grow"><b>${r.hours}h</b> · ${['','Rough','Broken','Okay','Pretty good','Dreamy'][r.quality]}<div class="muted">${fmtDate(r.entry_date)}${r.note?' · '+esc(r.note):''}</div></div><button class="x" data-a="del" data-t="sleep_entries" data-id="${r.id}">×</button></div>`).join(''):empty('No nights logged yet.')}</div>`;
+  }
+  if(s==='mood'){
+    const list=rows('mood_entries').slice().reverse().slice(0,20);
+    body=`<div class="card"><h2>How am I feeling?</h2><form data-form="mood_entries"><div class="moods">${MOODS.map(([e,l],i)=>`<label title="${l}"><input type="radio" name="mood" value="${e} ${l}" ${i===0?'checked':''}><span>${e}</span></label>`).join('')}</div><label>Date</label><input type="date" name="entry_date" value="${today()}"><label>Want to say more?</label><textarea name="note" placeholder="Whatever is on my mind..."></textarea><button class="btn" type="submit">Save my mood</button></form><p class="muted" style="margin-top:10px">All feelings are welcome here. If you are struggling, please talk to your midwife, GP or someone you trust.</p></div>
+    <div class="card"><h3>My mood diary</h3>${list.length?list.map(r=>`<div class="item"><div class="grow"><b>${esc(r.mood)}</b><div class="muted">${fmtDate(r.entry_date)}${r.note?' · '+esc(r.note):''}</div></div><button class="x" data-a="del" data-t="mood_entries" data-id="${r.id}">×</button></div>`).join(''):empty('No entries yet.')}</div>`;
+  }
+  return `<h1>My Diary</h1>${chips('diary',[['food','Food'],['meals','Meal ideas'],['vitamins','Vitamins'],['sleep','Sleep'],['mood','Mood']])}${body}`;
+}
+
+function vBaby(){
+  const s=S.sub.baby;let body='';
+  if(s==='journal'){
+    const list=rows('journal_entries').slice().reverse();
+    body=`<div class="card"><h2>Baby journal</h2><form data-form="journal_entries"><label>Title</label><input name="title" required placeholder="My first bump photo"><label>Date</label><input type="date" name="entry_date" value="${today()}"><label>Photo (optional)</label><input type="file" name="photo" accept="image/*"><label>My words</label><textarea name="body" placeholder="Write to your baby, or to future you..."></textarea><button class="btn" type="submit">Save to journal</button></form></div>
+    ${list.length?list.map(r=>`<div class="card"><div class="row"><div class="grow" style="flex:1"><h3>${esc(r.title)}</h3><div class="muted">${fmtDate(r.entry_date)}</div></div><button class="x" data-a="del" data-t="journal_entries" data-id="${r.id}">×</button></div>${r.photo?`<img class="photo" src="${r.photo}" alt="">`:''}<p>${esc(r.body).replace(/\n/g,'<br>')}</p></div>`).join(''):`<div class="card">${empty('Your first page is waiting.')}</div>`}`;
+  }
+  if(s==='names'){
+    const list=rows('baby_names').slice().sort((a,b)=>(b.fav?1:0)-(a.fav?1:0));
+    body=`<div class="card"><h2>Names shortlist</h2>${list.length?list.map(r=>`<div class="item"><button class="x" data-a="fav" data-id="${r.id}" style="font-size:1.4rem">${r.fav?'💗':'🤍'}</button><div class="grow"><b>${esc(r.name)}</b>${r.note?`<div class="muted">${esc(r.note)}</div>`:''}</div><button class="x" data-a="del" data-t="baby_names" data-id="${r.id}">×</button></div>`).join(''):empty('No names yet. Add the ones that make you smile.')}
+    <form data-form="baby_names" class="row" style="flex-wrap:wrap;margin-top:12px"><input name="name" placeholder="Name" required style="flex:1;min-width:110px"><input name="note" placeholder="Why I like it" style="flex:1;min-width:110px"><button class="btn small" type="submit">Add</button></form></div>`;
+  }
+  return `<h1>My Baby</h1>${chips('baby',[['journal','Journal'],['names','Names']])}${body}`;
+}
+
+function vPlan(){
+  const s=S.sub.plan;let body='';
+  if(s==='shopping'){
+    const list=rows('shopping_items'),order={High:0,Medium:1,Low:2};
+    list.sort((a,b)=>(order[a.priority]-order[b.priority]));
+    const total=list.reduce((n,r)=>n+(Number(r.price)||0),0),spent=list.filter(r=>r.done).reduce((n,r)=>n+(Number(r.price)||0),0);
+    const budget=Number(S.profile.budget)||0;
+    body=`<div class="card hero"><div class="muted">Planned total</div><div class="big">£${total.toFixed(0)}</div><p class="muted">Bought so far £${spent.toFixed(0)}${budget?` · Budget £${budget.toFixed(0)} (${budget-total>=0?'£'+(budget-total).toFixed(0)+' to spare':'£'+(total-budget).toFixed(0)+' over'})`:''}</p>${budget?`<div class="bar"><i style="width:${Math.min(100,total/budget*100)}%"></i></div>`:''}</div>
+    <div class="card"><h2>Baby shopping list</h2><p class="muted">Sample items and prices are placeholders. Swap in your own.</p>${checklist('shopping_items',list,{extra:r=>`${esc(r.priority)} priority · £${Number(r.price||0).toFixed(0)}`})}
+    <form data-form="shopping_items"><label>Item</label><input name="label" required placeholder="Item"><div class="grid2"><div><label>Price (£)</label><input type="number" name="price" min="0" step="1"></div><div><label>Priority</label><select name="priority"><option>High</option><option selected>Medium</option><option>Low</option></select></div></div><button class="btn" type="submit">Add to list</button></form></div>`;
+  }
+  if(s==='timeline'){
+    const p=preg();
+    body=`<div class="card"><h2>Pregnancy timeline <span class="badge">sample content</span></h2><p class="muted">Gentle ideas for each stage, not medical advice.</p><div class="tl">${TIMELINE.map(([w,t])=>{const c=p?(p.wk>=w&&p.wk<w+4?'now':p.wk>=w+4?'past':''):'';return `<div class="s ${c}"><b>Week ${w}</b>${c==='now'?'<span class="badge">you are here</span>':''}<div>${t}</div></div>`}).join('')}</div></div>`;
+  }
+  if(s==='bag'){
+    const l=rows('bag_items'),n=l.filter(r=>r.done).length;
+    body=`<div class="card"><h2>Hospital bag</h2><p class="muted">${n} of ${l.length} packed. Sample list to get you started, edit freely.</p>${checklist('bag_items',l)}${addBox('bag_items','Add something to pack')}</div>`;
+  }
+  return `<h1>Planning</h1>${chips('plan',[['shopping','Shopping'],['timeline','Timeline'],['bag','Hospital bag']])}${body}`;
+}
+
+function vMe(){
+  const p=S.profile,l=rows('selfcare_items');
+  return `<h1>Me</h1>
+  <div class="card"><h2>My details</h2><form data-form="profile"><label>First name</label><input name="name" value="${esc(p.name)}" required><label>Due date</label><input type="date" name="due_date" value="${esc(p.due_date)}"><label>Baby shopping budget (£, optional)</label><input type="number" name="budget" min="0" value="${esc(p.budget)}"><button class="btn" type="submit">Save</button></form></div>
+  <div class="card"><h2>Self-care</h2>${checklist('selfcare_items',l)}${addBox('selfcare_items','Something kind for me')}</div>
+  <div class="card"><h3>Privacy</h3><p class="muted">${sb?'Your journal is private to your account. Nobody else can see it.':'Demo mode: everything stays on this device only.'}</p><button class="btn ghost" data-a="signout">${sb?'Sign out':'Reset demo data'}</button></div>
+  <p class="note">Hello Baby is a journal and planner, not medical advice. For anything about your health or your baby, please speak to your midwife or GP.</p>`;
+}
+
+function vWelcome(){
+  const auth=sb?`<form data-form="auth"><label>Email</label><input type="email" name="email" required><label>Password</label><input type="password" name="password" minlength="8" required><button class="btn" type="submit" name="mode" value="up">Create my account</button><button class="btn ghost" type="submit" name="mode" value="in">I already have one</button></form>`:
+  `<form data-form="onboard"><label>What shall I call you?</label><input name="name" required placeholder="Your first name"><label>When is baby due?</label><input type="date" name="due_date"><button class="btn" type="submit">Start my journal</button><p class="note">Demo mode: your journal is saved on this device only.</p></form>`;
+  return `<div class="welcome"><div class="big">Hello Baby</div><p style="margin:10px 0 24px">A cosy little journal for your pregnancy. Diaries, lists, photos and plans, all in one pretty place.</p></div><div class="card">${auth}</div>`;
+}
+
+/* ---------- render ---------- */
+const NAV=[['home','🏠','Home'],['diary','📖','My Diary'],['baby','👶','My Baby'],['plan','🗓️','Planning'],['me','💗','Me']];
+function render(){
+  const nav=$('#nav');
+  if(!DB.user){nav.hidden=true;$('#app').innerHTML=vWelcome();return}
+  if(!S.profile){nav.hidden=true;$('#app').innerHTML=`<div class="welcome"><div class="big">Nearly there</div></div><div class="card"><form data-form="onboard"><label>What shall I call you?</label><input name="name" required><label>When is baby due?</label><input type="date" name="due_date"><button class="btn" type="submit">Start my journal</button></form></div>`;return}
+  nav.hidden=false;
+  nav.firstElementChild.innerHTML=NAV.map(([k,i,l])=>`<button class="${S.tab===k?'on':''}" data-a="tab" data-k="${k}"><span>${i}</span>${l}</button>`).join('');
+  const v={home:vHome,diary:vDiary,baby:vBaby,plan:vPlan,me:vMe}[S.tab]();
+  $('#app').innerHTML=header()+v;
+}
+
+/* ---------- photos ---------- */
+function toast(m){const d=document.createElement('div');d.className='toast';d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),4000)}
+function shrink(file){return new Promise(res=>{const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const m=900,k=Math.min(1,m/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);res(c.toDataURL('image/jpeg',.75))};im.onerror=()=>res(null);im.src=r.result};r.onerror=()=>res(null);r.readAsDataURL(file)})}
+
+/* ---------- events ---------- */
+document.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-a]');if(!b)return;
+  const a=b.dataset.a,d=b.dataset;
+  if(a==='tab'){S.tab=d.k;scrollTo(0,0)}
+  else if(a==='sub'){S.sub[d.g]=d.k}
+  else if(a==='go'){S.tab=d.tab;S.sub[d.g]=d.k;scrollTo(0,0)}
+  else if(a==='toggle'){
+    const r=rows(d.t).find(x=>x.id===d.id);
+    if(d.t==='vitamin_items')await upd(d.t,d.id,{done_date:r.done_date===today()?null:today()});
+    else await upd(d.t,d.id,{done:!r.done});
+  }
+  else if(a==='del'){await del(d.t,d.id)}
+  else if(a==='fav'){const r=rows('baby_names').find(x=>x.id===d.id);await upd('baby_names',d.id,{fav:!r.fav})}
+  else if(a==='task'){
+    const ex=rows('task_logs').find(x=>x.task_key===d.k&&x.log_date===today());
+    if(ex)await del('task_logs',ex.id);else await add('task_logs',{task_key:d.k,log_date:today()});
+  }
+  else if(a==='savemeal'){const m=MEALS[d.i];await add('food_entries',{meal:'Meal idea',what:m[0],entry_date:today(),note:'Saved from meal inspiration'});S.sub.diary='food'}
+  else if(a==='signout'){
+    if(sb){await sb.auth.signOut();DB.user=null;S.profile=null}
+    else if(!S.cr){S.cr=true;toast('Tap again to clear all demo data on this device.')}else{S.cr=false;['profile',...TABLES].forEach(t=>ls.del(DB.key(t)));S.profile=null;await loadAll()}
+  }
+  render();
+});
+
+document.addEventListener('submit',async e=>{
+  const f=e.target.closest('form[data-form]');if(!f)return;e.preventDefault();
+  const t=f.dataset.form,fd=new FormData(f),row={};
+  for(const[k,v]of fd.entries()){if(k!=='photo'&&k!=='mode')row[k]=v}
+  f.querySelectorAll('input[type=number]').forEach(i=>{row[i.name]=i.value===''?null:Number(i.value)});
+  try{
+    if(t==='auth'){
+      const mode=e.submitter&&e.submitter.value;
+      const r=mode==='up'?await sb.auth.signUp({email:row.email,password:row.password}):await sb.auth.signInWithPassword({email:row.email,password:row.password});
+      if(r.error){toast(r.error.message);return}
+      if(!r.data.session){toast('Check your emails to confirm your account, then sign in.');return}
+      DB.user=r.data.session.user;await loadAll();
+    }
+    else if(t==='onboard'){S.profile={name:row.name,due_date:row.due_date||null};await DB.saveProfile(S.profile);S.profile=await DB.getProfile();if(!rows('bag_items').length)await seed();await loadAll()}
+    else if(t==='profile'){S.profile={...S.profile,...row,due_date:row.due_date||null};await DB.saveProfile(S.profile);S.profile=await DB.getProfile()}
+    else{
+      const file=f.querySelector('input[type=file]');
+      if(file&&file.files[0])row.photo=await shrink(file.files[0]);
+      if(t==='shopping_items'||t==='bag_items'||t==='selfcare_items')row.done=false;
+      await add(t,row);
+    }
+  }catch(err){toast('Sorry, that did not save. '+(err.message||''))}
+  render();
+});
+
+/* ---------- start ---------- */
+(async function start(){
+  if(CFG.SUPABASE_URL&&CFG.SUPABASE_ANON_KEY){
+    await new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';s.onload=ok;s.onerror=no;document.head.appendChild(s)});
+    sb=window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_ANON_KEY);
+    const{data}=await sb.auth.getSession();
+    if(data.session){DB.user=data.session.user;await loadAll()}
+  }else{
+    let id=ls.get('hb:device');if(!id){id=uid();ls.set('hb:device',id)}
+    DB.user={id};await loadAll();
+  }
+  render();
+})();
+</script>
+</body>
+</html>

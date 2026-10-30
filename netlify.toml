@@ -14,13 +14,7 @@
 
 [[redirects]]
   from = "/hellobaby"
-  to = "https://snazzy-palmier-4b0717.netlify.app/"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/hellobaby/*"
-  to = "https://snazzy-palmier-4b0717.netlify.app/:splat"
+  to = "/hellobaby/index.html"
   status = 200
   force = true
 
