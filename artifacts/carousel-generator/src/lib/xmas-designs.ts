@@ -1355,20 +1355,14 @@ export const LOGO_POSITIONS: { value: LogoPos; label: string }[] = [
 
 // The logo sits on a small paper plate in the chosen corner, so it reads on any colour or photo.
 export function drawLogo(g: G, logo: HTMLImageElement, pos: LogoPos) {
-  const { ctx, c } = g;
+  const { ctx } = g;
   const maxW = 230, maxH = 96, pad = 16, m = 28;
   const sc = Math.min(maxW / logo.width, maxH / logo.height);
   const w = logo.width * sc, h = logo.height * sc;
   const pw = w + pad * 2, ph = h + pad * 2;
   const x = pos === "tl" || pos === "bl" ? m : XW - m - pw;
   const y = pos === "tl" || pos === "tr" ? m : XH - m - ph;
-  ctx.save();
-  ctx.shadowColor = "rgba(0,0,0,0.25)"; ctx.shadowBlur = 14; ctx.shadowOffsetY = 4;
-  ctx.fillStyle = c.frame;
-  ctx.beginPath();
-  ctx.roundRect(x, y, pw, ph, 14);
-  ctx.fill();
-  ctx.restore();
+  // The logo sits straight on the design with nothing behind it, so a transparent PNG stays transparent.
   ctx.drawImage(logo, x + pad, y + pad, w, h);
 }
 
