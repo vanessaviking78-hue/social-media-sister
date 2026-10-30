@@ -262,13 +262,15 @@ function Swatch({ label, value, onChange }: { label: string; value: string; onCh
 // Dates and uploads
 // ---------------------------------------------------------------------------
 
-function startSlot(hhmm: string, extraDays: number): string {
+// Empower goes out every Tuesday at 8pm. The first one is the next Tuesday that is still ahead of us.
+function nextTuesday8pm(): string {
   const p = (n: number) => String(n).padStart(2, "0");
-  const [hh, mm] = (hhmm || "18:15").split(":").map((x) => parseInt(x, 10));
   const d = new Date();
-  d.setHours(Number.isFinite(hh) ? hh : 18, Number.isFinite(mm) ? mm : 15, 0, 0);
-  d.setDate(d.getDate() + extraDays);
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  d.setHours(20, 0, 0, 0);
+  let add = (2 - d.getDay() + 7) % 7;
+  if (add === 0 && d.getTime() <= Date.now()) add = 7;
+  d.setDate(d.getDate() + add);
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T20:00`;
 }
 
 async function uploadPngs(dataUrls: string[], names: string[]): Promise<string[]> {
@@ -558,7 +560,7 @@ export default function Empower() {
       toast.dismiss(toastId);
       setScheduleItems(items);
       setScheduleIds(selected.map((p) => p.id));
-      setScheduleStart(startSlot((preset as unknown as { defaultPostTime?: string }).defaultPostTime ?? "18:15", 2));
+      setScheduleStart(nextTuesday8pm());
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not get those ready", { id: toastId });
     } finally {
@@ -692,7 +694,7 @@ export default function Empower() {
 
         {/* posts */}
         {shown.length === 0 && (
-          <p className="text-muted-foreground text-sm">Choose a client, add their approved photos and press Plan all. Each client starts on a different design. Static posts, one image each. Every colour has a Metallic box beside it for a foil finish. {"{owner}"}, {"{clinic}"}, {"{area}"} and {"{role}"} fill in from the boxes above. Posts float, so scheduling starts two days from now with a three day gap you can change.</p>
+          <p className="text-muted-foreground text-sm">Choose a client, add their approved photos and press Plan all. Each client starts on a different design. Static posts, one image each. Every colour has a Metallic box beside it for a foil finish. {"{owner}"}, {"{clinic}"}, {"{area}"} and {"{role}"} fill in from the boxes above. Scheduling puts them on every Tuesday at 8pm, starting with the next one, and you can move any date.</p>
         )}
         <div className="grid gap-5 lg:grid-cols-2">
           {shown.map((post, pi) => {
@@ -810,7 +812,7 @@ export default function Empower() {
           posts={scheduleItems}
           perPostCaptions
           initialScheduledAt={scheduleStart}
-          initialGapMinutes={3 * 1440}
+          initialGapMinutes={7 * 1440}
           keepClockTime
           sourceTool="empower"
           presets={presets.map((x) => ({ id: x.id, name: x.name }))}
