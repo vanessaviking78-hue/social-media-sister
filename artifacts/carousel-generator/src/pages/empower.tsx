@@ -43,7 +43,7 @@ type Post = {
 };
 
 type ClientSettings = {
-  owner: string; role: string; area: string; headFont: string; bodyFont: string; upper: boolean; logoPos: LogoPos;
+  owner: string; role: string; area: string; headFont: string; bodyFont: string; upper: boolean; logoPos: LogoPos; gpal?: Partial<EPalette>; gmetal?: EMetal;
 };
 
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -103,6 +103,8 @@ async function ensureFonts(...fonts: string[]) {
 // ---------------------------------------------------------------------------
 
 type Look = {
+  gpal: Partial<EPalette>;
+  gmetal: EMetal;
   fill: Fill;
   headFont: string;
   bodyFont: string;
@@ -122,8 +124,8 @@ async function renderPost(post: Post, look: Look, canvas: HTMLCanvasElement, sca
   return drawEmpower(ctx, {
     design: post.design,
     text: resolveEmpowerText(def, post.text, look.fill),
-    palette: { ...def.palette, ...(post.palette ?? {}) },
-    metal: post.metal ?? {},
+    palette: { ...def.palette, ...look.gpal, ...(post.palette ?? {}) },
+    metal: { ...look.gmetal, ...(post.metal ?? {}) },
     headFont: look.headFont,
     bodyFont: look.bodyFont,
     upper: look.upper,
@@ -310,6 +312,8 @@ export default function Empower() {
   const [bodyFont, setBodyFont] = useState(DEFAULT_BODY);
   const [upper, setUpper] = useState(false);
   const [logoPos, setLogoPos] = useState<LogoPos>("off");
+  const [gpal, setGpal] = useState<Partial<EPalette>>({});
+  const [gmetal, setGmetal] = useState<EMetal>({});
   const [logo, setLogo] = useState<HTMLImageElement | null>(null);
   const [fontsTick, setFontsTick] = useState(0);
 
@@ -352,6 +356,8 @@ export default function Empower() {
     setHeadFont(saved.headFont ?? p?.stylishCoverHeadlineFont ?? DEFAULT_HEAD);
     setBodyFont(saved.bodyFont ?? p?.stylishCoverSubtitleFont ?? DEFAULT_BODY);
     setUpper(saved.upper ?? false);
+    setGpal(saved.gpal ?? {});
+    setGmetal(saved.gmetal ?? {});
     setLogoPos(saved.logoPos ?? "off");
     setPosts(EMPOWER.map((_, k) => ({ ...makePost(EMPOWER[((id ?? 0) + k) % EMPOWER.length].id, k), photo: null })));
   };
@@ -360,10 +366,10 @@ export default function Empower() {
     if (!presetId) return;
     try {
       const all = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}") as Record<string, ClientSettings>;
-      all[String(presetId)] = { owner, role, area, headFont, bodyFont, upper, logoPos };
+      all[String(presetId)] = { owner, role, area, headFont, bodyFont, upper, logoPos, gpal, gmetal };
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(all));
     } catch { /* ignore */ }
-  }, [presetId, owner, role, area, headFont, bodyFont, upper, logoPos]);
+  }, [presetId, owner, role, area, headFont, bodyFont, upper, logoPos, gpal, gmetal]);
 
   useEffect(() => {
     let live = true;
@@ -417,7 +423,7 @@ export default function Empower() {
   };
 
   const fill: Fill = useMemo(() => ({ owner: owner.trim(), clinic: clinic.trim(), area: area.trim(), role: role.trim() }), [owner, clinic, area, role]);
-  const look: Look = useMemo(() => ({ fill, headFont, bodyFont, upper, logoPos, logo, pool }), [fill, headFont, bodyFont, upper, logoPos, logo, pool]);
+  const look: Look = useMemo(() => ({ fill, gpal, gmetal, headFont, bodyFont, upper, logoPos, logo, pool }), [fill, gpal, gmetal, headFont, bodyFont, upper, logoPos, logo, pool]);
 
   const patchPost = (id: string, change: Partial<Post>) => setPosts((l) => l.map((p) => (p.id === id ? { ...p, ...change } : p)));
   const setText = (id: string, key: string, value: string) => setPosts((l) => l.map((p) => (p.id === id ? { ...p, text: { ...p.text, [key]: value } } : p)));
@@ -615,6 +621,42 @@ export default function Empower() {
             </div>
           </div>
 
+          <div className="space-y-3 rounded-xl border border-border/30 p-4">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-[11px] uppercase tracking-widest text-muted-foreground">Colour picker for every post</span>
+              <span className="text-xs text-muted-foreground">Pick a colour and it replaces that colour on all {EMPOWER.length} posts. Tick Metallic for a foil in the same colour, or press a metal.</span>
+              {(Object.keys(gpal).length > 0 || Object.values(gmetal).some(Boolean)) && (
+                <button type="button" onClick={() => { setGpal({}); setGmetal({}); }} className="text-xs text-muted-foreground underline hover:text-foreground">back to the design colours</button>
+              )}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {(["page", "dark", "accent", "soft", "ink", "light"] as EKey[]).map((key) => {
+                const names: Record<EKey, string> = { page: "Background", dark: "Dark block", accent: "Accent", soft: "Soft colour", ink: "Text on light", light: "Text on dark" };
+                const on = gpal[key] != null;
+                return (
+                  <div key={key} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <Swatch label={names[key] + (on ? "" : " (design's own)")} value={gpal[key] ?? "#999999"} onChange={(v) => setGpal((p) => ({ ...p, [key]: v }))} />
+                    <label className="flex items-center gap-1.5 text-xs">
+                      <input type="checkbox" checked={!!gmetal[key]} onChange={(e) => setGmetal((m) => ({ ...m, [key]: e.target.checked }))} />
+                      Metallic
+                    </label>
+                    {FOILS.map((f) => (
+                      <button key={f.label} type="button" title={f.label}
+                        onClick={() => { setGpal((p) => ({ ...p, [key]: f.hex })); setGmetal((m) => ({ ...m, [key]: true })); }}
+                        className="h-5 w-5 rounded-full border border-border/50" style={{ background: `linear-gradient(135deg, ${f.hex}, #ffffff 45%, ${f.hex} 60%, #00000040)` }} />
+                    ))}
+                    {(on || gmetal[key]) && (
+                      <button type="button" className="text-xs underline text-muted-foreground" onClick={() => {
+                        setGpal((p) => { const n = { ...p }; delete n[key]; return n; });
+                        setGmetal((m) => ({ ...m, [key]: false }));
+                      }}>clear</button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm">
             <label className="flex items-center gap-2">
               <input type="checkbox" checked={upper} onChange={(e) => setUpper(e.target.checked)} />
@@ -685,7 +727,7 @@ export default function Empower() {
           {shown.map((post, pi) => {
             const def = EMPOWER_BY_ID[post.design];
             const ph = post.photo != null ? pool[post.photo] : null;
-            const mine = { ...def.palette, ...(post.palette ?? {}) };
+            const mine = { ...def.palette, ...gpal, ...(post.palette ?? {}) };
             return (
               <article key={post.id} className="rounded-2xl border border-border/30 p-4 space-y-4">
                 <div className="flex flex-wrap items-center gap-3">
@@ -715,7 +757,7 @@ export default function Empower() {
                             <div key={c.key} className="flex flex-wrap items-center gap-x-3 gap-y-1">
                               <Swatch label={c.label} value={mine[c.key]} onChange={(v) => setPostColour(post.id, c.key, v)} />
                               <label className="flex items-center gap-1.5">
-                                <input type="checkbox" checked={!!post.metal?.[c.key]} onChange={(e) => setPostMetal(post.id, c.key, e.target.checked)} />
+                                <input type="checkbox" checked={!!(post.metal?.[c.key] ?? gmetal[c.key])} onChange={(e) => setPostMetal(post.id, c.key, e.target.checked)} />
                                 Metallic
                               </label>
                               {FOILS.map((f) => (
